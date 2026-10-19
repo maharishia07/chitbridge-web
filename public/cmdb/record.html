@@ -216,233 +216,548 @@
 </div>
 
 <script>
-(function(){
+(function () {
   /* the API: ?api=… for a test server, else the live one — the same rule as testing.html */
-  var API = (new URLSearchParams(location.search).get('api')) || window.CB_API;
-  function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) { return null; } }
-  function $(id){ return document.getElementById(id); }
-  async function call(p){
+  var API = new URLSearchParams(location.search).get('api') || window.CB_API;
+  function sess() {
+    try {
+      return JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    } catch (_) {
+      return null;
+    }
+  }
+  function $(id) {
+    return document.getElementById(id);
+  }
+  async function call(p) {
     var s = sess();
     if (!s || !s.token) throw new Error('Sign in to ChitBridge on this browser first, then reload this page.');
-    var r = await fetch(API + p, { headers: { Authorization: 'Bearer ' + s.token } });
-    var j = await r.json().catch(function(){ return {}; });
-    if (!r.ok) throw new Error(j.message || j.error || ('The server answered ' + r.status));
+    var reply = await fetch(API + p, { headers: { Authorization: 'Bearer ' + s.token } });
+    var j = await reply.json().catch(function () {
+      return {};
+    });
+    if (!reply.ok) throw new Error(j.message || j.error || 'The server answered ' + reply.status);
     return j;
   }
-  function fail(msg){ var e = $('err'); e.textContent = msg; e.hidden = false; ['sec1','sec2','sec3','sec4'].forEach(function(id){ $(id).hidden = true; }); }
+  function fail(msg) {
+    var e = $('err');
+    e.textContent = msg;
+    e.hidden = false;
+    ['sec1', 'sec2', 'sec3', 'sec4'].forEach(function (id) {
+      $(id).hidden = true;
+    });
+  }
 
-  var REC = null, EDGES = [], byId = {}, current = null;
+  var REC = null,
+    EDGES = [],
+    byId = {},
+    current = null;
 
-  function pill(result){
-    var cls = result === 'pass' ? 'ok' : (result === 'fail' ? 'warn' : 'warn');
+  function pill(result) {
+    var cls = result === 'pass' ? 'ok' : result === 'fail' ? 'warn' : 'warn';
     return '<span class="pill ' + cls + '">' + esc(result || 'not run') + '</span>';
   }
 
-  function drawRecord(j){
-    var r = j.record || {}; REC = r;
-    document.title = (r.title || j.ci) + ' · CMDB';
-    $('tags').innerHTML = '<span class="tag strong">CI · ' + esc(j.ci) + '</span>'
-      + (r.type ? '<span class="tag">type: ' + esc(r.type) + '</span>' : '')
-      + (r.system ? '<span class="tag">system: ' + esc(r.system) + '</span>' : '')
-      + '<span class="tag">version ' + esc(j.version) + (j.saved_at ? ' · ' + esc(String(j.saved_at).slice(0, 10)) : '') + '</span>'
-      + (r.source ? '<span class="tag">' + esc(r.source === 'generated' ? 'generated from the code' : 'written by hand') + '</span>' : '');
-    $('title').textContent = r.title || j.ci;
-    $('summary').textContent = r.summary || '';
-    var tests = r.tests || [], ran = tests.filter(function(t){ return t.result === 'pass' || t.result === 'fail'; });
-    var passed = tests.filter(function(t){ return t.result === 'pass'; }).length;
-    var mat = r.maturity ? (r.maturity.now + (r.maturity.target && r.maturity.target !== r.maturity.now ? ' → ' + r.maturity.target : '')) : '—';
+  function drawRecord(j) {
+    var list = j.record || {};
+    REC = list;
+    document.title = (list.title || j.ci) + ' · CMDB';
+    $('tags').innerHTML =
+      '<span class="tag strong">CI · ' +
+      esc(j.ci) +
+      '</span>' +
+      (list.type ? '<span class="tag">type: ' + esc(list.type) + '</span>' : '') +
+      (list.system ? '<span class="tag">system: ' + esc(list.system) + '</span>' : '') +
+      '<span class="tag">version ' +
+      esc(j.version) +
+      (j.saved_at ? ' · ' + esc(String(j.saved_at).slice(0, 10)) : '') +
+      '</span>' +
+      (list.source ? '<span class="tag">' + esc(list.source === 'generated' ? 'generated from the code' : 'written by hand') + '</span>' : '');
+    $('title').textContent = list.title || j.ci;
+    $('summary').textContent = list.summary || '';
+    var tests = list.tests || [],
+      ran = tests.filter(function (item) {
+        return item.result === 'pass' || item.result === 'fail';
+      });
+    var passed = tests.filter(function (item) {
+      return item.result === 'pass';
+    }).length;
+    var mat = list.maturity
+      ? list.maturity.now + (list.maturity.target && list.maturity.target !== list.maturity.now ? ' → ' + list.maturity.target : '')
+      : '—';
     $('facts').innerHTML = [
-      [(r.entries || []).length, 'ways in (entry points)'], [(r.process || []).length, 'steps that do the work'],
-      [(r.exits || []).length, 'things it produces (exits)'], [passed + ' / ' + tests.length, 'tests passing'],
-      [mat, 'maturity' + (r.maturity && r.maturity.set ? ' (set ' + r.maturity.set + ')' : '')]
-    ].concat((r.fields || []).length ? [[(r.fields || []).length, 'fields in the ledger']] : []).map(function(f){ return '<div role="listitem"><b>' + esc(f[0]) + '</b><span>' + esc(f[1]) + '</span></div>'; }).join('');
+      [(list.entries || []).length, 'ways in (entry points)'],
+      [(list.process || []).length, 'steps that do the work'],
+      [(list.exits || []).length, 'things it produces (exits)'],
+      [passed + ' / ' + tests.length, 'tests passing'],
+      [mat, 'maturity' + (list.maturity && list.maturity.set ? ' (set ' + list.maturity.set + ')' : '')]
+    ]
+      .concat((list.fields || []).length ? [[(list.fields || []).length, 'fields in the ledger']] : [])
+      .map(function (item) {
+        return '<div role="listitem"><b>' + esc(item[0]) + '</b><span>' + esc(item[1]) + '</span></div>';
+      })
+      .join('');
     var flags = j.flags || [];
-    if (flags.length) { var fl = $('flagline'); fl.hidden = false; fl.innerHTML = '<span class="pill warn">⚠️ ' + esc(flags.join(' · ')) + '</span>'; }
+    if (flags.length) {
+      var fl = $('flagline');
+      fl.hidden = false;
+      fl.innerHTML = '<span class="pill warn">⚠️ ' + esc(flags.join(' · ')) + '</span>';
+    }
 
     /* view 1 */
-    var tiles = r.map || [];
-    $('capmap').innerHTML = tiles.map(function(t, i){
-      var st = t.state || 'off';
-      var cls = st === 'ok' ? 'ok' : (st === 'off' ? 'off' : 'warn');
-      var tag = st === 'ok' ? 'green' : (st === 'off' ? 'not mapped' : st);
-      /* a tile naming ANOTHER record opens that record — the capability map is how you move between capabilities */
-      var other = t.ci && t.ci !== j.ci && /^CAP-[A-Z0-9-]+$/.test(t.ci);
-      var el = other ? 'a' : ((t.node || t.ci === j.ci) ? 'button' : 'div');
-      var attr = other ? ' href="#' + esc(t.ci) + '" style="text-decoration:none;color:inherit"' : (el === 'button' ? ' type="button" data-tile="' + i + '"' : '');
-      return '<' + el + ' class="cap ' + cls + (t.ci === j.ci ? ' sel' : '') + '"' + attr + '>'
-        + '<div class="row"><h3>' + esc(t.title) + '</h3><span class="pill ' + cls + '">' + esc(tag) + '</span></div>'
-        + '<small>' + esc(t.note || '') + '</small></' + el + '>';
-    }).join('') || '<p class="muted">No map for this record yet.</p>';
-    Array.prototype.forEach.call(document.querySelectorAll('[data-tile]'), function(b){
-      b.addEventListener('click', function(){
+    var tiles = list.map || [];
+    $('capmap').innerHTML =
+      tiles
+        .map(function (item, index) {
+          var st = item.state || 'off';
+          var cls = st === 'ok' ? 'ok' : st === 'off' ? 'off' : 'warn';
+          var tag = st === 'ok' ? 'green' : st === 'off' ? 'not mapped' : st;
+          /* a tile naming ANOTHER record opens that record — the capability map is how you move between capabilities */
+          var other = item.ci && item.ci !== j.ci && /^CAP-[A-Z0-9-]+$/.test(item.ci);
+          var el = other ? 'a' : item.node || item.ci === j.ci ? 'button' : 'div';
+          var attr = other
+            ? ' href="#' + esc(item.ci) + '" style="text-decoration:none;color:inherit"'
+            : el === 'button'
+              ? ' type="button" data-tile="' + index + '"'
+              : '';
+          return (
+            '<' +
+            el +
+            ' class="cap ' +
+            cls +
+            (item.ci === j.ci ? ' sel' : '') +
+            '"' +
+            attr +
+            '>' +
+            '<div class="row"><h3>' +
+            esc(item.title) +
+            '</h3><span class="pill ' +
+            cls +
+            '">' +
+            esc(tag) +
+            '</span></div>' +
+            '<small>' +
+            esc(item.note || '') +
+            '</small></' +
+            el +
+            '>'
+          );
+        })
+        .join('') || '<p class="muted">No map for this record yet.</p>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tile]'), function (b) {
+      b.addEventListener('click', function () {
         var t = tiles[Number(b.getAttribute('data-tile'))];
-        document.querySelectorAll('.cap.sel').forEach(function(x){ x.classList.remove('sel'); }); b.classList.add('sel');
-        if (t.node) { current = null; select(t.node); $('v2').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        document.querySelectorAll('.cap.sel').forEach(function (x) {
+          x.classList.remove('sel');
+        });
+        b.classList.add('sel');
+        if (t.node) {
+          current = null;
+          select(t.node);
+          $('v2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
     });
 
     /* view 2 */
-    EDGES = r.edges || [];
+    EDGES = list.edges || [];
     var grid = $('mapgrid');
-    [['e', r.entries], ['p', r.process], ['x', r.exits]].forEach(function(pair){
+    [
+      ['e', list.entries],
+      ['p', list.process],
+      ['x', list.exits]
+    ].forEach(function (pair) {
       var col = grid.querySelector('[data-col="' + pair[0] + '"]');
-      (pair[1] || []).forEach(function(n){
-        var b = document.createElement('button');
-        b.type = 'button'; b.className = 'node ' + pair[0]; b.id = 'n-' + n.id;
-        b.innerHTML = '<b></b><span></span>';
-        b.querySelector('b').textContent = n.t; b.querySelector('span').textContent = n.s || '';
-        b.addEventListener('click', function(){ select(n.id); });
-        col.appendChild(b); byId[n.id] = { n: n, col: pair[0] };
+      (pair[1] || []).forEach(function (item) {
+        var node = document.createElement('button');
+        node.type = 'button';
+        node.className = 'node ' + pair[0];
+        node.id = 'n-' + item.id;
+        node.innerHTML = '<b></b><span></span>';
+        node.querySelector('b').textContent = item.t;
+        node.querySelector('span').textContent = item.s || '';
+        node.addEventListener('click', function () {
+          select(item.id);
+        });
+        col.appendChild(node);
+        byId[item.id] = { n: item, col: pair[0] };
       });
       if (!(pair[1] || []).length) col.insertAdjacentHTML('beforeend', '<p class="muted" style="font-size:13px">⚠️ none</p>');
     });
 
     /* view 3 */
-    $('rels').innerHTML = (r.relationships || []).map(function(x){
-      return '<tr><td>' + esc(x.this) + '</td><td class="rel">' + esc(x.rel) + '</td><td>' + esc(x.that) + '</td></tr>'; }).join('');
-    var L = r.layers || {};
-    $('layers').innerHTML = [['consume','Consume'],['manage','Manage'],['build','Build'],['design','Design']].filter(function(k){ return L[k[0]]; })
-      .map(function(k){ return '<div class="layer"><span class="lk">' + k[1] + '</span><span>' + esc(L[k[0]]) + '</span></div>'; }).join('');
-    $('tests').innerHTML = tests.map(function(t){
-      return '<tr><td><code>' + esc(t.file) + '</code></td><td>' + esc(t.kind || '') + '</td><td>' + esc(t.proves || '') + '</td>'
-        + '<td class="num">' + (t.checks == null ? '—' : esc(t.checks)) + '</td><td>' + pill(t.result) + (t.at ? ' <span class="muted" style="font-size:12px">' + esc(t.at) + '</span>' : '') + '</td></tr>'; }).join('');
-    $('changes').innerHTML = (r.changes || []).map(function(c){
-      return '<tr><td><code>' + esc(c.ref) + '</code></td><td>' + esc(c.what) + '</td></tr>'; }).join('');
-    $('raised').textContent = r.raised_by ? 'Raised by: ' + r.raised_by : '';
-    $('descriptor').textContent = r.descriptor || '(none)';
-    $('foot').innerHTML = 'CMDB record ' + esc(j.ci) + ' · ' + esc(r.system || 'ChitBridge') + (r.spec ? ' · contract ' + esc(r.spec) : '')
-      + ' · <a href="/cmdb/record.html">every record</a> · <a href="/app.html">back to ChitBridge</a>';
+    $('rels').innerHTML = (list.relationships || [])
+      .map(function (x) {
+        return '<tr><td>' + esc(x.this) + '</td><td class="rel">' + esc(x.rel) + '</td><td>' + esc(x.that) + '</td></tr>';
+      })
+      .join('');
+    var L = list.layers || {};
+    $('layers').innerHTML = [
+      ['consume', 'Consume'],
+      ['manage', 'Manage'],
+      ['build', 'Build'],
+      ['design', 'Design']
+    ]
+      .filter(function (item) {
+        return L[item[0]];
+      })
+      .map(function (item) {
+        return '<div class="layer"><span class="lk">' + item[1] + '</span><span>' + esc(L[item[0]]) + '</span></div>';
+      })
+      .join('');
+    $('tests').innerHTML = tests
+      .map(function (item) {
+        return (
+          '<tr><td><code>' +
+          esc(item.file) +
+          '</code></td><td>' +
+          esc(item.kind || '') +
+          '</td><td>' +
+          esc(item.proves || '') +
+          '</td>' +
+          '<td class="num">' +
+          (item.checks == null ? '—' : esc(item.checks)) +
+          '</td><td>' +
+          pill(item.result) +
+          (item.at ? ' <span class="muted" style="font-size:12px">' + esc(item.at) + '</span>' : '') +
+          '</td></tr>'
+        );
+      })
+      .join('');
+    $('changes').innerHTML = (list.changes || [])
+      .map(function (item) {
+        return '<tr><td><code>' + esc(item.ref) + '</code></td><td>' + esc(item.what) + '</td></tr>';
+      })
+      .join('');
+    $('raised').textContent = list.raised_by ? 'Raised by: ' + list.raised_by : '';
+    $('descriptor').textContent = list.descriptor || '(none)';
+    $('foot').innerHTML =
+      'CMDB record ' +
+      esc(j.ci) +
+      ' · ' +
+      esc(list.system || 'ChitBridge') +
+      (list.spec ? ' · contract ' + esc(list.spec) : '') +
+      ' · <a href="/cmdb/record.html">every record</a> · <a href="/app.html">back to ChitBridge</a>';
     drawFields();
     draw();
   }
 
   /* view 4 · the field ledger (a record's `fields`, lib/cmdb.js): filter by status, find, click a field for where it is shown and set */
-  var FST = { 'ok': '✓ complete', 'shown-nowhere': '⚠ shown nowhere', 'not-settable': '⚠ shown but not settable', 'two-sources': '⚠ two sources',
-              'no-meaning': '⚠ no meaning', 'untested': '⚠ untested', 'not-used': 'not used' };
+  var FST = {
+    'ok': '✓ complete',
+    'shown-nowhere': '⚠ shown nowhere',
+    'not-settable': '⚠ shown but not settable',
+    'two-sources': '⚠ two sources',
+    'no-meaning': '⚠ no meaning',
+    'untested': '⚠ untested',
+    'not-used': 'not used'
+  };
   var FSTATE = { status: 'all', q: '', sel: null };
-  function fpill(s){ return '<span class="pill ' + (s === 'ok' ? 'ok' : (s === 'not-used' ? 'off' : 'warn')) + '">' + esc(FST[s] || s) + '</span>'; }
-  function fhas(f, s){ return f.status === s || (f.also || []).indexOf(s) >= 0; }
-  function fvisible(){
+  function fpill(s) {
+    return '<span class="pill ' + (s === 'ok' ? 'ok' : s === 'not-used' ? 'off' : 'warn') + '">' + esc(FST[s] || s) + '</span>';
+  }
+  function fhas(f, s) {
+    return f.status === s || (f.also || []).indexOf(s) >= 0;
+  }
+  function fvisible() {
     var q = FSTATE.q.toLowerCase();
-    return (REC.fields || []).filter(function(f){
-      if (FSTATE.status !== 'all' && !fhas(f, FSTATE.status)) return false;
-      return !q || (f.key + ' ' + f.means).toLowerCase().indexOf(q) >= 0;
+    return (REC.fields || []).filter(function (item) {
+      if (FSTATE.status !== 'all' && !fhas(item, FSTATE.status)) return false;
+      return !q || (item.key + ' ' + item.means).toLowerCase().indexOf(q) >= 0;
     });
   }
-  function paintFields(){
-    var all = REC.fields || [], rows = fvisible();
-    $('fchips').innerHTML = [['all', 'All']].concat(Object.keys(FST).map(function(k){ return [k, FST[k]]; })).map(function(p){
-      var n = p[0] === 'all' ? all.length : all.filter(function(f){ return fhas(f, p[0]); }).length;
-      return n || p[0] === 'all' ? '<button type="button" class="chip" data-f="' + esc(p[0]) + '" aria-pressed="' + (FSTATE.status === p[0]) + '">' + esc(p[1]) + ' · ' + n + '</button>' : '';
-    }).join('');
+  function paintFields() {
+    var all = REC.fields || [],
+      rows = fvisible();
+    $('fchips').innerHTML = [['all', 'All']]
+      .concat(
+        Object.keys(FST).map(function (item) {
+          return [item, FST[item]];
+        })
+      )
+      .map(function (item) {
+        var n =
+          item[0] === 'all'
+            ? all.length
+            : all.filter(function (f) {
+                return fhas(f, item[0]);
+              }).length;
+        return n || item[0] === 'all'
+          ? '<button type="button" class="chip" data-f="' +
+              esc(item[0]) +
+              '" aria-pressed="' +
+              (FSTATE.status === item[0]) +
+              '">' +
+              esc(item[1]) +
+              ' · ' +
+              n +
+              '</button>'
+          : '';
+      })
+      .join('');
     $('fcount').textContent = rows.length + ' of ' + all.length + ' fields';
-    $('frows').innerHTML = rows.map(function(f){
-      return '<tr tabindex="0" role="button" data-k="' + esc(f.key) + '" aria-selected="' + (FSTATE.sel === f.key) + '"><td><code>' + esc(f.key) + '</code></td><td class="rel">' + esc(f.origin) + '</td><td>' + esc(f.means) + '</td><td>' + fpill(f.status)
-        + (f.also || []).map(function(a){ return ' ' + fpill(a); }).join('') + '</td></tr>';
-    }).join('') || '<tr><td colspan="4" class="muted">No field matches.</td></tr>';
+    $('frows').innerHTML =
+      rows
+        .map(function (item) {
+          return (
+            '<tr tabindex="0" role="button" data-k="' +
+            esc(item.key) +
+            '" aria-selected="' +
+            (FSTATE.sel === item.key) +
+            '"><td><code>' +
+            esc(item.key) +
+            '</code></td><td class="rel">' +
+            esc(item.origin) +
+            '</td><td>' +
+            esc(item.means) +
+            '</td><td>' +
+            fpill(item.status) +
+            (item.also || [])
+              .map(function (item) {
+                return ' ' + fpill(item);
+              })
+              .join('') +
+            '</td></tr>'
+          );
+        })
+        .join('') || '<tr><td colspan="4" class="muted">No field matches.</td></tr>';
   }
-  function fList(a){ return a && a.length ? '<ul>' + a.map(function(x){ return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<span class="muted">nothing</span>'; }
-  function showField(key){
-    var f = (REC.fields || []).filter(function(x){ return x.key === key; })[0]; if (!f) return;
-    FSTATE.sel = key; $('fdt').textContent = f.key;
-    $('fdd').innerHTML = '<dl>'
-      + '<dt>Status</dt><dd>' + fpill(f.status) + (f.also || []).map(function(a){ return ' ' + fpill(a); }).join('') + '</dd>'
-      + '<dt>Means</dt><dd>' + esc(f.means) + '</dd>'
-      + '<dt>Kinds</dt><dd>' + esc((f.kinds || []).join(', ')) + '</dd>'
-      + '<dt>Origin</dt><dd>' + esc(f.origin) + (f.origin_detail ? ' — ' + esc(f.origin_detail) : '') + '</dd>'
-      + '<dt>Source of truth</dt><dd>' + esc(f.source) + '</dd>'
-      + '<dt>Set by</dt><dd>' + esc(f.set_by) + '</dd>'
-      + '<dt>Validated by</dt><dd>' + esc(f.validated_by || '?') + '</dd>'
-      + '<dt>Shown in</dt><dd>' + fList(f.shown_in) + '</dd>'
-      + '<dt>Used by</dt><dd>' + fList(f.used_by) + '</dd>'
-      + '<dt>Test</dt><dd>' + esc(f.test || '?') + '</dd>'
-      + (f.inputs && f.inputs.length ? '<dt>Form inputs</dt><dd><code>' + esc(f.inputs.join(' ')) + '</code></dd>' : '')
-      + (f.finding ? '<dt>Finding</dt><dd>' + esc(f.finding) + '</dd>' : '') + '</dl>';
+  function fList(list) {
+    return list && list.length
+      ? '<ul>' +
+          list
+            .map(function (x) {
+              return '<li>' + esc(x) + '</li>';
+            })
+            .join('') +
+          '</ul>'
+      : '<span class="muted">nothing</span>';
+  }
+  function showField(key) {
+    var f = (REC.fields || []).filter(function (x) {
+      return x.key === key;
+    })[0];
+    if (!f) return;
+    FSTATE.sel = key;
+    $('fdt').textContent = f.key;
+    $('fdd').innerHTML =
+      '<dl>' +
+      '<dt>Status</dt><dd>' +
+      fpill(f.status) +
+      (f.also || [])
+        .map(function (item) {
+          return ' ' + fpill(item);
+        })
+        .join('') +
+      '</dd>' +
+      '<dt>Means</dt><dd>' +
+      esc(f.means) +
+      '</dd>' +
+      '<dt>Kinds</dt><dd>' +
+      esc((f.kinds || []).join(', ')) +
+      '</dd>' +
+      '<dt>Origin</dt><dd>' +
+      esc(f.origin) +
+      (f.origin_detail ? ' — ' + esc(f.origin_detail) : '') +
+      '</dd>' +
+      '<dt>Source of truth</dt><dd>' +
+      esc(f.source) +
+      '</dd>' +
+      '<dt>Set by</dt><dd>' +
+      esc(f.set_by) +
+      '</dd>' +
+      '<dt>Validated by</dt><dd>' +
+      esc(f.validated_by || '?') +
+      '</dd>' +
+      '<dt>Shown in</dt><dd>' +
+      fList(f.shown_in) +
+      '</dd>' +
+      '<dt>Used by</dt><dd>' +
+      fList(f.used_by) +
+      '</dd>' +
+      '<dt>Test</dt><dd>' +
+      esc(f.test || '?') +
+      '</dd>' +
+      (f.inputs && f.inputs.length ? '<dt>Form inputs</dt><dd><code>' + esc(f.inputs.join(' ')) + '</code></dd>' : '') +
+      (f.finding ? '<dt>Finding</dt><dd>' + esc(f.finding) + '</dd>' : '') +
+      '</dl>';
     paintFields();
   }
-  function drawFields(){
-    var has = (REC.fields || []).length > 0; $('sec4').hidden = !has; if (!has) return;
+  function drawFields() {
+    var has = (REC.fields || []).length > 0;
+    $('sec4').hidden = !has;
+    if (!has) return;
     FSTATE = { status: 'all', q: '', sel: null };
     paintFields();
-    $('fchips').addEventListener('click', function(e){ var b = e.target.closest('[data-f]'); if (!b) return; FSTATE.status = b.getAttribute('data-f'); paintFields(); });
-    $('fq').addEventListener('input', function(e){ FSTATE.q = e.target.value; paintFields(); });
-    $('frows').addEventListener('click', function(e){ var t = e.target.closest('[data-k]'); if (t) showField(t.getAttribute('data-k')); });
-    $('frows').addEventListener('keydown', function(e){ if (e.key !== 'Enter' && e.key !== ' ') return; var t = e.target.closest('[data-k]'); if (t) { e.preventDefault(); showField(t.getAttribute('data-k')); } });
+    $('fchips').addEventListener('click', function (e) {
+      var node = e.target.closest('[data-f]');
+      if (!node) return;
+      FSTATE.status = node.getAttribute('data-f');
+      paintFields();
+    });
+    $('fq').addEventListener('input', function (e) {
+      FSTATE.q = e.target.value;
+      paintFields();
+    });
+    $('frows').addEventListener('click', function (e) {
+      var node = e.target.closest('[data-k]');
+      if (node) showField(node.getAttribute('data-k'));
+    });
+    $('frows').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var node = e.target.closest('[data-k]');
+      if (node) {
+        e.preventDefault();
+        showField(node.getAttribute('data-k'));
+      }
+    });
   }
 
-  function draw(){
-    var grid = $('mapgrid'), svg = $('wires');
+  function draw() {
+    var grid = $('mapgrid'),
+      node = $('wires');
     var box = grid.getBoundingClientRect();
-    svg.setAttribute('viewBox', '0 0 ' + box.width + ' ' + box.height);
-    svg.innerHTML = '';
-    EDGES.forEach(function(ed){
-      var A = document.getElementById('n-' + ed[0]), C = document.getElementById('n-' + ed[1]);
+    node.setAttribute('viewBox', '0 0 ' + box.width + ' ' + box.height);
+    node.innerHTML = '';
+    EDGES.forEach(function (item) {
+      var A = document.getElementById('n-' + item[0]),
+        C = document.getElementById('n-' + item[1]);
       if (!A || !C) return;
-      var a = A.getBoundingClientRect(), c = C.getBoundingClientRect();
-      var same = byId[ed[0]].col === byId[ed[1]].col, x1 = a.right - box.left, y1 = a.top + a.height / 2 - box.top, d;
-      if (same) { var x2 = c.right - box.left, y2 = c.top + c.height / 2 - box.top;
-        d = 'M' + x1 + ',' + y1 + ' C' + (x1 + 26) + ',' + y1 + ' ' + (x2 + 26) + ',' + y2 + ' ' + x2 + ',' + y2; }
-      else { var x3 = c.left - box.left, y3 = c.top + c.height / 2 - box.top, mx = (x1 + x3) / 2;
-        d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y3 + ' ' + x3 + ',' + y3; }
+      var a = A.getBoundingClientRect(),
+        c = C.getBoundingClientRect();
+      var same = byId[item[0]].col === byId[item[1]].col,
+        x1 = a.right - box.left,
+        y1 = a.top + a.height / 2 - box.top,
+        d;
+      if (same) {
+        var x2 = c.right - box.left,
+          y2 = c.top + c.height / 2 - box.top;
+        d = 'M' + x1 + ',' + y1 + ' C' + (x1 + 26) + ',' + y1 + ' ' + (x2 + 26) + ',' + y2 + ' ' + x2 + ',' + y2;
+      } else {
+        var x3 = c.left - box.left,
+          y3 = c.top + c.height / 2 - box.top,
+          mx = (x1 + x3) / 2;
+        d = 'M' + x1 + ',' + y1 + ' C' + mx + ',' + y1 + ' ' + mx + ',' + y3 + ' ' + x3 + ',' + y3;
+      }
       var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      p.setAttribute('d', d); p.setAttribute('data-a', ed[0]); p.setAttribute('data-b', ed[1]);
-      svg.appendChild(p);
+      p.setAttribute('d', d);
+      p.setAttribute('data-a', item[0]);
+      p.setAttribute('data-b', item[1]);
+      node.appendChild(p);
     });
     if (current) mark(current);
   }
-  function linked(id){
-    var seen = {}; seen[id] = 1;
-    [true, false].forEach(function(fwd){
-      var frontier = [id], out = {};
+  function linked(id) {
+    var seen = {};
+    seen[id] = 1;
+    [true, false].forEach(function (item) {
+      var frontier = [id],
+        out = {};
       while (frontier.length) {
         var n = frontier.pop();
-        EDGES.forEach(function(e){ var from = fwd ? e[0] : e[1], to = fwd ? e[1] : e[0];
-          if (from === n && !out[to]) { out[to] = 1; seen[to] = 1; frontier.push(to); } });
+        EDGES.forEach(function (e) {
+          var from = item ? e[0] : e[1],
+            to = item ? e[1] : e[0];
+          if (from === n && !out[to]) {
+            out[to] = 1;
+            seen[to] = 1;
+            frontier.push(to);
+          }
+        });
       }
     });
     return seen;
   }
-  function mark(id){
-    var s = linked(id), grid = $('mapgrid');
+  function mark(id) {
+    var s = linked(id),
+      grid = $('mapgrid');
     grid.classList.add('dim');
-    grid.querySelectorAll('.node').forEach(function(el){ el.classList.toggle('hot', !!s[el.id.slice(2)]); });
-    $('wires').querySelectorAll('path').forEach(function(p){ p.classList.toggle('hot', !!(s[p.getAttribute('data-a')] && s[p.getAttribute('data-b')])); });
+    grid.querySelectorAll('.node').forEach(function (el) {
+      el.classList.toggle('hot', !!s[el.id.slice(2)]);
+    });
+    $('wires')
+      .querySelectorAll('path')
+      .forEach(function (item) {
+        item.classList.toggle('hot', !!(s[item.getAttribute('data-a')] && s[item.getAttribute('data-b')]));
+      });
   }
-  function select(id){
+  function select(id) {
     var grid = $('mapgrid');
-    if (current === id) { current = null; grid.classList.remove('dim'); grid.querySelectorAll('.node.hot').forEach(function(el){ el.classList.remove('hot'); });
-      $('dt').textContent = 'Nothing selected'; $('dd').textContent = 'Select a box in the map.'; return; }
+    if (current === id) {
+      current = null;
+      grid.classList.remove('dim');
+      grid.querySelectorAll('.node.hot').forEach(function (el) {
+        el.classList.remove('hot');
+      });
+      $('dt').textContent = 'Nothing selected';
+      $('dd').textContent = 'Select a box in the map.';
+      return;
+    }
     if (!byId[id]) return;
-    current = id; mark(id);
-    var k = byId[id].col, n = byId[id].n;
+    current = id;
+    mark(id);
+    var k = byId[id].col,
+      n = byId[id].n;
     $('dt').textContent = (k === 'e' ? 'Entry point' : k === 'p' ? 'Process' : 'Exit') + ' · ' + n.t;
     $('dd').textContent = (n.d || '') + (n.s ? '  (' + n.s + ')' : '');
   }
 
-  async function drawList(){
-    ['sec1','sec2','sec3','sec4'].forEach(function(id){ $(id).hidden = true; });
-    $('listsec').hidden = false; $('title').textContent = 'CMDB'; $('tags').innerHTML = '<span class="tag strong">Every record</span>';
+  async function drawList() {
+    ['sec1', 'sec2', 'sec3', 'sec4'].forEach(function (id) {
+      $(id).hidden = true;
+    });
+    $('listsec').hidden = false;
+    $('title').textContent = 'CMDB';
+    $('tags').innerHTML = '<span class="tag strong">Every record</span>';
     $('summary').textContent = 'One record per configuration item. Each opens in the three views.';
     var j = await call('/api/testing/cmdb');
-    $('list').innerHTML = (j.records || []).map(function(r){
-      var fl = r.flags || [];
-      return '<a class="cap ' + (fl.length ? 'warn' : 'ok') + '" href="#' + esc(r.ci) + '" style="text-decoration:none;color:inherit">'
-        + '<div class="row"><h3>' + esc(r.title) + '</h3><span class="pill ' + (fl.length ? 'warn' : 'ok') + '">' + esc(fl.length ? fl.join(' · ') : 'way in · way out · tested') + '</span></div>'
-        + '<small class="mono">' + esc(r.ci) + ' · v' + esc(r.version) + '</small></a>';
-    }).join('') || '<p class="muted">No records yet. A board writer loads them with “Load CMDB records” (POST /api/testing/cmdb/seed).</p>';
+    $('list').innerHTML =
+      (j.records || [])
+        .map(function (item) {
+          var fl = item.flags || [];
+          return (
+            '<a class="cap ' +
+            (fl.length ? 'warn' : 'ok') +
+            '" href="#' +
+            esc(item.ci) +
+            '" style="text-decoration:none;color:inherit">' +
+            '<div class="row"><h3>' +
+            esc(item.title) +
+            '</h3><span class="pill ' +
+            (fl.length ? 'warn' : 'ok') +
+            '">' +
+            esc(fl.length ? fl.join(' · ') : 'way in · way out · tested') +
+            '</span></div>' +
+            '<small class="mono">' +
+            esc(item.ci) +
+            ' · v' +
+            esc(item.version) +
+            '</small></a>'
+          );
+        })
+        .join('') || '<p class="muted">No records yet. A board writer loads them with “Load CMDB records” (POST /api/testing/cmdb/seed).</p>';
   }
 
-  async function boot(){
+  async function boot() {
     var ci = (location.hash || '').replace(/^#/, '');
     try {
       if (!ci) return await drawList();
       if (!/^CAP-[A-Z0-9][A-Z0-9-]{1,39}$/.test(ci)) return fail('“' + ci + '” is not a CMDB id. They look like CAP-SIGNIN.');
       drawRecord(await call('/api/testing/cmdb/' + encodeURIComponent(ci)));
-    } catch (e) { fail((e && e.message) || 'The record could not be read.'); }
+    } catch (e) {
+      fail((e && e.message) || 'The record could not be read.');
+    }
   }
-  window.addEventListener('hashchange', function(){ location.reload(); });
-  window.addEventListener('resize', function(){ if (REC) draw(); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ if (REC) draw(); });
+  window.addEventListener('hashchange', function () {
+    location.reload();
+  });
+  window.addEventListener('resize', function () {
+    if (REC) draw();
+  });
+  if (document.fonts && document.fonts.ready)
+    document.fonts.ready.then(function () {
+      if (REC) draw();
+    });
   boot();
 })();
 </script>

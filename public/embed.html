@@ -52,61 +52,116 @@
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="/engine/locale.js"></script>
 <script>
-(function(){
+(function () {
   var Q = new URLSearchParams(location.search);
   var API = Q.get('api') || window.CB_API;
   var BRIDGE = (Q.get('bridge') || Q.get('b') || '').trim();
-  var BRAND = Q.get('brand') !== 'off';           // brand shown unless brand=off (whitelabel)
+  var BRAND = Q.get('brand') !== 'off'; // brand shown unless brand=off (whitelabel)
   /* SHELL-ONE: the frame first; a host site's ?theme=light|dark is the avatar's Cream / Dark, applied as a preview (nothing saved in the visitor's browser) */
-  if (window.CBFrame) CBFrame.mount({ app:'embed', bar:true, signin:false, host:el('shell'), homeHref:location.pathname+location.search, title:{ icon:'▦', name:'Catalogue' } });
+  if (window.CBFrame)
+    CBFrame.mount({
+      app: 'embed',
+      bar: true,
+      signin: false,
+      host: el('shell'),
+      homeHref: location.pathname + location.search,
+      title: { icon: '▦', name: 'Catalogue' }
+    });
   if ((Q.get('theme') === 'light' || Q.get('theme') === 'dark') && window.CBAvatar) CBAvatar.applyTheme(Q.get('theme') === 'dark' ? 'dark' : 'cream');
-  var CUR = '';   /* CX0: the shop's currency_code, read from the catalogue; the locale engine draws the symbol */
-  function price(v){ if (v==null || v==='') return ''; try { return CBLocale.money(Number(v), CUR || ''); } catch (e) { return (CUR ? CUR + ' ' : '') + String(v); } }
-  function el(id){ return document.getElementById(id); }
-  // the media URL a catalogue item carries (ready for real photos/videos when the media layer lands)
-  function mediaUrl(x){ return (x && (x.image || x.img || x.photo || x.thumbnail || (Array.isArray(x.media) && x.media[0] && (x.media[0].url || x.media[0])))) || ''; }
-  function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
-  function comboHtml(cm){ return '<div class="combo"><span class="dots">'+((cm.colours||[]).map(swatch).join(''))+'</span><span class="cbname">'+esc(cm.name||'')+'</span></div>'; }
-  function finishCard(it){
-    var m = mediaUrl(it);
-    var thumb = m ? '<img class="thumb" loading="lazy" src="'+esc(m)+'" alt="'+esc(it.name||'')+'">' : '<div class="noimg">🎨</div>';
-    var combos = (it.combinations||[]).slice(0,3).map(comboHtml).join('');
-    return '<div class="card">'+thumb+'<div class="cbody">'
-      + '<div class="fname">'+esc(it.name||'Finish')+'</div>'
-      + (it.scale||it.sheen ? '<div class="meta">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</div>' : '')
-      + (combos ? '<div class="cclabel">Colour combinations</div>'+combos : '')
-      + (it.price!=null ? '<div class="price">'+price(it.price)+'</div>' : '')
-      + '</div></div>';
+  var CUR = ''; /* CX0: the shop's currency_code, read from the catalogue; the locale engine draws the symbol */
+  function price(v) {
+    if (v == null || v === '') return '';
+    try {
+      return CBLocale.money(Number(v), CUR || '');
+    } catch (e) {
+      return (CUR ? CUR + ' ' : '') + String(v);
+    }
   }
-  function productCard(p){
+  function el(id) {
+    return document.getElementById(id);
+  }
+  // the media URL a catalogue item carries (ready for real photos/videos when the media layer lands)
+  function mediaUrl(x) {
+    return (x && (x.image || x.img || x.photo || x.thumbnail || (Array.isArray(x.media) && x.media[0] && (x.media[0].url || x.media[0])))) || '';
+  }
+  function swatch(c) {
+    return '<span class="dot" title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="background:' + esc(c.hex || '#ccc') + '"></span>';
+  }
+  function comboHtml(cm) {
+    return (
+      '<div class="combo"><span class="dots">' + (cm.colours || []).map(swatch).join('') + '</span><span class="cbname">' + esc(cm.name || '') + '</span></div>'
+    );
+  }
+  function finishCard(it) {
+    var m = mediaUrl(it);
+    var thumb = m ? '<img class="thumb" loading="lazy" src="' + esc(m) + '" alt="' + esc(it.name || '') + '">' : '<div class="noimg">🎨</div>';
+    var combos = (it.combinations || []).slice(0, 3).map(comboHtml).join('');
+    return (
+      '<div class="card">' +
+      thumb +
+      '<div class="cbody">' +
+      '<div class="fname">' +
+      esc(it.name || 'Finish') +
+      '</div>' +
+      (it.scale || it.sheen ? '<div class="meta">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</div>' : '') +
+      (combos ? '<div class="cclabel">Colour combinations</div>' + combos : '') +
+      (it.price != null ? '<div class="price">' + price(it.price) + '</div>' : '') +
+      '</div></div>'
+    );
+  }
+  function productCard(p) {
     var d = (p && (p.item_data || p)) || {};
     var m = mediaUrl(d);
-    var thumb = m ? '<img class="thumb" loading="lazy" src="'+esc(m)+'" alt="'+esc(d.name||'')+'">' : '<div class="noimg">📦</div>';
-    return '<div class="card">'+thumb+'<div class="cbody"><div class="fname">'+esc(d.name||d.product||'Item')+'</div>'
-      + (d.unit ? '<div class="meta">'+esc(d.unit)+'</div>' : '')
-      + (d.price!=null ? '<div class="price">'+price(d.price)+'</div>' : '')
-      + '</div></div>';
+    var thumb = m ? '<img class="thumb" loading="lazy" src="' + esc(m) + '" alt="' + esc(d.name || '') + '">' : '<div class="noimg">📦</div>';
+    return (
+      '<div class="card">' +
+      thumb +
+      '<div class="cbody"><div class="fname">' +
+      esc(d.name || d.product || 'Item') +
+      '</div>' +
+      (d.unit ? '<div class="meta">' + esc(d.unit) + '</div>' : '') +
+      (d.price != null ? '<div class="price">' + price(d.price) + '</div>' : '') +
+      '</div></div>'
+    );
   }
-  function render(data){
+  function render(data) {
     var shop = data.shop || {};
     CUR = shop.currency_code || '';
     var head = '';
     if (BRAND) {
-      head = '<div class="brand"><div class="logo">🎨</div><div style="flex:1;min-width:0"><div class="bname">'+esc(shop.display_name||'Catalogue')+'</div>'
-        + '<div class="bmeta">'+esc(shop.bridge_id||'')+(shop.address?(' · '+esc(shop.address)):'')+'</div></div>'
-        + (shop.is_verified?'<span class="badge">✓ Verified</span>':'') + '</div>';
+      head =
+        '<div class="brand"><div class="logo">🎨</div><div style="flex:1;min-width:0"><div class="bname">' +
+        esc(shop.display_name || 'Catalogue') +
+        '</div>' +
+        '<div class="bmeta">' +
+        esc(shop.bridge_id || '') +
+        (shop.address ? ' · ' + esc(shop.address) : '') +
+        '</div></div>' +
+        (shop.is_verified ? '<span class="badge">✓ Verified</span>' : '') +
+        '</div>';
     }
     var out = head;
     /* SEC4: a sign-in-first shop sends a stranger its card and a code, never its items — say so, and open the shop where a customer can sign in */
     if (data.sign_in && data.sign_in.code === 'sign_in_first') {
-      el('app').innerHTML = head + '<div class="empty" data-testid="embed-sign-in-first">' + esc(data.sign_in.say || 'This shop asks customers to sign in first.')
-        + '<div style="margin-top:12px"><a href="/shop.html?s=' + encodeURIComponent(BRIDGE) + '" target="_blank" rel="noopener" style="color:var(--ink);font-weight:700;text-decoration:underline">Open the shop to sign in</a></div></div>';
-      postHeight(); return;
+      el('app').innerHTML =
+        head +
+        '<div class="empty" data-testid="embed-sign-in-first">' +
+        esc(data.sign_in.say || 'This shop asks customers to sign in first.') +
+        '<div style="margin-top:12px"><a href="/shop.html?s=' +
+        encodeURIComponent(BRIDGE) +
+        '" target="_blank" rel="noopener" style="color:var(--ink);font-weight:700;text-decoration:underline">Open the shop to sign in</a></div></div>';
+      postHeight();
+      return;
     }
     var finishes = data.finishes || [];
-    finishes.forEach(function(f){
-      out += '<div class="sechd">'+esc(f.title || f.collection || 'Designer finishes')+'</div>'
-        + '<div class="grid">' + (f.items||[]).map(finishCard).join('') + '</div>';
+    finishes.forEach(function (item) {
+      out +=
+        '<div class="sechd">' +
+        esc(item.title || item.collection || 'Designer finishes') +
+        '</div>' +
+        '<div class="grid">' +
+        (item.items || []).map(finishCard).join('') +
+        '</div>';
     });
     var prods = data.items || [];
     if (prods.length) out += '<div class="sechd">Products</div><div class="grid">' + prods.map(productCard).join('') + '</div>';
@@ -116,14 +171,26 @@
     postHeight();
   }
   // let the host page auto-size the iframe (optional; they listen for message.cbEmbedHeight)
-  function postHeight(){ try{ if (window.parent && window.parent !== window) window.parent.postMessage({ cbEmbedHeight: document.documentElement.scrollHeight, bridge: BRIDGE }, '*'); } catch(_){ } }
+  function postHeight() {
+    try {
+      if (window.parent && window.parent !== window) window.parent.postMessage({ cbEmbedHeight: document.documentElement.scrollHeight, bridge: BRIDGE }, '*');
+    } catch (_) {}
+  }
   window.addEventListener('load', postHeight);
   window.addEventListener('resize', postHeight);
-  if (!BRIDGE) { el('app').innerHTML = '<div class="empty">No catalogue specified. Add <code>?bridge=YOUR_BRIDGE_ID</code>.</div>'; return; }
+  if (!BRIDGE) {
+    el('app').innerHTML = '<div class="empty">No catalogue specified. Add <code>?bridge=YOUR_BRIDGE_ID</code>.</div>';
+    return;
+  }
   fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE))
-    .then(function(r){ if(!r.ok) throw new Error('not found'); return r.json(); })
+    .then(function (reply) {
+      if (!reply.ok) throw new Error('not found');
+      return reply.json();
+    })
     .then(render)
-    .catch(function(){ el('app').innerHTML = '<div class="empty">Catalogue unavailable.</div>'; });
+    .catch(function () {
+      el('app').innerHTML = '<div class="empty">Catalogue unavailable.</div>';
+    });
 })();
 </script>
 </body>

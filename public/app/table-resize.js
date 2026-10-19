@@ -38,22 +38,27 @@
 var TBL_STORE = 'cb.colw';
 
 function tblWidths() {
-  try { return JSON.parse(localStorage.getItem(TBL_STORE) || '{}'); } catch (_) { return {}; }
+  try {
+    return JSON.parse(localStorage.getItem(TBL_STORE) || '{}');
+  } catch (_) {
+    return {};
+  }
 }
 function tblSave(all) {
-  try { localStorage.setItem(TBL_STORE, JSON.stringify(all)); } catch (_) {}
+  try {
+    localStorage.setItem(TBL_STORE, JSON.stringify(all));
+  } catch (_) {}
 }
 
 /** ⭐ a table's identity is what its columns are CALLED — see the note above */
 function tblKey(table) {
   var head = table.querySelector(':scope > thead') || table.querySelector(':scope > tr');
   if (!head) return null;
-  var names = [].slice.call(head.querySelectorAll('th')).map(function (h) {
-    return (h.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 14);
+  var names = [].slice.call(head.querySelectorAll('th')).map(function (item) {
+    return (item.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 14);
   });
   return names.length > 1 ? names.join('|') : null;
 }
-
 
 /**
  * ── ⭐ A CONTROL NOBODY CAN SEE IS NOT A CONTROL ──────────────────────────────────────────────────────────
@@ -64,11 +69,13 @@ function tblKey(table) {
  */
 function tblStyle() {
   if (document.getElementById('cb-colgrip-css')) return;
-  var sheet = document.createElement('style'); sheet.id = 'cb-colgrip-css';
-  sheet.textContent = '.colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3; background:transparent; }'
-    + '.colgrip::before{ content:""; position:absolute; inset-block:0; inset-inline-end:4px; width:1px; background:var(--line); }'
-    + '.colgrip:hover::before{ inset-block:-5px; width:3px; inset-inline-end:3px; background:var(--blue); border-radius:2px; }'
-    + 'th:last-child .colgrip::before{ display:none; }';
+  var sheet = document.createElement('style');
+  sheet.id = 'cb-colgrip-css';
+  sheet.textContent =
+    '.colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3; background:transparent; }' +
+    '.colgrip::before{ content:""; position:absolute; inset-block:0; inset-inline-end:4px; width:1px; background:var(--line); }' +
+    '.colgrip:hover::before{ inset-block:-5px; width:3px; inset-inline-end:3px; background:var(--blue); border-radius:2px; }' +
+    'th:last-child .colgrip::before{ display:none; }';
   document.head.appendChild(sheet);
 }
 
@@ -83,14 +90,16 @@ function tblResizable(root) {
     var key = tblKey(table);
     if (!key) return;
     var head = table.querySelector(':scope > thead') || table.querySelector(':scope > tr');
-    var ths = [].slice.call(head.querySelectorAll('th'));
+    var list = [].slice.call(head.querySelectorAll('th'));
 
-    ths.forEach(function (th, i) {
+    list.forEach(function (th, index) {
       /* re-apply a remembered width */
-      var w = all[key] && all[key][i];
-      if (w) th.style.width = th.style.minWidth = w + 'px';   /* min too: a cell's width is only a preference to the table, so a widened column would be squeezed back */
+      var w = all[key] && all[key][index];
+      if (w)
+        th.style.width = th.style.minWidth =
+          w + 'px'; /* min too: a cell's width is only a preference to the table, so a widened column would be squeezed back */
 
-      if (th.dataset.rs) return;                 /* ⚠ already wired — see the idempotence note */
+      if (th.dataset.rs) return; /* ⚠ already wired — see the idempotence note */
       th.dataset.rs = '1';
       /* ⚠️ the grip needs a positioned th — but a FROZEN header (sticky) already is one, and relative would unfreeze it */
       if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
@@ -100,11 +109,14 @@ function tblResizable(root) {
       grip.title = 'Drag to set this column’s width · double-click to reset it';
       th.appendChild(grip);
 
-      var startX = 0, startW = 0, dragging = false;
+      var startX = 0,
+        startW = 0,
+        dragging = false;
 
       grip.addEventListener('mousedown', function (e) {
         /* ⚠️ a th is usually a sort or fold control — the drag must not also press it */
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
         dragging = true;
         startX = e.clientX;
         startW = th.getBoundingClientRect().width;
@@ -126,16 +138,20 @@ function tblResizable(root) {
         document.body.style.userSelect = '';
         var store = tblWidths();
         store[key] = store[key] || {};
-        store[key][i] = Math.round(th.getBoundingClientRect().width);
+        store[key][index] = Math.round(th.getBoundingClientRect().width);
         tblSave(store);
       });
 
       /* ⭐ double-click clears THIS column — the way back is the same control as the way in */
       grip.addEventListener('dblclick', function (e) {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
         th.style.width = th.style.minWidth = '';
         var store = tblWidths();
-        if (store[key]) { delete store[key][i]; tblSave(store); }
+        if (store[key]) {
+          delete store[key][index];
+          tblSave(store);
+        }
       });
     });
   });

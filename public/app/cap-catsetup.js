@@ -37,8 +37,8 @@ var CATSET_SECS = [
      renaming it would break links for a word nobody sees. Athi named the SCREENS, 2026-09-27:
      "product list and reference catalogue". */
   { key: 'blueprint', icon: '📋', name: 'Reference catalogue', q: 'Follow another shop’s catalogue' },
-  { key: 'columns',  icon: '📐', name: 'Columns',          q: 'What every product records' },
-  { key: 'variants', icon: '🔗', name: 'Variants',         q: 'One product, several sizes' },
+  { key: 'columns', icon: '📐', name: 'Columns', q: 'What every product records' },
+  { key: 'variants', icon: '🔗', name: 'Variants', q: 'One product, several sizes' },
   /**
    * ⭐ OFFERS LIVE HERE TOO (Athi, 2026-08-16: *"offers can also bring it here"*).
    *
@@ -50,21 +50,21 @@ var CATSET_SECS = [
    * are on when you are setting up how you SELL, and an offer is authored once and then left alone — exactly the
    * rhythm of the other sections, and nothing like the rhythm of the product list.
    */
-  { key: 'offers',   icon: '🏷️', name: 'Offers',           q: 'Discounts, tiers and deals' },
+  { key: 'offers', icon: '🏷️', name: 'Offers', q: 'Discounts, tiers and deals' },
   /* ⭐ PRICING IS ITS OWN SECTION (Athi's call). Pricing models and price SOURCES belong together and are
      neither a column nor a storefront setting: one says how a price is arrived at, the other where it was read
      from and when. Price provenance is close to the traceability story, so it is named rather than buried. */
-  { key: 'pricing',  icon: '💱', name: 'Pricing',          q: 'How a price is arrived at' },
+  { key: 'pricing', icon: '💱', name: 'Pricing', q: 'How a price is arrived at' },
   /* ⭐ ORDER MODELS BELONG HERE FOR THE SAME REASON VARIANTS DO — "Carton of 6" is a quantity RULE a product
      adopts, i.e. part of how the catalogue is shaped, not a product record. It was in Definitions only because
      everything definition-backed was. */
-  { key: 'ordermodels', icon: '🔢', name: 'Order models',  q: 'Carton of 6, sold by the metre' },
-  { key: 'data',     icon: '⇅',  name: 'Import & export',  q: 'Spreadsheets in and out' },
+  { key: 'ordermodels', icon: '🔢', name: 'Order models', q: 'Carton of 6, sold by the metre' },
+  { key: 'data', icon: '⇅', name: 'Import & export', q: 'Spreadsheets in and out' },
   /* ⭐ Beside Import & export, because all three answer the same question — how does this catalogue meet
      another system — and a reader who wants one usually wants the next. */
-  { key: 'erp',      icon: '🔌', name: 'Other systems',   q: 'ERP · Tally · SAP field names' },
-  { key: 'tax',      icon: '🧾', name: 'Tax',              q: 'Slabs your products cite' },
-  { key: 'face',     icon: '🛍️', name: 'Storefront',       q: 'How customers order from you' },
+  { key: 'erp', icon: '🔌', name: 'Other systems', q: 'ERP · Tally · SAP field names' },
+  { key: 'tax', icon: '🧾', name: 'Tax', q: 'Slabs your products cite' },
+  { key: 'face', icon: '🛍️', name: 'Storefront', q: 'How customers order from you' }
 ];
 /**
  * ⚠️ ONE LOADER FOR EVERY DEFINITION KIND THIS SCREEN HOSTS, keyed by kind. Offers and order models are the same
@@ -72,77 +72,171 @@ var CATSET_SECS = [
  * drift. `all=1` because this is the MANAGEMENT view: retired ones must be visible, or someone re-creates
  * something they already withdrew. Compose asks for live only; that difference is the point of having a screen.
  */
-var CATSET_DEFS = {}, _catsetDefReq = {};
-function catsetDefsLoad(kind, force){
+var CATSET_DEFS = {},
+  _catsetDefReq = {};
+function catsetDefsLoad(kind, force) {
   if (!force && CATSET_DEFS[kind]) return Promise.resolve(CATSET_DEFS[kind]);
   if (!force && _catsetDefReq[kind]) return _catsetDefReq[kind];
   _catsetDefReq[kind] = api('defList', { query: { kind: kind, all: 1 } })
-    .then(function(r){
-      CATSET_DEFS[kind] = ((r && r.definitions) || []).map(function(d){
-        return { id: d.definition_id, name: d.name, sub: d.sub_kind || '', status: d.status || 'draft',
-                 note: d.note || '', rules: d.rules || {},
-                 governance: d.governance || null,   // the jurisdiction's, not this entity's — shown, never edited
-                 network: d.network || null };       // a brand's offer: do its stores have it (app.html netRelChip)
+    .then(function (reply) {
+      CATSET_DEFS[kind] = ((reply && reply.definitions) || []).map(function (item) {
+        return {
+          id: item.definition_id,
+          name: item.name,
+          sub: item.sub_kind || '',
+          status: item.status || 'draft',
+          note: item.note || '',
+          rules: item.rules || {},
+          governance: item.governance || null, // the jurisdiction's, not this entity's — shown, never edited
+          network: item.network || null
+        }; // a brand's offer: do its stores have it (app.html netRelChip)
       });
-      _catsetDefReq[kind] = null; return CATSET_DEFS[kind];
+      _catsetDefReq[kind] = null;
+      return CATSET_DEFS[kind];
     })
-    .catch(function(){ _catsetDefReq[kind] = null; return (CATSET_DEFS[kind] = []); });
+    .catch(function () {
+      _catsetDefReq[kind] = null;
+      return (CATSET_DEFS[kind] = []);
+    });
   return _catsetDefReq[kind];
 }
 /* ⚠️ REUSES THE DEFINITIONS FORM. cbDefNew/cbDefEdit already know every kind and its conditions, read straight
    from the registries (offers.js KINDS, cart-ui MODELS). A second form here would drift from the engine within a
    release — the same reason catalogue-ui delegates its category chips instead of copying them. */
-function catsetDefNew(kind){ ensureCap('definitions').then(function(){ cbDefNew(kind); }); }
-function catsetDefEdit(kind, id){ ensureCap('definitions').then(function(){ cbDefEdit(id); }); }
+function catsetDefNew(kind) {
+  ensureCap('definitions').then(function () {
+    cbDefNew(kind);
+  });
+}
+function catsetDefEdit(kind, id) {
+  ensureCap('definitions').then(function () {
+    cbDefEdit(id);
+  });
+}
 /* Live ⇄ draft from here; the definitions capability owns the write and refreshes both lists. */
-function catsetDefStatus(id, status){ ensureCap('definitions').then(function(){ cbDefSetStatus(id, status); }); }
-function catsetDefRetire(kind, id, name){
+function catsetDefStatus(id, status) {
+  ensureCap('definitions').then(function () {
+    cbDefSetStatus(id, status);
+  });
+}
+function catsetDefRetire(kind, id, name) {
   /* cbDefAfterChange (in the definitions capability) refreshes this list too once the retire lands — no timer. */
-  ensureCap('definitions').then(function(){ cbDefRetire(id, name); });
+  ensureCap('definitions').then(function () {
+    cbDefRetire(id, name);
+  });
 }
 /** The shared list body for a definition-backed section. */
-function catsetDefListHTML(kind, one){
+function catsetDefListHTML(kind, one) {
   var rows = CATSET_DEFS[kind];
-  if (rows === undefined) { catsetDefsLoad(kind).then(catsetPaintDetail); return '<div class="catset-load">reading…</div>'; }
+  if (rows === undefined) {
+    catsetDefsLoad(kind).then(catsetPaintDetail);
+    return '<div class="catset-load">reading…</div>';
+  }
   if (!rows.length) return '<div class="catset-none">None yet.</div>';
   /* ⭐ THE JURISDICTION'S ROWS ARE LISTED FIRST AND NEVER EDITED. Athi, 2026-09-04: "why each entity should create one
      for them … it has to come from governance layer." A governed slab shows where it comes from and offers no
      Edit / Retire / Make live — to differ from it, a person declares a slab of their own below. */
-  var gov  = rows.filter(function(d){ return d.governance; });
-  var live = rows.filter(function(d){ return !d.governance && d.status !== 'retired'; });
-  var ret  = rows.filter(function(d){ return !d.governance && d.status === 'retired'; });
-  var row = function(d){
+  var list = rows.filter(function (item) {
+    return item.governance;
+  });
+  var live = rows.filter(function (item) {
+    return !item.governance && item.status !== 'retired';
+  });
+  var ret = rows.filter(function (item) {
+    return !item.governance && item.status === 'retired';
+  });
+  var row = function (d) {
     if (d.governance) {
       var g = d.governance;
-      return '<div class="catset-drow gov" data-testid="catset-' + kind + '-' + esc(d.id) + '" style="opacity:.85">'
-        + '<span class="dn">' + esc(d.name) + '</span>'
-        + '<span class="dst live" title="' + esc(tx('Declared by the jurisdiction — inherited, not editable here')) + '">'
-        + esc(((g.jurisdiction || '') + ' ' + (g.scheme || '')).trim()) + ' · ' + esc(tx('governance')) + '</span>'
-        + '</div>';
+      return (
+        '<div class="catset-drow gov" data-testid="catset-' +
+        kind +
+        '-' +
+        esc(d.id) +
+        '" style="opacity:.85">' +
+        '<span class="dn">' +
+        esc(d.name) +
+        '</span>' +
+        '<span class="dst live" title="' +
+        esc(tx('Declared by the jurisdiction — inherited, not editable here')) +
+        '">' +
+        esc(((g.jurisdiction || '') + ' ' + (g.scheme || '')).trim()) +
+        ' · ' +
+        esc(tx('governance')) +
+        '</span>' +
+        '</div>'
+      );
     }
-    return '<div class="catset-drow' + (d.status === 'retired' ? ' ret' : '') + '" data-testid="catset-' + kind + '-' + esc(d.id) + '">'
-      + '<span class="dn">' + esc(d.name) + '</span>' + catsetDefRowDetail(kind, d)
-      + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
-      + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
-      + (kind === 'offer' && d.status === 'live' && typeof netRelChip === 'function' ? netRelChip(d.network, d.id) : '')
+    return (
+      '<div class="catset-drow' +
+      (d.status === 'retired' ? ' ret' : '') +
+      '" data-testid="catset-' +
+      kind +
+      '-' +
+      esc(d.id) +
+      '">' +
+      '<span class="dn">' +
+      esc(d.name) +
+      '</span>' +
+      catsetDefRowDetail(kind, d) +
+      (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '') +
+      '<span class="dst ' +
+      esc(d.status) +
+      '">' +
+      esc(d.status) +
+      '</span>' +
+      (kind === 'offer' && d.status === 'live' && typeof netRelChip === 'function' ? netRelChip(d.network, d.id) : '') +
       /* ⭐ REINSTATE. Athi, 2026-09-05: "only option to retire is there, but there is no way to reinstate" — a retired
          row goes back to live from here; products that still cite it resolve again on the next paint. */
-      + (d.status === 'retired' ? '<span class="da" data-testid="catset-' + kind + '-reinstate-' + esc(d.id) + '" onclick="catsetDefStatus(\'' + esc(d.id) + '\',\'live\')">' + tx('Reinstate') + '</span>'
-          /* ⭐ THE STATUS SWITCH, HERE TOO. Athi, 2026-09-03: *"how will you attach to a product?"* — a product's
+      (d.status === 'retired'
+        ? '<span class="da" data-testid="catset-' +
+          kind +
+          '-reinstate-' +
+          esc(d.id) +
+          '" onclick="catsetDefStatus(\'' +
+          esc(d.id) +
+          "','live')\">" +
+          tx('Reinstate') +
+          '</span>'
+        : /* ⭐ THE STATUS SWITCH, HERE TOO. Athi, 2026-09-03: *"how will you attach to a product?"* — a product's
              Offers tab lists LIVE offers only, and this list had Edit and Retire but no way to go live, so a
              draft authored here could never reach a product without a detour through Definitions. */
-          : '<span class="da" data-testid="catset-' + kind + '-live-' + esc(d.id) + '" onclick="catsetDefStatus(\'' + esc(d.id) + '\',\'' + (d.status === 'live' ? 'draft' : 'live') + '\')">'
-            + (d.status === 'live' ? tx('Back to draft') : tx('Make live')) + '</span>'
-            + '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">' + tx('Edit') + '</span>'
-            + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">' + tx('Retire') + '</span>')
+          '<span class="da" data-testid="catset-' +
+          kind +
+          '-live-' +
+          esc(d.id) +
+          '" onclick="catsetDefStatus(\'' +
+          esc(d.id) +
+          "','" +
+          (d.status === 'live' ? 'draft' : 'live') +
+          '\')">' +
+          (d.status === 'live' ? tx('Back to draft') : tx('Make live')) +
+          '</span>' +
+          '<span class="da" onclick="catsetDefEdit(\'' +
+          kind +
+          "','" +
+          esc(d.id) +
+          '\')">' +
+          tx('Edit') +
+          '</span>' +
+          '<span class="da" onclick="catsetDefRetire(\'' +
+          kind +
+          "','" +
+          esc(d.id) +
+          "','" +
+          esc(String(d.name).replace(/'/g, '')) +
+          '\')">' +
+          tx('Retire') +
+          '</span>') +
       /**
        * ⚠️⚠️ THE AUTHOR'S NOTE, WHICH NOTHING HAS EVER SHOWN. Athi, 2026-09-03: *"note — where will it
        * reflect?"* — nowhere. It was written on the form, saved on the definition, and read back only by the
        * form itself, so it was a field that swallowed what you typed. This is the list it belongs on: the
        * author's own, beside the offer it is about, and never anywhere a buyer looks.
        */
-      + (d.note ? '<div class="dnote">' + esc(d.note) + '</div>' : '')
-      + '</div>';
+      (d.note ? '<div class="dnote">' + esc(d.note) + '</div>' : '') +
+      '</div>'
+    );
   };
   /**
    * ⚠️⚠️ ORPHANS ARE SURFACED, NEVER SILENTLY BROKEN (backlog 18). Narrowing a catalogue's selling method
@@ -156,28 +250,61 @@ function catsetDefListHTML(kind, one){
   var orphanNote = '';
   if (kind === 'ordermodel' && typeof CBCatalogue !== 'undefined' && CBCatalogue.orphanModels) {
     var meth = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || null;
-    var used = live.map(function(d){ return d.sub; }).filter(Boolean);
+    var used = live
+      .map(function (item) {
+        return item.sub;
+      })
+      .filter(Boolean);
     var orph = meth ? CBCatalogue.orphanModels(meth, used) : [];
     if (orph.length) {
-      var uniq = orph.filter(function(v, i){ return orph.indexOf(v) === i; });
-      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">'
-        + '⚠️ <b>' + uniq.length + ' order model' + (uniq.length === 1 ? '' : 's') + ' this catalogue can no longer sell</b> — '
-        + uniq.map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(' · ')
-        + '. A <b>' + esc(meth) + '</b> catalogue does not support ' + (uniq.length === 1 ? 'it' : 'them') + '. '
-        + 'They still work on products that already use them; nothing has been changed or removed. '
-        + 'Either change the selling method back, or move those products onto a supported model.</div>';
+      var uniq = orph.filter(function (item, index) {
+        return orph.indexOf(item) === index;
+      });
+      orphanNote =
+        '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">' +
+        '⚠️ <b>' +
+        uniq.length +
+        ' order model' +
+        (uniq.length === 1 ? '' : 's') +
+        ' this catalogue can no longer sell</b> — ' +
+        uniq
+          .map(function (x) {
+            return '<code>' + esc(x) + '</code>';
+          })
+          .join(' · ') +
+        '. A <b>' +
+        esc(meth) +
+        '</b> catalogue does not support ' +
+        (uniq.length === 1 ? 'it' : 'them') +
+        '. ' +
+        'They still work on products that already use them; nothing has been changed or removed. ' +
+        'Either change the selling method back, or move those products onto a supported model.</div>';
     }
   }
-  return orphanNote + '<div class="catset-dlist">' + gov.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
+  return orphanNote + '<div class="catset-dlist">' + list.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
-function catsetSec(){ if (!CATSET.sec && typeof UI !== 'undefined' && UI.catsetWant) { CATSET.sec = UI.catsetWant; } if (typeof UI !== 'undefined') UI.catsetWant = null; return CATSET.sec || 'blueprint'; }
-function catsetSetSec(k){
+function catsetSec() {
+  if (!CATSET.sec && typeof UI !== 'undefined' && UI.catsetWant) {
+    CATSET.sec = UI.catsetWant;
+  }
+  if (typeof UI !== 'undefined') UI.catsetWant = null;
+  return CATSET.sec || 'blueprint';
+}
+function catsetSetSec(k) {
   CATSET.sec = k;
-  if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
+  if (UI.vp === 'mob') {
+    UI.mdetail = true;
+    var node = document.getElementById('panel');
+    if (node) node.classList.add('showdetail');
+  }
   catsetPaint();
 }
-function catsetBack(){ UI.mdetail = false; var p = document.getElementById('panel'); if (p) p.classList.remove('showdetail'); }
+function catsetBack() {
+  UI.mdetail = false;
+  var node = document.getElementById('panel');
+  if (node) node.classList.remove('showdetail');
+}
 
 /**
  * ⭐ THE VOCABULARY BLOCKS — rehomed from Definitions, NOT copied out of it.
@@ -195,74 +322,123 @@ function catsetBack(){ UI.mdetail = false; var p = document.getElementById('pane
  * ⚠️ VISIBLE, NOT FOLDED — Athi asked for that explicitly. Someone meeting "tiered pricing" for the first time
  * should not have to know to expand something to find out what the options are.
  */
-function catsetRegistry(keys){
+function catsetRegistry(keys) {
   if (typeof cbDefRegistries !== 'function') {
-    ensureCap('definitions').then(function(){ catsetPaintDetail(); });
+    ensureCap('definitions').then(function () {
+      catsetPaintDetail();
+    });
     return '<div class="catset-load">reading the registry…</div>';
   }
-  var all = cbDefRegistries(), want = {};
-  keys.forEach(function(k){ want[k] = 1; });
-  var secs = all.filter(function(s){ return want[s.key]; });
+  var all = cbDefRegistries(),
+    want = {};
+  keys.forEach(function (item) {
+    want[item] = 1;
+  });
+  var secs = all.filter(function (item) {
+    return want[item.key];
+  });
   if (!secs.length) return '';
-  return secs.map(function(s){
-    var rows = s.rows || [];
-    /**
-     * ⭐ TICK WHAT THIS ENTITY ACTUALLY USES (Athi, 2026-08-17: *"also the check box wherever required, so those
-     * only can be used in the catalogue"*). The registry in code is the MAXIMUM; the ticks are this entity's
-     * slice, and every picker downstream offers only the slice.
-     *
-     * ⚠️ ONLY WHERE A CHOICE CAN MEAN SOMETHING — see CATSET_SELECTABLE. `method` is ONE per catalogue, so a set
-     * would imply you can have several; `ordermodel` is already narrowed by the selling method (backlog 18) and a
-     * second, independent narrowing could disagree with the first with nothing on screen to say which won. A
-     * checkbox that cannot mean anything is worse than no checkbox.
-     */
-    var flag = CATSET_SELECTABLE[s.key];
-    var sel = flag ? _CATSEL[flag] : null;
-    if (flag && sel === undefined) { catsetSelLoad(); }
-    var picked = Array.isArray(sel) ? sel : null;
-    var n = picked ? picked.length : rows.length;
-    return '<div class="catset-reg">'
-      + '<div class="catset-regh">' + s.icon + ' ' + esc(s.title)
-      +   '<span class="catset-regn">' + (picked ? n + ' / ' + rows.length : rows.length) + '</span></div>'
-      + '<div class="catset-regb">' + esc(s.blurb)
-      +   (flag ? ' <b>' + tx('Tick the ones you use') + '</b> — only those are offered when you build a catalogue.' : '')
-      + '</div>'
-      + (rows.length
-          /* ⚠️ DO NOT PRINT THE CODE TWICE. Some registries have no separate code — `UNITS` maps to
+  return secs
+    .map(function (item) {
+      var rows = item.rows || [];
+      /**
+       * ⭐ TICK WHAT THIS ENTITY ACTUALLY USES (Athi, 2026-08-17: *"also the check box wherever required, so those
+       * only can be used in the catalogue"*). The registry in code is the MAXIMUM; the ticks are this entity's
+       * slice, and every picker downstream offers only the slice.
+       *
+       * ⚠️ ONLY WHERE A CHOICE CAN MEAN SOMETHING — see CATSET_SELECTABLE. `method` is ONE per catalogue, so a set
+       * would imply you can have several; `ordermodel` is already narrowed by the selling method (backlog 18) and a
+       * second, independent narrowing could disagree with the first with nothing on screen to say which won. A
+       * checkbox that cannot mean anything is worse than no checkbox.
+       */
+      var flag = CATSET_SELECTABLE[item.key];
+      var sel = flag ? _CATSEL[flag] : null;
+      if (flag && sel === undefined) {
+        catsetSelLoad();
+      }
+      var picked = Array.isArray(sel) ? sel : null;
+      var n = picked ? picked.length : rows.length;
+      return (
+        '<div class="catset-reg">' +
+        '<div class="catset-regh">' +
+        item.icon +
+        ' ' +
+        esc(item.title) +
+        '<span class="catset-regn">' +
+        (picked ? n + ' / ' + rows.length : rows.length) +
+        '</span></div>' +
+        '<div class="catset-regb">' +
+        esc(item.blurb) +
+        (flag ? ' <b>' + tx('Tick the ones you use') + '</b> — only those are offered when you build a catalogue.' : '') +
+        '</div>' +
+        (rows.length
+          ? /* ⚠️ DO NOT PRINT THE CODE TWICE. Some registries have no separate code — `UNITS` maps to
              `{code:u, label:u}` because a unit IS its own name — so every row rendered "kg kg", "gram gram",
              "litre litre". Fifteen of those reads as a rendering fault, and it makes the reader look for a
              distinction that does not exist. Show the code only where it actually differs from the label. */
-          /* Bare words → chips; anything with a code or a note keeps its rows. See the `.chips` rule. */
-          /**
-           * ⭐ TWO LINES, NOT THREE COLUMNS (Athi, 2026-08-17: *"align properly and any information regarding the
-           * particular field can be mentioned below, so it is easier to read"*).
-           *
-           * ⚠️ The note was a third column competing for the same row, so a long one squeezed the label and a
-           * short one left a gap — nothing lined up down the page. Line 1 is the identity (code + name) on a
-           * fixed grid so every code and every name align; line 2 is the explanation, indented under the name
-           * and in its own colour so the eye can skip it or read it, but never confuse it with a name.
-           */
-          ? '<div class="catset-regrows' + (rows.every(function(r){
-              return !r.note && String(r.code || '') === String(r.label || '');
-            }) ? ' chips' : '') + '">' + rows.map(function(r){
-              var same = String(r.code || '') === String(r.label || '');
-              var on = picked ? picked.indexOf(String(r.code)) >= 0 : true;
-              var tag = flag ? 'label' : 'div';
-              return '<' + tag + ' class="catset-regrow' + (same ? ' nocode' : '') + (flag ? ' pick' : '') + (on ? '' : ' off') + '">'
-                + '<div class="rr1">'
-                +   (flag ? '<input type="checkbox" ' + (on ? 'checked' : '')
-                          + ' onchange="catsetSelToggle(\'' + esc(flag) + '\',\'' + esc(r.code) + '\',this.checked)">' : '')
-                +   (same ? '' : '<code>' + esc(r.code) + '</code>')
-                +   '<span class="rl">' + esc(r.label || r.code || '') + '</span>'
-                + '</div>'
-                + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '</' + tag + '>';
-            }).join('') + '</div>'
-          : '<div class="catset-none">not loaded</div>')
-      /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
+            /* Bare words → chips; anything with a code or a note keeps its rows. See the `.chips` rule. */
+            /**
+             * ⭐ TWO LINES, NOT THREE COLUMNS (Athi, 2026-08-17: *"align properly and any information regarding the
+             * particular field can be mentioned below, so it is easier to read"*).
+             *
+             * ⚠️ The note was a third column competing for the same row, so a long one squeezed the label and a
+             * short one left a gap — nothing lined up down the page. Line 1 is the identity (code + name) on a
+             * fixed grid so every code and every name align; line 2 is the explanation, indented under the name
+             * and in its own colour so the eye can skip it or read it, but never confuse it with a name.
+             */
+            '<div class="catset-regrows' +
+            (rows.every(function (item) {
+              return !item.note && String(item.code || '') === String(item.label || '');
+            })
+              ? ' chips'
+              : '') +
+            '">' +
+            rows
+              .map(function (item) {
+                var same = String(item.code || '') === String(item.label || '');
+                var on = picked ? picked.indexOf(String(item.code)) >= 0 : true;
+                var tag = flag ? 'label' : 'div';
+                return (
+                  '<' +
+                  tag +
+                  ' class="catset-regrow' +
+                  (same ? ' nocode' : '') +
+                  (flag ? ' pick' : '') +
+                  (on ? '' : ' off') +
+                  '">' +
+                  '<div class="rr1">' +
+                  (flag
+                    ? '<input type="checkbox" ' +
+                      (on ? 'checked' : '') +
+                      ' onchange="catsetSelToggle(\'' +
+                      esc(flag) +
+                      "','" +
+                      esc(item.code) +
+                      '\',this.checked)">'
+                    : '') +
+                  (same ? '' : '<code>' + esc(item.code) + '</code>') +
+                  '<span class="rl">' +
+                  esc(item.label || item.code || '') +
+                  '</span>' +
+                  '</div>' +
+                  (item.note ? '<div class="rn">' + esc(item.note) + '</div>' : '') +
+                  '</' +
+                  tag +
+                  '>'
+                );
+              })
+              .join('') +
+            '</div>'
+          : '<div class="catset-none">not loaded</div>') +
+        /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
          looking for an edit button that should not exist. */
-      + '<div class="catset-regsrc">read from <code>' + esc(s.source) + '</code></div>'
-      + '</div>';
-  }).join('');
+        '<div class="catset-regsrc">read from <code>' +
+        esc(item.source) +
+        '</code></div>' +
+        '</div>'
+      );
+    })
+    .join('');
 }
 
 /* ── the sections ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -300,42 +476,59 @@ function catsetRegistry(keys){
  * registry key → the policy flag that holds this entity's slice.
  */
 var CATSET_SELECTABLE = {
-  datatype:    'datatypes',
-  pricing:     'pricing_models',
+  datatype: 'datatypes',
+  pricing: 'pricing_models',
   priceorigin: 'price_origins',
-  offer:       'offer_kinds',
-  facet:       'facets',
+  offer: 'offer_kinds',
+  facet: 'facets'
 };
-var _CATSEL = {};      // flag → chosen codes, as last read (undefined = not read yet)
+var _CATSEL = {}; // flag → chosen codes, as last read (undefined = not read yet)
 var _catselReq = null;
 /* ⚠️ ONE READ FOR EVERY REGISTRY ON THE SCREEN. Five registries asking for the same policy document five times
    would be five round trips for one answer, and they would arrive out of order. */
-async function catsetSelLoad(force){
+async function catsetSelLoad(force) {
   if (_catselReq && !force) return _catselReq;
-  _catselReq = api('policyGet').then(function(f){
-    var flags = (f && f.flags) || {};
-    Object.keys(CATSET_SELECTABLE).forEach(function(k){
-      var fl = CATSET_SELECTABLE[k]; _CATSEL[fl] = Array.isArray(flags[fl]) ? flags[fl] : [];
+  _catselReq = api('policyGet')
+    .then(function (reply) {
+      var flags = (reply && reply.flags) || {};
+      Object.keys(CATSET_SELECTABLE).forEach(function (item) {
+        var fl = CATSET_SELECTABLE[item];
+        _CATSEL[fl] = Array.isArray(flags[fl]) ? flags[fl] : [];
+      });
+      _catselReq = null;
+      catsetPaintDetail();
+    })
+    .catch(function () {
+      _catselReq = null;
     });
-    _catselReq = null; catsetPaintDetail();
-  }).catch(function(){ _catselReq = null; });
   return _catselReq;
 }
-async function catsetSelToggle(flag, code, on){
-  var cur = _CATSEL[flag] || [];
-  var next = cur.filter(function(x){ return x !== code; });
+async function catsetSelToggle(flag, code, on) {
+  var list = _CATSEL[flag] || [];
+  var next = list.filter(function (x) {
+    return x !== code;
+  });
   if (on) next.push(code);
   /* ⚠️ Same refusal as units, and for the same reason: an empty set is what an accidental clear-all looks like,
      and honouring it would empty a picker in the product form with nothing on screen to explain why. */
-  if (!next.length) { if (typeof toast === 'function') toast('Keep at least one — the catalogue needs something to offer.'); catsetPaintDetail(); return; }
+  if (!next.length) {
+    if (typeof toast === 'function') toast('Keep at least one — the catalogue needs something to offer.');
+    catsetPaintDetail();
+    return;
+  }
   _CATSEL[flag] = next;
   catsetPaintDetail();
-  var body = {}; body[flag] = next;
-  try { await api('policySet', { body: body }); }
-  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetSelLoad(true); }
+  var body = {};
+  body[flag] = next;
+  try {
+    await api('policySet', { body: body });
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again'));
+    catsetSelLoad(true);
+  }
 }
 
-var _UNITSEL = null;   // the entity's chosen units, as last read
+var _UNITSEL = null; // the entity's chosen units, as last read
 /**
  * ⭐⭐ WHAT EACH CHOSEN UNIT ALLOWS — { kg: { decimals, tol, min_qty } } — as last read.
  * Athi, 2026-09-12: *"for each entity we can set decimal allowed, if so tollerance and min qty... and each
@@ -349,23 +542,23 @@ var _UNITRULES = null;
  * should be able to flip. The kinds come from the catalogue model, not a second list here.
  */
 var _MEASURED_KINDS = ['Weight', 'Volume', 'Length', 'Area'];
-function catsetUnitMeasured(u){
-  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+function catsetUnitMeasured(u) {
+  var M = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   if (!M || typeof M.unitKind !== 'function') return false;
   var k = M.unitKind(u);
   return !!k && _MEASURED_KINDS.indexOf(k.label || k.key) >= 0;
 }
 /** the effective answer for a unit: what is declared, else what its kind implies — the cart's own fallback */
-function catsetUnitRule(u){
+function catsetUnitRule(u) {
   var r = (_UNITRULES && _UNITRULES[u]) || null;
   return {
-    decimals: (r && r.decimals != null) ? !!r.decimals : catsetUnitMeasured(u),
-    tol: (r && r.tol != null) ? Number(r.tol) : 0.01,
-    min_qty: (r && r.min_qty != null) ? Number(r.min_qty) : 0,
-    declared: !!r,
+    decimals: r && r.decimals != null ? !!r.decimals : catsetUnitMeasured(u),
+    tol: r && r.tol != null ? Number(r.tol) : 0.01,
+    min_qty: r && r.min_qty != null ? Number(r.min_qty) : 0,
+    declared: !!r
   };
 }
-var _LANGSEL = ['en'];  // the entity's languages — a READING preference, never a parsing rule
+var _LANGSEL = ['en']; // the entity's languages — a READING preference, never a parsing rule
 
 /**
  * ⭐ THE LANGUAGE BAR (Athi, 2026-08-17: *"language picker comes from the entity settings, the same can be shown
@@ -378,42 +571,65 @@ var _LANGSEL = ['en'];  // the entity's languages — a READING preference, neve
  * ⚠️ English is not removable. It is the fallback every list falls back to, and a units screen with no readable
  * column at all is not a state worth being able to reach.
  */
-function catsetLangBar(){
-  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+function catsetLangBar() {
+  var M = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   var langs = (M && M.UNIT_LANGS) || [];
   if (!langs.length) return '';
   var have = {};
   /* Mark the languages we actually hold spellings for, so an empty pick is explained rather than puzzling. */
-  Object.keys((M && M.UNIT_ALIASES) || {}).forEach(function(u){
-    Object.keys(M.UNIT_ALIASES[u] || {}).forEach(function(lg){ if ((M.UNIT_ALIASES[u][lg] || []).length) have[lg] = 1; });
+  Object.keys((M && M.UNIT_ALIASES) || {}).forEach(function (item) {
+    Object.keys(M.UNIT_ALIASES[item] || {}).forEach(function (lg) {
+      if ((M.UNIT_ALIASES[item][lg] || []).length) have[lg] = 1;
+    });
   });
-  var chip = function(l){
-    var on = _LANGSEL.indexOf(l.code) >= 0, fixed = l.code === 'en';
-    return '<span class="lang-chip' + (on ? ' on' : '') + (fixed ? ' fixed' : '') + '"'
-      + (fixed ? ' title="English always shows — it is what every list falls back to"'
-               : ' onclick="catsetLangToggle(\'' + esc(l.code) + '\')"')
-      + '>' + (on ? '✓ ' : '') + esc(l.label) + (have[l.code] ? '' : '<span class="lang-none">no words yet</span>') + '</span>';
+  var chip = function (l) {
+    var on = _LANGSEL.indexOf(l.code) >= 0,
+      fixed = l.code === 'en';
+    return (
+      '<span class="lang-chip' +
+      (on ? ' on' : '') +
+      (fixed ? ' fixed' : '') +
+      '"' +
+      (fixed ? ' title="English always shows — it is what every list falls back to"' : ' onclick="catsetLangToggle(\'' + esc(l.code) + '\')"') +
+      '>' +
+      (on ? '✓ ' : '') +
+      esc(l.label) +
+      (have[l.code] ? '' : '<span class="lang-none">no words yet</span>') +
+      '</span>'
+    );
   };
-  var groups = ['Common', 'Indian', 'Foreign'].map(function(g){
-    var ls = langs.filter(function(l){ return l.group === g; });
-    if (!ls.length) return '';
-    return '<div class="lang-g"><span class="lang-gh">' + esc(g) + '</span>' + ls.map(chip).join('') + '</div>';
-  }).join('');
-  return '<div class="lang-bar">' + groups
-    + '<div class="lang-note">⚠️ This changes what is <b>listed</b>, not what is <b>understood</b> — every '
-    + 'spelling in every language still folds onto its unit when a message arrives. '
-    + '<b>no words yet</b> means nobody has sent one in that language; the list grows from real messages, '
-    + 'not from a dictionary.</div></div>';
+  var groups = ['Common', 'Indian', 'Foreign']
+    .map(function (item) {
+      var list = langs.filter(function (l) {
+        return l.group === item;
+      });
+      if (!list.length) return '';
+      return '<div class="lang-g"><span class="lang-gh">' + esc(item) + '</span>' + list.map(chip).join('') + '</div>';
+    })
+    .join('');
+  return (
+    '<div class="lang-bar">' +
+    groups +
+    '<div class="lang-note">⚠️ This changes what is <b>listed</b>, not what is <b>understood</b> — every ' +
+    'spelling in every language still folds onto its unit when a message arrives. ' +
+    '<b>no words yet</b> means nobody has sent one in that language; the list grows from real messages, ' +
+    'not from a dictionary.</div></div>'
+  );
 }
-async function catsetLangToggle(code){
-  if (code === 'en') return;                        // the fallback is not removable — see above
-  var next = _LANGSEL.filter(function(x){ return x !== code; });
+async function catsetLangToggle(code) {
+  if (code === 'en') return; // the fallback is not removable — see above
+  var next = _LANGSEL.filter(function (x) {
+    return x !== code;
+  });
   if (next.length === _LANGSEL.length) next.push(code);
   if (next.indexOf('en') < 0) next.unshift('en');
   _LANGSEL = next;
   catsetPaintDetail();
-  try { await api('policySet', { body: { languages: next } }); }
-  catch (e) { if (typeof toast === 'function') toast('Could not save the language choice — ' + ((e && e.message) || 'try again')); }
+  try {
+    await api('policySet', { body: { languages: next } });
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not save the language choice — ' + ((e && e.message) || 'try again'));
+  }
 }
 
 /**
@@ -429,28 +645,67 @@ async function catsetLangToggle(code){
  * ⭐ ROUNDING IS DOWNWARD ONLY, and the sentence says so: the excess above a whole number is dropped, the
  * shortfall below one is kept, so a customer is never billed for grams the scale did not weigh.
  */
-function catsetUomRuleHTML(u){
+function catsetUomRuleHTML(u) {
   if (!catsetUnitMeasured(u)) {
     /* ⚠️ Said, not hidden. A row that simply lacks the controls reads as an oversight; this reads as a rule. */
     return '<div class="uom-rule flat"><span class="urn">Whole numbers — a count cannot be half.</span></div>';
   }
-  var r = catsetUnitRule(u), id = 'uomr_' + u;
-  return '<div class="uom-rule">'
-    + '<label class="urk"><input type="checkbox" ' + (r.decimals ? 'checked' : '')
-    +   ' onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'decimals\',this.checked)"> ' + tx('Decimal allowed') + '</label>'
-    + (r.decimals
-        ? '<span class="urf"><label for="' + id + '_t">' + tx('Round down within') + '</label>'
-          + '<input id="' + id + '_t" type="number" min="0" step="0.001" inputmode="decimal" value="' + esc(String(r.tol))
-          + '" data-testid="uom-tol-' + esc(u) + '" onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'tol\',this.value)">'
-          + '<span class="uru">' + esc(u) + '</span></span>'
-          + '<span class="urf"><label for="' + id + '_m">' + tx('from') + '</label>'
-          + '<input id="' + id + '_m" type="number" min="0" step="0.001" inputmode="decimal" value="' + esc(String(r.min_qty))
-          + '" data-testid="uom-min-' + esc(u) + '" onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'min_qty\',this.value)">'
-          + '<span class="uru">' + esc(u) + '</span></span>'
-          + '<span class="urn">' + txf('{ex} becomes {r} — downward only, so {lo} stays {lo}.', {
-              ex: '<b>' + esc(String(1 + (Number(r.tol) || 0))) + '</b>', r: '<b>1</b>', lo: '<b>0.995</b>' }) + '</span>'
-        : '<span class="urn">' + tx('Whole numbers only for this unit.') + '</span>')
-    + '</div>';
+  var r = catsetUnitRule(u),
+    id = 'uomr_' + u;
+  return (
+    '<div class="uom-rule">' +
+    '<label class="urk"><input type="checkbox" ' +
+    (r.decimals ? 'checked' : '') +
+    ' onchange="catsetUomRuleSet(\'' +
+    esc(u) +
+    "','decimals',this.checked)\"> " +
+    tx('Decimal allowed') +
+    '</label>' +
+    (r.decimals
+      ? '<span class="urf"><label for="' +
+        id +
+        '_t">' +
+        tx('Round down within') +
+        '</label>' +
+        '<input id="' +
+        id +
+        '_t" type="number" min="0" step="0.001" inputmode="decimal" value="' +
+        esc(String(r.tol)) +
+        '" data-testid="uom-tol-' +
+        esc(u) +
+        '" onchange="catsetUomRuleSet(\'' +
+        esc(u) +
+        "','tol',this.value)\">" +
+        '<span class="uru">' +
+        esc(u) +
+        '</span></span>' +
+        '<span class="urf"><label for="' +
+        id +
+        '_m">' +
+        tx('from') +
+        '</label>' +
+        '<input id="' +
+        id +
+        '_m" type="number" min="0" step="0.001" inputmode="decimal" value="' +
+        esc(String(r.min_qty)) +
+        '" data-testid="uom-min-' +
+        esc(u) +
+        '" onchange="catsetUomRuleSet(\'' +
+        esc(u) +
+        "','min_qty',this.value)\">" +
+        '<span class="uru">' +
+        esc(u) +
+        '</span></span>' +
+        '<span class="urn">' +
+        txf('{ex} becomes {r} — downward only, so {lo} stays {lo}.', {
+          ex: '<b>' + esc(String(1 + (Number(r.tol) || 0))) + '</b>',
+          r: '<b>1</b>',
+          lo: '<b>0.995</b>'
+        }) +
+        '</span>'
+      : '<span class="urn">' + tx('Whole numbers only for this unit.') + '</span>') +
+    '</div>'
+  );
 }
 
 /**
@@ -458,13 +713,16 @@ function catsetUomRuleHTML(u){
  * other unit's row with it, and a second tab's edit would be overwritten by whatever this tab last read.
  * [[feedback-partial-writes-merge-patch]]
  */
-async function catsetUomRuleSet(u, field, value){
+async function catsetUomRuleSet(u, field, value) {
   _UNITRULES = _UNITRULES || {};
   var row = _UNITRULES[u] || {};
   if (field === 'decimals') row.decimals = !!value;
   else {
     var n = Number(value);
-    if (!isFinite(n) || n < 0) { if (typeof toast === 'function') toast('That needs to be a number, zero or more.'); return; }
+    if (!isFinite(n) || n < 0) {
+      if (typeof toast === 'function') toast('That needs to be a number, zero or more.');
+      return;
+    }
     row[field] = n;
   }
   /* ⭐ a row that has been touched declares all three, so what the cart reads is what the screen showed */
@@ -476,86 +734,153 @@ async function catsetUomRuleSet(u, field, value){
   /* ⚠️ the SWITCH repaints the row (its two boxes appear or go); a number does not — repainting under a
      cursor is how a half-typed value is lost. [[feedback-repaint-locally]] */
   if (field === 'decimals') catsetPaintDetail();
-  try { await api('policySet', { body: { unit_rules: _UNITRULES } }); }
-  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
+  try {
+    await api('policySet', { body: { unit_rules: _UNITRULES } });
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again'));
+    catsetUnitsLoad();
+  }
 }
 
-function catsetUnitsHTML(){
-  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+function catsetUnitsHTML() {
+  var M = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   if (!M || !M.UNIT_KINDS) return catsetCard('⚖️ Units of measure', '<div class="catset-none">not loaded</div>');
-  if (_UNITSEL === null) { catsetUnitsLoad(); return catsetCard('⚖️ Units of measure', '<div class="catset-load">reading…</div>'); }
+  if (_UNITSEL === null) {
+    catsetUnitsLoad();
+    return catsetCard('⚖️ Units of measure', '<div class="catset-load">reading…</div>');
+  }
 
-  var sel = _UNITSEL, aliases = M.UNIT_ALIASES || {}, names = M.UNIT_NAMES || {};
-  var groups = M.UNIT_KINDS.map(function(g){
-    var rows = g.units.map(function(u){
-      var on = sel.indexOf(u) >= 0;
-      /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
+  var sel = _UNITSEL,
+    aliases = M.UNIT_ALIASES || {},
+    names = M.UNIT_NAMES || {};
+  var groups = M.UNIT_KINDS.map(function (item) {
+    var rows = item.units
+      .map(function (item) {
+        var on = sel.indexOf(item) >= 0;
+        /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
          Squeezed into a right-hand column they were truncated at four and ellipsed — which hid the very thing
          worth seeing, that கிலோ and kilo and kgs all mean this row. On its own line the whole set fits. */
-      /* ⚠️ ONLY THE LANGUAGES THIS ENTITY WORKS IN ARE LISTED — but every language is still UNDERSTOOD. The
+        /* ⚠️ ONLY THE LANGUAGES THIS ENTITY WORKS IN ARE LISTED — but every language is still UNDERSTOOD. The
          picker is a reading aid; lib/units.js folds all of them regardless. A screen set to Hindi that stopped
          `கிலோ` resolving would be a parsing rule wearing a preference's clothes. */
-      var by = aliases[u] || {};
-      var shown = _LANGSEL.reduce(function(a, lg){ return a.concat((by[lg] || []).map(function(w){ return { w: w, lg: lg }; })); }, []);
-      return '<label class="uom-row' + (on ? '' : ' off') + '">'
-        + '<div class="ur1">'
-        +   '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
-        +   '<code>' + esc(u) + '</code>'
-        +   '<span class="un">' + esc(names[u] || u) + '</span>'
-        + '</div>'
-        /* ⚠️ THE SEPARATOR IS DECORATION, AND MUST SAY SO. It is a faint `·` between spellings — deliberately
+        var by = aliases[item] || {};
+        var shown = _LANGSEL.reduce(function (total, item) {
+          return total.concat(
+            (by[item] || []).map(function (w) {
+              return { w: w, lg: item };
+            })
+          );
+        }, []);
+        return (
+          '<label class="uom-row' +
+          (on ? '' : ' off') +
+          '">' +
+          '<div class="ur1">' +
+          '<input type="checkbox" ' +
+          (on ? 'checked' : '') +
+          ' onchange="catsetUnitToggle(\'' +
+          esc(item) +
+          '\',this.checked)">' +
+          '<code>' +
+          esc(item) +
+          '</code>' +
+          '<span class="un">' +
+          esc(names[item] || item) +
+          '</span>' +
+          '</div>' +
+          /* ⚠️ THE SEPARATOR IS DECORATION, AND MUST SAY SO. It is a faint `·` between spellings — deliberately
            low-contrast, because it divides rather than informs. Unmarked it is counted as unreadable TEXT by any
            contrast audit (63 false positives on this screen alone) and, worse, a screen reader announces
            "middle dot" between every word. aria-hidden states what it already is. */
-        + (shown.length ? '<div class="ua">' + shown.map(function(x){ return esc(x.w); }).join('<span class="sep" aria-hidden="true">·</span>') + '</div>' : '')
-        + '</label>'
-        /**
-         * ⭐⭐ THE THREE ANSWERS, ONLY WHERE THEY MEAN SOMETHING, and only for a unit actually in use.
-         * ⚠️ OUTSIDE the <label>: a number box inside a label toggles the checkbox on every click.
-         */
-        + (on ? catsetUomRuleHTML(u) : '');
-    }).join('');
-    return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
+          (shown.length
+            ? '<div class="ua">' +
+              shown
+                .map(function (x) {
+                  return esc(x.w);
+                })
+                .join('<span class="sep" aria-hidden="true">·</span>') +
+              '</div>'
+            : '') +
+          '</label>' +
+          /**
+           * ⭐⭐ THE THREE ANSWERS, ONLY WHERE THEY MEAN SOMETHING, and only for a unit actually in use.
+           * ⚠️ OUTSIDE the <label>: a number box inside a label toggles the checkbox on every click.
+           */
+          (on ? catsetUomRuleHTML(item) : '')
+        );
+      })
+      .join('');
+    return '<div class="uom-g"><div class="uom-gh">' + esc(item.label) + '</div>' + rows + '</div>';
   }).join('');
 
-  var n = sel.length, total = M.UNIT_KINDS.reduce(function(a, g){ return a + g.units.length; }, 0);
-  return catsetCard('⚖️ Units of measure',
-    '<div class="catset-regb">What a quantity is counted in. <b>' + tx('Tick the ones you trade in') + '</b> — the product form '
-    + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
-    + catsetLangBar()
-    + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span></div>'
-    + groups
-    /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
+  var n = sel.length,
+    total = M.UNIT_KINDS.reduce(function (total, item) {
+      return total + item.units.length;
+    }, 0);
+  return catsetCard(
+    '⚖️ Units of measure',
+    '<div class="catset-regb">What a quantity is counted in. <b>' +
+      tx('Tick the ones you trade in') +
+      '</b> — the product form ' +
+      'and the catalogue wizard offer only those. <b>' +
+      n +
+      ' of ' +
+      total +
+      '</b> selected.</div>' +
+      catsetLangBar() +
+      '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span></div>' +
+      groups +
+      /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
        already priced in barrels; saying so up front is cheaper than them not daring to touch it. */
-    + '<div class="catset-src">'
-    + txf('Unticking stops a unit being {offered}. Products already saved in it keep it — nothing is rewritten. Spellings under {also} fold onto the unit when a message arrives.', {
-        offered: '<b>' + tx('offered') + '</b>', also: '<i>' + tx('also accepted') + '</i>' })
-    + '</div>');
+      '<div class="catset-src">' +
+      txf(
+        'Unticking stops a unit being {offered}. Products already saved in it keep it — nothing is rewritten. Spellings under {also} fold onto the unit when a message arrives.',
+        {
+          offered: '<b>' + tx('offered') + '</b>',
+          also: '<i>' + tx('also accepted') + '</i>'
+        }
+      ) +
+      '</div>'
+  );
 }
-async function catsetUnitsLoad(){
-  try { var f = await api('policyGet'); var fl = (f && f.flags) || {};
-        _UNITSEL = fl.units || [];
-        _UNITRULES = (fl.unit_rules && typeof fl.unit_rules === 'object') ? fl.unit_rules : {};
-        /* ⚠️ English is forced in even if the stored set somehow lacks it — see catsetLangBar(). */
-        var lg = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
-        if (lg.indexOf('en') < 0) lg.unshift('en');
-        _LANGSEL = lg; }
-  catch (e) { _UNITSEL = []; }
+async function catsetUnitsLoad() {
+  try {
+    var reply = await api('policyGet');
+    var fl = (reply && reply.flags) || {};
+    _UNITSEL = fl.units || [];
+    _UNITRULES = fl.unit_rules && typeof fl.unit_rules === 'object' ? fl.unit_rules : {};
+    /* ⚠️ English is forced in even if the stored set somehow lacks it — see catsetLangBar(). */
+    var list = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
+    if (list.indexOf('en') < 0) list.unshift('en');
+    _LANGSEL = list;
+  } catch (e) {
+    _UNITSEL = [];
+  }
   catsetPaintDetail();
 }
-async function catsetUnitToggle(u, on){
-  var next = (_UNITSEL || []).filter(function(x){ return x !== u; });
+async function catsetUnitToggle(u, on) {
+  var next = (_UNITSEL || []).filter(function (x) {
+    return x !== u;
+  });
   if (on) next.push(u);
   /* ⚠️ REFUSE THE EMPTY SET HERE TOO, not only on the server. The server already rejects it, but a silent
      server-side rejection would leave the box unticked on screen and the value unchanged underneath — the two
      would disagree and only one of them is real. */
-  if (!next.length) { if (typeof toast === 'function') toast('Keep at least one unit — the product form needs something to offer.'); catsetPaintDetail(); return; }
+  if (!next.length) {
+    if (typeof toast === 'function') toast('Keep at least one unit — the product form needs something to offer.');
+    catsetPaintDetail();
+    return;
+  }
   _UNITSEL = next;
   /* ⭐ OPERATE LOCALLY UNTIL A REPAINT IS ABSOLUTELY REQUIRED (Athi, 2026-09-04). The box the person clicked has
      already flipped; the set is written; the pane is NOT rebuilt — a rebuild is what threw the page to the top.
      Only a refusal (above) or a failed write (below) repaints, to put the screen back to what is real. */
-  try { await api('policySet', { body: { units: next } }); }
-  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
+  try {
+    await api('policySet', { body: { units: next } });
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again'));
+    catsetUnitsLoad();
+  }
 }
 /**
  * ⚠️ THIS SCREEN NEVER SHOWED WHAT IT HAD DONE. Its two siblings — offers and order models — each list what you
@@ -581,37 +906,60 @@ var CATSET_FACE;
  * response from an older generation is discarded — it cannot be newer than what we already hold.
  */
 var _catsetFaceGen = 0;
-function catsetFaceLoad(){
+function catsetFaceLoad() {
   var gen = _catsetFaceGen;
   return api('catFaceGet')
-    .then(function(r){ if (gen === _catsetFaceGen) CATSET_FACE = (r && r.face) || null; })
-    .catch(function(){ if (gen === _catsetFaceGen) CATSET_FACE = null; });
+    .then(function (reply) {
+      if (gen === _catsetFaceGen) CATSET_FACE = (reply && reply.face) || null;
+    })
+    .catch(function () {
+      if (gen === _catsetFaceGen) CATSET_FACE = null;
+    });
 }
 /**
  * Called by _vSave so the card reflects a save without a round trip.
  * ⚠️ It also INVALIDATES any read in flight — see above. Setting the face locally is a statement that what we
  * hold is newer than anything the server was asked for before now.
  */
-function catsetFaceSet(f){ _catsetFaceGen++; CATSET_FACE = f || null; }
-function catsetVariantStateHTML(){
-  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div class="catset-load">reading…</div>'; }
+function catsetFaceSet(f) {
+  _catsetFaceGen++;
+  CATSET_FACE = f || null;
+}
+function catsetVariantStateHTML() {
+  if (CATSET_FACE === undefined) {
+    catsetFaceLoad().then(catsetPaintDetail);
+    return '<div class="catset-load">reading…</div>';
+  }
   var id = (CATSET_FACE && CATSET_FACE.identity) || {};
   var opts = id.options || [];
   if (!id.group) return '<div class="catset-none">Not grouped yet — every line stands as its own product.</div>';
-  return '<div class="catset-drow" data-testid="catset-variant-state">'
-    + '<span class="dn">Grouped by <b>' + esc(id.group) + '</b></span>'
-    + (opts.length ? '<code class="dk">told apart by ' + esc(opts.join(', ')) + '</code>'
-                   : '<code class="dk">no distinguishing column yet</code>')
-    + '<span class="da" onclick="declareVariants()">' + tx('Change') + '</span></div>';
+  return (
+    '<div class="catset-drow" data-testid="catset-variant-state">' +
+    '<span class="dn">Grouped by <b>' +
+    esc(id.group) +
+    '</b></span>' +
+    (opts.length ? '<code class="dk">told apart by ' + esc(opts.join(', ')) + '</code>' : '<code class="dk">no distinguishing column yet</code>') +
+    '<span class="da" onclick="declareVariants()">' +
+    tx('Change') +
+    '</span></div>'
+  );
 }
-function catsetCard(title, body, actions){
-  var sec = CATSET_SECS.filter(function(x){ return x.key === catsetSec(); })[0];
+function catsetCard(title, body, actions) {
+  var sec = CATSET_SECS.filter(function (x) {
+    return x.key === catsetSec();
+  })[0];
   var dupe = sec && String(sec.q || '').trim() === String(title || '').trim();
-  return '<div class="catset-card">' + (dupe ? '' : '<div class="catset-ct">' + title + '</div>')
-    + '<div class="catset-cb">' + body + '</div>'
-    + (actions ? '<div class="catset-ca">' + actions + '</div>' : '') + '</div>';
+  return (
+    '<div class="catset-card">' +
+    (dupe ? '' : '<div class="catset-ct">' + title + '</div>') +
+    '<div class="catset-cb">' +
+    body +
+    '</div>' +
+    (actions ? '<div class="catset-ca">' + actions + '</div>' : '') +
+    '</div>'
+  );
 }
-function catsetBody(k){
+function catsetBody(k) {
   if (k === 'blueprint') {
     /**
      * ⭐⭐ THE FASTEST WAY IN, SO IT IS THE FIRST THING OFFERED — Athi, 2026-09-02: *"if the user can use the
@@ -628,112 +976,151 @@ function catsetBody(k){
      * into this panel would be a second implementation of the one thing on this screen that must not disagree
      * with itself. The hub is the entry point; the screen it opens is the detail.
      */
-    return catsetCard('Follow another shop’s catalogue',
-      'Someone in your trade has published theirs as a <b>reference catalogue</b>. Follow it and your columns, units and '
-      + 'shape are set in one act — you put your own prices over their design, and a correction they publish '
-      + 'reaches you.'
-      + '<div class="catset-std">⭐ <b>Following is not copying.</b> You cite it rather '
-      + 'than copy it, so it stays THEIRS to correct. ⚠️ Adopting <b>by reference</b> shares the design and keeps '
-      + 'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below '
-      + 'asks which.</div>'
-      + '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the '
-      + 'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
-      + 'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
-      '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">'
-      + tx('📋 See the catalogues you can follow') + '</button>')
-    + catsetCard('What you have adopted', catsetAdoptedHTML(), '');
+    return (
+      catsetCard(
+        'Follow another shop’s catalogue',
+        'Someone in your trade has published theirs as a <b>reference catalogue</b>. Follow it and your columns, units and ' +
+          'shape are set in one act — you put your own prices over their design, and a correction they publish ' +
+          'reaches you.' +
+          '<div class="catset-std">⭐ <b>Following is not copying.</b> You cite it rather ' +
+          'than copy it, so it stays THEIRS to correct. ⚠️ Adopting <b>by reference</b> shares the design and keeps ' +
+          'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below ' +
+          'asks which.</div>' +
+          '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the ' +
+          'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
+          'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
+        '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">' + tx('📋 See the catalogues you can follow') + '</button>'
+      ) + catsetCard('What you have adopted', catsetAdoptedHTML(), '')
+    );
   }
   if (k === 'columns') {
-    return catsetCard('What every product records',
-      'A catalogue starts with three columns — <b>name</b>, <b>unit</b> and <b>price</b>. A trade usually expects '
-      + 'more: a grade, an HSN code, a botanical name, a finish. Pick your trade and the columns it expects are '
-      + 'added; you can still bring your own from a spreadsheet afterwards.'
-      + '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. '
-      + '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different '
-      + 'mechanisms, which is why categories live on their own screen.</div>',
-      '<button class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>')
-    /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
-    /* ⭐ WHAT IT RECORDS TODAY, before what it could record — the question a reader arrives with. */
-    + catsetCard('What your catalogue records today', catsetColsHTML(), '')
-    + catsetUnitsHTML()
-    + catsetRegistry(['datatype']);
+    return (
+      catsetCard(
+        'What every product records',
+        'A catalogue starts with three columns — <b>name</b>, <b>unit</b> and <b>price</b>. A trade usually expects ' +
+          'more: a grade, an HSN code, a botanical name, a finish. Pick your trade and the columns it expects are ' +
+          'added; you can still bring your own from a spreadsheet afterwards.' +
+          '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. ' +
+          '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different ' +
+          'mechanisms, which is why categories live on their own screen.</div>',
+        '<button class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>'
+      ) +
+      /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
+      /* ⭐ WHAT IT RECORDS TODAY, before what it could record — the question a reader arrives with. */
+      catsetCard('What your catalogue records today', catsetColsHTML(), '') +
+      catsetUnitsHTML() +
+      catsetRegistry(['datatype'])
+    );
   }
   if (k === 'pricing') {
-    return catsetCard('How a price is arrived at, and where it came from',
-      'A catalogue can declare more than one — a list price, a bulk tier, a regional price, a negotiated one. '
-      + 'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.'
-      + '<div class="catset-std">⚠️ A price with no source is not wrong, it is just unattributable — and a '
-      + 'market-referenced price without a reading date is a rumour. That is the same rule the availability '
-      + 'engine applies to a stock figure: a number without a timestamp is not an answer.</div>',
-      /* ⭐ THE SAME RULE, MADE PLAYABLE. The lab is the conversion engine as a page — a rate carries its source
+    return (
+      catsetCard(
+        'How a price is arrived at, and where it came from',
+        'A catalogue can declare more than one — a list price, a bulk tier, a regional price, a negotiated one. ' +
+          'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.' +
+          '<div class="catset-std">⚠️ A price with no source is not wrong, it is just unattributable — and a ' +
+          'market-referenced price without a reading date is a rumour. That is the same rule the availability ' +
+          'engine applies to a stock figure: a number without a timestamp is not an answer.</div>',
+        /* ⭐ THE SAME RULE, MADE PLAYABLE. The lab is the conversion engine as a page — a rate carries its source
          and its date, a quantity is valued at a market price, and the weakest link in the chain is named above
          the total. It belongs HERE because "where and when a price came from" is this card's subject. */
-      '<a class="composebtn" data-testid="catset-conversion-lab" href="conversion-lab.html" target="_blank" rel="noopener" title="Value a quantity or convert a basket — same engine as the server, steps shown" style="text-decoration:none">💱 ' + tx('Conversion lab') + '</a>')
-    + catsetRegistry(['pricing', 'priceorigin'])
-    + catsetCard('Your pricing structures', catsetDefListHTML('pricing', 'pricing structure'), '');
+        '<a class="composebtn" data-testid="catset-conversion-lab" href="conversion-lab.html" target="_blank" rel="noopener" title="Value a quantity or convert a basket — same engine as the server, steps shown" style="text-decoration:none">💱 ' +
+          tx('Conversion lab') +
+          '</a>'
+      ) +
+      catsetRegistry(['pricing', 'priceorigin']) +
+      catsetCard('Your pricing structures', catsetDefListHTML('pricing', 'pricing structure'), '')
+    );
   }
   if (k === 'variants') {
-    return catsetCard('One product, several sizes',
-      'Say which lines belong together — a 1L, 4L and 10L of the same paint, or a saree in three borders. The '
-      + 'shop then shows one product with its options instead of three unrelated rows.'
-      + '<div class="catset-std">In PIM terms this is the <b>product model</b> and its <b>variant axis</b>: which '
-      + 'attribute varies, and which stay common across the group.</div>',
-      '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">' + tx('🔗 Declare variants') + '</button>')
-    + catsetCard('What you have declared', catsetVariantStateHTML(), '');
+    return (
+      catsetCard(
+        'One product, several sizes',
+        'Say which lines belong together — a 1L, 4L and 10L of the same paint, or a saree in three borders. The ' +
+          'shop then shows one product with its options instead of three unrelated rows.' +
+          '<div class="catset-std">In PIM terms this is the <b>product model</b> and its <b>variant axis</b>: which ' +
+          'attribute varies, and which stay common across the group.</div>',
+        '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">' + tx('🔗 Declare variants') + '</button>'
+      ) + catsetCard('What you have declared', catsetVariantStateHTML(), '')
+    );
   }
   if (k === 'offers') {
-    return catsetCard('Discounts, tiers and deals',
-      'A percentage, a flat amount, a quantity break, buy-one-get-one, free shipping, or a spend threshold. '
-      + 'Publish one and it becomes VISIBLE — on the product row, on your storefront, to a B2B buyer browsing '
-      + 'you, and in the basket, where the breakdown shows what came off and, when it does not fire, how far '
-      + 'short the order is.'
-      + '<div class="catset-std">⚠️ A row states the CONDITION, never a bare discount — <b>"₹170 each from 10"</b>, '
-      + 'not "₹170 each" beside a product priced ₹180. A badge is a promise, and one the basket then declines is '
-      + 'worse than no badge at all, so an offer that cannot fire today shows nothing anywhere.</div>'
-      + '<div class="catset-std">⚠️ An offer is a <b>term of trade</b>, not a product fact — it has an author, a '
-      + 'validity window and a jurisdiction, and it has to survive into a dispute intact. That is why it is '
-      + 'authored once here rather than edited on a product. <b>' + tx('Live') + '</b> offers apply; a draft is one you are '
-      + 'still writing.</div>',
-      /* ⭐⭐⭐ POINTS AT THE REAL LAB NOW (Athi: "we already have an offer lab in catalogue set-up opening the
+    return (
+      catsetCard(
+        'Discounts, tiers and deals',
+        'A percentage, a flat amount, a quantity break, buy-one-get-one, free shipping, or a spend threshold. ' +
+          'Publish one and it becomes VISIBLE — on the product row, on your storefront, to a B2B buyer browsing ' +
+          'you, and in the basket, where the breakdown shows what came off and, when it does not fire, how far ' +
+          'short the order is.' +
+          '<div class="catset-std">⚠️ A row states the CONDITION, never a bare discount — <b>"₹170 each from 10"</b>, ' +
+          'not "₹170 each" beside a product priced ₹180. A badge is a promise, and one the basket then declines is ' +
+          'worse than no badge at all, so an offer that cannot fire today shows nothing anywhere.</div>' +
+          '<div class="catset-std">⚠️ An offer is a <b>term of trade</b>, not a product fact — it has an author, a ' +
+          'validity window and a jurisdiction, and it has to survive into a dispute intact. That is why it is ' +
+          'authored once here rather than edited on a product. <b>' +
+          tx('Live') +
+          '</b> offers apply; a draft is one you are ' +
+          'still writing.</div>',
+        /* ⭐⭐⭐ POINTS AT THE REAL LAB NOW (Athi: "we already have an offer lab in catalogue set-up opening the
          existing one, possibly, retire that page and attach the current one"). offer-lab.html is the retired
          tool — offer-lab-next.html is the one actually built against the real offers engine, with your own
          catalogue, saved-offer lifecycle and the price list. The old file is untouched on disk (still linked
          from Conversion lab's own nav and covered by e2e/tests/offer-lab.spec.js) but nothing in the app
          points a shopkeeper at it any more. */
-      '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab-next.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the same engine as the shop" style="text-decoration:none;margin-right:6px">🧪 ' + tx('Offer lab') + '</a>'
-      /* ⭐ [Labs split, 2026-09-26] its own page now, its own link beside Offer lab's — see combo-lab.html's
+        '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab-next.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the same engine as the shop" style="text-decoration:none;margin-right:6px">🧪 ' +
+          tx('Offer lab') +
+          '</a>' +
+          /* ⭐ [Labs split, 2026-09-26] its own page now, its own link beside Offer lab's — see combo-lab.html's
          own header comment for why. */
-      + '<a class="composebtn" data-testid="catset-combo-lab" href="combo-lab.html" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' + tx('Combo lab') + '</a>'
-      + '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
-    + catsetCard('The next six months', catsetOfferPlanHTML(),
-      '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>')
-    + catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '')
-    + catsetRegistry(['offer']);
+          '<a class="composebtn" data-testid="catset-combo-lab" href="combo-lab.html" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' +
+          tx('Combo lab') +
+          '</a>' +
+          '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>'
+      ) +
+      catsetCard(
+        'The next six months',
+        catsetOfferPlanHTML(),
+        '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>'
+      ) +
+      catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '') +
+      catsetRegistry(['offer'])
+    );
   }
   if (k === 'ordermodels') {
-    return catsetCard('How a quantity is counted',
-      'Give a quantity rule a name, and a product adopts “Carton of 6” instead of repeating pack/step 6. The '
-      + 'kinds come from the cart itself — whole units, a decimal amount, a pack multiple, a range, a metre, or '
-      + 'an offer line where the buyer names their price.'
-      + '<div class="catset-std">⚠️ Change “Carton of 6” to 12 and <b>every product using it moves</b> — '
-      + 'which is either exactly what you want or a catastrophe. Chits already stamped keep the version they '
-      + 'froze, which is why adoption freezes at the mint.</div>',
-      '<button class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>')
-    + catsetCard('Your order models', catsetDefListHTML('ordermodel', 'order model'), '')
-    + catsetRegistry(['ordermodel']);
+    return (
+      catsetCard(
+        'How a quantity is counted',
+        'Give a quantity rule a name, and a product adopts “Carton of 6” instead of repeating pack/step 6. The ' +
+          'kinds come from the cart itself — whole units, a decimal amount, a pack multiple, a range, a metre, or ' +
+          'an offer line where the buyer names their price.' +
+          '<div class="catset-std">⚠️ Change “Carton of 6” to 12 and <b>every product using it moves</b> — ' +
+          'which is either exactly what you want or a catastrophe. Chits already stamped keep the version they ' +
+          'froze, which is why adoption freezes at the mint.</div>',
+        '<button class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>'
+      ) +
+      catsetCard('Your order models', catsetDefListHTML('ordermodel', 'order model'), '') +
+      catsetRegistry(['ordermodel'])
+    );
   }
   if (k === 'data') {
-    return catsetCard('Bring a spreadsheet in',
-      'Read a file, see what each column would become, and decide before anything is written. Products are added '
-      + 'or updated by their code — re-importing the same sheet updates rather than duplicates.'
-      + '<div class="catset-std">⚠️ Nothing is imported until you confirm the column mapping. The check step is '
-      + 'not a formality: it is the only place a wrong column is cheap to fix.</div>',
-      '<button class="composebtn pri" data-testid="catset-import" onclick="checkCatalogueFile()">🔍 Check &amp; import</button>'
-      + '<button class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">' + tx('📄 Blank template') + '</button>')
-    + catsetCard('Take it back out',
-      'Every product as a spreadsheet, in your catalogue’s own columns — for a backup, an accountant, or another '
-      + 'system.',
-      '<button class="composebtn" data-testid="catset-export" onclick="exportCatalogueCSV(this)">⬇ Export CSV</button>');
+    return (
+      catsetCard(
+        'Bring a spreadsheet in',
+        'Read a file, see what each column would become, and decide before anything is written. Products are added ' +
+          'or updated by their code — re-importing the same sheet updates rather than duplicates.' +
+          '<div class="catset-std">⚠️ Nothing is imported until you confirm the column mapping. The check step is ' +
+          'not a formality: it is the only place a wrong column is cheap to fix.</div>',
+        '<button class="composebtn pri" data-testid="catset-import" onclick="checkCatalogueFile()">🔍 Check &amp; import</button>' +
+          '<button class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">' +
+          tx('📄 Blank template') +
+          '</button>'
+      ) +
+      catsetCard(
+        'Take it back out',
+        'Every product as a spreadsheet, in your catalogue’s own columns — for a backup, an accountant, or another ' + 'system.',
+        '<button class="composebtn" data-testid="catset-export" onclick="exportCatalogueCSV(this)">⬇ Export CSV</button>'
+      )
+    );
   }
   if (k === 'erp') {
     /**
@@ -749,16 +1136,20 @@ function catsetBody(k){
      * their spreadsheet arrives. Two mechanisms for one relationship was the finding in the research note above;
      * this is the half that declares it.
      */
-    return catsetCard('Where each column lives in your other system',
-      'If an ERP, Tally or SAP already holds this, say what it is called there. A connector then knows which of '
-      + 'their fields fills which of yours — and an export can leave in their shape rather than ours.'
-      + '<div class="catset-std">⭐ <b>One map, read both ways.</b> Outbound it shapes an export for them; '
-      + 'inbound it is the same statement a spreadsheet import needs. ⚠️ Declaring a mapping does not move any '
-      + 'data — a connector does that, and it is told what to do by this.</div>'
-      + '<div class="catset-std">⚠️ <b>Tally and SAP are not the same kind of connection.</b> Tally exchanges '
-      + 'masters as a file somebody exports; SAP is a live service an IT department connects. This declares the '
-      + 'field names either way; what carries them differs.</div>', '')
-    + catsetCard('Your columns', catsetErpHTML(), '');
+    return (
+      catsetCard(
+        'Where each column lives in your other system',
+        'If an ERP, Tally or SAP already holds this, say what it is called there. A connector then knows which of ' +
+          'their fields fills which of yours — and an export can leave in their shape rather than ours.' +
+          '<div class="catset-std">⭐ <b>One map, read both ways.</b> Outbound it shapes an export for them; ' +
+          'inbound it is the same statement a spreadsheet import needs. ⚠️ Declaring a mapping does not move any ' +
+          'data — a connector does that, and it is told what to do by this.</div>' +
+          '<div class="catset-std">⚠️ <b>Tally and SAP are not the same kind of connection.</b> Tally exchanges ' +
+          'masters as a file somebody exports; SAP is a live service an IT department connects. This declares the ' +
+          'field names either way; what carries them differs.</div>',
+        ''
+      ) + catsetCard('Your columns', catsetErpHTML(), '')
+    );
   }
   if (k === 'tax') {
     /**
@@ -772,25 +1163,40 @@ function catsetBody(k){
        screen used to explain the rules and list the slabs; it never showed the OUTCOME. Now: what every product
        carries (tax as RESOLVED, from where; offers; HSN; categories) comes first, each row opening the product; the
        slabs carry their counts; the two explanations fold away. */
-    return catsetCard('What your products carry', catsetTaxRegisterHTML(),
-      /* ⭐ CL1 (2026-10-12): the Country lab beside the slabs — what a change of country does to the tax, the year, the chart and the
+    return (
+      catsetCard(
+        'What your products carry',
+        catsetTaxRegisterHTML(),
+        /* ⭐ CL1 (2026-10-12): the Country lab beside the slabs — what a change of country does to the tax, the year, the chart and the
          return, every row read from the regulation packs; the same Labs rule as Offer / Combo / Conversion (one tab per lab). */
-      '<a class="composebtn" data-testid="catset-country-lab" href="country-lab.html" target="cb_country_lab" rel="noopener" title="What changes when the shop\'s country changes — every row read from the regulation packs, the cart billed under both" style="text-decoration:none;margin-right:6px">🌍 ' + tx('Country lab') + '</a>'
-      + '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
-    + catsetCard('Your slabs', catsetTaxCountsHTML() + catsetDefListHTML('tax', 'tax slab'), '')
-    + catsetCard('Falls back to', catsetTaxHTML(), '')
-    + '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' + tx('How slabs work') + '</summary>'
-    + catsetCard('Name a rate, then a product cites it',
-      'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names '
-      + 'none inherits — first from its category, then from the catalogue default.'
-      + '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and '
-      + 'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>'
-      + '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product '
-      + 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you '
-      + 'declared, who declared it and when — and freezes it onto a chit at the mint.</div>', '')
-    + '</details>'
-    + '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' + tx('GST slab rates (reference)') + '</summary>'
-    + catsetRegistry(['tax']) + '</details>';
+        '<a class="composebtn" data-testid="catset-country-lab" href="country-lab.html" target="cb_country_lab" rel="noopener" title="What changes when the shop\'s country changes — every row read from the regulation packs, the cart billed under both" style="text-decoration:none;margin-right:6px">🌍 ' +
+          tx('Country lab') +
+          '</a>' +
+          '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>'
+      ) +
+      catsetCard('Your slabs', catsetTaxCountsHTML() + catsetDefListHTML('tax', 'tax slab'), '') +
+      catsetCard('Falls back to', catsetTaxHTML(), '') +
+      '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' +
+      tx('How slabs work') +
+      '</summary>' +
+      catsetCard(
+        'Name a rate, then a product cites it',
+        'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names ' +
+          'none inherits — first from its category, then from the catalogue default.' +
+          '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and ' +
+          'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>' +
+          '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product ' +
+          'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you ' +
+          'declared, who declared it and when — and freezes it onto a chit at the mint.</div>',
+        ''
+      ) +
+      '</details>' +
+      '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' +
+      tx('GST slab rates (reference)') +
+      '</summary>' +
+      catsetRegistry(['tax']) +
+      '</details>'
+    );
   }
   /* ⭐ The storefront controls are REAL here now — see catsetSfHTML. This used to be a paragraph and a button
      that opened the six-step wizard, so the hub owned nine of its ten sections and handed the tenth back. */
@@ -819,112 +1225,202 @@ function catsetBody(k){
  */
 var CATCOL = { v: null, sel: null, starter: null };
 
-async function catcolPick(){
+async function catcolPick() {
   var r;
-  try { r = await api('prodStarters'); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not load the standard sets.'); return; }
+  try {
+    r = await api('prodStarters');
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not load the standard sets.');
+    return;
+  }
   var verts = (r && r.verticals) || [];
-  if (!verts.length) { if (typeof toast === 'function') toast('No standard sets are available.'); return; }
+  if (!verts.length) {
+    if (typeof toast === 'function') toast('No standard sets are available.');
+    return;
+  }
   CATCOL = { v: verts[0].key, sel: null, starter: null };
-  modal('<div class="mhd"><div class="t">' + tx('📐 Columns your trade expects') + '</div>'
-    + '<div class="s">' + tx('pick the ones you want — you can add more later, but a column with data cannot be removed') + '</div></div>'
-    + '<div class="mbody">'
-    + '<label class="fl">' + tx('Trade') + '</label>'
-    + '<select class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">'
-    + verts.map(function(v){ return '<option value="' + esc(v.key) + '">' + esc(v.title) + ' — '
-        + v.field_count + ' ' + tx('columns') + '</option>'; }).join('')
-    + '</select>'
-    + '<div id="catcol_body" style="margin-top:10px">' + tx('loading…') + '</div>'
-    + '<div style="margin-top:11px"><label class="fl">' + tx('Add your own as well') + '</label>'
-    + '<div style="display:flex;gap:6px"><input class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"'
-    + ' placeholder="' + esc(tx('column name')) + '">'
-    + '<select class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">'
-    + ['text','number','boolean','date','choice'].map(function(t){ return '<option>' + t + '</option>'; }).join('')
-    + '</select></div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
-    + tx('One per line or separated by commas — they all take the type on the right. Nothing guesses it from the name.')
-    + '</div></div>'
-    + '</div>'
-    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button>'
-    + '<button class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' + tx('Add columns') + '</button></div>', true);
+  modal(
+    '<div class="mhd"><div class="t">' +
+      tx('📐 Columns your trade expects') +
+      '</div>' +
+      '<div class="s">' +
+      tx('pick the ones you want — you can add more later, but a column with data cannot be removed') +
+      '</div></div>' +
+      '<div class="mbody">' +
+      '<label class="fl">' +
+      tx('Trade') +
+      '</label>' +
+      '<select class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">' +
+      verts
+        .map(function (item) {
+          return '<option value="' + esc(item.key) + '">' + esc(item.title) + ' — ' + item.field_count + ' ' + tx('columns') + '</option>';
+        })
+        .join('') +
+      '</select>' +
+      '<div id="catcol_body" style="margin-top:10px">' +
+      tx('loading…') +
+      '</div>' +
+      '<div style="margin-top:11px"><label class="fl">' +
+      tx('Add your own as well') +
+      '</label>' +
+      '<div style="display:flex;gap:6px"><input class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"' +
+      ' placeholder="' +
+      esc(tx('column name')) +
+      '">' +
+      '<select class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">' +
+      ['text', 'number', 'boolean', 'date', 'choice']
+        .map(function (item) {
+          return '<option>' + item + '</option>';
+        })
+        .join('') +
+      '</select></div>' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
+      tx('One per line or separated by commas — they all take the type on the right. Nothing guesses it from the name.') +
+      '</div></div>' +
+      '</div>' +
+      '<div class="mfoot"><button onclick="closeModal()">' +
+      tx('Cancel') +
+      '</button>' +
+      '<button class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' +
+      tx('Add columns') +
+      '</button></div>',
+    true
+  );
   catcolLoad(CATCOL.v);
 }
 
 /** One trade's columns, with what this catalogue already has marked — so nothing looks like a fresh choice twice. */
-async function catcolLoad(v){
-  CATCOL.v = v; CATCOL.sel = null;
+async function catcolLoad(v) {
+  CATCOL.v = v;
+  CATCOL.sel = null;
   var body = document.getElementById('catcol_body');
   if (body) body.innerHTML = tx('loading…');
   var r;
-  try { r = await api('prodStarters', { query: { vertical: v } }); }
-  catch (e) { if (body) body.innerHTML = '<div style="color:var(--disp)">' + esc((e && e.message) || 'Could not read that set.') + '</div>'; return; }
+  try {
+    r = await api('prodStarters', { query: { vertical: v } });
+  } catch (e) {
+    if (body) body.innerHTML = '<div style="color:var(--disp)">' + esc((e && e.message) || 'Could not read that set.') + '</div>';
+    return;
+  }
   var set = (r && r.starter) || {};
   var fields = set.fields || [];
   CATCOL.starter = fields;
   /* Everything ticked, which is what "Add these columns" always did — the old behaviour is one press away. */
   CATCOL.sel = {};
-  fields.forEach(function(f){ CATCOL.sel[f.field_key] = 1; });
+  fields.forEach(function (item) {
+    CATCOL.sel[item.field_key] = 1;
+  });
 
   var have = {};
-  ((CATSET && CATSET.fields) || []).forEach(function(f){ have[f.field_key] = 1; });
+  ((CATSET && CATSET.fields) || []).forEach(function (item) {
+    have[item.field_key] = 1;
+  });
 
   if (body) {
-    body.innerHTML = '<div style="display:flex;gap:7px;align-items:center;margin-bottom:7px">'
-      + '<button type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('All') + '</button>'
-      + '<button type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('None') + '</button>'
-      + '<span id="catcol_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap"></span></div>'
-      + '<div class="bulklist">' + fields.map(function(f){
-          var already = !!have[f.field_key];
-          return '<label class="bulkrow" style="cursor:' + (already ? 'default' : 'pointer') + (already ? ';opacity:.6' : '') + '">'
-            + '<input type="checkbox" ' + (already ? 'checked disabled' : 'checked')
-            + ' data-colkey="' + esc(f.field_key) + '" data-testid="catcol-f-' + esc(f.field_key) + '"'
-            + ' onchange="catcolTick(\'' + esc(f.field_key) + '\', this.checked)">'
-            + '<span class="bn">' + esc(f.field_name || f.field_key) + '</span>'
+    body.innerHTML =
+      '<div style="display:flex;gap:7px;align-items:center;margin-bottom:7px">' +
+      '<button type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      tx('All') +
+      '</button>' +
+      '<button type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      tx('None') +
+      '</button>' +
+      '<span id="catcol_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap"></span></div>' +
+      '<div class="bulklist">' +
+      fields
+        .map(function (item) {
+          var already = !!have[item.field_key];
+          return (
+            '<label class="bulkrow" style="cursor:' +
+            (already ? 'default' : 'pointer') +
+            (already ? ';opacity:.6' : '') +
+            '">' +
+            '<input type="checkbox" ' +
+            (already ? 'checked disabled' : 'checked') +
+            ' data-colkey="' +
+            esc(item.field_key) +
+            '" data-testid="catcol-f-' +
+            esc(item.field_key) +
+            '"' +
+            ' onchange="catcolTick(\'' +
+            esc(item.field_key) +
+            '\', this.checked)">' +
+            '<span class="bn">' +
+            esc(item.field_name || item.field_key) +
+            '</span>' +
             /* ⭐ The datatype, named — the question Athi asked of this screen. */
-            + '<span class="bh">' + esc(f.field_type || 'text') + (already ? ' · ' + tx('already there') : '') + '</span>'
-            + '</label>';
-        }).join('') + '</div>';
+            '<span class="bh">' +
+            esc(item.field_type || 'text') +
+            (already ? ' · ' + tx('already there') : '') +
+            '</span>' +
+            '</label>'
+          );
+        })
+        .join('') +
+      '</div>';
     catcolCount();
   }
 }
 
-function catcolCount(){
-  var n = Object.keys(CATCOL.sel || {}).length, tot = (CATCOL.starter || []).length;
+function catcolCount() {
+  var n = Object.keys(CATCOL.sel || {}).length,
+    tot = (CATCOL.starter || []).length;
   var el = document.getElementById('catcol_n');
   if (el) el.textContent = txf('{n} of {tot} selected', { n: n, tot: tot });
 }
-function catcolTick(k, on){
-  if (on) CATCOL.sel[k] = 1; else delete CATCOL.sel[k];
+function catcolTick(k, on) {
+  if (on) CATCOL.sel[k] = 1;
+  else delete CATCOL.sel[k];
   catcolCount();
 }
-function catcolAll(on){
+function catcolAll(on) {
   CATCOL.sel = {};
-  (CATCOL.starter || []).forEach(function(f){ if (on) CATCOL.sel[f.field_key] = 1; });
-  document.querySelectorAll('[data-colkey]').forEach(function(b){ if (!b.disabled) b.checked = !!on; });
+  (CATCOL.starter || []).forEach(function (item) {
+    if (on) CATCOL.sel[item.field_key] = 1;
+  });
+  document.querySelectorAll('[data-colkey]').forEach(function (item) {
+    if (!item.disabled) item.checked = !!on;
+  });
   catcolCount();
 }
 
-async function catcolGo(){
+async function catcolGo() {
   var ownEl = document.getElementById('catcol_own');
   var typeEl = document.getElementById('catcol_owntype');
   var type = (typeEl && typeEl.value) || 'text';
-  var own = ((ownEl && ownEl.value) || '').split(/[\n,]/).map(function(s){ return s.trim(); }).filter(Boolean)
-    .map(function(nm){ return { field_name: nm, field_type: type }; });
+  var own = ((ownEl && ownEl.value) || '')
+    .split(/[\n,]/)
+    .map(function (item) {
+      return item.trim();
+    })
+    .filter(Boolean)
+    .map(function (item) {
+      return { field_name: item, field_type: type };
+    });
   var fields = Object.keys(CATCOL.sel || {});
-  if (!fields.length && !own.length) { if (typeof toast === 'function') toast(tx('Nothing selected.'), true); return; }
+  if (!fields.length && !own.length) {
+    if (typeof toast === 'function') toast(tx('Nothing selected.'), true);
+    return;
+  }
   var btn = document.getElementById('catcol_go');
-  if (btn) { btn.disabled = true; btn.textContent = tx('Adding…'); }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = tx('Adding…');
+  }
   try {
-    var r = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
-    UI._catFields = null;   // the product form renders declared columns from this; it must not keep the old list
+    var reply = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
+    UI._catFields = null; // the product form renders declared columns from this; it must not keep the old list
     closeModal();
     if (typeof toast === 'function') {
-      toast((r && r.message) || 'Columns added'
-        + ((r && r.rejected && r.rejected.length) ? ' · ' + r.rejected.length + ' refused' : ''));
+      toast((reply && reply.message) || 'Columns added' + (reply && reply.rejected && reply.rejected.length ? ' · ' + reply.rejected.length + ' refused' : ''));
     }
-    if (typeof catsetLoad === 'function') await catsetLoad(true); else renderApp();
+    if (typeof catsetLoad === 'function') await catsetLoad(true);
+    else renderApp();
   } catch (e) {
-    if (btn) { btn.disabled = false; btn.textContent = tx('Add columns'); }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = tx('Add columns');
+    }
     if (typeof toast === 'function') toast((e && e.message) || 'Could not add the columns.', true);
   }
 }
@@ -933,28 +1429,47 @@ async function catcolGo(){
  * ⭐ WHAT THIS CATALOGUE HAS ALREADY ADOPTED. A panel offering blueprints that cannot say which one you already
  * took is a panel that invites adopting the same thing twice.
  */
-function catsetAdoptedHTML(){
-  var a = (CATSET && CATSET.adopted) || null;
-  if (a === null) { catsetAdoptedLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  if (!a.length) {
-    return '<div style="font-size:var(--fs-2);color:var(--grey)">'
-      + tx('Nothing adopted yet — your catalogue is entirely your own.') + '</div>';
+function catsetAdoptedHTML() {
+  var list = (CATSET && CATSET.adopted) || null;
+  if (list === null) {
+    catsetAdoptedLoad();
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>';
   }
-  return '<div class="bulklist">' + a.map(function(s){
-    return '<div class="bulkrow"><span class="bn">' + esc(s.title || s.source_key || '—') + '</span>'
-      + '<span class="bh">' + ((s.items && s.items.length) || s.item_count || 0) + ' ' + tx('items') + ' · '
-      + esc(s.visible === false ? tx('hidden') : tx('showing')) + '</span></div>';
-  }).join('') + '</div>';
+  if (!list.length) {
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('Nothing adopted yet — your catalogue is entirely your own.') + '</div>';
+  }
+  return (
+    '<div class="bulklist">' +
+    list
+      .map(function (item) {
+        return (
+          '<div class="bulkrow"><span class="bn">' +
+          esc(item.title || item.source_key || '—') +
+          '</span>' +
+          '<span class="bh">' +
+          ((item.items && item.items.length) || item.item_count || 0) +
+          ' ' +
+          tx('items') +
+          ' · ' +
+          esc(item.visible === false ? tx('hidden') : tx('showing')) +
+          '</span></div>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
 }
-async function catsetAdoptedLoad(){
+async function catsetAdoptedLoad() {
   if (CATSET._adoptedBusy) return;
   CATSET._adoptedBusy = true;
   try {
-    var r = await api('catalogueSources');
+    var reply = await api('catalogueSources');
     /* ⚠️ Only what THIS catalogue has taken — the endpoint also answers with what is available to take, and
        showing those here would read as "you have adopted nine things" on a fresh account. */
-    CATSET.adopted = ((r && (r.adopted || r.mine)) || []);
-  } catch (e) { CATSET.adopted = []; }
+    CATSET.adopted = (reply && (reply.adopted || reply.mine)) || [];
+  } catch (e) {
+    CATSET.adopted = [];
+  }
   CATSET._adoptedBusy = false;
   catsetPaintDetail();
 }
@@ -964,10 +1479,13 @@ async function catsetAdoptedLoad(){
  * their shared design — and that screen exists and works. A second implementation here would be the one thing on
  * this hub that could disagree with itself about what "adopted" means.
  */
-function catsetBlueprint(){
+function catsetBlueprint() {
   navTo('catsetup');
   /* Land on the blueprint step rather than the top of the walk: the reader pressed a button that named it. */
-  try { UI.cw = UI.cw || {}; UI.cw.step = 1; } catch(_) {}
+  try {
+    UI.cw = UI.cw || {};
+    UI.cw.step = 1;
+  } catch (_) {}
   renderApp();
 }
 
@@ -1007,103 +1525,269 @@ function catsetBlueprint(){
  * ⚠️ TIGHTENS PER COLUMN, LIKE REMOVAL. Label and unit are always free (they change no stored value); the TYPE is
  * fixed the moment a product records a value, and the control says why. Same rule, same source (column-rules).
  */
-var CATSET_REC20 = [['H87','piece'],['KGM','kilogram'],['GRM','gram'],['TNE','tonne'],['LTR','litre'],['MLT','millilitre'],
-  ['MTR','metre'],['CMT','centimetre'],['MMT','millimetre'],['MTK','square metre'],['MTQ','cubic metre'],['BG','bag'],
-  ['BX','box'],['PK','pack'],['CT','carton'],['DZN','dozen'],['SET','set'],['PR','pair'],['RO','roll'],['BO','bottle'],
-  ['HUR','hour'],['DAY','day'],['MON','month']];
-function catsetColTab(){ return (CATSET && CATSET.colTab) || 'columns'; }
-function catsetSetColTab(k){ CATSET.colTab = k; catsetPaintDetail(); }
-function catsetColTabsHTML(){
-  var tabs = [['columns', tx('Columns')], ['types', tx('Types')], ['usage', tx('Usage')]];
-  return '<div class="dtabs" data-testid="catset-col-tabs" style="padding:0;margin-bottom:8px">' + tabs.map(function(t){
-    return '<button type="button" data-testid="catset-coltab-' + t[0] + '" class="' + (catsetColTab() === t[0] ? 'on' : '') + '"'
-      + ' onclick="catsetSetColTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>';
+var CATSET_REC20 = [
+  ['H87', 'piece'],
+  ['KGM', 'kilogram'],
+  ['GRM', 'gram'],
+  ['TNE', 'tonne'],
+  ['LTR', 'litre'],
+  ['MLT', 'millilitre'],
+  ['MTR', 'metre'],
+  ['CMT', 'centimetre'],
+  ['MMT', 'millimetre'],
+  ['MTK', 'square metre'],
+  ['MTQ', 'cubic metre'],
+  ['BG', 'bag'],
+  ['BX', 'box'],
+  ['PK', 'pack'],
+  ['CT', 'carton'],
+  ['DZN', 'dozen'],
+  ['SET', 'set'],
+  ['PR', 'pair'],
+  ['RO', 'roll'],
+  ['BO', 'bottle'],
+  ['HUR', 'hour'],
+  ['DAY', 'day'],
+  ['MON', 'month']
+];
+function catsetColTab() {
+  return (CATSET && CATSET.colTab) || 'columns';
+}
+function catsetSetColTab(k) {
+  CATSET.colTab = k;
+  catsetPaintDetail();
+}
+function catsetColTabsHTML() {
+  var tabs = [
+    ['columns', tx('Columns')],
+    ['types', tx('Types')],
+    ['usage', tx('Usage')]
+  ];
+  return (
+    '<div class="dtabs" data-testid="catset-col-tabs" style="padding:0;margin-bottom:8px">' +
+    tabs
+      .map(function (item) {
+        return (
+          '<button type="button" data-testid="catset-coltab-' +
+          item[0] +
+          '" class="' +
+          (catsetColTab() === item[0] ? 'on' : '') +
+          '"' +
+          ' onclick="catsetSetColTab(\'' +
+          item[0] +
+          '\')">' +
+          item[1] +
+          '</button>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
 }
 /* One write for every attribute a tab can change; the server answers with the count a person needs next. */
-async function catsetFieldPatch(key, patch){
+async function catsetFieldPatch(key, patch) {
   try {
-    var r = await api('schemaFieldPatch', { params: { key: key }, body: patch });
+    var reply = await api('schemaFieldPatch', { params: { key: key }, body: patch });
     UI._catFields = null;
-    var msg = (r && r.message) || tx('Saved');
-    if (r && r.missing_required) msg += ' — ' + txn('{count} product has no value in it yet', '{count} products have no value in it yet', r.missing_required);
+    var msg = (reply && reply.message) || tx('Saved');
+    if (reply && reply.missing_required)
+      msg += ' — ' + txn('{count} product has no value in it yet', '{count} products have no value in it yet', reply.missing_required);
     if (typeof toast === 'function') toast(msg);
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || tx('Could not update the column.'), true);
   }
   await catsetFieldsLoad(true);
 }
-function catsetColRow(c, i, n){
-  var key = esc(c.field_key), used = Number(c.used_by || 0), can = !!c.removable, t = catsetColTab();
+function catsetColRow(c, i, n) {
+  var key = esc(c.field_key),
+    used = Number(c.used_by || 0),
+    can = !!c.removable,
+    t = catsetColTab();
   var name = esc(c.field_name || c.field_key);
   if (t === 'types') {
     var types = ['text', 'number', 'choice', 'date'];
     var lockedType = !c.retypable;
-    var lockedReq = (c.field_key === 'name' || c.field_key === 'price');
+    var lockedReq = c.field_key === 'name' || c.field_key === 'price';
     var ready = !!CATSET.attrsReady;
-    return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
-      + '<span class="bn">' + name + '</span>'
-      + '<select data-testid="catset-type-' + key + '"' + (lockedType ? ' disabled' : '')
-      + ' title="' + esc(lockedType ? (c.retype_because || '') : tx('What kind of value this column holds')) + '"'
-      + ' onchange="catsetFieldPatch(\'' + key + '\',{field_type:this.value})" style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">'
-      + types.map(function(x){ return '<option value="' + x + '"' + ((c.field_type || 'text') === x ? ' selected' : '') + '>' + x + '</option>'; }).join('')
-      + (types.indexOf(c.field_type) < 0 && c.field_type ? '<option value="' + esc(c.field_type) + '" selected>' + esc(c.field_type) + '</option>' : '')
-      + '</select>'
-      + '<input list="cb-rec20" data-testid="catset-unit-' + key + '" value="' + esc(c.unit || '') + '" placeholder="' + esc(tx('unit · KGM')) + '"'
-      + (ready ? '' : ' disabled title="' + esc(tx('Needs migration b200 — run it in the SQL editor')) + '"')
-      + ' onchange="catsetFieldPatch(\'' + key + '\',{unit:this.value})" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);text-transform:uppercase">'
-      + '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="' + esc(lockedReq ? tx('Every catalogue requires this') : tx('Refuse a product that leaves this empty')) + '">'
-      + '<input type="checkbox" data-testid="catset-req-' + key + '"' + (c.required ? ' checked' : '') + (lockedReq ? ' disabled' : '')
-      + ' onchange="catsetFieldPatch(\'' + key + '\',{required:this.checked})">' + tx('required') + '</label>'
-      + '</div>';
+    return (
+      '<div class="bulkrow" data-testid="catset-col-' +
+      key +
+      '">' +
+      '<span class="bn">' +
+      name +
+      '</span>' +
+      '<select data-testid="catset-type-' +
+      key +
+      '"' +
+      (lockedType ? ' disabled' : '') +
+      ' title="' +
+      esc(lockedType ? c.retype_because || '' : tx('What kind of value this column holds')) +
+      '"' +
+      ' onchange="catsetFieldPatch(\'' +
+      key +
+      '\',{field_type:this.value})" style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">' +
+      types
+        .map(function (x) {
+          return '<option value="' + x + '"' + ((c.field_type || 'text') === x ? ' selected' : '') + '>' + x + '</option>';
+        })
+        .join('') +
+      (types.indexOf(c.field_type) < 0 && c.field_type ? '<option value="' + esc(c.field_type) + '" selected>' + esc(c.field_type) + '</option>' : '') +
+      '</select>' +
+      '<input list="cb-rec20" data-testid="catset-unit-' +
+      key +
+      '" value="' +
+      esc(c.unit || '') +
+      '" placeholder="' +
+      esc(tx('unit · KGM')) +
+      '"' +
+      (ready ? '' : ' disabled title="' + esc(tx('Needs migration b200 — run it in the SQL editor')) + '"') +
+      ' onchange="catsetFieldPatch(\'' +
+      key +
+      '\',{unit:this.value})" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);text-transform:uppercase">' +
+      '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="' +
+      esc(lockedReq ? tx('Every catalogue requires this') : tx('Refuse a product that leaves this empty')) +
+      '">' +
+      '<input type="checkbox" data-testid="catset-req-' +
+      key +
+      '"' +
+      (c.required ? ' checked' : '') +
+      (lockedReq ? ' disabled' : '') +
+      ' onchange="catsetFieldPatch(\'' +
+      key +
+      '\',{required:this.checked})">' +
+      tx('required') +
+      '</label>' +
+      '</div>'
+    );
   }
   if (t === 'usage') {
     var erp = (typeof CATSET_FACE !== 'undefined' && CATSET_FACE && CATSET_FACE.erp && CATSET_FACE.erp[c.field_key]) || '';
-    return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
-      + '<span class="bn">' + name + '</span>'
-      + '<span class="bh">' + (used ? txn('used by {count} product', 'used by {count} products', used) : tx('unused'))
-      + ' · ' + tx('in the upload template') + (erp ? ' · ERP: <span class="mono">' + esc(erp) + '</span>' : '') + '</span>'
-      + '<button type="button" class="badd" data-testid="catset-rm-' + key + '"' + (can ? '' : ' disabled')
-      + ' title="' + esc(can ? tx('Remove this column') : (c.locked_because || tx('This column cannot be removed.'))) + '"'
-      + ' onclick="catsetDrop(\'' + key + '\')">' + (can ? '✕' : '🔒') + '</button>'
-      + '</div>';
+    return (
+      '<div class="bulkrow" data-testid="catset-col-' +
+      key +
+      '">' +
+      '<span class="bn">' +
+      name +
+      '</span>' +
+      '<span class="bh">' +
+      (used ? txn('used by {count} product', 'used by {count} products', used) : tx('unused')) +
+      ' · ' +
+      tx('in the upload template') +
+      (erp ? ' · ERP: <span class="mono">' + esc(erp) + '</span>' : '') +
+      '</span>' +
+      '<button type="button" class="badd" data-testid="catset-rm-' +
+      key +
+      '"' +
+      (can ? '' : ' disabled') +
+      ' title="' +
+      esc(can ? tx('Remove this column') : c.locked_because || tx('This column cannot be removed.')) +
+      '"' +
+      ' onclick="catsetDrop(\'' +
+      key +
+      '\')">' +
+      (can ? '✕' : '🔒') +
+      '</button>' +
+      '</div>'
+    );
   }
   /* columns — the label is editable in place; order is always live (presentation, never a fact about a product). */
-  return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
-    + '<input class="bn" data-testid="catset-name-' + key + '" value="' + name + '" title="' + esc(tx('Rename — every screen and sheet follows; the key stays')) + '"'
-    + ' onchange="catsetFieldPatch(\'' + key + '\',{field_name:this.value})" style="border:0;border-bottom:1px dashed var(--line);background:transparent;color:inherit;font:inherit;font-weight:600;min-width:0;flex:1">'
-    + '<span class="bh">' + (c.required ? tx('required') : '') + '</span>'
-    + '<button type="button" title="' + esc(tx('Move up')) + '" data-testid="catset-up-' + key + '"'
-    + (i === 0 ? ' disabled' : '') + ' onclick="catsetMove(\'' + key + '\',-1)">↑</button>'
-    + '<button type="button" title="' + esc(tx('Move down')) + '" data-testid="catset-dn-' + key + '"'
-    + (i === n - 1 ? ' disabled' : '') + ' onclick="catsetMove(\'' + key + '\',1)">↓</button>'
-    + (can ? '' : '<button type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>')
-    + '</div>';
+  return (
+    '<div class="bulkrow" data-testid="catset-col-' +
+    key +
+    '">' +
+    '<input class="bn" data-testid="catset-name-' +
+    key +
+    '" value="' +
+    name +
+    '" title="' +
+    esc(tx('Rename — every screen and sheet follows; the key stays')) +
+    '"' +
+    ' onchange="catsetFieldPatch(\'' +
+    key +
+    '\',{field_name:this.value})" style="border:0;border-bottom:1px dashed var(--line);background:transparent;color:inherit;font:inherit;font-weight:600;min-width:0;flex:1">' +
+    '<span class="bh">' +
+    (c.required ? tx('required') : '') +
+    '</span>' +
+    '<button type="button" title="' +
+    esc(tx('Move up')) +
+    '" data-testid="catset-up-' +
+    key +
+    '"' +
+    (i === 0 ? ' disabled' : '') +
+    ' onclick="catsetMove(\'' +
+    key +
+    '\',-1)">↑</button>' +
+    '<button type="button" title="' +
+    esc(tx('Move down')) +
+    '" data-testid="catset-dn-' +
+    key +
+    '"' +
+    (i === n - 1 ? ' disabled' : '') +
+    ' onclick="catsetMove(\'' +
+    key +
+    '\',1)">↓</button>' +
+    (can ? '' : '<button type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>') +
+    '</div>'
+  );
 }
-function catsetColsHTML(){
-  var f = (CATSET && CATSET.fields) || null;
-  if (f === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  if (!f.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
+function catsetColsHTML() {
+  var list = (CATSET && CATSET.fields) || null;
+  if (list === null) {
+    catsetFieldsLoad();
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>';
+  }
+  if (!list.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
 
   var t = catsetColTab();
-  var rows = f.map(function(c, i){ return catsetColRow(c, i, f.length); }).join('');
-  var tabNote = t === 'types'
-    ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('Type is fixed once a product records a value. Unit is a UN/ECE Rec 20 code (KGM · LTR · MTK · H87 = piece) so a sheet stays machine-readable.'))
-      + (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Unit needs migration b200.')) + '</b>') + '</div>'
-      + '<datalist id="cb-rec20">' + CATSET_REC20.map(function(u){ return '<option value="' + u[0] + '">' + esc(u[1]) + '</option>'; }).join('') + '</datalist>'
-    : t === 'usage'
-    ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('A column can be removed only while no product records a value in it. Nothing stored is deleted either way.')) + '</div>'
-    : '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('The order here is the order on the product form, the template and the export.')) + '</div>';
+  var rows = list
+    .map(function (item, index) {
+      return catsetColRow(item, index, list.length);
+    })
+    .join('');
+  var tabNote =
+    t === 'types'
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' +
+        esc(
+          tx('Type is fixed once a product records a value. Unit is a UN/ECE Rec 20 code (KGM · LTR · MTK · H87 = piece) so a sheet stays machine-readable.')
+        ) +
+        (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Unit needs migration b200.')) + '</b>') +
+        '</div>' +
+        '<datalist id="cb-rec20">' +
+        CATSET_REC20.map(function (item) {
+          return '<option value="' + item[0] + '">' + esc(item[1]) + '</option>';
+        }).join('') +
+        '</datalist>'
+      : t === 'usage'
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' +
+          esc(tx('A column can be removed only while no product records a value in it. Nothing stored is deleted either way.')) +
+          '</div>'
+        : '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' +
+          esc(tx('The order here is the order on the product form, the template and the export.')) +
+          '</div>';
 
   /* ⭐ AND THE ONES THE SYSTEM KEEPS, beside them — a product records these too, so a list headed "what every
      product records" that omits them is short by three. Locked, and each says where it IS set. */
-  var sys = ((CATSET && CATSET.system) || []).map(function(c){
-    return '<div class="bulkrow" style="opacity:.72" data-testid="catset-sys-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_name) + ' <span style="font-weight:400;color:var(--grey)">· '
-      + esc(tx('kept by the system')) + '</span></span>'
-      + '<span class="bh">' + esc(c.field_type) + '</span>'
-      + '<button type="button" class="badd" disabled title="' + esc(tx('Set in ') + (c.managed_by || '')) + '">🔒</button>'
-      + '</div>';
-  }).join('');
+  var sys = ((CATSET && CATSET.system) || [])
+    .map(function (item) {
+      return (
+        '<div class="bulkrow" style="opacity:.72" data-testid="catset-sys-' +
+        esc(item.field_key) +
+        '">' +
+        '<span class="bn">' +
+        esc(item.field_name) +
+        ' <span style="font-weight:400;color:var(--grey)">· ' +
+        esc(tx('kept by the system')) +
+        '</span></span>' +
+        '<span class="bh">' +
+        esc(item.field_type) +
+        '</span>' +
+        '<button type="button" class="badd" disabled title="' +
+        esc(tx('Set in ') + (item.managed_by || '')) +
+        '">🔒</button>' +
+        '</div>'
+      );
+    })
+    .join('');
 
   /**
    * ⚠️⚠️ COLUMNS THAT ARE IN THE DATA AND IN NO DECLARATION — and this panel used to be silent about them.
@@ -1116,36 +1800,71 @@ function catsetColsHTML(){
    * one is data written before that. If it appears, the backfill (migration b198) has not been run — and saying
    * so is far better than a panel that quietly disagrees with the download.
    */
-  var undec = ((CATSET && CATSET.undeclared) || []).map(function(c){
-    return '<div class="bulkrow" style="opacity:.8" data-testid="catset-undeclared-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_key) + '</span>'
-      + '<span class="bh">' + esc(String(c.used_by || 0)) + ' ' + esc(tx('product(s)')) + '</span>'
-      + '</div>';
-  }).join('');
+  var undec = ((CATSET && CATSET.undeclared) || [])
+    .map(function (item) {
+      return (
+        '<div class="bulkrow" style="opacity:.8" data-testid="catset-undeclared-' +
+        esc(item.field_key) +
+        '">' +
+        '<span class="bn">' +
+        esc(item.field_key) +
+        '</span>' +
+        '<span class="bh">' +
+        esc(String(item.used_by || 0)) +
+        ' ' +
+        esc(tx('product(s)')) +
+        '</span>' +
+        '</div>'
+      );
+    })
+    .join('');
 
-  return catsetColTabsHTML() + tabNote + '<div class="bulklist">' + rows + '</div>'
-    + (sys ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;'
-      + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('Kept by the system') + '</div>'
-      + '<div class="bulklist">' + sys + '</div>' : '')
-    + (undec ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);text-transform:uppercase;'
-      + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('In your data, not yet declared') + '</div>'
-      + '<div class="bulklist">' + undec + '</div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">'
-      + esc(tx('These are in your export and your template but are not columns yet, so they cannot be renamed, reordered or removed.')) + '</div>' : '');
+  return (
+    catsetColTabsHTML() +
+    tabNote +
+    '<div class="bulklist">' +
+    rows +
+    '</div>' +
+    (sys
+      ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;' +
+        'letter-spacing:.04em;margin:12px 0 5px">' +
+        tx('Kept by the system') +
+        '</div>' +
+        '<div class="bulklist">' +
+        sys +
+        '</div>'
+      : '') +
+    (undec
+      ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);text-transform:uppercase;' +
+        'letter-spacing:.04em;margin:12px 0 5px">' +
+        tx('In your data, not yet declared') +
+        '</div>' +
+        '<div class="bulklist">' +
+        undec +
+        '</div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">' +
+        esc(tx('These are in your export and your template but are not columns yet, so they cannot be renamed, reordered or removed.')) +
+        '</div>'
+      : '')
+  );
 }
 
-async function catsetFieldsLoad(force){
+async function catsetFieldsLoad(force) {
   if (CATSET._fieldsBusy) return;
   if (CATSET.fields && !force) return;
   CATSET._fieldsBusy = true;
   try {
-    var r = await api('schemaFields');
-    CATSET.fields = (r && r.fields) || [];
-    CATSET.system = (r && r.system) || [];
-    CATSET.attrsReady = !!(r && r.attrs_ready);   // unit · source exist only once migration b200 has run
+    var reply = await api('schemaFields');
+    CATSET.fields = (reply && reply.fields) || [];
+    CATSET.system = (reply && reply.system) || [];
+    CATSET.attrsReady = !!(reply && reply.attrs_ready); // unit · source exist only once migration b200 has run
     /* Empty on any catalogue written since the declare-first writer; non-empty means b198 has not been run. */
-    CATSET.undeclared = (r && r.undeclared) || [];
-  } catch (e) { CATSET.fields = []; CATSET.system = []; CATSET.undeclared = []; }
+    CATSET.undeclared = (reply && reply.undeclared) || [];
+  } catch (e) {
+    CATSET.fields = [];
+    CATSET.system = [];
+    CATSET.undeclared = [];
+  }
   CATSET._fieldsBusy = false;
   catsetPaintDetail();
 }
@@ -1155,33 +1874,53 @@ async function catsetFieldsLoad(force){
  * screen that sent a single move would be asking the server to reconstruct an order it can already see. Sending
  * the list means what is on screen and what is stored cannot drift apart by one press.
  */
-async function catsetMove(key, dir){
-  var f = (CATSET.fields || []).slice();
-  var i = f.findIndex(function(x){ return x.field_key === key; });
+async function catsetMove(key, dir) {
+  var list = (CATSET.fields || []).slice();
+  var i = list.findIndex(function (x) {
+    return x.field_key === key;
+  });
   var j = i + dir;
-  if (i < 0 || j < 0 || j >= f.length) return;
-  var t = f[i]; f[i] = f[j]; f[j] = t;
-  CATSET.fields = f;
-  catsetPaintDetail();                                    // move first, so the screen answers the press at once
-  try { await api('schemaFieldOrder', { body: { order: f.map(function(x){ return x.field_key; }) } }); UI._catFields = null; }
-  catch (e) {
+  if (i < 0 || j < 0 || j >= list.length) return;
+  var t = list[i];
+  list[i] = list[j];
+  list[j] = t;
+  CATSET.fields = list;
+  catsetPaintDetail(); // move first, so the screen answers the press at once
+  try {
+    await api('schemaFieldOrder', {
+      body: {
+        order: list.map(function (x) {
+          return x.field_key;
+        })
+      }
+    });
+    UI._catFields = null;
+  } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not save the order.', true);
-    await catsetFieldsLoad(true);                         // and put it back if the server disagreed
+    await catsetFieldsLoad(true); // and put it back if the server disagreed
   }
 }
 
-function catsetDrop(key){
-  var c = (CATSET.fields || []).find(function(x){ return x.field_key === key; }) || {};
-  confirmAsk(txf('Remove the {name} column?', { name: '"' + esc(c.field_name || key) + '"' }),
-    tx('Nothing recorded in it is deleted — the column stops being part of your catalogue, and re-adding it '
-     + 'brings back anything products still hold.'),
-    tx('Remove'), function(){ _catsetDrop(key); }, true);
+function catsetDrop(key) {
+  var c =
+    (CATSET.fields || []).find(function (x) {
+      return x.field_key === key;
+    }) || {};
+  confirmAsk(
+    txf('Remove the {name} column?', { name: '"' + esc(c.field_name || key) + '"' }),
+    tx('Nothing recorded in it is deleted — the column stops being part of your catalogue, and re-adding it ' + 'brings back anything products still hold.'),
+    tx('Remove'),
+    function () {
+      _catsetDrop(key);
+    },
+    true
+  );
 }
-async function _catsetDrop(key){
+async function _catsetDrop(key) {
   try {
-    var r = await api('schemaFieldDrop', { params: { key: key } });
+    var reply = await api('schemaFieldDrop', { params: { key: key } });
     UI._catFields = null;
-    if (typeof toast === 'function') toast((r && r.message) || 'Column removed');
+    if (typeof toast === 'function') toast((reply && reply.message) || 'Column removed');
     await catsetFieldsLoad(true);
   } catch (e) {
     /* ⚠️ The server's refusal carries the COUNT — pass it through rather than replacing it with a generic
@@ -1219,7 +1958,7 @@ var CATSET_SYS = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
 /** ⚠️ Merged, never replaced — see the note above. */
 /** ⚠️ Merged, never replaced: the face is upserted WHOLE, so a panel saving only its own key would drop
     everything else it holds. */
-async function catsetFaceSave(patch){
+async function catsetFaceSave(patch) {
   var face = Object.assign({}, CATSET_FACE || {}, patch || {});
   catsetFaceSet(face);
   try {
@@ -1228,52 +1967,88 @@ async function catsetFaceSave(patch){
        pane). [TAX-01] INHERIT found it: set the catalogue-default slab here, open a product, and it still said
        "Not set" until a reload. The write is the one place that knows the face changed. */
     if (typeof UI !== 'undefined') UI._face = undefined;
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true);
   }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true); }
 }
 
-function catsetErpHTML(){
-  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+function catsetErpHTML() {
+  if (CATSET_FACE === undefined) {
+    catsetFaceLoad().then(catsetPaintDetail);
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>';
+  }
   var cols = (CATSET && CATSET.fields) || null;
-  if (cols === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (cols === null) {
+    catsetFieldsLoad();
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>';
+  }
   if (!cols.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('Declare some columns first.') + '</div>';
 
   var map = (CATSET_FACE && CATSET_FACE.erpMap) || {};
-  var mapped = Object.keys(map).filter(function(k){ var m = map[k]; return m && m.system && m.system !== '—'; }).length;
+  var mapped = Object.keys(map).filter(function (item) {
+    var m = map[item];
+    return m && m.system && m.system !== '—';
+  }).length;
 
-  return '<div class="bulklist">' + cols.map(function(c){
-    var m = map[c.field_key] || {};
-    var sys = m.system || '—';
-    return '<div class="bulkrow" data-testid="catset-erp-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_name || c.field_key) + '</span>'
-      + '<select data-testid="catset-erpsys-' + esc(c.field_key) + '"'
-      + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'system\',this.value)"'
-      + ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">'
-      + CATSET_SYS.map(function(s){ return '<option' + (s === sys ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('')
-      + '</select>'
-      /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
+  return (
+    '<div class="bulklist">' +
+    cols
+      .map(function (item) {
+        var m = map[item.field_key] || {};
+        var sys = m.system || '—';
+        return (
+          '<div class="bulkrow" data-testid="catset-erp-' +
+          esc(item.field_key) +
+          '">' +
+          '<span class="bn">' +
+          esc(item.field_name || item.field_key) +
+          '</span>' +
+          '<select data-testid="catset-erpsys-' +
+          esc(item.field_key) +
+          '"' +
+          ' onchange="catsetErpSet(\'' +
+          esc(item.field_key) +
+          "','system',this.value)\"" +
+          ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">' +
+          CATSET_SYS.map(function (item) {
+            return '<option' + (item === sys ? ' selected' : '') + '>' + esc(item) + '</option>';
+          }).join('') +
+          '</select>' +
+          /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
          a question with no context, and an answer typed against "—" would be stored against nothing. */
-      + (sys !== '—'
-          ? '<input class="inp" data-testid="catset-erpref-' + esc(c.field_key) + '" style="width:170px;padding:3px 7px"'
-            + ' value="' + esc(m.ref || '') + '" placeholder="' + esc(tx('their field name')) + '"'
-            + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'ref\',this.value)">'
-          : '<span class="bh">' + tx('not mapped') + '</span>')
-      + '</div>';
-  }).join('') + '</div>'
-  + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'
-  + (mapped ? txn('{count} column mapped', '{count} columns mapped', mapped)
-            : tx('Nothing mapped — this catalogue stands on its own.'))
-  + '</div>';
+          (sys !== '—'
+            ? '<input class="inp" data-testid="catset-erpref-' +
+              esc(item.field_key) +
+              '" style="width:170px;padding:3px 7px"' +
+              ' value="' +
+              esc(m.ref || '') +
+              '" placeholder="' +
+              esc(tx('their field name')) +
+              '"' +
+              ' onchange="catsetErpSet(\'' +
+              esc(item.field_key) +
+              "','ref',this.value)\">"
+            : '<span class="bh">' + tx('not mapped') + '</span>') +
+          '</div>'
+        );
+      })
+      .join('') +
+    '</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+    (mapped ? txn('{count} column mapped', '{count} columns mapped', mapped) : tx('Nothing mapped — this catalogue stands on its own.')) +
+    '</div>'
+  );
 }
 
-function catsetErpSet(key, prop, val){
+function catsetErpSet(key, prop, val) {
   var face = CATSET_FACE || {};
   var map = Object.assign({}, face.erpMap || {});
   var m = Object.assign({}, map[key] || {});
   m[prop] = val;
   /* A column set back to "—" is UNMAPPED, not mapped to a dash — otherwise the count and any exporter reading
      this would treat the placeholder as a destination. */
-  if (prop === 'system' && val === '—') delete map[key]; else map[key] = m;
+  if (prop === 'system' && val === '—') delete map[key];
+  else map[key] = m;
   catsetFaceSave({ erpMap: map });
   catsetPaintDetail();
 }
@@ -1307,43 +2082,105 @@ function catsetErpSet(key, prop, val){
  * status (Scheduled · Active · Expired, the words Shopify/WooCommerce/Google Merchant use — a second axis beside
  * draft · live · retired); where it applies = the products or category it targets, else every product.
  */
-function catsetOfferShape(d){ return Object.assign({ id: d.id, kind: d.sub, label: d.name }, d.rules || {}); }
-function catsetOfferAppliesHTML(rules){
+function catsetOfferShape(d) {
+  return Object.assign({ id: d.id, kind: d.sub, label: d.name }, d.rules || {});
+}
+function catsetOfferAppliesHTML(rules) {
   var at = (rules && rules.applies_to) || {};
   var bits = [];
-  if (Array.isArray(at.item_ids) && at.item_ids.length) { catsetProdsEnsure(); bits.push(at.item_ids.map(function (id) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(catsetProdName(id)) + '</span>'; }).join(' ')); }
+  if (Array.isArray(at.item_ids) && at.item_ids.length) {
+    catsetProdsEnsure();
+    bits.push(
+      at.item_ids
+        .map(function (id) {
+          return '<span class="pill" style="font-size:var(--fs-1)">' + esc(catsetProdName(id)) + '</span>';
+        })
+        .join(' ')
+    );
+  }
   var catIds = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
   catIds.forEach(function (catId) {
-    var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === catId; })[0];
+    var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) {
+      return String(x.definition_id || x.id) === catId;
+    })[0];
     at = Object.assign({}, at, { category: catId });
     /* the products this category offer reaches — one list, so its applicability is confirmed by looking (Athi, 2026-09-05) */
     var prods = catsetProdsEnsure() || [];
-    var inCat = prods.filter(function (p) { var d = p.item_data || p; return ((typeof catgIdsOf === 'function') ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0; });
-    bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + ' · ' + esc(txf('{n} product(s)', { n: String(inCat.length) })) + '</span>'
-      + (inCat.length ? '<details style="display:inline-block;margin-inline-start:6px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('which') + '</summary><div data-testid="catset-offer-reach" style="font-size:var(--fs-1);padding:4px 0 0 8px">'
-        + inCat.map(function (p) { var d = p.item_data || p; return '<div>' + esc((d.name || '')) + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>'; }).join('') + '</div></details>' : ''));
+    var inCat = prods.filter(function (item) {
+      var d = item.item_data || item;
+      return (typeof catgIdsOf === 'function' ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0;
+    });
+    bits.push(
+      '<span class="pill" style="font-size:var(--fs-1)">' +
+        esc(tx('category') + ': ' + (c ? c.name : at.category)) +
+        ' · ' +
+        esc(txf('{n} product(s)', { n: String(inCat.length) })) +
+        '</span>' +
+        (inCat.length
+          ? '<details style="display:inline-block;margin-inline-start:6px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' +
+            tx('which') +
+            '</summary><div data-testid="catset-offer-reach" style="font-size:var(--fs-1);padding:4px 0 0 8px">' +
+            inCat
+              .map(function (item) {
+                var d = item.item_data || item;
+                return '<div>' + esc(d.name || '') + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>';
+              })
+              .join('') +
+            '</div></details>'
+          : '')
+    );
   });
   return bits.length ? bits.join(' ') : '<span style="color:var(--grey)">' + tx('every product') + '</span>';
 }
-function catsetOfferWindowHTML(rules, status){
-  var r = rules || {}; if (typeof CBOffers === 'undefined') return '';
+function catsetOfferWindowHTML(rules, status) {
+  var r = rules || {};
+  if (typeof CBOffers === 'undefined') return '';
   var t = CBOffers.timeStatus(r);
   var word = { scheduled: tx('Scheduled'), active: tx('Active'), expired: tx('Expired') }[t] || t;
   var col = { scheduled: 'var(--blue)', active: 'var(--ok, #2e7d32)', expired: 'var(--grey)' }[t] || 'var(--grey)';
-  var win = (r.valid_from || r.valid_to) ? esc((r.valid_from || '…') + ' → ' + (r.valid_to || '…')) : esc(tx('no dates — always'));
+  var win = r.valid_from || r.valid_to ? esc((r.valid_from || '…') + ' → ' + (r.valid_to || '…')) : esc(tx('no dates — always'));
   /* a draft or retired offer has a window but does not APPLY; say the time word only for live ones */
-  return '<span data-testid="catset-offer-time" data-time="' + esc(t) + '" style="color:' + col + ';font-weight:700">' + (status === 'live' ? esc(word) : esc(win)) + '</span>'
-    + (status === 'live' ? ' <span style="color:var(--grey)">' + win + '</span>' : '');
+  return (
+    '<span data-testid="catset-offer-time" data-time="' +
+    esc(t) +
+    '" style="color:' +
+    col +
+    ';font-weight:700">' +
+    (status === 'live' ? esc(word) : esc(win)) +
+    '</span>' +
+    (status === 'live' ? ' <span style="color:var(--grey)">' + win + '</span>' : '')
+  );
 }
-function catsetDefRowDetail(kind, d){
+function catsetDefRowDetail(kind, d) {
   if (kind !== 'offer') return '';
   var o = catsetOfferShape(d);
-  var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? CBOffers.terms(o, { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) : null;
-  return '<div class="dn-detail" data-testid="catset-offer-detail-' + esc(d.id) + '" style="flex-basis:100%;font-size:var(--fs-1);display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:2px 0 0">'
-    + '<span data-testid="catset-offer-terms">' + (terms ? esc(terms) + ' <span style="color:var(--grey)">' + esc(tx(CBOffers.scopeLabel(o))) + '</span>' : '<span style="color:var(--warn-3)">' + tx('no terms yet') + '</span>') + '</span>'
-    + '<span>' + catsetOfferWindowHTML(d.rules, d.status) + '</span>'
-    + '<span data-testid="catset-offer-applies"><span style="color:var(--grey)">' + tx('on') + '</span> ' + catsetOfferAppliesHTML(d.rules) + '</span>'
-    + '</div>';
+  var terms =
+    typeof CBOffers !== 'undefined' && CBOffers.terms
+      ? CBOffers.terms(o, {
+          money: function (n) {
+            return typeof inr === 'function' ? inr(n) : String(n);
+          }
+        })
+      : null;
+  return (
+    '<div class="dn-detail" data-testid="catset-offer-detail-' +
+    esc(d.id) +
+    '" style="flex-basis:100%;font-size:var(--fs-1);display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:2px 0 0">' +
+    '<span data-testid="catset-offer-terms">' +
+    (terms
+      ? esc(terms) + ' <span style="color:var(--grey)">' + esc(tx(CBOffers.scopeLabel(o))) + '</span>'
+      : '<span style="color:var(--warn-3)">' + tx('no terms yet') + '</span>') +
+    '</span>' +
+    '<span>' +
+    catsetOfferWindowHTML(d.rules, d.status) +
+    '</span>' +
+    '<span data-testid="catset-offer-applies"><span style="color:var(--grey)">' +
+    tx('on') +
+    '</span> ' +
+    catsetOfferAppliesHTML(d.rules) +
+    '</span>' +
+    '</div>'
+  );
 }
 
 /**
@@ -1353,106 +2190,317 @@ function catsetDefRowDetail(kind, d){
  * months side by side and authoring several at once. The strip: six months, each with the live offers that touch
  * it. "Plan several": rows of name · kind · value · product · from · to, created LIVE in one pass.
  */
-function catsetOfferPlanHTML(){
-  var rows = CATSET_DEFS['offer'];
+function catsetOfferPlanHTML() {
+  var rows = CATSET_DEFS.offer;
   if (rows === undefined) return '<div class="catset-load">' + tx('reading…') + '</div>';
-  var live = rows.filter(function (d) { return d.status === 'live'; });
-  var now = new Date(), months = [];
-  for (var i = 0; i < 6; i++) { var m0 = new Date(now.getFullYear(), now.getMonth() + i, 1), m1 = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59); months.push({ from: m0, to: m1, label: m0.toLocaleString(undefined, { month: 'short', year: 'numeric' }) }); }
-  var touches = function (d, m) { var r = d.rules || {}; var f = r.valid_from ? new Date(r.valid_from) : null, t = r.valid_to ? new Date(r.valid_to + 'T23:59:59') : null; if (f && f > m.to) return false; if (t && t < m.from) return false; return true; };
-  var cells = months.map(function (m, i) {
-    var on = live.filter(function (d) { return touches(d, m); });
-    return '<div data-testid="catset-plan-month-' + i + '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' + (i === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') + '">'
-      + '<div style="font-weight:700;margin-bottom:4px">' + esc(m.label) + (i === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') + '</div>'
-      + (on.length ? on.map(function (d) { return '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' + esc(d.id) + '\')">' + esc(d.name) + '</div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">—</div>')
-      + '</div>';
-  }).join('');
-  return '<div data-testid="catset-offer-plan" style="display:flex;gap:8px;flex-wrap:wrap">' + cells + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('An offer applies only inside its own dates; two offers on the same product in the same month stack by their order.') + '</div>';
+  var live = rows.filter(function (item) {
+    return item.status === 'live';
+  });
+  var now = new Date(),
+    months = [];
+  for (var index = 0; index < 6; index++) {
+    var date = new Date(now.getFullYear(), now.getMonth() + index, 1),
+      m1 = new Date(now.getFullYear(), now.getMonth() + index + 1, 0, 23, 59, 59);
+    months.push({ from: date, to: m1, label: date.toLocaleString(undefined, { month: 'short', year: 'numeric' }) });
+  }
+  var touches = function (d, m) {
+    var r = d.rules || {};
+    var f = r.valid_from ? new Date(r.valid_from) : null,
+      t = r.valid_to ? new Date(r.valid_to + 'T23:59:59') : null;
+    if (f && f > m.to) return false;
+    if (t && t < m.from) return false;
+    return true;
+  };
+  var cells = months
+    .map(function (item, index) {
+      var on = live.filter(function (d) {
+        return touches(d, item);
+      });
+      return (
+        '<div data-testid="catset-plan-month-' +
+        index +
+        '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' +
+        (index === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') +
+        '">' +
+        '<div style="font-weight:700;margin-bottom:4px">' +
+        esc(item.label) +
+        (index === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') +
+        '</div>' +
+        (on.length
+          ? on
+              .map(function (item) {
+                return (
+                  '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' +
+                  esc(item.id) +
+                  '\')">' +
+                  esc(item.name) +
+                  '</div>'
+                );
+              })
+              .join('')
+          : '<div style="font-size:var(--fs-1);color:var(--grey)">—</div>') +
+        '</div>'
+      );
+    })
+    .join('');
+  return (
+    '<div data-testid="catset-offer-plan" style="display:flex;gap:8px;flex-wrap:wrap">' +
+    cells +
+    '</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+    tx('An offer applies only inside its own dates; two offers on the same product in the same month stack by their order.') +
+    '</div>'
+  );
 }
 var CATSET_PLAN = null;
-function catsetPlanOpen(){
+function catsetPlanOpen() {
   CATSET_PLAN = [catsetPlanRow(0), catsetPlanRow(1)];
   catsetProdsEnsure();
   catsetPlanPaint();
 }
-function catsetPlanRow(i){ var d = new Date(); var f = new Date(d.getFullYear(), d.getMonth() + i, 1), t = new Date(d.getFullYear(), d.getMonth() + i + 1, 0); var iso = function (x) { return x.toISOString().slice(0, 10); }; return { name: '', kind: 'percent_off', value: '', product: '', from: iso(f), to: iso(t) }; }
-function catsetPlanPaint(){
-  var kinds = [['percent_off', tx('Percent off')], ['amount_off', tx('Amount off')]];
-  var prods = UI.prods || [];
-  var rowsHtml = CATSET_PLAN.map(function (r, i) {
-    return '<div data-testid="catset-plan-row" style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;align-items:center;margin-bottom:6px">'
-      + '<input class="inp" data-testid="plan-name-' + i + '" placeholder="' + esc(tx('Name buyers see')) + '" value="' + esc(r.name) + '" oninput="CATSET_PLAN[' + i + '].name=this.value">'
-      + '<select class="inp" data-testid="plan-kind-' + i + '" onchange="CATSET_PLAN[' + i + '].kind=this.value">' + kinds.map(function (k) { return '<option value="' + k[0] + '"' + (r.kind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>'
-      + '<input class="inp" data-testid="plan-value-' + i + '" inputmode="decimal" placeholder="10" value="' + esc(r.value) + '" oninput="CATSET_PLAN[' + i + '].value=this.value">'
-      + '<select class="inp" data-testid="plan-product-' + i + '" onchange="CATSET_PLAN[' + i + '].product=this.value"><option value="">' + esc(tx('every product')) + '</option>' + prods.map(function (p) { var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (r.product === id ? ' selected' : '') + '>' + esc((p.item_data || p).name || '') + '</option>'; }).join('') + '</select>'
-      + '<input class="inp" type="date" data-testid="plan-from-' + i + '" value="' + esc(r.from) + '" onchange="CATSET_PLAN[' + i + '].from=this.value">'
-      + '<input class="inp" type="date" data-testid="plan-to-' + i + '" value="' + esc(r.to) + '" onchange="CATSET_PLAN[' + i + '].to=this.value">'
-      + '<button class="composebtn" title="' + esc(tx('Remove')) + '" onclick="CATSET_PLAN.splice(' + i + ',1);catsetPlanPaint()">✕</button>'
-      + '</div>';
-  }).join('');
-  modal('<div class="mhd"><div class="t">' + tx('Plan several offers') + '</div><div class="s">' + tx('Each applies only inside its dates — this month one, next month another.') + '</div></div>'
-    + '<div class="mbody">'
-    + '<div style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;font-size:var(--fs-1);color:var(--grey);margin-bottom:4px"><span>' + tx('Name') + '</span><span>' + tx('Kind') + '</span><span>' + tx('Value') + '</span><span>' + tx('Applies to') + '</span><span>' + tx('From') + '</span><span>' + tx('To') + '</span><span></span></div>'
-    + rowsHtml
-    + '<button class="composebtn" data-testid="plan-add" onclick="CATSET_PLAN.push(catsetPlanRow(CATSET_PLAN.length));catsetPlanPaint()">+ ' + tx('Another month') + '</button>'
-    + '<div id="plan_err" class="err" style="margin-top:6px"></div></div>'
-    + '<div class="mfoot"><button class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' + tx('Create all as live') + '</button><button onclick="closeModal()">' + tx('Cancel') + '</button></div>', true);
+function catsetPlanRow(i) {
+  var date = new Date();
+  var f = new Date(date.getFullYear(), date.getMonth() + i, 1),
+    t = new Date(date.getFullYear(), date.getMonth() + i + 1, 0);
+  var iso = function (x) {
+    return x.toISOString().slice(0, 10);
+  };
+  return { name: '', kind: 'percent_off', value: '', product: '', from: iso(f), to: iso(t) };
 }
-async function catsetPlanGo(){
-  var err = document.getElementById('plan_err'); if (err) err.textContent = '';
-  var rows = (CATSET_PLAN || []).filter(function (r) { return r.name.trim() || r.value; });
-  if (!rows.length) { if (err) err.textContent = tx('Nothing to create.'); return; }
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i];
-    if (!r.name.trim()) { if (err) err.textContent = tx('Row {n}: a name buyers will see.').replace('{n}', String(i + 1)); return; }
-    if (!(Number(r.value) > 0)) { if (err) err.textContent = tx('Row {n}: a value above 0.').replace('{n}', String(i + 1)); return; }
-    if (r.from && r.to && r.to < r.from) { if (err) err.textContent = tx('Row {n}: “to” is before “from”.').replace('{n}', String(i + 1)); return; }
+function catsetPlanPaint() {
+  var kinds = [
+    ['percent_off', tx('Percent off')],
+    ['amount_off', tx('Amount off')]
+  ];
+  var prods = UI.prods || [];
+  var rowsHtml = CATSET_PLAN.map(function (item, index) {
+    return (
+      '<div data-testid="catset-plan-row" style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;align-items:center;margin-bottom:6px">' +
+      '<input class="inp" data-testid="plan-name-' +
+      index +
+      '" placeholder="' +
+      esc(tx('Name buyers see')) +
+      '" value="' +
+      esc(item.name) +
+      '" oninput="CATSET_PLAN[' +
+      index +
+      '].name=this.value">' +
+      '<select class="inp" data-testid="plan-kind-' +
+      index +
+      '" onchange="CATSET_PLAN[' +
+      index +
+      '].kind=this.value">' +
+      kinds
+        .map(function (k) {
+          return '<option value="' + k[0] + '"' + (item.kind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>';
+        })
+        .join('') +
+      '</select>' +
+      '<input class="inp" data-testid="plan-value-' +
+      index +
+      '" inputmode="decimal" placeholder="10" value="' +
+      esc(item.value) +
+      '" oninput="CATSET_PLAN[' +
+      index +
+      '].value=this.value">' +
+      '<select class="inp" data-testid="plan-product-' +
+      index +
+      '" onchange="CATSET_PLAN[' +
+      index +
+      '].product=this.value"><option value="">' +
+      esc(tx('every product')) +
+      '</option>' +
+      prods
+        .map(function (p) {
+          var id = p.item_id || p.id;
+          return '<option value="' + esc(id) + '"' + (item.product === id ? ' selected' : '') + '>' + esc((p.item_data || p).name || '') + '</option>';
+        })
+        .join('') +
+      '</select>' +
+      '<input class="inp" type="date" data-testid="plan-from-' +
+      index +
+      '" value="' +
+      esc(item.from) +
+      '" onchange="CATSET_PLAN[' +
+      index +
+      '].from=this.value">' +
+      '<input class="inp" type="date" data-testid="plan-to-' +
+      index +
+      '" value="' +
+      esc(item.to) +
+      '" onchange="CATSET_PLAN[' +
+      index +
+      '].to=this.value">' +
+      '<button class="composebtn" title="' +
+      esc(tx('Remove')) +
+      '" onclick="CATSET_PLAN.splice(' +
+      index +
+      ',1);catsetPlanPaint()">✕</button>' +
+      '</div>'
+    );
+  }).join('');
+  modal(
+    '<div class="mhd"><div class="t">' +
+      tx('Plan several offers') +
+      '</div><div class="s">' +
+      tx('Each applies only inside its dates — this month one, next month another.') +
+      '</div></div>' +
+      '<div class="mbody">' +
+      '<div style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;font-size:var(--fs-1);color:var(--grey);margin-bottom:4px"><span>' +
+      tx('Name') +
+      '</span><span>' +
+      tx('Kind') +
+      '</span><span>' +
+      tx('Value') +
+      '</span><span>' +
+      tx('Applies to') +
+      '</span><span>' +
+      tx('From') +
+      '</span><span>' +
+      tx('To') +
+      '</span><span></span></div>' +
+      rowsHtml +
+      '<button class="composebtn" data-testid="plan-add" onclick="CATSET_PLAN.push(catsetPlanRow(CATSET_PLAN.length));catsetPlanPaint()">+ ' +
+      tx('Another month') +
+      '</button>' +
+      '<div id="plan_err" class="err" style="margin-top:6px"></div></div>' +
+      '<div class="mfoot"><button class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' +
+      tx('Create all as live') +
+      '</button><button onclick="closeModal()">' +
+      tx('Cancel') +
+      '</button></div>',
+    true
+  );
+}
+async function catsetPlanGo() {
+  var err = document.getElementById('plan_err');
+  if (err) err.textContent = '';
+  var rows = (CATSET_PLAN || []).filter(function (item) {
+    return item.name.trim() || item.value;
+  });
+  if (!rows.length) {
+    if (err) err.textContent = tx('Nothing to create.');
+    return;
+  }
+  for (var index = 0; index < rows.length; index++) {
+    var r = rows[index];
+    if (!r.name.trim()) {
+      if (err) err.textContent = tx('Row {n}: a name buyers will see.').replace('{n}', String(index + 1));
+      return;
+    }
+    if (!(Number(r.value) > 0)) {
+      if (err) err.textContent = tx('Row {n}: a value above 0.').replace('{n}', String(index + 1));
+      return;
+    }
+    if (r.from && r.to && r.to < r.from) {
+      if (err) err.textContent = tx('Row {n}: “to” is before “from”.').replace('{n}', String(index + 1));
+      return;
+    }
   }
   var made = 0;
   try {
     for (var j = 0; j < rows.length; j++) {
       var x = rows[j];
       var rules = { scope: 'line', priority: j + 1 };
-      if (x.kind === 'percent_off') rules.percent = Number(x.value); else rules.amount = Number(x.value);
-      if (x.from) rules.valid_from = x.from; if (x.to) rules.valid_to = x.to;
+      if (x.kind === 'percent_off') rules.percent = Number(x.value);
+      else rules.amount = Number(x.value);
+      if (x.from) rules.valid_from = x.from;
+      if (x.to) rules.valid_to = x.to;
       if (x.product) rules.applies_to = { item_ids: [x.product] };
       await api('defAdd', { body: { kind: 'offer', sub_kind: x.kind, name: x.name.trim(), rules: rules, status: 'live' } });
       made++;
     }
-    closeModal(); toast(txf('{n} offer(s) created, live in their own dates.', { n: String(made) }));
-    if (typeof cbDefAfterChange === 'function') { try { await cbDefAfterChange('offer'); } catch (_) {} }
-    await catsetDefsLoad('offer', true); catsetPaintDetail();
-  } catch (e) { if (err) err.textContent = (made ? txf('{n} created, then: ', { n: String(made) }) : '') + ((e && e.message) || tx('Could not create.')); }
+    closeModal();
+    toast(txf('{n} offer(s) created, live in their own dates.', { n: String(made) }));
+    if (typeof cbDefAfterChange === 'function') {
+      try {
+        await cbDefAfterChange('offer');
+      } catch (_) {}
+    }
+    await catsetDefsLoad('offer', true);
+    catsetPaintDetail();
+  } catch (e) {
+    if (err) err.textContent = (made ? txf('{n} created, then: ', { n: String(made) }) : '') + ((e && e.message) || tx('Could not create.'));
+  }
 }
 
 /** The product list this screen's registers read — once, cached where the catalogue keeps it (UI.prods); null while reading. */
-function catsetProdsEnsure(){
+function catsetProdsEnsure() {
   if (Array.isArray(UI.prods)) return UI.prods;
-  if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (r) { UI.prods = r || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
+  if (!UI._catsetProdReq) {
+    UI._catsetProdReq = api('prodList')
+      .then(function (reply) {
+        UI.prods = reply || [];
+        UI._catsetProdReq = null;
+        catsetPaintDetail();
+      })
+      .catch(function () {
+        UI.prods = [];
+        UI._catsetProdReq = null;
+        catsetPaintDetail();
+      });
+  }
   return null;
 }
-function catsetProdName(id){ var p = (UI.prods || []).filter(function (x) { return String(x.item_id || x.id) === String(id); })[0]; return p ? ((p.item_data || p).name || id) : id; }
-function catsetTaxRows(){
+function catsetProdName(id) {
+  var p = (UI.prods || []).filter(function (x) {
+    return String(x.item_id || x.id) === String(id);
+  })[0];
+  return p ? (p.item_data || p).name || id : id;
+}
+function catsetTaxRows() {
   var prods = catsetProdsEnsure();
   if (prods === null) return null;
-  var slabs = (CATSET_DEFS['tax'] || []).filter(function (d) { return d.status === 'live'; })
-    .map(function (d) { return { definition_id: d.id, name: d.name, status: d.status, rules: d.rules || {} }; });
+  var slabs = (CATSET_DEFS.tax || [])
+    .filter(function (item) {
+      return item.status === 'live';
+    })
+    .map(function (item) {
+      return { definition_id: item.id, name: item.name, status: item.status, rules: item.rules || {} };
+    });
   var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || null;
-  if (cats === null && typeof cbDefsLive === 'function') { cbDefsLive('category').then(catsetPaintDetail).catch(function(){}); cats = []; }
+  if (cats === null && typeof cbDefsLive === 'function') {
+    cbDefsLive('category')
+      .then(catsetPaintDetail)
+      .catch(function () {});
+    cats = [];
+  }
   var offers = (typeof UI._ctOffers !== 'undefined' && UI._ctOffers) || null;
-  if (offers === null && typeof ctOffersEnsure === 'function') { ctOffersEnsure(function(){ catsetPaintDetail(); }); offers = []; }
+  if (offers === null && typeof ctOffersEnsure === 'function') {
+    ctOffersEnsure(function () {
+      catsetPaintDetail();
+    });
+    offers = [];
+  }
   var face = CATSET_FACE || {};
-  return prods.map(function (p) {
-    var d = p.item_data || p, id = p.item_id || p.id;
-    var r = (typeof CBTaxSlab !== 'undefined') ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
-    var on = (offers || []).filter(function (o) { var at = (o.rules && o.rules.applies_to) || {}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0; });
-    return { id: id, name: (typeof pName === 'function') ? pName(d) : (d.name || ''), code: d.hsn || d.code || d.sku || '',
-             cats: (typeof catgNamesOf === 'function') ? catgNamesOf(d) : [], catIds: (typeof catgIdsOf === 'function') ? catgIdsOf(d) : [], price: d.price, r: r, offers: on.map(function (o) { return o.name; }) };
+  return prods.map(function (item) {
+    var d = item.item_data || item,
+      id = item.item_id || item.id;
+    var r =
+      typeof CBTaxSlab !== 'undefined' ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
+    var on = (offers || []).filter(function (item) {
+      var at = (item.rules && item.rules.applies_to) || {};
+      return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0;
+    });
+    return {
+      id: id,
+      name: typeof pName === 'function' ? pName(d) : d.name || '',
+      code: d.hsn || d.code || d.sku || '',
+      cats: typeof catgNamesOf === 'function' ? catgNamesOf(d) : [],
+      catIds: typeof catgIdsOf === 'function' ? catgIdsOf(d) : [],
+      price: d.price,
+      r: r,
+      offers: on.map(function (item) {
+        return item.name;
+      })
+    };
   });
 }
-var CATSET_TAX_CATG = '';   /* the category chip picked on the Tax register ('' = all) */
-function catsetTaxCatg(id){ CATSET_TAX_CATG = (CATSET_TAX_CATG === id) ? '' : id; catsetPaintDetail(); }
+var CATSET_TAX_CATG = ''; /* the category chip picked on the Tax register ('' = all) */
+function catsetTaxCatg(id) {
+  CATSET_TAX_CATG = CATSET_TAX_CATG === id ? '' : id;
+  catsetPaintDetail();
+}
 /**
  * ⭐ ONE LIST PER CATEGORY — Athi, 2026-09-05: "is there any way we can look at the entire product under the category
  * in one single list in the offer and tax panel so things can be seen in one go and confirm its applicability".
@@ -1460,148 +2508,349 @@ function catsetTaxCatg(id){ CATSET_TAX_CATG = (CATSET_TAX_CATG === id) ? '' : id
  * so "does this category's slab actually reach its products?" is answered by looking. A product whose categories
  * disagree (two slabs) is flagged on its row and counted at the top.
  */
-function catsetTaxCatgChipsHTML(rows){
+function catsetTaxCatgChipsHTML(rows) {
   var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || [];
   if (!cats.length) return '';
-  var count = {}; rows.forEach(function (x) { (x.catIds || []).forEach(function (id) { count[id] = (count[id] || 0) + 1; }); });
-  var chip = function (id, name, n) { var on = CATSET_TAX_CATG === id; return '<span class="pill" data-testid="catset-tax-catg-' + esc(id || 'all') + '" onclick="catsetTaxCatg(\'' + esc(id) + '\')" style="cursor:pointer;' + (on ? 'background:var(--accent);color:#fff;' : 'color:var(--on-bg);') + '">' + esc(name) + (n != null ? ' · ' + n : '') + '</span>'; };
-  return '<div data-testid="catset-tax-catgs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
-    + chip('', tx('All products'), rows.length)
-    + cats.filter(function (c) { return c.status !== 'retired'; }).map(function (c) { var id = String(c.definition_id || c.id); var slab = c.rules && c.rules.default_slab; return chip(id, c.name + (slab ? ' · ' + tx('slab set') : ''), count[id] || 0); }).join('')
-    + '</div>';
+  var count = {};
+  rows.forEach(function (x) {
+    (x.catIds || []).forEach(function (id) {
+      count[id] = (count[id] || 0) + 1;
+    });
+  });
+  var chip = function (id, name, n) {
+    var on = CATSET_TAX_CATG === id;
+    return (
+      '<span class="pill" data-testid="catset-tax-catg-' +
+      esc(id || 'all') +
+      '" onclick="catsetTaxCatg(\'' +
+      esc(id) +
+      '\')" style="cursor:pointer;' +
+      (on ? 'background:var(--accent);color:#fff;' : 'color:var(--on-bg);') +
+      '">' +
+      esc(name) +
+      (n != null ? ' · ' + n : '') +
+      '</span>'
+    );
+  };
+  return (
+    '<div data-testid="catset-tax-catgs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">' +
+    chip('', tx('All products'), rows.length) +
+    cats
+      .filter(function (item) {
+        return item.status !== 'retired';
+      })
+      .map(function (item) {
+        var id = String(item.definition_id || item.id);
+        var slab = item.rules && item.rules.default_slab;
+        return chip(id, item.name + (slab ? ' · ' + tx('slab set') : ''), count[id] || 0);
+      })
+      .join('') +
+    '</div>'
+  );
 }
-function catsetTaxRegisterHTML(){
+function catsetTaxRegisterHTML() {
   var all = catsetTaxRows();
   if (all === null) return '<div class="catset-load">' + tx('reading…') + '</div>';
   if (!all.length) return '<div class="catset-none">' + tx('No products yet.') + '</div>';
-  var rows = CATSET_TAX_CATG ? all.filter(function (x) { return (x.catIds || []).indexOf(CATSET_TAX_CATG) >= 0; }) : all;
+  var rows = CATSET_TAX_CATG
+    ? all.filter(function (x) {
+        return (x.catIds || []).indexOf(CATSET_TAX_CATG) >= 0;
+      })
+    : all;
   var chips = catsetTaxCatgChipsHTML(all);
   if (!rows.length) return chips + '<div class="catset-none">' + tx('No product in this category.') + '</div>';
   var src = { product: tx('on the product'), category: tx('from category'), catalogue: tx('catalogue default'), none: tx('not set') };
-  var cell = function (h, extra) { return '<td style="padding:6px 8px;border-top:1px solid var(--line);vertical-align:top' + (extra || '') + '">' + h + '</td>'; };
-  var dead = 0, clash = 0;
-  var body = rows.map(function (x) {
-    var r = x.r || {}; var isDead = r.unresolved && r.cited; if (isDead) dead++;
-    var tax = r.rate === null || r.rate === undefined
-      ? '<span style="color:var(--warn-3)">' + tx('no rate') + '</span>'
-      : '<b><bdi>' + esc(String(r.rate)) + '%</bdi></b> <span style="color:var(--grey)">' + esc(r.name || '') + '</span>';
-    var from = '<span class="pill" style="font-size:var(--fs-1)">' + esc(src[r.source] || r.source || '') + (r.source === 'category' && r.via_category_name ? ' · ' + esc(r.via_category_name) : '') + '</span>';
-    var warn = isDead ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(txf('cites “{s}”, not active', { s: r.cited })) + '</div>' : '';
-    if (Array.isArray(r.conflict) && r.conflict.length > 1) { clash++; warn += '<div data-testid="catset-tax-conflict" style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(tx('categories disagree: ') + r.conflict.map(function (h) { return (h.category_name || h.category_id) + ' ' + (h.rate == null ? '?' : h.rate + '%'); }).join(' vs ')) + '</div>'; }
-    return '<tr data-testid="catset-tax-row-' + esc(id(x)) + '" style="cursor:pointer" onclick="catsetOpenProduct(\'' + esc(id(x)) + '\')">'
-      + cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : ''))
-      + cell(tax + ' ' + from + warn)
-      + cell(x.offers.length ? x.offers.map(function (n) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(n) + '</span>'; }).join(' ') : '<span style="color:var(--grey)">—</span>')
-      + cell(x.cats.length ? esc(x.cats.join(' · ')) : '<span style="color:var(--grey)">—</span>')
-      + cell('<bdi>' + (typeof inr === 'function' ? inr(typeof cbAmount === 'function' ? cbAmount(x.price) : x.price) : esc(String(x.price || ''))) + '</bdi>', ';text-align:end;white-space:nowrap')
-      + '</tr>';
-  }).join('');
-  function id(x){ return String(x.id || ''); }
-  return chips
-    + (dead ? '<div data-testid="catset-tax-dead" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) cite a slab that is not active — open the row and attach another.', { n: String(dead) })) + '</div>' : '')
-    + (clash ? '<div data-testid="catset-tax-clash" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) sit in categories that name different slabs — the first applies; cite a slab on the product to settle it.', { n: String(clash) })) + '</div>' : '')
-    + '<div style="overflow-x:auto"><table data-testid="catset-tax-register" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
-    + '<thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 8px">' + tx('Product') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Tax applied') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Offers') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Categories') + '</th><th style="text-align:end;padding:4px 8px">' + tx('Price') + '</th></tr></thead>'
-    + '<tbody>' + body + '</tbody></table></div>';
+  var cell = function (h, extra) {
+    return '<td style="padding:6px 8px;border-top:1px solid var(--line);vertical-align:top' + (extra || '') + '">' + h + '</td>';
+  };
+  var dead = 0,
+    clash = 0;
+  var body = rows
+    .map(function (x) {
+      var r = x.r || {};
+      var isDead = r.unresolved && r.cited;
+      if (isDead) dead++;
+      var tax =
+        r.rate === null || r.rate === undefined
+          ? '<span style="color:var(--warn-3)">' + tx('no rate') + '</span>'
+          : '<b><bdi>' + esc(String(r.rate)) + '%</bdi></b> <span style="color:var(--grey)">' + esc(r.name || '') + '</span>';
+      var from =
+        '<span class="pill" style="font-size:var(--fs-1)">' +
+        esc(src[r.source] || r.source || '') +
+        (r.source === 'category' && r.via_category_name ? ' · ' + esc(r.via_category_name) : '') +
+        '</span>';
+      var warn = isDead ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(txf('cites “{s}”, not active', { s: r.cited })) + '</div>' : '';
+      if (Array.isArray(r.conflict) && r.conflict.length > 1) {
+        clash++;
+        warn +=
+          '<div data-testid="catset-tax-conflict" style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' +
+          esc(
+            tx('categories disagree: ') +
+              r.conflict
+                .map(function (item) {
+                  return (item.category_name || item.category_id) + ' ' + (item.rate == null ? '?' : item.rate + '%');
+                })
+                .join(' vs ')
+          ) +
+          '</div>';
+      }
+      return (
+        '<tr data-testid="catset-tax-row-' +
+        esc(id(x)) +
+        '" style="cursor:pointer" onclick="catsetOpenProduct(\'' +
+        esc(id(x)) +
+        '\')">' +
+        cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : '')) +
+        cell(tax + ' ' + from + warn) +
+        cell(
+          x.offers.length
+            ? x.offers
+                .map(function (item) {
+                  return '<span class="pill" style="font-size:var(--fs-1)">' + esc(item) + '</span>';
+                })
+                .join(' ')
+            : '<span style="color:var(--grey)">—</span>'
+        ) +
+        cell(x.cats.length ? esc(x.cats.join(' · ')) : '<span style="color:var(--grey)">—</span>') +
+        cell(
+          '<bdi>' + (typeof inr === 'function' ? inr(typeof cbAmount === 'function' ? cbAmount(x.price) : x.price) : esc(String(x.price || ''))) + '</bdi>',
+          ';text-align:end;white-space:nowrap'
+        ) +
+        '</tr>'
+      );
+    })
+    .join('');
+  function id(x) {
+    return String(x.id || '');
+  }
+  return (
+    chips +
+    (dead
+      ? '<div data-testid="catset-tax-dead" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' +
+        esc(txf('{n} product(s) cite a slab that is not active — open the row and attach another.', { n: String(dead) })) +
+        '</div>'
+      : '') +
+    (clash
+      ? '<div data-testid="catset-tax-clash" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' +
+        esc(
+          txf('{n} product(s) sit in categories that name different slabs — the first applies; cite a slab on the product to settle it.', { n: String(clash) })
+        ) +
+        '</div>'
+      : '') +
+    '<div style="overflow-x:auto"><table data-testid="catset-tax-register" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">' +
+    '<thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 8px">' +
+    tx('Product') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Tax applied') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Offers') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Categories') +
+    '</th><th style="text-align:end;padding:4px 8px">' +
+    tx('Price') +
+    '</th></tr></thead>' +
+    '<tbody>' +
+    body +
+    '</tbody></table></div>'
+  );
 }
 /** Under "Your slabs": how many products each slab reaches, by the resolver's answer — so a retire knows its cost. */
-function catsetTaxCountsHTML(){
-  var rows = catsetTaxRows(); if (!rows || !rows.length) return '';
-  var by = {}; rows.forEach(function (x) { var k = (x.r && x.r.slab_id) || ''; if (k) by[k] = (by[k] || 0) + 1; });
-  var keys = Object.keys(by); if (!keys.length) return '';
-  var name = function (k) { var d = (CATSET_DEFS['tax'] || []).filter(function (s) { return s.id === k; })[0]; return d ? d.name : k; };
-  return '<div data-testid="catset-tax-counts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
-    + keys.map(function (k) { return '<span class="pill">' + esc(name(k)) + ' · ' + esc(txf('{n} product(s)', { n: String(by[k]) })) + '</span>'; }).join('') + '</div>';
+function catsetTaxCountsHTML() {
+  var rows = catsetTaxRows();
+  if (!rows || !rows.length) return '';
+  var by = {};
+  rows.forEach(function (x) {
+    var k = (x.r && x.r.slab_id) || '';
+    if (k) by[k] = (by[k] || 0) + 1;
+  });
+  var keys = Object.keys(by);
+  if (!keys.length) return '';
+  var name = function (k) {
+    var d = (CATSET_DEFS.tax || []).filter(function (item) {
+      return item.id === k;
+    })[0];
+    return d ? d.name : k;
+  };
+  return (
+    '<div data-testid="catset-tax-counts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">' +
+    keys
+      .map(function (item) {
+        return '<span class="pill">' + esc(name(item)) + ' · ' + esc(txf('{n} product(s)', { n: String(by[item]) })) + '</span>';
+      })
+      .join('') +
+    '</div>'
+  );
 }
 /** A register row opens its product on the Pricing & tax tab — the place the row's answer is changed. */
-function catsetOpenProduct(id){
-  UI.prodSel = id; UI.prodMode = 'view'; UI.mdetail = true; UI.prodTab = 'pricing';
-  UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp();
+function catsetOpenProduct(id) {
+  UI.prodSel = id;
+  UI.prodMode = 'view';
+  UI.mdetail = true;
+  UI.prodTab = 'pricing';
+  UI.nav = 'catalogue';
+  if (typeof renderApp === 'function') renderApp();
 }
-function catsetTaxHTML(){
-  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  var rows = CATSET_DEFS['tax'];
-  if (rows === undefined) { catsetDefsLoad('tax').then(catsetPaintDetail); return '<div class="catset-load">' + tx('reading…') + '</div>'; }
+function catsetTaxHTML() {
+  if (CATSET_FACE === undefined) {
+    catsetFaceLoad().then(catsetPaintDetail);
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>';
+  }
+  var rows = CATSET_DEFS.tax;
+  if (rows === undefined) {
+    catsetDefsLoad('tax').then(catsetPaintDetail);
+    return '<div class="catset-load">' + tx('reading…') + '</div>';
+  }
   var t = (CATSET_FACE && CATSET_FACE.tax) || {};
   if (typeof t === 'string') t = { treatment: t };
   var cur = t.default_slab || '';
-  var live = rows.filter(function(d){ return d.status === 'live'; });
+  var live = rows.filter(function (item) {
+    return item.status === 'live';
+  });
 
   /* ⚠️ An empty picker EXPLAINS ITSELF rather than rendering one blank option — the same rule the order-model
      form follows. "You have no live slabs" and "this catalogue cannot have a default" look identical otherwise. */
   var body = !live.length
     ? '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No live slab yet — author one above and make it live.') + '</div>'
-    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxDefault(this.value)">'
-      + '<option value="">— ' + esc(tx('none')) + ' —</option>'
-      + cbSlabOptionsHTML(live, cur)   /* governed first, own after — the same builder the product and category use */
-      + '</select>';
+    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxDefault(this.value)">' +
+      '<option value="">— ' +
+      esc(tx('none')) +
+      ' —</option>' +
+      cbSlabOptionsHTML(live, cur) /* governed first, own after — the same builder the product and category use */ +
+      '</select>';
 
-  return '<label class="fl">' + tx('Catalogue default') + '</label>' + body
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
-    + tx('Applies to every product that names no slab and sits in no category that names one.') + '</div>'
+  return (
+    '<label class="fl">' +
+    tx('Catalogue default') +
+    '</label>' +
+    body +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
+    tx('Applies to every product that names no slab and sits in no category that names one.') +
+    '</div>' +
     /* ⚠️ SAID ONCE, ONLY WHERE IT HAPPENED. The old free-text treatment is kept in the face rather than deleted —
        it is the owner's words — but nothing reads it any more, and a value nobody reads must not sit on a screen
        looking authoritative. */
-    + (t.treatment ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">⚠️ '
-        + txf('Your old typed treatment ({t}) is kept but no longer read — cite a slab instead.', { t: esc(t.treatment) })
-        + '</div>' : '');
+    (t.treatment
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">⚠️ ' +
+        txf('Your old typed treatment ({t}) is kept but no longer read — cite a slab instead.', { t: esc(t.treatment) }) +
+        '</div>'
+      : '')
+  );
 }
 /**
  * ⚠️ MERGED ONTO face.tax, NOT ASSIGNED OVER IT. `catsetFaceSave` merges one level only, so writing
  * `{ tax: {default_slab} }` would drop `tax.treatment` — the exact class of loss the face's own header warns
  * about ("a panel saving only its own key would drop everything else it holds"), one level deeper.
  */
-function catsetTaxDefault(id){
+function catsetTaxDefault(id) {
   var t = (CATSET_FACE && CATSET_FACE.tax) || {};
   if (typeof t === 'string') t = { treatment: t };
   var next = Object.assign({}, t);
   /* Cleared means INHERIT NOTHING, not "nil-rated" — so the key is removed rather than set to ''. */
-  if (id) next.default_slab = String(id); else delete next.default_slab;
+  if (id) next.default_slab = String(id);
+  else delete next.default_slab;
   catsetFaceSave({ tax: next }).then(catsetPaintDetail);
   if (typeof toast === 'function') toast(id ? tx('Catalogue default slab set') : tx('Catalogue default cleared'));
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
-function catsetDetailHTML(){
+function catsetDetailHTML() {
   var k = catsetSec();
-  var s = CATSET_SECS.filter(function(x){ return x.key === k; })[0] || CATSET_SECS[0];
-  return '<div class="dh"><button class="dback" onclick="catsetBack()">‹ Catalogue setup</button>'
-    + '<div class="dt">' + s.icon + ' ' + esc(s.name) + '</div><div class="ds">' + esc(s.q) + '</div></div>'
-    + '<div class="db" id="catsetbody">' + catsetBody(k) + '</div>';
+  var s =
+    CATSET_SECS.filter(function (x) {
+      return x.key === k;
+    })[0] || CATSET_SECS[0];
+  return (
+    '<div class="dh"><button class="dback" onclick="catsetBack()">‹ Catalogue setup</button>' +
+    '<div class="dt">' +
+    s.icon +
+    ' ' +
+    esc(s.name) +
+    '</div><div class="ds">' +
+    esc(s.q) +
+    '</div></div>' +
+    '<div class="db" id="catsetbody">' +
+    catsetBody(k) +
+    '</div>'
+  );
 }
 /* ⚠️ ONLY WHILE THIS SCREEN IS UP. The section's loaders (slabs, products, the face) call this when they land — and they
    land after a person has moved on: the Catalogue's pane was overwritten with Setup › Tax ([TAX-02], the tour, 2026-09-05). */
-function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var d = document.getElementById('detailpane'); if (d) { var k = scrollKeep(); d.className = 'detail'; d.innerHTML = catsetDetailHTML(); k(); } }
-function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var b = document.getElementById('catset_rows'); if (b) { var k = scrollKeep(); b.innerHTML = catsetRowsHTML(); k(); } }
-function catsetPaint(){ catsetPaintList(); catsetPaintDetail(); }
-function catsetRowsHTML(){
+function catsetPaintDetail() {
+  if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return;
+  var node = document.getElementById('detailpane');
+  if (node) {
+    var k = scrollKeep();
+    node.className = 'detail';
+    node.innerHTML = catsetDetailHTML();
+    k();
+  }
+}
+function catsetPaintList() {
+  if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return;
+  var node = document.getElementById('catset_rows');
+  if (node) {
+    var k = scrollKeep();
+    node.innerHTML = catsetRowsHTML();
+    k();
+  }
+}
+function catsetPaint() {
+  catsetPaintList();
+  catsetPaintDetail();
+}
+function catsetRowsHTML() {
   var cur = catsetSec();
-  return CATSET_SECS.map(function(s){
-    return '<div class="row' + (s.key === cur ? ' sel' : '') + '" data-testid="catset-sec-' + s.key + '"'
-      + ' onclick="catsetSetSec(\'' + s.key + '\')">'
-      + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
-      +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
-      +   '<b style="font-size:var(--fs-3)">' + esc(s.name) + '</b></div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
-      + '<div class="rowgo" aria-hidden="true">›</div></div>';
+  return CATSET_SECS.map(function (item) {
+    return (
+      '<div class="row' +
+      (item.key === cur ? ' sel' : '') +
+      '" data-testid="catset-sec-' +
+      item.key +
+      '"' +
+      ' onclick="catsetSetSec(\'' +
+      item.key +
+      '\')">' +
+      '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">' +
+      '<span style="font-size:var(--fs-3)">' +
+      item.icon +
+      '</span>' +
+      '<b style="font-size:var(--fs-3)">' +
+      esc(item.name) +
+      '</b></div>' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' +
+      esc(item.q) +
+      '</div></div>' +
+      '<div class="rowgo" aria-hidden="true">›</div></div>'
+    );
   }).join('');
 }
-function catalogueSetupHubScreen(){
+function catalogueSetupHubScreen() {
   catsetCss();
-  var list = '<div class="list"><div class="lh">'
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('⚙️ Catalogue setup') + '</span></div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
-    + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span>, '
-    + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Categories') + '</span>.</div>'
+  var list =
+    '<div class="list"><div class="lh">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+    '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' +
+    tx('⚙️ Catalogue setup') +
+    '</span></div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. ' +
+    'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+    tx('Catalogue') +
+    '</span>, ' +
+    'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+    tx('Categories') +
+    '</span>.</div>' +
     /* ⭐ WHERE AND HOW THE CATALOGUE STANDARDS ARE IMPLEMENTED — read from the STANDARDS register, so this
        screen states nothing of its own and cannot fall out of step with Settings › Standards. Renders only in
        🧾 Spec, so an ordinary setup screen is unchanged. */
-    + '</div>' + specStandards('catalogue')
-    + '<div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
+    '</div>' +
+    specStandards('catalogue') +
+    '<div class="rows" id="catset_rows">' +
+    catsetRowsHTML() +
+    '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  var showDetail = (UI.vp === 'mob') && UI.mdetail;
+  var divider =
+    '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  var showDetail = UI.vp === 'mob' && UI.mdetail;
   /**
    * ⚠️ ITS OWN WIDTH, NOT THE CHIT LIST'S. This read `UI.lw` — the width of the Task/Order chit list, persisted
    * as `cb_lw`. Drag that list wider to read long subjects and this menu grows with it: measured at **1031px**
@@ -1616,12 +2865,25 @@ function catalogueSetupHubScreen(){
    */
   if (UI.catsetLw == null) UI.catsetLw = 320;
   var lw = Math.min(UI.catsetLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
-  return '<div class="panel ' + (showDetail ? 'showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + UI.lh + 'px">' + list + divider + detail + '</div>';
+  return (
+    '<div class="panel ' +
+    (showDetail ? 'showdetail' : '') +
+    '" id="panel" style="--lw:' +
+    lw +
+    'px;--lh:' +
+    UI.lh +
+    'px">' +
+    list +
+    divider +
+    detail +
+    '</div>'
+  );
 }
-function catsetCss(){
+function catsetCss() {
   if (document.getElementById('catset_css')) return;
-  var s = document.createElement('style'); s.id = 'catset_css';
-  s.textContent = [
+  var node = document.createElement('style');
+  node.id = 'catset_css';
+  node.textContent = [
     '.catset-card{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow:hidden}',
     '.catset-ct{font-size:var(--fs-3);font-weight:700;padding:11px 14px 0}',
     '.catset-cb{font-size:var(--fs-2);line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
@@ -1686,8 +2948,8 @@ function catsetCss(){
      * keeps it from reading as a second name now that it no longer sits in its own column: a tinted ground and
      * a rule down the left say "this belongs to the row above" without spending any horizontal space to say it.
      */
-    '.catset-regrow .rn{margin-top:5px;padding:5px 9px;background:var(--neutral-tint);color:var(--note);'
-      + 'border-inline-start:2px solid var(--line);border-radius:0 6px 6px 0;font-size:var(--fs-1);line-height:1.45}',
+    '.catset-regrow .rn{margin-top:5px;padding:5px 9px;background:var(--neutral-tint);color:var(--note);' +
+      'border-inline-start:2px solid var(--line);border-radius:0 6px 6px 0;font-size:var(--fs-1);line-height:1.45}',
     '.catset-regrow.nocode .rn{padding-inline-start:0}',
     /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
        case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
@@ -1713,13 +2975,13 @@ function catsetCss(){
     '.uom-row .ua{margin-top:3px;padding-inline-start:108px;color:var(--note);font-size:var(--fs-1);line-height:1.5}',
     '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
     /* the three answers sit under the unit, indented to the same edge as its spellings */
-    '.uom-rule{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:4px 13px 8px 121px;'
-      + 'border-bottom:1px solid var(--line);font-size:var(--fs-1);background:var(--paper)}',
+    '.uom-rule{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:4px 13px 8px 121px;' +
+      'border-bottom:1px solid var(--line);font-size:var(--fs-1);background:var(--paper)}',
     '.uom-rule.flat{color:var(--note)}',
     '.uom-rule .urk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--ink)}',
     '.uom-rule .urf{display:inline-flex;align-items:center;gap:5px;color:var(--grey-2)}',
-    '.uom-rule .urf input{width:74px;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line);'
-      + 'border-radius:6px;background:var(--card);color:var(--ink)}',
+    '.uom-rule .urf input{width:74px;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line);' +
+      'border-radius:6px;background:var(--card);color:var(--ink)}',
     '.uom-rule .uru{color:var(--note)}',
     '.uom-rule .urn{color:var(--note);flex:1 1 100%}',
     /* ⚠️ at phone width the two boxes stack rather than squeezing the labels to nothing */
@@ -1744,7 +3006,7 @@ function catsetCss(){
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
     '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');
-  (document.head || document.documentElement).appendChild(s);
+  (document.head || document.documentElement).appendChild(node);
 }
 
 /**
@@ -1761,7 +3023,7 @@ function catsetCss(){
  * Re-listing them here is how two lists of "the methods we support" drift apart, and this screen has already made
  * that argument twice (offers.js KINDS, cart-ui MODELS).
  */
-function catsetSfHTML(){
+function catsetSfHTML() {
   /**
    * ⚠️ THE CARD SURVIVES THE LOADING STATE. My first version returned a bare "reading…" while the face was in
    * flight, so the whole section — heading, explanation, everything — vanished for a beat and came back. The
@@ -1769,32 +3031,60 @@ function catsetSfHTML(){
    * that shows nothing is indistinguishable from a screen that is broken. Every sibling section here keeps its
    * explanatory text outside the loading branch; this one now does too.
    */
-  var _loading = (CATSET_FACE === undefined);
+  var _loading = CATSET_FACE === undefined;
   if (_loading) catsetFaceLoad().then(catsetPaintDetail);
   var f = CATSET_FACE || {};
-  var P = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  var P = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   if (!P) return '<div class="catset-none">' + tx('The catalogue model is not loaded.') + '</div>';
 
   var method = f.method || (f.order_input && f.order_input.preset) || '';
   var units = Array.isArray(f.units) ? f.units : [];
-  var facets = (f.facets && typeof f.facets === 'object') ? f.facets : {};
+  var facets = f.facets && typeof f.facets === 'object' ? f.facets : {};
   var defUnit = (f.defaults && f.defaults.unit) || '';
 
-  var methods = (P.METHODS || []).map(function(m){
-    return '<div class="bulkrow' + (method === m.k ? ' on' : '') + '" data-testid="catset-sf-method-' + esc(m.k) + '"'
-      + ' onclick="catsetSfMethod(\'' + esc(m.k) + '\')" style="cursor:pointer">'
-      + '<span class="bn">' + esc(m.label) + '</span>'
-      + '<span class="bh">' + (method === m.k ? esc(tx('in use')) : '') + '</span></div>';
-  }).join('');
+  var methods = (P.METHODS || [])
+    .map(function (item) {
+      return (
+        '<div class="bulkrow' +
+        (method === item.k ? ' on' : '') +
+        '" data-testid="catset-sf-method-' +
+        esc(item.k) +
+        '"' +
+        ' onclick="catsetSfMethod(\'' +
+        esc(item.k) +
+        '\')" style="cursor:pointer">' +
+        '<span class="bn">' +
+        esc(item.label) +
+        '</span>' +
+        '<span class="bh">' +
+        (method === item.k ? esc(tx('in use')) : '') +
+        '</span></div>'
+      );
+    })
+    .join('');
 
   /* The catalogue's ALLOWED SET. An item picks from it; with exactly one, nobody is asked per product. */
   var known = (P.UNITS || []).slice();
-  units.forEach(function(u){ if (known.indexOf(u) < 0) known.push(u); });
-  var unitChips = known.map(function(u){
-    var on = units.indexOf(u) >= 0;
-    return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
-      + ' data-testid="catset-sf-unit-' + esc(u) + '" onclick="catsetSfUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
-  }).join(' ');
+  units.forEach(function (item) {
+    if (known.indexOf(item) < 0) known.push(item);
+  });
+  var unitChips = known
+    .map(function (item) {
+      var on = units.indexOf(item) >= 0;
+      return (
+        '<button type="button" class="cbpick-chip' +
+        (on ? ' on' : '') +
+        '"' +
+        ' data-testid="catset-sf-unit-' +
+        esc(item) +
+        '" onclick="catsetSfUnit(\'' +
+        esc(item) +
+        '\')">' +
+        esc(item) +
+        '</button>'
+      );
+    })
+    .join(' ');
 
   /**
    * ⭐ THE DEFAULT UNIT LIVES HERE, and only appears once there is a choice to make. One allowed unit IS the
@@ -1803,49 +3093,96 @@ function catsetSfHTML(){
    */
   var defRow = '';
   if (units.length > 1) {
-    defRow = '<div class="catset-drow" style="margin-top:9px"><span class="dn">' + esc(tx('Default unit'))
-      + '</span><span class="bh">' + units.map(function(u){
-          return '<button type="button" class="cbpick-chip' + (defUnit === u ? ' on' : '') + '"'
-            + ' data-testid="catset-sf-def-' + esc(u) + '" onclick="catsetSfDefUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
-        }).join(' ') + '</span></div>'
-      + '<div class="catset-std">' + esc(tx('A product that names no unit uses this one. Change it and every '
-      + 'product that never set its own follows.')) + '</div>';
+    defRow =
+      '<div class="catset-drow" style="margin-top:9px"><span class="dn">' +
+      esc(tx('Default unit')) +
+      '</span><span class="bh">' +
+      units
+        .map(function (item) {
+          return (
+            '<button type="button" class="cbpick-chip' +
+            (defUnit === item ? ' on' : '') +
+            '"' +
+            ' data-testid="catset-sf-def-' +
+            esc(item) +
+            '" onclick="catsetSfDefUnit(\'' +
+            esc(item) +
+            '\')">' +
+            esc(item) +
+            '</button>'
+          );
+        })
+        .join(' ') +
+      '</span></div>' +
+      '<div class="catset-std">' +
+      esc(tx('A product that names no unit uses this one. Change it and every ' + 'product that never set its own follows.')) +
+      '</div>';
   } else if (units.length === 1) {
     defRow = '<div class="catset-std">' + esc(tx('One unit, so every product uses it — nothing to choose.')) + '</div>';
   }
 
-  var facetRows = (P.FACETS || []).map(function(k){
-    var on = !!facets[k];
-    return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
-      + ' data-testid="catset-sf-facet-' + esc(k) + '" onclick="catsetSfFacet(\'' + esc(k) + '\')">' + esc(k) + '</button>';
-  }).join(' ');
+  var facetRows = (P.FACETS || [])
+    .map(function (item) {
+      var on = !!facets[item];
+      return (
+        '<button type="button" class="cbpick-chip' +
+        (on ? ' on' : '') +
+        '"' +
+        ' data-testid="catset-sf-facet-' +
+        esc(item) +
+        '" onclick="catsetSfFacet(\'' +
+        esc(item) +
+        '\')">' +
+        esc(item) +
+        '</button>'
+      );
+    })
+    .join(' ');
 
-  return catsetCard(tx('How customers order from you'),
-      '<div class="catset-std">' + esc(tx('In PIM terms this is the channel — the same products, presented for a '
-      + 'particular audience. It changes what buyers see.')) + '</div>'
-    + (_loading ? '<div class="catset-load">' + tx('reading…') + '</div>' : '')
-    + '<div class="catset-sub">' + esc(tx('Order method')) + '</div>'
-    + '<div class="bulklist" data-testid="catset-sf-methods">' + methods + '</div>'
-    + '<div class="catset-sub" style="margin-top:12px">' + esc(tx('Units you trade in')) + '</div>'
-    + '<div data-testid="catset-sf-units">' + unitChips + '</div>'
-    + defRow
-    + '<div class="catset-sub" style="margin-top:12px">' + esc(tx('What a buyer can filter by')) + '</div>'
-    + '<div data-testid="catset-sf-facets">' + facetRows + '</div>', '')
-    + catsetRegistry(['method', 'facet']);
+  return (
+    catsetCard(
+      tx('How customers order from you'),
+      '<div class="catset-std">' +
+        esc(tx('In PIM terms this is the channel — the same products, presented for a ' + 'particular audience. It changes what buyers see.')) +
+        '</div>' +
+        (_loading ? '<div class="catset-load">' + tx('reading…') + '</div>' : '') +
+        '<div class="catset-sub">' +
+        esc(tx('Order method')) +
+        '</div>' +
+        '<div class="bulklist" data-testid="catset-sf-methods">' +
+        methods +
+        '</div>' +
+        '<div class="catset-sub" style="margin-top:12px">' +
+        esc(tx('Units you trade in')) +
+        '</div>' +
+        '<div data-testid="catset-sf-units">' +
+        unitChips +
+        '</div>' +
+        defRow +
+        '<div class="catset-sub" style="margin-top:12px">' +
+        esc(tx('What a buyer can filter by')) +
+        '</div>' +
+        '<div data-testid="catset-sf-facets">' +
+        facetRows +
+        '</div>',
+      ''
+    ) + catsetRegistry(['method', 'facet'])
+  );
 }
 
 /** ⚠️ order_input is written BESIDE method, because the server resolves the contract from it — see order-input.js. */
-function catsetSfMethod(k){
+function catsetSfMethod(k) {
   var f = CATSET_FACE || {};
   var oi = Object.assign({}, f.order_input || {}, { preset: k });
   catsetFaceSave({ method: k, order_input: oi }).then(catsetPaintDetail);
 }
 
-function catsetSfUnit(u){
+function catsetSfUnit(u) {
   var f = CATSET_FACE || {};
   var units = (Array.isArray(f.units) ? f.units : []).slice();
   var i = units.indexOf(u);
-  if (i >= 0) units.splice(i, 1); else units.push(u);
+  if (i >= 0) units.splice(i, 1);
+  else units.push(u);
   /**
    * ⚠️ A DEFAULT THAT IS NO LONGER ALLOWED IS NOT A DEFAULT. Removing the unit that products inherit would leave
    * every silent row pointing at something this catalogue no longer trades in — so it is cleared here rather than
@@ -1856,15 +3193,15 @@ function catsetSfUnit(u){
   catsetFaceSave({ units: units, defaults: d }).then(catsetPaintDetail);
 }
 
-function catsetSfDefUnit(u){
+function catsetSfDefUnit(u) {
   var f = CATSET_FACE || {};
   var d = Object.assign({}, f.defaults || {});
-  d.unit = (d.unit === u) ? '' : u;      /* pressing the current one clears it — a default is optional */
+  d.unit = d.unit === u ? '' : u; /* pressing the current one clears it — a default is optional */
   if (!d.unit) delete d.unit;
   catsetFaceSave({ defaults: d }).then(catsetPaintDetail);
 }
 
-function catsetSfFacet(k){
+function catsetSfFacet(k) {
   var f = CATSET_FACE || {};
   var fa = Object.assign({}, f.facets || {});
   fa[k] = !fa[k];

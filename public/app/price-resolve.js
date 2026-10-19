@@ -24,11 +24,16 @@
  *
  * ── ⚠️ NOT WIRED. Nothing calls this yet. Where it plugs in (and whether a `by:'ref'` price may resolve at seal
  * without a human) is a decision, not a detail. See SPEC-offers-tax.md.
+ 
+ * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-crm.js, public/app/cap-testing.js, public/app/pick.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
 
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
+  function num(v) {
+    var n = Number(v);
+    return isFinite(n) ? n : null;
+  }
 
   /**
    * ⚠️ AN END DATE MEANS THE END OF THAT DAY. `validTo: '2026-11-15'` treated as midnight would expire an offer
@@ -36,9 +41,9 @@
    * refusing identically rather than cleverly.
    */
   function endOf(d) {
-    var t = new Date(d);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) t.setUTCHours(23, 59, 59, 999);
-    return t;
+    var date = new Date(d);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(d))) date.setUTCHours(23, 59, 59, 999);
+    return date;
   }
 
   /**
@@ -90,16 +95,18 @@
     ctx = ctx || {};
     var c = {
       now: ctx.now ? new Date(ctx.now) : new Date(),
-      region: ctx.region || '', currency: ctx.currency || '',
+      region: ctx.region || '',
+      currency: ctx.currency || '',
       qty: ctx.qty == null ? null : Number(ctx.qty)
     };
     var list = (entries || []).slice();
-    var applied = [], rejected = [];
+    var applied = [],
+      rejected = [];
 
-    list.forEach(function (p, i) {
-      var bad = why(p, c);
-      if (bad) rejected.push({ label: p.label || p.basis || ('entry ' + (i + 1)), why: bad, entry: p });
-      else applied.push({ entry: p, rank: rank(p), i: i });
+    list.forEach(function (item, index) {
+      var bad = why(item, c);
+      if (bad) rejected.push({ label: item.label || item.basis || 'entry ' + (index + 1), why: bad, entry: item });
+      else applied.push({ entry: item, rank: rank(item), i: index });
     });
 
     if (!applied.length) {
@@ -108,18 +115,27 @@
        * nothing; the caller must be able to tell "this is free" from "we do not know what this costs". The
        * rejections come with it, so the caller can say WHY there is no price.
        */
-      return { amount: null, entry: null, rejected: rejected,
-               explain: rejected.length
-                 ? 'No price applies here — ' + rejected.map(function (r) { return r.label + ': ' + r.why; }).join('; ')
-                 : 'No price is declared.' };
+      return {
+        amount: null,
+        entry: null,
+        rejected: rejected,
+        explain: rejected.length
+          ? 'No price applies here — ' +
+            rejected
+              .map(function (item) {
+                return item.label + ': ' + item.why;
+              })
+              .join('; ')
+          : 'No price is declared.'
+      };
     }
 
-    applied.sort(function (a, b) {
-      if (b.rank !== a.rank) return b.rank - a.rank;
-      var am = a.entry.minQty == null ? -1 : Number(a.entry.minQty);
-      var bm = b.entry.minQty == null ? -1 : Number(b.entry.minQty);
+    applied.sort(function (first, second) {
+      if (second.rank !== first.rank) return second.rank - first.rank;
+      var am = first.entry.minQty == null ? -1 : Number(first.entry.minQty);
+      var bm = second.entry.minQty == null ? -1 : Number(second.entry.minQty);
       if (bm !== am) return bm - am;
-      return a.i - b.i;
+      return first.i - second.i;
     });
 
     var win = applied[0].entry;
@@ -136,8 +152,7 @@
       rejected: rejected.concat(others),
       /* ⭐ The provenance rides along, so a resolved price can still say where it came from — the work done for
          "where are prices referred from" is useless if the resolver drops it. */
-      provenance: (root.CBCatalogue && root.CBCatalogue.priceProvenance)
-        ? root.CBCatalogue.priceProvenance(win) : '',
+      provenance: root.CBCatalogue && root.CBCatalogue.priceProvenance ? root.CBCatalogue.priceProvenance(win) : '',
       /* `by:'value'` is already frozen; `by:'ref'` WITH an amount is a reading that was taken and recorded — the
          caller still decides whether to re-read it at seal. Said plainly so nobody has to infer it. */
       state: win.by === 'value' ? 'frozen (by value)' : 'by reference — recorded reading',
@@ -161,9 +176,7 @@
      * their own — which is exactly the assumption this whole codebase spends its effort preventing.
      */
     var _ccy = p.currency || c.currency || '';
-    var _amt = _ccy
-      ? (typeof CBLocale !== 'undefined' ? CBLocale.money(p.amount, _ccy) : _ccy + ' ' + p.amount)
-      : (p.amount + ' (currency not stated)');
+    var _amt = _ccy ? (typeof CBLocale !== 'undefined' ? CBLocale.money(p.amount, _ccy) : _ccy + ' ' + p.amount) : p.amount + ' (currency not stated)';
     bits.push((p.label || p.basis || 'price') + ' = ' + _amt);
     if (p.minQty != null) bits.push(txf('for {minQty}+ units', { minQty: p.minQty }));
     if (p.region) bits.push('in ' + p.region);
@@ -178,9 +191,9 @@
    * nobody declared.
    */
   function forLines(lines, entriesFor, ctx) {
-    return (lines || []).map(function (l) {
-      var e = typeof entriesFor === 'function' ? entriesFor(l) : entriesFor;
-      return resolve(e, Object.assign({}, ctx, { qty: l.qty }));
+    return (lines || []).map(function (item) {
+      var e = typeof entriesFor === 'function' ? entriesFor(item) : entriesFor;
+      return resolve(e, Object.assign({}, ctx, { qty: item.qty }));
     });
   }
 

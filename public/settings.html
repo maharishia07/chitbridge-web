@@ -112,13 +112,20 @@ button{font-family:inherit;cursor:pointer}
 <script>
 'use strict';
 /* ── the host globals the workshop's own files expect (app.html declares these with let/const; so does this page — as accounts.html does) ── */
-const CFG = { API_BASE: (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API };   /* HX1: the deploy's api address from /config.js, never a host in the page */
-let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
-const EP = {};                       /* CB_SHOP_EP from accounts-shell.js; cap-shop.js adds the vault's PUT */
-let UI = { vp: 'lap', lw: 340 };     /* the vault's model lives on UI (UI._vault · UI._vaultEnc · UI._vaultOnly), as in the workshop */
-const _CARD = 'border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:9px';   /* the workshop's card frame (app.html) */
-function val(id){ const el = document.getElementById(id); return el ? el.value.trim() : ''; }
-function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
+const CFG = {
+  API_BASE: (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API
+}; /* HX1: the deploy's api address from /config.js, never a host in the page */
+const SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+const EP = {}; /* CB_SHOP_EP from accounts-shell.js; cap-shop.js adds the vault's PUT */
+const UI = { vp: 'lap', lw: 340 }; /* the vault's model lives on UI (UI._vault · UI._vaultEnc · UI._vaultOnly), as in the workshop */
+const _CARD = 'border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:9px'; /* the workshop's card frame (app.html) */
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function go() {
+  if (window.CBFrame) CBFrame.ended();
+} /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
 </script>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>
@@ -149,17 +156,17 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 (function () {
   /* SET-WALK1 · W28(a): Country setup is the FIRST Settings screen (and the landing one) — money, year, tax, time zone before anything else */
   var SECTIONS = [
-    { k: 'country', label: 'Country',   icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
-    { k: 'shop',    label: 'Your business', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
+    { k: 'country', label: 'Country', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18' },
+    { k: 'shop', label: 'Your business', icon: 'M3 10l9-6 9 6M5 10v10h14V10M9 20v-6h6v6' },
     /* W27: what prints on the bill — the bill's signature, previewed live by the one renderer (app/cap-print.js) */
-    { k: 'print',   label: 'Print setup', icon: 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z' },
+    { k: 'print', label: 'Print setup', icon: 'M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z' },
     /* T3-SETTINGS: the workshop's Integrations, Business rules and Usage, as CBList sections (app/cap-settings.js) */
-    { k: 'counters',   label: 'Counters', icon: 'M8 15a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 15' },
-    { k: 'connectors', label: 'Connectors',      icon: 'M4 8h14l-3-3M20 16H6l3 3' },
-    { k: 'policy',     label: 'Policy',          icon: 'M5 21V4h12l-2 4 2 4H5' },
-    { k: 'plan',       label: 'Plan & usage',    icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 3' },
+    { k: 'counters', label: 'Counters', icon: 'M8 15a4 4 0 1 1 3.9-5H21v3h-2v2h-3v-2h-4.1A4 4 0 0 1 8 15' },
+    { k: 'connectors', label: 'Connectors', icon: 'M4 8h14l-3-3M20 16H6l3 3' },
+    { k: 'policy', label: 'Policy', icon: 'M5 21V4h12l-2 4 2 4H5' },
+    { k: 'plan', label: 'Plan & usage', icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 3' },
     /* T3-P4-ACCOUNT: where you are signed in · keys for other systems (a door to the one list) · the papers the shop keeps (the vault, every section) */
-    { k: 'account',    label: 'Account',         icon: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0' },
+    { k: 'account', label: 'Account', icon: 'M12 12a4 4 0 1 0 0-8a4 4 0 0 0 0 8M4 21a8 8 0 0 1 16 0' }
   ];
   /* ⭐ New shop (SET3 · FX-UX2): the sign-in window's "New shop? Register" opens HERE — a customer never enters the workshop (INDEX-NOT-APP.md).
      A public section: no sign-in window over it (signin:false; the avatar's Sign in goes to Home's), the only section in the sidebar, and
@@ -170,25 +177,46 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
   var NEW = { k: 'new', label: 'New shop', icon: 'M12 5v14M5 12h14' };
   var isNew = /^#\/?new\b/.test(location.hash || '');
   if (isNew) SECTIONS = [NEW];
-  var host = document.getElementById('set'), frame = null;
-  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'country'; }
+  var host = document.getElementById('set'),
+    frame = null;
+  function secOf() {
+    var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&]/)[0];
+    return SECTIONS.some(function (item) {
+      return item.k === h;
+    })
+      ? h
+      : 'country';
+  }
   /** the verify answer → the apps' session (cb_sess, CBSignin.sessionOf — the one reading), claimed for this browser (CBOnePerson) → Home */
-  function registered(r){
+  function registered(r) {
     /* STD2: kept by the sign-in window's own writer (CBSignin.keepSession — cb_sess with `duty`, then CBOnePerson.claim), never a second copy here */
     CBSignin.keepSession({}, CBSignin.sessionOf(r));
     location.href = '/';
   }
   var shown = null;
   /** set the address bar to a section (no history entry); a browser that refuses is logged — the screen still shows the right section */
-  function setAddress(section){
-    try { history.replaceState(null, '', '#/' + section); } catch (err) { if (window.cbQuiet) cbQuiet('settings:setAddress', err); }
+  function setAddress(section) {
+    try {
+      history.replaceState(null, '', '#/' + section);
+    } catch (err) {
+      if (window.cbQuiet) cbQuiet('settings:setAddress', err);
+    }
   }
   /* W24: a move between sections asks first when something typed is not saved (CBUnsaved, accounts-shell.js) — Stay puts the address back */
-  function paint(k){
-    if (shown && shown !== k && window.CBUnsaved) return CBUnsaved.leave(function () { paintNow(k); }, function () { if (frame && frame.skeleton) frame.skeleton.setActive(shown); setAddress(shown); });
+  function paint(k) {
+    if (shown && shown !== k && window.CBUnsaved)
+      return CBUnsaved.leave(
+        function () {
+          paintNow(k);
+        },
+        function () {
+          if (frame && frame.skeleton) frame.skeleton.setActive(shown);
+          setAddress(shown);
+        }
+      );
     paintNow(k);
   }
-  function paintNow(section){
+  function paintNow(section) {
     shown = section;
     if (window.CBUnsaved) CBUnsaved.reset();
     if (frame && frame.skeleton) frame.skeleton.setActive(section);
@@ -198,26 +226,58 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
     host.classList.toggle('reg', section === 'new');
     if (section === 'new') CBRegistration.mount(host, registered);
     else if (CBSettings.SECTIONS.indexOf(section) >= 0) CBSettings.mount(host, section);
-    else if (section === 'country') CBCountry.mount(host, function () { location.hash = '#/shop'; });
+    else if (section === 'country')
+      CBCountry.mount(host, function () {
+        location.hash = '#/shop';
+      });
     else if (section === 'print') CBPrint.mount(host);
     else CBShop.mount(host);
   }
-  frame = CBFrame.mount({ app: 'settings', kural: 'settings', work: host, signin: isNew ? false : undefined,
-    skeleton: { name: 'Settings', icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3a1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1',
-      sections: SECTIONS, active: secOf(), onSection: paint } });
+  frame = CBFrame.mount({
+    app: 'settings',
+    kural: 'settings',
+    work: host,
+    signin: isNew ? false : undefined,
+    skeleton: {
+      name: 'Settings',
+      icon: 'M12 15a3 3 0 1 0 0-6a3 3 0 0 0 0 6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3a1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1',
+      sections: SECTIONS,
+      active: secOf(),
+      onSection: paint
+    }
+  });
   if (isNew) return paint('new');
   var sess = frame.session;
   /* Athi 16 Oct ("sign in above … not properly aligned"): the shell's one sign-in window is the screen — no second "Sign in above" beside it.
      Only when no window was drawn (signin-ui.js not loaded) does the pane say it, centred. */
   if (!sess || !sess.token) {
-    if (document.querySelector('[data-testid="signin-window"]')) { host.innerHTML = ''; host.style.display = 'none'; }
-    else host.innerHTML = '<div class="empty" data-testid="set-signin" style="margin:0 auto;width:100%;max-width:420px"><div class="t">' + (window.tx ? tx('Sign in above') : 'Sign in above') + '</div></div>';
+    if (document.querySelector('[data-testid="signin-window"]')) {
+      host.innerHTML = '';
+      host.style.display = 'none';
+    } else
+      host.innerHTML =
+        '<div class="empty" data-testid="set-signin" style="margin:0 auto;width:100%;max-width:420px"><div class="t">' +
+        (window.tx ? tx('Sign in above') : 'Sign in above') +
+        '</div></div>';
     return;
   }
   var me = CBOnePerson.who(sess);
-  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null,
-    jti: sess.jti || null, device_id: sess.device_id || null, surface: sess.surface || null, exp: sess.exp || null };   /* W18: this device's own sign-in, painted when the server's list is older than it */
-  window.addEventListener('hashchange', function () { paint(secOf()); });
+  SESSION = {
+    token: sess.token,
+    role: sess.role,
+    name: sess.name,
+    entity: sess.entity,
+    bridgeId: sess.bridgeId,
+    entityId: me && me.ent,
+    actorId: sess.role === 'actor' ? me && me.uid : null,
+    jti: sess.jti || null,
+    device_id: sess.device_id || null,
+    surface: sess.surface || null,
+    exp: sess.exp || null
+  }; /* W18: this device's own sign-in, painted when the server's list is older than it */
+  window.addEventListener('hashchange', function () {
+    paint(secOf());
+  });
   paint(secOf());
 })();
 </script>

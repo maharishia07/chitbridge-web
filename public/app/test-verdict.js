@@ -32,15 +32,13 @@
 'use strict';
 
 var TEST_TODO = {
-  'never run':   { icon: '○', tone: 'dim',   say: 'nobody has run it' },
-  'ok':          { icon: '✓', tone: 'ok',    say: 'nothing to do' },
-  're-run':      { icon: '⟳', tone: 'warn',  say: 're-run — the file changed after this result' },
-  'environment': { icon: '⚙', tone: 'warn',  say: 'needs something the run did not have' },
-  'decision':    { icon: '⏸', tone: 'warn',  say: 'a decision nobody has made yet' },
-  'defect':      { icon: '✗', tone: 'bad',
-                   say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
-  'unknown':     { icon: '?',      tone: 'dim',
-                   say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' },
+  'never run': { icon: '○', tone: 'dim', say: 'nobody has run it' },
+  'ok': { icon: '✓', tone: 'ok', say: 'nothing to do' },
+  're-run': { icon: '⟳', tone: 'warn', say: 're-run — the file changed after this result' },
+  'environment': { icon: '⚙', tone: 'warn', say: 'needs something the run did not have' },
+  'decision': { icon: '⏸', tone: 'warn', say: 'a decision nobody has made yet' },
+  'defect': { icon: '✗', tone: 'bad', say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
+  'unknown': { icon: '?', tone: 'dim', say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' }
 };
 
 /**
@@ -95,10 +93,13 @@ function testVerdictLabel(c, last) {
  */
 function testCounts(cases, last) {
   const n = { total: 0, pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-  (cases || []).forEach(function (c) {
+  (cases || []).forEach(function (item) {
     n.total++;
-    const l = last && last[c.case_key];
-    if (!l) { n.todo++; return; }
+    const l = last && last[item.case_key];
+    if (!l) {
+      n.todo++;
+      return;
+    }
     if (n[l.status] === undefined) n[l.status] = 0;
     n[l.status]++;
   });
@@ -113,8 +114,11 @@ function testCounts(cases, last) {
  * QA-72: a file that cannot fail a run (a seed, a demo, a narrated proof, the engine manifest, the walkthrough
  * fixture) is shown as "not evidence", so a green tick from it is never read as proof.
  * Both are plain functions, called by the Test panel (cap-testing.js) and tested in tests/board-trace.test.cjs. */
-const TEST_NOT_EVIDENCE = /(^|[/\\])(seed[^/\\]*|[^/\\]*[-_.]seed[^/\\]*|[^/\\]*demo[^/\\]*|[^/\\]*narrat[^/\\]*|[^/\\]*proof-?walk[^/\\]*|engine-manifest\.js|walkthrough\.js)$/i;
-function testIsEvidence(caseKey) { return !TEST_NOT_EVIDENCE.test(String(caseKey || '')); }
+const TEST_NOT_EVIDENCE =
+  /(^|[/\\])(seed[^/\\]*|[^/\\]*[-_.]seed[^/\\]*|[^/\\]*demo[^/\\]*|[^/\\]*narrat[^/\\]*|[^/\\]*proof-?walk[^/\\]*|engine-manifest\.js|walkthrough\.js)$/i;
+function testIsEvidence(caseKey) {
+  return !TEST_NOT_EVIDENCE.test(String(caseKey || ''));
+}
 function testCiteLine(boardCase) {
   const clause = boardCase && boardCase.cites;
   if (clause && (clause.clause || clause.standard)) {

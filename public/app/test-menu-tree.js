@@ -17,6 +17,8 @@
  *
  * ⚠️ A classic script, no imports, no framework: app.html loads capabilities into one shared scope and
  * testing.html is a single standalone page. A plain <script> is the only thing both can agree on.
+ 
+ * CALLED BY public/app/cap-testing.js, public/testing.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 
 /**
@@ -34,17 +36,28 @@
  */
 function testMenuTree(cases, last) {
   var L = last || {};
-  var byGroup = {}, order = [], off = 0;
+  var byGroup = {},
+    order = [],
+    count = 0;
 
-  (cases || []).forEach(function (c) {
-    if (!c.menu) { off++; return; }
-    var bits = String(c.menu).split('›');
+  (cases || []).forEach(function (item) {
+    if (!item.menu) {
+      count++;
+      return;
+    }
+    var bits = String(item.menu).split('›');
     var g = (bits[0] || '').trim() || 'Elsewhere';
     var d = (bits[1] || '').trim() || g;
-    if (!byGroup[g]) { byGroup[g] = { name: g, doors: {}, order: [] }; order.push(g); }
+    if (!byGroup[g]) {
+      byGroup[g] = { name: g, doors: {}, order: [] };
+      order.push(g);
+    }
     var G = byGroup[g];
-    if (!G.doors[d]) { G.doors[d] = { name: d, cases: [] }; G.order.push(d); }
-    G.doors[d].cases.push(c);
+    if (!G.doors[d]) {
+      G.doors[d] = { name: d, cases: [] };
+      G.order.push(d);
+    }
+    G.doors[d].cases.push(item);
   });
 
   /**
@@ -57,32 +70,40 @@ function testMenuTree(cases, last) {
    */
   function evidence(list) {
     var e = { total: list.length, run: 0, bad: 0, gen: 0 };
-    list.forEach(function (c) {
-      var l = L[c.case_key];
+    list.forEach(function (item) {
+      var l = L[item.case_key];
       if (l) e.run++;
       if (l && (l.status === 'fail' || l.status === 'blocked')) e.bad++;
-      if (c.generated) e.gen++;
+      if (item.generated) e.gen++;
     });
     return e;
   }
 
-  var groups = order.map(function (g) {
-    var G = byGroup[g];
-    var doors = G.order.map(function (d) {
-      var D = G.doors[d];
+  var groups = order.map(function (item) {
+    var G = byGroup[item];
+    var doors = G.order.map(function (item) {
+      var D = G.doors[item];
       var e = evidence(D.cases);
       /* ⭐ sorted by key so a tester walking a door twice walks it in the same order both times */
-      D.cases.sort(function (a, b) { return (a.case_key || '') < (b.case_key || '') ? -1 : 1; });
+      D.cases.sort(function (first, second) {
+        return (first.case_key || '') < (second.case_key || '') ? -1 : 1;
+      });
       return { name: D.name, cases: D.cases, total: e.total, run: e.run, bad: e.bad, gen: e.gen };
     });
-    var flat = doors.reduce(function (a, d) { return a.concat(d.cases); }, []);
+    var flat = doors.reduce(function (total, item) {
+      return total.concat(item.cases);
+    }, []);
     var ge = evidence(flat);
     return { name: G.name, doors: doors, total: ge.total, run: ge.run, bad: ge.bad, gen: ge.gen };
   });
 
-  var doors = groups.reduce(function (t, g) { return t + g.doors.length; }, 0);
-  var total = groups.reduce(function (t, g) { return t + g.total; }, 0);
-  return { groups: groups, offMenu: off, total: total, doors: doors };
+  var doors = groups.reduce(function (total, item) {
+    return total + item.doors.length;
+  }, 0);
+  var total = groups.reduce(function (t, item) {
+    return t + item.total;
+  }, 0);
+  return { groups: groups, offMenu: count, total: total, doors: doors };
 }
 
 /**
@@ -94,7 +115,7 @@ function testMenuTree(cases, last) {
  * sentence on either page.
  */
 var TEST_MENU_RETIRED_NOTE =
-  'This tree is swept from the live rail and the live screens, so a door or control added tomorrow appears '
-  + 'without anybody adding it — and one that is removed stops being swept, which retires its case at the '
-  + 'next load. Retired is not deleted: the case and every result recorded against it stay on the record. '
-  + '⚠ A load carrying less than 90% of what the board already holds retires nothing and says so.';
+  'This tree is swept from the live rail and the live screens, so a door or control added tomorrow appears ' +
+  'without anybody adding it — and one that is removed stops being swept, which retires its case at the ' +
+  'next load. Retired is not deleted: the case and every result recorded against it stay on the record. ' +
+  '⚠ A load carrying less than 90% of what the board already holds retires nothing and says so.';

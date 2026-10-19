@@ -24,15 +24,31 @@ const html = fs.readFileSync(process.env.CB_APP_HTML || path.join(root, 'public'
 // harness gap wearing the costume of a product failure, and a check that is permanently red stops being read at
 // all. Lifted from app.html for the same reason as the renderers: a stub here would be a copy that drifts, and
 // this file's whole premise is no copies.
-const NEEDED = ['myCur', 'cbAmount', 'cbCurrency', 'cbHasPrice',
-  '_refPrice', '_refPriceHTML', '_refChips', '_refFacts', '_refPhoto', 'refFinishRow', 'refFinishDetail', '_swatch', '_combo'];
+const NEEDED = [
+  'myCur',
+  'cbAmount',
+  'cbCurrency',
+  'cbHasPrice',
+  '_refPrice',
+  '_refPriceHTML',
+  '_refChips',
+  '_refFacts',
+  '_refPhoto',
+  'refFinishRow',
+  'refFinishDetail',
+  '_swatch',
+  '_combo'
+];
 let src = 'var _REF_SKIP=' + (/var _REF_SKIP=(\{[^}]*\});/.exec(html) || [])[1] + ';\n';
 /* T3-CATALOGUE moved the catalogue primitives (cbAmount · cbHasPrice · cbCurrency …) out of app.html into app/cap-catalogue.js — ONE copy; lift from wherever the one copy lives */
 const catalogue = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
 for (const fn of NEEDED) {
   const re = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^\\/\\/|^\\/\\*)', 'm');
   const m = re.exec(html) || re.exec(catalogue);
-  if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app.html or app/cap-catalogue.js'); process.exit(1); }
+  if (!m) {
+    console.log('SETUP FAIL — could not lift ' + fn + '() out of app.html or app/cap-catalogue.js');
+    process.exit(1);
+  }
   src += m[0] + '\n';
 }
 /**
@@ -46,14 +62,20 @@ const helpers = fs.readFileSync(path.join(root, 'public', 'app', 'helpers.js'), 
 /* T2-WEBPRIMS: esc is lifted too (it was a stub copy in ctx below), and fmtMoney spans lines now — a one-line body or up to its closing brace */
 for (const fn of ['fmtMoney', 'esc']) {
   const m = new RegExp('^function ' + fn + '\\b(?:.*\\}\\s*$|[\\s\\S]*?\\n\\})', 'm').exec(helpers);
-  if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app/helpers.js'); process.exit(1); }
+  if (!m) {
+    console.log('SETUP FAIL — could not lift ' + fn + '() out of app/helpers.js');
+    process.exit(1);
+  }
   src = m[0] + '\n' + src;
 }
 {
   const m = /^const CCY_LOCALE\s*=.*$/m.exec(helpers);
   src = (m ? m[0] + '\n' : 'const CCY_LOCALE={};\n') + src;
   const i = /^const inr\s*=.*$/m.exec(html);
-  if (!i) { console.log('SETUP FAIL — could not lift inr from app.html'); process.exit(1); }
+  if (!i) {
+    console.log('SETUP FAIL — could not lift inr from app.html');
+    process.exit(1);
+  }
   src += '\n' + i[0];
 }
 const ctx = {
@@ -74,7 +96,7 @@ const ctx = {
    * shortcut. `CBLocale` is the real module, evaluated below, so money formatting is tested and not imagined.
    */
   tx: (s) => s,
-  txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
+  txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m))
 };
 /* CBLocale is the REAL module, not a stub — money formatting is the thing several of these cases assert on. */
 ctx.window = ctx;
@@ -83,29 +105,66 @@ ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 /* ⚠ MONEY BEFORE LOCALE — the same order every page loads them in. locale.js now FORWARDS to CBMoney rather
    than unwrapping a stamped price itself (2026-09-11, the one-reader change), so a harness that loads locale
    without money gets "CBMoney is not defined" on the first price and fails 40 cases for one missing script. */
-try { new vm.Script(fs.readFileSync(path.join(root, 'public/engine/money.js'), 'utf8')).runInNewContext(ctx); }
-catch (e) { console.log('SETUP FAIL — money.js did not evaluate: ' + e.message); process.exit(1); }
-try { new vm.Script(fs.readFileSync(path.join(root, 'public/engine/locale.js'), 'utf8')).runInNewContext(ctx); }
-catch (e) { console.log('SETUP FAIL — locale.js did not evaluate: ' + e.message); process.exit(1); }
+try {
+  new vm.Script(fs.readFileSync(path.join(root, 'public/engine/money.js'), 'utf8')).runInNewContext(ctx);
+} catch (e) {
+  console.log('SETUP FAIL — money.js did not evaluate: ' + e.message);
+  process.exit(1);
+}
+try {
+  new vm.Script(fs.readFileSync(path.join(root, 'public/engine/locale.js'), 'utf8')).runInNewContext(ctx);
+} catch (e) {
+  console.log('SETUP FAIL — locale.js did not evaluate: ' + e.message);
+  process.exit(1);
+}
 
-try { new vm.Script(src).runInNewContext(ctx); }
-catch (e) { console.log('SETUP FAIL — lifted source did not evaluate: ' + e.message); process.exit(1); }
+try {
+  new vm.Script(src).runInNewContext(ctx);
+} catch (e) {
+  console.log('SETUP FAIL — lifted source did not evaluate: ' + e.message);
+  process.exit(1);
+}
 
-let pass = 0, fail = 0;
-const t = (name, fn) => { try { fn(); console.log('  ok  ' + name); pass++; } catch (e) { console.log('  XX  ' + name + ' — ' + e.message); fail++; } };
-const has = (h, s, why) => { if (h.indexOf(s) < 0) throw new Error('expected to find ' + JSON.stringify(s) + (why ? ' (' + why + ')' : '')); };
-const not = (h, s, why) => { if (h.indexOf(s) >= 0) throw new Error('expected NOT to find ' + JSON.stringify(s) + (why ? ' (' + why + ')' : '')); };
+let pass = 0,
+  fail = 0;
+const t = (name, fn) => {
+  try {
+    fn();
+    console.log('  ok  ' + name);
+    pass++;
+  } catch (e) {
+    console.log('  XX  ' + name + ' — ' + e.message);
+    fail++;
+  }
+};
+const has = (h, s, why) => {
+  if (h.indexOf(s) < 0) throw new Error('expected to find ' + JSON.stringify(s) + (why ? ' (' + why + ')' : ''));
+};
+const not = (h, s, why) => {
+  if (h.indexOf(s) >= 0) throw new Error('expected NOT to find ' + JSON.stringify(s) + (why ? ' (' + why + ')' : ''));
+};
 
 // ── the two fixtures: what a paint item and a veg item actually look like coming back from catalogue-mine ──
 const PAINT = {
-  name: 'Tussar', texture_family: 'weave', region: 'East', effect: ['luminous', 'elegant'], scale: 'single big wall',
-  sheen: 'metallic', inspiration: 'Bhagalpur tussar silk.', tools: ['trowel', 'sponge'], coats: '1 base + 2 effect',
+  name: 'Tussar',
+  texture_family: 'weave',
+  region: 'East',
+  effect: ['luminous', 'elegant'],
+  scale: 'single big wall',
+  sheen: 'metallic',
+  inspiration: 'Bhagalpur tussar silk.',
+  tools: ['trowel', 'sponge'],
+  coats: '1 base + 2 effect',
   combinations: [{ name: 'Silk Route', colours: [{ name: 'Raw Silk', hex: '#C9A86A' }] }],
-  commercials: { price_per_litre: 950 },
+  commercials: { price_per_litre: 950 }
 };
 const VEG = {
-  name: 'Tomato', local_names: ['Thakkali', 'Tamatar'], botanical_name: 'Solanum lycopersicum', category: 'vegetable',
-  photo: 'data:image/jpeg;base64,AAAA', commercials: { price: 40, unit: 'kg' },
+  name: 'Tomato',
+  local_names: ['Thakkali', 'Tamatar'],
+  botanical_name: 'Solanum lycopersicum',
+  category: 'vegetable',
+  photo: 'data:image/jpeg;base64,AAAA',
+  commercials: { price: 40, unit: 'kg' }
 };
 const EGG = { name: 'Egg', category: 'poultry', commercials: { price: 7, unit: 'count' } };
 
@@ -116,24 +175,32 @@ t('case 1 · paint row keeps combinations, swatches, application and ₹/L', () 
   has(h, '#C9A86A', 'named swatch must still render');
   has(h, 'Applied with trowel, sponge', 'application line must survive');
   has(h, '1 base + 2 effect');
-  has(h, '₹950'); has(h, '/L', 'pre-generic price_per_litre still reads as /L');
-  has(h, 'weave', 'texture chip'); has(h, 'East', 'region chip'); has(h, 'luminous', 'effect chip');
+  has(h, '₹950');
+  has(h, '/L', 'pre-generic price_per_litre still reads as /L');
+  has(h, 'weave', 'texture chip');
+  has(h, 'East', 'region chip');
+  has(h, 'luminous', 'effect chip');
 });
 t('case 1 · paint detail keeps the full showcase', () => {
   const h = ctx.refFinishDetail(PAINT);
-  has(h, 'Colour combinations'); has(h, '#C9A86A'); has(h, 'Applied with trowel, sponge');
-  has(h, '₹950'); has(h, '/ L');
+  has(h, 'Colour combinations');
+  has(h, '#C9A86A');
+  has(h, 'Applied with trowel, sponge');
+  has(h, '₹950');
+  has(h, '/ L');
 });
 
 // ── CASE 2 · VEG CLEAN (the actual bug: paint artifacts on a non-paint item) ──
 t('case 2 · veg row shows name · local/botanical · photo · ₹/kg', () => {
   const h = ctx.refFinishRow(VEG, 0);
   has(h, 'Tomato');
-  has(h, 'local names', 'the item\'s own fields must surface');
+  has(h, 'local names', "the item's own fields must surface");
   has(h, 'Thakkali, Tamatar', 'array fields join, not [object Object]');
-  has(h, 'botanical name'); has(h, 'Solanum lycopersicum');
+  has(h, 'botanical name');
+  has(h, 'Solanum lycopersicum');
   has(h, 'background-image:url(data:image/jpeg;base64,AAAA)', 'the photo must render');
-  has(h, '₹40'); has(h, '/kg', 'price in the ITEM\'s unit, not litres');
+  has(h, '₹40');
+  has(h, '/kg', "price in the ITEM's unit, not litres");
 });
 t('case 2 · veg row has NO paint artifacts', () => {
   const h = ctx.refFinishRow(VEG, 0);
@@ -144,8 +211,11 @@ t('case 2 · veg row has NO paint artifacts', () => {
 });
 t('case 2 · veg detail has no paint artifacts either', () => {
   const h = ctx.refFinishDetail(VEG);
-  not(h, 'Colour combinations'); not(h, 'Applied with'); not(h, 'optchip');
-  has(h, '₹40'); has(h, '/ kg');
+  not(h, 'Colour combinations');
+  not(h, 'Applied with');
+  not(h, 'optchip');
+  has(h, '₹40');
+  has(h, '/ kg');
 });
 t('case 2 · the by-reference marker survives on every vertical', () => {
   has(ctx.refFinishRow(VEG, 0), '🎨 referenced', 'the reference marker is the model, not a paint detail');
@@ -156,7 +226,7 @@ t('case 2 · the by-reference marker survives on every vertical', () => {
 t('case 3 · two items in one catalogue render their OWN units', () => {
   has(ctx.refFinishRow(VEG, 0), '/kg');
   has(ctx.refFinishRow(EGG, 1), '/count');
-  not(ctx.refFinishRow(EGG, 1), '/kg', 'egg must not inherit the tomato\'s unit');
+  not(ctx.refFinishRow(EGG, 1), '/kg', "egg must not inherit the tomato's unit");
 });
 
 // ── backward compatibility: the shape written before this pass must keep rendering ──
@@ -170,7 +240,9 @@ t('back-compat · generic price wins when both are present', () => {
 });
 t('back-compat · no commercials → "no price", never a crash or NaN', () => {
   const h = ctx.refFinishRow({ name: 'Unpriced' }, 0);
-  has(h, 'no price'); not(h, 'NaN'); not(h, 'undefined');
+  has(h, 'no price');
+  not(h, 'NaN');
+  not(h, 'undefined');
 });
 
 // ── the empty-render trap this pass exists to close ──
