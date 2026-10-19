@@ -85,7 +85,7 @@ jobs:
         run: node e2e/readability-guard.cjs
       - name: Only the code this change touched is judged (readability --changed --ratchet; the checklist numbers are printed)
         env:
-          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
         # ONE-TIME WAIVER (Athi, 19 Oct 2026): the iteration-1 mechanical pass reformats the whole repo, so every legacy function "got worse" and 757 headers
         # are owed. Skipped ONLY when the PR head branch is exactly iter1/mechanical AND that branch carries the commit "chore(iter1): mechanical pass (MNT-4)".
         # It expires on landing: the branch is gone, and every later PR is judged against the re-baselined readability.ratchet.json. No limit or rule is changed.
