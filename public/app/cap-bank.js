@@ -789,11 +789,11 @@ function bankNext(r) {
                 'Bills',
                 (item.bills || [])
                   .map(
-                    (item) =>
+                    (entry) =>
                       '<span class="mono">' +
-                      bkbE(item.bill_no || item.ref_chit_id) +
+                      bkbE(entry.bill_no || entry.ref_chit_id) +
                       '</span>' +
-                      (item.applied_minor != null ? ' ' + bkbE(bkMoney(item.applied_minor)) : '')
+                      (entry.applied_minor != null ? ' ' + bkbE(bkMoney(entry.applied_minor)) : '')
                   )
                   .join(' · ')
               )

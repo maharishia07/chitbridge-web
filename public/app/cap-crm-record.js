@@ -1399,8 +1399,8 @@ function crmTimelineView(p, tok) {
     empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log a call or note.') },
     filters: crmTlFilters(T),
     search: function () {
-      var node = el.querySelector('[data-cbl-q]');
-      return node ? node.value : '';
+      var element = el.querySelector('[data-cbl-q]');
+      return element ? element.value : '';
     },
     searchHint: tx('Search this history'),
     group: { default: 'on', tid: 'crm-tl', by: crmDayGroup },

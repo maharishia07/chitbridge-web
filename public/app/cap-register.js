@@ -311,10 +311,10 @@ function rgHeat(entries) {
   var grid = {},
     anyResidual = false;
   rated.forEach(function (e) {
-    var l = e.residual_likelihood || e.likelihood,
+    var nestedL = e.residual_likelihood || e.likelihood,
       s = e.residual_severity || e.severity;
     if (e.residual_likelihood || e.residual_severity) anyResidual = true;
-    grid[l + ':' + s] = (grid[l + ':' + s] || 0) + 1;
+    grid[nestedL + ':' + s] = (grid[nestedL + ':' + s] || 0) + 1;
   });
   var rows = '';
   for (var l = 5; l >= 1; l--) {

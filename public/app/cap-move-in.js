@@ -278,8 +278,8 @@ function miRender(k) {
           JSON.stringify(item.incoming).replace(/"/g, '&quot;') +
           ', this.value)">' +
           opts
-            .map(function (item) {
-              return '<option value="' + esc(item[0]) + '"' + (item[0] === cur ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
+            .map(function (entry) {
+              return '<option value="' + esc(entry[0]) + '"' + (entry[0] === cur ? ' selected' : '') + '>' + esc(entry[1]) + '</option>';
             })
             .join('') +
           '</select></td>' +

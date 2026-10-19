@@ -242,7 +242,7 @@
     var n = parseInt(lsGet('kural.h.' + wclass()), 10);
     return n > 20 ? n : { wide: 72, mid: 104, phone: 110 }[wclass()];
   }
-  function makeRoom(h, quiet) {
+  function makeRoom(h, nestedQuiet) {
     if (!RES) {
       RES = doc.createElement('div');
       RES.id = 'cbkural-reserve';
@@ -250,7 +250,7 @@
       RES.setAttribute('data-testid', 'kural-reserve');
       (HOST || doc.body).appendChild(RES);
     }
-    RES.className = 'cbk-reserve' + (quiet ? ' quiet' : '');
+    RES.className = 'cbk-reserve' + (nestedQuiet ? ' quiet' : '');
     RES.style.height = h + 'px';
   }
   function reserve() {

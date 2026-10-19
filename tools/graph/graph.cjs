@@ -206,7 +206,7 @@ function build() {
     ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((item) =>
       walk(path.join(A, item), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p))
         .sort()
-        .forEach((item) => addFile('api', item, /\/routes\//.test(item) ? 'route-file' : 'api-lib'))
+        .forEach((entry) => addFile('api', entry, /\/routes\//.test(entry) ? 'route-file' : 'api-lib'))
     );
     addFile('api', path.join(A, 'server.js'), 'api-lib');
     walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p))
@@ -302,11 +302,11 @@ function build() {
 
   /* ── 3 · function nodes, enclosure, attribution ─────────────────────────────────────────────────────────────── */
   for (const f of files) {
-    const list = f.scan.functions;
+    const rows = f.scan.functions;
     const seenName = new Map();
     /* parent = innermost enclosing function (a stack sweep over start-sorted ranges) */
     const stack = [];
-    for (const fn of list) {
+    for (const fn of rows) {
       while (stack.length && stack[stack.length - 1].end < fn.start) stack.pop();
       fn.parent = stack.length ? stack[stack.length - 1] : null;
       stack.push(fn);
@@ -320,14 +320,14 @@ function build() {
     /* attribute every positioned thing to its innermost function (or null = file level) */
     const owner = (pos) => {
       let best = null;
-      for (const fn of list) {
+      for (const fn of rows) {
         if (fn.start > pos) break;
         if (fn.end >= pos && (!best || fn.start >= best.start)) best = fn;
       }
       return best;
     };
     /* the sweep above is O(n) per lookup; make it O(log n) with a sorted array of starts + a parent chain */
-    const starts = list.map((x) => x.start);
+    const starts = rows.map((x) => x.start);
     const ownerFast = (pos) => {
       let count = 0,
         hi = starts.length - 1,
@@ -339,11 +339,11 @@ function build() {
           count = mid + 1;
         } else hi = mid - 1;
       }
-      let fn = idx >= 0 ? list[idx] : null;
+      let fn = idx >= 0 ? rows[idx] : null;
       while (fn && fn.end < pos) fn = fn.parent;
       return fn;
     };
-    f.owner = list.length > 400 ? ownerFast : owner;
+    f.owner = rows.length > 400 ? ownerFast : owner;
     f.scan.calls.forEach((item) => {
       item.owner = f.owner(item.pos);
     });
@@ -853,7 +853,7 @@ function build() {
       edge(app.id, id, 'calls', 'nav');
       let set = navCalls.get(text) || new Set();
       if (!set.size) {
-        const cap = text.replace(/-(\w)/g, (x, text) => text.toUpperCase());
+        const cap = text.replace(/-(\w)/g, (x, label) => label.toUpperCase());
         for (const cand of [cap + 'Screen', 'load' + cap[0].toUpperCase() + cap.slice(1), 'render' + cap[0].toUpperCase() + cap.slice(1)])
           for (const t of topOnly(cand)) set.add(t.id);
       }

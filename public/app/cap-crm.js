@@ -514,8 +514,8 @@ function crmNormalize(parties) {
       seen = by[k];
     item.roles = crmRolesList(item.roles);
     if (seen) {
-      (item.roles || []).forEach(function (item) {
-        if (seen.roles.indexOf(item) < 0) seen.roles.push(item);
+      (item.roles || []).forEach(function (entry) {
+        if (seen.roles.indexOf(entry) < 0) seen.roles.push(entry);
       });
       return;
     }
@@ -1015,8 +1015,8 @@ function crmPartyCols() {
 function crmGroupNames() {
   var s = {};
   CRM.rows.forEach(function (item) {
-    (item.groups || []).forEach(function (item) {
-      s[item] = 1;
+    (item.groups || []).forEach(function (entry) {
+      s[entry] = 1;
     });
   });
   return Object.keys(s).sort();

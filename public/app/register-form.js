@@ -345,22 +345,22 @@ async function doRegister() {
       /* user_id is the permanent one; display_name simply STARTS as it and is free to change in IAM after. */
       /* ⭐ FX-AU1: the guess the governance panel SHOWED travels with the registration — the server names it in the write that creates the
          shop (routes/entities.registerNew), so the column default never decides a Sydney shop is Indian. Verify still sends it (COALESCE). */
-      const reply = await api('register', {
+      const response = await api('register', {
         body: { user_id: R.name, display_name: R.name, email: R.email, context: window.CBGov ? CBGov.payload(govCtx()) : undefined }
       });
-      R.email = (reply && reply.email) || R.email;
+      R.email = (response && response.email) || R.email;
       R.busy = false;
       R.step = 'otp';
       try {
         /* STD2: the device's zone rides along, so each country row carries the zone the server WILL store (countries[].offer) */
         const tz = (govCtx() && govCtx().timezone && govCtx().timezone.value) || '';
-        const reply = await api('constitutions', tz ? { query: { tz: tz } } : undefined);
+        const answer = await api('constitutions', tz ? { query: { tz: tz } } : undefined);
         /* the country names and months are Country setup's (cap-country.js) — fetched on demand where the page does not carry it (app.html) */
         if (typeof csuCountryName !== 'function' && typeof ensureCap === 'function')
           await ensureCap('country').catch(function (e) {
             cblog('warn', 'register: Country setup unloaded — the panel shows country codes, not names: ' + (e && e.message));
           });
-        REG.verticals = (reply && reply.constitutions) || [];
+        REG.verticals = (answer && answer.constitutions) || [];
         const dv =
           REG.verticals.find(function (x) {
             return x.is_default;
@@ -368,8 +368,8 @@ async function doRegister() {
         REG.constitution = dv ? dv.key : null;
         /* GOV-SPIN: the installation's country and the packs a registrant may choose — the panel's first country is the installation's */
         REG.spin =
-          reply && Array.isArray(reply.countries)
-            ? { installation: reply.installation || null, allowed: reply.allowed_countries || null, countries: reply.countries }
+          answer && Array.isArray(answer.countries)
+            ? { installation: answer.installation || null, allowed: answer.allowed_countries || null, countries: answer.countries }
             : null;
         REG.country = regFirstCountry();
       } catch (_) {

@@ -96,14 +96,14 @@
     }
     /* SCREEN-ID: the section on show is the screen the header chip names (app/screen-id.js, if the page loaded it) */
     function setActive(k) {
-      Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (node) {
-        node.classList.toggle('active', node.getAttribute('data-sec') === k);
+      Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (element) {
+        element.classList.toggle('active', element.getAttribute('data-sec') === k);
       });
       if (root.CBScreenId) root.CBScreenId.here(appId, k);
     }
-    Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (node) {
-      node.onclick = function () {
-        var k = node.getAttribute('data-sec');
+    Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (element) {
+      element.onclick = function () {
+        var k = element.getAttribute('data-sec');
         setActive(k);
         if (sk.onSection) sk.onSection(k);
       };

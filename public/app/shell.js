@@ -387,8 +387,8 @@
     'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
   function addFonts() {
     if (!doc || !doc.head) return;
-    var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (link) {
-      return /IBM\+Plex\+Sans/.test(link.getAttribute('href') || '');
+    var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
+      return /IBM\+Plex\+Sans/.test(nestedLink.getAttribute('href') || '');
     });
     if (hasPlexLink) return;
     var link = doc.createElement('link');
@@ -677,13 +677,13 @@
   }
   /* a card's facts on its tile: NOT STARTED says so and invites (never "No X yet" — the tile is already the link); otherwise ONE line, and
      two or more → a +n badge with every line in the drop-down (.more) */
-  function factsHTML(card, lines, state, lineHTML) {
+  function factsHTML(card, lines, state, nestedLineHTML) {
     var badge = state ? stateHTML(state) : '';
     if (state === 'not_started') return badge + '<span class="f">' + esc(T(W.setUp)) + ' ›</span>';
-    if (lines.length < 2) return badge + lines.map(lineHTML).join('');
+    if (lines.length < 2) return badge + lines.map(nestedLineHTML).join('');
     return (
       badge +
-      lineHTML(lines[0]) +
+      nestedLineHTML(lines[0]) +
       '<span class="more-n" aria-hidden="true">+' +
       (lines.length - 1) +
       ' ' +
@@ -691,7 +691,7 @@
       '</span><span class="more" data-testid="shell-more-' +
       esc(card.id) +
       '">' +
-      lines.map(lineHTML).join('') +
+      lines.map(nestedLineHTML).join('') +
       '</span>'
     );
   }
@@ -764,9 +764,9 @@
       }
     };
     var sameDay = function () {
-      var date = new Date(at),
+      var day = new Date(at),
         n = new Date();
-      return !isNaN(date) && date.getFullYear() === n.getFullYear() && date.getMonth() === n.getMonth() && date.getDate() === n.getDate();
+      return !isNaN(day) && day.getFullYear() === n.getFullYear() && day.getMonth() === n.getMonth() && day.getDate() === n.getDate();
     };
     return text
       .replace(/{(money|time|date|when)}/g, function (_, k) {
@@ -936,9 +936,9 @@
         who.setAttribute('aria-label', shopName() + levelWord);
       }
       if (sheet) sheet.setAttribute('aria-label', shopName());
-      var node = $('.cbsh-lic'),
+      var element = $('.cbsh-lic'),
         w = S.header ? worstOf(S.header.licences) : null;
-      node.innerHTML = w
+      element.innerHTML = w
         ? '<button type="button" class="cbsh-chip ' +
           w.band +
           '" data-testid="shell-licence-chip" data-band="' +
@@ -976,8 +976,8 @@
     function paintSheet() {
       if (!sheet) return;
       var h = S.header,
-        col = function (title, body, why) {
-          return '<div class="cbsh-col"><h5>' + esc(title) + (why || '') + '</h5>' + body + '</div>';
+        col = function (title, body, nestedWhy) {
+          return '<div class="cbsh-col"><h5>' + esc(title) + (nestedWhy || '') + '</h5>' + body + '</div>';
         };
       if (S.headerState === 'loading') {
         sheet.innerHTML = '<div class="cbsh-sin"><div class="cbsh-ln">' + W.loading + '</div></div>';
@@ -1193,8 +1193,8 @@
       }
       $('[data-testid="shell-noapps"]').hidden = !!S.manifest || S.loadingApps;
       var has = areasShown();
-      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (node) {
-        node.hidden = navHidden(node.getAttribute('data-go'), has);
+      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (element) {
+        element.hidden = navHidden(element.getAttribute('data-go'), has);
       });
       $('.cbsh-more').innerHTML = has
         .slice(1)
@@ -1210,11 +1210,11 @@
             '<div class="cbsh-cap"><b>' + esc(T(W.caption[item])) + '</b>' + (W.sub[item] ? '<span>' + esc(T(W.sub[item])) + '</span>' : '') + '<i></i></div>';
           if (PILLARS[item]) {
             var boxes = PILLARS[item]
-              .map(function (item) {
+              .map(function (entry) {
                 var l = list.filter(function (e) {
-                  return pillarOf(e) === item;
+                  return pillarOf(e) === entry;
                 });
-                return l.length ? pillarBox(item, l) : '';
+                return l.length ? pillarBox(entry, l) : '';
               })
               .join('');
             return (
@@ -1282,9 +1282,9 @@
 
     function mark(id) {
       S.area = id;
-      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (node) {
-        if (node.getAttribute('data-go') === id) node.setAttribute('aria-current', 'true');
-        else node.removeAttribute('aria-current');
+      [].forEach.call(el.querySelectorAll('.cbsh-nv'), function (element) {
+        if (element.getAttribute('data-go') === id) element.setAttribute('aria-current', 'true');
+        else element.removeAttribute('aria-current');
       });
     }
     function go(id) {
@@ -1302,11 +1302,11 @@
         placeKural();
         return;
       }
-      var node = $('.cbsh-sec.' + id);
+      var element = $('.cbsh-sec.' + id);
       /* the chosen area stays lit while the scroll it started runs, and at the end of the page (where Labs cannot reach the top) */
       S.pin = id;
       S.pinUntil = Date.now() + 1200;
-      if (node) main.scrollTo({ top: id === 'home' ? 0 : node.offsetTop - 6 });
+      if (element) main.scrollTo({ top: id === 'home' ? 0 : element.offsetTop - 6 });
       mark(id);
     }
     function spy() {
@@ -1318,8 +1318,8 @@
       var y = main.scrollTop + 40,
         cur = 'home';
       areasShown().forEach(function (id) {
-        var node = $('.cbsh-sec.' + id);
-        if (node && node.offsetTop <= y) cur = id;
+        var element = $('.cbsh-sec.' + id);
+        if (element && element.offsetTop <= y) cur = id;
       });
       if (bottom) cur = areasShown().slice(-1)[0];
       mark(cur);
@@ -1327,9 +1327,9 @@
 
     /* ── the switcher (inside an app): the five areas as links to Home, the app's own menu stays the app's ── */
     function paintSwitcher() {
-      var node = $('.cbsh-swb'),
-        pop = $('.cbsh-swpop');
-      if (!node) return;
+      var element = $('.cbsh-swb'),
+        target = $('.cbsh-swpop');
+      if (!element) return;
       var me = ((S.manifest && S.manifest.entries) || []).filter(function (e) {
         return e && e.id === host.app;
       })[0];
@@ -1337,15 +1337,15 @@
       /* the app's name: its manifest entry; else the page's own title (SHELL-ONE: a lab, a page with no card); else the area */
       var icon = (me && me.icon) || (o.title && o.title.icon) || ICON[cur],
         name = (me && me.name) || (o.title && o.title.name) || W.areas[cur];
-      node.innerHTML =
+      element.innerHTML =
         '<span aria-hidden="true">' +
         glyph(icon) +
         '</span><span class="sn">' +
         esc(T(name)) +
         '</span><span class="chev" aria-hidden="true">▼</span>'; /* through the catalogue: an area is a word (walk-locale) */
-      node.setAttribute('title', T(name));
-      node.setAttribute('aria-label', W.switcher);
-      pop.innerHTML = areasShown()
+      element.setAttribute('title', T(name));
+      element.setAttribute('aria-label', W.switcher);
+      target.innerHTML = areasShown()
         .map(function (item) {
           return (
             '<a href="' +
@@ -1364,11 +1364,11 @@
         .join('');
     }
     function swOpen(v) {
-      var node = $('.cbsh-swb'),
-        pop = $('.cbsh-swpop');
-      if (!node) return;
-      pop.hidden = !v;
-      node.setAttribute('aria-expanded', v ? 'true' : 'false');
+      var element = $('.cbsh-swb'),
+        target = $('.cbsh-swpop');
+      if (!element) return;
+      target.hidden = !v;
+      element.setAttribute('aria-expanded', v ? 'true' : 'false');
     }
     /* the frame's words through the catalogue again (a pack landed after the first paint): ⌂ Home, the bar's title, the switcher, the areas */
     frameResay = function () {
@@ -1391,12 +1391,12 @@
       /* CL3: kural:false = the PAGE owns the band (CBFrame's skeleton pages put it at the body's foot) — a resize must never pull it up into the header */
       if (o.kural === false) return;
       var K = root.CBKural,
-        node = K && K.el && K.el();
-      if (!node) return;
+        element = K && K.el && K.el();
+      if (!element) return;
       var spot =
         phone.matches && mode === 'home' ? $('.cbsh-pfoot') : $('.cbsh-foot'); /* always the footer: above the tab bar on a phone, under the page elsewhere */
-      if (spot && node.parentNode !== spot) {
-        spot.appendChild(node);
+      if (spot && element.parentNode !== spot) {
+        spot.appendChild(element);
         if (K.refresh) K.refresh();
       }
     }
@@ -1428,11 +1428,11 @@
       });
     /* a fact line's own button sits inside the card's link: it goes where it says, the card does not */
     el.addEventListener('click', function (e) {
-      var node = e.target.closest && e.target.closest('.cbsh-box .f .act');
-      if (!node) return;
+      var element = e.target.closest && e.target.closest('.cbsh-box .f .act');
+      if (!element) return;
       e.preventDefault();
       e.stopPropagation();
-      root.location.href = node.getAttribute('data-href');
+      root.location.href = element.getAttribute('data-href');
     });
     var scrim = $('.cbsh-scrim');
     if (scrim)
@@ -1452,8 +1452,8 @@
     var nav = $('.cbsh-nav');
     if (nav)
       nav.addEventListener('click', function (e) {
-        var node = e.target.closest('.cbsh-nv');
-        if (node) go(node.getAttribute('data-go'));
+        var element = e.target.closest('.cbsh-nv');
+        if (element) go(element.getAttribute('data-go'));
       });
     el.addEventListener('click', function (e) {
       var rowButton = e.target.closest && e.target.closest('.cbsh-row');

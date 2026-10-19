@@ -1544,10 +1544,10 @@ function _openLegendImpl() {
     b = 0,
     nf = 0;
   CAP_CATALOGUE.forEach((item) =>
-    item.features.forEach((item) => {
+    item.features.forEach((entry) => {
       nf++;
-      if (item.s === 'done') count++;
-      else if (item.s === 'partial') p++;
+      if (entry.s === 'done') count++;
+      else if (entry.s === 'partial') p++;
       else b++;
     })
   );

@@ -263,8 +263,8 @@ function aiRowsHTML() {
           on = st.enabled;
         var dot = on ? (live ? 'var(--ok-3)' : 'var(--warn-2)') : 'var(--grey-2)';
         var gateOpts = (item.gates || [])
-          .map(function (item) {
-            return '<option value="' + item + '"' + (st.gate === item ? ' selected' : '') + '>' + item + '</option>';
+          .map(function (entry) {
+            return '<option value="' + entry + '"' + (st.gate === entry ? ' selected' : '') + '>' + entry + '</option>';
           })
           .join('');
         var canInvoke = on && live && item.invoke;
@@ -763,14 +763,14 @@ function awRender() {
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
       types
         .map(function (item) {
-          var rdy = _awReady(item[0]);
+          var nestedRdy = _awReady(item[0]);
           return (
             '<div data-testid="coassist-type-' +
             item[0] +
             '" onclick="awPick(\'' +
             item[0] +
             '\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;' +
-            (rdy ? '' : 'opacity:.72') +
+            (nestedRdy ? '' : 'opacity:.72') +
             '"><div style="font-size:var(--fs-5)">' +
             item[1] +
             '</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">' +
@@ -778,9 +778,9 @@ function awRender() {
             '</div><div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35">' +
             item[3] +
             '</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;' +
-            (rdy ? 'background:var(--ok-tint);color:var(--ok-2)' : 'background:var(--blue-tint);color:var(--blue-2)') +
+            (nestedRdy ? 'background:var(--ok-tint);color:var(--ok-2)' : 'background:var(--blue-tint);color:var(--blue-2)') +
             '">' +
-            (rdy ? 'ready' : 'explore') +
+            (nestedRdy ? 'ready' : 'explore') +
             '</span></div>'
           );
         })
@@ -1625,8 +1625,8 @@ async function loadCoassists() {
     loadConnMap(); // annotate which co-assists are CONNECTORS (graceful; needs the connector capability + b57)
   } catch (e) {
     UI._acLoading = false;
-    const node = document.getElementById('ac_rows');
-    if (node) node.innerHTML = scrErr(e, 'co-assists', 'loadCoassists()');
+    const element = document.getElementById('ac_rows');
+    if (element) element.innerHTML = scrErr(e, 'co-assists', 'loadCoassists()');
   }
 }
 /* A connector is a non-human co-assist. Annotate the actor list with its connector type (iot/erp) by fetching the

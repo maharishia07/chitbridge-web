@@ -559,8 +559,8 @@
     return rows
       .map(function (row) {
         return row
-          .map(function (cellValue) {
-            var text = String(cellValue == null ? '' : cellValue);
+          .map(function (nestedCellValue) {
+            var text = String(nestedCellValue == null ? '' : nestedCellValue);
             return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
           })
           .join(',');

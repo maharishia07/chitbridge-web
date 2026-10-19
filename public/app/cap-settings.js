@@ -904,9 +904,9 @@ var CBSettings = (function () {
     );
     var pol = null;
     function inUse() {
-      var list = (pol && pol.connectors_in_use) || [];
-      return Array.isArray(list)
-        ? list.filter(function (x) {
+      var rows = (pol && pol.connectors_in_use) || [];
+      return Array.isArray(rows)
+        ? rows.filter(function (x) {
             return x !== 'none';
           })
         : [];
@@ -1518,10 +1518,10 @@ var CBSettings = (function () {
       body[key] = polStored(x.def, el.value);
       if (ok) ok.textContent = T('Saving…');
       api('policySet', { body: body }).then(
-        function (answer) {
+        function (nestedAnswer) {
           var policyData = H.data.pol;
-          if (policyData && policyData.r && answer && answer.flags) policyData.r.flags = answer.flags;
-          if (typeof SESSION !== 'undefined' && answer && answer.flags) SESSION.policy_flags = answer.flags;
+          if (policyData && policyData.r && nestedAnswer && nestedAnswer.flags) policyData.r.flags = nestedAnswer.flags;
+          if (typeof SESSION !== 'undefined' && nestedAnswer && nestedAnswer.flags) SESSION.policy_flags = nestedAnswer.flags;
           var savedMark = $('sx_pol_ok_' + key);
           if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
         },

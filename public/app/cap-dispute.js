@@ -1000,14 +1000,14 @@ async function submitResolve(chitId, disputeId, partyId) {
     );
   }
   function whereCell(d) {
-    var open = d.status === 'open';
+    var nestedOpen = d.status === 'open';
     return (
       '<span class="tag ' +
-      (open ? 'amber' : 'green') +
+      (nestedOpen ? 'amber' : 'green') +
       '" data-testid="dp-word-' +
       esc(d.dispute_id) +
       '">' +
-      esc(T(open ? 'Open' : 'Resolved')) +
+      esc(T(nestedOpen ? 'Open' : 'Resolved')) +
       '</span> ' +
       '<span class="sub">' +
       esc(T(d.mine ? 'You raised' : 'Against you')) +
@@ -1313,34 +1313,34 @@ async function submitResolve(chitId, disputeId, partyId) {
     }
     h += '<div id="dp_out" class="tk-out" role="status" data-testid="dp-out">' + esc(keep) + '</div>';
     el.innerHTML = h;
-    var node = $('dp_sheet_retry');
-    if (node)
-      node.onclick = function () {
+    var element = $('dp_sheet_retry');
+    if (element)
+      element.onclick = function () {
         SH.err = null;
         sheetPaint();
         sheetRead();
       };
     if (!SH.data) return;
-    var rb = $('dp_raise');
-    if (rb && !rb.disabled)
-      rb.onclick = function () {
+    var nestedNode = $('dp_raise');
+    if (nestedNode && !nestedNode.disabled)
+      nestedNode.onclick = function () {
         raiseAsk();
       };
-    var go = $('dp_raise_go');
-    if (go)
-      go.onclick = function () {
-        raise(go);
+    var localNode = $('dp_raise_go');
+    if (localNode)
+      localNode.onclick = function () {
+        raise(localNode);
       };
     (SH.data.disputes || []).forEach(function (item) {
       var k = item.dispute_id,
-        node = $('dp_res_' + k),
-        t = $('dp_talk_' + k);
-      if (node && !node.disabled)
-        node.onclick = function () {
+        target = $('dp_res_' + k),
+        innerNode = $('dp_talk_' + k);
+      if (target && !target.disabled)
+        target.onclick = function () {
           resolveAsk(item);
         };
-      if (t)
-        t.onclick = function () {
+      if (innerNode)
+        innerNode.onclick = function () {
           SH.talk[k] = !SH.talk[k];
           sheetPaint();
         };
@@ -1364,10 +1364,10 @@ async function submitResolve(chitId, disputeId, partyId) {
   function raiseAsk() {
     SH.raising = true;
     sheetPaint();
-    var node = $('dp_reason');
-    if (node) {
-      node.focus();
-      if (node.scrollIntoView) node.scrollIntoView({ block: 'center' });
+    var element = $('dp_reason');
+    if (element) {
+      element.focus();
+      if (element.scrollIntoView) element.scrollIntoView({ block: 'center' });
     }
   }
   function changed() {
@@ -1407,18 +1407,18 @@ async function submitResolve(chitId, disputeId, partyId) {
   function resolveAsk(d) {
     var host = $('dp_rmore_' + d.dispute_id);
     if (!host) return;
-    var open = (d.others || []).filter(function (item) {
+    var nestedOpen = (d.others || []).filter(function (item) {
       return item.role === 'party' && item.dispute_status !== 'resolved';
     });
     host.innerHTML =
       '<div class="tk-panel">' +
-      (open.length > 1
+      (nestedOpen.length > 1
         ? '<label class="sub" for="dp_rwho">' +
           esc(T('With whom?')) +
           '</label><select class="inp" id="dp_rwho" data-testid="dp-rwho"><option value="">' +
           esc(T('Everyone still open')) +
           '</option>' +
-          open
+          nestedOpen
             .map(function (item) {
               return '<option value="' + esc(item.entity_id) + '">' + esc(item.display_name || T('a party')) + '</option>';
             })
@@ -1434,13 +1434,13 @@ async function submitResolve(chitId, disputeId, partyId) {
     $('dp_rnote').focus();
     $('dp_rgo').onclick = function () {
       var note = String($('dp_rnote').value || '').trim(),
-        node = $('dp_rwho') ? $('dp_rwho').value : '';
+        element = $('dp_rwho') ? $('dp_rwho').value : '';
       if (!note) {
         $('dp_out').textContent = T('Say how it was settled first.');
         return;
       }
       var body = { resolution_note: note };
-      if (node) body.target_entity_id = node;
+      if (element) body.target_entity_id = element;
       root.CBAction.run(
         $('dp_rgo'),
         function () {

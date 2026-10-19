@@ -280,16 +280,16 @@ async function renderPosition(node) {
   var laneHtml = lanes
     .map(function (item) {
       var gaps = (item.gaps || [])
-        .map(function (item) {
+        .map(function (entry) {
           return (
             '<div class="gap"><span class="k ' +
-            item.kind +
+            entry.kind +
             '">' +
-            esc(item.kind) +
+            esc(entry.kind) +
             '</span>' +
-            esc(item.title) +
-            (item.kind === 'closeable' ? ' <span class="note">(' + esc(String(item.unlocks)) + ' market' + (item.unlocks > 1 ? 's' : '') + ')</span>' : '') +
-            (item.kind === 'structural' ? ' <span class="note">&mdash; ' + esc(item.note || '') + '</span>' : '') +
+            esc(entry.title) +
+            (entry.kind === 'closeable' ? ' <span class="note">(' + esc(String(entry.unlocks)) + ' market' + (entry.unlocks > 1 ? 's' : '') + ')</span>' : '') +
+            (entry.kind === 'structural' ? ' <span class="note">&mdash; ' + esc(entry.note || '') + '</span>' : '') +
             '</div>'
           );
         })

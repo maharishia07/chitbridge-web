@@ -172,7 +172,7 @@ function go() {
     pane(CBTasks.VIEWS[0], String(id)); /* from Disputes / CB Assist (the sheet's Open page, the bell): the order's own sheet, in its folder */
   };
   /** one section at a time: a folder of the work (CBTasks), Disputes (CBDispute) or CB Assist (CBAssistReview) — each mounted when first asked for */
-  function pane(k, openId) {
+  function pane(k, nestedOpenId) {
     var isTask = CBTasks.VIEWS.indexOf(k) >= 0;
     panes.tk.hidden = !isTask;
     panes.dp.hidden = k !== 'disputes';
@@ -187,10 +187,10 @@ function go() {
     }
     if (!SESSION.token) return;
     if (isTask) {
-      if (!app) start(SESSION.token, null, k, openId);
+      if (!app) start(SESSION.token, null, k, nestedOpenId);
       else {
         app.show(k);
-        if (openId) app.open(openId);
+        if (nestedOpenId) app.open(nestedOpenId);
       }
       return;
     }
@@ -226,8 +226,8 @@ function go() {
       view: v || view,
       open: oid || openId,
       onEnded: window.CB_TASKS_ENDED,
-      onView: function (v) {
-        if (frame && frame.skeleton) frame.skeleton.setActive(v);
+      onView: function (nestedV) {
+        if (frame && frame.skeleton) frame.skeleton.setActive(nestedV);
       }
     });
   }
@@ -269,12 +269,12 @@ function go() {
     window.renderApp = function () {
       var side = document.getElementById('side');
       if (!side) return;
-      Array.prototype.forEach.call(side.querySelectorAll('.nav-btn[data-sec]'), function (node) {
-        var en = WORDS[node.getAttribute('data-sec')],
-          l = node.querySelector('.label');
-        if (!en || !l) return;
-        l.textContent = tx(en);
-        node.setAttribute('aria-label', tx(en));
+      Array.prototype.forEach.call(side.querySelectorAll('.nav-btn[data-sec]'), function (element) {
+        var en = WORDS[element.getAttribute('data-sec')],
+          target = element.querySelector('.label');
+        if (!en || !target) return;
+        target.textContent = tx(en);
+        element.setAttribute('aria-label', tx(en));
       });
       var node = side.querySelector('.brand-name');
       if (node) node.textContent = tx('Tasks & Orders');

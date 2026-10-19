@@ -475,7 +475,7 @@ function c2PaneOrd(d) {
           ? Number(l.offer.line_off)
           : Number(l.discount) || (l.offer && Number(l.offer.off)) || 0; /* decision 3: the row shows its own offers */
     var unit = isFinite(p) && q > 0 && off > 0 ? CBMoney.round(p - off / q) : null;
-    var d = {
+    var nestedD = {
       name: l.particulars || l.name || 'line',
       unit: l.unit || 'unit',
       price: isFinite(p) ? p : null,
@@ -493,7 +493,7 @@ function c2PaneOrd(d) {
           : null
     };
     var tax = l.gst_rate != null ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
-    items.push({ item_id: id, item_data: d, tax: tax, _e: e, _i: index, _l: l });
+    items.push({ item_id: id, item_data: nestedD, tax: tax, _e: e, _i: index, _l: l });
     if (!e.removed) recLines.push(l);
   });
   var cat = { shop: { bridge_id: 'chit', currency_code: d.detail && d.detail.currency_code }, offers: [], items: items };
@@ -1994,8 +1994,8 @@ function c2PaneSummary(d) {
       var detail = Object.keys(byKind)
         .map(function (item) {
           var rows = byKind[item];
-          var sub = rows.reduce(function (total, item) {
-            return total + Number(item.amount || 0);
+          var sub = rows.reduce(function (sum, entry) {
+            return sum + Number(entry.amount || 0);
           }, 0);
           /* ⚠️ NO SUBTOTAL FOR A KIND WITH ONE ITEM — it would print the same figure twice, one line apart, and
          a number repeated for no reason is a number a reader has to stop and reconcile. */
@@ -2007,20 +2007,20 @@ function c2PaneSummary(d) {
             (sub && rows.length > 1 ? esc(inr(sub)) : '') +
             '</span></div>' +
             rows
-              .map(function (item) {
-                var q = item.quantity ? item.quantity + ' ' + esc(item.unit || '') : '';
+              .map(function (entry) {
+                var q = entry.quantity ? entry.quantity + ' ' + esc(entry.unit || '') : '';
                 return (
                   '<div class="c2sitem"><span class="c2sit">' +
-                  esc(item.particulars || '') +
+                  esc(entry.particulars || '') +
                   '</span>' +
                   '<span class="c2sq">' +
                   q +
                   '</span>' +
                   '<span class="c2sby">' +
-                  esc(item.by_actor || '') +
+                  esc(entry.by_actor || '') +
                   '</span>' +
                   '<span class="c2sm">' +
-                  (item.amount ? esc(inr(item.amount)) : '') +
+                  (entry.amount ? esc(inr(entry.amount)) : '') +
                   '</span></div>'
                 );
               })

@@ -264,8 +264,8 @@ function localOf(r) {
   var n = tableFits() ? r.names || {} : {},
     out = [];
   (LANGS.length ? LANGS : Object.keys(n)).forEach(function (item) {
-    (n[item] || []).forEach(function (item) {
-      if (out.indexOf(item) < 0) out.push(item);
+    (n[item] || []).forEach(function (entry) {
+      if (out.indexOf(entry) < 0) out.push(entry);
     });
   });
   return out.join(', ');

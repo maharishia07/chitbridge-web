@@ -92,8 +92,8 @@
               esc(item.name) +
               '</h2>' +
               item.items
-                .map(function (item) {
-                  return menuRow(item, c, t);
+                .map(function (entry) {
+                  return menuRow(entry, c, t);
                 })
                 .join('')
             );
@@ -113,8 +113,8 @@
               esc(item.name) +
               '</h2>' +
               item.items
-                .map(function (item) {
-                  return specRow(item, c, t);
+                .map(function (entry) {
+                  return specRow(entry, c, t);
                 })
                 .join('')
             );

@@ -870,7 +870,7 @@
   }
   function periodPop(I, p) {
     var presets = p.presets || [],
-      val = I.pv || p.value;
+      nestedVal = I.pv || p.value;
     return (
       '<div class="cbl-pop left" role="dialog" aria-label="' +
       esc(T(I, 'Period')) +
@@ -879,11 +879,11 @@
       '</h4><div class="cbl-preset">' +
       presets
         .map(function (x) {
-          return '<button type="button" data-period="' + esc(x[0]) + '" aria-pressed="' + (val === x[0]) + '">' + esc(x[1]) + '</button>';
+          return '<button type="button" data-period="' + esc(x[0]) + '" aria-pressed="' + (nestedVal === x[0]) + '">' + esc(x[1]) + '</button>';
         })
         .join('') +
       '</div>' +
-      (val === 'custom'
+      (nestedVal === 'custom'
         ? '<div class="cbl-custom"><input data-cbl-from type="date" value="' +
           esc((p.custom && p.custom.from) || '') +
           '" aria-label="' +
@@ -2702,8 +2702,8 @@
           nx.focus();
           if (list.o.hl === false) return;
           list.r.hl = nx.getAttribute('data-row');
-          [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (node) {
-            node.classList.remove('sel');
+          [].forEach.call(list.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (element) {
+            element.classList.remove('sel');
           });
           nx.classList.add('sel');
         }

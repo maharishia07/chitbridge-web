@@ -189,8 +189,8 @@ function cmpPaintCompare() {
     return r.parts && r.parts[item];
   })
     .map(function (item) {
-      var P = r.parts[item],
-        n = P.counts ? P.counts.different + P.counts.gap + P.counts.only_ours : null;
+      var nestedP = r.parts[item],
+        n = nestedP.counts ? nestedP.counts.different + nestedP.counts.gap + nestedP.counts.only_ours : null;
       return (
         '<button type="button" class="optchip" data-testid="cmp-part-' +
         item +
@@ -201,8 +201,8 @@ function cmpPaintCompare() {
         '\')" style="cursor:pointer' +
         (item === CMP.part ? ';border-color:var(--blue-b);background:var(--blue-t);color:var(--blue-i)' : '') +
         '">' +
-        esc(tx(P.title)) +
-        (n ? ' · ' + esc(txf('{n} to check', { n: n })) : P.error ? ' · ⚠' : ' ✓') +
+        esc(tx(nestedP.title)) +
+        (n ? ' · ' + esc(txf('{n} to check', { n: n })) : nestedP.error ? ' · ⚠' : ' ✓') +
         '</button>'
       );
     })

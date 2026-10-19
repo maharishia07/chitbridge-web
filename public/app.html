@@ -2754,18 +2754,18 @@ function stampTestChip(host, code, name) {
       if (host.closest && host.closest('#cbcasespanel')) return;
     } catch (_) {}
     if (typeof CBTEST === 'undefined' || !CBTEST.on) return;
-    var t = typeof testScreenTally === 'function' ? testScreenTally(code) : null;
-    if (!t) return;
+    var nestedT = typeof testScreenTally === 'function' ? testScreenTally(code) : null;
+    if (!nestedT) return;
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'screen-cases');
-    tag.textContent = '\ud83e\uddea ' + t.pass + '/' + t.total;
-    tag.title = t.total
-      ? t.total + ' case(s) on this screen \u2014 ' + t.pass + ' passed, ' + t.fail + ' failed. Click to read them, or write one.'
+    tag.textContent = '\ud83e\uddea ' + nestedT.pass + '/' + nestedT.total;
+    tag.title = nestedT.total
+      ? nestedT.total + ' case(s) on this screen \u2014 ' + nestedT.pass + ' passed, ' + nestedT.fail + ' failed. Click to read them, or write one.'
       : 'No case on this screen yet \u2014 click to write the first one.';
     tag.style.cssText =
       "font-family:'Space Mono',ui-monospace,monospace;font-size:var(--fs-1);" +
       'color:' +
-      (t.fail ? 'var(--disp,#B3261E)' : 'var(--grey-2)') +
+      (nestedT.fail ? 'var(--disp,#B3261E)' : 'var(--grey-2)') +
       ';' +
       'background:var(--neutral-tint);border:1px solid var(--line);border-radius:5px;padding:1px 6px;' +
       'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
@@ -2809,8 +2809,8 @@ function screenHeadEl(body, info) {
     for (var index = 0; index < all.length && index < 500; index++) {
       var e = all[index];
       if (e.children.length) continue; /* the leaf that HOLDS the words, not a wrapper around it */
-      var t = leadIconOff(e.textContent).toLowerCase();
-      if (t && t === lab) return e;
+      var nestedT = leadIconOff(e.textContent).toLowerCase();
+      if (nestedT && nestedT === lab) return e;
     }
   }
   /* ⚠️ 'b' is deliberately NOT in this list: any bold word in the first paragraph would win it */
@@ -2872,7 +2872,7 @@ function stampScreenHeading() {
      * the emoji. ⭐ Done by looking for a leading non-ASCII run: it is the shape every one of these headings
      * uses, and where a heading has no icon the code simply goes first, which is the same order minus a part.
      */
-    var t = loose ? null : head.firstChild;
+    var nestedT = loose ? null : head.firstChild;
     if (loose) head.insertBefore(tag, head.firstChild);
     else placeCodeTag(head, tag);
     /* ⭐ the count rides beside the code, from the one place that already knows both */
@@ -3016,10 +3016,10 @@ function watchDetailPane() {
     if (!node) return;
     if (window._dpWatch && window._dpWatchEl === node) return; /* already watching THIS element */
     if (window._dpWatch) window._dpWatch.disconnect(); /* the shell replaced the pane */
-    var t = null;
+    var nestedT = null;
     window._dpWatch = new MutationObserver(function () {
-      clearTimeout(t);
-      t = setTimeout(function () {
+      clearTimeout(nestedT);
+      nestedT = setTimeout(function () {
         try {
           stampDetailTitle();
         } catch (_) {}
@@ -3063,10 +3063,10 @@ function watchDetailPane() {
 function watchPanelHead(panel, sel, key) {
   try {
     if (!panel || panel._headWatch) return;
-    var t = null;
+    var nestedT = null;
     panel._headWatch = new MutationObserver(function () {
-      clearTimeout(t);
-      t = setTimeout(function () {
+      clearTimeout(nestedT);
+      nestedT = setTimeout(function () {
         try {
           stampPanelCode(panel.querySelector(sel || '.mhd'), key);
         } catch (_) {}
@@ -3197,8 +3197,8 @@ function _fineScreen() {
     var U = typeof UI !== 'undefined' ? UI : {};
     if (U.detail) return U.dtab === 'messages' ? 'chit-messages' : 'chit-detail';
     if (U.acSel) {
-      var t = (U._connMap || {})[U.acSel];
-      return t === 'erp' ? 'connector-erp' : t === 'iot' ? 'connector-iot' : 'coassist-actor';
+      var nestedT = (U._connMap || {})[U.acSel];
+      return nestedT === 'erp' ? 'connector-erp' : nestedT === 'iot' ? 'connector-iot' : 'coassist-actor';
     }
     return U.nav || 'task';
   } catch (_) {
@@ -3460,8 +3460,8 @@ function _ccField(p) {
   const id = 'cc_' + p.key;
   if (r.equals === true || r.equals === false)
     return `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-2)"><input type="checkbox" id="${id}"> ${esc(p.label)}</label>`;
-  const t = r.max != null || r.min != null ? 'number' : 'text';
-  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:var(--fs-1);color:var(--grey-2)">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation === 'must' ? ' · required' : ''}</span></label><input id="${id}" type="${t}" ${t === 'number' ? 'step="any"' : ''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
+  const nestedT = r.max != null || r.min != null ? 'number' : 'text';
+  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:var(--fs-1);color:var(--grey-2)">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation === 'must' ? ' · required' : ''}</span></label><input id="${id}" type="${nestedT}" ${nestedT === 'number' ? 'step="any"' : ''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
 }
 function ccRender(res) {
   const std = _ccStds.find((item) => item.standard === _ccPick) || _ccStds[0];
@@ -4010,9 +4010,9 @@ document.addEventListener('keydown', function (e) {
     /* ⚠️ `.menu` IS the rail — I first guessed `.nav`/`.rail`, neither of which exists in this app, and a
        querySelectorAll that matches nothing fails SILENTLY: the key would simply have done nothing, for ever. */
     var items = document.querySelectorAll('.menu [data-testid^="nav-"]');
-    var t = items[Number(e.key) - 1];
-    if (t) {
-      t.click();
+    var nestedT = items[Number(e.key) - 1];
+    if (nestedT) {
+      nestedT.click();
       e.preventDefault();
     }
   }
@@ -5087,8 +5087,8 @@ var THEMES = CBAvatar.THEMES;
 var THEME_BASE = CBAvatar.themeBase();
 /** The value theme `k` would give token `v` — its own override, else the base. */
 function themeVal(k, v) {
-  var t = THEMES[k] || THEMES.cream;
-  return (t.vars && t.vars[v]) || THEME_BASE[v] || '';
+  var nestedT = THEMES[k] || THEMES.cream;
+  return (nestedT.vars && nestedT.vars[v]) || THEME_BASE[v] || '';
 }
 /** Every themed token, resolved for `k`, as an inline custom-property block. A preview drawn inside this
  *  renders in that theme without touching the page — no apply, no flicker, no undo to get wrong. */
@@ -5393,7 +5393,7 @@ function themePaletteHTML() {
   var cur = themeGet();
   var DARK = { dark: 1, slate: 1 };
   var card = function (k) {
-    var t = THEMES[k],
+    var nestedT = THEMES[k],
       on = k === cur;
     /* ⚠️ THE QUOTE IS BUILT, NOT TYPED. My first version wrote this onclick by concatenating quote characters
        inline and emitted `themeSet('" + k + "')` LITERALLY — so every card called themeSet with a garbage
@@ -5429,7 +5429,7 @@ function themePaletteHTML() {
       '</div></div></div>' +
       /* the name on its own chrome, so the rail colour shows too */
       '<div style="background:var(--chrome);color:var(--chrome-on);font-size:10px;font-weight:700;padding:3px 7px;display:flex;align-items:center;justify-content:space-between"><span>' +
-      esc(t.name) +
+      esc(nestedT.name) +
       (on ? '</span><span>✓</span>' : '</span>') +
       '</div></button>'
     );
@@ -5461,9 +5461,9 @@ function themePaletteHTML() {
    * is not spelt out at all, and nobody would guess it exists for dyslexia and visual stress.
    */
   var a11yRow = function (k) {
-    var t = THEMES[k],
+    var nestedT = THEMES[k],
       on = k === cur,
-      a = t.a11y || {};
+      a = nestedT.a11y || {};
     var Q2 = String.fromCharCode(39);
     return (
       '<button type="button" data-testid="theme-' +
@@ -5489,7 +5489,7 @@ function themePaletteHTML() {
       '<span style="min-width:0;flex:1">' +
       '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
       '<b style="font-size:var(--fs-2);color:var(--on-card)">' +
-      esc(t.name) +
+      esc(nestedT.name) +
       '</b>' +
       /* ⚠️ THE LEVEL IS A BADGE, AND IT IS TESTED. e2e/a11y-contrast.cjs computes every pairing in this theme
          and fails if the level shown here does not hold — so this badge is a measurement, not a label. */
@@ -6755,8 +6755,8 @@ function menuBody(M, role) {
      * The guarantee is kept and the restriction dropped: a collapsed group that holds the current screen still
      * shows THAT ONE ITEM under its heading. You lose the five you were not using and keep the one you are on.
      */
-    var here = items.filter(function (item) {
-      return item[0] === UI.nav;
+    var here = items.filter(function (entry) {
+      return entry[0] === UI.nav;
     });
     var shut = navGroupShut(item[0]);
     var shown = shut ? here : items;
@@ -6985,7 +6985,7 @@ function t(key, english) {
    * Writing six near-identical sentences by hand is how a catalogue drifts.
    */
   function plural(englishOne, n, template) {
-    for (var k in n) if (Object.prototype.hasOwnProperty.call(n, k)) ar[englishOne + P + k] = template(n[k]);
+    for (var nestedK in n) if (Object.prototype.hasOwnProperty.call(n, nestedK)) ar[englishOne + P + nestedK] = template(n[nestedK]);
   }
 
   var RECORD = forms('لا سجلات', 'سجل واحد', 'سجلين', '{count} سجلات', '{count} سجلًا', '{count} سجل');
@@ -7316,17 +7316,17 @@ async function openFolderPane(tab, opts) {
 }
 /* ⚠️ COLLAPSE, because eight folders under Task made the menu taller than the screen (Athi's screenshot). The
    state persists — a menu that re-expands on every render is worse than one that never collapsed. */
-function toggleTrack(t) {
+function toggleTrack(nestedT) {
   UI.trackOpen = UI.trackOpen || {};
-  UI.trackOpen[t] = !(UI.trackOpen[t] !== false);
+  UI.trackOpen[nestedT] = !(UI.trackOpen[nestedT] !== false);
   try {
     localStorage.setItem(uk('cb_trackopen'), JSON.stringify(UI.trackOpen));
   } catch (_) {}
   renderApp();
 }
-function trackIsOpen(t) {
+function trackIsOpen(nestedT) {
   const o = UI.trackOpen || {};
-  return o[t] !== false;
+  return o[nestedT] !== false;
 } // default open — you can see them at first
 /* ⚠️ THE TRACK IS THE ANSWER, so the dialog does not ask for it. Creating under Order makes an Order folder. */
 async function newFolderIn(track) {
@@ -9695,7 +9695,7 @@ function assistPage(key) {
   const groups = p.groups
     .map(
       (item) =>
-        `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((item, index) => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index ? 'border-top:0.5px solid #F0ECE2' : ''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(item[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(item[1])}</span></div>`).join('')}</div>`
+        `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(item.title)}</div>${item.rows.map((entry, index) => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${index ? 'border-top:0.5px solid #F0ECE2' : ''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(entry[0])}</span><span style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">${esc(entry[1])}</span></div>`).join('')}</div>`
     )
     .join('');
   return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key === 'order' ? 'Order' : 'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:var(--fs-2);color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
@@ -10404,13 +10404,13 @@ function promptAsk(title, opts, onOk, extra) {
   opts = opts || {};
   extra = extra || {};
   const ph = opts.placeholder || '',
-    val = opts.value || '',
+    nestedVal = opts.value || '',
     ok = opts.okLabel || 'Save',
     hint = opts.hint || '';
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody">
      ${opts.label ? `<label class="fl">${esc(opts.label)}</label>` : ''}
-     <input class="inp" id="_pmpt" data-testid="prompt-input" value="${esc(val)}" placeholder="${esc(ph)}"
+     <input class="inp" id="_pmpt" data-testid="prompt-input" value="${esc(nestedVal)}" placeholder="${esc(ph)}"
             maxlength="${Number(opts.maxlength) || 120}" autocomplete="off">
      ${hint ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>` : ''}
    </div>
@@ -10418,7 +10418,7 @@ function promptAsk(title, opts, onOk, extra) {
   UI._modalDismiss = extra.onCancel || null; // Cancel, Escape or the backdrop — see closeModal
   const node = document.getElementById('_pmpt'),
     b = document.getElementById('_pmptok');
-  const go = function () {
+  const nestedGo = function () {
     const v = ((node && node.value) || '').trim();
     if (!v) {
       if (node) node.focus();
@@ -10428,7 +10428,7 @@ function promptAsk(title, opts, onOk, extra) {
     closeModal();
     onOk(v);
   };
-  if (b) b.onclick = go;
+  if (b) b.onclick = nestedGo;
   /* An optional third button, for the case where "no answer" is itself a valid answer and must be said out loud
      rather than expressed by submitting an empty box. */
   const x = document.getElementById('_pmptx');
@@ -10442,13 +10442,13 @@ function promptAsk(title, opts, onOk, extra) {
     node.onkeydown = function (event) {
       if (event.key === 'Enter') {
         event.preventDefault();
-        go();
+        nestedGo();
       }
     };
     /* Focus AND select: a rename arrives pre-filled, and the first thing anyone does is replace it. */
     setTimeout(function () {
       node.focus();
-      if (val) node.select();
+      if (nestedVal) node.select();
     }, 60);
   }
 }
@@ -11781,8 +11781,8 @@ function paintSupList() {
       opts: supListOpts(),
       skeleton: '<div id="sup_own"></div><div id="tbl_suppliers" style="flex:1;min-height:0"></div>',
       before: function () {
-        const node = document.getElementById('sup_own');
-        if (node) node.innerHTML = own;
+        const element = document.getElementById('sup_own');
+        if (element) element.innerHTML = own;
       }
     });
     const o2 = document.getElementById('sup_own');
@@ -11790,8 +11790,8 @@ function paintSupList() {
   }
   /* ⚠️ the tab counts live in .lh, which this does not redraw — without this, adding a supplier leaves "Trade 4"
      next to five rows until something else forces a full render (feedback-repaint-locally). */
-  const t = document.getElementById('sp_kindtabs');
-  if (t) t.outerHTML = supKindTabsHTML();
+  const nestedT = document.getElementById('sp_kindtabs');
+  if (nestedT) nestedT.outerHTML = supKindTabsHTML();
 }
 function paintSupDetail() {
   const node = document.getElementById('detailpane');
@@ -12025,12 +12025,12 @@ function platLifeTone(q) {
   return ['var(--danger)', q + 'd'];
 }
 function platPill(txt, k) {
-  var t = platKindTone(k);
+  var nestedT = platKindTone(k);
   return (
     '<span style="font-size:var(--fs-1);font-weight:600;color:' +
-    t[0] +
+    nestedT[0] +
     ';background:' +
-    t[1] +
+    nestedT[1] +
     ';border-radius:999px;padding:1px 8px;white-space:nowrap">' +
     esc(txt) +
     '</span>'
@@ -12186,10 +12186,10 @@ function paintPlatDetail() {
   }
 }
 
-function platGrp(t, inner) {
+function platGrp(nestedT, inner) {
   return (
     '<div class="sec">' +
-    t +
+    nestedT +
     '</div>' +
     '<div class="itab" style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--sp-3);background:var(--card);color:var(--on-card);box-shadow:var(--shadow)">' +
     inner +
@@ -12336,11 +12336,11 @@ function platDetailHTML() {
 
 /** ⭐ one tab, one question. Everything here reads the loaded row — selecting a shop costs no round trip. */
 function platTabBodyHTML(r, mono) {
-  var t = UI.platTab || 'overview';
+  var nestedT = UI.platTab || 'overview';
 
-  if (t === 'scope') return platGrp(tx('What this entity may do'), platScopeHTML(r));
+  if (nestedT === 'scope') return platGrp(tx('What this entity may do'), platScopeHTML(r));
 
-  if (t === 'identity')
+  if (nestedT === 'identity')
     return (
       platGrp(
         tx('Identifiers'),
@@ -12363,7 +12363,7 @@ function platTabBodyHTML(r, mono) {
       )
     );
 
-  if (t === 'network')
+  if (nestedT === 'network')
     return platGrp(
       tx('Position'),
       platKv(
@@ -12484,8 +12484,8 @@ function platBytes(n) {
  * RLS-forced counts exist at all; until then those tiles say '—' and explain themselves on hover, because a 0
  * would read as an answer. [[feedback-silence-is-the-bug]]
  */
-function platTile(label, val, hint) {
-  var known = val !== null && val !== undefined;
+function platTile(label, nestedVal, hint) {
+  var known = nestedVal !== null && nestedVal !== undefined;
   return (
     '<div title="' +
     esc(hint || '') +
@@ -12495,7 +12495,7 @@ function platTile(label, val, hint) {
     'font-variant-numeric:tabular-nums;color:' +
     (known ? 'var(--ink)' : 'var(--grey-4)') +
     '">' +
-    esc(known ? String(val) : '—') +
+    esc(known ? String(nestedVal) : '—') +
     '</div>' +
     /* ⚠️ THE VALUE MAY BE CLIPPED, THE LABEL MAY NOT. '10441' can be read half-hidden and guessed at;
        'CUSTOMER' cannot — it reads as a different word from CUSTOMERS. So the label wraps rather than
@@ -12562,8 +12562,8 @@ function platTabsHTML() {
     '</div>'
   );
 }
-function setPlatTab(t) {
-  UI.platTab = t;
+function setPlatTab(nestedT) {
+  UI.platTab = nestedT;
   paintPlatDetail();
 }
 
@@ -13373,8 +13373,8 @@ function platSummaryHTML() {
         '</span>'
     );
   if (!d.by_kind) return emptyState('🛰️', tx('Platform report'), tx('Loading…'));
-  var total = (d.by_kind || []).reduce(function (total, x) {
-    return total + x.n;
+  var total = (d.by_kind || []).reduce(function (sum, x) {
+    return sum + x.n;
   }, 0);
   /* ⭐ a bar per kind, in that kind's own hue — the same colour it wears in the list, so the report and the
      rows teach each other. Rounded track, 6px, no gridlines: the number is beside it, the bar is for shape. */
@@ -13401,7 +13401,7 @@ function platSummaryHTML() {
   );
   var bars = ranked
     .map(function (x) {
-      var t = platKindTone(x.k),
+      var nestedT = platKindTone(x.k),
         pct = Math.min(100, Math.max(2, Math.round((100 * x.n) / scale)));
       return (
         '<div style="display:flex;align-items:center;gap:9px;padding:6px 13px;font-size:var(--fs-2)">' +
@@ -13411,7 +13411,7 @@ function platSummaryHTML() {
         '<span style="flex:1;height:6px;border-radius:999px;background:var(--soft);overflow:hidden"><span style="display:block;height:100%;width:' +
         pct +
         '%;background:' +
-        t[0] +
+        nestedT[0] +
         ';border-radius:999px;opacity:' +
         (ORDER[x.k] > 3 ? '.45' : '1') +
         '"></span></span>' +
@@ -13824,11 +13824,11 @@ function crmBooks() {
   return SESSION.booksOn === true && typeof bkMoney === 'function';
 }
 function crmGstin(r) {
-  var t =
+  var nestedT =
     (r.tax_ids || []).filter(function (x) {
       return x.scheme === 'GSTIN';
     })[0] || (r.tax_ids || [])[0];
-  return t ? t.value : '';
+  return nestedT ? nestedT.value : '';
 }
 function crmOneSided(r) {
   var o = r.one_sided;
@@ -14150,10 +14150,10 @@ function custDetailHTML() {
   var mono = function (v) {
     return '<span class="mono" style="font-size:var(--fs-1)">' + esc(v || '') + '</span>';
   };
-  var grp = function (t, rows) {
+  var grp = function (nestedT, rows) {
     return (
       '<div class="sec">' +
-      t +
+      nestedT +
       '</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">' +
       rows +
       '</div>'
@@ -14467,8 +14467,8 @@ async function loadSuppliers() {
     } else paintSupDetail();
   } catch (e) {
     UI._supLoading = false;
-    const node = document.getElementById('sup_rows');
-    if (node) node.innerHTML = scrErr(e, 'suppliers', 'loadSuppliers()');
+    const element = document.getElementById('sup_rows');
+    if (element) element.innerHTML = scrErr(e, 'suppliers', 'loadSuppliers()');
   }
 }
 /**
@@ -15225,11 +15225,11 @@ function cbRequirementsLive(force) {
       var keys = {},
         out = [];
       ((reply && reply.definitions) || []).forEach(function (item) {
-        ((item.rules && item.rules.standards) || []).forEach(function (item) {
-          item = String(item || '').trim();
-          if (!item || keys[item]) return;
-          keys[item] = 1;
-          out.push(item);
+        ((item.rules && item.rules.standards) || []).forEach(function (entry) {
+          entry = String(entry || '').trim();
+          if (!entry || keys[entry]) return;
+          keys[entry] = 1;
+          out.push(entry);
         });
       });
       _REQ = out;
@@ -15684,8 +15684,8 @@ function supSearch(q) {
       const reply = await api('entitySearch', { query: { q: q } });
       supRenderSugg(Array.isArray(reply) ? reply : (reply && reply.results) || []);
     } catch (_) {
-      const node = document.getElementById('sp_sugg');
-      if (node) node.innerHTML = '';
+      const element = document.getElementById('sp_sugg');
+      if (element) element.innerHTML = '';
     }
   }, 250);
 }
@@ -15767,8 +15767,8 @@ async function addSupplier() {
   if (node) node.innerHTML = '';
   const kind = supKind(),
     clear = function () {
-      const node = document.getElementById('sp_add');
-      if (node) node.value = '';
+      const element = document.getElementById('sp_add');
+      if (element) element.value = '';
     };
   /**
    * ⭐⭐ ONE OFFER, REUSED BY BOTH ROUTES IN. It is the fallback when a lookup finds nobody, which is why it is a
@@ -16291,8 +16291,8 @@ function prodOfferPaint() {
       .map(function (item) {
         const at = (item.rules && item.rules.applies_to) || {};
         const on = Array.isArray(at.item_ids) ? at.item_ids : [];
-        const already = ids.filter(function (item) {
-          return on.indexOf(item) >= 0;
+        const already = ids.filter(function (entry) {
+          return on.indexOf(entry) >= 0;
         }).length;
         /**
          * ⭐⭐ THE WINDOW IS SHOWN BEFORE YOU ATTACH, NOT AFTER. Athi: *"if offer, discounts added it should be time
@@ -16344,9 +16344,9 @@ function prodOfferWindow(rules) {
   const r = rules || {};
   if (!r.valid_from && !r.valid_to) return tx('no end date');
   const f = r.valid_from ? String(r.valid_from).slice(0, 10) : '';
-  const t = r.valid_to ? String(r.valid_to).slice(0, 10) : '';
-  if (f && t) return f + ' → ' + t;
-  return f ? tx('from ') + f : tx('until ') + t;
+  const nestedT = r.valid_to ? String(r.valid_to).slice(0, 10) : '';
+  if (f && nestedT) return f + ' → ' + nestedT;
+  return f ? tx('from ') + f : tx('until ') + nestedT;
 }
 
 /** The terms, read from the SAME registry the badge uses — never a second description of one offer. */
@@ -16742,9 +16742,9 @@ function availText(d) {
 function availAge(d) {
   var a = availOf(d);
   if (!a || !a.as_of) return '';
-  var t = Date.parse(a.as_of);
-  if (isNaN(t)) return '';
-  var hrs = (Date.now() - t) / 36e5;
+  var nestedT = Date.parse(a.as_of);
+  if (isNaN(nestedT)) return '';
+  var hrs = (Date.now() - nestedT) / 36e5;
   if (hrs < 24) return '';
   var days = Math.floor(hrs / 24);
   return days === 1 ? tx('counted yesterday') : txf('counted {n} days ago', { n: days });
@@ -16916,8 +16916,8 @@ function prodCatgStripHTML(ctx) {
       none++;
       return;
     }
-    ids.forEach((item) => {
-      n[item] = (n[item] || 0) + 1;
+    ids.forEach((entry) => {
+      n[entry] = (n[entry] || 0) + 1;
     });
   });
   const live = _CATG.filter((item) => n[item.id]); // a category with nothing in it is noise on this row
@@ -17339,14 +17339,14 @@ function refCatRowsHTML() {
   }); // STONE 3: group by SOURCE (each brand distinct)
   var body = order
     .map(function (item) {
-      var t = (list[groups[item][0]] || {})._sourceTitle || item;
+      var nestedT = (list[groups[item][0]] || {})._sourceTitle || item;
       return (
         '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 ' +
-        esc(t) +
+        esc(nestedT) +
         ' · referenced</div>' +
         groups[item]
-          .map(function (item) {
-            return refFinishRow(list[item], item);
+          .map(function (entry) {
+            return refFinishRow(list[entry], entry);
           })
           .join('')
       );
@@ -17616,9 +17616,9 @@ async function _loadCatalogue(force) {
         var _cats = (mine && mine.catalogues) || [];
         var _flat = [];
         _cats.forEach(function (item) {
-          var t = (item.resolved && item.resolved.title) || item.source;
+          var nestedT = (item.resolved && item.resolved.title) || item.source;
           ((item.resolved && item.resolved.items) || []).forEach(function (it) {
-            _flat.push(Object.assign({}, it, { _source: item.source, _sourceTitle: t }));
+            _flat.push(Object.assign({}, it, { _source: item.source, _sourceTitle: nestedT }));
           });
         });
         UI.refCat = _flat;
@@ -17647,8 +17647,8 @@ async function _loadCatalogue(force) {
     }
   } catch (e) {
     UI._prodLoading = false;
-    const node = document.getElementById('ct_rows');
-    if (node) node.innerHTML = scrErr(e, tx('the catalogue'), 'loadCatalogue()');
+    const element = document.getElementById('ct_rows');
+    if (element) element.innerHTML = scrErr(e, tx('the catalogue'), 'loadCatalogue()');
   }
 }
 /**
@@ -18351,8 +18351,8 @@ function offersForProduct(d, id) {
       return out;
     }
     const want = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
-    const hit = want.find(function (item) {
-      return cats.indexOf(item) >= 0;
+    const hit = want.find(function (entry) {
+      return cats.indexOf(entry) >= 0;
     });
     if (hit) out.push(Object.assign({}, item, { _via: catName(hit), _excluded: prodOfferExcluded(d).indexOf(String(item.id)) >= 0 }));
     return out;
@@ -18947,20 +18947,20 @@ async function prodAllFields(id) {
   const shown = new Set();
   let body = '';
   CAT_GROUPS.forEach(function (item) {
-    const rows = item[1].filter(function (item) {
-      return d[item] !== undefined;
+    const rows = item[1].filter(function (entry) {
+      return d[entry] !== undefined;
     });
     if (!rows.length) return;
-    rows.forEach(function (item) {
-      shown.add(item);
+    rows.forEach(function (entry) {
+      shown.add(entry);
     });
     body +=
       '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">' +
       item[0] +
       '</div>' +
       rows
-        .map(function (item) {
-          return catFieldRow(item, d[item]);
+        .map(function (entry) {
+          return catFieldRow(entry, d[entry]);
         })
         .join('');
   });
@@ -19376,8 +19376,8 @@ function prodTabBar() {
  */
 function prodOutcomeHTML(k, d) {
   const id = UI.prodSel || d.item_id || d.id || '';
-  const grey = (t) => `<span style="color:var(--grey)">${t}</span>`;
-  const none = (t) => `<span style="color:var(--grey)">${esc(t)}</span>`;
+  const grey = (nestedT) => `<span style="color:var(--grey)">${nestedT}</span>`;
+  const none = (nestedT) => `<span style="color:var(--grey)">${esc(nestedT)}</span>`;
   try {
     switch (k) {
       case 'product': {
@@ -19428,13 +19428,13 @@ function prodOutcomeHTML(k, d) {
           (nEx ? '<span data-testid="prod-offers-excluded" style="color:var(--grey)">' + esc(txf('{n} excluded', { n: String(nEx) })) + ' · </span>' : '') +
           on
             .map((item) => {
-              const t = prodOfferTerms(item.rules),
+              const nestedT = prodOfferTerms(item.rules),
                 sc =
                   typeof CBOffers !== 'undefined' && CBOffers.scopeLabel
                     ? CBOffers.scopeLabel(Object.assign({ kind: (item.rules || {}).kind }, item.rules || {}))
                     : '';
               const ts = typeof CBOffers !== 'undefined' && CBOffers.timeStatus ? CBOffers.timeStatus(item.rules || {}) : 'active';
-              return `<div><b>${esc(item.name)}</b> ${grey(esc(t) + (sc ? ' · ' + esc(tx(sc)) : ''))}${ts === 'scheduled' ? ' <span style="color:var(--blue)">📅 ' + esc(tx('from') + ' ' + ((item.rules || {}).valid_from || '')) + '</span>' : ''}${item._via ? ' ' + grey('↳ ' + esc(tx('from category') + ' ' + item._via)) : ''}</div>`;
+              return `<div><b>${esc(item.name)}</b> ${grey(esc(nestedT) + (sc ? ' · ' + esc(tx(sc)) : ''))}${ts === 'scheduled' ? ' <span style="color:var(--blue)">📅 ' + esc(tx('from') + ' ' + ((item.rules || {}).valid_from || '')) + '</span>' : ''}${item._via ? ' ' + grey('↳ ' + esc(tx('from category') + ' ' + item._via)) : ''}</div>`;
             })
             .join('')
         );
@@ -19627,11 +19627,11 @@ function prodSheetToggle(el, k) {
     UI._prodOpen[pid] = k;
     const node = document.getElementById('detailpane');
     if (node)
-      Array.prototype.forEach.call(node.querySelectorAll('details.ptab-sec'), function (node) {
-        if (node.getAttribute('data-tab') !== k && node.open) node.open = false;
+      Array.prototype.forEach.call(node.querySelectorAll('details.ptab-sec'), function (element) {
+        if (element.getAttribute('data-tab') !== k && element.open) element.open = false;
       });
-    Array.prototype.forEach.call((node || document).querySelectorAll('[data-testid^="prod-tab-"]'), function (node) {
-      node.classList.toggle('on', node.getAttribute('data-testid') === 'prod-tab-' + k);
+    Array.prototype.forEach.call((node || document).querySelectorAll('[data-testid^="prod-tab-"]'), function (element) {
+      element.classList.toggle('on', element.getAttribute('data-testid') === 'prod-tab-' + k);
     });
     if (k === 'pricing' && typeof prodPricingLoad === 'function') prodPricingLoad();
   } else if (UI._prodOpen[pid] === k) {
@@ -19708,7 +19708,7 @@ function prodRepaintSection(k) {
 }
 function ptabWrap(k, html) {
   if (prodLayout() === 'page') {
-    const t = (PROD_TABS.find((x) => x[0] === k) || [k, k])[1];
+    const nestedT = (PROD_TABS.find((x) => x[0] === k) || [k, k])[1];
     const d = UI._prodSheetD || {};
     const edit = UI.prodMode === 'edit' || UI.prodMode === 'new';
     const pid = UI.prodSel || d.item_id || d.id || '';
@@ -19716,7 +19716,7 @@ function ptabWrap(k, html) {
     const open = edit || ((UI._prodOpen[pid] || prodTab()) === k && !!UI._prodOpen[pid]);
     return (
       `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open ? ' open' : ''}${edit ? '' : ` ontoggle="prodSheetToggle(this,'${k}')"`}>` +
-      `<summary class="ptab-row"><span class="ptab-l">${tx(t)}</span><span class="ptab-o" data-testid="prod-outcome-${k}">${edit ? grey(tx('editing below')) : prodOutcomeHTML(k, d) || ''}</span><span class="ptab-c" aria-hidden="true">›</span></summary>` +
+      `<summary class="ptab-row"><span class="ptab-l">${tx(nestedT)}</span><span class="ptab-o" data-testid="prod-outcome-${k}">${edit ? grey(tx('editing below')) : prodOutcomeHTML(k, d) || ''}</span><span class="ptab-c" aria-hidden="true">›</span></summary>` +
       `<div class="ptab-b">${html}</div></details>`
     );
     function grey(x) {
@@ -19746,8 +19746,8 @@ function setProdTab(k) {
       el.style.display = el.getAttribute('data-tab') === k ? '' : 'none';
     });
   }
-  Array.prototype.forEach.call(node.querySelectorAll('[data-testid^="prod-tab-"]'), function (node) {
-    node.classList.toggle('on', node.getAttribute('data-testid') === 'prod-tab-' + k);
+  Array.prototype.forEach.call(node.querySelectorAll('[data-testid^="prod-tab-"]'), function (element) {
+    element.classList.toggle('on', element.getAttribute('data-testid') === 'prod-tab-' + k);
   });
   if (k === 'pricing') prodPricingLoad();
 }
@@ -19853,7 +19853,7 @@ function prodModifiersTab(d, edit) {
               (item, index) =>
                 `<div class="kv" data-testid="prod-mod-${index}" style="padding:8px 12px;border-top:1px dashed var(--line)">` +
                 `<b>${esc(item.name)}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(item.required ? tx('required') : tx('optional'))}${item.max > 1 ? ' · ' + esc(txf('up to {n}', { n: String(item.max) })) : ''}</span>` +
-                `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${item.options.map((item) => `<span class="pill">${esc(item.name)}${item.price ? ' +' + esc(String(item.price)) : ''}</span>`).join('')}</div></div>`
+                `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${item.options.map((entry) => `<span class="pill">${esc(entry.name)}${entry.price ? ' +' + esc(String(entry.price)) : ''}</span>`).join('')}</div></div>`
             )
             .join('')
         : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No modifiers yet — add spice level, size or extras in Edit › Modifiers.')}</div>`)
@@ -19920,21 +19920,21 @@ function prodModifiersTab(d, edit) {
         `<div style="padding:0 12px">` +
         sellable
           .map((item, index) => {
-            const picked = MODPREV.filter((m) => m.group === item.name).map((item) => item.option);
+            const picked = MODPREV.filter((m) => m.group === item.name).map((entry) => entry.option);
             return (
               `<div class="kv" data-testid="prod-mod-preview-group-${index}" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">` +
               `<div style="display:flex;gap:8px;align-items:baseline"><b>${esc(item.name)}</b>` +
               `<span style="font-size:var(--fs-1);color:var(--grey)">${esc(item.required ? tx('required') : tx('optional'))}${item.max > 1 ? ' · ' + esc(txf('up to {n}', { n: String(item.max) })) : ''}</span></div>` +
               `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">` +
               item.options
-                .map((item, oi) => {
-                  const on = picked.indexOf(item.name) >= 0;
+                .map((entry, oi) => {
+                  const on = picked.indexOf(entry.name) >= 0;
                   /* ⚠️ .ghost for OFF, plain .composebtn (its own default blue fill) for ON — .pri is not a
                      real variant of this class (the file's own comment above warns exactly against inventing
                      one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
                   return (
                     `<button type="button" class="composebtn${on ? '' : ' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">` +
-                    `${on ? '✓ ' : ''}${esc(item.name)}${item.price ? ' +' + esc(fmtMoney(item.price, moneyCode())) : ''}</button>`
+                    `${on ? '✓ ' : ''}${esc(entry.name)}${entry.price ? ' +' + esc(fmtMoney(entry.price, moneyCode())) : ''}</button>`
                   );
                 })
                 .join('') +
@@ -20710,23 +20710,23 @@ function prodInvoiceModel(d, pos) {
       if (on.length && typeof CBOffers !== 'undefined' && typeof cbOfferLine === 'function') {
         const pid = UI.prodSel || d.item_id || d.id || '';
         const lines = [cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
-        const ev = CBOffers.evaluate({ lines, offers: on.map((item) => item.rules), money: (n) => fmtMoney(n, moneyCode()) });
+        const ev = CBOffers.evaluate({ lines, offers: on.map((entry) => entry.rules), money: (n) => fmtMoney(n, moneyCode()) });
         const per = (CBOffers.perLine(ev, lines) || {})['0'] || {};
         off = CBMoney.round(per.off || 0);
         offLabel = per.label || '';
-        (ev.adjustments || []).forEach(function (item) {
-          if (item.scope === 'note') {
-            notes.push({ label: item.label, why: item.why || '' });
-          } else if (item.scope !== 'line' && Number(item.amount)) {
-            orderAdj.push({ label: item.label, scope: item.scope, amount: Math.abs(Number(item.amount)), why: item.why || '' });
+        (ev.adjustments || []).forEach(function (entry) {
+          if (entry.scope === 'note') {
+            notes.push({ label: entry.label, why: entry.why || '' });
+          } else if (entry.scope !== 'line' && Number(entry.amount)) {
+            orderAdj.push({ label: entry.label, scope: entry.scope, amount: Math.abs(Number(entry.amount)), why: entry.why || '' });
           }
         });
       }
     } catch (_) {
       off = 0;
     }
-    const orderOff = orderAdj.reduce(function (total, item) {
-      return total + item.amount;
+    const orderOff = orderAdj.reduce(function (total, entry) {
+      return total + entry.amount;
     }, 0);
     const myC = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase() || 'XX',
       OTHERC = myC === 'ZZ' ? 'XX' : 'ZZ';
@@ -21188,7 +21188,7 @@ function cbPricingOptionsHTML(defs, selected) {
     .join('');
 }
 function prodPricingHTML(d) {
-  const grey = (t) => '<span style="color:var(--grey)">' + t + '</span>';
+  const grey = (nestedT) => '<span style="color:var(--grey)">' + nestedT + '</span>';
   if (typeof CBPricing === 'undefined') return grey(tx('Pricing module not loaded.'));
   const defs = (cbDefsCached('pricing') || []).filter((item) => !item.status || item.status === 'live');
   const editing = UI.prodMode === 'edit';
@@ -21461,7 +21461,7 @@ function prodTaxPreviewHTML(d, r) {
     if (on.length && typeof CBOffers !== 'undefined' && typeof cbOfferLine === 'function') {
       const pid = UI.prodSel || d.item_id || d.id || '';
       const lines = [cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
-      const ev = CBOffers.evaluate({ lines: lines, offers: on.map((item) => item.rules), money: (n) => fmtMoney(n, moneyCode()) });
+      const ev = CBOffers.evaluate({ lines: lines, offers: on.map((item) => item.rules), money: (nestedN) => fmtMoney(nestedN, moneyCode()) });
       count = CBMoney.round(((CBOffers.perLine(ev, lines) || {})['0'] || {}).off || 0);
       offWhy = (ev.adjustments || []).map((item) => item.label).join(' · ');
       offRows = (ev.adjustments || []).map((item) => ({
@@ -21506,12 +21506,12 @@ function prodTaxPreviewHTML(d, r) {
   const n = (v) => `<bdi>${esc(String(v))}</bdi>`;
   /* INV-01's own field names, because they are what a buyer's system already speaks — and what makes "e-invoice
      ready" a mapping rather than a claim. The code is shown, not translated away. */
-  const cell = (t, it, tid, rows) =>
+  const cell = (nestedT, it, tid, rows) =>
     `<div data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}"` +
     ` data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}"` +
     ` data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}"` +
     ` style="flex:1 1 200px;border:1px solid var(--line);border-radius:9px;padding:9px 11px">` +
-    `<div style="font-weight:700;margin-bottom:5px">${esc(t)}</div>` +
+    `<div style="font-weight:700;margin-bottom:5px">${esc(nestedT)}</div>` +
     rows
       .map((x) => `<div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--grey)">${esc(x[0])}</span>${n(x[1])}</div>`)
       .join('') +
@@ -21534,8 +21534,8 @@ function prodTaxPreviewHTML(d, r) {
      FIRST, one row each with their amount; then the taxable value; then every head with its rate — CGST · SGST for the
      same state, IGST for another — then CESS as its own row (from the slab; "none on this slab" when zero); then After
      tax and You save. Two amount columns, one per case; the INV-01 field name rides beside each row for the buyer's system. */
-  const th = (t, it, tid) =>
-    `<th data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}" data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}" data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}" style="text-align:end;padding:4px 8px;font-weight:700;white-space:nowrap">${esc(t)}</th>`;
+  const th = (nestedT, it, tid) =>
+    `<th data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}" data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}" data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}" style="text-align:end;padding:4px 8px;font-weight:700;white-space:nowrap">${esc(nestedT)}</th>`;
   const td = (h, extra) => `<td style="padding:4px 8px;border-top:1px solid var(--line);vertical-align:top;${extra || ''}">${h}</td>`;
   const amt = (h, bold) => td(h, 'text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;' + (bold ? 'font-weight:700' : ''));
   const row = (step, detail, a, b, bold, tid) =>
@@ -21980,8 +21980,8 @@ const ACCESS_CHOICES = [
   ['commenter', tx('Commenter') + ' — ' + tx('reads and replies internally; cannot answer the other party or raise a dispute')],
   ['viewer', tx('Viewer') + ' — ' + tx('reads, and says nothing')]
 ];
-function acType(t) {
-  return AC_TYPE[t] || esc(t || 'human');
+function acType(nestedT) {
+  return AC_TYPE[nestedT] || esc(nestedT || 'human');
 }
 function acShc(sh) {
   return sh === 'on_shift' ? 'on' : sh === 'on_break' ? 'brk' : 'off';
@@ -22298,10 +22298,10 @@ function hasRollup() {
    and the slash carries nothing. Show the pair only while they actually differ, i.e. while more is still coming. */
 function stCount(s) {
   const loaded = countStates()[s];
-  const t = hasRollup() ? rollupBuckets()[s].c : loaded;
+  const nestedT = hasRollup() ? rollupBuckets()[s].c : loaded;
   /* WX-P2P-03: the other tabs' rows are not read until pressed — their count is the rollup's whole figure, never "0/2" */
-  if (s !== UI.state && !UI.selectMode && !UI.search) return '' + t;
-  return loaded === t ? '' + t : loaded + '/' + t;
+  if (s !== UI.state && !UI.selectMode && !UI.search) return '' + nestedT;
+  return loaded === nestedT ? '' + nestedT : loaded + '/' + nestedT;
 }
 /* cap → app/helpers.js */
 function setSub(s) {
@@ -22328,10 +22328,10 @@ function chitPaymentCell(c, cell, quoted) {
   if (h.sender_entity_id && typeof SESSION !== 'undefined' && SESSION && SESSION.entity && h.sender_entity_id === SESSION.entity) return '';
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
-  const val = pay
+  const nestedVal = pay
     ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
     : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx(chitUnpaidWord(c)))}</span> <button type="button" data-testid="chit-mark-paid" onclick="chitMarkPaid('${c.id}', ${Number(quoted) || 0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Mark paid'))}</button> ${payHasUpi() ? `<button type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted) || 0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>` : ''}`;
-  return cell(tx('Payment'), val);
+  return cell(tx('Payment'), nestedVal);
 }
 /* CX0: payHasUpi · payModeOpts live in app/helpers.js (every page's) — UPI is offered only where the shop's pack carries it */
 /* PAY-FIX H2: one key per OPEN of the sheet — a retry of this press repeats it (the books answer 'Already recorded'), a second press on the same chit mints a new one */
@@ -22452,9 +22452,9 @@ function actionTargets() {
   return [];
 }
 function needTarget() {
-  const t = actionTargets();
-  if (!t.length) toast('Open a chit — or tick some in Select — first.');
-  return t;
+  const nestedT = actionTargets();
+  if (!nestedT.length) toast('Open a chit — or tick some in Select — first.');
+  return nestedT;
 }
 const MODALS = {};
 
@@ -22540,9 +22540,9 @@ function makeMovable(panel, opts) {
       }
       var r = panel.getBoundingClientRect();
       var l = parseFloat(panel.style.left),
-        t = parseFloat(panel.style.top);
+        nestedT = parseFloat(panel.style.top);
       if (!isNaN(l)) panel.style.left = Math.min(Math.max(EDGE, l), Math.max(EDGE, vw - r.width - EDGE)) + 'px';
-      if (!isNaN(t)) panel.style.top = Math.min(Math.max(EDGE, t), Math.max(EDGE, vh - r.height - EDGE)) + 'px';
+      if (!isNaN(nestedT)) panel.style.top = Math.min(Math.max(EDGE, nestedT), Math.max(EDGE, vh - r.height - EDGE)) + 'px';
     }
     /**
      * ⭐ AND IT RUNS WHEN THE WINDOW CHANGES, not only when the panel is dragged. The trap above needs no
@@ -22607,22 +22607,22 @@ function makeMovable(panel, opts) {
     grip.textContent = '⠿';
     grip.title = 'Drag';
     grip.style.cssText = 'cursor:grab;color:var(--grey-4);font-size:var(--fs-3);line-height:1;user-select:none;padding:2px 3px';
-    var btn = function (t, ti, fn) {
-      var node = document.createElement('button');
-      node.type = 'button';
-      node.title = ti;
-      node.textContent = t;
-      node.style.cssText =
+    var btn = function (nestedT, ti, fn) {
+      var element = document.createElement('button');
+      element.type = 'button';
+      element.title = ti;
+      element.textContent = nestedT;
+      element.style.cssText =
         'border:1px solid rgba(0,0,0,.13);background:rgba(255,255,255,.92);cursor:pointer;border-radius:5px;width:22px;height:22px;font-size:var(--fs-1);font-weight:700;color:#5a6472;line-height:1;padding:0';
-      node.onmousedown = function (e) {
+      element.onmousedown = function (e) {
         e.stopPropagation();
       };
-      node.onclick = function (e) {
+      element.onclick = function (e) {
         e.stopPropagation();
         e.preventDefault();
         fn();
       };
-      return node;
+      return element;
     };
     bar.appendChild(grip);
     /**
@@ -22812,8 +22812,8 @@ function makeMovable(panel, opts) {
         head.style.cursor = 'grab';
         head.addEventListener('mousedown', function (e) {
           if (e.button !== 0) return;
-          var node = e.target;
-          if (node && node.closest && node.closest('button,select,input,textarea,a,label,[contenteditable]')) return;
+          var element = e.target;
+          if (element && element.closest && element.closest('button,select,input,textarea,a,label,[contenteditable]')) return;
           startDrag(e);
         });
       }
@@ -22941,10 +22941,10 @@ function mvModal(host, wide, opt) {
     var o = opt && typeof opt === 'object' ? opt : { key: opt };
     var k = o.key;
     if (!k) {
-      var t = node.querySelector('.mhd .t');
+      var nestedT = node.querySelector('.mhd .t');
       k =
-        t && t.textContent
-          ? t.textContent
+        nestedT && nestedT.textContent
+          ? nestedT.textContent
               .replace(/[^A-Za-z]+/g, '-')
               .replace(/^-|-$/g, '')
               .toLowerCase()
@@ -23053,8 +23053,8 @@ function resumeCompose() {
   const p = document.getElementById('composepill');
   if (p) p.remove();
   setTimeout(function () {
-    var node = document.getElementById('cf_subject');
-    if (node) node.focus();
+    var element = document.getElementById('cf_subject');
+    if (element) element.focus();
   }, 20);
 }
 function renderComposePill() {
@@ -23629,9 +23629,11 @@ async function openNotifications(repaint) {
       '</div></div></div>'
     );
   };
-  const nhead = function (t) {
+  const nhead = function (nestedT) {
     return (
-      '<div style="padding:8px 12px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">' + t + '</div>'
+      '<div style="padding:8px 12px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">' +
+      nestedT +
+      '</div>'
     );
   };
   /* ⚠️ SAY THAT IT POLLS. The bell is dimmed because there is no push transport; the panel must not then imply
@@ -25187,8 +25189,8 @@ const PENDING = {
   notifications: { label: 'Notifications', ref: 'ATH-109 §11' }
 };
 function todo(k) {
-  const t = PENDING[k] || { label: k, ref: '' };
-  toast(MSG.comingSoon(t.label) + (t.ref ? ' (' + t.ref + ')' : ''));
+  const nestedT = PENDING[k] || { label: k, ref: '' };
+  toast(MSG.comingSoon(nestedT.label) + (nestedT.ref ? ' (' + nestedT.ref + ')' : ''));
 }
 function selBar() {
   const ids = UI.selected;
@@ -26090,11 +26092,11 @@ function _aiMd(md) {
       .split('\n'),
     list = [],
     index = 0;
-  var sep = function (l) {
-    return l.indexOf('-') >= 0 && /^\s*\|?[\s:|-]+\|?\s*$/.test(l);
+  var sep = function (nestedL) {
+    return nestedL.indexOf('-') >= 0 && /^\s*\|?[\s:|-]+\|?\s*$/.test(nestedL);
   };
-  var cl = function (text) {
-    return text
+  var cl = function (label) {
+    return label
       .trim()
       .replace(/^\|/, '')
       .replace(/\|$/, '')
@@ -26706,8 +26708,8 @@ function detailInner() {
  * once the scope filter applies — better a number that corrects itself in front of you than one that is
  * quietly wrong.
  */
-function setDtab(t) {
-  UI.dtab = t;
+function setDtab(nestedT) {
+  UI.dtab = nestedT;
   paintDetail();
 } /* the Messages tab mounts CBThread, which reads the thread itself (rtMountAll) */
 // (a) The query-chit detail as the ASSISTANCE PAGE: reply on the chit (message) + publish the Q&A to the KB, in one act.
@@ -27065,7 +27067,7 @@ function booksBlockHTML(c) {
     .map(function (item) {
       var r = B[item] || {};
       var sys = esc(r.system || 'books');
-      var w = word[item] || item;
+      var nestedW = word[item] || item;
       if (r.outcome === 'ok')
         return (
           '<div class="ir" data-testid="books-' +
@@ -27073,7 +27075,7 @@ function booksBlockHTML(c) {
           '"><span class="nm" style="color:var(--ok-2);font-weight:700">✓ ' +
           txf('Written to {sys}', { sys: sys }) +
           '</span><span class="qt">' +
-          w +
+          nestedW +
           (r.ref ? ' ' + esc(r.ref) : '') +
           ' · ' +
           esc(whenTx(r.at)) +
@@ -27307,8 +27309,8 @@ function busyHide() {
 function unreadCount() {
   let index = 0;
   (STORE.chits || []).forEach((item) => {
-    (item.msgs || []).forEach((item) => {
-      if (item.unread && (SESSION.role !== 'customer' || item.scope === 'external')) index++;
+    (item.msgs || []).forEach((entry) => {
+      if (entry.unread && (SESSION.role !== 'customer' || entry.scope === 'external')) index++;
     });
   });
   return index;
@@ -27335,10 +27337,10 @@ function openMsgCenter() {
   UI.msgcOpen = true;
   const items = (STORE.chits || [])
     .map((item) => {
-      const ms = (item.msgs || []).filter((item) => SESSION.role !== 'customer' || item.scope === 'external');
+      const ms = (item.msgs || []).filter((entry) => SESSION.role !== 'customer' || entry.scope === 'external');
       if (!ms.length) return null;
       const last = ms[ms.length - 1];
-      const unread = ms.filter((item) => item.unread).length;
+      const unread = ms.filter((entry) => entry.unread).length;
       return { id: item.id, code: item.code, party: item.party, last, unread };
     })
     .filter(Boolean)
@@ -27921,8 +27923,8 @@ function syncAssignOk() {
   if (!node) return;
   if (p.bulk) {
     node.disabled = !p.actorId;
-    const a = (UI.actors || []).find((x) => x.id === p.actorId);
-    node.textContent = p.actorId ? 'Assign ' + p.ids.length + ' → ' + (a ? a.name : 'co-assist') : 'Assign all';
+    const nestedA = (UI.actors || []).find((x) => x.id === p.actorId);
+    node.textContent = p.actorId ? 'Assign ' + p.ids.length + ' → ' + (nestedA ? nestedA.name : 'co-assist') : 'Assign all';
     return;
   }
   const ok = p.actorId && (p.pri !== 'urgent' || (p.reason && p.reason.trim()));
@@ -28655,8 +28657,8 @@ document.addEventListener('touchend', endDrag);
 function attsVis(atts) {
   return atts || [];
 } /* DEC: customer sees the full co-signed set — both parties co-hold every attachment */
-function attIcon(t) {
-  return t === 'video' ? '▶' : t === 'doc' ? '📄' : '🖼️';
+function attIcon(nestedT) {
+  return nestedT === 'video' ? '▶' : nestedT === 'doc' ? '📄' : '🖼️';
 }
 /* (removed dead _mockAtts / toggleMockAtt demo stub — real attachments are live) */
 function attMedia(a, size) {
@@ -29092,10 +29094,10 @@ function chitSpendStrip(c) {
   const done = _done + ' ' + tx('of') + ' ' + (s.lines || 0) + ' ' + tx('done');
   const cell = (
     label,
-    val,
+    nestedVal,
     extra
   ) => `<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
-    <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${val}</div></div>`;
+    <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
     ${quoted ? cell(tx('Quoted'), esc(inr(quoted))) : ''}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent ? esc(inr(spent)) : '—'}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
@@ -29315,12 +29317,12 @@ function amdSetNote(v) {
    and no price, on the one screen whose job is fixing a line. Blank clears it; a non-number is ignored rather
    than stored as NaN, which would read on screen as "no price" and quietly drop the line from every total. */
 function amdSetPrice(v) {
-  const t = String(v).trim();
-  if (t === '') {
+  const nestedT = String(v).trim();
+  if (nestedT === '') {
     AMD.line.price = null;
     return;
   }
-  const n = Number(t);
+  const n = Number(nestedT);
   if (Number.isFinite(n) && n >= 0) AMD.line.price = n;
 }
 function amdPickItem(i) {
@@ -29602,8 +29604,8 @@ function amendPaint() {
       <s style="opacity:.5">${esc([o.particulars, o.quantity, o.unit].filter(Boolean).join(' '))}</s>
       &nbsp;<span class=arw>→</span>&nbsp;<b style="color:var(--blue-2)">${esc([l.particulars, l.quantity, l.unit].filter(Boolean).join(' '))}</b></div>`
     : '';
-  const ic = (g, t, fn, col) =>
-    `<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:var(--fs-5);${col || ''}">${g}</button>`;
+  const ic = (g, nestedT, fn, col) =>
+    `<button class="btn" data-testid="amd-${String(nestedT).toLowerCase().split(' ')[0]}" title="${nestedT}" onclick="${fn}" style="flex:1;height:50px;font-size:var(--fs-5);${col || ''}">${g}</button>`;
 
   /**
    * ── ⭐ ONE OVERLAY, THE WHOLE LINE ────────────────────────────────────────────────────────────────────────────
@@ -29747,8 +29749,8 @@ function chitTermsBlock(c) {
         var r = item.rules || {};
         /* The rules, said plainly. ⚠️ Whatever the kind carries is shown — enumerating a fixed set of fields
            here would silently hide a condition the offer actually had. */
-        var parts = Object.keys(r).map(function (item) {
-          return esc(item) + ' ' + esc(r[item]);
+        var parts = Object.keys(r).map(function (entry) {
+          return esc(entry) + ' ' + esc(r[entry]);
         });
         return (
           '<div class="ir" style="align-items:flex-start">' +

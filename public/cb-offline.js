@@ -246,18 +246,18 @@
     opts = opts || {};
     var skip = /pin|otp|password|pwd|cvv|secret/i;
     var eligible = function (f) {
-      var id = f.id || f.name;
-      if (!id || skip.test(id)) return null;
+      var identifier = f.id || f.name;
+      if (!identifier || skip.test(identifier)) return null;
       var t = (f.type || '').toLowerCase();
       if (t === 'password' || t === 'file' || t === 'hidden' || t === 'checkbox' || t === 'radio') return null;
-      return id;
+      return identifier;
     };
     var collect = function () {
       var o = {},
-        fs = container.querySelectorAll('input,textarea,select');
-      for (var index = 0; index < fs.length; index++) {
-        var id = eligible(fs[index]);
-        if (id && fs[index].value != null && fs[index].value !== '') o[id] = fs[index].value;
+        nestedFs = container.querySelectorAll('input,textarea,select');
+      for (var position = 0; position < nestedFs.length; position++) {
+        var identifier = eligible(nestedFs[position]);
+        if (identifier && nestedFs[position].value != null && nestedFs[position].value !== '') o[identifier] = nestedFs[position].value;
       }
       return o;
     };

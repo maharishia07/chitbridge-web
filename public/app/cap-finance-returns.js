@@ -179,8 +179,8 @@ function frGet(form, btn) {
       failed: tx('Could not build the file'),
       done: tx('Downloaded'),
       outcome: function (name) {
-        var node = document.getElementById('fr_out');
-        if (node) node.textContent = tx('Saved as') + ' ' + name;
+        var element = document.getElementById('fr_out');
+        if (element) element.textContent = tx('Saved as') + ' ' + name;
       }
     }
   );

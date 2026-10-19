@@ -750,10 +750,10 @@
         '</div><div id="tk_thread" data-testid="tk-thread"></div></div>'
     );
     STEPS.forEach(function (item) {
-      var node = $('tk_do_' + item);
-      if (node && acts[item] && acts[item].ok !== false)
-        node.onclick = function () {
-          tkMove(c, item, node);
+      var element = $('tk_do_' + item);
+      if (element && acts[item] && acts[item].ok !== false)
+        element.onclick = function () {
+          tkMove(c, item, element);
         };
     });
     var bill = $('tk_do_bill');
@@ -767,19 +767,19 @@
       };
     (c.lines || []).forEach(function (item) {
       var k = item.line_id,
-        node = $('tk_la_' + k),
-        ld = $('tk_ld_' + k),
-        lv = $('tk_lv_' + k);
-      if (node && !node.disabled)
-        node.onclick = function () {
+        element = $('tk_la_' + k),
+        target = $('tk_ld_' + k),
+        nestedNode = $('tk_lv_' + k);
+      if (element && !element.disabled)
+        element.onclick = function () {
           assignPanel(c, item);
         };
-      if (ld && !ld.disabled)
-        ld.onclick = function () {
-          tkAssignLine(c, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, ld);
+      if (target && !target.disabled)
+        target.onclick = function () {
+          tkAssignLine(c, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, target);
         };
-      if (lv && !lv.disabled)
-        lv.onclick = function () {
+      if (nestedNode && !nestedNode.disabled)
+        nestedNode.onclick = function () {
           deliverPanel(c, item);
         };
     });

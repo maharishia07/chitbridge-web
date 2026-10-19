@@ -232,8 +232,8 @@ function wlDone() {
 function wlDoneCount(d) {
   var index = 0;
   ((d || {}).people || []).forEach(function (item) {
-    (item.lines || []).forEach(function (item) {
-      if (item.state === 'done') index++;
+    (item.lines || []).forEach(function (entry) {
+      if (entry.state === 'done') index++;
     });
   });
   return index;

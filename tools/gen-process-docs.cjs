@@ -51,7 +51,7 @@ function diagram(flow) {
   out.push('  classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b');
   out.push('  classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161');
   ['ok', 'warn', 'missing'].forEach((item) => {
-    const ids = flow.steps.filter((s) => s.status === item).map((item) => 'S' + item.n);
+    const ids = flow.steps.filter((s) => s.status === item).map((entry) => 'S' + entry.n);
     if (ids.length) out.push('  class ' + ids.join(',') + ' ' + item);
   });
   out.push('```');
@@ -126,7 +126,7 @@ function indexPage() {
   list.push('| flow | what it is | SAP | steps | ' + ICON.ok + ' | ' + ICON.warn + ' | ' + ICON.missing + ' |');
   list.push('|---|---|---|---|---|---|---|');
   MAP.flows.forEach((item) => {
-    const c = (st) => item.steps.filter((item) => item.status === st).length;
+    const c = (st) => item.steps.filter((entry) => entry.status === st).length;
     list.push(
       '| [' +
         item.id +
@@ -137,7 +137,7 @@ function indexPage() {
         ' | ' +
         item.sap +
         ' | ' +
-        item.steps.map((item) => item.step).join(' → ') +
+        item.steps.map((entry) => entry.step).join(' → ') +
         ' | ' +
         c('ok') +
         ' | ' +
@@ -156,8 +156,8 @@ function indexPage() {
     const cells = MAP.modules.map(
       (m) =>
         item.steps
-          .filter((item) => item.module === m.id)
-          .map((item) => item.n + ' ' + item.step + (item.status === 'missing' ? ' (MISSING)' : item.status === 'warn' ? ' ⚠️' : ''))
+          .filter((entry) => entry.module === m.id)
+          .map((entry) => entry.n + ' ' + entry.step + (entry.status === 'missing' ? ' (MISSING)' : entry.status === 'warn' ? ' ⚠️' : ''))
           .join('<br>') || ''
     );
     list.push('| ' + item.id + ' | ' + cells.join(' | ') + ' |');
@@ -172,13 +172,13 @@ function indexPage() {
   list.push('## The backlog — every step the code does not have');
   list.push('');
   MAP.flows.forEach((item) =>
-    item.steps.filter((item) => item.status === 'missing').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note))
+    item.steps.filter((entry) => entry.status === 'missing').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note))
   );
   list.push('');
   list.push('## Built, with a gap named');
   list.push('');
   MAP.flows.forEach((item) =>
-    item.steps.filter((item) => item.status === 'warn').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note))
+    item.steps.filter((entry) => entry.status === 'warn').forEach((s) => list.push('- **' + item.id + ' step ' + s.n + ' · ' + s.step + '** — ' + s.note))
   );
   list.push('');
   list.push('## How a new function joins the map');

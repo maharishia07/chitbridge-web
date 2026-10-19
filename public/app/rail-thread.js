@@ -331,7 +331,7 @@
           list
             .map(function (item) {
               var ok = allowed(m, item),
-                v = verdict(m, item),
+                nestedV = verdict(m, item),
                 on = m.channel === item;
               return (
                 '<button type="button" class="' +
@@ -343,7 +343,7 @@
                 '" data-testid="msg-channel-' +
                 item +
                 '"' +
-                (ok ? '' : ' aria-disabled="true" title="' + esc(why(v.why)) + '"') +
+                (ok ? '' : ' aria-disabled="true" title="' + esc(why(nestedV.why)) + '"') +
                 '>' +
                 esc(T(item === 'external' ? W.external : W.internal)) +
                 '</button>'
@@ -590,17 +590,17 @@
           m.sent = Object.assign({}, v || {}, { message_id: (v && v.message_id) || null });
           draftClear(o);
           m.text = '';
-          var node = el.querySelector('[data-rt-act="text"]');
-          if (node) node.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
+          var element = el.querySelector('[data-rt-act="text"]');
+          if (element) element.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
           var s = o.dispute_id
             ? T(W.sentDisp)
             : body.thread_type === 'external'
               ? fill(T(W.sentExt), { party: o.party || T('the other party') })
               : T(W.sentInt);
-          var ob = out();
-          if (ob) {
-            ob.textContent = s;
-            ob.setAttribute('data-tone', 'ok');
+          var nestedNode = out();
+          if (nestedNode) {
+            nestedNode.textContent = s;
+            nestedNode.setAttribute('data-tone', 'ok');
           }
           if (typeof o.onDone === 'function') {
             try {
@@ -608,10 +608,10 @@
             } catch (_) {}
           }
           load(m).then(function () {
-            var node = out();
-            if (node) {
-              node.textContent = s;
-              node.setAttribute('data-tone', 'ok');
+            var target = out();
+            if (target) {
+              target.textContent = s;
+              target.setAttribute('data-tone', 'ok');
             }
           });
         },
@@ -620,10 +620,10 @@
           var w = words,
             d = e && e.data;
           if (d && d.why) w = why(d.why, d.message || words);
-          var node = out();
-          if (node) {
-            node.textContent = w;
-            node.setAttribute('data-tone', 'error');
+          var element = out();
+          if (element) {
+            element.textContent = w;
+            element.setAttribute('data-tone', 'error');
           }
           if (d && d.why && m.actions) {
             var k = body.thread_type === 'external' ? 'message_external' : 'message_internal';

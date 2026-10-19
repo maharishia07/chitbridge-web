@@ -1425,8 +1425,8 @@ function netRevertAll() {
     var kill = [];
     creates.forEach(function (item) {
       kill.push(item.key);
-      _netDescendants(item.key).forEach(function (item) {
-        kill.push(item);
+      _netDescendants(item.key).forEach(function (entry) {
+        kill.push(entry);
       });
     });
     if (kill.length) {
@@ -1684,10 +1684,12 @@ function netBuild() {
       var bcol = n.root ? 'var(--blue-2)' : n.built ? 'var(--ok-2)' : item.owned ? 'var(--blue-2)' : 'var(--warn-2)';
       var hnd = _netHandleOf(n);
       var rows = item.lines
-        .map(function (item) {
+        .map(function (entry) {
           return (
             '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' +
-            (item.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + item + '</span>' : '<span class=arw>▸</span> ' + item) +
+            (entry.indexOf('·') === 0
+              ? '<span style="color:var(--grey);padding-inline-start:12px">' + entry + '</span>'
+              : '<span class=arw>▸</span> ' + entry) +
             '</div>'
           );
         })
@@ -1895,9 +1897,9 @@ function netMintGo() {
       // could push this page's copy — which has no `built` markers — and the next Build would treat existing stores
       // as new. The server now also refuses to drop them, but the client should not be sending stale state at all.
       api('netDesignGet')
-        .then(function (reply) {
-          if (reply && reply.draft && reply.draft.nodes) {
-            UI.net = reply.draft;
+        .then(function (response) {
+          if (response && response.draft && response.draft.nodes) {
+            UI.net = response.draft;
             _netSetDirty(false);
           }
           UI._netPlan = null;

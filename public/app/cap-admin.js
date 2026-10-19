@@ -1494,14 +1494,14 @@ async function loadProfile() {
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
        Writing to that stale reference paints into a node no longer in the document and the panel stays blank
        with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
-    const node = document.getElementById('profbody');
-    if (!node) return;
-    node.innerHTML = profSecHTML(profSec(), e);
+    const element = document.getElementById('profbody');
+    if (!element) return;
+    element.innerHTML = profSecHTML(profSec(), e);
     profSnapshot();
     if (profSec() === 'vault') loadVault(); // the trade documents vault (async — pre-fills authority forms)
   } catch (e) {
-    const node = document.getElementById('profbody');
-    if (node) node.innerHTML = scrErr(e);
+    const element = document.getElementById('profbody');
+    if (element) element.innerHTML = scrErr(e);
   } finally {
     _profBusy = false;
   }
@@ -2772,8 +2772,8 @@ function _flag(cc) {
     .toUpperCase();
   if (!/^[A-Z]{2}$/.test(text)) return ''; // only a 2-letter ISO code makes a flag; "India" does not
   try {
-    return text.replace(/./g, function (text) {
-      return String.fromCodePoint(127397 + text.charCodeAt(0));
+    return text.replace(/./g, function (label) {
+      return String.fromCodePoint(127397 + label.charCodeAt(0));
     });
   } catch (_) {
     return '';
@@ -3334,8 +3334,8 @@ function iamGovernedRows(e) {
            not vanish because a five-element array was written with four. */
         return grp(
           item[1],
-          rows.filter(function (r) {
-            return (r[4] || 'biz') === item[0];
+          rows.filter(function (nestedR) {
+            return (nestedR[4] || 'biz') === item[0];
           })
         );
       })
@@ -4819,26 +4819,26 @@ function settingsScreen() {
         esc(item.q) +
         '</div></div></div>';
       if (item.key === 'integrations' && setSec() === 'integrations') {
-        row += INT_TABS.map(function (item) {
+        row += INT_TABS.map(function (entry) {
           return (
             '<div class="row misrow sub' +
-            (intTab() === item.key ? ' sel' : '') +
+            (intTab() === entry.key ? ' sel' : '') +
             '" data-testid="int-tab-' +
-            item.key +
+            entry.key +
             '" onclick="intSetTab(\'' +
-            item.key +
+            entry.key +
             '\')">' +
             '<div class="main2"><div class="l1"><span class="code">' +
-            esc(tx(item.n)) +
+            esc(tx(entry.n)) +
             '</span></div>' +
             '<div class="l2">' +
-            esc(tx(item.q)) +
+            esc(tx(entry.q)) +
             '</div></div></div>'
           );
         }).join('');
       }
       if (item.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined') {
-        row += GOV.map(function (item, index) {
+        row += GOV.map(function (entry, index) {
           var on = (UI.govTab || 0) === index;
           return (
             '<div class="row misrow sub' +
@@ -4849,10 +4849,10 @@ function settingsScreen() {
             index +
             ')">' +
             '<div class="main2"><div class="l1"><span class="code">' +
-            esc(item.n) +
+            esc(entry.n) +
             '</span></div>' +
             '<div class="l2">' +
-            esc(item.tag || '') +
+            esc(entry.tag || '') +
             '</div></div></div>'
           );
         }).join('');
@@ -6421,7 +6421,7 @@ function intConnectorsHTML() {
             })
             .join(' ');
           var open = intOpen() === item.id;
-          var more =
+          var nestedMore =
             '<span data-testid="int-card-' +
             esc(item.id) +
             '-toggle" onclick="intToggleCard(\'' +
@@ -6472,7 +6472,7 @@ function intConnectorsHTML() {
                 '</div>'
               : '') +
             '<div style="margin-top:6px">' +
-            more +
+            nestedMore +
             '</div>' +
             (open
               ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
@@ -6940,12 +6940,12 @@ function intReconcileHTML() {
     );
   var c = d.counts || {},
     rows = d.rows || [];
-  var chip = function (n, label, colour, testid) {
+  var chip = function (n, label, nestedColour, testid) {
     return (
       '<span data-testid="' +
       testid +
       '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' +
-      (colour ? 'color:' + colour + ';font-weight:700' : 'color:var(--grey)') +
+      (nestedColour ? 'color:' + nestedColour + ';font-weight:700' : 'color:var(--grey)') +
       '"><b>' +
       esc(String(n || 0)) +
       '</b> ' +
@@ -7307,22 +7307,22 @@ function netOffersHTML() {
 
   nets.forEach(function (item) {
     var optIn = item.policy !== 'opt_out';
-    var rows = (item.offers || [])
-      .map(function (item) {
-        var btn = item.applies
+    var lines = (item.offers || [])
+      .map(function (entry) {
+        var btn = entry.applies
           ? '<button data-testid="neto-out-' +
-            esc(item.id) +
+            esc(entry.id) +
             '" onclick="netoChoice(\'' +
-            esc(item.id) +
+            esc(entry.id) +
             "','" +
             (optIn ? '' : 'out') +
             '\')">' +
             tx(optIn ? 'Stop taking it' : 'Decline') +
             '</button>'
           : '<button class="pri" data-testid="neto-in-' +
-            esc(item.id) +
+            esc(entry.id) +
             '" onclick="netoChoice(\'' +
-            esc(item.id) +
+            esc(entry.id) +
             "','" +
             (optIn ? 'in' : '') +
             '\')">' +
@@ -7330,19 +7330,19 @@ function netOffersHTML() {
             '</button>';
         return (
           '<div data-testid="neto-net-' +
-          esc(item.id) +
+          esc(entry.id) +
           '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">' +
           '<span style="flex:1 1 220px;min-width:0"><b>' +
-          esc(item.name) +
+          esc(entry.name) +
           '</b>' +
           '<div style="font-size:var(--fs-1);color:var(--' +
-          (item.applies ? 'ok' : 'grey') +
+          (entry.applies ? 'ok' : 'grey') +
           ')">' +
-          (item.applies ? tx('applies at your counters') : tx('not applied here')) +
+          (entry.applies ? tx('applies at your counters') : tx('not applied here')) +
           ' · ' +
-          esc(_netRelWords({ at: item.at, until: item.until })) +
+          esc(_netRelWords({ at: entry.at, until: entry.until })) +
           '</div></span>' +
-          (item.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>') +
+          (entry.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>') +
           '</div>'
         );
       })
@@ -7361,7 +7361,7 @@ function netOffersHTML() {
               : 'Your network applies every released offer. You can decline one for this store.'
           ) +
           '</div>' +
-          (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>')
+          (lines || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>')
         : '') +
       '</div>';
   });
@@ -7483,8 +7483,8 @@ function netCatBrandHTML(c, stores) {
       var isOut = function (id) {
         return want && id in want ? !!want[id] : now.indexOf(id) >= 0;
       };
-      var outCount = storeList.filter(function (item) {
-        return isOut(item.id);
+      var outCount = storeList.filter(function (entry) {
+        return isOut(entry.id);
       }).length;
       var open = _NETC_OPEN === key + '|' + item;
       return (
@@ -7524,8 +7524,8 @@ function netCatBrandHTML(c, stores) {
             index +
             '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">' +
             storeList
-              .map(function (item, j) {
-                var changed = want && item.id in want && !!want[item.id] !== now.indexOf(item.id) >= 0;
+              .map(function (entry, j) {
+                var changed = want && entry.id in want && !!want[entry.id] !== now.indexOf(entry.id) >= 0;
                 return (
                   '<label data-testid="netc-at-' +
                   index +
@@ -7535,7 +7535,7 @@ function netCatBrandHTML(c, stores) {
                   (changed ? ';font-weight:700' : '') +
                   '">' +
                   '<input type="checkbox" ' +
-                  (isOut(item.id) ? 'checked ' : '') +
+                  (isOut(entry.id) ? 'checked ' : '') +
                   'onchange="netcAt(\'' +
                   esc(key) +
                   "'," +
@@ -7543,7 +7543,7 @@ function netCatBrandHTML(c, stores) {
                   ',' +
                   j +
                   ',this.checked)">' +
-                  esc(tx('withdraw at') + ' ' + item.name) +
+                  esc(tx('withdraw at') + ' ' + entry.name) +
                   '</label>'
                 );
               })
@@ -8441,8 +8441,8 @@ async function intCounterCloseDups() {
         return _keySeenAt(second) - _keySeenAt(first);
       })
       .slice(1)
-      .forEach(function (item) {
-        if (_keySeenAt(item)) kill.push(item);
+      .forEach(function (entry) {
+        if (_keySeenAt(entry)) kill.push(entry);
       });
   });
   if (!kill.length) {
@@ -8820,19 +8820,19 @@ function bizLedgerSwitch(on) {
     working: function () {
       box.innerHTML = esc(tx('Working…'));
     },
-    call: function (on) {
-      return CBLedger.call({ api: api }, on);
+    call: function (nestedOn) {
+      return CBLedger.call({ api: api }, nestedOn);
     },
-    done: async function (on) {
-      SESSION.booksOn = on;
-      if (on) {
+    done: async function (nestedOn) {
+      SESSION.booksOn = nestedOn;
+      if (nestedOn) {
         try {
           await ensureCap('books');
         } catch (_) {}
       }
       bgRenderApp(); /* the Ledger door appears (or goes) on the menu */
       await bizLedgerLoad();
-      toast(on ? tx('The Ledger is on.') : tx('The Ledger is off.'));
+      toast(nestedOn ? tx('The Ledger is on.') : tx('The Ledger is off.'));
     },
     failed: function (e) {
       box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : '');
@@ -9043,8 +9043,8 @@ function paintSettings(s, _daOpts) {
      not the whole screen, which would throw away anything half-typed in the fields below it. */
   if (setSec() === 'work' && !_WROUTE) {
     workRoutingLoad().then(function () {
-      var node = document.getElementById('wr_pane');
-      if (node) node.innerHTML = workRoutingHTML();
+      var element = document.getElementById('wr_pane');
+      if (element) element.innerHTML = workRoutingHTML();
     });
   }
   {
@@ -9076,8 +9076,8 @@ function paintSettings(s, _daOpts) {
             }
           })
           .catch(function (e) {
-            var node = document.getElementById('setbody');
-            if (node) node.innerHTML = scrErr(e);
+            var element = document.getElementById('setbody');
+            if (element) element.innerHTML = scrErr(e);
           });
       } else out = standardsSettingsHTML();
     } else if (k === 'work')
@@ -9823,11 +9823,11 @@ async function loadGaps() {
   if (window.CBOffline) CBOffline.autodraft(node, 'kb.form'); // draft the question/answer/context you're writing
   try {
     _kbItems = (await api('assistQuestions')) || [];
-    const node = document.getElementById('kb_n');
-    if (node) node.textContent = _kbItems.length;
-    const L = document.getElementById('kb_list');
-    if (L)
-      L.innerHTML = _kbItems.length
+    const element = document.getElementById('kb_n');
+    if (element) element.textContent = _kbItems.length;
+    const target = document.getElementById('kb_list');
+    if (target)
+      target.innerHTML = _kbItems.length
         ? _kbItems
             .map(function (e) {
               const eb = isHelp
@@ -9854,8 +9854,8 @@ async function loadGaps() {
             .join('')
         : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
   } catch (e) {
-    const node = document.getElementById('kb_list');
-    if (node) node.innerHTML = scrErr(e);
+    const element = document.getElementById('kb_list');
+    if (element) element.innerHTML = scrErr(e);
   }
 }
 function kbEdit(id) {

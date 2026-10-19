@@ -161,7 +161,7 @@ function reach(name, from, depth, seen) {
       callees(d.body).forEach((item) => {
         if (item === name || NOFOLLOW.test(item)) return;
         const x = reach(item, d.file, depth - 1, seen);
-        x.writes.forEach((item) => r.writes.add(item));
+        x.writes.forEach((entry) => r.writes.add(entry));
         if (depth >= 2) {
           r.asks = r.asks || x.asks;
           r.run = r.run || x.run;
@@ -193,23 +193,23 @@ for (const f of files) {
           e = item.indexOf(q, st);
         h = item.slice(st, e < 0 ? st + 240 : e);
       } else h = item.slice(m.index + m[0].length, m.index + m[0].length + 400);
-      const names = [...callees(h)].filter((item) => !/^(event|closeModal|toast|esc|tx|txf|go|navTo|stopPropagation)$/.test(item) && defsOf(item, f).length);
+      const names = [...callees(h)].filter((entry) => !/^(event|closeModal|toast|esc|tx|txf|go|navTo|stopPropagation)$/.test(entry) && defsOf(entry, f).length);
       const r = { writes: new Set(), asks: /confirmAsk|CBConfirm/.test(h), run: /CBAction\.run/.test(h), once: /CBAction\.once|bkOnce/.test(h) };
-      names.forEach((item) => {
-        const x = reach(item, f, 2, new Set());
-        x.writes.forEach((item) => r.writes.add(item));
+      names.forEach((entry) => {
+        const x = reach(entry, f, 2, new Set());
+        x.writes.forEach((element) => r.writes.add(element));
         r.asks = r.asks || x.asks;
         r.run = r.run || x.run;
         r.once = r.once || x.once;
       });
-      directWrites(h).forEach((item) => r.writes.add(item));
+      directWrites(h).forEach((entry) => r.writes.add(entry));
       if (!r.writes.size) continue;
       const tagStart = item.lastIndexOf('<', m.index),
         tagEnd = item.indexOf('>', m.index);
       const tag = tagStart >= 0 ? item.slice(tagStart, tagEnd < 0 ? undefined : tagEnd) : '';
       const tid = (/data-testid=\\?["']([^"'\\]+)/.exec(tag) || [])[1] || '';
       const list = [...r.writes].sort();
-      const methods = list.map((item) => (WRITE[item] ? WRITE[item].m : item.split(' ')[1]));
+      const methods = list.map((entry) => (WRITE[entry] ? WRITE[entry].m : entry.split(' ')[1]));
       const irrev =
         methods.includes('DELETE') ||
         IRREV.test(names.join(' ') + ' ' + list.join(' ') + ' ' + tid) ||

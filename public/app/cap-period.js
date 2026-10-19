@@ -565,7 +565,7 @@ function peKindFields(kind) {
           item.key;
       if (item.kind === 'amount') return peField(id, lab, peAmt(id));
       if (item.kind === 'pick') {
-        const opts = item.pick === 'mode' ? peMODES : ((PE.picks || {})[item.pick] || []).map((item) => [item.role || item.code, item.name]);
+        const opts = item.pick === 'mode' ? peMODES : ((PE.picks || {})[item.pick] || []).map((entry) => [entry.role || entry.code, entry.name]);
         return peField(id, lab, peSel(id, [['', 'Choose…']].concat(opts), ''));
       }
       return peField(id, lab, peInput(id, '', ''));

@@ -63,8 +63,8 @@
    * disputes it deserves to know which day's number this was.
    */
   var PRICE_ORIGIN = ['url', 'publisher', 'exchange', 'system', 'contract', 'manual'];
-  function viaFor(leg) {
-    return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT'];
+  function viaFor(nestedLeg) {
+    return nestedLeg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT'];
   }
 
   // ---- THE MAXIMUM DATATYPE PALETTE ----

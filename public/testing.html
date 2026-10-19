@@ -1606,7 +1606,7 @@ var MODFILT = ''; /* the chip selection — a module, chosen from the expansion 
  * ⭐ ONE PLACE THAT KNOWS WHETHER THE BOARD IS ANSWERING A NARROWER QUESTION — and says so in two ways at
  * once, because a colour tells you THAT and the control tells you WHAT and gives you the way out.
  */
-function showFilterState(shown) {
+function showFilterState(nestedShown) {
   var bar = document.querySelectorAll('.bar')[1];
   var el = document.getElementById('f_state_show');
   if (!el) return;
@@ -1635,7 +1635,7 @@ function showFilterState(shown) {
     return;
   }
   el.hidden = false;
-  el.innerHTML = '<b>' + shown + '</b> of ' + CASES.length + ' \u00b7 filtered by ' + esc(on.join(' \u00b7 '));
+  el.innerHTML = '<b>' + nestedShown + '</b> of ' + CASES.length + ' \u00b7 filtered by ' + esc(on.join(' \u00b7 '));
 }
 
 /** ⭐ every filter, including the hidden one the header chips set — a "clear" that leaves one on is worse than none */
@@ -1684,13 +1684,13 @@ function fillFilters() {
   KIND_ORDER.forEach(function (item) {
     /* ⚠️ AN EMPTY CATEGORY IS STILL OFFERED when we know it should exist — "Penetration (0)" says something
        true; leaving it out lets the absence pass for "not applicable". */
-    var n = nk[item] || 0;
-    if (!n && !ALWAYS_SHOW[item]) return;
-    var node = document.createElement('option');
-    node.value = item;
-    node.title = LEVEL_SAYS[item] || '';
-    node.textContent = KIND_LABEL[item] + ' (' + n + ')';
-    sel.appendChild(node);
+    var nestedN = nk[item] || 0;
+    if (!nestedN && !ALWAYS_SHOW[item]) return;
+    var element = document.createElement('option');
+    element.value = item;
+    element.title = LEVEL_SAYS[item] || '';
+    element.textContent = KIND_LABEL[item] + ' (' + nestedN + ')';
+    sel.appendChild(element);
   });
   sel.value = node;
 
@@ -1704,19 +1704,19 @@ function fillFilters() {
       noArea++;
       return;
     }
-    list.forEach(function (item) {
-      na[item] = (na[item] || 0) + 1;
+    list.forEach(function (entry) {
+      na[entry] = (na[entry] || 0) + 1;
     });
   });
   var sa = document.getElementById('f_area');
   sa.innerHTML = '<option value="">Anywhere</option>';
   AREA_ORDER.forEach(function (item) {
     if (!na[item]) return;
-    var node = document.createElement('option');
-    node.value = item;
-    node.title = AREA_SAYS[item] || '';
-    node.textContent = AREA_LABEL[item] + ' (' + na[item] + ')';
-    sa.appendChild(node);
+    var element = document.createElement('option');
+    element.value = item;
+    element.title = AREA_SAYS[item] || '';
+    element.textContent = AREA_LABEL[item] + ' (' + na[item] + ')';
+    sa.appendChild(element);
   });
   sa.value = ar;
 
@@ -1732,9 +1732,18 @@ function fillFilters() {
     return l && (l.status === 'fail' || l.status === 'blocked');
   }).length;
   var tot = document.getElementById('f_tot');
-  function n(val, label, key, cls) {
+  function n(val, nestedLabel, key, cls) {
     return (
-      '<b class="t' + (st === key ? ' on' : '') + (cls ? ' ' + cls : '') + '" onclick="setState(\'' + key + '\')">' + val + '</b> <span>' + label + '</span>'
+      '<b class="t' +
+      (st === key ? ' on' : '') +
+      (cls ? ' ' + cls : '') +
+      '" onclick="setState(\'' +
+      key +
+      '\')">' +
+      val +
+      '</b> <span>' +
+      nestedLabel +
+      '</span>'
     );
   }
   tot.innerHTML =
@@ -2127,21 +2136,21 @@ async function setProjectView(v) {
  * a page that fails to render because it could not remember a font size is a worse page than one that forgets.
  */
 function applyTextSize() {
-  var pct = 100;
+  var nestedPct = 100;
   try {
-    pct = parseInt(localStorage.getItem('cb.testsize'), 10) || 100;
+    nestedPct = parseInt(localStorage.getItem('cb.testsize'), 10) || 100;
   } catch (_) {}
-  pct = Math.max(85, Math.min(145, pct));
-  document.documentElement.style.fontSize = pct + '%';
-  return pct;
+  nestedPct = Math.max(85, Math.min(145, nestedPct));
+  document.documentElement.style.fontSize = nestedPct + '%';
+  return nestedPct;
 }
 function textSize(step) {
-  var pct = applyTextSize() + step * 10;
-  pct = Math.max(85, Math.min(145, pct));
+  var nestedPct = applyTextSize() + step * 10;
+  nestedPct = Math.max(85, Math.min(145, nestedPct));
   try {
-    localStorage.setItem('cb.testsize', String(pct));
+    localStorage.setItem('cb.testsize', String(nestedPct));
   } catch (_) {}
-  document.documentElement.style.fontSize = pct + '%';
+  document.documentElement.style.fontSize = nestedPct + '%';
 }
 applyTextSize();
 
@@ -2165,8 +2174,8 @@ function setView(v) {
   var bars = document.querySelectorAll('.bar');
   for (var index = 1; index < bars.length; index++) bars[index].className = v === 'cases' ? 'bar' : 'bar hide';
   /* ⭐ the case tally counts CASES — on the three document tabs it describes a tab you are not on */
-  var tally = document.getElementById('tally');
-  if (tally) tally.style.display = v === 'cases' || v === 'summary' ? '' : 'none';
+  var nestedTally = document.getElementById('tally');
+  if (nestedTally) nestedTally.style.display = v === 'cases' || v === 'summary' ? '' : 'none';
   var node = document.getElementById('pview');
   if (node) node.style.display = v === 'summary' || v === 'report' ? '' : 'none';
   document.getElementById('t_rep').className = v === 'report' ? 'on' : '';
@@ -2663,8 +2672,8 @@ async function paintReliability() {
       '<td>' +
       (_grp.length
         ? _grp
-            .map(function (item) {
-              return '<span class="grp">' + esc(item) + '</span>';
+            .map(function (entry) {
+              return '<span class="grp">' + esc(entry) + '</span>';
             })
             .join('')
         : '<span class="dim">—</span>') +
@@ -2983,25 +2992,25 @@ async function paintReport() {
           '<tr><th>Tester</th><th class="num">Cases</th><th class="num">Passed</th>' +
           '<th class="num">Failed</th><th class="num">Blocked</th><th>Last recorded</th></tr>' +
           people
-            .map(function (item) {
+            .map(function (entry) {
               return (
                 '<tr><td>' +
-                esc(item.tester) +
+                esc(entry.tester) +
                 '</td>' +
                 '<td class="num">' +
-                item.recorded +
+                entry.recorded +
                 '</td>' +
                 '<td class="num">' +
-                (item.passed || '\u2014') +
+                (entry.passed || '\u2014') +
                 '</td>' +
                 '<td class="num">' +
-                (item.failed || '\u2014') +
+                (entry.failed || '\u2014') +
                 '</td>' +
                 '<td class="num">' +
-                (item.blocked || '\u2014') +
+                (entry.blocked || '\u2014') +
                 '</td>' +
                 '<td>' +
-                (item.last_at ? new Date(item.last_at).toLocaleString() : '\u2014') +
+                (entry.last_at ? new Date(entry.last_at).toLocaleString() : '\u2014') +
                 '</td></tr>'
               );
             })
@@ -3064,31 +3073,31 @@ async function paintReport() {
         '<div class="scroll"><table class="sum">' +
         '<tr><th>Kind</th><th>What it proves</th><th class="num">Cases</th><th class="num">Run</th>' +
         '<th class="num">Passed</th><th class="num">Failing</th></tr>' +
-        K.map(function (item) {
-          var none = !item.total;
+        K.map(function (entry) {
+          var none = !entry.total;
           return (
             '<tr' +
             (none ? ' class="unplaced"' : '') +
             '>' +
             '<td><b>' +
-            esc(item.kind) +
+            esc(entry.kind) +
             '</b>' +
             (none ? ' <i class="zeroflag">0</i>' : '') +
             '</td>' +
             '<td class="fine">' +
-            esc(item.says || '') +
+            esc(entry.says || '') +
             '</td>' +
             '<td class="num">' +
-            (item.total || '<span class="dim">—</span>') +
+            (entry.total || '<span class="dim">—</span>') +
             '</td>' +
             '<td class="num">' +
-            (item.run || '<span class="dim">—</span>') +
+            (entry.run || '<span class="dim">—</span>') +
             '</td>' +
             '<td class="num">' +
-            (item.passed ? '<span class="big">' + item.passed + '</span>' : '<span class="dim">—</span>') +
+            (entry.passed ? '<span class="big">' + entry.passed + '</span>' : '<span class="dim">—</span>') +
             '</td>' +
             '<td class="num">' +
-            (item.failed ? '<span class="bad">' + item.failed + '</span>' : '<span class="dim">—</span>') +
+            (entry.failed ? '<span class="bad">' + entry.failed + '</span>' : '<span class="dim">—</span>') +
             '</td></tr>'
           );
         }).join('') +
@@ -3189,8 +3198,8 @@ async function paintReport() {
           };
           var block = function (head, title, why, list) {
             if (!list.length) return '';
-            var n = list.reduce(function (t, item) {
-              return t + Number(item.total || 0);
+            var n = list.reduce(function (nestedT, entry) {
+              return nestedT + Number(entry.total || 0);
             }, 0);
             return (
               '<h4 class="repgrp">' +
@@ -3218,8 +3227,8 @@ async function paintReport() {
               'Feature',
               'By feature',
               'what the product does \u2014 written by a person, walked by a person',
-              rows.filter(function (item) {
-                return !isDir(item);
+              rows.filter(function (entry) {
+                return !isDir(entry);
               })
             ) + block('Folder', 'By folder', 'the automated files, grouped where they live \u2014 a place, not a feature', rows.filter(isDir))
           );
@@ -3385,8 +3394,8 @@ async function paintReport() {
         ((item.caveats || []).length
           ? '<ul class="caveat">' +
             item.caveats
-              .map(function (item) {
-                return '<li>' + esc(item) + '</li>';
+              .map(function (entry) {
+                return '<li>' + esc(entry) + '</li>';
               })
               .join('') +
             '</ul>'
@@ -3756,7 +3765,7 @@ function matrixHTML() {
     });
   });
 
-  var pct = function (done, all) {
+  var nestedPct = function (done, all) {
     return all ? Math.round((done / all) * 100) : 0;
   };
   /**
@@ -3773,7 +3782,7 @@ function matrixHTML() {
     done = Number(done) || 0;
     all = Number(all) || 0;
     ran = Number(ran) || 0;
-    var q = pct(done, all);
+    var q = nestedPct(done, all);
     return (
       '<td class="num"><b>' +
       all +
@@ -4447,9 +4456,9 @@ function folderTreeHTML() {
       var parts = x.file.split('/');
       var leaf = parts.pop();
       var at = root;
-      parts.forEach(function (item) {
-        if (!at.kids[item]) at.kids[item] = { kids: {}, items: [] };
-        at = at.kids[item];
+      parts.forEach(function (entry) {
+        if (!at.kids[entry]) at.kids[entry] = { kids: {}, items: [] };
+        at = at.kids[entry];
       });
       at.items.push({ leaf: leaf, area: item, x: x });
     });
@@ -4484,8 +4493,8 @@ function folderTreeHTML() {
       .forEach(function (item, index) {
         var last = index === node.items.length - 1 && !kids.length;
         var list = casesFor(item.x.file);
-        var xr = list.filter(function (item) {
-          return LAST[item.case_key];
+        var xr = list.filter(function (entry) {
+          return LAST[entry.case_key];
         }).length;
         /* ⭐ the LAYER as a chip here — the folder says where it lives, the chip says what it is */
         var tail =
@@ -4613,14 +4622,23 @@ function menuTreeHTML() {
       if (!dopen) return;
 
       /* the controls themselves — the leaf a tester taps, with what it last did (sorted by the shared shape) */
-      list.forEach(function (item) {
-        var l = LAST[item.case_key];
-        var mark = !l
+      list.forEach(function (entry) {
+        var l = LAST[entry.case_key];
+        var nestedMark = !l
           ? '<span class="tof dim">not run</span>'
           : l.status === 'fail' || l.status === 'blocked'
             ? '<span class="tof"><b class="bad">' + esc(l.status) + '</b></span>'
             : '<span class="tof">' + esc(l.status) + '</span>';
-        h += treeNode(3, '\u00b7', item.title || item.case_key, null, mark + (item.generated ? '<span class="ttier">swept</span>' : ''), '', false, '');
+        h += treeNode(
+          3,
+          '\u00b7',
+          entry.title || entry.case_key,
+          null,
+          nestedMark + (entry.generated ? '<span class="ttier">swept</span>' : ''),
+          '',
+          false,
+          ''
+        );
       });
     });
   });
@@ -4658,8 +4676,8 @@ function treeHTML() {
   if (!CONTENTS) return '<div class="note">Press <b>Load cases</b>.</div>';
 
   var h = '<div class="tree">';
-  var total = AREA_ORDER.reduce(function (total, item) {
-    return total + (CONTENTS[item] || []).length;
+  var total = AREA_ORDER.reduce(function (sum, item) {
+    return sum + (CONTENTS[item] || []).length;
   }, 0);
   h += treeNode(0, '\u25c6', 'Chit & Bridge', total, '<span class="tof">built</span>', '', true, '');
 
@@ -4668,11 +4686,11 @@ function treeHTML() {
     var tests = CASES.filter(function (c) {
       return (c.areas || []).indexOf(item) >= 0;
     });
-    var run = tests.filter(function (item) {
-      return LAST[item.case_key];
+    var run = tests.filter(function (entry) {
+      return LAST[entry.case_key];
     }).length;
-    var bad = tests.filter(function (item) {
-      var l = LAST[item.case_key];
+    var bad = tests.filter(function (entry) {
+      var l = LAST[entry.case_key];
       return l && (l.status === 'fail' || l.status === 'blocked');
     }).length;
     var key = 'tree:' + item;
@@ -4710,18 +4728,18 @@ function treeHTML() {
       byTier[t].push(x);
     });
 
-    order.forEach(function (item) {
-      var kids = byTier[item];
+    order.forEach(function (entry) {
+      var kids = byTier[entry];
       var d = 2;
-      if (item) {
-        h += treeNode(2, '\u251c', item, kids.length, '', '', true, '');
+      if (entry) {
+        h += treeNode(2, '\u251c', entry, kids.length, '', '', true, '');
         d = 3;
       }
       kids.slice(0, 60).forEach(function (x, index) {
         var last = index === Math.min(kids.length, 60) - 1;
         var list = casesFor(x.file);
-        var xr = list.filter(function (item) {
-          return LAST[item.case_key];
+        var xr = list.filter(function (element) {
+          return LAST[element.case_key];
         }).length;
         var t2 =
           (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '') +
@@ -4982,8 +5000,8 @@ async function openRun(id) {
     var r = await call('/api/testing/results?run_id=' + encodeURIComponent(id));
     var rows = (r.results || []).slice();
     var rank = { fail: 0, blocked: 1, skipped: 2, pass: 3 };
-    rows.sort(function (first, second) {
-      return rank[first.status] - rank[second.status] || (first.case_key < second.case_key ? -1 : 1);
+    rows.sort(function (left, second) {
+      return rank[left.status] - rank[second.status] || (left.case_key < second.case_key ? -1 : 1);
     });
     var first = rows[0] || {};
     var h =
@@ -5169,10 +5187,10 @@ function paint() {
   var seqOf = {},
     nameOf = {};
   list.forEach(function (item) {
-    var list = PIVOTS[rowsBy].of(item),
-      cs = PIVOTS[colsBy].of(item);
-    if (list.length > 1 || cs.length > 1) multi = true;
-    list.forEach(function (r) {
+    var rows = PIVOTS[rowsBy].of(item),
+      entries = PIVOTS[colsBy].of(item);
+    if (rows.length > 1 || entries.length > 1) multi = true;
+    rows.forEach(function (r) {
       if (!rowOf[r]) {
         rowOf[r] = [];
         rowKeys.push(r);
@@ -5182,9 +5200,9 @@ function paint() {
         if (seqOf[r] === undefined) seqOf[r] = item.seq === undefined ? 99 : item.seq;
         if (!nameOf[r]) nameOf[r] = item.module_name || '';
       }
-      cs.forEach(function (item) {
-        if (colKeys.indexOf(item) < 0) colKeys.push(item);
-        cell[r + '\u0000' + item] = (cell[r + '\u0000' + item] || 0) + 1;
+      entries.forEach(function (entry) {
+        if (colKeys.indexOf(entry) < 0) colKeys.push(entry);
+        cell[r + '\u0000' + entry] = (cell[r + '\u0000' + entry] || 0) + 1;
       });
     });
   });
@@ -5243,7 +5261,7 @@ function paint() {
   var tot = {},
     lastTier = null;
   rowKeys.forEach(function (item) {
-    var list = rowOf[item];
+    var rows = rowOf[item];
     var open = isOpenSection(item, rowKeys.length);
     var step = rowsBy === 'area' && seqOf[item] !== undefined && seqOf[item] < 90 ? (seqOf[item] < 10 ? '0' + seqOf[item] : String(seqOf[item])) : '';
     /* ⭐ the architecture break, when the rows ARE the architecture */
@@ -5274,7 +5292,7 @@ function paint() {
           : '') +
       '</td>' +
       '<td class="num"><b>' +
-      list.length +
+      rows.length +
       '</b></td>';
     colKeys.forEach(function (k) {
       var n = cell[item + '\u0000' + k] || 0;
@@ -5300,8 +5318,8 @@ function paint() {
     if (open) {
       var inner = '';
       var inner2 = caseHeaderHTML();
-      list.forEach(function (item) {
-        inner2 += caseHTML(item);
+      rows.forEach(function (entry) {
+        inner2 += caseHTML(entry);
       });
       inner = inner2;
       h += '<tr class="acases"><td colspan="' + (colKeys.length + 2) + '">' + inner + '</td></tr>';

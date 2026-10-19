@@ -463,8 +463,8 @@ function vaultDatalists() {
         item +
         '">' +
         vaultSuggest(item)
-          .map(function (item) {
-            return '<option value="' + esc(item[0]) + '">';
+          .map(function (entry) {
+            return '<option value="' + esc(entry[0]) + '">';
           })
           .join('') +
         '</datalist>'

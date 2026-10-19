@@ -513,8 +513,8 @@
             '</td><td>' +
             fpill(item.status) +
             (item.also || [])
-              .map(function (item) {
-                return ' ' + fpill(item);
+              .map(function (entry) {
+                return ' ' + fpill(entry);
               })
               .join('') +
             '</td></tr>'

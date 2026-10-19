@@ -897,11 +897,11 @@ var CBCatalogueApp = (function () {
     }
     if (S.mode === 'new')
       catDeclared().then(function () {
-        var node = el('ct_declared');
-        if (node && S.mode === 'new') {
-          node.innerHTML = ctDeclaredRows({});
-          var w = el('ct_declared_wrap');
-          if (w) w.hidden = !node.innerHTML;
+        var element = el('ct_declared');
+        if (element && S.mode === 'new') {
+          element.innerHTML = ctDeclaredRows({});
+          var target = el('ct_declared_wrap');
+          if (target) target.hidden = !element.innerHTML;
         }
       });
   }
@@ -1063,12 +1063,12 @@ var CBCatalogueApp = (function () {
         paintSheet();
         catDeclared().then(function () {
           if (S.mode !== 'edit') return;
-          var node = el('ct_declared');
+          var element = el('ct_declared');
           var p = itemOf(S.sel);
-          if (node) {
-            node.innerHTML = ctDeclaredRows(p ? pData(p) : {});
-            var w = el('ct_declared_wrap');
-            if (w) w.hidden = !node.innerHTML;
+          if (element) {
+            element.innerHTML = ctDeclaredRows(p ? pData(p) : {});
+            var target = el('ct_declared_wrap');
+            if (target) target.hidden = !element.innerHTML;
           }
         });
       };
@@ -1093,8 +1093,8 @@ var CBCatalogueApp = (function () {
   /** ONE write, only the diff, as a merge-patch — the thing the workshop's whole-record Save could not promise ([EXP-01]) */
   function save(btn) {
     var p = S.sel ? itemOf(S.sel) : null,
-      cur = p ? pData(p) : {},
-      next = readForm(cur);
+      nestedCur = p ? pData(p) : {},
+      next = readForm(nestedCur);
     var out = 'cat_sheet_out';
     if (!next.name) {
       say(out, T('A name is needed.'), 'error');
@@ -1119,8 +1119,8 @@ var CBCatalogueApp = (function () {
         }
       );
     }
-    var patch = prodDiff(cur, next);
-    Object.keys(cur).forEach(function (item) {
+    var patch = prodDiff(nestedCur, next);
+    Object.keys(nestedCur).forEach(function (item) {
       if (!(item in next) && CT_FIXED_KEYS.indexOf(item) >= 0) patch[item] = null;
     }); /* a fixed field emptied on screen → null removes it (RFC 7386) */
     if (!Object.keys(patch).length) {

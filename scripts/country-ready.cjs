@@ -63,8 +63,8 @@ function parseCoverage(md) {
     if (!areas.length) return;
     const label = bold ? bold[2] : first.replace(/^[^·]*·/, '');
     const cells = {};
-    Object.keys(cols).forEach((item) => {
-      cells[item] = c[cols[item]] || '';
+    Object.keys(cols).forEach((entry) => {
+      cells[entry] = c[cols[entry]] || '';
     });
     areas[areas.length - 1].rows.push({ label: plain(label), cells });
   });
@@ -87,16 +87,16 @@ function rollUp(area, cc) {
     : '';
   return { area: area.area, state, line: state === 'ok' ? '' : words, works: n('ok'), of: on.length };
 }
-function build(mdText) {
+function build(nestedMdText) {
   const parsed = JSON.parse(fs.readFileSync(MATRIX, 'utf8'));
-  const areas = mdText ? parseCoverage(mdText) : null;
+  const areas = nestedMdText ? parseCoverage(nestedMdText) : null;
   const out = {
     source:
       'scripts/country-ready.cjs — public/data/country-matrix.json (engines ' +
       parsed.engines +
       ') × docs/design/standards/COUNTRY-COVERAGE.md §1; never edit by hand',
     engines: parsed.engines,
-    coverage: mdText ? { sha: crypto.createHash('sha256').update(mdText).digest('hex').slice(0, 16) } : null,
+    coverage: nestedMdText ? { sha: crypto.createHash('sha256').update(nestedMdText).digest('hex').slice(0, 16) } : null,
     countries: {}
   };
   parsed.packs.forEach((item) => {
@@ -104,11 +104,11 @@ function build(mdText) {
       total = (cnt.ok || 0) + (cnt.partial || 0) + (cnt.missing || 0) + (cnt.out || 0);
     out.countries[item.id] = {
       pack: { name: item.name, version: item.version, verified: !!item.verified, ok: cnt.ok || 0, of: total - (cnt.out || 0) },
-      areas: areas ? areas.map((a) => rollUp(a, item.id)).filter((item) => item.state !== 'out' || item.line) : [],
+      areas: areas ? areas.map((a) => rollUp(a, item.id)).filter((entry) => entry.state !== 'out' || entry.line) : [],
       /* "— not offered here": the matrix's A9 rows (payroll) — out in the pack's own words, named so nobody is surprised */
       out: parsed.rows
         .filter((r) => r.sectionId === 'A9' && r.cells[item.id] && r.cells[item.id].state === 'out')
-        .map((item) => ({ member: item.member, area: item.member.charAt(0).toUpperCase() + item.member.slice(1) }))
+        .map((entry) => ({ member: entry.member, area: entry.member.charAt(0).toUpperCase() + entry.member.slice(1) }))
     };
   });
   return out;
@@ -124,8 +124,8 @@ if (args.includes('--check')) {
   }
   const have = JSON.parse(fs.readFileSync(OUT, 'utf8'));
   if (mdText) {
-    const want = JSON.stringify(build(mdText), null, 1) + '\n';
-    if (want !== fs.readFileSync(OUT, 'utf8')) {
+    const nestedWant = JSON.stringify(build(mdText), null, 1) + '\n';
+    if (nestedWant !== fs.readFileSync(OUT, 'utf8')) {
       console.log('country-ready: STALE — the matrix or COUNTRY-COVERAGE.md moved; run node scripts/country-ready.cjs');
       process.exit(1);
     }

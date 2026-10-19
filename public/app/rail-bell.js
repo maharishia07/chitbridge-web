@@ -236,7 +236,7 @@
           rest = items.filter(function (x) {
             return !x.mine;
           });
-        var row = function (x) {
+        var record = function (x) {
           return (
             '<button type="button" class="cbb-row" data-testid="bell-row"' +
             (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
@@ -259,8 +259,8 @@
         var body = m.err
           ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
           : items.length
-            ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(row).join('') : '') +
-              (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(row).join('') : '')
+            ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(record).join('') : '') +
+              (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(record).join('') : '')
             : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
         html +=
           '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +

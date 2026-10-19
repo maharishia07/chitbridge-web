@@ -218,8 +218,8 @@
     if (!node || node.disabled || S.busy) return;
     var a = node.getAttribute('data-priv'),
       msg = function (s) {
-        var node = root.document.getElementById('shop_priv_msg');
-        if (node) node.textContent = s;
+        var element = root.document.getElementById('shop_priv_msg');
+        if (element) element.textContent = s;
       };
     S.busy = true;
     var p =

@@ -322,8 +322,8 @@ function delRow(what, i) {
  * those genuinely change what rows exist, and nothing is being typed into at that moment.
  * [[feedback-repaint-locally]]
  */
-function setVal(what, i, field, v, num) {
-  LAB[what][i][field] = num ? Number(v) : v;
+function setVal(what, i, field, v, nestedNum) {
+  LAB[what][i][field] = nestedNum ? Number(v) : v;
   paintOutcome();
 }
 
@@ -545,16 +545,16 @@ function trustOf(r) {
     undated = 0,
     steps = 0;
   (r.priced || []).forEach(function (item) {
-    (item.workings || []).forEach(function (item) {
-      if (!item.provenance && !item.as_of && item.step === 'line') return; /* the qty multiplication is ours, not evidence */
+    (item.workings || []).forEach(function (entry) {
+      if (!entry.provenance && !entry.as_of && entry.step === 'line') return; /* the qty multiplication is ours, not evidence */
       steps++;
-      if (item.provenance) {
-        var i = order.indexOf(item.provenance);
+      if (entry.provenance) {
+        var i = order.indexOf(entry.provenance);
         if (worst === null || i > worst) worst = i;
       }
-      if (item.as_of) {
-        if (!oldest || String(item.as_of) < oldest) oldest = String(item.as_of);
-      } else if (item.step !== 'line') undated++;
+      if (entry.as_of) {
+        if (!oldest || String(entry.as_of) < oldest) oldest = String(entry.as_of);
+      } else if (entry.step !== 'line') undated++;
     });
   });
   return { worst: worst === null ? null : order[worst], oldest: oldest, undated: undated, steps: steps };
@@ -642,20 +642,20 @@ function paintOutcome() {
           esc(fmtM(item.amount)) +
           '</span></div><ul class="work">' +
           (item.workings || [])
-            .map(function (item) {
+            .map(function (entry) {
               /* ⚠️ EVERY PIECE IS ITS OWN ELEMENT. Raw strings in a flex row are text nodes, and `gap` does not separate
            text nodes — "LBMA pm" and "as of 2026-09-15" rendered as "LBMA pmas of 2026-09-15". */
               var meta = [];
-              if (item.source) meta.push('<span>' + esc(item.source) + '</span>');
-              if (item.as_of) meta.push('<span>as of ' + esc(item.as_of) + '</span>');
-              else if (item.step !== 'line') meta.push('<span class="chip warn">undated</span>');
-              if (item.provenance) meta.push('<span class="chip">' + esc(item.provenance) + '</span>');
-              if (item.inverted) meta.push('<span class="chip warn" title="1 ÷ the rate it held — a bank\'s buy and sell are not reciprocal">inverted</span>');
+              if (entry.source) meta.push('<span>' + esc(entry.source) + '</span>');
+              if (entry.as_of) meta.push('<span>as of ' + esc(entry.as_of) + '</span>');
+              else if (entry.step !== 'line') meta.push('<span class="chip warn">undated</span>');
+              if (entry.provenance) meta.push('<span class="chip">' + esc(entry.provenance) + '</span>');
+              if (entry.inverted) meta.push('<span class="chip warn" title="1 ÷ the rate it held — a bank\'s buy and sell are not reciprocal">inverted</span>');
               return (
                 '<li class="step-' +
-                esc(item.step) +
+                esc(entry.step) +
                 '"><div class="say">' +
-                esc(item.say) +
+                esc(entry.say) +
                 '</div>' +
                 (meta.length ? '<div class="meta">' + meta.join('') + '</div>' : '') +
                 '</li>'

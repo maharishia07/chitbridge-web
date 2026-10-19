@@ -610,9 +610,9 @@
               var caches = root.caches
                 ? root.caches
                     .keys()
-                    .then(function (reply) {
+                    .then(function (response) {
                       return Promise.all(
-                        reply.map(function (item) {
+                        response.map(function (item) {
                           return root.caches.delete(item);
                         })
                       );
@@ -623,9 +623,9 @@
                 root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.getRegistrations
                   ? root.navigator.serviceWorker
                       .getRegistrations()
-                      .then(function (reply) {
+                      .then(function (response) {
                         return Promise.all(
-                          reply.map(function (item) {
+                          response.map(function (item) {
                             return item.unregister();
                           })
                         );

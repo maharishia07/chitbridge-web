@@ -134,8 +134,8 @@
       return (groups || []).reduce(function (total, item) {
         return (
           total +
-          (item.rows || []).filter(function (item) {
-            return item.s !== 'empty';
+          (item.rows || []).filter(function (entry) {
+            return entry.s !== 'empty';
           }).length
         );
       }, 0);
@@ -229,8 +229,8 @@
                   esc(W.g[item.key] || item.key) +
                   '</div>' +
                   (item.rows || [])
-                    .map(function (item) {
-                      return refRow(item, side);
+                    .map(function (entry) {
+                      return refRow(entry, side);
                     })
                     .join('')
                 );
@@ -285,12 +285,12 @@
       }
     }
     function onClick(e) {
-      var node = e.target.closest('[data-act]');
-      if (!node) return;
-      var a = node.getAttribute('data-act');
+      var element = e.target.closest('[data-act]');
+      if (!element) return;
+      var a = element.getAttribute('data-act');
       if (a === 'close') close();
       else if (a === 'review') {
-        var k = node.getAttribute('data-key');
+        var k = element.getAttribute('data-key');
         S.review[k] = !S.review[k];
         paint();
       } else if (a === 'who') {

@@ -2032,10 +2032,10 @@ function paintWork() {
     var note = '';
     if (S.goal === 'amount') {
       var list = lineRows(),
-        under = list.filter(function (item) {
+        nestedUnder = list.filter(function (item) {
           return item.margin != null && item.margin < num(S.margin);
         }).length;
-      note = under ? under + ' of ' + list.length + ' fall under your ' + num(S.margin) + '%.' : 'All clear your ' + num(S.margin) + '%.';
+      note = nestedUnder ? nestedUnder + ' of ' + list.length + ' fall under your ' + num(S.margin) + '%.' : 'All clear your ' + num(S.margin) + '%.';
     }
     document.getElementById('workNote').textContent = note;
   }
@@ -2228,17 +2228,17 @@ function priceOvList() {
 function priceOvCats() {
   var seen = {},
     out = [],
-    counts = {};
+    nestedCounts = {};
   P.forEach(function (item) {
     if (!item.cat) return;
-    counts[item.cat] = (counts[item.cat] || 0) + 1;
+    nestedCounts[item.cat] = (nestedCounts[item.cat] || 0) + 1;
     if (!seen[item.cat]) {
       seen[item.cat] = 1;
       out.push(item.cat);
     }
   });
   return out.map(function (id) {
-    return { id: id, name: catName(id), n: counts[id] || 0 };
+    return { id: id, name: catName(id), n: nestedCounts[id] || 0 };
   });
 }
 function paintPriceOvCats() {
@@ -3040,8 +3040,8 @@ function g3(heads, rows) {
           item[0] +
           '</td>' +
           item[1]
-            .map(function (item) {
-              return '<td>' + item + '</td>';
+            .map(function (entry) {
+              return '<td>' + entry + '</td>';
             })
             .join('') +
           '</tr>'
@@ -3107,7 +3107,7 @@ function scopeRow(catOnly) {
       '</div>'
     );
   }
-  var label =
+  var nestedLabel =
     S.scope === 'cat'
       ? 'Whole category — ' + esc(catName(S.catId) || '—')
       : S.itemIds && S.itemIds.length
@@ -3119,7 +3119,7 @@ function scopeRow(catOnly) {
     '<div class="f"><span class="lbl">Apply it to</span>' +
     '<button type="button" class="btn scope" style="width:100%;justify-content:space-between;font-weight:700" ' +
     'onclick="openApplyPicker()"><span>' +
-    label +
+    nestedLabel +
     '</span><span style="color:var(--blue-i)">▾</span></button></div>'
   );
 }
@@ -3604,8 +3604,8 @@ function cartPreviewItems() {
     });
   return picked.slice(0, 3);
 }
-function cartPreviewLines(items) {
-  return items.map(function (item) {
+function cartPreviewLines(nestedItems) {
+  return nestedItems.map(function (item) {
     var qty = 1;
     if (S.goal === 'qty') {
       var ts = tiers(),
@@ -3622,10 +3622,10 @@ function previewEval(lines) {
   return CBOffers.evaluate({ lines: lines, offers: [Object.assign({ id: 'preview', kind: subKindOf() }, ruleParamsOf())] });
 }
 function cartPreviewHTML() {
-  var items = cartPreviewItems();
+  var nestedItems = cartPreviewItems();
   var sub = subKindOf();
-  if (!items.length || !sub) return '';
-  var lines = cartPreviewLines(items);
+  if (!nestedItems.length || !sub) return '';
+  var lines = cartPreviewLines(nestedItems);
   var ev;
   try {
     ev = previewEval(lines);
@@ -3815,15 +3815,15 @@ function outQty() {
           '</td>' +
           ts
             .map(function (t) {
-              var r = priceRow(item, t.pct / 100);
+              var nestedR = priceRow(item, t.pct / 100);
               return (
                 '<td class="slab" data-l="buy ' +
                 t.qty +
                 '+"><span class="cell">' +
                 '<span class="cp">' +
-                M0(r.shown) +
+                M0(nestedR.shown) +
                 '</span>' +
-                mgnSpan(r.margin, r.status) +
+                mgnSpan(nestedR.margin, nestedR.status) +
                 '</span></td>'
               );
             })
@@ -4798,13 +4798,13 @@ async function labUseMine(quiet) {
     var amountOf = function (v) {
       return v && typeof v === 'object' && v.amount != null ? Number(v.amount) : Number(v) || 0;
     };
-    var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (item) {
+    var nestedItems = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (item) {
       return item && item.item_data && amountOf(item.item_data.price) > 0;
     });
-    if (!items.length) return labUseCache(who, 'no priced products yet');
+    if (!nestedItems.length) return labUseCache(who, 'no priced products yet');
     await catNamesReady; /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
-    await LabDB.set('catalogue', { items: items, who: who, at: Date.now() });
-    labApplyCatalogue(items, who, false);
+    await LabDB.set('catalogue', { items: nestedItems, who: who, at: Date.now() });
+    labApplyCatalogue(nestedItems, who, false);
     return true;
   } catch (e) {
     return labUseCache(who, 'offline right now');
@@ -4877,11 +4877,11 @@ function buildBiz(key, rows, who) {
   BIZ[key].d.pairA = firstItem;
   BIZ[key].d.pairB = secondItem;
 }
-function labApplyCatalogue(items, who, fromCache) {
+function labApplyCatalogue(nestedItems, who, fromCache) {
   var amountOf = function (v) {
     return v && typeof v === 'object' && v.amount != null ? Number(v.amount) : Number(v) || 0;
   };
-  var mineP = items.map(function (item) {
+  var mineP = nestedItems.map(function (item) {
     var d = item.item_data || {};
     var cats = Array.isArray(d.categories) ? d.categories : d.category ? [String(d.category)] : [];
     /* ⭐ lib/item-cost.js's shape, read plainly — a malformed or absent cost is unknown, never zero */
@@ -4973,8 +4973,8 @@ function exportCsv() {
   var csv = rows
     .map(function (item) {
       return item
-        .map(function (item) {
-          var text = String(item == null ? '' : item);
+        .map(function (entry) {
+          var text = String(entry == null ? '' : entry);
           return /[",\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
         })
         .join(',');
@@ -5232,8 +5232,8 @@ function clashDetail(sv) {
     return {
       title: x.title,
       status: x.status,
-      items: item.items.map(function (item) {
-        return item.name;
+      items: item.items.map(function (entry) {
+        return entry.name;
       })
     };
   });

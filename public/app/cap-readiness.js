@@ -1015,18 +1015,18 @@ async function openSectorMatrix() {
       .join('') +
     '</tr>';
   var rowH = function (r) {
-    var common = r.n === secs.length;
+    var nestedCommon = r.n === secs.length;
     return (
       '<tr' +
-      (common ? ' style="background:var(--ok-tint);color:var(--on-card)"' : '') +
+      (nestedCommon ? ' style="background:var(--ok-tint);color:var(--on-card)"' : '') +
       '><td style="padding:8px 6px;font-weight:600;font-size:var(--fs-2);border-bottom:1px solid var(--line);color:' +
-      (common ? 'var(--ok-3)' : 'var(--ink)') +
+      (nestedCommon ? 'var(--ok-3)' : 'var(--ink)') +
       '">' +
       esc(r.name) +
       '</td>' +
       r.on
-        .map(function (item, index) {
-          return _mtxCell(item, common, secs[index][3]);
+        .map(function (item, position) {
+          return _mtxCell(item, nestedCommon, secs[position][3]);
         })
         .join('') +
       '</tr>'

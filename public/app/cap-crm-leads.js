@@ -504,8 +504,8 @@ function crmImportGuess(head) {
       var h = norm(head[index]);
       if (
         words.indexOf(h) >= 0 ||
-        words.some(function (item) {
-          return item.length > 3 && h.indexOf(item) >= 0;
+        words.some(function (entry) {
+          return entry.length > 3 && h.indexOf(entry) >= 0;
         })
       ) {
         map[k] = index;
@@ -632,8 +632,8 @@ function crmImportStep(k) {
         esc(tx('Not in the file')) +
         '</option>' +
         LIMP.head
-          .map(function (item, index) {
-            return '<option value="' + index + '"' + (cur === index ? ' selected' : '') + '>' + esc(item || tx('Column') + ' ' + (index + 1)) + '</option>';
+          .map(function (entry, index) {
+            return '<option value="' + index + '"' + (cur === index ? ' selected' : '') + '>' + esc(entry || tx('Column') + ' ' + (index + 1)) + '</option>';
           })
           .join('') +
         '</select></label>'

@@ -508,8 +508,8 @@ async function ruleMove(id, dir) {
     all.splice(dir < 0 ? ni : ni + 1, 0, moved);
 
     var writes = [];
-    all.forEach(function (item, index) {
-      if (item.sort !== index) writes.push(api('folderRuleUpdate', { params: { rule_id: item.rule_id }, body: { sort: index } }));
+    all.forEach(function (item, position) {
+      if (item.sort !== position) writes.push(api('folderRuleUpdate', { params: { rule_id: item.rule_id }, body: { sort: position } }));
     });
     await Promise.all(writes);
     _FLD.rules = null;

@@ -148,8 +148,8 @@
     );
   }
   function paint() {
-    var node = document.getElementById('g_theme');
-    node.innerHTML = Object.keys(K.THEMES)
+    var element = document.getElementById('g_theme');
+    element.innerHTML = Object.keys(K.THEMES)
       .map(function (item) {
         return '<option value="' + item + '"' + (item === S.theme ? ' selected' : '') + '>' + esc(K.THEMES[item].label) + '</option>';
       })
@@ -169,8 +169,8 @@
           '\')">' +
           '<div class="sw">' +
           ['--paper', '--card', '--ink', '--ok', '--warn', '--accent']
-            .map(function (item) {
-              return '<i style="background:' + v[item] + '" title="' + item + ' ' + v[item] + '"></i>';
+            .map(function (entry) {
+              return '<i style="background:' + v[entry] + '" title="' + entry + ' ' + v[entry] + '"></i>';
             })
             .join('') +
           '</div>' +
@@ -259,10 +259,10 @@
               groups: GROUPS,
               attrs: ATTRS,
               openId: 'm',
-              items: ITEMS.filter(function (item) {
-                return item.group === 'Morning';
-              }).map(function (item, index) {
-                return { id: 'i' + index, name: item.name, on: index !== 2 };
+              items: ITEMS.filter(function (entry) {
+                return entry.group === 'Morning';
+              }).map(function (entry, index) {
+                return { id: 'i' + index, name: entry.name, on: index !== 2 };
               })
             }) +
             '</div>';

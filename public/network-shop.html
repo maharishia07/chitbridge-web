@@ -151,22 +151,22 @@ function render() {
             encodeURIComponent(API) +
             '">open this shop <span class=arw>→</span></a></div></div>' +
             (item.categories || [])
-              .map(function (item) {
+              .map(function (entry) {
                 return (
                   '<div class="cat">' +
-                  esc(item.name) +
+                  esc(entry.name) +
                   '</div>' +
-                  (item.items || [])
-                    .map(function (item) {
+                  (entry.items || [])
+                    .map(function (element) {
                       return (
                         '<div class="prow"><div class="pname"><b>' +
-                        esc(item.name) +
+                        esc(element.name) +
                         '</b>' +
-                        (item.variant ? '<span class="pvar">' + esc(item.variant) + '</span>' : '') +
-                        (item.unit ? ' <span class="meta">' + esc(item.unit) + '</span>' : '') +
+                        (element.variant ? '<span class="pvar">' + esc(element.variant) + '</span>' : '') +
+                        (element.unit ? ' <span class="meta">' + esc(element.unit) + '</span>' : '') +
                         '</div>' +
                         '<div class="price">' +
-                        esc(fmtMoney(item.price, item.currency, '—')) +
+                        esc(fmtMoney(element.price, element.currency, '—')) +
                         '</div></div>'
                       );
                     })

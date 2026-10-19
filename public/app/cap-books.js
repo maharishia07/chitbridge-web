@@ -745,8 +745,8 @@ function bkAdviceToggle(btn) {
 function bkAdviceFlip(pid, res, cell) {
   var lines = [];
   Object.keys(BK.stmt || {}).forEach(function (item) {
-    ((BK.stmt[item] && BK.stmt[item].lines) || []).forEach(function (item) {
-      if (item.payment_id === pid) lines.push(item);
+    ((BK.stmt[item] && BK.stmt[item].lines) || []).forEach(function (entry) {
+      if (entry.payment_id === pid) lines.push(entry);
     });
   });
   ((BK.lt && BK.lt.r && BK.lt.r.lines) || []).forEach(function (item) {
@@ -1839,11 +1839,11 @@ function bkDaySales(entries, day) {
     if (text.kind !== 'day' && text.kind !== 'bill') return; /* sales only: a bill, or a walk-in day */
     var total =
       text.kind === 'day'
-        ? (text.split || []).reduce(function (total, x) {
-            return total + Number(x.amount_minor || 0);
+        ? (text.split || []).reduce(function (sum, x) {
+            return sum + Number(x.amount_minor || 0);
           }, 0)
-        : (e.lines || []).reduce(function (total, item) {
-            return total + Number(item.dr_minor || 0);
+        : (e.lines || []).reduce(function (sum, item) {
+            return sum + Number(item.dr_minor || 0);
           }, 0);
     var bills = text.kind === 'day' ? Number(text.count || 0) : 1;
     var c = text.counter || '—';
@@ -1892,8 +1892,8 @@ function bkTodoCounts(dues, cheques, health) {
   var overdue = ((dues && dues.parties) || []).filter(function (item) {
     if (bkDuesSide(item) !== 'rcv') return false;
     var b = item.buckets || {};
-    return Object.keys(b).some(function (item) {
-      return item !== 'not_due' && Number(b[item] || 0);
+    return Object.keys(b).some(function (entry) {
+      return entry !== 'not_due' && Number(b[entry] || 0);
     });
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) {
@@ -2753,8 +2753,8 @@ function bkLtModel(accounts) {
     .forEach(function (item) {
       var code = String(item.code),
         bid = bkLtBand(code),
-        band = bands.filter(function (item) {
-          return item.id === bid;
+        band = bands.filter(function (entry) {
+          return entry.id === bid;
         })[0];
       if (BK_CTRL[code]) {
         band.ctrl.push({ code: code, name: String(item.name || ''), short: item.short_name || item.short || '' });
@@ -2777,8 +2777,8 @@ function bkLtModel(accounts) {
     item.groups.sort(function (x, y) {
       return order.indexOf(x.title) + 100 * (x.title === 'Other') - (order.indexOf(y.title) + 100 * (y.title === 'Other'));
     });
-    item.groups.forEach(function (item) {
-      item.accts.sort(function (x, y) {
+    item.groups.forEach(function (entry) {
+      entry.accts.sort(function (x, y) {
         return String(x.code).localeCompare(String(y.code), 'en', { numeric: true });
       });
     });
@@ -2914,35 +2914,35 @@ function bkLtNodes() {
   (BK.lt.model || []).forEach(function (item) {
     var kids = [],
       index = 0;
-    item.ctrl.forEach(function (item) {
-      var all = bkLtParties(item.code),
-        self = !q || String(item.code).indexOf(q) === 0 || hit(item.name, bkShort(item, item.name));
-      var ps = all.filter(function (item) {
-        return hit(item.party_no, item.name, bkShort(item, item.name));
+    item.ctrl.forEach(function (entry) {
+      var all = bkLtParties(entry.code),
+        self = !q || String(entry.code).indexOf(q) === 0 || hit(entry.name, bkShort(entry, entry.name));
+      var ps = all.filter(function (element) {
+        return hit(element.party_no, element.name, bkShort(element, element.name));
       });
       if (q && !self && !ps.length) return;
       index++;
       kids.push(
         bkLtLedgerNode(
-          item,
-          (self && !ps.length ? all : ps).map(function (p) {
+          entry,
+          (self && !ps.length ? all : ps).map(function (element) {
             return {
               t: 'party',
-              id: 'P:' + p.party_id,
-              party: p.party_id,
-              ctrl: item.code,
-              name: bkShort(p, p.name),
-              full: bkPartyLabel(p.party_id, p.name),
-              fig: Number(p.balance_minor || 0),
-              ok: !!bkAgreedTo(p)
+              id: 'P:' + element.party_id,
+              party: element.party_id,
+              ctrl: entry.code,
+              name: bkShort(element, element.name),
+              full: bkPartyLabel(element.party_id, element.name),
+              fig: Number(element.balance_minor || 0),
+              ok: !!bkAgreedTo(element)
             };
           })
         )
       );
     });
     item.groups.forEach(function (g, gi) {
-      var list = g.accts.filter(function (item) {
-        return !q || String(item.code).indexOf(q) === 0 || hit(item.name, bkShort(item, item.name));
+      var list = g.accts.filter(function (entry) {
+        return !q || String(entry.code).indexOf(q) === 0 || hit(entry.name, bkShort(entry, entry.name));
       });
       if (!list.length) return;
       index += list.length;
@@ -2952,8 +2952,8 @@ function bkLtNodes() {
         name: tx(g.title),
         tid: 'lt-group-' + g.title,
         count: list.length,
-        kids: list.map(function (item) {
-          return bkLtLedgerNode(item);
+        kids: list.map(function (entry) {
+          return bkLtLedgerNode(entry);
         })
       });
     });
@@ -3134,12 +3134,12 @@ function bkLtAcct(code) {
   (BK.lt.model || []).forEach(function (item) {
     item.ctrl
       .concat(
-        item.groups.reduce(function (total, item) {
-          return total.concat(item.accts);
+        item.groups.reduce(function (total, entry) {
+          return total.concat(entry.accts);
         }, [])
       )
-      .forEach(function (item) {
-        if (item.code === code) f = item;
+      .forEach(function (entry) {
+        if (entry.code === code) f = entry;
       });
   });
   return f;
@@ -3402,8 +3402,8 @@ function bkLgFigs(r, c, sel) {
     if (pc && typeof pc.agree === 'boolean')
       check = pc.agree ? { agree: true } : { agree: false, amount: Number(pc.amount_minor || 0), n: pc.entries != null ? Number(pc.entries) : none };
     else {
-      var total = bkLtParties(sel.code).reduce(function (total, item) {
-        return total + Number(item.balance_minor || 0);
+      var total = bkLtParties(sel.code).reduce(function (sum, item) {
+        return sum + Number(item.balance_minor || 0);
       }, 0);
       check = total === cl ? { agree: true } : { agree: false, amount: cl - total, n: none };
     }
@@ -3804,13 +3804,13 @@ function bkLgNext(l, c) {
 /** the tree's three behaviours — click · keyboard · find box · fold · resize — bound ONCE on the pane that holds them */
 function bkLtBind(root) {
   root.addEventListener('click', function (ev) {
-    var node = ev.target.closest('[data-tn]'),
-      a = ev.target.closest('[data-lt]');
-    if (node && root.contains(node)) {
-      var id = node.getAttribute('data-tn'),
+    var element = ev.target.closest('[data-tn]'),
+      nestedNode = ev.target.closest('[data-lt]');
+    if (element && root.contains(element)) {
+      var id = element.getAttribute('data-tn'),
         k = id.charAt(0),
         v = id.slice(2),
-        exp = node.getAttribute('aria-expanded');
+        exp = element.getAttribute('aria-expanded');
       if (k === 'B' || k === 'G') {
         bkLtSet(id, !bkLtOpenNow(id, true));
         bkLtTreePaint(id);
@@ -3828,19 +3828,19 @@ function bkLtBind(root) {
         return;
       }
       if (k === 'P') {
-        bkLtPickParty(v, node.getAttribute('data-ctrl'));
+        bkLtPickParty(v, element.getAttribute('data-ctrl'));
         bkLtFocus(id);
         return;
       }
     }
-    if (!a) return;
-    var d = a.getAttribute('data-lt');
+    if (!nestedNode) return;
+    var d = nestedNode.getAttribute('data-lt');
     if (d === 'clear') {
       BK.lt.tq = '';
-      var q = document.getElementById('lt_q');
-      if (q) {
-        q.value = '';
-        q.focus();
+      var innerNode = document.getElementById('lt_q');
+      if (innerNode) {
+        innerNode.value = '';
+        innerNode.focus();
       }
       bkLtTreePaint();
       return;
@@ -3852,8 +3852,8 @@ function bkLtBind(root) {
         bkLtPrefsSave();
       }
       bkLtFoldPaint();
-      var u = document.querySelector('[data-lt="unfold"]');
-      if (u) u.focus();
+      var localNode = document.querySelector('[data-lt="unfold"]');
+      if (localNode) localNode.focus();
       return;
     }
     if (d === 'unfold') {
@@ -3863,8 +3863,8 @@ function bkLtBind(root) {
         bkLtPrefsSave();
       }
       bkLtFoldPaint();
-      var q2 = document.getElementById('lt_q');
-      if (q2) q2.focus();
+      var nestedNode2 = document.getElementById('lt_q');
+      if (nestedNode2) nestedNode2.focus();
       return;
     }
     if (d === 'back') {
@@ -3887,33 +3887,33 @@ function bkLtBind(root) {
     }
   });
   root.addEventListener('keydown', function (event) {
-    var node = event.target;
-    if (node.id === 'lt_q') {
+    var element = event.target;
+    if (element.id === 'lt_q') {
       if (event.key === 'Escape' && BK.lt.tq) {
         event.preventDefault();
         BK.lt.tq = '';
-        node.value = '';
+        element.value = '';
         bkLtTreePaint();
         return;
       }
       if (event.key === 'ArrowDown') {
         event.preventDefault();
-        var f = document.querySelector('#lt_tree .tn');
-        if (f) bkLtFocus(f.getAttribute('data-tn'));
+        var nestedNode = document.querySelector('#lt_tree .tn');
+        if (nestedNode) bkLtFocus(nestedNode.getAttribute('data-tn'));
         return;
       }
     }
-    if (node.getAttribute && node.getAttribute('data-tn')) {
+    if (element.getAttribute && element.getAttribute('data-tn')) {
       /* ↑ ↓ move · → open / step in · ← close / step out · Enter opens · Home / End jump */
       var all = Array.prototype.slice.call(document.querySelectorAll('#lt_tree .tn')),
-        i = all.indexOf(node),
-        exp = node.getAttribute('aria-expanded'),
-        lvl = +node.getAttribute('aria-level'),
-        id = node.getAttribute('data-tn');
+        i = all.indexOf(element),
+        exp = element.getAttribute('aria-expanded'),
+        lvl = +element.getAttribute('aria-level'),
+        id = element.getAttribute('data-tn');
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault();
-        var nx = all[i + (event.key === 'ArrowDown' ? 1 : -1)];
-        if (nx) bkLtFocus(nx.getAttribute('data-tn'));
+        var innerNode = all[i + (event.key === 'ArrowDown' ? 1 : -1)];
+        if (innerNode) bkLtFocus(innerNode.getAttribute('data-tn'));
         return;
       }
       if (event.key === 'ArrowRight') {
@@ -3951,18 +3951,18 @@ function bkLtBind(root) {
       }
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        node.click();
+        element.click();
         return;
       }
     }
     if (event.key === 'Escape' && BK.lt.over) {
       BK.lt.over = false;
       bkLtFoldPaint();
-      var u = document.querySelector('[data-lt="unfold"]');
-      if (u) u.focus();
+      var localNode = document.querySelector('[data-lt="unfold"]');
+      if (localNode) localNode.focus();
       return;
     }
-    if (node.id === 'lt_rz' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+    if (element.id === 'lt_rz' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
       event.preventDefault();
       bkLtWidth(BK.lt.w + (event.key === 'ArrowRight' ? 16 : -16));
     }
@@ -4021,12 +4021,12 @@ function bkLgFilters() {
     parties = kind === 'control' && BK.lt.sel ? bkLtParties(BK.lt.sel.code) : [],
     list = [];
   var seen = function (f) {
-    var list = [];
+    var rows = [];
     ((BK.lt.r && BK.lt.r.lines) || []).forEach(function (item) {
       var v = f(item);
-      if (v && list.indexOf(v) < 0) list.push(v);
+      if (v && rows.indexOf(v) < 0) rows.push(v);
     });
-    return list.sort();
+    return rows.sort();
   };
   if (kind === 'control')
     list.push({
@@ -5034,8 +5034,8 @@ async function bkLockDo(what, p) {
             if (BK.lk.fy === fy) bkLockRowsPaint();
           })
           .catch(function () {}); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
-        var node = document.getElementById('lk_out');
-        if (node) node.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
+        var element = document.getElementById('lk_out');
+        if (element) element.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
       }
     }
   );
@@ -5451,8 +5451,8 @@ async function bkChequeStep(id, to) {
   }
   await bkOnce('chq:' + id, null, async function () {
     var node = function (t) {
-      var node = document.getElementById('chq_out');
-      if (node) node.textContent = t;
+      var element = document.getElementById('chq_out');
+      if (element) element.textContent = t;
       else if (t) toast(t);
     };
     document.querySelectorAll('[data-testid^="chq-"][data-testid$="-' + id + '"]').forEach(function (item) {

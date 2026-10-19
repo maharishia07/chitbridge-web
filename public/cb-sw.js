@@ -99,7 +99,7 @@ self.addEventListener('fetch', (e) => {
               const cp = res.clone();
               caches
                 .open(EXT)
-                .then((reply) => reply.put(req, cp))
+                .then((response) => response.put(req, cp))
                 .catch(() => {});
               return res;
             })

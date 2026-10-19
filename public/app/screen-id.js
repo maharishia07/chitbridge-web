@@ -256,7 +256,7 @@
   DECLARED.apps.forEach(function (item) {
     BYAPP[item.app] = {};
     item.rows.forEach(function (r) {
-      var row = {
+      var line = {
         code: r[0],
         key: r[1],
         screen: r[2],
@@ -271,13 +271,13 @@
         since: DECLARED.since,
         declared: true
       };
-      ROWS.push(row);
-      BYCODE[row.code] = row;
-      BYAPP[item.app][r[1] || ''] = row.code;
+      ROWS.push(line);
+      BYCODE[line.code] = line;
+      BYAPP[item.app][r[1] || ''] = line.code;
     });
   });
   DECLARED.sheets.forEach(function (item) {
-    var row = {
+    var line = {
       code: item[0],
       key: item[1],
       screen: item[2],
@@ -292,9 +292,9 @@
       since: DECLARED.since,
       declared: true
     };
-    ROWS.push(row);
-    BYCODE[row.code] = row;
-    BYSHEET[item[1]] = row.code;
+    ROWS.push(line);
+    BYCODE[line.code] = line;
+    BYSHEET[item[1]] = line.code;
   });
   /* the workshop's register (screens.js) is its own file's global: where a page loaded it, these rows join it; this file never creates it */
   var WS = root.CBSCREENS;

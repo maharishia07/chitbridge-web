@@ -89,8 +89,8 @@ function modLabMaxUp(p) {
   var sum = 0;
   CBVariant.groupsOf({ modifiers: p.modifiers }).forEach(function (item) {
     var count = 0;
-    (item.options || []).forEach(function (item) {
-      var v = Number(item.price) || 0;
+    (item.options || []).forEach(function (entry) {
+      var v = Number(entry.price) || 0;
       if (v > count) count = v;
     });
     sum += count;
@@ -589,26 +589,26 @@ function comboGroupsEditorHTML(groups) {
         (gerr.length
           ? '<div style="color:var(--red);font-size:12px;margin-top:4px">' +
             gerr
-              .map(function (item) {
-                return esc(item);
+              .map(function (entry) {
+                return esc(entry);
               })
               .join(' · ') +
             '</div>'
           : '') +
         '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">' +
         item.options
-          .map(function (item, oi) {
+          .map(function (entry, oi) {
             return (
               '<div style="display:flex;gap:6px;align-items:center">' +
               '<input class="inp" style="flex:1;height:36px" value="' +
-              esc(item.name) +
+              esc(entry.name) +
               '" placeholder="Option" onchange="modLabSetOption(' +
               index +
               ',' +
               oi +
               ',{name:this.value})">' +
               '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="' +
-              item.price +
+              entry.price +
               '" onchange="modLabSetOption(' +
               index +
               ',' +
@@ -954,21 +954,21 @@ function modsTabHTML(pendingDraft) {
     });
     order.forEach(function (item) {
       h += '<div class="grp">' + esc(item) + '</div>';
-      byCat[item].forEach(function (item) {
-        var groups = CBVariant.groupsOf({ modifiers: item.modifiers });
+      byCat[item].forEach(function (entry) {
+        var groups = CBVariant.groupsOf({ modifiers: entry.modifiers });
         var chips = groups
-          .map(function (item) {
-            return '<span class="modchip">' + esc(item.title || item.name || '') + '</span>';
+          .map(function (element) {
+            return '<span class="modchip">' + esc(element.title || element.name || '') + '</span>';
           })
           .join('');
-        var up = modLabMaxUp(item);
+        var up = modLabMaxUp(entry);
         h +=
           '<button class="it" onclick="' +
           clickFn +
           "('" +
-          item.id +
+          entry.id +
           '\')"><span class="nm"><b>' +
-          esc(item.name) +
+          esc(entry.name) +
           '</b><span>' +
           chips +
           '</span></span>' +

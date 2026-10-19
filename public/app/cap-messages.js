@@ -119,11 +119,11 @@ function msgThreads() {
         return String(first.created_at).localeCompare(String(second.created_at));
       });
       t.latest = t.msgs[t.msgs.length - 1];
-      t.unread = t.msgs.filter(function (item) {
-        return !item.read_at;
+      t.unread = t.msgs.filter(function (entry) {
+        return !entry.read_at;
       }).length;
-      t.kept = t.msgs.some(function (item) {
-        return item.kept;
+      t.kept = t.msgs.some(function (entry) {
+        return entry.kept;
       });
       return t;
     })
@@ -264,8 +264,8 @@ function messagesScreen() {
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
             (function () {
-              var n = item.msgs.length;
-              return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : '';
+              var nestedN = item.msgs.length;
+              return nestedN > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + nestedN + ' msgs</span>' : '';
             })() +
             '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' +
             esc(msgWhen(m.created_at)) +
@@ -364,7 +364,7 @@ function messagesScreen() {
     ['', 'order', 'task']
       .map(function (item) {
         var on = RPL.track === item;
-        var n = item
+        var nestedN = item
           ? (RPL.data || []).filter(function (m) {
               return m.track === item;
             }).length
@@ -385,7 +385,7 @@ function messagesScreen() {
           (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') +
           'border-radius:9px;padding:3px 10px">' +
           lbl +
-          (n ? ' <span style="opacity:.7">' + n + '</span>' : '') +
+          (nestedN ? ' <span style="opacity:.7">' + nestedN + '</span>' : '') +
           '</span>'
         );
       })

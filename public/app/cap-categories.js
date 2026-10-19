@@ -1472,12 +1472,12 @@ function cbcatOffersReaching(cid) {
   var anc = cbcatAncestorIds(cid);
   return list
     .map(function (item) {
-      var list = cbcatOfferCats(item.rules);
-      var own = list.indexOf(String(cid)) >= 0;
+      var rows = cbcatOfferCats(item.rules);
+      var own = rows.indexOf(String(cid)) >= 0;
       var viaId = own
         ? null
-        : list.filter(function (item) {
-            return anc.indexOf(item) >= 0;
+        : rows.filter(function (entry) {
+            return anc.indexOf(entry) >= 0;
           })[0];
       if (!own && !viaId) return null;
       var r = item.rules || {};
@@ -1575,12 +1575,12 @@ function cbcatOffersHereHTML(cid) {
     ' here — ' +
     here
       .map(function (item) {
-        var list = cbcatOfferCats(item.rules);
+        var rows = cbcatOfferCats(item.rules);
         var viaId =
-          list.indexOf(String(cid)) >= 0
+          rows.indexOf(String(cid)) >= 0
             ? null
-            : list.filter(function (item) {
-                return anc.indexOf(item) >= 0;
+            : rows.filter(function (entry) {
+                return anc.indexOf(entry) >= 0;
               })[0];
         var viaP = viaId ? (cbcatById(viaId) || {}).name : null;
         var sc =

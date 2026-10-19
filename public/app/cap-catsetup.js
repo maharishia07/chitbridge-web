@@ -387,16 +387,16 @@ function catsetRegistry(keys) {
              * and in its own colour so the eye can skip it or read it, but never confuse it with a name.
              */
             '<div class="catset-regrows' +
-            (rows.every(function (item) {
-              return !item.note && String(item.code || '') === String(item.label || '');
+            (rows.every(function (entry) {
+              return !entry.note && String(entry.code || '') === String(entry.label || '');
             })
               ? ' chips'
               : '') +
             '">' +
             rows
-              .map(function (item) {
-                var same = String(item.code || '') === String(item.label || '');
-                var on = picked ? picked.indexOf(String(item.code)) >= 0 : true;
+              .map(function (entry) {
+                var same = String(entry.code || '') === String(entry.label || '');
+                var on = picked ? picked.indexOf(String(entry.code)) >= 0 : true;
                 var tag = flag ? 'label' : 'div';
                 return (
                   '<' +
@@ -413,15 +413,15 @@ function catsetRegistry(keys) {
                       ' onchange="catsetSelToggle(\'' +
                       esc(flag) +
                       "','" +
-                      esc(item.code) +
+                      esc(entry.code) +
                       '\',this.checked)">'
                     : '') +
-                  (same ? '' : '<code>' + esc(item.code) + '</code>') +
+                  (same ? '' : '<code>' + esc(entry.code) + '</code>') +
                   '<span class="rl">' +
-                  esc(item.label || item.code || '') +
+                  esc(entry.label || entry.code || '') +
                   '</span>' +
                   '</div>' +
-                  (item.note ? '<div class="rn">' + esc(item.note) + '</div>' : '') +
+                  (entry.note ? '<div class="rn">' + esc(entry.note) + '</div>' : '') +
                   '</' +
                   tag +
                   '>'
@@ -755,19 +755,19 @@ function catsetUnitsHTML() {
     names = M.UNIT_NAMES || {};
   var groups = M.UNIT_KINDS.map(function (item) {
     var rows = item.units
-      .map(function (item) {
-        var on = sel.indexOf(item) >= 0;
+      .map(function (entry) {
+        var on = sel.indexOf(entry) >= 0;
         /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
          Squeezed into a right-hand column they were truncated at four and ellipsed — which hid the very thing
          worth seeing, that கிலோ and kilo and kgs all mean this row. On its own line the whole set fits. */
         /* ⚠️ ONLY THE LANGUAGES THIS ENTITY WORKS IN ARE LISTED — but every language is still UNDERSTOOD. The
          picker is a reading aid; lib/units.js folds all of them regardless. A screen set to Hindi that stopped
          `கிலோ` resolving would be a parsing rule wearing a preference's clothes. */
-        var by = aliases[item] || {};
-        var shown = _LANGSEL.reduce(function (total, item) {
-          return total.concat(
-            (by[item] || []).map(function (w) {
-              return { w: w, lg: item };
+        var by = aliases[entry] || {};
+        var shown = _LANGSEL.reduce(function (sum, element) {
+          return sum.concat(
+            (by[element] || []).map(function (record) {
+              return { w: record, lg: element };
             })
           );
         }, []);
@@ -779,13 +779,13 @@ function catsetUnitsHTML() {
           '<input type="checkbox" ' +
           (on ? 'checked' : '') +
           ' onchange="catsetUnitToggle(\'' +
-          esc(item) +
+          esc(entry) +
           '\',this.checked)">' +
           '<code>' +
-          esc(item) +
+          esc(entry) +
           '</code>' +
           '<span class="un">' +
-          esc(names[item] || item) +
+          esc(names[entry] || entry) +
           '</span>' +
           '</div>' +
           /* ⚠️ THE SEPARATOR IS DECORATION, AND MUST SAY SO. It is a faint `·` between spellings — deliberately
@@ -806,7 +806,7 @@ function catsetUnitsHTML() {
            * ⭐⭐ THE THREE ANSWERS, ONLY WHERE THEY MEAN SOMETHING, and only for a unit actually in use.
            * ⚠️ OUTSIDE the <label>: a number box inside a label toggles the checkbox on every click.
            */
-          (on ? catsetUomRuleHTML(item) : '')
+          (on ? catsetUomRuleHTML(entry) : '')
         );
       })
       .join('');
@@ -814,8 +814,8 @@ function catsetUnitsHTML() {
   }).join('');
 
   var n = sel.length,
-    total = M.UNIT_KINDS.reduce(function (total, item) {
-      return total + item.units.length;
+    total = M.UNIT_KINDS.reduce(function (sum, item) {
+      return sum + item.units.length;
     }, 0);
   return catsetCard(
     '⚖️ Units of measure',
@@ -2010,8 +2010,8 @@ function catsetErpHTML() {
           esc(item.field_key) +
           "','system',this.value)\"" +
           ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">' +
-          CATSET_SYS.map(function (item) {
-            return '<option' + (item === sys ? ' selected' : '') + '>' + esc(item) + '</option>';
+          CATSET_SYS.map(function (entry) {
+            return '<option' + (entry === sys ? ' selected' : '') + '>' + esc(entry) + '</option>';
           }).join('') +
           '</select>' +
           /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
@@ -2212,28 +2212,28 @@ function catsetOfferPlanHTML() {
     return true;
   };
   var cells = months
-    .map(function (item, index) {
+    .map(function (item, position) {
       var on = live.filter(function (d) {
         return touches(d, item);
       });
       return (
         '<div data-testid="catset-plan-month-' +
-        index +
+        position +
         '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' +
-        (index === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') +
+        (position === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') +
         '">' +
         '<div style="font-weight:700;margin-bottom:4px">' +
         esc(item.label) +
-        (index === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') +
+        (position === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') +
         '</div>' +
         (on.length
           ? on
-              .map(function (item) {
+              .map(function (entry) {
                 return (
                   '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' +
-                  esc(item.id) +
+                  esc(entry.id) +
                   '\')">' +
-                  esc(item.name) +
+                  esc(entry.name) +
                   '</div>'
                 );
               })
@@ -2478,8 +2478,8 @@ function catsetTaxRows() {
       id = item.item_id || item.id;
     var r =
       typeof CBTaxSlab !== 'undefined' ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
-    var on = (offers || []).filter(function (item) {
-      var at = (item.rules && item.rules.applies_to) || {};
+    var on = (offers || []).filter(function (entry) {
+      var at = (entry.rules && entry.rules.applies_to) || {};
       return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0;
     });
     return {
@@ -2490,8 +2490,8 @@ function catsetTaxRows() {
       catIds: typeof catgIdsOf === 'function' ? catgIdsOf(d) : [],
       price: d.price,
       r: r,
-      offers: on.map(function (item) {
-        return item.name;
+      offers: on.map(function (entry) {
+        return entry.name;
       })
     };
   });

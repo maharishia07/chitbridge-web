@@ -471,8 +471,8 @@
   function units(ns) {
     var s = C[ns];
     if (!s) return 0;
-    return Object.keys(s.sel).reduce(function (total, item) {
-      return total + (Number(s.sel[item]) || 0);
+    return Object.keys(s.sel).reduce(function (sum, item) {
+      return sum + (Number(s.sel[item]) || 0);
     }, 0);
   }
   function qtyOf(ns, id) {
@@ -611,7 +611,7 @@
     s.deals[key] = out;
     return out;
   }
-  function unitPrice(ns, r, opt) {
+  function unitPrice(ns, r, nestedOpt) {
     var s = C[ns] || {},
       o = declOf(ns, r);
     if (o.model === 'offer') {
@@ -644,7 +644,8 @@
         tier: tier,
         why: why
       };
-    if (opt && opt.noDeal) return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why }; /* the engine's input (engineLines) */
+    if (nestedOpt && nestedOpt.noDeal)
+      return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why }; /* the engine's input (engineLines) */
     var deal = dealOf(ns, r, base);
     if (deal) return { amount: deal.unit, offered: false, asking: list, base: base, deal: deal, tier: tier, why: why };
     return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };
@@ -748,8 +749,8 @@
     var cartAdj = list.filter(function (item) {
       return item.scope !== 'line' && item.scope !== 'note' && Math.abs(Number(item.amount) || 0) > 0;
     });
-    var orderOff = cartAdj.reduce(function (total, item) {
-      return total + Math.abs(Number(item.amount) || 0);
+    var orderOff = cartAdj.reduce(function (sum, item) {
+      return sum + Math.abs(Number(item.amount) || 0);
     }, 0);
     M.rowOff = {};
     EL.forEach(function (item) {
@@ -763,15 +764,15 @@
           return a.scope === 'line' && String(a.target) === String(item.key) && Math.abs(Number(a.amount) || 0) > 0;
         })
         .concat(cartShare > 0 ? cartAdj : []);
-      var labels = mine.map(function (item) {
-        return item.label || item.kind;
+      var labels = mine.map(function (entry) {
+        return entry.label || entry.kind;
       });
       var uniq = labels.filter(function (x, index) {
         return x && labels.indexOf(x) === index;
       });
       var ids = mine
-        .map(function (item) {
-          return item.offer_id;
+        .map(function (entry) {
+          return entry.offer_id;
         })
         .filter(function (x, index, arr) {
           return x != null && arr.indexOf(x) === index;
@@ -1023,8 +1024,8 @@
     var onlyOff = !!s.onlyOffers;
     var isOff =
       _rn && typeof _rn.isOnOffer === 'function'
-        ? function (r) {
-            return _rn.isOnOffer(r, Object.assign({ cat: s.cat }, s.o));
+        ? function (nestedR) {
+            return _rn.isOnOffer(nestedR, Object.assign({ cat: s.cat }, s.o));
           }
         : null; /* the reader's groups ride in with the catalogue (customer-only offers) */
     if (onlyOff && !isOff) onlyOff = false;
@@ -1724,9 +1725,9 @@
              catalogue carries offers or a line carries a tax rate; the bare Total stays for a catalogue with neither */
           (function () {
             try {
-              var st = C[ns],
+              var nestedSt = C[ns],
                 EL = engineLines(ns);
-              var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length),
+              var hasOffers = !!(nestedSt && nestedSt.cat && Array.isArray(nestedSt.cat.offers) && nestedSt.cat.offers.length),
                 hasTax = EL.some(function (item) {
                   return item.tax && item.tax.rate != null;
                 });
@@ -2237,8 +2238,8 @@
        * two screenshots: the storefront basket said −₹40 · GST ₹18 · ₹378, the Suppliers review said ₹400. Same cart, same
        * seller, a second total. Every review step asks the cart; none of them adds up lines of its own any more.
        */
-      moneyRows: function (o) {
-        o = o || {};
+      moneyRows: function (nestedO) {
+        nestedO = nestedO || {};
         try {
           var s = C[ns],
             EL = engineLines(ns);
@@ -2250,7 +2251,11 @@
           if (!hasOffers && !hasTax) return null;
           var M = compute(ns);
           if (!M) return null;
-          return { html: moneyRowsHTML(M, { taxTestid: o.taxTestid || 'cart-tax', totalTestid: o.totalTestid || 'cart-total' }), grand: M.grand, model: M };
+          return {
+            html: moneyRowsHTML(M, { taxTestid: nestedO.taxTestid || 'cart-tax', totalTestid: nestedO.totalTestid || 'cart-total' }),
+            grand: M.grand,
+            model: M
+          };
         } catch (e) {
           return null;
         }
@@ -2262,11 +2267,11 @@
        *   c.reviewHTML({ totalTestid: 'sup-total', taxTestid: 'sup-tax' })
        * and never reads total() itself; e2e/one-cart.cjs fails the run if one does.
        */
-      reviewHTML: function (o) {
-        o = o || {};
+      reviewHTML: function (nestedO) {
+        nestedO = nestedO || {};
         var T = total(ns),
-          text = o.totalTestid || 'cart-total';
-        var MR = !T.offered && !T.partial ? h.moneyRows({ totalTestid: text, taxTestid: o.taxTestid || 'cart-tax' }) : null;
+          text = nestedO.totalTestid || 'cart-total';
+        var MR = !T.offered && !T.partial ? h.moneyRows({ totalTestid: text, taxTestid: nestedO.taxTestid || 'cart-tax' }) : null;
         if (MR)
           return (
             '<div data-testid="' + esc(text.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>' + moneyWhyHTML(ns)
@@ -2390,8 +2395,8 @@
       listHTML: function () {
         return listHTML(ns);
       },
-      pickerHTML: function (o) {
-        return pickerHTML(ns, o);
+      pickerHTML: function (nestedO) {
+        return pickerHTML(ns, nestedO);
       },
       popupHTML: function () {
         return popupHTML(ns);
@@ -2475,7 +2480,7 @@
           return item && item.adhoc;
         });
         var merged = {};
-        for (var k in next) merged[k] = next[k];
+        for (var nestedK in next) merged[nestedK] = next[nestedK];
         if (mine.length) merged.items = (next.items || []).concat(mine);
         s.cat = merged;
         s.sig = sigOf(merged);
@@ -2535,7 +2540,7 @@
     var sp = T.splitLineTax({ net: net, rate: rate, priceIncludesTax: true });
     return roundMoney_(Number(sp && sp.tax) || 0);
   }
-  function money(lines, o) {
+  function money(nestedLines, o) {
     o = o || {};
     var offers = o.offers || [],
       ctx = o.ctx || {
@@ -2552,25 +2557,25 @@
             return null;
           };
     var incl = !!(o.priceIncludesTax != null ? o.priceIncludesTax : ctx.priceIncludesTax); /* WX-O2C: the shop's shelf prices include tax */
-    var gross = lines.reduce(function (total, item) {
-      return total + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0);
+    var gross = nestedLines.reduce(function (sum, item) {
+      return sum + (Number(item.unitPrice) || 0) * (Number(item.qty) || 0);
     }, 0);
     var ev =
       offers.length && root.CBOffers
-        ? root.CBOffers.evaluate({ lines: lines, offers: offers, ctx: ctx, money: ctx.money })
+        ? root.CBOffers.evaluate({ lines: nestedLines, offers: offers, ctx: ctx, money: ctx.money })
         : { adjustments: [], notes: [], subtotal: gross, total: gross };
-    var per = offers.length && root.CBOffers && root.CBOffers.perLine ? root.CBOffers.perLine(ev, lines) || {} : {};
+    var per = offers.length && root.CBOffers && root.CBOffers.perLine ? root.CBOffers.perLine(ev, nestedLines) || {} : {};
     var orderOff = (ev.adjustments || [])
       .filter(function (item) {
         return item.scope !== 'line' && item.scope !== 'note';
       })
-      .reduce(function (total, item) {
-        return total + Math.abs(Number(item.amount) || 0);
+      .reduce(function (sum, item) {
+        return sum + Math.abs(Number(item.amount) || 0);
       }, 0);
     var byRate = {},
       taxTotal = 0,
       untaxed = 0;
-    lines.forEach(function (item, index) {
+    nestedLines.forEach(function (item, index) {
       var g = (Number(item.unitPrice) || 0) * (Number(item.qty) || 0);
       var off = (per[String(index)] || per[item.key] || {}).off || 0;
       /* the engine's own running net per line (percent on percent; basket offers allocated by running net) — the old list-value split stays only for an engine without it */
@@ -2610,7 +2615,7 @@
    * same model money() builds from a basket, so the order page prints the block the cart printed. Nothing is re-evaluated.
    *   moneyFromLines(lines, ctx) → the model moneyRowsHTML takes
    */
-  function moneyFromLines(lines, ctx) {
+  function moneyFromLines(nestedLines, ctx) {
     ctx = ctx || {
       now: new Date(),
       currency: null,
@@ -2626,7 +2631,7 @@
       untaxed = 0,
       after = 0,
       cartParts = {}; /* a cart-scope offer prorated over N lines is ONE row again here */
-    (lines || []).forEach(function (item, index) {
+    (nestedLines || []).forEach(function (item, index) {
       if (!item || item.removed || item.kind === 'payload') return;
       var q = Number(item.quantity != null ? item.quantity : item.qty) || 0,
         p = Number(item.price) || 0,
@@ -2637,21 +2642,21 @@
       after += net;
       /* a line that carried two offers (offer.parts, lib/offers-live) makes two rows — the same rows the live cart printed */
       if (off > 0 && item.offer && Array.isArray(item.offer.parts) && item.offer.parts.length >= 1)
-        item.offer.parts.forEach(function (item) {
-          /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (item.scope === 'cart') {
-            var ck = String(item.offer_id || item.label);
+        item.offer.parts.forEach(function (entry) {
+          /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (entry.scope === 'cart') {
+            var ck = String(entry.offer_id || entry.label);
             if (!cartParts[ck]) {
-              cartParts[ck] = { scope: 'cart', offer_id: item.offer_id || null, label: item.label || 'offer', amount: 0 };
+              cartParts[ck] = { scope: 'cart', offer_id: entry.offer_id || null, label: entry.label || 'offer', amount: 0 };
               adjustments.push(cartParts[ck]);
             }
-            cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(item.off) || 0));
+            cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(entry.off) || 0));
           } else
             adjustments.push({
               scope: 'line',
               key: String(index),
-              offer_id: item.offer_id || null,
-              label: item.label || 'offer',
-              amount: -(Number(item.off) || 0)
+              offer_id: entry.offer_id || null,
+              label: entry.label || 'offer',
+              amount: -(Number(entry.off) || 0)
             });
         });
       else if (off > 0)
@@ -2701,8 +2706,8 @@
       else paintSummary(ns);
     }
   }
-  function moneyRowsHTML(m, opt) {
-    opt = opt || {};
+  function moneyRowsHTML(m, nestedOpt) {
+    nestedOpt = nestedOpt || {};
     var ctx = m.ctx,
       ev = m.ev || { adjustments: [], notes: [], total: m.gross };
     var row = function (l, r, extra) {
@@ -2738,7 +2743,7 @@
         ? ' <small data-testid="cbcart-foryou" style="color:var(--ok-2,#1a7f4b);font-weight:700">' + esc('only for you') + '</small>'
         : '';
     };
-    var rows = grouped
+    var records = grouped
       .map(function (item) {
         return row(
           '🏷️ ' +
@@ -2761,7 +2766,7 @@
         .map(function (item) {
           return (
             '<div data-testid="' +
-            esc(opt.taxTestid || 'cart-tax') +
+            esc(nestedOpt.taxTestid || 'cart-tax') +
             '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' +
             esc(item) +
             (m.inclusive ? ' <small style="opacity:.7">included</small>' : '') +
@@ -2775,8 +2780,8 @@
         ? '<div style="opacity:.6;font-size:12px">' + esc('no tax slab resolves for ' + ctx.money(m.untaxed) + ' of this basket') + '</div>'
         : '');
     var after =
-      rows || notes
-        ? rows +
+      records || notes
+        ? records +
           notes +
           '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>' +
           esc(ctx.money(ev.total)) +
@@ -2790,9 +2795,9 @@
       after +
       taxRows +
       '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>' +
-      (keys.length && !m.inclusive ? 'Total incl. tax' : !keys.length && !opt.plainUntaxed && !m.inclusive ? 'Total incl. tax' : 'Total') +
+      (keys.length && !m.inclusive ? 'Total incl. tax' : !keys.length && !nestedOpt.plainUntaxed && !m.inclusive ? 'Total incl. tax' : 'Total') +
       '</span><b data-testid="' +
-      esc(opt.totalTestid || 'cart-total') +
+      esc(nestedOpt.totalTestid || 'cart-total') +
       '">' +
       esc(ctx.money(m.grand)) +
       '</b></div>' +
@@ -3691,9 +3696,9 @@
         ? opts.sectionOf
         : null;
     if (secOf) {
-      var keyed = rows.map(function (item, index) {
+      var keyed = rows.map(function (item, position) {
         var s = secOf(item) || { id: '', label: '', order: 1e9 };
-        return { r: item, s: s, n: index };
+        return { r: item, s: s, n: position };
       });
       keyed.sort(function (first, second) {
         return first.s.order - second.s.order || first.n - second.n;

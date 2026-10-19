@@ -81,8 +81,8 @@ function testMenuTree(cases, last) {
 
   var groups = order.map(function (item) {
     var G = byGroup[item];
-    var doors = G.order.map(function (item) {
-      var D = G.doors[item];
+    var nestedDoors = G.order.map(function (entry) {
+      var D = G.doors[entry];
       var e = evidence(D.cases);
       /* ⭐ sorted by key so a tester walking a door twice walks it in the same order both times */
       D.cases.sort(function (first, second) {
@@ -90,15 +90,15 @@ function testMenuTree(cases, last) {
       });
       return { name: D.name, cases: D.cases, total: e.total, run: e.run, bad: e.bad, gen: e.gen };
     });
-    var flat = doors.reduce(function (total, item) {
-      return total.concat(item.cases);
+    var flat = nestedDoors.reduce(function (sum, entry) {
+      return sum.concat(entry.cases);
     }, []);
     var ge = evidence(flat);
-    return { name: G.name, doors: doors, total: ge.total, run: ge.run, bad: ge.bad, gen: ge.gen };
+    return { name: G.name, doors: nestedDoors, total: ge.total, run: ge.run, bad: ge.bad, gen: ge.gen };
   });
 
-  var doors = groups.reduce(function (total, item) {
-    return total + item.doors.length;
+  var doors = groups.reduce(function (sum, item) {
+    return sum + item.doors.length;
   }, 0);
   var total = groups.reduce(function (t, item) {
     return t + item.total;

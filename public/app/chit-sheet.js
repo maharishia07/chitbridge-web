@@ -262,7 +262,7 @@
      closed (cancelled/rejected/completed) → only what still makes sense: Print (counter) · Open page */
   function actionsFor(m) {
     var s = m.status,
-      open = stepIn(s, 'open'),
+      nestedOpen = stepIn(s, 'open'),
       live = stepIn(s, 'live'),
       dead = stepIn(s, 'dead');
     var list = [];
@@ -279,19 +279,19 @@
     }
     /* F10: my receipt of their bill — Accept (the goods were counted at my door: no Goods in; nobody else holds it: no Dispute) */
     else if (m.captured) {
-      if (open) {
+      if (nestedOpen) {
         list.push('accept');
         list.push('reject');
       }
     } else if (m.billRx) {
-      if (open) {
+      if (nestedOpen) {
         list.push('accept');
         list.push('reject');
         list.push('dispute');
         list.push('goodsin');
       } else if (!dead) list.push('dispute');
     } else {
-      if (open) list.push('accept');
+      if (nestedOpen) list.push('accept');
       if (!dead && m.hasOther) list.push('dispute');
       if (live) list.push('done');
     }
@@ -406,14 +406,14 @@
             '"><td>' +
             esc(item.particulars || item.name || '') +
             offs
-              .map(function (item) {
+              .map(function (entry) {
                 return (
                   '<div class="cs-off" data-testid="cs-offer-' +
                   index +
                   '">' +
-                  esc(item.label || T('Offer')) +
+                  esc(entry.label || T('Offer')) +
                   ' −' +
-                  esc(fmtMoney(item.off, m.cur, '—')) +
+                  esc(fmtMoney(entry.off, m.cur, '—')) +
                   '</div>'
                 );
               })

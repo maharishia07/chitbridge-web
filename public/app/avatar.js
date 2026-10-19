@@ -177,8 +177,8 @@
       t = THEMES[key] || { vars: {} };
     var all = {};
     Object.keys(THEMES).forEach(function (item) {
-      Object.keys(THEMES[item].vars || {}).forEach(function (item) {
-        all[item] = 1;
+      Object.keys(THEMES[item].vars || {}).forEach(function (entry) {
+        all[entry] = 1;
       });
     });
     ON_COLOUR_PAIRS.forEach(function (pair) {
@@ -1076,8 +1076,8 @@
       saved = {},
       cs = null;
     Object.keys(THEMES).forEach(function (item) {
-      Object.keys(THEMES[item].vars || {}).forEach(function (item) {
-        all[item] = 1;
+      Object.keys(THEMES[item].vars || {}).forEach(function (entry) {
+        all[entry] = 1;
       });
     });
     try {

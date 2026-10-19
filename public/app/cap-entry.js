@@ -329,16 +329,16 @@ function enGridHTML() {
         '</div>' +
         '<div class="en-grid">' +
         tiles
-          .map(function (item) {
+          .map(function (entry) {
             return (
               '<button type="button" class="en-tile" data-testid="en-event-' +
-              esc(item.id) +
+              esc(entry.id) +
               '" onclick="enPick(\'' +
-              esc(item.id) +
+              esc(entry.id) +
               '\')"><span class="ic" aria-hidden="true">' +
-              esc(item.icon || '＋') +
+              esc(entry.icon || '＋') +
               '</span><span>' +
-              esc(tx(item.label)) +
+              esc(tx(entry.label)) +
               '</span></button>'
             );
           })
@@ -437,15 +437,22 @@ function enLedgerSelect(id, cur, onch, onlyGroup) {
   var bands = bkLtModel(EN.accounts || []),
     h = '<option value="">' + esc(tx('Choose…')) + '</option>';
   bands.forEach(function (item) {
-    var list = item.groups.filter(function (item) {
-      return !onlyGroup || item.title === onlyGroup;
+    var list = item.groups.filter(function (entry) {
+      return !onlyGroup || entry.title === onlyGroup;
     });
     var inner = '',
       own = onlyGroup === 'Stock & advances';
-    list.forEach(function (item) {
-      item.accts.forEach(function (item) {
-        if (own && !enShopLedger(item.code)) return;
-        inner += '<option value="' + esc(item.code) + '"' + (item.code === cur ? ' selected' : '') + '>' + esc(item.code + ' · ' + item.name) + '</option>';
+    list.forEach(function (entry) {
+      entry.accts.forEach(function (element) {
+        if (own && !enShopLedger(element.code)) return;
+        inner +=
+          '<option value="' +
+          esc(element.code) +
+          '"' +
+          (element.code === cur ? ' selected' : '') +
+          '>' +
+          esc(element.code + ' · ' + element.name) +
+          '</option>';
       });
     });
     if (inner) h += '<optgroup label="' + esc(tx(item.title)) + '">' + inner + '</optgroup>';
@@ -584,8 +591,8 @@ function enStepReady(step) {
     if (item.kind === 'lines')
       return (
         EN.lines.length >= 2 &&
-        EN.lines.every(function (item) {
-          return item.code && String(item.amt).trim() !== '';
+        EN.lines.every(function (entry) {
+          return entry.code && String(entry.amt).trim() !== '';
         })
       );
     if (item.kind === 'amount') return String(EN.v[item.key] || '').trim() !== '';
