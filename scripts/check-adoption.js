@@ -39,7 +39,7 @@ const NEEDED = [
   '_swatch',
   '_combo'
 ];
-let src = 'var _REF_SKIP=' + (/var _REF_SKIP=(\{[^}]*\});/.exec(html) || [])[1] + ';\n';
+let src = 'var _REF_SKIP=' + (/var _REF_SKIP\s*=\s*(\{[^}]*\});/.exec(html) || [])[1] + ';\n';
 /* T3-CATALOGUE moved the catalogue primitives (cbAmount · cbHasPrice · cbCurrency …) out of app.html into app/cap-catalogue.js — ONE copy; lift from wherever the one copy lives */
 const catalogue = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
 for (const fn of NEEDED) {

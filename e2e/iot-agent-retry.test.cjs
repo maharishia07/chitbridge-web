@@ -8,7 +8,7 @@
 'use strict';
 const fs = require('fs'), path = require('path'), os = require('os'), vm = require('vm'), EventEmitter = require('events');
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-connector.js'), 'utf8');
-const m = src.match(/function _agentJs\(\)\{ return \[[\s\S]*?\]\.join\('\\n'\); \}/);
+const m = src.match(/function _agentJs\(\) ?\{\s*return \[[\s\S]*?\]\.join\('\\n'\);\s*\}/);
 let pass = 0, fail = 0; const ok = (c, msg, x) => { if (c) { pass++; console.log('PASS ' + msg); } else { fail++; console.log('FAIL ' + msg + (x ? ' ' + JSON.stringify(x) : '')); } };
 if (!m) { console.log('FAIL _agentJs not found in cap-connector.js'); process.exit(1); }
 const agent = new Function(m[0] + '; return _agentJs();')().replace(/^#!.*\n/, '');

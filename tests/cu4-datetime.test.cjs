@@ -14,7 +14,7 @@ globalThis.document = { createElement: () => ({ setAttribute() {}, appendChild()
 eval(P('engine/locale.js'));
 eval(P('app/rail-advice.js'));
 const app = P('app.html');
-const src = app.match(/^function fmtDateTime\(x\)\{.*\}$/m);
+const src = app.match(/^function fmtDateTime\(x\) ?\{[\s\S]*?^\}$/m);
 assert(src, 'fmtDateTime is declared once in app.html');
 const fmtDateTime = eval('(' + src[0] + ')');
 const L = globalThis.CBLocale, at = '2026-10-09T10:25:00Z';

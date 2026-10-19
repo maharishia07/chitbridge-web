@@ -38,10 +38,10 @@ const CORE = path.join(__dirname, '..', 'public', 'app', 'core.js');
    then be asserting a rule the client no longer follows — the exact failure it exists to prevent. */
 const core = fs.readFileSync(CORE, 'utf8');
 const sibsM = /var SIBS = \[([^\]]*)\]/.exec(core);
-const collM = /for\(const k of \[([^\]]*)\]\)\s*if\(Array\.isArray/.exec(core);
+const collM = /for\s*\(const k of \[([^\]]*)\]\)\s*if\s*\(Array\.isArray/.exec(core);
 if (!sibsM) { console.error('api-envelope: could not find SIBS in core.js'); process.exit(1); }
 if (!collM) { console.error('api-envelope: could not find the collapse list in core.js'); process.exit(1); }
-const names = (s) => (s.match(/"([^"]+)"/g) || []).map((x) => x.slice(1, -1));
+const names = (s) => (s.replace(/\/\*[\s\S]*?\*\//g, '').match(/(["'])([^"']+)\1/g) || []).map((x) => x.slice(1, -1));
 const SIBS = new Set(names(sibsM[1]));
 const COLLAPSE = new Set(names(collM[1]));
 

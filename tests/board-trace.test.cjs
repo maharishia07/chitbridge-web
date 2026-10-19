@@ -18,6 +18,6 @@ ok(testIsEvidence('chitbridge-web/e2e/tests/one-board.spec.js') && testIsEvidenc
 const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-testing.js'), 'utf8');
 const mark = src.slice(src.indexOf('async function testMark('), src.indexOf('async function testRetryUnsent'));
 const lost = src.slice(src.indexOf('function testMarkLost('), src.indexOf('async function testMark('));
-ok(/testMarkLost\(key, status, e\)/.test(mark) && /CBTEST\.unsent\[key\]/.test(lost) && /CBTEST\.notice = \{ tone: 'bad'/.test(lost), 'a failed testMark keeps the verdict and raises a sticky notice');
+ok(/testMarkLost\(key, status, \w+\)/.test(mark) && /CBTEST\.unsent\[key\]/.test(lost) && /CBTEST\.notice = \{\s*tone: 'bad'/.test(lost), 'a failed testMark keeps the verdict and raises a sticky notice');
 ok(/async function testRetryUnsent/.test(src) && /testRetryUnsent\(\)/.test(lost), 'the notice has a Send again that calls testRetryUnsent');
 console.log(n + ' passed');

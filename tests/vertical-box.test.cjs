@@ -11,7 +11,7 @@ const code = (s) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
 const rd = read('app/cap-readiness.js');
 ok(!/\|\|\s*'paint'|vertical:\s*'paint'|\|\|\s*'IN'\b|origin:\s*'IN'/.test(code(rd)), "CMP-1: cap-readiness.js has no 'paint' or 'IN' fallback left");
 ok(!/vertical=paint|origin=IN/.test(read('know-your-business.html')), 'CMP-1: know-your-business asks /api/kyb/position with no paint / IN');
-const lift = (name) => { const at = rd.indexOf('function ' + name + '('); return rd.slice(at, rd.indexOf('\n', at)); };
+const lift = (name) => { const at = rd.indexOf('function ' + name + '('); return rd.slice(at, rd.indexOf('\n}', at) + 2); };
 const cx = vm.createContext({ UI: {} });
 vm.runInContext([lift('_laneVert'), lift('_laneOrigin'), lift('_laneQuery'), rd.slice(rd.indexOf('function _mapOrigin('), rd.indexOf('function _rdDestSelectors('))].join('\n'), cx);
 const run = (s) => vm.runInContext(s, cx);
