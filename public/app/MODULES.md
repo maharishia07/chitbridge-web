@@ -96,7 +96,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-starter-categories.js` | eager |  |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
-| `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax |
+| `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
 | `country-ready.js` | — |  |
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
