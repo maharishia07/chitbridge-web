@@ -65,7 +65,7 @@ const SHARED = (function () {
 })();
 
 /* QA-71 · measured 19 Oct 2026 on main. May only go down. */
-const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 84);
+const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 83);
 let bad = [];
 files.forEach((f) => {
   let src = fs.readFileSync(f, 'utf8');
