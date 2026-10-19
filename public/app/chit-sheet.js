@@ -434,7 +434,7 @@
     var fivePercent = { taxable: 1076, cgst: 26.9, sgst: 26.9, tax: 53.8 };
     return { header: { chit_id: 'sample', purpose: 'order', current_status: 'pending', created_at: '2026-10-12T09:10:00Z', manual_subject: 'SO-1',
         all_recipients: [{ role: 'sender', display_name: 'Meena', entity_id: 'sample-meena' }],
-        summary_json: { currency_code: 'INR', total_value: 1129.8,
+        summary_json: { total_value: 1129.8,
           order_details: { channel: 'online', fulfilment: 'pickup', address: 'Pick up at the shop', requested_delivery: { date: '12 Oct' }, remark: 'Ring first' },
           money: { total: 1129.8, taxable: 1076, tax: 53.8, cgst: 26.9, sgst: 26.9, supply: 'intra', by_rate: { 5: fivePercent },
             lines: [{ total: 525, tax: 25, discount: 0 }, { total: 604.8, tax: 28.8, discount: 64 }] } } },
@@ -448,7 +448,7 @@
     d = document.createElement('dialog'); d.id = 'chitsheet'; d.className = 'cs'; d.setAttribute('aria-label', T('Bill'));
     d.innerHTML = '<div class="cs-top"><button type="button" class="cs-back" data-testid="cs-close" aria-label="' + esc(T('Back')) + '" onclick="CBSheet.close()"><span class="cs-back-ic" aria-hidden="true">←</span><span>' + esc(T('Back')) + '</span></button><span class="cs-ttl" data-testid="cs-title">' + esc(T('Bill')) + '</span><span class="cs-sid" data-testid="cs-screen-id"></span></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     /* R10-4: a close event is queued; if a new chit was opened meanwhile the sheet is open again and that late event must not wipe it (the read would be dropped and the sheet stay on Reading) */
-    d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; });
+    d.addEventListener('close', function () { if (d.open) return; lock(false); if (CS.mode === 'dialog') CS.id = null; leaveHistory(); });   /* also the native Esc on the full page */
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
     document.body.appendChild(d);
     return d;
@@ -491,6 +491,12 @@
     try { if (!CS.pushed && root.history && root.history.pushState) { root.history.pushState({ csOpen: 1 }, ''); CS.pushed = true; } }
     catch (e) { console.error('chit sheet: the Back button could not be wired —', (e && e.message) || e); }
   }
+  /** the page form's one history step is given back when it closes (the phone's Back already took it when it was Back that closed it) */
+  function leaveHistory() {
+    if (!CS.pushed) return;
+    CS.pushed = false;
+    try { root.history.back(); } catch (e) { console.error('chit sheet: Back could not step the history —', (e && e.message) || e); }
+  }
   async function open(id) {
     if (!id) return;
     var dialog = ensureDlg(); CS.mode = 'dialog'; CS.el = dialog; reset(id);
@@ -505,7 +511,8 @@
   /* closing the popup hands the painter back to a page form still on screen (it re-reads: the popup may have moved the chit) */
   function close() {
     var d = document.getElementById('chitsheet'); if (d && d.open) d.close(); lock(false); CS.id = null;
-    if (CS.pushed) { CS.pushed = false; try { root.history.back(); } catch (e) { console.error('chit sheet: Back could not step the history —', (e && e.message) || e); } }
+    var held = d && d.querySelector('.cs-body'); if (held) held.innerHTML = '';   /* a closed sheet keeps no hidden copy of the bill (two cs-no · cs-hist on one page) */
+    leaveHistory();
     var pg = CS.page; CS.page = null;
     if (pg && document.body.contains(pg.el)) mount(pg.el, pg.id);
   }
