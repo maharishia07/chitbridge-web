@@ -114,6 +114,11 @@ function crmWhen(iso) {
 }
 function crmLocalISO(d) { var p = function (n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
 function crmPlural(n, one, many) { return n + ' ' + (n === 1 ? tx(one) : tx(many)); }
+/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency } (the record's chip says the same words); '' when nothing is waiting. minor is null across two currencies: the count alone. */
+function crmUnbilledSaid(u, cur) {
+  if (!u || !u.n) return '';
+  return crmPlural(u.n, 'order not billed yet', 'orders not billed yet') + (u.minor == null ? '' : ' ' + bkMoney(u.minor, u.currency || cur));
+}
 
 var CRM_ICON = {
   phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2',
@@ -162,6 +167,15 @@ function crmDueCell(p) {
   return b > 0
     ? '<span class="due get"' + tid + ' title="' + esc(tx('They owe you') + oldest) + '"><span aria-hidden="true">↓</span> ' + esc(bkMoney(b, CRM.currency)) + ' <span class="w">' + esc(tx("you'll get")) + '</span>' + late + '</span>'
     : '<span class="due give"' + tid + ' title="' + esc(tx('You owe them') + oldest) + '"><span aria-hidden="true">↑</span> ' + esc(bkMoney(Math.abs(b), CRM.currency)) + ' <span class="w">' + esc(tx("you'll give")) + '</span>' + late + '</span>';
+}
+/** CRM-32: the Dues column. An order that is unpaid but NOT BILLED YET is not "Settled" (walk W41): the server's per-party figure (`p.unbilled`, the Tasks Billed tag's own test) is said instead of Settled, or beside what is owed. */
+function crmDueListCell(p) {
+  var said = crmUnbilledSaid(p.unbilled, CRM.currency);
+  if (!said) return crmDueCell(p);
+  var tag = '<span class="tag amber" data-testid="crm-unbilled-' + esc(p.party_id) + '">' + esc(said) + '</span>';
+  if (!CRM.ledger || p.balance_minor == null) return tag;
+  if (!Number(p.balance_minor || 0)) return '<span class="due" data-testid="party-due-' + esc(p.party_id) + '">' + tag + '</span>';
+  return crmDueCell(p) + ' ' + tag;
 }
 /** the next follow-up is ALWAYS on the row; an overdue one is red, says Late, and carries its date */
 function crmFuCell(p) {
@@ -420,7 +434,7 @@ function crmPartyCols() {
     { key: 'party', label: 'Party', prio: 1, w: 270, sort: 'name', html: true, cell: crmPartyCell, value: function (p) { return p.display_name; } },
     { key: 'role', label: 'Role', prio: 3, w: 120, sort: 'role', hfilter: 'role', cell: crmRoleWord, tid: function (p) { return 'crm-role-' + crmKey(p); }, value: function (p) { return crmRoleWord(p); } },
     { key: 'rail', label: 'On the network', prio: 6, w: 150, sort: 'rail', hfilter: 'rail', html: true, cell: crmRailCell, value: function (p) { return crmConnected(p) ? 'a' : 'b'; } }];
-  if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 200, sort: 'dues', html: true, cell: crmDueCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
+  if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 200, sort: 'dues', html: true, cell: crmDueListCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
   cols.push(
     { key: 'last', label: 'Last activity', prio: 5, w: 200, sort: 'last', html: true, cell: crmLastCell, value: function (p) { return p.last_at || ''; } },
     { key: 'next', label: 'Next follow-up', prio: 4, w: 170, sort: 'next', html: true, cell: crmFuCell, value: function (p) { return p.next_followup_at || '9999'; } },
@@ -501,7 +515,7 @@ function crmMini(p, list) {
     crmMiniRow('mail', em ? '<a href="mailto:' + esc(em) + '">' + esc(em) + '</a>' : '<span class="sub">' + esc(tx('no e-mail')) + '</span>', 'crm-mini-email-' + key),
     crmMiniRow('pin', p.city ? esc(p.city) : '<span class="sub">' + esc(tx('no place')) + '</span>', 'crm-mini-city-' + key)], 'crm-mini-contact-' + key);
   var money = crmMiniBox('mc-money', 'Money', [
-    '<div class="mc-big">' + (CRM.ledger && p.balance_minor != null ? crmDueCell(p) : '<span class="sub">—</span>') + '</div>',
+    '<div class="mc-big">' + (CRM.ledger && p.balance_minor != null ? crmDueListCell(p) : '<span class="sub">—</span>') + '</div>',
     crmMiniKV('Credit terms', terms, 'crm-mini-terms-' + key),
     crmMiniKV('Oldest bill', p.oldest_due ? esc(bkDate(p.oldest_due)) : '<span class="sub">—</span>', 'crm-mini-oldest-' + key)], 'crm-mini-money-' + key);
   var rows = list === undefined ? ['<div class="mc-r sub">' + esc(tx('Reading…')) + '</div>'] : crmMiniChitRows(list, key);

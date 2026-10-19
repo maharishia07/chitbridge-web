@@ -54,7 +54,7 @@ function list(rows, opt) {
     if (p.merged_into) return;                       /* the API never sends a party that was merged away */
     const k = p.party_id;
     if (!o.careless && by.has(k)) { const a = by.get(k); const r = rolesOf(p.roles); a.roles.customer = a.roles.customer || r.customer; a.roles.supplier = a.roles.supplier || r.supplier; return; }
-    const a = party(p, o.records && o.records[p.party_id]); by.set(k, a); out.push(a);
+    const a = party(p, o.records && o.records[p.party_id]); a.unbilled = p.unbilled || { n: 0, minor: 0, currency: null }; /* CRM-32: the list (not the record) carries the server's "not billed yet" figure */ by.set(k, a); out.push(a);
   });
   /* a party's sides follow its merged roles: re-derive the nested sides for a both-roles party */
   out.forEach((a) => {
