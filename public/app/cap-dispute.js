@@ -11,6 +11,10 @@
  * DEPENDS on Core globals (shared, NOT duplicated here): api, modal/closeModal, esc, nm (name+fallback),
  * val, toast, MSG, openChit, UI/SESSION, lazyWrap, menuAssist, cap, chitIsSelf (self/opponent — actor
  * resolves to its parent entity), and the EP rows dispute/disputes/resolveDispute/disputeQueue.
+ *
+ * OWNS      the Disputes list (Tasks › Disputes), the sheet's dispute section (raise · talk · resolve), the on-record banner.
+ * CALLED BY tasks.html (CBDispute.mount · CBDispute.open for ?view=disputes&chit=), chit-sheet.js (the section), app.html (the workshop's screen).
+ * CARD 03-disputes-service-and-register/disputes-per-party-confidential
  */
 
 /* ── Shared roster renderers — ONE definition, used by BOTH the banner and the Disputes screen (was
@@ -418,14 +422,14 @@ async function submitResolve(chitId, disputeId, partyId){
         { key: 'side', label: T('Side'), all: T('Both sides'), options: [{ v: 'mine', label: T('Raised by you') }, { v: 'against', label: T('Against you') }] }
       ],
       sorts: [{ key: 'old', label: T('Oldest first') }, { key: 'new', label: T('Newest first') }],
-      preset: { filt: { status: 'open' } },
+      preset: { filt: { status: 'open' } }, presetIsDefault: true,   /* UX-94: an empty "Still open" is the empty state below, not a filter that matches nothing */
       remote: { filters: true, total: function () { return DP.total; }, foot: pagerHTML,
         onQuery: function (q) {
           DP.q = String(q.q || '').trim(); DP.filt = q.filt || {}; if (q.sort && q.sort.key) DP.sort = q.sort.key === 'new' ? 'new' : 'old';
           DP.page = 1; listLoad();
         } },
       onOpen: function (d) { open(d); },
-      empty: { title: T(DP.filt.status === 'open' ? 'No open disputes' : 'No disputes here') }
+      empty: { title: T('No disputes.'), sub: T('When you or the other side raise one on a bill or order, it shows here.') }
     });
   }
   /** a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) */
@@ -450,7 +454,7 @@ async function submitResolve(chitId, disputeId, partyId){
   /* ── the chit sheet's section (DSP step 1 · raise · DSP step 2 · resolve) ── */
   function inSheet(el, id) {
     SH = { id: id, el: el, data: null, err: null, raising: false, talk: {}, threads: {} };
-    if (DP.focus && DP.focus.chit === id) SH.talk[DP.focus.dispute] = true;
+    if (DP.focus && DP.focus.chit === id && DP.focus.dispute) SH.talk[DP.focus.dispute] = true;
     sheetRead();
   }
   function sheetRead() {
@@ -546,5 +550,5 @@ async function submitResolve(chitId, disputeId, partyId){
   }
 
   /* sheet: false until a page opts in (tasks.html sets it) — the chit sheet then paints inSheet; app.html's sheet keeps the workshop's own form */
-  root.CBDispute = { mount: mount, reload: listLoad, inSheet: inSheet, raise: raiseAsk, sheet: false, EP: root.CB_DISPUTE_EP };
+  root.CBDispute = { open: open, mount: mount, reload: listLoad, inSheet: inSheet, raise: raiseAsk, sheet: false, EP: root.CB_DISPUTE_EP };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1062,6 +1062,17 @@ function bkDbPeriodLabel(q, preset) {
   var o = { day: 'numeric', month: 'short' }, oy = { day: 'numeric', month: 'short', year: 'numeric' };
   return preset === 'today' ? bkDvFmt(q.to, oy) : bkDvFmt(q.from, o) + ' – ' + bkDvFmt(q.to, oy);
 }
+/**
+ * WALK2 W31 (ACC-1): the "not closed yet" notice says WHICH day (the strip's day — not "today" by assumption) and, when the books show it, WHICH
+ * counters sold by bill that day (no day is closed, so each is still open). A counter that took only cash leaves no entry until it closes, so it
+ * cannot be named from the books — then the day alone is said. When it shows is unchanged (bkDvHead: no walk-in day entry that day).
+ */
+function bkNoCloseNotice(strip, stripDay) {
+  var open = strip.counters.map(function (row) { return row.counter; }).filter(function (counter) { return counter !== '—'; });
+  return { cls: 'warn', tid: 'strip-noclose', onOpen: function () { if (typeof navTo === 'function') navTo('counter'); },
+    text: txf(open.length ? 'Walk-ins for {day} not closed yet on {counters} — close the day on the counter' : 'Walk-ins for {day} not closed yet — close the day on the counter',
+      { day: bkDvFmt(stripDay, { day: 'numeric', month: 'short' }), counters: open.join(', ') }) };
+}
 /** the head the Day book declares: its period, today's strip (sales per counter and by tender) as chips, and what waits on you as notices that open their fix */
 function bkDvHead() {
   var d = BK.dv, r = d.r, c = r && r.currency, q = d.range, n = d.todo, p = BK.dbp || bkDbPeriod('fy');
@@ -1069,11 +1080,11 @@ function bkDvHead() {
   t.counters.forEach(function (x) { chips.push({ tid: 'strip-counter-' + x.counter, text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txn('{count} bill', '{count} bills', x.bills) }); });
   t.tenders.forEach(function (x) { chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, c) }); });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
-  if (!t.day_closed) notices.push({ cls: 'warn', tid: 'strip-noclose', text: tx('Walk-ins not closed yet — close the day on the counter'), onOpen: function () { if (typeof navTo === 'function') navTo('counter'); } });
+  if (!t.day_closed) notices.push(bkNoCloseNotice(t, q.to));
   if (n.accept) notices.push({ cls: 'warn', tid: 'todo-accept', text: n.accept + ' ' + tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
     /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
-    onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkTab('waiting'); } });
-  if (n.supplier) notices.push({ cls: 'warn', tid: 'todo-supplier', text: txn('{count} supplier to add', '{count} suppliers to add', n.supplier), onOpen: function () { bkTab('waiting'); } });
+    onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkNoticeGo('accept'); } });
+  if (n.supplier) notices.push({ cls: 'warn', tid: 'todo-supplier', text: txn('{count} supplier to add', '{count} suppliers to add', n.supplier), onOpen: function () { bkNoticeGo('supplier'); } });
   if (n.overdue) notices.push({ cls: 'warn', tid: 'todo-overdue', text: n.overdue + ' ' + tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), onOpen: function () { bkTab('dues'); } });
   if (n.cheques) notices.push({ cls: 'warn', tid: 'todo-cheques', text: n.cheques + ' ' + tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), onOpen: function () { bkTab('cheques'); } });
   if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
@@ -2246,6 +2257,8 @@ function bkWaitWho(w) { return bkWaitTodo(w) === 'add_supplier' && w.name ? Stri
  * one), then ask the books to try again: the bill now names a supplier the books know and waits for acceptance. → the sentence to show, or null.
  * "Already on your list" is not a failure here — the retry is what was wanted.
  */
+/** a To do notice's door: the host page (CB Accounts) names where "bills to accept" and "suppliers to add" open (BK.noticeTarget); the workshop's Waiting list otherwise */
+function bkNoticeGo(kind) { if (BK.noticeTarget && BK.noticeTarget[kind]) return BK.noticeTarget[kind](); bkTab('waiting'); }
 async function bkAddSupplier(name) {
   try { await api('supAdd', { body: { name: name, supply_kind: 'resale' } }); }
   catch (e) { if (!(e && (e.status === 409 || /already/i.test(String(e.message || ''))))) return bkWhy(e, tx('Could not add the supplier')); }

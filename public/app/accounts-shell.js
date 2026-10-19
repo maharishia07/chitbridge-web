@@ -32,10 +32,13 @@ var CB_HOMES = {
   profile: '/know-your-business.html',                 /* the avatar's own choice for Profile (avatar.js, H34) */
   shop: '/settings.html#/shop', country: '/settings.html#/country', settings: '/settings.html',  /* CB Settings (SET1): Your shop · Country setup */
   integrations: '/settings.html#/connectors', counters: '/settings.html#/counters', policy: '/settings.html#/policy', plan: '/settings.html#/plan',  /* CB Settings (T3-SETTINGS) */
+  disputes: '/tasks.html?view=disputes&chit=',        /* + the chit id: Tasks › Disputes with that chit's sheet open (RAIL-86) */
   chit: '/crm.html#/chit/'                             /* + the chit id: the chit PAGE in CB CRM (CRM2) — chitPageHref(id) below */
 };
 /* the sheet's "Open page" (chit-sheet.js `page` → openChitPage on each ledger page): the chit page in CB CRM, never the workshop */
 function chitPageHref(id){ return CB_HOMES.chit + encodeURIComponent(id); }
+/* the sheet's Dispute button on a page with no dispute form of its own: Tasks › Disputes on that chit (chit-sheet.js act 'dispute') */
+function disputePageHref(id){ return CB_HOMES.disputes + encodeURIComponent(id); }
 
 /* ── the Ledger's boot endpoints ── */
 var CB_BOOKS_EP = {

@@ -21,7 +21,6 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | BKS010 | Dues | Accounts | /accounts.html | To do › a dues item |
 | BKS011 | Unpaid bills | Accounts | /accounts.html | /accounts.html#bills · Accounts › Unpaid bills |
 | BKS012 | Cheques | Accounts | /accounts.html | /accounts.html#cheques · Accounts › Cheques |
-| BKS013 | Waiting | Accounts | /accounts.html | To do › a posting that failed |
 | BKS014 | Bank | Accounts | /accounts.html | /accounts.html#bank · Accounts › Bank |
 | BKS015 | Month lock | Accounts | /accounts.html | /accounts.html#lock · Accounts › Month lock |
 | BKS016 | Closing stock | Accounts | /accounts.html | /accounts.html#closingstock · Accounts › Closing stock |
@@ -56,6 +55,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | TSK002 | Orders out | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders out |
 | TSK003 | Tasks | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Tasks |
 | TSK004 | Done | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Done |
+| TSK006 | Disputes | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Disputes |
+| TSK007 | Assist | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Assist |
 | SET001 | Your business | Settings | /settings.html | /settings.html#/shop · Settings › Your business |
 | SET002 | Country | Settings | /settings.html | /settings.html#/country · Settings › Country |
 | SET003 | New shop | Settings | /settings.html | the sign-in window › New shop? Register |

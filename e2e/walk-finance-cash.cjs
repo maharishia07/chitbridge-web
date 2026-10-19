@@ -57,7 +57,7 @@ function answer(days, nodate) {
   const gstDue = days === 30 ? dayN(20) : dayN(45);
   const gst = nodate ? { payable_minor: 800000, form: 'VAT201', short: 'VAT return', due_date: null, counted: false, why: 'Due date unknown until the return period is picked under Returns.' }
     : { payable_minor: 800000, form: 'GSTR-3B', short: 'GST', due_date: gstDue, counted: days === 30, why: null };
-  return { asOf: dayN(0), days, from: dayN(0), to: dayN(days - 1), currency: 'INR', opening_minor: 5000000, opening: [{ role: 'cash', code: '1400', name: 'Cash', balance_minor: 1000000 }, { role: 'bank', code: '1500', name: 'Bank', balance_minor: 4000000 }],
+  return { asOf: dayN(0), days, from: dayN(0), to: dayN(days - 1), currency: 'INR', opening_minor: 5000000, drawer_minor: 1000000, bank_minor: 4000000, opening: [{ role: 'cash', code: '1400', name: 'Cash', balance_minor: 1000000 }, { role: 'bank', code: '1500', name: 'Bank', balance_minor: 4000000 }],
     in_minor: inT, out_minor: outT, closing_minor: bal, lowest: low, shortfall: short, words: short.words,
     uncounted: { overdue_in_minor: 1200000, overdue_parties: 1, disputed_in_minor: 0, disputed_out_minor: 0, words: '₹12,000 overdue from 1 party is not counted until it is promised or paid.' },
     gst, series: rows };
@@ -106,12 +106,12 @@ W.run('finance-cash', async (w) => {
     /* the page's own day (bkToday, the shop's local day) must be the stand-in's day 0 — it was the UTC day before F3b, a day behind every IST morning */
     const pageDay = await page.evaluate(() => (typeof bkToday === 'function' ? bkToday() : 'no bkToday')).catch(() => 'threw');
     const today = await page.locator('[data-testid^="fc-row-"]:has-text("Today")').count();
-    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /15,000(\.00)? Cr/.test(t3) && /50,000(\.00)? Dr/i.test(op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
+    return { ok: n === 7 && /Today/.test(t0) && today === 1 && pageDay === dayN(0) && /Short/.test(t3) && /short\s*₹?\s*15,000(\.00)?/.test(t3) && /50,000(\.00)?/.test(op) && !/\b(Dr|Cr)\b/.test(t3 + op), saw: n + ' rows; page day ' + pageDay + ' (fixture ' + dayN(0) + '); ' + today + ' row marked Today "' + t0.slice(0, 60) + '"; day 3 "' + t3.slice(0, 90) + '"; opening "' + op + '"' };
   });
-  await w.step('C4', 'Cash -> the bars: one per day, the shortfall day\'s is the red one, the lowest day is labelled (₹15,000 Cr)', async () => {
+  await w.step('C4', 'Cash -> the bars: one per day, the shortfall day\'s is the red one, the lowest day is labelled (short ₹15,000)', async () => {
     const bars = await page.locator('[data-testid^="fc-bar-"]').count(), neg = await page.locator('[data-testid^="fc-bar-"][data-neg="true"]').count(), low = (await page.locator('[data-testid="fc-low-label"]').first().textContent().catch(() => '')) || '';
     const negDate = await page.locator('[data-testid^="fc-bar-"][data-neg="true"]').first().getAttribute('data-testid').catch(() => '');
-    return { ok: bars === 7 && neg === 4 && negDate === 'fc-bar-' + D3 && /15,000(\.00)? Cr/.test(low), saw: bars + ' bars, ' + neg + ' red (first ' + negDate + '); lowest label "' + low + '"' };
+    return { ok: bars === 7 && neg === 4 && negDate === 'fc-bar-' + D3 && /short\s*₹?\s*15,000(\.00)?/.test(low) && !/\b(Dr|Cr)\b/.test(low), saw: bars + ' bars, ' + neg + ' red (first ' + negDate + '); lowest label "' + low + '"' };
   });
   await w.step('C5', 'Cash -> open the shortfall day -> what it counts: Sri Traders · Bill to pay · − ₹90,000 (the server\'s item, nothing added)', async () => {
     await page.click('[data-testid="fc-row-' + D3 + '"]'); await page.waitForSelector('[data-testid="fc-next-' + D3 + '"]', { timeout: 6000 }).catch(() => {});
