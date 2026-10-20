@@ -64,6 +64,8 @@ const SHARED = (function () {
   } catch (_) { return new Set(); }
 })();
 
+/* QA-71 · measured 19 Oct 2026 on main. May only go down. */
+const BASELINE = Number(process.env.CB_UNDECLARED_BASELINE || 83);
 let bad = [];
 files.forEach((f) => {
   let src = fs.readFileSync(f, 'utf8');
@@ -133,6 +135,26 @@ files.forEach((f) => {
     });
   });
 
+  /* ITER1 (MNT-4): the formatter puts each declarator of `let A = 1, B = 2;` on its own line, so the line reading above misses B. Read the whole
+     statement up to its `;` at bracket depth 0 and take the head of every top-level comma clause (over-collecting, as above). */
+  {
+    const kwRe = /\b(?:var|let|const)\s+/g;
+    let km;
+    while ((km = kwRe.exec(code))) {
+      let depth = 0, clause = '', i = km.index + km[0].length;
+      const heads = [];
+      for (; i < code.length; i++) {
+        const ch = code[i];
+        if ('([{'.indexOf(ch) >= 0) depth++;
+        else if (')]}'.indexOf(ch) >= 0) { if (depth === 0) break; depth--; }
+        if (depth === 0 && (ch === ';' || ch === ',')) { heads.push(clause); clause = ''; if (ch === ';') break; continue; }
+        clause += ch;
+      }
+      heads.push(clause);
+      heads.forEach(function (c) { const head = c.trim().split(/[\s=:(){}[\]]/)[0]; if (/^[A-Za-z_$][\w$]*$/.test(head)) DECLARED.add(head); });
+    }
+  }
+
   used.forEach((name) => {
     if (KNOWN.has(name)) return;
     if (SHARED.has(name)) return;   /* declared in app.html, shared into every capability */
@@ -175,7 +197,24 @@ if (bad.length) {
    * times, declared nowhere, paintSummary() throwing on every render, and the Summary tab silently showing the
    * Cases table. No parser catches that. Finishing this needs scope analysis, not another regex.
    */
-  process.exitCode = 0;
+  /**
+   * QA-71 (19 Oct 2026) · A RATCHET, NOT A GATE ON THE OSCILLATION. The reason above stands (the count moved
+   * 120 -> 1 -> 47 while the shared-globals set was wrong), so the number is BASELINED at today's count and may
+   * only go DOWN: it fails when the count RISES, and when it FALLS without BASELINE being lowered. Never edit a
+   * file to reach the number; lower the number when a real fix lands.
+   */
+  if (bad.length > BASELINE) {
+    console.log('  ✗ the count ROSE: ' + bad.length + ' > baseline ' + BASELINE + ' — a name is used and never declared; fix it\n');
+    process.exitCode = 1;
+  } else if (bad.length < BASELINE) {
+    console.log('  ✗ the count FELL to ' + bad.length + ' — lower BASELINE in e2e/undeclared.cjs so it cannot creep back\n');
+    process.exitCode = 1;
+  } else {
+    console.log('  ✓ at the baseline (' + BASELINE + ') — report-only reason kept above\n');
+  }
+} else if (BASELINE !== 0) {
+  console.log('  ✗ the count FELL to 0 — set BASELINE to 0 in e2e/undeclared.cjs\n');
+  process.exitCode = 1;
 } else {
   console.log('  ✓ every SHOUTING_CASE name is declared where it is used   ' + files.length + ' file(s)\n');
 }

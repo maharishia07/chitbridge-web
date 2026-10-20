@@ -10,36 +10,122 @@
 // OWNS the drafts and the outbox · CALLED BY every page that saves work (app.html, till.html, the small apps) through CBOffline.
 // FLOW  submit(req) → online? send → classify (done · reject · retry) → retry/offline: enqueue → 'online' event → flush() replays      CARD 28-platform-and-operations/offline
 (function (root) {
-  var LSK = 'cb.outbox.v1', DKP = 'cb.draft.';
-  var ls = (function () { try { var t = '__cb'; root.localStorage.setItem(t, '1'); root.localStorage.removeItem(t); return root.localStorage; } catch (e) { return null; } })();
-  var mem = {};   // fallback when localStorage is unavailable (private mode)
-  function get(k) { try { return ls ? ls.getItem(k) : (k in mem ? mem[k] : null); } catch (e) { return mem[k] || null; } }
-  function set(k, v) { try { if (ls) ls.setItem(k, v); else mem[k] = v; } catch (e) { mem[k] = v; } }
-  function del(k) { try { if (ls) ls.removeItem(k); else delete mem[k]; } catch (e) { delete mem[k]; } }
-  function uuid() { return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }); }
+  var LSK = 'cb.outbox.v1',
+    DKP = 'cb.draft.';
+  var ls = (function () {
+    try {
+      var t = '__cb';
+      root.localStorage.setItem(t, '1');
+      root.localStorage.removeItem(t);
+      return root.localStorage;
+    } catch (e) {
+      return null;
+    }
+  })();
+  var mem = {}; // fallback when localStorage is unavailable (private mode)
+  function get(k) {
+    try {
+      return ls ? ls.getItem(k) : k in mem ? mem[k] : null;
+    } catch (e) {
+      return mem[k] || null;
+    }
+  }
+  function set(k, v) {
+    try {
+      if (ls) ls.setItem(k, v);
+      else mem[k] = v;
+    } catch (e) {
+      mem[k] = v;
+    }
+  }
+  function del(k) {
+    try {
+      if (ls) ls.removeItem(k);
+      else delete mem[k];
+    } catch (e) {
+      delete mem[k];
+    }
+  }
+  function uuid() {
+    return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+  }
 
-  var cfg = { apiBase: '', token: function () { return null; }, onChange: function () {} };
-  function online() { return !root.navigator || root.navigator.onLine !== false; }
+  var cfg = {
+    apiBase: '',
+    token: function () {
+      return null;
+    },
+    onChange: function () {}
+  };
+  function online() {
+    return !root.navigator || root.navigator.onLine !== false;
+  }
 
   // ── drafts ──
-  function saveDraft(key, data) { set(DKP + key, JSON.stringify({ at: Date.now(), data: data })); }
-  function loadDraft(key) { var r = get(DKP + key); if (!r) return null; try { return JSON.parse(r).data; } catch (e) { return null; } }
-  function draftAge(key) { var r = get(DKP + key); if (!r) return null; try { return Date.now() - JSON.parse(r).at; } catch (e) { return null; } }
-  function clearDraft(key) { del(DKP + key); }
+  function saveDraft(key, data) {
+    set(DKP + key, JSON.stringify({ at: Date.now(), data: data }));
+  }
+  function loadDraft(key) {
+    var r = get(DKP + key);
+    if (!r) return null;
+    try {
+      return JSON.parse(r).data;
+    } catch (e) {
+      return null;
+    }
+  }
+  function draftAge(key) {
+    var r = get(DKP + key);
+    if (!r) return null;
+    try {
+      return Date.now() - JSON.parse(r).at;
+    } catch (e) {
+      return null;
+    }
+  }
+  function clearDraft(key) {
+    del(DKP + key);
+  }
 
   // ── outbox ──
-  function readQ() { var r = get(LSK); if (!r) return []; try { return JSON.parse(r); } catch (e) { return []; } }
-  function writeQ(q) { set(LSK, JSON.stringify(q)); paint(); }
-  function pending() { return readQ().length; }
+  function readQ() {
+    var r = get(LSK);
+    if (!r) return [];
+    try {
+      return JSON.parse(r);
+    } catch (e) {
+      return [];
+    }
+  }
+  function writeQ(q) {
+    set(LSK, JSON.stringify(q));
+    paint();
+  }
+  function pending() {
+    return readQ().length;
+  }
   function enqueue(req) {
-    var q = readQ();
+    var list = readQ();
     req.id = req.id || req.idem || uuid();
-    if (q.some(function (x) { return x.id === req.id; })) return req.id;   // idempotent enqueue
-    req.queued_at = Date.now(); req.tries = 0; q.push(req); writeQ(q); return req.id;
+    if (
+      list.some(function (x) {
+        return x.id === req.id;
+      })
+    )
+      return req.id; // idempotent enqueue
+    req.queued_at = Date.now();
+    req.tries = 0;
+    list.push(req);
+    writeQ(list);
+    return req.id;
   }
   function rawSend(req) {
     var h = { 'Content-Type': 'application/json', 'Idempotency-Key': req.id };
-    var tok = cfg.token && cfg.token(); if (tok) h.Authorization = 'Bearer ' + tok;
+    var tok = cfg.token && cfg.token();
+    if (tok) h.Authorization = 'Bearer ' + tok;
     return root.fetch(cfg.apiBase + req.path, { method: req.method || 'POST', headers: h, body: req.body ? JSON.stringify(req.body) : undefined });
   }
   // classify a response: done (drop), reject (drop + surface — a 4xx won't fix itself on retry), retry (keep)
@@ -54,49 +140,100 @@
   // the machine code of a 409 body (null when the body is not JSON) — read from a clone so the caller can still read the response
   function codeOf(response) {
     if (response.status !== 409 || !response.clone) return Promise.resolve(null);
-    return response.clone().json().then(function (body) { return body && body.code || null; }, function () { return null; });
+    return response
+      .clone()
+      .json()
+      .then(
+        function (body) {
+          return (body && body.code) || null;
+        },
+        function () {
+          return null;
+        }
+      );
   }
   // send one request and classify its answer: → { response, kind } (kind: done · reject · retry); a network failure rejects
   function sendAndClassify(req) {
-    return rawSend(req).then(function (response) { return codeOf(response).then(function (code) { return { response: response, kind: classify(response.status, code) }; }); });
+    return rawSend(req).then(function (response) {
+      return codeOf(response).then(function (code) {
+        return { response: response, kind: classify(response.status, code) };
+      });
+    });
   }
   var flushing = false;
   function flush() {
     if (flushing || !online()) return Promise.resolve({ sent: 0, pending: pending() });
     flushing = true;
-    var q = readQ(), still = [], rejected = [], sent = 0;
-    return q.reduce(function (p, req) {
-      return p.then(function () {
-        return sendAndClassify(req).then(function (result) {
-          if (result.kind === 'done') { sent++; }
-          else if (result.kind === 'reject') { req.tries++; req.error = 'rejected ' + result.response.status; rejected.push(req); }
-          else { req.tries++; still.push(req); }
-        }).catch(function () { req.tries++; still.push(req); });   // network error → keep for next reconnect
+    var list = readQ(),
+      still = [],
+      rejected = [],
+      sent = 0;
+    return list
+      .reduce(function (total, req) {
+        return total.then(function () {
+          return sendAndClassify(req)
+            .then(function (result) {
+              if (result.kind === 'done') {
+                sent++;
+              } else if (result.kind === 'reject') {
+                req.tries++;
+                req.error = 'rejected ' + result.response.status;
+                rejected.push(req);
+              } else {
+                req.tries++;
+                still.push(req);
+              }
+            })
+            .catch(function () {
+              req.tries++;
+              still.push(req);
+            }); // network error → keep for next reconnect
+        });
+      }, Promise.resolve())
+      .then(function () {
+        writeQ(still);
+        flushing = false;
+        if (rejected.length && cfg.onReject) cfg.onReject(rejected);
+        return { sent: sent, pending: still.length, rejected: rejected.length };
       });
-    }, Promise.resolve()).then(function () {
-      writeQ(still);
-      flushing = false;
-      if (rejected.length && cfg.onReject) cfg.onReject(rejected);
-      return { sent: sent, pending: still.length, rejected: rejected.length };
-    });
   }
   // submit now if online (and return the live response so callers can use the server id); else capture to the outbox.
   function submit(req) {
     req.id = req.id || req.idem || uuid();
     if (online()) {
-      return sendAndClassify(req).then(function (result) {
-        if (result.kind === 'retry') { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; }
-        return { ok: result.kind === 'done', online: true, status: result.response.status, res: result.response, id: req.id };
-      }).catch(function () { enqueue(req); return { ok: true, queued: true, online: false, id: req.id }; });
+      return sendAndClassify(req)
+        .then(function (result) {
+          if (result.kind === 'retry') {
+            enqueue(req);
+            return { ok: true, queued: true, online: false, id: req.id };
+          }
+          return { ok: result.kind === 'done', online: true, status: result.response.status, res: result.response, id: req.id };
+        })
+        .catch(function () {
+          enqueue(req);
+          return { ok: true, queued: true, online: false, id: req.id };
+        });
     }
-    enqueue(req); return Promise.resolve({ ok: true, queued: true, online: false, id: req.id });
+    enqueue(req);
+    return Promise.resolve({ ok: true, queued: true, online: false, id: req.id });
   }
 
-  function paint() { try { cfg.onChange({ online: online(), pending: pending() }); } catch (e) {} }
-  function configure(c) { for (var k in c) if (c.hasOwnProperty(k)) cfg[k] = c[k]; paint(); return API; }
+  function paint() {
+    try {
+      cfg.onChange({ online: online(), pending: pending() });
+    } catch (e) {}
+  }
+  function configure(c) {
+    for (var k in c) if (c.hasOwnProperty(k)) cfg[k] = c[k];
+    paint();
+    return API;
+  }
 
   if (root.addEventListener) {
-    root.addEventListener('online', function () { paint(); flush(); });
+    root.addEventListener('online', function () {
+      paint();
+      flush();
+    });
     root.addEventListener('offline', paint);
   }
 
@@ -109,34 +246,63 @@
     opts = opts || {};
     var skip = /pin|otp|password|pwd|cvv|secret/i;
     var eligible = function (f) {
-      var id = f.id || f.name; if (!id || skip.test(id)) return null;
+      var identifier = f.id || f.name;
+      if (!identifier || skip.test(identifier)) return null;
       var t = (f.type || '').toLowerCase();
       if (t === 'password' || t === 'file' || t === 'hidden' || t === 'checkbox' || t === 'radio') return null;
-      return id;
+      return identifier;
     };
     var collect = function () {
-      var o = {}, fs = container.querySelectorAll('input,textarea,select');
-      for (var i = 0; i < fs.length; i++) { var id = eligible(fs[i]); if (id && fs[i].value != null && fs[i].value !== '') o[id] = fs[i].value; }
+      var o = {},
+        nestedFs = container.querySelectorAll('input,textarea,select');
+      for (var position = 0; position < nestedFs.length; position++) {
+        var identifier = eligible(nestedFs[position]);
+        if (identifier && nestedFs[position].value != null && nestedFs[position].value !== '') o[identifier] = nestedFs[position].value;
+      }
       return o;
     };
-    var saved = loadDraft(key) || {}, restored = false, fs = container.querySelectorAll('input,textarea,select');
-    for (var i = 0; i < fs.length; i++) {
-      var id = eligible(fs[i]); if (!id) continue;
-      if (saved[id] != null && (opts.overwrite || fs[i].value === '' || fs[i].value == null)) { fs[i].value = saved[id]; restored = true; }
-      var h = function () { saveDraft(key, collect()); };
-      fs[i].addEventListener('input', h); fs[i].addEventListener('change', h);
+    var saved = loadDraft(key) || {},
+      restored = false,
+      fs = container.querySelectorAll('input,textarea,select');
+    for (var index = 0; index < fs.length; index++) {
+      var id = eligible(fs[index]);
+      if (!id) continue;
+      if (saved[id] != null && (opts.overwrite || fs[index].value === '' || fs[index].value == null)) {
+        fs[index].value = saved[id];
+        restored = true;
+      }
+      var h = function () {
+        saveDraft(key, collect());
+      };
+      fs[index].addEventListener('input', h);
+      fs[index].addEventListener('change', h);
     }
     return restored;
   }
 
   // ── service worker (Phase 3) — app opens offline + read-cache. Safe no-op where SW is unavailable. ──
   function registerSW(path) {
-    try { if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js').catch(function () {}); } catch (e) {}
+    try {
+      if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js').catch(function () {});
+    } catch (e) {}
   }
 
-  var API = { configure: configure, online: online, saveDraft: saveDraft, loadDraft: loadDraft, draftAge: draftAge,
-    clearDraft: clearDraft, autodraft: autodraft, submit: submit, enqueue: enqueue, flush: flush, pending: pending,
-    registerSW: registerSW, _classify: classify, _uuid: uuid };
+  var API = {
+    configure: configure,
+    online: online,
+    saveDraft: saveDraft,
+    loadDraft: loadDraft,
+    draftAge: draftAge,
+    clearDraft: clearDraft,
+    autodraft: autodraft,
+    submit: submit,
+    enqueue: enqueue,
+    flush: flush,
+    pending: pending,
+    registerSW: registerSW,
+    _classify: classify,
+    _uuid: uuid
+  };
   root.CBOffline = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : this);

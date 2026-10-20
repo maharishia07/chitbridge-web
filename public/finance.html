@@ -313,19 +313,23 @@ dialog.sheet::backdrop{background:var(--scrim)}
 <script>
 'use strict';
 /* ── the host globals the app's own files expect (app.html declares these with let/const; so does this page) ── */
-const CFG = { API_BASE: (function(){
-  try{
-    var forced = localStorage.getItem('cb_api_base');
-    if (forced) return forced === 'stage' ? window.CB_API : forced;
-    var h = location.hostname;
-    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
-  }catch(_){}
-  return window.CB_API;
-})() };
+const CFG = {
+  API_BASE: (function () {
+    try {
+      var forced = localStorage.getItem('cb_api_base');
+      if (forced) return forced === 'stage' ? window.CB_API : forced;
+      var h = location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+    } catch (_) {}
+    return window.CB_API;
+  })()
+};
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
-let UI = { vp: 'lap', lw: 340, custs: [], sups: [] };   /* the rows cap-books.js's party editor reads — empty here: Finance edits no party */
-function go(){ signedOut('Your session ended. Please sign in again.'); }
+let UI = { vp: 'lap', lw: 340, custs: [], sups: [] }; /* the rows cap-books.js's party editor reads — empty here: Finance edits no party */
+function go() {
+  signedOut('Your session ended. Please sign in again.');
+}
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
@@ -367,34 +371,69 @@ function go(){ signedOut('Your session ended. Please sign in again.'); }
 'use strict';
 /* ═══ CB Finance — the page: gate · chrome. The screen is cap-finance.js. (The frame is crm.html's / accounts.html's.) ═════════════ */
 const $ = (id) => document.getElementById(id);
-let SESS = null, MINE = null;
+let SESS = null,
+  MINE = null;
 
-function session(){
-  try{
-    const s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
-  }catch(_){ return null; }
+function session() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    return window.CBOnePerson && CBOnePerson.who(parsed) ? parsed : null;
+  } catch (_) {
+    return null;
+  }
 }
 /* the SMALL APP a screen key hands over to (CB_HOMES, accounts-shell.js) — never the workshop (IX0) */
-function navTo(k){ var h = CB_HOMES[k]; if (h) location.href = h; else toast(tx('Not built outside the workshop yet.')); }
-function openChitPage(id){ window.open(chitPageHref(id), '_blank', 'noopener'); }   /* the sheet's "Open page": the chit page in CB CRM (CRM2), this page keeps its place */
-function openChit(id){ openChitSheet(id); }
+function navTo(k) {
+  var h = CB_HOMES[k];
+  if (h) location.href = h;
+  else toast(tx('Not built outside the workshop yet.'));
+}
+function openChitPage(id) {
+  location.href = chitPageHref(id);
+} /* the sheet's "Open page": the chit page in CB CRM (CRM2), the same tab - Back returns (NAV-MAP 13) */
+function openChit(id) {
+  openChitSheet(id);
+}
 const confirmAsk = CBConfirm;
 
 /* ── a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (payOpen and Remind open here unchanged) ── */
-function modal(html){
-  const d = $('fin_sheet');
-  d.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
-  if (!d.open) { try { d.showModal(); } catch (_) { d.setAttribute('open', ''); } }
+function modal(html) {
+  const node = $('fin_sheet');
+  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  if (!node.open) {
+    try {
+      node.showModal();
+    } catch (_) {
+      node.setAttribute('open', '');
+    }
+  }
 }
-function closeModal(){
-  const d = $('fin_sheet'); try { d.close(); } catch (_) { d.removeAttribute('open'); } d.innerHTML = '';
-  const paid = typeof PAY !== 'undefined' && PAY && PAY.id;   /* a receipt was recorded: the list reads again, quietly */
-  if (paid) { PAY = null; finLoad(true); }
-  if (FIN.back) { const f = FIN.back; FIN.back = null; setTimeout(f, 0); }
+function closeModal() {
+  const node = $('fin_sheet');
+  try {
+    node.close();
+  } catch (_) {
+    node.removeAttribute('open');
+  }
+  node.innerHTML = '';
+  const paid = typeof PAY !== 'undefined' && PAY && PAY.id; /* a receipt was recorded: the list reads again, quietly */
+  if (paid) {
+    PAY = null;
+    finLoad(true);
+  }
+  if (FIN.back) {
+    const f = FIN.back;
+    FIN.back = null;
+    setTimeout(f, 0);
+  }
 }
-$('fin_sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeModal(); });
-$('fin_sheet').addEventListener('click', (e) => { if (e.target === $('fin_sheet')) closeModal(); });
+$('fin_sheet').addEventListener('cancel', (e) => {
+  e.preventDefault();
+  closeModal();
+});
+$('fin_sheet').addEventListener('click', (e) => {
+  if (e.target === $('fin_sheet')) closeModal();
+});
 
 /* ── the chrome ── */
 $('toggleNav').addEventListener('click', () => {
@@ -403,49 +442,107 @@ $('toggleNav').addEventListener('click', () => {
   $('toggleNav').setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
 });
 const railMq = window.matchMedia('(min-width:761px) and (max-width:1100px)');
-function railFit(){ const s = $('side'), t = $('toggleNav'); s.classList.toggle('collapsed', railMq.matches); const open = !s.classList.contains('collapsed'); t.setAttribute('aria-expanded', String(open)); t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar'); }
-if (railMq.addEventListener) railMq.addEventListener('change', railFit); railFit();
+function railFit() {
+  const node = $('side'),
+    t = $('toggleNav');
+  node.classList.toggle('collapsed', railMq.matches);
+  const open = !node.classList.contains('collapsed');
+  t.setAttribute('aria-expanded', String(open));
+  t.setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
+}
+if (railMq.addEventListener) railMq.addEventListener('change', railFit);
+railFit();
 /* SHELL-ONE: the frame, mounted once per session change (the shell mounts the bell and the avatar itself); signed out, the avatar's door scrolls to the sign-in card */
 let FRAME = null;
-function whoPaint(){
+function whoPaint() {
   const sessionToken = SESS ? SESS.token : null;
   if (FRAME && (FRAME.session ? FRAME.session.token : null) === sessionToken) return;
-  FRAME = CBFrame.mount({ app: 'finance', host: $('shell'), signin: false, avatar: { onSignIn: () => { const signinHost = $('signin-host'); if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' }); } } });
+  FRAME = CBFrame.mount({
+    app: 'finance',
+    host: $('shell'),
+    signin: false,
+    avatar: {
+      onSignIn: () => {
+        const signinHost = $('signin-host');
+        if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' });
+      }
+    }
+  });
   if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('finance');
 }
-function finCard(html, bad){
+function finCard(html, bad) {
   $('screen').className = 'screen';
   $('screen').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="fin-card">${html}</div>`;
 }
-function signedOut(why){
-  SESS = null; MINE = null; FIN.gen++;
-  whoPaint(); $('crumb').innerHTML = '';   /* the frame stays: its avatar is the Sign in door to the card below */
+function signedOut(why) {
+  SESS = null;
+  MINE = null;
+  FIN.gen++;
+  whoPaint();
+  $('crumb').innerHTML = ''; /* the frame stays: its avatar is the Sign in door to the card below */
   finCard(`<h2>${esc(why || 'You are signed out')}</h2><div id="signin-host" data-testid="signin-host"></div>`);
-  CBSignin.mount($('signin-host'), { apiBase: CFG.API_BASE, surface: 'finance', need: 'person', onIn: function(){ start(); } });
-}
-function closeFirst(r){
-  finCard(r.others.map((o, i) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(o))}</h2>
-      <button type="button" class="act" data-testid="close-first-go" data-i="${i}">${esc(CBOnePerson.buttonLabel(o))}</button>`).join(''), true);
-  $('screen').querySelectorAll('[data-testid="close-first-go"]').forEach((b) => {
-    b.onclick = () => {
-      $('screen').querySelectorAll('button').forEach((x) => { x.disabled = true; });
-      b.textContent = 'Signing it out…';
-      CBOnePerson.clearOut(r.others[+b.getAttribute('data-i')], MINE.name).then(start, start);
-    };
+  CBSignin.mount($('signin-host'), {
+    apiBase: CFG.API_BASE,
+    surface: 'finance',
+    need: 'person',
+    onIn: function () {
+      start();
+    }
   });
+}
+function closeFirst(r) {
+  finCard(
+    r.others
+      .map(
+        (item, index) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(item))}</h2>
+      <button type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`
+      )
+      .join(''),
+    true
+  );
+  $('screen')
+    .querySelectorAll('[data-testid="close-first-go"]')
+    .forEach((item) => {
+      item.onclick = () => {
+        $('screen')
+          .querySelectorAll('button')
+          .forEach((x) => {
+            x.disabled = true;
+          });
+        item.textContent = 'Signing it out…';
+        CBOnePerson.clearOut(r.others[+item.getAttribute('data-i')], MINE.name).then(start, start);
+      };
+    });
 }
 
 /* ═══ START ═══ */
-async function start(){
+async function start() {
   SESS = session();
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
-  SESSION = Object.assign({ token: null }, { entityId: MINE && MINE.ent, token: SESS.token, role: SESS.role, name: SESS.name, entity: SESS.entity, bridgeId: SESS.bridgeId, duty: SESS.duty, hat: SESS.hat, shop: SESS.shop });
+  SESSION = Object.assign(
+    { token: null },
+    {
+      entityId: MINE && MINE.ent,
+      token: SESS.token,
+      role: SESS.role,
+      name: SESS.name,
+      entity: SESS.entity,
+      bridgeId: SESS.bridgeId,
+      duty: SESS.duty,
+      hat: SESS.hat,
+      shop: SESS.shop
+    }
+  );
   const g = ++FIN.gen;
   whoPaint();
-  finMount(true);   /* the whole frame at once; only the rows change when the data arrives */
+  finMount(true); /* the whole frame at once; only the rows change when the data arrives */
   let t;
-  try{ t = await CBOnePerson.traces(MINE); }catch(_){ t = { others: [] }; }
+  try {
+    t = await CBOnePerson.traces(MINE);
+  } catch (_) {
+    t = { others: [] };
+  }
   if (g !== FIN.gen || !MINE) return;
   if (t.others.length) return closeFirst(t);
   if (window.CBKural) CBKural.set('accounts');
@@ -459,9 +556,17 @@ window.addEventListener('storage', (e) => {
   if (next && next.ent === MINE.ent) return;
   signedOut(next ? 'Signed out — ' + CBOnePerson.shopName(next) + ' opened in another tab.' : 'Signed out — you signed out in another tab.');
 });
-CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'Finance',
-  onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
-  onWipe: () => { location.replace('/?cleaned=1'); } });
+CBOnePerson.attach({
+  quiet: true,
+  who: () => MINE,
+  label: () => 'Finance',
+  onLeave: (by) => {
+    location.replace('/?left=' + encodeURIComponent(by || ''));
+  },
+  onWipe: () => {
+    location.replace('/?cleaned=1');
+  }
+});
 if (window.CBKural) CBKural.mount();
 start();
 </script>

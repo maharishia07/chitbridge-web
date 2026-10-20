@@ -26,11 +26,29 @@ function mergeBase(root, baseRef) {
 /** the `--- a/` · `+++ b/` · `/dev/null` lines: which file a section is about and whether it was added, deleted or modified */
 function noteFileLine(line, state) {
   let match;
-  if (/^diff --git /.test(line)) { state.current = null; state.oldPath = null; return true; }
-  if ((match = /^--- a\/(.+)$/.exec(line))) { state.oldPath = match[1]; return true; }
-  if (/^--- \/dev\/null/.test(line)) { state.oldPath = null; return true; }
-  if ((match = /^\+\+\+ b\/(.+)$/.exec(line))) { state.current = { file: match[1], status: state.oldPath ? 'modified' : 'added', ranges: [] }; state.touched.push(state.current); return true; }
-  if (/^\+\+\+ \/dev\/null/.test(line)) { if (state.oldPath) state.touched.push({ file: state.oldPath, status: 'deleted', ranges: [] }); state.current = null; return true; }
+  if (/^diff --git /.test(line)) {
+    state.current = null;
+    state.oldPath = null;
+    return true;
+  }
+  if ((match = /^--- a\/(.+)$/.exec(line))) {
+    state.oldPath = match[1];
+    return true;
+  }
+  if (/^--- \/dev\/null/.test(line)) {
+    state.oldPath = null;
+    return true;
+  }
+  if ((match = /^\+\+\+ b\/(.+)$/.exec(line))) {
+    state.current = { file: match[1], status: state.oldPath ? 'modified' : 'added', ranges: [] };
+    state.touched.push(state.current);
+    return true;
+  }
+  if (/^\+\+\+ \/dev\/null/.test(line)) {
+    if (state.oldPath) state.touched.push({ file: state.oldPath, status: 'deleted', ranges: [] });
+    state.current = null;
+    return true;
+  }
   return false;
 }
 
@@ -41,7 +59,8 @@ function parseDiff(text) {
     if (noteFileLine(line, state)) continue;
     const hunk = state.current && /^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/.exec(line);
     if (!hunk) continue;
-    const start = Number(hunk[1]), count = hunk[2] == null ? 1 : Number(hunk[2]);
+    const start = Number(hunk[1]),
+      count = hunk[2] == null ? 1 : Number(hunk[2]);
     state.current.ranges.push([start, start + Math.max(count, 1) - 1]);
   }
   return state.touched;
@@ -64,6 +83,8 @@ function baseText(root, baseSha, file) {
   return shown.ok ? shown.out : null;
 }
 
-function shortSha(commitSha) { return String(commitSha || '').slice(0, 7); }
+function shortSha(commitSha) {
+  return String(commitSha || '').slice(0, 7);
+}
 
 module.exports = { mergeBase, touched, baseText, parseDiff, shortSha };

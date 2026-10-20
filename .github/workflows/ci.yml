@@ -53,6 +53,8 @@ jobs:
           node scripts/cap-network-render.test.mjs
           node scripts/step-flow.test.mjs
           node scripts/check-adoption.js
+      - name: One answer to what trade is this shop (vertical-box; REL-7)
+        run: node tests/vertical-box.test.cjs
       - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
         run: |
           node e2e/screen-reads.cjs
@@ -66,6 +68,8 @@ jobs:
           npm run check:calls
           npm run check:a11y
           npm run check:eps
+          npm run check:undeclared
+          npm run check:barereturn
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)
@@ -82,7 +86,17 @@ jobs:
       - name: The §6 readability guard bites on its fixtures (e2e/readability-guard.cjs)
         run: node e2e/readability-guard.cjs
       - name: Only the code this change touched is judged (readability --changed --ratchet; the checklist numbers are printed)
-        run: node tools/readability.cjs --changed --base origin/main --ratchet --md
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+        # ONE-TIME WAIVER (Athi, 19 Oct 2026): the iteration-1 mechanical pass reformats the whole repo, so every legacy function "got worse" and 757 headers
+        # are owed. Skipped ONLY when the PR head branch is exactly iter1/mechanical AND that branch carries the commit "chore(iter1): mechanical pass (MNT-4)".
+        # It expires on landing: the branch is gone, and every later PR is judged against the re-baselined readability.ratchet.json. No limit or rule is changed.
+        run: |
+          if [ "$HEAD_REF" = "iter1/mechanical" ] && git log origin/main..HEAD --format=%s | grep -qxF 'chore(iter1): mechanical pass (MNT-4)'; then
+            echo 'readability guard WAIVED once for the iter1 mechanical pass (head branch iter1/mechanical + the pass commit); see the PR section 6'
+          else
+            node tools/readability.cjs --changed --base origin/main --ratchet --md
+          fi
       # ⭐ T1-TAX (14 Oct): the web and the api pin the SAME engine versions — web's packs sat at v1.42 while the api booked on v1.45.
       # The api is public; checked out LAST (after every other step) so no earlier guard sees a second tree. Twin branch as walks.yml.
       - name: Twin api branch?

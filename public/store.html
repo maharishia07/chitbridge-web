@@ -68,81 +68,191 @@
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="/engine/locale.js"></script>
 <script>
-  if (window.CBFrame) CBFrame.mount({ app:'store', bar:true, signin:false, host:document.getElementById('shell'), homeHref:location.pathname+location.search, title:{ icon:'◇', name:'Store' } });   /* SHELL-ONE */
-  var API = window.CB_API;
-  var NET = new URLSearchParams(location.search).get('net') || '';
-  var STATE = { all: [], categories: [], q: '', cat: '', cart: {}, cur: '' };
+if (window.CBFrame)
+  CBFrame.mount({
+    app: 'store',
+    bar: true,
+    signin: false,
+    host: document.getElementById('shell'),
+    homeHref: location.pathname + location.search,
+    title: { icon: '◇', name: 'Store' }
+  }); /* SHELL-ONE */
+var API = window.CB_API;
+var NET = new URLSearchParams(location.search).get('net') || '';
+var STATE = { all: [], categories: [], q: '', cat: '', cart: {}, cur: '' };
 
-  function rs(v){ if (v == null) return ''; try { return CBLocale.money(Number(v), STATE.cur || ''); } catch(e){ return (STATE.cur ? STATE.cur + ' ' : '') + v; } }   /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
-  function toast(m){ var t = document.getElementById('toast'); t.textContent = m; t.className = 'toast show'; setTimeout(function(){ t.className = 'toast'; }, 1800); }
+function rs(v) {
+  if (v == null) return '';
+  try {
+    return CBLocale.money(Number(v), STATE.cur || '');
+  } catch (e) {
+    return (STATE.cur ? STATE.cur + ' ' : '') + v;
+  }
+} /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
+function toast(m) {
+  var node = document.getElementById('toast');
+  node.textContent = m;
+  node.className = 'toast show';
+  setTimeout(function () {
+    node.className = 'toast';
+  }, 1800);
+}
 
-  function addToCart(pid){ STATE.cart[pid] = (STATE.cart[pid] || 0) + 1; renderCart(); var p = STATE.all.find(function(x){ return x.product_id === pid; }); toast((p ? p.name : 'Item') + ' added'); }
-  function cartItems(){ return Object.keys(STATE.cart).map(function(pid){ var p = STATE.all.find(function(x){ return x.product_id === pid; }) || {}; return { product_id: pid, qty: STATE.cart[pid], name: p.name, price: p.price }; }); }
-  function renderCart(){
-    var bar = document.getElementById('cartbar'); var ci = cartItems();
-    var n = ci.reduce(function(s,i){ return s + i.qty; }, 0), tot = ci.reduce(function(s,i){ return s + (i.price || 0) * i.qty; }, 0);
-    if (!n){ bar.className = 'cartbar'; bar.innerHTML = ''; return; }
-    bar.className = 'cartbar show';
-    bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button onclick="placeOrder()">Place order</button>';
-  }
-  function placeOrder(){
-    var name = prompt('Your name:', ''); if (name === null) return;
-    var email = prompt('Your email (optional):', '') || '';
-    var body = { items: cartItems().map(function(i){ return { product_id: i.product_id, qty: i.qty }; }), customer: { name: name || 'Customer', email: email } };
-    fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET) + '/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function(r){ return r.json(); })
-      .then(function(j){ if (j && j.ok){ STATE.cart = {}; renderCart(); alert('✓ Order placed!\nOrder #' + String(j.order_id).slice(0, 8) + '\n' + j.item_count + ' item(s) · ' + rs(j.total)); }
-        else { toast((j && j.message) || 'Order failed'); } })
-      .catch(function(){ toast('Order failed — try again.'); });
-  }
-
-  function visible(){
-    return STATE.all.filter(function(p){
-      if (STATE.cat && p.category !== STATE.cat) return false;
-      if (STATE.q){ var s = (p.name + ' ' + p.category).toLowerCase(); if (s.indexOf(STATE.q.toLowerCase()) < 0) return false; }
-      return true;
-    });
-  }
-  function renderCats(){
-    var el = document.getElementById('cats');
-    var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
-    STATE.categories.forEach(function(c){ chips.push('<span class="chip ' + (STATE.cat === c ? 'on' : '') + '" data-cat="' + esc(c) + '">' + esc(c) + '</span>'); });
-    el.innerHTML = chips.join('');
-  }
-  function renderBody(){
-    var items = visible();
-    document.getElementById('count').textContent = items.length + ' product' + (items.length === 1 ? '' : 's');
-    var body = document.getElementById('body');
-    if (!items.length){ body.innerHTML = '<div class="msg"><div class="big">🔍</div>No products' + (STATE.q ? ' for “' + esc(STATE.q) + '”' : '') + '.</div>'; return; }
-    body.innerHTML = '<div class="grid">' + items.map(function(p){
-      return '<div class="card"><span class="cat">' + esc(p.category) + '</span>'
-        + '<div class="nm">' + esc(p.name) + '</div>'
-        + '<div class="pr">' + (p.price != null ? rs(p.price) : '') + '</div>'
-        + '<button onclick="addToCart(\'' + p.product_id + '\')">Add</button></div>';
-    }).join('') + '</div>';
-  }
-  window.setCat = function(c){ STATE.cat = c; renderCats(); renderBody(); };
-  /* SEC-FIX2 H4: a chip carries its category as DATA (esc'd once) and one listener reads it back — no handler is ever built from a shop's text. */
-  document.getElementById('cats').addEventListener('click', function(e){
-    var chip = e.target.closest('[data-cat]');
-    if (chip) window.setCat(chip.getAttribute('data-cat'));
+function addToCart(pid) {
+  STATE.cart[pid] = (STATE.cart[pid] || 0) + 1;
+  renderCart();
+  var p = STATE.all.find(function (x) {
+    return x.product_id === pid;
   });
-
-  document.getElementById('q').addEventListener('input', function(e){ STATE.q = e.target.value; renderBody(); });
-
-  function load(){
-    if (!NET){ document.getElementById('body').innerHTML = '<div class="msg"><div class="big">🛍️</div>No store specified. Open with <code>?net=&lt;network id&gt;</code>.</div>'; return; }
-    document.getElementById('netlabel').textContent = NET;
-    fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET), { cache: 'no-store' })
-      .then(function(r){ return r.json(); })
-      .then(function(j){
-        STATE.all = j.products || []; STATE.categories = j.categories || []; STATE.cur = j.currency_code || (j.shop && j.shop.currency_code) || (j.network && j.network.currency_code) || '';
-        renderCats(); renderBody();
-        document.getElementById('foot').innerHTML = 'One storefront across every line of business. You see products — never the network\'s internal departments, locations, or supply. Powered by Chit &amp; Bridge.';
-      })
-      .catch(function(){ document.getElementById('body').innerHTML = '<div class="msg"><div class="big">⚠️</div>Could not load the store. Try again.</div>'; });
+  toast((p ? p.name : 'Item') + ' added');
+}
+function cartItems() {
+  return Object.keys(STATE.cart).map(function (pid) {
+    var p =
+      STATE.all.find(function (x) {
+        return x.product_id === pid;
+      }) || {};
+    return { product_id: pid, qty: STATE.cart[pid], name: p.name, price: p.price };
+  });
+}
+function renderCart() {
+  var bar = document.getElementById('cartbar');
+  var list = cartItems();
+  var n = list.reduce(function (total, item) {
+      return total + item.qty;
+    }, 0),
+    tot = list.reduce(function (total, item) {
+      return total + (item.price || 0) * item.qty;
+    }, 0);
+  if (!n) {
+    bar.className = 'cartbar';
+    bar.innerHTML = '';
+    return;
   }
-  load();
+  bar.className = 'cartbar show';
+  bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button onclick="placeOrder()">Place order</button>';
+}
+function placeOrder() {
+  var name = prompt('Your name:', '');
+  if (name === null) return;
+  var email = prompt('Your email (optional):', '') || '';
+  var body = {
+    items: cartItems().map(function (item) {
+      return { product_id: item.product_id, qty: item.qty };
+    }),
+    customer: { name: name || 'Customer', email: email }
+  };
+  fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET) + '/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function (reply) {
+      return reply.json();
+    })
+    .then(function (reply) {
+      if (reply && reply.ok) {
+        STATE.cart = {};
+        renderCart();
+        alert('✓ Order placed!\nOrder #' + String(reply.order_id).slice(0, 8) + '\n' + reply.item_count + ' item(s) · ' + rs(reply.total));
+      } else {
+        toast((reply && reply.message) || 'Order failed');
+      }
+    })
+    .catch(function () {
+      toast('Order failed — try again.');
+    });
+}
+
+function visible() {
+  return STATE.all.filter(function (item) {
+    if (STATE.cat && item.category !== STATE.cat) return false;
+    if (STATE.q) {
+      var s = (item.name + ' ' + item.category).toLowerCase();
+      if (s.indexOf(STATE.q.toLowerCase()) < 0) return false;
+    }
+    return true;
+  });
+}
+function renderCats() {
+  var el = document.getElementById('cats');
+  var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
+  STATE.categories.forEach(function (item) {
+    chips.push('<span class="chip ' + (STATE.cat === item ? 'on' : '') + '" data-cat="' + esc(item) + '">' + esc(item) + '</span>');
+  });
+  el.innerHTML = chips.join('');
+}
+function renderBody() {
+  var items = visible();
+  document.getElementById('count').textContent = items.length + ' product' + (items.length === 1 ? '' : 's');
+  var body = document.getElementById('body');
+  if (!items.length) {
+    body.innerHTML = '<div class="msg"><div class="big">🔍</div>No products' + (STATE.q ? ' for “' + esc(STATE.q) + '”' : '') + '.</div>';
+    return;
+  }
+  body.innerHTML =
+    '<div class="grid">' +
+    items
+      .map(function (item) {
+        return (
+          '<div class="card"><span class="cat">' +
+          esc(item.category) +
+          '</span>' +
+          '<div class="nm">' +
+          esc(item.name) +
+          '</div>' +
+          '<div class="pr">' +
+          (item.price != null ? rs(item.price) : '') +
+          '</div>' +
+          '<button onclick="addToCart(\'' +
+          item.product_id +
+          '\')">Add</button></div>'
+        );
+      })
+      .join('') +
+    '</div>';
+}
+window.setCat = function (c) {
+  STATE.cat = c;
+  renderCats();
+  renderBody();
+};
+/* SEC-FIX2 H4: a chip carries its category as DATA (esc'd once) and one listener reads it back — no handler is ever built from a shop's text. */
+document.getElementById('cats').addEventListener('click', function (e) {
+  var chip = e.target.closest('[data-cat]');
+  if (chip) window.setCat(chip.getAttribute('data-cat'));
+});
+
+document.getElementById('q').addEventListener('input', function (e) {
+  STATE.q = e.target.value;
+  renderBody();
+});
+
+function load() {
+  if (!NET) {
+    document.getElementById('body').innerHTML =
+      '<div class="msg"><div class="big">🛍️</div>No store specified. Open with <code>?net=&lt;network id&gt;</code>.</div>';
+    return;
+  }
+  document.getElementById('netlabel').textContent = NET;
+  fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET), { cache: 'no-store' })
+    .then(function (reply) {
+      return reply.json();
+    })
+    .then(function (reply) {
+      STATE.all = reply.products || [];
+      STATE.categories = reply.categories || [];
+      STATE.cur = reply.currency_code || (reply.shop && reply.shop.currency_code) || (reply.network && reply.network.currency_code) || '';
+      renderCats();
+      renderBody();
+      document.getElementById('foot').innerHTML =
+        "One storefront across every line of business. You see products — never the network's internal departments, locations, or supply. Powered by Chit &amp; Bridge.";
+    })
+    .catch(function () {
+      document.getElementById('body').innerHTML = '<div class="msg"><div class="big">⚠️</div>Could not load the store. Try again.</div>';
+    });
+}
+load();
 </script>
 </body>
 </html>

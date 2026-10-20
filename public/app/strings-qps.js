@@ -27,34 +27,100 @@
 
   /* ASCII → an accented look-alike that still reads as the letter (so a tester can read the screen). */
   var MAP = {
-    a: 'à', b: 'ƀ', c: 'ç', d: 'ď', e: 'é', f: 'ƒ', g: 'ĝ', h: 'ĥ', i: 'ï', j: 'ĵ', k: 'ķ', l: 'ļ', m: 'ɱ',
-    n: 'ñ', o: 'ö', p: 'þ', q: 'ɋ', r: 'ŕ', s: 'š', t: 'ţ', u: 'û', v: 'ṽ', w: 'ŵ', x: 'ẋ', y: 'ý', z: 'ž',
-    A: 'Å', B: 'Ɓ', C: 'Ç', D: 'Ď', E: 'É', F: 'Ƒ', G: 'Ĝ', H: 'Ĥ', I: 'Ï', J: 'Ĵ', K: 'Ķ', L: 'Ļ', M: 'Ṃ',
-    N: 'Ñ', O: 'Ö', P: 'Þ', Q: 'Ꝗ', R: 'Ŕ', S: 'Ŝ', T: 'Ţ', U: 'Û', V: 'Ṽ', W: 'Ŵ', X: 'Ẍ', Y: 'Ý', Z: 'Ž'
+    a: 'à',
+    b: 'ƀ',
+    c: 'ç',
+    d: 'ď',
+    e: 'é',
+    f: 'ƒ',
+    g: 'ĝ',
+    h: 'ĥ',
+    i: 'ï',
+    j: 'ĵ',
+    k: 'ķ',
+    l: 'ļ',
+    m: 'ɱ',
+    n: 'ñ',
+    o: 'ö',
+    p: 'þ',
+    q: 'ɋ',
+    r: 'ŕ',
+    s: 'š',
+    t: 'ţ',
+    u: 'û',
+    v: 'ṽ',
+    w: 'ŵ',
+    x: 'ẋ',
+    y: 'ý',
+    z: 'ž',
+    A: 'Å',
+    B: 'Ɓ',
+    C: 'Ç',
+    D: 'Ď',
+    E: 'É',
+    F: 'Ƒ',
+    G: 'Ĝ',
+    H: 'Ĥ',
+    I: 'Ï',
+    J: 'Ĵ',
+    K: 'Ķ',
+    L: 'Ļ',
+    M: 'Ṃ',
+    N: 'Ñ',
+    O: 'Ö',
+    P: 'Þ',
+    Q: 'Ꝗ',
+    R: 'Ŕ',
+    S: 'Ŝ',
+    T: 'Ţ',
+    U: 'Û',
+    V: 'Ṽ',
+    W: 'Ŵ',
+    X: 'Ẍ',
+    Y: 'Ý',
+    Z: 'Ž'
   };
   /* the parts that must survive untouched: a tag, a placeholder, an entity */
   var KEEP = /(<[^>]*>|\{[^}]*\}|&[#A-Za-z0-9]+;)/g;
 
-  function accent(s) {
-    return s.replace(/[A-Za-z]/g, function (ch) { return MAP[ch] || ch; });
+  function accent(text) {
+    return text.replace(/[A-Za-z]/g, function (ch) {
+      return MAP[ch] || ch;
+    });
   }
 
   /** The pseudo form of one English string. A test asserts it the way a screen reaches it: `tx('Sales')` with cb_lang = qps. */
   function pseudo(english) {
-    var s = String(english == null ? '' : english);
-    if (!s) return s;
-    var ctx = s.indexOf('\u0004'); if (ctx >= 0) s = s.slice(ctx + 1);          /* gettext context: ctx\u0004msgid */
-    var pl = s.indexOf('\u0005'); if (pl >= 0) s = s.slice(0, pl);               /* gettext plural:  msgid\u0005category */
-    if (!/[A-Za-z]/.test(s)) return s;                                           /* glyphs, digits — nothing to mark */
-    var out = s.split(KEEP).map(function (part, i) { return (i % 2) ? part : accent(part); }).join('');
+    var text = String(english == null ? '' : english);
+    if (!text) return text;
+    var ctx = text.indexOf('\u0004');
+    if (ctx >= 0) text = text.slice(ctx + 1); /* gettext context: ctx\u0004msgid */
+    var pl = text.indexOf('\u0005');
+    if (pl >= 0) text = text.slice(0, pl); /* gettext plural:  msgid\u0005category */
+    if (!/[A-Za-z]/.test(text)) return text; /* glyphs, digits — nothing to mark */
+    var out = text
+      .split(KEEP)
+      .map(function (part, index) {
+        return index % 2 ? part : accent(part);
+      })
+      .join('');
     /* ~40 % longer: the brackets and spaces give four, the '!' runs give the rest — at least two a side, as the standard example "[!! Ŝàļéš !!]" */
-    var bang = Array(Math.max(2, Math.ceil(s.length * 0.2)) + 1).join('!');
+    var bang = Array(Math.max(2, Math.ceil(text.length * 0.2)) + 1).join('!');
     return '[' + bang + ' ' + out + ' ' + bang + ']';
   }
 
-  CBSTR.qps = new Proxy({}, {
-    get: function (target, key) { return (typeof key === 'string') ? pseudo(key) : undefined; },
-    has: function () { return true; }
-  });
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  CBSTR.qps = new Proxy(
+    {},
+    {
+      get: function (target, key) {
+        return typeof key === 'string' ? pseudo(key) : undefined;
+      },
+      has: function () {
+        return true;
+      }
+    }
+  );
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

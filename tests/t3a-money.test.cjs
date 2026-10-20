@@ -36,7 +36,7 @@ ok(cb.bkDuesSide(paidAhead) === 'pay', 'M137: the ledger tree still files the su
 
 /* ── M136/M139/M132/M138: the words and the doors are in the source the page runs ── */
 ok(/Nobody owes you money/.test(books) && /You owe nobody/.test(books), 'M136: the empty sides say "Nobody owes you money" / "You owe nobody"');
-ok(/filters: onlySide \? \[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
+ok(/filters: onlySide\s*\?\s*\[\]/.test(books), 'M136: a page\'s own side is not a filter chip');
 ok(/These filters match nothing here/.test(src('list-ctl.js')) && !/These filters'\) \+ ' '\) \+ esc\(T\(I, 'matches/.test(src('list-ctl.js')), 'M136: "These filters match nothing here" (grammar)');
 const acc = fs.readFileSync(__dirname + '/../public/accounts.html', 'utf8');
 ok(/\['bills', 'Unpaid bills'/.test(acc), 'M139: the menu says "Unpaid bills"');

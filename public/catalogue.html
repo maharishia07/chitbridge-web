@@ -98,12 +98,22 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script>
 'use strict';
 /* ── the host globals the workshop's own files expect (app.html declares these with let/const; so does this page — as settings.html does) ── */
-const CFG = { API_BASE: (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API };   /* HX1: the deploy's api address from /config.js */
+const CFG = { API_BASE: (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API }; /* HX1: the deploy's api address from /config.js */
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
-const EP = {};                       /* CB_SHOP_EP (accounts-shell.js) + CB_DEFS_EP (core.js) + CB_CATALOGUE_EP (cap-catalogue.js) */
-let UI = { vp: 'lap', lw: 340, mdetail: false, prods: null };   /* cap-categories.js reads UI.vp; the declared columns live on UI._catFields, as in the workshop */
-function val(id){ const el = document.getElementById(id); return el ? el.value.trim() : ''; }
-function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
+const EP = {}; /* CB_SHOP_EP (accounts-shell.js) + CB_DEFS_EP (core.js) + CB_CATALOGUE_EP (cap-catalogue.js) */
+let UI = {
+  vp: 'lap',
+  lw: 340,
+  mdetail: false,
+  prods: null
+}; /* cap-categories.js reads UI.vp; the declared columns live on UI._catFields, as in the workshop */
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function go() {
+  if (window.CBFrame) CBFrame.ended();
+} /* api()'s 401 → drop the session, the one sign-in window shows (page-frame.js) */
 </script>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>
@@ -130,32 +140,73 @@ function go(){ if (window.CBFrame) CBFrame.ended(); }   /* api()'s 401 → drop 
 'use strict';
 (function () {
   var SECTIONS = [
-    { k: 'items',      label: 'Items',      icon: 'M4 6h16M4 12h16M4 18h10' },
+    { k: 'items', label: 'Items', icon: 'M4 6h16M4 12h16M4 18h10' },
     { k: 'categories', label: 'Categories', icon: 'M3 7l9-4 9 4-9 4-9-4M3 12l9 4 9-4M3 17l9 4 9-4' },
-    { k: 'import',     label: 'Import',     icon: 'M12 3v12M6 9l6 6 6-6M4 21h16' }
+    { k: 'import', label: 'Import', icon: 'M12 3v12M6 9l6 6 6-6M4 21h16' }
   ];
   /* FX-UX2: the head's CFG ran BEFORE shell.js loaded — asked again now (cb_api_base · localhost → :3000 · else CB_API — the one rule, shell.js apiBase) */
   if (window.CBShell && CBShell.apiBase) CFG.API_BASE = CBShell.apiBase() || CFG.API_BASE;
-  var host = document.getElementById('cat'), frame = null, app = null;
-  function secOf(){ var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&\/]/)[0]; return SECTIONS.some(function (s) { return s.k === h; }) ? h : 'items'; }
-  function marked(k){ if (frame && frame.skeleton) frame.skeleton.setActive(k); if (location.hash !== '#/' + k) { try { history.replaceState(null, '', '#/' + k); } catch (_) {} } }
-  function paint(k){ if (app) app.show(k); else marked(k); }
-  frame = CBFrame.mount({ app: 'catalogue', kural: 'sales', work: host,
-    skeleton: { name: 'Catalogue', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', sections: SECTIONS, active: secOf(), onSection: paint } });
-  var sess = frame.session;
-  if (!sess || !sess.token) { host.innerHTML = '<div class="empty" data-testid="cat-signin"><div class="t">Sign in above</div></div>'; return; }
-  var me = CBOnePerson.who(sess);
-  SESSION = { token: sess.token, role: sess.role, name: sess.name, entity: sess.entity, bridgeId: sess.bridgeId, entityId: me && me.ent, actorId: sess.role === 'actor' ? (me && me.uid) : null };
-  window.addEventListener('hashchange', function () { paint(secOf()); });
-  /* the shop's own record first: its currency is the symbol beside every price, its country the pack whose words the form uses */
-  api('me').then(function (r) { return (r && r.entity) || r || {}; }).catch(function (e) {
-    cblog('warn', 'catalogue: the shop record could not be read — prices show the code, not the symbol: ' + ((e && e.message) || e));
-    return {};
-  }).then(function (shop) {
-    SESSION.country = shop.country_code || shop.country || SESSION.country;
-    SESSION.currency = shop.currency_code || shop.currency || SESSION.currency;
-    app = CBCatalogueApp.mount(host, { me: shop, section: secOf(), onSection: marked });
+  var host = document.getElementById('cat'),
+    frame = null,
+    app = null;
+  function secOf() {
+    var h = (location.hash || '').replace(/^#\/?/, '').split(/[?&\/]/)[0];
+    return SECTIONS.some(function (item) {
+      return item.k === h;
+    })
+      ? h
+      : 'items';
+  }
+  function marked(k) {
+    if (frame && frame.skeleton) frame.skeleton.setActive(k);
+    if (location.hash !== '#/' + k) {
+      try {
+        history.replaceState(null, '', '#/' + k);
+      } catch (_) {}
+    }
+  }
+  function paint(k) {
+    if (app) app.show(k);
+    else marked(k);
+  }
+  frame = CBFrame.mount({
+    app: 'catalogue',
+    kural: 'sales',
+    work: host,
+    skeleton: { name: 'Catalogue', icon: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', sections: SECTIONS, active: secOf(), onSection: paint }
   });
+  var sess = frame.session;
+  if (!sess || !sess.token) {
+    host.innerHTML = '<div class="empty" data-testid="cat-signin"><div class="t">Sign in above</div></div>';
+    return;
+  }
+  var me = CBOnePerson.who(sess);
+  SESSION = {
+    token: sess.token,
+    role: sess.role,
+    name: sess.name,
+    entity: sess.entity,
+    bridgeId: sess.bridgeId,
+    entityId: me && me.ent,
+    actorId: sess.role === 'actor' ? me && me.uid : null
+  };
+  window.addEventListener('hashchange', function () {
+    paint(secOf());
+  });
+  /* the shop's own record first: its currency is the symbol beside every price, its country the pack whose words the form uses */
+  api('me')
+    .then(function (reply) {
+      return (reply && reply.entity) || reply || {};
+    })
+    .catch(function (e) {
+      cblog('warn', 'catalogue: the shop record could not be read — prices show the code, not the symbol: ' + ((e && e.message) || e));
+      return {};
+    })
+    .then(function (shop) {
+      SESSION.country = shop.country_code || shop.country || SESSION.country;
+      SESSION.currency = shop.currency_code || shop.currency || SESSION.currency;
+      app = CBCatalogueApp.mount(host, { me: shop, section: secOf(), onSection: marked });
+    });
 })();
 </script>
 </body>

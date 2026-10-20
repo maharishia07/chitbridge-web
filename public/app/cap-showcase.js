@@ -6,25 +6,69 @@
  *   CBShowcasePick.html({ current, shopId, t, cls, clsOn, why, origin }) → the buttons + the preview frame
  *     cls / clsOn: the host's button classes (the workshop's `btn` / `btn primary`; CB CRM's `act sm ghost` / `act sm`)
  *     why: a sentence → every button is shown greyed with it (the server's or the level's may/why), never hidden
+ 
+ * CALLED BY public/app/cap-admin.js, public/app/cap-crm-groups.js, public/app/cart.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
-  var _e = function (s) { return root.esc(s); };   /* the ONE escaper (app/helpers.js esc), loaded by every host before this file — never a copy */
+  var _e = function (s) {
+    return root.esc(s);
+  }; /* the ONE escaper (app/helpers.js esc), loaded by every host before this file — never a copy */
   var WORD = { gallery: 'Gallery', menu: 'Menu', specs: 'Specs', booking: 'Booking' };
-  function previewUrl(o, name) { return (o.origin || '') + '/shop.html?s=' + encodeURIComponent(o.shopId) + '&preview=1&showcase=' + encodeURIComponent(name); }
+  function previewUrl(o, name) {
+    return (o.origin || '') + '/shop.html?s=' + encodeURIComponent(o.shopId) + '&preview=1&showcase=' + encodeURIComponent(name);
+  }
   function html(o) {
     o = o || {};
-    var SC = root.CBShowcase; if (!SC) return '';
-    var t = typeof o.t === 'function' ? o.t : function (s) { return s; };
-    var cur = (o.current && SC.TEMPLATES[o.current]) ? o.current : SC.DEFAULT, why = o.why || '';
-    var btn = Object.keys(SC.TEMPLATES).map(function (n) {
-      var tp = SC.TEMPLATES[n], on = n === cur;
-      return '<button type="button" class="' + _e(on ? (o.clsOn || 'btn primary') : (o.cls || 'btn')) + '" data-testid="sc-pick" data-name="' + _e(n) + '" data-sc-pick="' + _e(n) + '" aria-pressed="' + on + '"'
-        + (why ? ' disabled aria-disabled="true" title="' + _e(why) + '"' : '') + '>' + _e(t(tp.vertical.charAt(0).toUpperCase() + tp.vertical.slice(1)) + ' · ' + t(WORD[tp.template] || tp.template)) + (on ? ' ✓' : '') + '</button>';
-    }).join(' ');
-    return '<div class="sc-picks" data-testid="sc-picks" data-current="' + _e(cur) + '">' + btn + '</div>' + (why ? '<div class="hint" data-testid="sc-pick-why">' + _e(why) + '</div>' : '')
-      + (o.shopId ? '<iframe title="' + _e(t('Preview')) + '" data-testid="sc-preview" src="' + _e(previewUrl(o, cur)) + '" class="sc-frame" style="width:100%;max-width:390px;height:560px;border:1px solid var(--line,#e6dcc6);border-radius:12px;margin-top:10px;background:var(--card,#fffdf8)"></iframe>' : '');
+    var SC = root.CBShowcase;
+    if (!SC) return '';
+    var t =
+      typeof o.t === 'function'
+        ? o.t
+        : function (s) {
+            return s;
+          };
+    var cur = o.current && SC.TEMPLATES[o.current] ? o.current : SC.DEFAULT,
+      why = o.why || '';
+    var btn = Object.keys(SC.TEMPLATES)
+      .map(function (item) {
+        var tp = SC.TEMPLATES[item],
+          on = item === cur;
+        return (
+          '<button type="button" class="' +
+          _e(on ? o.clsOn || 'btn primary' : o.cls || 'btn') +
+          '" data-testid="sc-pick" data-name="' +
+          _e(item) +
+          '" data-sc-pick="' +
+          _e(item) +
+          '" aria-pressed="' +
+          on +
+          '"' +
+          (why ? ' disabled aria-disabled="true" title="' + _e(why) + '"' : '') +
+          '>' +
+          _e(t(tp.vertical.charAt(0).toUpperCase() + tp.vertical.slice(1)) + ' · ' + t(WORD[tp.template] || tp.template)) +
+          (on ? ' ✓' : '') +
+          '</button>'
+        );
+      })
+      .join(' ');
+    return (
+      '<div class="sc-picks" data-testid="sc-picks" data-current="' +
+      _e(cur) +
+      '">' +
+      btn +
+      '</div>' +
+      (why ? '<div class="hint" data-testid="sc-pick-why">' + _e(why) + '</div>' : '') +
+      (o.shopId
+        ? '<iframe title="' +
+          _e(t('Preview')) +
+          '" data-testid="sc-preview" src="' +
+          _e(previewUrl(o, cur)) +
+          '" class="sc-frame" style="width:100%;max-width:390px;height:560px;border:1px solid var(--line,#e6dcc6);border-radius:12px;margin-top:10px;background:var(--card,#fffdf8)"></iframe>'
+        : '')
+    );
   }
   var api = { html: html, previewUrl: previewUrl, WORD: WORD };
-  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.CBShowcasePick = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.CBShowcasePick = api;
 })(typeof window !== 'undefined' ? window : globalThis);

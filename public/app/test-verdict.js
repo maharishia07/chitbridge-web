@@ -1,4 +1,7 @@
 /* app/test-verdict.js — what would make this red green. ONE judgement, two surfaces.
+ * OWNS the verdict judgement, the shared counts, the cite line and the not-evidence mark · CALLED BY app/cap-testing.js (the Test panel) and testing.html
+ * FLOW  case + last result → testCounts / testCiteLine / testIsEvidence → the panel row
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  *
  * ── ⭐⭐ WHY THIS IS ITS OWN FILE ────────────────────────────────────────────────────────────────────────────
  *
@@ -29,15 +32,13 @@
 'use strict';
 
 var TEST_TODO = {
-  'never run':   { icon: '○', tone: 'dim',   say: 'nobody has run it' },
-  'ok':          { icon: '✓', tone: 'ok',    say: 'nothing to do' },
-  're-run':      { icon: '⟳', tone: 'warn',  say: 're-run — the file changed after this result' },
-  'environment': { icon: '⚙', tone: 'warn',  say: 'needs something the run did not have' },
-  'decision':    { icon: '⏸', tone: 'warn',  say: 'a decision nobody has made yet' },
-  'defect':      { icon: '✗', tone: 'bad',
-                   say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
-  'unknown':     { icon: '?',      tone: 'dim',
-                   say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' },
+  'never run': { icon: '○', tone: 'dim', say: 'nobody has run it' },
+  'ok': { icon: '✓', tone: 'ok', say: 'nothing to do' },
+  're-run': { icon: '⟳', tone: 'warn', say: 're-run — the file changed after this result' },
+  'environment': { icon: '⚙', tone: 'warn', say: 'needs something the run did not have' },
+  'decision': { icon: '⏸', tone: 'warn', say: 'a decision nobody has made yet' },
+  'defect': { icon: '✗', tone: 'bad', say: 'a defect — unchanged since this result, and it needs nothing it did not have' },
+  'unknown': { icon: '?', tone: 'dim', say: 'cannot tell yet — this board has not been rebuilt since the file facts were added' }
 };
 
 /**
@@ -92,13 +93,40 @@ function testVerdictLabel(c, last) {
  */
 function testCounts(cases, last) {
   const n = { total: 0, pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-  (cases || []).forEach(function (c) {
+  (cases || []).forEach(function (item) {
     n.total++;
-    const l = last && last[c.case_key];
-    if (!l) { n.todo++; return; }
+    const l = last && last[item.case_key];
+    if (!l) {
+      n.todo++;
+      return;
+    }
     if (n[l.status] === undefined) n[l.status] = 0;
     n[l.status]++;
   });
   n.noResults = n.total > 0 && n.todo === n.total;
   return n;
 }
+
+/* ── QUAL-1 (K-BOARD, 19 Oct 2026): what a case is held to, and whether its file can fail a run ───────────────
+ * QA-24 + CAT-50: the traceability line. Order: the clause the case cites (`cites`), then the requirement a test
+ * header names with `@covers` (`covers`), else the words "Not cited". A requirement is NEVER inferred from a file
+ * name: the only thing a path proves is that a file exists.
+ * QA-72: a file that cannot fail a run (a seed, a demo, a narrated proof, the engine manifest, the walkthrough
+ * fixture) is shown as "not evidence", so a green tick from it is never read as proof.
+ * Both are plain functions, called by the Test panel (cap-testing.js) and tested in tests/board-trace.test.cjs. */
+const TEST_NOT_EVIDENCE =
+  /(^|[/\\])(seed[^/\\]*|[^/\\]*[-_.]seed[^/\\]*|[^/\\]*demo[^/\\]*|[^/\\]*narrat[^/\\]*|[^/\\]*proof-?walk[^/\\]*|engine-manifest\.js|walkthrough\.js)$/i;
+function testIsEvidence(caseKey) {
+  return !TEST_NOT_EVIDENCE.test(String(caseKey || ''));
+}
+function testCiteLine(boardCase) {
+  const clause = boardCase && boardCase.cites;
+  if (clause && (clause.clause || clause.standard)) {
+    const bits = [clause.standard, clause.clause ? '§' + clause.clause : null, clause.chapter, clause.level ? 'level ' + clause.level : null];
+    return { cited: true, source: 'clause', text: bits.filter(Boolean).join(' · ') };
+  }
+  const covers = boardCase && (boardCase.covers || (boardCase.rules && boardCase.rules.covers));
+  if (covers && String(covers).trim()) return { cited: true, source: 'covers', text: String(covers).trim() };
+  return { cited: false, source: 'none', text: 'Not cited' };
+}
+if (typeof module !== 'undefined' && module.exports) module.exports = { testIsEvidence, testCiteLine, testCounts };

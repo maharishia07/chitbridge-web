@@ -38,10 +38,10 @@ const CORE = path.join(__dirname, '..', 'public', 'app', 'core.js');
    then be asserting a rule the client no longer follows — the exact failure it exists to prevent. */
 const core = fs.readFileSync(CORE, 'utf8');
 const sibsM = /var SIBS = \[([^\]]*)\]/.exec(core);
-const collM = /for\(const k of \[([^\]]*)\]\)\s*if\(Array\.isArray/.exec(core);
+const collM = /for\s*\(const k of \[([^\]]*)\]\)\s*if\s*\(Array\.isArray/.exec(core);
 if (!sibsM) { console.error('api-envelope: could not find SIBS in core.js'); process.exit(1); }
 if (!collM) { console.error('api-envelope: could not find the collapse list in core.js'); process.exit(1); }
-const names = (s) => (s.match(/"([^"]+)"/g) || []).map((x) => x.slice(1, -1));
+const names = (s) => (s.replace(/\/\*[\s\S]*?\*\//g, '').match(/(["'])([^"']+)\1/g) || []).map((x) => x.slice(1, -1));
 const SIBS = new Set(names(sibsM[1]));
 const COLLAPSE = new Set(names(collM[1]));
 
@@ -59,9 +59,11 @@ const WHOLE = new Set(['token', 'my_disputes', 'header', 'has_catalogue', 'searc
  * judged only if its file serves one of them.
  */
 const APP = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
-const epBlock = /const EP = \{([\s\S]*?)\n\};/.exec(APP);
+const epBlock = /const EP = \{([\s\S]*?)\n\s*\};/.exec(APP); // the closing brace may be indented (MNT-4 formatting)
 if (!epBlock) { console.error('api-envelope: could not find EP in app.html'); process.exit(1); }
-const EP_PATHS = new Set((epBlock[1].match(/p:\s*"([^"]+)"/g) || []).map((s) => /"([^"]+)"/.exec(s)[1]));
+const EP_PATHS = new Set((epBlock[1].match(/p:\s*(['"])([^'"]+)\1/g) || []).map((s) => /(['"])([^'"]+)\1/.exec(s)[2])); // either quote style
+/* silence is the bug: a reader that matches almost nothing would pass every route unchecked */
+if (EP_PATHS.size < 50) { console.error('api-envelope: only ' + EP_PATHS.size + ' EP paths read from app.html; the reader no longer matches EP'); process.exit(1); }
 /* routes/<name>.js serves /api/<mount>; a file counts if ANY endpoint the app calls lives under its mount */
 const mountOf = (file) => file.replace(/\.js$/, '');
 const APP_FILES = new Set();
@@ -70,9 +72,10 @@ for (const p of EP_PATHS) {
   if (seg) APP_FILES.add(seg);
 }
 /* a few files serve a mount spelled differently from their filename */
-const ALIAS = { entities: 'entities', products: 'products', definitions: 'definitions', folders: 'folders',
-                chits: 'chits', actors: 'actors', relationships: 'relationships', connectors: 'connectors',
-                catalogue: 'catalogue', testing: 'testing' };
+/* QA-20 · nine of the ten identity entries were already in APP_FILES (every EP mount); only `connectors` is
+   not called through app.html's EP, and it is kept on purpose: connectors.js collapses responses the Node
+   connector reads, so it must still be checked. */
+const ALIAS = { connectors: 'connectors' };
 
 /** the balanced `{…}` starting at `from`, or null */
 function objectAt(src, from) {
@@ -161,11 +164,12 @@ function topKeys(obj) {
  * ⚠️ Keyed by file + the dropped names, NOT by line number — a baseline that moves when somebody adds a blank
  * line above it is a baseline that gets deleted in frustration.
  */
+/* QA-20 (19 Oct 2026) · RATCHET: every entry must still occur (a stale one fails: delete it) and the list may
+   only shrink. 'testing.js|history' and 'actors.js|summary' were stale (no route sends them any more). */
+const BASELINE_MAX = 3;
 const BASELINE = new Set([
-  'actors.js|summary',
   'products.js|added,declared,message,warnings',
   'relationships.js|fields,finishes,schema',
-  'testing.js|history',
   'till.js|basis,days,ok,quiet',
 ]);
 
@@ -209,6 +213,12 @@ if (known.length) {
   console.log('  ⚠ ' + known.length + ' known latent instance(s), on the baseline — sent and dropped, not yet read:');
   for (const x of known) console.log('      routes/' + x.file + ':' + x.line + '  ' + x.lost.join(', '));
   console.log('    ⭐ the list is meant to SHRINK — see BACKLOG.md\n');
+}
+const live = new Set(known.map((x) => x.file + '|' + x.lost.slice().sort().join(',')));
+const stale = [...BASELINE].filter((k) => !live.has(k));
+if (stale.length || BASELINE.size > BASELINE_MAX) {
+  console.log('  ✗ baseline entry no longer occurs (delete it, the list only shrinks): ' + (stale.join('; ') || 'size ' + BASELINE.size + ' > ' + BASELINE_MAX) + '\n');
+  process.exit(1);
 }
 if (!findings.length) {
   console.log('  ✓ ' + checked + ' collapsing response(s) checked — no NEW field is dropped\n');

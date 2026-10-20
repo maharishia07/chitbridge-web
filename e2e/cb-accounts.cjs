@@ -233,7 +233,7 @@ async function route(S, r) {
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
     ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
     ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
-    ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 0, 'A1: Waiting and Dues are no longer menu items');
+    ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
     await p.click('[data-testid="acc-grp-setup"]');
@@ -552,7 +552,7 @@ async function route(S, r) {
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');
     ok(await p.locator('[data-testid="avatar-menu"]').isVisible(), 'the avatar opens the menu');
-    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/know-your-business.html', 'Profile → a customer page (Know your business), never the workshop');
+    ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/settings.html#/shop', 'Profile → Settings › Your business, never the workshop (UX-96)');
     ok(await p.locator('[data-testid="nav-signout"]').isVisible(), 'Sign out is in the menu');
     ok(await p.evaluate(() => { const m = document.querySelector('[data-testid="avatar-menu"]'), r = m.getBoundingClientRect(), miss = [];
       for (let y = r.top + 6; y < Math.min(r.bottom, innerHeight) - 6; y += 24) for (let x = r.left + 6; x < r.right - 6; x += 40) { const e = document.elementFromPoint(x, y); if (e && !m.contains(e)) miss.push(e.className); }

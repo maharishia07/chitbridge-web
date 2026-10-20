@@ -21,78 +21,173 @@ var FR_SEE = 'Only the owner may see returns.';
 
 async function frLoad(quiet) {
   var g = ++FR.gen;
-  if (!quiet) { FR.state = 'loading'; frPaint(); }
+  if (!quiet) {
+    FR.state = 'loading';
+    frPaint();
+  }
   try {
-    var r = await api('me');
+    var reply = await api('me');
     if (g !== FR.gen) return;
-    var e = (r && r.entity) || r || {}, code = e.country ? String(e.country).toUpperCase() : null;
-    FR.code = code; FR.pack = code ? shopReg(code) : null;
-    if (code && typeof SESSION !== 'undefined' && SESSION) SESSION.country = code;   /* CX0: the pack's words reach this page too */
+    var e = (reply && reply.entity) || reply || {},
+      code = e.country ? String(e.country).toUpperCase() : null;
+    FR.code = code;
+    FR.pack = code ? shopReg(code) : null;
+    if (code && typeof SESSION !== 'undefined' && SESSION) SESSION.country = code; /* CX0: the pack's words reach this page too */
     FR.state = 'ready';
     ftNav();
   } catch (e2) {
     if (g !== FR.gen) return;
-    if (e2 && e2.status === 403) { finDenied(FR_SEE, 'Returns'); return; }
+    if (e2 && e2.status === 403) {
+      finDenied(FR_SEE, 'Returns');
+      return;
+    }
     FR.state = 'error';
   }
   frPaint();
 }
-function frRetry() { frLoad(); }
+function frRetry() {
+  frLoad();
+}
 
 /** the last twelve calendar months, newest first, from the shop's day — value YYYY-MM, label in the reader's month words */
 function frMonths() {
-  var t = bkToday(), y = Number(t.slice(0, 4)), m = Number(t.slice(5, 7)), names = monthNames('short'), out = [];
-  for (var i = 1; i <= 12; i++) {
-    var mm = m - i, yy = y; while (mm < 1) { mm += 12; yy -= 1; }
+  var t = bkToday(),
+    y = Number(t.slice(0, 4)),
+    m = Number(t.slice(5, 7)),
+    names = monthNames('short'),
+    out = [];
+  for (var index = 1; index <= 12; index++) {
+    var mm = m - index,
+      yy = y;
+    while (mm < 1) {
+      mm += 12;
+      yy -= 1;
+    }
     out.push({ v: yy + '-' + String(mm).padStart(2, '0'), label: names[mm - 1] + ' ' + yy });
   }
   return out;
 }
-function frCard(html, tid) { return '<div class="content"><div class="card" data-testid="' + tid + '" style="margin:0">' + html + '</div></div>'; }
+function frCard(html, tid) {
+  return '<div class="content"><div class="card" data-testid="' + tid + '" style="margin:0">' + html + '</div></div>';
+}
 
 function frPaint() {
-  var s = document.getElementById('screen'); if (!s) return;
-  s.className = 'screen';
-  if (FR.state === 'loading') { s.innerHTML = frCard('<div class="loadwrap"><span class="spin"></span>' + esc(tx('Loading…')) + '</div>', 'fr-loading'); return; }
+  var node = document.getElementById('screen');
+  if (!node) return;
+  node.className = 'screen';
+  if (FR.state === 'loading') {
+    node.innerHTML = frCard('<div class="loadwrap"><span class="spin"></span>' + esc(tx('Loading…')) + '</div>', 'fr-loading');
+    return;
+  }
   if (FR.state === 'error') {
-    s.innerHTML = frCard('<h2>' + esc(tx('Could not read your country')) + '</h2><p>' + esc(tx('Nothing was lost.')) + '</p>'
-      + '<button type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' + esc(tx('Try again')) + '</button>', 'fr-error');
+    node.innerHTML = frCard(
+      '<h2>' +
+        esc(tx('Could not read your country')) +
+        '</h2><p>' +
+        esc(tx('Nothing was lost.')) +
+        '</p>' +
+        '<button type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' +
+        esc(tx('Try again')) +
+        '</button>',
+      'fr-error'
+    );
     return;
   }
   if (!FR.code) {
-    s.innerHTML = frCard('<h2>' + esc(tx('Country not set')) + '</h2><p>' + esc(tx('A return follows the country your shop keeps its books in.')) + '</p>'
-      + '<a class="act" href="/settings.html#/country" data-testid="fr-country">' + esc(tx('Set the country')) + '</a>', 'fr-nocountry');
+    node.innerHTML = frCard(
+      '<h2>' +
+        esc(tx('Country not set')) +
+        '</h2><p>' +
+        esc(tx('A return follows the country your shop keeps its books in.')) +
+        '</p>' +
+        '<a class="act" href="/settings.html#/country" data-testid="fr-country">' +
+        esc(tx('Set the country')) +
+        '</a>',
+      'fr-nocountry'
+    );
     return;
   }
   var pk = FR.pack;
   /* India's GSTR-1 / 3B are the RAIL's read (books-period.taxReturn refuses the ledgers for the IN pack the same way): the pack id decides, not a word */
   if (pk && pk.id === 'IN') {
     var months = frMonths();
-    s.innerHTML = frCard('<h2>' + esc(tx('GSTR-1 and GSTR-3B')) + '</h2><p>' + esc(tx('Read from the rail. Check in the offline tool before filing.')) + '</p>'
-      + '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' + esc(tx('Month'))
-      + '<select class="inp" id="fr_month" data-testid="fr-month">' + months.map(function (x) { return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>'; }).join('') + '</select></label>'
-      + '<div class="supacts"><button type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' + esc(tx('GSTR-1 file')) + '</button>'
-      + '<button type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' + esc(tx('GSTR-3B file')) + '</button></div>'
-      + '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>'
-      + '<p class="hint" data-testid="fr-prepared">' + esc(tx('Prepared, not filed.')) + '</p>', 'fr-gstr');
+    node.innerHTML = frCard(
+      '<h2>' +
+        esc(tx('GSTR-1 and GSTR-3B')) +
+        '</h2><p>' +
+        esc(tx('Read from the rail. Check in the offline tool before filing.')) +
+        '</p>' +
+        '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' +
+        esc(tx('Month')) +
+        '<select class="inp" id="fr_month" data-testid="fr-month">' +
+        months
+          .map(function (x) {
+            return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
+          })
+          .join('') +
+        '</select></label>' +
+        '<div class="supacts"><button type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' +
+        esc(tx('GSTR-1 file')) +
+        '</button>' +
+        '<button type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
+        esc(tx('GSTR-3B file')) +
+        '</button></div>' +
+        '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +
+        '<p class="hint" data-testid="fr-prepared">' +
+        esc(tx('Prepared, not filed.')) +
+        '</p>',
+      'fr-gstr'
+    );
     return;
   }
   if (pk && pk.returns && pk.returns.id) {
-    s.innerHTML = frCard('<h2 data-testid="fr-which">' + esc(pk.returns.short || pk.returns.id) + '</h2><p>' + esc(txf('{name}: prepared in Accounts, not here.', { name: pk.returns.name || pk.returns.id })) + '</p>'
-      + '<a class="act" href="/accounts.html#gst" data-testid="fr-accounts">' + esc(tx('Open Accounts')) + '</a>', 'fr-elsewhere');
+    node.innerHTML = frCard(
+      '<h2 data-testid="fr-which">' +
+        esc(pk.returns.short || pk.returns.id) +
+        '</h2><p>' +
+        esc(txf('{name}: prepared in Accounts, not here.', { name: pk.returns.name || pk.returns.id })) +
+        '</p>' +
+        '<a class="act" href="/accounts.html#gstclose" data-testid="fr-accounts">' +
+        esc(tx('Open Accounts')) +
+        '</a>',
+      'fr-elsewhere'
+    );
     return;
   }
-  s.innerHTML = frCard('<h2>' + esc(tx('No return built yet')) + '</h2><p data-testid="fr-none-why">' + esc(txf('Nothing is built for {country} yet.', { country: (pk && pk.name) || FR.code })) + '</p>', 'fr-none');
+  node.innerHTML = frCard(
+    '<h2>' +
+      esc(tx('No return built yet')) +
+      '</h2><p data-testid="fr-none-why">' +
+      esc(txf('Nothing is built for {country} yet.', { country: (pk && pk.name) || FR.code })) +
+      '</p>',
+    'fr-none'
+  );
 }
 /** one press, one file: the server's JSON saved as gstr1-YYYY-MM.json / gstr3b-YYYY-MM.json (helpers.js gstrDownload) */
 function frGet(form, btn) {
-  var sel = document.getElementById('fr_month'), month = sel ? sel.value : null; if (!month) return;
-  return CBAction.run(btn, function () { return gstrDownload(month, form); },
-    { key: 'fr-' + form, out: 'fr_out', failed: tx('Could not build the file'), done: tx('Downloaded'),
-      outcome: function (name) { var o = document.getElementById('fr_out'); if (o) o.textContent = tx('Saved as') + ' ' + name; } });
+  var node = document.getElementById('fr_month'),
+    month = node ? node.value : null;
+  if (!month) return;
+  return CBAction.run(
+    btn,
+    function () {
+      return gstrDownload(month, form);
+    },
+    {
+      key: 'fr-' + form,
+      out: 'fr_out',
+      failed: tx('Could not build the file'),
+      done: tx('Downloaded'),
+      outcome: function (name) {
+        var element = document.getElementById('fr_out');
+        if (element) element.textContent = tx('Saved as') + ' ' + name;
+      }
+    }
+  );
 }
 function frMount(frame) {
-  var s = document.getElementById('screen'); if (!s) return;
+  var node = document.getElementById('screen');
+  if (!node) return;
   ftNav();
   frPaint();
   if (!frame) frLoad(FR.state === 'ready');

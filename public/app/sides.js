@@ -25,14 +25,33 @@
   var doc = root.document;
 
   var W = {
-    lean: 'We lean on', use: 'Leans on us', subL: 'What we follow and draw on.', subR: 'Who relies on what we hold.',
-    g: { rules: 'Rules we follow', mould: 'Mould we came from', content: 'Content we draw on', systems: 'Systems we read', buy: 'We buy from',
-         trade: 'Trade with us', act: 'Act for us', cite: 'Cite us', inherit: 'Inherit from us' },
-    close: 'Close', fail: 'Could not read', failM: 'not yet', nobody: 'Nobody yet', who: 'See who', hide: 'Hide', review: 'Review', finish: 'Finish', cur: 'Current'
+    lean: 'We lean on',
+    use: 'Leans on us',
+    subL: 'What we follow and draw on.',
+    subR: 'Who relies on what we hold.',
+    g: {
+      rules: 'Rules we follow',
+      mould: 'Mould we came from',
+      content: 'Content we draw on',
+      systems: 'Systems we read',
+      buy: 'We buy from',
+      trade: 'Trade with us',
+      act: 'Act for us',
+      cite: 'Cite us',
+      inherit: 'Inherit from us'
+    },
+    close: 'Close',
+    fail: 'Could not read',
+    failM: 'not yet',
+    nobody: 'Nobody yet',
+    who: 'See who',
+    hide: 'Hide',
+    review: 'Review',
+    finish: 'Finish',
+    cur: 'Current'
   };
 
-
-  var CSS = [
+  var list = [
     '.cbsd{--sd-blue:var(--blue,#2F74C9);--sd-blue-b:var(--sh-blue-b,var(--blue-b,#B9D2EF));--sd-blue-i:var(--sh-blue-i,var(--blue-i,#174A87));',
     '--sd-green:var(--sh-green,var(--green,#16693F));--sd-green-b:var(--sh-green-b,var(--green-b,#A9D3BC));--sd-green-d:var(--sh-green-d,var(--green-d,#0D4A2B));--sd-green-t:var(--sh-green-t,var(--green-t,#E8F4ED));',
     '--sd-amber-t:var(--sh-amber-t,var(--amber-t,#FDF3DC));--sd-amber-b:var(--sh-amber-b,var(--amber-b,#EFD39A));--sd-amber-i:var(--sh-amber-i,var(--amber-i,#7A5205));',
@@ -69,86 +88,247 @@
     '.cbsd-btn{display:none;height:30px;padding:0 9px;border-radius:9px;border:1px solid var(--sd-line);background:var(--sd-card);font-size:12.5px;font-weight:700;color:var(--sd-muted)}',
     '.cbsd-btn b{font-family:var(--f-num,"IBM Plex Mono",monospace);margin-left:5px}',
     '.cbsd-btn.l{border-color:var(--sd-blue-b);color:var(--sd-blue-i)}.cbsd-btn.r{border-color:var(--sd-green-b);color:var(--sd-green-d)}',
-    '.cbsd-btn[aria-expanded=true]{background:var(--sd-panel)}'
+    '.cbsd-btn[aria-expanded=true]{background:var(--sd-panel)}',
+    '.cbsd-btn .w{margin-left:5px}.cbsd-btn .w+b{margin-left:6px}',
+    '@media(max-width:700px){.cbsd-btn .w{display:none}}'
   ].join('');
   function addCss() {
     if (!doc || doc.getElementById('cbsd-css')) return;
-    var s = doc.createElement('style'); s.id = 'cbsd-css'; s.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(s);
+    var node = doc.createElement('style');
+    node.id = 'cbsd-css';
+    node.textContent = list;
+    (doc.head || doc.documentElement).appendChild(node);
   }
-  function apiBaseDefault() { return root.CBShell && root.CBShell.apiBase ? root.CBShell.apiBase() : ''; }
+  function apiBaseDefault() {
+    return root.CBShell && root.CBShell.apiBase ? root.CBShell.apiBase() : '';
+  }
 
+  /* a word through the catalogue when the page has it (tx), else as written */
+  function throughCatalogue(word) {
+    return typeof root.tx === 'function' ? root.tx(word) : word;
+  }
   function mount(slots, o) {
     o = o || {};
     addCss();
     var base = o.apiBase != null ? o.apiBase : apiBaseDefault();
     var S = { data: null, err: false, open: null, review: {}, who: false };
-    var L = slots.left, R = slots.right;
-    [L, R].forEach(function (el, i) { el.classList.add('cbsd', i ? 'r' : 'l'); });
-    L.setAttribute('data-testid', 'sides-left'); R.setAttribute('data-testid', 'sides-right');
-    L.setAttribute('aria-label', W.lean); R.setAttribute('aria-label', W.use);
-    var bL = slots.btnL, bR = slots.btnR;
-    [bL, bR].forEach(function (b, i) { b.classList.add('cbsd-btn', i ? 'r' : 'l'); b.setAttribute('aria-expanded', 'false'); });
-    bL.setAttribute('data-testid', 'sides-open-l'); bR.setAttribute('data-testid', 'sides-open-r');
+    var node = slots.left,
+      R = slots.right;
+    [node, R].forEach(function (el, index) {
+      el.classList.add('cbsd', index ? 'r' : 'l');
+    });
+    node.setAttribute('data-testid', 'sides-left');
+    R.setAttribute('data-testid', 'sides-right');
+    node.setAttribute('aria-label', W.lean);
+    R.setAttribute('aria-label', W.use);
+    var bL = slots.btnL,
+      bR = slots.btnR;
+    [bL, bR].forEach(function (item, index) {
+      item.classList.add('cbsd-btn', index ? 'r' : 'l');
+      item.setAttribute('aria-expanded', 'false');
+    });
+    bL.setAttribute('data-testid', 'sides-open-l');
+    bR.setAttribute('data-testid', 'sides-open-r');
 
-    function rowsOf(groups) { return (groups || []).reduce(function (a, g) { return a + (g.rows || []).filter(function (r) { return r.s !== 'empty'; }).length; }, 0); }
+    function rowsOf(groups) {
+      return (groups || []).reduce(function (total, item) {
+        return (
+          total +
+          (item.rows || []).filter(function (entry) {
+            return entry.s !== 'empty';
+          }).length
+        );
+      }, 0);
+    }
     function refRow(r, side) {
-      var key = side + ':' + r.id, shown = !!S.review[key];
-      var st = r.s === 'ok' || r.s === 'wait' || r.s === 'later' ? '<span class="cbsd-st ' + r.s + '" data-testid="sides-state">' + esc(r.t || (r.s === 'ok' ? W.cur : W.failM)) + '</span>' : '';
+      var key = side + ':' + r.id,
+        shown = !!S.review[key];
+      var st =
+        r.s === 'ok' || r.s === 'wait' || r.s === 'later'
+          ? '<span class="cbsd-st ' + r.s + '" data-testid="sides-state">' + esc(r.t || (r.s === 'ok' ? W.cur : W.failM)) + '</span>'
+          : '';
       var act = '';
-      if (r.fix === 'Review') act = '<button type="button" class="cbsd-fix" data-act="review" data-key="' + esc(key) + '" aria-expanded="' + shown + '" data-testid="sides-review">' + esc(W.review) + '</button>' +
-        '<div class="cbsd-det" data-testid="sides-detail"' + (shown ? '' : ' hidden') + '>' + esc(r.detail || '') + '</div>';
+      if (r.fix === 'Review')
+        act =
+          '<button type="button" class="cbsd-fix" data-act="review" data-key="' +
+          esc(key) +
+          '" aria-expanded="' +
+          shown +
+          '" data-testid="sides-review">' +
+          esc(W.review) +
+          '</button>' +
+          '<div class="cbsd-det" data-testid="sides-detail"' +
+          (shown ? '' : ' hidden') +
+          '>' +
+          esc(r.detail || '') +
+          '</div>';
       else if (r.fix === 'Finish') act = '<a class="cbsd-fix" href="' + esc(r.href || '#') + '" data-testid="sides-finish">' + esc(W.finish) + '</a>';
-      return '<div class="cbsd-ref' + (r.s === 'empty' || r.s === 'later' ? ' dash' : '') + '" data-testid="sides-row" data-id="' + esc(r.id) + '" data-s="' + esc(r.s || '') + '"><div class="cbsd-tx"><div class="cbsd-nm">' + esc(r.n) +
-        '</div><div class="cbsd-mt">' + esc(r.m) + '</div>' + act + '</div>' + st + '</div>';
+      return (
+        '<div class="cbsd-ref' +
+        (r.s === 'empty' || r.s === 'later' ? ' dash' : '') +
+        '" data-testid="sides-row" data-id="' +
+        esc(r.id) +
+        '" data-s="' +
+        esc(r.s || '') +
+        '"><div class="cbsd-tx"><div class="cbsd-nm">' +
+        esc(r.n) +
+        '</div><div class="cbsd-mt">' +
+        esc(r.m) +
+        '</div>' +
+        act +
+        '</div>' +
+        st +
+        '</div>'
+      );
     }
     function impactHtml(im) {
       if (!im) return '';
-      var who = (im.who || []).map(function (w) { return '<li>' + esc(w.name) + '<span class="r">' + esc(w.role) + '</span></li>'; }).join('') || '<li>' + esc(W.nobody) + '</li>';
-      return '<div class="cbsd-imp" data-testid="sides-impact"><div class="k">' + esc(im.k) + '</div><div class="n">' + esc(im.n) + '</div><div class="m" data-testid="sides-impact-m">' + esc(im.m) + '</div>' +
-        '<button type="button" data-act="who" aria-expanded="' + S.who + '" data-testid="sides-who-btn">' + esc(S.who ? W.hide : W.who) + '</button>' +
-        '<ul class="cbsd-who" data-testid="sides-who"' + (S.who ? '' : ' hidden') + '>' + who + '</ul></div>';
+      var who =
+        (im.who || [])
+          .map(function (item) {
+            return '<li>' + esc(item.name) + '<span class="r">' + esc(item.role) + '</span></li>';
+          })
+          .join('') || '<li>' + esc(W.nobody) + '</li>';
+      return (
+        '<div class="cbsd-imp" data-testid="sides-impact"><div class="k">' +
+        esc(im.k) +
+        '</div><div class="n">' +
+        esc(im.n) +
+        '</div><div class="m" data-testid="sides-impact-m">' +
+        esc(im.m) +
+        '</div>' +
+        '<button type="button" data-act="who" aria-expanded="' +
+        S.who +
+        '" data-testid="sides-who-btn">' +
+        esc(S.who ? W.hide : W.who) +
+        '</button>' +
+        '<ul class="cbsd-who" data-testid="sides-who"' +
+        (S.who ? '' : ' hidden') +
+        '>' +
+        who +
+        '</ul></div>'
+      );
     }
     function panel(side) {
-      var left = side === 'L', gs = S.data ? (left ? S.data.lean : S.data.use) : null;
+      var left = side === 'L',
+        gs = S.data ? (left ? S.data.lean : S.data.use) : null;
       var n = S.err || !S.data ? '–' : rowsOf(gs);
-      var body = S.err || !S.data
-        ? (S.err ? '<div class="cbsd-ref dash" data-testid="sides-failed"><div class="cbsd-tx"><div class="cbsd-nm">' + esc(W.fail) + '</div></div><span class="cbsd-st later">' + esc(W.failM) + '</span></div>' : '')
-        : (gs || []).map(function (g) { return '<div class="cbsd-g">' + esc(W.g[g.key] || g.key) + '</div>' + (g.rows || []).map(function (r) { return refRow(r, side); }).join(''); }).join('') + (left ? '' : impactHtml(S.data.impact));
-      return '<div class="cbsd-hd"><span class="cbsd-arr" aria-hidden="true">' + (left ? '→' : '←') + '</span><h3>' + esc(left ? W.lean : W.use) + '</h3><span class="cbsd-cnt" data-testid="sides-count">' + n +
-        '</span><button type="button" class="cbsd-x" data-act="close" aria-label="' + esc(W.close) + '" data-testid="sides-close">✕</button></div><div class="cbsd-sub">' + esc(left ? W.subL : W.subR) + '</div>' + body;
+      var body =
+        S.err || !S.data
+          ? S.err
+            ? '<div class="cbsd-ref dash" data-testid="sides-failed"><div class="cbsd-tx"><div class="cbsd-nm">' +
+              esc(W.fail) +
+              '</div></div><span class="cbsd-st later">' +
+              esc(W.failM) +
+              '</span></div>'
+            : ''
+          : (gs || [])
+              .map(function (item) {
+                return (
+                  '<div class="cbsd-g">' +
+                  esc(W.g[item.key] || item.key) +
+                  '</div>' +
+                  (item.rows || [])
+                    .map(function (entry) {
+                      return refRow(entry, side);
+                    })
+                    .join('')
+                );
+              })
+              .join('') + (left ? '' : impactHtml(S.data.impact));
+      return (
+        '<div class="cbsd-hd"><span class="cbsd-arr" aria-hidden="true">' +
+        (left ? '→' : '←') +
+        '</span><h3>' +
+        esc(left ? W.lean : W.use) +
+        '</h3><span class="cbsd-cnt" data-testid="sides-count">' +
+        n +
+        '</span><button type="button" class="cbsd-x" data-act="close" aria-label="' +
+        esc(W.close) +
+        '" data-testid="sides-close">✕</button></div><div class="cbsd-sub">' +
+        esc(left ? W.subL : W.subR) +
+        '</div>' +
+        body
+      );
     }
     function paint() {
-      L.innerHTML = panel('L'); R.innerHTML = panel('R');
-      var nl = S.data && !S.err ? rowsOf(S.data.lean) : '–', nr = S.data && !S.err ? rowsOf(S.data.use) : '–';
+      node.innerHTML = panel('L');
+      R.innerHTML = panel('R');
+      var nl = S.data && !S.err ? rowsOf(S.data.lean) : '–',
+        nr = S.data && !S.err ? rowsOf(S.data.use) : '–';
       /* an icon and its count; the words are the button's title and its spoken name (walk 2026-10-17) */
-      bL.innerHTML = '→<b>' + nl + '</b>'; bR.innerHTML = '←<b>' + nr + '</b>';
-      bL.title = W.lean; bR.title = W.use; bL.setAttribute('aria-label', W.lean + ' ' + nl); bR.setAttribute('aria-label', W.use + ' ' + nr);
-      L.classList.toggle('drawer', S.open === 'L'); R.classList.toggle('drawer', S.open === 'R');
-      bL.setAttribute('aria-expanded', S.open === 'L' ? 'true' : 'false'); bR.setAttribute('aria-expanded', S.open === 'R' ? 'true' : 'false');
+      bL.innerHTML = '→<span class="w">' + esc(throughCatalogue(W.lean)) + '</span><b>' + nl + '</b>';
+      bR.innerHTML =
+        '←<span class="w">' +
+        esc(throughCatalogue(W.use)) +
+        '</span><b>' +
+        nr +
+        '</b>'; /* UX-2: the mark says its words beside the count (a phone keeps the icon: title + aria-label) */
+      bL.title = W.lean;
+      bR.title = W.use;
+      bL.setAttribute('aria-label', W.lean + ' ' + nl);
+      bR.setAttribute('aria-label', W.use + ' ' + nr);
+      node.classList.toggle('drawer', S.open === 'L');
+      R.classList.toggle('drawer', S.open === 'R');
+      bL.setAttribute('aria-expanded', S.open === 'L' ? 'true' : 'false');
+      bR.setAttribute('aria-expanded', S.open === 'R' ? 'true' : 'false');
     }
     /* one drawer at a time: opening one closes the other; the same button closes it */
-    function drawer(side) { S.open = S.open === side ? null : side; paint(); }
-    function close() { if (S.open) { S.open = null; paint(); } }
-    function onClick(e) {
-      var t = e.target.closest('[data-act]'); if (!t) return;
-      var a = t.getAttribute('data-act');
-      if (a === 'close') close();
-      else if (a === 'review') { var k = t.getAttribute('data-key'); S.review[k] = !S.review[k]; paint(); }
-      else if (a === 'who') { S.who = !S.who; paint(); }
+    function drawer(side) {
+      S.open = S.open === side ? null : side;
+      paint();
     }
-    L.addEventListener('click', onClick); R.addEventListener('click', onClick);
-    bL.addEventListener('click', function () { drawer('L'); }); bR.addEventListener('click', function () { drawer('R'); });
-    doc.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    function close() {
+      if (S.open) {
+        S.open = null;
+        paint();
+      }
+    }
+    function onClick(e) {
+      var element = e.target.closest('[data-act]');
+      if (!element) return;
+      var a = element.getAttribute('data-act');
+      if (a === 'close') close();
+      else if (a === 'review') {
+        var k = element.getAttribute('data-key');
+        S.review[k] = !S.review[k];
+        paint();
+      } else if (a === 'who') {
+        S.who = !S.who;
+        paint();
+      }
+    }
+    node.addEventListener('click', onClick);
+    R.addEventListener('click', onClick);
+    bL.addEventListener('click', function () {
+      drawer('L');
+    });
+    bR.addEventListener('click', function () {
+      drawer('R');
+    });
+    doc.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') close();
+    });
 
     function get(url) {
-      return root.fetch((/^https?:/.test(url) ? '' : base) + url, { headers: o.token ? { Authorization: 'Bearer ' + o.token } : {} }).then(function (r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
+      return root.fetch((/^https?:/.test(url) ? '' : base) + url, { headers: o.token ? { Authorization: 'Bearer ' + o.token } : {} }).then(function (reply) {
+        if (!reply.ok) throw new Error('HTTP ' + reply.status);
+        return reply.json();
       });
     }
     function refresh() {
-      return get('/api/entities/sides').then(function (d) { S.data = d; S.err = !(d && d.lean && d.use); }, function () { S.data = null; S.err = true; }).then(paint);
+      return get('/api/entities/sides')
+        .then(
+          function (reply) {
+            S.data = reply;
+            S.err = !(reply && reply.lean && reply.use);
+          },
+          function () {
+            S.data = null;
+            S.err = true;
+          }
+        )
+        .then(paint);
     }
     paint();
     return { refresh: refresh, close: close, ready: refresh() };

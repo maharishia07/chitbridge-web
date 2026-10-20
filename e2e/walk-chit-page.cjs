@@ -164,7 +164,7 @@ const walk = async (w) => {
   });
   await w.step('C15', 'The three ledger pages\' "Open page" and the registry point at CRM, none at the workshop (static)', async () => {
     const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
-    const pages = ['accounts.html', 'finance.html', 'crm.html'].map((f) => { const s = rd(f); return f + ':' + (/function openChitPage\([^)]*\)\{[^\n]*chitPageHref/.test(s) && !/openChitPage[^\n]*app\.html/.test(s)); });
+    const pages = ['accounts.html', 'finance.html', 'crm.html'].map((f) => { const s = rd(f); return f + ':' + (/function openChitPage\([^)]*\)\s*\{[^}]*chitPageHref/.test(s) && !/openChitPage[^\n]*app\.html/.test(s)); });
     const reg = JSON.parse(rd('app/pages.json')), baseRow = reg.pages.find((r) => r.name + '@' + r.version === reg.base);
     const shell = /chit: '\/crm\.html#\/chit\/'/.test(rd('app/accounts-shell.js'));
     return { ok: pages.every((x) => /true$/.test(x)) && baseRow.script === 'crm.html' && shell, saw: pages.join(' ') + ' · base script ' + baseRow.script + ' · CB_HOMES.chit ' + shell };

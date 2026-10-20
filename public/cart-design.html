@@ -101,195 +101,355 @@
 
 <script>
 /* MY OWN catalogue — compose orders from what I sell, or from nothing at all. */
-var CAT={shop:{bridge_id:'CBNORTH01',currency_code:'INR'},
- items:[{item_id:'c1',item_data:{name:'Tussar Emulsion',unit:'L',price:950}},
-        {item_id:'c2',item_data:{name:'Tussar Emulsion',unit:'L',price:3400}},
-        {item_id:'c3',item_data:{name:'Primer Base',unit:'L',price:650}},
-        {item_id:'c4',item_data:{name:'test2',unit:'kg',price:555}},
-        {item_id:'c5',item_data:{name:'test1',unit:'kg',price:100}},
-        {item_id:'c6',item_data:{name:'Test North Product',unit:'Unit',price:250}},
-        {item_id:'c7',item_data:{name:'Sand',unit:'kg',price:20,order:{model:'measure',step:0.5}}},
-        {item_id:'c8',item_data:{name:'Wall Putty',unit:'bag'}}],   /* no price — the total goes partial */
- groups:[{label:'Tussar Emulsion',options:{Size:['1L','4L']},
-          lines:[{item_id:'c1',variant:'1L'},{item_id:'c2',variant:'4L'}]}]};
+var CAT = {
+  shop: { bridge_id: 'CBNORTH01', currency_code: 'INR' },
+  items: [
+    { item_id: 'c1', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 950 } },
+    { item_id: 'c2', item_data: { name: 'Tussar Emulsion', unit: 'L', price: 3400 } },
+    { item_id: 'c3', item_data: { name: 'Primer Base', unit: 'L', price: 650 } },
+    { item_id: 'c4', item_data: { name: 'test2', unit: 'kg', price: 555 } },
+    { item_id: 'c5', item_data: { name: 'test1', unit: 'kg', price: 100 } },
+    { item_id: 'c6', item_data: { name: 'Test North Product', unit: 'Unit', price: 250 } },
+    { item_id: 'c7', item_data: { name: 'Sand', unit: 'kg', price: 20, order: { model: 'measure', step: 0.5 } } },
+    { item_id: 'c8', item_data: { name: 'Wall Putty', unit: 'bag' } }
+  ] /* no price — the total goes partial */,
+  groups: [
+    {
+      label: 'Tussar Emulsion',
+      options: { Size: ['1L', '4L'] },
+      lines: [
+        { item_id: 'c1', variant: '1L' },
+        { item_id: 'c2', variant: '4L' }
+      ]
+    }
+  ]
+};
 
-var S={step:0,to:[],sendAs:'North · entity',priority:'Normal',subject:'',by:'',addr:'',note:'',files:[]};
+var S = { step: 0, to: [], sendAs: 'North · entity', priority: 'Normal', subject: '', by: '', addr: '', note: '', files: [] };
 /* ⭐ FOUR steps. "To" survives here and only here — the recipient is genuinely unknown. */
-var STEPS=[{k:'items',n:'Items',t:'What are you sending?'},
-           {k:'to',n:'To',t:'Who is this going to?'},
-           {k:'details',n:'Details',t:'Subject, delivery and anything attached'},
-           {k:'review',n:'Review',t:'Check it, then send'}];
+var STEPS = [
+  { k: 'items', n: 'Items', t: 'What are you sending?' },
+  { k: 'to', n: 'To', t: 'Who is this going to?' },
+  { k: 'details', n: 'Details', t: 'Subject, delivery and anything attached' },
+  { k: 'review', n: 'Review', t: 'Check it, then send' }
+];
 
-
-function armCart(){
+function armCart() {
   CBCart.init('cc', CAT, {
-    listEl:'list', barEl:'cartbar', popupEl:'cartov', popupBodyEl:'cartovc', popupClass:'cbcart-ov',
-    symbol:'₹', accent:'#3F66A6', soft:'#eef4ff', cartTitle:'This chit’s lines',
+    listEl: 'list',
+    barEl: 'cartbar',
+    popupEl: 'cartov',
+    popupBodyEl: 'cartovc',
+    popupClass: 'cbcart-ov',
+    symbol: '₹',
+    accent: '#3F66A6',
+    soft: '#eef4ff',
+    cartTitle: 'This chit’s lines',
     /* hideAvail is left at its default (true): my own catalogue makes no stock claim on this screen. */
-    noCatalogue:'Your catalogue is empty — type a line below instead.',
-    emptyHint:'Press + on what you are sending',
-    checkoutLabel:'Next: To →',
-    onCheckout:function(){ go(1); }
+    noCatalogue: 'Your catalogue is empty — type a line below instead.',
+    emptyHint: 'Press + on what you are sending',
+    checkoutLabel: 'Next: To →',
+    onCheckout: function () {
+      go(1);
+    }
   });
 }
-function go(i){ if(i<0||i>=STEPS.length)return; S.step=i; var b=document.getElementById('body'); if(b)b.scrollTop=0; paint(); }
-/** A typed one-off. It goes into the SAME cart via the helper — never a second list beside it. */
-function addTyped(){
-  var n=document.getElementById('cn'), q=document.getElementById('cq'), p=document.getElementById('cp');
-  if(!n||!n.value.trim()) return;
-  var price=parseFloat(p&&p.value);
-  CBCart.addAdhoc('cc',{name:n.value.trim(),unit:'unit',price:isFinite(price)?price:undefined},
-                  parseFloat(q&&q.value)||1);
-  n.value=''; if(p)p.value=''; if(q)q.value='1';
+function go(i) {
+  if (i < 0 || i >= STEPS.length) return;
+  S.step = i;
+  var node = document.getElementById('body');
+  if (node) node.scrollTop = 0;
   paint();
 }
-function addTo(role){
-  var v=document.getElementById('tov');
-  if(!v||!v.value.trim())return;
-  S.to.push({name:v.value.trim(),role:role||'To'}); v.value=''; paint();
+/** A typed one-off. It goes into the SAME cart via the helper — never a second list beside it. */
+function addTyped() {
+  var node = document.getElementById('cn'),
+    q = document.getElementById('cq'),
+    p = document.getElementById('cp');
+  if (!node || !node.value.trim()) return;
+  var price = parseFloat(p && p.value);
+  CBCart.addAdhoc('cc', { name: node.value.trim(), unit: 'unit', price: isFinite(price) ? price : undefined }, parseFloat(q && q.value) || 1);
+  node.value = '';
+  if (p) p.value = '';
+  if (q) q.value = '1';
+  paint();
 }
-function addSelf(){ if(!S.to.some(function(t){return t.self;})) S.to.push({name:'Myself (own record)',role:'To',self:true}); paint(); }
-function rmTo(i){ S.to.splice(i,1); paint(); }
-function addFile(){ S.files.push('quote-'+(S.files.length+1)+'.pdf'); paint(); }
-function rmFile(i){ S.files.splice(i,1); paint(); }
+function addTo(role) {
+  var node = document.getElementById('tov');
+  if (!node || !node.value.trim()) return;
+  S.to.push({ name: node.value.trim(), role: role || 'To' });
+  node.value = '';
+  paint();
+}
+function addSelf() {
+  if (
+    !S.to.some(function (item) {
+      return item.self;
+    })
+  )
+    S.to.push({ name: 'Myself (own record)', role: 'To', self: true });
+  paint();
+}
+function rmTo(i) {
+  S.to.splice(i, 1);
+  paint();
+}
+function addFile() {
+  S.files.push('quote-' + (S.files.length + 1) + '.pdf');
+  paint();
+}
+function rmFile(i) {
+  S.files.splice(i, 1);
+  paint();
+}
 
-function railHTML(){
-  return STEPS.map(function(s,i){
-    var cls=i===S.step?'st now':(i<S.step?'st done':'st');
-    return '<div class="'+cls+'"'+(i<S.step?' onclick="go('+i+')"':'')+'><span class="n">'+(i<S.step?'✓':(i+1))+'</span>'+s.n+'</div>';
+function railHTML() {
+  return STEPS.map(function (item, index) {
+    var cls = index === S.step ? 'st now' : index < S.step ? 'st done' : 'st';
+    return (
+      '<div class="' +
+      cls +
+      '"' +
+      (index < S.step ? ' onclick="go(' + index + ')"' : '') +
+      '><span class="n">' +
+      (index < S.step ? '✓' : index + 1) +
+      '</span>' +
+      item.n +
+      '</div>'
+    );
   }).join('');
 }
-function stepItems(){
-  return '<div id="cartbar">'+CBCart.barHTML('cc')+'</div>'
-    + '<input class="srch" placeholder="Search your catalogue…" value="'+esc((CBCart.state('cc')||{}).q||'')+'"'
-    + ' oninput="CBCart.search(\'cc\',this.value)">'
-    + '<div id="list">'+CBCart.listHTML('cc')+'</div>'
+function stepItems() {
+  return (
+    '<div id="cartbar">' +
+    CBCart.barHTML('cc') +
+    '</div>' +
+    '<input class="srch" placeholder="Search your catalogue…" value="' +
+    esc((CBCart.state('cc') || {}).q || '') +
+    '"' +
+    ' oninput="CBCart.search(\'cc\',this.value)">' +
+    '<div id="list">' +
+    CBCart.listHTML('cc') +
+    '</div>' +
     /* ⚠️ ON THIS STEP, not a step of its own — these are ways of ADDING A LINE, so they belong with the other way. */
-    + '<div class="sec">Not in your catalogue?</div>'
-    + '<div class="two"><input class="inp" id="cn" placeholder="Type an item name" style="flex:2">'
-    + '<input class="inp" id="cq" value="1" style="max-width:64px">'
-    + '<input class="inp" id="cp" placeholder="Price" style="max-width:92px">'
-    + '<button class="rb" onclick="addTyped()">+</button></div>'
-    + '<div class="two" style="margin-top:9px"><input class="inp" placeholder="✨ Or describe the order in words — AI fills the lines">'
-    + '<button class="rb" style="flex:none">✨</button></div>';
+    '<div class="sec">Not in your catalogue?</div>' +
+    '<div class="two"><input class="inp" id="cn" placeholder="Type an item name" style="flex:2">' +
+    '<input class="inp" id="cq" value="1" style="max-width:64px">' +
+    '<input class="inp" id="cp" placeholder="Price" style="max-width:92px">' +
+    '<button class="rb" onclick="addTyped()">+</button></div>' +
+    '<div class="two" style="margin-top:9px"><input class="inp" placeholder="✨ Or describe the order in words — AI fills the lines">' +
+    '<button class="rb" style="flex:none">✨</button></div>'
+  );
 }
-function stepTo(){
-  return '<div class="sec">Recipients</div>'
-    + '<div class="two"><select class="inp" id="torole" style="max-width:96px"><option>To</option><option>CC</option><option>For</option></select>'
-    + '<input class="inp" id="tov" placeholder="Type a name or User ID">'
-    + '<button class="rb" onclick="addTo(document.getElementById(\'torole\').value)">+</button></div>'
+function stepTo() {
+  return (
+    '<div class="sec">Recipients</div>' +
+    '<div class="two"><select class="inp" id="torole" style="max-width:96px"><option>To</option><option>CC</option><option>For</option></select>' +
+    '<input class="inp" id="tov" placeholder="Type a name or User ID">' +
+    '<button class="rb" onclick="addTo(document.getElementById(\'torole\').value)">+</button></div>' +
     /* A self-addressed chit is a real chit — one copy in Order, one in Task, same thread. */
-    + '<div style="margin-top:9px"><button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addSelf()">+ Self (own record)</button></div>'
-    + '<div style="margin-top:12px">'
-    + (S.to.length ? S.to.map(function(t,i){
-        return '<span class="chip"><span class="role">'+esc(t.role)+'</span>'+esc(t.name)
-          + '<span class="rm" onclick="rmTo('+i+')">×</span></span>'; }).join('')
-      : '<div class="empty">No recipients yet — a chit with none is a draft.</div>')+'</div>'
-    + '<div class="note">To acts on it · CC is informed · For = on behalf of.</div>'
-    + '<div class="sec">Send as</div><select class="inp"><option>North · entity</option></select>'
-    + '<label class="fl">External priority · informed, locked once sent</label>'
-    + '<select class="inp"><option>Normal</option><option>High</option></select>';
+    '<div style="margin-top:9px"><button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addSelf()">+ Self (own record)</button></div>' +
+    '<div style="margin-top:12px">' +
+    (S.to.length
+      ? S.to
+          .map(function (item, index) {
+            return (
+              '<span class="chip"><span class="role">' +
+              esc(item.role) +
+              '</span>' +
+              esc(item.name) +
+              '<span class="rm" onclick="rmTo(' +
+              index +
+              ')">×</span></span>'
+            );
+          })
+          .join('')
+      : '<div class="empty">No recipients yet — a chit with none is a draft.</div>') +
+    '</div>' +
+    '<div class="note">To acts on it · CC is informed · For = on behalf of.</div>' +
+    '<div class="sec">Send as</div><select class="inp"><option>North · entity</option></select>' +
+    '<label class="fl">External priority · informed, locked once sent</label>' +
+    '<select class="inp"><option>Normal</option><option>High</option></select>'
+  );
 }
-function stepDetails(){
-  return '<div class="sec">Chit fields · from your Order schema</div>'
-    + '<label class="fl">Subject *</label>'
-    + '<input class="inp" value="'+esc(S.subject)+'" placeholder="e.g. order summary" oninput="S.subject=this.value;paintFoot()">'
-    + '<div class="two"><div><label class="fl">Delivery by</label>'
-    + '<input class="inp" type="date" value="'+esc(S.by)+'" oninput="S.by=this.value"></div>'
-    + '<div><label class="fl">Deliver to</label>'
-    + '<input class="inp" value="'+esc(S.addr)+'" placeholder="address / site" oninput="S.addr=this.value"></div></div>'
-    + '<label class="fl">Note</label>'
-    + '<input class="inp" value="'+esc(S.note)+'" placeholder="instructions" oninput="S.note=this.value">'
+function stepDetails() {
+  return (
+    '<div class="sec">Chit fields · from your Order schema</div>' +
+    '<label class="fl">Subject *</label>' +
+    '<input class="inp" value="' +
+    esc(S.subject) +
+    '" placeholder="e.g. order summary" oninput="S.subject=this.value;paintFoot()">' +
+    '<div class="two"><div><label class="fl">Delivery by</label>' +
+    '<input class="inp" type="date" value="' +
+    esc(S.by) +
+    '" oninput="S.by=this.value"></div>' +
+    '<div><label class="fl">Deliver to</label>' +
+    '<input class="inp" value="' +
+    esc(S.addr) +
+    '" placeholder="address / site" oninput="S.addr=this.value"></div></div>' +
+    '<label class="fl">Note</label>' +
+    '<input class="inp" value="' +
+    esc(S.note) +
+    '" placeholder="instructions" oninput="S.note=this.value">' +
     /* ── ATTACHMENTS. The tab I flagged as homeless on 2026-08-08 — it lands HERE, with the other things that
        describe the chit, rather than becoming a fifth step nobody needs for most chits. ── */
-    + '<div class="sec">Attachments</div>'
-    + '<button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addFile()">+ Attach a file</button>'
-    + '<div style="margin-top:9px">'
-    + (S.files.length ? S.files.map(function(f,i){
-        return '<span class="chip">📎 '+esc(f)+'<span class="rm" onclick="rmFile('+i+')">×</span></span>'; }).join('')
-      : '<div style="font-size:12px;color:var(--grey)">Nothing attached — optional.</div>')+'</div>';
+    '<div class="sec">Attachments</div>' +
+    '<button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addFile()">+ Attach a file</button>' +
+    '<div style="margin-top:9px">' +
+    (S.files.length
+      ? S.files
+          .map(function (item, index) {
+            return '<span class="chip">📎 ' + esc(item) + '<span class="rm" onclick="rmFile(' + index + ')">×</span></span>';
+          })
+          .join('')
+      : '<div style="font-size:12px;color:var(--grey)">Nothing attached — optional.</div>') +
+    '</div>'
+  );
 }
-function stepReview(){
-  var T=CBCart.total('cc'), sel=CBCart.selected('cc');
-  return '<div class="rev"><div class="h">Lines · '+sel.length+'<span class="e" onclick="go(0)">Change</span></div>'
-    + sel.map(function(l){
-        return '<div class="r"><span class="k">'+l.qty+' × '+esc(l.unit)+'</span><span style="flex:1">'+esc(l.name)+'</span>'
-          + '<b>'+(l.line_total==null?'—':CBCart.fmt('cc', l.line_total))+'</b></div>'; }).join('')
-    + '<div class="tot"><span style="flex:1">Total</span><span>'+(T.amount?CBCart.fmt('cc', T.amount)+(T.partial?'+':''):'—')+'</span></div></div>'
-    + (T.partial?'<div class="note">Some lines have no price — the total covers only the priced ones.</div>':'')
-    + '<div class="rev"><div class="h">To<span class="e" onclick="go(1)">Change</span></div>'
-    + '<div class="r">'+(S.to.length?S.to.map(function(t){return esc(t.role)+' '+esc(t.name);}).join(' · ')
-        :'<span style="color:#b4453f">nobody yet</span>')+'</div></div>'
-    + '<div class="rev"><div class="h">Details<span class="e" onclick="go(2)">Change</span></div>'
-    + '<div class="r"><span class="k">Subject</span><span>'+(S.subject?esc(S.subject):'<span style="color:#b4453f">required</span>')+'</span></div>'
-    + '<div class="r"><span class="k">Delivery by</span><span>'+(S.by?esc(S.by):'—')+'</span></div>'
-    + '<div class="r"><span class="k">Deliver to</span><span>'+(S.addr?esc(S.addr):'—')+'</span></div>'
-    + '<div class="r"><span class="k">Note</span><span>'+(S.note?esc(S.note):'—')+'</span></div>'
-    + '<div class="r"><span class="k">Attachments</span><span>'+(S.files.length?esc(S.files.join(', ')):'—')+'</span></div></div>'
-    + '<div class="note">It becomes shared the moment you bridge it. A self-addressed chit is still a real chit: one copy in Order, one in Task, same thread.</div>';
+function stepReview() {
+  var T = CBCart.total('cc'),
+    list = CBCart.selected('cc');
+  return (
+    '<div class="rev"><div class="h">Lines · ' +
+    list.length +
+    '<span class="e" onclick="go(0)">Change</span></div>' +
+    list
+      .map(function (item) {
+        return (
+          '<div class="r"><span class="k">' +
+          item.qty +
+          ' × ' +
+          esc(item.unit) +
+          '</span><span style="flex:1">' +
+          esc(item.name) +
+          '</span>' +
+          '<b>' +
+          (item.line_total == null ? '—' : CBCart.fmt('cc', item.line_total)) +
+          '</b></div>'
+        );
+      })
+      .join('') +
+    '<div class="tot"><span style="flex:1">Total</span><span>' +
+    (T.amount ? CBCart.fmt('cc', T.amount) + (T.partial ? '+' : '') : '—') +
+    '</span></div></div>' +
+    (T.partial ? '<div class="note">Some lines have no price — the total covers only the priced ones.</div>' : '') +
+    '<div class="rev"><div class="h">To<span class="e" onclick="go(1)">Change</span></div>' +
+    '<div class="r">' +
+    (S.to.length
+      ? S.to
+          .map(function (item) {
+            return esc(item.role) + ' ' + esc(item.name);
+          })
+          .join(' · ')
+      : '<span style="color:#b4453f">nobody yet</span>') +
+    '</div></div>' +
+    '<div class="rev"><div class="h">Details<span class="e" onclick="go(2)">Change</span></div>' +
+    '<div class="r"><span class="k">Subject</span><span>' +
+    (S.subject ? esc(S.subject) : '<span style="color:#b4453f">required</span>') +
+    '</span></div>' +
+    '<div class="r"><span class="k">Delivery by</span><span>' +
+    (S.by ? esc(S.by) : '—') +
+    '</span></div>' +
+    '<div class="r"><span class="k">Deliver to</span><span>' +
+    (S.addr ? esc(S.addr) : '—') +
+    '</span></div>' +
+    '<div class="r"><span class="k">Note</span><span>' +
+    (S.note ? esc(S.note) : '—') +
+    '</span></div>' +
+    '<div class="r"><span class="k">Attachments</span><span>' +
+    (S.files.length ? esc(S.files.join(', ')) : '—') +
+    '</span></div></div>' +
+    '<div class="note">It becomes shared the moment you bridge it. A self-addressed chit is still a real chit: one copy in Order, one in Task, same thread.</div>'
+  );
 }
-function blockedBecause(){
-  if(S.step===0 && !CBCart.lines('cc')) return 'Add at least one line.';
-  if(S.step===1 && !S.to.length) return 'Add at least one recipient.';
-  if(S.step===2 && !S.subject.trim()) return 'A subject is required.';
-  if(S.step===3){
-    if(!CBCart.lines('cc')) return 'No lines.';
-    if(!S.to.length) return 'No recipient.';
-    if(!S.subject.trim()) return 'No subject.';
+function blockedBecause() {
+  if (S.step === 0 && !CBCart.lines('cc')) return 'Add at least one line.';
+  if (S.step === 1 && !S.to.length) return 'Add at least one recipient.';
+  if (S.step === 2 && !S.subject.trim()) return 'A subject is required.';
+  if (S.step === 3) {
+    if (!CBCart.lines('cc')) return 'No lines.';
+    if (!S.to.length) return 'No recipient.';
+    if (!S.subject.trim()) return 'No subject.';
   }
   return null;
 }
-function paintFoot(){
-  var last=S.step===STEPS.length-1, why=blockedBecause();
+function paintFoot() {
+  var last = S.step === STEPS.length - 1,
+    why = blockedBecause();
   document.getElementById('foot').innerHTML =
-      '<button onclick="'+(S.step?'go('+(S.step-1)+')':'')+'"'+(S.step?'':' disabled')+'>'+(S.step?'<span class=arw>←</span> Back':'Cancel')+'</button>'
-    + '<button>Save draft</button>'
-    + '<button class="pri"'+(why?' disabled title="'+esc(why)+'"':'')+' onclick="'+(last?'alert(\'(mock) chit sent\')':'go('+(S.step+1)+')')+'">'
-    + (last?'Send chit':'Next: '+STEPS[S.step+1].n+' <span class=arw>→</span>')+'</button>';
+    '<button onclick="' +
+    (S.step ? 'go(' + (S.step - 1) + ')' : '') +
+    '"' +
+    (S.step ? '' : ' disabled') +
+    '>' +
+    (S.step ? '<span class=arw>←</span> Back' : 'Cancel') +
+    '</button>' +
+    '<button>Save draft</button>' +
+    '<button class="pri"' +
+    (why ? ' disabled title="' + esc(why) + '"' : '') +
+    ' onclick="' +
+    (last ? "alert('(mock) chit sent')" : 'go(' + (S.step + 1) + ')') +
+    '">' +
+    (last ? 'Send chit' : 'Next: ' + STEPS[S.step + 1].n + ' <span class=arw>→</span>') +
+    '</button>';
 }
-function paint(){
-  document.getElementById('rail').innerHTML=railHTML();
-  document.getElementById('hSub').textContent=STEPS[S.step].t;
-  document.getElementById('body').innerHTML =
-    S.step===0?stepItems():S.step===1?stepTo():S.step===2?stepDetails():stepReview();
+function paint() {
+  document.getElementById('rail').innerHTML = railHTML();
+  document.getElementById('hSub').textContent = STEPS[S.step].t;
+  document.getElementById('body').innerHTML = S.step === 0 ? stepItems() : S.step === 1 ? stepTo() : S.step === 2 ? stepDetails() : stepReview();
   paintFoot();
 }
-armCart(); paint();
+armCart();
+paint();
 
 /* ── SMOKE TEST — this screen's own rules; the cart's are in scripts/cart-ui.test.mjs ── */
-(function(){
-  var f=0, ok=function(n,c){ console.log((c?'  ok   ':'  FAIL ')+n); if(!c)f++; };
-  console.log('%ccompose mock','font-weight:bold');
-  ok('the catalogue is the first and only thing on step 1', S.step===0 && CBCart.rows('cc').length===9);
-  ok('an empty chit cannot move on', blockedBecause()==='Add at least one line.');
-  CBCart.add('cc','c1'); CBCart.add('cc','c1'); CBCart.add('cc','c3');
-  ok('the shared cart is doing the counting', CBCart.lines('cc')===2 && CBCart.units('cc')===3);
-  ok('the total multiplies out', CBCart.total('cc').amount===950*2+650);
-  ok('★ order models work here too — sand steps by 0.5',
-     (CBCart.add('cc','c7'), CBCart.qtyOf('cc','c7')===0.5));
-  CBCart.setQty('cc','c7',0);
+(function () {
+  var count = 0,
+    ok = function (n, c) {
+      console.log((c ? '  ok   ' : '  FAIL ') + n);
+      if (!c) count++;
+    };
+  console.log('%ccompose mock', 'font-weight:bold');
+  ok('the catalogue is the first and only thing on step 1', S.step === 0 && CBCart.rows('cc').length === 9);
+  ok('an empty chit cannot move on', blockedBecause() === 'Add at least one line.');
+  CBCart.add('cc', 'c1');
+  CBCart.add('cc', 'c1');
+  CBCart.add('cc', 'c3');
+  ok('the shared cart is doing the counting', CBCart.lines('cc') === 2 && CBCart.units('cc') === 3);
+  ok('the total multiplies out', CBCart.total('cc').amount === 950 * 2 + 650);
+  ok('★ order models work here too — sand steps by 0.5', (CBCart.add('cc', 'c7'), CBCart.qtyOf('cc', 'c7') === 0.5));
+  CBCart.setQty('cc', 'c7', 0);
   /* the ad-hoc line — compose's own requirement, met by the helper rather than beside it */
-  var before=CBCart.lines('cc');
-  var id=CBCart.addAdhoc('cc',{name:'Scaffold hire',unit:'week',price:1200},2);
-  ok('★★ a typed one-off joins the SAME cart, not a second list', CBCart.lines('cc')===before+1);
-  ok('★ …carries its quantity', CBCart.qtyOf('cc',id)===2);
-  ok('★★ …and reaches the total, so the bar is never quietly wrong',
-     CBCart.total('cc').amount===950*2+650+1200*2);
-  ok('★ …and it can be removed like any other line', (CBCart.setQty('cc',id,0), CBCart.lines('cc')===before));
-  ok('★★ adding an ad-hoc line did NOT empty the cart it was added to', CBCart.lines('cc')===2);
-  CBCart.add('cc','c8');
-  ok('an unpriced line makes the total partial', CBCart.total('cc').partial===true);
-  CBCart.setQty('cc','c8',0);
-  ok('★★ FOUR steps — "To" survives HERE, because the recipient is genuinely unknown',
-     STEPS.length===4 && STEPS[1].k==='to');
-  go(1); ok('★ and it will not pass without one', blockedBecause()==='Add at least one recipient.');
-  addSelf(); ok('★ a self-addressed chit is an ordinary recipient here', S.to.length===1 && S.to[0].self===true);
-  addSelf(); ok('★ …and cannot be added twice', S.to.length===1);
-  go(2); ok('details will not pass without a subject', blockedBecause()==='A subject is required.');
-  S.subject='Paint order'; addFile();
-  ok('★ attachments have a home — on Details, not a fifth step', S.files.length===1);
-  go(3); ok('review is sendable once lines, recipient and subject are answered', blockedBecause()===null);
-  CBCart.clear('cc'); S.to=[]; S.subject=''; S.files=[]; S.step=0; paint();
-  console.log(f?('  '+f+' FAILED'):'  all passed');
+  var before = CBCart.lines('cc');
+  var id = CBCart.addAdhoc('cc', { name: 'Scaffold hire', unit: 'week', price: 1200 }, 2);
+  ok('★★ a typed one-off joins the SAME cart, not a second list', CBCart.lines('cc') === before + 1);
+  ok('★ …carries its quantity', CBCart.qtyOf('cc', id) === 2);
+  ok('★★ …and reaches the total, so the bar is never quietly wrong', CBCart.total('cc').amount === 950 * 2 + 650 + 1200 * 2);
+  ok('★ …and it can be removed like any other line', (CBCart.setQty('cc', id, 0), CBCart.lines('cc') === before));
+  ok('★★ adding an ad-hoc line did NOT empty the cart it was added to', CBCart.lines('cc') === 2);
+  CBCart.add('cc', 'c8');
+  ok('an unpriced line makes the total partial', CBCart.total('cc').partial === true);
+  CBCart.setQty('cc', 'c8', 0);
+  ok('★★ FOUR steps — "To" survives HERE, because the recipient is genuinely unknown', STEPS.length === 4 && STEPS[1].k === 'to');
+  go(1);
+  ok('★ and it will not pass without one', blockedBecause() === 'Add at least one recipient.');
+  addSelf();
+  ok('★ a self-addressed chit is an ordinary recipient here', S.to.length === 1 && S.to[0].self === true);
+  addSelf();
+  ok('★ …and cannot be added twice', S.to.length === 1);
+  go(2);
+  ok('details will not pass without a subject', blockedBecause() === 'A subject is required.');
+  S.subject = 'Paint order';
+  addFile();
+  ok('★ attachments have a home — on Details, not a fifth step', S.files.length === 1);
+  go(3);
+  ok('review is sendable once lines, recipient and subject are answered', blockedBecause() === null);
+  CBCart.clear('cc');
+  S.to = [];
+  S.subject = '';
+  S.files = [];
+  S.step = 0;
+  paint();
+  console.log(count ? '  ' + count + ' FAILED' : '  all passed');
 })();
 </script>

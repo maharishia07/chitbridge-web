@@ -304,7 +304,7 @@
     'Convert': 'Convertir',
     'Copy': 'Copier',
     'Cost': 'Coût',
-    'Couldn\'t load': 'Chargement impossible',
+    "Couldn't load": 'Chargement impossible',
     'Couldn’t load': 'Chargement impossible',
     'Counterparties': 'Contreparties',
     'Counterparty reliability': 'Fiabilité de la contrepartie',
@@ -382,7 +382,7 @@
     'How they order (commercial method)': 'Comment ils commandent (méthode commerciale)',
     'How this looks': 'Rendu',
     'How work arrives': 'Comment le travail arrive',
-    'I don\'t know': 'Je ne sais pas',
+    "I don't know": 'Je ne sais pas',
     'I don’t know': 'Je ne sais pas',
     'Identity': 'Identité',
     'IDs are identity': 'Les identifiants sont l’identité',
@@ -458,7 +458,9 @@
     'Notified by': 'Notifié par'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /** Batch 2 — the remaining 183 keys, so French matches the shared key set exactly. */
@@ -651,7 +653,9 @@
     'YOURS': 'LE VÔTRE'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
@@ -688,7 +692,7 @@
     'MIS': 'Tableau de bord',
     'Manager': 'Responsable',
     'chits received': 'chits reçus',
-    'chits you\'ve sent': 'chits envoyés',
+    "chits you've sent": 'chits envoyés',
     'unsent chits': 'chits non envoyés',
     'deleted chits': 'chits supprimés',
     'archived chits': 'chits archivés',
@@ -699,5 +703,7 @@
     'Search my orders': 'Rechercher mes commandes'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

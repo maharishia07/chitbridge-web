@@ -305,7 +305,7 @@
     'Convert': 'बदलें',
     'Copy': 'कॉपी',
     'Cost': 'लागत',
-    'Couldn\'t load': 'लोड नहीं हो सका',
+    "Couldn't load": 'लोड नहीं हो सका',
     'Couldn’t load': 'लोड नहीं हो सका',
     'Counterparties': 'प्रतिपक्ष',
     'Counterparty reliability': 'प्रतिपक्ष विश्वसनीयता',
@@ -383,7 +383,7 @@
     'How they order (commercial method)': 'वे कैसे ऑर्डर करते हैं (व्यावसायिक तरीका)',
     'How this looks': 'यह कैसा दिखता है',
     'How work arrives': 'काम कैसे आता है',
-    'I don\'t know': 'मुझे नहीं पता',
+    "I don't know": 'मुझे नहीं पता',
     'I don’t know': 'मुझे नहीं पता',
     'Identity': 'पहचान',
     'IDs are identity': 'ID ही पहचान है',
@@ -459,7 +459,9 @@
     'Notified by': 'किसने सूचित किया'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /** Batch 2 — the remaining keys, so Hindi matches the shared key set exactly. */
@@ -652,7 +654,9 @@
     'YOURS': 'आपका'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
 
 /* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
@@ -689,7 +693,7 @@
     'MIS': 'डैशबोर्ड',
     'Manager': 'प्रबंधक',
     'chits received': 'प्राप्त चिट',
-    'chits you\'ve sent': 'भेजी गई चिट',
+    "chits you've sent": 'भेजी गई चिट',
     'unsent chits': 'बिना भेजी चिट',
     'deleted chits': 'मिटाई गई चिट',
     'archived chits': 'संग्रहित चिट',
@@ -700,5 +704,7 @@
     'Search my orders': 'मेरे ऑर्डर खोजें'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
-  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

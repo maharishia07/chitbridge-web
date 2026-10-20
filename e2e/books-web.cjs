@@ -535,8 +535,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: waiting opens Ledger › Waiting');
   await p.click('[data-testid="acc-nav-daybook"]'); await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
   await p.click('[data-testid="todo-accept"]');
-  await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
-  ok(await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: several supplier bills opens Ledger › Waiting (a single one opens its sheet — e2e/chit-sheet.cjs), not Intake');
+  await p.waitForSelector('[data-testid="bills-tab-B-2100"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.evaluate(() => UI.nav) !== 'intake' && await p.locator('[data-testid="bills-tab-B-2100"]').count() === 1, 'tap: several supplier bills opens the Received bills (a single one opens its sheet — e2e/chit-sheet.cjs), not Intake');
   await ledgerGo(p);   /* the menu's Ledger item is now "CB Accounts ↗" (PR #7) — the in-app screen stays reachable by route */
   await p.click('[data-testid="acc-nav-daybook"]');
   await p.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 });
