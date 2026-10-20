@@ -27,9 +27,21 @@ const FILES = ['app.html'].concat(
  * ⚠️ THE BASELINE IS FOR PAIRS THAT ARE DELIBERATE, and each needs its reason written here. A new alias fails
  * immediately; these are the debt, and the point of the list is that it shrinks.
  */
+/**
+ * QA-20 (19 Oct 2026) · EXAMINED, DELIBERATE PAIRS (moved out of the unexamined list, with the check done):
+ *   · PUT /api/chits/:id/status  advance · status   — both names are in core.js OUTBOX_KEYS, so offline behaviour is
+ *     the same; they are two verbs of the chit's own language with different bodies.
+ *   · PUT /api/actors/assign/:id  assign · unassign — both are in OUTBOX_KEYS; assign/unassign are the two verbs.
+ * The other ten are still UNEXAMINED (the note below). The list is a ratchet: it may only shrink, and a stale entry fails.
+ */
+const JUSTIFIED = new Set([
+  'PUT /api/chits/:id/status|advance,status',
+  'PUT /api/actors/assign/:id|assign,unassign',
+]);
+const BASELINE_MAX = 10;
 const BASELINE = new Set([
   /**
-   * ⚠️⚠️ THESE FOURTEEN ARE **NOT APPROVED — THEY ARE UNEXAMINED**, and the difference matters. They are written
+   * ⚠️⚠️ THESE TEN ARE **NOT APPROVED — THEY ARE UNEXAMINED**, and the difference matters. They are written
    * down so a NEW alias fails immediately; nobody has yet checked, for each one, whether the two names are a
    * deliberate pair (one route, two verbs in the UI's language, differing only by body — `assign`/`unassign`,
    * `advance`/`status` look like that) or a genuine duplicate like the governance/profile triple was.
@@ -43,8 +55,6 @@ const BASELINE = new Set([
   'POST /api/entities/register|ownerLogin,register',
   'POST /api/governance/ai-draft|aiDraft,catEnrich',
   'GET /api/chits/:id|chit,wlChit',
-  'PUT /api/chits/:id/status|advance,status',
-  'PUT /api/actors/assign/:id|assign,unassign',
   'GET /api/actors|actors,wlActors',
   'PATCH /api/entities/profile|saveProfile,shopStatus',
   'GET /api/governance/readiness/:bridge_id|readinessOf',
@@ -80,7 +90,7 @@ for (const [key, hits] of seen) {
   const names = [...new Set(hits.map((h) => h.name))];
   if (hits.length < 2) continue;
   const tag = key + '|' + names.slice().sort().join(',');
-  (BASELINE.has(tag) ? known : problems).push({ key, names, hits });
+  ((BASELINE.has(tag) || JUSTIFIED.has(tag)) ? known : problems).push({ key, names, hits });
 }
 
 console.log('\n── one endpoint, one name ──\n');
@@ -88,6 +98,12 @@ console.log('  endpoints mapped : ' + seen.size);
 if (known.length) {
   console.log('\n  ⚠ ' + known.length + ' known alias(es), on the baseline:');
   known.forEach((p) => console.log('      ' + p.key + '  →  ' + p.names.join(' · ')));
+}
+const live = new Set(known.map((p) => p.key + '|' + p.names.slice().sort().join(',')));
+const stale = [...BASELINE].filter((k) => !live.has(k));
+if (stale.length || BASELINE.size > BASELINE_MAX) {
+  console.log('\n ✗ baseline entry no longer occurs (delete it): ' + (stale.join('; ') || 'size ' + BASELINE.size + ' > ' + BASELINE_MAX));
+  process.exit(1);
 }
 if (problems.length) {
   console.log('\n  ✗ ' + problems.length + ' endpoint(s) registered under more than one name, or more than once:\n');
