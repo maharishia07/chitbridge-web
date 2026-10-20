@@ -16,6 +16,6 @@ ok(cart.selected().length === 2, 'two lines in the cart before the order');
 cart.clear();
 ok(cart.selected().length === 0 && !cart.lines(), 'place → clear → the cart is empty (no lines, no total)');
 const shop = fs.readFileSync(__dirname + '/../public/shop.html', 'utf8');
-const i = shop.indexOf("var title=isCart?'Order placed'"), j = shop.indexOf('CBOffline.clearDraft', i);
+const i = shop.search(/var title\s*=\s*isCart\s*\?\s*'Order placed'/), j = shop.indexOf('CBOffline.clearDraft', i);
 ok(i > 0 && /_CART\.clear\(\)/.test(shop.slice(i, j)), 'M178: shop.html empties _CART when the order is placed');
 console.log(n + ' passed');

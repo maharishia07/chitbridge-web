@@ -46,48 +46,105 @@
   var doc = root.document;
   var K = root.CBScreen || {};
   var THEMES = K.APP_THEMES || {};
-  var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+  var has = function (o, k) {
+    return Object.prototype.hasOwnProperty.call(o, k);
+  };
 
   /* H34 (Athi's black-box, 2026-10-09): a utility page never sends a customer into the workshop (app.html). UX-96 (NAV-MAP §6 item 10, 2026-10-19):
      Profile opens Settings › Your business, the owner has Settings on every page, and Support is NOT drawn until a support page exists (it used to
      loop to Home) — a page that has one passes onSupport or supportHref and the item appears. A page's own handler or href still wins; the workshop passes its own. */
-  var PROFILE_HREF = '/settings.html#/shop', SETTINGS_HREF = '/settings.html';
+  var PROFILE_HREF = '/settings.html#/shop',
+    SETTINGS_HREF = '/settings.html';
   /* ── the facts (moved from app.html: FS_BASE · TEXT_SIZES · FONTS) ── */
   var FS_BASE = { '--fs-1': 11, '--fs-2': 12.5, '--fs-3': 14, '--fs-4': 16, '--fs-5': 20, '--fs-6': 28, '--fs-7': 36, '--fs-8': 46 };
-  var TEXT_SIZES = [['s', 'Small', 0.92], ['m', 'Medium', 1], ['l', 'Large', 1.15], ['xl', 'Extra large', 1.32]];
+  var TEXT_SIZES = [
+    ['s', 'Small', 0.92],
+    ['m', 'Medium', 1],
+    ['l', 'Large', 1.15],
+    ['xl', 'Extra large', 1.32]
+  ];
   var FONTS = [
-    ['default', 'Default',   'Inter,system-ui,sans-serif',            'the product’s own face'],
-    ['grotesk', 'Grotesk',   "'Space Grotesk',Inter,sans-serif",    'larger apertures'],
-    ['serif',   'Serif',     "Georgia,'Times New Roman',serif",     'serifs guide the line'],
-    ['wide',    'Wide',      'Verdana,Tahoma,sans-serif',             'wide letterforms · low vision'],
-    ['mono',    'Monospace', "'Space Mono',ui-monospace,monospace", 'every character the same width']
+    ['default', 'Default', 'Inter,system-ui,sans-serif', 'the product’s own face'],
+    ['grotesk', 'Grotesk', "'Space Grotesk',Inter,sans-serif", 'larger apertures'],
+    ['serif', 'Serif', "Georgia,'Times New Roman',serif", 'serifs guide the line'],
+    ['wide', 'Wide', 'Verdana,Tahoma,sans-serif', 'wide letterforms · low vision'],
+    ['mono', 'Monospace', "'Space Mono',ui-monospace,monospace", 'every character the same width']
   ];
   var MONO = FONTS[4][2];
   /* edition (AX1): which showing of Home this person sees (public/app/edition.js reads it; the list is the manifest's `editions`) — kept and synced like text size */
-  var KEY = { theme: 'cb_theme', font: 'cb_font', fs: 'cb_fs', weight: 'cb_weight', motion: 'cb_motion', stripes: 'cb_stripes', edition: 'cb_edition', kural: 'cb_kural' };
+  var KEY = {
+    theme: 'cb_theme',
+    font: 'cb_font',
+    fs: 'cb_fs',
+    weight: 'cb_weight',
+    motion: 'cb_motion',
+    stripes: 'cb_stripes',
+    edition: 'cb_edition',
+    kural: 'cb_kural'
+  };
   var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' };
   /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
-  var KURAL = [['auto', 'Where Tamil is read'], ['on', 'On'], ['off', 'Off']];
+  var KURAL = [
+    ['auto', 'Where Tamil is read'],
+    ['on', 'On'],
+    ['off', 'Off']
+  ];
   var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
-  var STRIPES = [['off', 'Off'], ['light', 'Light'], ['strong', 'Strong']];   /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
+  var STRIPES = [
+    ['off', 'Off'],
+    ['light', 'Light'],
+    ['strong', 'Strong']
+  ]; /* row stripes (Excel's banded rows): Strong is the default and the list unit's own 9%; Light 5%; Off none */
 
-  function lsGet(k, d) { try { return root.localStorage.getItem(k) || d; } catch (_) { return d; } }
-  function lsSet(k, v) { try { root.localStorage.setItem(k, v); } catch (_) {} }
-  function lsDel(k) { try { root.localStorage.removeItem(k); } catch (_) {} }
+  function lsGet(k, d) {
+    try {
+      return root.localStorage.getItem(k) || d;
+    } catch (_) {
+      return d;
+    }
+  }
+  function lsSet(k, v) {
+    try {
+      root.localStorage.setItem(k, v);
+    } catch (_) {}
+  }
+  function lsDel(k) {
+    try {
+      root.localStorage.removeItem(k);
+    } catch (_) {}
+  }
 
   /* ── what is saved ── */
-  function pref(kind) { return lsGet(KEY[kind], DEFAULTS[kind]); }
-  function get() { return { theme: pref('theme'), font: pref('font'), fs: pref('fs'), weight: pref('weight'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), kural: pref('kural') }; }
+  function pref(kind) {
+    return lsGet(KEY[kind], DEFAULTS[kind]);
+  }
+  function get() {
+    return {
+      theme: pref('theme'),
+      font: pref('font'),
+      fs: pref('fs'),
+      weight: pref('weight'),
+      motion: pref('motion'),
+      stripes: pref('stripes'),
+      edition: pref('edition'),
+      kural: pref('kural')
+    };
+  }
 
   /** The theme that is actually on the page. `device` (or nothing saved) asks the operating system ONCE, at load, and is not live. */
   function themeKey() {
     /* TOUR-FIX1: a page that loads the theme library AFTER this file (the till: avatar.js, then /engine/screen.js) took an empty table here and
        answered Cream for every saved theme — the library is read again the first time it is there */
-    if (!Object.keys(THEMES).length && root.CBScreen && root.CBScreen.APP_THEMES) { K = root.CBScreen; THEMES = K.APP_THEMES; }
+    if (!Object.keys(THEMES).length && root.CBScreen && root.CBScreen.APP_THEMES) {
+      K = root.CBScreen;
+      THEMES = K.APP_THEMES;
+    }
     var p = pref('theme');
     if (p !== 'device' && has(THEMES, p) && THEMES[p]) return p;
-    if (p !== 'device') return 'cream';                     /* a stale or unknown saved name never stamps itself on <html> */
-    try { if (root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches && has(THEMES, 'dark')) return 'dark'; } catch (_) {}
+    if (p !== 'device') return 'cream'; /* a stale or unknown saved name never stamps itself on <html> */
+    try {
+      if (root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches && has(THEMES, 'dark')) return 'dark';
+    } catch (_) {}
     return 'cream';
   }
 
@@ -96,142 +153,291 @@
      on-colour gets it from the engine's ONE calculation (CBScreen.onColour, screen.js — never a second luminance sum here): Dark's --blue #6892DB
      and --ok #2E9E5E took the pages' own white at 3.1:1 (the storefront's logo, + and the frame's mark). A theme's own --on-accent / --on-ok wins;
      under a theme the pages' accent IS --blue (page-skeleton.css, shop.html). */
-  var ON_COLOUR_PAIRS = [['--on-accent', ['--accent', '--blue']], ['--on-ok', ['--ok']]];
+  var ON_COLOUR_PAIRS = [
+    ['--on-accent', ['--accent', '--blue']],
+    ['--on-ok', ['--ok']]
+  ];
   function onColoursOf(vars) {
-    var derived = {}, onColour = root.CBScreen && root.CBScreen.onColour;
+    var derived = {},
+      onColour = root.CBScreen && root.CBScreen.onColour;
     if (typeof onColour !== 'function') return derived;
     ON_COLOUR_PAIRS.forEach(function (pair) {
-      var onToken = pair[0], baseToken = pair[1].filter(function (token) { return vars[token]; })[0];
+      var onToken = pair[0],
+        baseToken = pair[1].filter(function (token) {
+          return vars[token];
+        })[0];
       if (baseToken && !vars[onToken]) derived[onToken] = onColour(vars[baseToken]);
     });
     return derived;
   }
   /** Apply a theme to the page. With a key it is a PREVIEW (nothing saved) — what Settings' contrast check and the palette cards use. */
   function themeApply(forKey) {
-    var r = doc.documentElement, key = (forKey && has(THEMES, forKey) && THEMES[forKey]) ? forKey : themeKey(), t = THEMES[key] || { vars: {} };
+    var node = doc.documentElement,
+      key = forKey && has(THEMES, forKey) && THEMES[forKey] ? forKey : themeKey(),
+      t = THEMES[key] || { vars: {} };
     var all = {};
-    Object.keys(THEMES).forEach(function (k) { Object.keys(THEMES[k].vars || {}).forEach(function (v) { all[v] = 1; }); });
-    ON_COLOUR_PAIRS.forEach(function (pair) { all[pair[0]] = 1; });
-    Object.keys(all).forEach(function (v) { r.style.removeProperty(v); });
-    var vars = t.vars || {}, derived = onColoursOf(vars);
-    Object.keys(vars).forEach(function (token) { r.style.setProperty(token, vars[token]); });
-    Object.keys(derived).forEach(function (token) { r.style.setProperty(token, derived[token]); });
-    r.style.colorScheme = t.scheme || 'light';              /* the caret, scrollbars, autofill and date picker are drawn by the browser */
-    r.setAttribute('data-theme', key);
-    if (Object.keys(t.vars || {}).length) r.setAttribute('data-themed', key); else r.removeAttribute('data-themed');   /* a page's own names key off THIS: Cream overrides nothing */
+    Object.keys(THEMES).forEach(function (item) {
+      Object.keys(THEMES[item].vars || {}).forEach(function (entry) {
+        all[entry] = 1;
+      });
+    });
+    ON_COLOUR_PAIRS.forEach(function (pair) {
+      all[pair[0]] = 1;
+    });
+    Object.keys(all).forEach(function (item) {
+      node.style.removeProperty(item);
+    });
+    var vars = t.vars || {},
+      derived = onColoursOf(vars);
+    Object.keys(vars).forEach(function (token) {
+      node.style.setProperty(token, vars[token]);
+    });
+    Object.keys(derived).forEach(function (token) {
+      node.style.setProperty(token, derived[token]);
+    });
+    node.style.colorScheme = t.scheme || 'light'; /* the caret, scrollbars, autofill and date picker are drawn by the browser */
+    node.setAttribute('data-theme', key);
+    if (Object.keys(t.vars || {}).length) node.setAttribute('data-themed', key);
+    else node.removeAttribute('data-themed'); /* a page's own names key off THIS: Cream overrides nothing */
   }
-  function fontStack(k) { var row = FONTS.filter(function (f) { return f[0] === k; })[0] || FONTS[0]; return row[2]; }
+  function fontStack(k) {
+    var row =
+      FONTS.filter(function (item) {
+        return item[0] === k;
+      })[0] || FONTS[0];
+    return row[2];
+  }
   function fontApply() {
-    var r = doc.documentElement, fk = pref('font'), t = THEMES[themeKey()] || {}, stack = null;
+    var node = doc.documentElement,
+      fk = pref('font'),
+      t = THEMES[themeKey()] || {},
+      stack = null;
     if (fk !== 'default') stack = fontStack(fk);
-    else if (t.font === 'mono') stack = MONO;               /* Terminal's own face, unless the person chose one */
+    else if (t.font === 'mono') stack = MONO; /* Terminal's own face, unless the person chose one */
     /* two names, because the pages use two: the app's --font-ui and the list standard's --f-ui */
-    ['--font-ui', '--f-ui'].forEach(function (v) { if (stack) r.style.setProperty(v, stack); else r.style.removeProperty(v); });
+    ['--font-ui', '--f-ui'].forEach(function (item) {
+      if (stack) node.style.setProperty(item, stack);
+      else node.style.removeProperty(item);
+    });
   }
   var BASE = null;
   function fsBase() {
     if (BASE && BASE.ready) return BASE;
-    var b = { ready: false }, r = doc.documentElement, cs = null, got = 0, saved = {};
-    try { cs = root.getComputedStyle(r); } catch (_) {}
-    Object.keys(FS_BASE).forEach(function (tok) {
-      saved[tok] = r.style.getPropertyValue(tok); if (saved[tok]) r.style.removeProperty(tok);
+    var b = { ready: false },
+      node = doc.documentElement,
+      cs = null,
+      count = 0,
+      saved = {};
+    try {
+      cs = root.getComputedStyle(node);
+    } catch (_) {}
+    Object.keys(FS_BASE).forEach(function (item) {
+      saved[item] = node.style.getPropertyValue(item);
+      if (saved[item]) node.style.removeProperty(item);
     });
     /* ⚠️ a page may declare its tokens in rem/em (testing.html: --fs-1:0.8125rem). parseFloat alone read that as 0.8 px, so
        any text size but Medium drew the whole page at ~1 px (Athi, 2026-10-07). Convert to px against the root's own size. */
     var remPx = 16;
-    try { remPx = parseFloat(root.getComputedStyle(r).fontSize) || 16; } catch (_) {}
-    Object.keys(FS_BASE).forEach(function (tok) {
-      var raw = cs ? String(cs.getPropertyValue(tok)).trim() : '', v = parseFloat(raw);
-      if (/r?em$/i.test(raw)) v = v * remPx; else if (raw && !/px$/i.test(raw)) v = NaN;   /* %, calc(), vw …: fall back to FS_BASE */
-      if (v > 0) { b[tok] = v; got++; } else b[tok] = FS_BASE[tok];
+    try {
+      remPx = parseFloat(root.getComputedStyle(node).fontSize) || 16;
+    } catch (_) {}
+    Object.keys(FS_BASE).forEach(function (item) {
+      var raw = cs ? String(cs.getPropertyValue(item)).trim() : '',
+        v = parseFloat(raw);
+      if (/r?em$/i.test(raw)) v = v * remPx;
+      else if (raw && !/px$/i.test(raw)) v = NaN; /* %, calc(), vw …: fall back to FS_BASE */
+      if (v > 0) {
+        b[item] = v;
+        count++;
+      } else b[item] = FS_BASE[item];
     });
-    Object.keys(saved).forEach(function (tok) { if (saved[tok]) r.style.setProperty(tok, saved[tok]); });
-    b.ready = got === Object.keys(FS_BASE).length;           /* the stylesheet was not parsed yet: ask again next time */
-    BASE = b; return b;
+    Object.keys(saved).forEach(function (item) {
+      if (saved[item]) node.style.setProperty(item, saved[item]);
+    });
+    b.ready = count === Object.keys(FS_BASE).length; /* the stylesheet was not parsed yet: ask again next time */
+    BASE = b;
+    return b;
   }
   function sizeApply() {
-    var r = doc.documentElement, row = TEXT_SIZES.filter(function (x) { return x[0] === pref('fs'); })[0] || TEXT_SIZES[1], b = fsBase();
-    Object.keys(FS_BASE).forEach(function (tok) {
-      if (row[2] === 1) r.style.removeProperty(tok); else r.style.setProperty(tok, (Math.round(b[tok] * row[2] * 10) / 10) + 'px');
+    var node = doc.documentElement,
+      row =
+        TEXT_SIZES.filter(function (x) {
+          return x[0] === pref('fs');
+        })[0] || TEXT_SIZES[1],
+      b = fsBase();
+    Object.keys(FS_BASE).forEach(function (item) {
+      if (row[2] === 1) node.style.removeProperty(item);
+      else node.style.setProperty(item, Math.round(b[item] * row[2] * 10) / 10 + 'px');
     });
-    if (row[2] === 1) r.style.removeProperty('--k'); else r.style.setProperty('--k', String(row[2]));
+    if (row[2] === 1) node.style.removeProperty('--k');
+    else node.style.setProperty('--k', String(row[2]));
   }
   function weightApply() {
-    var r = doc.documentElement;
-    if (pref('weight') === 'bold') r.setAttribute('data-weight', 'bold'); else r.removeAttribute('data-weight');
+    var node = doc.documentElement;
+    if (pref('weight') === 'bold') node.setAttribute('data-weight', 'bold');
+    else node.removeAttribute('data-weight');
   }
   function motionApply() {
-    var r = doc.documentElement, m = pref('motion');
+    var node = doc.documentElement,
+      m = pref('motion');
     /* ⚠️ an unrecognised saved value means "follow the device", never a stamp no rule matches (the health setting must not fail open) */
-    if (m === 'reduce' || m === 'full') r.setAttribute('data-motion', m); else r.removeAttribute('data-motion');
+    if (m === 'reduce' || m === 'full') node.setAttribute('data-motion', m);
+    else node.removeAttribute('data-motion');
   }
   /** the ONE zebra token: the stamp picks --zebra (CSS below); Strong is no stamp, the unit's own fallback */
   function stripesApply() {
-    var r = doc.documentElement, s = pref('stripes');
-    if (s === 'off' || s === 'light') r.setAttribute('data-stripes', s); else r.removeAttribute('data-stripes');
+    var node = doc.documentElement,
+      s = pref('stripes');
+    if (s === 'off' || s === 'light') node.setAttribute('data-stripes', s);
+    else node.removeAttribute('data-stripes');
   }
   function apply() {
     if (!doc || !doc.documentElement) return;
-    try { themeApply(); fontApply(); sizeApply(); weightApply(); motionApply(); stripesApply(); } catch (_) {}
+    try {
+      themeApply();
+      fontApply();
+      sizeApply();
+      weightApply();
+      motionApply();
+      stripesApply();
+    } catch (_) {}
     /* W7: the band reads the pref itself (CBKural.repaint); told here so a change shows at once */
-    try { if (root.CBKural && root.CBKural.repaint) root.CBKural.repaint(); } catch (e) { console.warn('avatar: the kural band did not repaint', (e && e.message) || e); }
+    try {
+      if (root.CBKural && root.CBKural.repaint) root.CBKural.repaint();
+    } catch (e) {
+      console.warn('avatar: the kural band did not repaint', (e && e.message) || e);
+    }
   }
 
   /* ── the person's appearance follows them (b166) — silent when there is nothing to reach ── */
   var pushTimer = null;
   function apiBaseOf(o) {
     if (o && o.apiBase) return o.apiBase;
-    try { if (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) return CFG.API_BASE; } catch (_) {}
+    try {
+      if (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) return CFG.API_BASE;
+    } catch (_) {}
     return '';
   }
   function tokenOf(o) {
     if (o && o.token) return o.token;
-    try { var s = JSON.parse(root.localStorage.getItem('cb_sess') || 'null'); return (s && s.token) || ''; } catch (_) { return ''; }
+    try {
+      var parsed = JSON.parse(root.localStorage.getItem('cb_sess') || 'null');
+      return (parsed && parsed.token) || '';
+    } catch (_) {
+      return '';
+    }
   }
-  var HOST = {};                                            /* what the mounted page told us (apiBase · token · sync) */
+  var HOST = {}; /* what the mounted page told us (apiBase · token · sync) */
   /* ⭐ F9 (FX-UX2): THE PENDING MARK. A choice made on this device is held in cb_prefs_pending ({ kind: value }) until a push the server
      answers ok:true carries it; hydrate never resets a marked kind (offline, signed out, before the column exists — the push answers
      {pending:true} or {queued:true}, never ok:true). A mark whose value the server already holds was landed: it goes. */
   var PEND = 'cb_prefs_pending';
-  function pendGet() { try { var o = JSON.parse(root.localStorage.getItem(PEND) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (_) { return {}; } }
-  function pendPut(o) { try { if (Object.keys(o).length) root.localStorage.setItem(PEND, JSON.stringify(o)); else root.localStorage.removeItem(PEND); } catch (_) {} }
-  function pendMark(kind) { var o = pendGet(); o[kind] = pref(kind); pendPut(o); }
+  function pendGet() {
+    try {
+      var parsed = JSON.parse(root.localStorage.getItem(PEND) || '{}');
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+  function pendPut(o) {
+    try {
+      if (Object.keys(o).length) root.localStorage.setItem(PEND, JSON.stringify(o));
+      else root.localStorage.removeItem(PEND);
+    } catch (_) {}
+  }
+  function pendMark(kind) {
+    var o = pendGet();
+    o[kind] = pref(kind);
+    pendPut(o);
+  }
   /** a push landed: every kind it carried whose mark still holds the value sent is no longer pending */
   function landed(sent, r) {
     if (!r || r.ok !== true || r.pending) return;
     var o = pendGet();
-    Object.keys(o).forEach(function (k) { if (has(sent, k) && sent[k] === o[k]) delete o[k]; });
+    Object.keys(o).forEach(function (item) {
+      if (has(sent, item) && sent[item] === o[item]) delete o[item];
+    });
     pendPut(o);
   }
   function push(now) {
     if (HOST.sync === false) return;
-    var body = { theme: pref('theme'), fs: pref('fs'), motion: pref('motion'), stripes: pref('stripes'), edition: pref('edition'), font: pref('font'), weight: pref('weight'), kural: pref('kural') };   /* every synced key rides every push */
+    var body = {
+      theme: pref('theme'),
+      fs: pref('fs'),
+      motion: pref('motion'),
+      stripes: pref('stripes'),
+      edition: pref('edition'),
+      font: pref('font'),
+      weight: pref('weight'),
+      kural: pref('kural')
+    }; /* every synced key rides every push */
     /* the app's (and CB Accounts') own door: CBPrefs debounces, queues offline and stays silent before the migration; its answer clears the mark */
     /* …except a push that must outlive this page (an edition reloads at once): CBPrefs's 400 ms debounce would die with the page, so it is sent now, kept alive (FX-QA1) */
-    try { if (!now && typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) { CBPrefs.push('ui', body, function (r) { landed(body, r); }); return; } } catch (_) {}
-    var base = apiBaseOf(HOST), tok = tokenOf(HOST);
+    try {
+      if (!now && typeof CBPrefs !== 'undefined' && typeof SESSION !== 'undefined' && SESSION && SESSION.token) {
+        CBPrefs.push('ui', body, function (r) {
+          landed(body, r);
+        });
+        return;
+      }
+    } catch (_) {}
+    var base = apiBaseOf(HOST),
+      tok = tokenOf(HOST);
     if (!base || !tok || !root.fetch) return;
-    if (pushTimer) { try { root.clearTimeout(pushTimer); } catch (_) {} }
+    if (pushTimer) {
+      try {
+        root.clearTimeout(pushTimer);
+      } catch (_) {}
+    }
     var send = function (keep) {
       try {
-        return root.fetch(base + '/api/entities/me/prefs/ui', { method: 'PATCH', cache: 'no-store', keepalive: !!keep,
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) })
-          .then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { landed(body, j); }).catch(function () {});
-      } catch (_) { return null; }
+        return root
+          .fetch(base + '/api/entities/me/prefs/ui', {
+            method: 'PATCH',
+            cache: 'no-store',
+            keepalive: !!keep,
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
+            body: JSON.stringify(body)
+          })
+          .then(function (reply) {
+            return reply.ok ? reply.json() : null;
+          })
+          .then(function (reply) {
+            landed(body, reply);
+          })
+          .catch(function () {});
+      } catch (_) {
+        return null;
+      }
     };
-    if (now) return send(true);   /* the page redraws at once (an edition): sent now, and kept alive across the reload */
-    pushTimer = root.setTimeout(function () { send(false); }, 400);
+    if (now) return send(true); /* the page redraws at once (an edition): sent now, and kept alive across the reload */
+    pushTimer = root.setTimeout(function () {
+      send(false);
+    }, 400);
   }
   /** the one test of a value for a kind — set() and hydrate() ask the same question */
   function valid(kind, v) {
     if (kind === 'theme') return v === 'device' || (has(THEMES, v) && !!THEMES[v]);
-    if (kind === 'fs') return TEXT_SIZES.some(function (x) { return x[0] === v; });
-    if (kind === 'font') return FONTS.some(function (x) { return x[0] === v; });
+    if (kind === 'fs')
+      return TEXT_SIZES.some(function (x) {
+        return x[0] === v;
+      });
+    if (kind === 'font')
+      return FONTS.some(function (x) {
+        return x[0] === v;
+      });
     if (kind === 'weight') return v === 'normal' || v === 'bold';
     if (kind === 'motion') return ['auto', 'reduce', 'full'].indexOf(v) >= 0;
-    if (kind === 'stripes') return STRIPES.some(function (x) { return x[0] === v; });
+    if (kind === 'stripes')
+      return STRIPES.some(function (x) {
+        return x[0] === v;
+      });
     if (kind === 'edition') return EDITION.test(String(v));
-    if (kind === 'kural') return KURAL.some(function (x) { return x[0] === v; });
+    if (kind === 'kural')
+      return KURAL.some(function (x) {
+        return x[0] === v;
+      });
     return false;
   }
   /**
@@ -243,41 +449,73 @@
    */
   function hydrate(prefs) {
     if (!prefs || typeof prefs !== 'object') return false;
-    var changed = false, edNow = pref('edition'), pend = pendGet(), again = false;
+    var changed = false,
+      edNow = pref('edition'),
+      pend = pendGet(),
+      again = false;
     try {
-      Object.keys(KEY).forEach(function (k) {
-        var v = prefs[k], held = v != null && v !== '';
-        if (has(pend, k)) { if (held && String(v) === pend[k]) { delete pend[k]; pendPut(pend); } else again = true; return; }
-        if (held) { if (valid(k, v) && v !== pref(k)) { lsSet(KEY[k], v); changed = true; } return; }
-        if (pref(k) !== DEFAULTS[k]) { lsDel(KEY[k]); changed = true; }
+      Object.keys(KEY).forEach(function (item) {
+        var v = prefs[item],
+          held = v != null && v !== '';
+        if (has(pend, item)) {
+          if (held && String(v) === pend[item]) {
+            delete pend[item];
+            pendPut(pend);
+          } else again = true;
+          return;
+        }
+        if (held) {
+          if (valid(item, v) && v !== pref(item)) {
+            lsSet(KEY[item], v);
+            changed = true;
+          }
+          return;
+        }
+        if (pref(item) !== DEFAULTS[item]) {
+          lsDel(KEY[item]);
+          changed = true;
+        }
       });
-      if (changed) { apply(); repaint(); }
-      if (pref('edition') !== edNow) editionReload();   /* this person's saved showing differs from what this machine drew: draw it again */
-      if (again) push();                                 /* the choice that never landed goes up now */
+      if (changed) {
+        apply();
+        repaint();
+      }
+      if (pref('edition') !== edNow) editionReload(); /* this person's saved showing differs from what this machine drew: draw it again */
+      if (again) push(); /* the choice that never landed goes up now */
     } catch (_) {}
     return changed;
   }
   function pull(o) {
-    var base = apiBaseOf(o), tok = tokenOf(o);
+    var base = apiBaseOf(o),
+      tok = tokenOf(o);
     if (!base || !tok || !root.fetch) return;
     try {
-      root.fetch(base + '/api/entities/me', { cache: 'no-store', headers: { Authorization: 'Bearer ' + tok } })
-        .then(function (r) {
+      root
+        .fetch(base + '/api/entities/me', { cache: 'no-store', headers: { Authorization: 'Bearer ' + tok } })
+        .then(function (reply) {
           /* WALK-REG 2026-10-16 R1: ONLY the server's definite "no such identity" (404/401) ends the local session; a network failure or 5xx
              leaves it (the counter works offline). The page that asked (o.onGone) says why and shows the sign-in. */
-          if ((r.status === 404 || r.status === 401) && typeof o.onGone === 'function') { forget(); o.onGone(r.status); return null; }
-          return r.ok ? r.json() : null;
+          if ((reply.status === 404 || reply.status === 401) && typeof o.onGone === 'function') {
+            forget();
+            o.onGone(reply.status);
+            return null;
+          }
+          return reply.ok ? reply.json() : null;
         })
-        .then(function (j) {
-          if (!j) return;
-          var d = (j && j.data) || j, e = (d && d.entity) || d || {};
+        .then(function (reply) {
+          if (!reply) return;
+          var d = (reply && reply.data) || reply,
+            e = (d && d.entity) || d || {};
           hydrate(e.ui_prefs);
           /* FX-UX1 (F6): the same row carries the person's locale choice and the shop's country — handed to the locale engine the way app.html's boot
              does (app.html CBLocale.hydrate), so number · date · grouping follow the shop's country (REGIONS[country] = the pack's locale) on every
              page, not en-IN by default. One read for both; a page with pull:false hydrates itself. */
-          try { if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null }); } catch (_) {}
+          try {
+            if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null });
+          } catch (_) {}
           announceShop(e);
-        }).catch(function () {});
+        })
+        .catch(function () {});
     } catch (_) {}
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
@@ -285,25 +523,37 @@
   var SHOP_COUNTRY = null;
   function announceShop(entity) {
     SHOP_COUNTRY = entity && entity.country ? String(entity.country).toUpperCase() : null;
-    try { root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } })); } catch (e) { if (root.console) root.console.warn('avatar: cb:me not announced', e); }
+    try {
+      root.document.dispatchEvent(new CustomEvent('cb:me', { detail: { country: SHOP_COUNTRY } }));
+    } catch (e) {
+      if (root.console) root.console.warn('avatar: cb:me not announced', e);
+    }
   }
-  function shopCountry() { return SHOP_COUNTRY; }
+  function shopCountry() {
+    return SHOP_COUNTRY;
+  }
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
     lsSet(KEY[kind], value);
-    pendMark(kind);                                         /* held against a server reset until a push lands (F9) */
+    pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
-    if (kind === 'edition') { push(true); if (root.CBEdition) root.CBEdition.clearTab(); return editionReload(true); }   /* the person's own choice outranks a showing link */
-    push();                                                 /* every kind reaches the server since CU3 (font · weight were device-only) */
+    if (kind === 'edition') {
+      push(true);
+      if (root.CBEdition) root.CBEdition.clearTab();
+      return editionReload(true);
+    } /* the person's own choice outranks a showing link */
+    push(); /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
   function editionReload(force) {
     try {
-      if (!force && root.sessionStorage.getItem('cb_edition_tab')) return;   /* a showing link holds this tab: nothing to redraw */
-      var u = new URL(root.location.href); u.searchParams.delete('edition');
-      if (u.href === root.location.href) root.location.reload(); else root.location.replace(u.href);
+      if (!force && root.sessionStorage.getItem('cb_edition_tab')) return; /* a showing link holds this tab: nothing to redraw */
+      var u = new URL(root.location.href);
+      u.searchParams.delete('edition');
+      if (u.href === root.location.href) root.location.reload();
+      else root.location.replace(u.href);
     } catch (_) {}
   }
 
@@ -374,117 +624,327 @@
 
   function addCss() {
     if (!doc || doc.getElementById('cbav-css')) return;
-    var s = doc.createElement('style'); s.id = 'cbav-css'; s.textContent = CSS;
-    (doc.head || doc.documentElement).appendChild(s);
+    var node = doc.createElement('style');
+    node.id = 'cbav-css';
+    node.textContent = CSS;
+    (doc.head || doc.documentElement).appendChild(node);
   }
 
-  var M = null;                                             /* the mounted avatar: { el, o } — one per page */
+  var M = null; /* the mounted avatar: { el, o } — one per page */
   var openNow = false;
 
   function swatches() {
     var p = pref('theme');
-    var dev = '<button type="button" data-testid="theme-device" data-av-theme="device" aria-pressed="' + (p === 'device') + '"><span class="dot"><i style="background:#FCFAF5"></i><i style="background:#15140F"></i></span>My device</button>';
-    return dev + Object.keys(THEMES).map(function (k) {
-      var t = THEMES[k], v = t.vars || {};
-      return '<button type="button" data-testid="theme-' + esc(k) + '" data-av-theme="' + esc(k) + '" aria-pressed="' + (p === k) + '" title="' + esc(t.name) + '">' +
-        '<span class="dot"><i style="background:' + esc(v['--paper'] || '#FAF8F4') + '"></i><i style="background:' + esc(v['--blue'] || '#3F66A6') + '"></i></span>' + esc(t.name) + '</button>';
-    }).join('');
+    var dev =
+      '<button type="button" data-testid="theme-device" data-av-theme="device" aria-pressed="' +
+      (p === 'device') +
+      '"><span class="dot"><i style="background:#FCFAF5"></i><i style="background:#15140F"></i></span>My device</button>';
+    return (
+      dev +
+      Object.keys(THEMES)
+        .map(function (item) {
+          var t = THEMES[item],
+            v = t.vars || {};
+          return (
+            '<button type="button" data-testid="theme-' +
+            esc(item) +
+            '" data-av-theme="' +
+            esc(item) +
+            '" aria-pressed="' +
+            (p === item) +
+            '" title="' +
+            esc(t.name) +
+            '">' +
+            '<span class="dot"><i style="background:' +
+            esc(v['--paper'] || '#FAF8F4') +
+            '"></i><i style="background:' +
+            esc(v['--blue'] || '#3F66A6') +
+            '"></i></span>' +
+            esc(t.name) +
+            '</button>'
+          );
+        })
+        .join('')
+    );
   }
 
   /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
   function choiceGroup(heading, kind, choices) {
-    return '<h4>' + heading + '</h4><div class="cbav-stripes" role="group" aria-label="' + heading + '" data-testid="' + kind + '-group">' + choices.map(function (choice) {
-      return '<button type="button" data-testid="' + kind + '-' + choice[0] + '" data-av-' + kind + '="' + choice[0] + '" aria-pressed="' + (pref(kind) === choice[0]) + '">' + choice[1] + '</button>';
-    }).join('') + '</div>';
+    return (
+      '<h4>' +
+      heading +
+      '</h4><div class="cbav-stripes" role="group" aria-label="' +
+      heading +
+      '" data-testid="' +
+      kind +
+      '-group">' +
+      choices
+        .map(function (choice) {
+          return (
+            '<button type="button" data-testid="' +
+            kind +
+            '-' +
+            choice[0] +
+            '" data-av-' +
+            kind +
+            '="' +
+            choice[0] +
+            '" aria-pressed="' +
+            (pref(kind) === choice[0]) +
+            '">' +
+            choice[1] +
+            '</button>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
   }
 
   function menuHtml(o) {
-    var P = o.person || {}, items = o.items || ['profile', 'settings', 'support', 'signout'];
+    var P = o.person || {},
+      items = o.items || ['profile', 'settings', 'support', 'signout'];
     var showSettings = items.indexOf('settings') >= 0 && !!P.owner;
-    var has_ = function (k) { return items.indexOf(k) >= 0; };
-    var up = [], down = [];
-    if (has_('profile')) up.push(o.onProfile
-      ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
-      : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>');
+    var has_ = function (k) {
+      return items.indexOf(k) >= 0;
+    };
+    var up = [],
+      down = [];
+    if (has_('profile'))
+      up.push(
+        o.onProfile
+          ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
+          : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>'
+      );
     /* UX-96: the OWNER has Settings on every page — the workshop's own handler, else the Settings page (never a door into app.html, H34) */
-    if (showSettings) up.push(o.onSettings
-      ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-      : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>');
+    if (showSettings)
+      up.push(
+        o.onSettings
+          ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
+          : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>'
+      );
     /* UX-96: Support only where there is somewhere to go (no support page yet → no item, no loop to Home) */
-    if (has_('support') && (o.onSupport || o.supportHref)) down.push(o.onSupport
-      ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-      : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>');
+    if (has_('support') && (o.onSupport || o.supportHref))
+      down.push(
+        o.onSupport
+          ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
+          : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
+      );
     if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
 
-    var fsNow = pref('fs'), w = pref('weight'), f = pref('font');
+    var fsNow = pref('fs'),
+      w = pref('weight'),
+      f = pref('font');
     var langs = '';
     if (o.languages && o.languages.list) {
-      langs = '<h4>Language</h4><div class="cbav-langs" role="group" aria-label="Language" data-testid="lang-picker">' + Object.keys(o.languages.list).map(function (c) {
-        return '<button type="button" data-testid="lang-' + esc(c) + '" data-av-lang="' + esc(c) + '" aria-pressed="' + (o.languages.current === c) + '">' + esc(o.languages.list[c]) + '</button>';
-      }).join('') + '</div>';
+      langs =
+        '<h4>Language</h4><div class="cbav-langs" role="group" aria-label="Language" data-testid="lang-picker">' +
+        Object.keys(o.languages.list)
+          .map(function (item) {
+            return (
+              '<button type="button" data-testid="lang-' +
+              esc(item) +
+              '" data-av-lang="' +
+              esc(item) +
+              '" aria-pressed="' +
+              (o.languages.current === item) +
+              '">' +
+              esc(o.languages.list[item]) +
+              '</button>'
+            );
+          })
+          .join('') +
+        '</div>';
     }
-    return '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
-      '<div class="cbav-who"><span class="l">' + esc(letter(P)) + '</span><div><b>' + esc(P.name || P.entity || '') + '</b><span>' + esc(P.role || '') + '</span></div></div>' +
+    return (
+      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
+      '<div class="cbav-who"><span class="l">' +
+      esc(letter(P)) +
+      '</span><div><b>' +
+      esc(P.name || P.entity || '') +
+      '</b><span>' +
+      esc(P.role || '') +
+      '</span></div></div>' +
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
-      '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
+      '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' +
+      swatches() +
+      '</div>' +
       editionsHtml() +
       choiceGroup('Row stripes', 'stripes', STRIPES) +
       /* W7: the Thirukkural band — the stripes look, never a new one */
-      choiceGroup('Thirukkural', 'kural', KURAL) + '</div>' +
-      '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
-        return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
-      }).join('') + '</div>' +
+      choiceGroup('Thirukkural', 'kural', KURAL) +
+      '</div>' +
+      '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
+      TEXT_SIZES.map(function (x, index) {
+        return (
+          '<button type="button" data-testid="fs-' +
+          x[0] +
+          '" data-av-fs="' +
+          x[0] +
+          '" aria-pressed="' +
+          (fsNow === x[0]) +
+          '" title="' +
+          x[1] +
+          ' (' +
+          Math.round(x[2] * 100) +
+          '%)" aria-label="' +
+          x[1] +
+          '" style="font-size:' +
+          [13, 16, 20, 25][index] +
+          'px">A</button>'
+        );
+      }).join('') +
+      '</div>' +
       '<div class="cbav-weights" role="group" aria-label="Text weight">' +
-        '<button type="button" data-testid="weight-normal" data-av-weight="normal" aria-pressed="' + (w === 'normal') + '" title="Normal" aria-label="Normal text" style="font-weight:400">A</button>' +
-        '<button type="button" data-testid="weight-bold" data-av-weight="bold" aria-pressed="' + (w === 'bold') + '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
-      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-testid="motion-switch" data-av-motion="1" aria-checked="' + (pref('motion') === 'reduce') + '" aria-label="Less motion"></button></div>' +
-      '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' + FONTS.map(function (x) {
-        return '<button type="button" data-testid="font-' + x[0] + '" data-av-font="' + x[0] + '" aria-pressed="' + (f === x[0]) + '" style="font-family:' + esc(x[2]) + '">' + x[1] + '</button>';
-      }).join('') + '</div>' + langs + '</div></div>' +
+      '<button type="button" data-testid="weight-normal" data-av-weight="normal" aria-pressed="' +
+      (w === 'normal') +
+      '" title="Normal" aria-label="Normal text" style="font-weight:400">A</button>' +
+      '<button type="button" data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
+      (w === 'bold') +
+      '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
+      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-testid="motion-switch" data-av-motion="1" aria-checked="' +
+      (pref('motion') === 'reduce') +
+      '" aria-label="Less motion"></button></div>' +
+      '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
+      FONTS.map(function (x) {
+        return (
+          '<button type="button" data-testid="font-' +
+          x[0] +
+          '" data-av-font="' +
+          x[0] +
+          '" aria-pressed="' +
+          (f === x[0]) +
+          '" style="font-family:' +
+          esc(x[2]) +
+          '">' +
+          x[1] +
+          '</button>'
+        );
+      }).join('') +
+      '</div>' +
+      langs +
+      '</div></div>' +
       (down.length ? '<div class="cbav-items last">' + down.join('') + '</div>' : '') +
-      '</div>';
+      '</div>'
+    );
   }
   /* AX1: the showings this app has (the manifest's `editions`, through CBEdition) — the Row stripes look, never a new one; absent with one edition or no CBEdition */
   function editionsHtml() {
-    var E = root.CBEdition, l = E && E.list ? E.list() : [];
+    var E = root.CBEdition,
+      l = E && E.list ? E.list() : [];
     if (l.length < 2) return '';
     var now = E.key();
-    return '<h4>Edition</h4><div class="cbav-stripes" role="group" aria-label="Edition" data-testid="edition-group">' + l.map(function (x) {
-      return '<button type="button" data-testid="edition-' + esc(x.key) + '" data-av-edition="' + esc(x.key) + '" aria-pressed="' + (now === x.key) + '">' + esc(x.name) + '</button>';
-    }).join('') + '</div>';
+    return (
+      '<h4>Edition</h4><div class="cbav-stripes" role="group" aria-label="Edition" data-testid="edition-group">' +
+      l
+        .map(function (x) {
+          return (
+            '<button type="button" data-testid="edition-' +
+            esc(x.key) +
+            '" data-av-edition="' +
+            esc(x.key) +
+            '" aria-pressed="' +
+            (now === x.key) +
+            '">' +
+            esc(x.name) +
+            '</button>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
   }
-  function letter(P) { return String(P.name || P.entity || '?').trim().slice(0, 1).toUpperCase() || '?'; }
+  function letter(P) {
+    return (
+      String(P.name || P.entity || '?')
+        .trim()
+        .slice(0, 1)
+        .toUpperCase() || '?'
+    );
+  }
 
   function paint() {
     if (!M || !M.el) return;
-    var o = M.o, P = o.person, el = M.el, keepTop = 0, pop = el.querySelector('.cbav-pop'), focusKey = null;
-    if (pop) keepTop = pop.scrollTop;
-    try { var ae = doc.activeElement; if (ae && el.contains(ae)) focusKey = ae.getAttribute('data-testid'); } catch (_) {}
+    var o = M.o,
+      P = o.person,
+      el = M.el,
+      keepTop = 0,
+      node = el.querySelector('.cbav-pop'),
+      focusKey = null;
+    if (node) keepTop = node.scrollTop;
+    try {
+      var ae = doc.activeElement;
+      if (ae && el.contains(ae)) focusKey = ae.getAttribute('data-testid');
+    } catch (_) {}
     if (!P) {
       /* ⭐ M14: a page that mounts CBSignin (index · CB Accounts · CB CRM) gives onSignIn — the door opens the one sign-in window IN PLACE.
          Without it the door is a link to the INDEX, the front door (Athi 2026-10-09: a customer never lands in the workshop's #/login). */
-      el.innerHTML = typeof o.onSignIn === 'function'
-        ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
-        : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
+      el.innerHTML =
+        typeof o.onSignIn === 'function'
+          ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
+          : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
       return;
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
-    el.innerHTML = '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-testid="' + esc(o.testid || 'avatar') + '" aria-haspopup="dialog" aria-expanded="' + openNow + '" aria-label="' + esc(label) + '" title="' + esc(P.entity || P.name || '') + '">' + esc(letter(P)) + '</button>' + (openNow ? menuHtml(o) : '') + '</span>';
-    var np = el.querySelector('.cbav-pop'); if (np) { fit(np); np.scrollTop = keepTop; }
-    if (focusKey) { var f2 = el.querySelector('[data-testid="' + focusKey + '"]'); if (f2) { try { f2.focus({ preventScroll: true }); } catch (_) {} } }
+    el.innerHTML =
+      '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-testid="' +
+      esc(o.testid || 'avatar') +
+      '" aria-haspopup="dialog" aria-expanded="' +
+      openNow +
+      '" aria-label="' +
+      esc(label) +
+      '" title="' +
+      esc(P.entity || P.name || '') +
+      '">' +
+      esc(letter(P)) +
+      '</button>' +
+      (openNow ? menuHtml(o) : '') +
+      '</span>';
+    var np = el.querySelector('.cbav-pop');
+    if (np) {
+      fit(np);
+      np.scrollTop = keepTop;
+    }
+    if (focusKey) {
+      var f2 = el.querySelector('[data-testid="' + focusKey + '"]');
+      if (f2) {
+        try {
+          f2.focus({ preventScroll: true });
+        } catch (_) {}
+      }
+    }
   }
   /** the menu may be as tall as the room BELOW the button, never more: it scrolls itself only when the window is shorter than the menu, and nothing is cut */
-  function fit(pop) {
-    try { pop = pop || (M && M.el && M.el.querySelector('.cbav-pop')); if (!pop) return; pop.style.maxHeight = ''; var r = pop.getBoundingClientRect(), h = root.innerHeight || doc.documentElement.clientHeight; pop.style.maxHeight = Math.max(160, Math.floor(h - r.top - 8)) + 'px'; } catch (_) {}
+  function fit(node) {
+    try {
+      node = node || (M && M.el && M.el.querySelector('.cbav-pop'));
+      if (!node) return;
+      node.style.maxHeight = '';
+      var r = node.getBoundingClientRect(),
+        h = root.innerHeight || doc.documentElement.clientHeight;
+      node.style.maxHeight = Math.max(160, Math.floor(h - r.top - 8)) + 'px';
+    } catch (_) {}
   }
-  function repaint() { if (M) paint(); }
-  function close() { if (!openNow) return; openNow = false; paint(); }
+  function repaint() {
+    if (M) paint();
+  }
+  function close() {
+    if (!openNow) return;
+    openNow = false;
+    paint();
+  }
 
   /** the session and the per-person nav memory go; every other tab hears cb_sess go */
   function forget() {
     try {
       root.localStorage.removeItem('cb_sess');
-      Object.keys(root.localStorage).filter(function (k) { return /^cb_nav(@|$)/.test(k); }).forEach(function (k) { root.localStorage.removeItem(k); });
+      Object.keys(root.localStorage)
+        .filter(function (item) {
+          return /^cb_nav(@|$)/.test(item);
+        })
+        .forEach(function (item) {
+          root.localStorage.removeItem(item);
+        });
     } catch (_) {}
   }
   function signOut() {
@@ -500,9 +960,20 @@
   var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
   /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
   function onMenuAction(e, action, o) {
-    var closeThen = function (callback) { e.preventDefault(); openNow = false; paint(); return callback(); };
-    if (action === 'signout') { e.preventDefault(); return signOut(); }
-    if (action === 'signin' && typeof o.onSignIn === 'function') { e.preventDefault(); return o.onSignIn(); }
+    var closeThen = function (callback) {
+      e.preventDefault();
+      openNow = false;
+      paint();
+      return callback();
+    };
+    if (action === 'signout') {
+      e.preventDefault();
+      return signOut();
+    }
+    if (action === 'signin' && typeof o.onSignIn === 'function') {
+      e.preventDefault();
+      return o.onSignIn();
+    }
     if (action === 'profile' && o.onProfile) return closeThen(o.onProfile);
     if (action === 'settings' && o.onSettings) return closeThen(o.onSettings);
     if (action === 'support' && o.onSupport) return closeThen(o.onSupport);
@@ -510,29 +981,56 @@
   /** one click anywhere: outside the menu closes it; inside, the button's data-av-* attribute says what it does */
   function onDocClick(e) {
     if (!M || !M.el) return;
-    var target = e.target; if (!target || !target.closest) return;
-    if (!M.el.contains(target)) { if (openNow) close(); return; }
-    var options = M.o, button;
-    if (target.closest('.cbav-btn')) { openNow = !openNow; paint(); return; }
-    var picked = PICK_KINDS.filter(function (kind) { return target.closest('[data-av-' + kind + ']'); })[0];
+    var target = e.target;
+    if (!target || !target.closest) return;
+    if (!M.el.contains(target)) {
+      if (openNow) close();
+      return;
+    }
+    var options = M.o,
+      button;
+    if (target.closest('.cbav-btn')) {
+      openNow = !openNow;
+      paint();
+      return;
+    }
+    var picked = PICK_KINDS.filter(function (kind) {
+      return target.closest('[data-av-' + kind + ']');
+    })[0];
     if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
     if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
-    if ((button = target.closest('[data-av-lang]'))) { if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang')); return; }
+    if ((button = target.closest('[data-av-lang]'))) {
+      if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang'));
+      return;
+    }
     if ((button = target.closest('[data-av]'))) return onMenuAction(e, button.getAttribute('data-av'), options);
   }
   var wired = false;
   function wire() {
-    if (wired || !doc) return; wired = true;
-    if (root.addEventListener) root.addEventListener('resize', function () { if (openNow) fit(); });
+    if (wired || !doc) return;
+    wired = true;
+    if (root.addEventListener)
+      root.addEventListener('resize', function () {
+        if (openNow) fit();
+      });
     doc.addEventListener('click', onDocClick);
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && openNow) {
-        close(); var btn = M && M.el && M.el.querySelector('.cbav-btn'); if (btn) { try { btn.focus(); } catch (_) {} }
+        close();
+        var btn = M && M.el && M.el.querySelector('.cbav-btn');
+        if (btn) {
+          try {
+            btn.focus();
+          } catch (_) {}
+        }
       }
     });
     /* another tab changed the look: follow it (the storage event never fires in the tab that wrote) */
     root.addEventListener('storage', function (e) {
-      if (e.key === null || /^cb_(theme|font|fs|weight|motion|stripes)$/.test(e.key)) { apply(); repaint(); }
+      if (e.key === null || /^cb_(theme|font|fs|weight|motion|stripes)$/.test(e.key)) {
+        apply();
+        repaint();
+      }
     });
   }
 
@@ -552,38 +1050,105 @@
     HOST = { apiBase: o.apiBase, token: o.token, sync: o.sync, viaPrefs: o.viaPrefs };
     var first = !M || M.el !== el;
     M = { el: el, o: o };
-    apply();                                                 /* the base may only now be readable (the page's stylesheet is parsed) */
-    wire(); paint();
-    if (root.CBEdition && root.CBEdition.load) root.CBEdition.load().then(function () { if (openNow) paint(); });   /* the Edition choice needs the manifest's list */
+    apply(); /* the base may only now be readable (the page's stylesheet is parsed) */
+    wire();
+    paint();
+    if (root.CBEdition && root.CBEdition.load)
+      root.CBEdition.load().then(function () {
+        if (openNow) paint();
+      }); /* the Edition choice needs the manifest's list */
     if (first && o.person && o.sync !== false && o.pull !== false) pull(o);
-    return { update: function (p) { M.o.person = p; paint(); }, close: close, el: el };
+    return {
+      update: function (p) {
+        M.o.person = p;
+        paint();
+      },
+      close: close,
+      el: el
+    };
   }
 
   /** Every themed token's UNTHEMED value — taken with the saved theme lifted off, so a preview card can draw theme X while Y is active. */
   function themeBase() {
-    var out = {}, r = doc.documentElement, all = {}, saved = {}, cs = null;
-    Object.keys(THEMES).forEach(function (k) { Object.keys(THEMES[k].vars || {}).forEach(function (v) { all[v] = 1; }); });
-    try { cs = root.getComputedStyle(r); } catch (_) {}
-    Object.keys(all).forEach(function (v) { saved[v] = r.style.getPropertyValue(v); if (saved[v]) r.style.removeProperty(v); });
-    Object.keys(all).forEach(function (v) { out[v] = cs ? (cs.getPropertyValue(v) || '').trim() : ''; });
-    Object.keys(saved).forEach(function (v) { if (saved[v]) r.style.setProperty(v, saved[v]); });
+    var out = {},
+      node = doc.documentElement,
+      all = {},
+      saved = {},
+      cs = null;
+    Object.keys(THEMES).forEach(function (item) {
+      Object.keys(THEMES[item].vars || {}).forEach(function (entry) {
+        all[entry] = 1;
+      });
+    });
+    try {
+      cs = root.getComputedStyle(node);
+    } catch (_) {}
+    Object.keys(all).forEach(function (item) {
+      saved[item] = node.style.getPropertyValue(item);
+      if (saved[item]) node.style.removeProperty(item);
+    });
+    Object.keys(all).forEach(function (item) {
+      out[item] = cs ? (cs.getPropertyValue(item) || '').trim() : '';
+    });
+    Object.keys(saved).forEach(function (item) {
+      if (saved[item]) node.style.setProperty(item, saved[item]);
+    });
     return out;
   }
 
   /** A saved session (cb_sess) or the app's SESSION → the `person` the menu wants. Owner = the shop's own session (routes/books.js isOwner). */
   function personOf(s) {
     if (!s || typeof s !== 'object') return null;
-    var r = s.role, label = r === 'entity' ? 'Owner' : r === 'actor' ? 'Co-assist' : r === 'customer' ? 'Customer' : (r || '');
+    var r = s.role,
+      label = r === 'entity' ? 'Owner' : r === 'actor' ? 'Co-assist' : r === 'customer' ? 'Customer' : r || '';
     return { name: s.name || '', role: label + (s.entity ? ' · ' + s.entity : ''), entity: s.entity || '', owner: r === 'entity', token: s.token || '' };
   }
-  function sessionPerson() { try { var s = JSON.parse(root.localStorage.getItem('cb_sess') || 'null'); return s && s.token ? personOf(s) : null; } catch (_) { return null; } }
+  function sessionPerson() {
+    try {
+      var parsed = JSON.parse(root.localStorage.getItem('cb_sess') || 'null');
+      return parsed && parsed.token ? personOf(parsed) : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /* before first paint, from local storage alone — no network, no mount needed (a page with no menu still wears the look) */
   apply();
-  if (doc && doc.addEventListener) doc.addEventListener('DOMContentLoaded', function () { BASE = null; apply(); });
+  if (doc && doc.addEventListener)
+    doc.addEventListener('DOMContentLoaded', function () {
+      BASE = null;
+      apply();
+    });
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
-  if (root.addEventListener) root.addEventListener('online', function () { if (Object.keys(pendGet()).length) push(); });
+  if (root.addEventListener)
+    root.addEventListener('online', function () {
+      if (Object.keys(pendGet()).length) push();
+    });
 
-  root.CBAvatar = { mount: mount, apply: apply, hydrate: hydrate, set: set, get: get, personOf: personOf, sessionPerson: sessionPerson, themeKey: themeKey, applyTheme: themeApply, push: push, pending: pendGet, themeBase: themeBase, menuHtml: menuHtml, isOpen: function () { return openNow; }, close: close, signOut: signOut,
-    THEMES: THEMES, FONTS: FONTS, TEXT_SIZES: TEXT_SIZES, FS_BASE: FS_BASE, fontStack: fontStack, shopCountry: shopCountry };
+  root.CBAvatar = {
+    mount: mount,
+    apply: apply,
+    hydrate: hydrate,
+    set: set,
+    get: get,
+    personOf: personOf,
+    sessionPerson: sessionPerson,
+    themeKey: themeKey,
+    applyTheme: themeApply,
+    push: push,
+    pending: pendGet,
+    themeBase: themeBase,
+    menuHtml: menuHtml,
+    isOpen: function () {
+      return openNow;
+    },
+    close: close,
+    signOut: signOut,
+    THEMES: THEMES,
+    FONTS: FONTS,
+    TEXT_SIZES: TEXT_SIZES,
+    FS_BASE: FS_BASE,
+    fontStack: fontStack,
+    shopCountry: shopCountry
+  };
 })(typeof window !== 'undefined' ? window : this);

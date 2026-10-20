@@ -9,52 +9,93 @@
  * scrErr, val, toast, MSG, _CARD, CURRENCIES, UI. Screens: MIS, Profile, Settings (+ governance).
  * (Co-assists is planned to move here too, once its shared actor helpers are separated.) */
 
-if (typeof EP !== 'undefined') { Object.assign(EP, {
-  /* keysList · keysMint · keysRevoke · counters · counterAdd · counterRename · counterOpen · counterRelease → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
-  /* ⭐ a brand releases offers to its stores; a store takes them or not (routes/network-offers.js, 2026-09-17) */
-  netOffers:        {m:'GET',  p:'/api/network-offers',              ok:'✓'},
-  netOfferPolicy:   {m:'PUT',  p:'/api/network-offers/policy',       ok:'✓'},
-  netOfferRelease:  {m:'POST', p:'/api/network-offers/:id/release',  ok:'✓'},
-  netOfferWithdraw: {m:'POST', p:'/api/network-offers/:id/withdraw', ok:'✓'},
-  netOfferChoice:   {m:'POST', p:'/api/network-offers/:id/choice',   ok:'✓'},
-  /* ⭐ a brand publishes its product changes; a store is only ever SUGGESTED a price (lib/network-catalogue.js) */
-  netCatPublish:    {m:'POST', p:'/api/network-offers/catalogue/publish', ok:'✓'},
-  netCatCancel:     {m:'POST', p:'/api/network-offers/catalogue/cancel',  ok:'✓'},
-  netCatPrice:      {m:'POST', p:'/api/network-offers/catalogue/price',   ok:'✓'},
-  /* intCatalogue · intStatus · intApprove → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
-  intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
-  intStreams:{m:'GET',    p:'/api/integrations/streams',    ok:'y'},   // who owns which stream (2026-09-07)
-  intStreamsSet:{m:'PUT', p:'/api/integrations/streams',    ok:'✓'},   // hand a stream to another connector
-  intReconcile:{m:'GET',  p:'/api/integrations/reconcile',  ok:'y'},   // did what left this account land in the books?
-  intBooksSkip:{m:'POST', p:'/api/integrations/books/skip',  ok:'✓'},   // this one is not for the books (reversible)
-  /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
+if (typeof EP !== 'undefined') {
+  Object.assign(EP, {
+    /* keysList · keysMint · keysRevoke · counters · counterAdd · counterRename · counterOpen · counterRelease → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
+    /* ⭐ a brand releases offers to its stores; a store takes them or not (routes/network-offers.js, 2026-09-17) */
+    netOffers: { m: 'GET', p: '/api/network-offers', ok: '✓' },
+    netOfferPolicy: { m: 'PUT', p: '/api/network-offers/policy', ok: '✓' },
+    netOfferRelease: { m: 'POST', p: '/api/network-offers/:id/release', ok: '✓' },
+    netOfferWithdraw: { m: 'POST', p: '/api/network-offers/:id/withdraw', ok: '✓' },
+    netOfferChoice: { m: 'POST', p: '/api/network-offers/:id/choice', ok: '✓' },
+    /* ⭐ a brand publishes its product changes; a store is only ever SUGGESTED a price (lib/network-catalogue.js) */
+    netCatPublish: { m: 'POST', p: '/api/network-offers/catalogue/publish', ok: '✓' },
+    netCatCancel: { m: 'POST', p: '/api/network-offers/catalogue/cancel', ok: '✓' },
+    netCatPrice: { m: 'POST', p: '/api/network-offers/catalogue/price', ok: '✓' },
+    /* intCatalogue · intStatus · intApprove → CB_SETTINGS_EP (app/accounts-shell.js, T3-SETTINGS) */
+    intProfileMap: { m: 'GET', p: '/api/integrations/profile-map', ok: 'y' }, // what we look for about the store · where from · how trusted
+    intStreams: { m: 'GET', p: '/api/integrations/streams', ok: 'y' }, // who owns which stream (2026-09-07)
+    intStreamsSet: { m: 'PUT', p: '/api/integrations/streams', ok: '✓' }, // hand a stream to another connector
+    intReconcile: { m: 'GET', p: '/api/integrations/reconcile', ok: 'y' }, // did what left this account land in the books?
+    intBooksSkip: { m: 'POST', p: '/api/integrations/books/skip', ok: '✓' }, // this one is not for the books (reversible)
+    /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
      Friction counts unattended messages whether or not you have ever visited Messages. */
-  misMsgs: {m:'GET', p:'/api/folders/messages', ok:'y'},
-  /* ⭐ THE SERVER'S MEASUREMENT (backlog 29). MIS was the THIRD implementation of open/overdue/ageing/unread;
+    misMsgs: { m: 'GET', p: '/api/folders/messages', ok: 'y' }
+    /* ⭐ THE SERVER'S MEASUREMENT (backlog 29). MIS was the THIRD implementation of open/overdue/ageing/unread;
      lib/measure.js already served the folder pane and the counterparty scorecard. This makes it three consumers
      of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
      — the screen titled "What is stuck?" did not know what late meant.
      misMetrics → CB_MIS_EP (app/accounts-shell.js, T3-P4-ACCOUNT): CB Finance › Reports reads the same name; app.html merges it. */
-}); }
+  });
+}
 // ── TRADE DOCUMENTS VAULT — MOVED to app/cap-shop.js (SET1, 2026-10-13): CB Settings › Your shop paints the same rows. Loaded first by CAP_WITH.admin. ──
 /**
  * ⭐ SHOWN TO CUSTOMERS — THE BUSINESS'S DEFAULTS (Athi, 2026-09-05: "tax may be default"). One switch per detail, applied to
  * every item unless the item's own pane says otherwise (product page › Shown to customers). Saved through
  * PATCH /entities/me/exposure; enforced in the catalogue view (lib/exposure.js), so every surface obeys.
  */
-var PF_EXPOSURE = [['tax','Tax line'],['offers','Offers'],['stock','Availability'],['synonyms','Synonyms'],['hsn','HSN code'],['description','Description'],['media','Pictures']];
-var PF_EXPOSURE_DEFAULTS = { tax:true, offers:true, stock:true, synonyms:false, hsn:false, description:true, media:true };
-function pfExposureDefaultsHTML(e){
-  var cur = Object.assign({}, PF_EXPOSURE_DEFAULTS, ((e && e.policy_flags && e.policy_flags.storefront_exposure) || {}));
-  return '<label class="fl" style="margin-top:12px">' + tx('Shown to customers by default') + '</label>'
-    + '<div data-testid="pf-exposure" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-width:520px">'
-    + PF_EXPOSURE.map(function(x){ return '<label style="display:flex;gap:6px;align-items:center;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" data-testid="pf-expose-' + x[0] + '"' + (cur[x[0]] ? ' checked' : '') + ' onchange="pfExposureSet(\'' + x[0] + '\', this.checked)">' + esc(tx(x[1])) + '</label>'; }).join('')
-    + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Any item can differ: product page › Shown to customers. Price and unit always show.')) + '</div>';
+var PF_EXPOSURE = [
+  ['tax', 'Tax line'],
+  ['offers', 'Offers'],
+  ['stock', 'Availability'],
+  ['synonyms', 'Synonyms'],
+  ['hsn', 'HSN code'],
+  ['description', 'Description'],
+  ['media', 'Pictures']
+];
+var PF_EXPOSURE_DEFAULTS = { tax: true, offers: true, stock: true, synonyms: false, hsn: false, description: true, media: true };
+function pfExposureDefaultsHTML(e) {
+  var cur = Object.assign({}, PF_EXPOSURE_DEFAULTS, (e && e.policy_flags && e.policy_flags.storefront_exposure) || {});
+  return (
+    '<label class="fl" style="margin-top:12px">' +
+    tx('Shown to customers by default') +
+    '</label>' +
+    '<div data-testid="pf-exposure" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-width:520px">' +
+    PF_EXPOSURE.map(function (x) {
+      return (
+        '<label style="display:flex;gap:6px;align-items:center;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" data-testid="pf-expose-' +
+        x[0] +
+        '"' +
+        (cur[x[0]] ? ' checked' : '') +
+        ' onchange="pfExposureSet(\'' +
+        x[0] +
+        '\', this.checked)">' +
+        esc(tx(x[1])) +
+        '</label>'
+      );
+    }).join('') +
+    '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
+    esc(tx('Any item can differ: product page › Shown to customers. Price and unit always show.')) +
+    '</div>'
+  );
 }
-async function pfExposureSet(k, on){
-  try { var r = await api('exposureDefaults', { body: (function(){ var b = {}; b[k] = !!on; return b; })() }); if (UI._me) { UI._me.policy_flags = Object.assign({}, UI._me.policy_flags || {}, { storefront_exposure: r.exposure }); } toast(tx('Saved ✓')); }
-  catch (e) { toast((e && e.message) || tx('Could not save'), true); }
+async function pfExposureSet(k, on) {
+  try {
+    var reply = await api('exposureDefaults', {
+      body: (function () {
+        var b = {};
+        b[k] = !!on;
+        return b;
+      })()
+    });
+    if (UI._me) {
+      UI._me.policy_flags = Object.assign({}, UI._me.policy_flags || {}, { storefront_exposure: reply.exposure });
+    }
+    toast(tx('Saved ✓'));
+  } catch (e) {
+    toast((e && e.message) || tx('Could not save'), true);
+  }
 }
 /* ═══ MIS ═══════════════════════════════════════════════════════════════════════════════════════════════════
  * ⭐ REBUILT 2026-08-16. It was eight equal tiles — chits, value, open, in progress, closed, disputes, co-assists,
@@ -73,27 +114,27 @@ async function pfExposureSet(k, on){
  * plausible score — the same discipline netAvail set by waiting for lib/availability.js.
  */
 var MIS_BANDS = [
-  { key:'overview', name:'Overview', q:'Everything, condensed' },
-  { key:'position', name:'Position', q:'How much is real?' },
-  { key:'flow',     name:'Flow',     q:'What is moving?' },
-  { key:'friction', name:'Friction', q:'What is stuck?' },
-  { key:'trust',    name:'Trust',    q:'Who can I rely on?' },
+  { key: 'overview', name: 'Overview', q: 'Everything, condensed' },
+  { key: 'position', name: 'Position', q: 'How much is real?' },
+  { key: 'flow', name: 'Flow', q: 'What is moving?' },
+  { key: 'friction', name: 'Friction', q: 'What is stuck?' },
+  { key: 'trust', name: 'Trust', q: 'Who can I rely on?' },
   /* The outcome half of the plan declared in Governance → Constitution. It is a metric, so it lives here. */
-  { key:'plan',     name:'Plan',     q:'What have I used?' },
+  { key: 'plan', name: 'Plan', q: 'What have I used?' },
   /* ⭐ THE NETWORK CLAIM, AS A NUMBER. Athi, 2026-09-04: "if you use our networking capability your tax liability can
      be computed or organised — is it possible?" — STUDY-gst-structure §4. Output tax on my sent chits, input credit
      on my received ones (the seller's copy is the same record), net for the month. Provisional until a copy is
      completed, which freezes its invoice. We compute and organise; we do not file. */
-  { key:'tax',      name:'Tax',      q:'What do I owe this month?' }
+  { key: 'tax', name: 'Tax', q: 'What do I owe this month?' }
 ];
 /**
  * ⚠️ THE STATUS→MONEY MAPPING, AND THE TRAP IN IT. `cancelled` and `rejected` live in the `close` bucket beside
  * `completed`, so "committed = closed" would count DEAD value as real money. They are excluded from both sides and
  * reported separately — silently dropping them would be a lie of omission, and folding them in would be worse.
  */
-var MIS_COMMITTED = { accepted:1, in_progress:1, partial:1, completed:1 };   // someone said yes
-var MIS_FORECAST  = { pending:1, delivered:1, read:1 };                      // sent, nobody has committed
-var MIS_DEAD      = { cancelled:1, rejected:1 };
+var MIS_COMMITTED = { accepted: 1, in_progress: 1, partial: 1, completed: 1 }; // someone said yes
+var MIS_FORECAST = { pending: 1, delivered: 1, read: 1 }; // sent, nobody has committed
+var MIS_DEAD = { cancelled: 1, rejected: 1 };
 
 /**
  * ⚠️ ON MOBILE, PICKING A ROW MUST SLIDE TO THE DETAIL. The shell hides .detail under .appwrap.m unless the panel
@@ -101,44 +142,93 @@ var MIS_DEAD      = { cancelled:1, rejected:1 };
  * all when tapped — the row highlighted and the content stayed invisible. selectSupplier has always done this;
  * one helper rather than the same three lines in MIS, Profile and Settings.
  */
-function _capShowDetail(){
+function _capShowDetail() {
   if (UI.vp !== 'mob') return;
   UI.mdetail = true;
-  var p = document.getElementById('panel'); if (p) p.classList.add('showdetail');
+  var node = document.getElementById('panel');
+  if (node) node.classList.add('showdetail');
 }
-function misBand(){ return UI.misBand || 'overview'; }
+function misBand() {
+  return UI.misBand || 'overview';
+}
 /* Repaint from the cached model when we have one — switching band is not a reason to re-fetch five endpoints. */
-function misSetBand(k){ UI.misBand = k; renderApp(); _capShowDetail();
-  if (UI._mis){ const h=document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(k, UI._mis); } else { loadMIS(); } }
-function misPeriod(){ return UI.misPeriod || 'all'; }
-function misSetPeriod(p){ UI.misPeriod = p; renderApp(); loadMIS(true); }   /* ⚠ FORCED: a new window is a new question */   // a new window DOES need the data re-bucketed
+function misSetBand(k) {
+  UI.misBand = k;
+  renderApp();
+  _capShowDetail();
+  if (UI._mis) {
+    const node = document.getElementById('misbody');
+    if (node) node.innerHTML = misBandHTML(k, UI._mis);
+  } else {
+    loadMIS();
+  }
+}
+function misPeriod() {
+  return UI.misPeriod || 'all';
+}
+function misSetPeriod(p) {
+  UI.misPeriod = p;
+  renderApp();
+  loadMIS(true);
+} /* ⚠ FORCED: a new window is a new question */ // a new window DOES need the data re-bucketed
 
-function misScreen(){
+function misScreen() {
   var m = UI._mis;
-  var rail = MIS_BANDS.map(function(b){
-    var sel = (misBand() === b.key) ? ' sel' : '';
-    var hv = m ? misHeadline(b.key, m) : { v:'·', s:'' };
-    return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div>'
-        + '<div class="l2">' + esc(b.q) + '</div></div>'
-      + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
+  var rail = MIS_BANDS.map(function (item) {
+    var sel = misBand() === item.key ? ' sel' : '';
+    var hv = m ? misHeadline(item.key, m) : { v: '·', s: '' };
+    return (
+      '<div class="row misrow' +
+      sel +
+      '" data-testid="mis-band-' +
+      item.key +
+      '" onclick="misSetBand(\'' +
+      item.key +
+      '\')">' +
+      '<div class="main2"><div class="l1"><span class="code">' +
+      esc(item.name) +
+      '</span></div>' +
+      '<div class="l2">' +
+      esc(item.q) +
+      '</div></div>' +
+      '<div class="misval' +
+      (hv.tone ? ' ' + hv.tone : '') +
+      '">' +
+      hv.v +
+      '<small>' +
+      esc(hv.s) +
+      '</small></div></div>'
+    );
   }).join('');
-  var seg = function(p, l){ return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>'; };
+  var seg = function (p, l) {
+    return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>';
+  };
   /* The period bar sits ABOVE the split because it reframes all four bands at once; anything scoped to one band
      lives inside that band. Same rule that puts the Suppliers tabs above its list. */
-  var bar = '<div class="misbar"><span class="misttl">' + tx('📊 MIS') + '</span>'
-    + '<span class="seg">' + seg('7', '7 days') + seg('30', '30 days') + seg('all', 'All time') + '</span>'
-    + '<span class="misbar-r">' + (m ? '<span class="misasof">' + esc(m.asOf) + '</span>' : '')   /* the one read stamp: cap-mis.js misReadAt (W2-SHOP) */
-    + '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' + tx('✨ Explain') + '</button></span></div>';
-  var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>'
-    + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="misbody">'
+  var bar =
+    '<div class="misbar"><span class="misttl">' +
+    tx('📊 MIS') +
+    '</span>' +
+    '<span class="seg">' +
+    seg('7', '7 days') +
+    seg('30', '30 days') +
+    seg('all', 'All time') +
+    '</span>' +
+    '<span class="misbar-r">' +
+    (m ? '<span class="misasof">' + esc(m.asOf) + '</span>' : '') /* the one read stamp: cap-mis.js misReadAt (W2-SHOP) */ +
+    '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' +
+    tx('✨ Explain') +
+    '</button></span></div>';
+  var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>' + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
+  var detail =
+    '<div class="detail" id="detailpane"><div id="misbody">' +
     /* ⚠️ NO INLINE SPINNER, AND A WAY OUT WHILE IT LOADS. api() already shows the centred "Reading data…" pill,
        so a second spinner in the pane is two indicators for one fetch. And on mobile the loading pane COVERS the
        rail — without this button a slow read (measured ~3.6s against Railway) strands you on a blank screen. */
-    + (m ? misBandHTML(misBand(), m)
-         : '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>') + '</div></div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+    (m ? misBandHTML(misBand(), m) : '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>') +
+    '</div></div>';
+  var divider =
+    '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   /**
    * ⚠️ ITS OWN RAIL WIDTH, not the shared UI.lw. Task and Suppliers hold lists of unbounded, variable-length rows,
    * so people drag those panes wide — and MIS then inherited that width for FIVE FIXED ROWS, pushing its detail
@@ -147,23 +237,35 @@ function misScreen(){
    */
   if (UI.misLw == null) UI.misLw = 320;
   var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
-  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+  return (
+    '<div class="panel' +
+    (UI.vp === 'mob' && UI.mdetail ? ' showdetail' : '') +
+    '" id="panel" style="--lw:' +
+    lw +
+    'px;--lh:' +
+    (UI.lh || 300) +
+    'px">' +
+    list +
+    divider +
+    detail +
+    '</div>'
+  );
 }
 
 /* The rail doubles as the summary, so each row needs its own headline — one number and one word of context. */
-function misHeadline(k, m){
+function misHeadline(k, m) {
   if (k === 'overview') return { v: MIS_BANDS.length - 1, s: 'bands' };
   if (k === 'position') return { v: inr(m.committed), s: 'committed' };
-  if (k === 'flow')     return { v: m.chits, s: m.periodLabel };
-  if (k === 'friction'){
+  if (k === 'flow') return { v: m.chits, s: m.periodLabel };
+  if (k === 'friction') {
     const un = (m.unattended || []).length;
     /* The headline leads with whichever is worse — an unanswered message is friction the chit queue never showed. */
-    if (un) return { v: m.waiting.length + un, s: un + ' unanswered', tone:'warn' };
-    return { v: m.waiting.length, s: m.waiting.length ? ('oldest ' + m.waiting[0].age) : 'nothing stuck', tone: m.waiting.length ? 'warn' : 'ok' };
+    if (un) return { v: m.waiting.length + un, s: un + ' unanswered', tone: 'warn' };
+    return { v: m.waiting.length, s: m.waiting.length ? 'oldest ' + m.waiting[0].age : 'nothing stuck', tone: m.waiting.length ? 'warn' : 'ok' };
   }
-  if (k === 'plan')     return { v: (UI._misToday==null?'·':UI._misToday), s:'of '+PLAN.chitsPerDay+' today' };
-  if (k === 'trust')    return { v: m.suppliers, s: m.open_disputes ? (m.open_disputes + ' disputes') : '0 disputes', tone: m.open_disputes ? 'warn' : 'ok' };
-  if (k === 'tax'){
+  if (k === 'plan') return { v: UI._misToday == null ? '·' : UI._misToday, s: 'of ' + PLAN.chitsPerDay + ' today' };
+  if (k === 'trust') return { v: m.suppliers, s: m.open_disputes ? m.open_disputes + ' disputes' : '0 disputes', tone: m.open_disputes ? 'warn' : 'ok' };
+  if (k === 'tax') {
     const L = UI._taxLedger;
     if (!L) return { v: '·', s: 'this month' };
     return { v: inr(L.net.total), s: (L.provisional ? 'provisional · ' : '') + 'net ' + L.month, tone: L.net.total > 0 ? 'warn' : 'ok' };
@@ -173,16 +275,27 @@ function misHeadline(k, m){
 
 /* Athi: *"scroll not appearing, how do i know i reached the bottom"* — so say so, rather than leaving a stopped
    page indistinguishable from a stalled one. */
-function _capEnd(){ return '<div class="capend">— end —</div>'; }
-function misBandHTML(k, m){
-  var body = (k === 'overview') ? misOverview(m)
-    : (k === 'position') ? misPosition(m)
-    : (k === 'flow')     ? misFlow(m)
-    : (k === 'friction') ? misFriction(m)
-    : (k === 'trust')    ? misTrust(m)
-    : (k === 'plan')     ? misPlan(m)
-    : (k === 'tax')      ? misTax() : '';
-  return body ? (body + _capEnd()) : '';
+function _capEnd() {
+  return '<div class="capend">— end —</div>';
+}
+function misBandHTML(k, m) {
+  var body =
+    k === 'overview'
+      ? misOverview(m)
+      : k === 'position'
+        ? misPosition(m)
+        : k === 'flow'
+          ? misFlow(m)
+          : k === 'friction'
+            ? misFriction(m)
+            : k === 'trust'
+              ? misTrust(m)
+              : k === 'plan'
+                ? misPlan(m)
+                : k === 'tax'
+                  ? misTax()
+                  : '';
+  return body ? body + _capEnd() : '';
 }
 /**
  * ⭐ THE TAX BAND — one GSTIN, one month: output by head over my SENT copies, input credit by head over my RECEIVED
@@ -190,60 +303,175 @@ function misBandHTML(k, m){
  * once completed). The two export links hand back the offline-tool JSON a return preparer or Tally imports.
  * ⚠️ Says PROVISIONAL while any copy in the month is not yet completed, and says what is NOT here: off-rail purchases.
  */
-function misTaxMonth(){ return UI._taxMonth || new Date().toISOString().slice(0, 7); }
-function misTaxSetMonth(m){ UI._taxMonth = m; UI._taxLedger = null; loadTaxLedger(); }
-async function loadTaxLedger(){
-  try { UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } }); }
-  catch (e) { UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' }; }
-  const h = document.getElementById('misbody'); if (h && misBand() === 'tax') h.innerHTML = misBandHTML('tax', UI._mis || {});
-  const rail = document.getElementById('mis_rail'); if (rail && UI._mis) { const b = MIS_BANDS.find(function(x){ return x.key === 'tax'; }); const hv = misHeadline('tax', UI._mis);
-    const el = rail.querySelector('[data-testid="mis-band-tax"] .misval'); if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>'; }
+function misTaxMonth() {
+  return UI._taxMonth || new Date().toISOString().slice(0, 7);
 }
-function misTax(){
+function misTaxSetMonth(m) {
+  UI._taxMonth = m;
+  UI._taxLedger = null;
+  loadTaxLedger();
+}
+async function loadTaxLedger() {
+  try {
+    UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } });
+  } catch (e) {
+    UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' };
+  }
+  const node = document.getElementById('misbody');
+  if (node && misBand() === 'tax') node.innerHTML = misBandHTML('tax', UI._mis || {});
+  const rail = document.getElementById('mis_rail');
+  if (rail && UI._mis) {
+    const b = MIS_BANDS.find(function (x) {
+      return x.key === 'tax';
+    });
+    const hv = misHeadline('tax', UI._mis);
+    const el = rail.querySelector('[data-testid="mis-band-tax"] .misval');
+    if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>';
+  }
+}
+function misTax() {
   /* ⭐ CX0: this band is India's GST (CGST · SGST · IGST, GSTR-1 / 3B from the rail). Another country's shop is told where its own return is. */
   if (typeof SESSION !== 'undefined' && SESSION && SESSION.country && String(SESSION.country).toUpperCase() !== 'IN')
-    return _misHead('Tax', tx('This band reads India\'s GST. Your return is prepared in Accounts.'));
+    return _misHead('Tax', tx("This band reads India's GST. Your return is prepared in Accounts."));
   const L = UI._taxLedger;
-  if (L === undefined || L === null) { loadTaxLedger(); return _misHead('Tax', tx('What this month owes, from the chits on the rail.')) + '<div class="misnote">' + tx('reading…') + '</div>'; }
+  if (L === undefined || L === null) {
+    loadTaxLedger();
+    return _misHead('Tax', tx('What this month owes, from the chits on the rail.')) + '<div class="misnote">' + tx('reading…') + '</div>';
+  }
   if (L.error) return _misHead('Tax', '') + '<div class="miswarn">' + esc(L.error) + '</div>';
   const m = misTaxMonth();
-  const prev = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
-  const next = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 7); })();
+  const prev = (function () {
+    const date = new Date(m + '-01T00:00:00Z');
+    date.setUTCMonth(date.getUTCMonth() - 1);
+    return date.toISOString().slice(0, 7);
+  })();
+  const next = (function () {
+    const date = new Date(m + '-01T00:00:00Z');
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    return date.toISOString().slice(0, 7);
+  })();
   const head = (t, x) => '<div class="mistwo"><div>' + t + '</div><div>' + x + '</div></div>';
-  const heads = (h) => '<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:var(--fs-2)">'
-    + [['Taxable', h.taxable], ['CGST', h.cgst], ['SGST', h.sgst], ['IGST', h.igst]].concat(h.cess ? [['Cess', h.cess]] : []).concat([['Tax', h.tax]])
-      .map(function(r){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(r[0]) + '</td><td style="text-align:end;padding:2px 0"><bdi>' + inr(r[1]) + '</bdi></td></tr>'; }).join('')
-    + '</table>';
-  const rows = (L.rows || []).map(function(r){
-    const tone = r.side === 'output' ? 'var(--warn-3)' : r.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
-    return '<div class="row" style="cursor:pointer" onclick="openChit(\'' + esc(r.chit_id) + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(r.subject || r.purpose || 'chit') + '</span>'
-      + '<span class="optchip" style="color:' + tone + '">' + esc(r.side === 'output' ? tx('output') : r.side === 'itc' ? tx('input credit') : tx('no credit')) + '</span>'
-      + (r.provisional ? '<span class="optchip">' + tx('provisional') + '</span>' : '<span class="optchip" style="color:var(--ok-2)">' + tx('frozen') + '</span>')
-      + '<span class="amt" style="margin-inline-start:auto"><bdi>' + inr(r.heads.tax) + '</bdi></span></div>'
-      + '<div class="l2">' + esc((r.counterparty || '—') + (r.counterparty_gstin ? ' · ' + r.counterparty_gstin : ' · no GSTIN')) + ' · ' + tx('taxable') + ' ' + inr(r.heads.taxable)
-      + (r.unrated ? ' · <span style="color:var(--warn-3)">' + r.unrated + ' ' + tx('line(s) without a rate') + '</span>' : '') + '</div></div></div>';
-  }).join('');
-  return _misHead('Tax', tx('What this month owes, from the chits on the rail. Provisional until a copy is completed; off-rail purchases are not here; this is not a filing.'))
-    + '<div class="misbar" style="margin-bottom:8px"><span class="seg">'
-    + '<button onclick="misTaxSetMonth(\'' + prev + '\')">‹</button><button class="on">' + esc(m) + '</button><button onclick="misTaxSetMonth(\'' + next + '\')">›</button></span>'
-    + '<span class="misbar-r" style="font-size:var(--fs-1);color:var(--grey)">' + esc((L.gstin ? 'GSTIN ' + L.gstin : tx('no GSTIN on the profile')) + ' · ' + L.registration) + '</span></div>'
-    + head('<div class="mislbl">' + tx('Output · on what I sold') + '</div><div class="mishero" data-testid="mis-tax-output"><bdi>' + inr(L.output.tax) + '</bdi></div>' + heads(L.output),
-           '<div class="mislbl">' + tx('Input credit · on what I bought') + '</div><div class="mishero" data-testid="mis-tax-itc" style="color:var(--ok-2)"><bdi>' + inr(L.itc.tax) + '</bdi></div>' + heads(L.itc))
-    + '<div class="mislbl" style="margin-top:12px">' + tx('Net for the month') + '</div>'
-    + '<div class="mishero" data-testid="mis-tax-net"><bdi>' + inr(L.net.total) + '</bdi>' + (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') + '</div>'
-    + '<div class="misnote">CGST ' + inr(L.net.cgst) + ' · SGST ' + inr(L.net.sgst) + ' · IGST ' + inr(L.net.igst) + (L.net.cess ? ' · Cess ' + inr(L.net.cess) : '') + '</div>'
-    + '<div style="display:flex;gap:8px;margin:10px 0">'
-    + '<button class="composebtn" onclick="misTaxExport(\'gstr1\')">' + tx('⬇ GSTR-1 JSON') + '</button>'
-    + '<button class="composebtn" onclick="misTaxExport(\'gstr3b\')">' + tx('⬇ GSTR-3B JSON') + '</button></div>'
-    + '<div class="sec">' + tx('The chits behind it') + ' · ' + L.count + '</div>'
-    + (rows || '<div class="misnote">' + tx('No chit in this month.') + '</div>');
+  const heads = (h) =>
+    '<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:var(--fs-2)">' +
+    [
+      ['Taxable', h.taxable],
+      ['CGST', h.cgst],
+      ['SGST', h.sgst],
+      ['IGST', h.igst]
+    ]
+      .concat(h.cess ? [['Cess', h.cess]] : [])
+      .concat([['Tax', h.tax]])
+      .map(function (item) {
+        return (
+          '<tr><td style="color:var(--grey);padding:2px 0">' +
+          esc(item[0]) +
+          '</td><td style="text-align:end;padding:2px 0"><bdi>' +
+          inr(item[1]) +
+          '</bdi></td></tr>'
+        );
+      })
+      .join('') +
+    '</table>';
+  const rows = (L.rows || [])
+    .map(function (item) {
+      const tone = item.side === 'output' ? 'var(--warn-3)' : item.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
+      return (
+        '<div class="row" style="cursor:pointer" onclick="openChit(\'' +
+        esc(item.chit_id) +
+        '\')">' +
+        '<div class="main2"><div class="l1"><span class="code">' +
+        esc(item.subject || item.purpose || 'chit') +
+        '</span>' +
+        '<span class="optchip" style="color:' +
+        tone +
+        '">' +
+        esc(item.side === 'output' ? tx('output') : item.side === 'itc' ? tx('input credit') : tx('no credit')) +
+        '</span>' +
+        (item.provisional
+          ? '<span class="optchip">' + tx('provisional') + '</span>'
+          : '<span class="optchip" style="color:var(--ok-2)">' + tx('frozen') + '</span>') +
+        '<span class="amt" style="margin-inline-start:auto"><bdi>' +
+        inr(item.heads.tax) +
+        '</bdi></span></div>' +
+        '<div class="l2">' +
+        esc((item.counterparty || '—') + (item.counterparty_gstin ? ' · ' + item.counterparty_gstin : ' · no GSTIN')) +
+        ' · ' +
+        tx('taxable') +
+        ' ' +
+        inr(item.heads.taxable) +
+        (item.unrated ? ' · <span style="color:var(--warn-3)">' + item.unrated + ' ' + tx('line(s) without a rate') + '</span>' : '') +
+        '</div></div></div>'
+      );
+    })
+    .join('');
+  return (
+    _misHead(
+      'Tax',
+      tx('What this month owes, from the chits on the rail. Provisional until a copy is completed; off-rail purchases are not here; this is not a filing.')
+    ) +
+    '<div class="misbar" style="margin-bottom:8px"><span class="seg">' +
+    '<button onclick="misTaxSetMonth(\'' +
+    prev +
+    '\')">‹</button><button class="on">' +
+    esc(m) +
+    '</button><button onclick="misTaxSetMonth(\'' +
+    next +
+    '\')">›</button></span>' +
+    '<span class="misbar-r" style="font-size:var(--fs-1);color:var(--grey)">' +
+    esc((L.gstin ? 'GSTIN ' + L.gstin : tx('no GSTIN on the profile')) + ' · ' + L.registration) +
+    '</span></div>' +
+    head(
+      '<div class="mislbl">' +
+        tx('Output · on what I sold') +
+        '</div><div class="mishero" data-testid="mis-tax-output"><bdi>' +
+        inr(L.output.tax) +
+        '</bdi></div>' +
+        heads(L.output),
+      '<div class="mislbl">' +
+        tx('Input credit · on what I bought') +
+        '</div><div class="mishero" data-testid="mis-tax-itc" style="color:var(--ok-2)"><bdi>' +
+        inr(L.itc.tax) +
+        '</bdi></div>' +
+        heads(L.itc)
+    ) +
+    '<div class="mislbl" style="margin-top:12px">' +
+    tx('Net for the month') +
+    '</div>' +
+    '<div class="mishero" data-testid="mis-tax-net"><bdi>' +
+    inr(L.net.total) +
+    '</bdi>' +
+    (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') +
+    '</div>' +
+    '<div class="misnote">CGST ' +
+    inr(L.net.cgst) +
+    ' · SGST ' +
+    inr(L.net.sgst) +
+    ' · IGST ' +
+    inr(L.net.igst) +
+    (L.net.cess ? ' · Cess ' + inr(L.net.cess) : '') +
+    '</div>' +
+    '<div style="display:flex;gap:8px;margin:10px 0">' +
+    '<button class="composebtn" onclick="misTaxExport(\'gstr1\')">' +
+    tx('⬇ GSTR-1 JSON') +
+    '</button>' +
+    '<button class="composebtn" onclick="misTaxExport(\'gstr3b\')">' +
+    tx('⬇ GSTR-3B JSON') +
+    '</button></div>' +
+    '<div class="sec">' +
+    tx('The chits behind it') +
+    ' · ' +
+    L.count +
+    '</div>' +
+    (rows || '<div class="misnote">' + tx('No chit in this month.') + '</div>')
+  );
 }
 /* The offline-tool JSON, saved as a file — the same read the band shows. T3-P1-MONEY: the download is helpers.js gstrDownload, the ONE copy CB Finance › Returns uses too. */
-function misTaxExport(form){
-  const base = (typeof apiBase === 'function') ? apiBase() : '';
+function misTaxExport(form) {
+  const base = typeof apiBase === 'function' ? apiBase() : '';
   const url = base + '/api/tax/gstr?month=' + encodeURIComponent(misTaxMonth()) + '&form=' + form;
-  gstrDownload(misTaxMonth(), form).catch(function(){ toast(tx('Could not build the file. Try again.'), true); });   /* the server's sentence never reaches the band (design rule 1) */
+  gstrDownload(misTaxMonth(), form).catch(function () {
+    toast(tx('Could not build the file. Try again.'), true);
+  }); /* the server's sentence never reaches the band (design rule 1) */
   return url;
 }
 /**
@@ -254,26 +482,44 @@ function misTaxExport(form){
  */
 /* ⚠️ The back button is separable from the title, because Governance drops the title (the rail already names it)
    but still needs a way back on mobile. Losing it with the heading is exactly the dead-end fixed earlier. */
-function _misBack(){ return '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>'; }
+function _misBack() {
+  return '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>';
+}
 /**
  * ⚠️ AN ABSENT SUBTITLE TAKES NO SPACE. Passing '' used to emit an empty `<div class="ds">` carrying a 14px
  * bottom margin — a gap under the heading with nothing in it, which reads as a rendering fault rather than as
  * a screen that simply needs no strapline. Now that a subtitle is optional (the IAM one was removed because it
  * had gone stale), omitting it has to look deliberate.
  */
-function _misHead(t, s){
-  return _misBack() + '<div class="dh">' + esc(t) + '</div>'
-    + (s ? '<div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>' : '<div style="margin-bottom:11px"></div>'); }
-function _misSplitBar(m){
+function _misHead(t, s) {
+  return (
+    _misBack() +
+    '<div class="dh">' +
+    esc(t) +
+    '</div>' +
+    (s ? '<div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>' : '<div style="margin-bottom:11px"></div>')
+  );
+}
+function _misSplitBar(m) {
   var tot = m.committed + m.forecast;
   if (!tot) return '<div class="misnote">No value on any chit yet.</div>';
-  var cp = Math.round(m.committed / tot * 100);
-  return '<div class="misplit"><span style="background:var(--blue);width:' + cp + '%;color:var(--on-accent)"></span>'
-    + '<span style="background:var(--gold);width:' + (100 - cp) + '%;color:var(--on-gold)"></span></div>'
-    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Committed ' + inr(m.committed) + '</span>'
-    + '<span class="k"><i class="sw" style="background:var(--gold);color:var(--on-gold)"></i> Forecast ' + inr(m.forecast) + '</span></div>';
+  var cp = Math.round((m.committed / tot) * 100);
+  return (
+    '<div class="misplit"><span style="background:var(--blue);width:' +
+    cp +
+    '%;color:var(--on-accent)"></span>' +
+    '<span style="background:var(--gold);width:' +
+    (100 - cp) +
+    '%;color:var(--on-gold)"></span></div>' +
+    '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Committed ' +
+    inr(m.committed) +
+    '</span>' +
+    '<span class="k"><i class="sw" style="background:var(--gold);color:var(--on-gold)"></i> Forecast ' +
+    inr(m.forecast) +
+    '</span></div>'
+  );
 }
-function _misStack(m){
+function _misStack(m) {
   var t = m.chits || 1;
   /**
    * ⚠️⚠️ EVERY BACKGROUND MUST NAME ITS TEXT COLOUR, and this was the one renderer that did not. Found by
@@ -291,68 +537,151 @@ function _misStack(m){
    * ⚠️ IT COULD NOT HAVE BEEN CAUGHT ON AN EMPTY ACCOUNT: `seg()` returns '' when the count is zero, so with
    * no chits there is no segment, no text, and nothing to measure. This is the bug M3 was worth doing for.
    */
-  var seg = function(n, col, on){ return n ? '<span style="background:' + col + ';color:' + on + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
-  return '<div class="misstack">' + seg(m.open, 'var(--blue)', 'var(--on-accent)')
-    + seg(m.in_progress, 'var(--prog)', 'var(--on-warn)') + seg(m.closed, 'var(--ok)', 'var(--on-ok)') + '</div>'
-    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> ' + tx('Open') + '</span>'
-    + '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> ' + tx('In progress') + '</span>'
-    + '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> ' + tx('Closed') + '</span></div>';
+  var seg = function (n, col, on) {
+    return n ? '<span style="background:' + col + ';color:' + on + ';width:' + (n / t) * 100 + '%">' + n + '</span>' : '';
+  };
+  return (
+    '<div class="misstack">' +
+    seg(m.open, 'var(--blue)', 'var(--on-accent)') +
+    seg(m.in_progress, 'var(--prog)', 'var(--on-warn)') +
+    seg(m.closed, 'var(--ok)', 'var(--on-ok)') +
+    '</div>' +
+    '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> ' +
+    tx('Open') +
+    '</span>' +
+    '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> ' +
+    tx('In progress') +
+    '</span>' +
+    '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> ' +
+    tx('Closed') +
+    '</span></div>'
+  );
 }
 /* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
-function _misSpark(series){
+function _misSpark(series) {
   if (!series || series.length < 2) return '<div class="misnote">Not enough history yet for a trend — one bucket of data.</div>';
-  var max = Math.max.apply(null, series.map(function(p){ return p.n; })) || 1;
-  var pts = series.map(function(p, i){
-    var x = 6 + i * (288 / (series.length - 1));
-    return Math.round(x) + ',' + Math.round(50 - (p.n / max) * 42);
-  }).join(' ');
-  var last = pts.split(' ').pop().split(',');
-  return '<svg class="misspark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Chits per period, latest ' + series[series.length - 1].n + '">'
-    + '<polyline points="' + pts + '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="4" fill="var(--blue)" stroke="#fff" stroke-width="2"/></svg>';
+  var max =
+    Math.max.apply(
+      null,
+      series.map(function (item) {
+        return item.n;
+      })
+    ) || 1;
+  var text = series
+    .map(function (item, index) {
+      var x = 6 + index * (288 / (series.length - 1));
+      return Math.round(x) + ',' + Math.round(50 - (item.n / max) * 42);
+    })
+    .join(' ');
+  var last = text.split(' ').pop().split(',');
+  return (
+    '<svg class="misspark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Chits per period, latest ' +
+    series[series.length - 1].n +
+    '">' +
+    '<polyline points="' +
+    text +
+    '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="' +
+    last[0] +
+    '" cy="' +
+    last[1] +
+    '" r="4" fill="var(--blue)" stroke="#fff" stroke-width="2"/></svg>'
+  );
 }
 
-function misPosition(m){
+function misPosition(m) {
   var tot = m.committed + m.forecast;
-  var pct = tot ? Math.round(m.committed / tot * 100) : 0;
-  return _misHead('Position', 'How much of the pipeline is authoritative, and how much is still a forecast.')
-    + '<div class="mistwo"><div>'
-      + '<div class="mislbl">' + tx('Committed · someone said yes') + '</div>'
-      + '<div class="mishero">' + inr(m.committed) + '</div>'
-      + '<div class="misnote">' + pct + '% of the book is authoritative — accepted, in progress or completed.</div>'
-      + _misSplitBar(m)
-    + '</div><div>'
-      + '<div class="mislbl">' + tx('Forecast · nobody has committed') + '</div>'
-      + '<div class="misfore">' + inr(m.forecast) + '</div>'
-      + '<div class="misnote" style="margin-top:7px">Sent or received but not yet accepted. Real work — nobody has promised it.</div>'
-      + (m.dead ? '<div class="miswarn">' + inr(m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '')
-    + '</div></div>'
-    + '<div class="miswhy">The old screen showed <b>' + inr(m.committed + m.forecast + m.dead) + '</b> as one “deal value”, blending all three — which <b>overstates the book</b>.</div>';
+  var pct = tot ? Math.round((m.committed / tot) * 100) : 0;
+  return (
+    _misHead('Position', 'How much of the pipeline is authoritative, and how much is still a forecast.') +
+    '<div class="mistwo"><div>' +
+    '<div class="mislbl">' +
+    tx('Committed · someone said yes') +
+    '</div>' +
+    '<div class="mishero">' +
+    inr(m.committed) +
+    '</div>' +
+    '<div class="misnote">' +
+    pct +
+    '% of the book is authoritative — accepted, in progress or completed.</div>' +
+    _misSplitBar(m) +
+    '</div><div>' +
+    '<div class="mislbl">' +
+    tx('Forecast · nobody has committed') +
+    '</div>' +
+    '<div class="misfore">' +
+    inr(m.forecast) +
+    '</div>' +
+    '<div class="misnote" style="margin-top:7px">Sent or received but not yet accepted. Real work — nobody has promised it.</div>' +
+    (m.dead ? '<div class="miswarn">' + inr(m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '') +
+    '</div></div>' +
+    '<div class="miswhy">The old screen showed <b>' +
+    inr(m.committed + m.forecast + m.dead) +
+    '</b> as one “deal value”, blending all three — which <b>overstates the book</b>.</div>'
+  );
 }
-function misFlow(m){
-  return _misHead('Flow', 'What is moving through the rail, and at what rate.')
-    + '<div class="mistwo"><div>'
-      + '<div class="mislbl">' + tx('Chits by state') + '</div><div class="misbig">' + m.chits + '</div>' + _misStack(m)
-      + '<div class="miswhy">Three peer tiles hid that <b>' + m.open + ' + ' + m.in_progress + ' + ' + m.closed + ' = ' + m.chits + '</b>.</div>'
-    + '</div><div>'
-      + '<div class="mislbl">Chits per ' + esc(m.bucketName) + '</div>'
-      + '<div class="misbig">' + m.chits + (m.delta ? ' <span class="misdelta">▲ ' + m.delta + '</span>' : '') + '</div>'
-      + _misSpark(m.series)
-    + '</div></div>';
+function misFlow(m) {
+  return (
+    _misHead('Flow', 'What is moving through the rail, and at what rate.') +
+    '<div class="mistwo"><div>' +
+    '<div class="mislbl">' +
+    tx('Chits by state') +
+    '</div><div class="misbig">' +
+    m.chits +
+    '</div>' +
+    _misStack(m) +
+    '<div class="miswhy">Three peer tiles hid that <b>' +
+    m.open +
+    ' + ' +
+    m.in_progress +
+    ' + ' +
+    m.closed +
+    ' = ' +
+    m.chits +
+    '</b>.</div>' +
+    '</div><div>' +
+    '<div class="mislbl">Chits per ' +
+    esc(m.bucketName) +
+    '</div>' +
+    '<div class="misbig">' +
+    m.chits +
+    (m.delta ? ' <span class="misdelta">▲ ' + m.delta + '</span>' : '') +
+    '</div>' +
+    _misSpark(m.series) +
+    '</div></div>'
+  );
 }
 /* Ageing as a distribution, not a number — the oldest bucket carries the warning tone because that is the one
    worth acting on. An empty bucket renders as a flat rule rather than vanishing, so the scale stays readable. */
-function _misAgeing(m){
-  const tot = m.waiting.length; if (!tot) return '';
-  const max = Math.max.apply(null, m.ageing.map(function(b){ return b.n; })) || 1;
-  const cells = m.ageing.map(function(b, i){
-    const warn = (i >= 2 && b.n > 0);
-    return '<div class="misage' + (warn ? ' warn' : '') + '">'
-      + '<div class="misagebar"><i style="height:' + Math.round((b.n / max) * 100) + '%"></i></div>'
-      + '<div class="misagen">' + b.n + '</div><div class="misagek">' + b.k + '</div></div>';
-  }).join('');
-  return '<div class="mislbl" style="margin-top:16px">Ageing · how long they have waited</div>'
-    + '<div class="misageing">' + cells + '</div>';
+function _misAgeing(m) {
+  const tot = m.waiting.length;
+  if (!tot) return '';
+  const max =
+    Math.max.apply(
+      null,
+      m.ageing.map(function (item) {
+        return item.n;
+      })
+    ) || 1;
+  const cells = m.ageing
+    .map(function (item, index) {
+      const warn = index >= 2 && item.n > 0;
+      return (
+        '<div class="misage' +
+        (warn ? ' warn' : '') +
+        '">' +
+        '<div class="misagebar"><i style="height:' +
+        Math.round((item.n / max) * 100) +
+        '%"></i></div>' +
+        '<div class="misagen">' +
+        item.n +
+        '</div><div class="misagek">' +
+        item.k +
+        '</div></div>'
+      );
+    })
+    .join('');
+  return '<div class="mislbl" style="margin-top:16px">Ageing · how long they have waited</div>' + '<div class="misageing">' + cells + '</div>';
 }
 /**
  * ⭐⭐ OVERDUE — the number MIS did not have (backlog 29).
@@ -368,73 +697,186 @@ function _misAgeing(m){
  * second implementation is exactly the drift this replaced, and the fallback would be invisible precisely when
  * the two disagree.
  */
-function _misOverdue(m){
+function _misOverdue(m) {
   var s = m.srv;
   if (!s || !s.all) {
-    return '<div class="misnote" style="margin-top:14px">⚠️ Overdue is unavailable — the server measurement could not be read. '
-      + txf('It is deliberately {not} as shown in the folder pane.', { not: '<b>' + tx('not') + '</b>' }) + '</div>';
+    return (
+      '<div class="misnote" style="margin-top:14px">⚠️ Overdue is unavailable — the server measurement could not be read. ' +
+      txf('It is deliberately {not} as shown in the folder pane.', { not: '<b>' + tx('not') + '</b>' }) +
+      '</div>'
+    );
   }
-  var n = s.all.overdue || 0, d = s.overdue_days;
-  var mine = (s.received && s.received.overdue) || 0, theirs = (s.sent && s.sent.overdue) || 0;
-  return '<div class="mislbl" style="margin-top:16px">Overdue · past ' + esc(String(d)) + ' day' + (d === 1 ? '' : 's') + '</div>'
-    + '<div class="misstatus">'
-    + (n ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + n + ' overdue</b>'
-         : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('Nothing overdue') + '</b>')
-    + '<span class="misnote" style="margin-inline-start:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
-    + '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — '
-    + 'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>';
+  var n = s.all.overdue || 0,
+    d = s.overdue_days;
+  var mine = (s.received && s.received.overdue) || 0,
+    theirs = (s.sent && s.sent.overdue) || 0;
+  return (
+    '<div class="mislbl" style="margin-top:16px">Overdue · past ' +
+    esc(String(d)) +
+    ' day' +
+    (d === 1 ? '' : 's') +
+    '</div>' +
+    '<div class="misstatus">' +
+    (n
+      ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + n + ' overdue</b>'
+      : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('Nothing overdue') + '</b>') +
+    '<span class="misnote" style="margin-inline-start:8px">· ' +
+    mine +
+    ' received · ' +
+    theirs +
+    ' sent</span></div>' +
+    '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — ' +
+    'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>'
+  );
 }
-function _misUnattended(m){
+function _misUnattended(m) {
   const u = m.unattended || [];
   if (!u.length) return '<div class="misnote" style="margin-top:14px">✓ No unanswered messages.</div>';
-  const rows = u.slice(0, 4).map(function(x){
-    return '<div class="misunrow"><span class="misunage">' + esc(x.age) + '</span>'
-      + '<span class="misuntxt"><b>' + esc(x.from) + '</b> — ' + esc(x.text) + '</span></div>';
-  }).join('');
-  return '<div class="mislbl" style="margin-top:16px">Unanswered messages · ' + u.length + ' waiting on you</div>'
-    + '<div class="misunatt">' + rows
-    + (u.length > 4 ? '<div class="misnote" style="padding:6px 0 0">…and ' + (u.length - 4) + ' more.</div>' : '')
-    + '</div>';
+  const rows = u
+    .slice(0, 4)
+    .map(function (x) {
+      return (
+        '<div class="misunrow"><span class="misunage">' +
+        esc(x.age) +
+        '</span>' +
+        '<span class="misuntxt"><b>' +
+        esc(x.from) +
+        '</b> — ' +
+        esc(x.text) +
+        '</span></div>'
+      );
+    })
+    .join('');
+  return (
+    '<div class="mislbl" style="margin-top:16px">Unanswered messages · ' +
+    u.length +
+    ' waiting on you</div>' +
+    '<div class="misunatt">' +
+    rows +
+    (u.length > 4 ? '<div class="misnote" style="padding:6px 0 0">…and ' + (u.length - 4) + ' more.</div>' : '') +
+    '</div>'
+  );
 }
-function misFriction(m){
-  var rows = m.waiting.slice(0, 12).map(function(w){
-    return '<tr><td>' + esc(w.on) + '</td><td>' + esc(w.subject) + '</td><td class="num">' + esc(w.age) + '</td>'
-      + '<td class="num">' + (w.amt ? inr(w.amt) : '—') + '</td>'
-      + '<td><span class="misclock ' + w.who + '">◷ ' + (w.who === 'mine' ? 'Mine' : 'Theirs') + '</span></td></tr>';
-  }).join('');
-  return _misHead('Friction', 'Where time is being lost — and whose clock is running.')
-    + '<div class="misstatus">' + (m.open_disputes
-        ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
-        : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>')
-      + '<span class="misnote" style="margin-inline-start:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
-    + _misOverdue(m) + _misAgeing(m) + _misUnattended(m)
-    + (rows
-      ? '<div class="mislbl" style="margin-top:18px">' + tx('The queue · oldest first') + '</div>'
-        + '<div class="misscroll"><table class="mistable"><thead><tr><th>' + tx('Waiting on') + '</th><th>' + tx('Chit') + '</th><th>' + tx('Age') + '</th><th>' + tx('Value') + '</th><th>' + tx('Whose clock') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
-      : '<div class="misnote" style="margin-top:12px">Nothing is waiting — every chit has been accepted or closed.</div>')
+function misFriction(m) {
+  var rows = m.waiting
+    .slice(0, 12)
+    .map(function (item) {
+      return (
+        '<tr><td>' +
+        esc(item.on) +
+        '</td><td>' +
+        esc(item.subject) +
+        '</td><td class="num">' +
+        esc(item.age) +
+        '</td>' +
+        '<td class="num">' +
+        (item.amt ? inr(item.amt) : '—') +
+        '</td>' +
+        '<td><span class="misclock ' +
+        item.who +
+        '">◷ ' +
+        (item.who === 'mine' ? 'Mine' : 'Theirs') +
+        '</span></td></tr>'
+      );
+    })
+    .join('');
+  return (
+    _misHead('Friction', 'Where time is being lost — and whose clock is running.') +
+    '<div class="misstatus">' +
+    (m.open_disputes
+      ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' +
+        m.open_disputes +
+        ' open dispute' +
+        (m.open_disputes === 1 ? '' : 's') +
+        '</b>'
+      : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>') +
+    '<span class="misnote" style="margin-inline-start:8px">· ' +
+    m.chits +
+    ' chits · ' +
+    (m.open_disputes ? 'needs resolving' : 'nothing to resolve') +
+    '</span></div>' +
+    _misOverdue(m) +
+    _misAgeing(m) +
+    _misUnattended(m) +
+    (rows
+      ? '<div class="mislbl" style="margin-top:18px">' +
+        tx('The queue · oldest first') +
+        '</div>' +
+        '<div class="misscroll"><table class="mistable"><thead><tr><th>' +
+        tx('Waiting on') +
+        '</th><th>' +
+        tx('Chit') +
+        '</th><th>' +
+        tx('Age') +
+        '</th><th>' +
+        tx('Value') +
+        '</th><th>' +
+        tx('Whose clock') +
+        '</th></tr></thead><tbody>' +
+        rows +
+        '</tbody></table></div>'
+      : '<div class="misnote" style="margin-top:12px">Nothing is waiting — every chit has been accepted or closed.</div>') +
     /* ⭐ DESIGN RATIONALE → SPEC. Why a dispute is shown as a status rather than a number is a good decision
        and not one the reader has to agree with before using the screen. */
-    + specNote('mis.disputes-as-status',
-        'Disputes are a <b>status</b>, not a count: a plain <b>0</b> tile reads exactly like <b>Suppliers 2</b>, '
-      + 'when one is a health signal and the other is inventory.');
+    specNote(
+      'mis.disputes-as-status',
+      'Disputes are a <b>status</b>, not a count: a plain <b>0</b> tile reads exactly like <b>Suppliers 2</b>, ' +
+        'when one is a health signal and the other is inventory.'
+    )
+  );
 }
-function misTrust(m){
+function misTrust(m) {
   var chan = m.byChannel;
   var chanTxt = Object.keys(chan).length
-    ? Object.keys(chan).map(function(c){ return chan[c] + ' by ' + esc(c); }).join(' · ')
+    ? Object.keys(chan)
+        .map(function (item) {
+          return chan[item] + ' by ' + esc(item);
+        })
+        .join(' · ')
     : 'none captured — everything entered by hand';
-  return _misHead('Trust', 'Who you deal with, and how the work reaches you.')
-    + '<div class="mistrust">'
-      + '<div><div class="mislbl">' + tx('Counterparties') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.parties + '</div>'
-        + '<div class="misnote">' + (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') + '</div></div>'
-      + '<div><div class="mislbl">' + tx('Suppliers on your list') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.suppliers + '</div>'
-        + '<div class="misnote">' + m.co_assists + ' co-assist' + (m.co_assists === 1 ? '' : 's') + ' working the rail</div></div>'
-      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.captured + ' <span style="font-size:var(--fs-2);color:var(--grey)">of ' + m.chits + '</span></div>'
-        + '<div class="misnote">' + chanTxt + '</div></div>'
-    + '</div>'
+  return (
+    _misHead('Trust', 'Who you deal with, and how the work reaches you.') +
+    '<div class="mistrust">' +
+    '<div><div class="mislbl">' +
+    tx('Counterparties') +
+    '</div><div class="misbig" style="font-size:var(--fs-5)">' +
+    m.parties +
+    '</div>' +
+    '<div class="misnote">' +
+    (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') +
+    '</div></div>' +
+    '<div><div class="mislbl">' +
+    tx('Suppliers on your list') +
+    '</div><div class="misbig" style="font-size:var(--fs-5)">' +
+    m.suppliers +
+    '</div>' +
+    '<div class="misnote">' +
+    m.co_assists +
+    ' co-assist' +
+    (m.co_assists === 1 ? '' : 's') +
+    ' working the rail</div></div>' +
+    '<div><div class="mislbl">' +
+    tx('How work arrives') +
+    '</div><div class="misbig" style="font-size:var(--fs-5)">' +
+    m.captured +
+    ' <span style="font-size:var(--fs-2);color:var(--grey)">of ' +
+    m.chits +
+    '</span></div>' +
+    '<div class="misnote">' +
+    chanTxt +
+    '</div></div>' +
+    '</div>' +
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
-    + '<div class="miswhy">' + txf('⚠️ {what} — who confirms fast, who delivers short — is the most valuable thing this could report, and is {notbuilt}. Shown as plain counts, not a score.', {
-        what: '<b>' + tx('Counterparty reliability') + '</b>', notbuilt: '<b>' + tx('not built') + '</b>' }) + '</div>';
+    '<div class="miswhy">' +
+    txf(
+      '⚠️ {what} — who confirms fast, who delivers short — is the most valuable thing this could report, and is {notbuilt}. Shown as plain counts, not a score.',
+      {
+        what: '<b>' + tx('Counterparty reliability') + '</b>',
+        notbuilt: '<b>' + tx('not built') + '</b>'
+      }
+    ) +
+    '</div>'
+  );
 }
 /**
  * ⭐ USAGE AGAINST THE DECLARED PLAN. The limits come from PLAN (declared in Governance → Constitution); this band
@@ -445,18 +887,40 @@ function misTrust(m){
  * is the same one the supplier search makes between "not listed" and "can't tell", and the `—` these rows used to
  * show on the governance card is exactly the ambiguity being removed.
  */
-function misPlan(m){
-  var meter = function(label, used, limit, note){
-    if (limit == null) return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
-      + '<span class="govrow-v" style="color:var(--grey)">'+esc(note||'not counted here')+'</span></div>';
+function misPlan(m) {
+  var meter = function (label, used, limit, note) {
+    if (limit == null)
+      return (
+        '<div class="govrow"><span class="govrow-k">' +
+        esc(label) +
+        '</span>' +
+        '<span class="govrow-v" style="color:var(--grey)">' +
+        esc(note || 'not counted here') +
+        '</span></div>'
+      );
     var pct = Math.min(100, Math.round((used / limit) * 100));
     var tone = pct >= 100 ? 'var(--disp)' : pct >= 80 ? 'var(--prog)' : 'var(--blue)';
-    return '<div class="misplanrow"><div class="misplanhead"><span>'+esc(label)+'</span>'
-      + '<span class="misplanv">'+used+' <span style="color:var(--grey);font-weight:600">of '+limit+'</span></span></div>'
-      + '<div class="misplanbar"><i style="width:'+pct+'%;background:'+tone+'"></i></div></div>';
+    return (
+      '<div class="misplanrow"><div class="misplanhead"><span>' +
+      esc(label) +
+      '</span>' +
+      '<span class="misplanv">' +
+      used +
+      ' <span style="color:var(--grey);font-weight:600">of ' +
+      limit +
+      '</span></span></div>' +
+      '<div class="misplanbar"><i style="width:' +
+      pct +
+      '%;background:' +
+      tone +
+      '"></i></div></div>'
+    );
   };
-  var todayStart = new Date(); todayStart.setHours(0,0,0,0);
-  var chitsToday = (UI._misStamps || []).filter(function(t){ return t >= todayStart.getTime(); }).length;
+  var todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  var chitsToday = (UI._misStamps || []).filter(function (item) {
+    return item >= todayStart.getTime();
+  }).length;
   /**
    * The subscription window, when there is one. ⚠️ It says "no period recorded" rather than assuming open-ended —
    * a plan with no dates and a plan valid forever look identical on screen but are not the same claim, and only
@@ -466,46 +930,97 @@ function misPlan(m){
   var period = !w
     ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">no period recorded</span>'
     : w.state === 'expired'
-      ? '<span class="govtag" style="background:var(--danger-tint);color:var(--disp)">expired '+w.days+'d ago</span>'
+      ? '<span class="govtag" style="background:var(--danger-tint);color:var(--disp)">expired ' + w.days + 'd ago</span>'
       : w.state === 'not yet started'
-        ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">starts in '+w.days+'d</span>'
-        : '<span class="govtag" style="background:var(--ok-tint);color:var(--disp)">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
-  return _misHead('Plan', 'What you have used against the limits your plan declares.')
-    + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
-    + '<div class="misnote" style="margin-bottom:12px"><b>'+esc(PLAN.tier)+'</b> plan · limits declared in '
-      + '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance <span class=arw>→</span> Constitution <span class=arw>→</span></b></div>'
-    + meter('Entities', 1, PLAN.entities)
-    + meter('Chits today', chitsToday, PLAN.chitsPerDay)
-    + meter('Networks formed', 0, null, 'not counted on this screen')
-    + meter('Data stored', 0, null, 'not counted on this screen')
-    + '<div class="miswhy">These four sat on the governance card as <b>metered</b> rows, two of them showing '
-      + '<b>—</b> while this screen counted chits. Your plan sets the limit; this is what you have used.</div>';
+        ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">starts in ' + w.days + 'd</span>'
+        : '<span class="govtag" style="background:var(--ok-tint);color:var(--disp)">active' + (w.days != null ? ' · ' + w.days + 'd left' : '') + '</span>';
+  return (
+    _misHead('Plan', 'What you have used against the limits your plan declares.') +
+    '<div class="misnote" style="margin-bottom:10px">' +
+    period +
+    '</div>' +
+    '<div class="misnote" style="margin-bottom:12px"><b>' +
+    esc(PLAN.tier) +
+    '</b> plan · limits declared in ' +
+    '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance <span class=arw>→</span> Constitution <span class=arw>→</span></b></div>' +
+    meter('Entities', 1, PLAN.entities) +
+    meter('Chits today', chitsToday, PLAN.chitsPerDay) +
+    meter('Networks formed', 0, null, 'not counted on this screen') +
+    meter('Data stored', 0, null, 'not counted on this screen') +
+    '<div class="miswhy">These four sat on the governance card as <b>metered</b> rows, two of them showing ' +
+    '<b>—</b> while this screen counted chits. Your plan sets the limit; this is what you have used.</div>'
+  );
 }
-function misOverview(m){
-  var sec = function(name, q, inner){
-    return '<div class="misov"><div class="misovh"><span class="misovn">' + esc(name) + '</span><span class="misnote">' + esc(q) + '</span></div>' + inner + '</div>';
+function misOverview(m) {
+  var sec = function (name, q, inner) {
+    return (
+      '<div class="misov"><div class="misovh"><span class="misovn">' + esc(name) + '</span><span class="misnote">' + esc(q) + '</span></div>' + inner + '</div>'
+    );
   };
-  var tot = m.committed + m.forecast, pct = tot ? Math.round(m.committed / tot * 100) : 0;
-  return _misHead('Overview', '')
-    + sec('Position', 'How much of the pipeline is real?',
-        '<div class="mistwo"><div><div class="mishero" style="font-size:var(--fs-6)">' + inr(m.committed) + '</div>'
-        + '<div class="misnote">committed · ' + pct + '% of the book</div></div><div>' + _misSplitBar(m) + '</div></div>')
-    + sec('Flow', 'What is moving through the rail?',
-        '<div class="mistwo"><div>' + _misStack(m) + '</div><div>' + _misSpark(m.series) + '</div></div>')
-    + sec('Friction', 'Where is time being lost?',
-        '<div class="misstatus">' + (m.open_disputes
+  var tot = m.committed + m.forecast,
+    pct = tot ? Math.round((m.committed / tot) * 100) : 0;
+  return (
+    _misHead('Overview', '') +
+    sec(
+      'Position',
+      'How much of the pipeline is real?',
+      '<div class="mistwo"><div><div class="mishero" style="font-size:var(--fs-6)">' +
+        inr(m.committed) +
+        '</div>' +
+        '<div class="misnote">committed · ' +
+        pct +
+        '% of the book</div></div><div>' +
+        _misSplitBar(m) +
+        '</div></div>'
+    ) +
+    sec('Flow', 'What is moving through the rail?', '<div class="mistwo"><div>' + _misStack(m) + '</div><div>' + _misSpark(m.series) + '</div></div>') +
+    sec(
+      'Friction',
+      'Where is time being lost?',
+      '<div class="misstatus">' +
+        (m.open_disputes
           ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open</b>'
-          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>')
-        + '<span style="margin-inline-start:9px">' + (m.waiting.length
-            ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">' + tx('◷ Theirs') + '</span> ' + m.waitMine + ' on <span class="misclock mine">' + tx('◷ Mine') + '</span>'
-            : 'nothing waiting') + '</span></div>'
-        + ((m.unattended || []).length
-            ? '<div class="misnote" style="margin-top:6px">⚠ <b>' + m.unattended.length + ' unanswered message'
-              + (m.unattended.length === 1 ? '' : 's') + '</b> — oldest ' + esc(m.unattended[0].age) + '</div>'
-            : '')
-        + _misAgeing(m))
-    + sec('Trust', 'Who can I rely on?',
-        '<div class="misnote"><b>' + m.parties + ' counterparties</b> · ' + m.captured + ' of ' + m.chits + ' chits captured from a channel · ' + m.suppliers + ' suppliers</div>');
+          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>') +
+        '<span style="margin-inline-start:9px">' +
+        (m.waiting.length
+          ? '<b>' +
+            m.waiting.length +
+            ' waiting</b> — ' +
+            m.waitTheirs +
+            ' on <span class="misclock theirs">' +
+            tx('◷ Theirs') +
+            '</span> ' +
+            m.waitMine +
+            ' on <span class="misclock mine">' +
+            tx('◷ Mine') +
+            '</span>'
+          : 'nothing waiting') +
+        '</span></div>' +
+        ((m.unattended || []).length
+          ? '<div class="misnote" style="margin-top:6px">⚠ <b>' +
+            m.unattended.length +
+            ' unanswered message' +
+            (m.unattended.length === 1 ? '' : 's') +
+            '</b> — oldest ' +
+            esc(m.unattended[0].age) +
+            '</div>'
+          : '') +
+        _misAgeing(m)
+    ) +
+    sec(
+      'Trust',
+      'Who can I rely on?',
+      '<div class="misnote"><b>' +
+        m.parties +
+        ' counterparties</b> · ' +
+        m.captured +
+        ' of ' +
+        m.chits +
+        ' chits captured from a channel · ' +
+        m.suppliers +
+        ' suppliers</div>'
+    )
+  );
 }
 
 /**
@@ -523,7 +1038,7 @@ function misOverview(m){
  * ⭐ ONE READ IN FLIGHT. A second caller joins the first rather than starting another; nobody has to know how
  * many times the app decided to paint. [[feedback-no-duplicate-functions]]
  */
-async function loadMIS(force){
+async function loadMIS(force) {
   if (!document.getElementById('mis_rail')) return;
   if (UI._misReq) return UI._misReq;
   /**
@@ -534,31 +1049,50 @@ async function loadMIS(force){
    * one arrival, which are a second apart at worst. A person who waits ten seconds and expects new numbers
    * gets them; the twenty-second auto-refresh is untouched, and every deliberate re-read passes `force`.
    */
-  if (!force && UI._mis && UI._misAt && (Date.now() - UI._misAt) < 10000) return;
-  UI._misReq = _loadMIS().finally(function(){ UI._misReq = null; });
+  if (!force && UI._mis && UI._misAt && Date.now() - UI._misAt < 10000) return;
+  UI._misReq = _loadMIS().finally(function () {
+    UI._misReq = null;
+  });
   return UI._misReq;
 }
-async function _loadMIS(){
-  try{
+async function _loadMIS() {
+  try {
     /* ⚠️ BOTH SIDES, NOT JUST inbox. "Whose clock" is unanswerable from received copies alone — everything would
        read as mine. Merged by id so a self-chit, which lands in both, is counted once. */
     /* ⚠️ The window is computed BEFORE the fetch because the server has to measure the same one — see `since`
        below. A period selector on screen beside a figure measured over all time is worse than no selector. */
     const _days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
-    const _since = misWindow(misPeriod());   /* ONE window rule (app/cap-mis.js, T3-P4-ACCOUNT): the same `since` CB Finance › Reports sends */
+    const _since = misWindow(misPeriod()); /* ONE window rule (app/cap-mis.js, T3-P4-ACCOUNT): the same `since` CB Finance › Reports sends */
     const [inb, snt, dq, ac, sp, msgRaw, srv] = await Promise.all([
-      api('inbox'), api('sent').catch(function(){ return []; }),
-      api('disputeQueue').catch(function(){ return {}; }),
-      api('actors').catch(function(){ return []; }), api('supList').catch(function(){ return []; }),
-      api('misMsgs').catch(function(){ return []; }),
+      api('inbox'),
+      api('sent').catch(function () {
+        return [];
+      }),
+      api('disputeQueue').catch(function () {
+        return {};
+      }),
+      api('actors').catch(function () {
+        return [];
+      }),
+      api('supList').catch(function () {
+        return [];
+      }),
+      api('misMsgs').catch(function () {
+        return [];
+      }),
       /* ⚠️ Fails SOFT to null, not to a client-computed substitute. If the measurement is unavailable the screen
          must say the number is unavailable — quietly falling back to a second implementation is precisely the
          drift this endpoint exists to end, and it would be invisible. */
-      api('misMetrics', { query: { since: _since } }).catch(function(){ return null; })
+      api('misMetrics', { query: { since: _since } }).catch(function () {
+        return null;
+      })
     ]);
-    const seen = {}, chits = [];
-    (inb || []).concat(snt || []).forEach(function(raw){
-      const c = mapApiChit(raw); if (!c || seen[c.id]) return; seen[c.id] = 1;
+    const seen = {},
+      chits = [];
+    (inb || []).concat(snt || []).forEach(function (item) {
+      const c = mapApiChit(item);
+      if (!c || seen[c.id]) return;
+      seen[c.id] = 1;
       c._iSent = !!SESSION.entity && (c.sender || '') === SESSION.entity;
       chits.push(c);
     });
@@ -567,47 +1101,90 @@ async function _loadMIS(){
        boundary or the two halves of this screen describe different fortnights. */
     const days = _days;
     const cutoff = _since ? Date.parse(_since) : null;
-    const inWindow = chits.filter(function(c){ return !cutoff || (new Date(c.created_at)).getTime() >= cutoff; });
+    const inWindow = chits.filter(function (item) {
+      return !cutoff || new Date(item.created_at).getTime() >= cutoff;
+    });
 
-    let committed = 0, forecast = 0, dead = 0;
-    const byState = { open:0, act:0, close:0 };
-    const byChannel = {}; let captured = 0;
-    const parties = {}; const waiting = [];
+    let committed = 0,
+      forecast = 0,
+      dead = 0;
+    const byState = { open: 0, act: 0, close: 0 };
+    const byChannel = {};
+    let captured = 0;
+    const parties = {};
+    const waiting = [];
     const now = Date.now();
-    inWindow.forEach(function(c){
-      const st = c._status || 'pending', amt = c.amt || 0;
-      if (MIS_DEAD[st]) dead += amt; else if (MIS_COMMITTED[st]) committed += amt; else if (MIS_FORECAST[st]) forecast += amt;
-      byState[c.state] = (byState[c.state] || 0) + 1;
-      if (c.via && c.via.channel){ captured++; byChannel[c.via.channel] = (byChannel[c.via.channel] || 0) + 1; }
-      const other = c._iSent ? (c.party || '') : (c.sender || c.party || '');
+    inWindow.forEach(function (item) {
+      const st = item._status || 'pending',
+        amt = item.amt || 0;
+      if (MIS_DEAD[st]) dead += amt;
+      else if (MIS_COMMITTED[st]) committed += amt;
+      else if (MIS_FORECAST[st]) forecast += amt;
+      byState[item.state] = (byState[item.state] || 0) + 1;
+      if (item.via && item.via.channel) {
+        captured++;
+        byChannel[item.via.channel] = (byChannel[item.via.channel] || 0) + 1;
+      }
+      const other = item._iSent ? item.party || '' : item.sender || item.party || '';
       if (other && other !== SESSION.entity) parties[other] = 1;
-      if (MIS_FORECAST[st]){
-        const ageMs = now - (new Date(c.created_at)).getTime();
-        const d = Math.floor(ageMs / 864e5), h = Math.floor(ageMs / 36e5);
-        waiting.push({ on:'Acceptance', subject:c.code || '—', amt:amt, ageMs:ageMs,
-                       age: d >= 1 ? (d + 'd') : (h + 'h'),
-                       /* I sent it → they owe the answer. It came to me → the clock is mine. */
-                       who: c._iSent ? 'theirs' : 'mine' });
+      if (MIS_FORECAST[st]) {
+        const ageMs = now - new Date(item.created_at).getTime();
+        const d = Math.floor(ageMs / 864e5),
+          h = Math.floor(ageMs / 36e5);
+        waiting.push({
+          on: 'Acceptance',
+          subject: item.code || '—',
+          amt: amt,
+          ageMs: ageMs,
+          age: d >= 1 ? d + 'd' : h + 'h',
+          /* I sent it → they owe the answer. It came to me → the clock is mine. */
+          who: item._iSent ? 'theirs' : 'mine'
+        });
       }
     });
-    waiting.sort(function(a, b){ return b.ageMs - a.ageMs; });
+    waiting.sort(function (first, second) {
+      return second.ageMs - first.ageMs;
+    });
 
     /* Weekly buckets when the span is wide, daily when it is short — a 7-day window has no weeks in it. */
     /* Kept for the Plan band, which counts against a per-DAY limit and so cannot use the period-windowed series. */
-    UI._misStamps = chits.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; });
-    { const _t0 = new Date(); _t0.setHours(0,0,0,0);
-      UI._misToday = UI._misStamps.filter(function(t){ return t >= _t0.getTime(); }).length; }
-    const stamps = inWindow.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; }).sort();
-    let series = [], bucketName = 'week';
-    if (stamps.length){
-      const spanDays = (stamps[stamps.length - 1] - stamps[0]) / 864e5;
-      const size = spanDays > 21 ? 7 : 1; bucketName = size === 7 ? 'week' : 'day';
-      const buckets = {};
-      stamps.forEach(function(t){ const b = Math.floor((t - stamps[0]) / (size * 864e5)); buckets[b] = (buckets[b] || 0) + 1; });
-      const maxB = Math.max.apply(null, Object.keys(buckets).map(Number));
-      for (let i = 0; i <= maxB; i++) series.push({ n: buckets[i] || 0 });
+    UI._misStamps = chits
+      .map(function (item) {
+        return new Date(item.created_at).getTime();
+      })
+      .filter(function (item) {
+        return item;
+      });
+    {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      UI._misToday = UI._misStamps.filter(function (item) {
+        return item >= date.getTime();
+      }).length;
     }
-    const delta = series.length >= 2 ? (series[series.length - 1].n - series[series.length - 2].n) : 0;
+    const stamps = inWindow
+      .map(function (item) {
+        return new Date(item.created_at).getTime();
+      })
+      .filter(function (item) {
+        return item;
+      })
+      .sort();
+    let series = [],
+      bucketName = 'week';
+    if (stamps.length) {
+      const spanDays = (stamps[stamps.length - 1] - stamps[0]) / 864e5;
+      const size = spanDays > 21 ? 7 : 1;
+      bucketName = size === 7 ? 'week' : 'day';
+      const buckets = {};
+      stamps.forEach(function (item) {
+        const b = Math.floor((item - stamps[0]) / (size * 864e5));
+        buckets[b] = (buckets[b] || 0) + 1;
+      });
+      const maxB = Math.max.apply(null, Object.keys(buckets).map(Number));
+      for (let index = 0; index <= maxB; index++) series.push({ n: buckets[index] || 0 });
+    }
+    const delta = series.length >= 2 ? series[series.length - 1].n - series[series.length - 2].n : 0;
 
     /**
      * ⭐ AGEING + UNATTENDED (Athi, 2026-08-16: *"can we bring aging, message unattended etc"*).
@@ -621,55 +1198,118 @@ async function _loadMIS(){
      * chit status to show up under. Inbound and unread, aged the same way; messages I sent are not my delay.
      */
     const AGE_BUCKETS = [
-      { k:'<1d',  max:1 }, { k:'1–3d', max:3 }, { k:'3–7d', max:7 }, { k:'7d+', max:Infinity }
+      { k: '<1d', max: 1 },
+      { k: '1–3d', max: 3 },
+      { k: '3–7d', max: 7 },
+      { k: '7d+', max: Infinity }
     ];
-    const ageing = AGE_BUCKETS.map(function(b){ return { k:b.k, n:0 }; });
-    waiting.forEach(function(w){
-      const d = w.ageMs / 864e5;
-      for (let i = 0; i < AGE_BUCKETS.length; i++){ if (d < AGE_BUCKETS[i].max){ ageing[i].n++; break; } }
+    const ageing = AGE_BUCKETS.map(function (item) {
+      return { k: item.k, n: 0 };
+    });
+    waiting.forEach(function (item) {
+      const d = item.ageMs / 864e5;
+      for (let index = 0; index < AGE_BUCKETS.length; index++) {
+        if (d < AGE_BUCKETS[index].max) {
+          ageing[index].n++;
+          break;
+        }
+      }
     });
 
     const msgs = (msgRaw && (msgRaw.messages || msgRaw.items || (Array.isArray(msgRaw) ? msgRaw : []))) || [];
-    const unattended = msgs.filter(function(m){
-      /* Unread AND not mine — my own outbound message sitting unread is THEIR clock, not a task of mine. */
-      return !m.read_at && m.sender_entity_id !== SESSION.entityId;
-    }).map(function(m){
-      const ms = now - (new Date(m.created_at)).getTime();
-      const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
-      return { from:m.sender_display_name || '—', text:(m.message_text || '').slice(0, 90),
-               subject:m.manual_subject || m.auto_subject || '—', ageMs:ms, age: d >= 1 ? (d + 'd') : (h + 'h') };
-    }).sort(function(a, b){ return b.ageMs - a.ageMs; });
+    const unattended = msgs
+      .filter(function (item) {
+        /* Unread AND not mine — my own outbound message sitting unread is THEIR clock, not a task of mine. */
+        return !item.read_at && item.sender_entity_id !== SESSION.entityId;
+      })
+      .map(function (item) {
+        const ms = now - new Date(item.created_at).getTime();
+        const d = Math.floor(ms / 864e5),
+          h = Math.floor(ms / 36e5);
+        return {
+          from: item.sender_display_name || '—',
+          text: (item.message_text || '').slice(0, 90),
+          subject: item.manual_subject || item.auto_subject || '—',
+          ageMs: ms,
+          age: d >= 1 ? d + 'd' : h + 'h'
+        };
+      })
+      .sort(function (first, second) {
+        return second.ageMs - first.ageMs;
+      });
 
-    const openDisp = dq.total_open != null ? dq.total_open : (((dq.my_disputes || []).length) + ((dq.other_disputes || []).length));
+    const openDisp = dq.total_open != null ? dq.total_open : (dq.my_disputes || []).length + (dq.other_disputes || []).length;
     /* ⚠ stamped so the freshness guard above has something to measure against */
     UI._misAt = Date.now();
     UI._mis = {
-      chits: inWindow.length, committed: committed, forecast: forecast, dead: dead,
-      open: byState.open, in_progress: byState.act, closed: byState.close,
-      open_disputes: openDisp, co_assists: (ac || []).length, suppliers: (sp || []).length,
-      parties: Object.keys(parties).length, partyNames: Object.keys(parties),
-      captured: captured, byChannel: byChannel,
-      waiting: waiting, waitMine: waiting.filter(function(w){ return w.who === 'mine'; }).length,
-      waitTheirs: waiting.filter(function(w){ return w.who === 'theirs'; }).length,
-      ageing: ageing, unattended: unattended,
-      series: series, bucketName: bucketName, delta: delta > 0 ? delta : 0,
+      chits: inWindow.length,
+      committed: committed,
+      forecast: forecast,
+      dead: dead,
+      open: byState.open,
+      in_progress: byState.act,
+      closed: byState.close,
+      open_disputes: openDisp,
+      co_assists: (ac || []).length,
+      suppliers: (sp || []).length,
+      parties: Object.keys(parties).length,
+      partyNames: Object.keys(parties),
+      captured: captured,
+      byChannel: byChannel,
+      waiting: waiting,
+      waitMine: waiting.filter(function (item) {
+        return item.who === 'mine';
+      }).length,
+      waitTheirs: waiting.filter(function (item) {
+        return item.who === 'theirs';
+      }).length,
+      ageing: ageing,
+      unattended: unattended,
+      series: series,
+      bucketName: bucketName,
+      delta: delta > 0 ? delta : 0,
       /* ⭐ THE SERVER'S MEASUREMENT (backlog 29) — the same lib/measure.js the folder pane and the counterparty
          scorecard read, so all three now agree by construction rather than by coincidence. `srv` is null when
          the call failed; every reader must handle that rather than fall back to a second implementation. */
       srv: srv,
-      periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
-      asOf: misReadAt(Date.now()),   /* "live · 10:32" — the same stamp CB Finance › Reports paints (cap-mis.js, loaded with this capability) */
+      periodLabel: misPeriod() === 'all' ? 'all time' : 'last ' + misPeriod() + 'd',
+      asOf: misReadAt(Date.now()) /* "live · 10:32" — the same stamp CB Finance › Reports paints (cap-mis.js, loaded with this capability) */,
       currency: moneyCode()
     };
-    const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);
+    const node = document.getElementById('misbody');
+    if (node) node.innerHTML = misBandHTML(misBand(), UI._mis);
     const r = document.getElementById('mis_rail');
-    if (r) r.innerHTML = MIS_BANDS.map(function(b){
-      const sel = (misBand() === b.key) ? ' sel' : '', hv = misHeadline(b.key, UI._mis);
-      return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
-        + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div><div class="l2">' + esc(b.q) + '</div></div>'
-        + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
-    }).join('');
-  }catch(e){ const h = document.getElementById('misbody'); if (h) h.innerHTML = scrErr(e); } }
+    if (r)
+      r.innerHTML = MIS_BANDS.map(function (item) {
+        const sel = misBand() === item.key ? ' sel' : '',
+          hv = misHeadline(item.key, UI._mis);
+        return (
+          '<div class="row misrow' +
+          sel +
+          '" data-testid="mis-band-' +
+          item.key +
+          '" onclick="misSetBand(\'' +
+          item.key +
+          '\')">' +
+          '<div class="main2"><div class="l1"><span class="code">' +
+          esc(item.name) +
+          '</span></div><div class="l2">' +
+          esc(item.q) +
+          '</div></div>' +
+          '<div class="misval' +
+          (hv.tone ? ' ' + hv.tone : '') +
+          '">' +
+          hv.v +
+          '<small>' +
+          esc(hv.s) +
+          '</small></div></div>'
+        );
+      }).join('');
+  } catch (e) {
+    const node = document.getElementById('misbody');
+    if (node) node.innerHTML = scrErr(e);
+  }
+}
 
 /* ---- PROFILE ---- */
 /* ═══ PROFILE ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -693,15 +1333,17 @@ var PROF_SECS = [
    * ⭐ SO IT IS STRUCTURED BY BOUNDARY — inside · at the edge · outside. That is the same sovereignty the rest
    * of the rail rests on, and it turns the asymmetry from an apology into the content.
    */
-  { key:'identity',   name:'IAM',         q:'Who can act, and what they may do' },
-  { key:'storefront', name:'Storefront',  q:'What customers can see' },
+  { key: 'identity', name: 'IAM', q: 'Who can act, and what they may do' },
+  { key: 'storefront', name: 'Storefront', q: 'What customers can see' },
   /* ⚠️ NOT "Governance" — Settings has a section by that name too, and two rows with one name in two screens is
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
      Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
-  { key:'governance', name:'Your rights',  q:'What this entity may do' },
-  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
+  { key: 'governance', name: 'Your rights', q: 'What this entity may do' },
+  { key: 'vault', name: 'Documents', q: 'Fill forms once, reuse' }
 ];
-function profSec(){ return UI.profSec || 'identity'; }
+function profSec() {
+  return UI.profSec || 'identity';
+}
 /**
  * ⚠️ REPAINT THE BODY DIRECTLY — do not rely on the post-render hook. renderApp() rewrites the pane to its
  * "loading…" placeholder and the `if(UI.nav==="profile") loadProfile()` hook fires while #profbody is not yet in
@@ -730,7 +1372,9 @@ function profSec(){ return UI.profSec || 'identity'; }
  * ⭐ ONE PANE FOR EVERYONE NOW — the same shape an actor already had. loadProfile fills #profbody, and the
  * sections inside it are the navigation.
  */
-function profileScreen(){ return scr('👤 Profile', 'profbody', 'profile'); }
+function profileScreen() {
+  return scr('👤 Profile', 'profbody', 'profile');
+}
 
 /**
  * ⚠️ profSetSec SURVIVES AS A SHIM, because four call sites still ask for a section by name — a nav link, the
@@ -738,13 +1382,15 @@ function profileScreen(){ return scr('👤 Profile', 'profbody', 'profile'); }
  * OPEN the matching accordion rather than to switch panes, so an old link still lands the reader on the thing
  * it promised. Deleting it would have left four dead links pointing at nothing.
  */
-var _SEC_TO_ACCORDION = { identity:'ident', storefront:'governed', governance:'rights', vault:'docs' };
-function profSetSec(k){
+var _SEC_TO_ACCORDION = { identity: 'ident', storefront: 'governed', governance: 'rights', vault: 'docs' };
+function profSetSec(k) {
   var key = _SEC_TO_ACCORDION[k] || 'ident';
   UI._iamOpen = UI._iamOpen || {};
   UI._iamOpen[key] = true;
   UI.nav = 'profile';
-  renderApp(); _capShowDetail(); loadProfile();
+  renderApp();
+  _capShowDetail();
+  loadProfile();
 }
 
 /**
@@ -766,15 +1412,23 @@ let _profBusy = false;
  * profile still paints without it — but leaving the latch UNSET means the section's own loader will try again
  * when it renders. Bundling must not turn a retryable gap into a permanent one.
  */
-function _profSeedIncluded(e){
-  var inc = e && e.included; if (!inc) return;
-  var ok = function(v){ return v && !v.error; };
+function _profSeedIncluded(e) {
+  var inc = e && e.included;
+  if (!inc) return;
+  var ok = function (v) {
+    return v && !v.error;
+  };
 
-  if (ok(inc.readiness)) { UI._rdSum = inc.readiness.summary || null; UI._rdSumLoaded = true; }
+  if (ok(inc.readiness)) {
+    UI._rdSum = inc.readiness.summary || null;
+    UI._rdSumLoaded = true;
+  }
 
   if (ok(inc.channels)) {
     UI._chans = Array.isArray(inc.channels.channels)
-      ? inc.channels.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
+      ? inc.channels.channels.reduce(function (all, item) {
+          return all.concat(item.bindings || []);
+        }, [])
       : null;
     UI._chansLoaded = true;
   }
@@ -783,14 +1437,16 @@ function _profSeedIncluded(e){
      still runs when the vault section opens. Seeding the DATA means it paints immediately instead of showing
      a spinner for a round trip it no longer needs. */
   if (ok(inc.vault)) {
-    UI._vault = { sections: ((inc.vault.vault || {}).sections) || [] };
+    UI._vault = { sections: (inc.vault.vault || {}).sections || [] };
     UI._vaultEnc = !!inc.vault.vault_encrypted;
     UI._vaultSeeded = true;
   }
 }
 
-async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
-  if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
+async function loadProfile() {
+  const node = document.getElementById('profbody');
+  if (!node) return;
+  if (SESSION.role === 'actor') return loadActorProfile(node); // actors get their own profile, not the entity's
   /* ⚠️ THE SNAPSHOT IS RE-TAKEN AFTER EVERY PAINT. A baseline captured once at load goes stale the first time
      a section is collapsed, and every later edit then reads as clean. See profSnapshot. */
   /**
@@ -803,8 +1459,14 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
    * on the common one. Measured 2026-09-01: three extra requests (actors, readiness, channels) on a warm
    * open. _profSeedIncluded is defensive — no , or one that errored, simply leaves the latch alone.
    */
-  if(UI._me){ _profSeedIncluded(UI._me); h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
-  if(_profBusy) return;
+  if (UI._me) {
+    _profSeedIncluded(UI._me);
+    node.innerHTML = profSecHTML(profSec(), UI._me);
+    if (profSec() === 'vault') loadVault();
+    profSnapshot();
+    return;
+  }
+  if (_profBusy) return;
   _profBusy = true;
   /**
    * ⭐⭐ ONE HTTP ROUND TRIP INSTEAD OF FOUR. Athi, 2026-08-21: *"why do we need a round trip, can't the js send
@@ -824,18 +1486,26 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
   /* ⭐ meTake() HANDS BACK THE REQUEST THAT WAS ALREADY IN FLIGHT, started at sign-in before this screen
      existed. If none is waiting it fetches exactly as before — the include list is identical, so the two paths
      cannot return different shapes. See mePrefetchStart in app.html. */
-  try{ const e=(await meTake())||{}; UI._me=e;
+  try {
+    const e = (await meTake()) || {};
+    UI._me = e;
     _profSeedIncluded(e);
     /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. bgRenderApp() rebuilds the screen wholesale, so a repaint that lands
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
        Writing to that stale reference paints into a node no longer in the document and the panel stays blank
        with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
-    const h2=document.getElementById("profbody"); if(!h2) return;
-    h2.innerHTML = profSecHTML(profSec(), e);
+    const element = document.getElementById('profbody');
+    if (!element) return;
+    element.innerHTML = profSecHTML(profSec(), e);
     profSnapshot();
-    if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
-  }catch(e){ const h3=document.getElementById("profbody"); if(h3) h3.innerHTML=scrErr(e); }
-  finally { _profBusy = false; } }
+    if (profSec() === 'vault') loadVault(); // the trade documents vault (async — pre-fills authority forms)
+  } catch (e) {
+    const element = document.getElementById('profbody');
+    if (element) element.innerHTML = scrErr(e);
+  } finally {
+    _profBusy = false;
+  }
+}
 
 /**
  * ⭐ THE FOUR NAMES, AND WHICH ARE COMPULSORY (Athi, 2026-08-16: *"need to mention about user name context, entity
@@ -891,33 +1561,45 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
  * ⚠️ DERIVED and CAPPED are the two nobody can find today, because no screen says "this is true because of where
  * you sit". Naming the provenance is what makes this page answer the question people actually ask.
  */
-function iamTab(){ return UI.iamTab || 'me'; }
+function iamTab() {
+  return UI.iamTab || 'me';
+}
 /* setIamTab removed with the tab strip it drove — see iamHTML. */
 
 /* ⚠️ SAME API AS CO-ASSISTS — Athi: "assume we need to have it in another place, then that has to be the same
    api and should behave the same way." This is `api('actors')`, the endpoint cap-workforce already uses, cached
    on UI so switching tabs does not re-fetch. IAM never writes an actor; it links to Co-assists to do that. */
-async function iamLoadActors(){
+async function iamLoadActors() {
   if (UI._iamActors) return UI._iamActors;
-  try { UI._iamActors = (await api('actors', { query: { status: 'all' } })) || []; }
-  catch (_) { UI._iamActors = []; }
+  try {
+    UI._iamActors = (await api('actors', { query: { status: 'all' } })) || [];
+  } catch (_) {
+    UI._iamActors = [];
+  }
   return UI._iamActors;
 }
 
 var IAM_HAT = {
-  manager:   ['Manager',   'acts, and assigns work to others'],
-  act:       ['Act',       'does the work'],
-  audit:     ['Audit',     'review only'],
-  mis:       ['MIS',       'reports'],
+  manager: ['Manager', 'acts, and assigns work to others'],
+  act: ['Act', 'does the work'],
+  audit: ['Audit', 'review only'],
+  mis: ['MIS', 'reports'],
   view_only: ['View-only', 'read only']
 };
 var IAM_WRITES = ['act', 'manager'];
 
-function iamHTML(e){
+function iamHTML(e) {
   var Q = String.fromCharCode(39);
   var tab = iamTab();
   /* kick the fetch on first paint; the tab repaints when it lands */
-  if (!UI._iamActors) { iamLoadActors().then(function(){ if (profSec() === 'identity') { _capShowDetail(); loadProfile(); } }); }
+  if (!UI._iamActors) {
+    iamLoadActors().then(function () {
+      if (profSec() === 'identity') {
+        _capShowDetail();
+        loadProfile();
+      }
+    });
+  }
 
   /**
    * ⭐⭐ THREE TABS, AND THE FIRST ONE IS THE ONLY ONE THAT ACTS. Athi, 2026-08-19: *"in the IAM tab, we can
@@ -938,7 +1620,7 @@ function iamHTML(e){
    * Splitting by PARTY means each tab shows one thing and needs no sentence saying so — which is the point:
    * *"we do not need any explanation."*
    */
-    /**
+  /**
    * ⭐⭐ TWO TABS. Athi, 2026-08-20: *"only two tabs, others are variation of the same."*
    *
    * NETWORK went because a network node IS an entity — *"there is nothing called network tab"* — and the
@@ -972,7 +1654,8 @@ function iamHTML(e){
    * pattern is consistent: a description of a screen ages the moment the screen changes, while the sections
    * cannot — they ARE the screen.
    */
-  return _misHead('IAM · Identity and Access Management', '')
+  return (
+    _misHead('IAM · Identity and Access Management', '') +
     /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
        were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
        Network tab exists somewhere they have not looked. */
@@ -981,7 +1664,8 @@ function iamHTML(e){
        cannot reach iamHTML at all. The employee's own screen is rendered THERE — one place, see the note on
        loadActorProfile. A branch here would be unreachable and would read to the next person as though this
        screen served both parties. */
-    + iamMeHTML(e);
+    iamMeHTML(e)
+  );
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -1011,17 +1695,21 @@ var IAM_PARTY = {
     nav: ["navTo('coassists')", 'Co-assists'],
     rows: function (e, acts) {
       var uid = e.user_id || 'your-user-id';
-      var n = acts.filter(function (a) { return !a.actor_type || a.actor_type === 'human'; }).length;
-      var costs = acts.filter(function (a) { return a.can_see_costs; }).length;
+      var n = acts.filter(function (item) {
+        return !item.actor_type || item.actor_type === 'human';
+      }).length;
+      var costs = acts.filter(function (item) {
+        return item.can_see_costs;
+      }).length;
       /**
        * ⚠️ THIS COUNTED WRONG THE MOMENT b173 LANDED. It read (a.hat || 'act'), so an actor carrying the new
        * access_level and no hat defaulted to 'act' and was counted as a writer — the tab cheerfully reported
        * "3 people, 3 can write" for one editor and two who cannot. A fallback chain has to be read in the same
        * order everywhere, and lib/access.js is the order: level first, hat only when the level is absent.
        */
-      var LEVEL_OF = { act:'editor', manager:'editor', audit:'commenter', mis:'commenter', view_only:'commenter' };
-      var writes = acts.filter(function (a) {
-        var lvl = a.access_level || LEVEL_OF[a.hat] || 'editor';
+      var LEVEL_OF = { act: 'editor', manager: 'editor', audit: 'commenter', mis: 'commenter', view_only: 'commenter' };
+      var writes = acts.filter(function (item) {
+        var lvl = item.access_level || LEVEL_OF[item.hat] || 'editor';
         return lvl === 'editor';
       }).length;
       return [
@@ -1066,8 +1754,12 @@ var IAM_PARTY = {
          */
         ['Access', 'Viewer · Commenter · Editor', 0, 'Three levels. Google Workspace’s, so nobody has to learn ours.'],
         ['Viewer', 'Reads', 0, 'Looks, and says nothing.'],
-        ['Commenter', 'Reads · replies INTERNALLY', 0,
-          'Sees everything including external threads, and may reply to colleagues. Cannot answer the other party, and cannot raise a dispute — someone auditing who participates is not auditing.'],
+        [
+          'Commenter',
+          'Reads · replies INTERNALLY',
+          0,
+          'Sees everything including external threads, and may reply to colleagues. Cannot answer the other party, and cannot raise a dispute — someone auditing who participates is not auditing.'
+        ],
         ['Editor', 'Changes records · messages anyone', 0, 'Inside or outside.'],
         ['Sees the whole business', 'A separate switch', 0, 'Reach normally follows their node. This lifts it — inside this entity only.'],
         ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and what a job has cost. Margin is never shown. Also a separate switch.'],
@@ -1115,13 +1807,12 @@ var IAM_PARTY = {
         ['Verified by', 'phone@' + bid + '.cr', 1, 'Unique at this shop'],
         ['or', 'email=domain@' + bid + '.cr', 1, 'The @ becomes = so two providers stay two people'],
         ['Proves it with', 'A one-time code', 0, 'No password'],
-        ['Access', (e.storefront_access === 'login' ? 'Sign in first' : 'Browse first'), 0, 'One rule for every customer'],
+        ['Access', e.storefront_access === 'login' ? 'Sign in first' : 'Browse first', 0, 'One rule for every customer'],
         ['Hat', 'None', 0, 'Not staff — cannot be granted or restricted']
       ];
     }
   }
 };
-
 
 /**
  * ⭐ MY PROFILE — the only tab on this screen that ACTS. Everything else is a map.
@@ -1147,22 +1838,33 @@ var IAM_PARTY = {
  * ⚠️ EVERY INPUT ID IS UNCHANGED — pf_name, pf_uid, pf_gstn, pf_addr, pf_bs. saveProfile() reads them by id,
  * and a restructure that quietly renamed one would break saving in a way no parse check catches.
  */
-function iamSection(key, title, body, opts){
+function iamSection(key, title, body, opts) {
   var o = opts || {};
-  var open = (UI._iamOpen && Object.prototype.hasOwnProperty.call(UI._iamOpen, key))
-    ? UI._iamOpen[key] : !!o.openByDefault;
+  var open = UI._iamOpen && Object.prototype.hasOwnProperty.call(UI._iamOpen, key) ? UI._iamOpen[key] : !!o.openByDefault;
   var Q = String.fromCharCode(39);
-  return '<div style="border:1px solid var(--line);border-radius:11px;margin-bottom:9px;background:var(--card);color:var(--on-card);overflow:hidden">'
-    + '<button type="button" data-testid="iam-sec-' + key + '" aria-expanded="' + (open ? 'true' : 'false') + '"'
-    +   ' onclick="iamToggle(' + Q + key + Q + ')"'
-    +   ' style="width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;text-align:start;'
-    +   'border:0;background:var(--paper);color:var(--on-bg);padding:10px 13px;font-weight:700;font-size:var(--fs-2)">'
-    +   '<span style="font-size:11px;color:var(--grey)">' + (open ? '▾' : '<span class=arw>▸</span>') + '</span>'
-    +   esc(title)
-    +   (o.hint ? '<span style="margin-inline-start:auto;font-weight:400;font-size:var(--fs-1);color:var(--grey)">' + esc(o.hint) + '</span>' : '')
-    + '</button>'
-    + (open ? '<div style="padding:11px 13px 14px">' + body + '</div>' : '')
-    + '</div>';
+  return (
+    '<div style="border:1px solid var(--line);border-radius:11px;margin-bottom:9px;background:var(--card);color:var(--on-card);overflow:hidden">' +
+    '<button type="button" data-testid="iam-sec-' +
+    key +
+    '" aria-expanded="' +
+    (open ? 'true' : 'false') +
+    '"' +
+    ' onclick="iamToggle(' +
+    Q +
+    key +
+    Q +
+    ')"' +
+    ' style="width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;text-align:start;' +
+    'border:0;background:var(--paper);color:var(--on-bg);padding:10px 13px;font-weight:700;font-size:var(--fs-2)">' +
+    '<span style="font-size:11px;color:var(--grey)">' +
+    (open ? '▾' : '<span class=arw>▸</span>') +
+    '</span>' +
+    esc(title) +
+    (o.hint ? '<span style="margin-inline-start:auto;font-weight:400;font-size:var(--fs-1);color:var(--grey)">' + esc(o.hint) + '</span>' : '') +
+    '</button>' +
+    (open ? '<div style="padding:11px 13px 14px">' + body + '</div>' : '') +
+    '</div>'
+  );
 }
 
 /**
@@ -1171,14 +1873,16 @@ function iamSection(key, title, body, opts){
  * the exact loss Athi asked to be asked about. Guarding only page navigation would have missed the click
  * people make most often.
  */
-function iamToggle(k){
-  profGuard(function(){
+function iamToggle(k) {
+  profGuard(function () {
     UI._iamOpen = UI._iamOpen || {};
     /* the default for a key that has never been touched is whatever the section declared, so the first click
        must flip THAT, not flip an assumed-false */
-    var cur = Object.prototype.hasOwnProperty.call(UI._iamOpen, k) ? UI._iamOpen[k] : (k === 'ident');
+    var cur = Object.prototype.hasOwnProperty.call(UI._iamOpen, k) ? UI._iamOpen[k] : k === 'ident';
     UI._iamOpen[k] = !cur;
-    renderApp(); _capShowDetail(); loadProfile();
+    renderApp();
+    _capShowDetail();
+    loadProfile();
   });
 }
 
@@ -1218,8 +1922,8 @@ function iamToggle(k){
 var PROF_SRC = {
   gov: ['Governed', 'decided above you — not yours to change'],
   biz: ['Business', 'set on the business record'],
-  you: ['You',      'your own choice, on this account'],
-  def: ['Default',  'nobody chose — following your region'],
+  you: ['You', 'your own choice, on this account'],
+  def: ['Default', 'nobody chose — following your region']
 };
 
 /**
@@ -1237,59 +1941,88 @@ var PROF_SRC = {
 /* ⚠️ typeof-GUARDED, LIKE ITS NEIGHBOURS. apGet lives in app.html; this file is a lazily-loaded capability,
    and a render that throws because an OPTIONAL affordance could not read a preference would blank the whole
    profile to hide a chip nobody asked for. The same shape as the themeGet/TEXT_SIZES guards above. */
-function profSrcOn(){
-  try { return typeof apGet === 'function' && apGet('cb_prof_src', '') === '1'; } catch (_) { return false; }
+function profSrcOn() {
+  try {
+    return typeof apGet === 'function' && apGet('cb_prof_src', '') === '1';
+  } catch (_) {
+    return false;
+  }
 }
-function profSrcToggle(){
+function profSrcToggle() {
   apSet('cb_prof_src', profSrcOn() ? '' : '1');
   loadProfile();
 }
 
 /** The control itself — a quiet line, not a switch competing with the content. */
-function profSrcBtn(){
+function profSrcBtn() {
   var on = profSrcOn();
-  return '<a href="#" data-testid="prof-src-toggle" onclick="profSrcToggle();return false" '
-    + 'style="color:var(--blue);font-size:var(--fs-1);text-decoration:none">'
-    + (on ? tx('Hide where these come from') : tx('Show where these come from')) + '</a>';
+  return (
+    '<a href="#" data-testid="prof-src-toggle" onclick="profSrcToggle();return false" ' +
+    'style="color:var(--blue);font-size:var(--fs-1);text-decoration:none">' +
+    (on ? tx('Hide where these come from') : tx('Show where these come from')) +
+    '</a>'
+  );
 }
 
 function _srcMark(src) {
-  if (!profSrcOn()) return '';               /* opt-in — see the note above */
+  if (!profSrcOn()) return ''; /* opt-in — see the note above */
   var s = Object.prototype.hasOwnProperty.call(PROF_SRC, src) ? PROF_SRC[src] : null;
   if (!s) return '';
   /* ⚠️ COLOUR CARRIES NOTHING HERE. Every mark is the same grey: making 'Governed' red would read as a
      warning, and being governed is not a problem. The word is the information. */
-  return '<span title="' + esc(s[1]) + '" style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;'
-    + 'text-transform:uppercase;color:var(--grey);border:1px solid var(--line);border-radius:4px;'
-    + 'padding:0 4px;white-space:nowrap">' + esc(s[0]) + '</span>';
+  return (
+    '<span title="' +
+    esc(s[1]) +
+    '" style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;' +
+    'text-transform:uppercase;color:var(--grey);border:1px solid var(--line);border-radius:4px;' +
+    'padding:0 4px;white-space:nowrap">' +
+    esc(s[0]) +
+    '</span>'
+  );
 }
 
-function profRow(label, value, note, isHtml, src){
+function profRow(label, value, note, isHtml, src) {
   var mark = _srcMark(src);
-  return '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">'
-    + '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;'
-    + 'letter-spacing:.04em;line-height:1.7">' + esc(label) + '</b>'
-    + '<div style="flex:1;min-width:0">'
-      /* ⚠️ isHtml MEANS "THIS VALUE IS MARKUP" — the jump-to-control arrow, the employee login chip.
+  return (
+    '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">' +
+    '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;' +
+    'letter-spacing:.04em;line-height:1.7">' +
+    esc(label) +
+    '</b>' +
+    '<div style="flex:1;min-width:0">' +
+    /* ⚠️ isHtml MEANS "THIS VALUE IS MARKUP" — the jump-to-control arrow, the employee login chip.
          Everything else is escaped and stays escaped: raw HTML must be opted into deliberately. */
-      + '<div>' + (isHtml ? value : esc(value)) + '</div>'
-      /* ⚠️ THE MARK SHARES THE NOTE LINE rather than taking a row of its own. Every row gaining a third line
+    '<div>' +
+    (isHtml ? value : esc(value)) +
+    '</div>' +
+    /* ⚠️ THE MARK SHARES THE NOTE LINE rather than taking a row of its own. Every row gaining a third line
          would add eleven lines to this section for information most readers need once. */
-      + ((mark || note) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5;'
-          + 'display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">' + mark
-          + (note ? '<span>' + esc(note) + '</span>' : '') + '</div>' : '')
-    + '</div></div>';
+    (mark || note
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5;' +
+        'display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">' +
+        mark +
+        (note ? '<span>' + esc(note) + '</span>' : '') +
+        '</div>'
+      : '') +
+    '</div></div>'
+  );
 }
 
 /** ⭐ And ONE group heading — larger, ruled, with its rows indented beneath it. */
-function profGroup(title, rowsHtml){
+function profGroup(title, rowsHtml) {
   if (!rowsHtml) return '';
-  return '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);'
-    + 'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' + esc(title) + '</div>'
-    + '<div style="padding-inline-start:6px">' + rowsHtml + '</div>';
+  return (
+    '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);' +
+    'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' +
+    esc(title) +
+    '</div>' +
+    '<div style="padding-inline-start:6px">' +
+    rowsHtml +
+    '</div>'
+  );
 }
 
-function iamMeHTML(e){
+function iamMeHTML(e) {
   var Q = String.fromCharCode(39);
   /* ⚠️ KICKED FROM THE RENDERER because this screen has no mount step — same as iamLoadDocs, same latch. */
   iamLoadTrade();
@@ -1305,25 +2038,40 @@ function iamMeHTML(e){
    * icon."* Two rows sit together — one editable, one fixed — and the difference now shows in the row itself
    * rather than being inferred from the fact that one is an <input>.
    */
-  var ident = '<label class="fl">' + tx('Name') + ' <span style="color:var(--grey);font-weight:400" title="' + esc(tx('You can change this')) + '">✎</span></label>'
-    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
-
+  var ident =
+    '<label class="fl">' +
+    tx('Name') +
+    ' <span style="color:var(--grey);font-weight:400" title="' +
+    esc(tx('You can change this')) +
+    '">✎</span></label>' +
+    '<input class="inp" id="pf_name" value="' +
+    esc(e.display_name || '') +
+    '">' +
     /* ⚠️⚠️ THE THREE-LINE EXPLANATION IS GONE. Athi: *"we don't want this info — that is what we are showcasing
        in employee."* It said co-assists sign in as key@handle, which the EMPLOYEE's own screen already shows
        them as their actual login. Explaining someone else's screen on yours is the definition of the text this
        product carries too much of; the 🔒 says the one thing left that is not visible from the value. */
-    + '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">'
-    + (e.user_id
-        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">'
-          +   tx('User ID') + ' <span title="' + esc(tx('Cannot be changed')) + '">🔒</span></div>'
-          + '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' + esc(e.user_id) + '</div>'
-        : '<label class="fl" style="margin-top:0">' + tx('User ID') + '</label>'
-          + '<input class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">'
-          /* ⚠️ THIS ONE STAYS. It is not explanation — it is the rule you must satisfy to fill the box, and it
+    '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">' +
+    (e.user_id
+      ? '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' +
+        tx('User ID') +
+        ' <span title="' +
+        esc(tx('Cannot be changed')) +
+        '">🔒</span></div>' +
+        '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' +
+        esc(e.user_id) +
+        '</div>'
+      : '<label class="fl" style="margin-top:0">' +
+        tx('User ID') +
+        '</label>' +
+        '<input class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">' +
+        /* ⚠️ THIS ONE STAYS. It is not explanation — it is the rule you must satisfy to fill the box, and it
              is unrecoverable if you get it wrong. Set-once means there is no second attempt to learn from. */
-          + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px;line-height:1.5">'
-          +   '8+ characters · letters, numbers, dashes · no <b>@</b> or <b>.</b> · <b>' + tx('permanent') + '</b></div>')
-    + '</div>';
+        '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px;line-height:1.5">' +
+        '8+ characters · letters, numbers, dashes · no <b>@</b> or <b>.</b> · <b>' +
+        tx('permanent') +
+        '</b></div>') +
+    '</div>';
 
   /* ⚠️⚠️ THE BRIDGE ID ROW IS GONE, AND NOT ONLY FROM HERE. Athi: *"we don't need to say minted, never typed —
      in fact this information should not be appearing anywhere."* A bridge_id is a PRIMARY KEY: it exists so
@@ -1333,8 +2081,7 @@ function iamMeHTML(e){
 
   /* ── 2 · BUSINESS PROFILE — MOVED to app/cap-shop.js (SET1): the same card CB Settings › Your shop edits (shopLicLabel · shopFieldsHTML) ── */
   var licLabel = shopLicLabel();
-  var profile = shopFieldsHTML(e, licLabel)
-    ;   /* ⚠️ REGIONAL LEFT THIS SECTION. Athi, 2026-08-20: *"can we keep regional as a separate collapsable
+  var profile = shopFieldsHTML(e, licLabel); /* ⚠️ REGIONAL LEFT THIS SECTION. Athi, 2026-08-20: *"can we keep regional as a separate collapsable
            unit — it is under business, I was searching for something on its own."* He went looking for it as a
            thing and found it as a footnote. A block a person searches FOR is a section; a block they read in
            passing is a row. Which it is was decided by how he tried to use it, not by where the data lives. */
@@ -1342,12 +2089,12 @@ function iamMeHTML(e){
   /* ── 3 · PRESENCE & GOVERNANCE ─────────────────────────────────────────────────────────────────────────
    * Read-only rows come from the constitution and the operator; the editable one is trading status. */
   var vis = e.catalogue_visibility || 'private';
-  var st  = e.business_status || 'open';
+  var st = e.business_status || 'open';
   /* ⚠️ DECLARED HERE, NOT BORROWED. I first wrote the capped-visibility branch below using `cap` and `capped`
      from storefrontCardHTML — variables in a different function, which is a ReferenceError at render time and
      invisible to node --check. Third time today that a remembered name compiled and would not have run. */
-  var cap    = e.visibility_cap || { max: 'public', by: null, reason: '' };
-  var capped = (cap.max === 'private');
+  var cap = e.visibility_cap || { max: 'public', by: null, reason: '' };
+  var capped = cap.max === 'private';
   /**
    * ⭐⭐ ONE RESOLVED SENTENCE, NOT TWO FACTS TO JOIN. Athi, 2026-08-19: *"we have to state explicitly that your
    * storefront is visible to public — that depends on the open, close, away status."*
@@ -1371,8 +2118,7 @@ function iamMeHTML(e){
    * older API that does not send one. Neither is evidence that the network is empty, so neither hides the
    * link. Only a real zero does.
    */
-  var live = (st !== 'closed') && vis !== 'private'
-          && !(vis === 'network' && e.network_public_count === 0);
+  var live = st !== 'closed' && vis !== 'private' && !(vis === 'network' && e.network_public_count === 0);
 
   /**
    * ⭐⭐ TWO CONTROLS, ADJACENT, AND NOTHING ELSE. The resolved sentence is gone: it restated in prose what the
@@ -1382,19 +2128,28 @@ function iamMeHTML(e){
    * saying "Change in Storefront", which is a screen telling you to go to another screen to change something
    * it is already showing you. If it can display it, it can set it.
    */
-  var governed = '<div style="display:flex;gap:11px;flex-wrap:wrap">'
-    +   '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' + tx('Trading') + '</label>'
-    +     '<select class="inp" id="pf_bs" style="margin:0">' + opt(['open','away','closed'], st) + '</select></div>'
+  var governed =
+    '<div style="display:flex;gap:11px;flex-wrap:wrap">' +
+    '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' +
+    tx('Trading') +
+    '</label>' +
+    '<select class="inp" id="pf_bs" style="margin:0">' +
+    opt(['open', 'away', 'closed'], st) +
+    '</select></div>' +
     /* ⚠️ THE CAP IS HONOURED HERE OR THE CONTROL LIES. visibility_cap can pin an entity to private from a layer
        above it; offering "public" in that state would be a choice the server refuses. Disabled, and the reason
        is the only sentence in this section — because a control that cannot be used and does not say why is the
        one place where removing the explanation would remove the information. */
-    +   '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' + tx('Visible to') + '</label>'
-    +     '<select class="inp" id="pf_vis" style="margin:0"' + (capped ? ' disabled' : '') + '>'
-    +     opt(capped ? ['private'] : ['public','network','private'], vis) + '</select></div>'
-    + '</div>'
-    + (capped ? '<div class="misnote" style="margin-top:6px">' + esc(cap.reason || tx('Set above you.')) + '</div>' : '')
-
+    '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' +
+    tx('Visible to') +
+    '</label>' +
+    '<select class="inp" id="pf_vis" style="margin:0"' +
+    (capped ? ' disabled' : '') +
+    '>' +
+    opt(capped ? ['private'] : ['public', 'network', 'private'], vis) +
+    '</select></div>' +
+    '</div>' +
+    (capped ? '<div class="misnote" style="margin-top:6px">' + esc(cap.reason || tx('Set above you.')) + '</div>' : '') +
     /* ⚠️ THE STOREFRONT LINK OPENS IN A NEW WINDOW — and that does NOT protect the session, which was the
        stated reason for it. Same origin means the same localStorage. We are safe today because shop.html
        holds no session at all; the rule to keep is that a customer token must never be written to cb_sess. */
@@ -1420,16 +2175,24 @@ function iamMeHTML(e){
     /* ⚠️ BUILT INLINE — opt() takes a flat value list, and there is no label/value variant. I wrote `opt2(...)`
        from memory and it does not exist anywhere: the sixth invented name today, and the only one caught
        before it shipped, because I checked instead of assuming. */
-    + (live
-        ? '<label class="fl">' + tx('Customers') + '</label>'
-          + '<select class="inp" id="pf_sfaccess" style="max-width:320px">'
-          +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(o){
-                return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
-              }).join('')
-          + '</select>'
-          + pfExposureDefaultsHTML(e)
-        : '')
-
+    (live
+      ? '<label class="fl">' +
+        tx('Customers') +
+        '</label>' +
+        '<select class="inp" id="pf_sfaccess" style="max-width:320px">' +
+        [
+          ['browse', tx('Browse first')],
+          ['login', tx('Sign in first')]
+        ]
+          .map(function (item) {
+            return (
+              '<option value="' + esc(item[0]) + '"' + ((e.storefront_access || 'browse') === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>'
+            );
+          })
+          .join('') +
+        '</select>' +
+        pfExposureDefaultsHTML(e)
+      : '') +
     /**
      * ⭐ THE NETWORK ANSWER IS DERIVED, NOT STORED. Athi, 2026-08-20: *"if you change the option to network, by
      * default it is a PRIVATE network, so no storefront. But if you have any store under you is public, then
@@ -1441,28 +2204,34 @@ function iamMeHTML(e){
      * ⚠️ null IS NOT ZERO. The server sends null when the count could not be taken; "nothing under you is
      * public" is a definite statement and this is the absence of one, so the line simply does not appear.
      */
-    + (vis === 'network' && e.network_public_count != null
-        ? '<div class="kv" style="margin-top:9px"><b>' + tx('Network') + '</b> · '
-          + (e.network_public_count > 0
-              ? esc(txf('{n} store(s) under you are public', { n: e.network_public_count }))
-              : '<span style="color:var(--grey)">' + tx('nothing under you is public') + '</span>')
-          + '</div>'
-        : '')
-
-    + '<div class="kv" style="margin-top:11px"><b>' + tx('Link') + '</b> · '
-    +   (live && (e.user_id || e.bridge_id)
-          ? '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
-            + ' style="color:var(--blue)">' + esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) + ' <span class=arw>↗</span></a>'
-          : '<span style="color:var(--grey)">' + tx('nothing to show while private or closed') + '</span>')
-    + '</div>'
-    /* ⭐ THE OTHER HALF OF "how is this store reached" — the link answers the catalogue, these answer the
-       messages. Both are outward facts; neither is configured here. */
-    ;   /* ⚠️ CHANNELS LEFT THIS SECTION, for the same reason Regional did. Athi: *"same way, the channel under
+    (vis === 'network' && e.network_public_count != null
+      ? '<div class="kv" style="margin-top:9px"><b>' +
+        tx('Network') +
+        '</b> · ' +
+        (e.network_public_count > 0
+          ? esc(txf('{n} store(s) under you are public', { n: e.network_public_count }))
+          : '<span style="color:var(--grey)">' + tx('nothing under you is public') + '</span>') +
+        '</div>'
+      : '') +
+    '<div class="kv" style="margin-top:11px"><b>' +
+    tx('Link') +
+    '</b> · ' +
+    (live && (e.user_id || e.bridge_id)
+      ? '<a href="/shop.html?s=' +
+        encodeURIComponent(e.user_id || e.bridge_id) +
+        '" target="_blank" rel="noopener noreferrer"' +
+        ' style="color:var(--blue)">' +
+        esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) +
+        ' <span class=arw>↗</span></a>'
+      : '<span style="color:var(--grey)">' + tx('nothing to show while private or closed') + '</span>') +
+    '</div>'; /* ⚠️ CHANNELS LEFT THIS SECTION, for the same reason Regional did. Athi: *"same way, the channel under
            storefront, can we keep it separate as Channel? And point to channel settings?"* Both were things he
            went LOOKING for and found buried — and the test is not where the data belongs but how a person
            reaches for it. The storefront link answers "can customers see my catalogue"; the channels answer
            "where does work arrive". Related, and not the same question. */
 
+  /* ⭐ THE OTHER HALF OF "how is this store reached" — the link answers the catalogue, these answer the
+       messages. Both are outward facts; neither is configured here. */
   /**
    * ⭐⭐ FIVE SECTIONS, ONE SCREEN, NO RAIL. Athi, 2026-08-20: *"we have other three panel in profile —
    * storefront, your rights and documents — it can come over to the first page itself… see what we have
@@ -1489,32 +2258,30 @@ function iamMeHTML(e){
    * ANSWER so the section need not be opened. A reader who wants "public · open · 2 channels" now has it
    * without a click, and opens the section only to change something.
    */
-  var _regHint = [ (e.country || null), (e.currency_code || null), (e.timezone || null) ]
-                 .filter(Boolean).join(' · ') || tx('not set');
+  var _regHint = [e.country || null, e.currency_code || null, e.timezone || null].filter(Boolean).join(' · ') || tx('not set');
   var _chanN = Array.isArray(UI._chans) ? UI._chans.length : null;
   /* ⚠️ AFTER _chanN, NOT BEFORE.  hoists the NAME and not the VALUE, so reading it one line earlier gave
      undefined — falsy — and the hint would have said "none yet" for every entity, always. A silent
      always-wrong, and the third this session that only a check for declaration order would find. */
   /* ⚠️ null (not read / failed) IS NOT ZERO — the hint stays empty rather than claiming none. */
-  var _chanHint = (_chanN === null) ? '' : (_chanN ? (_chanN + ' ' + (_chanN === 1 ? tx('bound') : tx('bound'))) : tx('none yet'));
-  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open') ].join(' · ');
+  var _chanHint = _chanN === null ? '' : _chanN ? _chanN + ' ' + (_chanN === 1 ? tx('bound') : tx('bound')) : tx('none yet');
+  var _sfHint = [e.catalogue_visibility || 'private', e.business_status || 'open'].join(' · ');
   /* ⭐ COUNTRY AND CURRENCY IN THE HINT — the two Regional facts a reader is most likely to be checking, and
      the reason they open this section at all. */
   /* ⭐ country and currency moved OUT of this hint with the block they describe — a hint must summarise its
      own section, or the closed screen answers the wrong question. */
-  var _licHint = [ (e.supplies || 'goods'), (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
-                 || tx('not set');
+  var _licHint = [e.supplies || 'goods', e.gstn ? licLabel : null, e.address ? 'address' : null].filter(Boolean).join(' · ') || tx('not set');
 
   /* ⭐ EACH SECTION CARRIES ITS OWN SAVE — and Rights carries none, because nothing in it is yours to set.
      A Save button on a read-only card is the same false affordance as a disabled input. */
-  return iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true,
-             hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
-    + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
+  return (
+    iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true, hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') }) +
+    iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint }) +
     /* ⚠️ THE SAVE BUTTON WENT WITH THE PICKER. It was rendered when the constitution permitted more than one
        currency — the section's only writable control. With the picker in Settings, a Save here would submit an
        empty section: a button that does nothing is worse than no button, because a reader who presses it and
        sees 'saved' believes something was written. */
-    + iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint })
+    iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint }) +
     /**
      * ⭐ HOW THIS BUSINESS READS ITS WORK — stated here because a person looking at their own profile should not
      * have to open Settings to find out. Athi, 2026-08-24: *"show the same in profile as the selected choice."*
@@ -1524,18 +2291,18 @@ function iamMeHTML(e){
      */
     /* ⚠️ THE VALUE GOES IN THE HINT, not only in the body — a section is collapsed until someone opens it, and
        a choice you have to expand a panel to read is not "shown in the profile". The body carries the why. */
-    + iamSection('detail', tx('Detail page'), iamDetailDesignRow(e), { hint: iamDetailDesignName() })
-    + iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint })
-    + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
+    iamSection('detail', tx('Detail page'), iamDetailDesignRow(e), { hint: iamDetailDesignName() }) +
+    iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint }) +
+    iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint }) +
     /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
        business do", one from the platform and one from the world. Neither takes a Save. */
-    + iamSection('trade', tx('Trade ready'), iamTradeBody(), { hint: iamTradeHint() })
-    + iamSection('rights', tx('Rights'), iamRightsBody(e), { hint: tx('resolved') })
-    + iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' })
+    iamSection('trade', tx('Trade ready'), iamTradeBody(), { hint: iamTradeHint() }) +
+    iamSection('rights', tx('Rights'), iamRightsBody(e), { hint: tx('resolved') }) +
+    iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' }) +
     /* Last, and collapsed: consulted, not maintained. The hint carries the total so the number is readable
        without opening the panel — the one figure anyone actually wants at a glance. */
-    + iamSection('usage', tx('Usage'), usageBody(),
-        { hint: (UI._usage && UI._usage.total_cost_usd != null) ? _usageMoney(UI._usage.total_cost_usd) : '' });
+    iamSection('usage', tx('Usage'), usageBody(), { hint: UI._usage && UI._usage.total_cost_usd != null ? _usageMoney(UI._usage.total_cost_usd) : '' })
+  );
 }
 
 /**
@@ -1545,12 +2312,23 @@ function iamMeHTML(e){
  * the seven layers are the derivation. The button says "The seven layers →", which is the same information in
  * four words, and the reader who does not care never reads a paragraph telling them they might.
  */
-function iamRightsBody(e){
+function iamRightsBody(e) {
   var Q = String.fromCharCode(39);
-  return (govCardHTML(e.governance) || '<div class="misnote">' + tx('Nothing resolved yet.') + '</div>')
-    + '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" '
-    +   'onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'governance' + Q + ')">'
-    +   tx('The seven layers') + ' <span class=arw>→</span></button>';
+  return (
+    (govCardHTML(e.governance) || '<div class="misnote">' + tx('Nothing resolved yet.') + '</div>') +
+    '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" ' +
+    'onclick="navTo(' +
+    Q +
+    'settings' +
+    Q +
+    ');setSetSec(' +
+    Q +
+    'governance' +
+    Q +
+    ')">' +
+    tx('The seven layers') +
+    ' <span class=arw>→</span></button>'
+  );
 }
 
 /**
@@ -1560,13 +2338,14 @@ function iamRightsBody(e){
  * person navigated to deliberately; as a collapsed section it would otherwise fetch on every profile paint for
  * every reader who never opens it — the on-demand rule exactly.
  */
-function iamVaultBody(){
+function iamVaultBody() {
   var open = UI._iamOpen && UI._iamOpen.docs;
   if (!open) return '';
-  setTimeout(function(){ if (typeof loadVault === 'function') loadVault(); }, 0);
+  setTimeout(function () {
+    if (typeof loadVault === 'function') loadVault();
+  }, 0);
   return '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> ' + tx('loading…') + '</div></div>';
 }
-
 
 /**
  * ⚠️⚠️ SESSION_IS_ACTOR LIVED HERE AND IS GONE, IN TWO STAGES, BOTH WORTH RECORDING.
@@ -1597,12 +2376,12 @@ function iamVaultBody(){
  * possible. Request your manager to modify if required."* An editable control here would be a lie — the API
  * refuses it (routes/actors.js is entity-only), so the screen must not offer what the server will decline.
  */
-function iamSelfEmployeeHTML(e){
+function iamSelfEmployeeHTML(e) {
   /* ⚠️ KICKED OFF FROM THE RENDERER because there is no other hook — this screen has no mount step. The latch
      inside iamLoadDocs is what keeps that from being a render loop. */
   iamLoadDocs();
-  var lvl   = accessLevelOf(e);
-  var login = (e.actor_key && e.parent_user_id) ? (e.actor_key + "@" + e.parent_user_id) : null;
+  var lvl = accessLevelOf(e);
+  var login = e.actor_key && e.parent_user_id ? e.actor_key + '@' + e.parent_user_id : null;
 
   /**
    * ── 1 · WHO YOU ARE — name, login, access level. ALL READ-ONLY. ───────────────────────────────────────
@@ -1623,25 +2402,32 @@ function iamSelfEmployeeHTML(e){
      label to the left. Same job, two looks, and a reader crossing between the employee profile and the
      business profile met the same kind of fact dressed differently. It is profRow now; the value may be
      markup here (the login chip), which is why the fourth argument is true. */
-  var idRow = function(label, value, note){ return profRow(label, value, note, true); };
+  var idRow = function (label, value, note) {
+    return profRow(label, value, note, true);
+  };
 
-  var who = idRow(tx('Name'), '<span style="font-size:var(--fs-3);font-weight:700">' + esc(e.display_name || '—') + '</span>',
-                  tx('Set by your employer.'))
-    + idRow(tx('Your login'),
-            login ? '<span class="mono" style="font-size:var(--fs-3);color:var(--gold)">' + esc(login) + '</span>'
-                  : '<span class="mono" style="color:var(--grey)">' + esc(e.actor_key || '—') + '</span>',
-            tx('Your key, then your employer\'s User ID. Issued with your account and cannot be changed.'))
-    + idRow(tx('Access'),
-            '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'
-              + esc(ACCESS_LABEL[lvl] || lvl) + '</span>'
-            + (e.whole_entity === true  ? ' <span class="optchip">' + tx('Whole business') + '</span>' : '')
-            + (e.can_see_costs === true ? ' <span class="optchip">' + tx('Sees costs') + '</span>' : ''),
-            tx('Only your employer can change this.'))
-    /* ⚠️ NO BRIDGE ID ROW. Athi: *"this information should not be appearing anywhere."* An employee has a
+  var who =
+    idRow(tx('Name'), '<span style="font-size:var(--fs-3);font-weight:700">' + esc(e.display_name || '—') + '</span>', tx('Set by your employer.')) +
+    idRow(
+      tx('Your login'),
+      login
+        ? '<span class="mono" style="font-size:var(--fs-3);color:var(--gold)">' + esc(login) + '</span>'
+        : '<span class="mono" style="color:var(--grey)">' + esc(e.actor_key || '—') + '</span>',
+      tx("Your key, then your employer's User ID. Issued with your account and cannot be changed.")
+    ) +
+    idRow(
+      tx('Access'),
+      '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">' +
+        esc(ACCESS_LABEL[lvl] || lvl) +
+        '</span>' +
+        (e.whole_entity === true ? ' <span class="optchip">' + tx('Whole business') + '</span>' : '') +
+        (e.can_see_costs === true ? ' <span class="optchip">' + tx('Sees costs') + '</span>' : ''),
+      tx('Only your employer can change this.')
+    );
+
+  /* ⚠️ NO BRIDGE ID ROW. Athi: *"this information should not be appearing anywhere."* An employee has a
        login they type and a name colleagues read; the internal key is neither, and showing it here would
-       invite them to quote it to someone. e2e/bridge-id-audit.cjs holds the line. */;
-
-  /**
+       invite them to quote it to someone. e2e/bridge-id-audit.cjs holds the line. */ /**
    * ── 2 · YOUR IDENTITY RECORD ─────────────────────────────────────────────────────────────────────────
    *
    * ⭐ RENDERED BY THE SHARED MODULE, NOT BY THIS FILE. Athi: *"as a separate module to update."* The same
@@ -1654,19 +2440,21 @@ function iamSelfEmployeeHTML(e){
    * are, name, id, and access level"*. One line in the identity block beats a section a reader must open to
    * learn one word, and this product's measured problem is that 56% of its on-screen words are explanation.
    */
-  var docs = (typeof CBIdDocs !== 'undefined')
-    ? CBIdDocs.html(UI._idocs || [], 'self')
-    : '<div class="misnote">' + tx('Loading…') + '</div>';
+  var docs = typeof CBIdDocs !== 'undefined' ? CBIdDocs.html(UI._idocs || [], 'self') : '<div class="misnote">' + tx('Loading…') + '</div>';
 
-  return iamSection("ident", tx("Who you are"), who, { openByDefault: true, hint: ACCESS_LABEL[lvl] || '' })
-    + iamSection("docs", tx("Your identity record"), docs, { hint: iamDocsHint() });
+  return (
+    iamSection('ident', tx('Who you are'), who, { openByDefault: true, hint: ACCESS_LABEL[lvl] || '' }) +
+    iamSection('docs', tx('Your identity record'), docs, { hint: iamDocsHint() })
+  );
 }
 
 /** "2 of 6 verified" — the summary an owner or an employee reads before opening the section. */
-function iamDocsHint(){
-  var d = UI._idocs || [];
-  if (!d.length) return '';
-  var ok = d.filter(function(x){ return x.status === 'verified'; }).length;
+function iamDocsHint() {
+  var list = UI._idocs || [];
+  if (!list.length) return '';
+  var ok = list.filter(function (x) {
+    return x.status === 'verified';
+  }).length;
   return ok + ' of ' + (CBIdDocs ? CBIdDocs.ORDER.length : 6) + ' verified';
 }
 
@@ -1685,74 +2473,99 @@ function iamDocsHint(){
  * beats documented ([[project-attestation-layer]]). A supplier asking "can I trade with them" is asking which
  * rung, not how many rows.
  */
-function iamTradeHint(){
+function iamTradeHint() {
   var s = UI._rdSum;
   if (!s) return '';
   if (!s.total) return tx('not started');
   return s.verified + ' ' + tx('verified') + ' · ' + s.met + '/' + s.total;
 }
 
-function iamTradeBody(){
+function iamTradeBody() {
   var s = UI._rdSum;
   if (s === undefined) return '<div class="misnote">' + tx('Loading…') + '</div>';
   /* ⚠️ null means the read FAILED. That is not "nothing is ready" — a definite claim from an absent answer is
      the mistake the network count already avoids. */
   if (s === null) return '<div class="misnote">' + tx('Could not read your trade record.') + '</div>';
-  if (!s.total)  return '<div class="misnote">' + tx('Nothing recorded yet.') + '</div>'
-    + iamTradeLink();
+  if (!s.total) return '<div class="misnote">' + tx('Nothing recorded yet.') + '</div>' + iamTradeLink();
 
-  var box = function(label, value, sub, tone){
-    return '<div style="flex:1 1 130px;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:11px;'
-      + 'background:var(--paper);color:var(--on-bg)">'
-      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
-      + '<div style="margin-top:3px;font-size:var(--fs-4);font-weight:700' + (tone ? ';color:' + tone : '') + '">' + esc(value) + '</div>'
-      + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</div>' : '')
-      + '</div>';
+  var box = function (label, value, sub, tone) {
+    return (
+      '<div style="flex:1 1 130px;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:11px;' +
+      'background:var(--paper);color:var(--on-bg)">' +
+      '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' +
+      esc(label) +
+      '</div>' +
+      '<div style="margin-top:3px;font-size:var(--fs-4);font-weight:700' +
+      (tone ? ';color:' + tone : '') +
+      '">' +
+      esc(value) +
+      '</div>' +
+      (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</div>' : '') +
+      '</div>'
+    );
   };
 
   /* The trust ladder, highest rung first — that is the order a counterparty reads it in. */
-  var rungs = '<div style="display:flex;flex-wrap:wrap;gap:9px">'
-    + box(tx('Verified'),   String(s.verified),   tx('checked at source'), 'var(--ok-3)')
-    + box(tx('Attested'),   String(s.attested),   tx('third party'), '')
-    + box(tx('Documented'), String(s.documented), tx('self-declared'), '')
-    + '</div>';
+  var rungs =
+    '<div style="display:flex;flex-wrap:wrap;gap:9px">' +
+    box(tx('Verified'), String(s.verified), tx('checked at source'), 'var(--ok-3)') +
+    box(tx('Attested'), String(s.attested), tx('third party'), '') +
+    box(tx('Documented'), String(s.documented), tx('self-declared'), '') +
+    '</div>';
 
   /* ⚠️ ONLY WHAT NEEDS ACTION APPEARS. A row reading "expired: 0" is a fact nobody needs; the absence of the
      row is the same answer and costs no attention. */
   var flags = [];
   if (s.expiring) flags.push(['⚠️', s.expiring + ' ' + tx('expiring'), 'var(--warn-3)']);
-  if (s.expired)  flags.push(['✕',  s.expired  + ' ' + tx('expired'),  'var(--disp-2)']);
-  if (s.pending)  flags.push(['○',  s.pending  + ' ' + tx('not started'), 'var(--grey)']);
+  if (s.expired) flags.push(['✕', s.expired + ' ' + tx('expired'), 'var(--disp-2)']);
+  if (s.pending) flags.push(['○', s.pending + ' ' + tx('not started'), 'var(--grey)']);
 
-  return rungs
-    + (flags.length
-        ? '<div class="kv" style="margin-top:10px">'
-          + flags.map(function(f){ return '<span style="color:' + f[2] + ';margin-inline-end:12px">' + f[0] + ' ' + esc(f[1]) + '</span>'; }).join('')
-          + '</div>'
-        : '')
-    + iamTradeLink();
+  return (
+    rungs +
+    (flags.length
+      ? '<div class="kv" style="margin-top:10px">' +
+        flags
+          .map(function (item) {
+            return '<span style="color:' + item[2] + ';margin-inline-end:12px">' + item[0] + ' ' + esc(item[1]) + '</span>';
+          })
+          .join('') +
+        '</div>'
+      : '') +
+    iamTradeLink()
+  );
 }
 
 /* ⭐ THE WORK HAPPENS ON THE OTHER SCREEN, and the button is the whole instruction. */
-function iamTradeLink(){
+function iamTradeLink() {
   var Q = String.fromCharCode(39);
-  return '<button class="composebtn" style="margin-top:10px" data-testid="prof-to-readiness" '
-    + 'onclick="navTo(' + Q + 'readiness' + Q + ')">' + tx('Trade readiness') + ' <span class=arw>→</span></button>';
+  return (
+    '<button class="composebtn" style="margin-top:10px" data-testid="prof-to-readiness" ' +
+    'onclick="navTo(' +
+    Q +
+    'readiness' +
+    Q +
+    ')">' +
+    tx('Trade readiness') +
+    ' <span class=arw>→</span></button>'
+  );
 }
 
 /**
  * ⚠️ LATCHED, like the identity record — this sets UI._rdSum and then repaints, and the renderer reads
  * UI._rdSum. Without the latch that is a cycle which pins a core and looks like a slow screen.
  */
-async function iamLoadTrade(){
+async function iamLoadTrade() {
   if (UI._rdSumLoaded) return;
   UI._rdSumLoaded = true;
   try {
-    var r = await fetch(CFG.API_BASE + '/api/governance/readiness',
-      { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    UI._rdSum = r.ok ? ((await r.json()).summary || null) : null;
-  } catch (_) { UI._rdSum = null; }
-  bgRenderApp(); _capShowDetail(); loadProfile();
+    var reply = await fetch(CFG.API_BASE + '/api/governance/readiness', { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    UI._rdSum = reply.ok ? (await reply.json()).summary || null : null;
+  } catch (_) {
+    UI._rdSum = null;
+  }
+  bgRenderApp();
+  _capShowDetail();
+  loadProfile();
 }
 
 /**
@@ -1762,7 +2575,7 @@ async function iamLoadTrade(){
  * that reads UI._idocs — so without the _idocsLoaded latch this is an infinite cycle that pins a CPU core and
  * looks, from the outside, exactly like a slow screen.
  */
-async function iamLoadDocs(){
+async function iamLoadDocs() {
   if (UI._idocsLoaded) return;
   UI._idocsLoaded = true;
   try {
@@ -1771,8 +2584,12 @@ async function iamLoadDocs(){
     /* ⚠️ loadProfile() TOO — the employee screen is painted by loadActorProfile, which renderApp alone does
        not re-run. Without it the documents arrive, sit in UI._idocs, and the section keeps showing "Loading…"
        until something else happens to repaint. Same trio iamToggle uses; anything less is a half-repaint. */
-    bgRenderApp(); _capShowDetail(); loadProfile();
-  } catch (_) { /* the record is additive — its absence must not take the profile down */ }
+    bgRenderApp();
+    _capShowDetail();
+    loadProfile();
+  } catch (_) {
+    /* the record is additive — its absence must not take the profile down */
+  }
 }
 
 /**
@@ -1813,44 +2630,81 @@ async function iamLoadDocs(){
  * worked would put a false contact route on the screen a counterparty trusts, so it is shown as inactive
  * rather than hidden: hiding it would leave an owner wondering where their number went.
  */
-function iamChannelRows(){
+function iamChannelRows() {
   var Q0 = String.fromCharCode(39);
-  var cs = UI._chans;
-  if (cs === undefined) return '';                    // not read yet — say nothing rather than "none"
-  if (cs === null) return '';                         // the read failed — same rule as the network count
+  var list = UI._chans;
+  if (list === undefined) return ''; // not read yet — say nothing rather than "none"
+  if (list === null) return ''; // the read failed — same rule as the network count
   /**
    * ⚠️⚠️ AN EMPTY LIST STILL RENDERS. It used to return nothing, so an owner who had not bound a number saw no
    * trace of the feature — indistinguishable from "not built". That is the same mistake as hiding a declared
    * channel, applied to the empty case: I reasoned that a business with no channels "has nothing to say here",
    * which is true of the DATA and false of the PERSON, who needs to know the row exists and how to fill it.
    */
-  if (!cs.length) return '<div class="kv" style="margin-top:2px">'
-    + '<span style="color:var(--grey)">' + tx('no channel yet') + '</span>'
-    + ' <a href="#" onclick="navTo(' + Q0 + 'settings' + Q0 + ');setSetSec(' + Q0 + 'channels' + Q0 + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">'
-    + tx('Add one in Channel settings') + ' <span class=arw>→</span></a></div>';
+  if (!list.length)
+    return (
+      '<div class="kv" style="margin-top:2px">' +
+      '<span style="color:var(--grey)">' +
+      tx('no channel yet') +
+      '</span>' +
+      ' <a href="#" onclick="navTo(' +
+      Q0 +
+      'settings' +
+      Q0 +
+      ');setSetSec(' +
+      Q0 +
+      'channels' +
+      Q0 +
+      ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">' +
+      tx('Add one in Channel settings') +
+      ' <span class=arw>→</span></a></div>'
+    );
   var Q = String.fromCharCode(39);
   /* ⚠️ NO INNER HEADING. The section is called Channels; repeating it one line down reads as a rendering
      fault — the same reason the Regional block lost its own title when it was promoted. */
-  return ''
-    + cs.map(function(c){
-        var ok = c.status === 'verified';
-        return '<div class="kv" style="margin-top:3px">'
-          + '<span style="color:' + (ok ? 'var(--ok-3)' : 'var(--grey)') + '">' + (ok ? '✓' : '○') + '</span> '
-          + '<span class="mono">' + esc(c.address || '') + '</span>'
-          + '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(c.label || c.channel || '')
-          + (ok ? '' : ' · ' + tx('not receiving yet')) + '</span></div>';
-      }).join('')
-    + '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'channels' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
-    + tx('Channel settings') + ' <span class=arw>→</span></a></div>';
+  return (
+    '' +
+    list
+      .map(function (item) {
+        var ok = item.status === 'verified';
+        return (
+          '<div class="kv" style="margin-top:3px">' +
+          '<span style="color:' +
+          (ok ? 'var(--ok-3)' : 'var(--grey)') +
+          '">' +
+          (ok ? '✓' : '○') +
+          '</span> ' +
+          '<span class="mono">' +
+          esc(item.address || '') +
+          '</span>' +
+          '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' +
+          esc(item.label || item.channel || '') +
+          (ok ? '' : ' · ' + tx('not receiving yet')) +
+          '</span></div>'
+        );
+      })
+      .join('') +
+    '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' +
+    Q +
+    'settings' +
+    Q +
+    ');setSetSec(' +
+    Q +
+    'channels' +
+    Q +
+    ');return false" style="color:var(--blue);font-size:var(--fs-1)">' +
+    tx('Channel settings') +
+    ' <span class=arw>→</span></a></div>'
+  );
 }
 
 /** ⚠️ Latched, like the identity record and the trade summary — this repaints, and the renderer reads it. */
-async function iamLoadChannels(){
+async function iamLoadChannels() {
   if (UI._chansLoaded) return;
   UI._chansLoaded = true;
   try {
-    var r = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
-    var j = r.ok ? await r.json() : null;
+    var reply = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    var j = reply.ok ? await reply.json() : null;
     /**
      * ⚠️⚠️ THE BOUND ADDRESSES ARE IN channels[].bindings[], NOT channels[]. I wrote
      *  from memory without reading lib/channels.js:  is the CATALOGUE OF
@@ -1861,11 +2715,18 @@ async function iamLoadChannels(){
      * ⭐ AN API SHAPE IS A NAME LIKE ANY OTHER: reading it costs one minute, guessing it costs a screen that
      * silently shows nothing.
      */
-    UI._chans = j && Array.isArray(j.channels)
-      ? j.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
-      : null;
-  } catch (_) { UI._chans = null; }
-  bgRenderApp(); _capShowDetail(); loadProfile();
+    UI._chans =
+      j && Array.isArray(j.channels)
+        ? j.channels.reduce(function (all, item) {
+            return all.concat(item.bindings || []);
+          }, [])
+        : null;
+  } catch (_) {
+    UI._chans = null;
+  }
+  bgRenderApp();
+  _capShowDetail();
+  loadProfile();
 }
 
 /**
@@ -1887,8 +2748,11 @@ async function iamLoadChannels(){
  */
 /* ⚠️ A CODE IS NOT A LANGUAGE TO A READER. "ta" tells a person nothing; the endonym tells them everything,
    and seeing their own script is how they confirm the setting took. */
-var _LANG_NAME = { en:'English', hi:'हिन्दी', ta:'தமிழ்', ar:'العربية', fr:'Français' };
-function _langName(l){ var n = _LANG_NAME[l]; return n ? (n + ' (' + l + ')') : String(l || ''); }
+var _LANG_NAME = { en: 'English', hi: 'हिन्दी', ta: 'தமிழ்', ar: 'العربية', fr: 'Français' };
+function _langName(l) {
+  var n = _LANG_NAME[l];
+  return n ? n + ' (' + l + ')' : String(l || '');
+}
 
 /**
  * ⭐ A FLAG AND A SYMBOL, BOTH DERIVED — no asset, no lookup table to fall out of date. Athi, 2026-08-20:
@@ -1902,23 +2766,34 @@ function _langName(l){ var n = _LANG_NAME[l]; return n ? (n + ' (' + l + ')') : 
  * that silently degrades to a country code is fine; a flag REPLACING the code would show Athi two letters
  * where he expected a picture and nothing where he expected the code.
  */
-function _flag(cc){
-  var c = String(cc || '').trim().toUpperCase();
-  if (!/^[A-Z]{2}$/.test(c)) return '';   // only a 2-letter ISO code makes a flag; "India" does not
-  try { return c.replace(/./g, function(ch){ return String.fromCodePoint(127397 + ch.charCodeAt(0)); }); }
-  catch (_) { return ''; }
+function _flag(cc) {
+  var text = String(cc || '')
+    .trim()
+    .toUpperCase();
+  if (!/^[A-Z]{2}$/.test(text)) return ''; // only a 2-letter ISO code makes a flag; "India" does not
+  try {
+    return text.replace(/./g, function (label) {
+      return String.fromCodePoint(127397 + label.charCodeAt(0));
+    });
+  } catch (_) {
+    return '';
+  }
 }
 
 /**
  * ⚠️ NOT EVERY CURRENCY HAS A SYMBOL, and Intl says so honestly — AED formats as "AED". When the symbol IS the
  * code there is nothing to add, so nothing is added rather than printing "AED AED".
  */
-function _curSym(cur){
+function _curSym(cur) {
   try {
-    var p = new Intl.NumberFormat(CBLocale.locale ? CBLocale.locale() : 'en', { style: 'currency', currency: cur }).formatToParts(1);
-    var c = p.find(function(x){ return x.type === 'currency'; });
-    return (c && c.value && c.value !== cur) ? c.value : '';
-  } catch (_) { return ''; }
+    var list = new Intl.NumberFormat(CBLocale.locale ? CBLocale.locale() : 'en', { style: 'currency', currency: cur }).formatToParts(1);
+    var c = list.find(function (x) {
+      return x.type === 'currency';
+    });
+    return c && c.value && c.value !== cur ? c.value : '';
+  } catch (_) {
+    return '';
+  }
 }
 
 /**
@@ -1928,14 +2803,18 @@ function _curSym(cur){
  * aliases besides. Comparing the RENDERED INSTANT answers the only question a reader has: will my timestamps
  * read differently from the business's? Two names for one zone answer "no", which is correct.
  */
-function _tzDiffers(a, b){
+function _tzDiffers(a, b) {
   if (!a || !b) return false;
   if (a === b) return false;
   try {
     var t = Date.now();
-    var f = function(z){ return new Intl.DateTimeFormat('en-GB', { timeZone: z, dateStyle: 'short', timeStyle: 'short' }).format(t); };
+    var f = function (z) {
+      return new Intl.DateTimeFormat('en-GB', { timeZone: z, dateStyle: 'short', timeStyle: 'short' }).format(t);
+    };
     return f(a) !== f(b);
-  } catch (_) { return false; }   /* an unknown zone is not evidence of a difference */
+  } catch (_) {
+    return false;
+  } /* an unknown zone is not evidence of a difference */
 }
 
 /**
@@ -1950,18 +2829,16 @@ function _tzDiffers(a, b){
  * ⚠️ typeof-guarded: the shell owns SESSION and this module is rendered standalone by the guards. That is the
  * codebase's own pattern for a cross-module call — a bare call passes in the browser and fails the guard.
  */
-function iamDetailDesignName(){
-  var v = (typeof detailDesignPref === 'function') ? detailDesignPref() : 'chit';
-  return (v === 'lines') ? tx('Line level') : tx('Order level');
+function iamDetailDesignName() {
+  var v = typeof detailDesignPref === 'function' ? detailDesignPref() : 'chit';
+  return v === 'lines' ? tx('Line level') : tx('Order level');
 }
 
-function iamDetailDesignRow(e){
+function iamDetailDesignRow(e) {
   var Q = String.fromCharCode(39);
-  var v = (typeof detailDesignPref === 'function') ? detailDesignPref() : 'chit';
+  var v = typeof detailDesignPref === 'function' ? detailDesignPref() : 'chit';
   var name = iamDetailDesignName();
-  var why = (v === 'lines')
-    ? tx('Each line has its own person, parts and cost.')
-    : tx('The chit is the unit of work — one state, one value.');
+  var why = v === 'lines' ? tx('Each line has its own person, parts and cost.') : tx('The chit is the unit of work — one state, one value.');
   /**
    * ⚠️⚠️ THIS SAID "change in Settings" IN GREY, AND WAS NOT A LINK. Athi, 2026-08-29: *"where in settings
    * we are changing it, it is not directly taking us to change in settings?"* A row that names the place you
@@ -1975,16 +2852,31 @@ function iamDetailDesignRow(e){
    * Channels twice, Localisation, Appearance and Governance. Detail page was the only row that told the reader
    * to go and left them to find it.
    */
-  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0">'
-    + '<div style="min-width:0"><div style="font-weight:600;font-size:var(--fs-3)">' + esc(name) + '</div>'
-    + '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + esc(why) + '</div></div>'
-    + '<a href="#" data-testid="prof-detail-design"'
-    +   ' onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'policy' + Q + ');return false"'
-    +   ' style="font-size:var(--fs-1);color:var(--blue);white-space:nowrap">'
-    + esc(tx('change in Settings › Policy')) + ' <span class=arw>→</span></a></div>';
+  return (
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0">' +
+    '<div style="min-width:0"><div style="font-weight:600;font-size:var(--fs-3)">' +
+    esc(name) +
+    '</div>' +
+    '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' +
+    esc(why) +
+    '</div></div>' +
+    '<a href="#" data-testid="prof-detail-design"' +
+    ' onclick="navTo(' +
+    Q +
+    'settings' +
+    Q +
+    ');setSetSec(' +
+    Q +
+    'policy' +
+    Q +
+    ');return false"' +
+    ' style="font-size:var(--fs-1);color:var(--blue);white-space:nowrap">' +
+    esc(tx('change in Settings › Policy')) +
+    ' <span class=arw>→</span></a></div>'
+  );
 }
 
-function iamGovernedRows(e){
+function iamGovernedRows(e) {
   var rows = [];
   var Q = String.fromCharCode(39);
   var country = (e && e.country) || null;
@@ -2003,9 +2895,11 @@ function iamGovernedRows(e){
      * is no code to derive from, so nothing is drawn — borrowing the reader's would be inventing a fact about
      * someone else's business.
      */
-    var _cc = (country && String(country).length === 2) ? country : null;
+    var _cc = country && String(country).length === 2 ? country : null;
     rows.push(['Country', ((country || (r && r.name) || 'Not set') + ' ' + _flag(_cc)).trim(), '', false, 'biz', country ? 'biz' : 'def']);
-  } catch (_) { if (country) rows.push(['Country', country, '', false, 'biz', 'biz']); }
+  } catch (_) {
+    if (country) rows.push(['Country', country, '', false, 'biz', 'biz']);
+  }
   /**
    * ⚠️⚠️ CURRENCY AND TIME ZONE CAN CONTRADICT RIGHTS › BASICS, AND ATHI ASKED THE RIGHT QUESTION.
    *
@@ -2042,7 +2936,7 @@ function iamGovernedRows(e){
    * fact; two or more is a decision and renders as a picker. A select with one option is a control that
    * cannot be used — the same false affordance as a link to a closed shop.
    */
-  var gb  = (e && e.governance && e.governance.basics) || {};
+  var gb = (e && e.governance && e.governance.basics) || {};
   var gal = (e && e.governance && e.governance.allowed) || {};
   var perm = Array.isArray(gal.currencies) ? gal.currencies : null;
   /**
@@ -2054,14 +2948,13 @@ function iamGovernedRows(e){
    *     made Rights say AED and Regional say INR on the same screen.
    */
   var hasChoice = !!(perm && perm.length > 1);
-  var curr = hasChoice ? ((e && e.currency_code) || gb.currency || null)
-                       : (gb.currency || (e && e.currency_code) || null);
+  var curr = hasChoice ? (e && e.currency_code) || gb.currency || null : gb.currency || (e && e.currency_code) || null;
   /* ⚠️ A STORED VALUE OUTSIDE THE ENVELOPE IS NOT SILENTLY SUBSTITUTED — it is named, because a business
      trading in a currency its layer no longer permits needs to know, not to have it quietly corrected. */
   /* ⚠️ THE STORED VALUE, NOT THE RESOLVED ONE. Checking  could never fire once governance won the
      precedence — so a business whose saved currency is no longer permitted would have been silently shown the
      permitted one and never told. The question is about what THEY hold, not what we chose to display. */
-  var stored  = (e && e.currency_code) || null;
+  var stored = (e && e.currency_code) || null;
   var outside = !!(perm && perm.length && stored && perm.indexOf(stored) < 0);
   /**
    * ⭐⭐ A FACT, NOT A CONTROL — THE PICKER THAT WAS HERE IS NOW IN SETTINGS. Athi, 2026-08-21: *"why have we
@@ -2076,7 +2969,7 @@ function iamGovernedRows(e){
    * nothing reads it. The screen said saved, the business still priced in the old currency. Same shape as the
    * user_id theft, minus the global name: the API now refuses it outright (CURRENCY_ENTITY_ONLY).
    */
-  var stored  = (e && e.currency_code) || null;
+  var stored = (e && e.currency_code) || null;
   var outside = !!(perm && perm.length && stored && perm.indexOf(stored) < 0);
   if (curr) {
     /* ⚠️ LABELLED BY WHERE THE VALUE CAME FROM, not by whether a list exists. With no allowed set the governed
@@ -2084,9 +2977,14 @@ function iamGovernedRows(e){
     var fromGov = (curr === gb.currency && curr !== stored) || (!stored && !!gb.currency);
     /* ⭐ SYMBOL BESIDE THE CODE — '₹ INR'. The code is what a system needs; the symbol is what a person
        recognises. Neither replaces the other, and not every currency has one (AED formats as AED). */
-    rows.push(['Currency', esc((_curSym(curr) ? _curSym(curr) + ' ' : '') + curr) + _locLink(tx('Currency'), 'loc-currency'),
+    rows.push([
+      'Currency',
+      esc((_curSym(curr) ? _curSym(curr) + ' ' : '') + curr) + _locLink(tx('Currency'), 'loc-currency'),
       outside ? txf('{cur} no longer permitted', { cur: stored }) : '',
-      true, 'biz', fromGov ? 'gov' : 'biz']);   /* ⚠️ blank where the GROUP HEADING already says it — the message column is for exceptions only */
+      true,
+      'biz',
+      fromGov ? 'gov' : 'biz'
+    ]); /* ⚠️ blank where the GROUP HEADING already says it — the message column is for exceptions only */
   }
   /**
    * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
@@ -2125,8 +3023,13 @@ function iamGovernedRows(e){
      * English. Rendering them as an unordered list would lose the only thing that distinguishes them.
      */
     var _langs = (CBLocale.langs ? CBLocale.langs() : [CBLocale.lang && CBLocale.lang()]).filter(Boolean);
-    _langs.forEach(function(l, i){
-      rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read',
+    _langs.forEach(function (item, index) {
+      rows.push([
+        (index === 0 ? tx('Language') : ' ') + ' ' + (index + 1),
+        _langName(item),
+        index === 0 ? tx('first choice') : tx('then'),
+        false,
+        'read',
         /**
          * ⚠⚠ 'IS cb_langs SET' IS NOT 'DID YOU CHOOSE IT'. setRegion() WRITES the language list as a side
          * effect — pick India and cb_langs becomes ['en'] without anyone touching a language control. Testing
@@ -2136,12 +3039,14 @@ function iamGovernedRows(e){
          * ⭐ SO IT IS DERIVED BY COMPARISON, not by a flag. Still the region's own first language, alone? That
          * is the default. Anything else — a second language, a different first — required a human to act.
          */
-        _langsAreDefault() ? 'def' : 'you']);
+        _langsAreDefault() ? 'def' : 'you'
+      ]);
     });
-    if (CBLocale.dir) /* ⚠️ NO MARK. Direction is not derived from a SOURCE, it is derived from the language — there is no layer
+    if (CBLocale.dir)
+      /* ⚠️ NO MARK. Direction is not derived from a SOURCE, it is derived from the language — there is no layer
        that could have set it and no choice a reader could make. Marking it 'Default' would invite someone to
        look for the control that overrides it. */
-    rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
+      rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
     /**
      * ⚠️⚠️ THE READER'S ZONE BELONGS IN THIS GROUP, and leaving it out is what made Settings look broken.
      * Athi, 2026-08-21: *"when I click the language and formats hyperlink it goes to settings, but it shows
@@ -2178,9 +3083,9 @@ function iamGovernedRows(e){
      * being spent on nobody.
      */
     try {
-      var _fr   = CBLocale.region && CBLocale.region();
-      var _fri  = CBLocale.regionInfo && CBLocale.regionInfo();
-      var _ftag = CBLocale.tag ? CBLocale.tag() : (CBLocale.locale && CBLocale.locale());
+      var _fr = CBLocale.region && CBLocale.region();
+      var _fri = CBLocale.regionInfo && CBLocale.regionInfo();
+      var _ftag = CBLocale.tag ? CBLocale.tag() : CBLocale.locale && CBLocale.locale();
       /* ⚠️ THE BASE TAG ONLY. en-IN-u-fw-sun-nu-deva is a machine's answer to a human's question; every -u-
          extension is spelled out in the note beside it, so showing both would be the same fact twice, once
          illegibly. split('-u-')[0] rather than a regex — the separator is literal and fixed by BCP 47. */
@@ -2204,7 +3109,9 @@ function iamGovernedRows(e){
         var _ov = [];
         try {
           if (CBLocale.getExt) {
-            var _nu = CBLocale.getExt('nu'), _hc = CBLocale.getExt('hc'), _ca = CBLocale.getExt('ca');
+            var _nu = CBLocale.getExt('nu'),
+              _hc = CBLocale.getExt('hc'),
+              _ca = CBLocale.getExt('ca');
             if (_nu) _ov.push(_locName(NUMERALS, _nu));
             if (_hc) _ov.push(_locName(HOURS, _hc));
             if (_ca) _ov.push(_locName(CALS, _ca));
@@ -2214,32 +3121,47 @@ function iamGovernedRows(e){
             var _fw = CBLocale.getExt('fw');
             if (_fw) _ov.push(txf('week starts {d}', { d: _locName(WEEK, _fw) }));
           }
-        } catch (_) { /* no ext layer — the row still names the region */ }
-        var _diff = (_fr && country && String(_fr).toUpperCase() !== String(country).toUpperCase())
-          ? txf('your device — the business is in {c}', { c: country }) : '';
+        } catch (_) {
+          /* no ext layer — the row still names the region */
+        }
+        var _diff =
+          _fr && country && String(_fr).toUpperCase() !== String(country).toUpperCase() ? txf('your device — the business is in {c}', { c: country }) : '';
         /* ⚠️ THE ARROW POINTS AT THE REGION PICKER, the control that decides most of this row — and the
            override names in the note each carry their own, so 'Devanagari →' lands on the numeral picker
            rather than making the reader guess which of six controls produced it. */
         var _fval = esc(_fname ? _fname + (_ftag ? ' (' + _ftag + ')' : '') : _ftag) + _locLink(tx('Region'), 'loc-region');
-        rows.push(['Format', _fval,
+        rows.push([
+          'Format',
+          _fval,
           [_diff].concat(_ov).filter(Boolean).join(' · '),
-          true, 'fmt', (CBLocale.region() || (CBLocale.getExt && CBLocale.getExt('locale'))) ? 'you' : 'def']);
+          true,
+          'fmt',
+          CBLocale.region() || (CBLocale.getExt && CBLocale.getExt('locale')) ? 'you' : 'def'
+        ]);
       }
-    } catch (_) { /* absent locale layer — the samples below still speak for themselves */ }
-    if (CBLocale.datetime) rows.push(['Timestamp', esc(CBLocale.datetime(Date.now())) + _locLink(tx('Time zone'), 'loc-tz'),
-      /**
-       * ⚠️ THE COMPARISON IS THE CLOCK, NOT THE NAME. Asia/Calcutta and Asia/Kolkata are THE SAME ZONE under a
-       * legacy alias, and a string compare called them different — so the note claimed a reader was on another
-       * clock when they were not. The note exists to explain a timestamp that DIFFERS; if the two zones render
-       * the same instant identically there is nothing to explain, whatever they are called.
-       */
-      _tzDiffers(_readTz, _bizTz2) ? txf('shown in {tz} — your device', { tz: _readTz }) : '',
-      true, 'fmt']);   /* ⚠️ isHtml — the value now carries the jump-to-control arrow */
+    } catch (_) {
+      /* absent locale layer — the samples below still speak for themselves */
+    }
+    if (CBLocale.datetime)
+      rows.push([
+        'Timestamp',
+        esc(CBLocale.datetime(Date.now())) + _locLink(tx('Time zone'), 'loc-tz'),
+        /**
+         * ⚠️ THE COMPARISON IS THE CLOCK, NOT THE NAME. Asia/Calcutta and Asia/Kolkata are THE SAME ZONE under a
+         * legacy alias, and a string compare called them different — so the note claimed a reader was on another
+         * clock when they were not. The note exists to explain a timestamp that DIFFERS; if the two zones render
+         * the same instant identically there is nothing to explain, whatever they are called.
+         */
+        _tzDiffers(_readTz, _bizTz2) ? txf('shown in {tz} — your device', { tz: _readTz }) : '',
+        true,
+        'fmt'
+      ]); /* ⚠️ isHtml — the value now carries the jump-to-control arrow */
     /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
        groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
        'en-IN'. Athi: *"number system also."* */
     if (CBLocale.number) rows.push(['Numbers', esc(CBLocale.number(12345678.9)) + _locLink(tx('Numbering system'), 'loc-nu'), '', true, 'fmt']);
-    else if (CBLocale.locale) rows.push(['Numbers', esc((12345678.9).toLocaleString(CBLocale.locale())) + _locLink(tx('Numbering system'), 'loc-nu'), '', true, 'fmt']);
+    else if (CBLocale.locale)
+      rows.push(['Numbers', esc((12345678.9).toLocaleString(CBLocale.locale())) + _locLink(tx('Numbering system'), 'loc-nu'), '', true, 'fmt']);
     /**
      * ⭐⭐ THEME AND TEXT SIZE JOIN "HOW YOU READ IT" — because that is literally what they are. Athi,
      * 2026-08-21: *"under profile, personal preference the colour scheme and the size of the char, say 75%,
@@ -2267,25 +3189,60 @@ function iamGovernedRows(e){
      */
     try {
       if (CBLocale.workdays) {
-        var _D = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+        var _D = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
         var _wd = CBLocale.workdays() || [];
-        if (_wd.length) rows.push(['Working week', esc(_wd.map(function(d){ return _D[d] || d; }).join(' ')) + _locLink(tx('Working days'), 'loc-workdays'),
-          '',
-          true, 'fmt', (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? 'you' : 'def']);
+        if (_wd.length)
+          rows.push([
+            'Working week',
+            esc(
+              _wd
+                .map(function (item) {
+                  return _D[item] || item;
+                })
+                .join(' ')
+            ) + _locLink(tx('Working days'), 'loc-workdays'),
+            '',
+            true,
+            'fmt',
+            CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride() ? 'you' : 'def'
+          ]);
       }
-    } catch (_) { /* absent locale layer — show what we have */ }
+    } catch (_) {
+      /* absent locale layer — show what we have */
+    }
 
     try {
       if (typeof THEMES !== 'undefined' && typeof themeGet === 'function') {
         var _th = THEMES[themeGet()] || {};
-        rows.push(['Theme', esc(_th.name || themeGet()) + _locLink(tx('Theme'), 'theme-' + themeGet(), 'appearance'), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', true, 'look', 'you']);
+        rows.push([
+          'Theme',
+          esc(_th.name || themeGet()) + _locLink(tx('Theme'), 'theme-' + themeGet(), 'appearance'),
+          _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '',
+          true,
+          'look',
+          'you'
+        ]);
       }
       if (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function') {
-        var _ts = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0];
-        if (_ts) rows.push(['Text size', esc(_ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%') + _locLink(tx('Text size'), 'ap-fs-' + textSize(), 'appearance'), '', true, 'look', 'you']);
+        var _ts = TEXT_SIZES.filter(function (x) {
+          return x[0] === textSize();
+        })[0];
+        if (_ts)
+          rows.push([
+            'Text size',
+            esc(_ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%') + _locLink(tx('Text size'), 'ap-fs-' + textSize(), 'appearance'),
+            '',
+            true,
+            'look',
+            'you'
+          ]);
       }
-    } catch (_) { /* appearance layer absent — show what we have rather than nothing */ }
-  } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
+    } catch (_) {
+      /* appearance layer absent — show what we have rather than nothing */
+    }
+  } catch (_) {
+    /* locale layer absent — show what we have rather than nothing */
+  }
 
   if (!rows.length) return '';
   /**
@@ -2315,20 +3272,22 @@ function iamGovernedRows(e){
    * the layer chose, "no longer permitted" on one it has withdrawn, "first choice / then" on the language
    * chain. A heading cannot carry an exception.
    */
-/**
- * One Regional row. Athi, 2026-08-20: *"if the comment takes space bring it underneath."*
- *
- * ⭐⭐ THAT IS HIS OWN CONVENTION, APPLIED CONSISTENTLY — value first, message beneath it, settled on the
- * governance boxes ("base@v1" then "Platform set"). Here the message sat in a right-hand column instead,
- * competing with the value for width on a narrow screen and pushing "no longer permitted" onto its own line
- * anyway. Underneath, it costs nothing horizontally and reads in the order a person needs it: what it is,
- * then whose it is.
- */
-/* ⭐ Regional rows go through the SAME renderer as every other profile row — see profRow. x[3] flags markup. */
-/* ⚠️ x[4] IS THE GROUP, x[5] THE SOURCE — positional, because these rows are built by twenty push() calls
+  /**
+   * One Regional row. Athi, 2026-08-20: *"if the comment takes space bring it underneath."*
+   *
+   * ⭐⭐ THAT IS HIS OWN CONVENTION, APPLIED CONSISTENTLY — value first, message beneath it, settled on the
+   * governance boxes ("base@v1" then "Platform set"). Here the message sat in a right-hand column instead,
+   * competing with the value for width on a narrow screen and pushing "no longer permitted" onto its own line
+   * anyway. Underneath, it costs nothing horizontally and reads in the order a person needs it: what it is,
+   * then whose it is.
+   */
+  /* ⭐ Regional rows go through the SAME renderer as every other profile row — see profRow. x[3] flags markup. */
+  /* ⚠️ x[4] IS THE GROUP, x[5] THE SOURCE — positional, because these rows are built by twenty push() calls
    across three hundred lines and converting them all to objects is a change with no test behind it. The
    cost is that a row written with four elements gets no mark, which _srcMark answers with silence. */
-var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
+  var rowHtml = function (x) {
+    return profRow(x[0], x[1], x[2], !!x[3], x[5]);
+  };
   /**
    * ⚠️ A HEADING MUST NOT LOOK LIKE A ROW LABEL. Athi, 2026-08-20: *"can you make indentation or size
    * difference or underline for the heading — some difference should be there between heading and text."*
@@ -2340,8 +3299,11 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
    * anything, which is why it drifted.
    */
   /* ⭐ and the SAME group heading — see profGroup. */
-  var grp = function(title, list){ return list.length ? profGroup(title, list.map(rowHtml).join('')) : ''; };
-  return '<div>'
+  var grp = function (title, list) {
+    return list.length ? profGroup(title, list.map(rowHtml).join('')) : '';
+  };
+  return (
+    '<div>' +
     /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
        title repeated immediately under itself reads as a rendering fault. */
     /**
@@ -2361,30 +3323,57 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
      * ⚠️ ONE TABLE DRIVES IT, so a fifth group is a line here plus a key on the row — not a fourth copy of
      * .filter(r[4] === '…'), which is how the drawer formed in the first place.
      */
-    + [['biz',  tx('Business')],
-       ['read', tx('How you read it')],
-       ['fmt',  tx('How values are written')],
-       ['look', tx('How it looks')]]
-      .map(function(g){
+    [
+      ['biz', tx('Business')],
+      ['read', tx('How you read it')],
+      ['fmt', tx('How values are written')],
+      ['look', tx('How it looks')]
+    ]
+      .map(function (item) {
         /* ⚠️ 'biz' MATCHES AN ABSENT KEY TOO — a row pushed without a group must land somewhere visible,
            not vanish because a five-element array was written with four. */
-        return grp(g[1], rows.filter(function(r){ return (r[4] || 'biz') === g[0]; }));
-      }).join('')
+        return grp(
+          item[1],
+          rows.filter(function (nestedR) {
+            return (nestedR[4] || 'biz') === item[0];
+          })
+        );
+      })
+      .join('') +
     /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
     /* ⚠️ TWO DESTINATIONS, BECAUSE THE GROUP HAS TWO OWNERS. Language and formats are set in Localisation;
        theme and text size in Appearance. One link would send half the readers to the wrong screen, and a
        link that lands you somewhere without the control you came for is worse than no link. */
-    + '<div style="margin-top:9px;display:flex;gap:14px;flex-wrap:wrap">'
-    +   '<a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'locale' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
-    +   tx('Language and formats') + ' <span class=arw>→</span></a>'
-    +   '<a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'appearance' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
-    +   tx('Theme and text size') + ' <span class=arw>→</span></a>'
+    '<div style="margin-top:9px;display:flex;gap:14px;flex-wrap:wrap">' +
+    '<a href="#" onclick="navTo(' +
+    Q +
+    'settings' +
+    Q +
+    ');setSetSec(' +
+    Q +
+    'locale' +
+    Q +
+    ');return false" style="color:var(--blue);font-size:var(--fs-1)">' +
+    tx('Language and formats') +
+    ' <span class=arw>→</span></a>' +
+    '<a href="#" onclick="navTo(' +
+    Q +
+    'settings' +
+    Q +
+    ');setSetSec(' +
+    Q +
+    'appearance' +
+    Q +
+    ');return false" style="color:var(--blue);font-size:var(--fs-1)">' +
+    tx('Theme and text size') +
+    ' <span class=arw>→</span></a>' +
     /* ⚠️ WITH THE TWO LINKS, NOT ABOVE THE ROWS. This line answers a question about the rows rather than
        being one of them; putting it at the top would make every reader step over it to reach the content they
        came for, which is the cost the opt-in exists to avoid. */
-    +   profSrcBtn()
-    + '</div>'
-    + '</div>';
+    profSrcBtn() +
+    '</div>' +
+    '</div>'
+  );
 }
 
 /** The boundary badge. ⚠️ Same three words everywhere, so the spine is learnable in one read. */
@@ -2415,21 +3404,24 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
  *
  * ⭐ Loaded only when the section is opened — nothing here is needed to paint a profile.
  */
-function iamLoadUsage(){
+function iamLoadUsage() {
   if (UI._usageBusy) return;
   UI._usageBusy = true;
-  api('entityUsage').then(function(r){
-    UI._usage = r || {};
-  }).catch(function(e){
-    /* A read that failed and a ledger that is empty are different claims; say which. */
-    UI._usage = { _err: (e && e.message) || 'Could not read your usage.' };
-  }).then(function(){
-    UI._usageBusy = false;
-    if (profSec() === 'usage') bgRenderApp();
-  });
+  api('entityUsage')
+    .then(function (reply) {
+      UI._usage = reply || {};
+    })
+    .catch(function (e) {
+      /* A read that failed and a ledger that is empty are different claims; say which. */
+      UI._usage = { _err: (e && e.message) || 'Could not read your usage.' };
+    })
+    .then(function () {
+      UI._usageBusy = false;
+      if (profSec() === 'usage') bgRenderApp();
+    });
 }
 
-function _usageMoney(n){
+function _usageMoney(n) {
   var v = Number(n || 0);
   return '$' + (Math.round(v * 10000) / 10000).toFixed(4).replace(/0+$/, '').replace(/\.$/, '.00');
 }
@@ -2444,16 +3436,19 @@ function _usageMoney(n){
  * ⭐ So it is an `iamSection` like every other panel, and the body is only built when the section is OPEN —
  * which is also what keeps the profile's read count where it is.
  */
-function usageBody(){
+function usageBody() {
   var open = !!(UI._iamOpen && UI._iamOpen.usage);
   if (!open) return '<div class="mut" style="font-size:var(--fs-2)">' + tx('Open to read your usage.') + '</div>';
   return usageHTML();
 }
 
-function usageHTML(){
+function usageHTML() {
   var u = UI._usage;
   /* No outer heading: iamSection supplies the title, and two would read as two panels. */
-  if (!u) { iamLoadUsage(); return '<div class="mut">' + tx('Reading your usage…') + '</div>'; }
+  if (!u) {
+    iamLoadUsage();
+    return '<div class="mut">' + tx('Reading your usage…') + '</div>';
+  }
   if (u._err) return scrErr(u._err);
   if (u.not_enabled) {
     return '<div class="mut">' + tx('Usage recording is not switched on for this deployment yet.') + '</div>';
@@ -2462,27 +3457,51 @@ function usageHTML(){
   var out = '';
 
   /* ── the headline, and the caveat as part of it ── */
-  out += '<div class="card" style="padding:12px 14px">'
-    + '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">'
-    + '<div><div style="font-size:var(--fs-6);font-weight:700">' + _usageMoney(u.total_cost_usd) + '</div>'
-    + '<div class="mut" style="font-size:var(--fs-1)">' + txf('billed over {n} days', { n: u.window_days }) + '</div></div>'
-    + '<div><div style="font-size:var(--fs-5);font-weight:600">' + ((u.counts && u.counts.billed) || 0) + '</div>'
-    + '<div class="mut" style="font-size:var(--fs-1)">' + tx('events billed') + '</div></div>'
-    + (u.rate_card ? '<div><div class="mono" style="font-size:var(--fs-2)">' + esc(u.rate_card) + '</div>'
-        + '<div class="mut" style="font-size:var(--fs-1)">' + tx('rate card') + '</div></div>' : '')
-    + '</div>'
+  out +=
+    '<div class="card" style="padding:12px 14px">' +
+    '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">' +
+    '<div><div style="font-size:var(--fs-6);font-weight:700">' +
+    _usageMoney(u.total_cost_usd) +
+    '</div>' +
+    '<div class="mut" style="font-size:var(--fs-1)">' +
+    txf('billed over {n} days', { n: u.window_days }) +
+    '</div></div>' +
+    '<div><div style="font-size:var(--fs-5);font-weight:600">' +
+    ((u.counts && u.counts.billed) || 0) +
+    '</div>' +
+    '<div class="mut" style="font-size:var(--fs-1)">' +
+    tx('events billed') +
+    '</div></div>' +
+    (u.rate_card
+      ? '<div><div class="mono" style="font-size:var(--fs-2)">' +
+        esc(u.rate_card) +
+        '</div>' +
+        '<div class="mut" style="font-size:var(--fs-1)">' +
+        tx('rate card') +
+        '</div></div>'
+      : '') +
+    '</div>' +
     /* ⚠️ Stated on the screen, not only in the code: this is billed, not sent. */
-    + '<div class="mut" style="font-size:var(--fs-1);margin-top:8px">'
-    + tx('Counts what was billed. Recording never blocks a send, so this can sit below the chits in your mailbox — that difference means those events were not billed.')
-    + '</div></div>';
+    '<div class="mut" style="font-size:var(--fs-1);margin-top:8px">' +
+    tx(
+      'Counts what was billed. Recording never blocks a send, so this can sit below the chits in your mailbox — that difference means those events were not billed.'
+    ) +
+    '</div></div>';
 
   /* ── by meter ── */
   if ((u.by_meter || []).length) {
     out += '<div class="sec">' + tx('By kind') + '</div><div class="card" style="padding:4px 0">';
-    u.by_meter.forEach(function(m){
-      out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)">'
-        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(m.meter) + '</span>'
-        + '<span class="mut" style="font-size:var(--fs-2)">' + m.events + ' × &nbsp;' + _usageMoney(m.cost) + '</span></div>';
+    u.by_meter.forEach(function (item) {
+      out +=
+        '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)">' +
+        '<span class="mono" style="font-size:var(--fs-2)">' +
+        esc(item.meter) +
+        '</span>' +
+        '<span class="mut" style="font-size:var(--fs-2)">' +
+        item.events +
+        ' × &nbsp;' +
+        _usageMoney(item.cost) +
+        '</span></div>';
     });
     out += '</div>';
   }
@@ -2490,10 +3509,17 @@ function usageHTML(){
   /* ── per day: the accumulation Athi described ── */
   if ((u.daily || []).length) {
     out += '<div class="sec">' + tx('Per day') + '</div><div class="card" style="padding:4px 0">';
-    u.daily.slice(0, 14).forEach(function(d){
-      out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 14px">'
-        + '<span style="font-size:var(--fs-2)">' + esc(String(d.day).slice(0, 10)) + '</span>'
-        + '<span class="mut" style="font-size:var(--fs-2)">' + d.events + ' × &nbsp;' + _usageMoney(d.cost) + '</span></div>';
+    u.daily.slice(0, 14).forEach(function (item) {
+      out +=
+        '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 14px">' +
+        '<span style="font-size:var(--fs-2)">' +
+        esc(String(item.day).slice(0, 10)) +
+        '</span>' +
+        '<span class="mut" style="font-size:var(--fs-2)">' +
+        item.events +
+        ' × &nbsp;' +
+        _usageMoney(item.cost) +
+        '</span></div>';
     });
     out += '</div>';
   }
@@ -2501,33 +3527,38 @@ function usageHTML(){
   /* ── the rows, with what they charged FOR and on what basis ── */
   if ((u.recent || []).length) {
     out += '<div class="sec">' + tx('Recent') + '</div><div class="card" style="padding:4px 0">';
-    u.recent.slice(0, 25).forEach(function(r){
-      var meta = r.meta || {};
+    u.recent.slice(0, 25).forEach(function (item) {
+      var meta = item.meta || {};
       var rate = meta.rate || {};
-      var basis = (meta.basis != null) ? meta.basis : rate.basis;
-      out += '<div style="padding:8px 14px;border-bottom:1px solid var(--line)">'
-        + '<div style="display:flex;justify-content:space-between;gap:10px">'
-        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(r.meter) + '</span>'
-        + '<span style="font-size:var(--fs-2)">' + _usageMoney(r.cost_usd) + '</span></div>'
-        + '<div class="mut" style="font-size:var(--fs-1);margin-top:2px">'
-        + esc(String(r.created_at).slice(0, 16).replace('T', ' '))
+      var basis = meta.basis != null ? meta.basis : rate.basis;
+      out +=
+        '<div style="padding:8px 14px;border-bottom:1px solid var(--line)">' +
+        '<div style="display:flex;justify-content:space-between;gap:10px">' +
+        '<span class="mono" style="font-size:var(--fs-2)">' +
+        esc(item.meter) +
+        '</span>' +
+        '<span style="font-size:var(--fs-2)">' +
+        _usageMoney(item.cost_usd) +
+        '</span></div>' +
+        '<div class="mut" style="font-size:var(--fs-1);margin-top:2px">' +
+        esc(String(item.created_at).slice(0, 16).replace('T', ' ')) +
         /* ⭐ the reference back to the trade — this is what makes the ledger row explainable */
-        + (r.detail ? ' · ' + tx('ref') + ' ' + esc(String(r.detail).slice(0, 8)) : '')
-        + (basis != null ? ' · ' + txf('on {v}', { v: basis }) + (meta.basis_currency ? ' ' + esc(meta.basis_currency) : '') : '')
-        + (rate.card ? ' · ' + esc(rate.model || '') : '')
-        + '</div></div>';
+        (item.detail ? ' · ' + tx('ref') + ' ' + esc(String(item.detail).slice(0, 8)) : '') +
+        (basis != null ? ' · ' + txf('on {v}', { v: basis }) + (meta.basis_currency ? ' ' + esc(meta.basis_currency) : '') : '') +
+        (rate.card ? ' · ' + esc(rate.model || '') : '') +
+        '</div></div>';
     });
     out += '</div>';
   }
   return out;
 }
 
-function profSecHTML(k, e){
+function profSecHTML(k, e) {
   var b = _profSecBody(k, e);
   if (!b) return '';
-  return k === 'vault' ? b : (b + _capEnd());
+  return k === 'vault' ? b : b + _capEnd();
 }
-function _profSecBody(k, e){
+function _profSecBody(k, e) {
   if (k === 'identity') return iamHTML(e);
   /* ⚠️⚠️ THE __iam_old BRANCH WAS DELETED HERE, AND IT TOOK namingRulesHTML WITH IT.
      No section key is ever '__iam_old' — PROF_SECS has identity/storefront/governance/vault — so this was
@@ -2543,7 +3574,7 @@ function _profSecBody(k, e){
    * rendered elsewhere, and the next person to change the Storefront would have had even odds of editing the
    * dead one.
    *
-   * ⚠️ THE CUSTOMER-ACCESS MODE WAS CARRIED ACROSS FIRST. storefrontCardHTML held 
+   * ⚠️ THE CUSTOMER-ACCESS MODE WAS CARRIED ACROSS FIRST. storefrontCardHTML held
    * (browse-first vs login-first) and nothing else did — deleting this branch before moving that control
    * would have removed a real setting silently, which is exactly how the localisation rows nearly went.
    */
@@ -2565,23 +3596,39 @@ function _profSecBody(k, e){
  * ⚠️ EMPTY BOXES ARE NOT RENDERED. A grid of "—" would be a promise of five facts and delivery of two; a box
  * appears only when there is something in it, so the card is honest about how much is resolved.
  */
-function govCardHTML(g){
-  if(!g) return '';
-  var inst=g.installation||{}, b=g.basics||{}, j=g.jurisdiction||{};
-  var caps=(g.capabilities||[]).map(function(c){return '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(c)+'</span>';}).join(' ');
-  var allow=(g.allowances||[]).map(function(a){return esc(a.limit+' '+a.resource);}).join(' · ');
-  var langs=(b.languages||[]).join(', ');
-  var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
+function govCardHTML(g) {
+  if (!g) return '';
+  var inst = g.installation || {},
+    b = g.basics || {},
+    j = g.jurisdiction || {};
+  var caps = (g.capabilities || [])
+    .map(function (item) {
+      return '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">' + esc(item) + '</span>';
+    })
+    .join(' ');
+  var allow = (g.allowances || [])
+    .map(function (item) {
+      return esc(item.limit + ' ' + item.resource);
+    })
+    .join(' · ');
+  var langs = (b.languages || []).join(', ');
+  var list = [inst.cloud, inst.region, inst.zone].filter(Boolean).join(' · ');
 
   /* ⚠️ EACH BOX NAMES ITS INK BECAUSE IT PAINTS ITS GROUND — guard check 11. */
-  var box=function(label, value, sub){
-    if(!value) return '';
-    return '<div style="flex:1 1 200px;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:11px;'
-      + 'background:var(--paper);color:var(--on-bg)">'
-      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
-      + '<div style="margin-top:4px;font-size:var(--fs-2);line-height:1.5">' + value + '</div>'
-      + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(sub) + '</div>' : '')
-      + '</div>';
+  var box = function (label, value, sub) {
+    if (!value) return '';
+    return (
+      '<div style="flex:1 1 200px;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:11px;' +
+      'background:var(--paper);color:var(--on-bg)">' +
+      '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' +
+      esc(label) +
+      '</div>' +
+      '<div style="margin-top:4px;font-size:var(--fs-2);line-height:1.5">' +
+      value +
+      '</div>' +
+      (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(sub) + '</div>' : '') +
+      '</div>'
+    );
   };
 
   var boxes = [
@@ -2595,18 +3642,22 @@ function govCardHTML(g){
      * part of its name, and a rights question is always about a specific version. The message line is reserved
      * for WHERE IT CAME FROM, which is the only thing a reader cannot see by looking at the value.
      */
-    box(tx('Governed by'),
-        esc(g.constitution || '') + (g.constitution_version ? esc('@' + g.constitution_version) : ''),
-        tx('Platform set')),
-    box(tx('Installation'), esc(inst.label||inst.key||''), loc),
+    box(tx('Governed by'), esc(g.constitution || '') + (g.constitution_version ? esc('@' + g.constitution_version) : ''), tx('Platform set')),
+    box(tx('Installation'), esc(inst.label || inst.key || ''), list),
     box(tx('Basics'), [b.currency, b.timezone, langs].filter(Boolean).map(esc).join(' · '), tx('Platform set')),
     box(tx('Rights'), caps, tx('Cascaded to you')),
-    box(tx('Allowances'), allow ? esc(allow) : '', tx('Cascaded to you')),
-  ].filter(Boolean).join('');
+    box(tx('Allowances'), allow ? esc(allow) : '', tx('Cascaded to you'))
+  ]
+    .filter(Boolean)
+    .join('');
 
-  if(!boxes) return '';
-  return '<div style="display:flex;flex-wrap:wrap;gap:9px">' + boxes + '</div>'
-    + (j.disclaimer ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">' + esc(j.disclaimer) + '</div>' : '');
+  if (!boxes) return '';
+  return (
+    '<div style="display:flex;flex-wrap:wrap;gap:9px">' +
+    boxes +
+    '</div>' +
+    (j.disclaimer ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">' + esc(j.disclaimer) + '</div>' : '')
+  );
 }
 /**
  * ⭐⭐ ONE SAVE PER SECTION. Athi, 2026-08-20: *"if each section has to have a separate save button to do so."*
@@ -2622,14 +3673,21 @@ function govCardHTML(g){
  * away rather than being guarded against, and the button now sits where the reader's attention already is.
  */
 var PROF_FIELDS = {
-  ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
-  profile:  SHOP_FIELDS,   /* the Business section's inputs — app/cap-shop.js (SET1): CB Settings › Your shop sends the same list */
-  governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility'], ['pf_sfaccess', 'storefront_access']],
+  ident: [
+    ['pf_name', 'display_name'],
+    ['pf_uid', 'user_id']
+  ],
+  profile: SHOP_FIELDS /* the Business section's inputs — app/cap-shop.js (SET1): CB Settings › Your shop sends the same list */,
+  governed: [
+    ['pf_bs', 'business_status'],
+    ['pf_vis', 'catalogue_visibility'],
+    ['pf_sfaccess', 'storefront_access']
+  ],
   /* ⚠️ REGIONAL SAVES NOTHING NOW, AND THE EMPTY ARRAY IS THE POINT. Its one control (pf_cur) moved to
      Settings; leaving ['pf_cur','currency_code'] here would make profDirtySections read an element that no
      longer exists, and the section would offer a Save button with nothing behind it. A read-only section is
      an honest one — it says the value is decided elsewhere. */
-  regional: [],
+  regional: []
 };
 
 /**
@@ -2639,14 +3697,28 @@ var PROF_FIELDS = {
  * this screen today (loadProfile routes them to loadActorProfile), but a button that would silently misfile
  * data must not exist on the strength of a route that might change.
  */
-function profCanEdit(){ return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId); }
+function profCanEdit() {
+  return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId);
+}
 
-function profSaveBtn(sec){
+function profSaveBtn(sec) {
   if (!profCanEdit()) return '';
   var Q = String.fromCharCode(39);
-  return '<div class="err" id="pf_err_' + sec + '" style="margin-top:8px"></div>'
-    + '<button class="composebtn" data-testid="prof-save-' + sec + '" style="margin-top:6px" '
-    +   'onclick="saveProfile(' + Q + sec + Q + ')">' + tx('Save') + '</button>';
+  return (
+    '<div class="err" id="pf_err_' +
+    sec +
+    '" style="margin-top:8px"></div>' +
+    '<button class="composebtn" data-testid="prof-save-' +
+    sec +
+    '" style="margin-top:6px" ' +
+    'onclick="saveProfile(' +
+    Q +
+    sec +
+    Q +
+    ')">' +
+    tx('Save') +
+    '</button>'
+  );
 }
 
 /* ════ UNSAVED CHANGES ════════════════════════════════════════════════════════════════════════════════════
@@ -2677,19 +3749,29 @@ var _profSnap = {};
  * disagree about what unsaved means.
  */
 var SET_FIELDS = {
-  work:   [['st_am', 'assignment_model'], ['st_mt', 'default_max_tasks']],
-  assign: [['st_aam', 'mode'], ['st_ada', 'default_assignee']],
+  work: [
+    ['st_am', 'assignment_model'],
+    ['st_mt', 'default_max_tasks']
+  ],
+  assign: [
+    ['st_aam', 'mode'],
+    ['st_ada', 'default_assignee']
+  ]
 };
 
-function setSnapshot(){ profSnapshot(SET_FIELDS); }
-function setGuard(go){ return profGuard(go, SET_FIELDS, { work: tx('Work'), assign: tx('Auto-assign') }); }
+function setSnapshot() {
+  profSnapshot(SET_FIELDS);
+}
+function setGuard(go) {
+  return profGuard(go, SET_FIELDS, { work: tx('Work'), assign: tx('Auto-assign') });
+}
 
 /** Re-read every profile field currently on screen. Called after each paint. */
-function profSnapshot(map){
+function profSnapshot(map) {
   map = map || PROF_FIELDS;
   _profSnap = {};
-  Object.keys(map).forEach(function(s){
-    map[s].forEach(function(pair){
+  Object.keys(map).forEach(function (item) {
+    map[item].forEach(function (pair) {
       var el = document.getElementById(pair[0]);
       if (el) _profSnap[pair[0]] = el.value;
     });
@@ -2697,17 +3779,17 @@ function profSnapshot(map){
 }
 
 /** Which sections have an on-screen field whose value differs from the snapshot. */
-function profDirtySections(map){
+function profDirtySections(map) {
   map = map || PROF_FIELDS;
   var out = [];
-  Object.keys(map).forEach(function(s){
-    var dirty = map[s].some(function(pair){
+  Object.keys(map).forEach(function (item) {
+    var dirty = map[item].some(function (pair) {
       var el = document.getElementById(pair[0]);
       /* ⚠️ A FIELD NOT ON SCREEN IS NOT DIRTY. A collapsed section cannot have been edited, and treating its
          absence as a change would prompt on every single navigation. */
       return el && Object.prototype.hasOwnProperty.call(_profSnap, pair[0]) && el.value !== _profSnap[pair[0]];
     });
-    if (dirty) out.push(s);
+    if (dirty) out.push(item);
   });
   return out;
 }
@@ -2722,7 +3804,7 @@ function profDirtySections(map){
  * often wants neither. A two-button dialog forces a decision about the data in order to answer a question
  * about the navigation.
  */
-function profGuard(go, map, nameMap){
+function profGuard(go, map, nameMap) {
   /* ⚠️ THE MAP IS REMEMBERED FOR profGuardDo — it saves the dirty sections after the person chooses, and
      without this it would save PROFILE fields when the prompt came from Settings. */
   UI._guardMap = map || PROF_FIELDS;
@@ -2730,7 +3812,11 @@ function profGuard(go, map, nameMap){
   if (!dirty.length) return go();
   var Q = String.fromCharCode(39);
   var names = nameMap || { ident: tx('Identity'), profile: tx('Business'), governed: tx('Storefront') };
-  var what  = dirty.map(function(s){ return names[s] || s; }).join(', ');
+  var what = dirty
+    .map(function (item) {
+      return names[item] || item;
+    })
+    .join(', ');
 
   UI._profGo = go;
   /**
@@ -2739,45 +3825,77 @@ function profGuard(go, map, nameMap){
    * SESSION.identity_type, PURPOSE.profile and the borrowed `capped`. The house markup is mhd / mbody / mfoot,
    * as confirmAsk builds it; confirmAsk itself is two-button and this needs three.
    */
-  modal('<div class="mhd"><div class="t">' + esc(tx('Not saved')) + '</div></div>'
-    + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">'
-    +   tx('You changed') + ' <b>' + esc(what) + '</b> ' + tx('and have not saved it.')
-    + '</div></div>'
-    + '<div class="mfoot">'
-    +   '<button data-testid="prof-guard-stay" onclick="profGuardDo(' + Q + 'stay' + Q + ')">' + esc(tx('Stay here')) + '</button>'
-    +   '<button data-testid="prof-guard-discard" onclick="profGuardDo(' + Q + 'discard' + Q + ')">' + esc(tx('Discard')) + '</button>'
-    +   '<button class="pri" data-testid="prof-guard-save" onclick="profGuardDo(' + Q + 'save' + Q + ')">' + esc(tx('Save and continue')) + '</button>'
-    + '</div>');
+  modal(
+    '<div class="mhd"><div class="t">' +
+      esc(tx('Not saved')) +
+      '</div></div>' +
+      '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">' +
+      tx('You changed') +
+      ' <b>' +
+      esc(what) +
+      '</b> ' +
+      tx('and have not saved it.') +
+      '</div></div>' +
+      '<div class="mfoot">' +
+      '<button data-testid="prof-guard-stay" onclick="profGuardDo(' +
+      Q +
+      'stay' +
+      Q +
+      ')">' +
+      esc(tx('Stay here')) +
+      '</button>' +
+      '<button data-testid="prof-guard-discard" onclick="profGuardDo(' +
+      Q +
+      'discard' +
+      Q +
+      ')">' +
+      esc(tx('Discard')) +
+      '</button>' +
+      '<button class="pri" data-testid="prof-guard-save" onclick="profGuardDo(' +
+      Q +
+      'save' +
+      Q +
+      ')">' +
+      esc(tx('Save and continue')) +
+      '</button>' +
+      '</div>'
+  );
   /* ⚠️ ESCAPE AND THE BACKDROP MEAN STAY, NOT DISCARD. A dialog dismissed by accident must never be the thing
      that throws away work — the safe default is the one that changes nothing. */
-  UI._modalDismiss = function(){ UI._profGo = null; };
+  UI._modalDismiss = function () {
+    UI._profGo = null;
+  };
 }
 
 /** ⭐ EVERY OUTCOME CONFIRMS ITSELF. Athi: *"a confirmation message for both save and cancel."* Silence after
  *  discarding is indistinguishable from silence after saving, and the difference is the person's work. */
-async function profGuardDo(which){
-  var go = UI._profGo; UI._profGo = null;
+async function profGuardDo(which) {
+  var go = UI._profGo;
+  UI._profGo = null;
   if (typeof closeModal === 'function') closeModal();
-  if (which === 'stay') { toast(tx('Staying — nothing was changed.')); return; }
+  if (which === 'stay') {
+    toast(tx('Staying — nothing was changed.'));
+    return;
+  }
   var map = UI._guardMap || PROF_FIELDS;
   if (which === 'save') {
     var secs = profDirtySections(map);
     /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
        fields in response to a Settings prompt — the map is what tells them apart. */
-    for (var i = 0; i < secs.length; i++) {
-      if (map === PROF_FIELDS) await saveProfile(secs[i]);
-      else if (secs[i] === 'work')   await saveSettings();
-      else if (secs[i] === 'assign') await saveAutoAssign();
+    for (var index = 0; index < secs.length; index++) {
+      if (map === PROF_FIELDS) await saveProfile(secs[index]);
+      else if (secs[index] === 'work') await saveSettings();
+      else if (secs[index] === 'assign') await saveAutoAssign();
     }
     toast(tx('Saved.'));
   } else {
-    profSnapshot(map);              // whatever is on screen becomes the new baseline
+    profSnapshot(map); // whatever is on screen becomes the new baseline
     toast(tx('Changes discarded.'));
   }
   if (typeof go === 'function') go();
 }
 
-async function saveProfile(sec){
+async function saveProfile(sec) {
   /* ⚠️ DEFAULTS TO EVERY SECTION so an older call site (or a test) that calls saveProfile() with no argument
      still saves what is on screen rather than silently saving nothing. */
   var secs = sec ? [sec] : Object.keys(PROF_FIELDS);
@@ -2785,11 +3903,22 @@ async function saveProfile(sec){
   if (x) x.textContent = '';
 
   var _b = {};
-  secs.forEach(function(s){ Object.assign(_b, profFieldsBody(PROF_FIELDS[s])); });   /* one rule for "what a section sends" — app/cap-shop.js */
+  secs.forEach(function (item) {
+    Object.assign(_b, profFieldsBody(PROF_FIELDS[item]));
+  }); /* one rule for "what a section sends" — app/cap-shop.js */
 
-  if (!Object.keys(_b).length) { if (x) x.textContent = tx('Nothing to save.'); return; }
-  try { await api('saveProfile', { body: _b }); toast(MSG.profileSaved()); UI._me = null; loadProfile(); }
-  catch (e) { if (x) x.textContent = e.message; }
+  if (!Object.keys(_b).length) {
+    if (x) x.textContent = tx('Nothing to save.');
+    return;
+  }
+  try {
+    await api('saveProfile', { body: _b });
+    toast(MSG.profileSaved());
+    UI._me = null;
+    loadProfile();
+  } catch (e) {
+    if (x) x.textContent = e.message;
+  }
 }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
 /* sfCopy removed with storefrontCardHTML, the card whose copy button called it. */
@@ -2825,7 +3954,7 @@ async function saveProfile(sec){
  * so that an owner demoting someone takes effect immediately rather than at token expiry. Naming the level
  * therefore costs one round trip, and that is the correct price for the answer being current.
  */
-async function loadActorProfile(h){
+async function loadActorProfile(node) {
   /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
      *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
      behave the same way beat two accordions and one loose card sitting under them. */
@@ -2838,33 +3967,60 @@ async function loadActorProfile(h){
   /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
   const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
   if (!UI._me) {
-    h.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
-      + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
+    node.innerHTML =
+      `<div class="sec">${tx('Your profile')}</div>` +
+      `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` +
+      pinCard;
   }
 
   let e = UI._me;
   if (!e) {
-      /* ⭐ meNow() — the warm request started at sign-in, or a fetch. An actor never passes through
+    /* ⭐ meNow() — the warm request started at sign-in, or a fetch. An actor never passes through
          loadProfile (it returns here first), so before this the co-assist path always paid a full round
          trip while a perfectly good one was already in flight. */
-    try { e = (await meNow()) || {}; UI._me = e; }
-    catch (err) { e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' }; }
+    try {
+      e = (await meNow()) || {};
+      UI._me = e;
+    } catch (err) {
+      e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' };
+    }
   }
   /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.
      Every await in this file followed by a DOM write has the same hazard. */
-  const h2 = document.getElementById('profbody'); if (!h2) return;
-  h2.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
-    + iamSelfEmployeeHTML(e)
-    + pinCard
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">${txf('Set your {what} from the top bar.', { what: '<b>' + tx('Duty / Break') + '</b>' })}</div>`;
+  const h2 = document.getElementById('profbody');
+  if (!h2) return;
+  h2.innerHTML =
+    `<div class="sec">${tx('Your profile')}</div>` +
+    iamSelfEmployeeHTML(e) +
+    pinCard +
+    `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">${txf('Set your {what} from the top bar.', { what: '<b>' + tx('Duty / Break') + '</b>' })}</div>`;
 }
 
-async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
-  const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
-  if(!/^\d{4}$/.test(n)){ if(x)x.textContent="New PIN must be 4 digits."; return; }
-  if(n!==n2){ if(x)x.textContent="New PINs don't match."; return; }
-  try{ await api("changePin",{body:{current_pin:c,new_pin:n,confirm_pin:n2}}); toast("PIN changed ✓"); ['pf_cpin','pf_npin','pf_npin2'].forEach(function(i){ var el=document.getElementById(i); if(el)el.value=''; }); }
-  catch(e){ if(x)x.textContent=e.message; } }
+async function saveActorPin() {
+  const x = document.getElementById('pf_err');
+  if (x) x.textContent = '';
+  const c = val('pf_cpin'),
+    n = val('pf_npin'),
+    n2 = val('pf_npin2');
+  if (!/^\d{4}$/.test(n)) {
+    if (x) x.textContent = 'New PIN must be 4 digits.';
+    return;
+  }
+  if (n !== n2) {
+    if (x) x.textContent = "New PINs don't match.";
+    return;
+  }
+  try {
+    await api('changePin', { body: { current_pin: c, new_pin: n, confirm_pin: n2 } });
+    toast('PIN changed ✓');
+    ['pf_cpin', 'pf_npin', 'pf_npin2'].forEach(function (item) {
+      var el = document.getElementById(item);
+      if (el) el.value = '';
+    });
+  } catch (e) {
+    if (x) x.textContent = e.message;
+  }
+}
 /* ---- SETTINGS + governance (7-layer perception stub) ---- */
 /**
  * ⭐ MODEL A — GOVERNANCE DECLARES, EVERY OTHER SCREEN REFERS (Athi, 2026-08-16: *"model a, we need to bring
@@ -2890,7 +4046,7 @@ async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x
  * precisely the kind of thing a governance screen exists to say out loud. Printing only "private (cap)" threw away
  * both who set it and whether it actually holds.
  */
-function govCatVis(){
+function govCatVis() {
   var e = UI._me;
   if (!e) return 'open Profile → Storefront to read it';
   var cap = e.visibility_cap || {};
@@ -2946,30 +4102,34 @@ function govCatVis(){
  * The precedent for the real thing already exists in this codebase: product versions carry valid_from/valid_to
  * and are queried by instant (`routes/products.js`). A plan should follow that shape, not invent its own.
  */
-var PLAN = { tier:'Free', entities:5, chitsPerDay:10, networks:1, validFrom:null, validTo:null };
+var PLAN = { tier: 'Free', entities: 5, chitsPerDay: 10, networks: 1, validFrom: null, validTo: null };
 /* Where a plan sits in time. Returns null when there is no window to reason about — callers must not guess. */
-function planWindow(){
+function planWindow() {
   if (!PLAN.validFrom && !PLAN.validTo) return null;
   var now = Date.now();
   var from = PLAN.validFrom ? Date.parse(PLAN.validFrom) : null;
-  var to   = PLAN.validTo   ? Date.parse(PLAN.validTo)   : null;
-  if (to && now > to)     return { state:'expired', to:to, days:Math.ceil((now-to)/864e5) };
-  if (from && now < from) return { state:'not yet started', from:from, days:Math.ceil((from-now)/864e5) };
-  return { state:'active', to:to, days: to ? Math.ceil((to-now)/864e5) : null };
+  var to = PLAN.validTo ? Date.parse(PLAN.validTo) : null;
+  if (to && now > to) return { state: 'expired', to: to, days: Math.ceil((now - to) / 864e5) };
+  if (from && now < from) return { state: 'not yet started', from: from, days: Math.ceil((from - now) / 864e5) };
+  return { state: 'active', to: to, days: to ? Math.ceil((to - now) / 864e5) : null };
 }
-function govPlanBlock(){
-  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--purple-2)">' + tx('↑ Your plan · what it entitles you to') + '</div>'
-    + govRowHtml('Plan tier', esc(PLAN.tier), 'bound')
+function govPlanBlock() {
+  return (
+    '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--purple-2)">' +
+    tx('↑ Your plan · what it entitles you to') +
+    '</div>' +
+    govRowHtml('Plan tier', esc(PLAN.tier), 'bound') +
     /* The subscription period. `free` is the honest class: not yours to set, and not set by anyone else either. */
-    + govRowHtml('Valid from', PLAN.validFrom ? esc(PLAN.validFrom) : 'no subscription record yet', PLAN.validFrom ? 'bound' : 'free')
-    + govRowHtml('Valid to',   PLAN.validTo   ? esc(PLAN.validTo)   : 'no subscription record yet', PLAN.validTo   ? 'bound' : 'free')
-    + govRowHtml('Entities allowed', String(PLAN.entities), 'bound')
-    + govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound')
-    + govRowHtml('Networks allowed', String(PLAN.networks), 'bound')
-    + '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS <span class=arw>→</span></b></div>';
+    govRowHtml('Valid from', PLAN.validFrom ? esc(PLAN.validFrom) : 'no subscription record yet', PLAN.validFrom ? 'bound' : 'free') +
+    govRowHtml('Valid to', PLAN.validTo ? esc(PLAN.validTo) : 'no subscription record yet', PLAN.validTo ? 'bound' : 'free') +
+    govRowHtml('Entities allowed', String(PLAN.entities), 'bound') +
+    govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound') +
+    govRowHtml('Networks allowed', String(PLAN.networks), 'bound') +
+    '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS <span class=arw>→</span></b></div>'
+  );
 }
-function govCodeStandards(){
-  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+function govCodeStandards() {
+  var M = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   var s = M && M.STD_SCHEMES;
   if (!s || !s.length) return 'no scheme registry loaded';
   return s.slice(0, 4).join(' · ') + (s.length > 4 ? ' +' + (s.length - 4) : '') + ' — see Definitions';
@@ -3004,35 +4164,44 @@ function govCodeStandards(){
  * The layer caps; the profile chooses. Localisation is not a separate concern from governance — it is one of
  * the seven layers, and the settings screen is its chooser.
  */
-function govLocaleLang(){
+function govLocaleLang() {
   try {
-    var m = { en:'English', hi:'हिन्दी (Hindi)', ta:'தமிழ் (Tamil)', fr:'Français (French)' };
+    var m = { en: 'English', hi: 'हिन्दी (Hindi)', ta: 'தமிழ் (Tamil)', fr: 'Français (French)' };
     var l = CBLocale.lang();
     return (m[l] || l) + ' · interface';
-  } catch(_){ return '—'; }
+  } catch (_) {
+    return '—';
+  }
 }
-function govLocaleFormat(){
-  try { return CBLocale.locale() + ' · ' + CBLocale.money(1234567890.5, 'INR') + ' · ' + CBLocale.date(Date.now()); }
-  catch(_){ return '—'; }
+function govLocaleFormat() {
+  try {
+    return CBLocale.locale() + ' · ' + CBLocale.money(1234567890.5, 'INR') + ' · ' + CBLocale.date(Date.now());
+  } catch (_) {
+    return '—';
+  }
 }
-function govLocaleDir(){
-  try { return CBLocale.dir() === 'rtl' ? 'right to left (RTL)' : 'left to right (LTR)'; } catch(_){ return '—'; }
+function govLocaleDir() {
+  try {
+    return CBLocale.dir() === 'rtl' ? 'right to left (RTL)' : 'left to right (LTR)';
+  } catch (_) {
+    return '—';
+  }
 }
-function govUnits(){
+function govUnits() {
   /* Reads the MODEL now, not the wizard — so it resolves whether or not the catalogue capability has been opened.
      Reaching across to another lazily-loaded capability's global was the reason this row used to read empty. */
-  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  var M = typeof CBCatalogue !== 'undefined' ? CBCatalogue : null;
   var u = M && M.UNITS;
   if (!u || !u.length) return 'no units registry loaded';
   return u.length + ' declared · ' + u.slice(0, 5).join(' · ') + (u.length > 5 ? ' +' + (u.length - 5) : '');
 }
-function govAssignModel(){
+function govAssignModel() {
   var s = UI._set && UI._set.s;
   if (!s) return 'open Settings → Work to read it';
   return (s.assignment_model || 'both') + ' — saved, not yet enforced';
 }
 /* The cap's own explanation, when the server gives one. Shown under the row rather than truncated into it. */
-function govCatVisWhy(){
+function govCatVisWhy() {
   var cap = (UI._me && UI._me.visibility_cap) || {};
   return cap.reason ? String(cap.reason) : '';
 }
@@ -3044,66 +4213,141 @@ function govCatVisWhy(){
  * value two controls, which is the duplication being removed, only worse: two places to change it and no way to
  * tell which one last won. One owner, many viewers.
  */
-function govOwnedElsewhere(where, nav){ return '<button class="govref-go" onclick="'+nav+'">change in '+esc(where)+' <span class=arw>→</span></button>'; }
+function govOwnedElsewhere(where, nav) {
+  return '<button class="govref-go" onclick="' + nav + '">change in ' + esc(where) + ' <span class=arw>→</span></button>';
+}
 /* A declared value may be a literal or a function of live state — resolve it the same way everywhere, so no
    consumer has to know which kind it got. */
-function govVal(v){ try { return (typeof v === 'function') ? v() : v; } catch(_){ return '—'; } }
-function govDecl(label){
-  for (var i=0; i<GOV.length; i++){
-    var rows = GOV[i].rows || [];
-    for (var j=0; j<rows.length; j++){
-      if (rows[j][0] === label) return { value:govVal(rows[j][1]), klass:rows[j][2], layer:GOV[i].n, layerIndex:i };
+function govVal(v) {
+  try {
+    return typeof v === 'function' ? v() : v;
+  } catch (_) {
+    return '—';
+  }
+}
+function govDecl(label) {
+  for (var index = 0; index < GOV.length; index++) {
+    var rows = GOV[index].rows || [];
+    for (var j = 0; j < rows.length; j++) {
+      if (rows[j][0] === label) return { value: govVal(rows[j][1]), klass: rows[j][2], layer: GOV[index].n, layerIndex: index };
     }
   }
   return null;
 }
 /* Render a declared value read-only, with where it was declared and a way to go there. The consumer screen shows
    the value; it does not own it. */
-function govRefHTML(label){
+function govRefHTML(label) {
   var d = govDecl(label);
-  if (!d) return '<div class="misnote">⚠️ <b>'+esc(label)+'</b> is not set — nothing to show.</div>';
-  return '<div class="govref"><span class="govref-k">'+esc(label)+'</span>'
-    + '<span class="govref-v">'+esc(d.value)+'</span>'
-    + '<button class="govref-go" onclick="govGoTo('+d.layerIndex+')" title="Open the layer that declares this">'
-      + esc(d.layer)+' <span class=arw>→</span></button></div>';
+  if (!d) return '<div class="misnote">⚠️ <b>' + esc(label) + '</b> is not set — nothing to show.</div>';
+  return (
+    '<div class="govref"><span class="govref-k">' +
+    esc(label) +
+    '</span>' +
+    '<span class="govref-v">' +
+    esc(d.value) +
+    '</span>' +
+    '<button class="govref-go" onclick="govGoTo(' +
+    d.layerIndex +
+    ')" title="Open the layer that declares this">' +
+    esc(d.layer) +
+    ' <span class=arw>→</span></button></div>'
+  );
 }
-function govGoTo(i){ UI.govTab=i; UI.setSec='governance'; if(UI.vp==='mob'){ UI.mdetail=true; }
-  renderApp(); if(typeof loadSettings==='function') loadSettings(); }
+function govGoTo(i) {
+  UI.govTab = i;
+  UI.setSec = 'governance';
+  if (UI.vp === 'mob') {
+    UI.mdetail = true;
+  }
+  renderApp();
+  if (typeof loadSettings === 'function') loadSettings();
+}
 
-const GOV=[
-  { n:'1 · Constitution', tag:'platform · top layer', desc:'Platform-wide rules every entity inherits at mint. Set the locale here → it flows down into the boilerplate.', rows:[
-    ['Message max length','unbounded','advisory'],['Max schemas / entity','2','bound'],
-    /* ⚠️ RESOLVED, NOT HARDCODED. This row read a literal 'private (cap)' while the real cap lives on the entity
+const GOV = [
+  {
+    n: '1 · Constitution',
+    tag: 'platform · top layer',
+    desc: 'Platform-wide rules every entity inherits at mint. Set the locale here → it flows down into the boilerplate.',
+    rows: [
+      ['Message max length', 'unbounded', 'advisory'],
+      ['Max schemas / entity', '2', 'bound'],
+      /* ⚠️ RESOLVED, NOT HARDCODED. This row read a literal 'private (cap)' while the real cap lives on the entity
        as `visibility_cap` (server-set, applied by Profile → Storefront, which disables the control and says "set
        by your network operator"). The behaviour was already Model A — the layer caps, Profile chooses within it —
        but this row asserted a value independently, so a network operator lifting the cap would leave Governance
        still saying "private" with nothing to notice. Reads the same source now. */
-    /* ⚠️ THE FUNCTION, NOT ITS RESULT. GOV is a const built once at load, so `govCatVis()` here would evaluate
+      /* ⚠️ THE FUNCTION, NOT ITS RESULT. GOV is a const built once at load, so `govCatVis()` here would evaluate
        before UI._me exists and freeze on "not read yet" forever. A declaration that depends on live state has to
        be resolved at RENDER time — govVal() below unwraps it. */
-    ['Catalogue visibility', govCatVis, 'chosen'],['Attachment types','image, pdf, docx, xlsx, csv, zip','advisory'],
-    ['Attachment max size','10 MB','advisory'] ] },
+      ['Catalogue visibility', govCatVis, 'chosen'],
+      ['Attachment types', 'image, pdf, docx, xlsx, csv, zip', 'advisory'],
+      ['Attachment max size', '10 MB', 'advisory']
+    ]
+  },
   /* ⚠️ THE LOCALISATION ROWS RESOLVE LIVE — see govLocaleLang/Format/Dir above. They read '—' until 2026-08-18:
      the layer declared it governed the locale bundle and could not see it. Chosen in Settings › Localisation,
      which is this layer's chooser, exactly as Profile → Storefront is the chooser for visibility. */
-  { n:'2 · Jurisdiction', tag:'country / legal · localisation', desc:'Country-specific legal & tax frame, and the locale bundle: language, formats and reading direction. Chosen in Settings › Localisation.', rows:[
-    ['Country','—','free'],['Tax regime (GST / VAT)','—','free'],['Legal framework','—','free'],
-    ['Interface language', govLocaleLang, 'chosen'],
-    ['Date / number format', govLocaleFormat, 'chosen'],
-    ['Reading direction', govLocaleDir, 'chosen'],
-    ['Sort order','follows the format locale','free'] ] },
-  { n:'3 · Vertical', tag:'business type', desc:'Defaults for your line of business.', rows:[
-    ['Business vertical','—','free'],['Default units','—','free'],['Vertical currency default','—','free'] ] },
-  { n:'4 · Standards', tag:'codes / units', desc:'Measurement & coding standards.', rows:[
-    ['Units of measure', govUnits, 'free'], ['Code standards (HSN / SKU)', govCodeStandards, 'free'] ] },
-  { n:'5 · Content', tag:'shared assets · versioned', desc:'Shared catalogue / manuals / images published once & carried by reference, not copied.', rows:[
-    ['Shared catalogue / manuals / images','published once · referenced','free'],['Asset reference','asset_id @ version','free'],
-    ['On update','new version; frozen chits keep the old','free'] ] },
-  { n:'6 · ERP', tag:'integration', desc:'System integration adapters.', rows:[
-    ['ERP adapter','—','free'],['Sync mode','—','free'] ] },
-  { n:'7 · Consolidation', tag:'→ boilerplate the entity inherits', desc:'The 7 layers consolidate into the Boilerplate every entity copies at registration; the locale below is inherited from Constitution.', rows:[
-    ['Assignment model', govAssignModel, 'entity'],
-    ['Default max tasks / co-assist','10 · entity setting','entity'] ] }   /* ⚠️ the SECOND site of this label — the reason TERM exists */
+  {
+    n: '2 · Jurisdiction',
+    tag: 'country / legal · localisation',
+    desc: 'Country-specific legal & tax frame, and the locale bundle: language, formats and reading direction. Chosen in Settings › Localisation.',
+    rows: [
+      ['Country', '—', 'free'],
+      ['Tax regime (GST / VAT)', '—', 'free'],
+      ['Legal framework', '—', 'free'],
+      ['Interface language', govLocaleLang, 'chosen'],
+      ['Date / number format', govLocaleFormat, 'chosen'],
+      ['Reading direction', govLocaleDir, 'chosen'],
+      ['Sort order', 'follows the format locale', 'free']
+    ]
+  },
+  {
+    n: '3 · Vertical',
+    tag: 'business type',
+    desc: 'Defaults for your line of business.',
+    rows: [
+      ['Business vertical', '—', 'free'],
+      ['Default units', '—', 'free'],
+      ['Vertical currency default', '—', 'free']
+    ]
+  },
+  {
+    n: '4 · Standards',
+    tag: 'codes / units',
+    desc: 'Measurement & coding standards.',
+    rows: [
+      ['Units of measure', govUnits, 'free'],
+      ['Code standards (HSN / SKU)', govCodeStandards, 'free']
+    ]
+  },
+  {
+    n: '5 · Content',
+    tag: 'shared assets · versioned',
+    desc: 'Shared catalogue / manuals / images published once & carried by reference, not copied.',
+    rows: [
+      ['Shared catalogue / manuals / images', 'published once · referenced', 'free'],
+      ['Asset reference', 'asset_id @ version', 'free'],
+      ['On update', 'new version; frozen chits keep the old', 'free']
+    ]
+  },
+  {
+    n: '6 · ERP',
+    tag: 'integration',
+    desc: 'System integration adapters.',
+    rows: [
+      ['ERP adapter', '—', 'free'],
+      ['Sync mode', '—', 'free']
+    ]
+  },
+  {
+    n: '7 · Consolidation',
+    tag: '→ boilerplate the entity inherits',
+    desc: 'The 7 layers consolidate into the Boilerplate every entity copies at registration; the locale below is inherited from Constitution.',
+    rows: [
+      ['Assignment model', govAssignModel, 'entity'],
+      ['Default max tasks / co-assist', '10 · entity setting', 'entity']
+    ]
+  } /* ⚠️ the SECOND site of this label — the reason TERM exists */
 ];
 /**
  * ⚠️ REWRITTEN FOR A READER, NOT A DEVELOPER. These were 9.5px Space Mono chips reading "advisory · mutable",
@@ -3114,15 +4358,15 @@ const GOV=[
  * Now: plain words, at the floor, and only where they add something the GROUP HEADING has not already said.
  */
 var GOV_KLASS = {
-  advisory:  { say:'you can change this',        tone:'yours' },
-  entity:    { say:'you set this',               tone:'yours' },
-  bound_set: { say:'choose from a fixed list',   tone:'yours' },
-  chosen:    { say:'you can only make it stricter', tone:'yours' },
-  bound:     { say:'locked by the layer above',  tone:'fixed' },
-  inherited: { say:'inherited, frozen',          tone:'fixed' },
-  protected: { say:'set by the platform',        tone:'fixed' },
-  metered:   { say:'counted for licensing',      tone:'fixed' },
-  free:      { say:'not set yet',                tone:'none'  }
+  advisory: { say: 'you can change this', tone: 'yours' },
+  entity: { say: 'you set this', tone: 'yours' },
+  bound_set: { say: 'choose from a fixed list', tone: 'yours' },
+  chosen: { say: 'you can only make it stricter', tone: 'yours' },
+  bound: { say: 'locked by the layer above', tone: 'fixed' },
+  inherited: { say: 'inherited, frozen', tone: 'fixed' },
+  protected: { say: 'set by the platform', tone: 'fixed' },
+  metered: { say: 'counted for licensing', tone: 'fixed' },
+  free: { say: 'not set yet', tone: 'none' }
 };
 /**
  * ⚠️ PERMISSION IS NOT THE SAME AS "THERE IS A CONTROL HERE", and conflating them made this screen lie.
@@ -3135,9 +4379,14 @@ var GOV_KLASS = {
  *
  * So the wording now depends on whether the row actually offers a control. Same governance, honest sentence.
  */
-function govKlass(k, hasControl){
+function govKlass(k, hasControl) {
   var x = GOV_KLASS[k] || GOV_KLASS.free;
-  var col = x.tone==='yours' ? ['var(--ok-tint)','var(--ok-2)'] : x.tone==='fixed' ? ['var(--blue-tint-bg)','var(--blue-2)'] : ['var(--warn-tint)','var(--grey-2)'];
+  var col =
+    x.tone === 'yours'
+      ? ['var(--ok-tint)', 'var(--ok-2)']
+      : x.tone === 'fixed'
+        ? ['var(--blue-tint-bg)', 'var(--blue-2)']
+        : ['var(--warn-tint)', 'var(--grey-2)'];
   var say = x.say;
   /**
    * ⚠️ `=== false`, NOT `!hasControl`. Only a caller that has actually LOOKED may claim there is no control.
@@ -3146,11 +4395,11 @@ function govKlass(k, hasControl){
    * The same mistake as the rows this caveat was written to fix, pointing the other way: an assertion made from
    * absence of information rather than from evidence.
    */
-  if (x.tone === 'yours' && hasControl === false){
-    col = ['var(--warn-tint)','var(--warn-3)'];
+  if (x.tone === 'yours' && hasControl === false) {
+    col = ['var(--warn-tint)', 'var(--warn-3)'];
     say = say + ' — no control here yet';
   }
-  return '<span class="govtag" style="background:'+col[0]+';color:'+col[1]+'">'+say+'</span>';
+  return '<span class="govtag" style="background:' + col[0] + ';color:' + col[1] + '">' + say + '</span>';
 }
 /**
  * ⚠️ TIMEZONES / LANGS / GOVSET / govSetVal / govSel WERE HERE AND ARE DELETED (2026-08-16).
@@ -3177,7 +4426,7 @@ function govKlass(k, hasControl){
  * ⚠️ The comment repeats within a group, and that is fine HERE — a column of like values is scannable, where
  * the same text as loose chips after each value was noise. The layout is what changed the answer.
  */
-function govRowHtml(label,valHtml,klass){
+function govRowHtml(label, valHtml, klass) {
   /* Does this row actually offer a way to change it? Read from the rendered value, so the comment can never drift
      from the control — add a select to a row and its wording corrects itself. */
   var hasControl = /<select|<input|<textarea|<button/i.test(String(valHtml));
@@ -3188,39 +4437,73 @@ function govRowHtml(label,valHtml,klass){
    * built after this map was written, so their governance rows declared a rule and offered no way to reach the
    * control — the exact "left hunting for the control" this map exists to prevent, reintroduced by growth.
    */
-  var OWNER = { 'Catalogue visibility': ['Profile → Storefront', "navTo('profile');UI.profSec='storefront'"],
-                'Assignment model':     ['Settings → Work',      "setSetSec('work')"],
-                'Interface language':   ['Settings → Localisation', "setSetSec('locale')"],
-                'Date / number format': ['Settings → Localisation', "setSetSec('locale')"],
-                'Reading direction':    ['Settings → Localisation', "setSetSec('locale')"],
-                /* CAT-162: units and code standards are read here, set in Catalogue setup (Definitions) — one place per setting */
-                'Units of measure':     ['Catalogue setup → Definitions', "navTo('catsetup')"],
-                'Code standards (HSN / SKU)': ['Catalogue setup → Definitions', "navTo('catsetup')"] };
+  var OWNER = {
+    'Catalogue visibility': ['Profile → Storefront', "navTo('profile');UI.profSec='storefront'"],
+    'Assignment model': ['Settings → Work', "setSetSec('work')"],
+    'Interface language': ['Settings → Localisation', "setSetSec('locale')"],
+    'Date / number format': ['Settings → Localisation', "setSetSec('locale')"],
+    'Reading direction': ['Settings → Localisation', "setSetSec('locale')"],
+    /* CAT-162: units and code standards are read here, set in Catalogue setup (Definitions) — one place per setting */
+    'Units of measure': ['Catalogue setup → Definitions', "navTo('catsetup')"],
+    'Code standards (HSN / SKU)': ['Catalogue setup → Definitions', "navTo('catsetup')"]
+  };
   var own = OWNER[label];
-  var why = (label === 'Catalogue visibility') ? govCatVisWhy() : '';
-  return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
-    + '<span class="govrow-v">'+valHtml
-      /* ⚠️ THROUGH THE HELPER, not inlined. govOwnedElsewhere() was written for exactly this, with the
+  var why = label === 'Catalogue visibility' ? govCatVisWhy() : '';
+  return (
+    '<div class="govrow"><span class="govrow-k">' +
+    esc(label) +
+    '</span>' +
+    '<span class="govrow-v">' +
+    valHtml +
+    /* ⚠️ THROUGH THE HELPER, not inlined. govOwnedElsewhere() was written for exactly this, with the
          "one owner, many viewers" reasoning attached to it, and then this line duplicated its body — so the
          helper sat uncalled while its explanation applied to code somewhere else. Found by the dead-surface
          scan, which reported it as unreachable when it was really un-adopted. */
-      + (own ? ' ' + govOwnedElsewhere(own[0], own[1]) : '')
-    + '</span>'
-    + '<span class="govrow-c">'+govKlass(klass, hasControl || !!own)+'</span></div>'
-    + (why ? '<div class="govwhy">'+esc(why)+'</div>' : '');
+    (own ? ' ' + govOwnedElsewhere(own[0], own[1]) : '') +
+    '</span>' +
+    '<span class="govrow-c">' +
+    govKlass(klass, hasControl || !!own) +
+    '</span></div>' +
+    (why ? '<div class="govwhy">' + esc(why) + '</div>' : '')
+  );
 }
 /* In Settings the layers are rail rows, so the RAIL has to repaint too (to move the highlight); elsewhere the
    in-place swap is still right. renderApp covers both — Settings paints from cache, so it is not a re-fetch. */
 /* Open state is per-group and sticks while you move between layers — you are usually asking the same question
    ("what can I change?") of each one in turn, and re-collapsing on every switch would fight that. */
-function govToggleGrp(k){ UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
+function govToggleGrp(k) {
+  UI.govOpen = UI.govOpen || { yours: true, fixed: false, none: false };
   UI.govOpen[k] = !UI.govOpen[k];
-  var h=document.getElementById('govblock'); if(h) h.outerHTML=govLayersBlock(); }
-function govSetTab(i){ UI.govTab=i;
-  if (UI.nav === 'settings'){ if(UI.vp==='mob'){ UI.mdetail=true; } renderApp(); if(typeof loadSettings==='function') loadSettings(); return; }
-  var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
-function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
-  var tabs=GOV.map(function(g,i){ return '<button class="composebtn'+(i===t?' on':'')+'" style="font-size:var(--fs-1);padding:5px 9px" onclick="govSetTab('+i+')">'+esc(g.n)+'</button>'; }).join('');
+  var node = document.getElementById('govblock');
+  if (node) node.outerHTML = govLayersBlock();
+}
+function govSetTab(i) {
+  UI.govTab = i;
+  if (UI.nav === 'settings') {
+    if (UI.vp === 'mob') {
+      UI.mdetail = true;
+    }
+    renderApp();
+    if (typeof loadSettings === 'function') loadSettings();
+    return;
+  }
+  var node = document.getElementById('govblock');
+  if (node) node.outerHTML = govLayersBlock();
+}
+function govLayersBlock() {
+  var t = UI.govTab || 0;
+  var L = GOV[t];
+  var tabs = GOV.map(function (item, index) {
+    return (
+      '<button class="composebtn' +
+      (index === t ? ' on' : '') +
+      '" style="font-size:var(--fs-1);padding:5px 9px" onclick="govSetTab(' +
+      index +
+      ')">' +
+      esc(item.n) +
+      '</button>'
+    );
+  }).join('');
   /**
    * ⭐ SPLIT BY WHO CONTROLS IT (Athi, 2026-08-16: *"we have to see how we can split between what is static and
    * what can change"*). The distinction already existed — it was encoded in a nine-value class on every row — but
@@ -3230,10 +4513,12 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    * ⚠️ THREE GROUPS, NOT TWO. `free` means "not configured yet, lands here later" — it is neither yours to change
    * nor fixed above you, and filing it under either would be a claim the data does not make.
    */
-  var YOURS = { advisory:1, entity:1, bound_set:1, chosen:1 };   // set it, pick from a set, or tighten it
-  var FIXED = { bound:1, inherited:1, protected:1, metered:1 };  // decided upstream or by the platform
-  var _rows=[];
-  var push=function(label,val,klass){ _rows.push([label,val,klass]); };
+  var YOURS = { advisory: 1, entity: 1, bound_set: 1, chosen: 1 }; // set it, pick from a set, or tighten it
+  var FIXED = { bound: 1, inherited: 1, protected: 1, metered: 1 }; // decided upstream or by the platform
+  var _rows = [];
+  var push = function (label, val, klass) {
+    _rows.push([label, val, klass]);
+  };
   /**
    * ⚠️ THE THREE DECOY CONTROLS ARE GONE. Currency, Timezone and Language were working `<select>`s that persisted
    * to localStorage (`cb_govset`) and were read by NOTHING except this screen. Money renders from
@@ -3245,7 +4530,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    * Now: Currency shows the entity's ACTUAL value, read-only because no write path exists (adding a select before
    * the endpoint would recreate exactly the problem). Timezone and Language say plainly that nothing sets them.
    */
-  if(t===0){
+  if (t === 0) {
     /**
      * ⚠️⚠️ TWO SOURCES FOR ONE FACT, AND THEY CAN DISAGREE. This row read the ENTITY RECORD
      * (identities.currency_code, via myCur()). Profile › Your rights reads the RESOLVED governance
@@ -3256,12 +4541,18 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
      * entity record is what this business set. Where they differ that is worth SEEING, not hiding behind
      * whichever screen you happened to open, so the row shows both and names them.
      */
-    (function(){
+    (function () {
       var _rec = moneyCode();
       var _gov = (UI._me && UI._me.governance && UI._me.governance.basics && UI._me.governance.basics.currency) || '';
       if (_gov && _rec && String(_gov).toUpperCase() !== String(_rec).toUpperCase()) {
-        push('Currency', esc(_gov) + ' <span style="color:var(--warn-2)">— governed. Your entity record says '
-          + esc(_rec) + ', which is what your prices are stamped with.</span>', 'bound');
+        push(
+          'Currency',
+          esc(_gov) +
+            ' <span style="color:var(--warn-2)">— governed. Your entity record says ' +
+            esc(_rec) +
+            ', which is what your prices are stamped with.</span>',
+          'bound'
+        );
       } else {
         push('Currency', esc(_gov || _rec) + ' — from your installation, matched by your entity record', 'bound');
       }
@@ -3271,12 +4562,14 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   }
   /* ⚠️ The Consolidation view inherited from GOVSET — the localStorage decoy — so it echoed a value nothing
      used. It reads the same real sources the Constitution row does, and says so where there is none. */
-  else if(t===6){
+  else if (t === 6) {
     push('Currency (inherited)', esc(moneyCode() || '-') + ' · from your entity record', 'inherited');
     push('Timezone (inherited)', 'nothing to inherit — not stored', 'free');
     push('Language (inherited)', 'nothing to inherit — not stored', 'free');
   }
-  L.rows.forEach(function(r){ push(r[0],esc(govVal(r[1])),r[2]); });   // literal or live — govVal resolves both
+  L.rows.forEach(function (item) {
+    push(item[0], esc(govVal(item[1])), item[2]);
+  }); // literal or live — govVal resolves both
   /**
    * ⭐ COLLAPSIBLE GROUPS (Athi, 2026-08-16). A layer can run to nineteen rows, and the three groups are not
    * equally interesting: "Yours to set" is the reason you opened the screen, "Fixed above you" is reference, and
@@ -3286,32 +4579,89 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    * ⚠️ The count sits in the HEADER, not inside the panel, so a shut group still tells you how much is in it.
    * A collapsed section that hides even its own size is just missing information.
    */
-  var grp=function(key,title,note,pick){
-    var hit=_rows.filter(function(r){ return pick(r[2]); });
-    if(!hit.length) return '';
-    UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
+  var grp = function (key, title, note, pick) {
+    var list = _rows.filter(function (item) {
+      return pick(item[2]);
+    });
+    if (!list.length) return '';
+    UI.govOpen = UI.govOpen || { yours: true, fixed: false, none: false };
     var open = !!UI.govOpen[key];
-    return '<div class="govgrp'+(open?' open':'')+'">'
-      + '<button class="govgrp-h" data-testid="gov-grp-'+key+'" onclick="govToggleGrp(\''+key+'\')" aria-expanded="'+open+'">'
-        + '<span class="govchev">'+(open?'▾':'<span class=arw>▸</span>')+'</span><span class="govgrp-t">'+title+'</span>'
-        + '<span class="govcount">'+hit.length+'</span><span class="govnote">'+note+'</span></button>'
-      + (open ? ('<div class="govgrp-b">'+hit.map(function(r){ return govRowHtml(r[0],r[1],r[2]); }).join('')+'</div>') : '')
-      + '</div>';
+    return (
+      '<div class="govgrp' +
+      (open ? ' open' : '') +
+      '">' +
+      '<button class="govgrp-h" data-testid="gov-grp-' +
+      key +
+      '" onclick="govToggleGrp(\'' +
+      key +
+      '\')" aria-expanded="' +
+      open +
+      '">' +
+      '<span class="govchev">' +
+      (open ? '▾' : '<span class=arw>▸</span>') +
+      '</span><span class="govgrp-t">' +
+      title +
+      '</span>' +
+      '<span class="govcount">' +
+      list.length +
+      '</span><span class="govnote">' +
+      note +
+      '</span></button>' +
+      (open
+        ? '<div class="govgrp-b">' +
+          list
+            .map(function (item) {
+              return govRowHtml(item[0], item[1], item[2]);
+            })
+            .join('') +
+          '</div>'
+        : '') +
+      '</div>'
+    );
   };
-  var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
-    + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
-    + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
-  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--grey-2)">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
-  var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
+  var rowsHtml =
+    grp('yours', 'Yours to set', 'you control these', function (k) {
+      return YOURS[k];
+    }) +
+    grp('fixed', 'Fixed above you', 'inherited or platform-bound', function (k) {
+      return FIXED[k];
+    }) +
+    grp('none', 'Not configured yet', 'arrives from the layer later', function (k) {
+      return !YOURS[k] && !FIXED[k];
+    });
+  if (t === 0) {
+    rowsHtml +=
+      '<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--grey-2)">' +
+      tx('⚙ Installation · platform-only (master)') +
+      '</div>' +
+      govRowHtml('Cloud provider', 'AWS', 'protected') +
+      govRowHtml('Region', 'ap-south-1', 'protected') +
+      govRowHtml('Storage adapter', 'db <span class=arw>→</span> S3 / Azure / GCS', 'protected') +
+      govRowHtml('Storage bucket', 'chitbridge-prod-•••', 'protected') +
+      govRowHtml('Secrets / keys', '•••• managed (never exposed)', 'protected') +
+      govRowHtml('System health', '● healthy', 'protected');
+    rowsHtml += govPlanBlock();
+  }
+  var inRail = UI.nav === 'settings'; /* rail carries the layers in Settings; chips elsewhere */
   /* ⭐ THE INSTRUCTION STAYS, THE MECHANISM MOVES. "boilerplate every entity copies at registration" and
      "freeze onto each chit at send" are how it works; a person on this tab is choosing a value. */
-  var foot=(t===0)?('Change a value above, then open <b>tab 7 · Consolidation</b>. <i>⏳ ' + tx('Pending') + '</i>'
-      + specNote('governance.inherit', 'Values are inherited by the entity from the layer that set them.'))
-    :(t===6)?('<i>⏳ ' + tx('Pending') + '</i>'
-      + specNote('governance.boilerplate', 'These come down into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send.'))/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
+  var foot =
+    t === 0
+      ? 'Change a value above, then open <b>tab 7 · Consolidation</b>. <i>⏳ ' +
+        tx('Pending') +
+        '</i>' +
+        specNote('governance.inherit', 'Values are inherited by the entity from the layer that set them.')
+      : t === 6
+        ? '<i>⏳ ' +
+          tx('Pending') +
+          '</i>' +
+          specNote(
+            'governance.boilerplate',
+            'These come down into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send.'
+          ) /* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
    not on the page is the stale-copy bug in its purest form: correct once, then quietly describing nothing. */
-:'';
+        : '';
   /* ⚠️ "stub · perception" was internal shorthand on a user-facing screen. The honest part of it — that these are
      not enforced yet — is worth keeping and is now said in words a reader can act on. */
   /**
@@ -3324,14 +4674,22 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    */
   /* The layer's own name, ordinal and all — "1 · Constitution" — is the heading. The separate "Layer 1 of 7" line
      said the same thing a second way; the rail shows all seven, so position is already visible there. */
-  return '<div id="govblock" style="'+_CARD+'">'
-    + (inRail?'':'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div>')
-    + '<div class="govtitle">'+esc(L.n)+'</div>'
-    + '<div class="govsub">'+esc(L.tag)
-      + ' <span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">shown, not enforced yet</span></div>'
-    + '<div class="govdesc">'+esc(L.desc)+'</div>'
-    + rowsHtml
-    + (foot ? ('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">'+foot+'</div>') : '')
+  return (
+    '<div id="govblock" style="' +
+    _CARD +
+    '">' +
+    (inRail ? '' : '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">' + tabs + '</div>') +
+    '<div class="govtitle">' +
+    esc(L.n) +
+    '</div>' +
+    '<div class="govsub">' +
+    esc(L.tag) +
+    ' <span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">shown, not enforced yet</span></div>' +
+    '<div class="govdesc">' +
+    esc(L.desc) +
+    '</div>' +
+    rowsHtml +
+    (foot ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">' + foot + '</div>' : '') +
     /**
      * ⭐⭐ GOVERNANCE SETS THE ENVELOPE; SETTINGS PICKS A POINT INSIDE IT — and this footer is where that
      * relationship stops being implicit.
@@ -3348,15 +4706,23 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
      * screens write (govLocaleLang/Format/Dir), so the two can never disagree; these links close the loop by
      * sending a reader from the rule to the place the choice is made.
      */
-    + '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line);font-size:var(--fs-1);line-height:1.6">'
-    +   '<div style="color:var(--grey);margin-bottom:5px"><b>This sets the limits. You choose inside them:</b></div>'
-    +   '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' + "'locale'" + ');return false" style="color:var(--blue);font-weight:600">Localisation <span class=arw>→</span></a>'
-    +   '<span style="color:var(--grey)"> language, formats, time zone, working days &nbsp;·&nbsp; </span>'
-    +   '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' + "'appearance'" + ');return false" style="color:var(--blue);font-weight:600">Appearance <span class=arw>→</span></a>'
-    +   '<span style="color:var(--grey)"> theme, text size, motion &nbsp;·&nbsp; </span>'
-    +   '<a href="#" data-testid="gov-to-standards" onclick="setSetSec(' + "'standards'" + ');return false" style="color:var(--blue);font-weight:600">Standards <span class=arw>→</span></a>'
-    +   '<span style="color:var(--grey)"> the authority every rule above derives from, and what each one removes</span>'
-    + '</div>' + '</div>';
+    '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line);font-size:var(--fs-1);line-height:1.6">' +
+    '<div style="color:var(--grey);margin-bottom:5px"><b>This sets the limits. You choose inside them:</b></div>' +
+    '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' +
+    "'locale'" +
+    ');return false" style="color:var(--blue);font-weight:600">Localisation <span class=arw>→</span></a>' +
+    '<span style="color:var(--grey)"> language, formats, time zone, working days &nbsp;·&nbsp; </span>' +
+    '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' +
+    "'appearance'" +
+    ');return false" style="color:var(--blue);font-weight:600">Appearance <span class=arw>→</span></a>' +
+    '<span style="color:var(--grey)"> theme, text size, motion &nbsp;·&nbsp; </span>' +
+    '<a href="#" data-testid="gov-to-standards" onclick="setSetSec(' +
+    "'standards'" +
+    ');return false" style="color:var(--blue);font-weight:600">Standards <span class=arw>→</span></a>' +
+    '<span style="color:var(--grey)"> the authority every rule above derives from, and what each one removes</span>' +
+    '</div>' +
+    '</div>'
+  );
 }
 /* ═══ SETTINGS ══════════════════════════════════════════════════════════════════════════════════════════════
  * Eight cards in one scroll — governance layers, assignment, auto-assign, attachment policy, AI, channels, policy
@@ -3369,20 +4735,20 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
 var SET_SECS = [
   /* ⭐ FIRST, because it is the most basic thing anyone can say about their shop, and because two of the
      four columns it writes decide whether anybody can find them at all. See ACCESS-MATRIX.md. */
-  { key:'business',   name:'Your business', q:'What you do, and who can see it' },
-  { key:'work',       name:'Work',        q:'How tasks reach people' },
-  { key:'policy',     name:'Policy',      q:'Rules on your records' },
-  { key:'channels',   name:'Channels',    q:'Where work arrives from' },
-  { key:'integrations', name:'Integrations', q:'Keys other systems call with' },
-  { key:'governance', name:'Governance layers', q:'Where your rights come from' },
+  { key: 'business', name: 'Your business', q: 'What you do, and who can see it' },
+  { key: 'work', name: 'Work', q: 'How tasks reach people' },
+  { key: 'policy', name: 'Policy', q: 'Rules on your records' },
+  { key: 'channels', name: 'Channels', q: 'Where work arrives from' },
+  { key: 'integrations', name: 'Integrations', q: 'Keys other systems call with' },
+  { key: 'governance', name: 'Governance layers', q: 'Where your rights come from' },
   /* ⚠️ NAMED FOR WHAT IT RENDERS. I called this "Blueprints · Shared catalogue designs" when splitting Settings
      into sections, taking the name from the function (blueprintSettingsHTML) without reading its output — it
      renders WORK_PATTERNS, "Governed by work pattern". Nothing about catalogue blueprints appears on it. */
-  { key:'blueprints', name:'Work patterns',  q:'How each action is governed' },
+  { key: 'blueprints', name: 'Work patterns', q: 'How each action is governed' },
   /* ⚠️ ITS OWN SECTION, NOT A ROW UNDER SOMETHING ELSE. Localisation is eight decisions — language, direction,
      numerals, numbers, money, dates, times and sort order — and they were scattered across five files and three
      hardcoded 'en-IN' pins. A concern that large filed under "Work" is a concern nobody finds. */
-  { key:'locale',     name:'Localisation', q:'Language, formats and direction' },
+  { key: 'locale', name: 'Localisation', q: 'Language, formats and direction' },
   /**
    * ⭐ APPEARANCE IS ITS OWN SECTION, because it outgrew the avatar dropdown the moment the themes started
    * explaining themselves. Fifteen themes, five of which carry an audience and a standard, do not fit a menu
@@ -3392,7 +4758,7 @@ var SET_SECS = [
    * this?" — and splitting them across a menu and a settings page means someone who needs two of the three
    * finds one of them. Athi: *"we can see how to bring the look and feel as a separate unit."*
    */
-  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion', moved:'the avatar menu' },
+  { key: 'appearance', name: 'Appearance', q: 'Theme, text size and motion', moved: 'the avatar menu' },
   /**
    * ⭐⭐ STANDARDS — what the PLATFORM follows, what YOU follow, and what your TRADE follows.
    *
@@ -3405,20 +4771,27 @@ var SET_SECS = [
    * those three into one tick is worse than no page, because someone will rely on it. Anything not in force
    * says what is missing, in its own row.
    */
-  { key:'standards',  name:'Standards',    q:'What you follow, and the register', moved:'standards.html' }
+  { key: 'standards', name: 'Standards', q: 'What you follow, and the register', moved: 'standards.html' }
 ];
-function setSec(){ return UI.setSec || 'work'; }
+function setSec() {
+  return UI.setSec || 'work';
+}
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
 /**
  * ⚠️ SWITCHING SECTIONS IS AN EXIT, and it discards whatever was typed. Three Settings sections need a Save
  * (Work, Auto-assign, Documents); clicking another rail row threw that away silently, which is the exact loss
  * Athi asked to be warned about on Profile. Same guard, same three outcomes, same functions.
  */
-function setSetSec(k){
-  setGuard(function(){ UI.setSec = k; renderApp(); _capShowDetail(); loadSettings(); });
+function setSetSec(k) {
+  setGuard(function () {
+    UI.setSec = k;
+    renderApp();
+    _capShowDetail();
+    loadSettings();
+  });
 }
 
-function settingsScreen(){
+function settingsScreen() {
   /**
    * ⭐ THE 7 GOVERNANCE LAYERS ARE RAIL ROWS (Athi, 2026-08-16: *"under governance you can bring all 7 layers and
    * each can bring its own data right side"*). They were a strip of chips INSIDE the right pane — a second
@@ -3428,70 +4801,160 @@ function settingsScreen(){
    * They appear only while Governance is the open section, so the rail stays five rows when it is not.
    */
   /* P0: a section marked `moved` has its customer home (frozen, not deleted; setSetSec('standards') still opens it) — no rail row. */
-  var rail = SET_SECS.filter(function(s){ return !s.moved; }).map(function(s){
-    var row = '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
-    if (s.key === 'integrations' && setSec() === 'integrations'){
-      row += INT_TABS.map(function(t){
-        return '<div class="row misrow sub' + (intTab() === t.key ? ' sel' : '') + '" data-testid="int-tab-' + t.key + '" onclick="intSetTab(\'' + t.key + '\')">'
-          + '<div class="main2"><div class="l1"><span class="code">' + esc(tx(t.n)) + '</span></div>'
-          + '<div class="l2">' + esc(tx(t.q)) + '</div></div></div>';
-      }).join('');
-    }
-    if (s.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
-      row += GOV.map(function(g, i){
-        var on = ((UI.govTab || 0) === i);
-        return '<div class="row misrow sub' + (on ? ' sel' : '') + '" data-testid="gov-layer-' + i + '" onclick="govSetTab(' + i + ')">'
-          + '<div class="main2"><div class="l1"><span class="code">' + esc(g.n) + '</span></div>'
-          + '<div class="l2">' + esc(g.tag || '') + '</div></div></div>';
-      }).join('');
-    }
-    return row;
-  }).join('');
-  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">' + tx('⚙️ Settings') + '</span></div></div>'
-    + '<div class="rows" id="set_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="setbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  var rail = SET_SECS.filter(function (item) {
+    return !item.moved;
+  })
+    .map(function (item) {
+      var row =
+        '<div class="row misrow' +
+        (setSec() === item.key ? ' sel' : '') +
+        '" data-testid="set-sec-' +
+        item.key +
+        '" onclick="setSetSec(\'' +
+        item.key +
+        '\')">' +
+        '<div class="main2"><div class="l1"><span class="code">' +
+        esc(item.name) +
+        '</span></div><div class="l2">' +
+        esc(item.q) +
+        '</div></div></div>';
+      if (item.key === 'integrations' && setSec() === 'integrations') {
+        row += INT_TABS.map(function (entry) {
+          return (
+            '<div class="row misrow sub' +
+            (intTab() === entry.key ? ' sel' : '') +
+            '" data-testid="int-tab-' +
+            entry.key +
+            '" onclick="intSetTab(\'' +
+            entry.key +
+            '\')">' +
+            '<div class="main2"><div class="l1"><span class="code">' +
+            esc(tx(entry.n)) +
+            '</span></div>' +
+            '<div class="l2">' +
+            esc(tx(entry.q)) +
+            '</div></div></div>'
+          );
+        }).join('');
+      }
+      if (item.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined') {
+        row += GOV.map(function (entry, index) {
+          var on = (UI.govTab || 0) === index;
+          return (
+            '<div class="row misrow sub' +
+            (on ? ' sel' : '') +
+            '" data-testid="gov-layer-' +
+            index +
+            '" onclick="govSetTab(' +
+            index +
+            ')">' +
+            '<div class="main2"><div class="l1"><span class="code">' +
+            esc(entry.n) +
+            '</span></div>' +
+            '<div class="l2">' +
+            esc(entry.tag || '') +
+            '</div></div></div>'
+          );
+        }).join('');
+      }
+      return row;
+    })
+    .join('');
+  var list =
+    '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">' +
+    tx('⚙️ Settings') +
+    '</span></div></div>' +
+    '<div class="rows" id="set_rail">' +
+    rail +
+    '</div></div>';
+  var detail =
+    '<div class="detail" id="detailpane"><div id="setbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
+  var divider =
+    '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   if (UI.misLw == null) UI.misLw = 320;
   var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
-  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+  return (
+    '<div class="panel' +
+    (UI.vp === 'mob' && UI.mdetail ? ' showdetail' : '') +
+    '" id="panel" style="--lw:' +
+    lw +
+    'px;--lh:' +
+    (UI.lh || 300) +
+    'px">' +
+    list +
+    divider +
+    detail +
+    '</div>'
+  );
 }
 // AI assists settings = a REDIRECT to Co-assists (the enable + rule live WITH the actor, next to Human/IoT/ERP —
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
-function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
-  /**
-   * ⭐ SIMPLIFIED, NOT MERELY SHORTENED. Athi, 2026-08-20: *"this text has to be simplified, no one understands
-   * rung floor etc."*
-   *
-   * Three pieces of jargon carried the old sentence — "the human gate", "bounded by the rung floor (you can
-   * only tighten)", and "a lit AI slot is an actor" — and none of them is needed to understand what the button
-   * underneath does. The two facts a reader actually needs are that an AI assist is governed like a person,
-   * and that what it does is disputable.
-   *
-   * ⚠️ "actor" WENT TOO. It is the database's word (identity_type='actor'), never the product's — TERM.coassist
-   * is what a person reads.
-   */
-  +'<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.55">An AI assist is a ' + TERM.coassist + '. '
-  +'It works to a rule you set, and everything it does is a chit you can dispute.</div>'
-  +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'; }
-function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}
-  if(typeof navTo==='function') navTo('coassists'); else if(typeof go==='function') go('#/coassists'); }
+function aiSettingsCard() {
+  return (
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>' +
+    /**
+     * ⭐ SIMPLIFIED, NOT MERELY SHORTENED. Athi, 2026-08-20: *"this text has to be simplified, no one understands
+     * rung floor etc."*
+     *
+     * Three pieces of jargon carried the old sentence — "the human gate", "bounded by the rung floor (you can
+     * only tighten)", and "a lit AI slot is an actor" — and none of them is needed to understand what the button
+     * underneath does. The two facts a reader actually needs are that an AI assist is governed like a person,
+     * and that what it does is disputable.
+     *
+     * ⚠️ "actor" WENT TOO. It is the database's word (identity_type='actor'), never the product's — TERM.coassist
+     * is what a person reads.
+     */
+    '<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.55">An AI assist is a ' +
+    TERM.coassist +
+    '. ' +
+    'It works to a rule you set, and everything it does is a chit you can dispute.</div>' +
+    '<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'
+  );
+}
+function goCoassistAI() {
+  try {
+    if (typeof UI !== 'undefined') UI.acTypeF = 'ai';
+  } catch (_) {}
+  if (typeof navTo === 'function') navTo('coassists');
+  else if (typeof go === 'function') go('#/coassists');
+}
 /**
  * ⚠️ FETCH ONCE, PAINT MANY. Switching section is not a reason to re-read settings and the actor list — and until
  * this cache existed every switch fired both again, so the pane sat on its spinner while a round trip completed
  * for data it already had.
  */
-async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
-  if (UI._set){ return (function(){ var r = paintSettings(UI._set.s, UI._set.daOpts); setSnapshot(); return r; })(); }
-  try{ const [s,_acts]=await Promise.all([api("getSettings").then(r=>r||{}), api("actors").then(r=>(r||[]).map(mapApiActor)).catch(()=>[])]);
-    const _assign=_acts.filter(a=>hatAssignable(a.hat));
-    const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(a=>`<option value="${a.id}"${s.default_assignee_actor_id===a.id?' selected':''}>${esc(a.name)}</option>`).join('');
-    UI._set={ s:s, daOpts:_daOpts };
+async function loadSettings() {
+  const node = document.getElementById('setbody');
+  if (!node) return;
+  if (UI._set) {
+    return (function () {
+      var r = paintSettings(UI._set.s, UI._set.daOpts);
+      setSnapshot();
+      return r;
+    })();
+  }
+  try {
+    const [s, _acts] = await Promise.all([
+      api('getSettings').then((reply) => reply || {}),
+      api('actors')
+        .then((reply) => (reply || []).map(mapApiActor))
+        .catch(() => [])
+    ]);
+    const _assign = _acts.filter((item) => hatAssignable(item.hat));
+    const _daOpts =
+      '<option value="">— none (leave in pool) —</option>' +
+      _assign.map((item) => `<option value="${item.id}"${s.default_assignee_actor_id === item.id ? ' selected' : ''}>${esc(item.name)}</option>`).join('');
+    UI._set = { s: s, daOpts: _daOpts };
     paintSettings(s, _daOpts);
     /* ⚠️ THE BASELINE IS TAKEN AFTER EVERY PAINT — one captured at load goes stale the first time a
        section changes, and every later edit then reads as clean. Same rule as Profile. */
     setSnapshot();
-  }catch(e){ h.innerHTML=scrErr(e); } }
+  } catch (e) {
+    node.innerHTML = scrErr(e);
+  }
+}
 /**
  * ⭐⭐ THE LOCALISATION SCREEN.
  *
@@ -3526,136 +4989,255 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
  * ⚠️ THE STATUS COLUMN WAS THE WHOLE POINT of the old four tabs and it moved with them: In force / Partly / Planned, and what is
  * missing in the row itself, are on the page. Do not rebuild a second list here.
  */
-function standardsSettingsHTML(){
-  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+function standardsSettingsHTML() {
+  var card = function (inner) {
+    return '<div style="' + _CARD + '">' + inner + '</div>';
+  };
   /* ⚠️ READ FROM THE LIVE SETTINGS, never a stored copy. A page describing what you follow that had drifted
    from what you actually set would be the one place a wrong answer is guaranteed to be believed. */
-  var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+  var DAY = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
   var r = CBLocale.regionInfo();
   var th = (typeof THEMES !== 'undefined' && THEMES[typeof themeGet === 'function' ? themeGet() : 'cream']) || {};
   var mine = [
-    ['Region',        r ? r.name : 'Not set'],
-    ['Languages',     CBLocale.langs().map(function(x, i){ return (i + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
+    ['Region', r ? r.name : 'Not set'],
+    [
+      'Languages',
+      CBLocale.langs()
+        .map(function (x, index) {
+          return index + 1 + '. ' + CBLocale.langName(x);
+        })
+        .join('  ·  ')
+    ],
     ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
-    ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
-    ['Numbers',       esc(CBLocale.number(123456789.5))],
-    ['Money',         esc(fmtMoney(123456.5, moneyCode()))],
-    ['Date',          esc(CBLocale.date(Date.now()))],
-    ['Time',          esc(CBLocale.time(Date.now()))],
-    ['Time zone',     esc(CBLocale.timezone())],
-    ['Working days',  CBLocale.workdays().map(function(d){ return DAY[d]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
-    ['Theme',         esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
-    ['Text size',     (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function')
-                        ? (function(){ var m = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0]; return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—'; })() : '—'],
-    ['Motion',        (typeof motionPref === 'function') ? ({ auto:'Follow my device', reduce:'Reduced', full:'Always animate' }[motionPref()] || '—') : '—']
+    ['Locale tag', '<code>' + esc(CBLocale.tag()) + '</code>'],
+    ['Numbers', esc(CBLocale.number(123456789.5))],
+    ['Money', esc(fmtMoney(123456.5, moneyCode()))],
+    ['Date', esc(CBLocale.date(Date.now()))],
+    ['Time', esc(CBLocale.time(Date.now()))],
+    ['Time zone', esc(CBLocale.timezone())],
+    [
+      'Working days',
+      CBLocale.workdays()
+        .map(function (item) {
+          return DAY[item];
+        })
+        .join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')
+    ],
+    ['Theme', esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
+    [
+      'Text size',
+      typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function'
+        ? (function () {
+            var m = TEXT_SIZES.filter(function (x) {
+              return x[0] === textSize();
+            })[0];
+            return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—';
+          })()
+        : '—'
+    ],
+    ['Motion', typeof motionPref === 'function' ? { auto: 'Follow my device', reduce: 'Reduced', full: 'Always animate' }[motionPref()] || '—' : '—']
   ];
-  var body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-      + 'The conventions <b>your</b> screens follow. Every line here is a live reading of your own settings, '
-      + 'not a stored copy — change one in Localisation or Appearance and this moves with it.'
-      + '</div>')
-    + card('<div data-testid="std-yours">' + mine.map(function(x){
-        return '<div style="display:flex;gap:10px;padding:5px 0;border-block-start:1px solid var(--line);font-size:var(--fs-2)">'
-          + '<span style="min-width:112px;color:var(--grey)">' + x[0] + '</span>'
-          + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + x[1] + '</b></div>';
-      }).join('') + '</div>')
-    + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
-      + '⚠️ <b>' + tx('None of this changes what anyone wrote.') + '</b> These settings govern the chrome and the way figures '
-      + 'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the '
-      + 'language and the currency their author used — a chit is a shared record, and one that read differently '
-      + 'to each party would not be a record.</div>');
+  var body =
+    card(
+      '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">' +
+        'The conventions <b>your</b> screens follow. Every line here is a live reading of your own settings, ' +
+        'not a stored copy — change one in Localisation or Appearance and this moves with it.' +
+        '</div>'
+    ) +
+    card(
+      '<div data-testid="std-yours">' +
+        mine
+          .map(function (x) {
+            return (
+              '<div style="display:flex;gap:10px;padding:5px 0;border-block-start:1px solid var(--line);font-size:var(--fs-2)">' +
+              '<span style="min-width:112px;color:var(--grey)">' +
+              x[0] +
+              '</span>' +
+              '<b style="color:var(--on-card);min-width:0;word-break:break-word">' +
+              x[1] +
+              '</b></div>'
+            );
+          })
+          .join('') +
+        '</div>'
+    ) +
+    card(
+      '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">' +
+        '⚠️ <b>' +
+        tx('None of this changes what anyone wrote.') +
+        '</b> These settings govern the chrome and the way figures ' +
+        'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the ' +
+        'language and the currency their author used — a chit is a shared record, and one that read differently ' +
+        'to each party would not be a record.</div>'
+    );
 
   /* the door to the page: its counts are the register's own (stdCounts), never typed here */
   var n = stdCounts();
-  var door = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-      + '<b>' + tx('What we follow, and what is still missing') + '</b> — the laws and standards, each with its status, '
-      + 'now has its own page.'
-      + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)" data-testid="std-door-counts">'
-      + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · <b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned.</div>'
-      + '<div style="margin-top:9px"><a href="/standards.html" data-testid="std-open-page" style="color:var(--blue);font-weight:700">' + tx('Open Standards') + ' <span class=arw>→</span></a></div>'
-      + '</div>');
+  var door = card(
+    '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">' +
+      '<b>' +
+      tx('What we follow, and what is still missing') +
+      '</b> — the laws and standards, each with its status, ' +
+      'now has its own page.' +
+      '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)" data-testid="std-door-counts">' +
+      '<b style="color:var(--ok-2)">' +
+      n.live +
+      ' in force</b> · <b style="color:var(--warn-2)">' +
+      n.part +
+      ' partly</b> · ' +
+      n.plan +
+      ' planned.</div>' +
+      '<div style="margin-top:9px"><a href="/standards.html" data-testid="std-open-page" style="color:var(--blue);font-weight:700">' +
+      tx('Open Standards') +
+      ' <span class=arw>→</span></a></div>' +
+      '</div>'
+  );
 
   return _misHead('Standards', '') + door + body;
 }
 
-function appearanceSettingsHTML(){
-  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+function appearanceSettingsHTML() {
+  var card = function (inner) {
+    return '<div style="' + _CARD + '">' + inner + '</div>';
+  };
   /* ⚠️ Q IS DEFINED HERE, in the SHIPPED function — not in the script that generated it. This is the fourth
      time a generator-only constant has been emitted into shipped code (BT, then Q twice, now this). It always
      PARSES, because a bare identifier is valid syntax, so node --check and the guard both pass and it only
      dies when the line finally runs — reaching Athi as "the buttons do nothing". A generator that writes code
      must be tested by RUNNING its output, which is what caught this one before it shipped. */
   var Q = String.fromCharCode(39);
-  var cur = (typeof textSize === 'function') ? textSize() : 'm';
-  var mot = (typeof motionPref === 'function') ? motionPref() : 'auto';
+  var cur = typeof textSize === 'function' ? textSize() : 'm';
+  var mot = typeof motionPref === 'function' ? motionPref() : 'auto';
 
-  var pill = function(id, on, click, label, sub){
-    return '<button type="button" data-testid="' + id + '" onclick="' + click + '"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + ' style="flex:1;min-width:0;cursor:pointer;font:inherit;text-align:center;padding:7px 6px;border-radius:9px;'
-      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
-      + '<span style="display:block;font-weight:' + (on ? 800 : 600) + ';font-size:var(--fs-2)">' + esc(label) + '</span>'
-      + (sub ? '<span style="display:block;font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</span>' : '')
-      + '</button>';
+  var pill = function (id, on, click, label, sub) {
+    return (
+      '<button type="button" data-testid="' +
+      id +
+      '" onclick="' +
+      click +
+      '"' +
+      ' aria-pressed="' +
+      (on ? 'true' : 'false') +
+      '"' +
+      ' style="flex:1;min-width:0;cursor:pointer;font:inherit;text-align:center;padding:7px 6px;border-radius:9px;' +
+      'border:2px solid ' +
+      (on ? 'var(--blue)' : 'var(--line)') +
+      ';' +
+      'background:' +
+      (on ? 'var(--blue-tint-bg)' : 'var(--card)') +
+      ';color:var(--on-card)">' +
+      '<span style="display:block;font-weight:' +
+      (on ? 800 : 600) +
+      ';font-size:var(--fs-2)">' +
+      esc(label) +
+      '</span>' +
+      (sub ? '<span style="display:block;font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</span>' : '') +
+      '</button>'
+    );
   };
 
-  var sizes = (typeof TEXT_SIZES !== 'undefined' ? TEXT_SIZES : []).map(function(x){
-    return pill('ap-fs-' + x[0], cur === x[0], 'textSizeSet(' + Q + x[0] + Q + ')', x[1], Math.round(x[2] * 100) + '%');
-  }).join('');
+  var sizes = (typeof TEXT_SIZES !== 'undefined' ? TEXT_SIZES : [])
+    .map(function (x) {
+      return pill('ap-fs-' + x[0], cur === x[0], 'textSizeSet(' + Q + x[0] + Q + ')', x[1], Math.round(x[2] * 100) + '%');
+    })
+    .join('');
 
   var motions = [
-    ['auto',   'Follow my device', 'the usual'],
-    ['reduce', 'Reduce motion',    'no animation'],
-    ['full',   'Always animate',   'override']
-  ].map(function(x){
-    return pill('ap-motion-' + x[0], mot === x[0], 'motionSet(' + Q + x[0] + Q + ')', x[1], x[2]);
-  }).join('');
+    ['auto', 'Follow my device', 'the usual'],
+    ['reduce', 'Reduce motion', 'no animation'],
+    ['full', 'Always animate', 'override']
+  ]
+    .map(function (x) {
+      return pill('ap-motion-' + x[0], mot === x[0], 'motionSet(' + Q + x[0] + Q + ')', x[1], x[2]);
+    })
+    .join('');
 
-  return _misHead('Appearance', '')
-
-    + card('<label class="fl">' + tx('Theme') + '</label>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 8px">'
-        + 'Fifteen themes. The five under <b>' + tx('Designed for specific needs') + '</b> each name who they are for and which '
-        + 'standard they meet — and those levels are computed by a test, so a card claiming 7:1 has been checked.'
-        + '</div>'
-        + (typeof themePaletteHTML === 'function' ? themePaletteHTML() : ''))
-
-    + card('<label class="fl">' + tx('Text size') + '</label>'
-        + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + sizes + '</div>'
+  return (
+    _misHead('Appearance', '') +
+    card(
+      '<label class="fl">' +
+        tx('Theme') +
+        '</label>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 8px">' +
+        'Fifteen themes. The five under <b>' +
+        tx('Designed for specific needs') +
+        '</b> each name who they are for and which ' +
+        'standard they meet — and those levels are computed by a test, so a card claiming 7:1 has been checked.' +
+        '</div>' +
+        (typeof themePaletteHTML === 'function' ? themePaletteHTML() : '')
+    ) +
+    card(
+      '<label class="fl">' +
+        tx('Text size') +
+        '</label>' +
+        '<div style="display:flex;gap:7px;margin:5px 0 7px">' +
+        sizes +
+        '</div>' +
         /* ⚠️ THE SENTENCE THAT WAS HERE IS GONE — "the whole type scale moves together, so headings stay
            larger than captions" is a description of the implementation, and the line BELOW it demonstrates
            the same thing by being rendered at the chosen size. A demonstration outlives an explanation:
            this text is showing at 115% is checkable by looking at it. Athi: *"if some adjustment needed in
            settings, please do so."* */
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
-        + '<b>This text is showing at ' + esc(String(Math.round(((TEXT_SIZES.filter(function(x){return x[0]===cur;})[0]||[0,0,1])[2]) * 100))) + '%.</b>'
-        + '</div>')
-
-    + card('<label class="fl">' + tx('Motion') + '</label>'
-        + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + motions + '</div>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
-        + '⚠️ <b>' + tx('Movement is a health setting, not a matter of polish.') + '</b> Animation triggers migraine, nausea and '
-        + 'vertigo for people with vestibular disorders. <b>' + tx('Follow my device') + '</b> honours the setting you already '
-        + 'made in Windows, macOS, iOS or Android — you should not have to ask us separately.'
-        + '</div>')
-
+        '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">' +
+        '<b>This text is showing at ' +
+        esc(
+          String(
+            Math.round(
+              (TEXT_SIZES.filter(function (x) {
+                return x[0] === cur;
+              })[0] || [0, 0, 1])[2] * 100
+            )
+          )
+        ) +
+        '%.</b>' +
+        '</div>'
+    ) +
+    card(
+      '<label class="fl">' +
+        tx('Motion') +
+        '</label>' +
+        '<div style="display:flex;gap:7px;margin:5px 0 7px">' +
+        motions +
+        '</div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">' +
+        '⚠️ <b>' +
+        tx('Movement is a health setting, not a matter of polish.') +
+        '</b> Animation triggers migraine, nausea and ' +
+        'vertigo for people with vestibular disorders. <b>' +
+        tx('Follow my device') +
+        '</b> honours the setting you already ' +
+        'made in Windows, macOS, iOS or Android — you should not have to ask us separately.' +
+        '</div>'
+    ) +
     /* ⚠️ WHAT IS NOT HERE YET, SAID PLAINLY. A settings page that silently lacks the control someone came for
        wastes their time twice: once looking, once wondering whether they missed it. */
-    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' + tx('Not here yet') + '</div>'
-        + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + '<b>' + tx('Typeface') + '</b> — a dyslexia-friendly face (Atkinson Hyperlegible, free, from the Braille Institute) needs '
-        + 'the font shipped with the app before it can be offered.<br>'
-        + '<b>' + tx('Colour-vision preview') + '</b> — showing you what deuteranopia does to your own screen, rather than asking '
-        + 'you to take the Colour Vision theme on trust.<br>'
-        + '<b>' + tx('These follow you, not this browser.') + '</b> Your theme, text size and motion are stored against you '
-        + '(b166), so signing in on another device brings them with you — because someone who needs High Contrast '
-        + 'needs it everywhere, not only where they first found it.'
-        + '</div>')
-
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">'
-    +   'Standards: <b>WCAG 2.2</b> (1.4.3 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · '
-    +   'colour-blind palette <b>' + tx('Okabe–Ito') + '</b>.'
-    + '</div>';
+    card(
+      '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' +
+        tx('Not here yet') +
+        '</div>' +
+        '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">' +
+        '<b>' +
+        tx('Typeface') +
+        '</b> — a dyslexia-friendly face (Atkinson Hyperlegible, free, from the Braille Institute) needs ' +
+        'the font shipped with the app before it can be offered.<br>' +
+        '<b>' +
+        tx('Colour-vision preview') +
+        '</b> — showing you what deuteranopia does to your own screen, rather than asking ' +
+        'you to take the Colour Vision theme on trust.<br>' +
+        '<b>' +
+        tx('These follow you, not this browser.') +
+        '</b> Your theme, text size and motion are stored against you ' +
+        '(b166), so signing in on another device brings them with you — because someone who needs High Contrast ' +
+        'needs it everywhere, not only where they first found it.' +
+        '</div>'
+    ) +
+    '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">' +
+    'Standards: <b>WCAG 2.2</b> (1.4.3 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · ' +
+    'colour-blind palette <b>' +
+    tx('Okabe–Ito') +
+    '</b>.' +
+    '</div>'
+  );
 }
 
 /**
@@ -3664,10 +5246,30 @@ function appearanceSettingsHTML(){
  * picker and the Profile note start disagreeing about what a code is called: two tables, one meaning, no force
  * keeping them equal. The pickers still read these; nothing else changed for them.
  */
-var NUMERALS = [['', 'Follow the format'], ['latn', 'Western'], ['arab', 'Eastern Arabic'], ['deva', 'Devanagari']];
-var HOURS    = [['', 'Follow the format'], ['h12', '12-hour'], ['h23', '24-hour']];
-var CALS     = [['', 'Follow the format'], ['gregory', 'Gregorian'], ['islamic-umalqura', 'Hijri (Umm al-Qura)'], ['indian', 'Indian national'], ['buddhist', 'Buddhist']];
-var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'], ['sat', 'Saturday']];
+var NUMERALS = [
+  ['', 'Follow the format'],
+  ['latn', 'Western'],
+  ['arab', 'Eastern Arabic'],
+  ['deva', 'Devanagari']
+];
+var HOURS = [
+  ['', 'Follow the format'],
+  ['h12', '12-hour'],
+  ['h23', '24-hour']
+];
+var CALS = [
+  ['', 'Follow the format'],
+  ['gregory', 'Gregorian'],
+  ['islamic-umalqura', 'Hijri (Umm al-Qura)'],
+  ['indian', 'Indian national'],
+  ['buddhist', 'Buddhist']
+];
+var WEEK = [
+  ['', 'Follow the format'],
+  ['mon', 'Monday'],
+  ['sun', 'Sunday'],
+  ['sat', 'Saturday']
+];
 
 /**
  * The short name for a stored code — 'deva' → 'Devanagari'. The tables carry a sample after an em dash
@@ -3692,25 +5294,25 @@ var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'],
  * so a sample can never promise something the setting does not deliver.
  */
 function _locSample(kind, code) {
-  if (!code) return '';                       /* 'Follow the format' has no effect of its own to show */
+  if (!code) return ''; /* 'Follow the format' has no effect of its own to show */
   var base = String((CBLocale.tag ? CBLocale.tag() : 'en') || 'en').split('-u-')[0];
-  var now  = new Date();
+  var now = new Date();
   try {
     if (kind === 'nu') return new Intl.NumberFormat(base + '-u-nu-' + code).format(12345678.9);
-    if (kind === 'hc') return new Intl.DateTimeFormat(base + '-u-hc-' + code,
-      { hour: '2-digit', minute: '2-digit' }).format(now);
-    if (kind === 'ca') return new Intl.DateTimeFormat(base + '-u-ca-' + code,
-      { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
-  } catch (_) { /* ⚠️ an engine that does not know this extension shows the NAME alone rather than a wrong
-                    sample — silence is honest here, a guess is not. */ }
+    if (kind === 'hc') return new Intl.DateTimeFormat(base + '-u-hc-' + code, { hour: '2-digit', minute: '2-digit' }).format(now);
+    if (kind === 'ca') return new Intl.DateTimeFormat(base + '-u-ca-' + code, { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+  } catch (_) {
+    /* ⚠️ an engine that does not know this extension shows the NAME alone rather than a wrong
+                    sample — silence is honest here, a guess is not. */
+  }
   return '';
 }
 
 /** [code, name] → [code, 'name — sample'], for the pickers. One place, so every list gets the same treatment. */
 function _locWithSamples(table, kind) {
-  return table.map(function (t) {
-    var s = _locSample(kind, t[0]);
-    return [t[0], s ? t[1] + ' — ' + s : t[1]];
+  return table.map(function (item) {
+    var s = _locSample(kind, item[0]);
+    return [item[0], s ? item[1] + ' — ' + s : item[1]];
   });
 }
 
@@ -3739,13 +5341,24 @@ function _locGoto(testid, sec) {
     /* ⚠️ A BOUNDED RETRY, NOT A LOOP. The settings body paints asynchronously; if the element never appears
        (a control removed, a testid renamed) this must give up quietly rather than spin — the reader is already
        on the right screen, which is the fallback the old links offered. */
-    if (!el) { if (++tries < 20) requestAnimationFrame(find); return; }
+    if (!el) {
+      if (++tries < 20) requestAnimationFrame(find);
+      return;
+    }
     requestAnimationFrame(function () {
-      try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { el.scrollIntoView(); }
-      var prev = el.style.outline, prevOff = el.style.outlineOffset;
+      try {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch (_) {
+        el.scrollIntoView();
+      }
+      var prev = el.style.outline,
+        prevOff = el.style.outlineOffset;
       el.style.outline = '2px solid var(--blue)';
       el.style.outlineOffset = '3px';
-      setTimeout(function () { el.style.outline = prev; el.style.outlineOffset = prevOff; }, 2200);
+      setTimeout(function () {
+        el.style.outline = prev;
+        el.style.outlineOffset = prevOff;
+      }, 2200);
     });
   };
   requestAnimationFrame(find);
@@ -3761,22 +5374,34 @@ function _locGoto(testid, sec) {
  */
 function _locLink(label, testid, sec) {
   var Q = String.fromCharCode(39);
-  return ' <a href="#" title="' + esc(label) + '" onclick="return _locGoto(' + Q + testid + Q
-    + (sec ? ', ' + Q + sec + Q : '') + ')" style="color:var(--blue);text-decoration:none;font-size:var(--fs-1)">→</a>';
+  return (
+    ' <a href="#" title="' +
+    esc(label) +
+    '" onclick="return _locGoto(' +
+    Q +
+    testid +
+    Q +
+    (sec ? ', ' + Q + sec + Q : '') +
+    ')" style="color:var(--blue);text-decoration:none;font-size:var(--fs-1)">→</a>'
+  );
 }
 
 /** Are the reader's languages simply what their region hands out, untouched? See the note at its call site. */
 function _langsAreDefault() {
   try {
     var mine = (CBLocale.langs && CBLocale.langs()) || [];
-    var ri   = CBLocale.regionInfo && CBLocale.regionInfo();
+    var ri = CBLocale.regionInfo && CBLocale.regionInfo();
     if (!ri || !ri.langs || !ri.langs.length) return !mine.length;
     return mine.length === 1 && mine[0] === ri.langs[0];
-  } catch (_) { return true; }   /* ⚠️ unknown → 'Default'. Claiming a choice nobody made is the worse error. */
+  } catch (_) {
+    return true;
+  } /* ⚠️ unknown → 'Default'. Claiming a choice nobody made is the worse error. */
 }
 
 function _locName(table, code) {
-  var row = table.find(function (t) { return t[0] === code; });
+  var row = table.find(function (item) {
+    return item[0] === code;
+  });
   return row ? String(row[1]).split(' — ')[0] : code;
 }
 
@@ -3816,32 +5441,37 @@ function _locName(table, code) {
  * business a currency it does not use and write it on the next save.
  */
 function _curPicker(cur) {
-  var all  = (CBLocale.currencies && CBLocale.currencies()) || null;
+  var all = (CBLocale.currencies && CBLocale.currencies()) || null;
   var mine = (CBLocale.regionCurrencies && CBLocale.regionCurrencies()) || [];
-  var top  = mine.slice();
-  if (cur && top.indexOf(cur) < 0) top.unshift(cur);        /* what you use is never buried */
-  var rest = (all || []).filter(function (c) { return top.indexOf(c) < 0; });
-  if (!all) rest = [];                                      /* cannot enumerate → offer what we know, say nothing false */
+  var top = mine.slice();
+  if (cur && top.indexOf(cur) < 0) top.unshift(cur); /* what you use is never buried */
+  var rest = (all || []).filter(function (item) {
+    return top.indexOf(item) < 0;
+  });
+  if (!all) rest = []; /* cannot enumerate → offer what we know, say nothing false */
 
   var label = function (c) {
     var nm = (CBLocale.currencyName && CBLocale.currencyName(c)) || c;
     return esc(c) + (nm && nm !== c ? ' — ' + esc(nm) : '');
   };
   var optsOf = function (list) {
-    return list.map(function (c) {
-      return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + label(c) + '</option>';
-    }).join('');
+    return list
+      .map(function (item) {
+        return '<option value="' + esc(item) + '"' + (item === cur ? ' selected' : '') + '>' + label(item) + '</option>';
+      })
+      .join('');
   };
 
   /* ⚠️ regionInfo(), NOT a regionName() I remembered writing — it does not exist. locale.js exposes the
      whole record; the name is a field on it. */
   var _ri = CBLocale.regionInfo && CBLocale.regionInfo();
   var regionName = (_ri && _ri.name) || CBLocale.region();
-  return '<select class="inp" id="loc-cur" style="margin:0;max-width:320px" onchange="localeSetCurrency(this.value)">'
-    + (top.length ? '<optgroup label="' + esc(regionName ? tx('Used in') + ' ' + regionName : tx('In use')) + '">'
-                    + optsOf(top) + '</optgroup>' : '')
-    + (rest.length ? '<optgroup label="' + esc(tx('All currencies')) + '">' + optsOf(rest) + '</optgroup>' : '')
-    + '</select>';
+  return (
+    '<select class="inp" id="loc-cur" style="margin:0;max-width:320px" onchange="localeSetCurrency(this.value)">' +
+    (top.length ? '<optgroup label="' + esc(regionName ? tx('Used in') + ' ' + regionName : tx('In use')) + '">' + optsOf(top) + '</optgroup>' : '') +
+    (rest.length ? '<optgroup label="' + esc(tx('All currencies')) + '">' + optsOf(rest) + '</optgroup>' : '') +
+    '</select>'
+  );
 }
 
 /**
@@ -3857,32 +5487,42 @@ async function localeSetCurrency(code) {
        with {method} is a shape this codebase does not have. */
     await api('saveProfile', { body: { currency_code: want } });
     if (typeof SESSION !== 'undefined' && SESSION) SESSION.currency = want;
-    UI._me = null; loadProfile();                       /* re-read, exactly as saveProfile does */
+    UI._me = null;
+    loadProfile(); /* re-read, exactly as saveProfile does */
     toast(txf('Prices are now written in {cur}', { cur: want }));
   } catch (err) {
     /* ⚠️ PUT THE OLD VALUE BACK ON THE SCREEN. A <select> that keeps showing the refused choice tells the
        reader it was accepted. */
     toast((err && err.message) || tx('That currency could not be set.'), 'err');
-    UI._me = null; loadProfile();
+    UI._me = null;
+    loadProfile();
   }
 }
 
 function _locPendingBar() {
-  var st = UI._locStage || [];
-  if (!st.length) return '';
+  var list = UI._locStage || [];
+  if (!list.length) return '';
   var Q = String.fromCharCode(39);
   var rowOf = function (o) {
     /* ⚠️ THE VALUE AS THE PICKER SHOWS IT, not the raw code. 'ca=indian' is the thing Athi could not read;
        repeating it in the confirmation would repeat the problem at the moment it matters most. */
     var v = o.args[o.args.length - 1];
-    var shown = Array.isArray(v) ? (v.length ? v.join(', ') : tx('follow the region'))
-      : (o.fn === 'setExt'
-          ? (_locName(o.args[0] === 'nu' ? NUMERALS : o.args[0] === 'hc' ? HOURS : o.args[0] === 'ca' ? CALS : WEEK, v)
-             + (_locSample(o.args[0], v) ? ' — ' + _locSample(o.args[0], v) : ''))
-          : (v || tx('follow the region')));
-    return '<div style="display:flex;gap:8px;padding:2px 0">'
-      + '<b style="min-width:132px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">'
-      + esc(o.what) + '</b><div style="flex:1;min-width:0">' + esc(shown) + '</div></div>';
+    var shown = Array.isArray(v)
+      ? v.length
+        ? v.join(', ')
+        : tx('follow the region')
+      : o.fn === 'setExt'
+        ? _locName(o.args[0] === 'nu' ? NUMERALS : o.args[0] === 'hc' ? HOURS : o.args[0] === 'ca' ? CALS : WEEK, v) +
+          (_locSample(o.args[0], v) ? ' — ' + _locSample(o.args[0], v) : '')
+        : v || tx('follow the region');
+    return (
+      '<div style="display:flex;gap:8px;padding:2px 0">' +
+      '<b style="min-width:132px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' +
+      esc(o.what) +
+      '</b><div style="flex:1;min-width:0">' +
+      esc(shown) +
+      '</div></div>'
+    );
   };
   /* ⚠️ A SURFACE MUST NAME ITS TEXT COLOUR. guard-static flagged this: painting a background and letting
      the text inherit means the two themes can disagree — warn-tint is light in both, so dark-mode inherited
@@ -3896,31 +5536,43 @@ function _locPendingBar() {
      ⭐ THE UNSAVED-CHANGES BAR WAS THE ONE THING THAT COULD NOT AFFORD TO FAIL SILENTLY: staging still
      worked, so a change was held and never announced. You would edit a setting, see no confirmation, and
      reasonably conclude it had saved. A comment moved one line up is the whole fix. */
-  return '<div data-testid="loc-pending" style="position:sticky;top:0;z-index:3;background:var(--warn-tint);color:var(--on-card);'
-    + 'border:1px solid var(--warn-2);border-radius:9px;padding:10px 12px;margin-bottom:10px">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
-    + 'color:var(--on-card);margin-bottom:6px">' + tx('Not saved yet') + '</div>'
-    + st.map(rowOf).join('')
-    + '<div style="display:flex;gap:8px;margin-top:9px">'
-    +   '<button class="btn pri" style="flex:1" onclick="localeSaveLocale()">' + tx('Save') + '</button>'
-    +   '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' + tx('Discard') + '</button>'
-    + '</div></div>';
+  return (
+    '<div data-testid="loc-pending" style="position:sticky;top:0;z-index:3;background:var(--warn-tint);color:var(--on-card);' +
+    'border:1px solid var(--warn-2);border-radius:9px;padding:10px 12px;margin-bottom:10px">' +
+    '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;' +
+    'color:var(--on-card);margin-bottom:6px">' +
+    tx('Not saved yet') +
+    '</div>' +
+    list.map(rowOf).join('') +
+    '<div style="display:flex;gap:8px;margin-top:9px">' +
+    '<button class="btn pri" style="flex:1" onclick="localeSaveLocale()">' +
+    tx('Save') +
+    '</button>' +
+    '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' +
+    tx('Discard') +
+    '</button>' +
+    '</div></div>'
+  );
 }
 
-function localeSettingsHTML(){
+function localeSettingsHTML() {
   if (!UI._locStage || !UI._locStage.length) return _localeSettingsBody();
   var snap = CBLocale.snapshot();
   /* ⚠️ QUIETLY — a preview that pushed would sync a value nobody chose, and the rollback would be the only
      part that stayed local. See CBLocale.quietly. */
-  return CBLocale.quietly(function(){
+  return CBLocale.quietly(function () {
     /* ⚠️ THE BAR IS BUILT INSIDE THE PREVIEW, so its sample renders in the pending calendar too — a
        confirmation showing today's date in the OLD calendar would be describing what you are leaving. */
-    try { _locReplay(); return _locPendingBar() + _localeSettingsBody(); }
-    finally { CBLocale.restore(snap); }
+    try {
+      _locReplay();
+      return _locPendingBar() + _localeSettingsBody();
+    } finally {
+      CBLocale.restore(snap);
+    }
   });
 }
 
-function _localeSettingsBody(){
+function _localeSettingsBody() {
   /* ⚠️ THE QUOTE IS BUILT HERE, NOT IN THE SCRIPT THAT WROTE THIS FILE. Third time: BT, then Q in the palette,
      now Q again. A generator-only constant emitted into shipped code PARSES fine and dies at render. The only
      check that catches it is running the function — which is what caught this one, before it shipped. */
@@ -3941,52 +5593,96 @@ function _localeSettingsBody(){
     ['ja-JP', 'Japan — 123,456,789.50']
   ];
 
-  var cur = CBLocale.getExt('locale');   /* CU3: the layer's own read, not a second one of its storage */
-  var sel = function(id, list, val, fn){
-    return '<select class="inp" data-testid="' + id + '" onchange="' + fn + '(this.value)">'
+  var cur = CBLocale.getExt('locale'); /* CU3: the layer's own read, not a second one of its storage */
+  var sel = function (id, list, val, fn) {
+    return (
+      '<select class="inp" data-testid="' +
+      id +
+      '" onchange="' +
+      fn +
+      '(this.value)">' +
       /* ⚠️ ESCAPE THE VALUE TOO, not only the label. `o[0]` lands inside `value="…"` — an unescaped quote
          there closes the attribute and everything after it becomes markup. Every list passed here today is
          ours or the engine's, so nothing is exploitable right now; that is precisely why it would survive
          until the day someone passes a list built from stored data, which is one edit away on this screen. */
-      + list.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
-      + '</select>';
+      list
+        .map(function (item) {
+          return '<option value="' + esc(item[0]) + '"' + (val === item[0] ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
+        })
+        .join('') +
+      '</select>'
+    );
   };
-  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
-  var line = function(k, v){
-    return '<div style="display:flex;gap:10px;padding:4px 0;font-size:var(--fs-2)">'
-      + '<span style="min-width:108px;color:var(--grey)">' + k + '</span>'
-      + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + v + '</b></div>';
+  var card = function (inner) {
+    return '<div style="' + _CARD + '">' + inner + '</div>';
+  };
+  var line = function (k, v) {
+    return (
+      '<div style="display:flex;gap:10px;padding:4px 0;font-size:var(--fs-2)">' +
+      '<span style="min-width:108px;color:var(--grey)">' +
+      k +
+      '</span>' +
+      '<b style="color:var(--on-card);min-width:0;word-break:break-word">' +
+      v +
+      '</b></div>'
+    );
   };
   /* Working-day chips. ⚠️ ISO numbering (1 = Monday … 7 = Sunday) throughout, because that is what
      Intl.Locale.weekInfo returns — mixing it with Date.getDay()'s 0 = Sunday moves every due date by one. */
-  var DAYFULL = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+  var DAYFULL = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
   var work = CBLocale.workdays();
-  var dayChips = [1,2,3,4,5,6,7].map(function(n){
-    var on = work.indexOf(n) >= 0;
-    return '<button type="button" data-testid="loc-day-' + n + '" onclick="localeToggleWorkday(' + n + ')"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + ' style="cursor:pointer;font:inherit;border-radius:8px;padding:5px 10px;font-size:var(--fs-2);'
-      + 'border:1px solid ' + (on ? 'var(--ok)' : 'var(--line)') + ';'
-      + 'background:' + (on ? 'var(--ok-tint)' : 'var(--card)') + ';'
-      + 'color:' + (on ? 'var(--ok-2)' : 'var(--grey)') + ';font-weight:' + (on ? 700 : 500) + '">'
-      + DAYFULL[n] + '</button>';
-  }).join('');
+  var dayChips = [1, 2, 3, 4, 5, 6, 7]
+    .map(function (item) {
+      var on = work.indexOf(item) >= 0;
+      return (
+        '<button type="button" data-testid="loc-day-' +
+        item +
+        '" onclick="localeToggleWorkday(' +
+        item +
+        ')"' +
+        ' aria-pressed="' +
+        (on ? 'true' : 'false') +
+        '"' +
+        ' style="cursor:pointer;font:inherit;border-radius:8px;padding:5px 10px;font-size:var(--fs-2);' +
+        'border:1px solid ' +
+        (on ? 'var(--ok)' : 'var(--line)') +
+        ';' +
+        'background:' +
+        (on ? 'var(--ok-tint)' : 'var(--card)') +
+        ';' +
+        'color:' +
+        (on ? 'var(--ok-2)' : 'var(--grey)') +
+        ';font-weight:' +
+        (on ? 700 : 500) +
+        '">' +
+        DAYFULL[item] +
+        '</button>'
+      );
+    })
+    .join('');
 
   /* ⚠️ The zone list comes from the ENGINE (Intl.supportedValuesOf), not a table we would have to edit twice a
      year. Where the engine will not supply one, a short list beats an empty select. */
-  var tzCur = CBLocale.getExt('tz');     /* the override only ('' = the device's zone) — CBLocale.timezone() would fill the default */
+  var tzCur = CBLocale.getExt('tz'); /* the override only ('' = the device's zone) — CBLocale.timezone() would fill the default */
   var tzAll = CBLocale.zones();
   /* ⚠️ esc() — the zone comes from localStorage (and, via b165, from a row another device wrote), so it is not
      ours to trust. Every OTHER render of it on this screen was escaped; this one label was not, which is exactly
      how one gets missed: the value LOOKS like a constant because it usually reads "Asia/Kolkata". */
   var tzOpts = [['', 'Follow this device — ' + esc(CBLocale.timezone())]].concat(
-    (tzAll.length ? tzAll : ['Asia/Kolkata','Asia/Dubai','Asia/Riyadh','Europe/London','Europe/Berlin','America/New_York','UTC'])
-      .map(function(z){ return [z, z.split('/').join(' / ')]; }));
+    (tzAll.length ? tzAll : ['Asia/Kolkata', 'Asia/Dubai', 'Asia/Riyadh', 'Europe/London', 'Europe/Berlin', 'America/New_York', 'UTC']).map(function (item) {
+      return [item, item.split('/').join(' / ')];
+    })
+  );
 
   var myCurCode = moneyCode();
   var wi = CBLocale.weekInfo() || {};
-  var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
-  var weekend = (wi.weekend || []).map(function(x){ return DAY[x] || x; }).join(' + ') || '—';
+  var DAY = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
+  var weekend =
+    (wi.weekend || [])
+      .map(function (x) {
+        return DAY[x] || x;
+      })
+      .join(' + ') || '—';
 
   /**
    * ⭐⭐ PRESENTATION AND LANGUAGE ARE NOW TWO SEPARATE CHOICES, AND THE FIRST BOUNDS THE SECOND.
@@ -4005,117 +5701,187 @@ function _localeSettingsBody(){
   var allowed = CBLocale.allowedLangs();
 
   var regionOpts = [['', 'Not set — show me everything']].concat(
-    Object.keys(CBLocale.REGIONS).map(function (k) {
-      var r = CBLocale.REGIONS[k];
-      return [k, r.name + ' — ' + r.format + ' · ' + r.langs.slice(0, 4).map(function (x) { return CBLocale.langName(x); }).join(', ')
-        + (r.langs.length > 4 ? ' …' : '')];
-    }));
+    Object.keys(CBLocale.REGIONS).map(function (item) {
+      var r = CBLocale.REGIONS[item];
+      return [
+        item,
+        r.name +
+          ' — ' +
+          r.format +
+          ' · ' +
+          r.langs
+            .slice(0, 4)
+            .map(function (x) {
+              return CBLocale.langName(x);
+            })
+            .join(', ') +
+          (r.langs.length > 4 ? ' …' : '')
+      ];
+    })
+  );
 
   /**
    * ⚠️ A LANGUAGE IS A TOGGLE IN AN ORDERED LIST, NOT A RADIO. RFC 4647 calls this a language priority list —
    * "I read Tamil, then English, then Hindi" — and the ORDER is what decides which version of a catalogue a
    * reader is shown when several exist. So each chosen language carries its rank, visibly.
    */
-  var langChips = allowed.map(function (code) {
-    var at = chosen.indexOf(code);
-    var on = at >= 0;
-    var full = !on && chosen.length >= CBLocale.MAX_LANGS;
-    return '<button type="button" data-testid="loc-lang-' + code + '"'
-      + ' onclick="localeToggleLang(' + Q + code + Q + ')"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + (full ? ' disabled' : '')
-      + ' style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';'
-      + 'color:' + (on ? 'var(--blue)' : (full ? 'var(--grey-4)' : 'var(--on-card)')) + ';'
-      + 'opacity:' + (full ? '.5' : '1') + ';cursor:' + (full ? 'not-allowed' : 'pointer') + ';'
-      + 'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' + (on ? 700 : 500) + ';margin:0 6px 6px 0">'
-      + (on ? '<b style="font-family:\'Space Mono\',monospace">' + (at + 1) + '</b> ' : '')
-      + esc(CBLocale.langName(code)) + '</button>';
-  }).join('');
+  var langChips = allowed
+    .map(function (code) {
+      var at = chosen.indexOf(code);
+      var on = at >= 0;
+      var full = !on && chosen.length >= CBLocale.MAX_LANGS;
+      return (
+        '<button type="button" data-testid="loc-lang-' +
+        code +
+        '"' +
+        ' onclick="localeToggleLang(' +
+        Q +
+        code +
+        Q +
+        ')"' +
+        ' aria-pressed="' +
+        (on ? 'true' : 'false') +
+        '"' +
+        (full ? ' disabled' : '') +
+        ' style="border:1px solid ' +
+        (on ? 'var(--blue)' : 'var(--line)') +
+        ';' +
+        'background:' +
+        (on ? 'var(--blue-tint-bg)' : 'var(--card)') +
+        ';' +
+        'color:' +
+        (on ? 'var(--blue)' : full ? 'var(--grey-4)' : 'var(--on-card)') +
+        ';' +
+        'opacity:' +
+        (full ? '.5' : '1') +
+        ';cursor:' +
+        (full ? 'not-allowed' : 'pointer') +
+        ';' +
+        'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' +
+        (on ? 700 : 500) +
+        ';margin:0 6px 6px 0">' +
+        (on ? '<b style="font-family:\'Space Mono\',monospace">' + (at + 1) + '</b> ' : '') +
+        esc(CBLocale.langName(code)) +
+        '</button>'
+      );
+    })
+    .join('');
 
-  return _misHead('Localisation', '')
-
+  return (
+    _misHead('Localisation', '') +
     /* ── 1 · PRESENTATION ───────────────────────────────────────────────────────────────────────────────── */
-    + card('<label class="fl">Presentation <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>'
-        + sel('loc-region', regionOpts, region, 'localeSetRegion')
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
-        + 'A region sets the number, money, date and time conventions <b>and the languages it makes sense to read '
-        + 'in</b>. Choosing one prunes any language it does not admit, rather than leaving a combination that '
-        + 'contradicts itself.<br>'
-        + '⚠️ <b>' + tx('Grouping is not a separate switch, and that is deliberate.') + '</b> Millions or lakhs is a property of '
-        + 'the region itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it '
-        + 'apart would let you pick a combination no locale on earth uses.'
-        + '</div>')
-
-    + card('<label class="fl">Or a format directly <span style="font-weight:400;color:var(--grey)">— if no region fits</span></label>'
-        + sel('loc-format', FORMATS, cur, 'localeSetFormat'))
-
+    card(
+      '<label class="fl">Presentation <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>' +
+        sel('loc-region', regionOpts, region, 'localeSetRegion') +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">' +
+        'A region sets the number, money, date and time conventions <b>and the languages it makes sense to read ' +
+        'in</b>. Choosing one prunes any language it does not admit, rather than leaving a combination that ' +
+        'contradicts itself.<br>' +
+        '⚠️ <b>' +
+        tx('Grouping is not a separate switch, and that is deliberate.') +
+        '</b> Millions or lakhs is a property of ' +
+        'the region itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it ' +
+        'apart would let you pick a combination no locale on earth uses.' +
+        '</div>'
+    ) +
+    card(
+      '<label class="fl">Or a format directly <span style="font-weight:400;color:var(--grey)">— if no region fits</span></label>' +
+        sel('loc-format', FORMATS, cur, 'localeSetFormat')
+    ) +
     /* ── 2 · LANGUAGES ──────────────────────────────────────────────────────────────────────────────────── */
-    + card('<label class="fl">Languages you read <span style="font-weight:400;color:var(--grey)">— up to ' + CBLocale.MAX_LANGS + ', in order</span></label>'
-        + '<div style="margin:4px 0 6px">' + langChips + '</div>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
-        + 'The <b>order matters</b>. When a catalogue exists in more than one language you are shown the highest '
-        + 'one on this list that its author actually wrote. This is a <b>language priority list</b> (RFC 4647) — '
-        + 'the same thing your browser sends every website as <code>' + tx('Accept-Language') + '</code>.'
-        + (region ? '' : '<br>⚠️ No region set, so every language we name is offered. Pick a region above to see only the ones that fit.')
-        + '</div>')
-
+    card(
+      '<label class="fl">Languages you read <span style="font-weight:400;color:var(--grey)">— up to ' +
+        CBLocale.MAX_LANGS +
+        ', in order</span></label>' +
+        '<div style="margin:4px 0 6px">' +
+        langChips +
+        '</div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">' +
+        'The <b>order matters</b>. When a catalogue exists in more than one language you are shown the highest ' +
+        'one on this list that its author actually wrote. This is a <b>language priority list</b> (RFC 4647) — ' +
+        'the same thing your browser sends every website as <code>' +
+        tx('Accept-Language') +
+        '</code>.' +
+        (region ? '' : '<br>⚠️ No region set, so every language we name is offered. Pick a region above to see only the ones that fit.') +
+        '</div>'
+    ) +
     /* ⚠️⚠️ THE RULE THAT MATTERS MOST ON THIS SCREEN, RAISED FROM A FOOTNOTE TO ITS OWN CARD. Athi, twice:
        *"the panel and content in the panel, catalogue should stay in the language the origin is, no direct
        conversion at all."* Everything above chooses BETWEEN versions a human wrote. Nothing here produces text
        no human wrote, and that boundary is the reason a chit can be a shared record at all. */
-    + '<div style="' + _CARD + ';border-color:var(--warn-tint);background:var(--warn-tint);color:var(--on-card)">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">' + tx('Content is never converted') + '</div>'
-    +   '<div style="font-size:var(--fs-2);line-height:1.6">'
-    +   'These settings change the <b>chrome</b> — labels, buttons, and how figures are written. They never touch '
-    +   'what people wrote. A product name, a catalogue entry, a chit subject, a message and a dispute reason stay '
-    +   'in the language their author used.<br>'
-    +   '<b>' + tx('Choosing a language picks between versions a human wrote — it does not translate anything.') + '</b> '
-    +   'A chit is a shared record, and one that read differently to each party would not be a record.'
-    +   '</div>'
-    + '</div>'
-
-    + card('<label class="fl">Numbering system <span style="font-weight:400;color:var(--grey)">— <code>-u-nu-</code></span></label>'
-        + sel('loc-nu', _locWithSamples(NUMERALS, 'nu'), CBLocale.getExt('nu'), 'localeSetNu'))
-
-    + card('<label class="fl">Hour cycle <span style="font-weight:400;color:var(--grey)">— <code>-u-hc-</code></span></label>'
-        + sel('loc-hc', _locWithSamples(HOURS, 'hc'), CBLocale.getExt('hc'), 'localeSetHc'))
-
-    + card('<label class="fl">Calendar <span style="font-weight:400;color:var(--grey)">— <code>-u-ca-</code></span></label>'
-        + sel('loc-ca', _locWithSamples(CALS, 'ca'), CBLocale.getExt('ca'), 'localeSetCa'))
-
-    + card('<label class="fl">First day of week <span style="font-weight:400;color:var(--grey)">— <code>-u-fw-</code></span></label>'
-        + sel('loc-fw', WEEK, CBLocale.getExt('fw'), 'localeSetFw')
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.55">'
-        + 'Which column a calendar starts on. Separate from which days you actually <i>work</i> — that is below.'
-        + '</div>')
-
+    '<div style="' +
+    _CARD +
+    ';border-color:var(--warn-tint);background:var(--warn-tint);color:var(--on-card)">' +
+    '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">' +
+    tx('Content is never converted') +
+    '</div>' +
+    '<div style="font-size:var(--fs-2);line-height:1.6">' +
+    'These settings change the <b>chrome</b> — labels, buttons, and how figures are written. They never touch ' +
+    'what people wrote. A product name, a catalogue entry, a chit subject, a message and a dispute reason stay ' +
+    'in the language their author used.<br>' +
+    '<b>' +
+    tx('Choosing a language picks between versions a human wrote — it does not translate anything.') +
+    '</b> ' +
+    'A chit is a shared record, and one that read differently to each party would not be a record.' +
+    '</div>' +
+    '</div>' +
+    card(
+      '<label class="fl">Numbering system <span style="font-weight:400;color:var(--grey)">— <code>-u-nu-</code></span></label>' +
+        sel('loc-nu', _locWithSamples(NUMERALS, 'nu'), CBLocale.getExt('nu'), 'localeSetNu')
+    ) +
+    card(
+      '<label class="fl">Hour cycle <span style="font-weight:400;color:var(--grey)">— <code>-u-hc-</code></span></label>' +
+        sel('loc-hc', _locWithSamples(HOURS, 'hc'), CBLocale.getExt('hc'), 'localeSetHc')
+    ) +
+    card(
+      '<label class="fl">Calendar <span style="font-weight:400;color:var(--grey)">— <code>-u-ca-</code></span></label>' +
+        sel('loc-ca', _locWithSamples(CALS, 'ca'), CBLocale.getExt('ca'), 'localeSetCa')
+    ) +
+    card(
+      '<label class="fl">First day of week <span style="font-weight:400;color:var(--grey)">— <code>-u-fw-</code></span></label>' +
+        sel('loc-fw', WEEK, CBLocale.getExt('fw'), 'localeSetFw') +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.55">' +
+        'Which column a calendar starts on. Separate from which days you actually <i>work</i> — that is below.' +
+        '</div>'
+    ) +
     /* ══ WORKING DAYS ═══════════════════════════════════════════════════════════════════════════════════════
      * ⚠️⚠️ LOAD-BEARING, NOT A PREFERENCE. "Due in three working days" lands on a different DATE depending on
      * this, and until now the app had no idea. CLDR supplies the region's answer; a business overrides it
      * because a shop that opens on Sunday is a fact, not an error to be corrected. */
-    + card('<label class="fl">Working days <span style="font-weight:400;color:var(--grey)">— what a due date counts</span></label>'
-        + '<div data-testid="loc-workdays" style="display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 7px">' + dayChips + '</div>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
-        + (CBLocale.hasWorkdayOverride()
-            ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' + tx('Use the regional default') + '</a> instead.'
-            : 'These come from <b>' + tx('CLDR') + '</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.')
-        + '<br>⚠️ <b>' + tx('The weekend is not Saturday and Sunday everywhere.') + '</b> Saudi Arabia\'s is Friday + Saturday; '
-        + 'India\'s is Sunday alone; the UAE moved to Saturday + Sunday in 2022. Any due date counted in '
-        + '<i>working</i> days lands on a different day in Riyadh, Mumbai and Berlin.'
-        + '</div>')
-
+    card(
+      '<label class="fl">Working days <span style="font-weight:400;color:var(--grey)">— what a due date counts</span></label>' +
+        '<div data-testid="loc-workdays" style="display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 7px">' +
+        dayChips +
+        '</div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">' +
+        (CBLocale.hasWorkdayOverride()
+          ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' +
+            tx('Use the regional default') +
+            '</a> instead.'
+          : 'These come from <b>' + tx('CLDR') + '</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.') +
+        '<br>⚠️ <b>' +
+        tx('The weekend is not Saturday and Sunday everywhere.') +
+        "</b> Saudi Arabia's is Friday + Saturday; " +
+        "India's is Sunday alone; the UAE moved to Saturday + Sunday in 2022. Any due date counted in " +
+        '<i>working</i> days lands on a different day in Riyadh, Mumbai and Berlin.' +
+        '</div>'
+    ) +
     /* ══ TIME ZONE ══════════════════════════════════════════════════════════════════════════════════════════
      * ⚠️ One immutable event, three different answers to "when did this happen", because every date was rendered
      * in whatever zone the browser happened to be in. */
-    + card('<label class="fl">' + tx('Time zone') + '</label>'
-        + sel('loc-tz', tzOpts, tzCur, 'localeSetTz')
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
-        + 'Now showing times in <b>' + esc(CBLocale.timezone()) + '</b>. '
-        + 'A chit stamped 19:00 in Dubai reads 20:30 in Mumbai and 16:00 in London — the same instant, three '
-        + 'answers. Leave this on your device unless you want your <i>business\'s</i> clock wherever you are.'
-        + '</div>')
-
+    card(
+      '<label class="fl">' +
+        tx('Time zone') +
+        '</label>' +
+        sel('loc-tz', tzOpts, tzCur, 'localeSetTz') +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">' +
+        'Now showing times in <b>' +
+        esc(CBLocale.timezone()) +
+        '</b>. ' +
+        'A chit stamped 19:00 in Dubai reads 20:30 in Mumbai and 16:00 in London — the same instant, three ' +
+        "answers. Leave this on your device unless you want your <i>business's</i> clock wherever you are." +
+        '</div>'
+    ) +
     /* ══ CURRENCY ═══════════════════════════════════════════════════════════════════════════
      * ⭐⭐ THE CONTROL LIVES HERE NOW — IT USED TO POINT AT THE PROFILE, AND THE PROFILE POINTED BACK. Athi,
      * 2026-08-21: *"why have we brought the currency to choose in profile? Let it be in settings only."* His
@@ -4131,35 +5897,63 @@ function _localeSettingsBody(){
      * the region's own currency sits alone at the top and the rest are one <optgroup> below it — a list of one
      * for the answer that is almost always right, with everything still reachable.
      */
-    + card('<label class="fl">' + tx('Currency') + '</label>'
-        + '<div data-testid="loc-currency" style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + (profCanEdit() ? _curPicker(myCurCode)
-           : '<b>' + esc(myCurCode) + ' ' + esc(CBLocale.symbol(myCurCode)) + '</b> · '
-             + '<span style="color:var(--grey)">' + tx('set by the business') + '</span>')
-        + '<div style="margin-top:7px;color:var(--grey)">' + tx('Your prices are written in this.') + ' '
-        + esc(CBLocale.money(123456.5, myCurCode)) + '</div>'
-        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ ' + tx('Amounts are never converted.') + ' '
-        + '<span style="color:var(--grey)">' + tx('A supplier quoting in USD stays') + ' '
-        + esc(CBLocale.money(123456.5, 'USD')) + '.</span></div>'
-        + '</div>')
-
+    card(
+      '<label class="fl">' +
+        tx('Currency') +
+        '</label>' +
+        '<div data-testid="loc-currency" style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">' +
+        (profCanEdit()
+          ? _curPicker(myCurCode)
+          : '<b>' +
+            esc(myCurCode) +
+            ' ' +
+            esc(CBLocale.symbol(myCurCode)) +
+            '</b> · ' +
+            '<span style="color:var(--grey)">' +
+            tx('set by the business') +
+            '</span>') +
+        '<div style="margin-top:7px;color:var(--grey)">' +
+        tx('Your prices are written in this.') +
+        ' ' +
+        esc(CBLocale.money(123456.5, myCurCode)) +
+        '</div>' +
+        '<div style="margin-top:7px;color:var(--warn-2)">⚠️ ' +
+        tx('Amounts are never converted.') +
+        ' ' +
+        '<span style="color:var(--grey)">' +
+        tx('A supplier quoting in USD stays') +
+        ' ' +
+        esc(CBLocale.money(123456.5, 'USD')) +
+        '.</span></div>' +
+        '</div>'
+    ) +
     /* THE PREVIEW — see the note on this function. Every control above is an abstraction; this is the only place
        the choice becomes visible before it is made. */
-    + '<div style="' + _CARD + ';background:var(--neutral-tint);color:var(--on-card)" data-testid="loc-preview">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">' + tx('How this looks') + '</div>'
-    +   line('Number', esc(CBLocale.number(123456789.5)))
-    +   line('Money', esc(CBLocale.money(123456.5, 'INR')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'USD')))
-    +   line('Date', esc(CBLocale.date(Date.now())))
-    +   line('Time', esc(CBLocale.time(Date.now())))
-    +   line('Sorting', esc(CBLocale.sort(['Zebra','Ähnlich','apple','Ökonom','banana']).join(' · ')))
-    +   line('Direction', d.dir === 'rtl' ? 'right to left ←' : 'left to right →')
-    +   line('Locale tag', '<code>' + esc(CBLocale.tag()) + '</code>')
-    + '</div>'
-
-    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' + tx('What is never translated') + '</div>'
-        + '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
-        + 'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
-        + '<b>' + tx('A chit is a shared record') + '</b> — one that read differently to each party would not be a record.</div>');
+    '<div style="' +
+    _CARD +
+    ';background:var(--neutral-tint);color:var(--on-card)" data-testid="loc-preview">' +
+    '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">' +
+    tx('How this looks') +
+    '</div>' +
+    line('Number', esc(CBLocale.number(123456789.5))) +
+    line('Money', esc(CBLocale.money(123456.5, 'INR')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'USD'))) +
+    line('Date', esc(CBLocale.date(Date.now()))) +
+    line('Time', esc(CBLocale.time(Date.now()))) +
+    line('Sorting', esc(CBLocale.sort(['Zebra', 'Ähnlich', 'apple', 'Ökonom', 'banana']).join(' · '))) +
+    line('Direction', d.dir === 'rtl' ? 'right to left ←' : 'left to right →') +
+    line('Locale tag', '<code>' + esc(CBLocale.tag()) + '</code>') +
+    '</div>' +
+    card(
+      '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' +
+        tx('What is never translated') +
+        '</div>' +
+        '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">' +
+        'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. ' +
+        '<b>' +
+        tx('A chit is a shared record') +
+        '</b> — one that read differently to each party would not be a record.</div>'
+    )
+  );
 }
 /** Choosing a region sets the format AND prunes languages it does not admit — see the note in locale.js. */
 /**
@@ -4194,22 +5988,26 @@ function _localeSettingsBody(){
  * replay of all three would be slower and, for setRegion, would prune against the intermediate ones.
  */
 function _locStage(what, fn, args) {
-  UI._locStage = (UI._locStage || []).filter(function (o) {
+  UI._locStage = (UI._locStage || []).filter(function (item) {
     /* setExt is four controls sharing one function — they are the same control only if the subtag matches. */
-    return o.fn !== fn || (fn === 'setExt' && o.args[0] !== args[0]);
+    return item.fn !== fn || (fn === 'setExt' && item.args[0] !== args[0]);
   });
   UI._locStage.push({ what: what, fn: fn, args: args });
-  loadSettings();          /* ⚠️ the CARD repaints; renderApp() deliberately does not run — see the wrapper. */
+  loadSettings(); /* ⚠️ the CARD repaints; renderApp() deliberately does not run — see the wrapper. */
 }
 
 function _locReplay() {
-  (UI._locStage || []).forEach(function (o) { CBLocale[o.fn].apply(CBLocale, o.args); });
+  (UI._locStage || []).forEach(function (item) {
+    CBLocale[item.fn].apply(CBLocale, item.args);
+  });
 }
 
 /** What is waiting, named — so the Save button can say what it is about to do. */
 function _locPending() {
   var seen = [];
-  (UI._locStage || []).forEach(function (o) { if (seen.indexOf(o.what) < 0) seen.push(o.what); });
+  (UI._locStage || []).forEach(function (item) {
+    if (seen.indexOf(item.what) < 0) seen.push(item.what);
+  });
   return seen;
 }
 
@@ -4224,10 +6022,14 @@ function localeSaveLocale() {
   var before = CBLocale.snapshot();
   _locReplay();
   UI._locStage = [];
-  renderApp(); _capShowDetail(); loadSettings();
+  renderApp();
+  _capShowDetail();
+  loadSettings();
   toast(txf('{what} saved', { what: pending.join(', ') }), function () {
     CBLocale.restore(before);
-    renderApp(); _capShowDetail(); loadSettings();
+    renderApp();
+    _capShowDetail();
+    loadSettings();
     toast(txf('{what} put back', { what: pending.join(', ') }));
   });
 }
@@ -4239,7 +6041,9 @@ function localeDiscardLocale() {
   toast(tx('Nothing was changed.'));
 }
 
-function localeSetTz(v){ _locStage(tx('Time zone'), 'setTimezone', [v]); }
+function localeSetTz(v) {
+  _locStage(tx('Time zone'), 'setTimezone', [v]);
+}
 /**
  * ⚠️ THE LAST WORKING DAY CANNOT BE REMOVED. A business with no working days has no due dates at all, and every
  * SLA calculation would divide by an empty week — a state the UI should refuse rather than the maths discover.
@@ -4252,37 +6056,61 @@ function localeSetTz(v){ _locStage(tx('Time zone'), 'setTimezone', [v]); }
  */
 function _locStaged(fn, live) {
   var last = null;
-  (UI._locStage || []).forEach(function (o) { if (o.fn === fn) last = o; });
+  (UI._locStage || []).forEach(function (item) {
+    if (item.fn === fn) last = item;
+  });
   return last ? last.args[0].slice() : live();
 }
 
-function localeToggleWorkday(n){
-  var cur = _locStaged('setWorkdays', function(){ return CBLocale.workdays(); }), at = cur.indexOf(n);
-  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); } else cur.push(n);
-  _locStage(tx('Working days'), 'setWorkdays', [cur]);
+function localeToggleWorkday(n) {
+  var list = _locStaged('setWorkdays', function () {
+      return CBLocale.workdays();
+    }),
+    at = list.indexOf(n);
+  if (at >= 0) {
+    if (list.length > 1) list.splice(at, 1);
+  } else list.push(n);
+  _locStage(tx('Working days'), 'setWorkdays', [list]);
 }
 /** Clearing the override returns to CLDR's answer for the region — not to a hardcoded Mon–Fri. */
-function localeResetWorkdays(){ _locStage(tx('Working days'), 'setWorkdays', [[]]); }
-function localeSetRegion(v){ _locStage(tx('Region'), 'setRegion', [v]); }
+function localeResetWorkdays() {
+  _locStage(tx('Working days'), 'setWorkdays', [[]]);
+}
+function localeSetRegion(v) {
+  _locStage(tx('Region'), 'setRegion', [v]);
+}
 /**
  * ⚠️ APPEND, DO NOT REPLACE — the list is ORDERED and the order is the feature. Toggling a language on puts it
  * last (lowest priority); toggling it off closes the gap. Reordering by re-selecting is a smaller, separate
  * design problem, and pretending a toggle could express rank would have made the order silently arbitrary.
  * ⚠️ The last remaining language cannot be removed: a reader with no languages matches nothing at all.
  */
-function localeToggleLang(code){
-  var cur = _locStaged('setLangs', function(){ return CBLocale.langs(); }), at = cur.indexOf(code);
-  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); }
-  else if (cur.length < CBLocale.MAX_LANGS) cur.push(code);
-  _locStage(tx('Languages'), 'setLangs', [cur]);
+function localeToggleLang(code) {
+  var list = _locStaged('setLangs', function () {
+      return CBLocale.langs();
+    }),
+    at = list.indexOf(code);
+  if (at >= 0) {
+    if (list.length > 1) list.splice(at, 1);
+  } else if (list.length < CBLocale.MAX_LANGS) list.push(code);
+  _locStage(tx('Languages'), 'setLangs', [list]);
 }
-function localeSetFormat(v){ _locStage(tx('Format'), 'setLocale', [v]); }
+function localeSetFormat(v) {
+  _locStage(tx('Format'), 'setLocale', [v]);
+}
 /* One handler shape per subtag — each re-renders so the preview above moves with the choice. */
-function localeSetNu(v){ _locStage(tx('Numbering system'), 'setExt', ['nu', v]); }
-function localeSetHc(v){ _locStage(tx('Hour cycle'), 'setExt', ['hc', v]); }
-function localeSetCa(v){ _locStage(tx('Calendar'), 'setExt', ['ca', v]); }
-function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v]); }
-
+function localeSetNu(v) {
+  _locStage(tx('Numbering system'), 'setExt', ['nu', v]);
+}
+function localeSetHc(v) {
+  _locStage(tx('Hour cycle'), 'setExt', ['hc', v]);
+}
+function localeSetCa(v) {
+  _locStage(tx('Calendar'), 'setExt', ['ca', v]);
+}
+function localeSetFw(v) {
+  _locStage(tx('First day of week'), 'setExt', ['fw', v]);
+}
 
 /**
  * ⭐ INTEGRATIONS — API KEYS FOR OTHER SYSTEMS. Athi, 2026-09-05: "create the entire offer as a capability and attach it to
@@ -4290,55 +6118,174 @@ function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v])
  * revocable in one press. The services it opens: /api/offers kinds · evaluate · explain; the contract at
  * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
  */
-var _KEYS, _KEY_SHOWN = '';   /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
-var _INT_CAT, _INT_RUN, _INT_MAP;   /* the connector catalogue, the connectors that have checked in, the profile map — lazy, like the keys */
+var _KEYS,
+  _KEY_SHOWN = ''; /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
+var _INT_CAT, _INT_RUN, _INT_MAP; /* the connector catalogue, the connectors that have checked in, the profile map — lazy, like the keys */
 /**
  * ⭐ THE PROFILE MAP (Athi, 2026-09-05: "do we have a map of what we look for, how do we fill it, what is the authenticity?").
  * One row per field we look for: the value we hold, where it came from (typed · Tally · Zoho · a file · derived from the
  * GSTIN), when, and its rung — declared · copied · checked · verified — plus any check that failed (a GSTIN whose check
  * digit is wrong, a PIN in another state). The connector's sync-profile fills it; a higher rung is never overwritten.
  */
-function intProfileMapHTML(){
-  if (_INT_MAP === undefined) { _INT_MAP = null; api('intProfileMap').then(function(r){ _INT_MAP = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_MAP = {}; if (setSec() === 'integrations') loadSettings(); }); }
-  var m = _INT_MAP; if (!m || !m.fields) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + '</div><div style="color:var(--grey)">' + tx(m === null ? 'reading…' : 'no map') + '</div></div>';
-  var rungStyle = { declared: 'background:var(--warn-tint);color:var(--warn-2)', copied: 'background:var(--blue-tint);color:var(--blue-2)', checked: 'background:var(--ok-tint);color:var(--ok-2)', verified: 'background:var(--ok-2);color:var(--on-ok)' };   /* ⚠️ was #fff on a THEMED ground — the text vanishes in any theme that lightens --ok-2 (guard-static, 2026-09-27); --on-ok is the token for ink on the ok colour */
-  var rows = (m.order || []).map(function(k){ var f = m.fields[k] || {}; var src = f.source ? String(f.source) : ''; var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
-    return '<tr data-testid="int-map-' + esc(k) + '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(f.label || k) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(f.why || '') + '</div></td>'
-      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-family:monospace">' + (f.value != null ? esc(String(f.value)) : '<span style="color:var(--warn-3)">' + esc(tx('missing')) + '</span>') + (f.issues && f.issues.length ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠ ' + esc(f.issues.join('; ')) + '</div>' : '') + '</td>'
-      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(src) + (when ? ' · ' + esc(when) : '') + '<div>' + esc((f.sources && (f.sources.tally || '')) ? intWhereFrom(f, src) : '') + '</div></td>'
-      + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + (f.rung ? '<span data-testid="int-map-rung-' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' + (rungStyle[f.rung] || '') + '">' + esc(f.rung) + '</span>' : '') + '</td></tr>'; }).join('');
-  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.filled || 0) + ' ' + tx('of') + ' ' + String(m.total || 0) + ' ' + tx('filled')) + (m.state_name ? ' · ' + esc(m.state_name) : '') + '</span></div>'
-    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
-    + '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' + tx('Field') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Value') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Source · when') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Rung') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+function intProfileMapHTML() {
+  if (_INT_MAP === undefined) {
+    _INT_MAP = null;
+    api('intProfileMap')
+      .then(function (reply) {
+        _INT_MAP = reply || {};
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _INT_MAP = {};
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
+  var m = _INT_MAP;
+  if (!m || !m.fields)
+    return (
+      '<div style="' +
+      _CARD +
+      '"><div class="sec" style="margin:0 0 6px">' +
+      tx('The store, as we know it') +
+      '</div><div style="color:var(--grey)">' +
+      tx(m === null ? 'reading…' : 'no map') +
+      '</div></div>'
+    );
+  var rungStyle = {
+    declared: 'background:var(--warn-tint);color:var(--warn-2)',
+    copied: 'background:var(--blue-tint);color:var(--blue-2)',
+    checked: 'background:var(--ok-tint);color:var(--ok-2)',
+    verified: 'background:var(--ok-2);color:var(--on-ok)'
+  }; /* ⚠️ was #fff on a THEMED ground — the text vanishes in any theme that lightens --ok-2 (guard-static, 2026-09-27); --on-ok is the token for ink on the ok colour */
+  var rows = (m.order || [])
+    .map(function (item) {
+      var f = m.fields[item] || {};
+      var src = f.source ? String(f.source) : '';
+      var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
+      return (
+        '<tr data-testid="int-map-' +
+        esc(item) +
+        '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' +
+        esc(f.label || item) +
+        '</b><div style="font-size:var(--fs-1);color:var(--grey)">' +
+        esc(f.why || '') +
+        '</div></td>' +
+        '<td style="padding:5px 8px;border-top:1px solid var(--line);font-family:monospace">' +
+        (f.value != null ? esc(String(f.value)) : '<span style="color:var(--warn-3)">' + esc(tx('missing')) + '</span>') +
+        (f.issues && f.issues.length ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠ ' + esc(f.issues.join('; ')) + '</div>' : '') +
+        '</td>' +
+        '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' +
+        esc(src) +
+        (when ? ' · ' + esc(when) : '') +
+        '<div>' +
+        esc(f.sources && (f.sources.tally || '') ? intWhereFrom(f, src) : '') +
+        '</div></td>' +
+        '<td style="padding:5px 8px;border-top:1px solid var(--line)">' +
+        (f.rung
+          ? '<span data-testid="int-map-rung-' +
+            esc(item) +
+            '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' +
+            (rungStyle[f.rung] || '') +
+            '">' +
+            esc(f.rung) +
+            '</span>'
+          : '') +
+        '</td></tr>'
+      );
+    })
+    .join('');
+  return (
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('The store, as we know it') +
+    ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' +
+    esc(String(m.filled || 0) + ' ' + tx('of') + ' ' + String(m.total || 0) + ' ' + tx('filled')) +
+    (m.state_name ? ' · ' + esc(m.state_name) : '') +
+    '</span></div>' +
+    '<div style="font-size:var(--fs-2);margin-bottom:6px">' +
+    tx(
+      'What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.'
+    ) +
+    '</div>' +
+    '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' +
+    tx('Field') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Value') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Source · when') +
+    '</th><th style="text-align:start;padding:4px 8px">' +
+    tx('Rung') +
+    '</th></tr></thead><tbody>' +
+    rows +
+    '</tbody></table></div></div>'
+  );
 }
 /* ⭐ THE HANDSHAKE ON THE ROW (Athi, 2026-09-06): a connector is approved for ONE PC. The row says which PC and which Tally company asked,
    and why it waits; Approve is the owner's act, Reject revokes the key (the kit stops at its next call). */
 /** ⭐ where this field lives in the system that filled it — Tally, Zoho, GoFrugal or a CSV column (2026-09-07) */
-function intWhereFrom(f, src){
-  var srcs = (f && f.sources) || {}; var key = String(src || '').toLowerCase();
+function intWhereFrom(f, src) {
+  var srcs = (f && f.sources) || {};
+  var key = String(src || '').toLowerCase();
   var named = { tally: 'Tally', zoho: 'Zoho Books', csv: 'CSV', gofrugal: 'GoFrugal' };
-  var pick = srcs[key] ? key : (Object.keys(srcs)[0] || '');
+  var pick = srcs[key] ? key : Object.keys(srcs)[0] || '';
   if (!pick || !srcs[pick]) return '';
   return (named[pick] || pick) + ': ' + srcs[pick];
 }
-function intEnrolHTML(r){
-  var e = r.enrol; if (!e) return '';
+function intEnrolHTML(r) {
+  var e = r.enrol;
+  if (!e) return '';
   var facts = [e.host, e.company, e.gstin].filter(Boolean).map(esc).join(' · ');
-  if (e.approved === false) return '<div style="font-weight:400;font-size:var(--fs-1);margin-top:3px"><span style="color:var(--warn-2);font-weight:700">⚠ ' + tx('waiting for approval') + '</span> — ' + facts + (e.reason ? ' <span style="color:var(--grey)">(' + esc(e.reason) + ')</span>' : '')
-    + '<div style="display:flex;gap:6px;margin-top:5px"><button class="composebtn" data-testid="int-approve-' + esc(r.actor_id) + '" onclick="intApprove(\'' + esc(r.actor_id) + '\')">✓ ' + tx('Approve this PC') + '</button>'
-    + (r.key_jti ? '<button class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') + '</div></div>';
+  if (e.approved === false)
+    return (
+      '<div style="font-weight:400;font-size:var(--fs-1);margin-top:3px"><span style="color:var(--warn-2);font-weight:700">⚠ ' +
+      tx('waiting for approval') +
+      '</span> — ' +
+      facts +
+      (e.reason ? ' <span style="color:var(--grey)">(' + esc(e.reason) + ')</span>' : '') +
+      '<div style="display:flex;gap:6px;margin-top:5px"><button class="composebtn" data-testid="int-approve-' +
+      esc(r.actor_id) +
+      '" onclick="intApprove(\'' +
+      esc(r.actor_id) +
+      '\')">✓ ' +
+      tx('Approve this PC') +
+      '</button>' +
+      (r.key_jti ? '<button class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') +
+      '</div></div>'
+    );
   return '<div style="font-weight:400;font-size:var(--fs-1);color:var(--ok-2);margin-top:3px">✓ ' + tx('approved') + (facts ? ' · ' + facts : '') + '</div>';
 }
-async function intApprove(id){ try { await api('intApprove', { params: { id: id } }); toast(tx('Approved — the connector starts within a minute.')); _INT_RUN = undefined; loadSettings(); } catch (e) { toast(tx('Could not approve') + ': ' + (e && e.message || e)); } }
-async function intReject(jti){ try { await api('keysRevoke', { params: { jti: jti } }); toast(tx('Key revoked — that kit can no longer connect.')); _INT_RUN = undefined; _KEYS = undefined; loadSettings(); } catch (e) { toast(tx('Could not revoke') + ': ' + (e && e.message || e)); } }
+async function intApprove(id) {
+  try {
+    await api('intApprove', { params: { id: id } });
+    toast(tx('Approved — the connector starts within a minute.'));
+    _INT_RUN = undefined;
+    loadSettings();
+  } catch (e) {
+    toast(tx('Could not approve') + ': ' + ((e && e.message) || e));
+  }
+}
+async function intReject(jti) {
+  try {
+    await api('keysRevoke', { params: { jti: jti } });
+    toast(tx('Key revoked — that kit can no longer connect.'));
+    _INT_RUN = undefined;
+    _KEYS = undefined;
+    loadSettings();
+  } catch (e) {
+    toast(tx('Could not revoke') + ': ' + ((e && e.message) || e));
+  }
+}
 
 /** the kit through the session (kitDownload, app/cap-settings.js — the one fetch); the workshop says the outcome in a toast */
-async function intDownloadKit(id, adapter){
+async function intDownloadKit(id, adapter) {
   try {
     await kitDownload(id, adapter);
     toast(tx('Downloaded — your key is inside. Unzip on the Tally PC and double-click start.cmd.'));
-    _INT_RUN = undefined;   /* the new key shows under Your keys on the next paint */
-  } catch (e) { toast(tx('Could not download') + ': ' + (e && e.message || e)); }
+    _INT_RUN = undefined; /* the new key shows under Your keys on the next paint */
+  } catch (e) {
+    toast(tx('Could not download') + ': ' + ((e && e.message) || e));
+  }
 }
 /**
  * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
@@ -4348,55 +6295,291 @@ async function intDownloadKit(id, adapter){
  */
 /** what this connector carries — the streams it owns (2026-09-07). Silent until the ownership map has been read. */
 /** the OTHER system's health as of this connector's last run — "live" says the connector checked in, never that Tally answered. */
-function intSourceHTML(r){
-  var sc = r.source; if (!sc || sc.ok === null || sc.ok === undefined) return '';
+function intSourceHTML(r) {
+  var sc = r.source;
+  if (!sc || sc.ok === null || sc.ok === undefined) return '';
   var when = sc.at ? fmtDateTime(sc.at) : '';
   var sys = r.adapter || tx('the other system');
-  if (sc.ok) return '<div style="width:100%;font-size:var(--fs-1);color:var(--ok-2)" data-testid="int-source-' + esc(r.id) + '">✓ ' + esc(txf('{sys} answered', { sys: sys })) + (when ? ' · ' + esc(when) : '') + '</div>';
-  return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-3)" data-testid="int-source-' + esc(r.id) + '">⚠ ' + esc(txf('{sys} did not answer', { sys: sys })) + (when ? ' · ' + esc(when) : '') + (sc.why ? ' · ' + esc(sc.why) : '') + ' — ' + tx('the connector keeps trying and starts by itself when it comes back') + '</div>';
+  if (sc.ok)
+    return (
+      '<div style="width:100%;font-size:var(--fs-1);color:var(--ok-2)" data-testid="int-source-' +
+      esc(r.id) +
+      '">✓ ' +
+      esc(txf('{sys} answered', { sys: sys })) +
+      (when ? ' · ' + esc(when) : '') +
+      '</div>'
+    );
+  return (
+    '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-3)" data-testid="int-source-' +
+    esc(r.id) +
+    '">⚠ ' +
+    esc(txf('{sys} did not answer', { sys: sys })) +
+    (when ? ' · ' + esc(when) : '') +
+    (sc.why ? ' · ' + esc(sc.why) : '') +
+    ' — ' +
+    tx('the connector keeps trying and starts by itself when it comes back') +
+    '</div>'
+  );
 }
 /** from a running row to that system's own card — the instructions live in one place (2026-09-07) */
-function intToSetup(id){ UI.intOpen = id; lsSet('cb_int_open', id); intSetTab('connectors'); }
-function intCarriesHTML(r){
-  var d = _INT_STR; if (!d || !d.owner) return '';
-  var mine = (d.streams || []).filter(function(st){ return d.owner[st.id] === r.id; });
-  if (!mine.length) return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-2)" data-testid="int-carries-' + esc(r.id) + '">' + tx('carries nothing — every stream it can carry belongs to another connector') + '</div>';
-  return '<div style="width:100%;font-size:var(--fs-1);color:var(--grey)" data-testid="int-carries-' + esc(r.id) + '">' + esc(tx('carries')) + ': ' + mine.map(function(st){ return esc(tx(st.label)); }).join(' · ') + '</div>';
+function intToSetup(id) {
+  UI.intOpen = id;
+  lsSet('cb_int_open', id);
+  intSetTab('connectors');
 }
-function intConnectorsHTML(){
-  if (_INT_CAT === undefined) { _INT_CAT = null; api('intCatalogue').then(function(r){ _INT_CAT = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_CAT = []; if (setSec() === 'integrations') loadSettings(); }); }
-  if (_INT_RUN === undefined) { _INT_RUN = null; api('intStatus').then(function(r){ _INT_RUN = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_RUN = []; if (setSec() === 'integrations') loadSettings(); }); }
+function intCarriesHTML(r) {
+  var d = _INT_STR;
+  if (!d || !d.owner) return '';
+  var mine = (d.streams || []).filter(function (item) {
+    return d.owner[item.id] === r.id;
+  });
+  if (!mine.length)
+    return (
+      '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-2)" data-testid="int-carries-' +
+      esc(r.id) +
+      '">' +
+      tx('carries nothing — every stream it can carry belongs to another connector') +
+      '</div>'
+    );
+  return (
+    '<div style="width:100%;font-size:var(--fs-1);color:var(--grey)" data-testid="int-carries-' +
+    esc(r.id) +
+    '">' +
+    esc(tx('carries')) +
+    ': ' +
+    mine
+      .map(function (item) {
+        return esc(tx(item.label));
+      })
+      .join(' · ') +
+    '</div>'
+  );
+}
+function intConnectorsHTML() {
+  if (_INT_CAT === undefined) {
+    _INT_CAT = null;
+    api('intCatalogue')
+      .then(function (reply) {
+        _INT_CAT = (reply && reply.connectors) || [];
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _INT_CAT = [];
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
+  if (_INT_RUN === undefined) {
+    _INT_RUN = null;
+    api('intStatus')
+      .then(function (reply) {
+        _INT_RUN = (reply && reply.connectors) || [];
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _INT_RUN = [];
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-  var cat = _INT_CAT || [], run = _INT_RUN || [];
+  var list = _INT_CAT || [],
+    run = _INT_RUN || [];
   var use = intInUse();
-  var chosen = use.length ? cat.filter(function(c){ return use.indexOf(c.id) >= 0; }) : cat;
-  var rest = use.length ? cat.filter(function(c){ return use.indexOf(c.id) < 0; }) : [];
-  var cards = cat.length ? chosen.map(function(c){
-    /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
-    /* CX6 (K1): the SERVER says whether this connector works for the shop's country (may/why from the pack) — a refused one stays shown, greyed WITH its sentence */
-    var may = c.may || { ok: true }, no = may.ok === false;
-    var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '"' + (no ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"' : ' onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')"') + '>⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
-    var open = intOpen() === c.id;
-    var more = '<span data-testid="int-card-' + esc(c.id) + '-toggle" onclick="intToggleCard(\'' + esc(c.id) + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: c.name })) + '</span>';
-    var steps = open ? intCardDetailHTML(c) : '';
-    var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
-    var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(c.id) + '"' + (use.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(c.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
-    return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div>'
-      + (no ? '<div data-testid="int-why-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(may.why || '') + '</div>' : '')
-      + '<div style="margin-top:6px">' + more + '</div>'
-      + (open ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div>' : '')
-      + steps + '</div>';
-  }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
-  var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
-    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + ' · <span data-testid="int-row-help-' + esc(r.id) + '" onclick="intToSetup(\'' + esc(r.adapter || '') + '\')" style="cursor:pointer;color:var(--blue)">' + esc(txf('what to do for {name}', { name: r.adapter || 'this' })) + '</span></span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
-  if (intTab() === 'running') return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>'
-    + intFold('running', ['One row per connector that has checked in.', 'It reports every run, and every five minutes while it watches.', '"Answered" is the other system. "Live" is only the connector itself.', 'Approve a PC once — a kit is approved for one PC at a time.']) + rows + '</div>';
-  var more = rest.length ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' + esc(txf('{n} you do not use: {names}', { n: String(rest.length), names: rest.map(function(c){ return c.name; }).join(', ') })) + ' — ' + tx('tick "we use this" on one to bring it back') + '</div>' : '';
-  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
-    + intFold('connectors', ['A small program that runs beside your own system — Tally, Zoho, a folder of files.', 'It carries products and stock up, offers back, and orders down as vouchers.', 'Download, unzip, double-click start.cmd. Your key is already inside.'])
-    + cards + more + '</div>';
+  var chosen = use.length
+    ? list.filter(function (item) {
+        return use.indexOf(item.id) >= 0;
+      })
+    : list;
+  var rest = use.length
+    ? list.filter(function (item) {
+        return use.indexOf(item.id) < 0;
+      })
+    : [];
+  var cards = list.length
+    ? chosen
+        .map(function (item) {
+          /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
+          /* CX6 (K1): the SERVER says whether this connector works for the shop's country (may/why from the pack) — a refused one stays shown, greyed WITH its sentence */
+          var may = item.may || { ok: true },
+            no = may.ok === false;
+          var adapters = (item.adapters || [])
+            .map(function (a) {
+              return (
+                '<button class="composebtn" data-testid="int-download-' +
+                esc(item.id) +
+                '-' +
+                esc(a) +
+                '"' +
+                (no
+                  ? ' disabled aria-disabled="true" title="' + esc(may.why || '') + '" style="opacity:.55;cursor:not-allowed"'
+                  : ' onclick="intDownloadKit(\'' + esc(item.id) + "','" + esc(a) + '\')"') +
+                '>⬇ ' +
+                esc(tx('Download')) +
+                ' · ' +
+                esc(a) +
+                '</button>'
+              );
+            })
+            .join(' ');
+          var open = intOpen() === item.id;
+          var nestedMore =
+            '<span data-testid="int-card-' +
+            esc(item.id) +
+            '-toggle" onclick="intToggleCard(\'' +
+            esc(item.id) +
+            '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' +
+            (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: item.name })) +
+            '</span>';
+          var steps = open ? intCardDetailHTML(item) : '';
+          var doc = item.docs
+            ? '<a href="' +
+              esc(base + item.docs) +
+              '" target="_blank" rel="noopener" data-testid="int-docs-' +
+              esc(item.id) +
+              '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' +
+              esc(tx('Instructions')) +
+              '</a>'
+            : '';
+          var tick =
+            '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' +
+            esc(item.id) +
+            '"' +
+            (use.indexOf(item.id) >= 0 ? ' checked' : '') +
+            ' onchange="intUseToggle(\'' +
+            esc(item.id) +
+            '\', this.checked)">' +
+            esc(tx('we use this')) +
+            '</label>';
+          return (
+            '<div data-testid="int-connector-' +
+            esc(item.id) +
+            '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' +
+            esc(item.name) +
+            '</b>' +
+            tick +
+            ' ' +
+            doc +
+            ' ' +
+            adapters +
+            '</div>' +
+            '<div style="font-size:var(--fs-2);margin-top:6px">' +
+            esc(item.does) +
+            '</div>' +
+            (no
+              ? '<div data-testid="int-why-' +
+                esc(item.id) +
+                '" style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+                esc(may.why || '') +
+                '</div>'
+              : '') +
+            '<div style="margin-top:6px">' +
+            nestedMore +
+            '</div>' +
+            (open
+              ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+                esc(tx('Runs on')) +
+                ': ' +
+                esc(item.runs_on) +
+                ' · ' +
+                esc(item.status) +
+                '</div>'
+              : '') +
+            steps +
+            '</div>'
+          );
+        })
+        .join('')
+    : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
+  var rows = run.length
+    ? run
+        .map(function (item) {
+          var ago = item.last_seen ? Math.round((Date.now() - new Date(item.last_seen).getTime()) / 60000) : null;
+          var c = item.counters || {};
+          return (
+            '<div data-testid="int-running-' +
+            esc(item.id) +
+            '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' +
+            esc(item.name) +
+            intEnrolHTML(item) +
+            '</b><span style="color:var(--grey);font-size:var(--fs-1)">' +
+            esc(item.adapter || '') +
+            ' · ' +
+            esc(item.host || '') +
+            ' · ' +
+            (ago == null ? '' : ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) })) +
+            ' · ' +
+            esc(tx('products')) +
+            ' ' +
+            esc(String(c.products_ok || 0)) +
+            ' · ' +
+            esc(tx('orders')) +
+            ' ' +
+            esc(String(c.orders_ok || 0)) +
+            (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') +
+            (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') +
+            (item.note ? ' · ' + esc(item.note) : '') +
+            ' · <span data-testid="int-row-help-' +
+            esc(item.id) +
+            '" onclick="intToSetup(\'' +
+            esc(item.adapter || '') +
+            '\')" style="cursor:pointer;color:var(--blue)">' +
+            esc(txf('what to do for {name}', { name: item.adapter || 'this' })) +
+            '</span></span>' +
+            intSourceHTML(item) +
+            intCarriesHTML(item) +
+            '</div>'
+          );
+        })
+        .join('')
+    : '<div style="color:var(--grey);font-size:var(--fs-2)">' +
+      tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') +
+      '</div>';
+  if (intTab() === 'running')
+    return (
+      '<div style="' +
+      _CARD +
+      '"><div class="sec" style="margin:0 0 6px">' +
+      tx('Running connectors') +
+      '</div>' +
+      intFold('running', [
+        'One row per connector that has checked in.',
+        'It reports every run, and every five minutes while it watches.',
+        '"Answered" is the other system. "Live" is only the connector itself.',
+        'Approve a PC once — a kit is approved for one PC at a time.'
+      ]) +
+      rows +
+      '</div>'
+    );
+  var more = rest.length
+    ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' +
+      esc(
+        txf('{n} you do not use: {names}', {
+          n: String(rest.length),
+          names: rest
+            .map(function (item) {
+              return item.name;
+            })
+            .join(', ')
+        })
+      ) +
+      ' — ' +
+      tx('tick "we use this" on one to bring it back') +
+      '</div>'
+    : '';
+  return (
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('Connectors') +
+    '</div>' +
+    intFold('connectors', [
+      'A small program that runs beside your own system — Tally, Zoho, a folder of files.',
+      'It carries products and stock up, offers back, and orders down as vouchers.',
+      'Download, unzip, double-click start.cmd. Your key is already inside.'
+    ]) +
+    cards +
+    more +
+    '</div>'
+  );
 }
 /**
  * ⭐⭐ INTEGRATIONS, ONE QUESTION PER PANE (Athi, 2026-09-07: "the integration screen is overwhelming … it takes time to digest").
@@ -4405,55 +6588,120 @@ function intConnectorsHTML(){
  * systems sign in with.
  */
 var INT_TABS = [
-  { key: 'connectors', n: 'Connectors',      q: 'what you can attach' },
-  { key: 'running',    n: 'Running',         q: 'who is checked in, and is the other system answering' },
-  { key: 'streams',    n: 'Who owns what',   q: 'one owner per stream' },
-  { key: 'books',      n: 'In the books',    q: 'did it land, and what is late' },
-  { key: 'store',      n: 'The store',       q: 'what your own books say about you' },
-  { key: 'netoffers',  n: 'Network offers',  q: 'offers a brand releases to its stores, and which ones each store takes' },
-  { key: 'counters',   n: 'Counters',        q: 'every till on your shop \u2014 where it is, when it last spoke' },
-  { key: 'keys',       n: 'Keys & services', q: 'what other systems sign in with' },
+  { key: 'connectors', n: 'Connectors', q: 'what you can attach' },
+  { key: 'running', n: 'Running', q: 'who is checked in, and is the other system answering' },
+  { key: 'streams', n: 'Who owns what', q: 'one owner per stream' },
+  { key: 'books', n: 'In the books', q: 'did it land, and what is late' },
+  { key: 'store', n: 'The store', q: 'what your own books say about you' },
+  { key: 'netoffers', n: 'Network offers', q: 'offers a brand releases to its stores, and which ones each store takes' },
+  { key: 'counters', n: 'Counters', q: 'every till on your shop \u2014 where it is, when it last spoke' },
+  { key: 'keys', n: 'Keys & services', q: 'what other systems sign in with' }
 ];
-function intOpen(){ return UI.intOpen !== undefined ? UI.intOpen : lsGet('cb_int_open', ''); }
-function intToggleCard(id){ var next = intOpen() === id ? '' : id; UI.intOpen = next; lsSet('cb_int_open', next); loadSettings(); }
-/** the four things a person needs about ONE system, in its own card (2026-09-07) */
-function intCardDetailHTML(c){
-  var group = function(title, lines){
-    if (!lines || !lines.length) return '';
-    return '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(tx(title)) + '</div>'
-      + '<ul style="margin:3px 0 0;padding-inline-start:18px;font-size:var(--fs-2)">' + lines.map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('') + '</ul></div>';
-  };
-  return '<div data-testid="int-detail-' + esc(c.id) + '" style="border-top:1px solid var(--line);margin-top:8px;padding-top:2px">'
-    + group('Before you start', c.needs)
-    + group('What to do', c.steps)
-    + group('If it does not work', c.watch_out)
-    + group('Once it runs, look here', ['Running — is it checked in, and did ' + (c.default_adapter || c.id) + ' answer it', 'Who owns what — which streams this connector carries', 'In the books — whether each order reached it, and what is late'])
-    + '</div>';
+function intOpen() {
+  return UI.intOpen !== undefined ? UI.intOpen : lsGet('cb_int_open', '');
 }
-function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
+function intToggleCard(id) {
+  var next = intOpen() === id ? '' : id;
+  UI.intOpen = next;
+  lsSet('cb_int_open', next);
+  loadSettings();
+}
+/** the four things a person needs about ONE system, in its own card (2026-09-07) */
+function intCardDetailHTML(c) {
+  var group = function (title, lines) {
+    if (!lines || !lines.length) return '';
+    return (
+      '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' +
+      esc(tx(title)) +
+      '</div>' +
+      '<ul style="margin:3px 0 0;padding-inline-start:18px;font-size:var(--fs-2)">' +
+      lines
+        .map(function (item) {
+          return '<li style="margin:2px 0">' + esc(tx(item)) + '</li>';
+        })
+        .join('') +
+      '</ul></div>'
+    );
+  };
+  return (
+    '<div data-testid="int-detail-' +
+    esc(c.id) +
+    '" style="border-top:1px solid var(--line);margin-top:8px;padding-top:2px">' +
+    group('Before you start', c.needs) +
+    group('What to do', c.steps) +
+    group('If it does not work', c.watch_out) +
+    group('Once it runs, look here', [
+      'Running — is it checked in, and did ' + (c.default_adapter || c.id) + ' answer it',
+      'Who owns what — which streams this connector carries',
+      'In the books — whether each order reached it, and what is late'
+    ]) +
+    '</div>'
+  );
+}
+function intTab() {
+  var k = UI.intTab || lsGet('cb_int_tab', 'connectors');
+  return INT_TABS.some(function (item) {
+    return item.key === k;
+  })
+    ? k
+    : 'connectors';
+}
 /* ⚠️ THE RAIL IS PART OF THE PAINT (Athi, 2026-09-07: "when I click the submenu the details change on the right, but the menu marked
    in a different colour does not change"). loadSettings() repaints the BODY only, so the highlight stayed on the old row — the same
    reason govSetTab calls renderApp() first. Copying that, rather than inventing a second way to move a selection. */
-function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); if (typeof renderApp === 'function') renderApp(); loadSettings(); }
-/** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
-function intFold(key, lines){
-  var open = lsGet('cb_fold_' + key, '1') === '1';
-  var list = (Array.isArray(lines) ? lines : [lines]).map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('');
-  return '<div style="font-size:var(--fs-2);margin-bottom:6px">'
-    + '<span data-testid="int-fold-' + esc(key) + '" onclick="intFoldToggle(\'' + esc(key) + '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) + '</span>'
-    + (open ? '<ul style="margin:4px 0 0;padding-inline-start:18px">' + list + '</ul>' : '') + '</div>';
+function intSetTab(k) {
+  UI.intTab = k;
+  lsSet('cb_int_tab', k);
+  if (typeof renderApp === 'function') renderApp();
+  loadSettings();
 }
-function intFoldToggle(key){ lsSet('cb_fold_' + key, lsGet('cb_fold_' + key, '1') === '1' ? '0' : '1'); loadSettings(); }
+/** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
+function intFold(key, lines) {
+  var open = lsGet('cb_fold_' + key, '1') === '1';
+  var list = (Array.isArray(lines) ? lines : [lines])
+    .map(function (item) {
+      return '<li style="margin:2px 0">' + esc(tx(item)) + '</li>';
+    })
+    .join('');
+  return (
+    '<div style="font-size:var(--fs-2);margin-bottom:6px">' +
+    '<span data-testid="int-fold-' +
+    esc(key) +
+    '" onclick="intFoldToggle(\'' +
+    esc(key) +
+    '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' +
+    (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) +
+    '</span>' +
+    (open ? '<ul style="margin:4px 0 0;padding-inline-start:18px">' + list + '</ul>' : '') +
+    '</div>'
+  );
+}
+function intFoldToggle(key) {
+  lsSet('cb_fold_' + key, lsGet('cb_fold_' + key, '1') === '1' ? '0' : '1');
+  loadSettings();
+}
 /** ⭐ which systems this account actually runs. A DISPLAY choice, not a connection: it puts them first and folds the rest away. */
-function intInUse(){ var v = ((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).connectors_in_use; return Array.isArray(v) ? v.filter(function(x){ return x !== 'none'; }) : []; }
-async function intUseToggle(id, on){
-  var now = intInUse().filter(function(x){ return x !== id; });
+function intInUse() {
+  var list = ((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).connectors_in_use;
+  return Array.isArray(list)
+    ? list.filter(function (x) {
+        return x !== 'none';
+      })
+    : [];
+}
+async function intUseToggle(id, on) {
+  var now = intInUse().filter(function (x) {
+    return x !== id;
+  });
   if (on) now.push(id);
   try {
-    var r = await api('policySet', { body: { connectors_in_use: now.length ? now : ['none'] } });
-    if (typeof SESSION !== 'undefined') SESSION.policy_flags = (r && r.flags) || Object.assign({}, SESSION.policy_flags || {}, { connectors_in_use: now });
+    var reply = await api('policySet', { body: { connectors_in_use: now.length ? now : ['none'] } });
+    if (typeof SESSION !== 'undefined')
+      SESSION.policy_flags = (reply && reply.flags) || Object.assign({}, SESSION.policy_flags || {}, { connectors_in_use: now });
     loadSettings();
-  } catch (e) { toast(tx('Could not save') + ': ' + (e && e.message || e)); }
+  } catch (e) {
+    toast(tx('Could not save') + ': ' + ((e && e.message) || e));
+  }
 }
 
 /**
@@ -4462,34 +6710,127 @@ async function intUseToggle(id, on){
  * carry a stream claims it, so an account with one system is never asked a question — this card is where a migration hands one over.
  */
 var _INT_STR;
-function intStreamsHTML(){
-  if (_INT_STR === undefined) { _INT_STR = null; api('intStreams').then(function(r){ _INT_STR = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_STR = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
-  var d = _INT_STR || {}; var list = d.streams || [], own = d.owner || {}, con = d.connectors || [];
-  if (_INT_STR === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
-  var nameOf = function(id){ var c = con.find(function(x){ return x.id === id; }); return c ? (c.name + ' · ' + (c.adapter || '')) : id; };
+function intStreamsHTML() {
+  if (_INT_STR === undefined) {
+    _INT_STR = null;
+    api('intStreams')
+      .then(function (reply) {
+        _INT_STR = reply || {};
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _INT_STR = { error: true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
+  var d = _INT_STR || {};
+  var list = d.streams || [],
+    own = d.owner || {},
+    con = d.connectors || [];
+  if (_INT_STR === null)
+    return (
+      '<div style="' +
+      _CARD +
+      '"><div class="sec" style="margin:0 0 6px">' +
+      tx('Who owns what') +
+      '</div><div style="color:var(--grey);font-size:var(--fs-2)">' +
+      tx('reading…') +
+      '</div></div>'
+    );
+  var nameOf = function (id) {
+    var c = con.find(function (x) {
+      return x.id === id;
+    });
+    return c ? c.name + ' · ' + (c.adapter || '') : id;
+  };
   var body;
-  if (!con.length) body = '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx('No connector has checked in yet. The first one to run claims the streams it can carry.') + '</div>';
-  else if (con.length === 1 && Object.keys(own).length) body = '<div style="font-size:var(--fs-2)" data-testid="int-streams-single">' + txf('{name} carries everything.', { name: con[0].name }) + ' ' + tx('A second connector claims only what is still free, and this is where you would hand a stream over.') + '</div>';
-  else body = '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr>'
-      + '<th style="text-align:start;padding:4px 8px">' + tx('Stream') + '</th><th style="text-align:start;padding:4px 8px">' + tx('What travels') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Carried by') + '</th></tr></thead><tbody>'
-      + list.map(function(st){
-          var sel = '<select class="inp" data-testid="int-stream-' + esc(st.id) + '" onchange="intStreamSet(\'' + esc(st.id) + '\', this.value)">'
-            + '<option value="">' + esc(tx('nobody')) + '</option>'
-            + con.map(function(c){ return '<option value="' + esc(c.id) + '"' + (own[st.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>'; }).join('')
-            + (own[st.id] && !con.find(function(c){ return c.id === own[st.id]; }) ? '<option value="' + esc(own[st.id]) + '" selected>' + esc(own[st.id]) + ' (' + esc(tx('not running')) + ')</option>' : '')
-            + '</select>';
-          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(st.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.dir === 'in' ? tx('into the network') : tx('out to the other system')) + '</div></td>'
-            + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(tx(st.what)) + '</td>'
-            + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + sel + '</td></tr>';
-        }).join('') + '</tbody></table></div>';
-  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div>'
-    + intFold('streams', ['Several connectors are fine — a POS for stock, the books for vouchers, a CRM for parties.', 'Each stream belongs to exactly one of them, or the same order becomes a voucher in two ledgers.', 'The first connector to carry a stream claims it. Change it here when a migration ends.']) + body + '</div>';
+  if (!con.length)
+    body =
+      '<div style="color:var(--grey);font-size:var(--fs-2)">' +
+      tx('No connector has checked in yet. The first one to run claims the streams it can carry.') +
+      '</div>';
+  else if (con.length === 1 && Object.keys(own).length)
+    body =
+      '<div style="font-size:var(--fs-2)" data-testid="int-streams-single">' +
+      txf('{name} carries everything.', { name: con[0].name }) +
+      ' ' +
+      tx('A second connector claims only what is still free, and this is where you would hand a stream over.') +
+      '</div>';
+  else
+    body =
+      '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr>' +
+      '<th style="text-align:start;padding:4px 8px">' +
+      tx('Stream') +
+      '</th><th style="text-align:start;padding:4px 8px">' +
+      tx('What travels') +
+      '</th><th style="text-align:start;padding:4px 8px">' +
+      tx('Carried by') +
+      '</th></tr></thead><tbody>' +
+      list
+        .map(function (item) {
+          var sel =
+            '<select class="inp" data-testid="int-stream-' +
+            esc(item.id) +
+            '" onchange="intStreamSet(\'' +
+            esc(item.id) +
+            '\', this.value)">' +
+            '<option value="">' +
+            esc(tx('nobody')) +
+            '</option>' +
+            con
+              .map(function (c) {
+                return '<option value="' + esc(c.id) + '"' + (own[item.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>';
+              })
+              .join('') +
+            (own[item.id] &&
+            !con.find(function (c) {
+              return c.id === own[item.id];
+            })
+              ? '<option value="' + esc(own[item.id]) + '" selected>' + esc(own[item.id]) + ' (' + esc(tx('not running')) + ')</option>'
+              : '') +
+            '</select>';
+          return (
+            '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' +
+            esc(tx(item.label)) +
+            '</b><div style="font-size:var(--fs-1);color:var(--grey)">' +
+            esc(item.dir === 'in' ? tx('into the network') : tx('out to the other system')) +
+            '</div></td>' +
+            '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' +
+            esc(tx(item.what)) +
+            '</td>' +
+            '<td style="padding:5px 8px;border-top:1px solid var(--line)">' +
+            sel +
+            '</td></tr>'
+          );
+        })
+        .join('') +
+      '</tbody></table></div>';
+  return (
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('Who owns what') +
+    '</div>' +
+    intFold('streams', [
+      'Several connectors are fine — a POS for stock, the books for vouchers, a CRM for parties.',
+      'Each stream belongs to exactly one of them, or the same order becomes a voucher in two ledgers.',
+      'The first connector to carry a stream claims it. Change it here when a migration ends.'
+    ]) +
+    body +
+    '</div>'
+  );
 }
-async function intStreamSet(stream, kit){
-  try { var body = {}; body[stream] = kit || null; await api('intStreamsSet', { body: body });
+async function intStreamSet(stream, kit) {
+  try {
+    var body = {};
+    body[stream] = kit || null;
+    await api('intStreamsSet', { body: body });
     toast(kit ? tx('Stream handed over — the connector picks it up within a minute.') : tx('Stream left unowned — nobody carries it now.'));
-    _INT_STR = undefined; loadSettings();
-  } catch (e) { toast(tx('Could not change it') + ': ' + (e && e.message || e)); }
+    _INT_STR = undefined;
+    loadSettings();
+  } catch (e) {
+    toast(tx('Could not change it') + ': ' + ((e && e.message) || e));
+  }
 }
 
 /**
@@ -4504,103 +6845,279 @@ async function intStreamSet(stream, kit){
  * a shopkeeper should never have to read either. Each known answer becomes one sentence and one instruction; anything unrecognised
  * keeps its own words rather than pretending to understand it, and the raw text is always one click away.
  */
-function recPlain(r){
+function recPlain(r) {
   var sys = r.system || tx('the other system');
   var w = String(r.why || '');
-  if (r.state === 'refused'){
+  if (r.state === 'refused') {
     if (/<RESPONSE>|CREATED>0|LASTVCHID/i.test(w))
-      return { line: txf('{sys} did not create the voucher.', { sys: sys }), todo: tx('Almost always a name on the order does not exist in that company yet — a stock item, a ledger, or the voucher type. Open that company, add the missing name, then press Ask again.') };
+      return {
+        line: txf('{sys} did not create the voucher.', { sys: sys }),
+        todo: tx(
+          'Almost always a name on the order does not exist in that company yet — a stock item, a ledger, or the voucher type. Open that company, add the missing name, then press Ask again.'
+        )
+      };
     if (/gstin mismatch/i.test(w))
-      return { line: tx('The company in the books has a different GSTIN from this account.'), todo: tx('Correct the GSTIN in that company, or approve this PC under Running once — then press Ask again.') };
+      return {
+        line: tx('The company in the books has a different GSTIN from this account.'),
+        todo: tx('Correct the GSTIN in that company, or approve this PC under Running once — then press Ask again.')
+      };
     if (/organization_id/i.test(w))
-      return { line: tx('The books do not recognise the organisation this connector was set up with.'), todo: tx('Run start.cmd on that PC again and pick your organisation from the list it prints.') };
+      return {
+        line: tx('The books do not recognise the organisation this connector was set up with.'),
+        todo: tx('Run start.cmd on that PC again and pick your organisation from the list it prints.')
+      };
     if (/IGST|interstate/i.test(w))
-      return { line: tx('The tax on the invoice did not match the customer’s state.'), todo: tx('This was fixed on 7 September. Press Ask again — it should go straight in.') };
+      return {
+        line: tx('The tax on the invoice did not match the customer’s state.'),
+        todo: tx('This was fixed on 7 September. Press Ask again — it should go straight in.')
+      };
     if (/401|unauthor|token|oauth|invalid_client/i.test(w))
       return { line: txf('{sys} signed us out.', { sys: sys }), todo: tx('Run start.cmd on that PC and answer yes when it offers to get a new code.') };
     if (/ECONNREFUSED|ETIMEDOUT|connect|closed|not answer/i.test(w))
-      return { line: txf('{sys} was not open when we tried.', { sys: sys }), todo: tx('Open it on that PC. Nothing else — the connector tries again by itself every five minutes.') };
+      return {
+        line: txf('{sys} was not open when we tried.', { sys: sys }),
+        todo: tx('Open it on that PC. Nothing else — the connector tries again by itself every five minutes.')
+      };
     if (/date/i.test(w) && /voucher/i.test(w))
-      return { line: tx('The books refused the date on the voucher.'), todo: tx('The Educational edition of Tally accepts the 1st, 2nd and 31st only. The connector already uses the 2nd — if you see this, tell us.') };
-    return { line: txf('{sys} refused it.', { sys: sys }), todo: tx('The connector tries again every five minutes. If it keeps failing, open the technical detail below and send it to us.') };
+      return {
+        line: tx('The books refused the date on the voucher.'),
+        todo: tx('The Educational edition of Tally accepts the 1st, 2nd and 31st only. The connector already uses the 2nd — if you see this, tell us.')
+      };
+    return {
+      line: txf('{sys} refused it.', { sys: sys }),
+      todo: tx('The connector tries again every five minutes. If it keeps failing, open the technical detail below and send it to us.')
+    };
   }
   if (r.state === 'overdue')
-    return { line: tx('Nothing has answered yet.'), todo: tx('Check under Running that the connector is checked in and the other system answered it. If it is, press Ask again; if the PC is off, switch it on — nothing is lost.') };
-  if (r.state === 'due')
-    return { line: tx('On its way.'), todo: tx('Nothing to do — it usually lands within a minute.') };
+    return {
+      line: tx('Nothing has answered yet.'),
+      todo: tx(
+        'Check under Running that the connector is checked in and the other system answered it. If it is, press Ask again; if the PC is off, switch it on — nothing is lost.'
+      )
+    };
+  if (r.state === 'due') return { line: tx('On its way.'), todo: tx('Nothing to do — it usually lands within a minute.') };
   if (r.state === 'waiting')
-    return { line: tx('Not released yet.'), todo: tx('It goes to the books when the order reaches the state you chose in Settings — or when you press Send to books on the order itself.') };
+    return {
+      line: tx('Not released yet.'),
+      todo: tx('It goes to the books when the order reaches the state you chose in Settings — or when you press Send to books on the order itself.')
+    };
   if (r.state === 'before_connector')
-    return { line: tx('This order is older than your connector.'), todo: tx('Nothing was listening when it happened, so it is not late. Press Ask again if you want it in the books anyway, or set it aside.') };
+    return {
+      line: tx('This order is older than your connector.'),
+      todo: tx('Nothing was listening when it happened, so it is not late. Press Ask again if you want it in the books anyway, or set it aside.')
+    };
   if (r.state === 'set_aside')
-    return { line: tx('You set this one aside.'), todo: tx('It will not go to the books and nothing will ask again. Press Send after all to change your mind.') };
+    return {
+      line: tx('You set this one aside.'),
+      todo: tx('It will not go to the books and nothing will ask again. Press Send after all to change your mind.')
+    };
   return { line: '', todo: '' };
 }
 var _INT_REC;
-function intReconcileHTML(){
-  if (_INT_REC === undefined) { _INT_REC = null; api('intReconcile', { query: { days: 30 } }).then(function(r){ _INT_REC = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_REC = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+function intReconcileHTML() {
+  if (_INT_REC === undefined) {
+    _INT_REC = null;
+    api('intReconcile', { query: { days: 30 } })
+      .then(function (reply) {
+        _INT_REC = reply || {};
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _INT_REC = { error: true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   var d = _INT_REC || {};
-  if (_INT_REC === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
-  var c = d.counts || {}, rows = d.rows || [];
-  var chip = function(n, label, colour, testid){ return '<span data-testid="' + testid + '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' + (colour ? 'color:' + colour + ';font-weight:700' : 'color:var(--grey)') + '"><b>' + esc(String(n || 0)) + '</b> ' + esc(label) + '</span>'; };
-  var bySys = Object.keys(d.by_system || {}).map(function(k){ return esc(k) + ' ' + esc(String(d.by_system[k])); }).join(' · ');
-  var head = (c.overdue || c.refused)
-    ? '<div style="font-size:var(--fs-2);color:var(--warn-3);font-weight:700;margin-bottom:4px" data-testid="int-rec-head">' + esc(txf('{n} order(s) need a look — each one below says what to do.', { n: String((c.overdue || 0) + (c.refused || 0)) })) + '</div>'
-    : '<div style="font-size:var(--fs-2);color:var(--ok-2);margin-bottom:4px" data-testid="int-rec-head">' + esc(tx('Nothing needs you. Anything on the way lands by itself.')) + '</div>';
-  var chips = head + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">'
-    + chip(c.booked, tx('in the books'), 'var(--ok-2)', 'int-rec-booked')
-    + chip(c.overdue, tx('overdue'), (c.overdue ? 'var(--warn-3)' : ''), 'int-rec-overdue')
-    + chip(c.refused, tx('refused'), (c.refused ? 'var(--warn-3)' : ''), 'int-rec-refused')
-    + chip(c.due, tx('on the way'), '', 'int-rec-due')
-    + chip(c.waiting, tx('waiting for the trigger'), '', 'int-rec-waiting')
-    + (c.before_connector ? chip(c.before_connector, tx('older than the connector'), '', 'int-rec-older') : '')
-    + (c.set_aside ? chip(c.set_aside, tx('set aside'), '', 'int-rec-aside') : '')
-    + '</div>';
+  if (_INT_REC === null)
+    return (
+      '<div style="' +
+      _CARD +
+      '"><div class="sec" style="margin:0 0 6px">' +
+      tx('In the books') +
+      '</div><div style="color:var(--grey);font-size:var(--fs-2)">' +
+      tx('reading…') +
+      '</div></div>'
+    );
+  var c = d.counts || {},
+    rows = d.rows || [];
+  var chip = function (n, label, nestedColour, testid) {
+    return (
+      '<span data-testid="' +
+      testid +
+      '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' +
+      (nestedColour ? 'color:' + nestedColour + ';font-weight:700' : 'color:var(--grey)') +
+      '"><b>' +
+      esc(String(n || 0)) +
+      '</b> ' +
+      esc(label) +
+      '</span>'
+    );
+  };
+  var bySys = Object.keys(d.by_system || {})
+    .map(function (item) {
+      return esc(item) + ' ' + esc(String(d.by_system[item]));
+    })
+    .join(' · ');
+  var head =
+    c.overdue || c.refused
+      ? '<div style="font-size:var(--fs-2);color:var(--warn-3);font-weight:700;margin-bottom:4px" data-testid="int-rec-head">' +
+        esc(txf('{n} order(s) need a look — each one below says what to do.', { n: String((c.overdue || 0) + (c.refused || 0)) })) +
+        '</div>'
+      : '<div style="font-size:var(--fs-2);color:var(--ok-2);margin-bottom:4px" data-testid="int-rec-head">' +
+        esc(tx('Nothing needs you. Anything on the way lands by itself.')) +
+        '</div>';
+  var chips =
+    head +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">' +
+    chip(c.booked, tx('in the books'), 'var(--ok-2)', 'int-rec-booked') +
+    chip(c.overdue, tx('overdue'), c.overdue ? 'var(--warn-3)' : '', 'int-rec-overdue') +
+    chip(c.refused, tx('refused'), c.refused ? 'var(--warn-3)' : '', 'int-rec-refused') +
+    chip(c.due, tx('on the way'), '', 'int-rec-due') +
+    chip(c.waiting, tx('waiting for the trigger'), '', 'int-rec-waiting') +
+    (c.before_connector ? chip(c.before_connector, tx('older than the connector'), '', 'int-rec-older') : '') +
+    (c.set_aside ? chip(c.set_aside, tx('set aside'), '', 'int-rec-aside') : '') +
+    '</div>';
   /* what a person is being asked about — an order older than the connector, or one set aside, is stated below but asks nothing */
-  var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due' || r.state === 'before_connector' || r.state === 'set_aside'; });
+  var open = rows.filter(function (item) {
+    return item.state === 'overdue' || item.state === 'refused' || item.state === 'due' || item.state === 'before_connector' || item.state === 'set_aside';
+  });
   var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way'), before_connector: tx('older'), set_aside: tx('set aside') };
   var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)', before_connector: 'var(--grey)', set_aside: 'var(--grey)' };
   var when = fmtDateTime;
-  var list = open.length ? open.slice(0, 40).map(function(r){
-    var short = String(r.chit_id).slice(0, 8), p = recPlain(r), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
-    return '<div data-testid="int-rec-row-' + esc(short) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
-      + '<span style="font-weight:700;color:' + colour[r.state] + ';flex:0 0 92px">' + esc(word[r.state] || r.state) + '</span>'
-      + '<span style="flex:1">'
-        + '<b>' + esc(r.subject || tx('Order')) + '</b>' + (r.party ? '<span style="color:var(--grey)"> · ' + esc(r.party) + '</span>' : '')
-        + '<div style="margin-top:2px">' + esc(p.line) + '</div>'
-        + (p.todo ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:2px">' + esc(p.todo) + '</div>' : '')
-        + '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' + esc(when(r.released_at || r.created_at)) + (r.why ? ' · <span data-testid="int-rec-raw-' + esc(short) + '" onclick="intRecRaw(\'' + esc(short) + '\')" style="cursor:pointer;color:var(--blue)">' + (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) + '</span>' : '') + '</div>'
-        + (raw && r.why ? '<div style="margin-top:3px;font-family:monospace;font-size:var(--fs-1);color:var(--warn-2);word-break:break-word">' + esc(r.why) + '</div>' : '')
-      + '</span>'
-      + '<span style="display:flex;gap:6px;flex:0 0 auto">'
-        + '<button class="btn2" data-testid="int-rec-open-' + esc(short) + '" onclick="intRecOpen(\'' + esc(r.chit_id) + '\',\'' + esc(r.side || '') + '\')">' + tx('Open') + '</button>'
-        + (r.state === 'set_aside'
-            ? '<button class="btn2" data-testid="int-rec-unskip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', false)">' + tx('Send after all') + '</button>'
-            : '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button>'
-              + '<button class="btn2" data-testid="int-rec-skip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', true)" title="' + esc(tx('it will not go to the books, and nothing will ask again')) + '">' + tx('Not for the books') + '</button>')
-      + '</span></div>';
-  }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Everything has reached the books. Nothing for you to do.') + '</div>';
-  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
-    + intFold('books', ['The last ' + String(d.days || 30) + ' days of orders, and where each stands in the other system.', 'Overdue: the trigger released it more than ' + String(d.overdue_hours || 12) + ' hours ago and nothing answered.', 'Ask again re-requests one — the connector never books the same order twice.'])
-    + chips + (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') + list + '</div>';
+  var list = open.length
+    ? open
+        .slice(0, 40)
+        .map(function (item) {
+          var short = String(item.chit_id).slice(0, 8),
+            p = recPlain(item),
+            raw = lsGet('cb_rec_raw_' + short, '0') === '1';
+          return (
+            '<div data-testid="int-rec-row-' +
+            esc(short) +
+            '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">' +
+            '<span style="font-weight:700;color:' +
+            colour[item.state] +
+            ';flex:0 0 92px">' +
+            esc(word[item.state] || item.state) +
+            '</span>' +
+            '<span style="flex:1">' +
+            '<b>' +
+            esc(item.subject || tx('Order')) +
+            '</b>' +
+            (item.party ? '<span style="color:var(--grey)"> · ' + esc(item.party) + '</span>' : '') +
+            '<div style="margin-top:2px">' +
+            esc(p.line) +
+            '</div>' +
+            (p.todo ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:2px">' + esc(p.todo) + '</div>' : '') +
+            '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' +
+            esc(when(item.released_at || item.created_at)) +
+            (item.why
+              ? ' · <span data-testid="int-rec-raw-' +
+                esc(short) +
+                '" onclick="intRecRaw(\'' +
+                esc(short) +
+                '\')" style="cursor:pointer;color:var(--blue)">' +
+                (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) +
+                '</span>'
+              : '') +
+            '</div>' +
+            (raw && item.why
+              ? '<div style="margin-top:3px;font-family:monospace;font-size:var(--fs-1);color:var(--warn-2);word-break:break-word">' + esc(item.why) + '</div>'
+              : '') +
+            '</span>' +
+            '<span style="display:flex;gap:6px;flex:0 0 auto">' +
+            '<button class="btn2" data-testid="int-rec-open-' +
+            esc(short) +
+            '" onclick="intRecOpen(\'' +
+            esc(item.chit_id) +
+            "','" +
+            esc(item.side || '') +
+            '\')">' +
+            tx('Open') +
+            '</button>' +
+            (item.state === 'set_aside'
+              ? '<button class="btn2" data-testid="int-rec-unskip-' +
+                esc(short) +
+                '" onclick="intRecSkip(\'' +
+                esc(item.chit_id) +
+                '\', false)">' +
+                tx('Send after all') +
+                '</button>'
+              : '<button class="btn2" data-testid="int-rec-retry-' +
+                esc(short) +
+                '" onclick="intRecRetry(\'' +
+                esc(item.chit_id) +
+                '\')">' +
+                tx('Ask again') +
+                '</button>' +
+                '<button class="btn2" data-testid="int-rec-skip-' +
+                esc(short) +
+                '" onclick="intRecSkip(\'' +
+                esc(item.chit_id) +
+                '\', true)" title="' +
+                esc(tx('it will not go to the books, and nothing will ask again')) +
+                '">' +
+                tx('Not for the books') +
+                '</button>') +
+            '</span></div>'
+          );
+        })
+        .join('')
+    : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' +
+      tx('Everything has reached the books. Nothing for you to do.') +
+      '</div>';
+  return (
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('In the books') +
+    '</div>' +
+    intFold('books', [
+      'The last ' + String(d.days || 30) + ' days of orders, and where each stands in the other system.',
+      'Overdue: the trigger released it more than ' + String(d.overdue_hours || 12) + ' hours ago and nothing answered.',
+      'Ask again re-requests one — the connector never books the same order twice.'
+    ]) +
+    chips +
+    (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') +
+    list +
+    '</div>'
+  );
 }
 /** set an order aside, or bring it back — reversible, and recorded with who and when (2026-09-07) */
-async function intRecSkip(id, on){
-  try { await api('intBooksSkip', { body: { chit_id: id, on: !!on } });
+async function intRecSkip(id, on) {
+  try {
+    await api('intBooksSkip', { body: { chit_id: id, on: !!on } });
     toast(on ? tx('Set aside — it will not go to the books.') : tx('Back in the queue — the connector books it within a minute.'));
-    _INT_REC = undefined; loadSettings();
-  } catch (e) { toast(tx('Could not change it') + ': ' + (e && e.message || e)); }
+    _INT_REC = undefined;
+    loadSettings();
+  } catch (e) {
+    toast(tx('Could not change it') + ': ' + ((e && e.message) || e));
+  }
 }
-function intRecRaw(short){ lsSet('cb_rec_raw_' + short, lsGet('cb_rec_raw_' + short, '0') === '1' ? '0' : '1'); loadSettings(); }
+function intRecRaw(short) {
+  lsSet('cb_rec_raw_' + short, lsGet('cb_rec_raw_' + short, '0') === '1' ? '0' : '1');
+  loadSettings();
+}
 /** open the order itself — a sale sits in Task, an order you placed in Order (2026-09-07) */
-function intRecOpen(id, side){
-  try { if (typeof navTo === 'function') navTo(side === 'purchase' ? 'order' : 'task');
-    setTimeout(function(){ if (typeof openChit === 'function') openChit(id); }, 300);
-  } catch (e) { toast(tx('Could not open it') + ': ' + (e && e.message || e)); }
+function intRecOpen(id, side) {
+  try {
+    if (typeof navTo === 'function') navTo(side === 'purchase' ? 'order' : 'task');
+    setTimeout(function () {
+      if (typeof openChit === 'function') openChit(id);
+    }, 300);
+  } catch (e) {
+    toast(tx('Could not open it') + ': ' + ((e && e.message) || e));
+  }
 }
-async function intRecRetry(id){
-  try { await api('chitBooks', { params: { id: id } }); toast(tx('Asked again — the connector books it within a minute.')); _INT_REC = undefined; loadSettings(); }
-  catch (e) { toast(tx('Could not ask') + ': ' + (e && e.message || e)); }
+async function intRecRetry(id) {
+  try {
+    await api('chitBooks', { params: { id: id } });
+    toast(tx('Asked again — the connector books it within a minute.'));
+    _INT_REC = undefined;
+    loadSettings();
+  } catch (e) {
+    toast(tx('Could not ask') + ': ' + ((e && e.message) || e));
+  }
 }
 
 /**
@@ -4633,107 +7150,231 @@ async function intRecRetry(id){
  * A STORE sees each network it belongs to and takes or declines each released offer. Every change is pushed: the
  * brand's release to every member store, and each store to its own counters.
  */
-var _NETO, _NETO_ARMED = null;
+var _NETO,
+  _NETO_ARMED = null;
 /* ⚠️ a release changes what the offer chips say on the product page and in Catalogue setup (netRelChip) — those caches go too */
-function netoReload(){
+function netoReload() {
   _NETO = undefined;
   if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
   if (typeof UI !== 'undefined') UI._ctOffers = undefined;
   if (typeof CATSET_DEFS !== 'undefined') delete CATSET_DEFS.offer;
   loadSettings();
 }
-function _netWhen(iso){
+function _netWhen(iso) {
   if (!iso) return '';
-  try { return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
-  catch (_) { return String(iso).slice(0, 16); }
+  try {
+    return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch (_) {
+    return String(iso).slice(0, 16);
+  }
 }
-function _netRelWords(r){
+function _netRelWords(r) {
   if (!r) return tx('not released');
-  var now = Date.now(), at = r.at ? new Date(r.at).getTime() : 0, until = r.until ? new Date(r.until).getTime() : 0;
+  var now = Date.now(),
+    at = r.at ? new Date(r.at).getTime() : 0,
+    until = r.until ? new Date(r.until).getTime() : 0;
   if (until && until <= now) return tx('withdrawn') + ' ' + _netWhen(r.until);
   var w = at > now ? tx('released — starts') + ' ' + _netWhen(r.at) : tx('running since') + ' ' + _netWhen(r.at);
   if (until) w += ' · ' + tx('ends') + ' ' + _netWhen(r.until);
   return w;
 }
-function netOffersHTML(){
-  if (_NETO === undefined) { _NETO = null; api('netOffers').then(function(r){ _NETO = r || {}; if (setSec() === 'integrations') loadSettings(); })
-    .catch(function(e){ _NETO = { error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
+function netOffersHTML() {
+  if (_NETO === undefined) {
+    _NETO = null;
+    api('netOffers')
+      .then(function (reply) {
+        _NETO = reply || {};
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function (e) {
+        _NETO = { error: (e && e.message) || true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   if (_NETO === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   if (_NETO.error) return '<div style="' + _CARD + ';color:var(--warn)">' + tx('Could not read network offers.') + '</div>';
-  var b = _NETO.brand || {}, nets = (_NETO.store && _NETO.store.networks) || [];
+  var b = _NETO.brand || {},
+    nets = (_NETO.store && _NETO.store.networks) || [];
   var out = '';
 
   if (b.is_brand) {
     var pol = b.policy || 'opt_in';
-    var polBtn = function(k, label, hint){
-      return '<button class="' + (pol === k ? 'pri' : '') + '" data-testid="neto-policy-' + k + '" onclick="netoPolicy(\'' + k + '\')"'
-        + ' title="' + esc(hint) + '">' + tx(label) + '</button>';
+    var polBtn = function (k, label, hint) {
+      return (
+        '<button class="' +
+        (pol === k ? 'pri' : '') +
+        '" data-testid="neto-policy-' +
+        k +
+        '" onclick="netoPolicy(\'' +
+        k +
+        '\')"' +
+        ' title="' +
+        esc(hint) +
+        '">' +
+        tx(label) +
+        '</button>'
+      );
     };
-    var rows = (b.offers || []).map(function(o){
-      var r = o.released, live = o.status === 'live';
-      var running = r && (!r.until || new Date(r.until).getTime() > Date.now());
-      var armed = _NETO_ARMED === 'now:' + o.id;
-      return '<div data-testid="neto-offer-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
-        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
-        + '<div style="font-size:var(--fs-1);color:var(--' + (running ? 'ok' : 'grey') + ')" data-testid="neto-state-' + esc(o.id) + '">'
-        + (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing'))
-        /* ⚠️ edited since release: the stores are still on the released version until this goes out */
-        + (o.changed ? ' · <b style="color:var(--warn)" data-testid="neto-changed-' + esc(o.id) + '">' + tx('changed since release — stores still have the released version') + '</b>' : '')
-        + '</div></span>'
-        + (live && (!running || o.changed)
-            ? '<button class="pri" data-testid="neto-release-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',false)">' + tx('Release at next opening') + '</button>'
-              + '<button data-testid="neto-release-now-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',true)">'
-              + (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) + '</button>'
-            : '')
-        + (running ? '<button class="warn" data-testid="neto-withdraw-' + esc(o.id) + '" onclick="netoWithdraw(\'' + esc(o.id) + '\')">' + tx('Withdraw at next opening') + '</button>' : '')
-        + '</div>';
-    }).join('');
-    out += '<div style="' + _CARD + '">'
-      + '<div class="sec" style="margin:0 0 6px">' + tx('Your network') + ' · ' + (b.stores || 0) + ' ' + tx('store(s)') + '</div>'
+    var rows = (b.offers || [])
+      .map(function (item) {
+        var r = item.released,
+          live = item.status === 'live';
+        var running = r && (!r.until || new Date(r.until).getTime() > Date.now());
+        var armed = _NETO_ARMED === 'now:' + item.id;
+        return (
+          '<div data-testid="neto-offer-' +
+          esc(item.id) +
+          '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">' +
+          '<span style="flex:1 1 220px;min-width:0"><b>' +
+          esc(item.name) +
+          '</b>' +
+          '<div style="font-size:var(--fs-1);color:var(--' +
+          (running ? 'ok' : 'grey') +
+          ')" data-testid="neto-state-' +
+          esc(item.id) +
+          '">' +
+          (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing')) +
+          /* ⚠️ edited since release: the stores are still on the released version until this goes out */
+          (item.changed
+            ? ' · <b style="color:var(--warn)" data-testid="neto-changed-' +
+              esc(item.id) +
+              '">' +
+              tx('changed since release — stores still have the released version') +
+              '</b>'
+            : '') +
+          '</div></span>' +
+          (live && (!running || item.changed)
+            ? '<button class="pri" data-testid="neto-release-' +
+              esc(item.id) +
+              '" onclick="netoRelease(\'' +
+              esc(item.id) +
+              '\',false)">' +
+              tx('Release at next opening') +
+              '</button>' +
+              '<button data-testid="neto-release-now-' +
+              esc(item.id) +
+              '" onclick="netoRelease(\'' +
+              esc(item.id) +
+              '\',true)">' +
+              (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) +
+              '</button>'
+            : '') +
+          (running
+            ? '<button class="warn" data-testid="neto-withdraw-' +
+              esc(item.id) +
+              '" onclick="netoWithdraw(\'' +
+              esc(item.id) +
+              '\')">' +
+              tx('Withdraw at next opening') +
+              '</button>'
+            : '') +
+          '</div>'
+        );
+      })
+      .join('');
+    out +=
+      '<div style="' +
+      _CARD +
+      '">' +
+      '<div class="sec" style="margin:0 0 6px">' +
+      tx('Your network') +
+      ' · ' +
+      (b.stores || 0) +
+      ' ' +
+      tx('store(s)') +
+      '</div>' +
       /* ⭐ WHO IS IN — and the network decides (src/services/network: the side that did not ask approves) */
-      + netMembersHTML(b.members || [])
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">'
-      + tx('Offers you release reach every store that uses your catalogue, and every counter in those stores. A release takes effect at the next opening, so nothing changes in the middle of a trading day unless you choose to.')
-      + '</div>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
-      + polBtn('opt_in', 'Stores choose which offers to take', 'opt-in: an offer applies only in stores that take it')
-      + polBtn('opt_out', 'Every released offer applies', 'opt-out: an offer applies unless a store declines it')
-      + '</div>'
-      + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No offers yet — declare them under Offers, make them live, then release them here.') + '</div>')
-      + '</div>';
-    (b.catalogue || []).forEach(function(c){ out += netCatBrandHTML(c, b.stores || 0); });
+      netMembersHTML(b.members || []) +
+      '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">' +
+      tx(
+        'Offers you release reach every store that uses your catalogue, and every counter in those stores. A release takes effect at the next opening, so nothing changes in the middle of a trading day unless you choose to.'
+      ) +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
+      polBtn('opt_in', 'Stores choose which offers to take', 'opt-in: an offer applies only in stores that take it') +
+      polBtn('opt_out', 'Every released offer applies', 'opt-out: an offer applies unless a store declines it') +
+      '</div>' +
+      (rows ||
+        '<div style="color:var(--grey);padding:6px 0">' + tx('No offers yet — declare them under Offers, make them live, then release them here.') + '</div>') +
+      '</div>';
+    (b.catalogue || []).forEach(function (item) {
+      out += netCatBrandHTML(item, b.stores || 0);
+    });
   }
 
   var notes = (_NETO.store && _NETO.store.price_notices) || [];
   if (notes.length) out += netCatNoticesHTML(notes);
 
-  nets.forEach(function(nw){
-    var optIn = nw.policy !== 'opt_out';
-    var rows = (nw.offers || []).map(function(o){
-      var btn = o.applies
-        ? '<button data-testid="neto-out-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? '' : 'out') + '\')">' + tx(optIn ? 'Stop taking it' : 'Decline') + '</button>'
-        : '<button class="pri" data-testid="neto-in-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? 'in' : '') + '\')">' + tx('Take this offer') + '</button>';
-      return '<div data-testid="neto-net-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
-        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
-        + '<div style="font-size:var(--fs-1);color:var(--' + (o.applies ? 'ok' : 'grey') + ')">'
-        + (o.applies ? tx('applies at your counters') : tx('not applied here')) + ' · ' + esc(_netRelWords({ at: o.at, until: o.until })) + '</div></span>'
-        + (o.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>')
-        + '</div>';
-    }).join('');
-    out += '<div style="' + _CARD + '">'
+  nets.forEach(function (item) {
+    var optIn = item.policy !== 'opt_out';
+    var lines = (item.offers || [])
+      .map(function (entry) {
+        var btn = entry.applies
+          ? '<button data-testid="neto-out-' +
+            esc(entry.id) +
+            '" onclick="netoChoice(\'' +
+            esc(entry.id) +
+            "','" +
+            (optIn ? '' : 'out') +
+            '\')">' +
+            tx(optIn ? 'Stop taking it' : 'Decline') +
+            '</button>'
+          : '<button class="pri" data-testid="neto-in-' +
+            esc(entry.id) +
+            '" onclick="netoChoice(\'' +
+            esc(entry.id) +
+            "','" +
+            (optIn ? 'in' : '') +
+            '\')">' +
+            tx('Take this offer') +
+            '</button>';
+        return (
+          '<div data-testid="neto-net-' +
+          esc(entry.id) +
+          '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">' +
+          '<span style="flex:1 1 220px;min-width:0"><b>' +
+          esc(entry.name) +
+          '</b>' +
+          '<div style="font-size:var(--fs-1);color:var(--' +
+          (entry.applies ? 'ok' : 'grey') +
+          ')">' +
+          (entry.applies ? tx('applies at your counters') : tx('not applied here')) +
+          ' · ' +
+          esc(_netRelWords({ at: entry.at, until: entry.until })) +
+          '</div></span>' +
+          (entry.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>') +
+          '</div>'
+        );
+      })
+      .join('');
+    out +=
+      '<div style="' +
+      _CARD +
+      '">' +
       /* ⭐ one card per brand this store sells for — a store can be in several networks, each with its own offers and prices */
-      + netStandingHTML(nw)
-      + (((nw.membership || {}).state || 'active') === 'active'
-          ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
-            + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
-                       : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
-            + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>')
-          : '')
-      + '</div>';
+      netStandingHTML(item) +
+      (((item.membership || {}).state || 'active') === 'active'
+        ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">' +
+          tx(
+            optIn
+              ? 'Your network lets each store choose. An offer applies here only if you take it.'
+              : 'Your network applies every released offer. You can decline one for this store.'
+          ) +
+          '</div>' +
+          (lines || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>')
+        : '') +
+      '</div>';
   });
 
-  if (!out) out = '<div style="' + _CARD + ';color:var(--grey)">'
-    + tx('This shop is not part of a network. A brand shares its catalogue with its stores — a store that adopts it sees the brand\'s offers here, and a brand releases them from here.') + '</div>';
+  if (!out)
+    out =
+      '<div style="' +
+      _CARD +
+      ';color:var(--grey)">' +
+      tx(
+        "This shop is not part of a network. A brand shares its catalogue with its stores — a store that adopts it sees the brand's offers here, and a brand releases them from here."
+      ) +
+      '</div>';
   return out;
 }
 /**
@@ -4743,194 +7384,500 @@ function netOffersHTML(){
  * Like an offer: at the next opening unless "now" is pressed twice. A store still at the brand's price follows it; a store
  * with its own price is asked, never overwritten (lib/network-catalogue.js).
  */
-var _NETC_ADD = {}, _NETC_OUT = {};
+var _NETC_ADD = {},
+  _NETC_OUT = {};
 var _NETC_WORDS = { price: 'price', mrp: 'MRP', name: 'name', category: 'category', hsn: 'HSN', unit: 'unit', image: 'picture', desc: 'description' };
-function _netMoney(n){
+function _netMoney(n) {
   if (n === null || n === undefined || n === '') return '—';
-  try { return fmtMoney(Number(n), moneyCode()); } catch (_) { return String(n); }
+  try {
+    return fmtMoney(Number(n), moneyCode());
+  } catch (_) {
+    return String(n);
+  }
 }
-function _netFieldWords(f){
+function _netFieldWords(f) {
   var money = f.field === 'price' || f.field === 'mrp';
-  var v = function(x){ return f.field === 'image' ? (x ? tx('a picture') : tx('none')) : (money ? _netMoney(x) : (x === null || x === '' ? '—' : String(x))); };
+  var v = function (x) {
+    return f.field === 'image' ? (x ? tx('a picture') : tx('none')) : money ? _netMoney(x) : x === null || x === '' ? '—' : String(x);
+  };
   return tx(_NETC_WORDS[f.field] || f.field) + ' ' + esc(v(f.from)) + ' → ' + esc(v(f.to));
 }
-function netCatBrandHTML(c, stores){
-  var key = c.source_key, sel = _NETC_ADD[key] || {};
-  var nSel = Object.keys(sel).filter(function(k){ return sel[k]; }).length;
+function netCatBrandHTML(c, stores) {
+  var key = c.source_key,
+    sel = _NETC_ADD[key] || {};
+  var nSel = Object.keys(sel).filter(function (item) {
+    return sel[item];
+  }).length;
   var outSel = _NETC_OUT[key] || {};
-  var nOut = Object.keys(outSel).filter(function(k){ return outSel[k]; }).length;
+  var nOut = Object.keys(outSel).filter(function (item) {
+    return outSel[item];
+  }).length;
   var armed = _NETO_ARMED === 'pub:' + key;
-  var changes = (c.changes || []).map(function(ch, i){
-    return '<div data-testid="netc-change-' + i + '" style="padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
-      + '<b>' + esc(ch.name) + '</b>' + (ch.was ? ' <span style="color:var(--grey)">(' + tx('was') + ' ' + esc(ch.was) + ')</span>' : '')
-      + ' — ' + (ch.kind === 'withdrawn' ? tx('withdrawn from your stores') :
-                 ch.kind === 'withdrawn_at' ? tx('withdrawn from') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') :
-                 ch.kind === 'restored_at' ? tx('offered again at') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') : (ch.kind === 'added' ? tx('new to your stores') + ' · ' : '') + (ch.fields || []).map(_netFieldWords).join(' · ')) + '</div>';
-  }).join('');
-  var cands = (c.candidates || []).map(function(p){
-    return '<label data-testid="netc-add-' + esc(p.item_id) + '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">'
-      + '<input type="checkbox" ' + (sel[p.item_id] ? 'checked ' : '') + 'onchange="netcTick(\'' + esc(key) + '\',\'' + esc(p.item_id) + '\',this.checked)">'
-      + esc(p.name) + ' <span style="color:var(--grey)">' + esc(_netMoney(p.price)) + '</span></label>';
-  }).join('');
+  var changes = (c.changes || [])
+    .map(function (item, index) {
+      return (
+        '<div data-testid="netc-change-' +
+        index +
+        '" style="padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">' +
+        '<b>' +
+        esc(item.name) +
+        '</b>' +
+        (item.was ? ' <span style="color:var(--grey)">(' + tx('was') + ' ' + esc(item.was) + ')</span>' : '') +
+        ' — ' +
+        (item.kind === 'withdrawn'
+          ? tx('withdrawn from your stores')
+          : item.kind === 'withdrawn_at'
+            ? tx('withdrawn from') + ' ' + (item.stores || []).length + ' ' + tx('store(s)')
+            : item.kind === 'restored_at'
+              ? tx('offered again at') + ' ' + (item.stores || []).length + ' ' + tx('store(s)')
+              : (item.kind === 'added' ? tx('new to your stores') + ' · ' : '') + (item.fields || []).map(_netFieldWords).join(' · ')) +
+        '</div>'
+      );
+    })
+    .join('');
+  var cands = (c.candidates || [])
+    .map(function (item) {
+      return (
+        '<label data-testid="netc-add-' +
+        esc(item.item_id) +
+        '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">' +
+        '<input type="checkbox" ' +
+        (sel[item.item_id] ? 'checked ' : '') +
+        'onchange="netcTick(\'' +
+        esc(key) +
+        "','" +
+        esc(item.item_id) +
+        '\',this.checked)">' +
+        esc(item.name) +
+        ' <span style="color:var(--grey)">' +
+        esc(_netMoney(item.price)) +
+        '</span></label>'
+      );
+    })
+    .join('');
   var waiting = c.pending
-    ? '<div data-testid="netc-pending" style="padding:8px 0;color:var(--warn-2);font-size:var(--fs-2)">⏳ '
-      + esc((c.pending.changes || []).length + ' ' + tx('change(s) go to your stores') + ' ' + _netWhen(c.pending.at))
-      + ' <button class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' + esc(key) + '\')">' + tx('Cancel') + '</button></div>'
+    ? '<div data-testid="netc-pending" style="padding:8px 0;color:var(--warn-2);font-size:var(--fs-2)">⏳ ' +
+      esc((c.pending.changes || []).length + ' ' + tx('change(s) go to your stores') + ' ' + _netWhen(c.pending.at)) +
+      ' <button class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' +
+      esc(key) +
+      '\')">' +
+      tx('Cancel') +
+      '</button></div>'
     : '';
   var any = (c.changes || []).length || nSel || nOut;
   /* ⭐ WITHDRAW — tick what the stores should stop selling; it goes with the next publish (lib/network-catalogue.diff) */
-  var missing = {}; (c.missing || []).forEach(function(n){ missing[n] = true; });
+  var missing = {};
+  (c.missing || []).forEach(function (item) {
+    missing[item] = true;
+  });
   /* ⭐ …or from SOME stores: each product opens a row of its stores, ticked where it is (or will be) withdrawn */
-  var atSel = _NETC_AT[key] || {}, cur = c.withdrawn_at || {}, storeList = c.stores || [];
+  var atSel = _NETC_AT[key] || {},
+    cur = c.withdrawn_at || {},
+    storeList = c.stores || [];
   var nAt = netcAtChanges(c).count;
   any = any || nAt;
-  var shared = (c.published || []).map(function(n, i){
-    var now = cur[n] || [], want = atSel[n] || null;
-    var isOut = function(id){ return want && (id in want) ? !!want[id] : now.indexOf(id) >= 0; };
-    var outCount = storeList.filter(function(s){ return isOut(s.id); }).length;
-    var open = _NETC_OPEN === key + '|' + n;
-    return '<div data-testid="netc-out-' + i + '" style="padding:3px 0;font-size:var(--fs-2)">'
-      + '<label style="display:flex;gap:8px;align-items:center">'
-      + '<input type="checkbox" ' + (outSel[n] ? 'checked ' : '') + 'onchange="netcOut(\'' + esc(key) + '\',' + i + ',this.checked)">'
-      + '<span style="' + (outSel[n] ? 'text-decoration:line-through;color:var(--warn-2)' : '') + '">' + esc(n) + '</span>'
-      + (missing[n] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '')
-      + (outSel[n] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '')
-      + (!outSel[n] && storeList.length
-          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' + i + '" onclick="event.preventDefault();netcAtOpen(\'' + esc(key) + '\',' + i + ')"'
-            + ' style="color:var(--blue);cursor:pointer;font-size:var(--fs-1)">' + esc(outCount ? tx('withdrawn from') + ' ' + outCount + ' ' + tx('store(s)') + ' ▾' : tx('by store') + ' ▸') + '</span>'
-          : '')
-      + '</label>'
-      + (open && !outSel[n] ? '<div data-testid="netc-at-' + i + '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">'
-          + storeList.map(function(s, j){
-              var changed = want && (s.id in want) && (!!want[s.id] !== (now.indexOf(s.id) >= 0));
-              return '<label data-testid="netc-at-' + i + '-' + j + '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' + (changed ? ';font-weight:700' : '') + '">'
-                + '<input type="checkbox" ' + (isOut(s.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + i + ',' + j + ',this.checked)">'
-                + esc(tx('withdraw at') + ' ' + s.name) + '</label>';
-            }).join('') + '</div>'
-        : '')
-      + '</div>';
-  }).join('');
-  var log = (c.log || []).map(function(l){
-    var state = l.cancelled_at ? tx('cancelled') : (l.applied_at ? tx('with your stores since') + ' ' + _netWhen(l.applied_at) : tx('waiting for') + ' ' + _netWhen(l.at));
-    return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(_netWhen(l.published_at)) + ' · '
-      + esc((l.changes || []).length + ' ' + tx('change(s)')) + ' · ' + esc(state) + '</div>';
-  }).join('');
-  return '<div style="' + _CARD + '" data-testid="netc-' + esc(key) + '">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('Catalogue') + ' · ' + esc(c.title || key) + ' · ' + (c.items || 0) + ' ' + tx('product(s) with your stores') + '</div>'
-    + waiting
-    + (changes ? '<div style="font-size:var(--fs-2);margin-bottom:4px">' + tx('Changed since your stores last received it:') + '</div>' + changes
-               : '<div data-testid="netc-uptodate" style="color:var(--grey);font-size:var(--fs-2);padding:4px 0">' + tx('Your stores have every change.') + '</div>')
-    + (cands ? '<div style="font-size:var(--fs-2);margin:8px 0 2px">' + tx('Not shared with your stores yet — tick to add:') + '</div>' + cands : '')
+  var shared = (c.published || [])
+    .map(function (item, index) {
+      var now = cur[item] || [],
+        want = atSel[item] || null;
+      var isOut = function (id) {
+        return want && id in want ? !!want[id] : now.indexOf(id) >= 0;
+      };
+      var outCount = storeList.filter(function (entry) {
+        return isOut(entry.id);
+      }).length;
+      var open = _NETC_OPEN === key + '|' + item;
+      return (
+        '<div data-testid="netc-out-' +
+        index +
+        '" style="padding:3px 0;font-size:var(--fs-2)">' +
+        '<label style="display:flex;gap:8px;align-items:center">' +
+        '<input type="checkbox" ' +
+        (outSel[item] ? 'checked ' : '') +
+        'onchange="netcOut(\'' +
+        esc(key) +
+        "'," +
+        index +
+        ',this.checked)">' +
+        '<span style="' +
+        (outSel[item] ? 'text-decoration:line-through;color:var(--warn-2)' : '') +
+        '">' +
+        esc(item) +
+        '</span>' +
+        (missing[item] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '') +
+        (outSel[item] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '') +
+        (!outSel[item] && storeList.length
+          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' +
+            index +
+            '" onclick="event.preventDefault();netcAtOpen(\'' +
+            esc(key) +
+            "'," +
+            index +
+            ')"' +
+            ' style="color:var(--blue);cursor:pointer;font-size:var(--fs-1)">' +
+            esc(outCount ? tx('withdrawn from') + ' ' + outCount + ' ' + tx('store(s)') + ' ▾' : tx('by store') + ' ▸') +
+            '</span>'
+          : '') +
+        '</label>' +
+        (open && !outSel[item]
+          ? '<div data-testid="netc-at-' +
+            index +
+            '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">' +
+            storeList
+              .map(function (entry, j) {
+                var changed = want && entry.id in want && !!want[entry.id] !== now.indexOf(entry.id) >= 0;
+                return (
+                  '<label data-testid="netc-at-' +
+                  index +
+                  '-' +
+                  j +
+                  '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' +
+                  (changed ? ';font-weight:700' : '') +
+                  '">' +
+                  '<input type="checkbox" ' +
+                  (isOut(entry.id) ? 'checked ' : '') +
+                  'onchange="netcAt(\'' +
+                  esc(key) +
+                  "'," +
+                  index +
+                  ',' +
+                  j +
+                  ',this.checked)">' +
+                  esc(tx('withdraw at') + ' ' + entry.name) +
+                  '</label>'
+                );
+              })
+              .join('') +
+            '</div>'
+          : '') +
+        '</div>'
+      );
+    })
+    .join('');
+  var log = (c.log || [])
+    .map(function (item) {
+      var state = item.cancelled_at
+        ? tx('cancelled')
+        : item.applied_at
+          ? tx('with your stores since') + ' ' + _netWhen(item.applied_at)
+          : tx('waiting for') + ' ' + _netWhen(item.at);
+      return (
+        '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' +
+        esc(_netWhen(item.published_at)) +
+        ' · ' +
+        esc((item.changes || []).length + ' ' + tx('change(s)')) +
+        ' · ' +
+        esc(state) +
+        '</div>'
+      );
+    })
+    .join('');
+  return (
+    '<div style="' +
+    _CARD +
+    '" data-testid="netc-' +
+    esc(key) +
+    '">' +
+    '<div class="sec" style="margin:0 0 6px">' +
+    tx('Catalogue') +
+    ' · ' +
+    esc(c.title || key) +
+    ' · ' +
+    (c.items || 0) +
+    ' ' +
+    tx('product(s) with your stores') +
+    '</div>' +
+    waiting +
+    (changes
+      ? '<div style="font-size:var(--fs-2);margin-bottom:4px">' + tx('Changed since your stores last received it:') + '</div>' + changes
+      : '<div data-testid="netc-uptodate" style="color:var(--grey);font-size:var(--fs-2);padding:4px 0">' + tx('Your stores have every change.') + '</div>') +
+    (cands ? '<div style="font-size:var(--fs-2);margin:8px 0 2px">' + tx('Not shared with your stores yet — tick to add:') + '</div>' + cands : '') +
     /* ⚠️ the fold REMEMBERS it is open — every tick repaints the screen, and a list that snapped shut would lose the brand's place */
-    + (shared ? '<details data-testid="netc-shared"' + (_NETC_SHOW[key] || nOut || nAt || (c.missing || []).length ? ' open' : '')
-        + ' ontoggle="_NETC_SHOW[\'' + esc(key) + '\']=this.open" style="margin-top:8px"><summary data-testid="netc-shared-open" style="cursor:pointer;font-size:var(--fs-2)">'
-        + esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) + '</summary>' + shared + '</details>' : '')
-    + (any ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
-        + '<button class="pri" data-testid="netc-publish" onclick="netcPublish(\'' + esc(key) + '\',false)">' + tx('Publish at next opening') + '</button>'
-        + '<button data-testid="netc-publish-now" onclick="netcPublish(\'' + esc(key) + '\',true)">' + (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) + '</button>'
-        + '</div>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'
-        + esc(tx('A store still selling at your price moves to the new one. A store with its own price keeps it and is shown yours.')
-              + (stores ? '' : ' ' + tx('No store uses this catalogue yet.'))) + '</div>'
-      : '')
-    + (log ? '<div style="margin-top:8px">' + log + '</div>' : '')
-    + '</div>';
+    (shared
+      ? '<details data-testid="netc-shared"' +
+        (_NETC_SHOW[key] || nOut || nAt || (c.missing || []).length ? ' open' : '') +
+        ' ontoggle="_NETC_SHOW[\'' +
+        esc(key) +
+        '\']=this.open" style="margin-top:8px"><summary data-testid="netc-shared-open" style="cursor:pointer;font-size:var(--fs-2)">' +
+        esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) +
+        '</summary>' +
+        shared +
+        '</details>'
+      : '') +
+    (any
+      ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
+        '<button class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
+        esc(key) +
+        '\',false)">' +
+        tx('Publish at next opening') +
+        '</button>' +
+        '<button data-testid="netc-publish-now" onclick="netcPublish(\'' +
+        esc(key) +
+        '\',true)">' +
+        (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) +
+        '</button>' +
+        '</div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+        esc(
+          tx('A store still selling at your price moves to the new one. A store with its own price keeps it and is shown yours.') +
+            (stores ? '' : ' ' + tx('No store uses this catalogue yet.'))
+        ) +
+        '</div>'
+      : '') +
+    (log ? '<div style="margin-top:8px">' + log + '</div>' : '') +
+    '</div>'
+  );
 }
-var _NETC_AT = {}, _NETC_OPEN = null, _NETC_SHOW = {};
-function _netcCat(key){ return ((((_NETO || {}).brand || {}).catalogue) || []).filter(function(x){ return x.source_key === key; })[0] || null; }
-function netcAtOpen(key, i){
-  var c = _netcCat(key), n = c && (c.published || [])[i]; if (!n) return;
-  _NETC_OPEN = _NETC_OPEN === key + '|' + n ? null : key + '|' + n; loadSettings();
+var _NETC_AT = {},
+  _NETC_OPEN = null,
+  _NETC_SHOW = {};
+function _netcCat(key) {
+  return (
+    (((_NETO || {}).brand || {}).catalogue || []).filter(function (x) {
+      return x.source_key === key;
+    })[0] || null
+  );
 }
-function netcAt(key, i, j, on){
-  var c = _netcCat(key), n = c && (c.published || [])[i], s = c && (c.stores || [])[j]; if (!n || !s) return;
-  _NETC_AT[key] = _NETC_AT[key] || {}; _NETC_AT[key][n] = _NETC_AT[key][n] || {}; _NETC_AT[key][n][s.id] = !!on; loadSettings();
+function netcAtOpen(key, i) {
+  var c = _netcCat(key),
+    n = c && (c.published || [])[i];
+  if (!n) return;
+  _NETC_OPEN = _NETC_OPEN === key + '|' + n ? null : key + '|' + n;
+  loadSettings();
+}
+function netcAt(key, i, j, on) {
+  var c = _netcCat(key),
+    n = c && (c.published || [])[i],
+    s = c && (c.stores || [])[j];
+  if (!n || !s) return;
+  _NETC_AT[key] = _NETC_AT[key] || {};
+  _NETC_AT[key][n] = _NETC_AT[key][n] || {};
+  _NETC_AT[key][n][s.id] = !!on;
+  loadSettings();
 }
 /** what the per-store ticks change against what is already withdrawn → { withdraw_at, restore_at, count } */
-function netcAtChanges(c){
-  var sel = (_NETC_AT[c.source_key]) || {}, cur = c.withdrawn_at || {}, w = {}, r = {}, count = 0;
-  Object.keys(sel).forEach(function(n){
-    Object.keys(sel[n]).forEach(function(id){
-      var was = (cur[n] || []).indexOf(id) >= 0;
-      if (sel[n][id] && !was) { (w[n] = w[n] || []).push(id); count++; }
-      if (!sel[n][id] && was) { (r[n] = r[n] || []).push(id); count++; }
+function netcAtChanges(c) {
+  var sel = _NETC_AT[c.source_key] || {},
+    cur = c.withdrawn_at || {},
+    w = {},
+    r = {},
+    count = 0;
+  Object.keys(sel).forEach(function (item) {
+    Object.keys(sel[item]).forEach(function (id) {
+      var was = (cur[item] || []).indexOf(id) >= 0;
+      if (sel[item][id] && !was) {
+        (w[item] = w[item] || []).push(id);
+        count++;
+      }
+      if (!sel[item][id] && was) {
+        (r[item] = r[item] || []).push(id);
+        count++;
+      }
     });
   });
   return { withdraw_at: w, restore_at: r, count: count };
 }
-function netCatAtFor(key){ var c = _netcCat(key); return c ? netcAtChanges(c) : { withdraw_at: {}, restore_at: {}, count: 0 }; }
-function netcOut(key, i, on){
-  var c = ((((_NETO || {}).brand || {}).catalogue) || []).filter(function(x){ return x.source_key === key; })[0];
-  var name = c && (c.published || [])[i]; if (!name) return;
-  _NETC_OUT[key] = _NETC_OUT[key] || {}; _NETC_OUT[key][name] = !!on; loadSettings();
+function netCatAtFor(key) {
+  var c = _netcCat(key);
+  return c ? netcAtChanges(c) : { withdraw_at: {}, restore_at: {}, count: 0 };
 }
-function netcTick(key, id, on){ _NETC_ADD[key] = _NETC_ADD[key] || {}; _NETC_ADD[key][id] = !!on; loadSettings(); }
-async function netcPublish(key, now){
-  if (now && _NETO_ARMED !== 'pub:' + key) { _NETO_ARMED = 'pub:' + key; loadSettings(); return; }
+function netcOut(key, i, on) {
+  var c = (((_NETO || {}).brand || {}).catalogue || []).filter(function (x) {
+    return x.source_key === key;
+  })[0];
+  var name = c && (c.published || [])[i];
+  if (!name) return;
+  _NETC_OUT[key] = _NETC_OUT[key] || {};
+  _NETC_OUT[key][name] = !!on;
+  loadSettings();
+}
+function netcTick(key, id, on) {
+  _NETC_ADD[key] = _NETC_ADD[key] || {};
+  _NETC_ADD[key][id] = !!on;
+  loadSettings();
+}
+async function netcPublish(key, now) {
+  if (now && _NETO_ARMED !== 'pub:' + key) {
+    _NETO_ARMED = 'pub:' + key;
+    loadSettings();
+    return;
+  }
   _NETO_ARMED = null;
   var sel = _NETC_ADD[key] || {};
   try {
     var outs = _NETC_OUT[key] || {};
     var at = netCatAtFor(key);
-    var r = await api('netCatPublish', { body: { source_key: key, at: now ? 'now' : undefined,
-      add: Object.keys(sel).filter(function(k){ return sel[k]; }),
-      withdraw: Object.keys(outs).filter(function(k){ return outs[k]; }),
-      withdraw_at: at.withdraw_at, restore_at: at.restore_at } });
-    delete _NETC_ADD[key]; delete _NETC_OUT[key]; delete _NETC_AT[key]; _NETC_OPEN = null;
-    toast(r && r.applied ? tx('Published — your stores have it now') : tx('Published — your stores get it at the next opening'));
+    var reply = await api('netCatPublish', {
+      body: {
+        source_key: key,
+        at: now ? 'now' : undefined,
+        add: Object.keys(sel).filter(function (item) {
+          return sel[item];
+        }),
+        withdraw: Object.keys(outs).filter(function (item) {
+          return outs[item];
+        }),
+        withdraw_at: at.withdraw_at,
+        restore_at: at.restore_at
+      }
+    });
+    delete _NETC_ADD[key];
+    delete _NETC_OUT[key];
+    delete _NETC_AT[key];
+    _NETC_OPEN = null;
+    toast(reply && reply.applied ? tx('Published — your stores have it now') : tx('Published — your stores get it at the next opening'));
     netoReload();
-  } catch (e) { toast((e && e.message) || tx('Could not publish'), true); }
+  } catch (e) {
+    toast((e && e.message) || tx('Could not publish'), true);
+  }
 }
-async function netcCancel(key){
-  try { await api('netCatCancel', { body: { source_key: key } }); toast(tx('Cancelled — nothing goes to your stores')); netoReload(); }
-  catch (e) { toast((e && e.message) || tx('Could not cancel'), true); }
+async function netcCancel(key) {
+  try {
+    await api('netCatCancel', { body: { source_key: key } });
+    toast(tx('Cancelled — nothing goes to your stores'));
+    netoReload();
+  } catch (e) {
+    toast((e && e.message) || tx('Could not cancel'), true);
+  }
 }
-function netCatNoticesHTML(notes){
-  return '<div style="' + _CARD + '" data-testid="netc-notices">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('From your brand') + '</div>'
-    + notes.map(function(n, i){
-      if (n.kind === 'restored') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--ok)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) + '</div></span>'
-        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
-      if (n.kind === 'withdrawn') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--warn-2)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + (n.only_here ? tx('withdrew this from your store — it is off your counter and storefront since')
-                                                                        : tx('no longer offers this — it is off your counter and storefront since')) + ' ' + _netWhen(n.at)) + '</div></span>'
-        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
-      return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
-        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">'
-        + esc((n.brand_name || tx('Your brand')) + ' ' + tx('suggests') + ' ' + _netMoney(n.suggested) + ' · ' + tx('you sell at') + ' ' + _netMoney(n.yours)) + '</div></span>'
-        + '<button class="pri" data-testid="netc-use-' + i + '" onclick="netcAnswer(' + i + ',\'use\')">' + esc(tx('Use') + ' ' + _netMoney(n.suggested)) + '</button>'
-        + '<button data-testid="netc-keep-' + i + '" onclick="netcAnswer(' + i + ',\'keep\')">' + esc(tx('Keep') + ' ' + _netMoney(n.yours)) + '</button>'
-        + '</div>';
-    }).join('') + '</div>';
+function netCatNoticesHTML(notes) {
+  return (
+    '<div style="' +
+    _CARD +
+    '" data-testid="netc-notices">' +
+    '<div class="sec" style="margin:0 0 6px">' +
+    tx('From your brand') +
+    '</div>' +
+    notes
+      .map(function (item, index) {
+        if (item.kind === 'restored')
+          return (
+            '<div data-testid="netc-notice-' +
+            index +
+            '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">' +
+            '<span style="flex:1 1 240px;min-width:0"><b>' +
+            esc(item.name) +
+            '</b><div style="font-size:var(--fs-1);color:var(--ok)">' +
+            esc((item.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) +
+            '</div></span>' +
+            '<button data-testid="netc-ok-' +
+            index +
+            '" onclick="netcAnswer(' +
+            index +
+            ",'ok')\">" +
+            tx('OK') +
+            '</button></div>'
+          );
+        if (item.kind === 'withdrawn')
+          return (
+            '<div data-testid="netc-notice-' +
+            index +
+            '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">' +
+            '<span style="flex:1 1 240px;min-width:0"><b>' +
+            esc(item.name) +
+            '</b><div style="font-size:var(--fs-1);color:var(--warn-2)">' +
+            esc(
+              (item.brand_name || tx('Your brand')) +
+                ' ' +
+                (item.only_here
+                  ? tx('withdrew this from your store — it is off your counter and storefront since')
+                  : tx('no longer offers this — it is off your counter and storefront since')) +
+                ' ' +
+                _netWhen(item.at)
+            ) +
+            '</div></span>' +
+            '<button data-testid="netc-ok-' +
+            index +
+            '" onclick="netcAnswer(' +
+            index +
+            ",'ok')\">" +
+            tx('OK') +
+            '</button></div>'
+          );
+        return (
+          '<div data-testid="netc-notice-' +
+          index +
+          '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">' +
+          '<span style="flex:1 1 240px;min-width:0"><b>' +
+          esc(item.name) +
+          '</b><div style="font-size:var(--fs-1);color:var(--grey)">' +
+          esc(
+            (item.brand_name || tx('Your brand')) +
+              ' ' +
+              tx('suggests') +
+              ' ' +
+              _netMoney(item.suggested) +
+              ' · ' +
+              tx('you sell at') +
+              ' ' +
+              _netMoney(item.yours)
+          ) +
+          '</div></span>' +
+          '<button class="pri" data-testid="netc-use-' +
+          index +
+          '" onclick="netcAnswer(' +
+          index +
+          ",'use')\">" +
+          esc(tx('Use') + ' ' + _netMoney(item.suggested)) +
+          '</button>' +
+          '<button data-testid="netc-keep-' +
+          index +
+          '" onclick="netcAnswer(' +
+          index +
+          ",'keep')\">" +
+          esc(tx('Keep') + ' ' + _netMoney(item.yours)) +
+          '</button>' +
+          '</div>'
+        );
+      })
+      .join('') +
+    '</div>'
+  );
 }
-async function netcAnswer(i, choice){
-  var n = (((_NETO || {}).store || {}).price_notices || [])[i]; if (!n) return;
+async function netcAnswer(i, choice) {
+  var n = (((_NETO || {}).store || {}).price_notices || [])[i];
+  if (!n) return;
   try {
     await api('netCatPrice', { body: { source_key: n.source_key, name: n.name, key: n.key, choice: choice } });
-    toast(choice === 'use' ? tx('Your price now follows the brand') : (choice === 'ok' ? tx('Noted') : tx('Kept your price')));
+    toast(choice === 'use' ? tx('Your price now follows the brand') : choice === 'ok' ? tx('Noted') : tx('Kept your price'));
     netoReload();
-  } catch (e) { toast((e && e.message) || tx('Could not save'), true); }
+  } catch (e) {
+    toast((e && e.message) || tx('Could not save'), true);
+  }
 }
-async function netoPolicy(k){
-  try { await api('netOfferPolicy', { body: { policy: k } }); if (typeof toast === 'function') toast(tx('Saved — every store is told')); netoReload(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true); }
+async function netoPolicy(k) {
+  try {
+    await api('netOfferPolicy', { body: { policy: k } });
+    if (typeof toast === 'function') toast(tx('Saved — every store is told'));
+    netoReload();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true);
+  }
 }
-async function netoRelease(id, now){
+async function netoRelease(id, now) {
   /* ⚠️ "now" is a mid-day change for every store — two presses, and the second one says so */
-  if (now && _NETO_ARMED !== 'now:' + id) { _NETO_ARMED = 'now:' + id; loadSettings(); return; }
+  if (now && _NETO_ARMED !== 'now:' + id) {
+    _NETO_ARMED = 'now:' + id;
+    loadSettings();
+    return;
+  }
   _NETO_ARMED = null;
   try {
-    var r = await api('netOfferRelease', { params: { id: id }, body: now ? { at: 'now' } : {} });
-    if (typeof toast === 'function') toast(tx('Released') + ' — ' + ((r && r.pushed && r.pushed.stores) || 0) + ' ' + tx('store(s) told'));
+    var reply = await api('netOfferRelease', { params: { id: id }, body: now ? { at: 'now' } : {} });
+    if (typeof toast === 'function') toast(tx('Released') + ' — ' + ((reply && reply.pushed && reply.pushed.stores) || 0) + ' ' + tx('store(s) told'));
     netoReload();
-  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not release'), true); }
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not release'), true);
+  }
 }
-async function netoWithdraw(id){
-  try { await api('netOfferWithdraw', { params: { id: id }, body: {} }); if (typeof toast === 'function') toast(tx('Withdrawn from the next opening')); netoReload(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not withdraw'), true); }
+async function netoWithdraw(id) {
+  try {
+    await api('netOfferWithdraw', { params: { id: id }, body: {} });
+    if (typeof toast === 'function') toast(tx('Withdrawn from the next opening'));
+    netoReload();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not withdraw'), true);
+  }
 }
 /**
  * ── ⭐⭐ MEMBERSHIP — THE NETWORK'S OWN EDGES (Athi, 2026-09-17) ──────────────────────────────────────────────────────
@@ -4940,132 +7887,343 @@ async function netoWithdraw(id){
  * removed); joined = an existing business that asked or was invited (can be removed).
  */
 var _NET_STATE = { active: 'in the network', suspended: 'paused', requested: 'waiting' };
-function netMembersHTML(list){
-  var rows = list.map(function(m, i){
-    var btns = '';
-    if (m.state === 'requested' && m.asked_by === 'store')
-      btns = '<button class="pri" data-testid="netm-approve-' + i + '" onclick="netmAct(\'netApprove\',\'' + esc(m.edge_id) + '\')">' + tx('Approve') + '</button>'
-           + '<button data-testid="netm-decline-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Decline') + '</button>';
-    else if (m.state === 'requested')
-      btns = '<button data-testid="netm-cancel-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Cancel invitation') + '</button>';
-    else if (m.state === 'suspended' && m.edge_id)
-      btns = '<button class="pri" data-testid="netm-resume-' + i + '" onclick="netmAct(\'netResume\',\'' + esc(m.edge_id) + '\')">' + tx('Resume') + '</button>';
-    else if (m.state === 'active' && m.via === 'joined')
-      btns = (_NETO_ARMED === 'rm:' + m.edge_id
-               ? '<button class="warn" data-testid="netm-remove-' + i + '" onclick="netmAct(\'netDisconnect\',\'' + esc(m.edge_id) + '\')">' + tx('Remove — their counters stop selling your products') + '</button>'
-               : '<button data-testid="netm-remove-' + i + '" onclick="_NETO_ARMED=\'rm:' + esc(m.edge_id) + '\';loadSettings()">' + tx('Remove') + '</button>');
-    else if (m.state === 'active' && m.edge_id)
-      btns = '<button data-testid="netm-pause-' + i + '" onclick="netmAct(\'netSuspend\',\'' + esc(m.edge_id) + '\')">' + tx('Pause') + '</button>';
-    var words = m.state === 'requested' ? (m.asked_by === 'store' ? tx('asks to join') : tx('invited — waiting for them')) : tx(_NET_STATE[m.state] || m.state);
-    return '<div data-testid="netm-' + i + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">'
-      + '<span style="flex:1 1 200px;min-width:0"><b>' + esc(m.name || m.id) + '</b> <span style="font-size:var(--fs-1);color:var(--'
-      + (m.state === 'active' ? 'ok' : 'warn-2') + ')">' + esc(words) + (m.via === 'built' ? ' · ' + esc(tx('your store')) : '') + '</span></span>' + btns + '</div>';
-  }).join('');
-  return '<div data-testid="neto-members" style="margin-bottom:8px">' + rows
-    + '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
-    + '<input id="netm_handle" data-testid="netm-handle" placeholder="' + esc(tx('Invite a store by its handle')) + '" style="flex:1;min-width:0">'
-    + '<button data-testid="netm-invite" onclick="netmInvite()">' + tx('Invite') + '</button></div></div>';
+function netMembersHTML(list) {
+  var rows = list
+    .map(function (item, index) {
+      var btns = '';
+      if (item.state === 'requested' && item.asked_by === 'store')
+        btns =
+          '<button class="pri" data-testid="netm-approve-' +
+          index +
+          "\" onclick=\"netmAct('netApprove','" +
+          esc(item.edge_id) +
+          '\')">' +
+          tx('Approve') +
+          '</button>' +
+          '<button data-testid="netm-decline-' +
+          index +
+          "\" onclick=\"netmAct('netDecline','" +
+          esc(item.edge_id) +
+          '\')">' +
+          tx('Decline') +
+          '</button>';
+      else if (item.state === 'requested')
+        btns =
+          '<button data-testid="netm-cancel-' +
+          index +
+          "\" onclick=\"netmAct('netDecline','" +
+          esc(item.edge_id) +
+          '\')">' +
+          tx('Cancel invitation') +
+          '</button>';
+      else if (item.state === 'suspended' && item.edge_id)
+        btns =
+          '<button class="pri" data-testid="netm-resume-' +
+          index +
+          "\" onclick=\"netmAct('netResume','" +
+          esc(item.edge_id) +
+          '\')">' +
+          tx('Resume') +
+          '</button>';
+      else if (item.state === 'active' && item.via === 'joined')
+        btns =
+          _NETO_ARMED === 'rm:' + item.edge_id
+            ? '<button class="warn" data-testid="netm-remove-' +
+              index +
+              "\" onclick=\"netmAct('netDisconnect','" +
+              esc(item.edge_id) +
+              '\')">' +
+              tx('Remove — their counters stop selling your products') +
+              '</button>'
+            : '<button data-testid="netm-remove-' +
+              index +
+              '" onclick="_NETO_ARMED=\'rm:' +
+              esc(item.edge_id) +
+              '\';loadSettings()">' +
+              tx('Remove') +
+              '</button>';
+      else if (item.state === 'active' && item.edge_id)
+        btns = '<button data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+      var words =
+        item.state === 'requested'
+          ? item.asked_by === 'store'
+            ? tx('asks to join')
+            : tx('invited — waiting for them')
+          : tx(_NET_STATE[item.state] || item.state);
+      return (
+        '<div data-testid="netm-' +
+        index +
+        '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">' +
+        '<span style="flex:1 1 200px;min-width:0"><b>' +
+        esc(item.name || item.id) +
+        '</b> <span style="font-size:var(--fs-1);color:var(--' +
+        (item.state === 'active' ? 'ok' : 'warn-2') +
+        ')">' +
+        esc(words) +
+        (item.via === 'built' ? ' · ' + esc(tx('your store')) : '') +
+        '</span></span>' +
+        btns +
+        '</div>'
+      );
+    })
+    .join('');
+  return (
+    '<div data-testid="neto-members" style="margin-bottom:8px">' +
+    rows +
+    '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">' +
+    '<input id="netm_handle" data-testid="netm-handle" placeholder="' +
+    esc(tx('Invite a store by its handle')) +
+    '" style="flex:1;min-width:0">' +
+    '<button data-testid="netm-invite" onclick="netmInvite()">' +
+    tx('Invite') +
+    '</button></div></div>'
+  );
 }
-function netStandingHTML(nw){
-  var m = nw.membership || { state: 'active' }, name = esc(nw.brand_name || tx('this brand'));
-  var head = function(words, color){ return '<div class="sec" style="margin:0 0 6px" data-testid="neto-network-' + esc(nw.brand_id) + '">' + words + '</div>'
-    + (color ? '' : ''); };
+function netStandingHTML(nw) {
+  var m = nw.membership || { state: 'active' },
+    name = esc(nw.brand_name || tx('this brand'));
+  var head = function (words, color) {
+    return '<div class="sec" style="margin:0 0 6px" data-testid="neto-network-' + esc(nw.brand_id) + '">' + words + '</div>' + (color ? '' : '');
+  };
   if (m.state === 'active') return head(tx('Member of') + ' ' + name);
-  var note = function(words, btns){ return head(name) + '<div data-testid="neto-standing-' + esc(nw.brand_id) + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--fs-2);color:var(--warn-2);margin-bottom:6px"><span style="flex:1 1 220px">' + words + '</span>' + (btns || '') + '</div>'; };
-  if (m.state === 'invited') return note(esc(tx('invited your store to its network')),
-    '<button class="pri" data-testid="neto-accept-' + esc(nw.brand_id) + '" onclick="netmAct(\'netApprove\',\'' + esc(m.edge_id) + '\')">' + tx('Accept') + '</button>'
-    + '<button data-testid="neto-refuse-' + esc(nw.brand_id) + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Decline') + '</button>');
-  if (m.state === 'asked') return note(esc(tx('You asked to join — its products show here once it approves.')),
-    '<button data-testid="neto-unask-' + esc(nw.brand_id) + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Cancel request') + '</button>');
+  var note = function (words, btns) {
+    return (
+      head(name) +
+      '<div data-testid="neto-standing-' +
+      esc(nw.brand_id) +
+      '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--fs-2);color:var(--warn-2);margin-bottom:6px"><span style="flex:1 1 220px">' +
+      words +
+      '</span>' +
+      (btns || '') +
+      '</div>'
+    );
+  };
+  if (m.state === 'invited')
+    return note(
+      esc(tx('invited your store to its network')),
+      '<button class="pri" data-testid="neto-accept-' +
+        esc(nw.brand_id) +
+        "\" onclick=\"netmAct('netApprove','" +
+        esc(m.edge_id) +
+        '\')">' +
+        tx('Accept') +
+        '</button>' +
+        '<button data-testid="neto-refuse-' +
+        esc(nw.brand_id) +
+        "\" onclick=\"netmAct('netDecline','" +
+        esc(m.edge_id) +
+        '\')">' +
+        tx('Decline') +
+        '</button>'
+    );
+  if (m.state === 'asked')
+    return note(
+      esc(tx('You asked to join — its products show here once it approves.')),
+      '<button data-testid="neto-unask-' +
+        esc(nw.brand_id) +
+        "\" onclick=\"netmAct('netDecline','" +
+        esc(m.edge_id) +
+        '\')">' +
+        tx('Cancel request') +
+        '</button>'
+    );
   if (m.state === 'suspended') return note(esc(tx('paused your store — its products and offers are not shown here for now.')));
-  return note(esc(tx('Not in its network — its products are not shown here.')),
-    (m.brand_node ? '<button class="pri" data-testid="neto-ask-' + esc(nw.brand_id) + '" onclick="netmAsk(\'' + esc(m.brand_node) + '\')">' + tx('Ask to join') + '</button>' : ''));
+  return note(
+    esc(tx('Not in its network — its products are not shown here.')),
+    m.brand_node
+      ? '<button class="pri" data-testid="neto-ask-' +
+          esc(nw.brand_id) +
+          '" onclick="netmAsk(\'' +
+          esc(m.brand_node) +
+          '\')">' +
+          tx('Ask to join') +
+          '</button>'
+      : ''
+  );
 }
-function _netmDone(){
+function _netmDone() {
   if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
   if (typeof UI !== 'undefined') UI._ctOffers = undefined;
-  _NETO_ARMED = null; netoReload();
+  _NETO_ARMED = null;
+  netoReload();
 }
-async function netmAct(ep, edgeId){
-  try { await api(ep, { params: { id: edgeId }, body: {} }); toast(tx('Done')); _netmDone(); }
-  catch (e) { toast((e && e.message) || tx('Could not do that'), true); }
+async function netmAct(ep, edgeId) {
+  try {
+    await api(ep, { params: { id: edgeId }, body: {} });
+    toast(tx('Done'));
+    _netmDone();
+  } catch (e) {
+    toast((e && e.message) || tx('Could not do that'), true);
+  }
 }
-async function netmAsk(brandNode){
-  try { await api('netConnect', { body: { parentId: brandNode, type: 'commercial' } }); toast(tx('Asked — the brand decides')); _netmDone(); }
-  catch (e) { toast((e && e.message) || tx('Could not ask'), true); }
+async function netmAsk(brandNode) {
+  try {
+    await api('netConnect', { body: { parentId: brandNode, type: 'commercial' } });
+    toast(tx('Asked — the brand decides'));
+    _netmDone();
+  } catch (e) {
+    toast((e && e.message) || tx('Could not ask'), true);
+  }
 }
-async function netmInvite(){
-  var el = document.getElementById('netm_handle'), h = el && el.value.trim();
+async function netmInvite() {
+  var el = document.getElementById('netm_handle'),
+    h = el && el.value.trim();
   if (!h) return;
-  try { await api('netConnect', { body: { childHandle: h, type: 'commercial' } }); toast(tx('Invited — they decide')); _netmDone(); }
-  catch (e) { toast((e && e.message) || tx('Could not invite'), true); }
+  try {
+    await api('netConnect', { body: { childHandle: h, type: 'commercial' } });
+    toast(tx('Invited — they decide'));
+    _netmDone();
+  } catch (e) {
+    toast((e && e.message) || tx('Could not invite'), true);
+  }
 }
-async function netoChoice(id, choice){
-  try { await api('netOfferChoice', { params: { id: id }, body: { choice: choice || null } }); if (typeof toast === 'function') toast(tx('Saved — your counters are told')); netoReload(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true); }
+async function netoChoice(id, choice) {
+  try {
+    await api('netOfferChoice', { params: { id: id }, body: { choice: choice || null } });
+    if (typeof toast === 'function') toast(tx('Saved — your counters are told'));
+    netoReload();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true);
+  }
 }
 var _CTRS;
-function ctrReload(){ _CTRS = undefined; loadSettings(); }
-function ctrRegisterHTML(){
-  if (_CTRS === undefined) { _CTRS = null; api('counters').then(function(r){ _CTRS = r || { counters: [] }; if (setSec() === 'integrations') loadSettings(); })
-    .catch(function(e){ _CTRS = { counters: [], error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
+function ctrReload() {
+  _CTRS = undefined;
+  loadSettings();
+}
+function ctrRegisterHTML() {
+  if (_CTRS === undefined) {
+    _CTRS = null;
+    api('counters')
+      .then(function (reply) {
+        _CTRS = reply || { counters: [] };
+        if (setSec() === 'integrations') loadSettings();
+      })
+      .catch(function (e) {
+        _CTRS = { counters: [], error: (e && e.message) || true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   if (_CTRS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   var list = (_CTRS && _CTRS.counters) || [];
-  var rows = list.map(function(c){
-    /* ⚠️ a counter on break is still HELD by its PC — shown as such, and still releasable only as a last resort */
-    var onBreak = c.state === 'break', open = c.state === 'open' || onBreak, h = c.held_by || {};
-    var where = onBreak
-      ? ('☕ ' + tx('on break') + (c.break_since ? ' ' + tx('since') + ' ' + esc(new Date(c.break_since).toTimeString().slice(0, 5)) : '')
-         + (c.break_by ? ' · ' + esc(c.break_by) : '') + ' · ' + esc(h.name || tx('a PC')))
-      : open
-      ? (tx('open on') + ' ' + esc(h.name || tx('a PC')) + (h.seen && h.seen.ip ? ' · ' + esc(h.seen.ip) : '')
-         + (h.seen && h.seen.at ? ' · ' + esc(_keyAgo(h.seen.at)) : ''))
-      : (c.state === 'opening' ? tx('opening…') : (c.closed_at ? tx('closed') + ' ' + esc(_keyAgo(c.closed_at)) : tx('not opened yet')));
-    var armed = (_CLOSE_ARMED === 'rel:' + c.id);
-    return '<div data-testid="ctr-' + esc(c.id) + '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
-      + '<b class="mono" style="font-size:1.15em;min-width:2.4em">' + esc(c.id) + '</b>'
-      + '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' + esc(c.id) + '">' + esc(c.name) + '</span>'
-      + '<div style="color:var(--grey);font-size:var(--fs-1)">'
-        + (c.last_no ? tx('last bill') + ' ' + esc(c.last_no) + ' · ' : '')
-        + (c.next ? tx('next') + ' ' + esc(String(c.next).padStart(4, '0')) + ' · ' : '')
-        + '<span style="color:var(--' + (onBreak ? 'warn' : (open ? 'ok' : 'grey')) + ')" data-testid="ctr-state-' + esc(c.id) + '">' + where + '</span></div>'
-      + (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '')
-      + '</span>'
-      + (open
-          ? '<button class="warn" data-testid="ctr-release-' + esc(c.id) + '" onclick="ctrRelease(\'' + esc(c.id) + '\')" title="'
-            + esc(tx('only for a PC that cannot close the counter itself')) + '">'
-            + (armed ? tx('Release — unsent bills stay on that PC') : tx('Release')) + '</button>'
-          : '<button class="pri" data-testid="ctr-open-' + esc(c.id) + '" onclick="ctrOpenHere(\'' + esc(c.id) + '\')"'
-            + (c.state === 'opening' ? ' disabled' : '') + '>' + tx('Open on this PC') + '</button>')
-      + '</div>';
-  }).join('');
-  return '<div style="' + _CARD + '">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('Counters') + ' · ' + list.length + '</div>'
-    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
-    + tx('Each counter keeps its own number and its own bill series. Open it on a PC to bill; close it from that counter (☰ → Close this counter) and it can be opened again — here or on another PC — carrying on from its last bill. Only one PC can hold a counter at a time.')
-    + '</div>'
-    + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No counters yet.') + '</div>')
-    + '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
-    + '<input class="inp" id="ctr_new_name" data-testid="ctr-new-name" placeholder="' + esc(tx('Name — Front desk, Billing 2 …')) + '" style="flex:1 1 220px">'
-    + '<button class="pri" data-testid="ctr-add" onclick="ctrAdd()">' + tx('Add a counter') + '</button></div>'
-    + (_CTRS && _CTRS.error ? '<div style="color:var(--warn);font-size:var(--fs-1);margin-top:6px">' + tx('Could not read the counters.') + '</div>' : '')
-    + '</div>';
+  var rows = list
+    .map(function (item) {
+      /* ⚠️ a counter on break is still HELD by its PC — shown as such, and still releasable only as a last resort */
+      var onBreak = item.state === 'break',
+        open = item.state === 'open' || onBreak,
+        h = item.held_by || {};
+      var where = onBreak
+        ? '☕ ' +
+          tx('on break') +
+          (item.break_since ? ' ' + tx('since') + ' ' + esc(new Date(item.break_since).toTimeString().slice(0, 5)) : '') +
+          (item.break_by ? ' · ' + esc(item.break_by) : '') +
+          ' · ' +
+          esc(h.name || tx('a PC'))
+        : open
+          ? tx('open on') +
+            ' ' +
+            esc(h.name || tx('a PC')) +
+            (h.seen && h.seen.ip ? ' · ' + esc(h.seen.ip) : '') +
+            (h.seen && h.seen.at ? ' · ' + esc(_keyAgo(h.seen.at)) : '')
+          : item.state === 'opening'
+            ? tx('opening…')
+            : item.closed_at
+              ? tx('closed') + ' ' + esc(_keyAgo(item.closed_at))
+              : tx('not opened yet');
+      var armed = _CLOSE_ARMED === 'rel:' + item.id;
+      return (
+        '<div data-testid="ctr-' +
+        esc(item.id) +
+        '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">' +
+        '<b class="mono" style="font-size:1.15em;min-width:2.4em">' +
+        esc(item.id) +
+        '</b>' +
+        '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' +
+        esc(item.id) +
+        '">' +
+        esc(item.name) +
+        '</span>' +
+        '<div style="color:var(--grey);font-size:var(--fs-1)">' +
+        (item.last_no ? tx('last bill') + ' ' + esc(item.last_no) + ' · ' : '') +
+        (item.next ? tx('next') + ' ' + esc(String(item.next).padStart(4, '0')) + ' · ' : '') +
+        '<span style="color:var(--' +
+        (onBreak ? 'warn' : open ? 'ok' : 'grey') +
+        ')" data-testid="ctr-state-' +
+        esc(item.id) +
+        '">' +
+        where +
+        '</span></div>' +
+        (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '') +
+        '</span>' +
+        (open
+          ? '<button class="warn" data-testid="ctr-release-' +
+            esc(item.id) +
+            '" onclick="ctrRelease(\'' +
+            esc(item.id) +
+            '\')" title="' +
+            esc(tx('only for a PC that cannot close the counter itself')) +
+            '">' +
+            (armed ? tx('Release — unsent bills stay on that PC') : tx('Release')) +
+            '</button>'
+          : '<button class="pri" data-testid="ctr-open-' +
+            esc(item.id) +
+            '" onclick="ctrOpenHere(\'' +
+            esc(item.id) +
+            '\')"' +
+            (item.state === 'opening' ? ' disabled' : '') +
+            '>' +
+            tx('Open on this PC') +
+            '</button>') +
+        '</div>'
+      );
+    })
+    .join('');
+  return (
+    '<div style="' +
+    _CARD +
+    '">' +
+    '<div class="sec" style="margin:0 0 6px">' +
+    tx('Counters') +
+    ' · ' +
+    list.length +
+    '</div>' +
+    '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">' +
+    tx(
+      'Each counter keeps its own number and its own bill series. Open it on a PC to bill; close it from that counter (☰ → Close this counter) and it can be opened again — here or on another PC — carrying on from its last bill. Only one PC can hold a counter at a time.'
+    ) +
+    '</div>' +
+    (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No counters yet.') + '</div>') +
+    '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+    '<input class="inp" id="ctr_new_name" data-testid="ctr-new-name" placeholder="' +
+    esc(tx('Name — Front desk, Billing 2 …')) +
+    '" style="flex:1 1 220px">' +
+    '<button class="pri" data-testid="ctr-add" onclick="ctrAdd()">' +
+    tx('Add a counter') +
+    '</button></div>' +
+    (_CTRS && _CTRS.error ? '<div style="color:var(--warn);font-size:var(--fs-1);margin-top:6px">' + tx('Could not read the counters.') + '</div>' : '') +
+    '</div>'
+  );
 }
-async function ctrAdd(){
+async function ctrAdd() {
   var el = document.getElementById('ctr_new_name');
-  try { await api('counterAdd', { body: { name: (el && el.value || '').trim() } }); if (typeof toast === 'function') toast(tx('Counter added')); ctrReload(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not add the counter'), true); }
+  try {
+    await api('counterAdd', { body: { name: ((el && el.value) || '').trim() } });
+    if (typeof toast === 'function') toast(tx('Counter added'));
+    ctrReload();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not add the counter'), true);
+  }
 }
 /**
  * ⭐ OPEN ON THIS PC — the key is minted FOR this counter and handed to the counter page, which takes the counter's
  * number and carries on its series. The same address shape counterGo() uses, so the counter checks it is the shop
  * it was opened for.
  */
-async function ctrOpenHere(id){
+async function ctrOpenHere(id) {
   try {
-    var r = await api('counterOpen', { params: { id: id } });
-    if (!r || !r.key) throw new Error(tx('no key came back'));
-    ctrOpenTill(r.key);   /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
+    var reply = await api('counterOpen', { params: { id: id } });
+    if (!reply || !reply.key) throw new Error(tx('no key came back'));
+    ctrOpenTill(reply.key); /* app/cap-settings.js — the one opener, CB Settings › Counters & keys calls it too */
     ctrReload();
   } catch (e) {
     /* ⚠️ held elsewhere is the ordinary refusal — say who has it, in the server's own words */
@@ -5073,71 +8231,168 @@ async function ctrOpenHere(id){
     ctrReload();
   }
 }
-async function ctrRelease(id){
-  if (_CLOSE_ARMED !== 'rel:' + id) { _CLOSE_ARMED = 'rel:' + id; loadSettings(); return; }
+async function ctrRelease(id) {
+  if (_CLOSE_ARMED !== 'rel:' + id) {
+    _CLOSE_ARMED = 'rel:' + id;
+    loadSettings();
+    return;
+  }
   _CLOSE_ARMED = null;
-  try { await api('counterRelease', { params: { id: id } }); if (typeof toast === 'function') toast(tx('Counter released')); ctrReload(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not release it'), true); }
+  try {
+    await api('counterRelease', { params: { id: id } });
+    if (typeof toast === 'function') toast(tx('Counter released'));
+    ctrReload();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not release it'), true);
+  }
 }
-function intCountersHTML(){
+function intCountersHTML() {
   return ctrRegisterHTML() + '<div style="margin-top:12px">' + intPairingsHTML() + '</div>';
 }
 /* ⚠️ the pairings made before the register existed — still listed, because they may still hold bills */
-function intPairingsHTML(){
-  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+function intPairingsHTML() {
+  if (_KEYS === undefined) {
+    _KEYS = null;
+    api('keysList')
+      .then(function (reply) {
+        _KEYS = reply || { keys: [] };
+        if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _KEYS = { keys: [], error: true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   if (_KEYS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
-  var tills = ((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; });
+  var tills = ((_KEYS && _KEYS.keys) || []).filter(function (item) {
+    return item && (item.scopes || []).indexOf('till') >= 0;
+  });
   var bridge = (typeof S !== 'undefined' && S && S.bridgeId) || '';
-  if (!tills.length) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Counters') + '</div>'
-    + '<div style="color:var(--grey)">' + tx('No PC has been paired to this shop yet.') + '</div></div>';
+  if (!tills.length)
+    return (
+      '<div style="' +
+      _CARD +
+      '"><div class="sec" style="margin:0 0 6px">' +
+      tx('Counters') +
+      '</div>' +
+      '<div style="color:var(--grey)">' +
+      tx('No PC has been paired to this shop yet.') +
+      '</div></div>'
+    );
 
-  var live = tills.filter(function(k){ return _keySeenAt(k) && (Date.now() - _keySeenAt(k)) < 900000; });
-  var never = tills.filter(function(k){ return !_keySeenAt(k); });
+  var live = tills.filter(function (item) {
+    return _keySeenAt(item) && Date.now() - _keySeenAt(item) < 900000;
+  });
+  var never = tills.filter(function (item) {
+    return !_keySeenAt(item);
+  });
   /* ⭐ two counters reporting the same address are one PC paired twice — much the commonest duplicate */
   var byIp = {};
-  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
-  var dupIps = Object.keys(byIp).filter(function(ip){ return byIp[ip].length > 1; });
+  tills.forEach(function (item) {
+    var ip = item.seen && item.seen.ip;
+    if (ip) (byIp[ip] = byIp[ip] || []).push(item);
+  });
+  var dupIps = Object.keys(byIp).filter(function (item) {
+    return byIp[item].length > 1;
+  });
 
-  var rows = tills.slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); }).map(function(k){
-    var at = _keySeenAt(k), ip = (k.seen && k.seen.ip) || null, d = k.diag || null;
-    var shut = !!(k.till && k.till.closed_at);
-    var state = shut ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(k.till.closed_at) + (k.till.id ? ' · ' + k.till.id : '') }
-              : !at ? { c: 'warn', t: tx('never reached us') }
-              : (Date.now() - at) < 900000 ? { c: 'ok', t: tx('open now') }
-              : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(k.seen.at) };
-    var armed = (_CLOSE_ARMED === k.jti);
-    return '<div data-testid="int-counter-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)">'
-      + '<span style="flex:1"><b>' + esc(k.name || 'counter') + '</b>'
-      + (ip && byIp[ip].length > 1 ? ' <span style="color:var(--warn);font-size:var(--fs-1)">' + tx('same PC as another counter') + '</span>' : '')
-      + '<div style="color:var(--grey);font-size:var(--fs-1)">'
-        + esc(bridge || tx('no bridge id')) + ' · …' + esc(k.last4 || '')
-        + ' · ' + tx('paired') + ' ' + esc(String(k.created_at || '').slice(0, 10))
-        + (ip ? ' · ' + esc(ip) : '')
-        + ((k.seen && k.seen.agent) ? ' · ' + esc(_agentName(k.seen.agent)) : '')
-      + '</div>'
-      /* ⭐ what the counter itself last said — it can see things this side never will */
-      + (d && d.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)" data-testid="int-counter-said-' + esc(k.jti) + '">🩺 ' + esc(d.verdict) + '</div>' : '')
-      + '</span>'
-      + '<span style="color:var(--' + state.c + ');font-size:var(--fs-1);white-space:nowrap">' + esc(state.t) + '</span>'
-      /* ⚠️ two presses, and the second one SAYS WHAT IT COSTS — closing strands whatever that PC has not sent */
-      + '<button class="warn" data-testid="int-counter-close-' + esc(k.jti) + '" onclick="intCounterClose(\'' + esc(k.jti) + '\')">'
-      + (armed ? tx('Really close — unsent bills stay on that PC') : tx('Close')) + '</button>'
-      + '</div>';
-  }).join('');
+  var rows = tills
+    .slice()
+    .sort(function (first, second) {
+      return _keySeenAt(second) - _keySeenAt(first);
+    })
+    .map(function (item) {
+      var at = _keySeenAt(item),
+        ip = (item.seen && item.seen.ip) || null,
+        d = item.diag || null;
+      var shut = !!(item.till && item.till.closed_at);
+      var state = shut
+        ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(item.till.closed_at) + (item.till.id ? ' · ' + item.till.id : '') }
+        : !at
+          ? { c: 'warn', t: tx('never reached us') }
+          : Date.now() - at < 900000
+            ? { c: 'ok', t: tx('open now') }
+            : { c: Date.now() - at > 86400000 ? 'warn' : 'grey', t: _keyAgo(item.seen.at) };
+      var armed = _CLOSE_ARMED === item.jti;
+      return (
+        '<div data-testid="int-counter-' +
+        esc(item.jti) +
+        '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)">' +
+        '<span style="flex:1"><b>' +
+        esc(item.name || 'counter') +
+        '</b>' +
+        (ip && byIp[ip].length > 1 ? ' <span style="color:var(--warn);font-size:var(--fs-1)">' + tx('same PC as another counter') + '</span>' : '') +
+        '<div style="color:var(--grey);font-size:var(--fs-1)">' +
+        esc(bridge || tx('no bridge id')) +
+        ' · …' +
+        esc(item.last4 || '') +
+        ' · ' +
+        tx('paired') +
+        ' ' +
+        esc(String(item.created_at || '').slice(0, 10)) +
+        (ip ? ' · ' + esc(ip) : '') +
+        (item.seen && item.seen.agent ? ' · ' + esc(_agentName(item.seen.agent)) : '') +
+        '</div>' +
+        /* ⭐ what the counter itself last said — it can see things this side never will */
+        (d && d.verdict
+          ? '<div style="color:var(--warn);font-size:var(--fs-1)" data-testid="int-counter-said-' + esc(item.jti) + '">🩺 ' + esc(d.verdict) + '</div>'
+          : '') +
+        '</span>' +
+        '<span style="color:var(--' +
+        state.c +
+        ');font-size:var(--fs-1);white-space:nowrap">' +
+        esc(state.t) +
+        '</span>' +
+        /* ⚠️ two presses, and the second one SAYS WHAT IT COSTS — closing strands whatever that PC has not sent */
+        '<button class="warn" data-testid="int-counter-close-' +
+        esc(item.jti) +
+        '" onclick="intCounterClose(\'' +
+        esc(item.jti) +
+        '\')">' +
+        (armed ? tx('Really close — unsent bills stay on that PC') : tx('Close')) +
+        '</button>' +
+        '</div>'
+      );
+    })
+    .join('');
 
   var note = '';
-  if (never.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-unreached">'
-    + esc(never.length + ' ' + tx('counter(s) have never reached us. They are not being refused — nothing from them has arrived at all, so look at the network or firewall on those PCs rather than at permissions here.')) + '</div>';
-  if (dupIps.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-dups">'
-    + esc(tx('The same PC is paired more than once. Each pairing keeps its own copy of the bills on that machine and only the one in use is sent from.'))
-    + ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' + tx('Close the unused duplicates') + '</button></div>';
+  if (never.length)
+    note +=
+      '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-unreached">' +
+      esc(
+        never.length +
+          ' ' +
+          tx(
+            'counter(s) have never reached us. They are not being refused — nothing from them has arrived at all, so look at the network or firewall on those PCs rather than at permissions here.'
+          )
+      ) +
+      '</div>';
+  if (dupIps.length)
+    note +=
+      '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-dups">' +
+      esc(tx('The same PC is paired more than once. Each pairing keeps its own copy of the bills on that machine and only the one in use is sent from.')) +
+      ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' +
+      tx('Close the unused duplicates') +
+      '</button></div>';
 
-  return '<div style="' + _CARD + '">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('Pairings — every PC ever paired to this shop') + ' · ' + tills.length
-    + (live.length ? ' · ' + live.length + ' ' + tx('open now') : '') + '</div>'
-    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
-    + tx('Each pairing is one PC opening a counter. A closed pairing is kept as history; its counter can be opened again above.') + '</div>'
-    + rows + note + '</div>';
+  return (
+    '<div style="' +
+    _CARD +
+    '">' +
+    '<div class="sec" style="margin:0 0 6px">' +
+    tx('Pairings — every PC ever paired to this shop') +
+    ' · ' +
+    tills.length +
+    (live.length ? ' · ' + live.length + ' ' + tx('open now') : '') +
+    '</div>' +
+    '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">' +
+    tx('Each pairing is one PC opening a counter. A closed pairing is kept as history; its counter can be opened again above.') +
+    '</div>' +
+    rows +
+    note +
+    '</div>'
+  );
 }
 /* _keySeenAt · _keyAgo · _agentName → app/cap-settings.js (T3-SETTINGS: CB Settings › Counters & keys reads them too) */
 var _CLOSE_ARMED = null;
@@ -5146,11 +8401,21 @@ var _CLOSE_ARMED = null;
  * bills are not destroyed — they sit in that machine's own copy — but nothing can send them once the key is gone.
  * So the second press says that, in those words, instead of asking "are you sure?" about a cost it never names.
  */
-async function intCounterClose(jti){
-  if (_CLOSE_ARMED !== jti) { _CLOSE_ARMED = jti; loadSettings(); return; }
+async function intCounterClose(jti) {
+  if (_CLOSE_ARMED !== jti) {
+    _CLOSE_ARMED = jti;
+    loadSettings();
+    return;
+  }
   _CLOSE_ARMED = null;
-  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; if (typeof toast === 'function') toast(tx('Counter closed')); loadSettings(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not close it'), true); }
+  try {
+    await api('keysRevoke', { params: { jti: jti } });
+    _KEYS = undefined;
+    if (typeof toast === 'function') toast(tx('Counter closed'));
+    loadSettings();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not close it'), true);
+  }
 }
 /**
  * ⭐ CLOSE THE UNUSED DUPLICATES — where one PC holds several pairings, keep the one that spoke most recently and
@@ -5159,24 +8424,58 @@ async function intCounterClose(jti){
  * and closing the one that cannot call for help is the worst guess available — it is also exactly the counter
  * somebody is most likely to be trying to fix.
  */
-async function intCounterCloseDups(){
-  var tills = (((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; }));
-  var byIp = {};
-  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
-  var kill = [];
-  Object.keys(byIp).forEach(function(ip){
-    byIp[ip].slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); })
-      .slice(1).forEach(function(k){ if (_keySeenAt(k)) kill.push(k); });
+async function intCounterCloseDups() {
+  var tills = ((_KEYS && _KEYS.keys) || []).filter(function (item) {
+    return item && (item.scopes || []).indexOf('till') >= 0;
   });
-  if (!kill.length) { if (typeof toast === 'function') toast(tx('There are no duplicates that can be closed safely.')); return; }
-  if (_CLOSE_ARMED !== 'dups') { _CLOSE_ARMED = 'dups'; if (typeof toast === 'function')
-    toast(tx('Press again to close') + ' ' + kill.length + ' ' + tx('duplicate counter(s). The newest on each PC is kept.')); return; }
+  var byIp = {};
+  tills.forEach(function (item) {
+    var ip = item.seen && item.seen.ip;
+    if (ip) (byIp[ip] = byIp[ip] || []).push(item);
+  });
+  var kill = [];
+  Object.keys(byIp).forEach(function (item) {
+    byIp[item]
+      .slice()
+      .sort(function (first, second) {
+        return _keySeenAt(second) - _keySeenAt(first);
+      })
+      .slice(1)
+      .forEach(function (entry) {
+        if (_keySeenAt(entry)) kill.push(entry);
+      });
+  });
+  if (!kill.length) {
+    if (typeof toast === 'function') toast(tx('There are no duplicates that can be closed safely.'));
+    return;
+  }
+  if (_CLOSE_ARMED !== 'dups') {
+    _CLOSE_ARMED = 'dups';
+    if (typeof toast === 'function') toast(tx('Press again to close') + ' ' + kill.length + ' ' + tx('duplicate counter(s). The newest on each PC is kept.'));
+    return;
+  }
   _CLOSE_ARMED = null;
-  for (var i = 0; i < kill.length; i++) { try { await api('keysRevoke', { params: { jti: kill[i].jti } }); } catch (_) {} }
-  _KEYS = undefined; loadSettings();
+  for (var index = 0; index < kill.length; index++) {
+    try {
+      await api('keysRevoke', { params: { jti: kill[index].jti } });
+    } catch (_) {}
+  }
+  _KEYS = undefined;
+  loadSettings();
 }
-function integrationsSettingsHTML(){
-  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+function integrationsSettingsHTML() {
+  if (_KEYS === undefined) {
+    _KEYS = null;
+    api('keysList')
+      .then(function (reply) {
+        _KEYS = reply || { keys: [] };
+        if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings();
+      })
+      .catch(function () {
+        _KEYS = { keys: [], error: true };
+        if (setSec() === 'integrations') loadSettings();
+      });
+  }
   var keys = (_KEYS && _KEYS.keys) || [];
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   /**
@@ -5187,7 +8486,7 @@ function integrationsSettingsHTML(){
    * refused by us — it is not getting here, which points at the network in front of it. That distinction is the
    * difference between hunting a permissions bug and telephoning an office firewall, so it is said in words.
    */
-  var _keyAgo = function(iso){
+  var _keyAgo = function (iso) {
     if (!iso) return null;
     var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
     if (s < 90) return tx('just now');
@@ -5195,44 +8494,135 @@ function integrationsSettingsHTML(){
     if (s < 172800) return Math.round(s / 3600) + ' h ago';
     return Math.round(s / 86400) + ' days ago';
   };
-  var _keySeen = function(k){
+  var _keySeen = function (k) {
     var sn = k && k.seen;
-    if (!sn || !sn.at) return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--warn)">'
-      + tx('never reached us') + '</span>';
-    var quiet = (Date.now() - new Date(sn.at).getTime()) > 86400000;
-    return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--' + (quiet ? 'warn' : 'ok') + ')">'
-      + esc(_keyAgo(sn.at)) + (sn.ip ? ' · ' + esc(sn.ip) : '') + '</span>';
+    if (!sn || !sn.at) return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--warn)">' + tx('never reached us') + '</span>';
+    var quiet = Date.now() - new Date(sn.at).getTime() > 86400000;
+    return (
+      '<span data-testid="int-key-seen-' +
+      esc(k.jti) +
+      '" style="color:var(--' +
+      (quiet ? 'warn' : 'ok') +
+      ')">' +
+      esc(_keyAgo(sn.at)) +
+      (sn.ip ? ' · ' + esc(sn.ip) : '') +
+      '</span>'
+    );
   };
-  var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + ' · ' + _keySeen(k) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
+  var rows = keys.length
+    ? keys
+        .map(function (item) {
+          return (
+            '<div class="row" data-testid="int-key-' +
+            esc(item.jti) +
+            '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' +
+            esc(item.name) +
+            '</b><span style="color:var(--grey);font-size:var(--fs-1)">' +
+            esc((item.scopes || []).join(', ')) +
+            ' · …' +
+            esc(item.last4 || '') +
+            ' · ' +
+            esc(String(item.created_at || '').slice(0, 10)) +
+            ' · ' +
+            _keySeen(item) +
+            '</span><button class="warn" data-testid="int-key-revoke-' +
+            esc(item.jti) +
+            '" onclick="intKeyRevoke(\'' +
+            esc(item.jti) +
+            '\')">' +
+            tx('Revoke') +
+            '</button></div>'
+          );
+        })
+        .join('')
+    : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
   var tab = intTab();
-  var head = _misHead('Integrations', tx((INT_TABS.filter(function(t){ return t.key === tab; })[0] || {}).q || 'Connectors, services and the keys they use'));
+  var head = _misHead(
+    'Integrations',
+    tx(
+      (
+        INT_TABS.filter(function (item) {
+          return item.key === tab;
+        })[0] || {}
+      ).q || 'Connectors, services and the keys they use'
+    )
+  );
   if (tab === 'connectors' || tab === 'running') return head + intConnectorsHTML();
   if (tab === 'streams') return head + intStreamsHTML();
-  if (tab === 'books')   return head + intReconcileHTML();
-  if (tab === 'store')   return head + intProfileMapHTML();
+  if (tab === 'books') return head + intReconcileHTML();
+  if (tab === 'store') return head + intProfileMapHTML();
   if (tab === 'counters') return head + intCountersHTML();
   if (tab === 'netoffers') return head + netOffersHTML();
-  return head
-    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
-    + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
-    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
-    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' + KEY_SCOPES.map(function(o){ return '<option value="' + esc(o[0]) + '">' + esc(tx(o[1])) + '</option>'; }).join('') + '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
-    + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
+  return (
+    head +
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('The services') +
+    '</div>' +
+    '<div style="font-size:var(--fs-2)">' +
+    tx(
+      'Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.'
+    ) +
+    '</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' +
+    esc(base) +
+    '/api/openapi.json" target="_blank" rel="noopener">' +
+    tx('the contract (openapi.json)') +
+    '</a></div></div>' +
+    '<div style="' +
+    _CARD +
+    '"><div class="sec" style="margin:0 0 6px">' +
+    tx('Your keys') +
+    '</div>' +
+    rows +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' +
+    esc(tx('Name — which system')) +
+    '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' +
+    KEY_SCOPES.map(function (item) {
+      return '<option value="' + esc(item[0]) + '">' + esc(tx(item[1])) + '</option>';
+    }).join('') +
+    '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' +
+    tx('Mint a key') +
+    '</button></div>' +
+    '<div id="int_key_out">' +
+    (_KEY_SHOWN || '') +
+    '</div></div>'
+  );
 }
-async function intKeyMint(){
-  var nm = (document.getElementById('int_key_name') || {}).value || '';
+async function intKeyMint() {
+  var node = (document.getElementById('int_key_name') || {}).value || '';
   var sc = (document.getElementById('int_key_scope') || {}).value || 'offers';
   /* a connector key also evaluates offers — the scope names the larger surface (routes/keys.js · middleware/auth.js KEY_ROUTES) */
-  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: keyScopesOf(sc) } });
-    _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
-    _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
-    loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
-  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true); }
+  try {
+    var reply = await api('keysMint', { body: { name: node || 'key', scopes: keyScopesOf(sc) } });
+    _KEY_SHOWN =
+      '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' +
+      tx('Copy it now — it is shown once.') +
+      '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' +
+      esc(reply.key) +
+      '</div><div style="color:var(--grey);margin-top:6px">' +
+      tx('Send it as') +
+      ' <code>X-Api-Key: …</code> ' +
+      tx('or') +
+      ' <code>Authorization: Bearer …</code></div></div>';
+    _KEYS = undefined;
+    if (typeof toast === 'function') toast(tx('Key minted ✓'));
+    loadSettings(); /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true);
+  }
 }
-async function intKeyRevoke(jti){
-  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; _KEY_SHOWN = ''; if (typeof toast === 'function') toast(tx('Key revoked')); loadSettings(); }
-  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not revoke'), true); }
+async function intKeyRevoke(jti) {
+  try {
+    await api('keysRevoke', { params: { jti: jti } });
+    _KEYS = undefined;
+    _KEY_SHOWN = '';
+    if (typeof toast === 'function') toast(tx('Key revoked'));
+    loadSettings();
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not revoke'), true);
+  }
 }
 /**
  * ── ⭐⭐⭐ TWO QUESTIONS, IN WORDS A SHOPKEEPER ALREADY USES ────────────────────────────────────────────────────
@@ -5257,128 +8647,201 @@ async function intKeyRevoke(jti){
  *   · internal           — not a choice a shop can make. It is what WE are.
  */
 var BIZ_DOES = [
-  ['goods',    'I sell products',              'A shop, a wholesaler, a trader.'],
-  ['services', 'I do jobs for customers',      'A garage, a helpdesk, an accountant \u2014 the work is quoted, not listed.'],
-  ['both',     'Both',                         'Jobs and the parts that go with them.'],
-  ['none',     'Neither \u2014 I only buy for my own use', 'Nothing is sold on. Stock is consumed.'],
+  ['goods', 'I sell products', 'A shop, a wholesaler, a trader.'],
+  ['services', 'I do jobs for customers', 'A garage, a helpdesk, an accountant \u2014 the work is quoted, not listed.'],
+  ['both', 'Both', 'Jobs and the parts that go with them.'],
+  ['none', 'Neither \u2014 I only buy for my own use', 'Nothing is sold on. Stock is consumed.']
 ];
 var BIZ_LIST = [
-  ['public',  'Show it to customers',            'Anyone on the rail can see what you sell and order from it.'],
-  ['private', 'Keep it internal \u2014 I bill from it', 'Your list stays yours. You can still be found, and still be sent work.'],
+  ['public', 'Show it to customers', 'Anyone on the rail can see what you sell and order from it.'],
+  ['private', 'Keep it internal \u2014 I bill from it', 'Your list stays yours. You can still be found, and still be sent work.']
 ];
 
-function bizChoice(group, val, cur, rows){
-  return rows.map(function(r){
-    var on = String(cur) === r[0];
-    return '<label data-testid="biz-' + group + '-' + r[0] + '" style="display:flex;gap:10px;align-items:flex-start;'
-      + 'padding:11px 13px;border-bottom:1px solid var(--line-soft);cursor:pointer;'
-      /* ⚠️ THE CHOSEN ROW NEEDS MORE THAN A TINT. --wash against --card is nearly invisible in a dark theme
+function bizChoice(group, val, cur, rows) {
+  return rows
+    .map(function (item) {
+      var on = String(cur) === item[0];
+      return (
+        '<label data-testid="biz-' +
+        group +
+        '-' +
+        item[0] +
+        '" style="display:flex;gap:10px;align-items:flex-start;' +
+        'padding:11px 13px;border-bottom:1px solid var(--line-soft);cursor:pointer;' +
+        /* ⚠️ THE CHOSEN ROW NEEDS MORE THAN A TINT. --wash against --card is nearly invisible in a dark theme
          — on Athi's screenshot the radio dot was carrying the selection on its own. A left bar in --blue is
          a border, not a background, so it survives every one of the fifteen themes at full strength. */
-      + (on ? 'background:var(--wash);box-shadow:inset 3px 0 0 var(--blue)' : 'box-shadow:inset 3px 0 0 transparent')
-      + '">'
-      + '<input type="radio" name="biz_' + group + '" value="' + esc(r[0]) + '"' + (on ? ' checked' : '')
-      + ' onchange="bizSave(\'' + group + '\', this.value)" style="margin-top:3px;flex:none">'
-      + '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' + esc(tx(r[1])) + '</span>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(tx(r[2])) + '</div></span></label>';
-  }).join('');
+        (on ? 'background:var(--wash);box-shadow:inset 3px 0 0 var(--blue)' : 'box-shadow:inset 3px 0 0 transparent') +
+        '">' +
+        '<input type="radio" name="biz_' +
+        group +
+        '" value="' +
+        esc(item[0]) +
+        '"' +
+        (on ? ' checked' : '') +
+        ' onchange="bizSave(\'' +
+        group +
+        '\', this.value)" style="margin-top:3px;flex:none">' +
+        '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' +
+        esc(tx(item[1])) +
+        '</span>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' +
+        esc(tx(item[2])) +
+        '</div></span></label>'
+      );
+    })
+    .join('');
 }
 
-function businessSettingsHTML(s){
+function businessSettingsHTML(s) {
   var me = (s && s.entity) || UI._me || {};
   /* ⚠️ unknown is never OFFERED. It is what the column holds until somebody answers, and showing it as a
      choice would invite people to pick "I have not decided", which is not a fact about a business. */
   var does = me.supplies && me.supplies !== 'unknown' ? me.supplies : '';
-  var list = me.catalogue_visibility === 'public' ? 'public'
-           : me.catalogue_visibility === 'private' ? 'private' : '';
-  var card = function(title, sub, inner, note){
-    return '<div style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;'
-      + 'margin-bottom:var(--sp-4);background:var(--card);color:var(--on-card)">'
-      + '<div style="padding:12px 13px 9px"><div style="font-weight:700;font-size:var(--fs-3);'
-      + 'font-family:\'Space Grotesk\'">' + esc(tx(title)) + '</div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(tx(sub)) + '</div></div>'
-      + inner + (note || '') + '</div>';
+  var list = me.catalogue_visibility === 'public' ? 'public' : me.catalogue_visibility === 'private' ? 'private' : '';
+  var card = function (title, sub, inner, note) {
+    return (
+      '<div style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;' +
+      'margin-bottom:var(--sp-4);background:var(--card);color:var(--on-card)">' +
+      '<div style="padding:12px 13px 9px"><div style="font-weight:700;font-size:var(--fs-3);' +
+      "font-family:'Space Grotesk'\">" +
+      esc(tx(title)) +
+      '</div>' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
+      esc(tx(sub)) +
+      '</div></div>' +
+      inner +
+      (note || '') +
+      '</div>'
+    );
   };
   /* ⭐ the network row is SHOWN, never editable, and only when it applies — so a shop in a group can see why
      its list behaves differently without being offered a switch that is not theirs to throw. */
-  var netNote = (me.catalogue_visibility === 'network')
-    ? '<div style="padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">'
-      + '<b>' + tx('Your group decides this one.') + '</b> '
-      + tx('Your list is shared with the shops in your group. That was set when your group was built, and it is not changed here.')
-      + '</div>'
-    : '';
-  return '<div style="max-width:560px">'
-    + card('What do you do?', 'This is how other businesses understand you.',
-           bizChoice('does', does, does, BIZ_DOES))
-    + card('Your price list', 'Your products and what they cost.',
-           netNote ? '' : bizChoice('list', list, list, BIZ_LIST), netNote)
+  var netNote =
+    me.catalogue_visibility === 'network'
+      ? '<div style="padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">' +
+        '<b>' +
+        tx('Your group decides this one.') +
+        '</b> ' +
+        tx('Your list is shared with the shops in your group. That was set when your group was built, and it is not changed here.') +
+        '</div>'
+      : '';
+  return (
+    '<div style="max-width:560px">' +
+    card('What do you do?', 'This is how other businesses understand you.', bizChoice('does', does, does, BIZ_DOES)) +
+    card('Your price list', 'Your products and what they cost.', netNote ? '' : bizChoice('list', list, list, BIZ_LIST), netNote) +
     /* ⚠️⚠️ A PRESELECTED RADIO ASSERTS AN ANSWER NOBODY GAVE. 'goods' is this column's long-standing DEFAULT
        (b238), so a legacy row shows 'I sell products' chosen whether the shop said so or not — and from here
        it is indistinguishable from a real answer. The radio cannot be un-chosen honestly, so the screen SAYS
        so instead, once, quietly. New registrations read 'unknown' and show nothing selected, which is why
        this line only appears for the older rows. */
-    + ((me.supplies === 'goods' && !me._supplies_confirmed)
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:-8px 0 var(--sp-4)">'
-          + tx('If that is not right, change it — it was filled in for you, not chosen by you.') + '</div>'
-        : '')
-    + '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div>'
+    (me.supplies === 'goods' && !me._supplies_confirmed
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:-8px 0 var(--sp-4)">' +
+        tx('If that is not right, change it — it was filled in for you, not chosen by you.') +
+        '</div>'
+      : '') +
+    '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div>' +
     /* ⭐ THE LEDGER'S SWITCH (Athi, 2026-10-01: "add the switch-on control in settings"). Owner only — the server
        refuses everyone else. Painted from GET /api/books/status once the card is on the screen (bizLedgerLoad), so
        the card never asserts a state it has not read. */
-    + (SESSION.role === 'entity'   /* the shop's own session is its owner (routes/books.js isOwner: no api key, no parent entity); an actor is not */
-        ? card('Ledger', 'A record of what is owed and paid, kept by double-entry.',
-               '<div id="biz_ledger" data-testid="biz-ledger" style="padding:0 13px 12px;font-size:var(--fs-1);color:var(--grey)">' + esc(tx('Reading…')) + '</div>')
-        : '')
-    + '</div>';
+    (SESSION.role === 'entity' /* the shop's own session is its owner (routes/books.js isOwner: no api key, no parent entity); an actor is not */
+      ? card(
+          'Ledger',
+          'A record of what is owed and paid, kept by double-entry.',
+          '<div id="biz_ledger" data-testid="biz-ledger" style="padding:0 13px 12px;font-size:var(--fs-1);color:var(--grey)">' + esc(tx('Reading…')) + '</div>'
+        )
+      : '') +
+    '</div>'
+  );
 }
 /** the Ledger card's one read — nothing is shown until the server has answered */
-async function bizLedgerLoad(){
-  var box = document.getElementById('biz_ledger'); if (!box) return;
+async function bizLedgerLoad() {
+  var box = document.getElementById('biz_ledger');
+  if (!box) return;
   try {
-    var r = await api('booksStatus');
-    box.innerHTML = bizLedgerHTML(r || {});
-  } catch (e) { box.innerHTML = esc(tx('Could not read the Ledger’s state.')); }
+    var reply = await api('booksStatus');
+    box.innerHTML = bizLedgerHTML(reply || {});
+  } catch (e) {
+    box.innerHTML = esc(tx('Could not read the Ledger’s state.'));
+  }
 }
-function bizLedgerHTML(r){
+function bizLedgerHTML(r) {
   if (r.migrated === false) return '<span data-testid="biz-ledger-state">' + esc(tx('Not ready on this server yet.')) + '</span>';
   /* ⭐ CS1: the server says whether the books MAY open here (r.country, from engines regulation.status) — a country with no pack, no country, or
      the setup still to do: the switch is not offered; its sentence is, with the one button that fixes it (Country setup) */
   if (r.country && r.country.books === false && !r.enabled) {
-    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' + esc(tx('Off')) + '</span>'
-      + '<span data-testid="biz-ledger-country" style="color:var(--warn-2)">' + esc(r.country.why || '') + '</span>'
-      + '<a class="pri" data-testid="biz-ledger-country-setup" data-to="#/country" onclick="go(this.dataset.to)" style="cursor:pointer">' + esc(tx('Country setup')) + '</a></div>';
+    return (
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' +
+      esc(tx('Off')) +
+      '</span>' +
+      '<span data-testid="biz-ledger-country" style="color:var(--warn-2)">' +
+      esc(r.country.why || '') +
+      '</span>' +
+      '<a class="pri" data-testid="biz-ledger-country-setup" data-to="#/country" onclick="go(this.dataset.to)" style="cursor:pointer">' +
+      esc(tx('Country setup')) +
+      '</a></div>'
+    );
   }
   if (r.enabled) {
-    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state" style="color:var(--ok)">● ' + esc(tx('On')) + '</span>'
-      + '<span>' + esc(tx('Walk-in sales recorded per')) + ' <b>' + esc(tx(r.walkin_grain === 'bill' ? 'bill' : r.walkin_grain === 'shift' ? 'shift' : 'day')) + '</b></span>'
-      + '<button data-testid="biz-ledger-off" onclick="bizLedgerSwitch(false)">' + esc(tx('Switch off')) + '</button></div>';
+    return (
+      '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state" style="color:var(--ok)">● ' +
+      esc(tx('On')) +
+      '</span>' +
+      '<span>' +
+      esc(tx('Walk-in sales recorded per')) +
+      ' <b>' +
+      esc(tx(r.walkin_grain === 'bill' ? 'bill' : r.walkin_grain === 'shift' ? 'shift' : 'day')) +
+      '</b></span>' +
+      '<button data-testid="biz-ledger-off" onclick="bizLedgerSwitch(false)">' +
+      esc(tx('Switch off')) +
+      '</button></div>'
+    );
   }
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' + esc(tx('Off')) + '</span>'
-    + '<button class="pri" data-testid="biz-ledger-on" onclick="bizLedgerSwitch(true)">' + esc(tx('Switch on')) + '</button>'
-    + '<span>' + esc(tx('From today. What people owed before goes in as opening balances.')) + '</span></div>';
+  return (
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' +
+    esc(tx('Off')) +
+    '</span>' +
+    '<button class="pri" data-testid="biz-ledger-on" onclick="bizLedgerSwitch(true)">' +
+    esc(tx('Switch on')) +
+    '</button>' +
+    '<span>' +
+    esc(tx('From today. What people owed before goes in as opening balances.')) +
+    '</span></div>'
+  );
 }
 /** on: POST /api/books/enable (seeds the chart, this year’s months, a number for every party) · off: POST /setting */
-function bizLedgerSwitch(on){
-  var box = document.getElementById('biz_ledger'); if (!box) return;
+function bizLedgerSwitch(on) {
+  var box = document.getElementById('biz_ledger');
+  if (!box) return;
   /* ⭐ the words, the confirm's wording and the call are CBLedger's (app/accounts-shell.js) — the CB Accounts page and
      the index tile switch the Ledger on through the same one; only the box and what follows are this card's */
   CBLedger.run(on, {
     ask: confirmAsk,
-    working: function(){ box.innerHTML = esc(tx('Working…')); },
-    call: function(on){ return CBLedger.call({ api: api }, on); },
-    done: async function(on){
-      SESSION.booksOn = on;
-      if (on) { try { await ensureCap('books'); } catch (_) {} }
-      bgRenderApp();   /* the Ledger door appears (or goes) on the menu */
-      await bizLedgerLoad();
-      toast(on ? tx('The Ledger is on.') : tx('The Ledger is off.'));
+    working: function () {
+      box.innerHTML = esc(tx('Working…'));
     },
-    failed: function(e){ box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : ''); },
+    call: function (nestedOn) {
+      return CBLedger.call({ api: api }, nestedOn);
+    },
+    done: async function (nestedOn) {
+      SESSION.booksOn = nestedOn;
+      if (nestedOn) {
+        try {
+          await ensureCap('books');
+        } catch (_) {}
+      }
+      bgRenderApp(); /* the Ledger door appears (or goes) on the menu */
+      await bizLedgerLoad();
+      toast(nestedOn ? tx('The Ledger is on.') : tx('The Ledger is off.'));
+    },
+    failed: function (e) {
+      box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : '');
+    }
   });
 }
 
 /** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */
-async function bizSave(group, val){
+async function bizSave(group, val) {
   var said = document.getElementById('biz_said');
   if (said) said.textContent = tx('Saving…');
   var body = group === 'does' ? { supplies: val } : { catalogue_visibility: val };
@@ -5387,9 +8850,13 @@ async function bizSave(group, val){
        endpoint, so every save would have thrown 'no endpoint profileUpdate' and the catch below would have
        shown that to a shopkeeper. Caught by grepping EP before trusting the name. */
     await api('saveProfile', { body: body });
-    if (UI._me) { if (group === 'does') UI._me.supplies = val; else UI._me.catalogue_visibility = val; }
+    if (UI._me) {
+      if (group === 'does') UI._me.supplies = val;
+      else UI._me.catalogue_visibility = val;
+    }
     if (UI._set && UI._set.s && UI._set.s.entity) {
-      if (group === 'does') UI._set.s.entity.supplies = val; else UI._set.s.entity.catalogue_visibility = val;
+      if (group === 'does') UI._set.s.entity.supplies = val;
+      else UI._set.s.entity.catalogue_visibility = val;
     }
     if (said) said.textContent = tx('Saved.');
     toast(tx('Saved'));
@@ -5418,88 +8885,149 @@ async function bizSave(group, val){
  */
 var _WROUTE = null;
 
-async function workRoutingLoad(force){
+async function workRoutingLoad(force) {
   if (_WROUTE && !force) return _WROUTE;
-  try { _WROUTE = await api('workRouting', {}); }
-  catch (e) { _WROUTE = { error: String((e && e.message) || e) }; }
+  try {
+    _WROUTE = await api('workRouting', {});
+  } catch (e) {
+    _WROUTE = { error: String((e && e.message) || e) };
+  }
   return _WROUTE;
 }
 
-function workRoutingHTML(){
+function workRoutingHTML() {
   var d = _WROUTE;
-  if (!d) return '<div style="color:var(--grey);font-size:var(--fs-2)">'
-    + '<span class="spin"></span> ' + tx('reading where work goes…') + '</div>';
+  if (!d) return '<div style="color:var(--grey);font-size:var(--fs-2)">' + '<span class="spin"></span> ' + tx('reading where work goes…') + '</div>';
   if (d.error) {
     /* ⚠️ said plainly, with the remedy. "Could not load" on its own sends somebody to ask me. */
-    return '<div style="background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);'
-      + 'padding:9px 11px;font-size:var(--fs-1);line-height:1.5"><b>' + esc(tx('Not set up yet')) + '</b><div>'
-      + esc(d.error) + '</div></div>';
+    return (
+      '<div style="background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);' +
+      'padding:9px 11px;font-size:var(--fs-1);line-height:1.5"><b>' +
+      esc(tx('Not set up yet')) +
+      '</b><div>' +
+      esc(d.error) +
+      '</div></div>'
+    );
   }
-  var sel = function(id, kind, field, cur, list, none){
-    return '<select class="inp" data-testid="wr-' + field + '-' + kind + '" '
-      + 'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)" '
-      + 'onchange="workRoutingSet(\'' + kind + '\',\'' + field + '\',this.value)">'
-      + '<option value="">' + esc(tx(none)) + '</option>'
-      + list.map(function(o){
-          return '<option value="' + esc(o[0]) + '"' + (String(cur || '') === String(o[0]) ? ' selected' : '')
-            + '>' + esc(o[1]) + '</option>'; }).join('')
-      + '</select>';
+  var sel = function (id, kind, field, cur, list, none) {
+    return (
+      '<select class="inp" data-testid="wr-' +
+      field +
+      '-' +
+      kind +
+      '" ' +
+      'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)" ' +
+      'onchange="workRoutingSet(\'' +
+      kind +
+      "','" +
+      field +
+      '\',this.value)">' +
+      '<option value="">' +
+      esc(tx(none)) +
+      '</option>' +
+      list
+        .map(function (item) {
+          return '<option value="' + esc(item[0]) + '"' + (String(cur || '') === String(item[0]) ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
+        })
+        .join('') +
+      '</select>'
+    );
   };
-  var folders = (d.folders || []).map(function(f){ return [f.folder_id, f.name]; });
-  var people  = (d.people  || []).map(function(p){ return [p.identity_id, p.display_name]; });
-  var teams   = (d.teams   || []).map(function(t){ return [t.identity_id, t.display_name]; });
+  var folders = (d.folders || []).map(function (item) {
+    return [item.folder_id, item.name];
+  });
+  var people = (d.people || []).map(function (item) {
+    return [item.identity_id, item.display_name];
+  });
+  var teams = (d.teams || []).map(function (item) {
+    return [item.identity_id, item.display_name];
+  });
 
-  var rows = (d.kinds || []).map(function(k){
-    return '<tr>'
-      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft);white-space:nowrap">'
-      + '<b style="font-weight:650">' + esc(tx(k.label)) + '</b>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(tx(k.hint)) + '</div></td>'
-      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + sel('', k.kind, 'folder', k.folder_id, folders, 'no folder') + '</td>'
-      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + sel('', k.kind, 'person', k.assignee_actor_id, people, 'nobody in particular') + '</td>'
-      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
-      + (teams.length ? sel('', k.kind, 'team', k.route_to_entity_id, teams, 'keep it here')
-         /* ⚠️ absent rather than empty: an enabled dropdown with one option teaches nothing, and a disabled one
+  var rows = (d.kinds || [])
+    .map(function (item) {
+      return (
+        '<tr>' +
+        '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft);white-space:nowrap">' +
+        '<b style="font-weight:650">' +
+        esc(tx(item.label)) +
+        '</b>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' +
+        esc(tx(item.hint)) +
+        '</div></td>' +
+        '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">' +
+        sel('', item.kind, 'folder', item.folder_id, folders, 'no folder') +
+        '</td>' +
+        '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">' +
+        sel('', item.kind, 'person', item.assignee_actor_id, people, 'nobody in particular') +
+        '</td>' +
+        '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">' +
+        (teams.length
+          ? sel('', item.kind, 'team', item.route_to_entity_id, teams, 'keep it here')
+          : /* ⚠️ absent rather than empty: an enabled dropdown with one option teaches nothing, and a disabled one
             with no explanation reads as broken. */
-         : '<span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(tx('no teams yet')) + '</span>')
-      + '</td></tr>';
-  }).join('');
+            '<span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(tx('no teams yet')) + '</span>') +
+        '</td></tr>'
+      );
+    })
+    .join('');
 
-  var th = function(t){ return '<th style="text-align:left;padding:6px 9px;font-size:var(--fs-1);color:var(--grey);'
-    + 'font-weight:600;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line)">'
-    + esc(tx(t)) + '</th>'; };
+  var th = function (t) {
+    return (
+      '<th style="text-align:left;padding:6px 9px;font-size:var(--fs-1);color:var(--grey);' +
+      'font-weight:600;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line)">' +
+      esc(tx(t)) +
+      '</th>'
+    );
+  };
 
-  return '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:9px">'
-    + esc(tx('When work of each kind arrives, this is where it lands and whose it becomes. '
-           + 'Leave a row blank and it stays here, unassigned.')) + '</div>'
-    + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:560px">'
-    + '<thead><tr>' + th('Kind of work') + th('Folder') + th('Person') + th('Team') + '</tr></thead>'
-    + '<tbody>' + rows + '</tbody></table></div>'
-    + '<div id="wr_say" style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;min-height:17px"></div>'
-    + (teams.length ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">'
-       + esc(tx('A team is a branch of your own network — build one in Network design and it appears here. '
-              + 'Work can only be routed inside your own network.')) + '</div>');
+  return (
+    '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:9px">' +
+    esc(tx('When work of each kind arrives, this is where it lands and whose it becomes. ' + 'Leave a row blank and it stays here, unassigned.')) +
+    '</div>' +
+    '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:560px">' +
+    '<thead><tr>' +
+    th('Kind of work') +
+    th('Folder') +
+    th('Person') +
+    th('Team') +
+    '</tr></thead>' +
+    '<tbody>' +
+    rows +
+    '</tbody></table></div>' +
+    '<div id="wr_say" style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;min-height:17px"></div>' +
+    (teams.length
+      ? ''
+      : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">' +
+        esc(
+          tx('A team is a branch of your own network — build one in Network design and it appears here. ' + 'Work can only be routed inside your own network.')
+        ) +
+        '</div>')
+  );
 }
 
 /** ⭐ saved on change, and it SAYS so — a silent save is one people repeat because they cannot tell. */
-async function workRoutingSet(kind, field, value){
-  var say = document.getElementById('wr_say');
-  var cur = ((_WROUTE && _WROUTE.kinds) || []).find(function(k){ return k.kind === kind; }) || {};
-  var body = { kind: kind,
-    folder_id: field === 'folder' ? value : (cur.folder_id || ''),
-    assignee_actor_id: field === 'person' ? value : (cur.assignee_actor_id || ''),
-    route_to_entity_id: field === 'team' ? value : (cur.route_to_entity_id || '') };
-  if (say) say.textContent = tx('Saving…');
+async function workRoutingSet(kind, field, value) {
+  var node = document.getElementById('wr_say');
+  var cur =
+    ((_WROUTE && _WROUTE.kinds) || []).find(function (item) {
+      return item.kind === kind;
+    }) || {};
+  var body = {
+    kind: kind,
+    folder_id: field === 'folder' ? value : cur.folder_id || '',
+    assignee_actor_id: field === 'person' ? value : cur.assignee_actor_id || '',
+    route_to_entity_id: field === 'team' ? value : cur.route_to_entity_id || ''
+  };
+  if (node) node.textContent = tx('Saving…');
   try {
     await api('workRoutingSet', { body: body });
     /* keep the local copy in step, or the next change on the same row would send the stale two fields back */
     if (field === 'folder') cur.folder_id = value || null;
     if (field === 'person') cur.assignee_actor_id = value || null;
-    if (field === 'team')   cur.route_to_entity_id = value || null;
-    if (say) say.textContent = tx('Saved.');
+    if (field === 'team') cur.route_to_entity_id = value || null;
+    if (node) node.textContent = tx('Saved.');
   } catch (e) {
-    if (say) say.textContent = '';
+    if (node) node.textContent = '';
     toast(String((e && e.message) || tx('Could not save it')), true);
     /* ⚠️ put the control back to what the SERVER has: a dropdown showing a value that was refused is a lie the
        reader will act on. */
@@ -5508,40 +9036,56 @@ async function workRoutingSet(kind, field, value){
   }
 }
 
-function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
+function paintSettings(s, _daOpts) {
+  const node = document.getElementById('setbody');
+  if (!node) return;
   /* fetched when the Work section is actually opened, and the pane repainted in place when it arrives -
      not the whole screen, which would throw away anything half-typed in the fields below it. */
   if (setSec() === 'work' && !_WROUTE) {
-    workRoutingLoad().then(function(){
-      var p = document.getElementById('wr_pane'); if (p) p.innerHTML = workRoutingHTML();
+    workRoutingLoad().then(function () {
+      var element = document.getElementById('wr_pane');
+      if (element) element.innerHTML = workRoutingHTML();
     });
   }
-  { const k = setSec();
+  {
+    const k = setSec();
     /* ⚠️ scoped: everything from 'Task assignment' down is stored and not yet read by anything. 'Where work
        goes' above it IS read — lib/workroute resolves every ticket through it. */
-    const notYetWork = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin:15px 0 11px">⏳ The settings <b>below</b> are saved but <b>not yet active</b> — assignment, limits and breaks don\'t change behaviour yet. <i>Where work goes</i>, above, is live.</div>';
-    const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
-    var out = "";
-    if (k === "business") out = businessSettingsHTML(s);
-    else if (k === "locale") out = localeSettingsHTML();
-    else if (k === "integrations") out = integrationsSettingsHTML();
-    else if (k === "appearance") out = appearanceSettingsHTML();
-    else if (k === "standards") {
+    const notYetWork =
+      '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin:15px 0 11px">⏳ The settings <b>below</b> are saved but <b>not yet active</b> — assignment, limits and breaks don\'t change behaviour yet. <i>Where work goes</i>, above, is live.</div>';
+    const notYet =
+      '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
+    var out = '';
+    if (k === 'business') out = businessSettingsHTML(s);
+    else if (k === 'locale') out = localeSettingsHTML();
+    else if (k === 'integrations') out = integrationsSettingsHTML();
+    else if (k === 'appearance') out = appearanceSettingsHTML();
+    else if (k === 'standards') {
       /**
        * ⚠️ THE REGISTER MOVED TO ITS OWN CAPABILITY (shared with the Legend), so it may not be here yet. Calling
        * standardsSettingsHTML() blind would throw on `STANDARDS is not defined` and paint an empty pane —
        * which reads as "we follow no standards", the worst possible failure for this particular screen.
        */
       if (typeof STANDARDS === 'undefined') {
-        out = _misHead('Standards', '')
-            + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the register…') + '</div>';
-        ensureCap('standards').then(function(){ if (setSec() === 'standards') { _capShowDetail(); loadSettings(); } })
-          .catch(function(e){ var h=document.getElementById('setbody'); if(h) h.innerHTML = scrErr(e); });
+        out = _misHead('Standards', '') + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the register…') + '</div>';
+        ensureCap('standards')
+          .then(function () {
+            if (setSec() === 'standards') {
+              _capShowDetail();
+              loadSettings();
+            }
+          })
+          .catch(function (e) {
+            var element = document.getElementById('setbody');
+            if (element) element.innerHTML = scrErr(e);
+          });
       } else out = standardsSettingsHTML();
-    }
-    else if (k === "work") out = _misHead('Work', '')
-      + `<div style="${_CARD}">
-      ${/**
+    } else if (k === 'work')
+      out =
+        _misHead('Work', '') +
+        `<div style="${_CARD}">
+      ${
+        /**
          * ⭐⭐ THE SAME CONTROL, NOT A SECOND ONE. Athi, 2026-08-20: *"in the settings, we have to include to
          * change the type, either goods or service, in the settings so the type of work it takes care of."*
          *
@@ -5550,67 +9094,93 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
          * been removing. Here it is a POINTER, not a copy: it states what is set and sends the reader to the
          * one place that sets it. Settings › Work is where a person asks "what kind of work do we do", so the
          * answer belongs on it; the CONTROL does not have to.
-         */''}
+         */ ''
+      }
       <div class="kv" style="margin-bottom:9px"><b>${tx('Supplies')}</b> · ${esc((UI._me && UI._me.supplies) || 'goods')}
         <a href="#" onclick="navTo('profile');profSetSec('identity');UI._iamOpen=Object.assign(UI._iamOpen||{},{profile:true});return false"
            style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">${tx('Change in Business')} <span class=arw>→</span></a></div>
-      ${/**
+      ${
+        /**
          * WHERE WORK GOES - the answer to this section's own question, which it had never actually
          * answered. Athi, 2026-09-14: *"we should not raise a SQL, it should be configurable."*
          * Loaded on demand and repainted when it lands: reading it up front would make every Settings
          * visit pay for a screen most of them are not opening. [[feedback-on-demand-loading]]
-         */''}
+         */ ''
+      }
       <div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
         <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
         <div id="wr_pane">${workRoutingHTML()}</div>
       </div>
       ${notYetWork}
-      <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
-      <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
-      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
-      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> ${tx('Auto-return tasks on short break')}</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>`
-      /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
+      <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(['pull', 'push', 'both'], s.assignment_model || 'both')}</select>
+      <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible ? 'checked' : ''}> All tasks visible to all co-assists</label>
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break ? 'checked' : ''}> ${tx('Auto-return tasks on short break')}</label>
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>` +
+        /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
          set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
          renderer. The link would have opened the right screen and shown nothing.
 
          ⭐ A POINTER IS A DEPENDENCY. It survived because deleting the target did not touch the file that
          pointed at it, which is the same drift as a subtitle nobody owns. The naming rules still exist in
          NAMING.md and are enforced by the API; a screen does not need to say so. */
-      + autoAssignCard(s,_daOpts) + aiSettingsCard();
-    else if (k === "policy") out = _misHead('Policy', '')
-      + policyFlagsCard()
-      /**
-       * ⚠️ THIS CARD USED TO RE-DECLARE THE ATTACHMENT RULES. It carried its own `<input>`s pre-filled with
-       * `image, pdf, docx, xlsx, csv, zip` and `10` — the exact strings ALSO written into the Constitution layer,
-       * as two independent literals in this same file. Nothing read one from the other, nothing compared them, and
-       * neither was saved anywhere, so they could sit disagreeing forever with no symptom.
-       *
-       * Under Model A the declaration lives in GOV and this screen REFERS to it. The inputs are gone on purpose:
-       * an editable field for a value this screen does not own is the same lie as "you can change this" on a row
-       * with no control. When the layer marks it `advisory` AND an edit path exists, the control belongs here —
-       * not before.
-       */
-      + '<div style="border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px">'
-        + '<div class="sec" style="margin:0 0 8px">' + tx('📎 Attachment policy') + '</div>'
-        + '<div class="misnote" style="margin-bottom:9px">Set for your business. Shown here.</div>'
-        + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
-      + '</div>';
-    else if (k === "channels"){ out = _misHead('Channels', '') + channelsCard();
-      loadChannels();   // async — the card paints itself in when the read lands
+        autoAssignCard(s, _daOpts) +
+        aiSettingsCard();
+    else if (k === 'policy')
+      out =
+        _misHead('Policy', '') +
+        policyFlagsCard() +
+        /**
+         * ⚠️ THIS CARD USED TO RE-DECLARE THE ATTACHMENT RULES. It carried its own `<input>`s pre-filled with
+         * `image, pdf, docx, xlsx, csv, zip` and `10` — the exact strings ALSO written into the Constitution layer,
+         * as two independent literals in this same file. Nothing read one from the other, nothing compared them, and
+         * neither was saved anywhere, so they could sit disagreeing forever with no symptom.
+         *
+         * Under Model A the declaration lives in GOV and this screen REFERS to it. The inputs are gone on purpose:
+         * an editable field for a value this screen does not own is the same lie as "you can change this" on a row
+         * with no control. When the layer marks it `advisory` AND an edit path exists, the control belongs here —
+         * not before.
+         */
+        '<div style="border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px">' +
+        '<div class="sec" style="margin:0 0 8px">' +
+        tx('📎 Attachment policy') +
+        '</div>' +
+        '<div class="misnote" style="margin-bottom:9px">Set for your business. Shown here.</div>' +
+        govRefHTML('Attachment types') +
+        govRefHTML('Attachment max size') +
+        '</div>';
+    else if (k === 'channels') {
+      out = _misHead('Channels', '') + channelsCard();
+      loadChannels(); // async — the card paints itself in when the read lands
     }
     /* ⚠️ NO SECTION HEADING HERE (Athi: *"governance, the layers your entity minted under, not required.. just
        1. Constitution under Governance"*). The rail row already says Governance and the selected layer is the
        subject — repeating the section name above it pushed the actual content down for no information. */
-    else if (k === "governance") out = _misBack() + govLayersBlock();
-    else if (k === "blueprints") out = _misHead('Work patterns', '') + blueprintSettingsHTML();
+    else if (k === 'governance') out = _misBack() + govLayersBlock();
+    else if (k === 'blueprints') out = _misHead('Work patterns', '') + blueprintSettingsHTML();
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
-    h.innerHTML = out + (out ? _capEnd() : '');
-    if (k === 'business') bizLedgerLoad();   /* the Ledger card reads its state after it is on the screen */
-  } }
-async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
-  try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+    node.innerHTML = out + (out ? _capEnd() : '');
+    if (k === 'business') bizLedgerLoad(); /* the Ledger card reads its state after it is on the screen */
+  }
+}
+async function saveSettings() {
+  const x = document.getElementById('st_err');
+  if (x) x.textContent = '';
+  try {
+    await api('saveSettings', {
+      body: {
+        assignment_model: val('st_am'),
+        default_max_tasks: +val('st_mt') || 10,
+        all_task_visible: document.getElementById('st_av').checked,
+        auto_return_on_short_break: document.getElementById('st_ar').checked
+      }
+    });
+    toast(MSG.settingsSaved());
+  } catch (e) {
+    if (x) x.textContent = e.message;
+  }
+}
 /* ---- POLICY FLAGS — per-entity governance toggles, SERVER-PERSISTED (b130).
  *
  * Athi, 2026-08-09: *"make the policy flags real, move it to settings."*
@@ -5628,43 +9198,75 @@ async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x
  */
 /* polDefsOf · polShown · polStored → app/cap-settings.js (T3-SETTINGS × T2-POLICY): the workshop's Business rules card and CB Settings › Policy
    paint the SAME server schema (schema[key].ui + bound_schema) through one reader — no flag list on the web */
-function polDefs(){ return polDefsOf(_POL.schema, _POL.bound); }
-var _POL = { flags:null, schema:null, bound:null, busy:false, err:null, migrated:true };
-function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
-function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
+function polDefs() {
+  return polDefsOf(_POL.schema, _POL.bound);
+}
+var _POL = { flags: null, schema: null, bound: null, busy: false, err: null, migrated: true };
+function _polVal(def) {
+  var o = _POL.flags || {};
+  return o[def.key] !== undefined ? o[def.key] : def.def;
+}
+function _polLocked(gov) {
+  return gov === 'bound' || gov === 'protected' || gov === 'inherited';
+}
 /* ⚠️ THE WRITE IS AWAITED AND ITS ANSWER IS SHOWN. The old version toasted "set ✓" the instant you changed a
    dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
    The card repaints from what the SERVER returns, so what is on screen is what is stored. */
-async function setPolFlag(key, v){
-  var def=polDefs().filter(function(d){return d.key===key;})[0];
+async function setPolFlag(key, v) {
+  var def = polDefs().filter(function (item) {
+    return item.key === key;
+  })[0];
   /**
    * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
    * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
    * means the number that comes back matches the number that was typed.
    */
-  v=polStored(def, v);   /* the shown unit → the stored one (app/cap-settings.js) */
-  _POL.busy=true; _POL.err=null; paintPolicy();
-  try{
-    var body={}; body[key]=v;
-    var r=await api('policySet',{body:body});
-    _POL.flags=(r&&r.flags)||_POL.flags;
-    toast((def?def.label:'Flag')+' saved');
-  }catch(e){
-    _POL.err=(e&&e.message)||'Could not save that setting.';
-    if(/not migrated|b130|503/i.test(_POL.err)) _POL.migrated=false;
+  v = polStored(def, v); /* the shown unit → the stored one (app/cap-settings.js) */
+  _POL.busy = true;
+  _POL.err = null;
+  paintPolicy();
+  try {
+    var body = {};
+    body[key] = v;
+    var reply = await api('policySet', { body: body });
+    _POL.flags = (reply && reply.flags) || _POL.flags;
+    toast((def ? def.label : 'Flag') + ' saved');
+  } catch (e) {
+    _POL.err = (e && e.message) || 'Could not save that setting.';
+    if (/not migrated|b130|503/i.test(_POL.err)) _POL.migrated = false;
   }
-  _POL.busy=false; paintPolicy();
+  _POL.busy = false;
+  paintPolicy();
 }
-async function loadPolicy(){
-  _POL.busy=true; _POL.err=null; paintPolicy();
-  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.schema=(r&&r.schema)||null; _POL.bound=(r&&r.bound_schema)||null; _POL.migrated=!(_POL.flags._migrated===false); }
-  catch(e){ _POL.err=(e&&e.message)||'Could not read your policy flags.'; }
-  _POL.busy=false; paintPolicy();
+async function loadPolicy() {
+  _POL.busy = true;
+  _POL.err = null;
+  paintPolicy();
+  try {
+    var reply = await api('policyGet');
+    _POL.flags = (reply && reply.flags) || {};
+    _POL.schema = (reply && reply.schema) || null;
+    _POL.bound = (reply && reply.bound_schema) || null;
+    _POL.migrated = !(_POL.flags._migrated === false);
+  } catch (e) {
+    _POL.err = (e && e.message) || 'Could not read your policy flags.';
+  }
+  _POL.busy = false;
+  paintPolicy();
 }
-function paintPolicy(){ var h=document.getElementById('polflags'); if(h) h.innerHTML=policyFlagsInner(); }
-function _polControl(def){ var v=_polVal(def);
-  if(_polLocked(def.gov)) return '<span style="font-weight:700;font-size:var(--fs-2)">'+esc(String(v))+'</span> <span style="font-size:var(--fs-1)" title="locked / inherited — cannot change here">🔒</span>';
-  var dis=_POL.busy?' disabled':'';
+function paintPolicy() {
+  var node = document.getElementById('polflags');
+  if (node) node.innerHTML = policyFlagsInner();
+}
+function _polControl(def) {
+  var v = _polVal(def);
+  if (_polLocked(def.gov))
+    return (
+      '<span style="font-weight:700;font-size:var(--fs-2)">' +
+      esc(String(v)) +
+      '</span> <span style="font-size:var(--fs-1)" title="locked / inherited — cannot change here">🔒</span>'
+    );
+  var dis = _POL.busy ? ' disabled' : '';
   /**
    * ⚠️ THE VALUE IS THE CODE; THE LABEL IS FOR A PERSON. This rendered raw enum codes — a dropdown offering
    * "both · sent · received" against a setting about self-chits, where the words a person recognises are Task and
@@ -5673,17 +9275,52 @@ function _polControl(def){ var v=_polVal(def);
    * control should have been speaking it.
    * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
    */
-  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
-  if(def.type==='number'){
+  if (def.type === 'enum')
+    return (
+      '<select' +
+      dis +
+      ' data-testid="pol-' +
+      esc(def.key) +
+      '" onchange="setPolFlag(\'' +
+      def.key +
+      '\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
+      def.options
+        .map(function (item) {
+          var lbl = (def.labels && def.labels[item]) || item;
+          return '<option value="' + esc(item) + '"' + (String(v) === String(item) ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+        })
+        .join('') +
+      '</select>'
+    );
+  if (def.type === 'number') {
     /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
     var shown = polShown(def, v);
-    return '<input type="number"'+dis+(def.step?' step="'+esc(String(def.step))+'"':'')+' min="0"'
-      + ' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(shown))+'"'
-      + ' onchange="setPolFlag(\''+def.key+'\',this.value)"'
-      + ' style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
-      + (def.suffix ? '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:5px">'+esc(def.suffix)+'</span>' : '');
+    return (
+      '<input type="number"' +
+      dis +
+      (def.step ? ' step="' + esc(String(def.step)) + '"' : '') +
+      ' min="0"' +
+      ' data-testid="pol-' +
+      esc(def.key) +
+      '" value="' +
+      esc(String(shown)) +
+      '"' +
+      ' onchange="setPolFlag(\'' +
+      def.key +
+      '\',this.value)"' +
+      ' style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
+      (def.suffix ? '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:5px">' + esc(def.suffix) + '</span>' : '')
+    );
   }
-  return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">';
+  return (
+    '<input' +
+    dis +
+    ' value="' +
+    esc(String(v)) +
+    '" onchange="setPolFlag(\'' +
+    def.key +
+    '\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+  );
 }
 
 /* ---- CHANNELS — the inbound on-ramps. Which number / address reaches THIS entity's intake inbox (b123).
@@ -5705,62 +9342,125 @@ function _polControl(def){ var v=_polVal(def);
  */
 var _CH = { data: null, busy: false, err: null, adding: null };
 
-function channelsCard(){
-  return '<div style="'+_CARD+';margin-top:10px" id="ch_card">'+channelsInner()+'</div>';
+function channelsCard() {
+  return '<div style="' + _CARD + ';margin-top:10px" id="ch_card">' + channelsInner() + '</div>';
 }
-function channelsInner(){
-  var head = '<div class="sec" style="margin:0 0 4px">📡 Channels '
-    + '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">inbound · live</span></div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Bind the number or address customers write to. Anything sent there lands in <b>' + tx('📨 Intake') + '</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
-  if(_CH.busy && !_CH.data) return head+'<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
+function channelsInner() {
+  var head =
+    '<div class="sec" style="margin:0 0 4px">📡 Channels ' +
+    '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">inbound · live</span></div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Bind the number or address customers write to. Anything sent there lands in <b>' +
+    tx('📨 Intake') +
+    '</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
+  if (_CH.busy && !_CH.data)
+    return head + '<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
   /* ⚠️ A MISSING ENDPOINT IS NOT A BROKEN SCREEN, and must not be reported as one. The API deploys separately from
      this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
      fault in their own account. Name the actual state: the server has not shipped this yet. */
-  if(_CH.notDeployed) return head+pendingNote('this server has not shipped channels yet');
-  if(_CH.err) return head+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--disp)">'+esc(_CH.err)+'</div>';
-  if(!_CH.data) return head+'<div style="font-size:var(--fs-2);color:var(--grey)">Not loaded.</div>';
+  if (_CH.notDeployed) return head + pendingNote('this server has not shipped channels yet');
+  if (_CH.err)
+    return (
+      head +
+      '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--disp)">' +
+      esc(_CH.err) +
+      '</div>'
+    );
+  if (!_CH.data) return head + '<div style="font-size:var(--fs-2);color:var(--grey)">Not loaded.</div>';
   /* The route answers 200 with a note when the table is not there — say which it is, because "no channels" and
      "the store does not exist" look identical on screen and mean entirely different things. */
-  if(_CH.data.note) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3)">The channel map is not migrated on this environment ('+esc(_CH.data.note)+'). The panel is here; the table is not.</div>';
-  return head + (_CH.data.channels||[]).map(_chRow).join('');
+  if (_CH.data.note)
+    return (
+      head +
+      '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3)">The channel map is not migrated on this environment (' +
+      esc(_CH.data.note) +
+      '). The panel is here; the table is not.</div>'
+    );
+  return head + (_CH.data.channels || []).map(_chRow).join('');
 }
-function _chRow(c){
-  var bound=(c.bindings||[]).length;
+function _chRow(c) {
+  var bound = (c.bindings || []).length;
   /* ⚠️ RECEIVING requires BOTH. Anything else is a state worth naming, not a colour to average out. */
   /* ⚠️ RECEIVING NEEDS A VERIFIED BINDING, not just any binding (b124). A claim is not a permission: until the
      platform confirms the number is yours, it resolves to nothing and messages sent there reach nobody. Counting a
      declared claim as "receiving" would be the panel telling the exact lie the migration exists to stop. */
-  var verified=(c.bindings||[]).filter(function(b){ return b.status==='verified'; }).length;
+  var verified = (c.bindings || []).filter(function (item) {
+    return item.status === 'verified';
+  }).length;
   var live = c.provider_configured && verified;
-  var pill = live ? ['var(--ok-2)','var(--ok-tint)','receiving']
-           : (bound && !verified) ? ['var(--warn-2)','var(--warn-tint)','claimed — awaiting confirmation']
-           : (!c.provider_configured && bound) ? ['var(--warn-2)','var(--warn-tint)','waiting on a provider account']
-           : (c.provider_configured && !bound) ? ['var(--warn-2)','var(--warn-tint)','configured — nothing bound yet']
-           : ['var(--grey-2)','var(--blue-tint-bg)','not set up'];
-  return '<div style="padding:10px 0;border-bottom:1px solid var(--line)" data-testid="ch-row-'+esc(c.key)+'">'
-    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-    + '<span style="font-weight:600;font-size:var(--fs-2)">'+esc(c.name)+'</span>'
-    + '<span style="font-size:var(--fs-1);font-weight:800;color:'+pill[0]+';background:'+pill[1]+';border-radius:5px;padding:1px 7px" data-testid="ch-status-'+esc(c.key)+'">'+pill[2]+'</span>'
-    + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-'+esc(c.key)+'" onclick="chToggleAdd(\''+esc(c.key)+'\')">'+(_CH.adding===c.key?'cancel':'+ bind')+'</span>'
-    + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(c.hint)+'</div>'
+  var pill = live
+    ? ['var(--ok-2)', 'var(--ok-tint)', 'receiving']
+    : bound && !verified
+      ? ['var(--warn-2)', 'var(--warn-tint)', 'claimed — awaiting confirmation']
+      : !c.provider_configured && bound
+        ? ['var(--warn-2)', 'var(--warn-tint)', 'waiting on a provider account']
+        : c.provider_configured && !bound
+          ? ['var(--warn-2)', 'var(--warn-tint)', 'configured — nothing bound yet']
+          : ['var(--grey-2)', 'var(--blue-tint-bg)', 'not set up'];
+  return (
+    '<div style="padding:10px 0;border-bottom:1px solid var(--line)" data-testid="ch-row-' +
+    esc(c.key) +
+    '">' +
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+    '<span style="font-weight:600;font-size:var(--fs-2)">' +
+    esc(c.name) +
+    '</span>' +
+    '<span style="font-size:var(--fs-1);font-weight:800;color:' +
+    pill[0] +
+    ';background:' +
+    pill[1] +
+    ';border-radius:5px;padding:1px 7px" data-testid="ch-status-' +
+    esc(c.key) +
+    '">' +
+    pill[2] +
+    '</span>' +
+    '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-' +
+    esc(c.key) +
+    '" onclick="chToggleAdd(\'' +
+    esc(c.key) +
+    '\')">' +
+    (_CH.adding === c.key ? 'cancel' : '+ bind') +
+    '</span>' +
+    '</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
+    esc(c.hint) +
+    '</div>' +
     /* ⚠️ REPLIES ARE A SEPARATE CREDENTIAL, so a separate line. Receiving and sending are not one switch: the app
        secret verifies inbound, WHATSAPP_TOKEN sends. Saying "connected" once would promise replies we cannot make.
        Only shown where the channel actually has a return leg. */
-    + (c.key==='whatsapp' ? '<div style="font-size:var(--fs-1);margin-top:3px;color:'+(c.outbound_configured?'var(--ok-2)':'var(--grey)')+'">'
-        + (c.outbound_configured
-            ? '↩ replies on — status changes go back to the customer, within their 24-hour window'
-            : '↩ replies off — needs WHATSAPP_TOKEN. Messages still arrive; nothing goes back.')
-        + '</div>' : '')
-    + (c.bindings||[]).map(function(b){
-        return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:var(--fs-2)">'
-          + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(b.address)+'</span>'
-          + (b.label?'<span style="color:var(--grey)">'+esc(b.label)+'</span>':'')
+    (c.key === 'whatsapp'
+      ? '<div style="font-size:var(--fs-1);margin-top:3px;color:' +
+        (c.outbound_configured ? 'var(--ok-2)' : 'var(--grey)') +
+        '">' +
+        (c.outbound_configured
+          ? '↩ replies on — status changes go back to the customer, within their 24-hour window'
+          : '↩ replies off — needs WHATSAPP_TOKEN. Messages still arrive; nothing goes back.') +
+        '</div>'
+      : '') +
+    (c.bindings || [])
+      .map(function (item) {
+        return (
+          '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:var(--fs-2)">' +
+          '<span style="font-family:ui-monospace,Menlo,monospace">' +
+          esc(item.address) +
+          '</span>' +
+          (item.label ? '<span style="color:var(--grey)">' + esc(item.label) + '</span>' : '') +
           /* declared vs verified — asserted is not confirmed, and the difference is visible. */
           /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
              a claim that has not been confirmed receives nothing at all. */
-          + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(b.status==='verified'?'var(--ok-2)':'var(--warn-2)')+';background:'+(b.status==='verified'?'var(--ok-tint)':'var(--warn-tint)')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
-          + '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
+          '<span style="font-size:var(--fs-1);font-weight:800;color:' +
+          (item.status === 'verified' ? 'var(--ok-2)' : 'var(--warn-2)') +
+          ';background:' +
+          (item.status === 'verified' ? 'var(--ok-tint)' : 'var(--warn-tint)') +
+          ';border-radius:5px;padding:1px 6px" title="' +
+          (item.status === 'verified'
+            ? 'confirmed by the platform — messages sent here reach you'
+            : 'not confirmed yet — messages sent to this number reach nobody') +
+          '">' +
+          esc(item.status === 'verified' ? 'verified' + (item.verified_via ? ' · ' + item.verified_via : '') : 'declared — not receiving yet') +
+          '</span>' +
+          '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\'' +
+          esc(item.id) +
+          '\')">✕</span></div>' +
           /**
            * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be
            * automatic without anyone's presence."*
@@ -5769,189 +9469,453 @@ function _chRow(c){
            * verification" rather than "on", because a binding that receives nothing cannot raise anything either.
            * Two independent conditions, and a toggle that claimed otherwise would be the lie.
            */
-          + (b.auto_raise===undefined ? '' :
-             '<label style="display:flex;align-items:center;gap:6px;margin:5px 0 0 10px;font-size:var(--fs-1);color:var(--grey);cursor:pointer">'
-             + '<input type="checkbox" data-testid="ch-autoraise" '+(b.auto_raise?'checked':'')+' onchange="chSetAutoRaise(\''+esc(b.id)+'\',this.checked)">'
-             + '<span>Raise messages on this line <b>automatically</b>'
-             + (b.auto_raise && b.status!=='verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '')
-             + '<br><span style="font-size:var(--fs-1)">' + txf('A chit appears in your Task list with nobody present. It is still an {inquiry} — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.',
-                 { inquiry: '<b>' + tx('inquiry') + '</b>' }) + '</span></span></label>')
+          (item.auto_raise === undefined
+            ? ''
+            : '<label style="display:flex;align-items:center;gap:6px;margin:5px 0 0 10px;font-size:var(--fs-1);color:var(--grey);cursor:pointer">' +
+              '<input type="checkbox" data-testid="ch-autoraise" ' +
+              (item.auto_raise ? 'checked' : '') +
+              ' onchange="chSetAutoRaise(\'' +
+              esc(item.id) +
+              '\',this.checked)">' +
+              '<span>Raise messages on this line <b>automatically</b>' +
+              (item.auto_raise && item.status !== 'verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '') +
+              '<br><span style="font-size:var(--fs-1)">' +
+              txf(
+                'A chit appears in your Task list with nobody present. It is still an {inquiry} — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.',
+                { inquiry: '<b>' + tx('inquiry') + '</b>' }
+              ) +
+              '</span></span></label>') +
           /* ⚠️ TEMPLATES ARE PER-NUMBER, so they hang off the BINDING and not the channel. Meta approves for one
              WhatsApp account; another business's approval says nothing about this one. */
-          + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
-              var state=((b.templates||{})[t.name])||'none';
-              var col=state==='approved'?['var(--ok-2)','var(--ok-tint)']:state==='pending'?['var(--warn-2)','var(--warn-tint)']:['var(--grey-2)','var(--blue-tint-bg)'];
-              return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-inline-start:2px solid var(--line);font-size:var(--fs-1)">'
-                + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span>'
-                + '<span style="font-size:var(--fs-1);font-weight:800;color:'+col[0]+';background:'+col[1]+';border-radius:5px;padding:1px 6px">'+esc(state==='none'?'not approved':state)+'</span>'
-                + '<span style="color:var(--grey)">'+esc(t.category)+' · '+esc(t.language)+'</span>'
-                + '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(b.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
-                + (state==='approved'?'mark not approved':'mark approved')+'</span></div>'
-                /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
+          (c.key === 'whatsapp'
+            ? (c.templates || [])
+                .map(function (t) {
+                  var state = (item.templates || {})[t.name] || 'none';
+                  var col =
+                    state === 'approved'
+                      ? ['var(--ok-2)', 'var(--ok-tint)']
+                      : state === 'pending'
+                        ? ['var(--warn-2)', 'var(--warn-tint)']
+                        : ['var(--grey-2)', 'var(--blue-tint-bg)'];
+                  return (
+                    '<div style="margin:5px 0 0 10px;padding:7px 9px;border-inline-start:2px solid var(--line);font-size:var(--fs-1)">' +
+                    '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">' +
+                    esc(t.name) +
+                    '</span>' +
+                    '<span style="font-size:var(--fs-1);font-weight:800;color:' +
+                    col[0] +
+                    ';background:' +
+                    col[1] +
+                    ';border-radius:5px;padding:1px 6px">' +
+                    esc(state === 'none' ? 'not approved' : state) +
+                    '</span>' +
+                    '<span style="color:var(--grey)">' +
+                    esc(t.category) +
+                    ' · ' +
+                    esc(t.language) +
+                    '</span>' +
+                    '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\'' +
+                    esc(item.id) +
+                    "','" +
+                    esc(t.name) +
+                    "','" +
+                    (state === 'approved' ? 'pending' : 'approved') +
+                    '\')">' +
+                    (state === 'approved' ? 'mark not approved' : 'mark approved') +
+                    '</span></div>' +
+                    /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
                    approved, and a template whose text differs from the approved one is simply rejected. */
-                + '<div style="margin-top:4px;color:var(--grey)">Submit this to Meta word for word:</div>'
-                + '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);white-space:pre-wrap;color:var(--on-bg)">'+esc(t.body)+'</div>'
-                + (state!=='approved' ? '<div style="margin-top:3px;color:var(--warn-2)">Until approved: no sending beyond 24h after the customer writes.</div>' : '')
-                + '</div>'; }).join('') : '')
-          ; }).join('')
-    + (_CH.adding===c.key
-        ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
-          + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
-          + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">' + tx('Bind') + '</button></div>'
-          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + txf('{addr} — the address customers write TO. It is a {claim}: not active until your number is confirmed.', { addr: esc(c.address_label), claim: '<b>' + tx('claim') + '</b>' }) + '</div>'
-        : '')
-    + '</div>';
+                    '<div style="margin-top:4px;color:var(--grey)">Submit this to Meta word for word:</div>' +
+                    '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);white-space:pre-wrap;color:var(--on-bg)">' +
+                    esc(t.body) +
+                    '</div>' +
+                    (state !== 'approved'
+                      ? '<div style="margin-top:3px;color:var(--warn-2)">Until approved: no sending beyond 24h after the customer writes.</div>'
+                      : '') +
+                    '</div>'
+                  );
+                })
+                .join('')
+            : '')
+        );
+      })
+      .join('') +
+    (_CH.adding === c.key
+      ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="' +
+        esc(c.placeholder) +
+        '" data-testid="ch-addr" style="flex:1">' +
+        '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">' +
+        '<button class="composebtn" data-testid="ch-save" onclick="chBind(\'' +
+        esc(c.key) +
+        '\')">' +
+        tx('Bind') +
+        '</button></div>' +
+        '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
+        txf('{addr} — the address customers write TO. It is a {claim}: not active until your number is confirmed.', {
+          addr: esc(c.address_label),
+          claim: '<b>' + tx('claim') + '</b>'
+        }) +
+        '</div>'
+      : '') +
+    '</div>'
+  );
 }
-function chPaint(){ var h=document.getElementById('ch_card'); if(h) h.innerHTML=channelsInner(); }
-async function loadChannels(){
-  _CH.busy=true; _CH.err=null; _CH.notDeployed=false; chPaint();
-  try{ _CH.data=await api('channelsList'); }
-  catch(e){
-    var m=(e&&e.message)||'';
-    if(/does not exist|not found|404/i.test(m)) _CH.notDeployed=true;
-    else _CH.err=m||'Could not read your channels.';
+function chPaint() {
+  var node = document.getElementById('ch_card');
+  if (node) node.innerHTML = channelsInner();
+}
+async function loadChannels() {
+  _CH.busy = true;
+  _CH.err = null;
+  _CH.notDeployed = false;
+  chPaint();
+  try {
+    _CH.data = await api('channelsList');
+  } catch (e) {
+    var m = (e && e.message) || '';
+    if (/does not exist|not found|404/i.test(m)) _CH.notDeployed = true;
+    else _CH.err = m || 'Could not read your channels.';
   }
-  _CH.busy=false; chPaint();
+  _CH.busy = false;
+  chPaint();
 }
-function chToggleAdd(k){ _CH.adding=(_CH.adding===k)?null:k; chPaint(); }
-async function chBind(channel){
-  var addr=val('ch_addr'), label=val('ch_label');
-  if(!String(addr||'').trim()){ toast('Enter the number or address first.', true); return; }
-  try{
-    await api('channelBind',{body:{channel:channel, address:addr, label:label}});
-    _CH.adding=null; await loadChannels(); toast('Channel bound ✓');
-  }catch(e){ toast((e&&e.message)||'Could not bind that.', true); }
+function chToggleAdd(k) {
+  _CH.adding = _CH.adding === k ? null : k;
+  chPaint();
+}
+async function chBind(channel) {
+  var addr = val('ch_addr'),
+    label = val('ch_label');
+  if (!String(addr || '').trim()) {
+    toast('Enter the number or address first.', true);
+    return;
+  }
+  try {
+    await api('channelBind', { body: { channel: channel, address: addr, label: label } });
+    _CH.adding = null;
+    await loadChannels();
+    toast('Channel bound ✓');
+  } catch (e) {
+    toast((e && e.message) || 'Could not bind that.', true);
+  }
 }
 /* ⚠️ CONFIRMED WHEN TURNING IT ON, not when turning it off. Switching it on changes what happens while nobody is
    watching, which is exactly the kind of change that should be read once before it takes effect. Switching it off
    only ever means "back to a person pressing Raise" — nothing to warn about. Repaints from the server either way. */
-function chSetAutoRaise(id, on){
-  if(!on) return _chSetAutoRaise(id, false);
-  confirmAsk('Raise messages on this line automatically?',
-    'A chit will appear in your Task list <b>without anyone present</b>. It is an inquiry — a record, not an '
-    + 'obligation — and it still says the sender is unverified.'
-    + '<div style="margin-top:7px">' + txf('Anything the co-assist cannot read stays in {intake} for you.', { intake: '<b>' + tx('Intake') + '</b>' }) + '</div>',
-    'Turn it on', function(){ _chSetAutoRaise(id, true); });
+function chSetAutoRaise(id, on) {
+  if (!on) return _chSetAutoRaise(id, false);
+  confirmAsk(
+    'Raise messages on this line automatically?',
+    'A chit will appear in your Task list <b>without anyone present</b>. It is an inquiry — a record, not an ' +
+      'obligation — and it still says the sender is unverified.' +
+      '<div style="margin-top:7px">' +
+      txf('Anything the co-assist cannot read stays in {intake} for you.', { intake: '<b>' + tx('Intake') + '</b>' }) +
+      '</div>',
+    'Turn it on',
+    function () {
+      _chSetAutoRaise(id, true);
+    }
+  );
   /* ⚠️ The toggle already moved on screen. Cancelling must put it back, and only a reload knows the real state. */
   loadChannels();
 }
-async function _chSetAutoRaise(id, on){
-  try{ await api('channelAutoRaise',{params:{id:id}, body:{on:!!on}}); await loadChannels(); }
-  catch(e){ toast((e&&e.message)||'Could not change that.', true); await loadChannels(); }
+async function _chSetAutoRaise(id, on) {
+  try {
+    await api('channelAutoRaise', { params: { id: id }, body: { on: !!on } });
+    await loadChannels();
+  } catch (e) {
+    toast((e && e.message) || 'Could not change that.', true);
+    await loadChannels();
+  }
 }
-async function chSetTemplate(id, name, state){
-  try{ await api('channelTemplate',{params:{id:id}, body:{name:name, state:state}}); await loadChannels(); }
-  catch(e){ toast((e&&e.message)||'Could not update the template.', true); }
+async function chSetTemplate(id, name, state) {
+  try {
+    await api('channelTemplate', { params: { id: id }, body: { name: name, state: state } });
+    await loadChannels();
+  } catch (e) {
+    toast((e && e.message) || 'Could not update the template.', true);
+  }
 }
-function chUnbind(id){
-  confirmAsk('Unbind this address?',
-    'Messages sent to it will <b>stop reaching your intake inbox</b>.'
-    + '<div style="margin-top:7px">Captures you have already received are untouched.</div>',
-    'Unbind', function(){ _chUnbind(id); }, true);
+function chUnbind(id) {
+  confirmAsk(
+    'Unbind this address?',
+    'Messages sent to it will <b>stop reaching your intake inbox</b>.' + '<div style="margin-top:7px">Captures you have already received are untouched.</div>',
+    'Unbind',
+    function () {
+      _chUnbind(id);
+    },
+    true
+  );
 }
-async function _chUnbind(id){
-  try{ await api('channelUnbind',{params:{id:id}}); await loadChannels(); }
-  catch(e){ toast((e&&e.message)||'Could not unbind that.', true); }
+async function _chUnbind(id) {
+  try {
+    await api('channelUnbind', { params: { id: id } });
+    await loadChannels();
+  } catch (e) {
+    toast((e && e.message) || 'Could not unbind that.', true);
+  }
 }
 
 /* S2 — the owner's SHOWCASE chooser: the registered templates (app/showcase-templates.js), one tap to choose (saved as the policy flag
    showcase_template via setPolFlag — one source), and the live preview is the shop's own page in a frame (shop.html ?showcase=). */
-function showcaseCard(){
-  if(typeof CBShowcase==='undefined') return '';
+function showcaseCard() {
+  if (typeof CBShowcase === 'undefined') return '';
   /* T3-P2-CRM: the chooser is app/cap-showcase.js (CBShowcasePick) — ONE copy, drawn here and on CB CRM's Shop window; a click on a template saves the flag (scPick) */
-  var cur=((_POL&&_POL.flags)||{}).showcase_template||CBShowcase.DEFAULT, id=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||'';
-  return '<div style="'+_CARD+';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">'+tx('Your shop window')+'</div>'
-    +(typeof CBShowcasePick!=='undefined'?CBShowcasePick.html({ current:cur, shopId:id, t:tx, cls:'btn', clsOn:'btn primary', origin:'' }):'')+'</div>';
+  var cur = ((_POL && _POL.flags) || {}).showcase_template || CBShowcase.DEFAULT,
+    id = (SESSION && (SESSION.user_id || SESSION.bridge_id)) || '';
+  return (
+    '<div style="' +
+    _CARD +
+    ';margin-top:10px" id="scard"><div class="sec" style="margin:0 0 6px">' +
+    tx('Your shop window') +
+    '</div>' +
+    (typeof CBShowcasePick !== 'undefined' ? CBShowcasePick.html({ current: cur, shopId: id, t: tx, cls: 'btn', clsOn: 'btn primary', origin: '' }) : '') +
+    '</div>'
+  );
 }
-document.addEventListener('click', function(ev){ var t=ev.target.closest&&ev.target.closest('#scard [data-sc-pick]'); if(t&&!t.disabled) scPick(t.getAttribute('data-sc-pick')); });
-async function scPick(n){ await setPolFlag('showcase_template',n); paintShowcase(); }
-function paintShowcase(){ var h=document.getElementById('scard'); if(h) h.outerHTML=showcaseCard(); }
-function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
-function policyFlagsInner(){
-  var rows=polDefs().map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
-    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
-    /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
+document.addEventListener('click', function (ev) {
+  var node = ev.target.closest && ev.target.closest('#scard [data-sc-pick]');
+  if (node && !node.disabled) scPick(node.getAttribute('data-sc-pick'));
+});
+async function scPick(n) {
+  await setPolFlag('showcase_template', n);
+  paintShowcase();
+}
+function paintShowcase() {
+  var node = document.getElementById('scard');
+  if (node) node.outerHTML = showcaseCard();
+}
+function policyFlagsCard() {
+  loadPolicy();
+  return '<div style="' + _CARD + ';margin-top:10px" id="polflags">' + policyFlagsInner() + '</div>';
+}
+function policyFlagsInner() {
+  var rows = polDefs()
+    .map(function (item) {
+      return (
+        '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">' +
+        '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">' +
+        esc(item.label) +
+        '</span>' +
+        govKlass(item.gov) +
+        '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">' +
+        esc(item.level) +
+        '</span></div>' +
+        /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
        one removed outright; without this each would leave a 2px-margined empty element under its control —
        a gap that reads as a rendering fault. Same fix as _misHead when its subtitle went. */
-    +(def.help ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div>' : '')+'</div>'
-    +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
+        (item.help ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(item.help) + '</div>' : '') +
+        '</div>' +
+        '<div style="flex:none;text-align:end;min-width:120px">' +
+        _polControl(item) +
+        '</div></div>'
+      );
+    })
+    .join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
-  var warn = !_POL.migrated ? pendingNote('not available on this environment — changes will not save')+'<div style="height:7px"></div>' : '';
-  var err = _POL.err ? '<div style="color:var(--disp);font-size:var(--fs-1);margin-top:6px">'+esc(_POL.err)+'</div>' : '';
-  return '<div class="sec" style="margin:0 0 4px">🚩 Business rules <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
+  var warn = !_POL.migrated ? pendingNote('not available on this environment — changes will not save') + '<div style="height:7px"></div>' : '';
+  var err = _POL.err ? '<div style="color:var(--disp);font-size:var(--fs-1);margin-top:6px">' + esc(_POL.err) + '</div>' : '';
+  return (
+    '<div class="sec" style="margin:0 0 4px">🚩 Business rules <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>' +
     /* ⭐ GOVERNANCE GRAMMAR → SPEC. "class + level", "platform-bound", "tighten-only" is our vocabulary for
        our mechanism. The person here is deciding one toggle; the grammar behind it is what a reviewer wants. */
-    + specNote('settings.policy-flags.grammar',
-        'Per-entity toggles cover what the 7-layer block does not yet carry — same governance grammar '
-      + '(<b>class</b> + <b>level</b>): 🔒 <b>platform-bound</b> cannot be relaxed · <b>tighten-only</b> may be '
-      + 'made stricter · <b>entity</b> is set freely.')
-    +warn+(rows||(_POL.busy?'<div style="font-size:var(--fs-1);color:var(--grey);padding:8px 0">'+tx('Reading your business rules…')+'</div>':''))+err
-    +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">'
-    + txf('Stored on your business, not on this device. {enforced} whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ {pending}.', {
-        enforced: '<b>' + tx('Working today:') + '</b>', pending: tx('pending') }) + '</div>';
+    specNote(
+      'settings.policy-flags.grammar',
+      'Per-entity toggles cover what the 7-layer block does not yet carry — same governance grammar ' +
+        '(<b>class</b> + <b>level</b>): 🔒 <b>platform-bound</b> cannot be relaxed · <b>tighten-only</b> may be ' +
+        'made stricter · <b>entity</b> is set freely.'
+    ) +
+    warn +
+    (rows || (_POL.busy ? '<div style="font-size:var(--fs-1);color:var(--grey);padding:8px 0">' + tx('Reading your business rules…') + '</div>' : '')) +
+    err +
+    '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">' +
+    txf('Stored on your business, not on this device. {enforced} whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ {pending}.', {
+      enforced: '<b>' + tx('Working today:') + '</b>',
+      pending: tx('pending')
+    }) +
+    '</div>'
+  );
 }
-function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
+function autoAssignCard(s, daOpts) {
+  const m = s.auto_assign_mode || 'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
     <label class="fl">${tx('Mode')}${helpQ('work.autoassign', 'How auto-assign picks someone')}</label><select class="inp" id="st_aam">
-      <option value="off"${m==='off'?' selected':''}>${tx('Off — received chits wait in the pool')}</option>
-      <option value="default_assignee"${m==='default_assignee'?' selected':''}>${tx('Default assignee — all to one person')}</option>
-      <option value="least_loaded"${m==='least_loaded'?' selected':''}>${tx('Least-loaded — balance across the team')}</option>
+      <option value="off"${m === 'off' ? ' selected' : ''}>${tx('Off — received chits wait in the pool')}</option>
+      <option value="default_assignee"${m === 'default_assignee' ? ' selected' : ''}>${tx('Default assignee — all to one person')}</option>
+      <option value="least_loaded"${m === 'least_loaded' ? ' selected' : ''}>${tx('Least-loaded — balance across the team')}</option>
     </select>
     <label class="fl">${tx('Default / overflow assignee')}</label><select class="inp" id="st_ada">${daOpts}</select>
-    ${/* ⚠️⚠️ THE PARAGRAPH THAT WAS HERE IS NOW BEHIND THE "?". Athi, 2026-08-20: *"do we need this message —
+    ${
+      /* ⚠️⚠️ THE PARAGRAPH THAT WAS HERE IS NOW BEHIND THE "?". Athi, 2026-08-20: *"do we need this message —
           again a ? can take it to assistant and can answer the same."* It explained three separate rules at once:
           who may be assigned, how least-loaded breaks ties and overflows, and what happens on leave. None of them
           is needed to CHOOSE a mode; all of them are needed if you ask why. That is exactly the split the
           assistant exists for — the screen states, the assistant explains.
 
           ⚠️ IT WAS ALSO WRONG UNTIL AN HOUR AGO: it said "Act / Manager", two levels retired in b173. A
-          paragraph nobody re-reads is a paragraph nobody corrects, which is its own argument for moving it. */''}
+          paragraph nobody re-reads is a paragraph nobody corrects, which is its own argument for moving it. */ ''
+    }
     <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
 }
-async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(x)x.textContent="";
-  const mode=val("st_aam"), da=val("st_ada");
-  if(mode==='default_assignee' && !da){ if(x)x.textContent="Pick a default assignee for this mode."; return; }
-  try{ await api("saveSettings",{body:{auto_assign_mode:mode, default_assignee_actor_id:da||null}}); toast("Auto-assign saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+async function saveAutoAssign() {
+  const x = document.getElementById('st_aerr');
+  if (x) x.textContent = '';
+  const mode = val('st_aam'),
+    da = val('st_ada');
+  if (mode === 'default_assignee' && !da) {
+    if (x) x.textContent = 'Pick a default assignee for this mode.';
+    return;
+  }
+  try {
+    await api('saveSettings', { body: { auto_assign_mode: mode, default_assignee_actor_id: da || null } });
+    toast('Auto-assign saved ✓');
+  } catch (e) {
+    if (x) x.textContent = e.message;
+  }
+}
 
 /* ---- ASSISTANT — knowledge base: the help desk publishes answers to its own catalogue -> served live ----
    Queries are handled the hard way (chits in GOV-01-Help's Task inbox: message + close). This screen is the
    one new atom: Publish-to-catalogue. loadGaps() name kept (renderApp dispatch) — it now loads the KB screen. */
-function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
-var _kbItems=[], _kbEditId='';
-async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
-  const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help'||me.isHelpdesk);
+function assistReviewScreen() {
+  return scr('🧠 Assistant — knowledge base', 'kbbody', 'assistreview');
+}
+var _kbItems = [],
+  _kbEditId = '';
+async function loadGaps() {
+  const node = document.getElementById('kbbody');
+  if (!node) return;
+  const me = typeof SESSION !== 'undefined' ? SESSION : {};
+  const isHelp = me.name === 'GOV-01-Help' || me.isHelpdesk;
   const form = isHelp
-    ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">' + tx('Publish an answer') + '</div>'
-      +'<label class="fl">' + tx('Question') + '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">'
-      +'<label class="fl">' + tx('Answer') + '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
-      +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
-      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' + tx('📣 Publish to catalogue') + '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + txf('Add a new answer, or press {edit} on one below to refine it.', {
-          edit: '<b>' + tx('Edit') + '</b>' }) + '</div>'
+    ? '<div style="' +
+      _CARD +
+      '"><div class="sec" id="kb_formhd" style="margin:0 0 6px">' +
+      tx('Publish an answer') +
+      '</div>' +
+      '<label class="fl">' +
+      tx('Question') +
+      '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">' +
+      '<label class="fl">' +
+      tx('Answer') +
+      '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>' +
+      '<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">' +
+      '<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' +
+      tx('📣 Publish to catalogue') +
+      '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
+      txf('Add a new answer, or press {edit} on one below to refine it.', {
+        edit: '<b>' + tx('Edit') + '</b>'
+      }) +
+      '</div>' +
       /* ⭐ "catalogue → projection" is how it works, not what to do. */
-      + specNote('assist.answers.projection', 'Answers are served to the assistant instantly (catalogue <span class=arw>→</span> projection).')
-      + '</div>'
-    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
-  h.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
-  if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
-  try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
-    const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
-      const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">' + tx('Edit') + '</button>' : '';
-      return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">'+esc(e.q)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
-  }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
-function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;
-  const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
-  if(q)q.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
-  if(q&&q.scrollIntoView)q.scrollIntoView({behavior:'smooth',block:'center'}); }
-function kbNew(){ if(window.CBOffline)CBOffline.clearDraft('kb.form'); _kbEditId=''; const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub"),x=document.getElementById("kb_err");
-  if(q)q.value=''; if(a)a.value=''; if(c)c.value='*'; if(hd)hd.textContent='Publish an answer'; if(pb)pb.textContent='📣 Publish to catalogue'; if(x)x.textContent=''; }
-async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)x.textContent="";
-  const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
-  if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
-  try{ await api("assistPublish",{body:{question:q, answer:a, context:c, qa_id:_kbEditId||undefined}}); toast(_kbEditId?"Updated ✓ — live":"Published ✓ — live in the assistant"); kbNew(); loadGaps(); }
-  catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }
-
+      specNote('assist.answers.projection', 'Answers are served to the assistant instantly (catalogue <span class=arw>→</span> projection).') +
+      '</div>'
+    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' +
+      tx('GOV-01-Help') +
+      "</b>'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>";
+  node.innerHTML =
+    form +
+    '<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' +
+    tx('Published answers (') +
+    '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+  if (window.CBOffline) CBOffline.autodraft(node, 'kb.form'); // draft the question/answer/context you're writing
+  try {
+    _kbItems = (await api('assistQuestions')) || [];
+    const element = document.getElementById('kb_n');
+    if (element) element.textContent = _kbItems.length;
+    const target = document.getElementById('kb_list');
+    if (target)
+      target.innerHTML = _kbItems.length
+        ? _kbItems
+            .map(function (e) {
+              const eb = isHelp
+                ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\'' +
+                  esc(e.id) +
+                  '\')">' +
+                  tx('Edit') +
+                  '</button>'
+                : '';
+              return (
+                '<div style="' +
+                _CARD +
+                ';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">' +
+                esc(e.q) +
+                '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' +
+                esc(e.a) +
+                '</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">' +
+                esc(Array.isArray(e.context) ? e.context.join(', ') : '') +
+                '</div></div>' +
+                eb +
+                '</div></div>'
+              );
+            })
+            .join('')
+        : '<div style="color:var(--grey);font-size:var(--fs-2)">None yet.</div>';
+  } catch (e) {
+    const element = document.getElementById('kb_list');
+    if (element) element.innerHTML = scrErr(e);
+  }
+}
+function kbEdit(id) {
+  const it = _kbItems.find(function (x) {
+    return x.id === id;
+  });
+  if (!it) return;
+  _kbEditId = id;
+  const node = document.getElementById('kb_q'),
+    a = document.getElementById('kb_a'),
+    c = document.getElementById('kb_c'),
+    hd = document.getElementById('kb_formhd'),
+    pb = document.getElementById('kb_pub');
+  if (node) node.value = it.q || '';
+  if (a) a.value = it.a || '';
+  if (c) c.value = Array.isArray(it.context) ? it.context.join(', ') : '*';
+  if (hd) hd.textContent = 'Edit answer';
+  if (pb) pb.textContent = '💾 Update';
+  if (node && node.scrollIntoView) node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function kbNew() {
+  if (window.CBOffline) CBOffline.clearDraft('kb.form');
+  _kbEditId = '';
+  const node = document.getElementById('kb_q'),
+    a = document.getElementById('kb_a'),
+    c = document.getElementById('kb_c'),
+    hd = document.getElementById('kb_formhd'),
+    pb = document.getElementById('kb_pub'),
+    x = document.getElementById('kb_err');
+  if (node) node.value = '';
+  if (a) a.value = '';
+  if (c) c.value = '*';
+  if (hd) hd.textContent = 'Publish an answer';
+  if (pb) pb.textContent = '📣 Publish to catalogue';
+  if (x) x.textContent = '';
+}
+async function publishAnswer() {
+  const x = document.getElementById('kb_err');
+  if (x) x.textContent = '';
+  const q = val('kb_q'),
+    a = val('kb_a');
+  const c = (val('kb_c') || '')
+    .split(',')
+    .map(function (item) {
+      return item.trim();
+    })
+    .filter(Boolean);
+  if (!q || !a) {
+    if (x) x.textContent = 'Question and answer are both required.';
+    return;
+  }
+  try {
+    await api('assistPublish', { body: { question: q, answer: a, context: c, qa_id: _kbEditId || undefined } });
+    toast(_kbEditId ? 'Updated ✓ — live' : 'Published ✓ — live in the assistant');
+    kbNew();
+    loadGaps();
+  } catch (e) {
+    if (x) x.textContent = (e && e.message) || 'Could not publish';
+  }
+}
 
 /* ⚠️ storefrontCardHTML and saveStorefront were removed on 2026-08-20. The Storefront PANEL they drew was
    folded into iamHTML as a section, which made both unreachable; their one irreplaceable control

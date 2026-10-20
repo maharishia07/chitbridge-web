@@ -43,11 +43,13 @@ assert(/'dues'/.test(groups), 'dues is in a menu group');
 assert(!/'waiting'/.test(groups) && !/acc-waiting-n/.test(acc) && acc.indexOf("['waiting', 'Waiting'") < 0, 'Waiting has no button and no badge');
 /* the To do notices open real places, never a tap that does nothing: bills to accept -> Received bills; suppliers to add -> the CRM supplier list */
 const books = P('app/cap-books.js');
+/* iter1: the pass wraps lines and renames locals, so the source checks compare without comments and whitespace */
+const flat = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+/g, '');
 
-assert(acc.indexOf("accept: () => { ACC.billTab = 'B-2100'; show('bills'); }") >= 0, 'accept opens the Received bills');
-assert(acc.indexOf('supplier: () => { location.href = CB_HOMES.suppliers; }') >= 0 && shell.indexOf("suppliers: '/crm.html#/parties?role=supplier'") >= 0, 'suppliers to add opens the CRM supplier list');
+assert(flat(acc).includes(flat("accept: () => { ACC.billTab = 'B-2100'; show('bills'); }")), 'accept opens the Received bills');
+assert(flat(acc).includes(flat('supplier: () => { location.href = CB_HOMES.suppliers; }')) && shell.indexOf("suppliers: '/crm.html#/parties?role=supplier'") >= 0, 'suppliers to add opens the CRM supplier list');
 assert(acc.indexOf("waiting: 'waiting'") >= 0 && acc.indexOf('waiting: (body)') < 0, 'the failed-posting list stays reachable from its To do row only');
-assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && books.indexOf("text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')") >= 0, 'accept and supplier go through bkNoticeGo; waiting keeps its list');
+assert(books.split("bkNoticeGo('accept')").length === 2 && books.indexOf("bkNoticeGo('supplier')") >= 0 && flat(books).includes(flat("text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting')")), 'accept and supplier go through bkNoticeGo; waiting keeps its list');
 const navIds = [...acc.slice(acc.indexOf('const NAV = ['), acc.indexOf('const KURAL_OF')).matchAll(/^\s*\['(\w+)', '/gm)].map((m) => m[1]);
 navIds.forEach((id) => assert(new RegExp("'" + id + "'").test(groups), 'NAV view ' + id + ' has a menu button'));
 

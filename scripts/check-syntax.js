@@ -13,27 +13,45 @@ let failed = 0;
 // Not just app.html: shop.html is the customer-facing storefront and carries its own inline script — a syntax error
 // there is just as fatal, and it used to sail past this check.
 const pubDir = path.join(root, 'public');
-for (const page of fs.readdirSync(pubDir).filter(f => f.endsWith('.html')).sort()) {
+for (const page of fs
+  .readdirSync(pubDir)
+  .filter((item) => item.endsWith('.html'))
+  .sort()) {
   const html = fs.readFileSync(path.join(pubDir, page), 'utf8');
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-  let m, n = 0, bad = 0;
+  let m,
+    index = 0,
+    count = 0;
   while ((m = re.exec(html)) !== null) {
     if (/\bsrc\s*=/.test(m[1] || '')) continue;
-    n++;
-    try { new vm.Script(m[2], { filename: `${page}#inline-${n}` }); }
-    catch (e) { failed++; bad++; console.log('SYNTAX FAIL  ' + page + ' inline #' + n + ': ' + e.message); }
+    index++;
+    try {
+      new vm.Script(m[2], { filename: `${page}#inline-${index}` });
+    } catch (e) {
+      failed++;
+      count++;
+      console.log('SYNTAX FAIL  ' + page + ' inline #' + index + ': ' + e.message);
+    }
   }
-  console.log(page + ': ' + n + ' inline script(s) — ' + (bad ? 'FAIL' : 'OK'));
+  console.log(page + ': ' + index + ' inline script(s) — ' + (count ? 'FAIL' : 'OK'));
 }
 
 // 2) the JS modules under public/app/
 const appDir = path.join(root, 'public', 'app');
 if (fs.existsSync(appDir)) {
-  for (const f of fs.readdirSync(appDir).filter(f => f.endsWith('.js'))) {
-    try { new vm.Script(fs.readFileSync(path.join(appDir, f), 'utf8'), { filename: 'app/' + f }); console.log('public/app/' + f + ' — OK'); }
-    catch (e) { failed++; console.log('SYNTAX FAIL  public/app/' + f + ': ' + e.message); }
+  for (const f of fs.readdirSync(appDir).filter((item) => item.endsWith('.js'))) {
+    try {
+      new vm.Script(fs.readFileSync(path.join(appDir, f), 'utf8'), { filename: 'app/' + f });
+      console.log('public/app/' + f + ' — OK');
+    } catch (e) {
+      failed++;
+      console.log('SYNTAX FAIL  public/app/' + f + ': ' + e.message);
+    }
   }
 }
 
-if (failed) { console.log('\ncheck-syntax: FAIL (' + failed + ')'); process.exit(1); }
+if (failed) {
+  console.log('\ncheck-syntax: FAIL (' + failed + ')');
+  process.exit(1);
+}
 console.log('check-syntax: PASS');

@@ -2,18 +2,18 @@
  "_about": "lint ratchet (MNT-1): eslint warnings per own-code file, 18 Oct = the baseline. A file may have FEWER warnings than its row, never more. Warn-only: no CI step reads this yet. Lower with `node tools/lint-ratchet.cjs --write`.",
  "_totals": {
   "files": 174,
-  "eslintWarnings": 799,
+  "eslintWarnings": 667,
   "parseErrors": 3,
-  "prettierFail": 135,
+  "prettierFail": 134,
   "prettierChecked": 135
  },
  "_rules": {
   "no-empty": 561,
-  "no-shadow": 133,
   "no-unused-vars": 64,
   "no-redeclare": 10,
   "no-constant-condition": 2,
   "no-useless-escape": 23,
+  "no-shadow": 1,
   "no-irregular-whitespace": 2,
   "no-dupe-else-if": 1,
   "no-func-assign": 1,
@@ -25,7 +25,7 @@
   "prettierOk": null
  },
  "public/app.html": {
-  "warnings": 247,
+  "warnings": 178,
   "prettierOk": null
  },
  "public/app/accounts-shell.js": {
@@ -49,7 +49,7 @@
   "prettierOk": false
  },
  "public/app/cap-admin.js": {
-  "warnings": 18,
+  "warnings": 13,
   "prettierOk": false
  },
  "public/app/cap-adopt.js": {
@@ -69,7 +69,7 @@
   "prettierOk": false
  },
  "public/app/cap-catalogue.js": {
-  "warnings": 3,
+  "warnings": 2,
   "prettierOk": false
  },
  "public/app/cap-categories.js": {
@@ -77,11 +77,11 @@
   "prettierOk": false
  },
  "public/app/cap-catsetup.js": {
-  "warnings": 3,
+  "warnings": 2,
   "prettierOk": false
  },
  "public/app/cap-chit2.js": {
-  "warnings": 5,
+  "warnings": 4,
   "prettierOk": false
  },
  "public/app/cap-cmdb.js": {
@@ -133,7 +133,7 @@
   "prettierOk": false
  },
  "public/app/cap-dispute.js": {
-  "warnings": 4,
+  "warnings": 2,
   "prettierOk": false
  },
  "public/app/cap-employees.js": {
@@ -193,7 +193,7 @@
   "prettierOk": false
  },
  "public/app/cap-messages.js": {
-  "warnings": 2,
+  "warnings": 1,
   "prettierOk": false
  },
  "public/app/cap-mis-trend.js": {
@@ -225,11 +225,11 @@
   "prettierOk": false
  },
  "public/app/cap-readiness.js": {
-  "warnings": 9,
+  "warnings": 8,
   "prettierOk": false
  },
  "public/app/cap-register.js": {
-  "warnings": 3,
+  "warnings": 2,
   "prettierOk": false
  },
  "public/app/cap-repeat.js": {
@@ -245,7 +245,7 @@
   "prettierOk": false
  },
  "public/app/cap-settings.js": {
-  "warnings": 2,
+  "warnings": 1,
   "prettierOk": false
  },
  "public/app/cap-shop.js": {
@@ -277,7 +277,7 @@
   "prettierOk": false
  },
  "public/app/cap-testing.js": {
-  "warnings": 100,
+  "warnings": 99,
   "prettierOk": false
  },
  "public/app/cap-traceability.js": {
@@ -293,7 +293,7 @@
   "prettierOk": false
  },
  "public/app/cart.js": {
-  "warnings": 24,
+  "warnings": 13,
   "prettierOk": false
  },
  "public/app/catalogue-lines.js": {
@@ -301,7 +301,7 @@
   "prettierOk": false
  },
  "public/app/catalogue-model.js": {
-  "warnings": 1,
+  "warnings": 0,
   "prettierOk": false
  },
  "public/app/catalogue-starter-categories.js": {
@@ -309,7 +309,7 @@
   "prettierOk": false
  },
  "public/app/chit-sheet.js": {
-  "warnings": 4,
+  "warnings": 3,
   "prettierOk": false
  },
  "public/app/core.js": {
@@ -317,7 +317,7 @@
   "prettierOk": false
  },
  "public/app/country-profiles.js": {
-  "warnings": 1,
+  "warnings": 0,
   "prettierOk": false
  },
  "public/app/country-ready.js": {
@@ -337,11 +337,11 @@
   "prettierOk": false
  },
  "public/app/kural.js": {
-  "warnings": 4,
+  "warnings": 3,
   "prettierOk": false
  },
  "public/app/list-ctl.js": {
-  "warnings": 19,
+  "warnings": 18,
   "prettierOk": false
  },
  "public/app/list-legacy.js": {
@@ -377,11 +377,11 @@
   "prettierOk": false
  },
  "public/app/rail-bell.js": {
-  "warnings": 4,
+  "warnings": 3,
   "prettierOk": false
  },
  "public/app/rail-thread.js": {
-  "warnings": 12,
+  "warnings": 11,
   "prettierOk": false
  },
  "public/app/register-form.js": {
@@ -389,7 +389,7 @@
   "prettierOk": false
  },
  "public/app/screen-id.js": {
-  "warnings": 2,
+  "warnings": 0,
   "prettierOk": false
  },
  "public/app/screens.js": {
@@ -413,7 +413,7 @@
   "prettierOk": false
  },
  "public/app/signin-ui.js": {
-  "warnings": 9,
+  "warnings": 8,
   "prettierOk": false
  },
  "public/app/step-flow.js": {
@@ -454,7 +454,7 @@
  },
  "public/app/their-bill.js": {
   "warnings": 0,
-  "prettierOk": false
+  "prettierOk": true
  },
  "public/app/units.js": {
   "warnings": 0,
@@ -497,7 +497,7 @@
   "prettierOk": false
  },
  "public/conversion-lab.html": {
-  "warnings": 2,
+  "warnings": 1,
   "prettierOk": null
  },
  "public/country-lab.html": {
@@ -569,7 +569,7 @@
   "prettierOk": null
  },
  "public/offer-lab-next.html": {
-  "warnings": 15,
+  "warnings": 8,
   "prettierOk": null
  },
  "public/offer-lab.html": {
@@ -597,7 +597,7 @@
   "prettierOk": null
  },
  "public/shop.html": {
-  "warnings": 15,
+  "warnings": 8,
   "prettierOk": null
  },
  "public/signin-lab.html": {
@@ -621,11 +621,11 @@
   "prettierOk": null
  },
  "public/tasks.html": {
-  "warnings": 2,
+  "warnings": 0,
   "prettierOk": null
  },
  "public/testing.html": {
-  "warnings": 19,
+  "warnings": 9,
   "prettierOk": null
  },
  "public/till-sw.js": {

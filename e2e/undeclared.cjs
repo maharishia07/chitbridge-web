@@ -135,6 +135,26 @@ files.forEach((f) => {
     });
   });
 
+  /* ITER1 (MNT-4): the formatter puts each declarator of `let A = 1, B = 2;` on its own line, so the line reading above misses B. Read the whole
+     statement up to its `;` at bracket depth 0 and take the head of every top-level comma clause (over-collecting, as above). */
+  {
+    const kwRe = /\b(?:var|let|const)\s+/g;
+    let km;
+    while ((km = kwRe.exec(code))) {
+      let depth = 0, clause = '', i = km.index + km[0].length;
+      const heads = [];
+      for (; i < code.length; i++) {
+        const ch = code[i];
+        if ('([{'.indexOf(ch) >= 0) depth++;
+        else if (')]}'.indexOf(ch) >= 0) { if (depth === 0) break; depth--; }
+        if (depth === 0 && (ch === ';' || ch === ',')) { heads.push(clause); clause = ''; if (ch === ';') break; continue; }
+        clause += ch;
+      }
+      heads.push(clause);
+      heads.forEach(function (c) { const head = c.trim().split(/[\s=:(){}[\]]/)[0]; if (/^[A-Za-z_$][\w$]*$/.test(head)) DECLARED.add(head); });
+    }
+  }
+
   used.forEach((name) => {
     if (KNOWN.has(name)) return;
     if (SHARED.has(name)) return;   /* declared in app.html, shared into every capability */

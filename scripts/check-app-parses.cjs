@@ -37,36 +37,50 @@ function inlineScripts(html) {
 function checkHtml(file) {
   const html = fs.readFileSync(file, 'utf8');
   const blocks = inlineScripts(html);
-  let bad = 0;
-  blocks.forEach((b, i) => {
-    try { new vm.Script(b.code, { filename: file }); }
-    catch (e) {
-      bad++;
+  let count = 0;
+  blocks.forEach((item, index) => {
+    try {
+      new vm.Script(item.code, { filename: file });
+    } catch (e) {
+      count++;
       // The offset makes the message point at a line in the FILE, not in the extracted fragment.
       const at = (e.stack && /:(\d+)/.exec(e.stack.split('\n')[0])) || null;
-      console.log(`  ✗ ${path.relative(ROOT, file)} · inline block ${i + 1} (from line ${b.line}): ${e.message}`);
+      console.log(`  ✗ ${path.relative(ROOT, file)} · inline block ${index + 1} (from line ${item.line}): ${e.message}`);
     }
   });
-  if (!bad) console.log(`  ✓ ${path.relative(ROOT, file)} — ${blocks.length} inline block(s)`);
-  return bad;
+  if (!count) console.log(`  ✓ ${path.relative(ROOT, file)} — ${blocks.length} inline block(s)`);
+  return count;
 }
 
 function checkJs(file) {
-  try { new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file }); console.log(`  ✓ ${path.relative(ROOT, file)}`); return 0; }
-  catch (e) { console.log(`  ✗ ${path.relative(ROOT, file)}: ${e.message}`); return 1; }
+  try {
+    new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
+    console.log(`  ✓ ${path.relative(ROOT, file)}`);
+    return 0;
+  } catch (e) {
+    console.log(`  ✗ ${path.relative(ROOT, file)}: ${e.message}`);
+    return 1;
+  }
 }
 
-const files = args.length ? args : [
-  path.join(ROOT, 'public', 'app.html'),
-  ...fs.readdirSync(path.join(ROOT, 'public', 'app')).filter((f) => f.endsWith('.js'))
-    .map((f) => path.join(ROOT, 'public', 'app', f)),
-];
+const files = args.length
+  ? args
+  : [
+      path.join(ROOT, 'public', 'app.html'),
+      ...fs
+        .readdirSync(path.join(ROOT, 'public', 'app'))
+        .filter((item) => item.endsWith('.js'))
+        .map((item) => path.join(ROOT, 'public', 'app', item))
+    ];
 
 console.log('\nparse check');
 let bad = 0;
-for (const f of files) {
-  if (!fs.existsSync(f)) { console.log(`  ? ${f} — not found`); continue; }
-  bad += f.endsWith('.html') ? checkHtml(f) : checkJs(f);
+for (const text of files) {
+  if (!fs.existsSync(text)) {
+    console.log(`  ? ${text} — not found`);
+    continue;
+  }
+  bad += text.endsWith('.html') ? checkHtml(text) : checkJs(text);
 }
 console.log(bad ? `\n  ${bad} FAILED — this would be a blank page\n` : '\n  all parse\n');
 process.exit(bad ? 1 : 0);

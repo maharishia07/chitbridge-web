@@ -38,10 +38,10 @@ const CORE = path.join(__dirname, '..', 'public', 'app', 'core.js');
    then be asserting a rule the client no longer follows — the exact failure it exists to prevent. */
 const core = fs.readFileSync(CORE, 'utf8');
 const sibsM = /var SIBS = \[([^\]]*)\]/.exec(core);
-const collM = /for\(const k of \[([^\]]*)\]\)\s*if\(Array\.isArray/.exec(core);
+const collM = /for\s*\(const k of \[([^\]]*)\]\)\s*if\s*\(Array\.isArray/.exec(core);
 if (!sibsM) { console.error('api-envelope: could not find SIBS in core.js'); process.exit(1); }
 if (!collM) { console.error('api-envelope: could not find the collapse list in core.js'); process.exit(1); }
-const names = (s) => (s.match(/"([^"]+)"/g) || []).map((x) => x.slice(1, -1));
+const names = (s) => (s.replace(/\/\*[\s\S]*?\*\//g, '').match(/(["'])([^"']+)\1/g) || []).map((x) => x.slice(1, -1));
 const SIBS = new Set(names(sibsM[1]));
 const COLLAPSE = new Set(names(collM[1]));
 
@@ -59,9 +59,11 @@ const WHOLE = new Set(['token', 'my_disputes', 'header', 'has_catalogue', 'searc
  * judged only if its file serves one of them.
  */
 const APP = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
-const epBlock = /const EP = \{([\s\S]*?)\n\};/.exec(APP);
+const epBlock = /const EP = \{([\s\S]*?)\n\s*\};/.exec(APP); // the closing brace may be indented (MNT-4 formatting)
 if (!epBlock) { console.error('api-envelope: could not find EP in app.html'); process.exit(1); }
-const EP_PATHS = new Set((epBlock[1].match(/p:\s*"([^"]+)"/g) || []).map((s) => /"([^"]+)"/.exec(s)[1]));
+const EP_PATHS = new Set((epBlock[1].match(/p:\s*(['"])([^'"]+)\1/g) || []).map((s) => /(['"])([^'"]+)\1/.exec(s)[2])); // either quote style
+/* silence is the bug: a reader that matches almost nothing would pass every route unchecked */
+if (EP_PATHS.size < 50) { console.error('api-envelope: only ' + EP_PATHS.size + ' EP paths read from app.html; the reader no longer matches EP'); process.exit(1); }
 /* routes/<name>.js serves /api/<mount>; a file counts if ANY endpoint the app calls lives under its mount */
 const mountOf = (file) => file.replace(/\.js$/, '');
 const APP_FILES = new Set();

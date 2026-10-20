@@ -101,7 +101,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 const CFG = { API_BASE: window.CB_API };
 let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
 const EP = {};
-function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
+function go() {
+  if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED();
+}
 </script>
 <script src="/app/core.js"></script>   <!-- api() + the registry: every read and write of this page goes through it (the round-trip budget reads the registry) -->
 <script src="/app/accounts-shell.js"></script>   <!-- CBAction (M64) · tx · toast · CBConfirm · CB_SHEET_EP (status: the ONE status writer's route) -->
@@ -126,75 +128,165 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
 <script>
 'use strict';
 (function () {
-  var q = new URLSearchParams(location.search), embed = q.get('embed') === '1', view = q.get('view') || '', openId = q.get('open') || '';
+  var q = new URLSearchParams(location.search),
+    embed = q.get('embed') === '1',
+    view = q.get('view') || '',
+    openId = q.get('open') || '';
   CFG.API_BASE = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || CFG.API_BASE;
-  var host = document.getElementById('tk'), app = null, frame = null;
+  var host = document.getElementById('tk'),
+    app = null,
+    frame = null;
   if (embed) document.body.classList.add('embed');
   Object.assign(EP, CB_SHEET_EP, CB_THREAD_EP, CB_WORK_EP, CB_DISPUTE_EP, CB_ASSIST_EP);
-  CBDispute.sheet = true;   /* the chit sheet paints the dispute section on this page (T3) */
-  var ICON = { tasks: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
-    orders_in: 'M12 3v12M6 9l6 6 6-6M4 21h16', orders_out: 'M12 21V9M6 15l6-6 6 6M4 3h16', done: 'M20 6L9 17l-5-5',
-    disputes: 'M5 21V4M5 4h11l-2 4 2 4H5', assist: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z' };
-  var EXTRA = [{ k: 'disputes', label: 'Disputes' }, { k: 'assist', label: 'Assist' }];   /* T3: the work beside the folders */
-  var panes = { tk: document.getElementById('tk'), dp: document.getElementById('dp'), ca: document.getElementById('ca') }, extraOn = {};
+  CBDispute.sheet = true; /* the chit sheet paints the dispute section on this page (T3) */
+  var ICON = {
+    tasks: 'M9 11l3 3 8-8M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9',
+    orders_in: 'M12 3v12M6 9l6 6 6-6M4 21h16',
+    orders_out: 'M12 21V9M6 15l6-6 6 6M4 3h16',
+    done: 'M20 6L9 17l-5-5',
+    disputes: 'M5 21V4M5 4h11l-2 4 2 4H5',
+    assist: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z'
+  };
+  var EXTRA = [
+    { k: 'disputes', label: 'Disputes' },
+    { k: 'assist', label: 'Assist' }
+  ]; /* T3: the work beside the folders */
+  var panes = { tk: document.getElementById('tk'), dp: document.getElementById('dp'), ca: document.getElementById('ca') },
+    extraOn = {};
   /** a 401 from the API: the session is no longer good (core.js api() calls go() → this) */
-  window.CB_TASKS_ENDED = function () { if (embed) start(null); else CBFrame.ended(); };
+  window.CB_TASKS_ENDED = function () {
+    if (embed) start(null);
+    else CBFrame.ended();
+  };
   /** the bell's row opens THAT order HERE (REQUIREMENT §6; rail-bell.js presses openChit when the page has one) — the same sheet, over whichever folder is open */
   /** the sheet's "Open page" (ORD-62): the chit PAGE in CB CRM in its own tab - this page keeps its place; without it the sheet fell back to openChit and re-opened itself under Orders in */
-  window.openChitPage = function (id) { if (id) location.href = chitPageHref(id); };   /* NAV-MAP §6 item 13: the same tab, Back returns */
+  window.openChitPage = function (id) {
+    if (id) location.href = chitPageHref(id);
+  }; /* NAV-MAP §6 item 13: the same tab, Back returns */
   window.openChit = function (id) {
     if (!id) return;
-    if (embed || (app && !panes.tk.hidden)) { if (app) app.open(String(id)); return; }
-    pane(CBTasks.VIEWS[0], String(id));   /* from Disputes / CB Assist (the sheet's Open page, the bell): the order's own sheet, in its folder */
+    if (embed || (app && !panes.tk.hidden)) {
+      if (app) app.open(String(id));
+      return;
+    }
+    pane(CBTasks.VIEWS[0], String(id)); /* from Disputes / CB Assist (the sheet's Open page, the bell): the order's own sheet, in its folder */
   };
   /** one section at a time: a folder of the work (CBTasks), Disputes (CBDispute) or CB Assist (CBAssistReview) — each mounted when first asked for */
-  function pane(k, openId) {
+  function pane(k, nestedOpenId) {
     var isTask = CBTasks.VIEWS.indexOf(k) >= 0;
-    panes.tk.hidden = !isTask; panes.dp.hidden = k !== 'disputes'; panes.ca.hidden = k !== 'assist';
+    panes.tk.hidden = !isTask;
+    panes.dp.hidden = k !== 'disputes';
+    panes.ca.hidden = k !== 'assist';
     if (frame && frame.skeleton) frame.skeleton.setActive(k);
-    try { var u = new URL(location.href); u.searchParams.set('view', k); history.replaceState(null, '', u.pathname + u.search + u.hash); } catch (e) { if (window.cblog) cblog('warn', 'tasks: the address bar could not follow the section — ' + e.message); }
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('view', k);
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    } catch (e) {
+      if (window.cblog) cblog('warn', 'tasks: the address bar could not follow the section — ' + e.message);
+    }
     if (!SESSION.token) return;
-    if (isTask) { if (!app) start(SESSION.token, null, k, openId); else { app.show(k); if (openId) app.open(openId); } return; }
+    if (isTask) {
+      if (!app) start(SESSION.token, null, k, nestedOpenId);
+      else {
+        app.show(k);
+        if (nestedOpenId) app.open(nestedOpenId);
+      }
+      return;
+    }
     if (extraOn[k]) return;
     extraOn[k] = true;
-    if (k === 'disputes') CBDispute.mount(panes.dp); else CBAssistReview.mount(panes.ca);
+    if (k === 'disputes') CBDispute.mount(panes.dp);
+    else CBAssistReview.mount(panes.ca);
   }
   /** RAIL-86: ?view=disputes&chit=<id> (the sheet's Dispute button on Accounts · Finance · CRM) opens that chit's sheet here, once - the address then forgets it */
   function openDisputeChit() {
     var chit = q.get('chit');
     if (!chit || view !== 'disputes' || !window.CBDispute || !CBDispute.open) return;
     CBDispute.open({ chit_id: chit });
-    try { var here = new URL(location.href); here.searchParams.delete('chit'); history.replaceState(null, '', here.pathname + here.search + here.hash); } catch (e) { if (window.cblog) cblog('warn', 'tasks: the address bar kept the chit - ' + e.message); }
+    try {
+      var here = new URL(location.href);
+      here.searchParams.delete('chit');
+      history.replaceState(null, '', here.pathname + here.search + here.hash);
+    } catch (e) {
+      if (window.cblog) cblog('warn', 'tasks: the address bar kept the chit - ' + e.message);
+    }
   }
   function start(token, api, v, oid) {
-    if (!token) { host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>'; return; }
+    if (!token) {
+      host.innerHTML = '<div class="empty" data-testid="tk-signin"><div class="t">' + (embed ? 'Sign in first' : 'Sign in above') + '</div></div>';
+      return;
+    }
     SESSION.token = token;
     if (api) CFG.API_BASE = api;
-    app = CBTasks.mount(host, { token: token, base: CFG.API_BASE, embed: embed, view: v || view, open: oid || openId, onEnded: window.CB_TASKS_ENDED,
-      onView: function (v) { if (frame && frame.skeleton) frame.skeleton.setActive(v); } });
+    app = CBTasks.mount(host, {
+      token: token,
+      base: CFG.API_BASE,
+      embed: embed,
+      view: v || view,
+      open: oid || openId,
+      onEnded: window.CB_TASKS_ENDED,
+      onView: function (nestedV) {
+        if (frame && frame.skeleton) frame.skeleton.setActive(nestedV);
+      }
+    });
   }
   if (!embed) {
-    var tabs = (window.CBWorkflow ? CBWorkflow.tabs() : []).filter(function (t) { return CBTasks.VIEWS.indexOf(t.id) >= 0; });
+    var tabs = (window.CBWorkflow ? CBWorkflow.tabs() : []).filter(function (item) {
+      return CBTasks.VIEWS.indexOf(item.id) >= 0;
+    });
     var first = CBTasks.VIEWS.indexOf(view) >= 0 || view === 'disputes' || view === 'assist' ? view : 'orders_in';
-    frame = CBFrame.mount({ app: 'tasks', kural: 'tasks', work: document.getElementById('tkw'),
-      skeleton: { name: 'Tasks & Orders', icon: ICON.tasks, active: first,
-        sections: [].concat(tabs.map(function (t) { return { k: t.id, label: t.label, icon: ICON[t.id] || ICON.tasks }; }),
-          EXTRA.map(function (x) { return { k: x.k, label: tx(x.label), icon: ICON[x.k] }; })),   /* through the catalogue (walk-locale) */
-        onSection: function (k) { pane(k); } } });
+    frame = CBFrame.mount({
+      app: 'tasks',
+      kural: 'tasks',
+      work: document.getElementById('tkw'),
+      skeleton: {
+        name: 'Tasks & Orders',
+        icon: ICON.tasks,
+        active: first,
+        sections: [].concat(
+          tabs.map(function (item) {
+            return { k: item.id, label: item.label, icon: ICON[item.id] || ICON.tasks };
+          }),
+          EXTRA.map(function (x) {
+            return { k: x.k, label: tx(x.label), icon: ICON[x.k] };
+          })
+        ) /* through the catalogue (walk-locale) */,
+        onSection: function (k) {
+          pane(k);
+        }
+      }
+    });
     /* a language pack loads after the frame is drawn and calls renderApp() when it lands (strings-*.js): the sidebar's words are said again
        through the catalogue then — the folders, Disputes · CB Assist, the name and Collapse (walk-locale counted them as plain English) */
-    var WORDS = {}; tabs.forEach(function (t) { WORDS[t.id] = t.label; }); EXTRA.forEach(function (x) { WORDS[x.k] = x.label; });
+    var WORDS = {};
+    tabs.forEach(function (item) {
+      WORDS[item.id] = item.label;
+    });
+    EXTRA.forEach(function (x) {
+      WORDS[x.k] = x.label;
+    });
     window.renderApp = function () {
-      var side = document.getElementById('side'); if (!side) return;
-      Array.prototype.forEach.call(side.querySelectorAll('.nav-btn[data-sec]'), function (b) {
-        var en = WORDS[b.getAttribute('data-sec')], l = b.querySelector('.label'); if (!en || !l) return;
-        l.textContent = tx(en); b.setAttribute('aria-label', tx(en));
+      var side = document.getElementById('side');
+      if (!side) return;
+      Array.prototype.forEach.call(side.querySelectorAll('.nav-btn[data-sec]'), function (element) {
+        var en = WORDS[element.getAttribute('data-sec')],
+          target = element.querySelector('.label');
+        if (!en || !target) return;
+        target.textContent = tx(en);
+        element.setAttribute('aria-label', tx(en));
       });
-      var bn = side.querySelector('.brand-name'); if (bn) bn.textContent = tx('Tasks & Orders');
-      var tg = document.getElementById('toggleNav'), tl = tg && tg.querySelector('.label'); if (tl) tl.textContent = tx('Collapse');
+      var node = side.querySelector('.brand-name');
+      if (node) node.textContent = tx('Tasks & Orders');
+      var tg = document.getElementById('toggleNav'),
+        tl = tg && tg.querySelector('.label');
+      if (tl) tl.textContent = tx('Collapse');
     };
     if (frame.session) SESSION = Object.assign({}, SESSION, frame.session);
-    if (!frame.token) { start(null); return; }
+    if (!frame.token) {
+      start(null);
+      return;
+    }
     SESSION.token = frame.token;
     pane(first);
     openDisputeChit();
@@ -203,16 +295,27 @@ function go(){ if (typeof CB_TASKS_ENDED === 'function') CB_TASKS_ENDED(); }
   /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
      kept in memory only, never stored - so the frame never acts as another shop's saved login. A host that does not answer: the browser's own saved session. */
   var own = (CBFrame.session() || {}).token;
-  if (!window.parent || window.parent === window) { start(own); return; }
+  if (!window.parent || window.parent === window) {
+    start(own);
+    return;
+  }
   var done = false;
-  function give(t, api) { if (done) return; done = true; window.removeEventListener('message', heard); start(t, api); }
+  function give(t, api) {
+    if (done) return;
+    done = true;
+    window.removeEventListener('message', heard);
+    start(t, api);
+  }
   function heard(e) {
     var m = e.data;
-    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session') give(m.token || null, String(m.api || '').indexOf('http') === 0 ? m.api : null);
+    if (e.source === window.parent && e.origin === location.origin && m && m.cb === 'host' && m.event === 'session')
+      give(m.token || null, String(m.api || '').indexOf('http') === 0 ? m.api : null);
   }
   window.addEventListener('message', heard);
   window.parent.postMessage({ cb: 'tasks', event: 'need-session' }, location.origin);
-  setTimeout(function () { give(own || null); }, 2500);
+  setTimeout(function () {
+    give(own || null);
+  }, 2500);
 })();
 </script>
 </body>

@@ -23,9 +23,9 @@ const run = (code) => vm.runInContext(code, cx);
 
 /* myCur as the page defines it (app.html) */
 const appHtml = fs.readFileSync(__dirname + '/../public/app.html', 'utf8');
-const curLine = appHtml.split('\n').find((line) => line.startsWith('function myCur()'));
+const curLine = (appHtml.match(/^function myCur\(\)[\s\S]*?^\}/m) || [])[0];
 ok(curLine && !/'INR'/.test(curLine) && /\|\| null/.test(curLine), 'N1: app.html myCur() ends in null, not INR');
-run('var SESSION = {};' + curLine.slice(0, curLine.indexOf('/*')));
+run('var SESSION = {};' + curLine);
 
 /* a shop that stated nothing */
 ok(run('moneyCode()') === null, 'N1: no currency anywhere -> moneyCode() is null, not INR');
@@ -48,7 +48,7 @@ ok(run('moneyCode("usd")') === 'USD', 'a row\'s own currency wins over the shop\
 /* N4: the books year starts where the setting or the pack says - no April of our own */
 const books = fs.readFileSync(__dirname + '/../public/app/cap-books.js', 'utf8');
 const startAt = books.indexOf('function bkYearStart()');
-const yearFn = books.slice(startAt, books.indexOf('\n', startAt));
+const yearFn = books.slice(startAt, books.indexOf('\n}', startAt) + 2);
 ok(!/\|\|\s*4\b|:\s*4\b/.test(yearFn), 'N4: bkYearStart has no "|| 4" / ": 4" fallback');
 const withYear = vm.createContext({ BK: { year: { start_month: 7 } }, shopReg: () => ({ fiscalYear: { startMonth: 4 } }) });
 vm.runInContext('function bkFyPack(){ return shopReg(); }' + yearFn, withYear);
@@ -75,10 +75,10 @@ for (const screen of Object.keys(screens)) {
 /* N1 (app.html, shop.html): the pay field, the UPI links and the currency list state no India */
 const appSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
 const shopSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop.html'), 'utf8');
-ok(!appSource.includes('&cu=INR') && appSource.includes("'&cu='+encodeURIComponent(moneyCode()||'')"), 'N1: the UPI link carries the shop money, not a typed INR');
+ok(!appSource.includes('&cu=INR') && appSource.replace(/\s+/g, '').includes("'&cu='+encodeURIComponent(moneyCode()||'')"), 'N1: the UPI link carries the shop money, not a typed INR');
 ok(!shopSource.includes('&cu=INR') && shopSource.includes('_SHOPDATA.shop.currency_code'), 'N1: the storefront UPI link carries the shop money, not a typed INR');
-ok(appSource.includes("CBLocale.symbol(moneyCode()):'')}</b>"), 'N1: the pay-amount field shows the shop symbol, none when no money is stated (no rupee sign)');
-ok(/\['CHF','Swiss Franc . 2dp'\]\]\.sort\(/.test(appSource), 'N1: the currency list is sorted by code - none leads');
+ok(appSource.replace(/\s+/g, '').includes("CBLocale.symbol(moneyCode()):'')}</b>"), 'N1: the pay-amount field shows the shop symbol, none when no money is stated (no rupee sign)');
+ok(/\['CHF',\s*'Swiss Franc . 2dp'\]\s*\]\.sort\(/.test(appSource), 'N1: the currency list is sorted by code - none leads');
 
 /* the ratchet itself */
 const guard = require('child_process').spawnSync(process.execPath, [__dirname + '/../e2e/neutral-literals-guard.cjs'], { encoding: 'utf8' });
