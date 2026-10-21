@@ -1,5 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
+<!-- OWNS  the list unit gallery: CBList on sample data.
+     CALLED BY e2e/list-unit.cjs and a designer checking the frozen look.
+     FLOW  load → /app/list-ctl.js → sample rows painted in every state
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -50,6 +54,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
 </div>
 <div id="app"></div>
 <div class="toast" id="toast" hidden></div>
+<script src="/app/device-id.js"></script>
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar, mounted in the list's title row through head.slot -->
