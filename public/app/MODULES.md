@@ -103,6 +103,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `embed-host.js` | — |  |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kural.js` | — |  |
+| `lab-kit.js` | — |  |
 | `list-ctl.js` | eager |  |
 | `list-legacy.js` | eager |  |
 | `network-app.js` | — |  |
