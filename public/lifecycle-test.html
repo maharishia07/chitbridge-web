@@ -1,5 +1,11 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><script src="/config.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
+<html>
+<!-- OWNS  the IoT lifecycle live check: register, connect a device, ingest, verify.
+     CALLED BY the IoT lab (iot-howitworks) and a person verifying by hand.
+     FLOW  register → POST /api/connectors → POST /api/connectors/ingest → read back
+     CARD 24-iot-and-devices/iot-lab-lifecycle-board -->
+<head><meta charset="utf-8"><script src="/app/device-id.js"></script>
+<script src="/config.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IoT Lifecycle — live verification</title>
 <style>
   :root{--line:#e6e8eb;--grey:#8a9199;--blue:#2c5aa0;--ink:#1a1f24;--bg:#f4f6f8;--pass:#1f7a3d;--fail:#c0453b;--run:#c9962a}
