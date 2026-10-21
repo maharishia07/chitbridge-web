@@ -1,10 +1,9 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
-<!-- OWNS  the shell gallery: CBShell on a bare page.
-     CALLED BY e2e/shell.cjs and a designer checking the shell.
-     FLOW  load → CBShell mounts → the frame is measured
-     CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
--->
+<!-- OWNS  the Shell Lab: the shell (app/shell.js · CBShell) on a page, the pass mark e2e/shell.cjs measures; ?harness=1 is the bare gallery.
+     CALLED BY the labs switcher; e2e/shell.cjs and cb-sides.cjs (with ?harness=1).
+     FLOW  load → CBFrame.lab (the Finance frame); with ?harness=1 → CBShell.mount in the mode asked for
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/shell-lab -->
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
@@ -27,9 +26,14 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
-body{margin:0;background:var(--page);color:var(--ink)}
+/* UX-90: the body names its face (it fell back to Times New Roman: no font-family at all) */
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
+.lab-note{padding:18px 20px;max-width:640px;font-size:14px;color:var(--muted)}
+.lab-note a{color:var(--blue-i);font-weight:600}
 .lab-app{padding:18px 4px;font-size:14px;color:var(--muted)}
 </style>
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame -->
+<link rel="stylesheet" href="/app/lab-kit.css">
 </head>
 <body>
 <div id="shell"></div>
@@ -38,10 +42,24 @@ body{margin:0;background:var(--page);color:var(--ink)}
 <script src="/app/kural.js"></script>       <!-- CBKural: the kural footer; the shell gives it its place -->
 <script src="/app/sides.js"></script>      <!-- CBSides: the two reference panels; the shell mounts them -->
 <script src="/app/shell.js"></script>       <!-- CBShell -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson (CBFrame.session) -->
+<script src="/app/lab-kit.js"></script>     <!-- CBLabKit: the Labs switcher's list -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.lab: the Finance frame -->
 <script>
 (function () {
   var q = new URLSearchParams(location.search),
     mode = q.get('mode');
+  /* UX-90: framed like every lab. ?harness=1 is the unit's pass mark (e2e/shell.cjs, cb-sides.cjs): the bare gallery, CBShell mounted by hand in
+     the mode asked for, so it measures the shell alone and not the frame around it. */
+  if (q.get('harness') !== '1' && window.CBFrame) {
+    CBFrame.lab({ app: 'shell-lab', name: 'Shell Lab', icon: '▭' });
+    var note = document.createElement('div');
+    note.className = 'lab-note';
+    note.setAttribute('data-testid', 'lab-app');
+    note.innerHTML = 'The bar above is the shell every page wears. See it as <a href="?harness=1&mode=bar">a bar only</a>, <a href="?harness=1&mode=app&app=accounts">inside an app</a> or <a href="?harness=1">as Home</a>.';
+    document.body.appendChild(note); /* the frame moves it into the main pane once the page has loaded */
+    return;
+  }
   var host = mode === 'bar' ? { bar: true } : mode === 'app' ? { app: q.get('app') || 'accounts' } : null;
   window.SHELL = CBShell.mount(document.getElementById('shell'), { host: host });
   /* inside an app, the app draws in the work slot — here, one line standing in for it */

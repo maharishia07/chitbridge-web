@@ -2,7 +2,7 @@
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum.
      CALLED BY the labs links on Home, the Catalogue's "see the offer", combo-lab.html (forwards here).
-     FLOW  load → CBFrame (bar) → the engine prices the typed cart → paint
+     FLOW  load → CBFrame.lab (the Finance frame) → the engine prices the typed cart → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/offer-lab -->
 <head>
 <meta charset="utf-8">
@@ -11,7 +11,7 @@
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the shop's money word / symbol (moneySymbol below) and its number format -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offer Lab</title>
+<title>Offer Lab · ChitBridge</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
 :root{
@@ -764,21 +764,18 @@ button{cursor:pointer}
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 </head>
-<body>
-<div id="shell" data-testid="olab-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Offer Lab / Combo Lab · chip · ⌂ Home · avatar -->
+<body>   <!-- THE ONE FRAME (SHELL-ONE): mark · Offer Lab / Combo Lab · chip · ⌂ Home · avatar -->
 <script>
 (function () {
   if (!window.CBFrame) return;
   var combo = new URLSearchParams(location.search).get('mode') === 'combo';
-  CBFrame.mount({
-    app: 'offer-lab',
-    bar: true,
-    signin: false,
-    host: document.getElementById('shell'),
-    title: combo ? { icon: '▣', name: 'Combo Lab' } : { icon: '%', name: 'Offer Lab' }
-  });
+  /* UX-90: the Finance frame + the Labs switcher; Combo Lab is a mode of this page and lights its own entry */
+  CBFrame.lab({ app: 'offer-lab', labId: combo ? 'combo-lab' : 'offer-lab', name: combo ? 'Combo Lab' : 'Offer Lab', icon: combo ? '▣' : '%' });
   if (combo && window.CBScreenId) CBScreenId.here('offer-lab', 'combo');
 })();
 </script>
@@ -5600,7 +5597,7 @@ render();
 /* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
 var LAB_MODE = new URLSearchParams(location.search).get('mode') === 'combo' ? 'combo' : 'offer';
 if (LAB_MODE === 'combo') {
-  document.title = 'Combo Lab';
+  document.title = 'Combo Lab · ChitBridge';
   openModLab();
 } /* the bar's title said Combo Lab at mount (SHELL-ONE) */
 /* ⭐ signed in → try your own catalogue quietly; queued writes from a previous offline session try to send

@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
-<!-- OWNS  the list unit gallery: CBList on sample data.
-     CALLED BY e2e/list-unit.cjs and a designer checking the frozen look.
-     FLOW  load → /app/list-ctl.js → sample rows painted in every state
-     CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls -->
+<!-- OWNS  the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches.
+     CALLED BY the labs switcher; e2e/list-unit.cjs, list-standard.cjs and list-columns.cjs measure it.
+     FLOW  load → CBFrame.lab (the Finance frame) → CBList.mount on the sample rows → paint
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/list-lab -->
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>List Lab</title>
+<title>List Lab · ChitBridge</title>
 <!--
   THE UNIT'S OWN GALLERY (docs/design/list-control/PLAN.md › Proof). This page loads ONE script, /app/list-ctl.js, and defines
   NOTHING the list needs from a host: no esc, no tx, no toast, no app stylesheet. Everything CBList does is shown here on sample
@@ -43,6 +43,8 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
 .proto .meter.ok{color:var(--green)}.proto .meter.bad{color:var(--red)}
 .toast{position:fixed;inset-inline-start:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:8px 14px;border-radius:9px;font-size:13.5px;z-index:50}
 </style>
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 </head>
 <body>
 <div class="proto" id="proto" role="region" aria-label="Prototype controls, not part of the product">
@@ -55,6 +57,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
 <div id="app"></div>
 <div class="toast" id="toast" hidden></div>
 <script src="/app/device-id.js"></script>
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address (the shell reads it) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar, mounted in the list's title row through head.slot -->
@@ -716,18 +719,9 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
   var current = 'daybook',
     pstate = 'normal',
     app = null;
-  /* the Lab shows who is signed in the way every page does: CBAvatar (signed out it is the Sign in door) */
-  function avatarSlot(el) {
-    CBAvatar.mount(el, { person: CBAvatar.sessionPerson(), items: ['profile', 'support', 'signout'] });
-  }
+  /* UX-90: the avatar is the frame's (one avatar per page); the list's title row keeps its slot empty */
   function mountCurrent() {
     var o = LISTS[current][1]();
-    var headOf = o.head; /* the avatar sits in the title row's slot: the head stays three rows */
-    o.head = function () {
-      var hd = headOf();
-      hd.slot = avatarSlot;
-      return hd;
-    };
     o.state = function () {
       return pstate === 'loading' || pstate === 'error' ? pstate : null;
     };
@@ -813,5 +807,12 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
   window.__labMeasure = measure;
 })();
 </script>
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.lab: the Finance frame -->
+<script>if (window.CBFrame) CBFrame.lab({ app:'list-lab', name:'List Lab', icon:'☰' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 </body>
 </html>

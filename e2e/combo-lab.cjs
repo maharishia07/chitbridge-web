@@ -45,7 +45,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     stillCallable: typeof openModLab === 'function',
   }));
   say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
-  say('the tab is titled for what it is', opened.title === 'Combo Lab', opened.title);
+  say('the tab is titled for what it is', opened.title === 'Combo Lab · ChitBridge', opened.title);
   say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
   /* L3 (small-fixes): the lab opens IN the page frame - the header (the frame's: title · Home · avatar, SHELL-ONE) is on screen above it, it is not a fixed pop-up over an empty page */
   for (const vp of [{ width: 1366, height: 800 }, { width: 390, height: 844 }]) {
@@ -56,7 +56,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
       const topB = top ? top.getBoundingClientRect() : null, pB = panel ? panel.getBoundingClientRect() : null;
       /* what is painted at the header's centre is the header, not the lab's scrim */
       const hit = topB ? document.elementFromPoint(topB.left + 20, topB.top + topB.height / 2) : null;
-      return { title: vis(document.querySelector('[data-testid="shell-title"]')), home: vis(document.querySelector('[data-testid="shell-home"]')), avatar: vis(document.querySelector('[data-testid="shell-avatar"] .cbav-btn, [data-testid="shell-avatar"] [data-testid="signin-door"]')),
+      return { title: vis(document.querySelector('[data-testid="shell-title"], [data-testid="shell-switcher"]')), home: vis(document.querySelector('[data-testid="shell-home"]')), avatar: vis(document.querySelector('[data-testid="shell-avatar"] .cbav-btn, [data-testid="shell-avatar"] [data-testid="signin-door"]')),
         pos: ov ? getComputedStyle(ov).position : '', headerHit: !!(hit && top && top.contains(hit)), below: !!(topB && pB && pB.top >= topB.bottom - 1), sw: document.documentElement.scrollWidth, iw: window.innerWidth,
         inert: ['strip', 'steps'].every((id) => { const e = document.getElementById(id); return !e || !vis(e) || !e.innerText.trim(); }) };
     });

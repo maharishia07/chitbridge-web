@@ -11,11 +11,13 @@ let fail = 0; const bad = (m) => { fail++; console.log('FAIL ' + m); }; const ok
 const OWN = ['finance.html', 'crm.html', 'accounts.html'];      /* the page draws <aside class="side"> + <main class="main"> itself */
 /* SHELL-ONE: pages that wear the frame's BAR only (CBFrame.mount({ bar: true }) — header: mark · name · chip · ⌂ Home · avatar) over their own body: the storefront
    (the shop's own brand row and cart under it), the shop screen, the labs; standards.html mounts the frame in app mode above its own two panes (host) */
-const BAR = ['shop.html', 'network-shop.html', 'store.html', 'embed.html', 'promo.html', 'product-lab.html', 'conversion-lab.html', 'offer-lab-next.html', 'network-design.html', 'standards.html'];
-const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'country-lab.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
+const BAR = ['shop.html', 'network-shop.html', 'store.html', 'embed.html', 'promo.html', 'standards.html'];
+const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
+/* UX-90: every lab wears the Finance frame through CBFrame.lab (skeleton + the Labs switcher in the left menu, one background); the list only grows with a new lab */
+const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
-const NOT_APPS = ['app.html', 'list-lab.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html'];
+const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html'];
 
 OWN.forEach((f) => {
   const h = read('public/' + f);
@@ -34,6 +36,12 @@ BAR.forEach((f) => {
   else if (/<header[\s>]|class="top"|class="bar"|CBAvatar\.mount\(|id="cbav"/.test(h.replace(/<!--[\s\S]*?-->/g, ''))) bad(f + ': still draws a header of its own (<header>, .top, .bar, its own CBAvatar.mount) — the frame is the one header');
   else ok(f + ': the frame\'s bar over its own body');
 });
+LABS.forEach((f) => {
+  const h = read('public/' + f).replace(/<!--[\s\S]*?-->/g, '');
+  if (!/CBFrame\.lab\(/.test(h)) bad(f + ': a lab must wear the Finance frame — CBFrame.lab({ app, name, icon })');
+  else if (!/href="\/app\/page-skeleton\.css"/.test(h) || !/src="\/app\/lab-kit\.js"/.test(h)) bad(f + ': a lab links /app/page-skeleton.css and loads /app/lab-kit.js (the Labs switcher)');
+  else ok(f + ': the Finance frame + the Labs switcher');
+});
 FRAMED.forEach((f) => {
   const h = read('public/' + f);
   const m = /CBFrame\.mount\(\{[\s\S]*?skeleton:\s*\{[\s\S]*?sections:\s*(\[|[A-Z_]+\b)/.exec(h);   /* a literal list, or the page's own constant (settings.html SECTIONS) */
@@ -44,7 +52,7 @@ FRAMED.forEach((f) => {
 });
 /* discovery: any other page that loads the frame or the list control must be listed above */
 fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).forEach((f) => {
-  if (OWN.includes(f) || FRAMED.includes(f) || NOT_APPS.includes(f) || BAR.includes(f)) return;
+  if (OWN.includes(f) || FRAMED.includes(f) || NOT_APPS.includes(f) || BAR.includes(f) || LABS.includes(f)) return;
   const h = read('public/' + f);
   if (/src="\/app\/(page-frame|list-ctl)\.js"/.test(h) || /<aside[^>]*class="side"/.test(h)) {
     if (f === 'till.html') return;   /* the till has its own sidebar; it is a counter, not a small app page */
@@ -60,8 +68,7 @@ fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).forEach((f) => {
 const SHELL_NOT_YET_WHY = {
   'app.html': 'the workshop (IX0: no customer path lands in it)', 'till.html': 'VENDORED from chitbridge-api tools/tally-connector/till.html — its bar is the api\'s round',
   'bill-print.html': 'the printed bill: a print surface, single-theme by decision', 'cart-design.html': 'design reference', 'design-mock.html': 'design reference',
-  'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'list-lab.html': 'the list unit on a bare page (its pass mark)',
-  'signin-lab.html': 'the sign-in window on a bare page', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
+  'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
   'testing.html': 'the test board', 'intake.html': 'a prototype, no customer door', 'iot-howitworks.html': 'a showcase opened in the workshop\'s overlay',
   'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo'
 };   /* shell-lab.html mounts CBShell itself (the unit's pass mark, e2e/shell.cjs): it loads the shell, so it is not here */
@@ -81,7 +88,7 @@ fs.readdirSync(pub).filter((f) => /\.html$/.test(f)).sort().forEach((f) => {
 SHELL_NOT_YET.forEach((f) => { if (!fs.existsSync(path.join(pub, f))) bad(f + ': listed in SHELL_NOT_YET but gone — strike it'); });
 ok('the standard shell: ' + shellPages.join(' · ') + ' (' + SHELL_NOT_YET.length + ' not yet, a list that only shrinks)');
 /* the Country lab is public: CBFrame with signin:false (no sign-in window over it; the avatar's door says Sign in) */
-if (!/CBFrame\.mount\(\{[^]*?signin:\s*false/.test(read('public/country-lab.html'))) bad('country-lab.html: a public page mounts CBFrame with signin:false');
+if (!/CBFrame\.lab\(/.test(read('public/country-lab.html'))) bad('country-lab.html: a public lab wears CBFrame.lab (public: no sign-in window over it)');
 else ok('country-lab.html: public (signin:false), the avatar still drawn');
 if (fail) { console.log('\nskeleton-guard: ' + fail + ' failure(s)'); process.exit(1); }
 console.log('\nskeleton-guard: ok');

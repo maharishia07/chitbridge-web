@@ -35,6 +35,23 @@
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> }], active: k, onSection: fn(k) } */
+  /** the Labs switcher (W79): a heading and one link per lab, current one lit; empty unless the skeleton says labs: '<lab id>' (lab-kit.js holds the list) */
+  function labsNav(current) {
+    var labs = current && root.CBLabKit ? root.CBLabKit.LABS : [];
+    if (!labs.length) return '';
+    return (
+      '<div class="nav-group label" data-testid="skel-labs">Labs</div>' +
+      labs
+        .map(function (entry) {
+          return (
+            '<a class="nav-btn lab-link' + (entry.id === current ? ' active' : '') + '" href="' + esc(entry.route) + '" data-testid="skel-lab-' + esc(entry.id) + '"' +
+            (entry.id === current ? ' aria-current="page"' : '') + ' aria-label="' + esc(entry.name) + '"><span class="lab-ico" aria-hidden="true">' + esc(entry.icon) +
+            '</span><span class="label">' + esc(entry.name) + '</span></a>'
+          );
+        })
+        .join('')
+    );
+  }
   function skeleton(doc, sk, appId) {
     var svg = function (d, cls) {
       return '<svg' + (cls ? ' class="' + cls + '"' : '') + ' viewBox="0 0 24 24" aria-hidden="true"><path d="' + esc(d) + '"/></svg>';
@@ -70,6 +87,7 @@
           );
         })
         .join('') +
+      labsNav(sk.labs) +
       '</nav><div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
@@ -192,5 +210,48 @@
     } catch (_) {}
     root.location.reload();
   }
-  root.CBFrame = { mount: mount, session: session, ended: ended };
+  /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the Labs switcher in the left menu, one background.
+     CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural? }).
+     A lab with no `work` element has its page body moved into the main pane once the page has loaded (scripts and styles stay where they are). */
+  var LAB_ICON = 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3';
+  function adoptBody(doc, screen) {
+    var work = doc.createElement('div');
+    work.className = 'lab-work';
+    work.id = 'labwork';
+    Array.prototype.slice.call(doc.body.children).forEach(function (node) {
+      if (/^(SCRIPT|STYLE|LINK|NOSCRIPT)$/.test(node.tagName) || node.classList.contains('app') || node.id === 'shell') return;
+      work.appendChild(node);
+    });
+    screen.appendChild(work);
+  }
+  function labFrame(opts) {
+    var doc = root.document,
+      oldShell = doc.getElementById('shell');
+    if (oldShell && !oldShell.closest('.app')) oldShell.remove(); /* the page's bar host: the skeleton draws the one header in its own */
+    var framed = mount({
+      app: opts.app,
+      area: 'labs',
+      signin: false,
+      kural: opts.kural,
+      title: { icon: opts.icon, name: opts.name },
+      work: opts.work,
+      skeleton: {
+        name: opts.name,
+        icon: opts.svg || LAB_ICON,
+        sections: opts.sections || [],
+        active: opts.active,
+        onSection: opts.onSection,
+        labs: opts.labId || opts.app
+      }
+    });
+    if (!opts.work) {
+      var adopt = function () {
+        adoptBody(doc, framed.skeleton.screen);
+      };
+      if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', adopt);
+      else adopt();
+    }
+    return framed;
+  }
+  root.CBFrame = { mount: mount, lab: labFrame, session: session, ended: ended };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,0 +1,44 @@
+/* lab-kit.css — the labs' shared look (UX-90). Theme tokens only, each with its Cream fallback. Red is for a blocker and nothing else. */
+/* W1: wide content uses the width — two-thirds main + one-third "what next"; cards in a grid are equal height; no stranded white space */
+.lab-cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start;padding:16px 20px}
+.lab-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:stretch;padding:16px 20px}
+.lab-cards > *{display:flex;flex-direction:column;height:100%;box-sizing:border-box}
+.lab-next{background:var(--card,#fff);border:1px solid var(--line,#e2d6bc);border-radius:10px;padding:14px;position:sticky;top:8px}
+@media (max-width:900px){.lab-cols{grid-template-columns:minmax(0,1fr)}.lab-next{position:static}}
+/* the frame around a lab page: one background, the page's own body scrolls inside the main pane */
+html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
+.cbsk .lab-work{flex:1 1 auto;min-height:0;overflow:auto;background:var(--page,#fcfaf5)}
+/* the Labs switcher in the left menu (W79) */
+.cbsk .nav-group{padding:12px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2,#5c5240);border-top:1px solid var(--line-side,#e2d6bc);margin-top:8px}
+.cbsk .lab-link .lab-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px;line-height:1}
+.cbsk .side.collapsed .nav-group{display:none}
+/* plain words, reasons, tags */
+.lk-plain{border-bottom:1px dotted var(--faint,#8a8374);cursor:help}
+.lk-notset,.lk-why{color:var(--muted,#5e594d);font-style:italic}
+.lk-tag{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:600;border:1px solid var(--line,#ddd6c6);white-space:nowrap}
+.lk-tag.diff{background:var(--panel,#f3efe6);color:var(--muted,#5e594d)}
+.lk-tag.ok{background:var(--green-t,#e8f4ed);color:var(--green-d,#0d4a2b);border-color:var(--green-b,#a9d3bc)}
+.lk-tag.near{background:var(--amber-t,#fdf3dc);color:var(--amber-i,#7a5205);border-color:var(--amber-b,#efd39a)}
+.lk-tag.blocker{background:var(--red-t,#fbeae3);color:var(--red-i,#8e3517);border-color:var(--red-b,#e7b9a8)}
+/* progress */
+.lk-bar{height:8px;border-radius:99px;background:var(--panel,#f3efe6);overflow:hidden}
+.lk-bar i{display:block;height:100%;background:var(--green,#16693f);border-radius:99px}
+.lk-progress-line{font-size:12.5px;color:var(--muted,#5e594d);margin-top:3px}
+.lk-group h3{font-size:13px;margin:14px 0 6px;color:var(--ink,#1d1b16)}
+.lk-count{color:var(--muted,#5e594d);font-weight:500}
+.lk-area{margin:0 0 10px}
+.lk-area-name{font-weight:600;font-size:14px;margin-bottom:3px}
+/* at most three + "and N more" */
+.lk-lines{margin:0;padding:0;list-style:none}
+.lk-lines li{padding:3px 0;border-bottom:1px solid var(--hair,#f0ece2)}
+.lk-more{margin-top:6px;border:0;background:none;color:var(--accent-text,var(--accent,#1f5f5b));font:inherit;font-weight:600;cursor:pointer;padding:2px 0;text-decoration:underline}
+.lk-pop-back{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px}
+.lk-pop{background:var(--card,#fff);color:var(--ink,#1d1b16);border-radius:12px;width:min(760px,100%);height:min(560px,90vh);display:flex;flex-direction:column;overflow:hidden}
+.lk-pop header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line,#ddd6c6)}
+.lk-pop-x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--ink,#1d1b16);min-width:36px;min-height:36px}
+.lk-pop-body{flex:1;min-height:0;display:flex;flex-direction:column}
+/* a lab page may carry its own .nav (the Offer Lab's step bar): the frame's sidebar menu keeps its own spacing whatever the page defines */
+.cbsk .side .nav{justify-content:flex-start;align-items:stretch;padding:10px 8px;border-top:0;gap:2px}
+.cbsk .side .nav-group{text-align:left}
+/* a lab page that defines its own --accent must not recolour the frame's menu: the sidebar keeps the frame's accent (a chosen theme re-points it in page-skeleton.css) */
+.cbsk .side{--accent:#1f5f5b;--accent-ink:#fbf6ec;--accent-text:#1f5f5b}
