@@ -72,6 +72,30 @@ jobs:
           npm run check:eps
           npm run check:undeclared
           npm run check:barereturn
+      # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
+      - name: Offline guards and unit tests no runner reached (QA-79)
+        run: |
+          node e2e/field-ledger-guard.cjs
+          node e2e/gov-zone-first.test.cjs
+          node e2e/icon-map-guard.cjs
+          node e2e/index-not-app.cjs
+          node e2e/iot-agent-retry.test.cjs
+          node e2e/screen-id-guard.cjs
+          node tests/board-trace.test.cjs
+          node tests/cart-currency.test.cjs
+          node tests/crm-unbilled-list.test.cjs
+          node tests/cu4-datetime.test.cjs
+          node tests/detail-placement.test.cjs
+          node tests/lint-ratchet.test.cjs
+          node tests/offline-409.test.cjs
+          node tests/sheets-links.test.cjs
+          node tests/t2e-cart.test.cjs
+          node tests/t2e-pin.test.cjs
+          node tests/t2f-backdrop.test.cjs
+          node tests/t3a-money.test.cjs
+          node tests/wx-bills-cols.test.cjs
+          node tests/wx-chit-door.test.cjs
+          node tests/wx-pay-name.test.cjs
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
         run: node e2e/cmdb-records.cjs
       - name: Every stand-in that answers /api/books or /api/crm holds its answers to the API contract (M43)

@@ -41,6 +41,10 @@
     "docs:process": "node tools/gen-process-docs.cjs",
     "check:themes": "node e2e/crm-themes.cjs",
     "check:graph": "node e2e/knowledge-graph.cjs",
+    "audit:mobile": "node e2e/mobile-audit.cjs",
+    "measure:waves": "node e2e/http-waves.cjs",
+    "demo:floor": "node e2e/floor-demo.cjs",
+    "look:health": "node e2e/_healthlook.cjs",
     "graph": "node tools/graph/graph.cjs build",
     "sweep:actions": "node scripts/action-state-sweep.cjs",
     "report:stars": "node tools/sig-stars.cjs web=. api=../chitbridge-api engines=../chitbridge-engines"
