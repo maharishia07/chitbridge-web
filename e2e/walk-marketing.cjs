@@ -76,7 +76,8 @@ async function route(r0) {
   if ((x = p.match(/^\/api\/crm\/segments\/([^/]+)\/send$/)) && m === 'POST') {
     if (S.level === 'viewer') return J(r, 403, { code: 'VIEW_ONLY', error: 'Your login can only view.', message: 'Your login can only view.' });
     if (!String(body.text || '').trim()) return J(r, 400, { code: 'NO_TEXT', error: 'Write the message.', message: 'Write the message.' });
-    return J(r, 200, send(decodeURIComponent(x[1]), body));
+    const sent = send(decodeURIComponent(x[1]), body);
+    return J(r, 200, body.dry ? sent : Object.assign(sent, { refusals_logged: 0, refusals_unlogged: true }));
   }
   if ((x = p.match(/^\/api\/chits\/([^/]+)/))) return J(r, 200, { chit: { chit_id: decodeURIComponent(x[1]) } });
   return J(r, 200, {});
@@ -177,6 +178,16 @@ const walk = async (w) => {
   });
 
   }   /* !REAL: K8-K11 */
+  await w.step('K15', 'A send whose refusals could not be recorded (the server says refusals_unlogged): Offers sent then says so in plain words - a 0 is never mistaken for nobody refused', async () => {
+    S.consent['pid-0005'] = 'CONSENT';   /* so the win-back set has someone who may be sent */
+    await open('#/results', '[data-testid="mkt-winback-send"]'); await page.click('[data-testid="mkt-winback-send"]'); await page.waitForSelector('[data-testid="crm-send-sheet"]');
+    await page.fill('#crm_send_text', 'Come back for 10% off'); await page.click('[data-testid="crm-send-check"]'); await page.waitForSelector('[data-testid="crm-send-may"]');
+    await page.evaluate(() => { const b = document.querySelector('[data-testid="crm-send-go"]'); b.disabled = false; }); await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
+    await page.keyboard.press('Escape'); await page.evaluate(() => { location.hash = '#/sent'; }); await page.waitForSelector('[data-testid="mkt-sent-unlogged"]', { timeout: 8000 });
+    S.consent['pid-0005'] = 'SAID_NO';
+    const t = await txt('[data-testid="mkt-sent-unlogged"]'); const before = S.bodies.filter((b) => /\/send$/.test(b.p) && b.body && !b.body.dry).length;
+    return { ok: /Some refusals were not recorded/.test(t) && before === 1, saw: t + ' - real sends ' + before };
+  });
   /* ── 4 · THE REUSED SCREENS, INSIDE THE FACE ── */
   await open('#/groups', '[data-testid="crm-grp-count-regular"]');
   await w.step('K12', 'Groups inside Marketing is the CRM Groups screen with no copy: the same counts, the menu marks Groups, the crumb says Marketing', async () => {

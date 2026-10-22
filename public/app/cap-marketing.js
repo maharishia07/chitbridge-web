@@ -140,6 +140,11 @@ function mktDrop(holder) {
 }
 
 /* ═══ OFFERS SENT - the receipts of every offer, sent or not ═══════════════════════════════════════════════════════ */
+var MKT_UNLOGGED = false; /* the last send's refusals were not recorded (the server's refusals_unlogged): Offers sent says so */
+/** the Send sheet hands over each send's answer - the one fact Offers sent needs from it */
+function mktNoteSend(answer) {
+  MKT_UNLOGGED = !!(answer && answer.refusals_unlogged);
+}
 var SENT = { rows: [], total: 0, page: 1, limit: 50, status: '', state: 'loading', err: null, migrated: true, api: null };
 /** the Result tag: Sent (green) or Not sent (amber - advisory, never red) */
 function mktResultTag(row) {
@@ -225,6 +230,7 @@ function mktSentFilters() {
 /** the list's head: its title, and a warning while b776 has not run */
 function mktSentHead() {
   var warn = SENT.state === 'ready' && !SENT.migrated ? [{ text: tx('Offers sent arrives after the next update.'), cls: 'warn', tid: 'mkt-sent-nomig' }] : [];
+  if (MKT_UNLOGGED) warn.push({ text: tx('Some refusals were not recorded. They show after the next update.'), cls: 'warn', tid: 'mkt-sent-unlogged' });
   return { title: tx('Offers sent'), notices: warn };
 }
 function mktSentEmpty() {
