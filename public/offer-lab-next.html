@@ -5690,21 +5690,33 @@ async function cartApplyGroup(id) {
   if (!item || !pick) return;
   await attachOffer(item, { customer_group: pick.value, customer_name: groupNameOf(pick.value) });
 }
-/** the one attach path: optional rules patch (read the current rules first, a PUT of rules replaces them), approve a draft, then live; the outcome is said in the row */
+/** the rules to send: the offer's current rules (a PUT of rules replaces them) with the group set, or cleared when the offer is made live for everyone; null when they cannot be read */
+async function rulesToAttach(id, patch, wasFor) {
+  var current = await defFetch('GET', '/' + id);
+  var versions = (current.ok && current.body.versions) || [];
+  if (!versions.length) return null;
+  var rules = Object.assign({}, versions[0].rules, patch);
+  if (wasFor) {
+    delete rules.customer_group; /* Make live = everyone: the group is cleared, and the row says so */
+    delete rules.customer_name;
+  }
+  return rules;
+}
+/** the sentence a finished attach says in its row */
+function attachSaid(reply, patch, wasFor) {
+  if (reply.queued) return 'Will go live once the line is back.';
+  if (patch) return 'Live, only for ' + patch.customer_name + '.';
+  return wasFor ? 'Was only for ' + wasFor + ', now for everyone.' : 'Live for everyone.';
+}
+/** the one attach path: optional rules patch, approve a draft, then live; the outcome is said in the row */
 async function attachOffer(item, patch) {
   var id = item.id,
-    body = { status: 'live' };
+    body = { status: 'live' },
+    wasFor = !patch && item.group ? item.groupName || groupNameOf(item.group) : '';
   cartSay(id, 'Saving…');
-  var wasFor = !patch && item.group ? item.groupName || groupNameOf(item.group) : '';
   if (patch || wasFor) {
-    var current = await defFetch('GET', '/' + id);
-    var versions = (current.ok && current.body.versions) || [];
-    if (!versions.length) return cartSay(id, 'Could not read this offer. Nothing changed.', 'bad');
-    body.rules = Object.assign({}, versions[0].rules, patch);
-    if (wasFor) {
-      delete body.rules.customer_group; /* Make live = everyone: the group is cleared, and the row says so */
-      delete body.rules.customer_name;
-    }
+    body.rules = await rulesToAttach(id, patch, wasFor);
+    if (!body.rules) return cartSay(id, 'Could not read this offer. Nothing changed.', 'bad');
   }
   if (item.status === 'draft') {
     var approved = await defFetch('PUT', '/' + id, { status: 'approved' });
@@ -5716,8 +5728,7 @@ async function attachOffer(item, patch) {
     return cartSay(id, (reply.body && reply.body.message) || 'That did not go live.', 'bad');
   }
   CART_PICK = null;
-  var said = reply.queued ? 'Will go live once the line is back.' : patch ? 'Live, only for ' + patch.customer_name + '.' : wasFor ? 'Was only for ' + wasFor + ', now for everyone.' : 'Live for everyone.';
-  CART_NOTES[id] = { text: said, tone: 'ok' };
+  CART_NOTES[id] = { text: attachSaid(reply, patch, wasFor), tone: 'ok' };
   await loadSaved();
 }
 /** the left menu follows the page: the type on show is lit; a shop with another currency reads its own symbol on the glyphs and words */
