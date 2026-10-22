@@ -101,7 +101,7 @@ function check(method, pathname, status, body, who) {
  * e2e/contract.cjs twice; adding `facts` for GET /api/facts/rail meant editing all four). An answer under one of these prefixes is checked
  * when the contract lists its route; a route the contract does not list is never checked (check() answers nothing for it).
  */
-const FAMILIES = ['books', 'crm', 'work', 'repeat', 'tax', 'facts', 'till/summary', 'network-offers'];   /* tax: the Tax Lab reads (TAX-SRV1); facts: facts/rail (RAIL-LAB-SRV1) + facts/tax-lab;
+const FAMILIES = ['books', 'crm', 'work', 'repeat', 'tax', 'facts', 'till/summary', 'network-offers', 'marketing', 'channels/outbound'];   /* marketing · channels/outbound: the Marketing face's two reads (MKT first slice, 22 Oct 2026); tax: the Tax Lab reads (TAX-SRV1); facts: facts/rail (RAIL-LAB-SRV1) + facts/tax-lab;
    till/summary: Reports › Trend's GET /api/till/summary #compare (RPT2) - the summary only, so the counter's own till stand-ins stay outside */
 const HELD = new RegExp('^/api/(' + FAMILIES.join('|') + ')(/|$)');
 

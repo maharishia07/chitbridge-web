@@ -209,7 +209,7 @@ const walk = async (w) => {
   await rule13(w, 'T13S', 'Offers sent', 'screen');
   if (api) await api.stop().catch(() => {});
   if (w.errs.length) w.note('T99', 'page errors seen during the walk', w.errs.slice(0, 3).join(' | '));
-  const [cOk, cMsg] = C.finish(); if (!cOk) w.results.push({ id: 'M43', path: 'every answer the stand-in served matches the API contract', ok: false, saw: cMsg }); else w.note('M43', 'every answer the stand-in served matches the API contract');
+  const [cOk, cMsg] = C.finish(); if (!cOk) { console.log('M43 · every answer the stand-in served matches the API contract · FAIL (' + cMsg + ')'); w.results.push({ id: 'M43', path: 'every answer the stand-in served matches the API contract', ok: false, saw: cMsg }); } else w.note('M43', 'every answer the stand-in served matches the API contract');
 };
 walk.opts = { viewport: { width: 1366, height: 900 } };
 W.run(REAL ? 'marketing-real' : 'marketing', walk);
