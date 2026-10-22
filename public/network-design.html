@@ -1,14 +1,15 @@
 <!doctype html>
+<html lang="en" data-tokens="list">
 <!-- OWNS  the Network design page: a brand's network built, validated and published (POST /api/network-design/build · /validate).
      CALLED BY network.html and Home's Network card.
-     FLOW  load → CBFrame → the design read → paint → build/validate → the server's verdict painted
+     FLOW  load → CBFrame.lab (the Finance frame) → the design read → paint → build/validate → the server's verdict painted
      CARD network-and-trade/network-design -->
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Network Lab</title>
+<title>Network Lab · ChitBridge</title>
 <!--
   network-design.html — NETWORK LAB (P2). On the Labs row of the index (manifest id network-lab). A lab SHOWS on sample data and never writes a real
   network (the Tax Lab rule): the sketch below is checked by POST /api/network-design/validate with sample:true — the same plan() Build runs, no database
@@ -148,6 +149,7 @@ document.addEventListener('DOMContentLoaded', labPaint);
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <style>
   :root{ --ink:#1d2530; --grey:#5c626c; --line:#e3e6ea; --paper:#f7f8fa; --blue:#3F66A6; --blue-soft:#eef4ff;
@@ -224,8 +226,11 @@ document.addEventListener('DOMContentLoaded', labPaint);
   .lab ul{margin:4px 0;padding-inline-start:20px}
 </style>
 
-<div id="shell" data-testid="nlab-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Network Lab · chip · ⌂ Home · avatar -->
-<script>if (window.CBFrame) CBFrame.mount({ app:'network-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'⌾', name:'Network Lab' } });</script>
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
+</head>
+<body>
+<script>if (window.CBFrame) CBFrame.lab({ app:'network-lab', name:'Network Lab', icon:'⌾' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 <div class="lab" id="lab" data-testid="lab">
   <div class="s" style="font-size:12.5px;color:var(--grey)">Sample data — nothing is saved or made. Sketch a network, then see what would break.</div>
   <div id="labRows"></div>

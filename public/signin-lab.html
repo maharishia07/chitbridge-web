@@ -10,7 +10,7 @@
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sign-in Lab</title>
+<title>Sign-in Lab · ChitBridge</title>
 <!--
   THE SIGN-IN WINDOW'S OWN GALLERY (M14, Athi 2026-10-08 — like list-lab.html for CBList). This page mounts THE SAME module every app
   mounts — /engine/signin.js (the rules) + /app/signin-ui.js (CBSignin.mount) — with nothing lab-only inside it, against a REAL server:
@@ -71,6 +71,8 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--page);padding:8px 14px;border-radius:9px;font-size:13.5px}
 [hidden]{display:none!important}
 </style>
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 </head>
 <body>
 <div class="proto" id="proto" role="region" aria-label="Practice controls, not part of the product">
@@ -604,5 +606,13 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
   };
 })();
 </script>
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.lab: the Finance frame -->
+<script>if (window.CBFrame) CBFrame.lab({ app:'signin-lab', name:'Sign-in Lab', icon:'⏎' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 </body>
 </html>

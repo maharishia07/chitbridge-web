@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <!-- OWNS  the Conversion lab: the units engine (engine/units.js · convert) on a bare page, so a conversion is seen before it is used.
      CALLED BY the labs links on Home and the Product lab.
-     FLOW  load → CBFrame (bar) → the engine runs on the typed values → paint
+     FLOW  load → CBFrame.lab (the Finance frame) → the engine runs on the typed values → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/conversion-lab -->
 <head>
 <meta charset="utf-8">
@@ -10,7 +10,7 @@
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Conversion lab · Chit &amp; Bridge</title>
+<title>Conversion Lab · ChitBridge</title>
 <!--
   THE CONVERSION LAB — the conversion engine as a page anyone can play with (Athi, 2026-09-15: "similar to offer lab, we should be
   creating a conversion lab, reading data from a chit or a catalogue, convert to another currency, and also, read the qty and provide
@@ -87,7 +87,10 @@
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 </head>
 <body>
 
@@ -96,8 +99,7 @@
      an empty page and no explanation. A missing engine is a fact, and a fact belongs on the screen. -->
 <div id="nofuel" class="nofuel" hidden></div>
 
-<div id="shell" data-testid="clab-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): mark · Conversion lab · chip · ⌂ Home · avatar -->
-<script>if (window.CBFrame) CBFrame.mount({ app:'conversion-lab', bar:true, signin:false, host:document.getElementById('shell'), title:{ icon:'◈', name:'Conversion lab' } });</script>
+<script>if (window.CBFrame) CBFrame.lab({ app:'conversion-lab', name:'Conversion Lab', icon:'⇅' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 <div class="tools">
   <div class="sub">What is this worth — in another currency, or at today's market price? Every step is shown, with who said it and when.</div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)">

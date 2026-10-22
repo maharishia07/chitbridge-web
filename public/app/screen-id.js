@@ -177,7 +177,7 @@
       },
       {
         app: 'country-lab',
-        name: 'Country lab',
+        name: 'Country Lab',
         page: '/country-lab.html',
         rows: [
           ['CLB001', 'compare', 'Side by side'],
@@ -230,11 +230,14 @@
       },
       {
         app: 'conversion-lab',
-        name: 'Conversion lab',
+        name: 'Conversion Lab',
         page: '/conversion-lab.html',
-        rows: [['CVL001', null, 'Conversion lab', '/conversion-lab.html · the Country lab']]
+        rows: [['CVL001', null, 'Conversion Lab', '/conversion-lab.html · the Country Lab']]
       },
-      { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] }
+      { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] },
+      { app: 'list-lab', name: 'List Lab', page: '/list-lab.html', rows: [['LLB001', null, 'List Lab', "/list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark"]] },
+      { app: 'signin-lab', name: 'Sign-in Lab', page: '/signin-lab.html', rows: [['SLB001', null, 'Sign-in Lab', '/signin-lab.html · the one sign-in window on a bare page']] },
+      { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] }
     ],
     /* SHELL-ONE: DESIGN REFERENCES — pages kept as the drawing a build was checked against, or a tool's own board. NOT customer navigation: no
        Home card, no link from a framed page; they wear no frame and carry no code. A page here that gains a customer door moves UP into apps. */
@@ -243,8 +246,6 @@
       ['/cart-design.html', 'Cart design', "the shared cart's drawing (app/cart.js is the build)"],
       ['/storefront-design.html', 'Storefront design', "the storefront's paper prototype (shop.html is the build)"],
       ['/supplier-design.html', 'Supplier design', "the suppliers screen's paper prototype (operations.html is the build)"],
-      ['/list-lab.html', 'List lab', "app/list-ctl.js on a bare page — the list standard's pass mark"],
-      ['/signin-lab.html', 'Sign-in lab', 'the one sign-in window on a bare page'],
       ['/screen-gallery.html', 'Screen library', 'the gallery of screen drawings'],
       ['/lifecycle-test.html', 'Lifecycle test', "the rail's lifecycle board (a tool)"],
       ['/testing.html', 'Test board', 'the test board and its printable report (a tool)'],
