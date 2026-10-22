@@ -11,11 +11,13 @@ flowchart LR
   S3["3. send<br/><i>CRM</i><br/>⚠"]
   S4["4. shop window<br/><i>CRM</i>"]
   S5["5. rewards<br/><i>CRM</i>"]
-  S1 --> S2 --> S3 --> S4 --> S5
+  S6["6. offers sent<br/><i>CRM</i>"]
+  S7["7. who came back<br/><i>CRM</i>"]
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
   classDef ok fill:#e8f5e9,stroke:#2e7d32,color:#1b1b1b
   classDef warn fill:#fff8e1,stroke:#f9a825,color:#1b1b1b
   classDef missing fill:#fafafa,stroke:#9e9e9e,stroke-dasharray:5 5,color:#616161
-  class S1,S2,S4,S5 ok
+  class S1,S2,S4,S5,S6,S7 ok
   class S3 warn
 ```
 
@@ -26,6 +28,8 @@ flowchart LR
 | 3 | send | CRM | the owner or an editor sends to the members who agreed — the one sender per member | `web:public/app/cap-crm-groups.js` `crmSendGo()` | `api:lib/crm-groups.js` `send()`<br>`api:lib/whatsapp-out.js` `notify()`<br>`api:lib/privacy.js` `gate()` | `POST /api/crm/segments/:key/send` `api:routes/crm.js` | none — a channel_outbound row per member (sent · refused with the sender's reason · failed) | none | `api:tests/crm-groups.test.cjs`<br>`api:tests/consent-senders.test.cjs` | ⚠️ — Only WhatsApp is sendable, and only with WHATSAPP_TOKEN and a bound line (b123/b126); without them every member is refused in words. A set over 100 is refused before any send. |
 | 4 | shop window | CRM | the owner picks the showcase template; staff share the link with a party who agreed, or with a group | `web:public/app/cap-crm-groups.js` `crmShowcase()`<br>`web:public/app/cap-crm-groups.js` `crmShareGo()`<br>`web:public/app/cap-showcase.js` `html()`<br>`web:public/app/showcase-templates.js` `render()` | `api:lib/privacy.js` `gate()` | `GET /api/entities/policy` `api:routes/entities.js`<br>`PATCH /api/entities/policy` `api:routes/entities.js`<br>`POST /api/crm/parties/:id/interactions` `api:routes/crm.js` | none — the policy flag showcase_template; a shared link is an OUT message on the party's timeline, gated | none | `web:e2e/walk-crm-marketing.cjs` | ✅ — The share itself leaves from the shop's own phone (wa.me); the api logs it through the gate. |
 | 5 | rewards | CRM | staff read a customer's points on the record (balance · worth · next · expiry · history) | `web:public/app/cap-rewards.js` `load()`<br>`web:public/app/cap-crm-record.js` `crmRecordPaint()` | `api:lib/rewards.js` `balanceOf()`<br>`api:lib/rewards.js` `worthOf()`<br>`api:lib/reward-store.js` `balance()` | `GET /api/relationships/customers/:id/rewards` `api:routes/relationships.js` | none — the reward ledger, folded by the engine | none | `web:e2e/walk-crm-marketing.cjs` | ✅ |
+| 6 | offers sent | CRM | the owner reads every offer message of a send - sent or not, to whom, why not, on which consent (Marketing face, MKT first slice) | `web:public/app/cap-marketing.js` `mktSent()` | `api:lib/channels.js` `listOutbound()`<br>`api:lib/whatsapp-out.js` `logRefused()`<br>`api:lib/marketing-results.js` `reasonCodeOf()` | `GET /api/channels/outbound` `api:routes/channels.js` | none - channel_outbound receipts with party_id, purpose, send_ref, basis (b776); the group's refusals are receipts too | none | `api:tests/marketing-outbound.test.cjs`<br>`api:tests/marketing-truth.realstack.cjs`<br>`web:e2e/walk-marketing.cjs` | ✅ — Before b776 runs the list says it arrives after the next update. Only WhatsApp, as step 3. |
+| 7 | who came back | CRM | the owner sees which customers who were sent an offer then bought, and the money they spent (Marketing face) | `web:public/app/cap-marketing.js` `mktResults()`<br>`web:public/app/cap-marketing.js` `mktWinbackHTML()` | `api:lib/marketing-results.js` `cameBack()`<br>`api:lib/select.js` `rows()`<br>`api:lib/measure.js` `measure()` | `GET /api/marketing/came-back` `api:routes/marketing.js` | none - read from the shop's own bills (counter bills naming the customer included), only for offers that were SENT | none - the Ledger holds credit bills only, so it is not the source | `api:tests/marketing-results.test.cjs`<br>`api:tests/marketing-truth.realstack.cjs`<br>`web:e2e/walk-marketing.cjs` | ✅ — The days are the shop's setting came_back_days (default 14). Live, a 0 stays until an offers template is approved on the number - the screen says so. |
 
 ## The backlog this map leaves
 

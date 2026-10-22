@@ -143,6 +143,12 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .tag.walk{border-style:dotted}
 .tag.seg{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
 .tag.amber{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
+/* MKT: Who came back - the figures and the cards above its list */
+.mkt-top{display:flex;flex-direction:column;gap:8px;padding:12px 16px 4px}
+.mkt-figs{display:flex;flex-wrap:wrap;gap:8px}
+.mkt-fig{display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-size:14px;text-decoration:none}
+.mkt-fig b{font-size:19px;font-family:var(--serif)}
+.mkt-card{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--amber-b);border-radius:10px;background:var(--amber-t);color:var(--amber-i);font-size:14px}
 .tag.red{background:var(--red-t);border-color:var(--red-b);color:var(--red-i)}
 .tag.green{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
 .tag.blue{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
@@ -389,13 +395,21 @@ function go() {
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the registered shop-window templates (S2) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick (T3-P2-CRM): the chooser + the live preview of the shop's own page — ONE copy with the workshop's Settings › Policy -->
 <script src="/app/cap-crm-groups.js"></script>   <!-- T3-P2-CRM: Groups & segments (#/groups) and the Shop window (#/showcase) -->
+<script src="/app/cap-marketing.js"></script>   <!-- MKT: the Marketing face (?app=marketing) - Offers sent (#/sent) and Who came back (#/results) -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->
 <script>
 'use strict';
 /* ═══ CB CRM — the page: gate · chrome · router. The screens are cap-crm.js and cap-crm-record.js. ═════════════════ */
-Object.assign(EP, CRM_EP);
+Object.assign(EP, CRM_EP, window.MKT_EP);
 
 const $ = (id) => document.getElementById(id);
+/* ⭐ MKT: this page is CRM, or its MARKETING FACE (`?app=marketing`, cap-marketing.js): the brand, the title, the screen id, the kural and the five tabs change; the screens are the same files. No `app` = CRM exactly as before. */
+const FACE = crmFace();
+if (FACE) {
+  document.title = FACE.title;
+  document.querySelector('.brand-name').textContent = FACE.brand;
+  $('nav').setAttribute('aria-label', FACE.brand);
+}
 let SESS = null,
   MINE = null;
 
@@ -483,8 +497,7 @@ function whoPaint() {
   /* a login's LEVEL in the server's own words (lib/access: editor · view-only), after the shop's name — never the internal word "co-assist" on screen (ai-eye E-8) */
   const level = role === 'owner' ? '' : role === 'editor' ? 'editor' : 'view-only';
   if (FRAME && (FRAME.session ? FRAME.session.token : null) === sessionToken && FRAME.level === level) return;
-  FRAME = CBFrame.mount({
-    app: 'crm',
+  const frameOpts = {
     host: $('shell'),
     signin: false,
     level,
@@ -494,9 +507,10 @@ function whoPaint() {
         if (signinHost && signinHost.scrollIntoView) signinHost.scrollIntoView({ block: 'center' });
       }
     }
-  });
+  };
+  FRAME = FACE ? CBFrame.mount({ app: 'marketing', ...frameOpts }) : CBFrame.mount({ app: 'crm', ...frameOpts });
   FRAME.level = level;
-  if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here('crm');
+  if (window.CBScreenId && !CBScreenId.current()) CBScreenId.here(FACE ? FACE.app : 'crm');
 }
 function signedOut(why) {
   SESS = null;
@@ -618,7 +632,7 @@ window.addEventListener('storage', (e) => {
 CBOnePerson.attach({
   quiet: true,
   who: () => MINE,
-  label: () => 'CRM',
+  label: () => (FACE ? FACE.brand : 'CRM'),
   onLeave: (by) => {
     location.replace('/?left=' + encodeURIComponent(by || ''));
   },

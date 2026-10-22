@@ -8,7 +8,7 @@
   },
   "rail": { "route": "/tasks.html", "facts": "/api/work/facts" },
   "entries": [
-    { "id": "marketing", "name": "Marketing", "route": "/crm.html#/groups", "icon": "◉", "area": "selling", "pillar": "marketing", "state": "built", "what": "Reach customers and bring them back.", "rows": [], "fits": "Customer groups, offer consent and the shop window, over the same parties.", "needs": {}, "facts": "/api/facts/marketing" },
+    { "id": "marketing", "name": "Marketing", "route": "/crm.html?app=marketing#/results", "icon": "◉", "area": "selling", "pillar": "marketing", "state": "built", "what": "Reach customers and bring them back.", "rows": [], "fits": "Customer groups, offer consent and the shop window, over the same parties.", "needs": {}, "facts": "/api/facts/marketing" },
     { "id": "finance", "name": "Finance", "route": "/finance.html", "icon": "◐", "area": "running", "pillar": "finance", "state": "built", "what": "Who owes you, who you owe, and when.", "rows": ["M25", "M28", "M36"], "fits": "Finance: payment advice and reminders over the same chits.", "needs": {"money": true}, "facts": "/api/facts/finance" },
     { "id": "operations", "name": "Operations", "route": "/operations.html", "icon": "⚙", "area": "running", "pillar": "operations", "state": "built", "what": "Stock and suppliers.", "rows": [], "fits": "Operations: stock from every receipt and sale, and the suppliers you order from.", "needs": {}, "facts": "/api/facts/operations" },
     { "id": "stock", "name": "Stock", "word": "stock", "route": "/operations.html#/stock", "icon": "◫", "area": "running", "pillar": "operations", "state": "built", "what": "How much of each you have.", "fits": "Counts follow the chits that move goods.", "needs": {}, "facts": null },

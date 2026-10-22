@@ -51,6 +51,12 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | CRM008 | Groups & segments | CRM | /crm.html | /crm.html#/groups · CRM › Groups & segments |
 | CRM009 | Shop window | CRM | /crm.html | /crm.html#/showcase · CRM › Shop window |
 | CRM010 | Privacy | CRM | /crm.html | /crm.html#/privacy · CRM › Privacy |
+| MKT001 | Leads | Marketing | /crm.html?app=marketing | /crm.html?app=marketing#/leads · Marketing › Leads |
+| MKT002 | Groups & segments | Marketing | /crm.html?app=marketing | /crm.html?app=marketing#/groups · Marketing › Groups & segments |
+| MKT003 | Offers sent | Marketing | /crm.html?app=marketing | /crm.html?app=marketing#/sent · Marketing › Offers sent |
+| MKT004 | Who came back | Marketing | /crm.html?app=marketing | /crm.html?app=marketing#/results · Marketing › Who came back |
+| MKT005 | Shop window | Marketing | /crm.html?app=marketing | /crm.html?app=marketing#/showcase · Marketing › Shop window |
+| MKT006 | Party | Marketing | /crm.html?app=marketing | Leads › a party |
 | TSK001 | Orders in | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders in |
 | TSK002 | Orders out | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Orders out |
 | TSK003 | Tasks | Tasks & Orders | /tasks.html | /tasks.html · Tasks & Orders › Tasks |

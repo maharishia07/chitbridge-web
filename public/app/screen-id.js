@@ -98,6 +98,20 @@
         ]
       } /* CRM008–009: T3-P2-CRM · CRM010: T3-P3-CONSENT */,
       {
+        app: 'marketing',
+        name: 'Marketing',
+        page: '/crm.html?app=marketing',
+        hash: true,
+        rows: [
+          ['MKT001', 'leads', 'Leads'],
+          ['MKT002', 'groups', 'Groups & segments'],
+          ['MKT003', 'sent', 'Offers sent'],
+          ['MKT004', 'results', 'Who came back'],
+          ['MKT005', 'showcase', 'Shop window'],
+          ['MKT006', 'party', 'Party', 'Leads › a party']
+        ]
+      } /* MKT001–006: the Marketing face of the CRM page (cap-marketing.js) - same screens, its own names and codes */,
+      {
         app: 'tasks',
         name: 'Tasks & Orders',
         page: '/tasks.html',

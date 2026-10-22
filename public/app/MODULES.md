@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (61)
+## Capabilities (62)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -54,6 +54,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
 | `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
+| `cap-marketing.js` | — | cap-marketing.js - THE MARKETING FACE of the CRM small app (MKT first slice, 22 Oct 2026; critic MKT-critic-2026-10-22 change 1) |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
 | `cap-mis-trend.js` | — | CB FINANCE › REPORTS › TREND: sales by week, month, quarter and year, each beside the same period last year (RPT2, 2026-10-17) |
@@ -138,4 +139,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*111 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*112 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
