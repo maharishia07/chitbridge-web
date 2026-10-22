@@ -13,6 +13,16 @@
  *   O7  SIGNED IN: "Make live" makes the other live for everyone: status live, no customer_group
  *   O8  390 px: the menu is icons only, so the middle lists the eight types in words; picking one opens the form; "All types" comes back
  *   O9  rule 13 at 1280 and 390, Cream and Dark: AA of every text, no sideways scroll, nothing covering a control, no app.html link
+ *  UX-109 / walk W21-W48 (Athi 22 Oct: every action that commits a money promise is a deliberate act):
+ *   L1  the landing has no "Create an offer" / "Saved offers", no empty circle, no type lit in the menu, and a line saying what to do (W30 W31 W36)
+ *   L2  Settings "Change": each of the four boxes is tall enough for its own label, chips and help (W29)
+ *   P1  every one of the eight types opens with NOTHING chosen: no category, items, shape, gift or pair; loyalty off; "Work it out" off with a reason (W21-W24)
+ *   P2  choosing the reach shows a prominent "Applies to: all N items in <category>" with the true count, and only then is "Work it out" on (W21)
+ *   C1  a shelf button asks first: Cancel changes nothing (no request), Confirm commits, and the question names what, whom, on what (count) and from when (W26-W28)
+ *   C2  the group picker starts on "Choose a group" with its button off (W25); the shelf title and each row's buttons follow its real status (W32)
+ *   C3  the Saved offers page asks before Approve, Go live, Pause, Retire and Delete (W28)
+ *   T1  390 px: the landing lists the eight kinds in words, every tool button has a word, the "Work it out" sheet fits the screen and its x can be reached (W33 W34)
+ *   T2  Dark is applied through CBAvatar.applyTheme and data-theme says dark; AA of the settings, the form, the sheet and the confirm (W43)
  *   NODE_PATH=e2e/node_modules node e2e/walk-offer-lab.cjs        headless, fast      ·   node e2e/walk-offer-lab.cjs --show   watch it
  */
 'use strict';
@@ -31,6 +41,7 @@ function definitionsApi() {
   const json = (route, status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   const handler = async (route) => {
     const req = route.request(), url = new URL(req.url()), parts = url.pathname.split('/').filter(Boolean);
+    if (url.pathname === '/api/relationships/customers') return json(route, 200, { count: 7, customers: [] });
     if (url.pathname === '/api/relationships/customers/groups') return json(route, 200, { names: [NAMED_GROUP] });
     if (parts[1] !== 'definitions') return json(route, 404, {});
     const id = parts[2], body = req.postData() ? JSON.parse(req.postData()) : {};
@@ -55,13 +66,13 @@ function definitionsApi() {
 }
 
 /** the failures of rule 13 on the screen as it stands: AA of every text, clipping, inner scroll, covered controls, app.html links */
-async function screenProblems(page) {
+async function screenProblems(page, overlayOpen) {
   const pairs = await page.evaluate(measure);
   const bad = pairs.filter((x) => !x.grad && x.ratio < x.need);
   const seen = await audit(page, 'labBody');
   const sideways = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1 || document.body.scrollWidth > window.innerWidth + 1);
   const fails = [].concat(bad.map((x) => 'contrast ' + x.ratio + ' "' + x.text + '"'), seen.clip.map((x) => 'clipped ' + x), seen.scroll.map((x) => 'scroll ' + x),
-    seen.cover.map((x) => 'covered ' + x), seen.app.map((x) => 'app.html ' + x), sideways ? ['the page scrolls sideways'] : []);
+    (overlayOpen ? [] : seen.cover).map((x) => 'covered ' + x), seen.app.map((x) => 'app.html ' + x), sideways ? ['the page scrolls sideways'] : []);
   return { fails, texts: pairs.length, lowest: Math.min.apply(null, pairs.map((x) => x.ratio)) };
 }
 
@@ -70,13 +81,28 @@ async function addOne(page, typeId, pct) {
   await page.evaluate(() => closeWork());
   await page.click('[data-testid="skel-nav-' + typeId + '"]');
   await page.waitForSelector('#s2.on');
-  if (pct) await page.evaluate((v) => { S.scope = 'item'; S.itemId = 'masala'; S.pctOff = v; render(); }, pct);
+  if (pct) await page.evaluate((v) => { S.scope = 'item'; S.itemId = 'masala'; S.itemIds = ['masala']; S.pctOff = v; render(); }, pct);
   await page.click('button[onclick="apply()"]');
   await page.waitForSelector('#workScrim.on');
   await page.click('#workSave');
   await page.waitForFunction(() => !document.getElementById('workScrim').classList.contains('on'));
 }
 
+/** answer the lab kit's confirm: read its words, then Cancel or Confirm; returns the text it showed */
+async function confirmWords(page, action) {
+  await page.waitForSelector('[data-testid="lk-pop"] [data-testid="lk-confirm-text"]');
+  const text = ((await page.textContent('[data-testid="lk-confirm-text"]')) || '').replace(/\s+/g, ' ').trim();
+  await page.click(action === 'ok' ? '[data-testid="lk-confirm-ok"]' : '[data-testid="lk-confirm-cancel"]');
+  await page.waitForFunction(() => !document.querySelector('[data-testid="lk-pop"]'));
+  return text;
+}
+/** the four settings boxes after "Change": is each at least as tall as everything inside it (W29) */
+async function settingsBoxFit(page) {
+  return page.evaluate(() => [...document.querySelectorAll('#s0 .open .sfld')].map((box) => {
+    const r = box.getBoundingClientRect(), label = box.querySelector('.lbl'), last = box.lastElementChild.getBoundingClientRect();
+    return { label: label ? label.textContent : '?', high: Math.round(r.height), clipped: box.scrollHeight > box.clientHeight + 1 || last.bottom > r.bottom + 1 || getComputedStyle(box).overflow === 'hidden' && box.scrollHeight > box.clientHeight };
+  }));
+}
 const walk = async (w) => {
   const { page, base } = w;
   const api = definitionsApi();
@@ -98,6 +124,23 @@ const walk = async (w) => {
       saw: menu.ids.length + ' types · headings ' + menu.heads.join(' / ') + ' · other labs in the menu ' + menu.others + ' · step bar ' + menu.steps };
   });
 
+  await w.step('L1', 'Landing: no second door ("Create an offer", "Saved offers"), no empty circle, nothing lit in the menu, one line saying what to do', async () => {
+    const got = await page.evaluate(() => ({
+      doors: [...document.querySelectorAll('#s0 button')].map((b) => b.textContent.trim()).filter((t) => /^(Create an offer|Saved offers)/.test(t)),
+      circle: !!document.getElementById('bizSw'),
+      lit: [...document.querySelectorAll('.side .nav-btn.active')].length,
+      hint: ((document.querySelector('[data-testid="landing-hint"]') || {}).textContent || '').trim()
+    }));
+    return { ok: !got.doors.length && !got.circle && got.lit === 0 && /left/.test(got.hint), saw: 'doors ' + got.doors.length + ' · circle ' + got.circle + ' · lit ' + got.lit + ' · "' + got.hint + '"' };
+  });
+
+  await w.step('L2', 'Settings "Change": the four boxes hold their own label, chips and help (no 46px box over 96-122px of content)', async () => {
+    await page.click('.fine button');
+    const boxes = await settingsBoxFit(page);
+    const bad = boxes.filter((b) => b.clipped || b.high < 60);
+    return { ok: boxes.length >= 3 && !bad.length, saw: boxes.map((b) => b.label + ' ' + b.high + 'px' + (b.clipped ? ' CLIPPED' : '')).join(' · ') };
+  });
+
   await w.step('O2', 'Trial: pick "A percentage off" on the left -> its working step, the menu lights it', async () => {
     await page.click('[data-testid="skel-nav-percent"]');
     await page.waitForSelector('#s2.on');
@@ -108,6 +151,47 @@ const walk = async (w) => {
       settingsHidden: getComputedStyle(document.getElementById('s0')).display === 'none'
     }));
     return { ok: got.title === 'A percentage off' && got.lit.join() === 'percent' && !got.pickerScreen && got.settingsHidden, saw: '"' + got.title + '" · lit ' + got.lit.join() };
+  });
+
+  await w.step('P1', 'Every one of the eight types opens with nothing chosen and "Work it out" off, with its reason; loyalty is off', async () => {
+    const seen = [];
+    for (const id of TYPE_IDS) {
+      await page.evaluate((t) => { pickGoal(t); }, id);
+      const got = await page.evaluate(() => ({
+        goal: S.goal,
+        scopeChosen: !!(S.scope || S.catId || (S.itemIds || []).length),
+        lit: document.querySelectorAll('#s2 .shape.on').length,
+        picks: [S.giftId, S.itemId, S.pairA, S.pairB, S.bunA, S.bunB].filter(Boolean).length,
+        loyOn: !!S.loyOn,
+        off: !!(document.querySelector('#s2 button[onclick="apply()"]') || {}).disabled,
+        why: ((document.querySelector('#s2 .acts .why') || {}).textContent || '').trim()
+      }));
+      const needsChoice = ['percent', 'amount', 'qty', 'free', 'bundle'].includes(id);
+      const clean = !got.scopeChosen && got.lit === 0 && got.picks === 0 && !got.loyOn && (!needsChoice || (got.off && got.why));
+      seen.push(id + (clean ? ' ok' : ' PRE-SET ' + JSON.stringify(got)));
+    }
+    return { ok: seen.every((x) => / ok$/.test(x)), saw: seen.join(' · ') };
+  });
+
+  await w.step('P1b', 'Something free: no shape is lit; each shape then opens with its gift, item, pair or category still on "Choose..." and "Work it out" off', async () => {
+    const seen = [];
+    for (const shape of ['anything', 'same', 'pair', 'cheapest']) {
+      await page.evaluate((v) => { pickGoal('free'); setShape(v); }, shape);
+      const got = await page.evaluate(() => ({ chooses: [...document.querySelectorAll('#s2 button')].filter((b) => /^Choose/.test(b.textContent.trim())).length, off: document.querySelector('#s2 button[onclick="apply()"]').disabled, why: (document.querySelector('#s2 .acts .why') || {}).textContent }));
+      seen.push(shape + (got.chooses >= 1 && got.off && got.why ? ' ok' : ' PRE-SET ' + JSON.stringify(got)));
+    }
+    await page.evaluate(() => { S.freeShape = ''; render(); });
+    return { ok: seen.every((x) => / ok$/.test(x)), saw: seen.join(' · ') };
+  });
+
+  await w.step('P2', 'Choosing a whole category shows "Applies to: all N items in <category>" with the true count, and only then "Work it out" is on', async () => {
+    await page.evaluate(() => { pickGoal('percent'); });
+    const before = await page.evaluate(() => ({ line: document.querySelector('[data-testid="reach-line"]').textContent, off: document.querySelector('#s2 button[onclick="apply()"]').disabled }));
+    const want = await page.evaluate(() => { const c = CATS[1]; applyWholeCategory(c.id); return { n: catItems(c.id).length, name: c.name }; });
+    const after = await page.evaluate(() => ({ line: document.querySelector('[data-testid="reach-line"]').textContent, off: document.querySelector('#s2 button[onclick="apply()"]').disabled }));
+    const sentence = 'Applies to: all ' + want.n + ' item' + (want.n === 1 ? '' : 's') + ' in ' + want.name;
+    await page.evaluate(() => { S.scope = ''; S.catId = ''; S.itemIds = []; render(); });
+    return { ok: /nothing chosen yet/.test(before.line) && before.off && after.line === sentence && !after.off, saw: '"' + before.line + '" off ' + before.off + ' -> "' + after.line + '" off ' + after.off };
   });
 
   await w.step('O3', 'Trial: work it out, add it -> the cart on the right shows it as a draft; no request left the page', async () => {
@@ -122,12 +206,31 @@ const walk = async (w) => {
       saw: '"' + cart.title + '" · ' + cart.rows + ' row (' + cart.pill + ') · cart is right of the form ' + cart.side + ' · api calls ' + apiCalls.length };
   });
 
+  await w.step('O3b', 'Trial: the line after Add says what was saved, on what, and that it is not live', async () => {
+    const said = ((await page.textContent('[data-testid="cart-said"]')) || '').trim();
+    const sheetPromise = await page.evaluate(() => { S.scope = 'item'; S.itemIds = ['masala']; render(); apply(); const t = document.getElementById('workPromise').textContent; closeWork(); return t; });
+    return { ok: /^Added as a draft: A percentage off · 10% off · /.test(said) && /Not live yet/.test(said) && /Saves a draft/.test(sheetPromise) && /Nothing is live until you make it live/.test(sheetPromise), saw: '"' + said + '" · sheet: "' + sheetPromise + '"' };
+  });
+
   await w.step('O4', 'Trial: "Make live" and "Only for a group" say to sign in, in the row; still no request', async () => {
     await page.click('[data-testid="cart-live"]');
     const first = (await page.textContent('[data-testid="cart-note"]')).trim();
     await page.click('[data-testid="cart-group"]');
     const second = (await page.textContent('[data-testid="cart-note"]')).trim();
     return { ok: first === 'Sign in to use this in your shop.' && second === first && apiCalls.length === 0, saw: '"' + first + '" · api calls ' + apiCalls.length };
+  });
+
+  await w.step('C3b', 'Trial: Delete asks first and says it cannot be undone; Cancel keeps the offer', async () => {
+    await page.evaluate(() => labStep(3));
+    await page.waitForSelector('[data-testid="shelf-drop"]');
+    const before = await page.evaluate(() => SAVED.length);
+    await page.click('[data-testid="shelf-drop"]');
+    const words = await confirmWords(page, 'cancel');
+    const kept = (await page.evaluate(() => SAVED.length)) === before;
+    await page.click('[data-testid="shelf-drop"]');
+    await confirmWords(page, 'ok');
+    const gone = (await page.evaluate(() => SAVED.length)) === before - 1;
+    return { ok: kept && gone && /cannot be undone/.test(words), saw: 'cancel kept ' + kept + ' · confirm removed ' + gone + ' · "' + words.slice(0, 100) + '"' };
   });
 
   /* ── signed in: a second page of the same browser holds the session ─────────────────────────────────────────────── */
@@ -146,15 +249,45 @@ const walk = async (w) => {
     return { ok: statuses.length === 2 && statuses.every((s) => s === 'draft'), saw: statuses.length + ' definitions: ' + statuses.join(', ') };
   });
 
+  await w.step('C2a', 'Signed in: the shelf is titled by what is on it (drafts only -> "(draft)"), a draft row offers Make live and Only for a group', async () => {
+    const got = await signed.evaluate(() => ({ title: document.querySelector('[data-testid="cart-title"]').textContent, aria: document.getElementById('labCart').getAttribute('aria-label'),
+      live: document.querySelectorAll('[data-testid="cart-live"]').length, rows: document.querySelectorAll('[data-testid="cart-row"]').length }));
+    return { ok: got.title === 'Your offers (draft)' && got.aria === got.title && got.live === got.rows, saw: got.title + ' · ' + got.rows + ' rows · ' + got.live + ' "Make live" buttons' };
+  });
+
+  await w.step('C1', 'Signed in: "Make live" asks first. Cancel changes nothing and sends no request; the question names what, whom, on what (count) and from when', async () => {
+    const row = signed.locator('[data-testid="cart-row"]').first();
+    const id = await row.getAttribute('data-id');
+    const callsBefore = apiCalls.length;
+    await row.locator('[data-testid="cart-live"]').click();
+    const text = await confirmWords(signed, 'cancel');
+    const unchanged = api.db.get(id).status === 'draft' && apiCalls.length === callsBefore;
+    const wordsOk = /Make this offer live\?|A percentage off/.test(text) && /On: .*1 item: Masala/i.test(text) && /For: every customer/.test(text) && /From: now/.test(text);
+    return { ok: unchanged && wordsOk, saw: 'unchanged ' + unchanged + ' · "' + text.slice(0, 220) + '"' };
+  });
+
+  await w.step('C2b', 'Signed in: the group picker starts on "Choose a group" and "Make live for them" is off until one is chosen', async () => {
+    const row = signed.locator('[data-testid="cart-row"]').first();
+    await row.locator('[data-testid="cart-group"]').click();
+    await signed.waitForSelector('[data-testid="cart-group-pick"] optgroup option', { state: 'attached' });
+    const got = await signed.evaluate(() => { const pick = document.querySelector('[data-testid="cart-group-pick"]'); return { value: pick.value, off: document.querySelector('[data-testid="cart-group-apply"]').disabled }; });
+    return { ok: got.value === '' && got.off, saw: 'select value "' + got.value + '" · button off ' + got.off };
+  });
+
   let groupId = null;
   await w.step('O6', 'Signed in: "Only for a group" -> the shop\'s named group -> live, only for them', async () => {
     const row = signed.locator('[data-testid="cart-row"]').first();
     const id = await row.getAttribute('data-id');
     groupId = id;
-    await row.locator('[data-testid="cart-group"]').click();
     await signed.waitForSelector('[data-testid="cart-group-pick"] optgroup option', { state: 'attached' });
     await signed.selectOption('[data-testid="cart-group-pick"]', 'group:' + NAMED_GROUP);
+    const enabled = await signed.evaluate(() => !document.querySelector('[data-testid="cart-group-apply"]').disabled);
     await signed.click('[data-testid="cart-group-apply"]');
+    const asked = await confirmWords(signed, 'cancel');
+    const stillDraft = api.db.get(id).status === 'draft';
+    await signed.click('[data-testid="cart-group-apply"]');
+    const wordsGroup = await confirmWords(signed, 'ok');
+    if (!enabled || !stillDraft || !new RegExp('For: ' + NAMED_GROUP + ' .*only').test(wordsGroup) || !/On: /.test(asked)) return { ok: false, saw: 'enabled ' + enabled + ' · draft after Cancel ' + stillDraft + ' · "' + wordsGroup + '"' };
     await signed.waitForFunction((want) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === want), 'Live, only for ' + NAMED_GROUP + '.');
     const def = api.db.get(id), rules = def.versions[0].rules;
     return { ok: def.status === 'live' && rules.customer_group === 'group:' + NAMED_GROUP && rules.customer_name === NAMED_GROUP && rules.percent === 10 && def.versions.length === 2,
@@ -165,6 +298,7 @@ const walk = async (w) => {
     const row = signed.locator('[data-testid="cart-row"]:has(.p-draft)').first();
     const id = await row.getAttribute('data-id');
     await row.locator('[data-testid="cart-live"]').click();
+    await confirmWords(signed, 'ok');
     await signed.waitForFunction((want) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === want), 'Live for everyone.');
     const def = api.db.get(id);
     return { ok: def.status === 'live' && def.versions[0].rules.customer_group === undefined, saw: def.status + ' · customer_group ' + def.versions[0].rules.customer_group };
@@ -174,7 +308,8 @@ const walk = async (w) => {
     await signed.reload();
     await signed.waitForSelector('[data-testid="cart-row"][data-id="' + groupId + '"] [data-testid="cart-note"]');
     const said = (await signed.textContent('[data-testid="cart-row"][data-id="' + groupId + '"] [data-testid="cart-note"]')).trim();
-    return { ok: said === 'Live, only for ' + NAMED_GROUP + '.', saw: '"' + said + '"' };
+    const widen = (await signed.textContent('[data-testid="cart-row"][data-id="' + groupId + '"] [data-testid="cart-live"]')).trim();
+    return { ok: said === 'Live, only for ' + NAMED_GROUP + '.' && widen === 'Make live for everyone', saw: '"' + said + '" · button "' + widen + '"' };
   });
 
   await w.step('O7c', 'Signed in: Edit the group offer and add it again -> the group is kept in its rules', async () => {
@@ -189,13 +324,135 @@ const walk = async (w) => {
   await w.step('O7d', 'Signed in: "Make live" on the group offer clears the group and says so (make live = everyone)', async () => {
     const row = signed.locator('[data-testid="cart-row"][data-id="' + groupId + '"]');
     await row.locator('[data-testid="cart-live"]').click();
+    const widenWords = await confirmWords(signed, 'ok');
+    if (!/it was only for Wholesale/.test(widenWords)) return { ok: false, saw: '"' + widenWords + '"' };
     const want = 'Was only for ' + NAMED_GROUP + ', now for everyone.';
     await signed.waitForFunction((t) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === t), want);
     const def = api.db.get(groupId), rules = def.versions[0].rules;
     return { ok: def.status === 'live' && rules.customer_group === undefined && rules.customer_name === undefined, saw: def.status + ' · customer_group ' + rules.customer_group };
   });
 
+  await w.step('C2c', 'Signed in: all live -> the shelf says "(live)"; one more draft -> "Your offers"; a live-for-everyone row has no "Make live"; an approved row says "not live yet" and offers it', async () => {
+    const allLive = await signed.evaluate(() => document.querySelector('[data-testid="cart-title"]').textContent);
+    await addOne(signed, 'percent', 20);
+    await signed.waitForFunction(() => document.querySelectorAll('[data-testid="cart-row"]').length === 3);
+    const mixed = await signed.evaluate(() => {
+      const live = [...document.querySelectorAll('[data-testid="cart-row"]')].filter((r) => r.querySelector('.p-live') && /Live for everyone/.test(r.textContent));
+      return { title: document.querySelector('[data-testid="cart-title"]').textContent, buttons: live.map((r) => r.querySelectorAll('[data-testid="cart-live"]').length) };
+    });
+    await signed.evaluate(() => labStep(3));
+    await signed.waitForSelector('.sv:has(.p-draft) [data-testid="shelf-step"]');
+    await signed.locator('.sv:has(.p-draft) [data-testid="shelf-step"]').first().click();
+    await confirmWords(signed, 'ok');
+    await signed.waitForSelector('.pill.p-appr');
+    const appr = await signed.evaluate(() => (document.querySelector('.pill.p-appr') || {}).textContent);
+    await signed.evaluate(() => labStep(2));
+    const apprRow = await signed.evaluate(() => { const r = [...document.querySelectorAll('[data-testid="cart-row"]')].find((x) => x.querySelector('.p-appr')); return r ? (r.querySelector('[data-testid="cart-live"]') || {}).textContent : null; });
+    return { ok: allLive === 'Your offers (live)' && mixed.title === 'Your offers' && mixed.buttons.length >= 1 && mixed.buttons.every((n) => n === 0) && /not live yet/.test(appr || '') && apprRow === 'Make live',
+      saw: 'all live "' + allLive + '" · mixed "' + mixed.title + '" · live rows\' "Make live" buttons ' + mixed.buttons.join(',') + ' · approved pill "' + appr + '" with "' + apprRow + '"' };
+  });
+
+  await w.step('C3', 'Signed in, Saved offers page: Go live, Pause and Retire each ask first; Cancel changes nothing, Confirm commits', async () => {
+    await signed.evaluate(() => labStep(3));
+    await signed.waitForSelector('.sv .pill.p-appr');
+    const statusOf = (id) => api.db.get(id).status;
+    const row = signed.locator('.sv:has(.p-appr)').first();
+    const approvedId = [...api.db.values()].find((d) => d.status === 'approved').definition_id;
+    const calls = apiCalls.length;
+    await row.locator('[data-testid="shelf-step"]').click();
+    const goLive = await confirmWords(signed, 'cancel');
+    const cancelled = statusOf(approvedId) === 'approved' && apiCalls.length === calls;
+    await row.locator('[data-testid="shelf-step"]').click();
+    await confirmWords(signed, 'ok');
+    await signed.waitForSelector('.sv .pill.p-live');
+    const liveNow = statusOf(approvedId) === 'live';
+    await signed.locator('.sv:has(.p-live) [data-testid="shelf-drop"]').first().click();
+    const retire = await confirmWords(signed, 'cancel');
+    const stillThere = [...api.db.values()].length >= 3 && api.db.size === 3;
+    return { ok: cancelled && liveNow && /Every bill from now on gets it/.test(goLive) && /Bills already made/.test(retire) && stillThere && /From: now/.test(goLive), saw: 'rows ' + api.db.size + ' · cancel kept it approved ' + cancelled + ' · confirm made it live ' + liveNow + ' · retire says "' + retire.slice(0, 120) + '"' };
+  });
+
+  const waitStatus = async (id, want) => { for (let i = 0; i < 40 && api.db.get(id).status !== want; i++) await signed.waitForTimeout(100); return api.db.get(id).status; };
+  await w.step('C4', 'Signed in: a group offer, Paused then Resumed, keeps its group; the Resume confirm names the group; the group is still in the saved rules', async () => {
+    await addOne(signed, 'percent', 30);
+    const id = [...api.db.keys()].pop();
+    const row = signed.locator('[data-testid="cart-row"][data-id="' + id + '"]');
+    await row.locator('[data-testid="cart-group"]').click();
+    await signed.waitForSelector('[data-testid="cart-group-pick"] optgroup option', { state: 'attached' });
+    await signed.selectOption('[data-testid="cart-group-pick"]', 'group:' + NAMED_GROUP);
+    await signed.click('[data-testid="cart-group-apply"]');
+    await confirmWords(signed, 'ok');
+    const live1 = await waitStatus(id, 'live');
+    await signed.evaluate((x) => { askStatus(x, 'paused'); }, id);
+    await confirmWords(signed, 'ok');
+    const paused = await waitStatus(id, 'paused');
+    await signed.waitForFunction((x) => { const r = document.querySelector('[data-testid="cart-row"][data-id="' + x + '"]'); return r && /Resume/.test(r.textContent); }, id);
+    await signed.locator('[data-testid="cart-row"][data-id="' + id + '"] [data-testid="cart-live"]').click();
+    const words = await confirmWords(signed, 'ok');
+    const back = await waitStatus(id, 'live');
+    const rules = api.db.get(id).versions[0].rules;
+    return { ok: live1 === 'live' && paused === 'paused' && back === 'live' && rules.customer_group === 'group:' + NAMED_GROUP && rules.customer_name === NAMED_GROUP && new RegExp('For: ' + NAMED_GROUP + ' .*only').test(words),
+      saw: 'live ' + live1 + ' -> ' + paused + ' -> ' + back + ' · customer_group ' + rules.customer_group + ' · "' + words.slice(0, 200) + '"' };
+  });
+
+  await w.step('C4b', 'An automatic group is named with how many customers it holds now (the api stand-in says 7)', async () => {
+    const label = await signed.evaluate(async () => { await groupCountFor('new'); return groupLabel('new'); });
+    return { ok: label === 'New customers (7 customers now)', saw: label };
+  });
+
+  await w.step('C5', 'A saved offer whose items left the catalogue still says a number, never just "the items you chose"', async () => {
+    const got = await signed.evaluate(() => ({
+      some: savedReachWords({ snap: { goal: 'percent', scope: 'item', itemIds: ['masala', 'gone'] } }),
+      none: savedReachWords({ snap: { goal: 'percent', scope: 'item', itemIds: ['gone', 'gone2'] } }),
+      free: savedReachWords({ snap: { goal: 'free', freeShape: 'same', itemId: 'gone' } })
+    }));
+    return { ok: /^1 item: .*, 1 no longer in your catalogue$/.test(got.some) && /^0 items, 2 no longer in your catalogue$/.test(got.none) && /^0 items: .*no longer in your catalogue$/.test(got.free), saw: JSON.stringify(got) };
+  });
+
+  await w.step('C6', 'Editing a LIVE offer says in the sheet that it comes off for customers until it is made live again', async () => {
+    const id = [...api.db.keys()].pop();
+    const said = await signed.evaluate((x) => { openSaved(x); apply(); const t = document.getElementById('workPromise').textContent; closeWork(); return t; }, id);
+    return { ok: /Editing takes it off for customers until you make it live again/.test(said), saw: '"' + said + '"' };
+  });
+
+  await w.step('C7', 'Esc with a confirm open closes only the confirm; the Work-it-out sheet under it stays until a second Esc', async () => {
+    await signed.evaluate(() => { pickGoal('percent'); applyWholeCategory(CATS[1].id); apply(); askPromise({ id: 'x', title: 'A percentage off', detail: '10% off', snap: { goal: 'percent', scope: 'cat', catId: CATS[1].id } }, 'live', null, function () {}); });
+    await signed.waitForSelector('[data-testid="lk-pop"]');
+    await signed.keyboard.press('Escape');
+    const first = await signed.evaluate(() => ({ pop: !!document.querySelector('[data-testid="lk-pop"]'), sheet: document.getElementById('workScrim').classList.contains('on') }));
+    await signed.keyboard.press('Escape');
+    const second = await signed.evaluate(() => document.getElementById('workScrim').classList.contains('on'));
+    return { ok: !first.pop && first.sheet && !second, saw: 'after Esc 1: confirm open ' + first.pop + ', sheet open ' + first.sheet + ' · after Esc 2: sheet open ' + second };
+  });
+
   /* ── the phone ─────────────────────────────────────────────────────────────────────────────────────────────────── */
+  await w.step('T1', '390 px, first visit: the landing lists the eight kinds in words, every tool button has a word, the "Work it out" sheet fits the screen and its x can be tapped', async () => {
+    const phone = await w.ctx.newPage();
+    await phone.addInitScript(() => { try { Object.keys(localStorage).filter((k) => k.indexOf('cb_offerlab_settings_') === 0).forEach((k) => localStorage.removeItem(k)); } catch (_) { /* a private window: nothing stored, nothing to clear */ } });
+    await phone.setViewportSize({ width: 390, height: 844 });
+    await phone.goto(base + '/offer-lab-next.html?api=' + encodeURIComponent(base));
+    await phone.waitForSelector('[data-testid="types-list"]');
+    const landing = await phone.evaluate(() => ({
+      onSettings: document.getElementById('s0').classList.contains('on'),
+      words: document.querySelectorAll('[data-testid="types-list"] .goal b').length,
+      lit: document.querySelectorAll('.side .nav-btn.active').length + document.querySelectorAll('[data-testid="types-list"] .goal.on').length,
+      tools: [...document.querySelectorAll('.labtools .tool')].map((b) => ({ word: (b.querySelector('.tx') || {}).textContent, shown: !!b.querySelector('.tx') && getComputedStyle(b.querySelector('.tx')).display !== 'none', high: Math.round(b.getBoundingClientRect().height) }))
+    }));
+    await phone.evaluate(() => { pickGoal('percent'); applyWholeCategory(CATS[1].id); apply(); });
+    await phone.waitForSelector('#workScrim.on');
+    const sheet = await phone.evaluate(() => {
+      const box = document.querySelector('#workScrim .sheet').getBoundingClientRect(), close = document.querySelector('#workScrim .shhd .ovlx').getBoundingClientRect();
+      const hit = document.elementFromPoint(close.left + close.width / 2, close.top + close.height / 2);
+      return { left: Math.round(box.left), right: Math.round(box.right), width: window.innerWidth, closeIn: close.left >= 0 && close.right <= window.innerWidth && close.top >= 0 && close.bottom <= window.innerHeight, closeHit: !!hit && (hit.classList.contains('ovlx') || !!hit.closest('.ovlx')) };
+    });
+    await phone.click('#workScrim .shhd .ovlx');
+    const closed = await phone.evaluate(() => !document.getElementById('workScrim').classList.contains('on'));
+    await phone.close();
+    const toolsOk = landing.tools.length === 4 && landing.tools.every((t) => t.shown && t.word && t.word.trim() && t.high >= 44);
+    return { ok: landing.onSettings && landing.words === 8 && landing.lit === 0 && toolsOk && sheet.left >= 0 && sheet.right <= sheet.width && sheet.closeIn && sheet.closeHit && closed,
+      saw: 'landing on settings ' + landing.onSettings + ' · ' + landing.words + ' kinds in words · lit ' + landing.lit + ' · tools ' + landing.tools.map((t) => t.word + ' ' + t.high + 'px').join(', ') + ' · sheet ' + sheet.left + '..' + sheet.right + ' of ' + sheet.width + ' · x reachable ' + sheet.closeHit + ' · closed by x ' + closed };
+  });
+
   await w.step('O8', '390 px: the menu is icons only, so the middle lists the eight types in words; pick one -> form; "All types" -> back', async () => {
     const phone = await w.ctx.newPage();
     await phone.setViewportSize({ width: 390, height: 844 });
@@ -229,6 +486,31 @@ const walk = async (w) => {
       await signed.screenshot({ path: require('path').join(__dirname, 'shots', 'offer-lab-' + theme + '-' + width + '.png') });
     }
   }
+  /* ── Dark through the avatar (the stored key alone does not switch it): data-theme must say so, and the new pieces must read in both themes ─────── */
+  const SHOWN = {
+    settings: () => { labStep(0); S0_OPEN = true; render(); },
+    form: () => { closeWork(); pickGoal('percent'); applyWholeCategory(CATS[1].id); edit('loyOn', true); },
+    sheet: () => { apply(); },
+    confirm: () => { closeWork(); askPromise({ id: 'x', title: 'A percentage off', detail: '10% off', snap: { goal: 'percent', scope: 'cat', catId: CATS[1].id } }, 'live', null, function () {}); }
+  };
+  for (const theme of ['cream', 'dark']) {
+    await page.setViewportSize({ width: 1280, height: 860 });
+    await page.evaluate((t) => { CBAvatar.applyTheme(t); }, theme);
+    const stamped = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    for (const state of Object.keys(SHOWN)) {
+      await page.evaluate(SHOWN[state]);
+      await page.waitForTimeout(150);
+      await w.step('T2·' + theme + '·' + state, 'Offer Lab · ' + theme + ' (data-theme "' + stamped + '") · ' + state + ' -> AA contrast, nothing clipped, no sideways scroll', async () => {
+        const got = await screenProblems(page, state === 'sheet' || state === 'confirm');
+        return { ok: stamped === theme && !got.fails.length && got.texts > 8, saw: 'data-theme ' + stamped + ' · ' + got.texts + ' texts, lowest ' + got.lowest + (got.fails.length ? ' · ' + got.fails.slice(0, 4).join(' · ') : ' · clean') };
+      });
+      await page.screenshot({ path: require('path').join(__dirname, 'shots', 'offer-lab-fix-' + theme + '-' + state + '.png') });
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => { closeWork(); });
+    }
+  }
+  await page.evaluate(() => { CBAvatar.applyTheme('cream'); });
+
   await w.step('O10', 'No page error on either page', async () => ({ ok: w.errs.length === 0, saw: w.errs.length ? w.errs[0].slice(0, 120) : 'none' }));
 };
 

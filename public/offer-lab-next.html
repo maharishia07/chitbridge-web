@@ -38,10 +38,6 @@ button{cursor:pointer}
 .grow{flex:1}
 .chip{height:36px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);
   font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.bizSw{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:4px}
-.bizSw button{height:30px;padding:0 12px;border-radius:7px;border:0;background:transparent;
-  font-size:12.5px;font-weight:600;color:var(--muted)}
-.bizSw button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.07)}
 
 .strip{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line-soft);
   border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
@@ -85,7 +81,7 @@ button{cursor:pointer}
 .open{display:none;margin-top:16px;border-top:1px solid var(--hair);padding-top:16px}
 .open.on{display:block}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 24px}
-.fld>span.lbl{margin-bottom:6px}
+.sfld>span.lbl{margin-bottom:6px}   /* the settings fields: NOT .fld (the sheet's number field, fixed 48px high) - W29 */
 .sub{font-size:12px;color:var(--ghost);margin-top:6px}
 /* ⭐ "Tools become icon-only (labels drop, icons grow)" — the top-bar's .chip.tool buttons, per the spec's own
    phone rule. `.g` is the icon glyph, `.tx` its label; only .tx hides. */
@@ -93,9 +89,9 @@ button{cursor:pointer}
 @media(max-width:760px){
   .fine button{margin-left:0;width:100%}
   .grid{grid-template-columns:1fr}
-  .tool{flex:1;justify-content:center;padding:0 8px}
-  .tool .tx{display:none}
+  .tool{flex:1 1 calc(50% - 8px);justify-content:center;gap:7px;min-height:44px;padding:0 8px}   /* W34: a word beside every glyph, two to a row */
   .tool .g{font-size:17px}
+  .cartacts .btn, .lab-next .lk-more{min-height:44px}   /* W48: a touch target */
 }
 /* the cart column (W19): lab-kit.css gives .lab-cols/.lab-next; the page's own padding already frames it */
 .wrap .lab-body{padding:0;margin-top:4px}
@@ -113,6 +109,13 @@ button{cursor:pointer}
 .cartnote{font-size:12.5px;margin-top:6px;color:var(--muted)}
 .cartnote.ok{color:var(--green-d)}
 .cartnote.bad{color:var(--red-i)}
+/* UX-109 / W21: the reach of an offer is a card, not a quiet dropdown */
+.reach{border:2px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:14px;background:var(--card)}
+.reach.set{border-color:var(--blue-b);background:var(--blue-t)}
+.reach .ask{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:6px;display:block}
+.reach .line{font-size:17px;font-weight:700;color:var(--ink);margin:2px 0 10px;overflow-wrap:anywhere}
+.reach .line.none{color:var(--red-i)}
+.landing-hint{margin:14px 0 0;font-size:14px;color:var(--muted)}
 .cartpick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .cartpick select{height:36px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:0 8px;font-size:13px}
 .btn.only-narrow{display:none}
@@ -135,8 +138,8 @@ button{cursor:pointer}
 
 .seg{display:flex;gap:7px;flex-wrap:wrap}
 .seg button{height:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line);
-  background:var(--card);font-size:14px;font-weight:600}
-.seg button.on{background:var(--green);border-color:var(--green);color:#fff}
+  background:var(--card);color:var(--ink);font-size:14px;font-weight:600}
+.seg button.on{background:var(--green);border-color:var(--green);color:var(--on-accent,#fff)}
 .inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:11px;background:var(--card);
   overflow:hidden;height:48px}
 .inp span{padding:0 11px;color:var(--faint);font-weight:600;font-size:14px;flex:0 0 auto;white-space:nowrap}
@@ -219,6 +222,7 @@ button{cursor:pointer}
 .shbd{overflow:auto;padding:0}
 .shft{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--hair);background:var(--page);flex-wrap:wrap;align-items:center}
 .why{font-size:12.5px;color:var(--faint)}
+.promise{flex:1 0 100%;margin:0;font-size:13.5px;color:var(--ink)}   /* the sheet's last word before Add: what this saves, in words */
 /**
  * ── ⭐⭐⭐ [2026-09-26] THE CONTROLS, PER ATHI'S OWN offer-lab-controls_1.html — its own review corrects the
  * compact formula row this session had just shipped: "the combined figure is a sentence, not a formula ——
@@ -242,7 +246,7 @@ button{cursor:pointer}
 .quick{display:flex;gap:5px;flex-wrap:wrap}
 .quick button{height:34px;min-width:52px;padding:0 11px;border-radius:9px;border:1px solid var(--line);background:var(--card);
   font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;color:var(--muted)}
-.quick button.on{background:var(--green);border-color:var(--green);color:#fff}
+.quick button.on{background:var(--green);border-color:var(--green);color:var(--on-accent,#fff)}
 .quick button:hover:not(.on){border-color:var(--ghost)}
 @media(max-width:640px){
   .row{gap:10px}
@@ -269,7 +273,7 @@ button{cursor:pointer}
 .verdict{display:flex;align-items:center;gap:14px;padding:14px 17px;margin-top:12px;border-radius:12px;border:1px solid}
 .verdict .mk{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;font-weight:800;flex:0 0 auto;color:#fff}
 .verdict .tx b{display:block;font-size:16px;font-weight:700;line-height:1.25}
-.verdict .tx span{display:block;font-size:13px;margin-top:2px;opacity:.9}
+.verdict .tx span{display:block;font-size:13px;margin-top:2px}   /* no opacity: it took the line to 4.0:1 in Dark (W43) */
 .verdict.pass{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
 .verdict.pass .mk{background:var(--green)}
 .verdict.some{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
@@ -344,7 +348,7 @@ button{cursor:pointer}
 @media(max-width:760px){
   .pair{grid-template-columns:1fr}
   .scrim{padding:0;align-items:stretch}
-  .sheet{border-radius:0;border:0;max-height:none;height:100%;width:100%}
+  .sheet{border-radius:0;border:0;max-height:none;height:100%;width:100%;min-width:0;resize:none}   /* W33: the 460px floor made the sheet wider than a phone */
   .headline{gap:16px} .headline .hv{font-size:20px}
   .shft .btn{flex:1;justify-content:center}
 }
@@ -847,7 +851,6 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
     <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
-    <div class="bizSw" id="bizSw"></div>
   </div>
   <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
        own footer already said "Using a sample catalogue — Apply tries it here, not on a real product" —
@@ -948,6 +951,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
     <div id="workDemo"></div>
     <div class="shbd" id="workBody"></div>
     <div class="shft">
+      <p class="promise" id="workPromise" data-testid="work-promise"></p>
       <button class="btn pri" id="workSave" onclick="saveOffer()">Add to your offers</button>
       <button class="btn" id="workFlip" onclick="closeWork()">Change it</button>
       <button class="btn" onclick="window.print()" title="Print this offer — the editable controls stay off the page">🖨 Print</button>
@@ -1083,9 +1087,9 @@ var HOTEL = {
     ['velcan', 'Vel Offices canteen', 'trade', 0]
   ],
   d: {
-    catId: 'tiffin',
-    itemId: 'masala',
-    itemIds: ['masala'],
+    catId: '' /* UX-109: nothing is pre-chosen - the shopkeeper picks the reach */,
+    itemId: '',
+    itemIds: [],
     pctOff: 10,
     rsOff: 10,
     tiers: [
@@ -1099,8 +1103,8 @@ var HOTEL = {
     buyId: 'masala',
     getId: 'masala',
     getOff: 100,
-    bunA: 'masala',
-    bunB: 'coffee',
+    bunA: '',
+    bunB: '',
     bunPrice: 80,
     shipAt: 300,
     shipCharge: 0,
@@ -1164,9 +1168,9 @@ var PHARMA = {
     ['gh', 'Guru Hospital pharmacy', 'trade', 4]
   ],
   d: {
-    catId: 'tablets',
-    itemId: 'panto',
-    itemIds: ['panto'],
+    catId: '',
+    itemId: '',
+    itemIds: [],
     pctOff: 5,
     rsOff: 4,
     tiers: [
@@ -1180,8 +1184,8 @@ var PHARMA = {
     buyId: 'panto',
     getId: 'panto',
     getOff: 100,
-    bunA: 'panto',
-    bunB: 'omep',
+    bunA: '',
+    bunB: '',
     bunPrice: 160,
     shipAt: 5000,
     shipCharge: 0,
@@ -1193,22 +1197,22 @@ var PHARMA = {
 
 var BIZ = { hotel: HOTEL, pharma: PHARMA };
 /* per-book defaults for the v5 offers */
-HOTEL.d.freeShape = 'anything';
-HOTEL.d.giftId = 'medu';
+HOTEL.d.freeShape = ''; /* UX-109: no shape, gift or pair is pre-picked */
+HOTEL.d.giftId = '';
 HOTEL.d.freeCounts = [1, 2, 3];
 HOTEL.d.bills = [100, 250, 500];
 HOTEL.d.cheapN = 3;
 HOTEL.d.shipCost = 30;
-HOTEL.d.pairA = 'masala';
-HOTEL.d.pairB = 'coffee';
-PHARMA.d.freeShape = 'anything';
-PHARMA.d.giftId = 'ors';
+HOTEL.d.pairA = '';
+HOTEL.d.pairB = '';
+PHARMA.d.freeShape = '';
+PHARMA.d.giftId = '';
 PHARMA.d.freeCounts = [5, 10, 20];
 PHARMA.d.bills = [2000, 5000, 10000];
 PHARMA.d.cheapN = 3;
 PHARMA.d.shipCost = 120;
-PHARMA.d.pairA = 'panto';
-PHARMA.d.pairB = 'omep';
+PHARMA.d.pairA = '';
+PHARMA.d.pairB = '';
 
 
 var SHAPES = [
@@ -1222,7 +1226,7 @@ var FRESH = {
   biz: 'hotel',
   step: 0,
   goal: 'percent',
-  scope: 'cat',
+  scope: '' /* '' = not chosen yet; 'cat' or 'item' once the shopkeeper picks (UX-109) */,
   margin: 25,
   cap: 10,
   belowAct: 'exclude',
@@ -1305,11 +1309,11 @@ function applyBiz(id) {
    * ⚠️⚠️ [found live, 2026-09-26] "if the previous panel loyalty bonus and the percentage is set, it has to
    * come to this panel automatically, why it is not cascading?" Real gap: S.custOn/S.cap (screen 0, shop-wide)
    * and S.loyOn/S.loyPct (screen 2, per-offer) are two different flags, and the per-offer one was hardcoded to
-   * start off/0 in FRESH regardless of what screen 0 said. An offer now starts with loyalty inherited from the
-   * shop-wide setting — still a per-offer toggle after this, loyBar() lets it be turned off or re-percented for
-   * just this one offer, exactly as before; only the STARTING point cascades now.
+   * start off/0 in FRESH regardless of what screen 0 said. The shop-wide setting now decides whether the per-offer
+   * switch is OFFERED and its ceiling; the per-offer bonus itself STARTS OFF (UX-109, walk W22, Athi 22 Oct: a bonus nobody
+   * asked for is a second promise) - the shopkeeper turns it on, and the headline then says so in words.
    */
-  S.loyOn = S.custOn;
+  S.loyOn = false;
   S.loyPct = S.cap;
 }
 function setBiz(id) {
@@ -1544,11 +1548,6 @@ function labAllTypes() {
   closeWork();
   render();
 }
-/** Settings → on: keeps the settings so the next visit opens on the working step */
-function labContinue() {
-  labSaveSettings();
-  labStep(2);
-}
 /** the phone rail is icons only (page-skeleton.css), so below 761px the middle lists the eight types in words until one is picked */
 function labNarrow() {
   return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches);
@@ -1561,6 +1560,7 @@ function labNarrow() {
  * whether the modal is CURRENTLY open, so closing it to tweak a number and reopening doesn't lose that state.
  */
 function apply() {
+  if (applyWhy()) return; /* UX-109: nothing is worked out, saved or promised until the reach is chosen */
   /* fresh open always starts centred — a drag from a PREVIOUS open must not carry over */
   var sheet = document.querySelector('#workScrim .sheet');
   if (sheet) {
@@ -2011,7 +2011,7 @@ function workDemoHTML(tail) {
     /* ⭐ "No text below margin threshold" — the only row with no per-offer decision riding on it (it's the
        shop's own settings-screen number, just editable here too); the other two rows keep their captions,
        since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
-    '<div class="row"><span class="lab">Margin threshold</span>' +
+    '<div class="row"><span class="lab">Margin threshold<small>Changes it for every offer</small></span>' +   /* W41: this number is the shop-wide setting, not this offer's */
     workField('margin', 'mMargin', S.margin) +
     '<span class="quick">' +
     workQuick('margin', [10, 25, 50], true) +
@@ -2076,7 +2076,7 @@ function paintWork() {
        (#workPnl) went unused once "On a bill" was removed; reused here for a single on/off toggle instead of
        adding new chrome. */
     node.style.display = '';
-    node.innerHTML = '<button class="' + (SHOW_MARKUP ? 'on' : '') + '" onclick="toggleMarkup()" title="Cost-to-price markup, alongside cost">Markup</button>';
+    node.innerHTML = '<button class="' + (SHOW_MARKUP ? 'on' : '') + '" onclick="toggleMarkup()" title="How much of the cost you add on top to get the price">Markup (on cost)</button>';
     document.getElementById('workBody').innerHTML = percentTableHTML(rs);
     flip.textContent = 'Change it';
     flip.onclick = closeWork;
@@ -2103,11 +2103,12 @@ function paintWork() {
     }
     document.getElementById('workNote').textContent = note;
   }
+  document.getElementById('workPromise').textContent = draftPromise(l);
   el.classList.add('on');
   document.body.style.overflow = 'hidden';
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && !document.querySelector('.lk-pop-back')) { /* a confirm open over the sheet: Esc closes only the confirm (its own handler) */
     closeWork();
     closePriceOverlay();
   }
@@ -2899,13 +2900,11 @@ var COST_TXT = {
   supplier: 'Cost from a supplier list',
   rule: 'Cost from a rule you set'
 };
-function renderS0() {
+/** Settings, top half: the margin threshold and the loyalty ceiling the shop keeps for every offer */
+function s0LimitsHTML() {
   var am = Math.round(avgM() * 100);
   var over = num(S.cap) >= num(S.margin);
-  var h = '<div class="cols" style="grid-template-columns:1fr">';
-
-  h +=
-    '<div class="card pad">' +
+  return (
     '<div class="two">' +
     '<div><span class="lbl">Margin threshold</span>' +
     '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="' +
@@ -2942,13 +2941,12 @@ function renderS0() {
         : 'Must stay under your margin.') +
     '</div>' +
     '</div>' +
-    '</div>' +
-    '<div class="acts">' +
-    '<button class="btn pri" onclick="labContinue()">Create an offer</button>' +
-    '<button class="btn" onclick="labStep(3)">Saved offers <b>' +
-    SAVED.length +
-    '</b></button>' +
-    '</div>' +
+    '</div>'
+  );
+}
+/** Settings, bottom half: the fine print in one line, and the four boxes "Change" opens (below cost · rounding · where cost comes from · who sees cost) */
+function s0FinePrintHTML() {
+  return (
     '<div class="fine">' +
     '<span>Below cost: ' +
     BELOW_TXT[S.belowAct] +
@@ -2967,14 +2965,14 @@ function renderS0() {
     (S0_OPEN ? ' on' : '') +
     '">' +
     '<div class="grid">' +
-    '<div class="fld"><span class="lbl">When an offer goes below cost</span>' +
+    '<div class="sfld"><span class="lbl">When an offer goes below cost</span>' +
     seg('belowAct', [
       ['exclude', 'Leave it out'],
       ['cap', 'Sell it at cost'],
       ['warn', 'Do it anyway']
     ]) +
     '</div>' +
-    '<div class="fld"><span class="lbl">Prices shown as</span>' +
+    '<div class="sfld"><span class="lbl">Prices shown as</span>' +
     seg('round', [
       ['0', 'Exact'],
       ['1', inShopMoney('Whole ₹')],
@@ -2984,7 +2982,7 @@ function renderS0() {
     '<div class="sub">Always rounded down, never above the normal price.</div></div>' +
     /* ⭐ "Typed on each item" still opens the price overlay on click, same as before — one thing to
             click, not a choice and then a separate hunt for where to actually type. */
-    '<div class="fld"><span class="lbl">Where cost comes from</span><div class="seg">' +
+    '<div class="sfld"><span class="lbl">Where cost comes from</span><div class="seg">' +
     [
       ['typed', 'Typed on each item', 1],
       ['purchases', 'What you last paid', 0],
@@ -3009,15 +3007,28 @@ function renderS0() {
     '</div>' +
     '<div class="sub">Cost is yours alone. No customer or link ever sees it.</div></div>' +
     (S.biz === 'mine' && savedLive() && COST_ACCESS.is_owner
-      ? '<div class="fld"><span class="lbl">Who else sees cost</span><div class="seg">' +
+      ? '<div class="sfld"><span class="lbl">Who else sees cost</span><div class="seg">' +
         "<button onclick=\"window.open('/employees.html','cb_employees')\">Open Employees</button></div>" /* IX0: "Sees costs" is granted on the person's row in CB Employees (cap-employees.js can_see_costs), never in the workshop */ +
         '<div class="sub">Yours alone by default.</div></div>'
       : '') +
     '</div>' +
+    '</div>'
+  );
+}
+/**
+ * The landing (step 0): the settings, and one line saying what to do. W30/W31: no second door to the form or the shelf - the left menu picks the
+ * kind, the right column is the shelf. W34: on a phone the rail is bare glyphs, so the eight kinds are listed in words above the settings.
+ */
+function renderS0() {
+  return (
+    (labNarrow() ? typesHTML() : '') +
+    '<div class="cols" style="grid-template-columns:1fr"><div class="card pad">' +
+    s0LimitsHTML() +
+    '<p class="landing-hint" data-testid="landing-hint">Pick the kind of offer on the left to start.</p>' +
+    s0FinePrintHTML() +
     '</div>' +
-    '</div>';
-
-  return h + '</div>';
+    '</div>'
+  );
 }
 
 /* ═══ SCREEN 1 · WHAT ══════════════════════════════════════════════════ */
@@ -3041,7 +3052,7 @@ function typesHTML() {
       h += '<div class="grouphead">' + KINDS[item.kind] + '<i></i></div>';
     }
     h +=
-      '<button class="goal' + (S.goal === item.id ? ' on' : '') + '" data-testid="type-' + item.id + '" onclick="pickGoal(\'' + item.id + '\')"><span class="gi">' +
+      '<button class="goal' + (TYPE_PICKED && S.goal === item.id ? ' on' : '') + '" data-testid="type-' + item.id + '" onclick="pickGoal(\'' + item.id + '\')"><span class="gi">' +
       inShopMoney(item.icon) + '</span><b>' + inShopMoney(item.n) + '</b><span class="ex">' + inShopMoney(item.ex) + '</span></button>';
   });
   return h + '</div></div>';
@@ -3146,34 +3157,43 @@ function nameCell(p) {
  * ⚠️ `catOnly` (free/cheapest's OWN picker, which only ever means a category) is untouched — it still opens
  * the simple single-chip category picker via selectOf(), unrelated to this.
  */
+/** a count in words: "1 item", "12 items" */
+function itemsWord(count) {
+  return count + ' item' + (count === 1 ? '' : 's');
+}
+/** up to three names then "and N more", with the count first: "12 items: A, B, C and 9 more" */
+function namesWords(names) {
+  return itemsWord(names.length) + ': ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '');
+}
+/** the scope a state (the form's S, or a saved offer's snapshot) holds, in words: "all 12 items in Sweets", "3 items: A, B, C", or '' while nothing is chosen (UX-109: never a default) */
+function scopeWords(state) {
+  if (state.scope === 'cat' && state.catId) return 'all ' + itemsWord(catItems(state.catId).length) + ' in ' + catName(state.catId);
+  var wanted = state.scope === 'item' ? state.itemIds || [] : [],
+    picked = wanted.map(byId).filter(Boolean),
+    gone = wanted.length - picked.length;
+  if (!wanted.length) return '';
+  var shown = picked.length ? namesWords(picked.map(function (item) { return item.name; })) : '0 items';
+  return shown + (gone ? ', ' + gone + ' no longer in your catalogue' : '');
+}
+/** the reach the form currently holds in words, or '' while nothing is chosen */
+function reachWords() {
+  return scopeWords(S);
+}
+/**
+ * "Who and what does this apply to?" - the first thing a line offer asks and the only way to carry on (UX-109, walk W21). Nothing is pre-chosen:
+ * the card says "nothing chosen yet" in red until the shopkeeper picks, then states the reach and the count in a prominent line.
+ * catOnly = the "cheapest is free" shape, which takes a whole category and nothing else.
+ */
 function scopeRow(catOnly) {
-  if (catOnly) {
-    return (
-      '<div class="f"><span class="lbl">Apply it to</span>' +
-      selectOf(
-        CATS.map(function (item) {
-          return [item.id, item.name];
-        }),
-        S.catId,
-        'setCat'
-      ) +
-      '</div>'
-    );
-  }
-  var nestedLabel =
-    S.scope === 'cat'
-      ? 'Whole category — ' + esc(catName(S.catId) || '—')
-      : S.itemIds && S.itemIds.length
-        ? S.itemIds.length === 1
-          ? esc((byId(S.itemIds[0]) || {}).name || '1 item')
-          : S.itemIds.length + ' items chosen'
-        : 'Choose…';
+  var words = reachWords(),
+    picker = catOnly
+      ? selectOf(CATS.map(function (item) { return [item.id, item.name]; }), S.catId, 'setCat')
+      : '<button type="button" class="btn scope" data-testid="reach-pick" style="width:100%;justify-content:space-between;font-weight:700" onclick="openApplyPicker()"><span>' +
+        (words ? 'Change what it applies to' : 'Choose items or a category') + '</span><span style="color:var(--blue-i)">▾</span></button>';
   return (
-    '<div class="f"><span class="lbl">Apply it to</span>' +
-    '<button type="button" class="btn scope" style="width:100%;justify-content:space-between;font-weight:700" ' +
-    'onclick="openApplyPicker()"><span>' +
-    nestedLabel +
-    '</span><span style="color:var(--blue-i)">▾</span></button></div>'
+    '<div class="reach' + (words ? ' set' : '') + '" data-testid="reach-card"><span class="ask">Who and what does this apply to?</span>' +
+    '<div class="line' + (words ? '' : ' none') + '" data-testid="reach-line">' + (words ? 'Applies to: ' + esc(words) : 'Applies to: nothing chosen yet') + '</div>' +
+    picker + '</div>'
   );
 }
 function setCat(v) {
@@ -3255,23 +3275,57 @@ function loyBar() {
       '" step="0.5" value="' +
       esc(S.loyPct == null ? '' : String(S.loyPct)) +
       '" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>' +
-      '<span class="ls">either the free thing or the bonus</span>';
+      '<span class="ls">they get the free thing or the bonus, not both</span>';
   }
   return h + '</div>';
 }
 
 /**
- * ⭐ [2026-09-26, percent/amount only] "Work it out" is refused (per offer-lab-workitout.html) until there is
- * something real to work out — no scope chosen, or a zero/blank rate — with the reason said right beside the
- * button rather than a silent no-op click. Other goal kinds are untouched; the doc only covers this pair.
+ * "Work it out" is refused until there is something real to work out, with the reason said right beside the button rather than a silent
+ * no-op click (offer-lab-workitout.html; UX-109 widened it from percent/amount to every kind: nothing is pre-chosen, so each kind says what is still missing).
  */
+var WHY_REACH = 'Choose what it applies to first.';
+/** has the reach been chosen: a whole category, or at least one item */
+function reachChosen() {
+  return S.scope === 'cat' ? !!S.catId : !!(S.scope === 'item' && S.itemIds && S.itemIds.length);
+}
+/** percent / amount: the reach first, then a rate that makes sense */
+function whyRate() {
+  if (!reachChosen()) return WHY_REACH;
+  var rate = S.goal === 'percent' ? num(S.pctOff) : num(S.rsOff);
+  if (rate <= 0) return S.goal === 'percent' ? 'Take off more than zero.' : 'Take off more than ' + moneySymbol() + '0.';
+  return S.goal === 'percent' && rate > 95 ? 'Take off 95% or less.' : '';
+}
+/** what is still missing for a free offer, by shape: a gift, an item, a pair or a category */
+var FREE_MISSING = {
+  anything: function () { return byId(S.giftId) ? '' : 'Choose what is free first.'; },
+  same: function () { return byId(S.itemId) ? '' : 'Choose the item first.'; },
+  pair: function () { return byId(S.pairA) && byId(S.pairB) ? '' : 'Choose what they buy and what they get first.'; },
+  cheapest: function () { return S.catId ? '' : WHY_REACH; }
+};
+function whyFree() {
+  var check = FREE_MISSING[S.freeShape];
+  return check ? check() : 'Choose which kind of free offer first.';
+}
+function whyBundle() {
+  if (!(byId(S.bunA) && byId(S.bunB))) return 'Choose the two things first.';
+  return num(S.bunPrice) > 0 ? '' : 'Type what they cost together.';
+}
+function whyBand() {
+  return num(S.bandLo) > num(S.bandHi) ? 'The smallest bill must not be above the largest.' : '';
+}
+var WHY_BY_GOAL = {
+  percent: whyRate,
+  amount: whyRate,
+  qty: function () { return reachChosen() ? '' : WHY_REACH; },
+  free: whyFree,
+  bundle: whyBundle,
+  band: whyBand
+};
+/** why "Work it out" is off right now ('' = it may go): each kind says what is still missing */
 function applyWhy() {
-  if (S.goal !== 'percent' && S.goal !== 'amount') return '';
-  var scopeOk = S.scope === 'cat' ? !!S.catId : !!(S.itemIds && S.itemIds.length);
-  if (!scopeOk) return 'Choose what it applies to first.';
-  var val = S.goal === 'percent' ? num(S.pctOff) : num(S.rsOff);
-  if (val <= 0) return S.goal === 'percent' ? 'Take off more than zero.' : 'Take off more than ' + moneySymbol() + '0.';
-  return '';
+  var check = WHY_BY_GOAL[S.goal];
+  return check ? check() : '';
 }
 function renderS2() {
   var g = goalOf(S.goal),
@@ -3309,9 +3363,9 @@ function cfgLine() {
     case 'qty':
       return 'Up to three steps. The percentage comes off <b>each one</b>.';
     case 'free':
-      return 'Four shapes. The arithmetic differs for each.';
+      return 'Pick one of the four ways below.';
     case 'bundle':
-      return 'Two things, one price. Break-even is the two costs.';
+      return 'Two things, one price. Below what the two cost you, you lose money.';
     case 'spend':
       return 'Worst at the threshold, better above it.';
     case 'ship':
@@ -3383,169 +3437,201 @@ function sumLineHTML() {
         '</span>'
     : '<span class="big">' + off + '%</span><span class="wd">off, for everyone.</span>';
 }
-function cfgHTML() {
-  switch (S.goal) {
-    case 'percent':
-      return (
-        scopeRow() +
-        '<div class="pair">' +
-        /* ⚠️ [found live, 2026-09-26] "it is not the customer pay this, rather discount applied, the wording
-           says the other way" — "Everyone pays this" reads as if the field held a PRICE, not the discount
-           that's actually being typed. Reworded to describe the discount itself, matching "For selected
-           customers only" right beside it. */
-        '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>' +
-        '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="' +
-        esc(S.pctOff == null ? '' : String(S.pctOff)) +
-        '" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>' +
-        '<div class="hint">Applied to every customer.</div></div>' +
-        loyBoxHTML() +
-        '</div>' +
-        '<div class="sum">' +
-        sumLineHTML() +
-        '</div>'
-      );
-    case 'amount':
-      return (
-        scopeRow() +
-        '<div class="pair">' +
-        '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>' +
-        '<span class="numf"><span class="u">' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.rsOff == null ? '' : String(S.rsOff)) +
-        '" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>' +
-        '<div class="hint">A different percentage on each item.</div></div>' +
-        loyBoxHTML() +
-        '</div>'
-      );
-    case 'qty':
-      return (
-        '<div class="f"><span class="lbl">Steps</span>' +
-        '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div></div>' +
-        loyBar() +
-        scopeRow()
-      );
-    case 'free':
-      var h =
-        '<span class="lbl">Which shape?</span><div class="shapes">' +
-        SHAPES.map(function (item) {
-          return (
-            '<button class="shape ' +
-            (S.freeShape === item.id ? 'on' : '') +
-            '" onclick="setShape(\'' +
-            item.id +
-            '\')">' +
-            '<b>' +
-            item.n +
-            '</b><span>' +
-            inShopMoney(item.ex) +
-            '</span></button>'
-          );
-        }).join('') +
-        '</div>';
-      if (S.freeShape === 'anything')
-        h +=
-          '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">What is free</span>' +
-          selectOf(prodOpts(P), S.giftId, 'setGift') +
-          '<div class="hint">Only the gift matters.</div>' +
-          '<div class="f"><span class="lbl">Three bills to look at</span>' +
-          '<div class="hint" style="margin-top:0">Edit them in the headings.</div>';
-      if (S.freeShape === 'same')
-        h +=
-          '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">The item</span>' +
-          selectOf(prodOpts(P), S.itemId, 'setItem') +
-          '</div>' +
-          '<div class="f"><span class="lbl">How many they buy</span>' +
-          '<div class="hint" style="margin-top:0">Compare up to three in the headings, then pick one with its radio.</div>' +
-          '</div></div>';
-      if (S.freeShape === 'pair')
-        h +=
-          '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">They buy</span>' +
-          selectOf(prodOpts(P), S.pairA, 'setA') +
-          '</div>' +
-          '<div class="f"><span class="lbl">They get, free</span>' +
-          selectOf(prodOpts(P), S.pairB, 'setB') +
-          '</div></div>';
-      if (S.freeShape === 'cheapest')
-        h +=
-          '<div class="two" style="margin-top:12px">' +
-          scopeRow(true) +
-          '<div class="f"><span class="lbl">They buy</span>' +
-          '<div class="inp"><input type="text" inputmode="decimal" min="2" max="20" value="' +
-          esc(S.cheapN == null ? '' : String(S.cheapN)) +
-          '" data-key="cheapN" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>' +
-          '</div></div>';
-      return h;
-    case 'bundle':
-      return (
-        '<div class="two"><div class="f"><span class="lbl">This</span>' +
-        selectOf(prodOpts(P), S.bunA, 'setA') +
-        '</div>' +
-        '<div class="f"><span class="lbl">and this</span>' +
-        selectOf(prodOpts(P), S.bunB, 'setB') +
-        '</div></div>' +
-        '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.bunPrice == null ? '' : String(S.bunPrice)) +
-        '" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>'
-      );
-    case 'spend':
-      return (
-        '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.spendAt == null ? '' : String(S.spendAt)) +
-        '" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>' +
-        '<div class="f"><span class="lbl">Then give back</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.spendVal == null ? '' : String(S.spendVal)) +
-        '" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>'
-      );
-    case 'ship':
-      return (
-        '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.shipCost == null ? '' : String(S.shipCost)) +
-        '" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>' +
-        '<div class="hint">Your average, per drop.</div>' +
-        '<div class="f"><span class="lbl">Free above</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.shipAt == null ? '' : String(S.shipAt)) +
-        '" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>' +
-        '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.shipCharge == null ? '' : String(S.shipCharge)) +
-        '" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>' +
-        '<div class="hint">Zero means free.</div></div>'
-      );
-    case 'band':
-      return (
-        '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.bandLo == null ? '' : String(S.bandLo)) +
-        '" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>' +
-        '<div class="f"><span class="lbl">Largest</span>' +
-        '<div class="inp"><span>' +
-        moneySymbol() +
-        '</span><input type="text" inputmode="decimal" min="0" value="' +
-        esc(S.bandHi == null ? '' : String(S.bandHi)) +
-        '" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>'
-      );
+/** the form fields of "the same percentage off everything picked" */
+function cfgPercent() {
+  return (
+    scopeRow() +
+    '<div class="pair">' +
+    /* ⚠️ [found live, 2026-09-26] "it is not the customer pay this, rather discount applied, the wording
+       says the other way" — "Everyone pays this" reads as if the field held a PRICE, not the discount
+       that's actually being typed. Reworded to describe the discount itself, matching "For selected
+       customers only" right beside it. */
+    '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>' +
+    '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="' +
+    esc(S.pctOff == null ? '' : String(S.pctOff)) +
+    '" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>' +
+    '<div class="hint">Applied to every customer.</div></div>' +
+    loyBoxHTML() +
+    '</div>' +
+    '<div class="sum">' +
+    sumLineHTML() +
+    '</div>'
+  );
+}
+/** the form fields of "rupees off each" */
+function cfgAmount() {
+  return (
+    scopeRow() +
+    '<div class="pair">' +
+    '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>' +
+    '<span class="numf"><span class="u">' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.rsOff == null ? '' : String(S.rsOff)) +
+    '" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>' +
+    '<div class="hint">A different percentage on each item.</div></div>' +
+    loyBoxHTML() +
+    '</div>'
+  );
+}
+/** the form fields of "quantity steps" */
+function cfgQty() {
+  return (
+    '<div class="f"><span class="lbl">Steps</span>' +
+    '<div class="hint" style="margin-top:0">Three steps at most. You set them in the table that opens with Work it out.</div></div>' +
+    loyBar() +
+    scopeRow()
+  );
+}
+/** the four shape buttons of "something free"; none is lit until one is chosen (UX-109) */
+function freeShapeButtons() {
+  var buttons = SHAPES.map(function (item) {
+    return (
+      '<button class="shape ' + (S.freeShape === item.id ? 'on' : '') + '" onclick="setShape(\'' + item.id + '\')">' +
+      '<b>' + item.n + '</b><span>' + inShopMoney(item.ex) + '</span></button>'
+    );
+  });
+  return '<span class="lbl">Which shape?</span><div class="shapes">' + buttons.join('') + '</div>';
+}
+/** the fields each shape of "something free" asks for once it is chosen */
+var FREE_FIELDS = {
+  anything: function () {
+    return (
+      '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">What is free</span>' +
+      selectOf(prodOpts(P), S.giftId, 'setGift') +
+      '<div class="hint">Only the gift matters.</div>' +
+      '<div class="f"><span class="lbl">Three bills to look at</span>' +
+      '<div class="hint" style="margin-top:0">You set them in the table that opens with Work it out.</div>'
+    );
+  },
+  same: function () {
+    return (
+      '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">The item</span>' +
+      selectOf(prodOpts(P), S.itemId, 'setItem') +
+      '</div>' +
+      '<div class="f"><span class="lbl">How many they buy</span>' +
+      '<div class="hint" style="margin-top:0">Compare up to three in the table that opens with Work it out, then pick one.</div>' +
+      '</div>' + '</div>'
+    );
+  },
+  pair: function () {
+    return (
+      '<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">They buy</span>' +
+      selectOf(prodOpts(P), S.pairA, 'setA') +
+      '</div>' +
+      '<div class="f"><span class="lbl">They get, free</span>' +
+      selectOf(prodOpts(P), S.pairB, 'setB') +
+      '</div>' + '</div>'
+    );
+  },
+  cheapest: function () {
+    return (
+      '<div class="two" style="margin-top:12px">' +
+      scopeRow(true) +
+      '<div class="f"><span class="lbl">They buy</span>' +
+      '<div class="inp"><input type="text" inputmode="decimal" min="2" max="20" value="' +
+      esc(S.cheapN == null ? '' : String(S.cheapN)) +
+      '" data-key="cheapN" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>' +
+      '</div>' + '</div>'
+    );
   }
-  return '';
+};
+/** the form fields of "something free, by shape" */
+function cfgFree() {
+  var fields = FREE_FIELDS[S.freeShape];
+  return freeShapeButtons() + (fields ? fields() : '');
+}
+/** the form fields of "two things at one price" */
+function cfgBundle() {
+  return (
+    '<div class="two"><div class="f"><span class="lbl">This</span>' +
+    selectOf(prodOpts(P), S.bunA, 'setA') +
+    '</div>' +
+    '<div class="f"><span class="lbl">and this</span>' +
+    selectOf(prodOpts(P), S.bunB, 'setB') +
+    '</div></div>' +
+    '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.bunPrice == null ? '' : String(S.bunPrice)) +
+    '" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>'
+  );
+}
+/** the form fields of "reward a big bill" */
+function cfgSpend() {
+  return (
+    '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.spendAt == null ? '' : String(S.spendAt)) +
+    '" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>' +
+    '<div class="f"><span class="lbl">Then give back</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.spendVal == null ? '' : String(S.spendVal)) +
+    '" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>'
+  );
+}
+/** the form fields of "free delivery" */
+function cfgShip() {
+  return (
+    '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.shipCost == null ? '' : String(S.shipCost)) +
+    '" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>' +
+    '<div class="hint">Your average, per drop.</div>' +
+    '<div class="f"><span class="lbl">Free above</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.shipAt == null ? '' : String(S.shipAt)) +
+    '" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>' +
+    '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.shipCharge == null ? '' : String(S.shipCharge)) +
+    '" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>' +
+    '<div class="hint">Zero means free.</div></div>'
+  );
+}
+/** the form fields of "refuse very small or big bills" */
+function cfgBand() {
+  return (
+    '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.bandLo == null ? '' : String(S.bandLo)) +
+    '" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>' +
+    '<div class="f"><span class="lbl">Largest</span>' +
+    '<div class="inp"><span>' +
+    moneySymbol() +
+    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    esc(S.bandHi == null ? '' : String(S.bandHi)) +
+    '" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>'
+  );
+}
+/** each kind of offer paints its own fields */
+var CFG_BY_GOAL = {
+  percent: cfgPercent,
+  amount: cfgAmount,
+  qty: cfgQty,
+  free: cfgFree,
+  bundle: cfgBundle,
+  spend: cfgSpend,
+  ship: cfgShip,
+  band: cfgBand
+};
+/** the form fields of the picked kind (the reach card first, nothing pre-chosen) */
+function cfgHTML() {
+  var build = CFG_BY_GOAL[S.goal];
+  return build ? build() : '';
 }
 function setGift(v) {
   S.giftId = v;
@@ -4885,8 +4971,6 @@ function buildBiz(key, rows, who) {
   var cats = Object.keys(byCat).map(function (item) {
     return [item, catDisplayName(item)];
   });
-  var firstItem = (rows[0] || [])[0],
-    secondItem = (rows[1] || rows[0] || [])[0];
   BIZ[key] = {
     name: who,
     cats: cats,
@@ -4894,9 +4978,9 @@ function buildBiz(key, rows, who) {
     margin: 25,
     cap: 10,
     d: {
-      catId: (cats[0] || [])[0] || '',
-      itemId: firstItem || '',
-      itemIds: firstItem ? [firstItem] : [],
+      catId: '',
+      itemId: '',
+      itemIds: [],
       pctOff: 10,
       rsOff: 10,
       tiers: [
@@ -4907,11 +4991,11 @@ function buildBiz(key, rows, who) {
       tierView: 2,
       spendAt: 500,
       spendVal: 50,
-      buyId: firstItem,
-      getId: firstItem,
+      buyId: '',
+      getId: '',
       getOff: 100,
-      bunA: firstItem,
-      bunB: secondItem,
+      bunA: '',
+      bunB: '',
       bunPrice: 0,
       shipAt: 300,
       shipCharge: 0,
@@ -4920,14 +5004,14 @@ function buildBiz(key, rows, who) {
       custId: null
     }
   };
-  BIZ[key].d.freeShape = 'anything';
-  BIZ[key].d.giftId = firstItem;
+  BIZ[key].d.freeShape = '';
+  BIZ[key].d.giftId = '';
   BIZ[key].d.freeCounts = [1, 2, 3];
   BIZ[key].d.bills = [100, 250, 500];
   BIZ[key].d.cheapN = 3;
   BIZ[key].d.shipCost = 30;
-  BIZ[key].d.pairA = firstItem;
-  BIZ[key].d.pairB = secondItem;
+  BIZ[key].d.pairA = '';
+  BIZ[key].d.pairB = '';
 }
 function labApplyCatalogue(nestedItems, who, fromCache) {
   var amountOf = function (v) {
@@ -5039,6 +5123,7 @@ function exportCsv() {
   document.body.appendChild(node);
   node.click();
   document.body.removeChild(node);
+  toastSay('Exported ' + itemsWord(P.length) + ' to ' + node.download + '.'); /* W45: say what and how many */
   setTimeout(function () {
     URL.revokeObjectURL(node.href);
   }, 1000);
@@ -5097,14 +5182,17 @@ function saveName(l) {
  * changed, so whatever review got it to approved/live/paused applied to a list that no longer exists.
  */
 /** "Add to cart": the offer is a draft on the shelf; the page stays on the form and the cart on the right shows it, with its attach actions */
-function afterSave() {
+function afterSave(offNote) {
+  var shown = label(),
+    twin = SAVED.filter(function (x) { return x.title === shown.title && x.detail === shown.detail; }).length > 1;
   EDITING = null;
-  CART_SAID = 'Added to your offers (draft).';
+  CART_SAID = 'Added as a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + '. Not live yet.' + (offNote || '') + (twin ? ' You already have one just like it.' : '');
   closeWork();
   render();
 }
 async function saveOffer() {
-  var l = label(),
+  var offNote = takenOffNote(),
+    l = label(),
     k = keyNumber(),
     sub = subKindOf();
   if (!savedLive()) {
@@ -5135,7 +5223,7 @@ async function saveOffer() {
         costs: costPrint()
       });
     }
-    afterSave();
+    afterSave(offNote);
     return;
   }
   if (!sub) {
@@ -5157,11 +5245,13 @@ async function saveOffer() {
     ? await defFetch('PUT', '/' + EDITING, { rules: rules, status: 'draft' })
     : await defFetch('POST', '', { kind: 'offer', sub_kind: sub, name: saveName(l), status: 'draft', rules: rules });
   if (!r.ok) {
-    toastSay((r.body && r.body.message) || 'That did not save.');
+    var refused = (r.body && r.body.message) || 'That did not save.';
+    document.getElementById('workNote').textContent = refused; /* W42: said in the sheet that is open, where the person is looking */
+    toastSay(refused);
     return;
   }
   await loadSaved();
-  afterSave();
+  afterSave(offNote);
 }
 /** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
 async function loadSaved() {
@@ -5178,7 +5268,7 @@ async function loadSaved() {
       when: new Date(item.created_at),
       biz: S.biz,
       remote: true,
-      title: lab.title || item.sub_kind || item.name,
+      title: lab.title || SUBKIND_TITLE[item.sub_kind] || item.name,
       detail: lab.detail || '',
       n: lab.n || '—',
       k: lab.k || 'saved',
@@ -5488,9 +5578,11 @@ function savedSummaryHTML() {
  * say PAUSED, or "why is this showing at the till" and "why did we never launch this" become the same question.
  */
 /** the status word as a pill (draft · approved · live · paused): one place, the shelf and the cart both draw it */
+/** the status as the shopkeeper says it: "approved" alone does not say it is NOT live yet (walk W32/W35) */
+var STATUS_WORD = { approved: 'approved, not live yet' };
 function savedPillHTML(item) {
   var pillClass = item.status === 'live' ? 'live' : item.status === 'paused' ? 'paused' : item.status === 'approved' ? 'appr' : 'draft';
-  return '<span class="pill p-' + pillClass + '">' + esc(item.status) + '</span>';
+  return '<span class="pill p-' + pillClass + '">' + esc(STATUS_WORD[item.status] || item.status) + '</span>';
 }
 /** a saved offer's title and its one-line detail (the shelf adds which shop it was worked out on) */
 function savedTitleHTML(item, withShop) {
@@ -5539,6 +5631,17 @@ function savedLinksHTML(item) {
   );
 }
 /** the shelf's next step for each status: the button's words, its handler's target status, and whether it is the primary one */
+/** a definition made elsewhere carries only its engine kind: shown in the lab's own words, never as a code (walk W35) */
+var SUBKIND_TITLE = {
+  percent_off: 'A percentage off',
+  amount_off: 'Rupees off',
+  tier_price: 'Cheaper when they buy more',
+  bundle_price: 'Two things at one price',
+  threshold: 'Reward a big bill',
+  shipping: 'Free delivery',
+  buy_x_get_y: 'Something free',
+  mix_and_match: 'Something free'
+};
 var SHELF_STEP = {
   draft: ['Approve', 'approved', false],
   approved: ['Go live', 'live', true],
@@ -5551,8 +5654,8 @@ function savedActionsHTML(item) {
   return (
     '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">' +
     '<button class="btn sm" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
-    (step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" onclick="setStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '') +
-    '<button class="btn sm" onclick="dropSaved(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>'
+    (step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" data-testid="shelf-step" onclick="askStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '') +
+    '<button class="btn sm" data-testid="shelf-drop" onclick="askDrop(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>'
   );
 }
 /** one row of the Saved offers shelf, with every action the status allows (the cart draws a shorter row from the same pieces) */
@@ -5608,7 +5711,15 @@ function cartItem(id) {
     return x.id === id;
   })[0];
 }
-/** one cart row: the shelf's title and status pill, the two attach buttons, and the outcome of the last attach right under them */
+/**
+ * The row's attach buttons follow the row's real status (walk W32): a live row has no "Make live" (it says where it is live and offers to widen it
+ * when it is only for a group); a paused one resumes; a draft or approved one goes live. "Only for a group" is offered on all of them.
+ */
+function cartLiveButton(item) {
+  var words = item.status === 'paused' ? 'Resume' : item.status === 'live' ? (item.group ? 'Make live for everyone' : '') : 'Make live';
+  return words ? '<button class="btn sm pri" data-testid="cart-live" onclick="cartLive(\'' + item.id + '\')">' + words + '</button>' : '';
+}
+/** one cart row: the shelf's title and status pill, the attach buttons its status allows, and the outcome of the last attach right under them */
 function cartRowHTML(item) {
   var note = CART_NOTES[item.id],
     live = item.status === 'live';
@@ -5617,7 +5728,7 @@ function cartRowHTML(item) {
     savedTitleHTML(item, false) +
     '<div class="cartacts">' + savedPillHTML(item) +
     '<button class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
-    '<button class="btn sm pri" data-testid="cart-live"' + (live && !item.group ? ' disabled' : '') + ' onclick="cartLive(\'' + item.id + '\')">Make live</button>' +
+    cartLiveButton(item) +
     '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button></div>' +
     (CART_PICK === item.id ? cartPickerHTML(item) : '') +
     (note || live
@@ -5626,19 +5737,30 @@ function cartRowHTML(item) {
     '</div>'
   );
 }
-/** the group picker: the four automatic groups, then the shop's own named groups */
+/** the group picker: starts on "Choose a group", and "Make live for them" waits until one is chosen (W25) */
 function cartPickerHTML(item) {
   var named = (CART_GROUPS || []).map(function (name) {
     return '<option value="group:' + esc(name) + '">' + esc(name) + '</option>';
   });
   return (
-    '<div class="cartpick"><select aria-label="Which group" data-testid="cart-group-pick" id="cartGroupPick">' +
+    '<div class="cartpick"><select aria-label="Which group" data-testid="cart-group-pick" id="cartGroupPick" onchange="cartGroupChosen(this)"><option value="" selected disabled>Choose a group…</option>' +
     SYSTEM_GROUPS.map(function (pair) {
       return '<option value="' + pair[0] + '">' + esc(pair[1]) + '</option>';
     }).join('') +
     (named.length ? '<optgroup label="Your groups">' + named.join('') + '</optgroup>' : '') +
-    '</select><button class="btn sm pri" data-testid="cart-group-apply" onclick="cartApplyGroup(\'' + item.id + '\')">Make live for them</button></div>'
+    '</select><button class="btn sm pri" data-testid="cart-group-apply" disabled onclick="cartApplyGroup(\'' + item.id + '\')">Make live for them</button></div>'
   );
+}
+/** a group was picked: the button that makes the offer live for them wakes up */
+function cartGroupChosen(select) {
+  var applyButton = select.parentNode.querySelector('[data-testid="cart-group-apply"]');
+  if (applyButton) applyButton.disabled = !select.value;
+}
+/** the shelf's title tells the truth about what is on it: all drafts, all live, or a mix (walk W32) */
+function cartTitle() {
+  var live = SAVED.filter(function (x) { return x.status === 'live'; }).length;
+  if (!live) return 'Your offers (draft)';
+  return live === SAVED.length ? 'Your offers (live)' : 'Your offers';
 }
 /** the right column; hidden in the Combo Lab and on the full Saved offers screen (which is the same shelf, whole) */
 function renderCart() {
@@ -5650,8 +5772,9 @@ function renderCart() {
   body.classList.toggle('solo', !show);
   if (!show) return;
   var rest = SAVED.length - CART_ROWS;
+  node.setAttribute('aria-label', cartTitle());
   node.innerHTML =
-    '<h2 class="h" data-testid="cart-title">Your offers (draft)</h2>' +
+    '<h2 class="h" data-testid="cart-title">' + cartTitle() + '</h2>' +
     '<p class="hs">' + (savedLive() ? 'Only live offers reach a bill.' : 'Kept in this tab only.') + '</p>' +
     (CART_SAID ? '<div class="cartnote ok" role="status" data-testid="cart-said">' + esc(CART_SAID) + '</div>' : '') +
     (SAVED.length
@@ -5659,12 +5782,36 @@ function renderCart() {
       : '<p class="hs" data-testid="cart-empty">Nothing yet. Work an offer out, then add it.</p>') +
     (SAVED.length ? '<button class="lk-more" data-testid="cart-all" onclick="labStep(3)">' + (rest > 0 ? 'and ' + rest + ' more' : 'All saved offers') + ' ›</button>' : '');
 }
-/** "Make live": draft -> approved -> live (the shelf's own steps, so the log shows who approved), for everyone */
+/** "Make live": asks first (what, whom, on what, from when), then draft -> approved -> live (the shelf's own steps, so the log shows who approved) */
 async function cartLive(id) {
   var item = cartItem(id);
   if (!item) return;
   if (!savedLive()) return cartSay(id, SIGN_IN_SAY, 'bad');
-  await attachOffer(item, null);
+  await groupCountFor(item.group);
+  if (item.status === 'paused') return askPromise(item, 'resume', null, function () { return resumeOffer(item); });
+  askPromise(item, 'live', null, function () { return attachOffer(item, null); });
+}
+/** Resume: the status only, so the offer's rules (its group included) are left exactly as they were */
+async function resumeOffer(item) {
+  cartSay(item.id, 'Saving…');
+  await setStatus(item.id, 'live');
+  var back = cartItem(item.id),
+    where = item.group ? 'only for ' + (item.groupName || groupNameOf(item.group)) : 'for everyone';
+  CART_NOTES[item.id] = back && back.status === 'live' ? { text: 'Live again, ' + where + '.', tone: 'ok' } : { text: 'That did not go live again.', tone: 'bad' };
+  render();
+}
+var GROUP_COUNTS = {}; /* group value -> customers in it now; null = the count could not be read */
+/** how many customers an automatic group holds, asked once before a confirm names it; a named group has no count route yet, so none is claimed */
+async function groupCountFor(value) {
+  var automatic = SYSTEM_GROUPS.some(function (pair) { return pair[0] === value; });
+  if (!value || !automatic || GROUP_COUNTS[value] !== undefined) return;
+  var reply = await apiFetch('GET', API + '/api/relationships/customers?segment=' + encodeURIComponent(value) + '&limit=1');
+  GROUP_COUNTS[value] = reply.ok && reply.body && typeof reply.body.count === 'number' ? reply.body.count : null;
+}
+/** a group named for a confirm: its name and how many customers it holds now (or that the count is not known here) */
+function groupLabel(value) {
+  var size = GROUP_COUNTS[value];
+  return groupNameOf(value) + (typeof size === 'number' ? ' (' + size + ' customer' + (size === 1 ? '' : 's') + ' now)' : ' (member count not shown here)');
 }
 /** "Only for a group": opens the picker (and reads the shop's named groups the first time) */
 async function cartOpenGroup(id) {
@@ -5687,8 +5834,100 @@ function groupNameOf(value) {
 async function cartApplyGroup(id) {
   var item = cartItem(id),
     pick = document.getElementById('cartGroupPick');
-  if (!item || !pick) return;
-  await attachOffer(item, { customer_group: pick.value, customer_name: groupNameOf(pick.value) });
+  if (!item || !pick || !pick.value) return;
+  await groupCountFor(pick.value);
+  var patch = { customer_group: pick.value, customer_name: groupNameOf(pick.value) };
+  askPromise(item, 'group', patch, function () { return attachOffer(item, patch); });
+}
+/* ═══ THE PROMISE, IN WORDS (UX-109 · Athi 22 Oct: every action that commits a money promise is a deliberate act) ═══════════════════════════════
+ * OWNS  the confirm every commit control asks first: Make live, Only for a group, Approve, Go live, Pause, Resume, Retire, Delete, on one item or many.
+ *       It states WHAT (the offer), ON WHAT (the items or category, with the count), FOR WHOM and FROM WHEN, in the lab kit's one popup (CBLabKit.confirm).
+ *       Cancel, the x and Esc change nothing. The create flow's own deliberate act is the first step of the form (scopeRow): nothing pre-chosen.
+ * FLOW  O2C step 1 · price (offers) */
+/** a saved offer's reach in words, from its snapshot: "all 12 items in Sweets", "3 items: A, B", "every bill of ₹500 or more" */
+function savedReachWords(savedOffer) {
+  var snap = savedOffer.snap || {},
+    names = savedItemNames(savedOffer) || [],
+    special = REACH_BY_GOAL[snap.goal];
+  if (special) return special(snap, names);
+  return scopeWords(snap) || fallbackReach(names, snap);
+}
+/** names with the count; with none left it still says how many were chosen and that they are gone: never a promise without a number */
+function fallbackReach(names, snap) {
+  if (names.length) return namesWords(names);
+  var wanted = ((snap && snap.itemIds) || []).length || (snap && snap.itemId ? 1 : 0);
+  return wanted ? '0 items: ' + (wanted === 1 ? 'the item you chose is' : 'the ' + wanted + ' items you chose are') + ' no longer in your catalogue' : '0 items found in your catalogue';
+}
+/** the kinds whose reach is not "a category or some items": a bill, a pair, a gift */
+var REACH_BY_GOAL = {
+  spend: function (snap) { return 'every bill of ' + M0(num(snap.spendAt)) + ' or more'; },
+  ship: function (snap) { return 'every bill above ' + M0(num(snap.shipAt)) + ' (free delivery)'; },
+  band: function () { return 'every bill (very small or very big ones are refused)'; },
+  bundle: function (snap) { return 'these two together: ' + [snap.bunA, snap.bunB].map(function (id) { return (byId(id) || {}).name || '?'; }).join(' + '); },
+  free: function (snap, names) {
+    if (snap.freeShape === 'anything') return 'every bill (free: ' + (names[0] || 'the gift') + ')';
+    if (snap.freeShape === 'cheapest' && snap.catId) return scopeWords({ scope: 'cat', catId: snap.catId });
+    return fallbackReach(names, snap);
+  }
+};
+/** the table of promises: the popup's title, button, for whom (a sentence), from when, and the closing line; danger = a red button */
+var PROMISE_ACTS = {
+  live: {
+    title: 'Make this offer live?',
+    ok: 'Make live',
+    who: function (item) { return item.group ? 'every customer (it was only for ' + groupLabel(item.group) + ')' : 'every customer'; },
+    from: 'now, on the very next bill',
+    end: 'Every bill from now on gets it.'
+  },
+  resume: { title: 'Resume this offer?', ok: 'Resume', who: function (item) { return item.group ? groupLabel(item.group) + ' only' : 'every customer'; }, from: 'now, on the very next bill', end: 'Every bill from now on gets it.' },
+  group: {
+    title: 'Make this offer live for a group?',
+    ok: 'Make live for them',
+    who: function (item, patch) { return groupLabel(patch.customer_group) + ' only'; },
+    from: 'now, on the very next bill',
+    end: 'Only they get it. Nobody else does.'
+  },
+  approve: { title: 'Approve this offer?', ok: 'Approve', who: function () { return 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
+  pause: { title: 'Pause this offer?', ok: 'Pause', who: function () { return 'nobody while it is paused'; }, from: 'now', end: 'Resume brings it back.' },
+  retire: { title: 'Retire this offer?', ok: 'Retire', danger: true, who: function () { return 'nobody from now on'; }, from: 'now', end: 'It leaves your shelf. Bills already made keep what they got.' },
+  delete: { title: 'Delete this offer?', ok: 'Delete', danger: true, who: function () { return 'nobody'; }, from: 'now', end: 'It is gone from this tab. This cannot be undone.' }
+};
+/** the popup's body: the offer, then ON WHAT (with the count) in a box of its own, then FOR WHOM and FROM WHEN, then one closing line */
+function promiseHTML(item, promise, patch) {
+  return (
+    '<p><b>' + esc(item.title) + '</b>' + (item.detail ? ' · ' + esc(item.detail) : '') + '</p>' +
+    '<span class="lk-reach" data-testid="promise-on">On: ' + esc(savedReachWords(item)) + '</span>' +
+    '<p>For: <b>' + esc(promise.who(item, patch)) + '</b></p><p>From: <b>' + esc(promise.from) + '</b></p><p>' + esc(promise.end) + '</p>'
+  );
+}
+/** asks first: runs `onConfirm` only if the shopkeeper confirms what, to whom, on what and from when */
+function askPromise(item, kind, patch, onConfirm) {
+  var promise = PROMISE_ACTS[kind];
+  CBLabKit.confirm(promise.title, promiseHTML(item, promise, patch), onConfirm, { okLabel: promise.ok, danger: !!promise.danger });
+}
+/** a shelf step button (Approve · Go live · Pause · Resume): confirm, then the status change */
+async function askStatus(id, status) {
+  var item = cartItem(id);
+  if (!item) return;
+  await groupCountFor(item.group);
+  var kind = status === 'approved' ? 'approve' : status === 'paused' ? 'pause' : item.status === 'paused' ? 'resume' : 'live';
+  askPromise(item, kind, null, function () { return setStatus(id, status); });
+}
+/** Retire (signed in) or Delete (trial): confirm, then drop it */
+function askDrop(id) {
+  var item = cartItem(id);
+  if (!item) return;
+  askPromise(item, savedLive() ? 'retire' : 'delete', null, function () { return dropSaved(id); });
+}
+/** the sheet's last word before "Add to your offers": what is saved, on what, and that it is not live (the final save repeats the promise) */
+function draftPromise(shown) {
+  var reach = savedReachWords({ snap: snapshot() });
+  return 'Saves a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + ', on ' + reach + '. Nothing is live until you make it live.' + takenOffNote();
+}
+/** saving an edit puts the offer back to draft (its items changed, so what was reviewed no longer holds): a live or paused one says it comes off */
+function takenOffNote() {
+  var editing = EDITING && cartItem(EDITING);
+  return editing && (editing.status === 'live' || editing.status === 'paused') ? ' Editing takes it off for customers until you make it live again.' : '';
 }
 /** the rules to send: the offer's current rules (a PUT of rules replaces them) with the group set, or cleared when the offer is made live for everyone; null when they cannot be read */
 async function rulesToAttach(id, patch, wasFor) {
@@ -5733,9 +5972,12 @@ async function attachOffer(item, patch) {
 }
 /** the left menu follows the page: the type on show is lit; a shop with another currency reads its own symbol on the glyphs and words */
 var MENU_SIG = '';
+/** lights the menu entry of the type whose form is in the middle (none on the landing, the shelf or the phone's list), and re-words the glyphs in the shop's money */
 function syncTypeMenu() {
   if (!LAB_FRAME || !LAB_FRAME.skeleton || LAB_COMBO) return;
-  var signature = S.goal + '|' + inShopMoney('₹');
+  /* W31: a type is lit only while ITS form is in the middle - not on the settings landing, the full shelf, or the phone's list of kinds */
+  var showsForm = S.step === 2 && (TYPE_PICKED || !labNarrow()),
+    signature = (showsForm ? S.goal : '-') + '|' + inShopMoney('₹');
   if (signature === MENU_SIG) return;
   MENU_SIG = signature;
   GOALS.forEach(function (goal) {
@@ -5744,8 +5986,9 @@ function syncTypeMenu() {
     button.querySelector('.lab-ico').textContent = inShopMoney(goal.icon);
     button.querySelector('.label').textContent = inShopMoney(goal.n);
     button.setAttribute('aria-label', inShopMoney(goal.n));
+    button.classList.toggle('active', showsForm && goal.id === S.goal);
   });
-  LAB_FRAME.skeleton.setActive(S.goal);
+  if (showsForm) LAB_FRAME.skeleton.setActive(S.goal);
 }
 if (window.matchMedia)
   window.matchMedia('(max-width:760px)').addEventListener('change', function () {
@@ -5756,6 +5999,7 @@ if (window.matchMedia)
 function render() {
   var B = BIZ[S.biz];
   document.getElementById('bizName').textContent = bizTitle(B);
+  document.getElementById('bizName').hidden = S.biz === 'mine'; /* W37: the signed-in shop is named once - in the bar */
   /* ⚠️⚠️ THE SAMPLE SWITCHER IS GONE (Athi: "there is a Sri button appearing... we have to speak about the
      shop only"). "Sri Sai Pharma Distributors" sat one tap from the real shop's own name. HOTEL stays as the
      one thing the page boots with before a sign-in or an import replaces it; PHARMA (var PHARMA above) and

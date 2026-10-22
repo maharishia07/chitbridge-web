@@ -2,6 +2,7 @@
  * OWNS  the labs' shared rules (UX-90, walk 21 Oct W9 / W10 / W15 / W1): the list of labs (the Labs switcher), plain words for a code, "Not set up
  *       for <country> yet", at most three items + "and N more" (the popup is a CBList), progress as a bar + "x of y ready · next: …", the
  *       Ready / Nearly / Not started grouping, and the layout classes (lab-cols, lab-cards) in /app/lab-kit.css.
+ * CONFIRM  confirm(title, bodyHtml, onOk, opts): the one popup that asks before a money promise is made (the Offer Lab shelf buttons, UX-109).
  * CALLED BY app/page-frame.js (CBFrame.lab → the switcher) and every lab page; Country Lab (PR 2) and Offer Lab (PR 3) use the rest.
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/lab-kit
  * FLOW  page loads → CBLabKit.LABS feeds the switcher → a lab paints rows through plain · notSetUp · reason · more · progress · groups
@@ -108,11 +109,11 @@
   }
 
   /* ── W15: at most three inline + "and N more" opening the one list control in a popup ── */
-  function popup(title, build) {
+  function popup(title, build, extraClass) {
     var back = root.document.createElement('div');
     back.className = 'lk-pop-back';
     back.innerHTML =
-      '<div class="lk-pop" role="dialog" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
+      '<div class="lk-pop' + (extraClass ? ' ' + extraClass : '') + '" role="dialog" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
       '</b><button type="button" class="lk-pop-x" aria-label="Close" data-testid="lk-pop-close">×</button></header><div class="lk-pop-body"></div></div>';
     function close() {
       root.document.removeEventListener('keydown', onKey);
@@ -130,6 +131,29 @@
     var closeBtn = back.querySelector('.lk-pop-x');
     if (closeBtn.focus) closeBtn.focus();
     return { close: close, node: back };
+  }
+  /**
+   * UX-109 (Athi 22 Oct): an action that commits a money promise asks first, in words. `bodyHtml` is raw HTML (the caller escapes what it
+   * puts in); `onOk` runs only on Confirm. Cancel, the x, Esc and a click outside change nothing. Focus starts on Cancel, never on the promise.
+   * opts: { okLabel, danger }
+   */
+  function confirm(title, bodyHtml, onOk, opts) {
+    opts = opts || {};
+    var shown = popup(
+      title,
+      function (body) {
+        body.innerHTML =
+          '<div class="lk-confirm-text" data-testid="lk-confirm-text">' + bodyHtml + '</div>' +
+          '<div class="lk-confirm-acts"><button type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
+          '<button type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
+        body.querySelector('[data-testid="lk-confirm-cancel"]').onclick = function () { shown.close(); };
+        body.querySelector('[data-testid="lk-confirm-ok"]').onclick = function () { shown.close(); onOk(); };
+      },
+      'lk-confirm'
+    );
+    var cancelButton = shown.node.querySelector('[data-testid="lk-confirm-cancel"]');
+    if (cancelButton && cancelButton.focus) cancelButton.focus();
+    return shown;
   }
   function listOptions(opts, items) {
     return {
@@ -186,5 +210,5 @@
       };
   }
 
-  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, more: more, popup: popup };
+  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, more: more, popup: popup, confirm: confirm };
 })(typeof window !== 'undefined' ? window : globalThis);

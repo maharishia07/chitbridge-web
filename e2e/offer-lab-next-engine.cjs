@@ -25,7 +25,7 @@ const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
   // percent screen: 10% off masala dosa -> expect final 63, margin 40%
   const percentCheck = await p.evaluate(() => {
     pickGoal('percent');
-    S.scope = 'item'; S.itemId = 'masala'; S.pctOff = 10; apply();
+    S.scope = 'item'; S.itemId = 'masala'; S.itemIds = ['masala']; S.pctOff = 10; apply();
     var r = priceRow(byId('masala'), CBOffers.compound([offerFrac(byId('masala'))*100, loyFrac()*100])/100);
     return { shown: r.shown, margin: r.margin, status: r.status };
   });
@@ -33,7 +33,7 @@ const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css' };
 
   // qty ladder default tiers: [2,5],[5,10],[10,15] -> buy 2+ = 5% off
   const qtyCheck = await p.evaluate(() => {
-    pickGoal('qty'); S.scope='item'; S.itemId='masala';
+    pickGoal('qty'); S.scope='item'; S.itemId='masala'; S.itemIds=['masala'];
     var r = priceRow(byId('masala'), 0.05);
     return { shown: r.shown, margin: r.margin };
   });
