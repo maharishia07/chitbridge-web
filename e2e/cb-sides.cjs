@@ -5,8 +5,8 @@
  * GET /api/entities/sides says (the server decides every state and number), so these checks are about WHAT IS DRAWN and HOW IT BEHAVES.
  *
  *   1  static: the prototype's `demo` switcher is not built; the unit computes no version, count or drift of its own
- *   2  1600 (wide): both panels sit beside the work area (left < work < right), the toolbar buttons are hidden, the panels stay put
- *      while the work area scrolls, and their own content scrolls on its own
+ *   2  1600 (wide): the same drawers as narrower widths (walk 2026-10-17): both panels shut, two toolbar buttons, one drawer open at a time
+ *      the drawer scrolls on its own
  *   3  the panels: titles, arrows, row counts (rows drawn, placeholders excluded), a "not yet" row is dashed and says so, no made-up number
  *   4  a drift row ("Update") carries Review; Review shows what differs and Review again hides it
  *   5  trade proof is "3 of 4 shown" with Finish pointing at the server's href
@@ -100,24 +100,21 @@ async function run() {
     {
       const { ctx, seen } = await profile(1600, 900), pg = await open(ctx);
       ok(seen.includes('/api/entities/sides'), '1600 · the shell asked /api/entities/sides');
-      ok(await vis(pg, '[data-testid="sides-left"]') && await vis(pg, '[data-testid="sides-right"]'), '1600 · both panels are shown');
-      ok(!(await vis(pg, '[data-testid="sides-open-l"]')) && !(await vis(pg, '[data-testid="sides-open-r"]')), '1600 · the toolbar drawer buttons are hidden');
-      const l = await box(pg, '[data-testid="sides-left"]'), r = await box(pg, '[data-testid="sides-right"]'), m = await box(pg, '[data-testid="shell-main"]');
-      ok(l && r && m && l.x + l.width <= m.x + 1 && r.x >= m.x + m.width - 1, '1600 · left panel | work area | right panel, side by side (' + [l && Math.round(l.x), m && Math.round(m.x), r && Math.round(r.x)].join(' · ') + ')');
-      ok(/We lean on/.test(await T(pg, '[data-testid="sides-left"] h3')) && /Leans on us/.test(await T(pg, '[data-testid="sides-right"] h3')), '1600 · titles are the plain words, not Upstream / Dependents');
+      /* walk 2026-10-17 (Athi): the panels are drawers behind two icon buttons at EVERY width, closed until asked for */
+      ok(!(await vis(pg, '[data-testid="sides-left"]')) && !(await vis(pg, '[data-testid="sides-right"]')), '1600 · both panels start shut (drawers at every width)');
+      ok(await vis(pg, '[data-testid="sides-open-l"]') && await vis(pg, '[data-testid="sides-open-r"]'), '1600 · the two toolbar drawer buttons are shown');
+      await pg.click('[data-testid="sides-open-l"]');
+      const l = await box(pg, '[data-testid="sides-left"]'), m = await box(pg, '[data-testid="shell-main"]');
+      ok(l && m && l.width <= 332 && l.width >= 280 && l.x < m.x + m.width, '1600 · the left drawer opens over the work area, about 330 px (' + [l && Math.round(l.x), l && Math.round(l.width)].join(' · ') + ')');
+      ok(/We lean on/.test(await T(pg, '[data-testid="sides-left"] h3')), '1600 · titles are the plain words, not Upstream / Dependents');
       const arrows = await pg.evaluate(() => [document.querySelector('[data-testid="sides-left"] .cbsd-arr').textContent, document.querySelector('[data-testid="sides-right"] .cbsd-arr').textContent]);
       ok(arrows[0] === '→' && arrows[1] === '←', '1600 · blue → in, green ← out');
-      ok(await T(pg, '[data-testid="sides-left"] [data-testid="sides-count"]') === String(NL) && await T(pg, '[data-testid="sides-right"] [data-testid="sides-count"]') === String(NR), '1600 · counts are the rows drawn: ' + NL + ' and ' + NR);
+      ok(await T(pg, '[data-testid="sides-left"] [data-testid="sides-count"]') === String(NL), '1600 · the left count is the rows drawn: ' + NL);
       ok(await pg.locator('[data-testid="sides-left"] [data-testid="sides-row"]').count() === NL, '1600 · and the left panel draws exactly that many rows');
       /* "not yet" is an honest dashed row */
       const nyet = pg.locator('[data-testid="sides-left"] [data-testid="sides-row"][data-id="jurisdiction"]');
       ok(await nyet.getAttribute('data-s') === 'later' && /not yet/.test(await nyet.innerText()) && /dash/.test(await nyet.getAttribute('class')), '1600 · a source with no data is a dashed row that says "not yet"');
-      ok(!/\b0\b/.test(await T(pg, '[data-testid="sides-right"] [data-testid="sides-row"][data-id="filings"]')), '1600 · filings carry no number (not a fake 0)');
-      /* stays put while the work area scrolls */
-      const y0 = (await box(pg, '[data-testid="sides-left"]')).y;
-      await pg.evaluate(() => { var mn = document.querySelector('.cbsh-main'); mn.style.scrollBehavior = 'auto'; mn.scrollTop = 600; }); await pg.waitForTimeout(150);
-      ok(Math.abs((await box(pg, '[data-testid="sides-left"]')).y - y0) < 2, '1600 · the panel stays put while the work area scrolls');
-      ok(await pg.evaluate(() => { var s = document.querySelector('[data-testid="sides-left"]'); return getComputedStyle(s).overflowY === 'auto'; }), '1600 · a long panel scrolls on its own');
+      ok(await pg.evaluate(() => getComputedStyle(document.querySelector('[data-testid="sides-left"]')).overflowY === 'auto'), '1600 · a long drawer scrolls on its own');
       /* drift → Review */
       const con = pg.locator('[data-testid="sides-left"] [data-testid="sides-row"][data-id="constitution"]');
       ok(/Update/.test(await con.locator('[data-testid="sides-state"]').innerText()), '1600 · a drift row says "Update"');
@@ -128,7 +125,10 @@ async function run() {
       await con.locator('[data-testid="sides-review"]').click();
       ok(!(await vis(pg, '[data-testid="sides-left"] [data-testid="sides-detail"]')), '1600 · Review again hides it');
       ok(await pg.locator('[data-testid="sides-left"] [data-testid="sides-review"]').count() === 1, '1600 · only the drifted row carries Review (the current ones do not)');
-      /* trade proof → Finish */
+      /* trade proof → Finish (the right drawer; opening it closes the left) */
+      await pg.click('[data-testid="sides-open-r"]');
+      ok(await T(pg, '[data-testid="sides-right"] [data-testid="sides-count"]') === String(NR), '1600 · the right count is the rows drawn: ' + NR);
+      ok(!/0/.test(await T(pg, '[data-testid="sides-right"] [data-testid="sides-row"][data-id="filings"]')), '1600 · filings carry no number (not a fake 0)');
       ok(/3 of 4 shown/.test(await T(pg, '[data-testid="sides-right"] [data-id="proof"]')), '1600 · trade proof reads "3 of 4 shown" (the rail\'s own Trade-ready)');
       ok(await pg.getAttribute('[data-testid="sides-finish"]', 'href') === '/know-your-business.html', '1600 · Finish goes where the server says');
       /* impact → See who */
@@ -149,7 +149,7 @@ async function run() {
       const { ctx } = await profile(1200, 800), pg = await open(ctx);
       ok(!(await vis(pg, '[data-testid="sides-left"]')) && !(await vis(pg, '[data-testid="sides-right"]')), '1200 · no panel beside the content');
       ok(await vis(pg, '[data-testid="sides-open-l"]') && await vis(pg, '[data-testid="sides-open-r"]'), '1200 · two toolbar buttons');
-      ok(await T(pg, '[data-testid="sides-open-l"]') === '→ We lean on' + NL && await T(pg, '[data-testid="sides-open-r"]') === 'Leans on us ←' + NR, '1200 · "→ We lean on' + NL + '" · "Leans on us ←' + NR + '" (' + await T(pg, '[data-testid="sides-open-l"]') + ' | ' + await T(pg, '[data-testid="sides-open-r"]') + ')');
+      ok(new RegExp('^→ ?We lean on ?' + NL + '$').test(await T(pg, '[data-testid="sides-open-l"]')) && new RegExp('^← ?Leans on us ?' + NR + '$').test(await T(pg, '[data-testid="sides-open-r"]')), '1200 · "→ We lean on' + NL + '" · "←Leans on us' + NR + '" (' + await T(pg, '[data-testid="sides-open-l"]') + ' | ' + await T(pg, '[data-testid="sides-open-r"]') + ')');
       await pg.click('[data-testid="sides-open-l"]');
       ok(await vis(pg, '[data-testid="sides-left"]') && !(await vis(pg, '[data-testid="sides-right"]')), '1200 · We lean on opens its drawer, the other stays shut');
       const d = await box(pg, '[data-testid="sides-left"]'), mn = await box(pg, '[data-testid="shell-main"]');
