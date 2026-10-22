@@ -717,7 +717,7 @@ function crmSendGo(btn) {
       },
       outcome: function (r) {
         SEND.done = r;
-        if (typeof mktNoteSend === 'function') mktNoteSend(r); /* MKT: Offers sent says when this send's refusals were not recorded */
+        document.dispatchEvent(new CustomEvent('crm-send-done', { detail: r })); /* MKT (cap-marketing.js): Offers sent says when this send's refusals were not recorded */
         /* three facts, never one number: sent · not sent (the sender refused or failed — its reason is on each line) · not asked (no consent — the server's codes) */
         var notSent = (r.sent || []).filter(function (x) {
             return x.status !== 'sent';

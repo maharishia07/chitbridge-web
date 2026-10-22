@@ -142,9 +142,10 @@ function mktDrop(holder) {
 /* ═══ OFFERS SENT - the receipts of every offer, sent or not ═══════════════════════════════════════════════════════ */
 var MKT_UNLOGGED = false; /* the last send's refusals were not recorded (the server's refusals_unlogged): Offers sent says so */
 /** the Send sheet hands over each send's answer - the one fact Offers sent needs from it */
-function mktNoteSend(answer) {
-  MKT_UNLOGGED = !!(answer && answer.refusals_unlogged);
+function mktNoteSend(event) {
+  MKT_UNLOGGED = !!(event.detail && event.detail.refusals_unlogged);
 }
+document.addEventListener('crm-send-done', mktNoteSend);
 var SENT = { rows: [], total: 0, page: 1, limit: 50, status: '', state: 'loading', err: null, migrated: true, api: null };
 /** the Result tag: Sent (green) or Not sent (amber - advisory, never red) */
 function mktResultTag(row) {
