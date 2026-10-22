@@ -257,7 +257,7 @@ const walk = async (w) => {
     const r = await page.evaluate(() => {
       const ids = CBRegulation.list().map((p) => p.id), keys = ['retention', 'kept', 'payheads', 'zones', 'formats', 'voucher'], blank = [];
       ids.forEach((id) => { LAB.from = id; LAB.to = id; repaint(); keys.forEach((k) => { const t = document.querySelector('[data-testid="cl-row-' + k + '"] td.v.from').textContent.trim(); if (!t || /undefined|NaN|[?]$/.test(t)) blank.push(id + '/' + k); }); });
-      const rt = CBCountries.rulesTable({ year: new Date().getFullYear() });
+      const rt = CBCountries.rulesTable({ year: 2026 });
       LAB.from = 'IN'; LAB.to = 'AU'; repaint();
       return { ids, blank, inYears: document.querySelector('[data-testid="cl-row-retention"] td.v.from').textContent.trim(), engineIn: rt.rules.filter((x) => x.key === 'records')[0].values.IN,
         gst: document.querySelector('[data-testid="cl-row-kept"] td.v.from').textContent, aeKept: (LAB.from = 'AE', repaint(), document.querySelector('[data-testid="cl-row-kept"] td.v.from').textContent) };
