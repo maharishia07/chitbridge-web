@@ -71,6 +71,12 @@ const walk = async (w) => {
     const want = await page.evaluate(() => CBCountries.rulesTable({ year: 2026 }).rules.length);
     return { ok: cols === all.length && rows.length === want && rows.includes('symbol'), saw: rows.length + ' rules × ' + cols + ' countries' };
   });
+  await w.step('P6b', '(CTRY-43) the Depreciation row says the law in words, once per law - never a pack code, never "?" - and so does Asset lives, for every country', async () => {
+    await page.goto(base + '/country-lab.html?view=all#/all'); await page.waitForSelector('[data-testid="cp-all-table"]', { timeout: 15000 });
+    const cells = await page.$$eval('[data-testid="cp-all-table"] tbody tr[data-rule="depreciation"] td, [data-testid="cp-all-table"] tbody tr[data-rule="lives"] td', (t) => t.map((x) => x.textContent.trim()).filter(Boolean));
+    const bad = cells.filter((x) => /\b(div40|it_act_wdv|schedule_ii|ias16|straight_line|sole_trader)\b|undefined|NaN|[?]/.test(x));
+    return { ok: cells.length >= 14 && !bad.length && cells.some((x) => /^Capital allowances \(Division 40\) — company, sole trader, partnership, trust/.test(x)), saw: cells.length + ' cells · codes or placeholders: ' + (bad.join(' | ') || 'none') };
+  });
   await w.step('P7', 'every counted or named cell opens what it counts: the chart, the filled return, the statements, a sample invoice billed live, the supply kinds — for every country', async () => {
     const out = [];
     for (const c of all) for (const k of ['chart', 'return', 'statements', 'invoice', 'kinds']) {
