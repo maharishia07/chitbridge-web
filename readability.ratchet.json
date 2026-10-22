@@ -37,7 +37,7 @@
   "public/app/cap-finance-returns.js": {"score":14,"long40":1,"long80":1,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":8,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "public/app/cap-finance-terms.js": {"score":64,"long40":5,"long80":0,"complex10":5,"complex15":0,"deep3":0,"deep4":0,"cryptic":46,"noWhatLine":7,"emptyCatch":0,"noHeader":1},
   "public/app/cap-finance.js": {"score":48,"long40":3,"long80":2,"complex10":1,"complex15":1,"deep3":0,"deep4":0,"cryptic":34,"noWhatLine":7,"emptyCatch":0,"noHeader":0},
-  "public/app/cap-folders.js": {"score":100,"long40":7,"long80":4,"complex10":9,"complex15":6,"deep3":0,"deep4":0,"cryptic":47,"noWhatLine":20,"emptyCatch":6,"noHeader":1},
+  "public/app/cap-folders.js": {"score":81,"long40":7,"long80":4,"complex10":9,"complex15":6,"deep3":0,"deep4":0,"cryptic":47,"noWhatLine":2,"emptyCatch":6,"noHeader":0},
   "public/app/cap-fx.js": {"score":35,"long40":1,"long80":1,"complex10":3,"complex15":1,"deep3":0,"deep4":0,"cryptic":22,"noWhatLine":6,"emptyCatch":0,"noHeader":1},
   "public/app/cap-iddocs.js": {"score":22,"long40":3,"long80":1,"complex10":2,"complex15":1,"deep3":0,"deep4":0,"cryptic":12,"noWhatLine":0,"emptyCatch":2,"noHeader":1},
   "public/app/cap-intake.js": {"score":59,"long40":7,"long80":0,"complex10":6,"complex15":3,"deep3":0,"deep4":0,"cryptic":33,"noWhatLine":8,"emptyCatch":2,"noHeader":0},
