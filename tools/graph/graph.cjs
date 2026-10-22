@@ -206,10 +206,10 @@ function build() {
     ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((item) =>
       walk(path.join(A, item), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p))
         .sort()
-        .forEach((entry) => addFile('api', entry, /\/routes\//.test(entry) ? 'route-file' : 'api-lib'))
+        .forEach((entry) => addFile('api', entry, /[\\/]routes[\\/]/.test(entry) ? 'route-file' : 'api-lib'))
     );
     addFile('api', path.join(A, 'server.js'), 'api-lib');
-    walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/\/(fixtures|support|helpers?)\//.test(p))
+    walk(path.join(A, 'tests'), (p) => /\.(test\.)?(cjs|js)$/.test(p) && !/[\\/](fixtures|support|helpers?)[\\/]/.test(p))
       .sort()
       .forEach((item) => addFile('api', item, 'test'));
     /* the counter's pages (the till master and promo) are own code with a trace row: screens of the api repo (INT7b) */
@@ -224,9 +224,9 @@ function build() {
   if (meta.present.engines) {
     walk(path.join(E, 'src'), (p) => /\.js$/.test(p))
       .sort()
-      .forEach((item) => addFile('engines', item, /\/reg-[a-z]+\.js$/.test(item) ? 'pack' : 'engine'));
+      .forEach((item) => addFile('engines', item, /[\\/]reg-[a-z]+\.js$/.test(item) ? 'pack' : 'engine'));
     addFile('engines', path.join(E, 'index.js'), 'engine');
-    walk(path.join(E, 'tests'), (p) => /\.(cjs|js)$/.test(p) && !/\/fixtures\//.test(p))
+    walk(path.join(E, 'tests'), (p) => /\.(cjs|js)$/.test(p) && !/[\\/]fixtures[\\/]/.test(p))
       .sort()
       .forEach((item) => addFile('engines', item, 'test'));
   }
