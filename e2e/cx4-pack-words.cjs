@@ -24,15 +24,17 @@ function page(country, currency) {
   vm.createContext(ctx);
   for (const f of ['engine/tax.js', 'engine/locale.js', 'app/helpers.js', 'app/cap-iddocs.js']) vm.runInContext(fs.readFileSync(path.join(PUB, f), 'utf8'), ctx, { filename: f });
   /* myCur as app.html defines it (the one line, read from the page so this proves the shipped text) */
-  const line = fs.readFileSync(path.join(PUB, 'app.html'), 'utf8').split('\n').find((l) => l.startsWith('function myCur(){'));
-  vm.runInContext(line, ctx);
+  const html = fs.readFileSync(path.join(PUB, 'app.html'), 'utf8').replace(/\r\n/g, '\n');
+  const fn = html.match(/^function myCur\(\) \{\n[^]*?\n\}/m); /* formatted over three lines since the mechanical pass */
+  if (!fn) throw new Error('function myCur() is not in app.html');
+  vm.runInContext(fn[0], ctx);
   return ctx;
 }
 
 (async () => {
   const IN = page('IN', undefined), AU = page('AU', undefined), AE = page('AE', undefined), NONE = page('', undefined);
-  ok('P1 packHasHsn: IN true · AU false · AE false · no pack true', IN.packHasHsn() === true && AU.packHasHsn() === false && AE.packHasHsn() === false && NONE.packHasHsn() === true);
-  ok('P2 myCur with no session money: IN INR · AU AUD · AE AED', IN.myCur() === 'INR' && AU.myCur() === 'AUD' && AE.myCur() === 'AED', [IN.myCur(), AU.myCur(), AE.myCur()].join(' '));
+  ok('P1 packHasHsn: IN true · AU false · AE false · no pack false (N2: no pack is not assumed to be India)', IN.packHasHsn() === true && AU.packHasHsn() === false && AE.packHasHsn() === false && NONE.packHasHsn() === false);
+  ok('P2 myCur with no session money: IN INR · AU AUD · AE AED · no pack null (N1: never a guessed currency)', IN.myCur() === 'INR' && AU.myCur() === 'AUD' && AE.myCur() === 'AED' && NONE.myCur() === null, [IN.myCur(), AU.myCur(), AE.myCur()].join(' '));
   ok('P2 myCur: the session\'s money still wins', page('AU', 'INR').myCur() === 'INR');
 
   const ID = AU.CBIdDocs;
@@ -51,7 +53,7 @@ function page(country, currency) {
   /* P4 — the pack's words, and neutral words with no pack (STD2) */
   const words = (c) => ['taxId', 'postcode', 'region'].map((k) => c.packWord(k)).join('·');
   ok('P4 packWord: IN GSTIN·PIN·State · AU ABN·Postcode·State · AE TRN·P.O. Box·Emirate', words(IN) === 'GSTIN·PIN·State' && words(AU) === 'ABN·Postcode·State' && words(AE) === 'TRN·P.O. Box·Emirate', [words(IN), words(AU), words(AE)].join(' | '));
-  ok('P4 no pack → neutral words, never India\'s: Tax number·Postcode·Region (and for a country with no pack, US)', words(NONE) === 'Tax number·Postcode·Region' && words(page('US')) === 'Tax number·Postcode·Region', words(NONE));
+  ok('P4 no pack → neutral words, never India\'s: Tax number·Postcode·Region (and a country with no pack: ZZ); US has a pack now and says its own words (EIN·ZIP code·State)', words(NONE) === 'Tax number·Postcode·Region' && words(page('ZZ')) === 'Tax number·Postcode·Region' && words(page('US')) === 'EIN·ZIP code·State', words(NONE));
   ok('P4 a screen passes the country it holds: taxIdWord(\'AU\') on a page whose session names none → ABN; packSplitsByState(\'AU\') false', NONE.taxIdWord('AU') === 'ABN' && NONE.packSplitsByState('AU') === false && NONE.taxIdWord() === 'Tax number');
 
   /* P5 — the guard: one tax-ID word table on the web (helpers.js PACK_WORDS) */
@@ -67,7 +69,7 @@ function page(country, currency) {
   const src = (f) => blank(fs.readFileSync(path.join(PUB, f), 'utf8'));
   const rf = src('app/register-form.js');
   ok('P6 register-form: no regZoneFor / regSourceOf / own months / RTL list / .in address / dev copy; reads csuCountryName · monthNames · countries[].offer',
-    !/regZoneFor|regSourceOf|'January','February'|\(ar\|ur\|fa\|he\)|@business\.in|check endpoint/.test(rf) && /csuCountryName\(/.test(rf) && /monthNames\('long'\)\[/.test(rf) && /pk\.offer/.test(rf) && /query:\{tz:tz\}/.test(rf));
+    !/regZoneFor|regSourceOf|'January','February'|\(ar\|ur\|fa\|he\)|@business\.in|check endpoint/.test(rf) && /csuCountryName\(/.test(rf) && /monthNames\('long'\)\[/.test(rf) && /pk\.offer/.test(rf) && /query:\s*\{\s*tz:\s*tz\s*\}/.test(rf) /* spaced since the mechanical pass */);
   ok('P6 settings.html registered() keeps the session through CBSignin.keepSession (with duty); signin-ui exports it WITHOUT replacing the engine\'s keep (the counter\'s)', /CBSignin\.keepSession\(\{\}, CBSignin\.sessionOf\(r\)\)/.test(src('settings.html')) && !/setItem\('cb_sess'/.test(src('settings.html')) && /E\.keepSession = keep;/.test(src('app/signin-ui.js')) && !/E\.keep = /.test(src('app/signin-ui.js')));
   ok('P6 cap-shop never writes the global SESSION.country', !/SESSION\.country\s*=/.test(src('app/cap-shop.js')));
 

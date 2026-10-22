@@ -60,10 +60,10 @@ const it = (what, fn) => Promise.resolve().then(fn).then(() => { pass++; console
     assert.strictEqual(g.A.hydrate({}), true);
     assert.strictEqual(g.A.get().edition, 'full'); assert.strictEqual(g.A.get().fs, 'm');
   });
-  await it('one rule for every kind: theme · fs · font · weight · motion · stripes go back to their defaults', () => {
+  await it('one rule for every kind: theme · fs · font · weight · motion · stripes · kural go back to their defaults', () => {
     const g = page({ ls: { cb_theme: 'dark', cb_fs: 'l', cb_font: 'serif', cb_weight: 'bold', cb_motion: 'reduce', cb_stripes: 'off' } });
     g.A.hydrate({ edition: 'full' });
-    assert.deepStrictEqual(g.A.get(), { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full' });
+    assert.deepStrictEqual(g.A.get(), { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' }); /* SET-WALK1 W7 added the kural pref (default auto) */
     assert.strictEqual(g.reloads, 0, 'the edition did not change: no redraw');
   });
   await it('a value the server holds is taken (unchanged behaviour)', () => {

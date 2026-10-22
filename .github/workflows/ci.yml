@@ -75,14 +75,20 @@ jobs:
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |
+          node e2e/cx4-pack-words.cjs
           node e2e/field-ledger-guard.cjs
           node e2e/gov-zone-first.test.cjs
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
+          node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
+          node e2e/shop-t2b.cjs
+          node e2e/vault-keys.cjs
+          node tests/avatar-hydrate.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
+          node tests/chit-sheet-captured.test.cjs
           node tests/crm-unbilled-list.test.cjs
           node tests/cu4-datetime.test.cjs
           node tests/detail-placement.test.cjs
