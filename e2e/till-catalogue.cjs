@@ -136,7 +136,7 @@ const VEG = [
    */
   const sync = await p.evaluate(() => {
     const snap = { shop: { name: 'S', currency: 'INR', country: 'IN' }, at: new Date().toISOString(), offers: [],
-      categories: [{ id: '838f', name: 'Grains' }, { id: 'b6d6', name: 'Flour' }],
+      category_master: [{ id: '838f', name: 'Grains' }, { id: 'b6d6', name: 'Flour' }],
       items: [
         { item_id: 'a', name: 'Rice',   price: 10, unit: 'kg', category: 'Veg',    category_id: '838f' },
         { item_id: 'b', name: 'Atta',   price: 20, unit: 'kg', category: null,     category_id: 'b6d6' },
