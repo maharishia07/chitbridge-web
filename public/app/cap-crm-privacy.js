@@ -156,6 +156,15 @@ function crmConsentHTML(p, rec) {
     '</a></div>';
   return crmSec('consent', 'Consent', crmConsentFact(cp), body, false);
 }
+/** how one consent row was given - the person's own STOP reply (b777 source), withdrawn, by them online, by you, by the shop, or just noted */
+function crmConsentHow(row, partyId) {
+  if (row.source === 'reply') return tx('Withdrawn · replied STOP'); /* CON-2: the person's own STOP on WhatsApp, not staff or the web */
+  if (row.withdrawn_at) return tx('Withdrawn');
+  var me = (window.SESSION && (SESSION.actorId || SESSION.entityId)) || null;
+  if (row.noted_by && row.noted_by === partyId) return tx('By them, online');
+  if (row.noted_by && me && row.noted_by === me) return tx('Noted by you');
+  return row.noted_by ? tx('Noted by the shop') : tx('Noted');
+}
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
 async function crmConsentOpen(p) {
   var hist = document.getElementById('crm_consent_hist'),
@@ -179,20 +188,11 @@ async function crmConsentOpen(p) {
   node = document.getElementById('crm_consent_law');
   if (!hist) return;
   if (node && r.law) node.innerHTML = r.law.known ? '<b>' + esc(r.law.short || r.law.law) + '</b> · ' + esc(r.law.consent) : esc(r.law.note || '');
-  var me = (window.SESSION && (SESSION.actorId || SESSION.entityId)) || null;
   var rows = (r.history || []).map(function (item, index) {
     return Object.assign({ _i: index }, item);
   });
   var how = function (h) {
-    return h.withdrawn_at
-      ? tx('Withdrawn')
-      : h.noted_by && h.noted_by === p.party_id
-        ? tx('By them, online')
-        : h.noted_by && me && h.noted_by === me
-          ? tx('Noted by you')
-          : h.noted_by
-            ? tx('Noted by the shop')
-            : tx('Noted');
+    return crmConsentHow(h, p.party_id);
   };
   var what = function (h) {
     return (
