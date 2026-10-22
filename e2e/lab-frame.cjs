@@ -43,6 +43,9 @@ function staticChecks() {
     ok(kit.indexOf("route: '" + e.route + "'") >= 0, 'lab-kit.js · Labs list has the manifest lab ' + e.name + ' (' + e.route + ')'));
 }
 
+/* the string layer (locale): the name the switcher shows is the name in the page title, so one name per lab */
+const kitSource = fs.readFileSync(path.join(PUB, 'app', 'lab-kit.js'), 'utf8');
+LABS.forEach((lab) => ok(kitSource.indexOf("name: '" + lab.title.split(' · ')[0] + "'") >= 0, 'string layer · locale · the switcher names ' + lab.id + ' as its title does'));
 async function pageChecks(browser, serve) {
   for (const size of [{ w: 1280, h: 800, n: 'wide' }, { w: 390, h: 800, n: 'phone' }]) {
     const ctx = await browser.newContext({ viewport: { width: size.w, height: size.h }, serviceWorkers: 'block' });
@@ -61,7 +64,16 @@ async function pageChecks(browser, serve) {
         links: Array.from(document.querySelectorAll('[data-testid^="skel-lab-"]')).map((a) => a.getAttribute('data-testid').slice(9)),
         lit: (document.querySelector('.lab-link.active') || {}).getAttribute ? document.querySelector('.lab-link.active').getAttribute('data-testid').slice(9) : '',
         font: getComputedStyle(document.body).fontFamily,
-        shells: document.querySelectorAll('[data-testid="shell-header"]').length
+        shells: document.querySelectorAll('[data-testid="shell-header"]').length,
+        text: document.body.innerText,
+        menu: (() => { /* the lit menu entry: its ink against the ground it sits on */
+          const el = document.querySelector('.lab-link.active'), px = (c) => (c.match(/[0-9.]+/g) || []).slice(0, 3).map((v) => (c.indexOf("color(") === 0 ? Number(v) * 255 : Number(v)));
+          const lum = (c) => { const [r, g, b] = px(c).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+          let bg = el, back = 'rgb(255,255,255)';
+          while (bg) { const c = getComputedStyle(bg).backgroundColor; if (c && c !== "rgba(0, 0, 0, 0)") { back = c; break; } bg = bg.parentElement; }
+          const a = lum(getComputedStyle(el).color), b = lum(back);
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        })()
       }), lab.id);
       const tag = lab.id + ' · ' + size.n;
       ok(got.framed, tag + ' · in the Finance frame (sidebar + main)');
@@ -69,6 +81,8 @@ async function pageChecks(browser, serve) {
       ok(got.lit === lab.id, tag + ' · its own entry is lit (' + got.lit + ')');
       ok(got.title === lab.title, tag + ' · title "' + got.title + '"');
       ok(!/Times/i.test(got.font), tag + ' · the page face is ours (' + got.font.slice(0, 24) + ')');
+      ok(got.menu >= 4.5, tag + ' · AA contrast: the lit menu entry reads (' + got.menu.toFixed(2) + ':1)');
+      ok(!/undefined|NaN/.test(got.text), tag + ' · the screen is in words: no undefined or NaN, nothing it could not read left blank');
       ok(got.shells <= 1, tag + ' · one header only');
       ok(errs.length === 0, tag + ' · no page or console error' + (errs.length ? ' · ' + errs[0].slice(0, 120) : ''));
       await page.close();

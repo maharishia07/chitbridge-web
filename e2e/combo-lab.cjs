@@ -45,7 +45,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     stillCallable: typeof openModLab === 'function',
   }));
   say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
-  say('the tab is titled for what it is', opened.title === 'Combo Lab · ChitBridge', opened.title);
+  say('the tab is titled for what it is (string layer: the locale name)', opened.title === 'Combo Lab · ChitBridge', opened.title);
+  say('what it could not read is said in words, never undefined or NaN', !/undefined|NaN/.test(await p.evaluate(() => document.body.innerText)), 'no raw undefined or NaN on screen');
   say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
   /* L3 (small-fixes): the lab opens IN the page frame - the header (the frame's: title · Home · avatar, SHELL-ONE) is on screen above it, it is not a fixed pop-up over an empty page */
   for (const vp of [{ width: 1366, height: 800 }, { width: 390, height: 844 }]) {
