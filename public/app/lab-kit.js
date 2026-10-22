@@ -186,14 +186,19 @@
   };
   /**
    * promise(parts) -> { title, ok, danger, html, text }: the one sentence a commit control shows before it saves.
-   * parts: { act (a PROMISE_ACTS key), thing ('offer'), name, detail, on (what it reaches, with the count), group (a label), note (a closing extra) }.
+   * parts: { act (a PROMISE_ACTS key), thing ('offer'), name, detail, on (what it reaches, with the count), group (a label), margin (the lab's one margin sentence, or ''), note (a closing extra) }.
    * `html` is the confirm popup's body; `text` is the same words as plain text (the pane and the draft line show it; the equality test reads it).
    */
+  /** the lab's margin sentence as a space-led fragment, or '' when it has none */
+  function marginPart(parts) {
+    return parts.margin ? ' ' + parts.margin : '';
+  }
   function promise(parts) {
     var step = PROMISE_ACTS[parts.act],
       audience = step.who(parts),
       head = parts.name + (parts.detail ? ' · ' + parts.detail : ''),
       note = parts.note ? ' ' + parts.note : '',
+      margin = marginPart(parts),
       closing = typeof step.end === 'function' ? step.end(parts) : step.end;
     return {
       title: step.title.replace('{thing}', parts.thing || 'offer'),
@@ -202,8 +207,9 @@
       html:
         '<p><b>' + escapeText(parts.name) + '</b>' + (parts.detail ? ' · ' + escapeText(parts.detail) : '') + '</p>' +
         '<span class="lk-reach" data-testid="promise-on">On: ' + escapeText(parts.on) + '</span>' +
+        (margin ? '<p class="lk-margin" data-testid="promise-margin">' + escapeText(margin.trim()) + '</p>' : '') +
         '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(closing + note) + '</p>',
-      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + closing + note
+      text: step.line ? step.line(parts, head) + margin + note : head + ' On: ' + parts.on + margin + ' For: ' + audience + ' From: ' + step.from + ' ' + closing + note
     };
   }
   function listOptions(opts, items, shown) {
