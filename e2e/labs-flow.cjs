@@ -453,7 +453,7 @@ function route(S, r) {
   }
 
   /* ── Offer Lab's own flow (offer-lab-next.html): Settings → "Create an offer" → pick a shape → "Work it
-   * out" → "Save for review" ─────────────────────────────────────────────────────────────────────────────
+   * out" → "Add to your offers" ─────────────────────────────────────────────────────────────────────────────
    * ⚠️ This page carries no data-testid attributes (unlike Product/Combo Lab) — its own e2e/offer-lab-next-*.cjs
    * harnesses drive it through its JS globals (pickGoal/apply/S) instead. labs-flow.cjs stays a real click-
    * through (it is testing the PERSON'S path from the index tile onward), so it drives the same onclick
@@ -483,10 +483,11 @@ function route(S, r) {
     /* 1 · Settings → "Create an offer" → screen 1, the eight shapes */
     await p.click('button:has-text("Create an offer")').catch(() => {});
     await settle(p);
-    ok('offer', await p.locator('#s1.on').count() > 0, '"Create an offer" opens the shape picker (' + state + ')', 'screen 1 (#s1) never carried class "on"');
+    ok('offer', await p.locator('#s2.on').count() > 0, '"Create an offer" opens the working step (the types are the left menu) (' + state + ')', 'screen 2 (#s2) never carried class "on"');
 
-    /* 2 · pick "A percentage off" → screen 2, its controls */
-    await p.click(`button[onclick="pickGoal('percent')"]`).catch(() => {});
+    /* 2 · pick "A percentage off" in the left menu (icons-only at phone width: the list in words in the middle) → its controls */
+    const typeBtn = p.locator('[data-testid="skel-nav-percent"]:visible, [data-testid="type-percent"]:visible').first();
+    await typeBtn.click().catch(() => {});
     await settle(p);
     ok('offer', await p.locator('#s2.on').count() > 0, 'picking "A percentage off" opens its controls (' + state + ')', 'screen 2 (#s2) never carried class "on"');
 
@@ -499,15 +500,15 @@ function route(S, r) {
     ok('offer', body.trim().length > 0, 'the result shows a worked-out table (' + state + ')', '#workBody stayed empty');
     ok('offer', !/NaN|undefined/.test(body), 'the worked-out result has no NaN/undefined (' + state + ')', 'result body read "' + body.replace(/\s+/g, ' ').trim().slice(0, 150) + '"');
 
-    /* 4 · "Save for review" — lands on the shelf (screen 3), signed in posts to /api/definitions */
+    /* 4 · "Add to your offers" — lands on the shelf (screen 3), signed in posts to /api/definitions */
     const before = S.definitions.length;
     await p.click('#workSave').catch(() => {});
     await settle(p);
-    ok('offer', await p.locator('#s3.on').count() > 0, '"Save for review" lands on Saved offers (' + state + ')', 'screen 3 (#s3) never carried class "on"');
-    const savedRows = await p.locator('#s3 .sv').count();
-    ok('offer', savedRows > 0, 'the saved offer is listed on the shelf (' + state + ')', 'no .sv row found on the Saved offers screen');
+    ok('offer', await p.locator('#s2.on').count() > 0, '"Add to your offers" stays on the form (' + state + ')', 'screen 2 (#s2) lost class "on"');
+    const savedRows = await p.locator('[data-testid="cart-row"]').count();
+    ok('offer', savedRows > 0, 'the offer is in the cart on the right (' + state + ')', 'no cart row found');
     if (!st.signedOut) {
-      ok('offer', S.definitions.length > before, 'signed in: Save for review posts to /api/definitions (' + state + ')', 'no new definition was created on the stand-in');
+      ok('offer', S.definitions.length > before, 'signed in: Add to your offers posts to /api/definitions (' + state + ')', 'no new definition was created on the stand-in');
     }
   }
 

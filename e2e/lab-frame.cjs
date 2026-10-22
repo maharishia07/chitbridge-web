@@ -2,8 +2,8 @@
 /* lab-frame.cjs — UX-90: every lab wears the ONE Finance frame, and the cross-lab rules (walk 21 Oct W9 / W10 / W15) are shared helpers.
  * Proves (exit 1 on any failure):
  *   static  every lab page loads page-frame.js + lab-kit.js and calls CBFrame.lab; none keeps a bar-only mount of its own; the Labs list in lab-kit.js
- *           names the same routes as app/manifest.json's built labs
- *   page    each lab opens in the frame (sidebar + main), with the Labs switcher (every lab, the current one lit), the title "<Name> Lab · ChitBridge",
+ *           names the same routes as app/manifest.json's built labs (kept this round; cb-janitor retires it)
+ *   page    each lab opens in the frame (sidebar + main), with the shell's own switcher naming the lab (W16: the left menu holds THIS lab's choices, never the other labs), the title "<Name> Lab · ChitBridge",
  *           the page face (never Times New Roman), no page error and no console error, at 1280 and at 390
  *   kit     plain words keep the code in the tooltip · "Not set up for <country> yet" · a reason instead of a blank · three lines + "and N more" that
  *           opens the CBList in a popup · progress "x of y ready · next: …" · Ready / Nearly / Not started · red only for a blocker
@@ -61,13 +61,14 @@ async function pageChecks(browser, serve) {
       const got = await page.evaluate((id) => ({
         title: document.title,
         framed: !!document.querySelector('[data-testid="skel-app"]') && !!document.querySelector('[data-testid="skel-main"]'),
-        links: Array.from(document.querySelectorAll('[data-testid^="skel-lab-"]')).map((a) => a.getAttribute('data-testid').slice(9)),
-        lit: (document.querySelector('.lab-link.active') || {}).getAttribute ? document.querySelector('.lab-link.active').getAttribute('data-testid').slice(9) : '',
+        otherLabsInMenu: document.querySelectorAll('[data-testid="skel-labs"], .side .lab-link').length,
+        switcher: (document.querySelector('[data-testid="shell-switcher"]') || {}).textContent || '',
         font: getComputedStyle(document.body).fontFamily,
         shells: document.querySelectorAll('[data-testid="shell-header"]').length,
         text: document.body.innerText,
         menu: (() => { /* the lit menu entry: its ink against the ground it sits on */
-          const el = document.querySelector('.lab-link.active'), px = (c) => (c.match(/[0-9.]+/g) || []).slice(0, 3).map((v) => (c.indexOf("color(") === 0 ? Number(v) * 255 : Number(v)));
+          const el = document.querySelector('.side .nav-btn.active'); if (!el) return 21; /* a lab with no choices of its own has no lit entry */
+          const px = (c) => (c.match(/[0-9.]+/g) || []).slice(0, 3).map((v) => (c.indexOf("color(") === 0 ? Number(v) * 255 : Number(v)));
           const lum = (c) => { const [r, g, b] = px(c).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
           let bg = el, back = 'rgb(255,255,255)';
           while (bg) { const c = getComputedStyle(bg).backgroundColor; if (c && c !== "rgba(0, 0, 0, 0)") { back = c; break; } bg = bg.parentElement; }
@@ -77,11 +78,12 @@ async function pageChecks(browser, serve) {
       }), lab.id);
       const tag = lab.id + ' · ' + size.n;
       ok(got.framed, tag + ' · in the Finance frame (sidebar + main)');
-      ok(got.links.length === LABS.length && LABS.every((l) => got.links.includes(l.id)), tag + ' · the Labs switcher lists every lab');
-      ok(got.lit === lab.id, tag + ' · its own entry is lit (' + got.lit + ')');
+      ok(got.otherLabsInMenu === 0, tag + ' · the left menu does not list the other labs (W16)');
+      /* the Combo Lab is a mode of the Offer Lab's page: its shell entry is the page's app (offer-lab) until Combo is its own lab */
+      ok(got.switcher.indexOf(lab.id === 'combo-lab' ? 'Offer Lab' : lab.title.split(' · ')[0]) >= 0, tag + ' · the shell switcher names this lab (' + got.switcher.trim() + ')');
       ok(got.title === lab.title, tag + ' · title "' + got.title + '"');
       ok(!/Times/i.test(got.font), tag + ' · the page face is ours (' + got.font.slice(0, 24) + ')');
-      ok(got.menu >= 4.5, tag + ' · AA contrast: the lit menu entry reads (' + got.menu.toFixed(2) + ':1)');
+      ok(got.menu >= 4.5, tag + ' · AA contrast: the lit menu entry (if any) reads (' + got.menu.toFixed(2) + ':1)');
       ok(!/undefined|NaN/.test(got.text), tag + ' · the screen is in words: no undefined or NaN, nothing it could not read left blank');
       ok(got.shells <= 1, tag + ' · one header only');
       ok(errs.length === 0, tag + ' · no page or console error' + (errs.length ? ' · ' + errs[0].slice(0, 120) : ''));

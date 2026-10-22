@@ -2,7 +2,9 @@
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum.
      CALLED BY the labs links on Home, the Catalogue's "see the offer", combo-lab.html (forwards here).
-     FLOW  load → CBFrame.lab (the Finance frame) → the engine prices the typed cart → paint
+     LAB STANDARD (W16-W19, 22 Oct): the left menu = the eight offer types in four groups (GOALS/KINDS) · the middle = Settings or the form of the picked type ·
+     the right = the cart, "Your offers (draft)" = the saved-offers shelf (SAVED, /api/definitions), with Make live and Only for a group. ?mode=combo has neither.
+     FLOW  load → CBFrame.lab (the Finance frame, types in its left menu) → pick a type → the engine prices the typed cart → Add to your offers → attach from the cart → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/offer-lab -->
 <head>
 <meta charset="utf-8">
@@ -47,16 +49,6 @@ button{cursor:pointer}
 .strip button{margin-left:auto;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line);
   background:var(--card);font-size:12.5px;font-weight:600}
 
-.steps{display:flex;gap:8px;margin-bottom:16px}
-.stp{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
-  display:flex;align-items:center;gap:10px;text-align:left}
-.stp .n{width:27px;height:27px;border-radius:8px;background:var(--panel);color:var(--muted);
-  font-size:13px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
-.stp .t{display:block;font-size:13.5px;font-weight:700}
-.stp .v{display:block;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stp.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
-.stp.on .n{background:var(--green);color:#fff}
-.stp.done .n{background:var(--green-t);color:var(--green-d)}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
 .pad{padding:18px 20px}
@@ -105,6 +97,26 @@ button{cursor:pointer}
   .tool .tx{display:none}
   .tool .g{font-size:17px}
 }
+/* the cart column (W19): lab-kit.css gives .lab-cols/.lab-next; the page's own padding already frames it */
+.wrap .lab-body{padding:0;margin-top:4px}
+.lab-body.solo{grid-template-columns:minmax(0,1fr)}
+.lab-body .lab-next[hidden]{display:none}
+.lab-mid{min-width:0}
+/* the frame styles ITS #screen as .cbsk .screen (flex); this page's own step panes share the class name, so the one that is not on stays hidden */
+.cbsk .lab-mid .screen{display:none}
+.cbsk .lab-mid .screen.on{display:block}
+.cartrow{padding:11px 0;border-top:1px solid var(--line-soft)}
+.cartrow:first-of-type{border-top:0}
+.cartacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.cartacts .btn{height:36px;padding:0 12px;font-size:13px}
+.lab-next .lk-more{color:var(--ink)}
+.cartnote{font-size:12.5px;margin-top:6px;color:var(--muted)}
+.cartnote.ok{color:var(--green-d)}
+.cartnote.bad{color:var(--red-i)}
+.cartpick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.cartpick select{height:36px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);padding:0 8px;font-size:13px}
+.btn.only-narrow{display:none}
+@media(max-width:760px){.btn.only-narrow{display:inline-flex;align-items:center}}
 .cols{display:grid;gap:16px}
 @media(min-width:900px){ .c-2{grid-template-columns:1fr 1fr} }
 
@@ -473,7 +485,6 @@ button{cursor:pointer}
 .scroll{max-height:460px;overflow-y:auto;border:1px solid var(--line-soft);border-radius:12px}
 @media(max-width:760px){
   .res th:nth-child(2),.res td:nth-child(2){display:none}
-  .steps{flex-direction:column}
 }
 /* ═══ v5 additions ═══════════════════════════════════════════════════════ */
 
@@ -579,7 +590,7 @@ button{cursor:pointer}
 .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
 .btn{height:44px;padding:0 16px;white-space:nowrap;border-radius:11px;border:1px solid var(--line);background:var(--card);
   font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
-.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.pri{background:var(--green);border-color:var(--green);color:var(--on-accent,#fff)}   /* the theme names the ink that sits on its accent: white on Cream, dark on the light green of Dark */
 .btn.pri:disabled{background:var(--panel);border-color:var(--line);color:var(--ghost)}
 .btn.sm{height:34px;padding:0 12px;font-size:13px;border-radius:9px}
 .btn b{font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:rgba(0,0,0,.08);border-radius:5px;padding:1px 6px}
@@ -646,7 +657,6 @@ button{cursor:pointer}
   .wrap{padding:14px 14px 50px}
   .res th.hide,.res td.hide{display:none}
   .headline .hv{font-size:24px}
-  .steps{display:none}
 }
 
 /* ═══ phone: the item table becomes one card per item ═══════════════════ */
@@ -771,11 +781,55 @@ button{cursor:pointer}
 </head>
 <body>   <!-- THE ONE FRAME (SHELL-ONE): mark · Offer Lab / Combo Lab · chip · ⌂ Home · avatar -->
 <script>
+/* THE EIGHT OFFER TYPES, in four groups (W17): the left menu draws them, the middle's phone list draws them, goalOf() reads them. One list, read before the frame. */
+var GOALS = [
+  { id: 'percent', kind: 'line', icon: '%', n: 'A percentage off', ex: '10% off' },
+  { id: 'amount', kind: 'line', icon: '₹', n: 'Rupees off', ex: '₹10 off each' },
+  { id: 'qty', kind: 'line', icon: '▦', n: 'Cheaper when they buy more', ex: '2+ → 5%, 5+ → 10%' },
+  { id: 'free', kind: 'pair', icon: '+', n: 'Something free', ex: 'buy 2, get 1' },
+  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'dosa + coffee = ₹80' },
+  { id: 'spend', kind: 'bill', icon: '↑', n: 'Reward a big bill', ex: 'over ₹500 → ₹50 back' },
+  { id: 'ship', kind: 'bill', icon: '⌁', n: 'Free delivery', ex: 'over ₹300 → free' },
+  { id: 'band', kind: 'guard', icon: '⌂', n: 'Refuse very small or big bills', ex: '₹50 to ₹2,000' }
+];
+var KINDS = {
+  line: "One thing's price",
+  pair: 'Two things together',
+  bill: 'Bill size',
+  guard: 'Allows or blocks'
+};
+var LAB_COMBO = new URLSearchParams(location.search).get('mode') === 'combo'; /* Combo Lab is a mode of this page: no types menu, no cart */
+/** the left menu: each type under its group heading, a glyph for the 64px phone rail (a sections list for CBFrame.lab) */
+function labTypeSections() {
+  var out = [],
+    last = null;
+  GOALS.forEach(function (goal) {
+    if (goal.kind !== last) {
+      last = goal.kind;
+      out.push({ group: KINDS[goal.kind] });
+    }
+    out.push({ k: goal.id, label: goal.n, glyph: goal.icon });
+  });
+  return out;
+}
+</script>
+<script>
+var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of the type on show */
 (function () {
   if (!window.CBFrame) return;
-  var combo = new URLSearchParams(location.search).get('mode') === 'combo';
-  /* UX-90: the Finance frame + the Labs switcher; Combo Lab is a mode of this page and lights its own entry */
-  CBFrame.lab({ app: 'offer-lab', labId: combo ? 'combo-lab' : 'offer-lab', name: combo ? 'Combo Lab' : 'Offer Lab', icon: combo ? '▣' : '%' });
+  var combo = LAB_COMBO;
+  /* UX-90 + W16/W17: the Finance frame; its left menu is THIS lab's choices - the eight offer types under four headings (the other labs are the top switcher's).
+     Combo Lab is a mode of this page and keeps its own bar, no menu. */
+  LAB_FRAME = CBFrame.lab({
+    app: 'offer-lab',
+    name: combo ? 'Combo Lab' : 'Offer Lab',
+    icon: combo ? '▣' : '%',
+    sections: combo ? [] : labTypeSections(),
+    active: 'percent',
+    onSection: function (type) {
+      pickGoal(type); /* defined further down: read when a type is tapped */
+    }
+  });
   if (combo && window.CBScreenId) CBScreenId.here('offer-lab', 'combo');
 })();
 </script>
@@ -812,12 +866,14 @@ button{cursor:pointer}
 
   <div id="strip"></div>
   <div id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
-  <div class="steps" id="steps"></div>
-
-  <div class="screen" id="s0"></div>
-  <div class="screen" id="s1"></div>
-  <div class="screen" id="s2"></div>
-  <div class="screen" id="s3"></div>
+  <div class="lab-cols lab-body" id="labBody">   <!-- W19: the middle forms the offer; the right is the cart (the saved-offers shelf, drafts first) -->
+    <div class="lab-mid">
+      <div class="screen" id="s0"></div>
+      <div class="screen" id="s2"></div>
+      <div class="screen" id="s3"></div>
+    </div>
+    <aside class="lab-next" id="labCart" data-testid="lab-cart" aria-label="Your offers (draft)"></aside>
+  </div>
 
 </div>
 <!--
@@ -892,7 +948,7 @@ button{cursor:pointer}
     <div id="workDemo"></div>
     <div class="shbd" id="workBody"></div>
     <div class="shft">
-      <button class="btn pri" id="workSave" onclick="saveOffer()">Save for review</button>
+      <button class="btn pri" id="workSave" onclick="saveOffer()">Add to your offers</button>
       <button class="btn" id="workFlip" onclick="closeWork()">Change it</button>
       <button class="btn" onclick="window.print()" title="Print this offer — the editable controls stay off the page">🖨 Print</button>
       <span class="grow"></span>
@@ -1154,22 +1210,6 @@ PHARMA.d.shipCost = 120;
 PHARMA.d.pairA = 'panto';
 PHARMA.d.pairB = 'omep';
 
-var GOALS = [
-  { id: 'percent', kind: 'line', icon: '%', n: 'A percentage off', ex: '10% off' },
-  { id: 'amount', kind: 'line', icon: '₹', n: 'Rupees off', ex: '₹10 off each' },
-  { id: 'qty', kind: 'line', icon: '▦', n: 'Cheaper when they buy more', ex: '2+ → 5%, 5+ → 10%' },
-  { id: 'free', kind: 'pair', icon: '+', n: 'Something free', ex: 'buy 2, get 1' },
-  { id: 'bundle', kind: 'pair', icon: '▣', n: 'Two things at one price', ex: 'dosa + coffee = ₹80' },
-  { id: 'spend', kind: 'bill', icon: '↑', n: 'Reward a big bill', ex: 'over ₹500 → ₹50 back' },
-  { id: 'ship', kind: 'bill', icon: '⌁', n: 'Free delivery', ex: 'over ₹300 → free' },
-  { id: 'band', kind: 'guard', icon: '⌂', n: 'Refuse very small or big bills', ex: '₹50 to ₹2,000' }
-];
-var KINDS = {
-  line: 'These change what one thing costs',
-  pair: 'These are about two things together',
-  bill: 'These are about the size of a bill',
-  guard: 'This one only allows or blocks'
-};
 
 var SHAPES = [
   { id: 'anything', n: 'Buy anything — this is free', ex: 'any bill → one free item' },
@@ -1195,6 +1235,7 @@ var FRESH = {
   applied: false
 };
 
+var TYPE_PICKED = false; /* has a type been chosen this visit (the phone list shows until then) */
 var S,
   CATS,
   P,
@@ -1234,15 +1275,19 @@ function labSaveSettings() {
     /* a settings save that fails costs nothing beyond this one refresh not remembering it */
   }
 }
+/** puts the shop's kept settings over the defaults; true when there were some (the page has been set up before) */
 function labLoadSettings() {
   try {
     var raw = localStorage.getItem(labSettingsKey());
-    if (!raw) return;
+    if (!raw) return false;
     var saved = JSON.parse(raw);
     SETTINGS_KEYS.forEach(function (item) {
       if (saved[item] !== undefined) S[item] = saved[item];
     });
-  } catch (_) {}
+    return true;
+  } catch (_) {
+    return false; /* unreadable settings: start from the defaults, on Settings */
+  }
 }
 function applyBiz(id) {
   var B = BIZ[id];
@@ -1254,7 +1299,8 @@ function applyBiz(id) {
     return { id: item[0], name: item[1], cat: item[2], price: item[3], cost: item[4], modifiers: Array.isArray(item[5]) ? item[5] : [] };
   });
   S = Object.assign({}, FRESH, { biz: id, margin: B.margin, cap: B.cap }, JSON.parse(JSON.stringify(B.d)));
-  labLoadSettings();
+  /* W17: a first visit opens on Settings; once the settings were kept (Continue, or a type picked) the page opens on the working step */
+  S.step = labLoadSettings() && !LAB_COMBO ? 2 : 0;
   /**
    * ⚠️⚠️ [found live, 2026-09-26] "if the previous panel loyalty bonus and the percentage is set, it has to
    * come to this panel automatically, why it is not cascading?" Real gap: S.custOn/S.cap (screen 0, shop-wide)
@@ -1474,18 +1520,38 @@ function editKeep(k, v) {
   render();
 }
 function labStep(n) {
-  S.step = n;
+  S.step = n === 1 ? 2 : n; /* the old "What kind of offer?" screen is gone: the types are the left menu */
   render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (n === 3 && savedLive()) loadSaved(); /* the shelf may have changed on another tab/device since last look */
   closeWork(); /* navigating away from "Work it out" must not leave its result floating over the next screen */
 }
+/** a type picked in the left menu (or the phone list) goes straight to the working step; picking one also keeps the settings as shown */
 function pickGoal(id) {
   EDITING = null;
   S.goal = id;
   S.applied = false;
   S.step = 2;
+  TYPE_PICKED = true;
+  CART_SAID = ''; /* the line about the last add belongs to that moment */
+  labSaveSettings();
+  closeWork();
   render();
+}
+/** the phone's "all types" door: back to the list in words */
+function labAllTypes() {
+  TYPE_PICKED = false;
+  closeWork();
+  render();
+}
+/** Settings → on: keeps the settings so the next visit opens on the working step */
+function labContinue() {
+  labSaveSettings();
+  labStep(2);
+}
+/** the phone rail is icons only (page-skeleton.css), so below 761px the middle lists the eight types in words until one is picked */
+function labNarrow() {
+  return !!(window.matchMedia && window.matchMedia('(max-width:760px)').matches);
 }
 /**
  * ⭐⭐⭐ [2026-09-26, per offer-lab-workitout.html] THE RESULT IS A MODAL NOW, NOT A PANEL PUSHED IN BELOW THE
@@ -1636,7 +1702,7 @@ function percentVerdict(list) {
         ' at ' +
         worst.m +
         '%.</span></span>',
-      save: 'Save for review'
+      save: 'Add to your offers'
     };
   if (pass > 0)
     return {
@@ -2026,7 +2092,7 @@ function paintWork() {
     document.getElementById('workBody').innerHTML = outHTML();
     flip.textContent = 'Change it';
     flip.onclick = closeWork;
-    save.textContent = 'Save for review';
+    save.textContent = 'Add to your offers';
     var note = '';
     if (S.goal === 'amount') {
       var list = lineRows(),
@@ -2878,7 +2944,7 @@ function renderS0() {
     '</div>' +
     '</div>' +
     '<div class="acts">' +
-    '<button class="btn pri" onclick="labStep(1)">Create an offer</button>' +
+    '<button class="btn pri" onclick="labContinue()">Create an offer</button>' +
     '<button class="btn" onclick="labStep(3)">Saved offers <b>' +
     SAVED.length +
     '</b></button>' +
@@ -2965,35 +3031,24 @@ function renderS0() {
 function backBtn(step) {
   return '<button class="btn sm back" onclick="labStep(' + step + ')">← Back</button>';
 }
-function renderS1() {
-  var h =
-    '<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
-    '<h2 class="h">What kind of offer?</h2>' +
-    backBtn(0) +
-    '</div>' +
-    '<p class="hs">Eight shapes. Pick one and the next screen does the arithmetic.</p>' +
-    '<div class="goals" style="margin-top:16px">';
-  var last = null;
+/** the eight types in words, by group: the phone's picker (the left menu there is icons); the same GOALS the menu draws */
+function typesHTML() {
+  var h = '<div class="card pad"><h2 class="h" data-testid="types-title">What kind of offer?</h2><div class="goals" data-testid="types-list" style="margin-top:16px">',
+    last = null;
   GOALS.forEach(function (item) {
     if (item.kind !== last) {
       last = item.kind;
       h += '<div class="grouphead">' + KINDS[item.kind] + '<i></i></div>';
     }
     h +=
-      '<button class="goal ' +
-      (S.goal === item.id ? 'on' : '') +
-      '" onclick="pickGoal(\'' +
-      item.id +
-      '\')">' +
-      '<span class="gi">' +
-      inShopMoney(item.icon) +
-      '</span><b>' +
-      inShopMoney(item.n) +
-      '</b><span class="ex">' +
-      inShopMoney(item.ex) +
-      '</span></button>';
+      '<button class="goal' + (S.goal === item.id ? ' on' : '') + '" data-testid="type-' + item.id + '" onclick="pickGoal(\'' + item.id + '\')"><span class="gi">' +
+      inShopMoney(item.icon) + '</span><b>' + inShopMoney(item.n) + '</b><span class="ex">' + inShopMoney(item.ex) + '</span></button>';
   });
   return h + '</div></div>';
+}
+/** the middle on the working step: the form of the picked type, or on a phone with none picked yet the list of types */
+function renderWorkOrTypes() {
+  return !TYPE_PICKED && labNarrow() ? typesHTML() : renderS2();
 }
 
 /* ═══ shared view pieces ══════════════════════════════════════════════ */
@@ -3226,8 +3281,7 @@ function renderS2() {
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
     '<h2 class="h">' +
     g.n +
-    '</h2>' +
-    backBtn(1) +
+    '</h2><button class="btn sm back only-narrow" data-testid="all-types" onclick="labAllTypes()">← All types</button>' +
     '</div><p class="hs">' +
     cfgLine() +
     '</p>' +
@@ -5042,6 +5096,13 @@ function saveName(l) {
  * second, separate offer next to it. A content edit always lands back in 'draft' — the item list just
  * changed, so whatever review got it to approved/live/paused applied to a list that no longer exists.
  */
+/** "Add to cart": the offer is a draft on the shelf; the page stays on the form and the cart on the right shows it, with its attach actions */
+function afterSave() {
+  EDITING = null;
+  CART_SAID = 'Added to your offers (draft).';
+  closeWork();
+  render();
+}
 async function saveOffer() {
   var l = label(),
     k = keyNumber(),
@@ -5074,8 +5135,7 @@ async function saveOffer() {
         costs: costPrint()
       });
     }
-    EDITING = null;
-    labStep(3);
+    afterSave();
     return;
   }
   if (!sub) {
@@ -5097,9 +5157,8 @@ async function saveOffer() {
     toastSay((r.body && r.body.message) || 'That did not save.');
     return;
   }
-  EDITING = null;
   await loadSaved();
-  labStep(3);
+  afterSave();
 }
 /** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
 async function loadSaved() {
@@ -5423,11 +5482,87 @@ function savedSummaryHTML() {
  * indistinguishable from a draft someone had just reviewed and not yet launched. A live offer that stops must
  * say PAUSED, or "why is this showing at the till" and "why did we never launch this" become the same question.
  */
+/** the status word as a pill (draft · approved · live · paused): one place, the shelf and the cart both draw it */
+function savedPillHTML(item) {
+  var pillClass = item.status === 'live' ? 'live' : item.status === 'paused' ? 'paused' : item.status === 'approved' ? 'appr' : 'draft';
+  return '<span class="pill p-' + pillClass + '">' + esc(item.status) + '</span>';
+}
+/** a saved offer's title and its one-line detail (the shelf adds which shop it was worked out on) */
+function savedTitleHTML(item, withShop) {
+  return '<div class="svt">' + esc(item.title) + '</div><div class="svd">' + esc(item.detail) + (withShop ? ' · ' + esc(BIZ[item.biz].name) : '') + '</div>';
+}
+/** the pills under a shelf row's title: its status, "n costs changed since", and "overlaps n others" (which opens the list of them) */
+function savedPillsHTML(item) {
+  var moved = costMoved(item),
+    hits = clashDetail(item),
+    clashOpen = !!SVOPEN[item.id + ':clash'];
+  return (
+    '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">' +
+    savedPillHTML(item) +
+    (moved ? '<span class="pill p-stale">' + moved + ' cost' + (moved > 1 ? 's' : '') + ' changed since</span>' : '') +
+    (hits
+      ? '<span class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" onclick="toggleSaved(\'' + item.id + "','clash')\">" +
+        (clashOpen ? '▾' : '▸') + ' overlaps ' + hits.length + ' other' + (hits.length > 1 ? 's' : '') + '</span>'
+      : '') +
+    '</div>' +
+    (clashOpen && hits ? savedClashListHTML(hits) : '')
+  );
+}
+/** the other offers on the same items, as the shelf's clash check found them */
+function savedClashListHTML(hits) {
+  return (
+    '<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--amber-t);border:1px solid var(--amber-b);border-radius:9px">' +
+    hits
+      .map(function (overlap) {
+        return '<b>' + esc(overlap.title) + '</b> (' + esc(overlap.status) + ')' + (overlap.items.length ? ': ' + overlap.items.map(esc).join(', ') : ' — whole overlapping category');
+      })
+      .join('<br>') +
+    '</div>'
+  );
+}
+/** "n items linked" and the version History buttons under a shelf row */
+function savedLinksHTML(item) {
+  var names = savedItemNames(item),
+    historyOpen = !!SVOPEN[item.id + ':history'];
+  return (
+    (names && names.length
+      ? '<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\'' + item.id + '\')">' + names.length + ' item' + (names.length === 1 ? '' : 's') + ' linked ›</button>'
+      : '') +
+    (item.remote
+      ? '<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\'' + item.id + '\')">' + (historyOpen ? '▾' : '▸') + ' History</button>' + (historyOpen ? historyHTML(item) : '')
+      : '')
+  );
+}
+/** the shelf's next step for each status: the button's words, its handler's target status, and whether it is the primary one */
+var SHELF_STEP = {
+  draft: ['Approve', 'approved', false],
+  approved: ['Go live', 'live', true],
+  live: ['Pause', 'paused', false],
+  paused: ['Resume', 'live', true]
+};
+/** a shelf row's buttons: Edit, the one next step its status allows, and Retire (signed in) or Delete (trial) */
+function savedActionsHTML(item) {
+  var step = SHELF_STEP[item.status];
+  return (
+    '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">' +
+    '<button class="btn sm" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
+    (step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" onclick="setStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '') +
+    '<button class="btn sm" onclick="dropSaved(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>'
+  );
+}
+/** one row of the Saved offers shelf, with every action the status allows (the cart draws a shorter row from the same pieces) */
+function savedRowHTML(item) {
+  return (
+    '<div class="sv"><div class="svm">' + savedTitleHTML(item, true) + savedPillsHTML(item) + savedLinksHTML(item) + '</div>' +
+    '<div style="text-align:right"><div class="svn">' + esc(item.n) + '</div><div class="svk">' + esc(item.k) + '</div></div>' +
+    savedActionsHTML(item) + '</div>'
+  );
+}
 function renderS3() {
   var h =
     '<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
     '<h2 class="h">Saved offers</h2>' +
-    backBtn(0) +
+    backBtn(2) +
     '</div>' +
     '<p class="hs">' +
     (savedLive() ? 'Draft → approved → live → paused.' : 'Draft → approved → live. Sign in to keep these past this tab.') +
@@ -5435,94 +5570,163 @@ function renderS3() {
     (SAVED.length ? savedSummaryHTML() : '') +
     '</div>';
   if (!SAVED.length) return h + '<div class="card empty">Nothing saved yet.</div>';
-  h += '<div class="bucket" style="margin-top:14px">';
-  SAVED.forEach(function (item) {
-    var moved = costMoved(item),
-      pillClass = item.status === 'live' ? 'live' : item.status === 'paused' ? 'paused' : item.status === 'approved' ? 'appr' : 'draft';
-    var names = savedItemNames(item);
-    var hits = clashDetail(item),
-      clashOpen = !!SVOPEN[item.id + ':clash'];
-    h +=
-      '<div class="sv"><div class="svm">' +
-      '<div class="svt">' +
-      esc(item.title) +
-      '</div>' +
-      '<div class="svd">' +
-      esc(item.detail) +
-      ' · ' +
-      esc(BIZ[item.biz].name) +
-      '</div>' +
-      '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">' +
-      '<span class="pill p-' +
-      pillClass +
-      '">' +
-      esc(item.status) +
-      '</span>' +
-      (moved ? '<span class="pill p-stale">' + moved + ' cost' + (moved > 1 ? 's' : '') + ' changed since</span>' : '') +
-      (hits
-        ? '<span class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" ' +
-          'onclick="toggleSaved(\'' +
-          item.id +
-          "','clash')\">" +
-          (clashOpen ? '▾' : '▸') +
-          ' overlaps ' +
-          hits.length +
-          ' other' +
-          (hits.length > 1 ? 's' : '') +
-          '</span>'
-        : '') +
-      '</div>' +
-      (clashOpen && hits
-        ? '<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--amber-t);border:1px solid var(--amber-b);border-radius:9px">' +
-          hits
-            .map(function (x) {
-              return (
-                '<b>' + esc(x.title) + '</b> (' + esc(x.status) + ')' + (x.items.length ? ': ' + x.items.map(esc).join(', ') : ' — whole overlapping category')
-              );
-            })
-            .join('<br>') +
-          '</div>'
-        : '') +
-      (names && names.length
-        ? '<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\'' +
-          item.id +
-          '\')">' +
-          names.length +
-          ' item' +
-          (names.length === 1 ? '' : 's') +
-          ' linked ›</button>'
-        : '') +
-      (item.remote
-        ? '<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\'' +
-          item.id +
-          '\')">' +
-          (SVOPEN[item.id + ':history'] ? '▾' : '▸') +
-          ' History</button>' +
-          (SVOPEN[item.id + ':history'] ? historyHTML(item) : '')
-        : '') +
-      '</div>' +
-      '<div style="text-align:right"><div class="svn">' +
-      esc(item.n) +
-      '</div><div class="svk">' +
-      esc(item.k) +
-      '</div></div>' +
-      '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">' +
-      '<button class="btn sm" onclick="openSaved(\'' +
-      item.id +
-      '\')">Edit</button>' +
-      (item.status === 'draft' ? '<button class="btn sm" onclick="setStatus(\'' + item.id + "','approved')\">Approve</button>" : '') +
-      (item.status === 'approved' ? '<button class="btn sm pri" onclick="setStatus(\'' + item.id + "','live')\">Go live</button>" : '') +
-      (item.status === 'live' ? '<button class="btn sm" onclick="setStatus(\'' + item.id + "','paused')\">Pause</button>" : '') +
-      (item.status === 'paused' ? '<button class="btn sm pri" onclick="setStatus(\'' + item.id + "','live')\">Resume</button>" : '') +
-      '<button class="btn sm" onclick="dropSaved(\'' +
-      item.id +
-      '\')">' +
-      (savedLive() ? 'Retire' : 'Delete') +
-      '</button>' +
-      '</div></div>';
-  });
-  return h + '</div>';
+  return h + '<div class="bucket" style="margin-top:14px">' + SAVED.map(savedRowHTML).join('') + '</div>';
 }
+
+/* ═══ THE CART (W19) · the saved-offers shelf, drawn beside the form ═════════════════════════════════════════════════
+ * OWNS  the right column: "Your offers (draft)" and the two ways to attach an offer from it.
+ * NOT   a second store and not CBCart (that holds chit LINES; an offer is a rule): the rows are SAVED, written by saveOffer() through
+ *       /api/definitions. Trial = SAVED in memory. Signed in = a definition in status 'draft', which no bill can see; only 'live' reaches one.
+ * ATTACH  "Make live" = the shelf's own status change, for everyone. "Only for a group" = rules.customer_group (+ customer_name) on the offer,
+ *       then live; the engine and the api already apply it (lib/offers-live, engines offers.js). Nothing here writes the pricing engine,
+ *       and sending the offer to the group stays Marketing's button (crm.html?app=marketing).
+ * FLOW  O2C step 1 · price (offers) */
+var CART_ROWS = 5;
+var CART_SAID = ''; /* the line at the top of the cart (what was just added) */
+var CART_NOTES = {}; /* offer id -> { text, tone }: what the last attach on that row did, said in the row */
+var CART_PICK = null; /* the offer whose group picker is open */
+var CART_GROUPS = null; /* the shop's named groups, read once: null = not read yet */
+var SIGN_IN_SAY = 'Sign in to use this in your shop.';
+/* the four groups the shop's customers fall into by themselves - the same values the Definitions picker writes (cap-definitions.js CBDEF_GROUPS, app.html's file) */
+var SYSTEM_GROUPS = [
+  ['new', 'New customers'],
+  ['regular', 'Regular (3+ orders)'],
+  ['high_value', 'High value'],
+  ['inactive', 'Inactive (90 days)']
+];
+function cartSay(id, text, tone) {
+  CART_NOTES[id] = { text: text, tone: tone || '' };
+  render();
+}
+function cartItem(id) {
+  return SAVED.filter(function (x) {
+    return x.id === id;
+  })[0];
+}
+/** one cart row: the shelf's title and status pill, the two attach buttons, and the outcome of the last attach right under them */
+function cartRowHTML(item) {
+  var note = CART_NOTES[item.id],
+    live = item.status === 'live';
+  return (
+    '<div class="cartrow" data-testid="cart-row" data-id="' + esc(item.id) + '">' +
+    savedTitleHTML(item, false) +
+    '<div class="cartacts">' + savedPillHTML(item) +
+    '<button class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
+    '<button class="btn sm pri" data-testid="cart-live"' + (live ? ' disabled' : '') + ' onclick="cartLive(\'' + item.id + '\')">Make live</button>' +
+    '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button></div>' +
+    (CART_PICK === item.id ? cartPickerHTML(item) : '') +
+    (note || live
+      ? '<div class="cartnote ' + (note ? note.tone : 'ok') + '" role="status" data-testid="cart-note">' + esc(note ? note.text : 'Live for everyone.') + '</div>'
+      : '') +
+    '</div>'
+  );
+}
+/** the group picker: the four automatic groups, then the shop's own named groups */
+function cartPickerHTML(item) {
+  var named = (CART_GROUPS || []).map(function (name) {
+    return '<option value="group:' + esc(name) + '">' + esc(name) + '</option>';
+  });
+  return (
+    '<div class="cartpick"><select aria-label="Which group" data-testid="cart-group-pick" id="cartGroupPick">' +
+    SYSTEM_GROUPS.map(function (pair) {
+      return '<option value="' + pair[0] + '">' + esc(pair[1]) + '</option>';
+    }).join('') +
+    (named.length ? '<optgroup label="Your groups">' + named.join('') + '</optgroup>' : '') +
+    '</select><button class="btn sm pri" data-testid="cart-group-apply" onclick="cartApplyGroup(\'' + item.id + '\')">Make live for them</button></div>'
+  );
+}
+/** the right column; hidden in the Combo Lab and on the full Saved offers screen (which is the same shelf, whole) */
+function renderCart() {
+  var node = document.getElementById('labCart'),
+    body = document.getElementById('labBody');
+  if (!node) return;
+  var show = !LAB_COMBO && S.step !== 3;
+  node.hidden = !show;
+  body.classList.toggle('solo', !show);
+  if (!show) return;
+  var rest = SAVED.length - CART_ROWS;
+  node.innerHTML =
+    '<h2 class="h" data-testid="cart-title">Your offers (draft)</h2>' +
+    '<p class="hs">' + (savedLive() ? 'Only live offers reach a bill.' : 'Kept in this tab only.') + '</p>' +
+    (CART_SAID ? '<div class="cartnote ok" role="status" data-testid="cart-said">' + esc(CART_SAID) + '</div>' : '') +
+    (SAVED.length
+      ? SAVED.slice(0, CART_ROWS).map(cartRowHTML).join('')
+      : '<p class="hs" data-testid="cart-empty">Nothing yet. Work an offer out, then add it.</p>') +
+    (SAVED.length ? '<button class="lk-more" data-testid="cart-all" onclick="labStep(3)">' + (rest > 0 ? 'and ' + rest + ' more' : 'All saved offers') + ' ›</button>' : '');
+}
+/** "Make live": draft -> approved -> live (the shelf's own steps, so the log shows who approved), for everyone */
+async function cartLive(id) {
+  var item = cartItem(id);
+  if (!item) return;
+  if (!savedLive()) return cartSay(id, SIGN_IN_SAY, 'bad');
+  await attachOffer(item, null);
+}
+/** "Only for a group": opens the picker (and reads the shop's named groups the first time) */
+async function cartOpenGroup(id) {
+  if (!savedLive()) return cartSay(id, SIGN_IN_SAY, 'bad');
+  CART_PICK = CART_PICK === id ? null : id;
+  render();
+  if (CART_GROUPS === null) {
+    var reply = await apiFetch('GET', API + '/api/relationships/customers/groups');
+    CART_GROUPS = reply.ok && reply.body && Array.isArray(reply.body.names) ? reply.body.names : [];
+    render();
+  }
+}
+/** the group's words: the automatic groups by their names, a named group as typed */
+function groupNameOf(value) {
+  var system = SYSTEM_GROUPS.filter(function (pair) {
+    return pair[0] === value;
+  })[0];
+  return system ? system[1] : String(value).replace(/^group:/, '');
+}
+async function cartApplyGroup(id) {
+  var item = cartItem(id),
+    pick = document.getElementById('cartGroupPick');
+  if (!item || !pick) return;
+  await attachOffer(item, { customer_group: pick.value, customer_name: groupNameOf(pick.value) });
+}
+/** the one attach path: optional rules patch (read the current rules first, a PUT of rules replaces them), approve a draft, then live; the outcome is said in the row */
+async function attachOffer(item, patch) {
+  var id = item.id,
+    body = { status: 'live' };
+  cartSay(id, 'Saving…');
+  if (patch) {
+    var current = await defFetch('GET', '/' + id);
+    var versions = (current.ok && current.body.versions) || [];
+    if (!versions.length) return cartSay(id, 'Could not read this offer. Nothing changed.', 'bad');
+    body.rules = Object.assign({}, versions[0].rules, patch);
+  }
+  if (item.status === 'draft') {
+    var approved = await defFetch('PUT', '/' + id, { status: 'approved' });
+    if (!approved.ok) return cartSay(id, (approved.body && approved.body.message) || 'That did not save.', 'bad');
+  }
+  var reply = await defFetch('PUT', '/' + id, body);
+  if (!reply.ok) return cartSay(id, (reply.body && reply.body.message) || 'That did not go live.', 'bad');
+  CART_PICK = null;
+  var said = reply.queued ? 'Will go live once the line is back.' : patch ? 'Live, only for ' + patch.customer_name + '.' : 'Live for everyone.';
+  CART_NOTES[id] = { text: said, tone: 'ok' };
+  await loadSaved();
+}
+/** the left menu follows the page: the type on show is lit; a shop with another currency reads its own symbol on the glyphs and words */
+var MENU_SIG = '';
+function syncTypeMenu() {
+  if (!LAB_FRAME || !LAB_FRAME.skeleton || LAB_COMBO) return;
+  var signature = S.goal + '|' + inShopMoney('₹');
+  if (signature === MENU_SIG) return;
+  MENU_SIG = signature;
+  GOALS.forEach(function (goal) {
+    var button = document.querySelector('.side .nav-btn[data-sec="' + goal.id + '"]');
+    if (!button) return;
+    button.querySelector('.lab-ico').textContent = inShopMoney(goal.icon);
+    button.querySelector('.label').textContent = inShopMoney(goal.n);
+    button.setAttribute('aria-label', inShopMoney(goal.n));
+  });
+  LAB_FRAME.skeleton.setActive(S.goal);
+}
+if (window.matchMedia)
+  window.matchMedia('(max-width:760px)').addEventListener('change', function () {
+    render(); /* the phone list and the form swap places when the window crosses the breakpoint */
+  });
 
 /* ═══ SHELL ═══════════════════════════════════════════════════════════ */
 function render() {
@@ -5560,32 +5764,14 @@ function render() {
         (S.custOn ? 'up to <b>' + num(S.cap) + '%</b>' : 'off') +
         '<button onclick="labStep(0)">Change</button></div>';
 
-  var names = ['Settings', 'Offer', 'Work it out'];
-  document.getElementById('steps').innerHTML =
-    S.step === 3
-      ? ''
-      : names
-          .map(function (item, index) {
-            return (
-              '<button class="stp ' +
-              (S.step === index ? 'on' : S.step > index ? 'done' : '') +
-              '" onclick="labStep(' +
-              index +
-              ')">' +
-              '<span class="n">' +
-              (index + 1) +
-              '</span><span><span class="t">' +
-              item +
-              '</span></span></button>'
-            );
-          })
-          .join('');
-
-  [0, 1, 2, 3].forEach(function (item) {
+  var screens = { 0: renderS0, 2: renderWorkOrTypes, 3: renderS3 };
+  [0, 2, 3].forEach(function (item) {
     var el = document.getElementById('s' + item);
     el.className = 'screen' + (S.step === item ? ' on' : '');
-    if (S.step === item) el.innerHTML = [renderS0, renderS1, renderS2, renderS3][item]();
+    if (S.step === item) el.innerHTML = screens[item]();
   });
+  syncTypeMenu();
+  renderCart();
   /* ⭐ if the "Work it out" modal is open, keep it in sync — e.g. editing a qty tier's own inline inputs while
    * the result is on screen calls render() the same way every other edit does, and the modal is not one of
    * the four .screen divs render() already repaints above. */
