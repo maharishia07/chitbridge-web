@@ -28,7 +28,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail
 
 const HOST_NAMES = ['tx', 'txf', 'esc', 'uk', 'UI', 'mvBtn', 'emptyState', 'lazyWrap', 'listCtl', 'listCtlS', 'toast', 'api', 'SESSION', 'CBLocale', 'fmtMoney'];
 /* every name the old list-ctl.js borrowed from its page becomes a trap: a read is recorded, and a call throws */
-const TRAPS = (names) => { window.__host = []; names.forEach((n) => { try { Object.defineProperty(window, n, { configurable: true, get() { window.__host.push(n); return undefined; } }); } catch (_) {} }); };
+const TRAPS = (names) => { window.__host = []; names.forEach((n) => { try { Object.defineProperty(window, n, { configurable: true, get() { if (/list-ctl[.]js/.test(new Error().stack || '')) window.__host.push(n); return undefined; /* UX-90: list-lab wears the frame now; only the LIST reading its host counts (the shell reads tx on its own) */ } }); } catch (_) {} }); };
 const THROWING_STORAGE = () => { const boom = function () { throw new Error('storage denied'); }; Storage.prototype.getItem = boom; Storage.prototype.setItem = boom; Storage.prototype.removeItem = boom; };
 
 (async () => {

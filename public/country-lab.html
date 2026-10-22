@@ -10,7 +10,7 @@
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address (CL3 loads app/shell.js) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Country lab · Chit &amp; Bridge</title>
+<title>Country Lab · ChitBridge</title>
 <!--
   THE COUNTRY LAB (CL1, 2026-10-12 · CL2, 2026-10-13) — what REGISTERING in another country would look like, SHOWN FROM THE PACKS.
 
@@ -155,6 +155,7 @@
   }
 </style>
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame (CL3) -->
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 <style>
@@ -302,6 +303,7 @@
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
 <script src="/app/shell.js"></script>
 <script src="/app/kural.js"></script>
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>
 <script src="/app/country-ready.js"></script>
 <script src="/app/table-resize.js"></script>   <!-- drag a column edge in All countries; remembered -->
@@ -1330,27 +1332,24 @@ function paintReady() {
 }
 /* CL3 · the standard frame around the lab: header + avatar (Sign in when signed out) + skeleton + kural. Public: no sign-in window. */
 var FRAME = window.CBFrame
-  ? CBFrame.mount({
+  ? CBFrame.lab({
       app: 'country-lab',
-      area: 'labs',
-      signin: false,
+      name: 'Country Lab',
+      icon: '§',
       kural: 'planning',
       work: document.getElementById('cl'),
-      skeleton: {
-        name: 'Country lab',
-        icon: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
-        active: labView(),
-        sections: [
-          { k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' },
-          { k: 'all', label: 'All countries', icon: 'M3 5h18v14H3zM3 10h18M9 5v14' },
-          { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' },
-          { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }
-        ],
-        onSection: function (k) {
-          showView(k === 'countries' || k === 'all' ? k : 'compare');
-          var node = k === 'ready' ? document.getElementById('ready-sec') : null;
-          if (node && node.scrollIntoView) node.scrollIntoView({ block: 'start' });
-        }
+      svg: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+      active: labView(),
+      sections: [
+        { k: 'countries', label: 'Countries', icon: 'M4 5h16M4 12h16M4 19h16' },
+        { k: 'all', label: 'All countries', icon: 'M3 5h18v14H3zM3 10h18M9 5v14' },
+        { k: 'compare', label: 'Side by side', icon: 'M4 5h7v14H4zM13 5h7v14h-7z' },
+        { k: 'ready', label: 'Where we are', icon: 'M5 12l4 4 10-10' }
+      ],
+      onSection: function (k) {
+        showView(k === 'countries' || k === 'all' ? k : 'compare');
+        var node = k === 'ready' ? document.getElementById('ready-sec') : null;
+        if (node && node.scrollIntoView) node.scrollIntoView({ block: 'start' });
       }
     })
   : null;

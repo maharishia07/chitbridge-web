@@ -91,7 +91,7 @@ async function run(o) {
   async function open(ctx, q) {
     const pg = await ctx.newPage();
     pg.on('pageerror', (e) => errs.push(String(e.message)));
-    await pg.goto(web.url('/shell-lab.html' + (q || '')));
+    await pg.goto(web.url('/shell-lab.html' + ((q || '?') + (q ? '&' : '') + 'harness=1')));
     await pg.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 });
     await pg.evaluate(() => window.SHELL.ready);
     await pg.waitForTimeout(250);
