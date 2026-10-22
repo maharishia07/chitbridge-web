@@ -105,9 +105,9 @@ async function viewer(api, token, shopUserId, key) {
 
 /** a shopper on the public storefront: order/start (the code) then order/confirm (the order) — the same two calls shop.html makes */
 async function shopperOrder(api, bridgeId, o) {
-  const s = await j(api + '/api/catalogue/' + encodeURIComponent(bridgeId) + '/order/start', { body: { identifier: o.contact, name: o.name } });
+  const s = await j(api + '/api/catalogue/' + encodeURIComponent(bridgeId) + '/order/start', { body: { identifier: o.contact, name: o.name }, headers: { 'idempotency-key': crypto.randomUUID() } }); /* API-3 S36: one key per attempt */
   if (s.status !== 200) throw new Error('real-stack: order/start refused ' + s.status + ' ' + JSON.stringify(s.b).slice(0, 200));
-  const c = await j(api + '/api/catalogue/' + encodeURIComponent(bridgeId) + '/order/confirm', { body: Object.assign({ identifier: o.contact, name: o.name, otp: s.b.dev_otp || OTP_CUSTOMER, location: o.location || '', fulfilment: o.fulfilment || 'delivery', line_items: o.lines }, o.extra || {}) });
+  const c = await j(api + '/api/catalogue/' + encodeURIComponent(bridgeId) + '/order/confirm', { headers: { 'idempotency-key': crypto.randomUUID() }, body: Object.assign({ identifier: o.contact, name: o.name, otp: s.b.dev_otp || OTP_CUSTOMER, location: o.location || '', fulfilment: o.fulfilment || 'delivery', line_items: o.lines }, o.extra || {}) });
   if (c.status !== 200) throw new Error('real-stack: order/confirm refused ' + c.status + ' ' + JSON.stringify(c.b).slice(0, 300));
   return c.b;
 }

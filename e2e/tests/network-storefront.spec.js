@@ -81,8 +81,8 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
   const view = async () => (await request.get(API + '/api/catalogue/' + encodeURIComponent(handle))).json();
   const order = async (name, quantity) => {
     const ident = 'nsf' + Date.now().toString().slice(-7) + '@example.com';
-    const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { data: { identifier: ident, name: 'Net Buyer' } })).json();
-    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { data: { identifier: ident, name: 'Net Buyer',
+    const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { headers: { 'Idempotency-Key': crypto.randomUUID() }, data: { identifier: ident, name: 'Net Buyer' } })).json();
+    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { headers: { 'Idempotency-Key': crypto.randomUUID() }, data: { identifier: ident, name: 'Net Buyer',
       otp: st.dev_otp || require('../fixtures').signinCode('customer'), location: 'Chennai', line_items: [{ kind: 'finish', source: sourceKey, finish: name, quantity }] } });
     return { status: cf.status(), j: await cf.json() };
   };
