@@ -480,10 +480,8 @@ function route(S, r) {
       ok('offer', sampleHidden2 === true, 'signed in: the sample-data banner is gone (' + state + ')', 'labSampleNote.hidden read ' + sampleHidden2);
     }
 
-    /* 1 · Settings → "Create an offer" → screen 1, the eight shapes */
-    await p.click('button:has-text("Create an offer")').catch(() => {});
-    await settle(p);
-    ok('offer', await p.locator('#s2.on').count() > 0, '"Create an offer" opens the working step (the types are the left menu) (' + state + ')', 'screen 2 (#s2) never carried class "on"');
+    /* 1 · the landing has ONE way in: the left menu (W30: no "Create an offer" / "Saved offers" buttons beside it) */
+    ok('offer', await p.locator('#s0 button:has-text("Create an offer"), #s0 button:has-text("Saved offers")').count() === 0, 'the landing carries no second door to the form or the shelf (' + state + ')', '"Create an offer" or "Saved offers" is still on the landing');
 
     /* 2 · pick "A percentage off" in the left menu (icons-only at phone width: the list in words in the middle) → its controls */
     const typeBtn = p.locator('[data-testid="skel-nav-percent"]:visible, [data-testid="type-percent"]:visible').first();
@@ -491,7 +489,9 @@ function route(S, r) {
     await settle(p);
     ok('offer', await p.locator('#s2.on').count() > 0, 'picking "A percentage off" opens its controls (' + state + ')', 'screen 2 (#s2) never carried class "on"');
 
-    /* 3 · "Work it out" — the result opens as a modal over the controls, never pushed in below them */
+    /* 3 · "Work it out" stays off until the reach is chosen (UX-109), then opens as a modal over the controls, never pushed in below them */
+    ok('offer', await p.locator('button[onclick="apply()"][disabled]').count() > 0, '"Work it out" waits for "Who and what does this apply to?" (' + state + ')', 'the button was on with nothing chosen');
+    await p.evaluate(() => { openApplyPicker(); overlayApplyToggle(P[0].id); overlayApplyDone(); }).catch(() => {});
     await p.click('button[onclick="apply()"]').catch(() => {});
     await settle(p);
     const open = await p.locator('#workScrim.on').count();

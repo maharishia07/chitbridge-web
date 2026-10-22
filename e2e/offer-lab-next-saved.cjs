@@ -83,7 +83,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   await p.goto(base + '/offer-lab-next.html');
   await p.waitForTimeout(200);
   const demo = await p.evaluate(async () => {
-    pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; S.pctOff = 10; apply();
+    pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; S.itemIds = ['masala']; S.pctOff = 10; apply();
     await saveOffer();
     return { step: S.step, saved: SAVED.length, live: savedLive() };
   });
@@ -100,7 +100,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   await p.goto(base + '/offer-lab-next.html?api=' + encodeURIComponent(base));
   await p.waitForTimeout(200);
   const saved = await p.evaluate(async () => {
-    pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; S.pctOff = 10; apply();
+    pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; S.itemIds = ['masala']; S.pctOff = 10; apply();
     await saveOffer();
     return { step: S.step, saved: SAVED.map((s) => ({ status: s.status, remote: !!s.remote })) };
   });
@@ -131,7 +131,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   console.log('\n── ⭐⭐ overlap detection — the same item, two live-ish offers ' + '─'.repeat(3));
   const overlap = await p.evaluate(async () => {
-    pickGoal('amount'); S.scope = 'item'; S.itemId = 'masala'; S.rsOff = 5; apply();
+    pickGoal('amount'); S.scope = 'item'; S.itemId = 'masala'; S.itemIds = ['masala']; S.rsOff = 5; apply();
     await saveOffer();
     const second = SAVED.filter((s) => s.status === 'draft')[0];
     await setStatus(second.id, 'approved');

@@ -59,7 +59,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
 
   console.log('\n── the imported book works like any other — real engine, real margin ' + '─'.repeat(2));
   const worked = await p.evaluate(() => {
-    pickGoal('percent'); S.scope = 'item'; S.itemId = P.filter((x) => x.name === 'Pencil')[0].id; S.pctOff = 10; apply();
+    pickGoal('percent'); S.scope = 'item'; S.itemId = P.filter((x) => x.name === 'Pencil')[0].id; S.itemIds = [S.itemId]; S.pctOff = 10; apply();
     /* ⚠️ MOVED, NOT DELETED (2026-09-28). Since 2026-09-26 the per-offer loyalty switch follows the shop-wide one
        (S.loyOn = S.custOn, on by default), so CBOffers.compound(offer, loyalty) is the LOYALTY price — ₹10 → ₹9 → ₹8.10,
        rounded down to ₹8, margin (8−4)/8 = 50%, which is right. The ₹9 / ~56% this case always meant is the PUBLIC

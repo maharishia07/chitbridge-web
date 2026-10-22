@@ -37,10 +37,10 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
 
   console.log('\n── ⭐ the sample switcher is gone — one shop, no "Sri" button ' + '─'.repeat(0));
   const noSwitcher = await p.evaluate(() => ({
-    bizSwEmpty: (document.getElementById('bizSw') || {}).innerHTML === '',
+    bizSwEmpty: !document.getElementById('bizSw'),   // W36: the empty circle is gone, not just empty
     noPharmaButton: !document.querySelector('#bizSw button'),
   }));
-  say('the switcher renders nothing', noSwitcher.bizSwEmpty, 'bizSw is empty');
+  say('the switcher is gone', noSwitcher.bizSwEmpty, 'no #bizSw');
   say('there is no button to flip to a different example business', noSwitcher.noPharmaButton, 'confirmed absent');
 
   console.log('\n── ⭐⭐⭐ the loyalty bonus value is readable, not hidden behind the % sign ' + '─'.repeat(0));

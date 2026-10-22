@@ -33,7 +33,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   console.log('\n── percent off masala dosa — the basket includes OTHER, untouched items too ' + '─'.repeat(0));
   const pct = await p.evaluate(() => {
-    pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; S.pctOff = 10; apply();
+    pickGoal('percent'); S.scope = 'item'; S.itemIds = ['masala']; S.pctOff = 10; apply();
     const items = cartPreviewItems();
     const html = cartPreviewHTML();
     return { itemCount: items.length, targeted: items.some((i) => i.id === 'masala'), others: items.some((i) => i.id !== 'masala'),
@@ -71,7 +71,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   console.log('\n── qty ladder: the item is bought at the TOP tier\'s quantity, so the discount actually shows ' + '─'.repeat(0));
   const qty = await p.evaluate(() => {
-    pickGoal('qty'); S.scope = 'item'; S.itemId = 'masala'; apply();
+    pickGoal('qty'); S.scope = 'item'; S.itemIds = ['masala']; apply();
     const items = cartPreviewItems();
     const lines = cartPreviewLines(items);
     const top = tiers()[tiers().length - 1];
