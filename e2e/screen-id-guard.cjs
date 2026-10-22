@@ -31,7 +31,8 @@ const pages = fs.readdirSync(PUB).filter((f) => f.endsWith('.html')).map((f) => 
 const frameApps = {};
 for (const f of pages) {
   const src = rd(f);
-  for (const m of src.matchAll(/CBFrame\.mount\(\{\s*app:\s*'([a-z-]+)'/g)) frameApps[m[1]] = f;
+  /* UX-90 (#352): a Lab wears the Finance frame through CBFrame.lab({ app: … }) — the same register as CBFrame.mount */
+  for (const m of src.matchAll(/CBFrame\.(?:mount|lab)\(\{\s*app:\s*'([a-z-]+)'/g)) frameApps[m[1]] = f;
 }
 frameApps.home = 'index.html';   /* SHELL-ONE: accounts · finance · crm mount CBFrame like every other page — found by the regex above, no own header any more */
 const missingApps = Object.keys(frameApps).filter((a) => !REG.byApp[a]);
@@ -71,7 +72,7 @@ ok('the chit sheet names its kinds in ONE function (sheetKind: ' + kinds.join(' 
 const noKind = kinds.filter((k) => !REG.bySheet[k]);
 ok('every sheet kind has a code' + (noKind.length ? ': ' + noKind.join(' · ') : ''), noKind.length === 0);
 ok('the popup has a chip slot in its title row and fills it from CBScreenId.sheetHTML(sheetKind(m))',
-  /class="cs-top">(?:<button[^\n]*?<\/button>)?<span class="cs-ttl" data-testid="cs-title">[^\n]*data-testid="cs-screen-id"/.test(cs) && cs.indexOf('CBScreenId.sheetHTML(sheetKind(m))') > 0);
+  /class="cs-top"><button[\s\S]{0,400}?<\/button><span class="cs-ttl" data-testid="cs-title">[\s\S]{0,160}?data-testid="cs-screen-id"/.test(cs) && cs.indexOf('CBScreenId.sheetHTML(sheetKind(m))') > 0);
 
 /* ── 4 · the codes: AAA###, one screen each, never a workshop code or prefix ── */
 const rows = REG.rows;
@@ -92,7 +93,7 @@ const placers = pages.concat(fs.readdirSync(path.join(PUB, 'app')).filter((f) =>
 ok('the chip is built only in app/screen-id.js' + (placers.length ? ': also ' + placers.join(' · ') : ''), placers.length === 0);
 const shell = rd('public/app/shell.js'), frame = rd('public/app/page-frame.js');
 ok('the CBShell bar places the chip (every CBFrame page and Home)', /\$\('\.cbsh-sid'\)\.appendChild\(root\.CBScreenId\.chip\(\)\)/.test(shell));
-ok('the skeleton\'s section is the screen the chip names (setActive → CBScreenId.here)', /function setActive\(k\)[^\n]*CBScreenId\.here\(appId, k\)/.test(frame));
+ok('the skeleton\'s section is the screen the chip names (setActive → CBScreenId.here)', /function setActive\(k\)[\s\S]{0,400}?CBScreenId\.here\(appId, k\)/.test(frame));
 const own = ['accounts', 'finance', 'crm', 'standards'].filter((a) => /CBScreenId\.chip\(\)|class="who"[^\n]*cb-avatar|CBAvatar\.mount\(/.test(rd('public/' + a + '.html')));
 ok('no page draws its own header any more — the chip, the Home and the avatar are the frame\'s (SHELL-ONE)' + (own.length ? ': still ' + own.join(' · ') : ''), own.length === 0);
 

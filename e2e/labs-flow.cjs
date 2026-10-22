@@ -360,8 +360,8 @@ function route(S, r) {
           const backOnIndex = (await p.url()).replace(base, '').split('?')[0].split('#')[0];
           ok(lab.key, backOnIndex === '/' || backOnIndex === '/index.html' || backOnIndex === '', lab.title + ': Home returns to the index (' + state + ')', 'landed on "' + backOnIndex + '"');
           if (!st.signedOut) {
-            const shopName = (await p.textContent('#shop').catch(() => '')) || '';
-            ok(lab.key, /Mayur Bhavan/.test(shopName), lab.title + ': the same shop is still shown after Home (' + state + ')', 'header shop line read "' + shopName + '"');
+            const shopName = (await p.textContent('[data-testid="shop-name"]').catch(() => '')) || '';
+            ok(lab.key, /Mayur Bhavan/.test(shopName), lab.title + ': the same shop is still shown after Home (' + state + ')', 'shell shop name read "' + shopName + '"');
           }
           const shotHome = 'labs-flow-' + lab.key + '-home-' + state + '.png';
           await p.screenshot({ path: path.join(SHOTS, shotHome), fullPage: true });

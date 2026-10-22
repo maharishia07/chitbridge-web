@@ -42,8 +42,8 @@
   --accent-hover:#174a47; --accent-text:var(--accent); --tab-n:#e9dfc8; --shadow-menu:0 10px 24px rgba(42,36,24,.16); --shadow-toast:0 10px 24px rgba(42,36,24,.25); --scrim:rgba(42,36,24,.4); --line-side:#e2d6bc; --hover-nav:#ece1c9;
 }
 /* a chosen theme (CBAvatar stamps data-themed) re-points this page's own names; Cream is untouched (as accounts.html, web #36) */
-:root{--red-text:var(--red-i)}   /* the red that carries WORDS: Cream's --red-i; in a chosen theme the theme's own --disp (its --disp-2 is a border red — 3:1 in Dark) */
-:root[data-themed]{--red-text:color-mix(in srgb,var(--disp,var(--red-i)) 78%,var(--ink));--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line);--line-side:var(--line);
+:root{--red-text:var(--red-i);--green-text:var(--green-d)}   /* the green that carries WORDS (a dues figure), as --red-text carries the red */   /* the red that carries WORDS: Cream's --red-i; in a chosen theme the theme's own --disp (its --disp-2 is a border red — 3:1 in Dark) */
+:root[data-themed]{--green-text:color-mix(in srgb,var(--ok-2) 40%,var(--ink));--red-text:color-mix(in srgb,var(--disp,var(--red-i)) 78%,var(--ink));--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line);--line-side:var(--line);
   /* the names a theme does not (always) carry follow the theme's own: text steps from --ink / --grey, the accent from the theme's blue, hover from ink over the card.
      A value the theme DOES set inline (--ink-2, --hover …) wins over these, so they only fill what a theme leaves out. */
   --ink-2:var(--ink); --muted-2:var(--grey); --grey-2:var(--grey);
@@ -170,7 +170,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .rchips .due{display:inline-flex;align-items:center;gap:4px;min-height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line-3);background:var(--surface);font-size:12px;font-weight:600}
 .rchips .due.get{border-color:var(--green-b)}.rchips .due.give{border-color:var(--red-b)}
 .rchips .due{white-space:normal;flex-wrap:wrap}   /* a record chip wraps its late line on a phone — never past the screen's edge (INT7b: crm.cjs phone record) */
-.due.get{color:var(--green-d)}.due.give{color:var(--red-text)}.due.settled{color:var(--muted);font-weight:600}
+.due.get{color:var(--green-text)}.due.give{color:var(--red-text)}.due.settled{color:var(--muted);font-weight:600}
 .conn{font-weight:800;font-size:16px;line-height:1}.conn.on{color:var(--green-d)}.conn.off{color:var(--muted)}
 .fu1{display:flex;align-items:center;gap:8px;min-width:0}.fut{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fua{display:inline-flex;gap:6px;flex:0 0 auto}
 /* ⭐ THE MINI-CARD (what ▸ opens): three boxes of one height, then the action row — the same on a party, a chit and a follow-up */

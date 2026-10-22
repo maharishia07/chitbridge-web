@@ -81,10 +81,10 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | NET001 | My network | Network | /network.html | /network.html · Network › My network |
 | NET002 | Offers | Network | /network.html | /network.html · Network › Offers |
 | NET003 | Design | Network | /network.html | /network.html · Network › Design |
-| CLB001 | Side by side | Country lab | /country-lab.html | /country-lab.html · Country lab › Side by side |
-| CLB002 | Where we are | Country lab | /country-lab.html | /country-lab.html · Country lab › Where we are |
-| CLB003 | Countries | Country lab | /country-lab.html | /country-lab.html · Country lab › Countries |
-| CLB004 | All countries | Country lab | /country-lab.html | /country-lab.html · Country lab › All countries |
+| CLB001 | Side by side | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Side by side |
+| CLB002 | Where we are | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Where we are |
+| CLB003 | Countries | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Countries |
+| CLB004 | All countries | Country Lab | /country-lab.html | /country-lab.html · Country Lab › All countries |
 | KYB001 | Know your business | Know your business | /know-your-business.html | /know-your-business.html |
 | DOC001 | Documents | Documents | /authority-forms.html | /authority-forms.html |
 | STD001 | Standards | Standards | /standards.html | /standards.html · Standards › Standards |
@@ -97,8 +97,11 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | PLB001 | Price Lab | Price Lab | /product-lab.html | /product-lab.html |
 | OLB001 | Offer Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html · Home › Labs |
 | OLB002 | Combo Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html?mode=combo · Home › Labs |
-| CVL001 | Conversion lab | Conversion lab | /conversion-lab.html | /conversion-lab.html · the Country lab |
+| CVL001 | Conversion Lab | Conversion Lab | /conversion-lab.html | /conversion-lab.html · the Country Lab |
 | NLB001 | Network Lab | Network Lab | /network-design.html | /network-design.html · Home › Labs |
+| LLB001 | List Lab | List Lab | /list-lab.html | /list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark |
+| SLB001 | Sign-in Lab | Sign-in Lab | /signin-lab.html | /signin-lab.html · the one sign-in window on a bare page |
+| SHL001 | Shell Lab | Shell Lab | /shell-lab.html | /shell-lab.html · the shell on a bare page |
 
 ## Sheets — one screen, wherever it is opened from
 
@@ -116,8 +119,6 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | /cart-design.html | Cart design | the shared cart's drawing (app/cart.js is the build) |
 | /storefront-design.html | Storefront design | the storefront's paper prototype (shop.html is the build) |
 | /supplier-design.html | Supplier design | the suppliers screen's paper prototype (operations.html is the build) |
-| /list-lab.html | List lab | app/list-ctl.js on a bare page — the list standard's pass mark |
-| /signin-lab.html | Sign-in lab | the one sign-in window on a bare page |
 | /screen-gallery.html | Screen library | the gallery of screen drawings |
 | /lifecycle-test.html | Lifecycle test | the rail's lifecycle board (a tool) |
 | /testing.html | Test board | the test board and its printable report (a tool) |

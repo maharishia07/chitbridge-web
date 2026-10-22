@@ -329,7 +329,7 @@
     '.cbsh-swpop{position:fixed;left:16px;right:16px;top:52px;min-width:0}',
     /* the tile's own line is hidden where .more lists every line: the status badge is the first child now, so :has(+.more-n) finds it */
     '.cbsh-box,.cbsh-sec.labs .cbsh-box,.cbsh-sec.setup .cbsh-box{height:auto}.cbsh-box .facts{height:auto}.cbsh-box .more{position:static;display:flex;border:0;box-shadow:none;padding:0;background:none}.cbsh-box .more-n,.cbsh-box .facts>.f:first-child:not(:only-child),.cbsh-box .facts>.f:has(+.more-n){display:none}',
-    '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:6px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}' /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */,
+    '.cbsh{--sh-bar:52px}.cbsh-bar{padding:0 13px;gap:4px;container-type:inline-size}.cbsh-who{padding:4px 4px;margin-left:-4px;flex:1 1 auto}.cbsh-who b{font-size:14px}' /* a pane keeps its 55px on a phone too: its line meets the sidebar's brand row (frame-every-width rule f) */,
     /* INT7b-GREEN: a 390 px bar held 405 px (mark · shop · switcher · chip · bell · ⌂ · avatar, 9 px gaps) and cut the shop's name to 55 px. The name takes the slack
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
@@ -338,7 +338,7 @@
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
     '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
-    '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 10px;gap:6px}',
+    '.cbsh-chip .lbl,.cbsh-chip .lg{display:none}.cbsh-chip .sm{display:inline}.cbsh-chip{padding:0 8px;gap:6px}',
     '.cbsh-sheet{position:absolute;left:0;right:0;top:var(--sh-bar);max-height:calc(100dvh - var(--sh-bar) - 70px);box-shadow:0 14px 28px var(--sh-shadow);border-bottom:1px solid var(--sh-line)}',
     '.cbsh-hdr.open .cbsh-scrim{display:block;position:fixed;inset:var(--sh-bar) 0 0 0;background:var(--sh-scrim);z-index:-1}',
     '.cbsh-sin{grid-template-columns:1fr;gap:16px;padding:14px 14px 16px}.cbsh-sin .cbsh-col:nth-child(3){grid-column:auto}.cbsh-ln.none{grid-column:auto}',
