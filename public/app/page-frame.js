@@ -35,14 +35,108 @@
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> | glyph: 'text' } | { group: 'heading' }], active: k, onSection: fn(k) } */
+  /** a heading's slug, the one word its test id and its fold's panel id carry */
+  function slugOf(label) {
+    return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+  /** a group heading: plain text, or (fold: true) a button that folds the entries under it; its count is drawn by CSS from data-count, so the heading's text stays the label */
+  function groupHead(item) {
+    var slug = slugOf(item.group);
+    if (!item.fold) return '<div class="nav-group label" data-testid="skel-group-' + esc(slug) + '">' + esc(item.group) + '</div>';
+    return (
+      '<button type="button" class="nav-group nav-fold label" data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
+      '" aria-controls="navg-' + esc(slug) + '"' + (item.count != null ? ' data-count="' + esc(String(item.count)) + '"' : '') + '>' + esc(item.group) + '</button>'
+    );
+  }
   /** one left-menu entry: a button (an svg path `icon`, or a text `glyph` such as % or ₹), or a group heading when the entry is `{ group: 'label' }` */
   function navEntry(item, active, drawIcon) {
-    if (item.group) return '<div class="nav-group label" data-testid="skel-group-' + esc(String(item.group).toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '">' + esc(item.group) + '</div>';
+    if (item.group) return groupHead(item);
     var mark = item.glyph ? '<span class="lab-ico" aria-hidden="true">' + esc(item.glyph) + '</span>' : drawIcon(item.icon);
     return (
       '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
       (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(item.label) + '">' + mark + '<span class="label">' + esc(item.label) + '</span></button>'
     );
+  }
+  /** the menu's html: entries in order; the entries under a folding heading sit in one panel that heading opens and closes */
+  function navHTML(sections, active, drawIcon) {
+    var html = '',
+      panel = false;
+    sections.forEach(function (item) {
+      if (panel && item.group) {
+        html += '</div>';
+        panel = false;
+      }
+      html += navEntry(item, active, drawIcon);
+      if (item.group && item.fold) {
+        html += '<div class="nav-items" id="navg-' + esc(slugOf(item.group)) + '"' + (item.open === false ? ' hidden' : '') + '>';
+        panel = true;
+      }
+    });
+    return html + (panel ? '</div>' : '');
+  }
+  /** a folding heading was tapped: its panel opens or closes (kept in the page for this visit only) */
+  function foldGroups(app) {
+    Array.prototype.forEach.call(app.querySelectorAll('.nav-fold'), function (head) {
+      head.onclick = function () {
+        var open = head.getAttribute('aria-expanded') !== 'true';
+        head.setAttribute('aria-expanded', String(open));
+        var panel = app.querySelector('#' + head.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !open;
+      };
+    });
+  }
+  /** the phone's switch above the middle ("New | Your offers (N)"): sk.phone = { items: [{ k, label }], active, onPick(k) }; hidden above 760 by page-skeleton.css */
+  function switchHTML(phone) {
+    return (
+      '<div class="lab-switch" role="tablist" data-testid="lab-switch">' +
+      phone.items
+        .map(function (item) {
+          return (
+            '<button type="button" role="tab" class="lab-switch-btn" data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '">' +
+            esc(item.label) + '</button>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+  /** a lab with a pinned shelf: at 760 and below the left panel is not drawn (no icons-only rail beside the switch); the shelf moves under the switch, and back above it */
+  function dockPinned(app, pinned, phone) {
+    var main = app.querySelector('.main');
+    if (phone) main.insertBefore(pinned, app.querySelector('#screen'));
+    else app.querySelector('#side').insertBefore(pinned, app.querySelector('.side-foot'));
+  }
+  /** a lab's pinned shelf and phone switch: docks the shelf under the switch at 760 and below, and returns what the lab calls (pinned · setPhone · relabelPhone) */
+  function wireLabPanel(app, options) {
+    var pinned = app.querySelector('#sidePinned'),
+      narrow = pinned && root.matchMedia && root.matchMedia('(max-width:760px)');
+    if (narrow) {
+      dockPinned(app, pinned, narrow.matches);
+      if (narrow.addEventListener)
+        narrow.addEventListener('change', function () {
+          dockPinned(app, pinned, narrow.matches);
+        });
+    }
+    /* the phone's tab on show: 'new' · 'yours' · '' (neither: an offer is open in the middle) */
+    function setPhone(tabName) {
+      app.setAttribute('data-tab', tabName || '');
+      Array.prototype.forEach.call(app.querySelectorAll('.lab-switch-btn'), function (button) {
+        button.setAttribute('aria-selected', String(button.getAttribute('data-tab') === tabName));
+      });
+    }
+    function relabelPhone(tabName, label) {
+      var button = app.querySelector('.lab-switch-btn[data-tab="' + tabName + '"]');
+      if (button) button.textContent = label;
+    }
+    Array.prototype.forEach.call(app.querySelectorAll('.lab-switch-btn'), function (button) {
+      button.onclick = function () {
+        var tabName = button.getAttribute('data-tab');
+        setPhone(tabName);
+        if (options.phone.onPick) options.phone.onPick(tabName);
+      };
+    });
+    if (options.phone) setPhone(options.phone.active);
+    return { pinned: pinned, setPhone: setPhone, relabelPhone: relabelPhone };
   }
   function skeleton(doc, sk, appId) {
     var svg = function (d, cls) {
@@ -60,16 +154,15 @@
       '<nav class="nav" id="nav" aria-label="' +
       esc(sk.name) +
       '">' +
-      (sk.sections || [])
-        .map(function (item) {
-          return navEntry(item, sk.active, svg);
-        })
-        .join('') +
-      '</nav><div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
+      navHTML(sk.sections || [], sk.active, svg) +
+      '</nav>' +
+      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
+      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
-      '<main class="main" data-testid="skel-main"><div id="shell"></div><div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
+      '<main class="main" data-testid="skel-main"><div id="shell"></div>' + (sk.phone ? switchHTML(sk.phone) : '') + '<div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
     doc.documentElement.classList.add('cbsk');
+    if (sk.pinned || sk.phone) doc.documentElement.classList.add('lab-v2');
     doc.body.insertBefore(app, doc.body.firstChild);
     var side = app.querySelector('#side'),
       node = app.querySelector('#toggleNav');
@@ -81,7 +174,9 @@
     node.onclick = function () {
       fit(!side.classList.contains('collapsed'));
     };
-    var mq = root.matchMedia && root.matchMedia('(min-width:761px) and (max-width:1100px)');
+    foldGroups(app);
+    /* a lab with a pinned shelf keeps its words at tablet width: the shelf is on that panel, so it is not folded to a rail */
+    var mq = !sk.pinned && root.matchMedia && root.matchMedia('(min-width:761px) and (max-width:1100px)');
     if (mq) {
       fit(mq.matches);
       if (mq.addEventListener)
@@ -89,6 +184,7 @@
           fit(mq.matches);
         });
     }
+    var panel = wireLabPanel(app, sk);
     /* SCREEN-ID: the section on show is the screen the header chip names (app/screen-id.js, if the page loaded it) */
     function setActive(k) {
       Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (element) {
@@ -103,7 +199,7 @@
         if (sk.onSection) sk.onSection(k);
       };
     });
-    return { host: app.querySelector('#shell'), screen: app.querySelector('#screen'), setActive: setActive };
+    return { host: app.querySelector('#shell'), screen: app.querySelector('#screen'), setActive: setActive, pinned: panel.pinned, setPhone: panel.setPhone, relabelPhone: panel.relabelPhone };
   }
   /** where the header is drawn: the skeleton's slot, the page's own element (host), else a div put first in the body */
   function headerHost(doc, opts, skel) {
@@ -188,7 +284,11 @@
     root.location.reload();
   }
   /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the left menu is THIS lab's own choices (W16; the other labs are the shell's top switcher, fed by manifest.json), one background.
-     CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural? }).
+     CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural?, pinned?, phone? }).
+     sections: { group: 'Heading', fold: true, count: 3, open: false } makes a heading that folds the entries under it (open by default; count is drawn beside it).
+     pinned: true draws a shelf under the menu (framed.skeleton.pinned is the element the lab fills: its own things, grouped by status, with CBLabKit.more).
+     phone: { items: [{ k, label }], active, onPick(k) } (a lab with a pinned shelf): at 760 and below the left panel is not drawn, a switch above the middle takes its place;
+     framed.skeleton.setPhone(k) lights a tab, relabelPhone(k, text) re-words one.
      A lab with no `work` element has its page body moved into the main pane once the page has loaded (scripts and styles stay where they are). */
   var LAB_ICON = 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3';
   function adoptBody(doc, screen) {
@@ -217,7 +317,9 @@
         icon: opts.svg || LAB_ICON,
         sections: opts.sections || [],
         active: opts.active,
-        onSection: opts.onSection
+        onSection: opts.onSection,
+        pinned: opts.pinned,
+        phone: opts.phone
       }
     });
     if (!opts.work) {

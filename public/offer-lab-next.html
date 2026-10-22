@@ -618,15 +618,25 @@ button{cursor:pointer}
 .btn.scope{border:1.5px solid var(--blue-b);background:var(--blue-t);color:var(--blue-i)}
 .btn.scope:hover{border-color:var(--blue)}
 
-/* saved offers */
-.bucket{display:flex;flex-direction:column;gap:10px}
-.sv{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:13px 15px;
-  display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
-.sv .svm{flex:1;min-width:220px}
-.sv .svt{font-size:14.5px;font-weight:700}
-.sv .svd{font-size:12.5px;color:var(--muted);margin-top:3px}
-.sv .svn{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700}
-.sv .svk{font-size:11px;color:var(--ghost);text-transform:uppercase;letter-spacing:.05em}
+/* saved offers: a row on the left, the open offer in the middle */
+.svt{font-size:14.5px;font-weight:700;overflow-wrap:anywhere}
+.svd{font-size:12.5px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+.pin-h{font-size:14px;margin:2px 4px 0;color:var(--ink)}
+.side-pinned .hs{margin:2px 4px 6px}
+.pin-sec{margin-top:8px}
+.pin-sh{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#5e594d);margin:0 4px 4px}
+.side-pinned .lk-lines li{padding:0;border-bottom:0}
+.pin-row{display:block;width:100%;min-height:44px;text-align:left;border:0;border-radius:8px;background:transparent;color:var(--ink);font:inherit;padding:6px 8px;cursor:pointer}
+.pin-row:hover{background:var(--panel,#f3efe6)}
+.pin-row.on{background:var(--panel,#f3efe6);box-shadow:inset 3px 0 0 var(--ink,#1d1b16)}
+.pin-row .svt{font-size:13.5px}
+.pin-row .svd{font-size:12px;margin-top:1px;color:var(--muted,#5e594d)}
+.side-pinned .lk-more{color:var(--ink);margin:2px 8px 0}
+.offer-open .svd{margin:4px 0 8px}
+.promise-text{font-size:14px;line-height:1.5}
+.promise-text p{margin:0 0 8px}
+.promise-text .lk-reach{display:block;margin:0 0 8px;padding:9px 11px;border-radius:9px;background:var(--panel);border:1px solid var(--line);font-weight:700;overflow-wrap:anywhere}
+@media(max-width:760px){.side-pinned .lk-more,.pin-row{min-height:44px}.lab-mid + .lab-next,.lab-mid .lab-next{position:static;margin:0 0 12px}}
 .pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:7px;
   font-size:11.5px;font-weight:700;letter-spacing:.02em}
 .p-draft{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
@@ -634,10 +644,6 @@ button{cursor:pointer}
 .p-live{background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b)}
 .p-paused{background:var(--red-t);color:var(--red-i);border:1px solid var(--red-b)}
 .p-stale{background:var(--amber-t);color:var(--amber-i);border:1px solid var(--amber-b)}
-/* the saved-offers TYPE summary (savedSummaryHTML()) — deliberately its own neutral color, not .p-appr's
-   blue: that blue already means "approved" on every row right below it, and a type/item COUNT is not a
-   status — reusing it would make the summary read as if every saved offer were approved. */
-.p-type{background:var(--panel);color:var(--ink);border:1px solid var(--line-soft);font-weight:700}
 .empty{text-align:center;padding:38px 20px;color:var(--faint);font-size:13.5px}
 
 .shapes{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:9px;margin-bottom:6px}
@@ -779,6 +785,7 @@ button{cursor:pointer}
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/list-ctl.js"></script>   <!-- CBList: the "and N more" list of Your offers (CBLabKit.more) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
@@ -810,7 +817,8 @@ function labTypeSections() {
   GOALS.forEach(function (goal) {
     if (goal.kind !== last) {
       last = goal.kind;
-      out.push({ group: KINDS[goal.kind] });
+      /* open by default (the eight types stay in sight); a heading folds its types and says how many it holds */
+      out.push({ group: KINDS[goal.kind], fold: true, open: true, count: GOALS.filter(function (other) { return other.kind === goal.kind; }).length });
     }
     out.push({ k: goal.id, label: goal.n, glyph: goal.icon });
   });
@@ -829,6 +837,8 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
     name: combo ? 'Combo Lab' : 'Offer Lab',
     icon: combo ? '▣' : '%',
     sections: combo ? [] : labTypeSections(),
+    pinned: !combo,
+    phone: combo ? undefined : { items: [{ k: 'new', label: 'New' }, { k: 'yours', label: 'Your offers (0)' }], active: 'new', onPick: function (tabName) { labPhonePick(tabName); } },
     active: 'percent',
     onSection: function (type) {
       pickGoal(type); /* defined further down: read when a type is tapped */
@@ -869,13 +879,13 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
 
   <div id="strip"></div>
   <div id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
-  <div class="lab-cols lab-body" id="labBody">   <!-- W19: the middle forms the offer; the right is the cart (the saved-offers shelf, drafts first) -->
+  <div class="lab-cols lab-body" id="labBody">   <!-- v2: the middle is the one offer being worked on; the right says what it promises; the saved offers are pinned in the frame's left panel -->
     <div class="lab-mid">
       <div class="screen" id="s0"></div>
       <div class="screen" id="s2"></div>
       <div class="screen" id="s3"></div>
     </div>
-    <aside class="lab-next" id="labCart" data-testid="lab-cart" aria-label="Your offers (draft)"></aside>
+    <aside class="lab-next" id="labPromise" data-testid="promise-pane" aria-label="What this promises"></aside>
   </div>
 
 </div>
@@ -1524,15 +1534,17 @@ function editKeep(k, v) {
   render();
 }
 function labStep(n) {
-  S.step = n === 1 ? 2 : n; /* the old "What kind of offer?" screen is gone: the types are the left menu */
+  S.step = n === 1 ? 2 : n === 3 && !cartItem(OPEN_ID) ? 0 : n; /* the old "What kind of offer?" screen is gone: the types are the left menu; step 3 is the open offer */
+  if (S.step !== 3) OPEN_ID = null;
   render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (n === 3 && savedLive()) loadSaved(); /* the shelf may have changed on another tab/device since last look */
   closeWork(); /* navigating away from "Work it out" must not leave its result floating over the next screen */
 }
 /** a type picked in the left menu (or the phone list) goes straight to the working step; picking one also keeps the settings as shown */
 function pickGoal(id) {
   EDITING = null;
+  OPEN_ID = null;
+  PHONE_YOURS = false;
   S.goal = id;
   S.applied = false;
   S.step = 2;
@@ -2188,7 +2200,7 @@ function openOverlay(pickMode, pickFn, picked, onlyIds, titleOverride) {
 function openPriceOverlay() {
   openOverlay(null, null);
 }
-/** ⭐ the "N items linked" row's own opener (renderS3()) — same overlay, same table, narrowed to exactly
+/** ⭐ the "N items linked" row's own opener (the open offer) — same overlay, same table, narrowed to exactly
  *  this saved offer's own items via OVL.onlyIds. `closePriceOverlay()` already just drops the 'on' class and
  *  re-renders — an overlay, not a navigation, so Saved offers is exactly where it was underneath. */
 function openPriceOverlayForItems(ids, title) {
@@ -5182,50 +5194,57 @@ function saveName(l) {
  * changed, so whatever review got it to approved/live/paused applied to a list that no longer exists.
  */
 /** "Add to cart": the offer is a draft on the shelf; the page stays on the form and the cart on the right shows it, with its attach actions */
-function afterSave(offNote) {
+function afterSave(offNote, savedId) {
   var shown = label(),
     twin = SAVED.filter(function (x) { return x.title === shown.title && x.detail === shown.detail; }).length > 1;
   EDITING = null;
   CART_SAID = 'Added as a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + '. Not live yet.' + (offNote || '') + (twin ? ' You already have one just like it.' : '');
   closeWork();
+  if (savedId && cartItem(savedId)) {
+    OPEN_ID = savedId; /* the saved offer opens in the middle, with its actions */
+    S.step = 3;
+    PHONE_YOURS = false;
+  }
   render();
+}
+/** trial: the offer is kept in this tab (SAVED), a new one or the one being edited, and opens in the middle */
+function saveInTab(shown, keyPair, offNote) {
+  var existing =
+    EDITING &&
+    SAVED.filter(function (x) {
+      return x.id === EDITING;
+    })[0];
+  var openId = existing ? existing.id : 'o' + ++SEQ;
+  if (existing) {
+    existing.title = shown.title;
+    existing.detail = shown.detail;
+    existing.n = keyPair[0];
+    existing.k = keyPair[1];
+    existing.snap = snapshot();
+    existing.costs = costPrint();
+    existing.status = 'draft';
+  } else {
+    SAVED.unshift({
+      id: openId,
+      when: new Date(),
+      biz: S.biz,
+      title: shown.title,
+      detail: shown.detail,
+      n: keyPair[0],
+      k: keyPair[1],
+      status: 'draft',
+      snap: snapshot(),
+      costs: costPrint()
+    });
+  }
+  afterSave(offNote, openId);
 }
 async function saveOffer() {
   var offNote = takenOffNote(),
     l = label(),
     k = keyNumber(),
     sub = subKindOf();
-  if (!savedLive()) {
-    var existing =
-      EDITING &&
-      SAVED.filter(function (x) {
-        return x.id === EDITING;
-      })[0];
-    if (existing) {
-      existing.title = l.title;
-      existing.detail = l.detail;
-      existing.n = k[0];
-      existing.k = k[1];
-      existing.snap = snapshot();
-      existing.costs = costPrint();
-      existing.status = 'draft';
-    } else {
-      SAVED.unshift({
-        id: 'o' + ++SEQ,
-        when: new Date(),
-        biz: S.biz,
-        title: l.title,
-        detail: l.detail,
-        n: k[0],
-        k: k[1],
-        status: 'draft',
-        snap: snapshot(),
-        costs: costPrint()
-      });
-    }
-    afterSave(offNote);
-    return;
-  }
+  if (!savedLive()) return saveInTab(l, k, offNote);
   if (!sub) {
     toastSay('This one cannot be saved to the shelf yet — work it out here for now.');
     return;
@@ -5251,9 +5270,9 @@ async function saveOffer() {
     return;
   }
   await loadSaved();
-  afterSave(offNote);
+  afterSave(offNote, editingLive ? EDITING : r.body && r.body.definition && r.body.definition.definition_id);
 }
-/** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
+/** ⭐ mirrors the shelf into SAVED's own shape, so the open offer/clash/costMoved need not know the source */
 async function loadSaved() {
   if (!savedLive()) return; /* demo mode: SAVED is already whatever the session has built locally */
   /* ⚠️ NOT &all=1 — retired must leave this list, exactly as routes/definitions.js excludes it by default.
@@ -5413,7 +5432,7 @@ function offerCoveringItem(p) {
 /**
  * ⭐ [found live, 2026-09-27] "why can't you bring the panel with all the details we already have if you are
  * going through the flow" — savedItemNames() used to be the only reader of an offer's scope; split so the
- * "N items linked" row (renderS3()) can now open the REAL price-list overlay (openPriceOverlayForItems()) on
+ * "N items linked" row (the open offer) can now open the REAL price-list overlay (openPriceOverlayForItems()) on
  * these exact ids — the same Product/Category/Sale price/Cost/Markup table the rest of the app already
  * trusts — instead of a bare list of names, and closing it (an overlay, not a navigation) returns to Saved
  * offers exactly where it was, for free.
@@ -5538,40 +5557,6 @@ function historyHTML(sv) {
  * definition — "version on edit", per its own comment) — nothing to build server-side, just wire it in.
  */
 var EDITING = null;
-function savedSummaryHTML() {
-  var groups = {},
-    order = [];
-  SAVED.forEach(function (item) {
-    if (!groups[item.title]) {
-      groups[item.title] = { n: 0, items: 0, hasItems: false };
-      order.push(item.title);
-    }
-    var g = groups[item.title],
-      ic = savedItemCount(item);
-    g.n++;
-    if (ic != null) {
-      g.items += ic;
-      g.hasItems = true;
-    }
-  });
-  return (
-    '<div class="hs" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">' +
-    order
-      .map(function (item) {
-        var g = groups[item];
-        return (
-          '<span class="pill p-type">' +
-          g.n +
-          ' ' +
-          esc(item) +
-          (g.hasItems ? ' · ' + g.items + ' item' + (g.items === 1 ? '' : 's') + ' linked' : '') +
-          '</span>'
-        );
-      })
-      .join('') +
-    '</div>'
-  );
-}
 /**
  * ⚠️ FOUR REAL STATES, NOT THREE PRETENDING TO BE FIVE. v5's own prototype sent "Pause" back to 'approved' —
  * indistinguishable from a draft someone had just reviewed and not yet launched. A live offer that stops must
@@ -5648,48 +5633,15 @@ var SHELF_STEP = {
   live: ['Pause', 'paused', false],
   paused: ['Resume', 'live', true]
 };
-/** a shelf row's buttons: Edit, the one next step its status allows, and Retire (signed in) or Delete (trial) */
-function savedActionsHTML(item) {
-  var step = SHELF_STEP[item.status];
-  return (
-    '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">' +
-    '<button class="btn sm" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
-    (step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" data-testid="shelf-step" onclick="askStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '') +
-    '<button class="btn sm" data-testid="shelf-drop" onclick="askDrop(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>'
-  );
-}
-/** one row of the Saved offers shelf, with every action the status allows (the cart draws a shorter row from the same pieces) */
-function savedRowHTML(item) {
-  return (
-    '<div class="sv"><div class="svm">' + savedTitleHTML(item, true) + savedPillsHTML(item) + savedLinksHTML(item) + '</div>' +
-    '<div style="text-align:right"><div class="svn">' + esc(item.n) + '</div><div class="svk">' + esc(item.k) + '</div></div>' +
-    savedActionsHTML(item) + '</div>'
-  );
-}
-function renderS3() {
-  var h =
-    '<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
-    '<h2 class="h">Saved offers</h2>' +
-    backBtn(2) +
-    '</div>' +
-    '<p class="hs">' +
-    (savedLive() ? 'Draft → approved → live → paused.' : 'Draft → approved → live. Sign in to keep these past this tab.') +
-    '</p>' +
-    (SAVED.length ? savedSummaryHTML() : '') +
-    '</div>';
-  if (!SAVED.length) return h + '<div class="card empty">Nothing saved yet.</div>';
-  return h + '<div class="bucket" style="margin-top:14px">' + SAVED.map(savedRowHTML).join('') + '</div>';
-}
-
-/* ═══ THE CART (W19) · the saved-offers shelf, drawn beside the form ═════════════════════════════════════════════════
- * OWNS  the right column: "Your offers (draft)" and the two ways to attach an offer from it.
+/* ═══ THE SHELF AND THE OPEN OFFER (Offer Lab v2) · saved offers pinned on the left, the one open offer in the middle ═══════════════════
+ * OWNS  the left "Your offers (N)" by status (live · paused · approved · draft, three each, "and N more"), the open offer in the middle with every action
+ *       its status allows, and the right "What this promises" (the confirm popup's own sentence).
  * NOT   a second store and not CBCart (that holds chit LINES; an offer is a rule): the rows are SAVED, written by saveOffer() through
  *       /api/definitions. Trial = SAVED in memory. Signed in = a definition in status 'draft', which no bill can see; only 'live' reaches one.
- * ATTACH  "Make live" = the shelf's own status change, for everyone. "Only for a group" = rules.customer_group (+ customer_name) on the offer,
+ * ATTACH  "Make live" = the status change, for everyone. "Only for a group" = rules.customer_group (+ customer_name) on the offer,
  *       then live; the engine and the api already apply it (lib/offers-live, engines offers.js). Nothing here writes the pricing engine,
  *       and sending the offer to the group stays Marketing's button (crm.html?app=marketing).
  * FLOW  O2C step 1 · price (offers) */
-var CART_ROWS = 5;
 var CART_SAID = ''; /* the line at the top of the cart (what was just added) */
 var CART_NOTES = {}; /* offer id -> { text, tone }: what the last attach on that row did, said in the row */
 var CART_PICK = null; /* the offer whose group picker is open */
@@ -5716,20 +5668,25 @@ function cartItem(id) {
  * when it is only for a group); a paused one resumes; a draft or approved one goes live. "Only for a group" is offered on all of them.
  */
 function cartLiveButton(item) {
-  var words = item.status === 'paused' ? 'Resume' : item.status === 'live' ? (item.group ? 'Make live for everyone' : '') : 'Make live';
+  var words = item.status === 'live' ? (item.group ? 'Make live for everyone' : '') : item.status === 'draft' ? 'Make live' : ''; /* approved and paused have their one step (Go live · Resume) */
   return words ? '<button class="btn sm pri" data-testid="cart-live" onclick="cartLive(\'' + item.id + '\')">' + words + '</button>' : '';
 }
-/** one cart row: the shelf's title and status pill, the attach buttons its status allows, and the outcome of the last attach right under them */
-function cartRowHTML(item) {
+/** the open offer, in the middle: its title and status, what it is linked to, and every action its status allows (the shelf's old row and the cart's, in one place) */
+function openOfferHTML(item) {
   var note = CART_NOTES[item.id],
     live = item.status === 'live';
   return (
-    '<div class="cartrow" data-testid="cart-row" data-id="' + esc(item.id) + '">' +
-    savedTitleHTML(item, false) +
-    '<div class="cartacts">' + savedPillHTML(item) +
+    '<div class="card pad offer-open" data-testid="offer-open" data-id="' + esc(item.id) + '">' +
+    '<h2 class="h" data-testid="open-title">' + esc(item.title) + '</h2>' +
+    '<div class="svd">' + esc(item.detail) + '</div>' +
+    savedPillsHTML(item) + savedLinksHTML(item) +
+    (CART_SAID ? '<div class="cartnote ok" role="status" data-testid="cart-said">' + esc(CART_SAID) + '</div>' : '') +
+    '<div class="cartacts">' +
     '<button class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
+    savedStepButton(item) +
     cartLiveButton(item) +
-    '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button></div>' +
+    '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button>' +
+    '<button class="btn sm" data-testid="shelf-drop" onclick="askDrop(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>' +
     (CART_PICK === item.id ? cartPickerHTML(item) : '') +
     (note || live
       ? '<div class="cartnote ' + (note ? note.tone : 'ok') + '" role="status" data-testid="cart-note">' + esc(note ? note.text : item.group ? 'Live, only for ' + (item.groupName || groupNameOf(item.group)) + '.' : 'Live for everyone.') + '</div>'
@@ -5737,6 +5694,148 @@ function cartRowHTML(item) {
     '</div>'
   );
 }
+/** the one next step its status allows (Approve · Go live · Pause · Resume), asked first like every commit */
+function savedStepButton(item) {
+  var step = SHELF_STEP[item.status];
+  return step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" data-testid="shelf-step" onclick="askStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '';
+}
+/** the middle for a saved offer: it opens in the same place the form does (a row on the left, or "and N more", opened it) */
+function renderOpenOffer() {
+  var item = cartItem(OPEN_ID);
+  return item ? openOfferHTML(item) : '<div class="card empty" data-testid="open-none">That offer is no longer on your shelf.</div>';
+}
+/** a saved row on the left (or its "and N more" list) was tapped: the offer opens in the middle. No commit happens here. */
+function openOffer(id) {
+  EDITING = null;
+  OPEN_ID = id;
+  S.step = 3;
+  PHONE_YOURS = false;
+  CART_PICK = null;
+  CART_SAID = ''; /* the line about the last add belongs to that moment */
+  closeWork();
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+/** the shelf's statuses, in the order the left lists them */
+var PIN_STATUSES = [['live', 'Live'], ['paused', 'Paused'], ['approved', 'Approved'], ['draft', 'Draft']];
+var PIN_ROWS = 3; /* per status; the rest is "and N more" */
+/** one saved row on the left: its title and detail, lit while it is the one open in the middle */
+function pinRowHTML(shown) {
+  var item = cartItem(shown.id);
+  if (!item) return '';
+  return (
+    '<button type="button" class="pin-row' + (item.id === OPEN_ID && S.step === 3 ? ' on' : '') + '" data-testid="cart-row" data-id="' + esc(item.id) + '" data-status="' + esc(item.status) +
+    '" onclick="openOffer(\'' + item.id + '\')">' + savedTitleHTML(item, false) + '</button>'
+  );
+}
+/** a saved offer as the "and N more" list reads it */
+function pinListItem(item) {
+  return { id: item.id, title: item.title, detail: item.detail, status: STATUS_WORD[item.status] || item.status };
+}
+/** one status section of the shelf: its heading with the count, three rows, "and N more" (CBLabKit.more) */
+function pinSection(host, status, label, items) {
+  var section = document.createElement('section');
+  section.className = 'pin-sec';
+  section.setAttribute('data-status', status);
+  section.innerHTML = '<h3 class="pin-sh">' + label + ' <span class="lk-count">' + items.length + '</span></h3><div class="pin-list"></div>';
+  host.appendChild(section);
+  CBLabKit.more(section.querySelector('.pin-list'), {
+    id: 'offers-' + status,
+    title: label + ' offers (' + items.length + ')',
+    items: items.map(pinListItem),
+    idKey: 'id',
+    columns: [{ key: 'title', label: 'Offer' }, { key: 'detail', label: 'What it does' }, { key: 'status', label: 'Status' }],
+    line: pinRowHTML,
+    max: PIN_ROWS,
+    open: function (shown) { openOffer(shown.id); }
+  });
+}
+/** the pinned shelf under the left menu: "Your offers (N)" by status. Trial = this tab's offers; no commit is one tap from here. */
+function renderPinned() {
+  var host = LAB_FRAME && LAB_FRAME.skeleton && LAB_FRAME.skeleton.pinned;
+  if (!host || LAB_COMBO) return;
+  var by = CBLabKit.groupBy(SAVED, function (item) { return item.status; }, PIN_STATUSES.map(function (pair) { return pair[0]; }));
+  host.innerHTML =
+    '<h2 class="pin-h" data-testid="cart-title">Your offers (' + SAVED.length + ')</h2>' +
+    '<p class="hs">' + (savedLive() ? 'Only live offers reach a bill.' : 'Kept in this tab only.') + '</p>' +
+    (SAVED.length ? '' : '<p class="hs" data-testid="cart-empty">Nothing yet. Work an offer out, then add it.</p>');
+  PIN_STATUSES.forEach(function (pair) {
+    if (by[pair[0]].length) pinSection(host, pair[0], pair[1], by[pair[0]]);
+  });
+  LAB_FRAME.skeleton.relabelPhone('yours', 'Your offers (' + SAVED.length + ')');
+}
+/* the next commit of a saved offer, by its status: what the right side promises (the same act the button asks) */
+var NEXT_ACT = { draft: 'live', approved: 'live', paused: 'resume', live: 'pause' };
+var PANE_ASKED = {}; /* a group whose member count was asked for the pane: asked once */
+/** the sentence the right side shows: the promise of the next commit on the thing in the middle, by CBLabKit.promise, the call the confirm popup makes; null = nothing to promise yet */
+function paneSaid() {
+  if (S.step === 3) {
+    var item = cartItem(OPEN_ID);
+    return item && NEXT_ACT[item.status] ? CBLabKit.promise(promiseParts(item, NEXT_ACT[item.status], null)) : null;
+  }
+  if (S.step !== 2 || (!TYPE_PICKED && labNarrow()) || applyWhy()) return null;
+  var parts = promiseParts({ title: label().title, detail: label().detail, snap: snapshot() }, 'draft');
+  parts.note = takenOffNote().trim();
+  return CBLabKit.promise(parts);
+}
+/** a group's member count is read before a confirm names it; the pane reads it too, so the two say the same words */
+function paneGroupCount() {
+  var item = S.step === 3 ? cartItem(OPEN_ID) : null;
+  if (!item || !item.group || !savedLive() || PANE_ASKED[item.group]) return;
+  PANE_ASKED[item.group] = true;
+  groupCountFor(item.group).then(renderPromisePane);
+}
+/** "What this promises" (right column; on a phone above the action button): one sentence, the confirm popup's own */
+function renderPromisePane() {
+  var node = document.getElementById('labPromise');
+  if (!node) return;
+  node.hidden = LAB_COMBO;
+  document.getElementById('labBody').classList.toggle('solo', LAB_COMBO);
+  paneGroupCount();
+  var said = paneSaid();
+  node.innerHTML =
+    '<h2 class="h" data-testid="promise-title">What this promises</h2>' +
+    (said
+      ? '<p class="hs" data-testid="promise-act">' + esc(said.title) + '</p><div class="promise-text" data-testid="promise-text">' + said.html + '</div>'
+      : '<p class="hs" data-testid="promise-hint">Open or start an offer, then this says what it will do.</p>');
+  placePromise();
+}
+/** wide: the right column. Phone: right above the action button of the middle, never a bar over a control */
+function placePromise() {
+  var node = document.getElementById('labPromise'),
+    home = document.getElementById('labBody');
+  if (!node) return;
+  var acts = labNarrow() && !node.hidden ? document.querySelector('.lab-mid .screen.on .cartacts, .lab-mid .screen.on .acts') : null;
+  if (acts && acts.parentNode) acts.parentNode.insertBefore(node, acts);
+  else if (node.parentNode !== home) home.appendChild(node);
+}
+/** the pane goes back to its column before the middle is repainted, so repainting never takes it away */
+function parkPromise() {
+  var node = document.getElementById('labPromise'),
+    home = document.getElementById('labBody');
+  if (node && home && node.parentNode !== home) home.appendChild(node);
+}
+var OPEN_ID = null; /* the saved offer open in the middle (step 3); null = the form, the landing or the phone's list of types */
+var PHONE_YOURS = false; /* the phone's "Your offers" tab is on show */
+/** the phone's switch: New = the list of kinds in words; Your offers = the shelf */
+function labPhonePick(tabName) {
+  PHONE_YOURS = tabName === 'yours';
+  if (!PHONE_YOURS) {
+    TYPE_PICKED = false;
+    OPEN_ID = null;
+    if (S.step === 3) S.step = 2;
+  }
+  closeWork();
+  render();
+}
+/** the switch lights the tab of what is on show: New while the kinds are listed, Your offers on the shelf, none while a form or an offer is open */
+function syncPhone() {
+  var skeleton = LAB_FRAME && LAB_FRAME.skeleton;
+  if (!skeleton || LAB_COMBO) return;
+  var listing = S.step !== 3 && !(S.step === 2 && TYPE_PICKED);
+  skeleton.setPhone(PHONE_YOURS ? 'yours' : listing ? 'new' : '');
+}
+
 /** the group picker: starts on "Choose a group", and "Make live for them" waits until one is chosen (W25) */
 function cartPickerHTML(item) {
   var named = (CART_GROUPS || []).map(function (name) {
@@ -5756,39 +5855,12 @@ function cartGroupChosen(select) {
   var applyButton = select.parentNode.querySelector('[data-testid="cart-group-apply"]');
   if (applyButton) applyButton.disabled = !select.value;
 }
-/** the shelf's title tells the truth about what is on it: all drafts, all live, or a mix (walk W32) */
-function cartTitle() {
-  var live = SAVED.filter(function (x) { return x.status === 'live'; }).length;
-  if (!live) return 'Your offers (draft)';
-  return live === SAVED.length ? 'Your offers (live)' : 'Your offers';
-}
-/** the right column; hidden in the Combo Lab and on the full Saved offers screen (which is the same shelf, whole) */
-function renderCart() {
-  var node = document.getElementById('labCart'),
-    body = document.getElementById('labBody');
-  if (!node) return;
-  var show = !LAB_COMBO && S.step !== 3;
-  node.hidden = !show;
-  body.classList.toggle('solo', !show);
-  if (!show) return;
-  var rest = SAVED.length - CART_ROWS;
-  node.setAttribute('aria-label', cartTitle());
-  node.innerHTML =
-    '<h2 class="h" data-testid="cart-title">' + cartTitle() + '</h2>' +
-    '<p class="hs">' + (savedLive() ? 'Only live offers reach a bill.' : 'Kept in this tab only.') + '</p>' +
-    (CART_SAID ? '<div class="cartnote ok" role="status" data-testid="cart-said">' + esc(CART_SAID) + '</div>' : '') +
-    (SAVED.length
-      ? SAVED.slice(0, CART_ROWS).map(cartRowHTML).join('')
-      : '<p class="hs" data-testid="cart-empty">Nothing yet. Work an offer out, then add it.</p>') +
-    (SAVED.length ? '<button class="lk-more" data-testid="cart-all" onclick="labStep(3)">' + (rest > 0 ? 'and ' + rest + ' more' : 'All saved offers') + ' ›</button>' : '');
-}
 /** "Make live": asks first (what, whom, on what, from when), then draft -> approved -> live (the shelf's own steps, so the log shows who approved) */
 async function cartLive(id) {
   var item = cartItem(id);
   if (!item) return;
   if (!savedLive()) return cartSay(id, SIGN_IN_SAY, 'bad');
   await groupCountFor(item.group);
-  if (item.status === 'paused') return askPromise(item, 'resume', null, function () { return resumeOffer(item); });
   askPromise(item, 'live', null, function () { return attachOffer(item, null); });
 }
 /** Resume: the status only, so the offer's rules (its group included) are left exactly as they were */
@@ -5886,7 +5958,7 @@ async function askStatus(id, status) {
   if (!item) return;
   await groupCountFor(item.group);
   var kind = status === 'approved' ? 'approve' : status === 'paused' ? 'pause' : item.status === 'paused' ? 'resume' : 'live';
-  askPromise(item, kind, null, function () { return setStatus(id, status); });
+  askPromise(item, kind, null, function () { return kind === 'resume' ? resumeOffer(item) : setStatus(id, status); }); /* Resume sends the status only and says where the offer is live again */
 }
 /** Retire (signed in) or Delete (trial): confirm, then drop it */
 function askDrop(id) {
@@ -6008,14 +6080,21 @@ function render() {
         (S.custOn ? 'up to <b>' + num(S.cap) + '%</b>' : 'off') +
         '<button onclick="labStep(0)">Change</button></div>';
 
-  var screens = { 0: renderS0, 2: renderWorkOrTypes, 3: renderS3 };
+  if (S.step === 3 && !cartItem(OPEN_ID)) {
+    OPEN_ID = null; /* retired or deleted: the landing */
+    S.step = 0;
+  }
+  parkPromise();
+  var screens = { 0: renderS0, 2: renderWorkOrTypes, 3: renderOpenOffer };
   [0, 2, 3].forEach(function (item) {
     var el = document.getElementById('s' + item);
     el.className = 'screen' + (S.step === item ? ' on' : '');
     if (S.step === item) el.innerHTML = screens[item]();
   });
   syncTypeMenu();
-  renderCart();
+  renderPinned();
+  renderPromisePane();
+  syncPhone();
   /* ⭐ if the "Work it out" modal is open, keep it in sync — e.g. editing a qty tier's own inline inputs while
    * the result is on screen calls render() the same way every other edit does, and the modal is not one of
    * the four .screen divs render() already repaints above. */

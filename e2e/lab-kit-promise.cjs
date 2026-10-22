@@ -56,6 +56,25 @@ const squash = (s) => String(s).replace(/\s+/g, ' ').trim();
     say(act.label + ': title, button, what, on what, whom, when', says.every(Boolean), says.join(','));
   }
 
+  /* v2: the right-hand pane (an open saved offer) says exactly what the popup of its next step says */
+  for (const status of ['draft', 'approved', 'live', 'paused']) {
+    const seen = await page.evaluate((st) => {
+      const item = { id: 'p1', title: 'Spend and save', detail: '₹50 back', status: st, n: '—', k: 'saved', snap: { goal: 'spend', spendAt: 500 } };
+      SAVED = [item]; openOffer('p1');
+      const pane = document.querySelector('[data-testid="promise-text"]').innerText;
+      askPromise(item, NEXT_ACT[st], null, function () {});
+      const popup = document.querySelector('[data-testid="lk-confirm-text"]').innerText;
+      document.querySelector('[data-testid="lk-confirm-cancel"]').click();
+      return { pane, popup };
+    }, status);
+    say('a ' + status + ' offer: the pane text = the popup text', squash(seen.pane) === squash(seen.popup) && seen.pane.length > 40, squash(seen.pane).slice(0, 80));
+  }
+  const grouped = await page.evaluate(() => {
+    const by = CBLabKit.groupBy([{ s: 'b' }, { s: 'a' }, { s: 'b' }, { s: 'z' }], (x) => x.s, ['a', 'b', 'c']);
+    return Object.keys(by).join() + '|' + Object.values(by).map((v) => v.length).join();
+  });
+  say('groupBy keeps the given order, empty groups and extra keys', grouped === 'a,b,c,z|1,2,0,1', grouped);
+
   const draft = await page.evaluate(() => {
     const shown = { title: 'A percentage off', detail: '10% off' };
     S.scope = 'item'; S.itemIds = ['masala']; render();

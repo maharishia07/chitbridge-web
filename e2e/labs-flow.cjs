@@ -504,9 +504,9 @@ function route(S, r) {
     const before = S.definitions.length;
     await p.click('#workSave').catch(() => {});
     await settle(p);
-    ok('offer', await p.locator('#s2.on').count() > 0, '"Add to your offers" stays on the form (' + state + ')', 'screen 2 (#s2) lost class "on"');
+    ok('offer', await p.locator('#s3.on [data-testid="offer-open"]').count() > 0, '"Add to your offers" opens the saved offer in the middle (' + state + ')', 'the saved offer did not open (#s3 not on)');
     const savedRows = await p.locator('[data-testid="cart-row"]').count();
-    ok('offer', savedRows > 0, 'the offer is in the cart on the right (' + state + ')', 'no cart row found');
+    ok('offer', savedRows > 0, 'the offer is in Your offers on the left (' + state + ')', 'no cart row found');
     if (!st.signedOut) {
       ok('offer', S.definitions.length > before, 'signed in: Add to your offers posts to /api/definitions (' + state + ')', 'no new definition was created on the stand-in');
     }

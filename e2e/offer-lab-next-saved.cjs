@@ -88,9 +88,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     return { step: S.step, saved: SAVED.length, live: savedLive() };
   });
   say('nothing signed in, so nothing is remote', demo.live === false, 'savedLive() is false');
-  say('the offer still saves, locally, exactly as before', demo.saved === 1 && demo.step === 2, JSON.stringify(demo));
+  say('the offer still saves, locally, exactly as before', demo.saved === 1 && demo.step === 3, /* v2: the saved offer opens in the middle */ JSON.stringify(demo));
   const cartRows = await p.locator('[data-testid="cart-row"]').count();
-  say('it shows in the cart on the right as a draft (W19)', cartRows === 1 && /draft/.test(await p.locator('[data-testid="cart-row"]').first().innerText()), cartRows + ' row(s)');
+  say('it is listed on the left under Draft, and open in the middle (v2)', cartRows === 1 && (await p.locator('[data-testid="cart-row"]').first().getAttribute('data-status')) === 'draft' && (await p.locator('[data-testid="offer-open"]').count()) === 1, cartRows + ' row(s)');
 
   console.log('\n── signed in: the SAME action now reaches the real shelf ' + '─'.repeat(6));
   await p.evaluate(() => {
@@ -104,7 +104,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     await saveOffer();
     return { step: S.step, saved: SAVED.map((s) => ({ status: s.status, remote: !!s.remote })) };
   });
-  say('stays on the form; the cart shows it', saved.step === 2 && (await p.locator('[data-testid="cart-row"]').count()) === 1, 'cart on the right');
+  say('opens the saved offer; the left list shows it', saved.step === 3 && (await p.locator('[data-testid="cart-row"]').count()) === 1, 'listed on the left');
   say('one live-shelf row, in draft', saved.saved.length === 1 && saved.saved[0].status === 'draft' && saved.saved[0].remote,
       JSON.stringify(saved.saved));
 
@@ -123,7 +123,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   console.log('\n── ⭐ the cost-drift warning survives a page reload (it is on the server, not in memory) ' + '─'.repeat(0));
   await p.evaluate(() => { byId('masala').cost = 999; });   /* the catalogue's own cost moved after saving */
-  await p.evaluate(() => { labStep(3); });
+  await p.evaluate(() => { openOffer(SAVED[0].id); });   /* v2: the saved offer opens in the middle */
   await p.waitForTimeout(150);
   const drift = await p.evaluate(() => document.querySelector('.p-stale') ? document.querySelector('.p-stale').textContent : null);
   say('"1 cost changed since" shows, computed against what was actually saved', /1 cost changed/.test(drift || ''), '"' + drift + '"');
