@@ -75,7 +75,7 @@ of file each thing is; this says what already does the job.
 | 26 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
 | 26 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 25 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 25 | `sheet` | `cap-employees.js` |  |
+| 26 | `sheet` | `cap-employees.js` |  |
 | 25 | `gate` | `country-setup.js` | gate(h, entity): |
 | 24 | `load` | `cap-assist.js` |  |
 | 24 | `money` | `cart.js` |  |
@@ -107,7 +107,7 @@ of file each thing is; this says what already does the job.
 | 19 | `shown` | `cap-settings.js` |  |
 | 19 | `card` | `cap-shop.js` |  |
 | 19 | `note` | `device-id.js` | note(where, problem) — |
-| 19 | `reason` | `lab-kit.js` | W9: |
+| 20 | `reason` | `lab-kit.js` | W9: |
 | 19 | `more` | `lab-kit.js` | idKey: |
 | 19 | `guard` | `books-assets.js` | run a store call; a missing table is the one refusal |
 | 19 | `entries` | `books-store.js` |  |
@@ -165,7 +165,7 @@ of file each thing is; this says what already does the job.
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 13 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 13 | `offers` | `network-app.js` |  |
+| 14 | `offers` | `network-app.js` |  |
 | 13 | `resolve` | `page.js` |  |
 | 13 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 13 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
