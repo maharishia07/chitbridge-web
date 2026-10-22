@@ -3,6 +3,8 @@
  *       for <country> yet", at most three items + "and N more" (the popup is a CBList), progress as a bar + "x of y ready · next: …", the
  *       Ready / Nearly / Not started grouping, and the layout classes (lab-cols, lab-cards) in /app/lab-kit.css.
  * CONFIRM  confirm(title, bodyHtml, onOk, opts): the one popup that asks before a money promise is made (the Offer Lab shelf buttons, UX-109).
+ * PROMISE  promise(parts) -> {title, ok, danger, html, text}: the ONE sentence (what, on what, for whom, from when) that the confirm body, the draft line
+ *          and any pane show; a lab supplies the parts (its name, reach and group label), never its own wording (Offer Lab v2 PR-a0).
  * CALLED BY app/page-frame.js (CBFrame.lab → the switcher) and every lab page; Country Lab (PR 2) and Offer Lab (PR 3) use the rest.
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/lab-kit
  * FLOW  page loads → CBLabKit.LABS feeds the switcher → a lab paints rows through plain · notSetUp · reason · more · progress · groups
@@ -155,6 +157,42 @@
     if (cancelButton && cancelButton.focus) cancelButton.focus();
     return shown;
   }
+  /* ── UX-109 / Offer Lab v2: ONE promise sentence. The popup, the pane and the sheet's draft line all read it from here, never word it themselves. ── */
+  var EVERYONE_NOW = { who: 'every customer', from: 'now, on the very next bill', end: 'Every bill from now on gets it.' };
+  /** the acts a lab can commit: the button, the sentence's "for whom" (from `group`, the label the lab gives), "from when" and the closing line */
+  var PROMISE_ACTS = {
+    live: { title: 'Make this {thing} live?', ok: 'Make live', who: function (parts) { return parts.group ? 'every customer (it was only for ' + parts.group + ')' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
+    resume: { title: 'Resume this {thing}?', ok: 'Resume', who: function (parts) { return parts.group ? parts.group + ' only' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
+    group: { title: 'Make this {thing} live for a group?', ok: 'Make live for them', who: function (parts) { return parts.group + ' only'; }, from: EVERYONE_NOW.from, end: 'Only they get it. Nobody else does.' },
+    approve: { title: 'Approve this {thing}?', ok: 'Approve', who: function () { return 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
+    pause: { title: 'Pause this {thing}?', ok: 'Pause', who: function () { return 'nobody while it is paused'; }, from: 'now', end: 'Resume brings it back.' },
+    retire: { title: 'Retire this {thing}?', ok: 'Retire', danger: true, who: function () { return 'nobody from now on'; }, from: 'now', end: 'It leaves your shelf. Bills already made keep what they got.' },
+    delete: { title: 'Delete this {thing}?', ok: 'Delete', danger: true, who: function () { return 'nobody'; }, from: 'now', end: 'It is gone from this tab. This cannot be undone.' },
+    draft: { title: 'Save this {thing} as a draft?', ok: 'Save draft', who: function () { return 'nobody yet'; }, from: 'not live. Nothing is live until you make it live', end: 'Saving does not start it.',
+      /* the sheet shows the draft as one line, before the save */
+      line: function (parts, head) { return 'Saves a draft: ' + head + ', on ' + parts.on + '. Nothing is live until you make it live.'; } }
+  };
+  /**
+   * promise(parts) -> { title, ok, danger, html, text }: the one sentence a commit control shows before it saves.
+   * parts: { act (a PROMISE_ACTS key), thing ('offer'), name, detail, on (what it reaches, with the count), group (a label), note (a closing extra) }.
+   * `html` is the confirm popup's body; `text` is the same words as plain text (the pane and the draft line show it; the equality test reads it).
+   */
+  function promise(parts) {
+    var step = PROMISE_ACTS[parts.act],
+      audience = step.who(parts),
+      head = parts.name + (parts.detail ? ' · ' + parts.detail : ''),
+      note = parts.note ? ' ' + parts.note : '';
+    return {
+      title: step.title.replace('{thing}', parts.thing || 'offer'),
+      ok: step.ok,
+      danger: !!step.danger,
+      html:
+        '<p><b>' + escapeText(parts.name) + '</b>' + (parts.detail ? ' · ' + escapeText(parts.detail) : '') + '</p>' +
+        '<span class="lk-reach" data-testid="promise-on">On: ' + escapeText(parts.on) + '</span>' +
+        '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(step.end + note) + '</p>',
+      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + step.end + note
+    };
+  }
   function listOptions(opts, items) {
     return {
       key: 'lab-more-' + opts.id,
@@ -210,5 +248,5 @@
       };
   }
 
-  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, more: more, popup: popup, confirm: confirm };
+  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, more: more, popup: popup, confirm: confirm, promise: promise };
 })(typeof window !== 'undefined' ? window : globalThis);
