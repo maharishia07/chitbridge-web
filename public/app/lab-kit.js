@@ -78,13 +78,24 @@
     if (item.total && item.done >= item.total) return 'Ready';
     return item.done > 0 ? 'Nearly' : 'Not started';
   }
-  /** items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } */
-  function groups(items) {
-    var out = { Ready: [], Nearly: [], 'Not started': [] };
+  /**
+   * groupBy(items, keyFn, order) -> { <key>: [items…] }: every key of `order` is present (empty if nothing falls in it), in that order, then any other
+   * key keyFn returned. One grouping for every lab: readiness (Ready · Nearly · Not started) and the Offer Lab's status shelf (live · paused · approved · draft).
+   */
+  function groupBy(items, keyFn, order) {
+    var out = {};
+    (order || []).forEach(function (name) {
+      out[name] = [];
+    });
     (items || []).forEach(function (item) {
-      out[groupOf(item)].push(item);
+      var name = keyFn(item);
+      (out[name] = out[name] || []).push(item);
     });
     return out;
+  }
+  /** items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } */
+  function groups(items) {
+    return groupBy(items, groupOf, ['Ready', 'Nearly', 'Not started']);
   }
   /** the grouped readiness block: each group heading, then each area with its bar; a blocker is the only red */
   function readiness(items) {
@@ -164,8 +175,9 @@
     live: { title: 'Make this {thing} live?', ok: 'Make live', who: function (parts) { return parts.group ? 'every customer (it was only for ' + parts.group + ')' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
     resume: { title: 'Resume this {thing}?', ok: 'Resume', who: function (parts) { return parts.group ? parts.group + ' only' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
     group: { title: 'Make this {thing} live for a group?', ok: 'Make live for them', who: function (parts) { return parts.group + ' only'; }, from: EVERYONE_NOW.from, end: 'Only they get it. Nobody else does.' },
-    approve: { title: 'Approve this {thing}?', ok: 'Approve', who: function () { return 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
-    pause: { title: 'Pause this {thing}?', ok: 'Pause', who: function () { return 'nobody while it is paused'; }, from: 'now', end: 'Resume brings it back.' },
+    golive: { title: 'Go live with this {thing}?', ok: 'Go live', who: function (parts) { return parts.group ? parts.group + ' only' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: function (parts) { return parts.group ? 'Only they get it. Nobody else does.' : EVERYONE_NOW.end; } },
+    approve: { title: 'Approve this {thing}?', ok: 'Approve', who: function (parts) { return parts.group ? 'nobody yet (it is for ' + parts.group + ' only)' : 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
+    pause: { title: 'Pause this {thing}?', ok: 'Pause', who: function (parts) { return 'nobody while it is paused' + (parts.group ? ' (it is for ' + parts.group + ' only)' : ''); }, from: 'now', end: 'Resume brings it back.' },
     retire: { title: 'Retire this {thing}?', ok: 'Retire', danger: true, who: function () { return 'nobody from now on'; }, from: 'now', end: 'It leaves your shelf. Bills already made keep what they got.' },
     delete: { title: 'Delete this {thing}?', ok: 'Delete', danger: true, who: function () { return 'nobody'; }, from: 'now', end: 'It is gone from this tab. This cannot be undone.' },
     draft: { title: 'Save this {thing} as a draft?', ok: 'Save draft', who: function () { return 'nobody yet'; }, from: 'not live. Nothing is live until you make it live', end: 'Saving does not start it.',
@@ -181,7 +193,8 @@
     var step = PROMISE_ACTS[parts.act],
       audience = step.who(parts),
       head = parts.name + (parts.detail ? ' · ' + parts.detail : ''),
-      note = parts.note ? ' ' + parts.note : '';
+      note = parts.note ? ' ' + parts.note : '',
+      closing = typeof step.end === 'function' ? step.end(parts) : step.end;
     return {
       title: step.title.replace('{thing}', parts.thing || 'offer'),
       ok: step.ok,
@@ -189,18 +202,24 @@
       html:
         '<p><b>' + escapeText(parts.name) + '</b>' + (parts.detail ? ' · ' + escapeText(parts.detail) : '') + '</p>' +
         '<span class="lk-reach" data-testid="promise-on">On: ' + escapeText(parts.on) + '</span>' +
-        '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(step.end + note) + '</p>',
-      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + step.end + note
+        '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(closing + note) + '</p>',
+      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + closing + note
     };
   }
-  function listOptions(opts, items) {
+  function listOptions(opts, items, shown) {
     return {
+      onOpen: opts.open
+        ? function (item) {
+            shown.close();
+            opts.open(item);
+          }
+        : undefined,
       key: 'lab-more-' + opts.id,
       rows: function () {
         return items;
       },
       id: function (item) {
-        return item[opts.columns[0].key];
+        return item[opts.idKey || opts.columns[0].key];
       },
       search: function (item) {
         return opts.columns.map(function (column) { return item[column.key]; }).join(' ');
@@ -223,8 +242,9 @@
     };
   }
   /**
-   * more(host, { id, title, items, columns:[{ key, label }], line(item) → html, max })
+   * more(host, { id, title, items, columns:[{ key, label }], line(item) → html, max, idKey, open(item) })
    * paints up to `max` (3) lines; beyond that a button "and N more" whose popup is a CBList (sort · search · resize) over the same items.
+   * idKey: the column that is unique per item (default the first column). open(item): a row of the popup was tapped; the popup closes first.
    */
   function more(host, opts) {
     var items = opts.items || [],
@@ -238,15 +258,15 @@
     var button = host.querySelector('.lk-more');
     if (button)
       button.onclick = function () {
-        popup(opts.title, function (body) {
+        var shown = popup(opts.title, function (body) {
           if (!root.CBList) {
             body.textContent = 'The list could not open. Reload the page and try again.';
             return;
           }
-          root.CBList.mount(body, listOptions(opts, items));
+          root.CBList.mount(body, listOptions(opts, items, shown));
         });
       };
   }
 
-  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, more: more, popup: popup, confirm: confirm, promise: promise };
+  root.CBLabKit = { LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, groupBy: groupBy, more: more, popup: popup, confirm: confirm, promise: promise };
 })(typeof window !== 'undefined' ? window : globalThis);
