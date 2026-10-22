@@ -16,3 +16,9 @@
 **Left for others:** W38 (switcher lists app areas, verify against CBLabKit.LABS) and W44 (Import in a real browser) go to cb-qa; W46 (the OLB chip is the frame's screen-id) is shell.js, ux-locale's but a shared file.
 
 **VERDICT: BUILD AS BRIEFED.**
+
+## cb-critic round (22 Oct, CHANGE) - fixed on the same branch
+1. BLOCKER Resume on a paused "Only for a group" offer went through `attachOffer`, which clears the group while the popup said "every customer": Resume is now `resumeOffer` (status only, rules untouched) and the popup names the group with its member count (automatic groups ask `GET /api/relationships/customers?segment=`; a named group has no count route, so it says "member count not shown here" rather than invent one: api gap for cb-crm). Walk C4 pauses and resumes a group offer and asserts `customer_group` kept and the group named.
+2. `fallbackReach` and `scopeWords` always state a number ("1 item: A, 1 no longer in your catalogue", "0 items, 2 no longer in your catalogue"). Walk C5.
+3. Editing a live or paused offer still saves it as a draft (the items changed, so the review no longer holds), but the sheet and the line after the save now say "Editing takes it off for customers until you make it live again." Walk C6.
+4. Esc with a confirm open closes only the confirm. Walk C7.

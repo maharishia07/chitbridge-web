@@ -2108,7 +2108,7 @@ function paintWork() {
   document.body.style.overflow = 'hidden';
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') {
+  if (e.key === 'Escape' && !document.querySelector('.lk-pop-back')) { /* a confirm open over the sheet: Esc closes only the confirm (its own handler) */
     closeWork();
     closePriceOverlay();
   }
@@ -3168,8 +3168,12 @@ function namesWords(names) {
 /** the scope a state (the form's S, or a saved offer's snapshot) holds, in words: "all 12 items in Sweets", "3 items: A, B, C", or '' while nothing is chosen (UX-109: never a default) */
 function scopeWords(state) {
   if (state.scope === 'cat' && state.catId) return 'all ' + itemsWord(catItems(state.catId).length) + ' in ' + catName(state.catId);
-  var picked = state.scope === 'item' ? (state.itemIds || []).map(byId).filter(Boolean) : [];
-  return picked.length ? namesWords(picked.map(function (item) { return item.name; })) : '';
+  var wanted = state.scope === 'item' ? state.itemIds || [] : [],
+    picked = wanted.map(byId).filter(Boolean),
+    gone = wanted.length - picked.length;
+  if (!wanted.length) return '';
+  var shown = picked.length ? namesWords(picked.map(function (item) { return item.name; })) : '0 items';
+  return shown + (gone ? ', ' + gone + ' no longer in your catalogue' : '');
 }
 /** the reach the form currently holds in words, or '' while nothing is chosen */
 function reachWords() {
@@ -5178,16 +5182,17 @@ function saveName(l) {
  * changed, so whatever review got it to approved/live/paused applied to a list that no longer exists.
  */
 /** "Add to cart": the offer is a draft on the shelf; the page stays on the form and the cart on the right shows it, with its attach actions */
-function afterSave() {
+function afterSave(offNote) {
   var shown = label(),
     twin = SAVED.filter(function (x) { return x.title === shown.title && x.detail === shown.detail; }).length > 1;
   EDITING = null;
-  CART_SAID = 'Added as a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + '. Not live yet.' + (twin ? ' You already have one just like it.' : '');
+  CART_SAID = 'Added as a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + '. Not live yet.' + (offNote || '') + (twin ? ' You already have one just like it.' : '');
   closeWork();
   render();
 }
 async function saveOffer() {
-  var l = label(),
+  var offNote = takenOffNote(),
+    l = label(),
     k = keyNumber(),
     sub = subKindOf();
   if (!savedLive()) {
@@ -5218,7 +5223,7 @@ async function saveOffer() {
         costs: costPrint()
       });
     }
-    afterSave();
+    afterSave(offNote);
     return;
   }
   if (!sub) {
@@ -5246,7 +5251,7 @@ async function saveOffer() {
     return;
   }
   await loadSaved();
-  afterSave();
+  afterSave(offNote);
 }
 /** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
 async function loadSaved() {
@@ -5782,7 +5787,31 @@ async function cartLive(id) {
   var item = cartItem(id);
   if (!item) return;
   if (!savedLive()) return cartSay(id, SIGN_IN_SAY, 'bad');
-  askPromise(item, item.status === 'paused' ? 'resume' : 'live', null, function () { return attachOffer(item, null); });
+  await groupCountFor(item.group);
+  if (item.status === 'paused') return askPromise(item, 'resume', null, function () { return resumeOffer(item); });
+  askPromise(item, 'live', null, function () { return attachOffer(item, null); });
+}
+/** Resume: the status only, so the offer's rules (its group included) are left exactly as they were */
+async function resumeOffer(item) {
+  cartSay(item.id, 'Saving…');
+  await setStatus(item.id, 'live');
+  var back = cartItem(item.id),
+    where = item.group ? 'only for ' + (item.groupName || groupNameOf(item.group)) : 'for everyone';
+  CART_NOTES[item.id] = back && back.status === 'live' ? { text: 'Live again, ' + where + '.', tone: 'ok' } : { text: 'That did not go live again.', tone: 'bad' };
+  render();
+}
+var GROUP_COUNTS = {}; /* group value -> customers in it now; null = the count could not be read */
+/** how many customers an automatic group holds, asked once before a confirm names it; a named group has no count route yet, so none is claimed */
+async function groupCountFor(value) {
+  var automatic = SYSTEM_GROUPS.some(function (pair) { return pair[0] === value; });
+  if (!value || !automatic || GROUP_COUNTS[value] !== undefined) return;
+  var reply = await apiFetch('GET', API + '/api/relationships/customers?segment=' + encodeURIComponent(value) + '&limit=1');
+  GROUP_COUNTS[value] = reply.ok && reply.body && typeof reply.body.count === 'number' ? reply.body.count : null;
+}
+/** a group named for a confirm: its name and how many customers it holds now (or that the count is not known here) */
+function groupLabel(value) {
+  var size = GROUP_COUNTS[value];
+  return groupNameOf(value) + (typeof size === 'number' ? ' (' + size + ' customer' + (size === 1 ? '' : 's') + ' now)' : ' (member count not shown here)');
 }
 /** "Only for a group": opens the picker (and reads the shop's named groups the first time) */
 async function cartOpenGroup(id) {
@@ -5806,6 +5835,7 @@ async function cartApplyGroup(id) {
   var item = cartItem(id),
     pick = document.getElementById('cartGroupPick');
   if (!item || !pick || !pick.value) return;
+  await groupCountFor(pick.value);
   var patch = { customer_group: pick.value, customer_name: groupNameOf(pick.value) };
   askPromise(item, 'group', patch, function () { return attachOffer(item, patch); });
 }
@@ -5820,11 +5850,13 @@ function savedReachWords(savedOffer) {
     names = savedItemNames(savedOffer) || [],
     special = REACH_BY_GOAL[snap.goal];
   if (special) return special(snap, names);
-  return scopeWords(snap) || fallbackReach(names);
+  return scopeWords(snap) || fallbackReach(names, snap);
 }
-/** names with the count, or the plain fallback for an offer that never saved its items */
-function fallbackReach(names) {
-  return names.length ? namesWords(names) : 'the items you chose';
+/** names with the count; with none left it still says how many were chosen and that they are gone: never a promise without a number */
+function fallbackReach(names, snap) {
+  if (names.length) return namesWords(names);
+  var wanted = ((snap && snap.itemIds) || []).length || (snap && snap.itemId ? 1 : 0);
+  return wanted ? '0 items: ' + (wanted === 1 ? 'the item you chose is' : 'the ' + wanted + ' items you chose are') + ' no longer in your catalogue' : '0 items found in your catalogue';
 }
 /** the kinds whose reach is not "a category or some items": a bill, a pair, a gift */
 var REACH_BY_GOAL = {
@@ -5835,7 +5867,7 @@ var REACH_BY_GOAL = {
   free: function (snap, names) {
     if (snap.freeShape === 'anything') return 'every bill (free: ' + (names[0] || 'the gift') + ')';
     if (snap.freeShape === 'cheapest' && snap.catId) return scopeWords({ scope: 'cat', catId: snap.catId });
-    return fallbackReach(names);
+    return fallbackReach(names, snap);
   }
 };
 /** the table of promises: the popup's title, button, for whom (a sentence), from when, and the closing line; danger = a red button */
@@ -5843,15 +5875,15 @@ var PROMISE_ACTS = {
   live: {
     title: 'Make this offer live?',
     ok: 'Make live',
-    who: function (item) { return item.group ? 'every customer (it was only for ' + (item.groupName || groupNameOf(item.group)) + ')' : 'every customer'; },
+    who: function (item) { return item.group ? 'every customer (it was only for ' + groupLabel(item.group) + ')' : 'every customer'; },
     from: 'now, on the very next bill',
     end: 'Every bill from now on gets it.'
   },
-  resume: { title: 'Resume this offer?', ok: 'Resume', who: function () { return 'every customer it was live for'; }, from: 'now, on the very next bill', end: 'Every bill from now on gets it.' },
+  resume: { title: 'Resume this offer?', ok: 'Resume', who: function (item) { return item.group ? groupLabel(item.group) + ' only' : 'every customer'; }, from: 'now, on the very next bill', end: 'Every bill from now on gets it.' },
   group: {
     title: 'Make this offer live for a group?',
     ok: 'Make live for them',
-    who: function (item, patch) { return patch.customer_name + ' only'; },
+    who: function (item, patch) { return groupLabel(patch.customer_group) + ' only'; },
     from: 'now, on the very next bill',
     end: 'Only they get it. Nobody else does.'
   },
@@ -5874,9 +5906,10 @@ function askPromise(item, kind, patch, onConfirm) {
   CBLabKit.confirm(promise.title, promiseHTML(item, promise, patch), onConfirm, { okLabel: promise.ok, danger: !!promise.danger });
 }
 /** a shelf step button (Approve · Go live · Pause · Resume): confirm, then the status change */
-function askStatus(id, status) {
+async function askStatus(id, status) {
   var item = cartItem(id);
   if (!item) return;
+  await groupCountFor(item.group);
   var kind = status === 'approved' ? 'approve' : status === 'paused' ? 'pause' : item.status === 'paused' ? 'resume' : 'live';
   askPromise(item, kind, null, function () { return setStatus(id, status); });
 }
@@ -5889,7 +5922,12 @@ function askDrop(id) {
 /** the sheet's last word before "Add to your offers": what is saved, on what, and that it is not live (the final save repeats the promise) */
 function draftPromise(shown) {
   var reach = savedReachWords({ snap: snapshot() });
-  return 'Saves a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + ', on ' + reach + '. Nothing is live until you make it live.';
+  return 'Saves a draft: ' + shown.title + (shown.detail ? ' · ' + shown.detail : '') + ', on ' + reach + '. Nothing is live until you make it live.' + takenOffNote();
+}
+/** saving an edit puts the offer back to draft (its items changed, so what was reviewed no longer holds): a live or paused one says it comes off */
+function takenOffNote() {
+  var editing = EDITING && cartItem(EDITING);
+  return editing && (editing.status === 'live' || editing.status === 'paused') ? ' Editing takes it off for customers until you make it live again.' : '';
 }
 /** the rules to send: the offer's current rules (a PUT of rules replaces them) with the group set, or cleared when the offer is made live for everyone; null when they cannot be read */
 async function rulesToAttach(id, patch, wasFor) {

@@ -41,6 +41,7 @@ function definitionsApi() {
   const json = (route, status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   const handler = async (route) => {
     const req = route.request(), url = new URL(req.url()), parts = url.pathname.split('/').filter(Boolean);
+    if (url.pathname === '/api/relationships/customers') return json(route, 200, { count: 7, customers: [] });
     if (url.pathname === '/api/relationships/customers/groups') return json(route, 200, { names: [NAMED_GROUP] });
     if (parts[1] !== 'definitions') return json(route, 404, {});
     const id = parts[2], body = req.postData() ? JSON.parse(req.postData()) : {};
@@ -286,7 +287,7 @@ const walk = async (w) => {
     const stillDraft = api.db.get(id).status === 'draft';
     await signed.click('[data-testid="cart-group-apply"]');
     const wordsGroup = await confirmWords(signed, 'ok');
-    if (!enabled || !stillDraft || !new RegExp('For: ' + NAMED_GROUP + ' only').test(wordsGroup) || !/On: /.test(asked)) return { ok: false, saw: 'enabled ' + enabled + ' · draft after Cancel ' + stillDraft + ' · "' + wordsGroup + '"' };
+    if (!enabled || !stillDraft || !new RegExp('For: ' + NAMED_GROUP + ' .*only').test(wordsGroup) || !/On: /.test(asked)) return { ok: false, saw: 'enabled ' + enabled + ' · draft after Cancel ' + stillDraft + ' · "' + wordsGroup + '"' };
     await signed.waitForFunction((want) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === want), 'Live, only for ' + NAMED_GROUP + '.');
     const def = api.db.get(id), rules = def.versions[0].rules;
     return { ok: def.status === 'live' && rules.customer_group === 'group:' + NAMED_GROUP && rules.customer_name === NAMED_GROUP && rules.percent === 10 && def.versions.length === 2,
@@ -369,6 +370,59 @@ const walk = async (w) => {
     const retire = await confirmWords(signed, 'cancel');
     const stillThere = [...api.db.values()].length >= 3 && api.db.size === 3;
     return { ok: cancelled && liveNow && /Every bill from now on gets it/.test(goLive) && /Bills already made/.test(retire) && stillThere && /From: now/.test(goLive), saw: 'rows ' + api.db.size + ' · cancel kept it approved ' + cancelled + ' · confirm made it live ' + liveNow + ' · retire says "' + retire.slice(0, 120) + '"' };
+  });
+
+  const waitStatus = async (id, want) => { for (let i = 0; i < 40 && api.db.get(id).status !== want; i++) await signed.waitForTimeout(100); return api.db.get(id).status; };
+  await w.step('C4', 'Signed in: a group offer, Paused then Resumed, keeps its group; the Resume confirm names the group; the group is still in the saved rules', async () => {
+    await addOne(signed, 'percent', 30);
+    const id = [...api.db.keys()].pop();
+    const row = signed.locator('[data-testid="cart-row"][data-id="' + id + '"]');
+    await row.locator('[data-testid="cart-group"]').click();
+    await signed.waitForSelector('[data-testid="cart-group-pick"] optgroup option', { state: 'attached' });
+    await signed.selectOption('[data-testid="cart-group-pick"]', 'group:' + NAMED_GROUP);
+    await signed.click('[data-testid="cart-group-apply"]');
+    await confirmWords(signed, 'ok');
+    const live1 = await waitStatus(id, 'live');
+    await signed.evaluate((x) => { askStatus(x, 'paused'); }, id);
+    await confirmWords(signed, 'ok');
+    const paused = await waitStatus(id, 'paused');
+    await signed.waitForFunction((x) => { const r = document.querySelector('[data-testid="cart-row"][data-id="' + x + '"]'); return r && /Resume/.test(r.textContent); }, id);
+    await signed.locator('[data-testid="cart-row"][data-id="' + id + '"] [data-testid="cart-live"]').click();
+    const words = await confirmWords(signed, 'ok');
+    const back = await waitStatus(id, 'live');
+    const rules = api.db.get(id).versions[0].rules;
+    return { ok: live1 === 'live' && paused === 'paused' && back === 'live' && rules.customer_group === 'group:' + NAMED_GROUP && rules.customer_name === NAMED_GROUP && new RegExp('For: ' + NAMED_GROUP + ' .*only').test(words),
+      saw: 'live ' + live1 + ' -> ' + paused + ' -> ' + back + ' · customer_group ' + rules.customer_group + ' · "' + words.slice(0, 200) + '"' };
+  });
+
+  await w.step('C4b', 'An automatic group is named with how many customers it holds now (the api stand-in says 7)', async () => {
+    const label = await signed.evaluate(async () => { await groupCountFor('new'); return groupLabel('new'); });
+    return { ok: label === 'New customers (7 customers now)', saw: label };
+  });
+
+  await w.step('C5', 'A saved offer whose items left the catalogue still says a number, never just "the items you chose"', async () => {
+    const got = await signed.evaluate(() => ({
+      some: savedReachWords({ snap: { goal: 'percent', scope: 'item', itemIds: ['masala', 'gone'] } }),
+      none: savedReachWords({ snap: { goal: 'percent', scope: 'item', itemIds: ['gone', 'gone2'] } }),
+      free: savedReachWords({ snap: { goal: 'free', freeShape: 'same', itemId: 'gone' } })
+    }));
+    return { ok: /^1 item: .*, 1 no longer in your catalogue$/.test(got.some) && /^0 items, 2 no longer in your catalogue$/.test(got.none) && /^0 items: .*no longer in your catalogue$/.test(got.free), saw: JSON.stringify(got) };
+  });
+
+  await w.step('C6', 'Editing a LIVE offer says in the sheet that it comes off for customers until it is made live again', async () => {
+    const id = [...api.db.keys()].pop();
+    const said = await signed.evaluate((x) => { openSaved(x); apply(); const t = document.getElementById('workPromise').textContent; closeWork(); return t; }, id);
+    return { ok: /Editing takes it off for customers until you make it live again/.test(said), saw: '"' + said + '"' };
+  });
+
+  await w.step('C7', 'Esc with a confirm open closes only the confirm; the Work-it-out sheet under it stays until a second Esc', async () => {
+    await signed.evaluate(() => { pickGoal('percent'); applyWholeCategory(CATS[1].id); apply(); askPromise({ id: 'x', title: 'A percentage off', detail: '10% off', snap: { goal: 'percent', scope: 'cat', catId: CATS[1].id } }, 'live', null, function () {}); });
+    await signed.waitForSelector('[data-testid="lk-pop"]');
+    await signed.keyboard.press('Escape');
+    const first = await signed.evaluate(() => ({ pop: !!document.querySelector('[data-testid="lk-pop"]'), sheet: document.getElementById('workScrim').classList.contains('on') }));
+    await signed.keyboard.press('Escape');
+    const second = await signed.evaluate(() => document.getElementById('workScrim').classList.contains('on'));
+    return { ok: !first.pop && first.sheet && !second, saw: 'after Esc 1: confirm open ' + first.pop + ', sheet open ' + first.sheet + ' · after Esc 2: sheet open ' + second };
   });
 
   /* ── the phone ─────────────────────────────────────────────────────────────────────────────────────────────────── */
