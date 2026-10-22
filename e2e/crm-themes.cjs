@@ -51,6 +51,10 @@ async function route(r) {
   if (p === '/api/books/todo') return J(r, 200, []);
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
   if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(x[1]));
+  /* the contract's keys for the three reads the screens now make (the catch-all {} below no longer conforms: the Parties record asks the credit terms, the Ledgers ask the cheques, Home asks the work facts) */
+  if (p === '/api/books/cheques') return J(r, 200, books.cheques());
+  if (p === '/api/books/terms') return J(r, 200, { terms_migrated: false, may_set: true, why_not: null, default: {}, party: null, events: [] });
+  if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 1, orders_out: 3, tasks: 1, done: 2 }, lines: [{ text: '1 new order', value: 1, tone: 'dn' }], figures: { orders_new: 1, tasks_mine: 0, orders_in: 1, orders_out: 3, tasks: 1, done: 2 } });
   if (p.startsWith('/api/books/')) return J(r, 200, {});
   if (p === '/api/folders') return J(r, 200, { folders: [{ folder_id: 'c0000000-0000-4000-8000-00000000000b', parent_id: null, name: 'Urgent', scope: 'task', kind: 'filed', count: 1 }] });
   if (p === '/api/chits/inbox') return J(r, 200, { chits: [{ chit_id: 'ord1', purpose: 'order', manual_subject: 'Order from Chola', sender_entity_display_name: 'Chola Auto Care', current_status: 'pending', created_at: '2026-10-01T04:00:00Z', summary_json: {}, all_recipients: [] }, { chit_id: 'job1', purpose: 'general', manual_subject: 'Fix the shutter', sender_entity_display_name: 'Bills Shop', current_status: 'pending', created_at: '2026-10-01T03:00:00Z', summary_json: {}, all_recipients: [] }], total: 2, page: 1, limit: 20 });
@@ -174,7 +178,7 @@ const { measure } = require('./lib/theme-measure.cjs');   /* the measurement, ru
   }
   /* A RATCHET, not a pass: the CRM, CB Accounts, the index and the list lab are held at ZERO. app.html's own rail and status strip still carry
      literal greys (a separate piece of work) — its count may only go DOWN, so no NEW unreadable pair can land there. */
-  const RATCHET = { 'app Task list': 18 };
+  const RATCHET = { 'app Task list': 8 };
   Object.keys(RATCHET).forEach((n) => { const c = fails.filter((x) => x.screen === n).length; ok(c <= RATCHET[n], n + ': ' + c + ' failing pairs, held at most ' + RATCHET[n] + (c < RATCHET[n] ? ' (lower the ratchet to ' + c + ')' : '')); });
   const hard = fails.filter((x) => !(x.screen in RATCHET));
   ok(hard.length === 0, 'every text pair on every screen in all 16 themes clears AA (' + hard.length + ' failing of ' + Object.keys(table).reduce((a, s) => a + th.reduce((b, k) => b + table[s][k][0], 0), 0) + ' measured)');
