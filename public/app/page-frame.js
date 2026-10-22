@@ -34,22 +34,14 @@
     }
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
-     skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> }], active: k, onSection: fn(k) } */
-  /** the Labs switcher (W79): a heading and one link per lab, current one lit; empty unless the skeleton says labs: '<lab id>' (lab-kit.js holds the list) */
-  function labsNav(current) {
-    var labs = current && root.CBLabKit ? root.CBLabKit.LABS : [];
-    if (!labs.length) return '';
+     skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> | glyph: 'text' } | { group: 'heading' }], active: k, onSection: fn(k) } */
+  /** one left-menu entry: a button (an svg path `icon`, or a text `glyph` such as % or ₹), or a group heading when the entry is `{ group: 'label' }` */
+  function navEntry(item, active, drawIcon) {
+    if (item.group) return '<div class="nav-group label" data-testid="skel-group-' + esc(String(item.group).toLowerCase().replace(/[^a-z0-9]+/g, '-')) + '">' + esc(item.group) + '</div>';
+    var mark = item.glyph ? '<span class="lab-ico" aria-hidden="true">' + esc(item.glyph) + '</span>' : drawIcon(item.icon);
     return (
-      '<div class="nav-group label" data-testid="skel-labs">Labs</div>' +
-      labs
-        .map(function (entry) {
-          return (
-            '<a class="nav-btn lab-link' + (entry.id === current ? ' active' : '') + '" href="' + esc(entry.route) + '" data-testid="skel-lab-' + esc(entry.id) + '"' +
-            (entry.id === current ? ' aria-current="page"' : '') + ' aria-label="' + esc(entry.name) + '"><span class="lab-ico" aria-hidden="true">' + esc(entry.icon) +
-            '</span><span class="label">' + esc(entry.name) + '</span></a>'
-          );
-        })
-        .join('')
+      '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
+      (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(item.label) + '">' + mark + '<span class="label">' + esc(item.label) + '</span></button>'
     );
   }
   function skeleton(doc, sk, appId) {
@@ -70,24 +62,9 @@
       '">' +
       (sk.sections || [])
         .map(function (item) {
-          return (
-            '<button type="button" class="nav-btn' +
-            (item.k === sk.active ? ' active' : '') +
-            '" data-sec="' +
-            esc(item.k) +
-            '" data-testid="skel-nav-' +
-            esc(item.k) +
-            '" aria-label="' +
-            esc(item.label) +
-            '">' +
-            svg(item.icon) +
-            '<span class="label">' +
-            esc(item.label) +
-            '</span></button>'
-          );
+          return navEntry(item, sk.active, svg);
         })
         .join('') +
-      labsNav(sk.labs) +
       '</nav><div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
@@ -210,7 +187,7 @@
     } catch (_) {}
     root.location.reload();
   }
-  /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the Labs switcher in the left menu, one background.
+  /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the left menu is THIS lab's own choices (W16; the other labs are the shell's top switcher, fed by manifest.json), one background.
      CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural? }).
      A lab with no `work` element has its page body moved into the main pane once the page has loaded (scripts and styles stay where they are). */
   var LAB_ICON = 'M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3';
@@ -240,8 +217,7 @@
         icon: opts.svg || LAB_ICON,
         sections: opts.sections || [],
         active: opts.active,
-        onSection: opts.onSection,
-        labs: opts.labId || opts.app
+        onSection: opts.onSection
       }
     });
     if (!opts.work) {

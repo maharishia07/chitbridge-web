@@ -8,9 +8,9 @@
 /* the frame around a lab page: one background, the page's own body scrolls inside the main pane */
 html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
 .cbsk .lab-work{flex:1 1 auto;min-height:0;overflow:auto;background:var(--page,#fcfaf5)}
-/* the Labs switcher in the left menu (W79) */
+/* the left menu of a lab: group headings and a glyph per choice (W16/W17) */
 .cbsk .nav-group{padding:12px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2,#5c5240);border-top:1px solid var(--line-side,#e2d6bc);margin-top:8px}
-.cbsk .lab-link .lab-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px;line-height:1}
+.cbsk .nav-btn .lab-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px;line-height:1}
 .cbsk .side.collapsed .nav-group{display:none}
 /* plain words, reasons, tags */
 .lk-plain{border-bottom:1px dotted var(--faint,#8a8374);cursor:help}
@@ -42,3 +42,5 @@ html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-fami
 .cbsk .side .nav-group{text-align:left}
 /* a lab page that defines its own --accent must not recolour the frame's menu: the sidebar keeps the frame's accent (a chosen theme re-points it in page-skeleton.css) */
 .cbsk .side{--accent:#1f5f5b;--accent-ink:#fbf6ec;--accent-text:#1f5f5b}
+/* a lab's choices are whole sentences ("Refuse very small or big bills"): the entry wraps to a second line instead of spilling past the menu */
+.cbsk .nav-btn.nav-wrap{white-space:normal;height:auto;min-height:44px;padding-top:6px;padding-bottom:6px;line-height:1.25;text-align:left}

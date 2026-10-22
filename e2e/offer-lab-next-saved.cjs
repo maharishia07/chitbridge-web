@@ -88,7 +88,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     return { step: S.step, saved: SAVED.length, live: savedLive() };
   });
   say('nothing signed in, so nothing is remote', demo.live === false, 'savedLive() is false');
-  say('the offer still saves, locally, exactly as before', demo.saved === 1 && demo.step === 3, JSON.stringify(demo));
+  say('the offer still saves, locally, exactly as before', demo.saved === 1 && demo.step === 2, JSON.stringify(demo));
+  const cartRows = await p.locator('[data-testid="cart-row"]').count();
+  say('it shows in the cart on the right as a draft (W19)', cartRows === 1 && /draft/.test(await p.locator('[data-testid="cart-row"]').first().innerText()), cartRows + ' row(s)');
 
   console.log('\n── signed in: the SAME action now reaches the real shelf ' + '─'.repeat(6));
   await p.evaluate(() => {
@@ -102,7 +104,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     await saveOffer();
     return { step: S.step, saved: SAVED.map((s) => ({ status: s.status, remote: !!s.remote })) };
   });
-  say('reaches step 3', saved.step === 3, 'went to Saved offers');
+  say('stays on the form; the cart shows it', saved.step === 2 && (await p.locator('[data-testid="cart-row"]').count()) === 1, 'cart on the right');
   say('one live-shelf row, in draft', saved.saved.length === 1 && saved.saved[0].status === 'draft' && saved.saved[0].remote,
       JSON.stringify(saved.saved));
 
