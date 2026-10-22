@@ -360,7 +360,21 @@
           "route": [{ "m": "GET", "p": "/api/relationships/customers/:id/rewards", "file": "api:routes/relationships.js" }],
           "chit": "none — the reward ledger, folded by the engine", "ledger": "none",
           "test": ["web:e2e/walk-crm-marketing.cjs"],
-          "status": "ok", "note": "" }
+          "status": "ok", "note": "" },
+        { "n": 6, "step": "offers sent", "module": "CRM", "who": "the owner reads every offer message of a send - sent or not, to whom, why not, on which consent (Marketing face, MKT first slice)",
+          "screen": [{ "file": "web:public/app/cap-marketing.js", "fn": "mktSent" }],
+          "engine": [{ "file": "api:lib/channels.js", "fn": "listOutbound" }, { "file": "api:lib/whatsapp-out.js", "fn": "logRefused" }, { "file": "api:lib/marketing-results.js", "fn": "reasonCodeOf" }],
+          "route": [{ "m": "GET", "p": "/api/channels/outbound", "file": "api:routes/channels.js" }],
+          "chit": "none - channel_outbound receipts with party_id, purpose, send_ref, basis (b776); the group's refusals are receipts too", "ledger": "none",
+          "test": ["api:tests/marketing-outbound.test.cjs", "api:tests/marketing-truth.realstack.cjs", "web:e2e/walk-marketing.cjs"],
+          "status": "ok", "note": "Before b776 runs the list says it arrives after the next update. Only WhatsApp, as step 3." },
+        { "n": 7, "step": "who came back", "module": "CRM", "who": "the owner sees which customers who were sent an offer then bought, and the money they spent (Marketing face)",
+          "screen": [{ "file": "web:public/app/cap-marketing.js", "fn": "mktResults" }, { "file": "web:public/app/cap-marketing.js", "fn": "mktWinbackHTML" }],
+          "engine": [{ "file": "api:lib/marketing-results.js", "fn": "cameBack" }, { "file": "api:lib/select.js", "fn": "rows" }, { "file": "api:lib/measure.js", "fn": "measure" }],
+          "route": [{ "m": "GET", "p": "/api/marketing/came-back", "file": "api:routes/marketing.js" }],
+          "chit": "none - read from the shop's own bills (counter bills naming the customer included), only for offers that were SENT", "ledger": "none - the Ledger holds credit bills only, so it is not the source",
+          "test": ["api:tests/marketing-results.test.cjs", "api:tests/marketing-truth.realstack.cjs", "web:e2e/walk-marketing.cjs"],
+          "status": "ok", "note": "The days are the shop's setting came_back_days (default 14). Live, a 0 stays until an offers template is approved on the number - the screen says so." }
       ]
     },
     {

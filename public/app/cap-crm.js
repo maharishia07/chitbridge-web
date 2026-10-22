@@ -700,30 +700,43 @@ function crmNav(active) {
         : ''
     ]
   ];
-  document.getElementById('nav').innerHTML = items
+  document.getElementById('nav').innerHTML = crmNavItems(items)
     .map(function (x) {
-      return (
-        '<a class="nav-btn' +
-        (x[0] === active ? ' active' : '') +
-        '" href="#/' +
-        x[0] +
-        '" data-testid="crm-nav-' +
-        x[0] +
-        '" aria-label="' +
-        esc(tx(x[1])) +
-        '"' +
-        (x[0] === active ? ' aria-current="page"' : '') +
-        '>' +
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' +
-        x[2] +
-        '"/></svg><span class="label">' +
-        esc(tx(x[1])) +
-        '</span>' +
-        x[3] +
-        '</a>'
-      );
+      return crmNavLink(x, active);
     })
     .join('');
+}
+/** the items this page's face shows: the Marketing face keeps its own five tabs (cap-marketing.js); CRM itself shows them all */
+function crmNavItems(items) {
+  return (typeof crmFaceNav === 'function' && crmFaceNav(items)) || items;
+}
+/** one sidebar link: [key, label, icon path, badge html] */
+function crmNavLink(item, active) {
+  return (
+    '<a class="nav-btn' +
+    (item[0] === active ? ' active' : '') +
+    '" href="#/' +
+    item[0] +
+    '" data-testid="crm-nav-' +
+    item[0] +
+    '" aria-label="' +
+    esc(tx(item[1])) +
+    '"' +
+    (item[0] === active ? ' aria-current="page"' : '') +
+    '>' +
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' +
+    item[2] +
+    '"/></svg><span class="label">' +
+    esc(tx(item[1])) +
+    '</span>' +
+    item[3] +
+    '</a>'
+  );
+}
+/** the app's name in the bar: CRM, or the face this page was opened as (Marketing, cap-marketing.js) */
+function crmAppName() {
+  var face = typeof crmFace === 'function' ? crmFace() : null;
+  return face ? tx(face.brand) : tx('CRM');
 }
 function crmBar(crumb, action, overlay) {
   var node = document.querySelector('.main');
@@ -767,6 +780,12 @@ function crmGo(hash, replace) {
   } else location.hash = hash;
 }
 
+/** one kural per page (kurals.json group `crm`; a face may name its own); true when the Marketing face handled this route itself (cap-marketing.js) */
+function crmRoutePrelude(segments, params, frame) {
+  var shown = segments[0] === 'party' && segments[1] ? 'crm-party' : segments[0] === 'followups' ? 'crm-party' : 'crm-parties';
+  if (window.CBKural) CBKural.set((typeof crmFaceKural === 'function' && crmFaceKural()) || shown);
+  return typeof crmFaceRoute === 'function' && crmFaceRoute(segments, params, frame);
+}
 function crmRoute(frame) {
   var text = (location.hash || '').replace(/^#\/?/, ''),
     q = '',
@@ -785,7 +804,7 @@ function crmRoute(frame) {
   });
   closeModal();
   /* one kural per page (kurals.json group `crm`); the footer is the page's, never a part of a message */
-  if (window.CBKural) CBKural.set(seg[0] === 'party' && seg[1] ? 'crm-party' : seg[0] === 'followups' ? 'crm-party' : 'crm-parties');
+  if (crmRoutePrelude(seg, params, frame)) return; /* the kural band, then the Marketing face's own routes (#/sent · #/results · its home) */
   if (seg[0] === 'party' && seg[1]) {
     if (frame) {
       crmNav('parties');
@@ -1468,7 +1487,7 @@ function crmHomePreset() {
   return Object.keys(f).length ? { filt: f } : null;
 }
 function crmHome(frame) {
-  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', crmAddBtn(), true);
+  crmBar('<strong>' + esc(crmAppName()) + '</strong>', crmAddBtn(), true);
   var node = document.getElementById('screen');
   node.className = 'screen flush';
   node.innerHTML = '<div id="crm_list" data-testid="crm-list"></div>';
@@ -2394,5 +2413,6 @@ document.addEventListener('click', function (ev) {
   if (typeof crmLeadClick === 'function' && crmLeadClick(a, node)) return;
   if (typeof crmCallClick === 'function' && crmCallClick(a, node)) return;
   if (typeof crmGroupsClick === 'function' && crmGroupsClick(a, node)) return;
+  if (typeof crmMarketingClick === 'function' && crmMarketingClick(a, node)) return;
   if (typeof crmRecordClick === 'function') return crmRecordClick(a, node, ev);
 });

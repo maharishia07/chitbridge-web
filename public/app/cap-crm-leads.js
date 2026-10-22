@@ -69,7 +69,7 @@ async function crmLeadsLoad(quiet) {
   if (CRM.route && CRM.route.view === 'leads') crmLeadsBar(); /* Add lead · Import grey WITH the sentence once the read says b297 has not run */
 }
 function crmLeadsBar() {
-  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true);
+  crmBar('<strong>' + esc(crmAppName()) + '</strong>', crmLeadAddBtn() + crmLeadImportBtn(), true);
 }
 function crmLeadsRefresh() {
   var a = LEADS.api;

@@ -325,7 +325,7 @@ function crmCallClick(action, target) {
 
 /* ═══ THE CALLS TAB ═════════════════════════════════════════════════════════════════════════════════════════════ */
 function crmCalls(frame) {
-  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', true);
+  crmBar('<strong>' + esc(crmAppName()) + '</strong>', '', true);
   var node = document.getElementById('screen');
   node.className = 'screen flush';
   node.innerHTML = '<div id="crm_calls" data-testid="crm-calls"></div>';

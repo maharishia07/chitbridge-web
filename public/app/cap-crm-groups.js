@@ -206,7 +206,7 @@ function crmGroupsBar() {
     ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), why)
     : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
   if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Named groups need one database step (b205).'));
-  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', btn, true);
+  crmBar('<strong>' + esc(crmAppName()) + '</strong>', btn, true);
 }
 function crmGroupsNotices() {
   var list = [];
@@ -765,7 +765,7 @@ function crmShopUrl() {
   return location.origin + '/shop.html?s=' + encodeURIComponent(id);
 }
 function crmShowcase(frame) {
-  crmBar('<strong>' + esc(tx('CRM')) + '</strong>', '', false);
+  crmBar('<strong>' + esc(crmAppName()) + '</strong>', '', false);
   var node = document.getElementById('screen');
   node.className = 'screen';
   node.innerHTML =
