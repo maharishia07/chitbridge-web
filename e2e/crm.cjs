@@ -236,7 +236,7 @@ async function route(S, r) {
     ok(lateFu && /Late · \d/.test(lateFu.t) && lateFu.c !== cols2.get, 'an overdue follow-up shows red, says Late and carries its date (' + (lateFu && lateFu.t) + ')');
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
     const headsClean = heads.map((h) => h.replace(/[▾●]/g, '').trim());
-    ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'ON CHITBRIDGE', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns: ' + headsClean.join(' · ') + ' (last activity and next follow-up are always on the row)');
+    ok(JSON.stringify(headsClean) === JSON.stringify(['PARTY', 'ROLE', 'ON THE NETWORK', 'DUES', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'the columns: ' + headsClean.join(' · ') + ' (last activity and next follow-up are always on the row)');
     ok(await p.locator('#crm_list .cbl-rz').count() === 6, 'every column has its drag handle (adjustable columns)');
     ok(await p.locator('#crm_list [data-hf="role"]').count() === 1 && await p.locator('#crm_list [data-hf="rail"]').count() === 1, 'Role and On the network carry their own filter in the column heading');
     /* the frozen head: title row (shop · Home · avatar slot ride in it) + tools + column header ≤ 20% of 1366×768 */
@@ -622,7 +622,7 @@ async function route(S, r) {
     const S = standIn({ ledger: false }), { ctx, p } = await open(S);
     await homeReady(p);
     const heads = await p.$$eval('#crm_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅▾●]/g, '').trim()));
-    ok(heads.indexOf('DUES') < 0 && JSON.stringify(heads) === JSON.stringify(['PARTY', 'ROLE', 'ON CHITBRIDGE', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'Ledger off: no Dues column and no blank one (' + heads.join(' · ') + ')');
+    ok(heads.indexOf('DUES') < 0 && JSON.stringify(heads) === JSON.stringify(['PARTY', 'ROLE', 'ON THE NETWORK', 'LAST ACTIVITY', 'NEXT FOLLOW-UP']), 'Ledger off: no Dues column and no blank one (' + heads.join(' · ') + ')');
     /* the Columns popover does not OFFER Dues either (the default set alone would let a Dues column slip back in through the picker) */
     await p.click('[data-testid="cols-btn-crm-parties"]');
     ok(await p.locator('.cbl-colrow').count() > 0 && (await p.locator('.cbl-colrow').allInnerTexts()).every((x) => !/Dues/i.test(x)), 'Ledger off: the Columns picker offers no Dues');
@@ -771,7 +771,8 @@ async function route(S, r) {
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     await ctx.route('**/api/**', async (r) => { await new Promise((x) => setTimeout(x, 1200)); r.fallback(); });
-    await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
+    /* SET-WALK1 W7: the band (and its room) is the owner's choice — 'auto' draws it only where the shop reads Tamil; this shop asked for it */
+    await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); localStorage.setItem('cb_kural', 'on'); } } catch (_) {} }, OWNER);
     const p = await ctx.newPage();
     await p.goto(base + '/crm.html');
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
