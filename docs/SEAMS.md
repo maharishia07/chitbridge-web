@@ -165,7 +165,7 @@ of file each thing is; this says what already does the job.
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 13 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 13 | `offers` | `network-app.js` |  |
+| 14 | `offers` | `network-app.js` |  |
 | 13 | `resolve` | `page.js` |  |
 | 13 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 13 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |

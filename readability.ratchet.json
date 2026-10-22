@@ -30,7 +30,7 @@
   "public/app/cap-definitions.js": {"score":183,"long40":15,"long80":7,"complex10":14,"complex15":9,"deep3":0,"deep4":0,"cryptic":100,"noWhatLine":30,"emptyCatch":8,"noHeader":0},
   "public/app/cap-dispute.js": {"score":109,"long40":12,"long80":0,"complex10":6,"complex15":3,"deep3":0,"deep4":0,"cryptic":79,"noWhatLine":7,"emptyCatch":2,"noHeader":0},
   "public/app/cap-employees.js": {"score":77,"long40":6,"long80":1,"complex10":2,"complex15":1,"deep3":0,"deep4":0,"cryptic":57,"noWhatLine":5,"emptyCatch":5,"noHeader":0},
-  "public/app/cap-entry.js": {"score":104,"long40":5,"long80":1,"complex10":10,"complex15":3,"deep3":0,"deep4":0,"cryptic":57,"noWhatLine":19,"emptyCatch":9,"noHeader":0},
+  "public/app/cap-entry.js": {"score":85,"long40":5,"long80":1,"complex10":10,"complex15":3,"deep3":0,"deep4":0,"cryptic":57,"noWhatLine":0,"emptyCatch":9,"noHeader":0},
   "public/app/cap-finance-cash.js": {"score":52,"long40":3,"long80":1,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":42,"noWhatLine":4,"emptyCatch":0,"noHeader":0},
   "public/app/cap-finance-cheques.js": {"score":51,"long40":1,"long80":1,"complex10":1,"complex15":1,"deep3":0,"deep4":0,"cryptic":42,"noWhatLine":4,"emptyCatch":0,"noHeader":1},
   "public/app/cap-finance-pay.js": {"score":50,"long40":3,"long80":2,"complex10":1,"complex15":1,"deep3":0,"deep4":0,"cryptic":38,"noWhatLine":5,"emptyCatch":0,"noHeader":0},
