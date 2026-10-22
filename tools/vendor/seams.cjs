@@ -1,6 +1,9 @@
 'use strict';
 /**
- * tools/seams.cjs (chitbridge-web; C:/dev/seams.cjs is a one-line shim to this file, DOC-68) — WHAT ALREADY DOES THIS? THE INDEX I SHOULD HAVE READ BEFORE BUILDING.
+ * LIVES UNDER tools/vendor/ ON PURPOSE: the readability guard skips any vendor/ folder, and this one-file doc tool is shared by three repos' CI
+ * (cb-maintainability may bring it up to the §6 rules later; DOC-68). C:/dev/seams.cjs is a one-line shim to this file.
+ *
+ * seams.cjs — WHAT ALREADY DOES THIS? THE INDEX I SHOULD HAVE READ BEFORE BUILDING.
  *
  * Athi, 2026-08-24, after catching the second reinvention in two days: *"I am tired of explaining each time.
  * I would assume you know what you have built and know to reuse. Does it mean you do not have a catalogue of
@@ -18,7 +21,7 @@
  *     node C:/dev/seams.cjs                 the index, most-reused first
  *     node C:/dev/seams.cjs catalogue       everything whose name or purpose mentions it
  *     node C:/dev/seams.cjs --write         refresh C:/dev/SEAMS.md AND docs/SEAMS.md in web, api, engines
- *     node tools/seams.cjs --check --repo web|api|engines   drift check (DOC-68, CI job seams-drift in all three repos): exit 1 + the stale
+ *     node tools/vendor/seams.cjs --check --repo web|api|engines   drift check (DOC-68, CI job seams-drift in all three repos): exit 1 + the stale
  *                                          lines of the docs/SEAMS.md of the checkout you run it in. api and engines run it from a web checkout.
  *
  * ⚠️ It reports what IS reused, and separately what is defined-but-used-once — the second list is where the
