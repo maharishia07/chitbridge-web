@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * e2e/print-quick-fixes.cjs — PRINT-1 slice 0 (walk 22 Oct, P6 · P7 · P15), on an AU stand-in. Black box: presses what an owner presses.
+ * e2e/walk-print-quick-fixes.cjs — PRINT-1 slice 0 (walk 22 Oct, P6 · P7 · P15), on an AU stand-in. Black box: presses what an owner presses.
  *   P6   the Save button is always in view (390 and 1280 wide, nothing covering it); NOTHING is stored until Save is pressed (no autosave); Save says "Print setup saved."
  *   P7   the Logo tick is greyed with "Add a logo first" while the logo is empty; a typed logo + tick + Save survives a reload; an emptied logo is unticked, unsaved, never printed
  *   P15  a footer with doubled spaces is saved and printed with single spaces
- *   NODE_PATH=$PWD/e2e/node_modules node e2e/print-quick-fixes.cjs [--show]
+ *   NODE_PATH=$PWD/e2e/node_modules node e2e/walk-print-quick-fixes.cjs [--show]
  * OWNS the slice-0 checks of public/app/cap-print.js · CALLED BY the web e2e shards (walks) · FLOW stand-in vault → Print setup → edit → Save → reload.
  */
 'use strict';
