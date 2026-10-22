@@ -17,7 +17,7 @@ const ACTS = [
   { label: 'Make live', kind: 'live', title: 'Make this offer live?', ok: 'Make live', who: 'every customer', from: 'now, on the very next bill' },
   { label: 'Only for a group', kind: 'group', title: 'Make this offer live for a group?', ok: 'Make live for them', who: 'Regulars', from: 'now, on the very next bill', patch: { customer_group: 'group:Regulars' } },
   { label: 'Approve', kind: 'approve', title: 'Approve this offer?', ok: 'Approve', who: 'nobody yet', from: 'not live. Going live is the next step' },
-  { label: 'Go live', kind: 'live', title: 'Make this offer live?', ok: 'Make live', who: 'every customer', from: 'now, on the very next bill' },
+  { label: 'Go live', kind: 'golive', title: 'Go live with this offer?', ok: 'Go live', who: 'every customer', from: 'now, on the very next bill' },
   { label: 'Pause', kind: 'pause', title: 'Pause this offer?', ok: 'Pause', who: 'nobody while it is paused', from: 'now' },
   { label: 'Resume', kind: 'resume', title: 'Resume this offer?', ok: 'Resume', who: 'every customer', from: 'now, on the very next bill' },
   { label: 'Retire', kind: 'retire', title: 'Retire this offer?', ok: 'Retire', who: 'nobody from now on', from: 'now' },
@@ -68,6 +68,19 @@ const squash = (s) => String(s).replace(/\s+/g, ' ').trim();
       return { pane, popup };
     }, status);
     say('a ' + status + ' offer: the pane text = the popup text', squash(seen.pane) === squash(seen.popup) && seen.pane.length > 40, squash(seen.pane).slice(0, 80));
+  }
+  /* a group offer: Go live and Resume keep the group, so the pane and the popup both NAME it (never "every customer") */
+  for (const [status, words] of [['approved', /For: Wholesale .*only/], ['paused', /For: Wholesale .*only/], ['live', /it is for Wholesale .*only/], ['draft', /it was only for Wholesale/]]) {
+    const seen = await page.evaluate((st) => {
+      const item = { id: 'g1', title: 'Spend and save', detail: '₹50 back', status: st, group: 'group:Wholesale', groupName: 'Wholesale', n: '—', k: 'saved', snap: { goal: 'spend', spendAt: 500 } };
+      SAVED = [item]; openOffer('g1');
+      const pane = document.querySelector('[data-testid="promise-text"]').innerText;
+      askPromise(item, NEXT_ACT[st], null, function () {});
+      const popup = document.querySelector('[data-testid="lk-confirm-text"]').innerText;
+      document.querySelector('[data-testid="lk-confirm-cancel"]').click();
+      return { pane, popup };
+    }, status);
+    say('a ' + status + ' group offer: pane = popup and names the group', squash(seen.pane) === squash(seen.popup) && words.test(squash(seen.pane)) , squash(seen.pane).slice(0, 110));
   }
   const grouped = await page.evaluate(() => {
     const by = CBLabKit.groupBy([{ s: 'b' }, { s: 'a' }, { s: 'b' }, { s: 'z' }], (x) => x.s, ['a', 'b', 'c']);

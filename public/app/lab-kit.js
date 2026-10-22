@@ -175,8 +175,9 @@
     live: { title: 'Make this {thing} live?', ok: 'Make live', who: function (parts) { return parts.group ? 'every customer (it was only for ' + parts.group + ')' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
     resume: { title: 'Resume this {thing}?', ok: 'Resume', who: function (parts) { return parts.group ? parts.group + ' only' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: EVERYONE_NOW.end },
     group: { title: 'Make this {thing} live for a group?', ok: 'Make live for them', who: function (parts) { return parts.group + ' only'; }, from: EVERYONE_NOW.from, end: 'Only they get it. Nobody else does.' },
-    approve: { title: 'Approve this {thing}?', ok: 'Approve', who: function () { return 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
-    pause: { title: 'Pause this {thing}?', ok: 'Pause', who: function () { return 'nobody while it is paused'; }, from: 'now', end: 'Resume brings it back.' },
+    golive: { title: 'Go live with this {thing}?', ok: 'Go live', who: function (parts) { return parts.group ? parts.group + ' only' : EVERYONE_NOW.who; }, from: EVERYONE_NOW.from, end: function (parts) { return parts.group ? 'Only they get it. Nobody else does.' : EVERYONE_NOW.end; } },
+    approve: { title: 'Approve this {thing}?', ok: 'Approve', who: function (parts) { return parts.group ? 'nobody yet (it is for ' + parts.group + ' only)' : 'nobody yet'; }, from: 'not live. Going live is the next step', end: 'Approving does not start it.' },
+    pause: { title: 'Pause this {thing}?', ok: 'Pause', who: function (parts) { return 'nobody while it is paused' + (parts.group ? ' (it is for ' + parts.group + ' only)' : ''); }, from: 'now', end: 'Resume brings it back.' },
     retire: { title: 'Retire this {thing}?', ok: 'Retire', danger: true, who: function () { return 'nobody from now on'; }, from: 'now', end: 'It leaves your shelf. Bills already made keep what they got.' },
     delete: { title: 'Delete this {thing}?', ok: 'Delete', danger: true, who: function () { return 'nobody'; }, from: 'now', end: 'It is gone from this tab. This cannot be undone.' },
     draft: { title: 'Save this {thing} as a draft?', ok: 'Save draft', who: function () { return 'nobody yet'; }, from: 'not live. Nothing is live until you make it live', end: 'Saving does not start it.',
@@ -192,7 +193,8 @@
     var step = PROMISE_ACTS[parts.act],
       audience = step.who(parts),
       head = parts.name + (parts.detail ? ' · ' + parts.detail : ''),
-      note = parts.note ? ' ' + parts.note : '';
+      note = parts.note ? ' ' + parts.note : '',
+      closing = typeof step.end === 'function' ? step.end(parts) : step.end;
     return {
       title: step.title.replace('{thing}', parts.thing || 'offer'),
       ok: step.ok,
@@ -200,8 +202,8 @@
       html:
         '<p><b>' + escapeText(parts.name) + '</b>' + (parts.detail ? ' · ' + escapeText(parts.detail) : '') + '</p>' +
         '<span class="lk-reach" data-testid="promise-on">On: ' + escapeText(parts.on) + '</span>' +
-        '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(step.end + note) + '</p>',
-      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + step.end + note
+        '<p>For: <b>' + escapeText(audience) + '</b></p><p>From: <b>' + escapeText(step.from) + '</b></p><p>' + escapeText(closing + note) + '</p>',
+      text: step.line ? step.line(parts, head) + note : head + ' On: ' + parts.on + ' For: ' + audience + ' From: ' + step.from + ' ' + closing + note
     };
   }
   function listOptions(opts, items, shown) {

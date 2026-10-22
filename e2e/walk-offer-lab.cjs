@@ -410,6 +410,19 @@ const walk = async (w) => {
       saw: 'live ' + live1 + ' -> ' + paused + ' -> ' + back + ' · customer_group ' + rules.customer_group + ' · "' + words.slice(0, 200) + '"' };
   });
 
+  await w.step('C4c', 'An APPROVED group offer: Go live names the group (not "every customer") and the saved rules keep customer_group', async () => {
+    const id = [...api.db.keys()].pop();
+    api.db.get(id).status = 'approved';
+    await signed.evaluate(() => loadSaved());
+    const { open } = await openRow(signed, { id });
+    await open.locator('[data-testid="shelf-step"]').click();
+    const words = await confirmWords(signed, 'ok');
+    const back = await waitStatus(id, 'live');
+    const rules = api.db.get(id).versions[0].rules;
+    return { ok: back === 'live' && new RegExp('For: ' + NAMED_GROUP + ' .*only').test(words) && !/every customer/.test(words) && rules.customer_group === 'group:' + NAMED_GROUP,
+      saw: back + ' · customer_group ' + rules.customer_group + ' · "' + words.slice(0, 160) + '"' };
+  });
+
   await w.step('C4b', 'An automatic group is named with how many customers it holds now (the api stand-in says 7)', async () => {
     const label = await signed.evaluate(async () => { await groupCountFor('new'); return groupLabel('new'); });
     return { ok: label === 'New customers (7 customers now)', saw: label };
