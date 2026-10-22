@@ -118,6 +118,7 @@ function rpSaysHTML(a, verbs) {
 
 /* ── the Finance tab: the seller's agreements ─────────────────────────────────────────────────────────────── */
 
+/** fetch the agreements into RP.rows (denied on a 403, error otherwise); quiet = no loading state, a stale reply is dropped */
 async function rpLoad(quiet) {
   var g = ++RP.gen;
   if (!quiet) {
@@ -173,6 +174,7 @@ function rpHead() {
     esc(RP.said ? RP.said.text : '') +
     '</span></span></div>';
 }
+/** the runs-due button: one sweep POST through CBAction; the outcome sentence (how many ran, how many had a problem) rides on RP.said */
 function rpSweep(btn) {
   return CBAction.run(
     btn,
@@ -198,6 +200,7 @@ function rpSweep(btn) {
     }
   );
 }
+/** the columns of the seller's Repeat supply list (customer, money, next, last, state, actions); a blank cell shows a grey dash */
 function rpCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
@@ -296,6 +299,7 @@ function rpCols() {
     }
   ];
 }
+/** paint the Repeat supply tab into #screen: the Finance tabs, the head, then a CBList mount of RP.rows */
 function rpMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
@@ -392,6 +396,7 @@ function rpDraftOf(m) {
 function rpField(label, input) {
   return '<div class="kv"><b style="flex:1 1 140px">' + esc(label) + '</b><span style="flex:1 1 160px">' + input + '</span></div>';
 }
+/** step 1 of Repeat this…: every how many days, weeks or months, from when, until when */
 function rpStepSchedule() {
   var list = RP.draft,
     sel = function (v) {
@@ -456,6 +461,7 @@ function rpStepSchedule() {
     )
   );
 }
+/** step 2 of Repeat this…: the schedule in words, read back before Send */
 function rpStepReview() {
   var list = RP.draft,
     u = RP_UNIT[list.unit] || [list.unit, list.unit],
@@ -496,6 +502,7 @@ function rpStepReview() {
     '<p class="hint" id="rp_send_why" data-testid="rp-send-why"></p>'
   );
 }
+/** copy the schedule inputs back into RP.draft before a step changes */
 function rpRead() {
   var list = RP.draft;
   if (!list) return;
@@ -518,6 +525,7 @@ function rpRead() {
   }
   if (RP.flow) RP.flow.paintFoot();
 }
+/** what stops the schedule step going on, as a sentence (null = nothing); only the schedule step is checked here */
 function rpGuard(k) {
   var list = RP.draft;
   if (!list) return null;
@@ -625,6 +633,7 @@ async function rpPanel(m) {
     el.innerHTML = '<div class="cs-mute" data-testid="rp-panel-err">' + esc(w) + '</div>';
   }
 }
+/** paint the agreement's panel in the chit sheet: its state, then the verbs this side may use, greyed with the server's why */
 function rpPanelPaint() {
   var el = document.getElementById('rp_panel'),
     p = RP.panel;
@@ -673,6 +682,7 @@ function rpPanelPaint() {
     rpSaysHTML(a, verbs) +
     '<div id="rp_form" data-testid="rp-form"></div><div class="cs-mute" id="rp_panel_why" data-testid="rp-panel-why"></div>';
 }
+/** the counter-offer in words: each line's asked quantity against the agreed one */
 function rpCounterWords(list, lines) {
   var byId = {};
   (lines || []).forEach(function (item) {
@@ -739,6 +749,7 @@ function rpCounterForm(p) {
     '</button>'
   );
 }
+/** the reason input and its one button, for the verbs that take a why (skip, decline, end, pause, refuse) */
 function rpReasonForm(verb, label, ph) {
   return (
     '<div class="cs-row"><input class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' +
@@ -800,6 +811,7 @@ function rpRowAct(id, verb, btn) {
 function rpEpOf(verb) {
   return 'repeat' + verb.charAt(0).toUpperCase() + verb.slice(1);
 }
+/** the sentence said beside the control after a verb: how many ran for run, otherwise what was done */
 function rpSaid(verb, r) {
   var n = verb === 'run' ? ((r && r.ran) || []).length : 0;
   var text =
@@ -819,6 +831,7 @@ function rpSaid(verb, r) {
   RP.said = { text: text, tone: 'ok' };
   rpHead(); /* the head is repainted on every load: the outcome rides on RP.said */
 }
+/** run one agreement verb (with the typed reason, if any) through CBAction; End and Decline ask first */
 function rpGo(verb, btn) {
   var p = RP.panel;
   if (!p) return;
@@ -852,6 +865,7 @@ function rpGo(verb, btn) {
     }
   );
 }
+/** send the customer's counter-offer: one changed quantity per line, through CBAction */
 function rpSendCounter(btn) {
   var p = RP.panel;
   if (!p) return;
