@@ -82,6 +82,76 @@ const squash = (s) => String(s).replace(/\s+/g, ' ').trim();
     }, status);
     say('a ' + status + ' group offer: pane = popup and names the group', squash(seen.pane) === squash(seen.popup) && words.test(squash(seen.pane)) , squash(seen.pane).slice(0, 110));
   }
+  /* ── margin effect (Athi 22 Oct): one sentence line, from totals(), in the pane and the popup alike ── */
+  const SETUP = (costs) => {
+    P = [['a', 100, costs[0]], ['b', 200, costs[1]], ['c', 50, costs[2]], ['d', 80, costs[3]]].map(([id, price, cost]) => ({ id, name: 'Item ' + id, cat: 'c1', price, cost, modifiers: [] }));
+    CATS = [{ id: 'c1', name: 'Things' }];
+    COST_ACCESS = { can_see_costs: true, is_owner: true, loaded: true };
+  };
+  const BASE = { scope: 'item', itemIds: ['a', 'b', 'c', 'd'], belowAct: 'exclude', round: '0' };
+  /* shown beside the pane and the popup of one saved offer (kind = the act the pane promises next) */
+  const SEE = (snapIn, status, group, costs, canSee) => page.evaluate(([snapArg, st, grp, cs, can]) => {
+    SETUP_FN(cs); COST_ACCESS.can_see_costs = can;
+    const item = { id: 'm1', title: 'Offer', detail: 'x', status: st, group: grp || undefined, groupName: grp ? 'Wholesale' : undefined, n: '—', k: 'saved', snap: snapArg };
+    SAVED = [item]; openOffer('m1');
+    const pane = (document.querySelector('[data-testid="promise-text"]') || {}).innerText || '';
+    askPromise(item, NEXT_ACT[st], null, function () {});
+    const popup = document.querySelector('[data-testid="lk-confirm-text"]').innerText;
+    const popupMargin = (document.querySelector('[data-testid="promise-margin"]') || {}).textContent || '';
+    document.querySelector('[data-testid="lk-confirm-cancel"]').click();
+    return { pane, popup, popupMargin, direct: marginSentence(snapArg, NEXT_ACT[st]), tot: marginTotals(snapArg) };
+  }, [snapIn, status, group, costs, canSee]);
+  await page.evaluate("window.SETUP_FN = " + SETUP.toString());
+  const FULL = [60, 120, 30, 40];
+  const KINDS = [
+    ['percent', { goal: 'percent', pctOff: 20 }, 'Margin on these items: 42% → 27% (as if one of each, at today\'s costs).'],
+    ['rupees off', { goal: 'amount', rsOff: 10 }, 'Margin on these items: 42% → 36% (as if one of each, at today\'s costs).'],
+    ['tiers (top step)', { goal: 'qty', tiers: [[2, 5], [5, 10]] }, 'Margin on these items: 42% → 35% (as if one of each, at today\'s costs).']
+  ];
+  for (const [label, kindSnap, words] of KINDS) {
+    const seen = await SEE(Object.assign({}, BASE, kindSnap), 'draft', '', FULL, true);
+    const same = squash(seen.pane) === squash(seen.popup);
+    say(label + ': margin line, pane = popup', same && squash(seen.popup).includes(words) && seen.popupMargin === words, seen.popupMargin || squash(seen.popup).slice(0, 90));
+    const t = seen.tot;
+    say(label + ': the figure is totals()', seen.popupMargin.includes(t.marginBefore + '% → ' + t.marginAfter + '%') && t.blind === 0, t.marginBefore + ' -> ' + t.marginAfter);
+  }
+  const lost = await SEE(Object.assign({}, BASE, { goal: 'percent', pctOff: 20 }), 'draft', '', [60, 120, null, null], true);
+  say('2 of 4 costs missing: the count, no figure', lost.popupMargin === 'Margin not shown: cost price missing for 2 of 4 items.' && !/Margin on/.test(lost.popup) && squash(lost.pane) === squash(lost.popup) && !/%/.test(lost.popupMargin), lost.popupMargin);
+  const paused = await SEE(Object.assign({}, BASE, { goal: 'percent', pctOff: 20 }), 'paused', 'group:Wholesale', FULL, true);
+  say('a paused group offer: margin, group, pane = popup', squash(paused.pane) === squash(paused.popup) && /Margin on these items: 42% → 27%/.test(paused.popup) && /For: Wholesale .*only/.test(squash(paused.popup)), squash(paused.popup).slice(0, 120));
+  for (const costs of [FULL, [60, 120, null, null]]) {
+    const blind = await SEE(Object.assign({}, BASE, { goal: 'percent', pctOff: 20 }), 'draft', '', costs, false);
+    say('cost-blind' + (costs[2] === null ? ' (costs missing)' : '') + ': no margin, no count, in the pane or the popup', !/[Mm]argin|cost price/.test(blind.pane + blind.popup) && squash(blind.pane) === squash(blind.popup), squash(blind.popup).slice(0, 70));
+  }
+  const NONE = [
+    ['free same', { goal: 'free', freeShape: 'same', itemId: 'a', freeCounts: [2, 3, 5], freeChosen: 0 }],
+    ['cheapest', { goal: 'free', freeShape: 'cheapest', catId: 'c1', cheapN: 3 }],
+    ['pair', { goal: 'free', freeShape: 'pair', pairA: 'a', pairB: 'b' }],
+    ['bundle', { goal: 'bundle', bunA: 'a', bunB: 'b', bunPrice: 250 }],
+    ['gift', { goal: 'free', freeShape: 'anything', giftId: 'a' }],
+    ['spend', { goal: 'spend', spendAt: 500, spendVal: 50 }],
+    ['ship', { goal: 'ship', shipAt: 500 }],
+    ['band', { goal: 'band', bandLo: 10, bandHi: 900 }]
+  ];
+  for (const [label, kindSnap] of NONE) {
+    const seen = await SEE(Object.assign({}, BASE, kindSnap), 'draft', '', FULL, true);
+    say(label + ': no margin line yet', !/[Mm]argin/.test(seen.popup + seen.pane) && squash(seen.pane) === squash(seen.popup), squash(seen.popup).slice(0, 60));
+  }
+  const quiet = await page.evaluate(() => {
+    SETUP_FN([60, 120, 30, 40]);
+    const item = { id: 'q1', title: 'Offer', detail: 'x', snap: { scope: 'item', itemIds: ['a', 'b', 'c', 'd'], belowAct: 'exclude', round: '0', goal: 'percent', pctOff: 20 } };
+    return ['approve', 'pause', 'retire', 'delete'].map((k) => k + ':' + CBLabKit.promise(promiseParts(item, k, null)).text.includes('Margin')).join();
+  });
+  say('approve, pause, retire, delete: no margin line', !/true/.test(quiet), quiet);
+  const form = await page.evaluate(() => {
+    SETUP_FN([60, 120, 30, 40]);
+    Object.assign(S, { goal: 'percent', scope: 'item', itemIds: ['a', 'b', 'c', 'd'], pctOff: 20, belowAct: 'exclude', round: '0', step: 2 });
+    TYPE_PICKED = true; SAVED = []; render();
+    const shown = { title: 'A percentage off', detail: '20% off' };
+    return { line: draftPromise(shown), pane: ((document.querySelector('[data-testid="promise-text"]') || {}).innerText || '') };
+  });
+  say('the sheet draft line carries the margin', /Margin on these items: 42% → 27%/.test(form.line), form.line.slice(-120));
+  say('the open form pane carries it too', form.pane === '' || /Margin on these items: 42% → 27%/.test(form.pane), squash(form.pane).slice(0, 80) || '(pane hidden at this width)');
   const grouped = await page.evaluate(() => {
     const by = CBLabKit.groupBy([{ s: 'b' }, { s: 'a' }, { s: 'b' }, { s: 'z' }], (x) => x.s, ['a', 'b', 'c']);
     return Object.keys(by).join() + '|' + Object.values(by).map((v) => v.length).join();

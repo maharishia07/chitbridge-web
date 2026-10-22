@@ -18,6 +18,7 @@
  *   V2  YOUR offers: three rows per status then "and N more" (a searchable list); a paused offer is listed under Paused and Resume is one tap away
  *   V3  the right side says, word for word, what the confirm popup of the same next step says (draft, approved, live, paused)
  *   V4  390 px: no icons-only rail; a "New | Your offers (N)" switch (44 px); the shelf under it; the sentence right above the action button; AA in Cream and Dark
+ *   M1  390 px, Cream and Dark: a saved percent offer says "Margin on these items: X% → Y%" in the pane and the popup; a cost-blind viewer sees none
  *  UX-109 / walk W21-W48 (Athi 22 Oct: every action that commits a money promise is a deliberate act):
  *   L1  the landing has no "Create an offer" / "Saved offers", no empty circle, no type lit in the menu, and a line saying what to do (W30 W31 W36)
  *   L2  Settings "Change": each of the four boxes is tall enough for its own label, chips and help (W29)
@@ -532,6 +533,30 @@ const walk = async (w) => {
       const fails = yoursProblems.fails.concat(openProblems.fails);
       return { ok: got.side === 'none' && got.tabs.length === 2 && got.tabs.every((t) => t.high >= 44) && got.tabs[1].word === 'Your offers (' + got.count + ')' && yours.shown && yours.within && yours.screenHidden && above.right && !above.fixed && above.text && !fails.length,
         saw: 'rail ' + got.side + ' · tabs ' + got.tabs.map((t) => t.word + ' ' + t.high + 'px').join(', ') + ' · shelf shown ' + yours.shown + ' · sentence above the buttons ' + above.right + ' fixed ' + above.fixed + (fails.length ? ' · ' + fails.slice(0, 3).join(' · ') : ' · AA clean (lowest ' + Math.min(yoursProblems.lowest, openProblems.lowest) + ')') };
+    });
+  }
+
+  /* ── margin effect in the promise sentence (Athi 22 Oct) ── */
+  for (const theme of ['cream', 'dark']) {
+    await w.step('M1·' + theme, '390 px, ' + theme + ': a saved percent offer with known costs says "Margin on these items: X% → Y%" in the pane AND the confirm popup; cost-blind says nothing; AA, no sideways scroll', async () => {
+      const phone = await phoneSigned(theme);
+      const set = await phone.evaluate(() => {
+        const ids = P.slice(0, 3).map((x) => x.id);
+        P.slice(0, 3).forEach((x, i) => { x.cost = Math.round(x.price * (0.5 + i * 0.05) * 100) / 100; });
+        const item = { id: 'mg1', title: 'A percentage off', detail: '10% off', status: 'approved', n: '—', k: 'saved', snap: { goal: 'percent', scope: 'item', itemIds: ids, pctOff: 10, belowAct: 'exclude', round: '0' } };
+        SAVED = [item]; render(); openOffer('mg1');
+        const t = totals(lineRows(item.snap));
+        return { line: 'Margin on these items: ' + t.marginBefore + '% → ' + t.marginAfter + "% (as if one of each, at today's costs).", pane: document.querySelector('[data-testid="promise-text"]').innerText.replace(/\s+/g, ' ') };
+      });
+      await phone.locator('[data-testid="offer-open"] [data-testid="shelf-step"]').first().click();
+      await phone.waitForSelector('[data-testid="lk-confirm-text"]');
+      const popup = (await phone.textContent('[data-testid="lk-confirm-text"]')).replace(/\s+/g, ' ');
+      const problems = await screenProblems(phone, true);
+      await phone.screenshot({ path: require('path').join(__dirname, 'shots', 'offer-lab-margin-' + theme + '-390.png') });
+      await phone.click('[data-testid="lk-confirm-cancel"]');
+      const blind = await phone.evaluate(() => { COST_ACCESS.can_see_costs = false; render(); openOffer('mg1'); return document.querySelector('[data-testid="promise-text"]').innerText; });
+      await phone.close();
+      return { ok: set.pane.includes(set.line) && popup.includes(set.line) && !/[Mm]argin|cost price/.test(blind) && !problems.fails.length, saw: set.line + ' · pane+popup agree ' + (set.pane.includes(set.line) && popup.includes(set.line)) + ' · blind shows ' + /[Mm]argin/.test(blind) + (problems.fails.length ? ' · ' + problems.fails.slice(0, 3).join(' · ') : ' · AA clean') };
     });
   }
 

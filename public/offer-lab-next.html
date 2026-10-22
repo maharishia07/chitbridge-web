@@ -1460,8 +1460,9 @@ function PC(n) {
 function marginPct(price, cost) {
   return price > 0 ? Math.round(((price - cost) / price) * 100) : 0;
 }
-function roundDown(v, cap) {
-  var r = String(S.round);
+/** state: optional, a saved offer's snapshot; omitted = the open form (S). The sentence about a saved offer passes its own state, S is never swapped. */
+function roundDown(v, cap, state) {
+  var r = String((state || S).round);
   if (r === '0') v = Math.floor(v * 100) / 100;
   else if (r === '1') v = Math.floor(v);
   else if (r === '5') v = Math.floor(v / 5) * 5;
@@ -1487,8 +1488,9 @@ function catItems(id) {
 }
 /* ⭐ scope='item' now means "one or more specific items" — S.itemIds, not S.itemId. items() already returned
  * an array either way, so this is the only line the multi-item picker needed to change in the engine itself. */
-function items() {
-  return S.scope === 'item' ? (S.itemIds || []).map(byId).filter(Boolean) : catItems(S.catId);
+function items(state) {
+  var ruleSet = state || S;
+  return ruleSet.scope === 'item' ? (ruleSet.itemIds || []).map(byId).filter(Boolean) : catItems(ruleSet.catId);
 }
 function goalOf(id) {
   for (var index = 0; index < GOALS.length; index++) if (GOALS[index].id === id) return GOALS[index];
@@ -2575,21 +2577,23 @@ function paintPriceOvBody() {
   }
 }
 /* ── the engine: two percentages, compounded ───────────────────────────── */
-function offerFrac(p) {
-  if (S.goal === 'percent') return Math.min(0.99, num(S.pctOff) / 100);
-  if (S.goal === 'amount') return p.price > 0 ? Math.min(1, num(S.rsOff) / p.price) : 0;
+function offerFrac(p, state) {
+  var ruleSet = state || S;
+  if (ruleSet.goal === 'percent') return Math.min(0.99, num(ruleSet.pctOff) / 100);
+  if (ruleSet.goal === 'amount') return p.price > 0 ? Math.min(1, num(ruleSet.rsOff) / p.price) : 0;
   return 0;
 }
-function loyMode() {
-  if (!S.custOn || !S.loyOn) return 'none';
-  if (S.goal === 'percent' || S.goal === 'amount') return 'pct';
-  if (S.goal === 'qty') return 'top';
-  if (S.goal === 'free') return S.freeShape === 'same' || S.freeShape === 'cheapest' ? 'top' : 'either';
-  if (S.goal === 'bundle') return 'either';
+function loyMode(state) {
+  var ruleSet = state || S;
+  if (!ruleSet.custOn || !ruleSet.loyOn) return 'none';
+  if (ruleSet.goal === 'percent' || ruleSet.goal === 'amount') return 'pct';
+  if (ruleSet.goal === 'qty') return 'top';
+  if (ruleSet.goal === 'free') return ruleSet.freeShape === 'same' || ruleSet.freeShape === 'cheapest' ? 'top' : 'either';
+  if (ruleSet.goal === 'bundle') return 'either';
   return 'na';
 }
-function loyFrac() {
-  return loyMode() === 'pct' ? Math.min(0.95, num(S.loyPct) / 100) : 0;
+function loyFrac(state) {
+  return loyMode(state) === 'pct' ? Math.min(0.95, num((state || S).loyPct) / 100) : 0;
 }
 /**
  * ⭐⭐⭐ THE ONE PLACE THE REAL ENGINE ANSWERS "WHAT DOES A % OFF COME TO" (Phase: offer-lab adoption).
@@ -2664,21 +2668,22 @@ function engineMixMatchPay(unitPrice, n) {
  * already said. Collapsed to one 3-way choice ("When an offer goes below cost": Leave it out / Sell it at
  * cost / Do it anyway); FRESH's default ('exclude') keeps the exact behaviour a shop had before this change.
  */
-function priceRow(p, frac) {
-  var base = p.price,
+function priceRow(p, frac, state) {
+  var ruleSet = state || S,
+    base = p.price,
     want = engineFinal(base, frac),
     status = 'ok';
   if (p.cost == null) status = 'nocost';
   else if (want < p.cost - 0.005) {
-    if (S.belowAct === 'exclude') {
+    if (ruleSet.belowAct === 'exclude') {
       status = 'left';
       want = base;
-    } else if (S.belowAct === 'cap') {
+    } else if (ruleSet.belowAct === 'cap') {
       status = 'capped';
       want = p.cost;
     } else status = 'loss';
   }
-  var shown = R2(status === 'left' ? base : roundDown(want, base));
+  var shown = R2(status === 'left' ? base : roundDown(want, base, ruleSet));
   if (p.cost != null && shown < p.cost - 0.005) status = 'loss';
   return {
     p: p,
@@ -2720,15 +2725,15 @@ function totals(list) {
     marginAfter: pa > 0 ? Math.round(((pa - cb) / pa) * 100) : 0
   };
 }
-function lineRows() {
-  return items().map(function (item) {
-    return priceRow(item, CBOffers.compound([offerFrac(item) * 100, loyFrac() * 100]) / 100);
+function lineRows(state) {
+  return items(state).map(function (item) {
+    return priceRow(item, CBOffers.compound([offerFrac(item, state) * 100, loyFrac(state) * 100]) / 100, state);
   });
 }
 
 /* ── ladders (max three steps, always) ─────────────────────────────────── */
-function tiers() {
-  return (S.tiers || []).map(function (item) {
+function tiers(state) {
+  return ((state || S).tiers || []).map(function (item) {
     return { qty: num(item[0]), pct: num(item[1]) };
   });
 }
@@ -4689,22 +4694,44 @@ function label() {
   else what = M0(num(S.bandLo)) + '–' + M0(num(S.bandHi));
   return { title: g.n, detail: [what, where].filter(Boolean).join(' · ') };
 }
+/**
+ * THE ONE MARGIN FIGURE of the offers whose price is a percentage of the shelf price: percent, rupees off, and a ladder's top step (as if one of each).
+ * keyNumber and marginSentence both read it, so the number on the card and the number in the promise cannot differ. null = a kind with no such figure.
+ */
+function marginTotals(state) {
+  var ruleSet = state || S,
+    top = tiers(ruleSet).pop();
+  if (ruleSet.goal === 'percent' || ruleSet.goal === 'amount') return totals(lineRows(ruleSet));
+  if (ruleSet.goal !== 'qty' || !top) return null;
+  return totals(
+    items(ruleSet).map(function (item) {
+      return priceRow(item, top.pct / 100, ruleSet);
+    })
+  );
+}
 function keyNumber() {
-  if (S.goal === 'percent' || S.goal === 'amount') {
-    var t = totals(lineRows());
-    return [t.marginAfter + '%', 'margin'];
-  }
-  if (S.goal === 'qty') {
-    var ts = tiers(),
-      top = ts[ts.length - 1];
-    var tt = totals(
-      items().map(function (item) {
-        return priceRow(item, top.pct / 100);
-      })
-    );
-    return [tt.marginAfter + '%', 'at ' + top.qty + '+'];
-  }
-  return ['—', 'see it'];
+  var sums = marginTotals();
+  if (!sums) return ['—', 'see it'];
+  if (S.goal !== 'qty') return [sums.marginAfter + '%', 'margin'];
+  return [sums.marginAfter + '%', 'at ' + tiers().pop().qty + '+'];
+}
+/** the acts whose sentence carries a margin line: starting or resuming a promise, never approve, pause, retire or delete */
+var MARGIN_ACTS = ['draft', 'live', 'group', 'golive', 'resume'];
+/**
+ * "Margin on these items: 40% → 32% (as if one of each, at today's costs)." for a snapshot (state is required: it never reads the open form).
+ * All or nothing: with any cost missing it says how many, and shows no figure. A viewer who may not see costs gets '' (no figure, no count).
+ */
+function marginSentence(state, kind) {
+  if (!state || MARGIN_ACTS.indexOf(kind) < 0 || !COST_ACCESS.can_see_costs) return '';
+  var sums = marginTotals(state);
+  return sums ? marginWords(sums) : '';
+}
+/** the words for one set of totals: the figure when every cost is known, else only how many are missing (never a partial figure); '' when there are no items */
+function marginWords(sums) {
+  var all = sums.n + sums.blind;
+  if (!all) return '';
+  if (sums.blind) return 'Margin not shown: cost price missing for ' + sums.blind + ' of ' + all + (all === 1 ? ' item.' : ' items.');
+  return 'Margin on these items: ' + sums.marginBefore + '% → ' + sums.marginAfter + "% (as if one of each, at today's costs).";
 }
 /**
  * ── ⭐⭐⭐ SAVED OFFERS, ON THE REAL SHELF (Athi: "we have already built the offer engine... how we enhance it
@@ -5943,7 +5970,7 @@ var REACH_BY_GOAL = {
 /** the offer's parts for CBLabKit.promise: its name, what it reaches (with the count) and the group's label when the act names one */
 function promiseParts(item, kind, patch) {
   var group = kind === 'group' ? patch.customer_group : item.group;
-  return { act: kind, thing: 'offer', name: item.title, detail: item.detail, on: savedReachWords(item), group: group ? groupLabel(group) : '' };
+  return { act: kind, thing: 'offer', name: item.title, detail: item.detail, on: savedReachWords(item), group: group ? groupLabel(group) : '', margin: marginSentence(item.snap, kind) };
 }
 /** asks first: runs `onConfirm` only if the shopkeeper confirms what, to whom, on what and from when */
 function askPromise(item, kind, patch, onConfirm) {
