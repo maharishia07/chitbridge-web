@@ -10,6 +10,7 @@
  * (bkOnce) — the same two halves cap-books.js uses for payments.
  * ⭐ Never "accounting" on a screen. Insert-only: a saved entry is never edited — Reverse adds the mirror.
  * Look: the chit sheet's own popup (a <dialog>, same tokens), the Day book's own line rows (CBList.nextRow). No new style of list.
+ * CARD      14-accounting/ledger-accounts-day-book-entries-reverse
  */
 'use strict';
 if (typeof EP !== 'undefined') {
@@ -56,6 +57,7 @@ var EN = {
 /* the four kinds of "who / what" field live on step 2; the rest are step 3 — a layout choice, never a rule of the books. A field may name its own step. */
 var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, lines: 1, choice: 1 };
 
+/** add the entry sheet's stylesheet to the page once */
 function enCss() {
   if (document.getElementById('en_css')) return;
   var node = document.createElement('style');
@@ -85,6 +87,7 @@ function enCss() {
     '#entrysheet .en-btn.pri{background:var(--green,#16693F);border-color:var(--green,#16693F);color:#fff}#entrysheet .en-btn:disabled{opacity:.45;cursor:default}';
   document.head.appendChild(node);
 }
+/** the entry sheet's <dialog>, created on first use */
 function enDlg() {
   var node = document.getElementById('entrysheet');
   if (node) return node;
@@ -214,6 +217,7 @@ function enStepWord(n) {
     4: 'Check and save'
   }[n];
 }
+/** paint the sheet for the current step: title, body, step dots and buttons */
 function enPaint() {
   var body = document.getElementById('en_body'),
     acts = document.getElementById('en_acts'),
@@ -265,6 +269,7 @@ function enPaint() {
   } else body.innerHTML = h + enFormHTML(EN.step);
   enActs();
 }
+/** the button row: Back / Next, and Save only when enCanSave says the server allowed it (step 4) */
 function enActs() {
   var acts = document.getElementById('en_acts'),
     last = EN.step === 4,
@@ -287,6 +292,7 @@ function enCanSave() {
   var pv = EN.pv;
   return !!(pv && pv.balanced === true && !(pv.refusals || []).length && !EN.pvBusy && !EN.saving);
 }
+/** step 1: the events the server offers, grouped, as a grid of buttons */
 function enGridHTML() {
   var groups = [],
     by = {};
@@ -362,6 +368,7 @@ function enJournalEv() {
     ]
   };
 }
+/** choose an event (or the free journal) and start its first step */
 function enPick(id) {
   var ev = EN.events.filter(function (e) {
     return e.id === id;
@@ -433,6 +440,7 @@ function enShopLedger(code) {
   })[0];
   return !!a && !a.role;
 }
+/** a ledger-account select built from the books accounts, banded and optionally limited to one group */
 function enLedgerSelect(id, cur, onch, onlyGroup) {
   var bands = bkLtModel(EN.accounts || []),
     h = '<option value="">' + esc(tx('Choose…')) + '</option>';
@@ -459,6 +467,7 @@ function enLedgerSelect(id, cur, onch, onlyGroup) {
   });
   return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
+/** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
     v = EN.v[k] == null ? '' : EN.v[k],
@@ -554,6 +563,7 @@ function enFieldHTML(f) {
   if (f.kind === 'lines') return enLinesHTML();
   return wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
 }
+/** a plain select from a list of options with the current value chosen */
 function enSelect(id, opts, cur, onch) {
   return (
     '<select data-testid="' +
@@ -583,6 +593,7 @@ function enSet(k, v) {
 function enPaintKeep() {
   enPaint();
 }
+/** true when every required field of the step has a value */
 function enStepReady(step) {
   return enFields(step).every(function (item) {
     if (item.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
@@ -600,6 +611,7 @@ function enStepReady(step) {
     return String(EN.v[item.key] == null ? '' : EN.v[item.key]).trim() !== '';
   });
 }
+/** read the chosen paper photo into EN.photo (or clear it) */
 function enPhoto(inp) {
   var f = inp.files && inp.files[0];
   if (!f) {
@@ -687,6 +699,7 @@ function enAsk(body) {
   EN.q = p.catch(function () {});
   return p;
 }
+/** the POST body for preview and save: the typed fields, with the amount parsed to minor units */
 function enBody() {
   var b = { event: EN.ev.kind || EN.ev.id };
   Object.keys(EN.v).forEach(function (item) {
@@ -716,6 +729,7 @@ function enWords(list, code, dateStep) {
     };
   });
 }
+/** the preview answer reduced to what the sheet compares and saves against */
 function enSeen(r) {
   r = r || {};
   return {
@@ -731,6 +745,7 @@ function enSeen(r) {
     })
   };
 }
+/** ask the server to preview the journal for the typed fields; a later call supersedes an earlier one */
 async function enPreview() {
   var seq = ++EN.seq;
   EN.pvBusy = true;
@@ -779,6 +794,7 @@ async function enCheckDate() {
   var node = document.getElementById('en_next');
   if (node) node.disabled = !enStepReady(EN.step);
 }
+/** run the fix a warning or refusal offers (retry, go to a step or field) */
 function enFixGo(i, w) {
   var list = w === 'date' ? EN.dateRef : EN.pv && EN.pv[w];
   var x = list && list[i];
@@ -818,6 +834,7 @@ function enRefusalHTML(list, w) {
     })
     .join('');
 }
+/** the server's warnings and refusals as a list, each with its fix button */
 function enWarnHTML(list) {
   return (list || [])
     .map(function (x, index) {
@@ -837,6 +854,7 @@ function enWarnHTML(list) {
     })
     .join('');
 }
+/** one journal line of the preview: account, side, amount, and the rule that placed it */
 function enLineHTML(l, c) {
   var rate = l.rate != null && l.rate !== '' ? ' ' + esc(String(l.rate)) + '%' : '';
   return (
@@ -862,6 +880,7 @@ function enLineHTML(l, c) {
     '</div></div>'
   );
 }
+/** step 4: the server's journal preview, its voucher, balanced or not, and its warnings */
 function enPreviewHTML() {
   var pv = EN.pv;
   if (!pv) return '<div class="loadwrap"><span class="spin"></span> ' + esc(tx('Checking…')) + '</div>';
@@ -926,6 +945,7 @@ async function enSave(btn) {
     }
   });
 }
+/** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
   var s = EN.saved,
     no = s.entry_no || s.no || '';
