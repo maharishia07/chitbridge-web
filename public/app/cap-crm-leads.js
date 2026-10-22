@@ -154,6 +154,7 @@ function crmLeadCols() {
     }
   ];
 }
+/** the "+ Add lead" button: greyed with the server's sentence when view-only, disabled until the lead stages are migrated */
 function crmLeadAddBtn() {
   if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), crmViewWhy()); /* shown, greyed, with the server's sentence (FX-L2C) */
   var off = LEADS.loaded && !LEADS.ready;
@@ -167,6 +168,7 @@ function crmLeadAddBtn() {
     '</button>'
   );
 }
+/** paint the Leads tab: the bar, then a CBList mount of the lead rows (loaded once, repainted on a stage move) */
 function crmLeads(frame) {
   crmLeadsBar();
   var node = document.getElementById('screen');
@@ -285,6 +287,7 @@ function crmLeadAddOpen() {
   var node = document.getElementById('crm_lead_name');
   if (node) node.focus();
 }
+/** save the Add-lead sheet: needs a name, then POSTs through CBAction and refreshes the list */
 function crmLeadSave(btn) {
   var node = function (id) {
       return String((document.getElementById(id) || {}).value || '').trim();
@@ -334,6 +337,7 @@ function crmStageBtn(p) {
     '</button>'
   );
 }
+/** the "Move to…" sheet: one button per stage the server allows this lead to move to */
 function crmStageOpen(p, rec) {
   var lead = (rec && rec.lead) || p.lead;
   if (!lead) return;
@@ -362,6 +366,7 @@ function crmStageOpen(p, rec) {
       '</button></div>'
   );
 }
+/** move the open party to a stage through CBAction, then repaint the record */
 function crmStageGo(stage, btn) {
   var p = CRMR.p,
     msg = document.getElementById('crm_stage_msg');
@@ -385,6 +390,7 @@ function crmStageGo(stage, btn) {
     }
   );
 }
+/** route a data-crm click (leadadd · leadsave · leadimport · rstage · stagego) to its handler; true when it was ours */
 function crmLeadClick(a, node) {
   if (a === 'leadadd') {
     crmLeadAddOpen();
@@ -541,6 +547,7 @@ function crmImportCounts(p) {
   return crmPlural(p.added, 'lead to add', 'leads to add') + ' · ' + p.merged + ' ' + tx('to merge') + ' · ' + p.skipped.length + ' ' + tx('to skip');
 }
 
+/** the "Import" button: greyed with the server's sentence when view-only, disabled until the lead stages are migrated */
 function crmLeadImportBtn() {
   if (!crmEdit())
     return crmViewOnlyBtn(
@@ -559,6 +566,7 @@ function crmLeadImportBtn() {
     '</button>'
   );
 }
+/** open the Import-from-CSV flow (file → columns → check, then Import) as a stepped sheet */
 function crmImportOpen() {
   if (LEADS.loaded && !LEADS.ready) {
     toast(tx(CRM_LEADS_WAIT));
@@ -602,6 +610,7 @@ function crmImportOpen() {
   });
   LIMP.flow.paint();
 }
+/** the HTML of one import step: file, map or check */
 function crmImportStep(k) {
   if (k === 'file') {
     var n = LIMP.rows.length;
@@ -658,12 +667,13 @@ function crmImportGuard(k) {
   }
   return null;
 }
+/** read the chosen CSV file into LIMP (head, rows, a guessed column map) and repaint; an unreadable file says so in words */
 async function crmImportPick(inp) {
-  var f = inp.files && inp.files[0];
-  if (!f) return;
+  var file = inp.files && inp.files[0];
+  if (!file) return;
   var text;
   try {
-    text = await f.text();
+    text = await file.text();
   } catch (_) {
     LIMP.rows = [];
     LIMP.name = '';
@@ -672,7 +682,7 @@ async function crmImportPick(inp) {
     return;
   }
   var all = crmCsvRows(text);
-  LIMP.name = f.name;
+  LIMP.name = file.name;
   LIMP.head = all.length
     ? all[0].map(function (item) {
         return String(item || '').trim();
@@ -853,6 +863,7 @@ function crmImportList(el, key, rows, preview) {
     ]
   });
 }
+/** send the mapped rows to the server in one CBAction and show the outcome */
 function crmImportSend() {
   var btn = document.querySelector('[data-testid="crm-import-go"]');
   return CBAction.run(
