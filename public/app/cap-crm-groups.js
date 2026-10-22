@@ -54,6 +54,7 @@ function crmGroupsRows(r) {
   });
   return segs.concat(grs);
 }
+/** read the segments and named groups from the server (the latest call wins); quiet keeps the list on screen while it reloads */
 async function crmGroupsLoad(quiet) {
   var g = ++GROUPS.gen;
   if (!quiet || !GROUPS.loaded) {
@@ -268,6 +269,7 @@ function crmGroupMini(r) {
     '</div>'
   );
 }
+/** the sentence that greys a row action (send · members · delete) for this row, or "" when it is allowed */
 function crmGroupsWhyNot(r, act) {
   if (act === 'send') {
     var w = crmGroupsMay('send');
@@ -279,6 +281,7 @@ function crmGroupsWhyNot(r, act) {
   if (act === 'offer') return tx(CRM_OFFER_WHY);
   return '';
 }
+/** the row actions of the Groups list (send, members, delete…), each with its test id and its why-not */
 function crmGroupsActions() {
   return [
     {
@@ -346,6 +349,7 @@ function crmGroupsActions() {
     }
   ];
 }
+/** paint the Groups screen: the bar, then a CBList mount with one row per segment or named group */
 function crmGroups(frame) {
   crmGroupsBar();
   var node = document.getElementById('screen');
@@ -439,6 +443,7 @@ function crmGroups(frame) {
 
 /* ═══ NEW GROUP · MEMBERS — one sheet: a name, then who is in it (the customers of the Parties list, ticked) ═══════ */
 var GSHEET = { name: '', fixed: false, orig: {}, on: {}, q: '' };
+/** open the New group / Edit members sheet; an existing name starts with its current members ticked */
 function crmGroupOpen(name) {
   GSHEET = { name: name || '', fixed: !!name, orig: {}, on: {}, q: '' };
   if (name)
@@ -481,6 +486,7 @@ function crmGroupCands() {
     return item.kind !== 'walk-in' && (item.roles || []).indexOf('customer') >= 0 && !crmIsLead(item);
   });
 }
+/** filter the member picker of the group sheet by the typed text and repaint the list */
 function crmGroupPick(q) {
   GSHEET.q = String(q || '')
     .trim()
@@ -533,6 +539,7 @@ function crmGroupWords(e) {
   if (code === 'NOTHING_TO_DO') return tx('Tick at least one customer.');
   return tx("Couldn't save the group. Try again.");
 }
+/** save the group sheet (a name is required) through CBAction, then reload the groups */
 function crmGroupSave(btn) {
   var name = String((document.getElementById('crm_grp_name') || {}).value || '')
       .replace(/\s+/g, ' ')
@@ -599,6 +606,7 @@ function crmGroupDelete(r) {
 
 /* ═══ SEND — the one sheet: who may (the server's dry answer, by code), then the send through the one sender ═══════ */
 var SEND = { row: null, dry: null, done: null };
+/** open the Send-to-group sheet for a row; pre is an optional starting message */
 function crmSendOpen(r, pre) {
   SEND = { row: r, dry: null, done: null };
   modal(
@@ -650,6 +658,7 @@ function crmSendWords(e) {
 function crmSendBody(dry) {
   return { channel: GROUPS.channel, purpose: GROUPS.purpose, text: String((document.getElementById('crm_send_text') || {}).value || '').trim(), dry: !!dry };
 }
+/** the dry run: ask the server who may be sent this message and show the count before anything is sent */
 function crmSendCheck(btn) {
   var node = document.getElementById('crm_send_who'),
     go = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
@@ -697,6 +706,7 @@ function crmSendCheck(btn) {
     }
   );
 }
+/** send the message through CBAction, only after a dry run found someone who may be sent it */
 function crmSendGo(btn) {
   var out = document.getElementById('crm_send_out'),
     body = crmSendBody(false);
@@ -765,6 +775,7 @@ function crmShopUrl() {
   var id = SESSION.bridgeId || SESSION.userId || '';
   return location.origin + '/shop.html?s=' + encodeURIComponent(id);
 }
+/** paint the Shop window screen: template chooser, preview and the share-with-a-party / group controls */
 function crmShowcase(frame) {
   crmBar('<strong>' + esc(crmAppName()) + '</strong>', '', false);
   var node = document.getElementById('screen');
@@ -803,6 +814,7 @@ function crmShowcase(frame) {
   if (!CRM.loaded) crmLoad(true);
   crmShowcaseLoad();
 }
+/** read the policy flags (the chosen template) and repaint the chooser; an unreadable answer shows the default */
 async function crmShowcaseLoad() {
   var g = ++SHOW.gen;
   try {
@@ -818,6 +830,7 @@ async function crmShowcaseLoad() {
   }
   crmShowcasePaint();
 }
+/** paint the template chooser, greyed with a sentence when the login can only view */
 function crmShowcasePaint() {
   var box = document.getElementById('crm_sc_pick');
   if (!box || typeof CBShowcasePick === 'undefined') return;
@@ -837,6 +850,7 @@ function crmShowcasePaint() {
     }) +
     '<div id="crm_sc_msg" class="hint" role="status" data-testid="crm-sc-msg"></div>';
 }
+/** save the chosen showcase template through CBAction */
 function crmShowcasePick(name, btn) {
   var msg = document.getElementById('crm_sc_msg');
   return CBAction.run(
@@ -891,6 +905,7 @@ function crmSharePick(q) {
       })
       .join('') || '<div class="hint">' + esc(tx('Nobody matches.')) + '</div>';
 }
+/** choose the party to share the shop link with, then paint the share box */
 async function crmShareParty(k) {
   var p =
       CRM.byKey[k] ||
@@ -920,6 +935,7 @@ function crmShareVerdict() {
   if (!v) return { may: false, code: 'NO_CONSENT', why: tx('No consent for offers on WhatsApp. Ask them first.') };
   return v;
 }
+/** paint the share box: the server's verdict on this party, greyed with its reason (no phone, not allowed, view-only) */
 function crmSharePaint() {
   var p = SHOW.party,
     box = document.getElementById('crm_sc_party');
@@ -982,6 +998,7 @@ function crmShareGo(btn) {
     }
   );
 }
+/** share the shop link with a group: load the groups first if needed, then offer the list to pick from */
 function crmShareGroup() {
   if (!GROUPS.loaded) {
     toast(tx('Reading your groups…'));

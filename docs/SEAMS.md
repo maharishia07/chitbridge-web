@@ -75,7 +75,7 @@ of file each thing is; this says what already does the job.
 | 26 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
 | 26 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 25 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 25 | `sheet` | `cap-employees.js` |  |
+| 26 | `sheet` | `cap-employees.js` |  |
 | 25 | `gate` | `country-setup.js` | gate(h, entity): |
 | 24 | `load` | `cap-assist.js` |  |
 | 24 | `money` | `cart.js` |  |
@@ -107,7 +107,7 @@ of file each thing is; this says what already does the job.
 | 19 | `shown` | `cap-settings.js` |  |
 | 19 | `card` | `cap-shop.js` |  |
 | 19 | `note` | `device-id.js` | note(where, problem) — |
-| 19 | `reason` | `lab-kit.js` | W9: |
+| 20 | `reason` | `lab-kit.js` | W9: |
 | 19 | `more` | `lab-kit.js` | idKey: |
 | 19 | `guard` | `books-assets.js` | run a store call; a missing table is the one refusal |
 | 19 | `entries` | `books-store.js` |  |

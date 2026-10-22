@@ -22,7 +22,7 @@
   "public/app/cap-country.js": {"score":54,"long40":4,"long80":0,"complex10":12,"complex15":1,"deep3":0,"deep4":0,"cryptic":23,"noWhatLine":4,"emptyCatch":10,"noHeader":0},
   "public/app/cap-crm-calls.js": {"score":31,"long40":1,"long80":1,"complex10":2,"complex15":0,"deep3":1,"deep4":0,"cryptic":23,"noWhatLine":3,"emptyCatch":0,"noHeader":0},
   "public/app/cap-crm-chits.js": {"score":40,"long40":2,"long80":1,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":30,"noWhatLine":5,"emptyCatch":1,"noHeader":0},
-  "public/app/cap-crm-groups.js": {"score":115,"long40":7,"long80":2,"complex10":5,"complex15":1,"deep3":0,"deep4":0,"cryptic":79,"noWhatLine":20,"emptyCatch":1,"noHeader":0},
+  "public/app/cap-crm-groups.js": {"score":98,"long40":7,"long80":2,"complex10":5,"complex15":1,"deep3":0,"deep4":0,"cryptic":79,"noWhatLine":3,"emptyCatch":1,"noHeader":0},
   "public/app/cap-crm-leads.js": {"score":88,"long40":6,"long80":2,"complex10":3,"complex15":0,"deep3":1,"deep4":0,"cryptic":72,"noWhatLine":2,"emptyCatch":2,"noHeader":0},
   "public/app/cap-crm-privacy.js": {"score":71,"long40":5,"long80":2,"complex10":3,"complex15":1,"deep3":0,"deep4":0,"cryptic":52,"noWhatLine":6,"emptyCatch":2,"noHeader":0},
   "public/app/cap-crm-record.js": {"score":196,"long40":11,"long80":6,"complex10":17,"complex15":13,"deep3":0,"deep4":0,"cryptic":117,"noWhatLine":27,"emptyCatch":5,"noHeader":0},
