@@ -25,7 +25,7 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
-body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
+body{margin:0;background:var(--page);color:var(--ink);font-size:calc(16px * var(--k,1)); /* the text size the person chose (avatar menu › Large sets --k) — the page body must follow it, as accounts and list-lab do */font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif)}
 
 /* ── anything wrong, before anything else (the shell's alerts slot; only a failing thing earns a row) ── */
 .al{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-size:13.5px}

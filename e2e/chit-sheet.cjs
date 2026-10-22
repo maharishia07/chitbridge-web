@@ -304,10 +304,10 @@ async function route(S, r) {
     await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]');
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.useCalls.length === 1 && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', 'Goods in → what it is for (PUT /use) then accepted');
-    /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in a new tab so the Day book keeps its place; never the workshop */
-    await p.evaluate(() => { window.__opened = null; window.open = function (url) { window.__opened = url; return null; }; });
+    /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in the SAME tab so Back returns (NAV-MAP 13; accounts.html openChitPage sets location.href), never the workshop */
     await p.click('[data-testid="cs-act-page"]');
-    ok(!(await sheetOpen(p)) && await p.evaluate(() => window.__opened) === '/crm.html#/chit/sb1', 'Open page closes the sheet and opens the chit page in CRM (/crm.html#/chit/sb1) — the only navigation');
+    await p.waitForURL(/[\/]crm[.]html#[\/]chit[\/]sb1$/, { timeout: 8000 }).catch(() => {});
+    ok(/[\/]crm[.]html#[\/]chit[\/]sb1$/.test(p.url()), 'Open page leaves the sheet for the chit page in CRM (/crm.html#/chit/sb1), the same tab — the only navigation (' + p.url().replace(/^https?:[\/][\/][^\/]+/, '') + ')');
     await ctx.close();
   }
   /* ── 3 · a task, from the Waiting list ──────────────────────────────────────────────────────────── */
