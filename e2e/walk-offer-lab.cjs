@@ -146,9 +146,11 @@ const walk = async (w) => {
     return { ok: statuses.length === 2 && statuses.every((s) => s === 'draft'), saw: statuses.length + ' definitions: ' + statuses.join(', ') };
   });
 
+  let groupId = null;
   await w.step('O6', 'Signed in: "Only for a group" -> the shop\'s named group -> live, only for them', async () => {
     const row = signed.locator('[data-testid="cart-row"]').first();
     const id = await row.getAttribute('data-id');
+    groupId = id;
     await row.locator('[data-testid="cart-group"]').click();
     await signed.waitForSelector('[data-testid="cart-group-pick"] optgroup option', { state: 'attached' });
     await signed.selectOption('[data-testid="cart-group-pick"]', 'group:' + NAMED_GROUP);
@@ -160,12 +162,37 @@ const walk = async (w) => {
   });
 
   await w.step('O7', 'Signed in: "Make live" on the other -> live for everyone (no customer_group)', async () => {
-    const row = signed.locator('[data-testid="cart-row"]:has([data-testid="cart-live"]:not([disabled]))').first();
+    const row = signed.locator('[data-testid="cart-row"]:has(.p-draft)').first();
     const id = await row.getAttribute('data-id');
     await row.locator('[data-testid="cart-live"]').click();
     await signed.waitForFunction((want) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === want), 'Live for everyone.');
     const def = api.db.get(id);
     return { ok: def.status === 'live' && def.versions[0].rules.customer_group === undefined, saw: def.status + ' · customer_group ' + def.versions[0].rules.customer_group };
+  });
+
+  await w.step('O7b', 'Signed in: after a reload the group offer still says "only for <group>" (not "for everyone")', async () => {
+    await signed.reload();
+    await signed.waitForSelector('[data-testid="cart-row"][data-id="' + groupId + '"] [data-testid="cart-note"]');
+    const said = (await signed.textContent('[data-testid="cart-row"][data-id="' + groupId + '"] [data-testid="cart-note"]')).trim();
+    return { ok: said === 'Live, only for ' + NAMED_GROUP + '.', saw: '"' + said + '"' };
+  });
+
+  await w.step('O7c', 'Signed in: Edit the group offer and add it again -> the group is kept in its rules', async () => {
+    await signed.evaluate((id) => { openSaved(id); apply(); }, groupId);
+    await signed.waitForSelector('#workScrim.on');
+    await signed.click('#workSave');
+    await signed.waitForFunction(() => !document.getElementById('workScrim').classList.contains('on'));
+    const rules = api.db.get(groupId).versions[0].rules;
+    return { ok: rules.customer_group === 'group:' + NAMED_GROUP && rules.customer_name === NAMED_GROUP, saw: 'customer_group ' + rules.customer_group + ' · name ' + rules.customer_name };
+  });
+
+  await w.step('O7d', 'Signed in: "Make live" on the group offer clears the group and says so (make live = everyone)', async () => {
+    const row = signed.locator('[data-testid="cart-row"][data-id="' + groupId + '"]');
+    await row.locator('[data-testid="cart-live"]').click();
+    const want = 'Was only for ' + NAMED_GROUP + ', now for everyone.';
+    await signed.waitForFunction((t) => [...document.querySelectorAll('[data-testid="cart-note"]')].some((n) => n.textContent === t), want);
+    const def = api.db.get(groupId), rules = def.versions[0].rules;
+    return { ok: def.status === 'live' && rules.customer_group === undefined && rules.customer_name === undefined, saw: def.status + ' · customer_group ' + rules.customer_group };
   });
 
   /* ── the phone ─────────────────────────────────────────────────────────────────────────────────────────────────── */

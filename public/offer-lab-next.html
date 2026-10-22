@@ -5145,6 +5145,9 @@ async function saveOffer() {
   var rules = Object.assign(ruleParamsOf(), {
     _lab: { snap: snapshot(), costs: costPrint(), at: new Date().toISOString(), title: l.title, detail: l.detail, n: k[0], k: k[1] }
   });
+  /* an edit rebuilds the rules from the form; the group the offer was aimed at is not on the form, so it is carried over */
+  var kept = EDITING && cartItem(EDITING);
+  if (kept && kept.group) Object.assign(rules, { customer_group: kept.group, customer_name: kept.groupName });
   var editingLive =
     EDITING &&
     SAVED.some(function (x) {
@@ -5180,6 +5183,8 @@ async function loadSaved() {
       n: lab.n || '—',
       k: lab.k || 'saved',
       status: item.status,
+      group: (item.rules && item.rules.customer_group) || '' /* Only for a group: kept on the row so a reload still says so */,
+      groupName: (item.rules && item.rules.customer_name) || '',
       snap: lab.snap || {},
       costs: lab.costs || {}
     };
@@ -5612,11 +5617,11 @@ function cartRowHTML(item) {
     savedTitleHTML(item, false) +
     '<div class="cartacts">' + savedPillHTML(item) +
     '<button class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
-    '<button class="btn sm pri" data-testid="cart-live"' + (live ? ' disabled' : '') + ' onclick="cartLive(\'' + item.id + '\')">Make live</button>' +
+    '<button class="btn sm pri" data-testid="cart-live"' + (live && !item.group ? ' disabled' : '') + ' onclick="cartLive(\'' + item.id + '\')">Make live</button>' +
     '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button></div>' +
     (CART_PICK === item.id ? cartPickerHTML(item) : '') +
     (note || live
-      ? '<div class="cartnote ' + (note ? note.tone : 'ok') + '" role="status" data-testid="cart-note">' + esc(note ? note.text : 'Live for everyone.') + '</div>'
+      ? '<div class="cartnote ' + (note ? note.tone : 'ok') + '" role="status" data-testid="cart-note">' + esc(note ? note.text : item.group ? 'Live, only for ' + (item.groupName || groupNameOf(item.group)) + '.' : 'Live for everyone.') + '</div>'
       : '') +
     '</div>'
   );
@@ -5690,20 +5695,28 @@ async function attachOffer(item, patch) {
   var id = item.id,
     body = { status: 'live' };
   cartSay(id, 'Saving…');
-  if (patch) {
+  var wasFor = !patch && item.group ? item.groupName || groupNameOf(item.group) : '';
+  if (patch || wasFor) {
     var current = await defFetch('GET', '/' + id);
     var versions = (current.ok && current.body.versions) || [];
     if (!versions.length) return cartSay(id, 'Could not read this offer. Nothing changed.', 'bad');
     body.rules = Object.assign({}, versions[0].rules, patch);
+    if (wasFor) {
+      delete body.rules.customer_group; /* Make live = everyone: the group is cleared, and the row says so */
+      delete body.rules.customer_name;
+    }
   }
   if (item.status === 'draft') {
     var approved = await defFetch('PUT', '/' + id, { status: 'approved' });
     if (!approved.ok) return cartSay(id, (approved.body && approved.body.message) || 'That did not save.', 'bad');
   }
   var reply = await defFetch('PUT', '/' + id, body);
-  if (!reply.ok) return cartSay(id, (reply.body && reply.body.message) || 'That did not go live.', 'bad');
+  if (!reply.ok) {
+    if (item.status === 'draft') await loadSaved(); /* the approve went through: the row must say approved, not draft */
+    return cartSay(id, (reply.body && reply.body.message) || 'That did not go live.', 'bad');
+  }
   CART_PICK = null;
-  var said = reply.queued ? 'Will go live once the line is back.' : patch ? 'Live, only for ' + patch.customer_name + '.' : 'Live for everyone.';
+  var said = reply.queued ? 'Will go live once the line is back.' : patch ? 'Live, only for ' + patch.customer_name + '.' : wasFor ? 'Was only for ' + wasFor + ', now for everyone.' : 'Live for everyone.';
   CART_NOTES[id] = { text: said, tone: 'ok' };
   await loadSaved();
 }
