@@ -22,7 +22,9 @@ const stub = () => ({ innerHTML: '', style: {}, classList: { toggle() {}, add() 
 const ctx = { console, setTimeout: () => 0, location: { search: '' }, localStorage: { getItem: () => null }, navigator: {}, URLSearchParams,
   fetch: () => new Promise(() => {}), Intl, document: { getElementById: () => stub(), createElement: stub, addEventListener() {}, body: stub(), head: stub(), querySelector: () => null } };
 ctx.window = ctx;
+ctx.tx = (english) => english; /* the string door (accounts-shell.js tx) is loaded by the page; English passes through, which is what this file reads */
 vm.createContext(ctx);
+vm.runInContext(read('app/helpers.js'), ctx);    /* T2-WEBPRIMS: esc · fmtMoney - the ONE copy, loaded by the page before its own script */
 vm.runInContext(read('app/workflow.js'), ctx);   /* the page loads it before its own script (CBWorkflow.stageOf → the status words) */
 vm.runInContext(script, ctx);
 const run = (src) => vm.runInContext(src, ctx);
@@ -47,7 +49,7 @@ const btn = run('shopCatBtnHtml()');
 ok(/id="cat_btn"/.test(btn) && /hidden/.test(btn) && /aria-expanded="false"/.test(btn), 'the Categories ▾ button and a CLOSED panel');
 ok(/onclick="shopCatPick\(this\.dataset\.sec\)"/.test(btn) && !/onmouseover|:hover/.test(btn), 'a tap picks; nothing is hover-only');
 ok(/oncontextmenu="return false"/.test(btn), 'a long press does not open a context menu');
-ok(/_catShield=true/.test(script) && /,\s*400\)/.test(script), 'a double tap is absorbed: the backdrop stays 400 ms after a pick');
+ok(/_catShield\s*=\s*true/.test(script) && /,\s*400\)/.test(script), 'a double tap is absorbed: the backdrop stays 400 ms after a pick');
 ok(!/class="catbar"/.test(script), 'the wrapping chip bar is gone');
 
 console.log('\n— address example (M71) and the first screen (M65)');
@@ -57,17 +59,18 @@ ok(/600002/.test(run('_areaExample()')), 'the area example too: ' + run('_areaEx
 run(`_SHOPDATA.shop={address:''}`);
 ok(!/Bengal|560001|Chennai/.test(run('_addrExample()')), 'a shop with no address gets a neutral example, never a built-in city');
 ok(!/560001|Bengaluru|Bollenini/.test(script), 'no hard-coded town or PIN left in shop.html');
-const headSrc = script.slice(script.indexOf("var head='<div class=\"hd\""), script.indexOf('var finishes='));
+const headSrc = script.slice(script.indexOf('var head ='), script.indexOf('var finishes =')); /* the header is the first `var head =` (formatted over lines since the mechanical pass) */
 ok(headSrc && !/gstn|GSTIN/i.test(headSrc), 'the header carries no GSTIN');
-ok(/shopAboutHtml/.test(script) && /GSTIN/.test(run('shopAboutHtml({address:"x",gstn:"29ABC"})')), 'the GSTIN lives under "About the shop"');
+ok(/shopAboutHtml/.test(script) && /GSTIN/.test(run('shopAboutHtml({address:"x",gstn:"29ABC",tax_id_word:"GSTIN"})')) && /29ABC/.test(run('shopAboutHtml({address:"x",gstn:"29ABC",tax_id_word:"GSTIN"})')), 'the GSTIN lives under "About the shop" (under the word the server sends, tax_id_word)');
+ok(!/GSTIN/.test(run('shopAboutHtml({address:"x",gstn:"29ABC"})')) && /Tax number/.test(run('shopAboutHtml({address:"x",gstn:"29ABC"})')), 'with no word from the server the About says "Tax number", never India\'s GSTIN (N1/STD2)');
 
 console.log('\n— checkout (M67, M68, M70)');
-ok(/steps:\[\{k:'delivery',n:'Pickup or delivery'\},\{k:'who',n:'Who you are'\}\]/.test(script), 'two steps: Pickup or delivery → Who you are (no Items, no Review step)');
+ok(/steps:\s*\[\s*\{\s*k:\s*'delivery',\s*n:\s*'Pickup or delivery'\s*\},\s*\{\s*k:\s*'who',\s*n:\s*'Who you are'\s*\}\s*\]/.test(script),'two steps: Pickup or delivery → Who you are (no Items, no Review step)');
 ok(!/_cartStepItems|shopCartQty/.test(script), 'the second "Items" screen is gone');
-ok(/quiet:true/.test(script), 'the checkout is quiet until the first try');
+ok(/quiet:\s*true/.test(script),'the checkout is quiet until the first try');
 run(`_ord={cart:true,lines:[{item_id:'1',name:'Poori',qty:1,price:50}],mode:''}`);
 const stepsSrc = script.slice(script.indexOf('function _cartStepsFor'), script.indexOf('function shopMode'));
-const guardFn = new Function('_ord', stepsSrc.match(/guard:function\(k\)\{[\s\S]*?\n    \},/)[0].replace('guard:function(k){', 'return function(k){').replace(/\},\s*$/, '}'));
+const guardFn = new Function('_ord', stepsSrc.match(/guard:\s*function\s*\(k\)\s*\{[\s\S]*?\n    \},/)[0].replace(/guard:\s*function\s*\(k\)\s*\{/, 'return function(k){').replace(/\},\s*$/, '}'));
 let g = guardFn({ lines: [{}], mode: '' });
 ok(/pickup or delivery/i.test(g('delivery')), 'nothing chosen → "Choose pickup or delivery"');
 g = guardFn({ lines: [{}], mode: 'pickup', loc: '' });
@@ -78,6 +81,7 @@ g = guardFn({ lines: [{}], mode: 'delivery', loc: 'x', contact: '', step: 'conta
 ok(/phone or email/i.test(g('who')), 'Who you are asks for a phone or email');
 const sf = read('app/step-flow.js');
 const flowCtx = { document: undefined, module: { exports: {} }, console }; flowCtx.globalThis = flowCtx; vm.createContext(flowCtx);
+flowCtx.esc = ctx.esc; /* step-flow.js uses the page's esc (app/helpers.js loads first) */
 vm.runInContext(sf, flowCtx);
 const SF = flowCtx.module.exports;
 let want = 'A delivery address is needed.';
@@ -92,7 +96,7 @@ ok(/needed!/.test(loud.footHTML()), 'a flow that is not quiet still says it at o
 
 console.log('\n— the dock (M72) and the receipt (M73)');
 ok(/class="shopdock"/.test(script) && /\.shopdock\.on\{ display:block; \}/.test(html), 'the basket total lives in a bottom dock, shown only when there is something in it');
-const listPos = script.indexOf("+ '<div id=\"p_list\">'"), offPos = script.indexOf('<div id="p_offers"></div>');
+const listPos = script.indexOf('<div id="p_list">'), offPos = script.indexOf('<div id="p_offers"></div>');
 ok(listPos > 0 && offPos > listPos, 'the totals box is BELOW the list in the page, so nothing above the list can move');
 ok(/Order #/.test(script) && /shop-receipt-total/.test(script) && /What happens next/.test(script) && /Waiting for the shop/.test(script), 'the receipt: order number, total, what happens next, status');
 ok(/\/my-orders/.test(script) && /shop-my-orders/.test(script), 'a "My orders" button reads the existing /my-orders route');
@@ -107,7 +111,7 @@ ok(run(`shopStatusWord('delivered')`) === 'Waiting for the shop' && run(`shopSta
 console.log('\n— the shared cart (M64, M69, M101)');
 const cc = { console, setTimeout: () => 0, clearTimeout() {}, Intl, Date, Math, JSON };
 cc.window = cc; cc.globalThis = cc; vm.createContext(cc);
-for (const f of ['engine/money.js', 'engine/offers.js', 'app/cart.js']) { try { vm.runInContext(read(f), cc, { filename: f }); } catch (e) { ok(false, 'could not load ' + f + ': ' + e.message); } }
+for (const f of ['app/helpers.js', 'engine/money.js', 'engine/offers.js', 'app/cart.js']) { try { vm.runInContext(read(f), cc, { filename: f }); } catch (e) { ok(false, 'could not load ' + f + ': ' + e.message); } }
 const CB = cc.CBCart || vm.runInContext('typeof CBCart!=="undefined"?CBCart:null', cc);
 if (!CB) ok(false, 'CBCart did not load');
 else {

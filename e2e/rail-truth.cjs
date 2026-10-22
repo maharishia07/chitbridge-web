@@ -37,7 +37,7 @@ for (const fn of ['cbAttachStage', 'cbAttachStaged', 'cbAttachUnstage', 'cbAttac
   kase('RAIL-51-' + fn, 'compose reaches ' + fn, callers(fn).length > 0, 'callers outside attach-ui.js: ' + JSON.stringify(callers(fn)), 'no caller on main: compose holds files in CC.files (ccAddFiles) and has its own send path — RAIL-47/48/49 are unreached');
 }
 kase('RAIL-51-defined', 'the four helpers exist in attach-ui.js', ['cbAttachStage', 'cbAttachStaged', 'cbAttachUnstage', 'cbAttachFlush'].every((n) => new RegExp('function ' + n + '\\b').test(att)), 'a helper is missing from attach-ui.js');
-kase('RAIL-51-own-path', 'compose has its own attach path today (ccAddFiles holds files; the send carries them)', /function ccAddFiles\(/.test(app) && /files:CC\.files\|\|\[\]/.test(app), 'ccAddFiles / files:CC.files not found in app.html');
+kase('RAIL-51-own-path', 'compose has its own attach path today (ccAddFiles holds files; the send carries them)', /function ccAddFiles\(/.test(app) && /files:\s*CC\.files\s*\|\|\s*\[\]/.test(app) /* spaced since the mechanical pass */, 'ccAddFiles / files:CC.files not found in app.html');
 kase('RAIL-51-one-rule', 'compose asks the one acceptance rule (cbAttachAccept) for each file', /function ccAddFiles[\s\S]{0,600}cbAttachAccept\(/.test(app), 'ccAddFiles does not call cbAttachAccept');
 
 const c1 = testBody(chits, "[CHIT-01] CREATE");
