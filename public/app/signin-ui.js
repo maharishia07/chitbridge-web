@@ -245,14 +245,14 @@
   var SAME_REFUSAL = /NO_ACCOUNT|SIGNIN_REFUSED| (401|403|404)$/;
 
   /** the sentence for a refused sign-in call: the server's own wins; unknown account, wrong secret and locked all read as W.refused */
-  function refusalSentence(reply, words, engine) {
+  function refusalSentence(reply, sentences, engine) {
     var body = reply.body || {};
     /* the server's own sentence wins (SIGNIN_REFUSED, DEVICE_REVOKED, AMBIGUOUS_NAME, …) — never the generic "wrong code" */
     if (body.code && body.code !== 'NO_ACCOUNT' && body.message) return String(body.message);
     /* a 429 is the line being busy, not a fact about the account (an account lockout now answers SIGNIN_REFUSED) */
-    if (reply.status === 429) return words.tooMany;
+    if (reply.status === 429) return sentences.tooMany;
     /* an old server, or none: unknown account, wrong secret and locked all read the same — never "no account here" */
-    if (SAME_REFUSAL.test(body.code + ' ' + reply.status)) return words.refused;
+    if (SAME_REFUSAL.test(body.code + ' ' + reply.status)) return sentences.refused;
     return engine.refusal({ status: reply.status, message: body.message || body.error });
   }
 
