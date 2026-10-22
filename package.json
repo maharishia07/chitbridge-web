@@ -4,9 +4,6 @@
   "description": "Chit and Bridge — React Web Application",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
     "check:syntax": "node scripts/check-syntax.js",
     "check:engines": "node ../chitbridge-engines/tools/adopt.cjs . --check",
     "check:pins": "node e2e/engines-pins-agree.cjs",
@@ -55,12 +52,5 @@
     "react-router-dom": "^6.20.0",
     "axios": "^1.6.2",
     "react-swipeable": "^7.0.0"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.2.0",
-    "vite": "^5.0.0",
-    "tailwindcss": "^3.3.6",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32"
   }
 }
