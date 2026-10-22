@@ -208,7 +208,7 @@ const walk = async (w) => {
     return { ok: /TAX INVOICE/.test(text) && /ABN 51824753556/.test(text) && /GST 10%/.test(text) && !/CGST/.test(text) && !/HSN/.test(text) && /Thanks for shopping at Austore/.test(text), saw: text.slice(0, 160) };
   });
   await w.step('A20', 'W27 · Save → one PUT of the vault merge-patch carrying the `signature|` section (the rows by tag, the order, the paper)', async () => {
-    const before = puts().length; await page.selectOption('[data-testid="pr-paper"]', '58'); await page.waitForTimeout(1600);   /* WALK-REG 2026-10-16: autosave on change, no Save click */
+    const before = puts().length; await page.selectOption('[data-testid="pr-paper"]', '58'); await page.click('[data-testid="pr-save"]'); await page.waitForTimeout(1200);   /* PRINT-1 slice 0: Save + confirm, no autosave */
     const put = puts().slice(before)[0], b = (put && put.body) || {}, sec = b.patch && b.patch.sections && b.patch.sections['signature|'];
     const rows = sec && sec.rows ? sec.rows : {};
     return { ok: puts().length === before + 1 && !!sec && rows['t:footer'] && rows['t:footer'].value === 'Thanks for shopping at Austore' && rows['t:paper'] && rows['t:paper'].value === '58' && /trade_name/.test((rows['t:order'] || {}).value || ''), saw: JSON.stringify(b).slice(0, 180) };

@@ -56,6 +56,14 @@ var CBPrint = (function () {
   function firstFilled() {
     return Array.prototype.slice.call(arguments).filter(Boolean)[0] || '';
   }
+  /** P15 (walk 22 Oct): free text never prints a run of spaces ("Thank You  & Visit Again") — every run of white space becomes one space */
+  function tidySpaces(text) {
+    return String(text == null ? '' : text).replace(/[\s ]{2,}/g, ' ');
+  }
+  /** P7: a logo exists only when its address is filled in; an empty logo is never ticked and never prints */
+  function hasLogo(model) {
+    return !!String(model.lines.logo || '').trim();
+  }
   function shopCountry() {
     var shop = held.me || {};
     return String(shop.country || shop.country_code || '').toUpperCase();
@@ -118,7 +126,7 @@ var CBPrint = (function () {
       address: firstFilled(signatureRows.address, identity.address, shop.address),
       phone: firstFilled(signatureRows.phone, identity.phone, shop.phone),
       email: firstFilled(signatureRows.email, identity.email, shop.email),
-      footer: signatureRows.footer || '',
+      footer: tidySpaces(signatureRows.footer),
       logo: signatureRows.logo || ''
     };
   }
@@ -133,12 +141,22 @@ var CBPrint = (function () {
     var knownPaper = PAPERS.some(function (paper) {
       return paper[0] === signatureRows.paper;
     });
-    return { lines: lineValues(signatureRows, identity, shop), shown: shown, paper: knownPaper ? signatureRows.paper : DEFAULT_PAPER };
+    var model = { lines: lineValues(signatureRows, identity, shop), shown: shown, paper: knownPaper ? signatureRows.paper : DEFAULT_PAPER };
+    dropEmptyLogo(model);
+    return model;
+  }
+  /** P7: take the logo off the shown order while there is no logo (a tick saved earlier with an empty logo is cleared on load and on save) */
+  function dropEmptyLogo(model) {
+    if (hasLogo(model)) return;
+    model.shown = model.shown.filter(function (tag) {
+      return tag !== 'logo';
+    });
   }
   /** the model back to vault rows (the section the merge-patch writes) */
   function rowsOf(model) {
+    dropEmptyLogo(model);
     var rows = LINES.map(function (line) {
-      return { name: lineLabel(line[0]), tag: line[0], value: model.lines[line[0]] || '' };
+      return { name: lineLabel(line[0]), tag: line[0], value: tidySpaces(model.lines[line[0]]) };
     });
     rows.push({ name: 'Order', tag: 'order', value: model.shown.join(',') });
     rows.push({ name: 'Paper', tag: 'paper', value: model.paper });
@@ -157,7 +175,7 @@ var CBPrint = (function () {
   }
   /** one shown line as the renderer paints it at the head of the paper (null when the line is empty) */
   function headLineOf(model, tag) {
-    var value = model.lines[tag];
+    var value = tidySpaces(model.lines[tag]);
     if (!value) return null;
     if (tag === 'tax_id') return { tag: tag, text: taxIdWord(shopCountry()) + ' ' + value, only_taxed: true };
     if (tag === 'phone') return { tag: tag, text: 'Ph ' + value };
@@ -176,7 +194,7 @@ var CBPrint = (function () {
   /** what the renderer paints at the head of the paper (R25 · R27): the logo on top, the required lines in their fixed order, then the shop's
       ticked lines in its order — the tax id under the pack's word; the footer is never a head line */
   function headLinesOf(model) {
-    var logo = model.shown.indexOf('logo') >= 0 ? ['logo'] : [];
+    var logo = model.shown.indexOf('logo') >= 0 && hasLogo(model) ? ['logo'] : [];
     var fixed = FIXED_HEAD.filter(function (tag) {
       return isRequired(tag) || model.shown.indexOf(tag) >= 0;
     });
@@ -194,9 +212,26 @@ var CBPrint = (function () {
   }
 
   /* ── paint ── */
+  /** P7: the sentence beside the greyed Logo tick (hidden once a logo is typed) */
+  function logoHintHTML(isShown) {
+    return '<span class="sub" data-testid="pr-logo-hint"' + (isShown ? '' : ' hidden') + '>' + esc(tx('Add a logo first')) + '</span>';
+  }
+  /** P7: typing in the Logo line switches its tick on or off in place (a repaint would take the cursor away) */
+  function syncLogoTick() {
+    var box = document.querySelector('[data-pr-show="logo"]'),
+      hint = document.querySelector('[data-testid="pr-logo-hint"]'),
+      isLogoless = !hasLogo(held.model);
+    dropEmptyLogo(held.model);
+    if (box) {
+      box.disabled = isLogoless;
+      if (isLogoless) box.checked = false;
+    }
+    if (hint) hint.hidden = !isLogoless;
+  }
   /** the "shows on the bill" tick of an optional line (a required line has none — its group heading says it always prints) */
   function tickHTML(tag) {
-    var isOn = held.model.shown.indexOf(tag) >= 0;
+    var isOn = held.model.shown.indexOf(tag) >= 0,
+      isLogoless = tag === 'logo' && !hasLogo(held.model);
     /* the group heading says what the tick does — no words repeated beside every box; the name rides on aria-label / title */
     return (
       '<label class="tick" title="' +
@@ -207,11 +242,14 @@ var CBPrint = (function () {
       esc(tag) +
       '"' +
       (isOn ? ' checked' : '') +
+      (isLogoless ? ' disabled' : '') +
       ' aria-label="' +
       esc(tx('Print this line')) +
       ': ' +
       esc(lineLabel(tag)) +
-      '"></label>'
+      '">' +
+      (tag === 'logo' ? logoHintHTML(isLogoless) : '') +
+      '</label>'
     );
   }
   /** one ↑ / ↓ button that moves a line in the order (direction −1 or +1) */
@@ -338,9 +376,10 @@ var CBPrint = (function () {
       optionalTags().map(lineRowHTML).join('') +
       paperRowHTML() +
       '<div class="err" id="pr_err" data-testid="pr-err" style="margin-top:8px"></div>' +
-      '<button type="button" class="act" id="pr-save" data-testid="pr-save" hidden style="display:none;margin-top:8px">' +
+      '<div class="pr-savebar" data-testid="pr-savebar" style="position:sticky;bottom:0;z-index:5;margin-top:8px;padding:8px 0;background:var(--bg,#fff)">' +
+      '<button type="button" class="act" id="pr-save" data-testid="pr-save">' +
       esc(tx('Save')) +
-      '</button>' +
+      '</button></div>' +
       '<p class="sub"><a class="sx-link" href="/settings.html#/shop" data-testid="pr-shop-link">' +
       esc(tx('Your business')) +
       ' ›</a></p></div>'
@@ -424,15 +463,9 @@ var CBPrint = (function () {
       '<h1 class="sx-h" data-testid="sx-title">' + esc(tx('Print setup')) + '</h1>' + '<div class="pr-grid">' + editorHTML() + previewHTML() + '</div>';
     held.frame = document.getElementById('pr_frame');
     held.frame.addEventListener('load', tell);
-    host.onclick = function (event) {
-      onClick(event);
-      if (event.target.closest && event.target.closest('[data-pr-move]')) saveSoon();
-    };
+    host.onclick = onClick;
     host.oninput = onInput;
-    host.onchange = function (event) {
-      onInput(event);
-      saveSoon();
-    };
+    host.onchange = onInput; /* Save + confirm, no autosave (settings rule): nothing is stored until Save is pressed */
     document.getElementById('pr-save').onclick = save;
     document.getElementById('pr-preview-open').onclick = openPreview;
     document.getElementById('pr-print').onclick = printSample;
@@ -476,6 +509,7 @@ var CBPrint = (function () {
     if (target.hasAttribute('data-pr-line')) {
       model.lines[target.getAttribute('data-pr-line')] = target.value;
       held.dirty = true;
+      if (target.getAttribute('data-pr-line') === 'logo') syncLogoTick();
       return tellSoon();
     }
     if (target.hasAttribute('data-pr-show')) return onShowTick(target);
@@ -519,7 +553,7 @@ var CBPrint = (function () {
     return {
       cb_preview: true,
       head: headLinesOf(model),
-      footer: model.shown.indexOf('footer') >= 0 ? model.lines.footer || '' : '',
+      footer: model.shown.indexOf('footer') >= 0 ? tidySpaces(model.lines.footer) : '',
       paper: model.paper,
       kind: isTaxed ? 'tax' : 'cash',
       currency: previewCurrency(shop, pack),
@@ -544,29 +578,6 @@ var CBPrint = (function () {
       section = sectionOfType(sections, 'signature');
     if (section) section.rows = rowsOf(held.model);
     else sections.push({ type: 'signature', label: '', rows: rowsOf(held.model) });
-  }
-  /** autosave (drift walk 16 Oct): a changed field or tick saves after a short pause; saves never overlap — one waits for the one in flight */
-  function saveSoon() {
-    clearTimeout(held.saveTimer);
-    held.saveTimer = setTimeout(function () {
-      if (held.saving) {
-        held.saveAgain = true;
-        return;
-      }
-      held.saving = true;
-      Promise.resolve(save()).then(
-        function () {
-          held.saving = false;
-          if (held.saveAgain) {
-            held.saveAgain = false;
-            saveSoon();
-          }
-        },
-        function () {
-          held.saving = false;
-        }
-      );
-    }, 600);
   }
   /** Save: hold the rows, send the patch through CBAction; a stale version (409) shows the vault's Reload sentence */
   function save(source) {
