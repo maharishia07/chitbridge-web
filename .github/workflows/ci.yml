@@ -82,6 +82,8 @@ jobs:
         run: node e2e/process-map.cjs
       - name: Docs beside the code have not drifted (MODULES.md; regenerate with node tools/gen-modules-doc.cjs)
         run: node e2e/docs-guard.cjs
+      - name: The seam index and its drift check do what they say (tools/seams.cjs, DOC-68)
+        run: node e2e/seams-guard.cjs
       # ⭐ READ-GUARD (DISCIPLINES §6, 15 Oct): every §6 rule bites once on a fixture, then the guard judges ONLY the code this push/PR
       # touched — a hard limit crossed, a NEW cryptic name, a new empty catch, a module with no header / CARD line / test row (trace.json,
       # built fresh from KG1), a file scoring worse than readability.ratchet.json. Today's backlog blocks nobody: untouched code is not judged.
@@ -120,7 +122,7 @@ jobs:
 
   seams-drift:
     # DOC-68 (docs truth): docs/SEAMS.md is GENERATED (node C:/dev/seams.cjs --write), so a drift check fails the build the way MODULES.md does.
-    # ONE copy of the logic: tools/vendor/seams.cjs in the web repo (this repo).
+    # ONE copy of the logic: tools/seams.cjs in the web repo (this repo).
     # It reads only THIS repo's checkout, so a change in the sibling repo can never turn this red. Refresh: node C:/dev/seams.cjs --write (LF checkout).
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -129,8 +131,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: docs/SEAMS.md has not drifted (node tools/vendor/seams.cjs --check --repo web)
-        run: node tools/vendor/seams.cjs --check --repo web
+      - name: docs/SEAMS.md has not drifted (node tools/seams.cjs --check --repo web)
+        run: node tools/seams.cjs --check --repo web
 
   pr-checklist:
     # ⭐ READ-GUARD (DISCIPLINES §6): a PR's body carries the §6 checklist WITH NUMBERS (.github/pull_request_template.md), filled from
