@@ -1633,6 +1633,43 @@ function renderLoginGate(shop) {
       : '') +
     '</div>';
 }
+/* ⭐ API-3 S36 · ONE KEY PER ATTEMPT. order/start and order/confirm need an Idempotency-Key, and the server answers a key once
+   for this shop and this contact. The SAME key goes with every send of the same body (a second tap, a retry after a lost
+   answer), so the order is made once and the retry gets the first answer. An answer that settles the attempt ends it, so the
+   next press (Resend code, a changed cart) is a new attempt with a new key. */
+var _ATTEMPTS = {};
+/** attemptKey(door, sent) → the key for this send: the one held while the body is unchanged, else a new one */
+function attemptKey(door, sent) {
+  var held = _ATTEMPTS[door];
+  if (!held || held.sent !== sent)
+    held = _ATTEMPTS[door] = { sent: sent, key: window.CBOffline ? CBOffline._uuid() : Date.now().toString(36) + Math.random().toString(36).slice(2) };
+  return held.key;
+}
+/** attemptAnswered(door, res) → words to show while the first send is still running, else null; a settled answer ends the attempt */
+function attemptAnswered(door, res) {
+  if (res.status === 409 && res.j && res.j.code === 'IDEMPOTENCY_IN_PROGRESS') return 'Still sending. Wait a moment, then try again.';
+  if (res.status < 500) delete _ATTEMPTS[door]; /* a 5xx or a lost answer keeps the key: the retry is the same attempt */
+  return null;
+}
+/** moneyPost(door, path, payload) → { status, j }: a POST to a money door carrying this attempt's key; "still running" reads as plain words */
+function moneyPost(door, path, payload) {
+  var sent = JSON.stringify(payload);
+  return fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Idempotency-Key': attemptKey(door, sent) },
+    body: sent
+  })
+    .then(function (reply) {
+      return reply.json().then(function (j) {
+        return { status: reply.status, j: j };
+      });
+    })
+    .then(function (res) {
+      var still = attemptAnswered(door, res);
+      if (still) res.j = Object.assign({}, res.j, { message: still });
+      return res;
+    });
+}
 function sfLoginStart() {
   if (_lg.busy) return;
   _lg.contact = (el('lg_contact').value || '').trim();
@@ -1644,16 +1681,7 @@ function sfLoginStart() {
   }
   _lg.busy = true;
   renderLoginGate(_SHOPDATA.shop);
-  fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + '/order/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: _lg.contact })
-  })
-    .then(function (reply) {
-      return reply.json().then(function (j) {
-        return { status: reply.status, j: j };
-      });
-    })
+  moneyPost('login-start', '/order/start', { identifier: _lg.contact })
     .then(function (res) {
       _lg.busy = false;
       if (res.status !== 200) {
@@ -2632,16 +2660,7 @@ function orderStart() {
   }
   _ord.busy = true;
   orderRender();
-  fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + '/order/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: _ord.contact, name: _ord.name })
-  })
-    .then(function (reply) {
-      return reply.json().then(function (j) {
-        return { status: reply.status, j: j };
-      });
-    })
+  moneyPost('order-start', '/order/start', { identifier: _ord.contact, name: _ord.name })
     .then(function (res) {
       _ord.busy = false;
       if (res.status !== 200) {
@@ -2880,16 +2899,7 @@ function _orderPost(body) {
     it = e ? e.it : null;
   _ord.busy = true;
   orderRender();
-  fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE) + '/order/confirm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-    .then(function (reply) {
-      return reply.json().then(function (j) {
-        return { status: reply.status, j: j };
-      });
-    })
+  moneyPost('confirm', '/order/confirm', body)
     .then(function (res) {
       if (res.status !== 200) {
         _ord.busy = false;
