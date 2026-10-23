@@ -117,7 +117,9 @@
   .cl-detail .rd-sides{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
   .cl-detail .rd-side{ border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:8px 10px; min-width:0; overflow-wrap:anywhere; }
   .cl-detail .why-open{ margin-top:5px; padding-top:4px; border-top:1px solid var(--line-2,#efece4); }
-  .cl-detail table.cmp-parts{ width:100%; border-collapse:collapse; margin:6px 0; }
+  .cl-detail table.cmp-parts{ width:100%; border-collapse:collapse; margin:6px 0; table-layout:fixed; }
+  .cl-detail table.cmp-parts th:nth-child(1){ width:24%; } .cl-detail table.cmp-parts th:nth-child(4){ width:20%; }
+  .cl-detail *{ min-width:0; }
   .cl-detail table.cmp-parts th, .cl-detail table.cmp-parts td{ text-align:left; padding:4px 6px; border-bottom:1px solid var(--line-2,#efece4); vertical-align:top; overflow-wrap:break-word; }
   .cl-detail table.cmp-parts th{ color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); text-transform:uppercase; letter-spacing:0; }
   .cl-detail table.cmp-parts td:last-child, .cl-detail table.cmp-parts th:last-child{ white-space:nowrap; }   /* "Changes" never breaks mid-word at 390 px */
