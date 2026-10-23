@@ -36,6 +36,8 @@ fs.mkdirSync(SHOTS, { recursive: true });
 const SHOP_A = { email: 'wt-shop-a@local.test', name: 'wt-shop-a' }, SHOP_B = { email: 'wt-shop-b@local.test', name: 'wt-shop-b' };
 const COVER = '#cb-shop-switched', SENTENCE = 'You signed in as another shop in another tab. Reload to continue.';
 const T = (s) => '[data-testid="' + s + '"]';
+/** a text no earlier run saved, so each save is a real change */
+const fresh = (s) => s + Date.now();   // clock-ok: a unique text suffix, not a business date
 const results = [];
 let shotNo = 0;
 
@@ -110,7 +112,7 @@ async function newCtx(browser) {
   try {
     /* ── Part 1 · the switch ── */
     let C = await newCtx(browser); const A = await C.open('A'), B = await C.open('B');
-    await signIn(A, SHOP_A.email); await openPrint(A, 'Tab A edit ' + Date.now());
+    await signIn(A, SHOP_A.email); await openPrint(A, fresh('Tab A edit '));
     const shopA = await shopOfSess(A), shopsOnLoad = await A.evaluate(() => !!window.CBDevice);
     record('S1 · A on Print setup as shop A', !!shopA && shopsOnLoad && !(await covered(A)), 'shop ' + shopA + ' · CBDevice loaded ' + shopsOnLoad + ' · no cover');
     await shot(A, 'A on Print setup, footer edited, not saved');
@@ -129,7 +131,7 @@ async function newCtx(browser) {
     await A.locator(COVER + ' button').click(); await A.waitForSelector(T('pr-save'), { timeout: 25000 });
     const nowShop = await shopOfSess(A), noCover = !(await covered(A));
     const barText = await A.locator('body').innerText();
-    await A.fill(T('pr-in-footer'), 'After reload ' + Date.now()); await A.dispatchEvent(T('pr-in-footer'), 'change');
+    await A.fill(T('pr-in-footer'), fresh('After reload ')); await A.dispatchEvent(T('pr-in-footer'), 'change');
     const mark2 = C.log.length; await pressSave(A);
     const w2 = writesOf(C.log.slice(mark2), 'A'), v2 = { a: await vaultOf(SHOP_A), b: await vaultOf(SHOP_B) };
     record('S4 · A: Reload → A acts as shop B; its Save writes B only', nowShop === shopB && noCover && w2.length >= 1 && w2.every((x) => x.status === 200) && v2.b !== before.b && v2.a === before.a && /wt-shop-b/.test(barText),
@@ -141,9 +143,9 @@ async function newCtx(browser) {
     C = await newCtx(browser); let P = await C.open('P');
     await signIn(P, SHOP_A.email);
     let bad = [], saved = 0;
-    await openPrint(P, 'F1 one ' + Date.now()); await pressSave(P); saved++;
+    await openPrint(P, fresh('F1 one ')); await pressSave(P); saved++;
     await P.reload(); await P.waitForSelector(T('pr-save'), { timeout: 25000 }); bad.push(await covered(P));
-    for (const n of [2, 3]) { await P.fill(T('pr-in-footer'), 'F1 save ' + n + ' ' + Date.now()); await P.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(P); saved++; bad.push(await covered(P)); }
+    for (const n of [2, 3]) { await P.fill(T('pr-in-footer'), 'F1 save ' + n + fresh(' ')); await P.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(P); saved++; bad.push(await covered(P)); }
     const w = writesOf(C.log, 'P');
     record('F1 · one tab: sign in, reload, three Saves', !bad.some(Boolean) && w.length >= 3 && w.every((x) => x.status === 200), 'cover seen ' + bad.some(Boolean) + ' · writes ' + w.map((x) => x.status).join(','));
     await shot(P, 'F1 after the third Save, no cover');
@@ -151,9 +153,9 @@ async function newCtx(browser) {
 
     C = await newCtx(browser); const T1 = await C.open('T1'), T2 = await C.open('T2');
     await signIn(T1, SHOP_A.email); await openPrint(T1, null);
-    await signIn(T2, SHOP_A.email); await openPrint(T2, 'F2 tab two ' + Date.now());   // a second sign-in of the SAME shop rewrites cb_sess with a new token
+    await signIn(T2, SHOP_A.email); await openPrint(T2, fresh('F2 tab two '));   // a second sign-in of the SAME shop rewrites cb_sess with a new token
     await pressSave(T2);
-    await T1.fill(T('pr-in-footer'), 'F2 tab one ' + Date.now()); await T1.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(T1);
+    await T1.fill(T('pr-in-footer'), fresh('F2 tab one ')); await T1.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(T1);
     const c1 = await covered(T1), c2 = await covered(T2), w1 = writesOf(C.log, 'T1'), w2b = writesOf(C.log, 'T2');
     record('F2 · two tabs of the SAME shop both Save', !c1 && !c2 && w1.length >= 1 && w2b.length >= 1 && w1.concat(w2b).every((x) => x.status === 200 || x.status === 409),
       'cover T1 ' + c1 + ' T2 ' + c2 + ' · writes T1 ' + w1.map((x) => x.status) + ' T2 ' + w2b.map((x) => x.status) + ' (409 = the vault\'s own stale-version answer, not the stop)');
@@ -162,7 +164,7 @@ async function newCtx(browser) {
     await T2.goto(WEB + '/app.html'); await T2.waitForTimeout(1500); await T2.evaluate(() => logoutNow());
     await T2.waitForTimeout(800); const afterOut = await covered(T1);
     await signIn(T2, SHOP_A.email); await T1.waitForTimeout(800);
-    const m3 = C.log.length; await T1.fill(T('pr-in-footer'), 'F2 after out/in ' + Date.now()); await T1.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(T1);
+    const m3 = C.log.length; await T1.fill(T('pr-in-footer'), fresh('F2 after out/in ')); await T1.dispatchEvent(T('pr-in-footer'), 'change'); await pressSave(T1);
     const w3 = writesOf(C.log.slice(m3), 'T1');
     record('F2b · other tab signs out then in as the same shop; this tab still Saves', !afterOut && !(await covered(T1)) && w3.length >= 1,
       'cover after sign-out ' + afterOut + ' · after sign-in ' + (await covered(T1)) + ' · writes from T1 ' + w3.map((x) => x.status) + ' (a 401 is the api ending the old session, not the stop)');
@@ -171,11 +173,11 @@ async function newCtx(browser) {
     C = await newCtx(browser); P = await C.open('P');
     await signIn(P, SHOP_A.email); await openPrint(P, null);
     await P.goto(WEB + '/app.html'); await P.waitForTimeout(1500); await P.evaluate(() => logoutNow());
-    await signIn(P, SHOP_A.email); await openPrint(P, 'F3 same tab again ' + Date.now()); const m4 = C.log.length; await pressSave(P);
+    await signIn(P, SHOP_A.email); await openPrint(P, fresh('F3 same tab again ')); const m4 = C.log.length; await pressSave(P);
     const w4 = writesOf(C.log.slice(m4), 'P'), c4 = await covered(P);
     record('F3 · sign out then in again, same tab, same shop', !c4 && w4.length >= 1 && w4.every((x) => x.status === 200), 'cover ' + c4 + ' · writes ' + w4.map((x) => x.status));
     await P.goto(WEB + '/app.html'); await P.waitForTimeout(1500); await P.evaluate(() => logoutNow());
-    await signIn(P, SHOP_B.email); await openPrint(P, 'F3 same tab other shop ' + Date.now()); const m5 = C.log.length; await pressSave(P);
+    await signIn(P, SHOP_B.email); await openPrint(P, fresh('F3 same tab other shop ')); const m5 = C.log.length; await pressSave(P);
     const w5 = writesOf(C.log.slice(m5), 'P'), c5 = await covered(P);
     record('F3b · same tab signs in as the OTHER shop (no second tab), then Saves', !c5 && w5.length >= 1 && w5.every((x) => x.status === 200), 'cover ' + c5 + ' · writes ' + w5.map((x) => x.status));
     await shot(P, 'F3b same tab, other shop, saved, no cover');

@@ -43,6 +43,9 @@ const SKIP = {
      checkout is read-only and the vendor step has no engines repo to copy from, so the breaks never reach the page. It only read
      "4/4 caught" in the first cloud run because till-two-sided itself was red. A dev PC with both repos runs it. */
   'till-two-sided-breaks.cjs': 'edits the api master and re-vendors — read-only api checkout on a runner (dev PC only)',
+  /* SEC-85 (web #374): two real tabs signed in to two shops against the real api and its database; the file itself refuses anything but a
+     localhost stack. The runner has no api on :3100 and no database (ECONNREFUSED). Run it on a dev PC after local-stack.sh up. */
+  'walk-shop-switch-tabs.cjs': 'needs the real local stack (api :3100 + database, two shops signed in) — the runner has neither (dev PC only)',
 };
 const KNOWN = {
   'walk-bill.cjs': 'BF1 open: the walk wants "Poori has no tax rate" on screen; M40 puts the names behind Fix › — Athi decides (TEST-LOG BF1)',
