@@ -848,5 +848,36 @@ console.log('\n21 · each adopted engine has ONE home in web (public/engine)');
   else pass('no page loads an adopted engine from app/');
 }
 
+// ── 22 · a shared popup keeps its header: no page scrolls the frame (UX-112 / UX-113) ────────────────────────────────────────
+/**
+ * Athi, 2026-10-23 (Country Lab row detail): the title and the x scrolled away with the text. country-lab.html put overflow:auto on
+ * .lk-pop.cl-detail, so the whole frame scrolled. The rule (DISCIPLINES §3, "the header stays"): only app/lab-kit.css styles the frame, and
+ * there the BODY (.lk-pop-body) scrolls, never the frame. A page may size or colour its popup; a page that gives the frame its own overflow
+ * fails here. e2e/walk-country-lab.cjs (step D5) scrolls a real popup and checks the header is still in view.
+ */
+console.log('\n22 · a shared popup keeps its header (no overflow on the .lk-pop frame outside app/lab-kit.css)');
+{
+  const OWNER = path.join(WEB, 'app', 'lab-kit.css');
+  const FRAME = /\.lk-pop(?![\w-])/;   /* the frame itself: not .lk-pop-body, -x or -back */
+  const files = [];
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((e) => {
+    const p = path.join(d, e.name);
+    if (e.isDirectory()) { if (e.name !== 'node_modules') walk(p); } else if (/\.(html|css)$/.test(e.name) && p !== OWNER) files.push(p);
+  });
+  walk(WEB);
+  const bad = [];
+  files.forEach((p) => {
+    const src = fs.readFileSync(p, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
+    for (const m of src.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const frame = m[1].split(',').some((s) => FRAME.test(s.trim().split(/\s+/).pop() || ''));
+      if (!frame || !/(^|;|\s)overflow(-y)?\s*:\s*(auto|scroll)/.test(m[2])) continue;
+      const at = m.index + m[1].search(/\S/);
+      bad.push(path.relative(WEB, p) + ':' + src.slice(0, at).split('\n').length + ' ' + m[1].trim());
+    }
+  });
+  if (bad.length) fail(bad.length + ' page rule(s) scroll the shared popup frame, so its title and x scroll away (only .lk-pop-body may scroll, in app/lab-kit.css): ' + bad.join(' · '));
+  else pass(files.length + ' pages and stylesheets: none gives the .lk-pop frame an overflow; the body scrolls, the header stays');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);
