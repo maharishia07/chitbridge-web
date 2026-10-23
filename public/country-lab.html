@@ -110,7 +110,7 @@
   details.why > div, details.why > ul{ margin-top:3px; }
   /* CTRY-49: the verdict line ("Changes: ₹ → A$ · same rule: 2 decimals" / "Same") and the row's popup */
   .vline b{ font-weight:700; } .vline.ok{ color:var(--ok-2,#2c7a43); } .vline.bad{ color:var(--bad,#b4453f); } .vline.bad b{ color:var(--bad,#b4453f); }
-  .lk-pop.cl-detail{ width:min(720px,94vw); max-height:88vh; overflow:auto; font-size:var(--fs-2,12.5px); }
+  .lk-pop.cl-detail{ width:min(720px,94vw); max-height:88vh; font-size:var(--fs-2,12.5px); }   /* UX-112: no overflow on the frame; lab-kit.css scrolls the body */
   .cl-detail .lk-pop-body{ padding:6px 16px 14px; }
   .cl-detail p{ margin:8px 0; }
   .cl-detail h4{ margin:0 0 4px; font-size:var(--fs-3,14px); }
@@ -372,10 +372,10 @@ function fromMinor(m, c) {
 function monthName(m) {
   return monthNames('long')[Number(m) - 1] || String(m);
 }
-/** a currency's symbol from the engine's locale layer; the code when it cannot say */
+/** the sign a BILL prints for a currency (CBLocale.moneySign: ₹ · A$ · S$ · RM), whatever this reader's locale; the code when it cannot say (CTRY-51) */
 function symbolOf(code) {
   try {
-    return CBLocale.symbol(code) || code;
+    return CBLocale.moneySign(code) || code;
   } catch (failure) {
     if (window.cbQuiet) window.cbQuiet('country-lab:symbol', failure); /* the reader is missing: the row shows the code, still true */
     return code;

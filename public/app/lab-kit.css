@@ -44,7 +44,8 @@ html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-fami
 .lk-btn-go{background:var(--green,#16693f);border-color:var(--green,#16693f);color:var(--on-accent,#fff)}
 .lk-btn-danger{background:var(--red-i,#8e3517);border-color:var(--red-i,#8e3517)}
 .lk-pop-x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--ink,#1d1b16);min-width:36px;min-height:36px}
-.lk-pop-body{flex:1;min-height:0;display:flex;flex-direction:column}
+/* UX-112: the frame never scrolls, the body does: the title and the x stay in view (a list mounted inside still scrolls in its own .cbl-list) */
+.lk-pop-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto}
 /* a lab page may carry its own .nav (the Offer Lab's step bar): the frame's sidebar menu keeps its own spacing whatever the page defines */
 .cbsk .side .nav{justify-content:flex-start;align-items:stretch;padding:10px 8px;border-top:0;gap:2px}
 .cbsk .side .nav-group{text-align:left}
