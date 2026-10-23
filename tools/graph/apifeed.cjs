@@ -3,7 +3,8 @@
  *
  * Athi, 2026-10-23: "create feedgraph and the other one and will see which one should be useful". This is candidate A: the KG1 graph
  * (graph.cjs) widened, never a second graph. graph.cjs calls feed() once, after the route nodes exist and before the graph is written.
- * Everything here is READ from generated files; nothing is typed by hand.
+ * The api registers and test results are READ from generated files. The one hand-written source is the lessons audit (cb-api writes it
+ * by hand): its verdicts are the audit's word, so a file it merely names is a `mentions` edge (via 'audit'), and only a test / tool / CI file is `enforced-by`.
  *
  *   api docs/api-register.json                    route nodes gain `reg`: status · 13 columns · human sign-off · owner_area · declared statuses
  *   api docs/contracts/api-error-tests.json       route → test (the api-problem sweep that names the route's file)  via `error-tests`
@@ -13,7 +14,9 @@
  *   api docs/error-codes.json                     `errcode` nodes · route → errcode `returns` when the route's own text names the code
  *   HOME docs/29-…/tests/TEST-LIBRARY.json        test nodes gain level · type · runner · owner
  *   HOME PM/API-LESSONS-AUDIT-*.md                `lesson` nodes (status ADDRESSED / RULE ONLY / NOT ADDRESSED) → `enforced-by` the check it
- *                                                 names (a file that exists) — or `gap` when nothing fails if the lesson is forgotten
+ *                                                 names when that file runs in CI (tests/ · tools/ · e2e/ · .github/ · a scanned test), else `mentions`
+ *                                                 (via 'audit'); `gap` when nothing fails if the lesson is forgotten; a partly lesson is counted apart
+ * Proof strength travels on the tested-by edge's `via`: error-tests-refusal (only 401/403/500) and http-prefix (a path-prefix guess) are WEAK.
  *
  * Static and offline. A route listed in a register that the scan cannot find (or the reverse) is counted in meta.apiFeed, never dropped.
  * Each source is one small function below; feed() runs them in the order the notes are read.
@@ -49,30 +52,73 @@ function isFile(file, note) {
   }
 }
 
-/** the audit's verdict cell → 'not-addressed' | 'rule-only' | 'addressed' | 'unknown' */
+/** the audit's verdict cell → 'not-addressed' | 'rule-only' | 'addressed' | 'unknown' (bold markers are ignored) */
 function verdictClass(status) {
-  if (/^NOT ADDRESSED/.test(status)) return 'not-addressed';
-  if (/^RULE ONLY/.test(status)) return 'rule-only';
-  if (/^ADDRESSED/.test(status)) return 'addressed';
+  const plain = status.replace(/\*/g, '').trim();
+  if (/^NOT ADDRESSED/.test(plain)) return 'not-addressed';
+  if (/^RULE ONLY/.test(plain)) return 'rule-only';
+  if (/^ADDRESSED/.test(plain)) return 'addressed';
   return 'unknown';
 }
 
-/** one audit table line → { id, ledger, text, status, verdict, partial, by } ; null when the line is not a lesson row */
-function parseLessonLine(line) {
-  const idCell = /^\|\s*(\d+[a-z]?|defect)\s*\|/.exec(line);
-  if (!idCell) return null;
-  const cells = line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((cell) => cell.trim());
-  if (cells.length < 5) return null;
-  const status = cells[3];
-  const verdict = verdictClass(status);
-  const partial = verdict === 'addressed' && /\(partly\)|\/ RULE ONLY|RULE ONLY \(/.test(status);
-  return { id: cells[0], ledger: cells[1], text: cells[2], status, verdict, partial, by: cells.slice(4).join('|') };
+/** the cells of one markdown table line */
+const cellsOf = (line) => line.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map((cell) => cell.trim());
+
+/** the table header line → { status, by } column positions, or null when no header names both a Status and a "By what" column */
+function columnsOf(markdown) {
+  for (const line of markdown.split(/\r?\n/)) {
+    if (!/^\|/.test(line)) continue;
+    const names = cellsOf(line).map((cell) => cell.replace(/\*/g, '').trim().toLowerCase());
+    const status = names.indexOf('status');
+    const by = names.findIndex((name) => /^by what/.test(name));
+    if (status >= 0 && by >= 0) return { status, by, count: names.length };
+  }
+  return null;
 }
 
-/** the audit's markdown table → [{ id, ledger, text, status, how, by }] ; status is the FIRST verdict word group */
-function parseLessons(markdown) {
-  return markdown.split(/\r?\n/).map(parseLessonLine).filter(Boolean);
+/** true when an ADDRESSED verdict says it covers only part of the lesson: "(partly)" or "… / RULE ONLY" */
+const isPartly = (verdict, status) => verdict === 'addressed' && /\(partly\)|\/ RULE ONLY|RULE ONLY \(/.test(status);
+
+/** the "By what" cell ; when it is the last column, a `|` inside a backticked cell has split it, so the rest is joined back */
+const byCell = (cells, columns) => (columns.by === columns.count - 1 ? cells.slice(columns.by).join('|') : cells[columns.by]);
+
+/** one audit table line → { id, ledger, text, status, verdict, partial, by } ; null when the line is not a lesson row */
+function parseLessonLine(line, columns) {
+  const idCell = /^\|\s*(\d+[a-z]?|defect)\s*\|/.exec(line);
+  if (!idCell) return null;
+  const cells = cellsOf(line);
+  if (cells.length <= columns.by) return null;
+  const status = cells[columns.status];
+  const verdict = verdictClass(status);
+  return { id: cells[0], ledger: cells[1], text: cells[2], status, verdict, partial: isPartly(verdict, status), by: byCell(cells, columns) };
 }
+
+/** a repeated lesson id gets "#2", "#3" … so each repeat stays its own node ; returns the ids that repeated */
+function renameRepeats(lessons) {
+  const seen = new Map();
+  const repeated = [];
+  lessons.forEach((lesson) => {
+    const count = (seen.get(lesson.id) || 0) + 1;
+    seen.set(lesson.id, count);
+    if (count === 1) return;
+    repeated.push(lesson.id);
+    lesson.id = lesson.id + '#' + count;
+  });
+  return repeated;
+}
+
+/** the audit's markdown table → { lessons, problems } ; the Status and "By what" columns are found by HEADER text, and a table without them is refused */
+function parseLessonsChecked(markdown) {
+  const columns = columnsOf(markdown);
+  if (!columns) return { lessons: [], problems: ['the lessons audit has no table header with "Status" and "By what" columns: no lesson was read (columns are found by name, never by position)'] };
+  const lessons = markdown.split(/\r?\n/).map((line) => parseLessonLine(line, columns)).filter(Boolean);
+  const repeated = renameRepeats(lessons);
+  const problems = repeated.length ? ['the lessons audit repeats lesson id(s) ' + [...new Set(repeated)].join(', ') + ': each repeat is kept as its own node (id#2), not merged'] : [];
+  return { lessons, problems };
+}
+
+/** the lessons only (parseLessonsChecked also returns the problems found) */
+const parseLessons = (markdown) => parseLessonsChecked(markdown).lessons;
 
 /** the test node for a repo-relative api test file, or null when the scan has no such test */
 const testNodeFor = (ctx, relPath) => (ctx.byId.has('test:api:' + relPath) ? 'test:api:' + relPath : null);
@@ -138,10 +184,23 @@ function registerBlock(row) {
   };
 }
 
+/** a register row → its route node ; a SECOND row for the same node is kept in \ and counted, never written over the first */
+function recordRegisterRow(ctx, stats, regOwner, scanned, row) {
+  const owner = regOwner.get(scanned.id);
+  if (!owner) {
+    regOwner.set(scanned.id, { key: row.key, also: [] });
+    return ctx.node(scanned.id, { reg: registerBlock(row) });
+  }
+  stats.registerCollisions.push(owner.key + ' = ' + row.key);
+  owner.also.push(registerBlock(row));
+  ctx.node(scanned.id, { regAlso: owner.also });
+}
+
 /** source 1: api docs/api-register.json → `reg` on each route node ; returns Map(register key → route) for the sources after it */
 function feedRegister(ctx, stats) {
   const { node, routes, meta } = ctx;
   const joined = new Map();
+  const regOwner = new Map();
   const register = readJson(path.join(ctx.apiRoot, 'docs', 'api-register.json'), (text) => meta.notes.push(text));
   const routesByKey = indexRoutes(ctx);
   const owned = ownedRouteIds(ctx, register, routesByKey);
@@ -158,9 +217,11 @@ function feedRegister(ctx, stats) {
     }
     joined.set(row.key, scanned);
     stats.routesJoined++;
-    node(scanned.id, { reg: registerBlock(row) });
+    recordRegisterRow(ctx, stats, regOwner, scanned, row);
   }
   const joinedIds = new Set([...joined.values()].map((route) => route.id));
+  if (stats.registerCollisions.length)
+    meta.notes.push('api register: ' + stats.registerCollisions.length + ' rows map to a route another row already owns (kept in regAlso): ' + stats.registerCollisions.join('; '));
   stats.scanNotInRegister = routes.filter((route) => !joinedIds.has(route.id)).length;
   if (stats.registerNotInScan || stats.scanNotInRegister)
     meta.notes.push(
@@ -169,6 +230,12 @@ function feedRegister(ctx, stats) {
     );
   return joined;
 }
+
+/** REFUSAL statuses: the request is turned away before the route's handler runs, so a row holding only these proves the gate, not the handler */
+const REFUSAL_STATUSES = new Set([401, 403, 500]);
+
+/** true when at least one status in an error-tests row comes from the handler itself (a 2xx or a 4xx with a body) */
+const hasHandlerStatus = (statuses) => Array.isArray(statuses) && statuses.some((status) => !REFUSAL_STATUSES.has(Number(status)));
 
 /** source 2: api docs/contracts/api-error-tests.json → route tested-by the api-problem sweep that names the route's file (else the sweep kit) */
 function feedErrorTests(ctx, stats, joined) {
@@ -184,7 +251,8 @@ function feedErrorTests(ctx, stats, joined) {
     if (!route) continue;
     const sweeps = sweepsNaming(route.file);
     const targets = sweeps.length ? sweeps : [sweepKit || checkNodeFor(ctx, 'docs/contracts/api-error-tests.json')];
-    targets.forEach((target) => edge(route.id, target, 'tested-by', 'error-tests'));
+    const proofKind = hasHandlerStatus(statuses) ? 'error-tests' : 'error-tests-refusal';
+    targets.forEach((target) => edge(route.id, target, 'tested-by', proofKind));
     node(route.id, { errorTestStatuses: statuses });
     stats.testedByFeed++;
   }
@@ -199,11 +267,18 @@ function feedContractResults(ctx, stats, joined) {
   for (const [routeKey, result] of Object.entries(results.routes || {})) {
     const route = joined.get(routeKey);
     if (!route) continue;
-    edge(route.id, contractTest, 'tested-by', 'contract');
     node(route.id, { contractCases: result.cases, contractFailed: result.failed });
+    if (result.failed > 0) {
+      stats.contractFailed++;
+      continue;
+    }
+    edge(route.id, contractTest, 'tested-by', 'contract');
     stats.testedByFeed++;
   }
 }
+
+/** the names of the flags that are true in an evidence row ; none when the row is missing or every flag is false (that proves nothing) */
+const trueFlags = (flags) => Object.keys(flags || {}).filter((flag) => flags[flag]);
 
 /** source 4: evidence, the two columns a static read cannot prove. api-hardening-evidence-areas.json arrives with api #337 — handle its absence */
 function feedEvidenceFiles(ctx, stats, joined) {
@@ -219,9 +294,10 @@ function feedEvidenceFiles(ctx, stats, joined) {
     }
     for (const [routeKey, flags] of Object.entries(evidence.routes || {})) {
       const route = joined.get(routeKey);
-      if (!route || !flags) continue;
+      const proven = trueFlags(flags);
+      if (!route || !proven.length) continue;
       evidenceRows++;
-      node(route.id, { evidence: Object.keys(flags).filter((flag) => flags[flag]) });
+      node(route.id, { evidence: proven });
       edge(route.id, writer, 'tested-by', 'evidence');
       stats.testedByFeed++;
     }
@@ -309,11 +385,24 @@ function checkTargetFor(ctx, relPath, byBase) {
   return target;
 }
 
+/** true when the file runs in CI as a check: a scanned test, or a file under tests/ · tools/ · e2e/ · .github/ · scripts/guard* (an implementation, data or doc file is only named) */
+const runsInCi = (relPath, target) => target.startsWith('test:') || /^(tests|tools|e2e|\.github)\//.test(relPath) || /^scripts\/guard/.test(relPath);
+
+/** the fields of a `lesson` node: ADDRESSED enforces (partly when the audit says so), anything else is a `gap` */
+function lessonFields(lesson) {
+  const enforces = lesson.verdict === 'addressed';
+  const fields = { kind: 'lesson', repo: 'api', n: lesson.id, ledger: lesson.ledger, text: lesson.text.slice(0, 200), verdict: lesson.verdict };
+  if (lesson.partial) fields.partial = true;
+  if (!enforces) fields.gap = true;
+  if (enforces && lesson.partial) fields.partly = true;
+  return fields;
+}
+
 /** one lesson → its `lesson` node and the enforced-by / mentions edges to the checks its "by" cell names ; adds the count found */
 function feedOneLesson(ctx, lesson, byBase) {
   const id = 'lesson:api:' + lesson.id;
   const enforces = lesson.verdict === 'addressed';
-  ctx.node(id, { kind: 'lesson', repo: 'api', n: lesson.id, ledger: lesson.ledger, text: lesson.text.slice(0, 200), verdict: lesson.verdict, partial: lesson.partial || undefined, gap: !enforces || undefined });
+  ctx.node(id, lessonFields(lesson));
   let found = 0;
   const backticks = /`([^`]+)`/g;
   let named;
@@ -321,8 +410,9 @@ function feedOneLesson(ctx, lesson, byBase) {
     const relPath = checkPathOf(named[1]);
     const target = relPath && checkTargetFor(ctx, relPath, byBase);
     if (!target) continue;
-    found++;
-    ctx.edge(id, target, enforces ? 'enforced-by' : 'mentions');
+    const enforcing = enforces && runsInCi(relPath, target);
+    if (enforcing) found++;
+    ctx.edge(id, target, enforcing ? 'enforced-by' : 'mentions', 'audit');
   }
   ctx.node(id, { checksFound: found });
 }
@@ -333,7 +423,12 @@ function feedLessonsAudit(ctx, stats) {
   const pmDir = path.join(ctx.HOME, 'PM');
   const audit = newestAuditName(ctx, pmDir);
   if (!audit) return ctx.meta.notes.push('PM/API-LESSONS-AUDIT-*.md not found under ' + ctx.HOME + ': no lesson nodes');
-  const lessons = parseLessons(fs.readFileSync(path.join(pmDir, audit), 'utf8'));
+  const parsed = parseLessonsChecked(fs.readFileSync(path.join(pmDir, audit), 'utf8'));
+  const lessons = parsed.lessons;
+  stats.lessonProblems = parsed.problems;
+  parsed.problems.forEach((problem) => ctx.meta.notes.push(problem));
+  const unknown = lessons.filter((lesson) => lesson.verdict === 'unknown').map((lesson) => lesson.id);
+  if (unknown.length) ctx.meta.notes.push('lessons audit: verdict not read for lesson(s) ' + unknown.join(', ') + ' (counted as a gap)');
   stats.lessons = lessons.length;
   stats.lessonSource = audit;
   for (const lesson of lessons) feedOneLesson(ctx, lesson, byBase);
@@ -341,7 +436,7 @@ function feedLessonsAudit(ctx, stats) {
 
 /** the whole feed: the seven sources in order, counted in meta.apiFeed ; does nothing but zero the counts when the api repo is absent */
 function feed(ctx) {
-  const stats = (ctx.meta.apiFeed = { register: null, routesJoined: 0, registerNotInScan: 0, scanNotInRegister: 0, testedByFeed: 0, errcodes: 0, lessons: 0, libraryRows: 0, libraryMatched: 0 });
+  const stats = (ctx.meta.apiFeed = { register: null, routesJoined: 0, registerNotInScan: 0, registerCollisions: [], contractFailed: 0, lessonProblems: [], scanNotInRegister: 0, testedByFeed: 0, errcodes: 0, lessons: 0, libraryRows: 0, libraryMatched: 0 });
   if (!ctx.present.api) return;
   const feedCtx = Object.assign({}, ctx, { apiRoot: ctx.A });
   const joined = feedRegister(feedCtx, stats);
@@ -353,4 +448,4 @@ function feed(ctx) {
   feedLessonsAudit(feedCtx, stats);
 }
 
-module.exports = { feed, parseLessons };
+module.exports = { feed, parseLessons, parseLessonsChecked };

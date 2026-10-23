@@ -57,6 +57,6 @@ Athi, 2026-10-23: *"create feedgraph and the other one and will see which one sh
 | api `docs/contracts/api-error-tests.json` · `api-contract-results.json` · `api-hardening-evidence.json` (+ `-areas.json` once api #337 lands; absence is said in `meta.notes`) | `tested-by` route → test, `via` error-tests / contract / evidence |
 | api `docs/error-codes.json` | `errcode` nodes; `returns` route → errcode where the route's own text names the code |
 | `TEST-LIBRARY.json` | test nodes gain level · type · runner · owner |
-| `API-LESSONS-AUDIT-*.md` | `lesson` nodes; `enforced-by` → the check an ADDRESSED lesson names; RULE ONLY / NOT ADDRESSED lessons carry `gap` |
+| `API-LESSONS-AUDIT-*.md` (hand-written by cb-api) | `lesson` nodes; `enforced-by` only when the named file runs in CI (tests/ · tools/ · e2e/ · .github/), else `mentions` (via audit = "named by the audit"); RULE ONLY / NOT ADDRESSED carry `gap`, ADDRESSED (partly) carries `partly` |
 
 `gaps` adds **6 · routes no test proves** (no `tested-by` edge of any kind) and **7 · lessons nothing enforces**. Register rows the scan cannot place (and the reverse) are counted in `meta.apiFeed`, never dropped; a router file mounted twice is joined by file + method + tail.

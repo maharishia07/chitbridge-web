@@ -168,6 +168,9 @@ function countKinds(items) {
   return counts;
 }
 
+/** the tested-by `via` of a test that calls a path: an open path (variable tail) that is not itself a route matched by PREFIX, which is a guess */
+const httpProofVia = (isOpenPath, isExactRoute) => (isOpenPath && !isExactRoute ? 'http-prefix' : 'http');
+
 function build() {
   const t0 = Date.now();
   const meta = { generated: new Date().toISOString().slice(0, 10), roots: {}, present: {}, notes: [], counts: {} };
@@ -690,8 +693,10 @@ function build() {
       const before = f.scan.strings.filter((item) => item.start < p.pos && item.start > p.pos - 40 && /^(GET|POST|PUT|PATCH|DELETE)$/.test(item.text));
       if (before.length) method = before[before.length - 1].text;
       const ids = resolvePath(method, p.path, p.open);
+      /* an open path (a template literal with a variable tail) that is not itself a route is matched by prefix: a guess, weak proof */
+      const testVia = httpProofVia(p.open, pathIndex.has(method + ' ' + norm(p.path)));
       for (const id of ids) {
-        if (isTest) edge(id, f.id, 'tested-by', 'http');
+        if (isTest) edge(id, f.id, 'tested-by', testVia);
         else {
           edge(from, id, 'calls', 'http');
           callEdges.push([from, id, 'http']);
@@ -1341,45 +1346,69 @@ function changed() {
 }
 
 /* ── gaps ───────────────────────────────────────────────────────────────────────────────────────────────────────── */
-/** gap 6 (FEEDGRAPH): routes no test proves — no tested-by edge of ANY kind (a test that calls the path, an error-tests row, a contract row, evidence) */
+/** the tested-by `via` values that are a GUESS or a gate-only proof: a path-prefix match, and an error-tests row holding only 401/403/500 */
+const WEAK_PROOF_VIAS = new Set(['http-prefix', 'error-tests-refusal']);
+
+/** how well tests prove one route: 'none' (no tested-by edge) · 'weak' (only guesses / refusals) · 'strong' ; plus which weak kinds it has */
+function proofOf(graph, route) {
+  const vias = (graph.out.get(route.id) || []).filter((link) => link.kind === 'tested-by').map((link) => link.via || '');
+  if (!vias.length) return { strength: 'none', vias };
+  return { strength: vias.every((kind) => WEAK_PROOF_VIAS.has(kind)) ? 'weak' : 'strong', vias };
+}
+
+/** the top files by route count, with each file's own route total */
+function topRouteFiles(list, routes) {
+  const perFile = {};
+  list.forEach((route) => {
+    perFile[route.file] = (perFile[route.file] || 0) + 1;
+  });
+  return Object.entries(perFile)
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, TOP)
+    .map(([file, count]) => ({ file, routes: count, of: routes.filter((item) => item.file === file).length }));
+}
+
+/** gap 6 (FEEDGRAPH): routes by proof strength — none · weak only (a path-prefix guess, a refusal-only row) · strong (a test that calls the exact path, a contract, evidence, a handler status) */
 function routesNoProof(graph, routes) {
-  /** a route is proven when any edge out of it is tested-by */
-  const proven = (route) => (graph.out.get(route.id) || []).some((link) => link.kind === 'tested-by');
-  const unproven = routes.filter((route) => !proven(route));
+  const graded = routes.map((route) => Object.assign({ route }, proofOf(graph, route)));
+  const unproven = graded.filter((item) => item.strength === 'none').map((item) => item.route);
+  const weak = graded.filter((item) => item.strength === 'weak');
   const byStatus = {};
   unproven.forEach((route) => {
     const status = route.reg ? route.reg.status : 'not in register';
     byStatus[status] = (byStatus[status] || 0) + 1;
   });
-  const perUnprovenFile = {};
-  unproven.forEach((route) => {
-    perUnprovenFile[route.file] = (perUnprovenFile[route.file] || 0) + 1;
-  });
+  const label = (route) => route.method + ' ' + route.path + (route.reg ? ' [' + route.reg.status + (route.reg.signed ? ', signed' : '') + ']' : '');
   return {
     total: routes.length,
+    strong: graded.length - unproven.length - weak.length,
     unproven: unproven.length,
+    weakOnly: weak.length,
+    weakOnlyPrefixGuess: weak.filter((item) => item.vias.includes('http-prefix')).length,
+    weakOnlyRefusal: weak.filter((item) => !item.vias.includes('http-prefix')).length,
     byRegisterStatus: byStatus,
     signedButUnproven: unproven.filter((route) => route.reg && route.reg.signed).length,
-    topFiles: Object.entries(perUnprovenFile)
-      .sort((first, second) => second[1] - first[1])
-      .slice(0, TOP)
-      .map(([file, count]) => ({ file, routes: count, of: routes.filter((item) => item.file === file).length })),
-    examples: unproven.slice(0, TOP).map((route) => route.method + ' ' + route.path + (route.reg ? ' [' + route.reg.status + (route.reg.signed ? ', signed' : '') + ']' : ''))
+    topFiles: topRouteFiles(unproven, routes),
+    examples: unproven.slice(0, TOP).map(label),
+    weakList: weak.map((item) => label(item.route) + ' (' + (item.vias.includes('http-prefix') ? 'path-prefix guess' : 'refusal only') + ')')
   };
 }
 
-/** gap 7 (FEEDGRAPH): the lessons audit rows whose verdict is RULE ONLY or NOT ADDRESSED, plus ADDRESSED rows whose named check was not found */
+/** gap 7 (FEEDGRAPH): lessons whose verdict is RULE ONLY or NOT ADDRESSED, those ADDRESSED only partly, and ADDRESSED rows whose named check was not found */
 function lessonsNoCheck(nodes) {
   const lessons = nodes.filter((item) => item.kind === 'lesson');
   const unenforced = lessons.filter((lesson) => lesson.gap);
-  const claimedNoCheck = lessons.filter((lesson) => !lesson.gap && !lesson.checksFound);
+  const partly = lessons.filter((lesson) => lesson.partly);
+  const claimedNoCheck = lessons.filter((lesson) => !lesson.gap && !lesson.partly && !lesson.checksFound);
   return {
     total: lessons.length,
     unenforced: unenforced.length,
     ruleOnly: unenforced.filter((lesson) => lesson.verdict === 'rule-only').length,
     notAddressed: unenforced.filter((lesson) => lesson.verdict === 'not-addressed').length,
+    partly: partly.length,
     addressedButCheckNotFound: claimedNoCheck.map((lesson) => lesson.n),
-    list: unenforced.map((lesson) => lesson.n + ' [' + lesson.verdict + '] ' + lesson.text)
+    list: unenforced.map((lesson) => lesson.n + ' [' + lesson.verdict + '] ' + lesson.text),
+    partlyList: partly.map((lesson) => lesson.n + ' [partly] ' + lesson.text)
   };
 }
 
@@ -1403,19 +1432,22 @@ function stepTestsOf(graph, step) {
 
 /** the console block for gaps 6 and 7 (FEEDGRAPH) */
 function printFeedGaps(out) {
+  const proof = out.routesNoProof;
   console.log(
-    '\n  6 · ROUTES NO TEST PROVES  — ' + out.routesNoProof.unproven + ' of ' + out.routesNoProof.total +
-      ' routes have no test edge of any kind (a test that calls the path · an error-tests row · a contract row · evidence); by register status ' +
-      JSON.stringify(out.routesNoProof.byRegisterStatus) + '; ' + out.routesNoProof.signedButUnproven + ' of them are signed off'
+    '\n  6 · ROUTES NO TEST PROVES  — of ' + proof.total + ' routes: ' + proof.strong + ' strongly proven · ' + proof.weakOnly + ' weak proof only (' + proof.weakOnlyPrefixGuess +
+      ' path-prefix guess · ' + proof.weakOnlyRefusal + ' refusal-only 401/403/500) · ' + proof.unproven + ' unproven (no test edge of any kind); unproven by register status ' +
+      JSON.stringify(proof.byRegisterStatus) + '; ' + proof.signedButUnproven + ' of them are signed off'
   );
-  out.routesNoProof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
-  out.routesNoProof.examples.forEach((item) => console.log('        ' + item));
+  proof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
+  proof.examples.forEach((item) => console.log('        ' + item));
+  proof.weakList.slice(0, TOP).forEach((item) => console.log('        weak: ' + item));
+  const lessons = out.lessonsNoCheck;
   console.log(
-    '\n  7 · LESSONS NOTHING ENFORCES  — ' + out.lessonsNoCheck.unenforced + ' of ' + out.lessonsNoCheck.total + ' API lessons (' +
-      out.lessonsNoCheck.ruleOnly + ' rule only · ' + out.lessonsNoCheck.notAddressed + ' not addressed)' +
-      (out.lessonsNoCheck.addressedButCheckNotFound.length ? '; ADDRESSED but the named check was not found: ' + out.lessonsNoCheck.addressedButCheckNotFound.join(' ') : '')
+    '\n  7 · LESSONS NOTHING ENFORCES  — ' + lessons.unenforced + ' of ' + lessons.total + ' API lessons (' + lessons.ruleOnly + ' rule only · ' + lessons.notAddressed +
+      ' not addressed) + ' + lessons.partly + ' only partly enforced' +
+      (lessons.addressedButCheckNotFound.length ? '; ADDRESSED but no CI check found (the audit only names a file): ' + lessons.addressedButCheckNotFound.join(' ') : '')
   );
-  out.lessonsNoCheck.list.slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
+  lessons.list.concat(lessons.partlyList).slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
 }
 
 function gaps() {
