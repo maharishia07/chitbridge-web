@@ -204,6 +204,13 @@
   .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
   .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }
   .cp-one{ display:none; } .cp-all-pick{ display:none; }
+  .cp-show{ display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; margin:8px 0; padding:6px 10px; border:1px solid var(--line,#e7e3d8); border-radius:8px; font-size:var(--fs-2,12.5px); }
+  .cp-show legend{ padding:0 4px; font-weight:700; } .cp-show-item{ display:inline-flex; gap:4px; align-items:center; cursor:pointer; }
+  /* CTRY-44: the sample sales receipt — a counter slip, drawn once per country by the one invoice layout */
+  .cp-receipt{ max-width:560px; margin:6px auto; padding:12px 14px; border:1px dashed var(--line,#e7e3d8); border-radius:6px; background:var(--card,#fff); }
+  .cp-rc-head{ text-align:center; margin-bottom:8px; } .cp-rc-title{ margin-top:6px; border-top:1px solid var(--line,#e7e3d8); border-bottom:1px solid var(--line,#e7e3d8); padding:4px 0; }
+  .cp-rc-foot{ margin-top:8px; border-top:1px dashed var(--line,#e7e3d8); padding-top:6px; text-align:center; } .cp-rc-thanks{ margin-top:4px; font-weight:700; }
+  @media (max-width:760px){ .cp-show{ display:none; } }
   .cp-link{ font:inherit; color:var(--blue,#3F66A6); background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; text-align:left; }
   .cp-chart{ margin-top:14px; background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:12px 14px; }
   .cp-tree{ columns:3 260px; column-gap:24px; margin:8px 0 0; padding-left:18px; font-size:var(--fs-2,12.5px); } .cp-tree > li{ break-inside:avoid; margin-bottom:8px; } .cp-tree ul{ margin:2px 0 0; padding-left:14px; } .cp-tree ul li{ color:var(--grey-2,#545A61); }
@@ -297,6 +304,7 @@
 <script src="/engine/money.js"></script>
 <script src="/engine/tax.js"></script>
 <script src="/engine/locale.js"></script>
+<script src="/engine/docnumber.js"></script>   <!-- CBDoc: the sample receipt's bill number, written by the country's own numbering rule -->
 <script src="/engine/profilemap.js"></script>
 <script src="/engine/jurisdiction.js"></script>
 <!-- CL3 · THE STANDARD SHELL (page-frame.js's load order): the one-person check, the shell, the kural, the frame; then the readiness reader -->
