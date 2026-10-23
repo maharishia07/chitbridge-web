@@ -152,6 +152,7 @@ of file each thing is; this says what already does the job.
 | 15 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `control` | `cap-settings.js` |  |
+| 14 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 14 | `cblog` | `core.js` | const __cblog = []; |
 | 14 | `offers` | `network-app.js` |  |
 | 14 | `check` | `network-app.js` |  |
@@ -166,7 +167,6 @@ of file each thing is; this says what already does the job.
 | 14 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 13 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 13 | `resolve` | `page.js` |  |
 | 13 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 13 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
