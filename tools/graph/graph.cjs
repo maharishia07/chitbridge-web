@@ -159,6 +159,15 @@ function linkNamedFiles(testFile, byId, edge) {
   }
 }
 
+/** { kind: how many } for a list of nodes or edges, in first-seen order */
+function countKinds(items) {
+  const counts = {};
+  items.forEach((item) => {
+    counts[item.kind] = (counts[item.kind] || 0) + 1;
+  });
+  return counts;
+}
+
 function build() {
   const t0 = Date.now();
   const meta = { generated: new Date().toISOString().slice(0, 10), roots: {}, present: {}, notes: [], counts: {} };
@@ -976,14 +985,8 @@ function build() {
   const Ed = [...edges.values()].sort((first, second) =>
     first.from + first.to + first.kind + (first.via || '') < second.from + second.to + second.kind + (second.via || '') ? -1 : 1
   );
-  const kinds = {};
-  list.forEach((item) => {
-    kinds[item.kind] = (kinds[item.kind] || 0) + 1;
-  });
-  const ekinds = {};
-  Ed.forEach((e) => {
-    ekinds[e.kind] = (ekinds[e.kind] || 0) + 1;
-  });
+  const kinds = countKinds(list);
+  const ekinds = countKinds(Ed);
   meta.counts.nodes = kinds;
   meta.counts.edges = ekinds;
   meta.ms = Date.now() - t0;
@@ -1338,6 +1341,83 @@ function changed() {
 }
 
 /* ── gaps ───────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/** gap 6 (FEEDGRAPH): routes no test proves — no tested-by edge of ANY kind (a test that calls the path, an error-tests row, a contract row, evidence) */
+function routesNoProof(graph, routes) {
+  /** a route is proven when any edge out of it is tested-by */
+  const proven = (route) => (graph.out.get(route.id) || []).some((link) => link.kind === 'tested-by');
+  const unproven = routes.filter((route) => !proven(route));
+  const byStatus = {};
+  unproven.forEach((route) => {
+    const status = route.reg ? route.reg.status : 'not in register';
+    byStatus[status] = (byStatus[status] || 0) + 1;
+  });
+  const perUnprovenFile = {};
+  unproven.forEach((route) => {
+    perUnprovenFile[route.file] = (perUnprovenFile[route.file] || 0) + 1;
+  });
+  return {
+    total: routes.length,
+    unproven: unproven.length,
+    byRegisterStatus: byStatus,
+    signedButUnproven: unproven.filter((route) => route.reg && route.reg.signed).length,
+    topFiles: Object.entries(perUnprovenFile)
+      .sort((first, second) => second[1] - first[1])
+      .slice(0, TOP)
+      .map(([file, count]) => ({ file, routes: count, of: routes.filter((item) => item.file === file).length })),
+    examples: unproven.slice(0, TOP).map((route) => route.method + ' ' + route.path + (route.reg ? ' [' + route.reg.status + (route.reg.signed ? ', signed' : '') + ']' : ''))
+  };
+}
+
+/** gap 7 (FEEDGRAPH): the lessons audit rows whose verdict is RULE ONLY or NOT ADDRESSED, plus ADDRESSED rows whose named check was not found */
+function lessonsNoCheck(nodes) {
+  const lessons = nodes.filter((item) => item.kind === 'lesson');
+  const unenforced = lessons.filter((lesson) => lesson.gap);
+  const claimedNoCheck = lessons.filter((lesson) => !lesson.gap && !lesson.checksFound);
+  return {
+    total: lessons.length,
+    unenforced: unenforced.length,
+    ruleOnly: unenforced.filter((lesson) => lesson.verdict === 'rule-only').length,
+    notAddressed: unenforced.filter((lesson) => lesson.verdict === 'not-addressed').length,
+    addressedButCheckNotFound: claimedNoCheck.map((lesson) => lesson.n),
+    list: unenforced.map((lesson) => lesson.n + ' [' + lesson.verdict + '] ' + lesson.text)
+  };
+}
+
+/** the tests that cover a flow step: the ones its flows.json row names, and the ones its code reaches within 2 hops (never through a screen) */
+function stepTestsOf(graph, step) {
+  const explicit = (graph.out.get(step.id) || []).filter((link) => link.kind === 'tested-by').map((link) => link.to);
+  const implied = new Set();
+  const seen = new Set();
+  const list = [[step.id, 0]];
+  while (list.length) {
+    const [nodeId, depth] = list.shift();
+    if (seen.has(nodeId)) continue;
+    seen.add(nodeId);
+    for (const link of graph.out.get(nodeId) || []) {
+      if (link.kind === 'tested-by' && nodeId !== step.id) implied.add(link.to);
+      if ((link.kind === 'implements' || link.kind === 'calls') && depth < 2 && !link.to.startsWith('screen:')) list.push([link.to, depth + 1]);
+    }
+  }
+  return { explicit, implied: [...implied] };
+}
+
+/** the console block for gaps 6 and 7 (FEEDGRAPH) */
+function printFeedGaps(out) {
+  console.log(
+    '\n  6 · ROUTES NO TEST PROVES  — ' + out.routesNoProof.unproven + ' of ' + out.routesNoProof.total +
+      ' routes have no test edge of any kind (a test that calls the path · an error-tests row · a contract row · evidence); by register status ' +
+      JSON.stringify(out.routesNoProof.byRegisterStatus) + '; ' + out.routesNoProof.signedButUnproven + ' of them are signed off'
+  );
+  out.routesNoProof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
+  out.routesNoProof.examples.forEach((item) => console.log('        ' + item));
+  console.log(
+    '\n  7 · LESSONS NOTHING ENFORCES  — ' + out.lessonsNoCheck.unenforced + ' of ' + out.lessonsNoCheck.total + ' API lessons (' +
+      out.lessonsNoCheck.ruleOnly + ' rule only · ' + out.lessonsNoCheck.notAddressed + ' not addressed)' +
+      (out.lessonsNoCheck.addressedButCheckNotFound.length ? '; ADDRESSED but the named check was not found: ' + out.lessonsNoCheck.addressedButCheckNotFound.join(' ') : '')
+  );
+  out.lessonsNoCheck.list.slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
+}
+
 function gaps() {
   const g = loadGraph();
   const N = [...g.nodes.values()];
@@ -1347,26 +1427,10 @@ function gaps() {
 
   /* 1 · flow steps with no test: none named in flows.json AND none reaches the step's code (depth 2 forward) */
   const steps = N.filter((item) => item.kind === 'step' && item.status !== 'missing');
-  const stepTests = (s) => {
-    const explicit = (g.out.get(s.id) || []).filter((e) => e.kind === 'tested-by').map((e) => e.to);
-    const implied = new Set();
-    const seen = new Set();
-    const list = [[s.id, 0]];
-    while (list.length) {
-      const [id, d] = list.shift();
-      if (seen.has(id)) continue;
-      seen.add(id);
-      for (const e of g.out.get(id) || []) {
-        if (e.kind === 'tested-by' && id !== s.id) implied.add(e.to);
-        if ((e.kind === 'implements' || e.kind === 'calls') && d < 2 && !e.to.startsWith('screen:')) list.push([e.to, d + 1]);
-      }
-    }
-    return { explicit, implied: [...implied] };
-  };
   const noTest = [],
     noExplicit = [];
   for (const s of steps) {
-    const t = stepTests(s);
+    const t = stepTestsOf(g, s);
     if (!t.explicit.length) noExplicit.push(s);
     if (!t.explicit.length && !t.implied.length) noTest.push(s);
   }
@@ -1480,42 +1544,8 @@ function gaps() {
     (item) => item.nav
   );
 
-  /* 6 · routes no test proves (FEEDGRAPH): no tested-by edge of ANY kind — a test that calls the path, an error-tests row, a contract row, evidence */
-  const proven = (r) => (g.out.get(r.id) || []).some((e) => e.kind === 'tested-by');
-  const unproven = routes.filter((r) => !proven(r));
-  const byStatus = {};
-  unproven.forEach((r) => {
-    const k = r.reg ? r.reg.status : 'not in register';
-    byStatus[k] = (byStatus[k] || 0) + 1;
-  });
-  const perUnprovenFile = {};
-  unproven.forEach((r) => {
-    perUnprovenFile[r.file] = (perUnprovenFile[r.file] || 0) + 1;
-  });
-  out.routesNoProof = {
-    total: routes.length,
-    unproven: unproven.length,
-    byRegisterStatus: byStatus,
-    signedButUnproven: unproven.filter((r) => r.reg && r.reg.signed).length,
-    topFiles: Object.entries(perUnprovenFile)
-      .sort((first, second) => second[1] - first[1])
-      .slice(0, TOP)
-      .map(([f, c]) => ({ file: f, routes: c, of: routes.filter((item) => item.file === f).length })),
-    examples: unproven.slice(0, TOP).map((r) => r.method + ' ' + r.path + (r.reg ? ' [' + r.reg.status + (r.reg.signed ? ', signed' : '') + ']' : ''))
-  };
-
-  /* 7 · lessons nothing enforces (FEEDGRAPH): the audit rows whose verdict is RULE ONLY or NOT ADDRESSED, plus ADDRESSED rows whose named check was not found */
-  const lessons = N.filter((item) => item.kind === 'lesson');
-  const unenforced = lessons.filter((l) => l.gap);
-  const claimedNoCheck = lessons.filter((l) => !l.gap && !l.checksFound);
-  out.lessonsNoCheck = {
-    total: lessons.length,
-    unenforced: unenforced.length,
-    ruleOnly: unenforced.filter((l) => l.verdict === 'rule-only').length,
-    notAddressed: unenforced.filter((l) => l.verdict === 'not-addressed').length,
-    addressedButCheckNotFound: claimedNoCheck.map((l) => l.n),
-    list: unenforced.map((l) => l.n + ' [' + l.verdict + '] ' + l.text)
-  };
+  out.routesNoProof = routesNoProof(g, routes);
+  out.lessonsNoCheck = lessonsNoCheck(N);
 
   if (JSON_OUT) return console.log(JSON.stringify(out));
   console.log('');
@@ -1578,19 +1608,7 @@ function gaps() {
     '\n  5 · SCREENS NO TEST  — ' + out.screensNoTest.untested + ' of ' + out.screensNoTest.total + ' screens (labs excluded) are reached by no web test'
   );
   out.screensNoTest.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
-  console.log(
-    '\n  6 · ROUTES NO TEST PROVES  — ' + out.routesNoProof.unproven + ' of ' + out.routesNoProof.total +
-      ' routes have no test edge of any kind (a test that calls the path · an error-tests row · a contract row · evidence); by register status ' +
-      JSON.stringify(out.routesNoProof.byRegisterStatus) + '; ' + out.routesNoProof.signedButUnproven + ' of them are signed off'
-  );
-  out.routesNoProof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
-  out.routesNoProof.examples.forEach((item) => console.log('        ' + item));
-  console.log(
-    '\n  7 · LESSONS NOTHING ENFORCES  — ' + out.lessonsNoCheck.unenforced + ' of ' + out.lessonsNoCheck.total + ' API lessons (' +
-      out.lessonsNoCheck.ruleOnly + ' rule only · ' + out.lessonsNoCheck.notAddressed + ' not addressed)' +
-      (out.lessonsNoCheck.addressedButCheckNotFound.length ? '; ADDRESSED but the named check was not found: ' + out.lessonsNoCheck.addressedButCheckNotFound.join(' ') : '')
-  );
-  out.lessonsNoCheck.list.slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
+  printFeedGaps(out);
   if (out.navNoDispatch.length) console.log('\n  nav keys in CBSCREENS with no dispatch line found in app.html: ' + out.navNoDispatch.join(' · '));
   console.log('');
 }
