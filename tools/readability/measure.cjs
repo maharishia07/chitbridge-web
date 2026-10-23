@@ -219,6 +219,17 @@ function functionName(node, parent) {
   return fromParent ? fromParent(parent) : null;
 }
 
+/** a handler passed to `router.get('/path', ...)` (or app.post, .put, …) carries its route, 'GET /path': the guard pairs it with
+ *  the same route in the base file, so a handler that moved is still compared with itself (INT7b) — a field, never a name */
+const ROUTE_VERBS = new Set(['get', 'post', 'put', 'patch', 'delete', 'all']);
+function routeOf(node, parent) {
+  if (!parent || parent.type !== 'CallExpression' || parent.callee === node || parent.callee.type !== 'MemberExpression') return null;
+  const verb = parent.callee.property && parent.callee.property.name;
+  const first = parent.arguments[0];
+  if (!ROUTE_VERBS.has(verb) || !first || first.type !== 'Literal' || typeof first.value !== 'string') return null;
+  return verb.toUpperCase() + ' ' + first.value;
+}
+
 /** the statement a function's what-line should sit above (`var f = function` and `a.b = function` look above the statement) */
 function enclosingStatement(stack, node) {
   for (let i = stack.length - 2; i >= 0; i--) {
@@ -286,6 +297,8 @@ function enterFunction(walk, node, parent) {
     wrapper: isWrapperNode(node, parent, walk.stack, lines),
     stmtLine: walk.lineOf(statement)
   };
+  const route = routeOf(node, parent);
+  if (route) record.route = route;
   walk.functions.push(record);
   node.params.forEach((param) => patternNames(param, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind: 'param' })));
   if (node.id && node.type === 'FunctionDeclaration') walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'function' });
