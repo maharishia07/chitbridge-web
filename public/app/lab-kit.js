@@ -21,6 +21,7 @@
     { id: 'combo-lab', name: 'Combo Lab', route: '/offer-lab-next.html?mode=combo', icon: '▣' },
     { id: 'conversion-lab', name: 'Conversion Lab', route: '/conversion-lab.html', icon: '⇅' },
     { id: 'country-lab', name: 'Country Lab', route: '/country-lab.html', icon: '§' },
+    { id: 'compatibility', name: 'Compatibility Lab', route: '/standards.html#compared-with', icon: '⇋' },
     { id: 'network-lab', name: 'Network Lab', route: '/network-design.html', icon: '⌾' },
     { id: 'list-lab', name: 'List Lab', route: '/list-lab.html', icon: '☰' },
     { id: 'signin-lab', name: 'Sign-in Lab', route: '/signin-lab.html', icon: '⏎' },
