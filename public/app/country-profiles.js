@@ -748,9 +748,9 @@
   }
   /* ── "All countries": the accounting rules of every country in ONE table — CBCountries.rulesTable, the same function docs/ACCOUNTING-RULES.md is
         written from (Athi, 17 Oct: "in the country lab we have to present"). Rules down the side, countries across; on a phone, one country at a time. ── */
-  var ALL = { host: null, code: null };
+  var ALL = { host: null, code: null, shown: null };
   /** a cell's value — the chart's count opens the chart it counts (Athi, 17 Oct: "if it is a hyperlink, can we showcase what those groups are") */
-  var OPENS = { chart: 'chart', return: 'return', filed: 'return', statements: 'statements', invoice: 'invoice', kinds: 'kinds' };
+  var OPENS = { chart: 'chart', return: 'return', filed: 'return', statements: 'statements', invoice: 'invoice', kinds: 'kinds', slip: 'receipt' };
   function cellValue(ruleKey, code, value) {
     var opens = OPENS[ruleKey];
     return opens
@@ -850,7 +850,7 @@
     });
   }
   /** a sample tax invoice, billed live by the real tax engine under the country's own pack (its currency, rates and kinds) */
-  function invoiceHTML(pack) {
+  function invoiceHTML(pack, asReceipt) {
     if (!root.CBTax || !CBTax.determine) return '<span class="hint">The tax engine is not loaded.</span>';
     var lines = sampleLines(pack),
       invoice = billSample(pack, lines),
@@ -859,11 +859,9 @@
       mustShow = requiredWords(pack),
       notes = (invoice._cb && invoice._cb.notes) || [];
     return (
-      '<div class="hint">' +
-      safe(taxWord(pack)) +
-      ' invoice · seller "Sample shop" · ' +
-      safe(mustShow.join(' · ')) +
-      '</div>' +
+      (asReceipt
+        ? receiptHead(pack, mustShow)
+        : '<div class="hint">' + safe(taxWord(pack)) + ' invoice · seller "Sample shop" · ' + safe(mustShow.join(' · ')) + '</div>') +
       '<table class="grid cp-boxes"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Rate</th><th class="r">Tax</th><th class="r">Total</th></tr></thead><tbody>' +
       (invoice.ItemList || [])
         .map(function (item, index) {
@@ -885,7 +883,82 @@
             })
             .join('') +
           '</ul>'
-        : '')
+        : '') +
+      (asReceipt ? receiptFoot(pack) : '')
+    );
+  }
+  /** one rule's text for a country, as the All countries table holds it (the slip title, cash rounding, ways to pay, address words) */
+  function ruleText(key, code) {
+    var table = ALL.table || (root.CBCountries && CBCountries.rulesTable ? CBCountries.rulesTable({ year: new Date().getFullYear() }) : null);
+    var rule =
+      table &&
+      (table.rules || []).filter(function (candidate) {
+        return candidate.key === key;
+      })[0];
+    return rule && rule.values[code] != null ? String(rule.values[code]) : '';
+  }
+  /** a bill number as the country's numbering rule writes it (the one numbering engine, CBDoc.compose); the pack's scheme in words when the engine is not on the page */
+  function sampleNumber(pack) {
+    try {
+      if (root.CBDoc && CBDoc.compose) return CBDoc.compose({ country: pack.id, prefix: 'S1', kind: 'sale', seq: 41, at: new Date() });
+    } catch (failure) {
+      quiet('docnumber', failure);
+    }
+    return numberingText(root.CBCountries ? CBCountries.meta(pack).numbering : null) || 'numbered by the pack';
+  }
+  /** the top of a sales receipt: shop, the lines the law requires, the pack's slip title, number and date (CTRY-44) */
+  function receiptHead(pack, mustShow) {
+    var taxId = root.CBCountries ? CBCountries.taxId(pack) : { word: null, hint: '' };
+    /* the trade name is the bold line above; the tax id and the address say what the law asks for, in the pack's own words */
+    var lawLines = mustShow
+      .filter(function (line) {
+        return line !== 'trade name';
+      })
+      .map(function (line) {
+        return line === 'tax id' && taxId.word
+          ? String(taxId.hint || '').indexOf(taxId.word) === 0
+            ? taxId.hint
+            : taxId.word + (taxId.hint ? ': ' + taxId.hint : '')
+          : line === 'address'
+            ? 'Address: ' + ruleText('address', pack.id)
+            : line;
+      });
+    return (
+      '<div class="cp-receipt" data-testid="cp-receipt-' +
+      safe(pack.id) +
+      '"><div class="cp-rc-head"><b>Sample shop</b>' +
+      lawLines
+        .map(function (line) {
+          return '<div>' + safe(line) + '</div>';
+        })
+        .join('') +
+      '<div class="cp-rc-title"><b>' +
+      safe(ruleText('slip', pack.id) || taxWord(pack) + ' invoice') +
+      '</b></div>' +
+      '<div class="hint">No. ' +
+      safe(sampleNumber(pack)) +
+      ' · ' +
+      safe(new Date().toISOString().slice(0, 10)) +
+      '</div></div>'
+    );
+  }
+  /** the foot of a sales receipt: how the total is rounded, the ways to pay, the shelf-price rule, a thank-you */
+  function receiptFoot(pack) {
+    var rows = [
+      ['Cash rounds to', ruleText('cashround', pack.id)],
+      ['Ways to pay', ruleText('pay', pack.id).replace(/→[a-z]+/g, '')],
+      ['Shelf prices', ruleText('shelf', pack.id)]
+    ].filter(function (row) {
+      return row[1];
+    });
+    return (
+      '<div class="cp-rc-foot">' +
+      rows
+        .map(function (row) {
+          return '<div class="hint">' + safe(row[0]) + ' · ' + safe(row[1]) + '</div>';
+        })
+        .join('') +
+      '<div class="cp-rc-thanks">Thank you · please keep this receipt</div></div></div>'
     );
   }
   /** the tax's own word (Consumption tax · GST · SST) */
@@ -938,6 +1011,14 @@
     },
     invoice: function (pack, sample, name) {
       return panelHTML(name + ' · a sample tax invoice', 'billed now by the tax engine under the ' + pack.name + ' pack', invoiceHTML(pack), 'cp-opened');
+    },
+    receipt: function (pack, sample, name) {
+      return panelHTML(
+        name + ' · a sample sales receipt',
+        'billed now by the tax engine under the ' + pack.name + ' pack, laid out as a counter slip (the one invoice layout, framed as a receipt)',
+        invoiceHTML(pack, true),
+        'cp-opened'
+      );
     },
     return: function (pack, sample, name) {
       return sample
@@ -1016,9 +1097,7 @@
       safe(ruleKey) +
       '-' +
       safe(code) +
-      '">+' +
-      (items.length - 3) +
-      ' more</button>'
+      '">… contd</button>'
     );
   }
   /** THE overlay of the All countries view — a long list and every "opens what it counts" panel open here, over the table, so the table never
@@ -1130,6 +1209,47 @@
       '</tbody></table>'
     );
   }
+  /** which countries the table showcases: the ticked ones (CTRY-42a); remembered in this browser only, all of them until the reader chooses */
+  function shownCodes(table) {
+    var all = table.countries.map(function (country) {
+      return country.id;
+    });
+    if (!ALL.shown) {
+      try {
+        ALL.shown = JSON.parse(root.localStorage.getItem('cb_cl_shown') || 'null');
+      } catch (failure) {
+        quiet('shown', failure);
+      }
+    }
+    var kept = (ALL.shown || all).filter(function (code) {
+      return all.indexOf(code) >= 0;
+    });
+    return kept.length ? kept : all;
+  }
+  /** a tick per country: choose which columns the table showcases */
+  function showcaseHTML(table, shown) {
+    return (
+      '<fieldset class="cp-show" data-testid="cp-show"><legend>Showcase</legend>' +
+      table.countries
+        .map(function (country) {
+          return (
+            '<label class="cp-show-item"><input type="checkbox" class="cp-show-box" data-show="' +
+            safe(country.id) +
+            '" data-testid="cp-show-' +
+            safe(country.id) +
+            '"' +
+            (shown.indexOf(country.id) >= 0 ? ' checked' : '') +
+            '> ' +
+            flagOf(country.id) +
+            ' ' +
+            safe(country.id) +
+            '</label>'
+          );
+        })
+        .join('') +
+      '<span class="hint cp-show-note" data-testid="cp-show-note" role="status"></span></fieldset>'
+    );
+  }
   /** draw the All countries view */
   function paintAll() {
     var host = ALL.host;
@@ -1141,6 +1261,7 @@
     var table = CBCountries.rulesTable({ year: new Date().getFullYear() });
     ALL.table = table;
     if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
+    var shown = shownCodes(table);
     var picker =
       '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' +
       table.countries
@@ -1166,8 +1287,15 @@
       table.rules.length +
       " accounting rules, read from each country's pack</div></div></div>" +
       picker +
+      showcaseHTML(table, shown) +
       '<div class="cp-allscroll">' +
-      allTableHTML(table) +
+      allTableHTML(
+        Object.assign({}, table, {
+          countries: table.countries.filter(function (country) {
+            return shown.indexOf(country.id) >= 0;
+          })
+        })
+      ) +
       '</div>' +
       oneColumnHTML(table, ALL.code) +
       '</div>';
@@ -1197,6 +1325,26 @@
       loadSamples();
     } /* the return and statements panels read the samples file */
     host.addEventListener('change', function (event) {
+      if (event.target.matches('.cp-show-box')) {
+        var ticked = [].slice.call(host.querySelectorAll('.cp-show-box')).filter(function (box) {
+          return box.checked;
+        });
+        if (!ticked.length) {
+          event.target.checked = true;
+          host.querySelector('.cp-show-note').textContent = 'Keep at least one country showing.';
+          return;
+        }
+        ALL.shown = ticked.map(function (box) {
+          return box.getAttribute('data-show');
+        });
+        try {
+          root.localStorage.setItem('cb_cl_shown', JSON.stringify(ALL.shown));
+        } catch (failure) {
+          quiet('shown-save', failure);
+        }
+        paintAll();
+        return;
+      }
       if (event.target.matches('.cp-all-pick')) {
         ALL.code = event.target.value;
         paintAll();
