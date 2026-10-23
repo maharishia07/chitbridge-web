@@ -1494,7 +1494,7 @@
 
     /* ── units the page loaded: the avatar (always), the bell, the sign-in window, the kural ── */
     if (root.CBAvatar && root.CBAvatar.mount) {
-      var ao = { person: person, items: ['profile', 'support', 'signout'], apiBase: base, token: token };
+      var ao = { person: person, items: ['profile', 'settings', 'support', 'signout'], apiBase: base, token: token };
       Object.keys(o.avatar || {}).forEach(function (item) {
         ao[item] = o.avatar[item];
       });
