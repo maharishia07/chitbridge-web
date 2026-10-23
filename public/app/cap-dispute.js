@@ -129,6 +129,7 @@ function dispChipHtml() {
     '</button>'
   );
 }
+/** the advanced-search toggle: show only chits with an open dispute, or clear that filter */
 function toggleDisputeFilter() {
   var a = UI.adv || {};
   if (a.dispute) {
@@ -184,6 +185,7 @@ function dispOpp(d) {
         .join(', ')
     : nm(d.raised_by_display_name, 'party');
 }
+/** one <optgroup> (OPEN or CLOSED) of the dispute picker: category · with whom · status, the chosen one selected */
 function dispOptGroup(list, label) {
   if (!list.length) return '';
   return (
@@ -451,6 +453,7 @@ function disputesScreen() {
  */
 var _DISP = { mine: [], other: [], loaded: false };
 
+/** the Disputes list's controls (listCtl): the search text and a filter over the categories present */
 function dispCtl() {
   var all = _DISP.mine.concat(_DISP.other);
   var cats = [];
@@ -641,6 +644,7 @@ function paintDisputes() {
     );
 }
 
+/** fetch the dispute queue (mine and the other party's) into _DISP and paint the rows */
 async function loadDisputes() {
   var host = document.getElementById('disprows');
   if (!host) return;
@@ -728,6 +732,7 @@ async function quickDispute(idArg, opt) {
       '</button></div>'
   );
 }
+/** raise the dispute from the sheet: a reason of at least 10 characters and a category, then POST it */
 async function confirmDispute() {
   var id = MODALS.disp.id,
     back = !!MODALS.disp.back;
@@ -803,6 +808,7 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       '</button></div>'
   );
 }
+/** resolve a dispute: a resolution note is required, then POST it and say so */
 async function submitResolve(chitId, disputeId, partyId) {
   var note = val('resnote');
   var err = document.getElementById('res_err');
