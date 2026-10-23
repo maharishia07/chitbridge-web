@@ -434,11 +434,11 @@ function csuMoneyExamples(currency, wordsChoice) {
     money = '',
     date = '',
     decimals = 2;
-  /* the symbol as the BILL writes it (A$ · ₹ · AED): the currency part of the money example, under the money's own tag — not the reader's */
+  /* the sign as the BILL writes it (A$ · ₹ · AED): CBLocale.moneySign, the one reader of it (CTRY-51) */
   try {
     money = locale.money(CSU_SAMPLE, currency);
     date = csuDate(Date.now());
-    symbol = String(money).replace(/[\d.,\s\u00a0]/g, '') || locale.symbol(currency);
+    symbol = locale.moneySign(currency);
   } catch (failure) {
     csuLogExample('locale example', failure);
   }

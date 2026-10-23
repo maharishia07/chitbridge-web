@@ -372,10 +372,10 @@ function fromMinor(m, c) {
 function monthName(m) {
   return monthNames('long')[Number(m) - 1] || String(m);
 }
-/** a currency's symbol from the engine's locale layer; the code when it cannot say */
+/** the sign a BILL prints for a currency (CBLocale.moneySign: ₹ · A$ · S$ · RM), whatever this reader's locale; the code when it cannot say (CTRY-51) */
 function symbolOf(code) {
   try {
-    return CBLocale.symbol(code) || code;
+    return CBLocale.moneySign(code) || code;
   } catch (failure) {
     if (window.cbQuiet) window.cbQuiet('country-lab:symbol', failure); /* the reader is missing: the row shows the code, still true */
     return code;
