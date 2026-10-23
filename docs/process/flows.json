@@ -33,7 +33,7 @@
           "engine": [{ "file": "api:lib/mint.js", "fn": "order" }, { "file": "api:lib/workflow.js", "fn": "kindOf" }, { "file": "engines:src/workflow.js", "fn": "stageOf" }, { "file": "engines:src/orders.js", "fn": "kindOf" }],
           "route": [{ "m": "POST", "p": "/api/catalogue/:bridge_id/order/confirm", "file": "api:routes/catalogue.js" }, { "m": "POST", "p": "/api/chits/send", "file": "api:routes/chits.js" }, { "m": "GET", "p": "/api/work/list", "file": "api:routes/work.js" }, { "m": "GET", "p": "/api/work/:chit_id", "file": "api:routes/work.js" }],
           "chit": "order (workflow kind order_in on the seller's copy)", "ledger": "none — an order moves nothing (lib/stock-from-chit.js)",
-          "test": ["api:tests/orders.test.js", "api:tests/t2e-orders.test.cjs", "api:tests/work-rows.test.cjs", "engines:tests/workflow.test.js", "web:tests/t2e-cart.test.cjs", "web:tests/cart-currency.test.cjs", "web:e2e/walk-tasks.cjs", "web:e2e/walk-shop-my-orders.cjs"],
+          "test": ["api:tests/orders.test.js", "api:tests/t2e-orders.test.cjs", "api:tests/work-rows.test.cjs", "engines:tests/workflow.test.js", "web:tests/t2e-cart.test.cjs", "web:tests/shop-attempt-key.test.cjs", "web:tests/cart-currency.test.cjs", "web:e2e/walk-tasks.cjs", "web:e2e/walk-shop-my-orders.cjs"],
           "status": "ok", "note": "" },
         { "n": 4, "step": "delivery", "module": "TasksOrders", "who": "the seller's staff",
           "screen": [{ "file": "web:public/app/cap-chit2.js", "fn": "" }, { "file": "web:public/app/cap-worklist.js", "fn": "wlAssignSave" }, { "file": "web:public/app/cap-tasks.js", "fn": "tkMove" }, { "file": "web:public/app/cap-tasks.js", "fn": "tkAssignLine" }, { "file": "web:public/app/cap-tasks.js", "fn": "tkDeliver" }],
