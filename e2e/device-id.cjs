@@ -10,6 +10,7 @@
  *   3  device-id.js itself, run in a sandbox: stamps api calls (relative /api/… and window.CB_API), never a third party, keeps a
  *      header the caller set, makes the id once and keeps it, and stamps NOTHING when storage cannot keep the id
  *   4  signin-ui.js defaults a door's deviceId to CBDevice, and `deviceId: false` still opts out
+ *   5  e2e/shop-switch.cjs (SEC-85): a page opened as one shop never writes to it after a sign-in as another shop in another tab
  * Run: node e2e/device-id.cjs · no network, no browser.
  */
 'use strict';
@@ -122,6 +123,11 @@ function sandbox(opts) {
   const ui = fs.readFileSync(path.join(PUB, 'app', 'signin-ui.js'), 'utf8');
   ok("signin-ui: a door with no deviceId uses CBDevice.id; 'deviceId: false' still opts out",
     /if \(d === undefined && root\.CBDevice && typeof root\.CBDevice\.id === 'function'\) d = root\.CBDevice\.id;/.test(ui));
+
+  /* ── 5 · SEC-85, the same file's shop-switch stop: its own test, run from here so the one CI device-id step covers it ── */
+  const switched = require('child_process').spawnSync(process.execPath, [path.join(__dirname, 'shop-switch.cjs')], { encoding: 'utf8' });
+  ok('e2e/shop-switch.cjs: a page opened as one shop stops after a sign-in as another shop in another tab (SEC-85)', switched.status === 0,
+    (switched.stdout || '').split('\n').filter((line) => /FAIL/.test(line)).join(' · ') || switched.stderr);
 
   console.log('\n  ' + pass + ' passed · ' + fail + ' failed · ' + (pass + fail) + ' checks');
   if (fail) process.exit(1);

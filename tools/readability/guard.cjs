@@ -34,9 +34,12 @@ const groupBy = (list, keyOf) => {
 };
 
 /** head function → the same function in the base file: by name + params, the NEAREST line among twins (a route file holds many
- *  `async (req, res) =>` handlers — the first untaken one paired a 120-line handler with a 30-line one, INT7b), else by name alone */
+ *  `async (req, res) =>` handlers — the first untaken one paired a 120-line handler with a 30-line one, INT7b), else by name alone.
+ *  A route handler pairs first with the same 'METHOD path' in the base (lines shift when a file grows, the route does not);
+ *  a function with no route, or a route the base lacks, pairs exactly as before. */
 function matchBase(headFns, baseFns) {
-  const byKey = groupBy(baseFns, functionKey),
+  const byRoute = groupBy(baseFns, (fn) => fn.route && fn.route + ' ' + functionKey(fn)),
+    byKey = groupBy(baseFns, functionKey),
     byName = groupBy(baseFns, (fn) => fn.name);
   const pairs = new Map(),
     taken = new Set();
@@ -49,7 +52,8 @@ function matchBase(headFns, baseFns) {
       taken.add(twin);
     }
   };
-  for (const fn of headFns) take(fn, byKey.get(functionKey(fn)));
+  for (const fn of headFns) if (fn.route) take(fn, byRoute.get(fn.route + ' ' + functionKey(fn)));
+  for (const fn of headFns) if (!pairs.has(fn)) take(fn, byKey.get(functionKey(fn)));
   for (const fn of headFns) if (!pairs.has(fn) && fn.name) take(fn, byName.get(fn.name));
   return pairs;
 }
