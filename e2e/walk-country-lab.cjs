@@ -19,7 +19,7 @@
  *   C5  (#5) one plain line per cell (<= 20 words visible), the legal detail and its citation behind a closed "why" fold (DL Art. 45 is in the fold only)
  *   C6  (#6) a reserved right gutter: the table ends before the window's edge; nothing fixed overlaps the "what it means" column
  *   C7  (#7) India's supply kinds say "India: each item's own GST rate decides."
- *   C8  (#8) AU -> AU: ten rows are the same, collapsed under "10 rows are the same"; show opens them; IN -> AU has no fold row
+ *   C8  (#8) AU -> AU: sixteen rows are the same, collapsed under "16 rows are the same"; show opens them; IN -> AU folds only the voucher row
  *   L8  at 390 px (Cream): no sideways scroll, the rows read one under the other, the bills stack, the cart lines are cards with nothing cut
  *   C9  at 390 px (Dark): AA everywhere, no sideways scroll, the TO cell still carries its rule
  *   ── CL3 (owner, 13 Oct: "where we are with it" · "if login not required, still avatar, and font, and other things should be intact") ──
@@ -75,10 +75,10 @@ const walk = async (w) => {
     const v = await verdicts(page);
     const cur = await text(page, '[data-testid="cl-row-currency"]'), fy = await text(page, '[data-testid="cl-row-fy"]'), sch = await text(page, '[data-testid="cl-row-scheme"]');
     const ret = await text(page, '[data-testid="cl-row-returns"]'), led = await text(page, '[data-testid="cl-row-ledgers"]');
-    const ok = Object.keys(v).length === 10 && Object.values(v).every((x) => x === 'DIFFERENT')
+    const ok = Object.keys(v).length === 16 && Object.entries(v).every(([k, x]) => x === (k === 'voucher' ? 'SAME' : 'DIFFERENT'))   /* CTRY-39: six more rows; IN and AU share one voucher shape */
       && /INR/.test(cur) && /AUD/.test(cur) && /April/.test(fy) && /July/.test(fy) && /split by state/.test(sch) && /border/.test(sch) && /heads gst/.test(sch)
       && /none in the pack/.test(ret) && /no returns member/.test(ret) && /BAS/.test(ret) && /8 boxes/.test(ret) && /added/.test(led) && /renamed/.test(led);
-    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'DIFFERENT').length + ' different · ' + ret.slice(0, 70) };
+    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'DIFFERENT').length + ' different (voucher numbers the same) · ' + ret.slice(0, 70) };
   });
 
   await w.step('L3', 'IN -> AU: the ABN box answers from the pack (a wrong digit is said); the GSTIN box from the profile-map engine', async () => {
@@ -227,7 +227,7 @@ const walk = async (w) => {
     return { ok, saw: '"' + t + '"' };
   });
 
-  await w.step('C8', '(#8) AU -> AU: ten rows the same, collapsed under "10 rows are the same"; show opens them; IN -> AU has no fold row', async () => {
+  await w.step('C8', '(#8) AU -> AU: sixteen rows the same, collapsed under "16 rows are the same"; show opens them; IN -> AU folds only the voucher row', async () => {
     await pick(page, 'from', 'AU'); await pick(page, 'to', 'AU');
     const vis = () => page.evaluate(() => ({ same: document.querySelectorAll('#rows-body tr.same').length, shown: [...document.querySelectorAll('#rows-body tr[data-row]')].filter((t) => getComputedStyle(t).display !== 'none').length, fold: (document.querySelector('[data-testid="cl-samefold"]') || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim() }));
     const a = await vis();
@@ -237,8 +237,34 @@ const walk = async (w) => {
     const c = await vis();
     await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
     const d = await vis();
-    const ok = a.same === 10 && a.shown === 0 && /^10 rows are the same · show/.test(a.fold) && b.shown === 10 && /hide/.test(b.fold) && c.shown === 0 && d.same === 0 && d.fold === '' && d.shown === 10;
-    return { ok, saw: 'AU→AU: ' + a.same + ' same, ' + a.shown + ' shown, "' + a.fold.slice(0, 40) + '" → show: ' + b.shown + ' → hide: ' + c.shown + ' · IN→AU: fold row ' + (d.fold ? 'present' : 'absent') };
+    const ok = a.same === 16 && a.shown === 0 && /^16 rows are the same · show/.test(a.fold) && b.shown === 16 && /hide/.test(b.fold) && c.shown === 0 && d.same === 1 && /^1 row is the same/.test(d.fold) && d.shown === 15;
+    return { ok, saw: 'AU→AU: ' + a.same + ' same, ' + a.shown + ' shown, "' + a.fold.slice(0, 40) + '" → show: ' + b.shown + ' → hide: ' + c.shown + ' · IN→AU: ' + d.same + ' same row folded' };
+  });
+
+  await w.step('K1', '(CTRY-38) one line says what the side-by-side is, and that any pack can be picked on either side', async () => {
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
+    const a = await text(page, '[data-testid="cl-what"]');
+    await pick(page, 'to', 'JP');
+    const b = await text(page, '[data-testid="cl-what"]');
+    const n = await page.evaluate(() => CBRegulation.list().length);
+    const words = (s) => s.split(/s+/).filter(Boolean).length;
+    const ok = /^Side by side: India with Australia./.test(a) && /^Side by side: India with Japan./.test(b) && new RegExp('any of the ' + n + ' packs on either side').test(b) && words(b) <= 16;
+    await pick(page, 'to', 'AU');
+    return { ok, saw: '"' + a + '" → "' + b + '"' };
+  });
+
+  await w.step('K2', '(CTRY-39) the pack rows the lab did not show: records, tax heads paid, time zones, dates and numbers, voucher numbers - read from the engine, none blank, for every pack pair', async () => {
+    const r = await page.evaluate(() => {
+      const ids = CBRegulation.list().map((p) => p.id), keys = ['retention', 'kept', 'payheads', 'zones', 'formats', 'voucher'], blank = [];
+      ids.forEach((id) => { LAB.from = id; LAB.to = id; repaint(); keys.forEach((k) => { const t = document.querySelector('[data-testid="cl-row-' + k + '"] td.v.from').textContent.trim(); if (!t || /undefined|NaN|[?]$/.test(t)) blank.push(id + '/' + k); }); });
+      const rt = CBCountries.rulesTable({ year: 2026 });
+      LAB.from = 'IN'; LAB.to = 'AU'; repaint();
+      return { ids, blank, inYears: document.querySelector('[data-testid="cl-row-retention"] td.v.from').textContent.trim(), engineIn: rt.rules.filter((x) => x.key === 'records')[0].values.IN,
+        gst: document.querySelector('[data-testid="cl-row-kept"] td.v.from').textContent, aeKept: (LAB.from = 'AE', repaint(), document.querySelector('[data-testid="cl-row-kept"] td.v.from').textContent) };
+    });
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
+    const ok = !r.blank.length && r.inYears === r.engineIn && /72/.test(r.gst) && /real estate vat/.test(r.aeKept);
+    return { ok, saw: r.ids.length + ' packs · blank cells: ' + (r.blank.join(' ') || 'none') + ' · IN keeps records "' + r.inYears + '" (engine: "' + r.engineIn + '")' };
   });
 
   /* ── 390 px: Cream, then Dark ─────────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -251,7 +277,7 @@ const walk = async (w) => {
       const cart = document.querySelector('.cart'), cut = [...cart.querySelectorAll('input[type=text],select')].map(fits).filter((x) => !x.ok);
       return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, stacked, billsStack: b.top >= a.bottom - 1, rows: rows.length, cards: [...document.querySelectorAll('#cart-body tr')].every((t) => getComputedStyle(t).display === 'grid'), cut: cut.length, innerScroll: cart.scrollWidth > cart.clientWidth, firstRow: rows[0].innerText.replace(/\s+/g, ' ').slice(0, 60) };
     }, fits);
-    const ok = r.sw <= r.iw && r.stacked && r.billsStack && r.rows === 10 && r.cards && r.cut === 0 && !r.innerScroll;
+    const ok = r.sw <= r.iw && r.stacked && r.billsStack && r.rows === 15 && r.cards && r.cut === 0 && !r.innerScroll;
     return { ok, saw: 'scroll ' + r.sw + ' / ' + r.iw + ' · rows stacked ' + r.stacked + ' · bills stacked ' + r.billsStack + ' · cart cards ' + r.cards + ', ' + r.cut + ' cut · "' + r.firstRow + '"' };
   });
 

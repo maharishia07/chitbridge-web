@@ -2,6 +2,9 @@
  * A per-entity TREE for organising ANY chit (mailing-model). foldersScreen() = tree (left, recursive/nestable) +
  * the selected folder's chits with Current/Archive (right). Any chit is redirected via 📁 Move (sets folder_id on
  * this entity's copy). Backend: routes/folders.js + b63. Self-registers its endpoints.
+ * OWNS      the Folders screen and its Chits · Metrics · Rules tabs, the Move-to-folder sheet, the group-sum pane.
+ * FLOW      foldersScreen → loadFolders → pick a folder → loadFolderChits → _folderView → (Metrics: loadFolderMetrics · Rules: loadFolderRules)
+ * CARD      01-rail-core-the-chit/user-folders-and-auto-file-rules
  * CALLED BY public/accounts.html, public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 if (typeof EP !== 'undefined') {
@@ -48,6 +51,7 @@ function _foldersFrom(r) {
     return !view(item);
   });
 }
+/** fetch the folder list into UI.folders (empty on failure) and repaint in the background */
 async function loadFolders() {
   try {
     var reply = await api('foldersList');
@@ -135,6 +139,7 @@ function _folderTree(parentId, depth) {
     })
     .join('');
 }
+/** the Folders screen: the folder tree on the left, the picked folder (or a prompt to pick one) on the right */
 function foldersScreen() {
   if (UI.folders === undefined) {
     loadFolders();
@@ -165,6 +170,7 @@ function setFolderArch(a) {
   if (node) node.innerHTML = _folderView();
   loadFolderChits();
 }
+/** fetch the picked folder's chits (current or archive) into UI.folderChits and repaint the detail pane */
 async function loadFolderChits() {
   var id = UI.folderSel;
   if (!id) return;
@@ -180,6 +186,7 @@ async function loadFolderChits() {
   var node = document.getElementById('detailpane');
   if (node) node.innerHTML = _folderView();
 }
+/** the picked folder's pane: Current/Archive tabs, the Chits · Metrics · Rules tabs, then that tab's body */
 function _folderView() {
   var f = (UI.folders || []).find(function (x) {
     return x.folder_id === UI.folderSel;
@@ -290,6 +297,7 @@ function _ftab(k, label) {
     '</span>'
   );
 }
+/** ask for a name, create the folder, reload the list */
 function newFolder() {
   promptAsk('New folder', { label: 'Folder name', placeholder: 'e.g. Awaiting payment', okLabel: 'Create' }, async function (name) {
     try {
@@ -302,6 +310,7 @@ function newFolder() {
     }
   });
 }
+/** ask for a new name (prefilled), rename the folder, reload the list */
 function renameFolder(id) {
   var f =
     (UI.folders || []).find(function (x) {
@@ -317,7 +326,9 @@ function renameFolder(id) {
     }
   });
 }
+/** confirm, then delete the folder; its chits go back to the mailbox, not away */
 function deleteFolder(id) {
+  /** the delete itself, after the confirm: clear the selection and reload the list */
   var run = async function () {
     try {
       await api('folderDelete', { params: { id: id } });
@@ -333,6 +344,7 @@ function deleteFolder(id) {
     confirmAsk('Delete folder', 'Delete this folder? Its chits are <b>not</b> deleted — they return to the main mailbox.', 'Delete', run, true);
   else if (window.confirm('Delete folder? Its chits return to the mailbox.')) run();
 }
+/** the Move-to-folder sheet for one chit: one row per folder, plus Remove from folder (loads the list first if needed) */
 async function moveChit(chitId) {
   if (UI.folders === undefined) {
     try {
@@ -366,6 +378,7 @@ async function moveChit(chitId) {
   if (typeof modal === 'function')
     modal('<div class="mhd"><div class="t">' + tx('📁 Move to folder') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>');
 }
+/** file the chit into a folder (null = back to the mailbox) and say which in a toast */
 async function _doMove(chitId, folderId) {
   if (folderId === 'null' || folderId === '') folderId = null;
   if (typeof closeModal === 'function') closeModal();
@@ -521,6 +534,7 @@ async function ruleMove(id, dir) {
   }
 }
 
+/** the Metrics tab: reconcile the filed counts, then fetch this folder's metrics */
 async function loadFolderMetrics() {
   _FLD.busy = true;
   _FLD.recon = null;
@@ -546,6 +560,7 @@ async function loadFolderMetrics() {
   _FLD.busy = false;
   _fldPaint();
 }
+/** the Rules tab: fetch this folder's rules (or every folder's) into _FLD.rules */
 async function loadFolderRules() {
   _FLD.busy = true;
   _fldPaint();
@@ -665,6 +680,7 @@ function _gsMoney(list, mixed) {
   );
 }
 
+/** the group-sum pane: money and counts added up per folder, with the scope pills */
 function _groupSumPane() {
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
   if (_FLD.err) return '<div style="padding:18px;color:var(--disp);font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
@@ -1064,6 +1080,7 @@ function _reconStrip() {
     '</div>'
   );
 }
+/** the Metrics tab body: this folder's clock, disputes and other measures, or a spinner while they load */
 function _folderMetricsPane() {
   if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> measuring…</div>';
   var m = _FLD.metrics;
@@ -1171,6 +1188,7 @@ function ruleDraftSet(k, v) {
   _FLD.draft[k] = v;
   if (k !== 'name') _FLD.preview = null;
 }
+/** turn the rule draft (term + value) into the rule's when-object; null until a value is filled in */
 function _draftWhen() {
   var d = _FLD.draft || {};
   var w = {};
@@ -1205,6 +1223,7 @@ async function rulePreview() {
   _FLD.busy = false;
   _fldPaint();
 }
+/** save the drafted rule on this folder; says 'Fill in the value first' when it is empty */
 async function ruleSave() {
   var w = _draftWhen();
   if (!w) {
@@ -1238,6 +1257,7 @@ async function ruleToggle(id, on) {
     _fldPaint();
   }
 }
+/** confirm, then delete a rule; chits it already filed stay where they are */
 function ruleDelete(id) {
   confirmAsk(
     'Delete this rule?',
@@ -1326,6 +1346,7 @@ function _ruleRow(r, i, n) {
   );
 }
 
+/** the Rules tab body: the folder's rules, each with on/off and delete, and the draft form for a new one */
 function _folderRulesPane() {
   if (_FLD.busy && _FLD.rules === null)
     return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading rules…</div>';
