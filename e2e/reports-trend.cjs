@@ -50,7 +50,7 @@ W.run('reports-trend', async (w) => {
     if (q.method() !== 'GET' && !/^\/api\/events\/ticket$/.test(p)) S.writes.push(q.method() + ' ' + p);
     if (p === '/api/till/summary' && u.searchParams.get('compare') === '1') {
       S.asked.push(u.searchParams.get('period'));
-      if (S.mode === 'nocountry') return J(route, 422, { error: 'Set the shop country first. The books never open on a guess.', code: 'NO_COUNTRY', message: 'Set the shop country first. The books never open on a guess.' });
+      if (S.mode === 'nocountry') return J(route, 422, { error: 'Set the shop country first. The books never open on a guess.', code: 'NO_COUNTRY', message: 'Set the shop country first. The books never open on a guess.', type: 'https://chitbridge.com/problems/no_country', title: 'No country set', status: 422, detail: 'Set the shop country first. The books never open on a guess.', hint: 'Set the country in Country setup.', request_id: null });
       return J(route, 200, answerFor(u.searchParams.get('period')));
     }
     /* the Till card's teaser on Home: 8 weeks' sales (minor, oldest first, null = no record) and the engine's change vs last year */
