@@ -46,3 +46,17 @@ true and useless.
 `e2e/knowledge-graph.cjs` (web CI, `npm run check:graph`) builds `fixture/` — a three-repo miniature where every join is known — and pins
 each one; then runs `impact`, `gaps` and `changed` (on a throw-away git copy); then builds the real repos. Without `../chitbridge-api`
 beside the checkout (web CI) the api half is checked by shape only, and the test says so.
+
+## FEEDGRAPH — the api's own registers as graph facts (2026-10-23, `apifeed.cjs`)
+
+Athi, 2026-10-23: *"create feedgraph and the other one and will see which one should be useful"* (the other one: the Backstage software catalog, `toolset/catalog-api.cjs`; comparison in `C:/dev/PM/KG-VS-CATALOG-2026-10-23.md`). Candidate A widens this graph, no second graph. `build` also reads, from the api checkout and `--home DIR` (default: the folder beside the repos, holding `docs/29-…/tests/TEST-LIBRARY.json` and `PM/API-LESSONS-AUDIT-*.md`):
+
+| joined from | gives |
+|---|---|
+| api `docs/api-register.json` | route nodes gain `reg` (status · columns · sign-off · owner_area · declared statuses) |
+| api `docs/contracts/api-error-tests.json` · `api-contract-results.json` · `api-hardening-evidence.json` (+ `-areas.json` once api #337 lands; absence is said in `meta.notes`) | `tested-by` route → test, `via` error-tests / contract / evidence |
+| api `docs/error-codes.json` | `errcode` nodes; `returns` route → errcode where the route's own text names the code |
+| `TEST-LIBRARY.json` | test nodes gain level · type · runner · owner |
+| `API-LESSONS-AUDIT-*.md` | `lesson` nodes; `enforced-by` → the check an ADDRESSED lesson names; RULE ONLY / NOT ADDRESSED lessons carry `gap` |
+
+`gaps` adds **6 · routes no test proves** (no `tested-by` edge of any kind) and **7 · lessons nothing enforces**. Register rows the scan cannot place (and the reverse) are counted in `meta.apiFeed`, never dropped; a router file mounted twice is joined by file + method + tail.

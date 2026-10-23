@@ -8,6 +8,7 @@ const { round } = require('../lib/money');
 router.post('/payments', async (req, res) => {
   const r = await pay.post(req.body, round);
   const s = await db.query('SELECT status FROM books_setting WHERE entity_id = $1', [1]);
+  if (!r) return res.status(409).json({ code: 'PAY_REFUSED' });
   res.json({ ok: true, r, s });
 });
 

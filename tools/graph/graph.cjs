@@ -14,15 +14,16 @@
  *   · a decisions file                         NONE exists in any of the three repos (searched by name and heading) — the
  *                                              `decision` node kind and `decided-by` edges are skipped, and meta says so
  *
- * Nodes  step · screen · function · route · table · test · pack · file
+ * Nodes  step · screen · function · route · table · test · pack · file · errcode · lesson · check   (the last three: FEEDGRAPH, tools/graph/apifeed.cjs)
  * Edges  implements (step → code) · calls (fn/screen/route → fn; fn → route via http) · reads / writes (code → table)
  *        tested-by (code → test) · requires (file → file) · vendors (adopted copy → engines source) · uses (file → pack)
  *        opens (screen → screen: a sheet raised from a page — SCREEN-ID, read from tools/screen-list.cjs)
+ *        returns (route → errcode) · enforced-by / mentions (lesson → check) · tested-by also from the api's error-tests / contract / evidence files
  *
  *   node tools/graph/graph.cjs build                      → tools/graph/out/calls.json + graph.json (gitignored)
  *   node tools/graph/graph.cjs impact <file|function>     flow steps, screens, routes and TESTS touched by a change there
  *   node tools/graph/graph.cjs changed <git-range>        git diff → impacted tests (the list a PR should run)  [--repo api|engines]
- *   node tools/graph/graph.cjs gaps                       steps with no test · functions on no flow · routes no screen calls · tables no route touches
+ *   node tools/graph/graph.cjs gaps                       steps with no test · functions on no flow · routes no screen calls · tables no route touches · routes no test proves · lessons nothing enforces
  *   flags: --roots web=DIR,api=DIR,engines=DIR  --out DIR  --json  --depth N  --top N
  *
  * ⚠️ WHAT IT CANNOT SEE, SAID PLAINLY: static names only. Dynamic dispatch (`window[name]()`), a holder chain longer than one
@@ -38,6 +39,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const S = require('./scan.cjs');
+const APIFEED = require('./apifeed.cjs');
 
 /* ── args ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 const argv = process.argv.slice(2);
@@ -45,7 +47,7 @@ const flag = (name, dflt) => {
   const i = argv.indexOf('--' + name);
   return i >= 0 ? (argv[i + 1] == null || /^--/.test(argv[i + 1]) ? true : argv[i + 1]) : dflt;
 };
-const positional = argv.filter((item, index) => !/^--/.test(item) && !(index > 0 && /^--(roots|out|depth|top|repo|endpoint-usage)$/.test(argv[index - 1])));
+const positional = argv.filter((item, index) => !/^--/.test(item) && !(index > 0 && /^--(roots|out|depth|top|repo|endpoint-usage|home)$/.test(argv[index - 1])));
 const CMD = positional[0];
 const ARG = positional[1];
 const HERE = __dirname;
@@ -67,6 +69,8 @@ const JSON_OUT = !!flag('json', false);
    screen and every step, which is true and useless. `--depth 0` lifts the limit. */
 const DEPTH = flag('depth', null) == null ? 4 : Number(flag('depth')) || 0;
 const TOP = Number(flag('top', 10)) || 10;
+/* the folder that holds docs/29-…/tests/TEST-LIBRARY.json and PM/API-LESSONS-AUDIT-*.md (the dev root, beside the repos) */
+const HOME = path.resolve(String(flag('home', path.resolve(ROOTS.web, '..'))));
 
 const exists = (p) => {
   try {
@@ -964,6 +968,9 @@ function build() {
     'no decisions file exists in web, api or engines (searched for *decision* files and "# Decisions" headings): the decision node kind and decided-by edges are skipped'
   );
 
+  /* ── 10b · FEEDGRAPH: the api's generated registers, tests, evidence, error codes and the lessons audit ─────────────── */
+  APIFEED.feed({ A, HOME, node, edge, byId, routes, files, norm, meta, present: meta.present });
+
   /* ── 11 · write ─────────────────────────────────────────────────────────────────────────────────────────────── */
   const list = [...nodes.values()].sort((first, second) => (first.id < second.id ? -1 : 1));
   const Ed = [...edges.values()].sort((first, second) =>
@@ -1473,6 +1480,43 @@ function gaps() {
     (item) => item.nav
   );
 
+  /* 6 · routes no test proves (FEEDGRAPH): no tested-by edge of ANY kind — a test that calls the path, an error-tests row, a contract row, evidence */
+  const proven = (r) => (g.out.get(r.id) || []).some((e) => e.kind === 'tested-by');
+  const unproven = routes.filter((r) => !proven(r));
+  const byStatus = {};
+  unproven.forEach((r) => {
+    const k = r.reg ? r.reg.status : 'not in register';
+    byStatus[k] = (byStatus[k] || 0) + 1;
+  });
+  const perUnprovenFile = {};
+  unproven.forEach((r) => {
+    perUnprovenFile[r.file] = (perUnprovenFile[r.file] || 0) + 1;
+  });
+  out.routesNoProof = {
+    total: routes.length,
+    unproven: unproven.length,
+    byRegisterStatus: byStatus,
+    signedButUnproven: unproven.filter((r) => r.reg && r.reg.signed).length,
+    topFiles: Object.entries(perUnprovenFile)
+      .sort((first, second) => second[1] - first[1])
+      .slice(0, TOP)
+      .map(([f, c]) => ({ file: f, routes: c, of: routes.filter((item) => item.file === f).length })),
+    examples: unproven.slice(0, TOP).map((r) => r.method + ' ' + r.path + (r.reg ? ' [' + r.reg.status + (r.reg.signed ? ', signed' : '') + ']' : ''))
+  };
+
+  /* 7 · lessons nothing enforces (FEEDGRAPH): the audit rows whose verdict is RULE ONLY or NOT ADDRESSED, plus ADDRESSED rows whose named check was not found */
+  const lessons = N.filter((item) => item.kind === 'lesson');
+  const unenforced = lessons.filter((l) => l.gap);
+  const claimedNoCheck = lessons.filter((l) => !l.gap && !l.checksFound);
+  out.lessonsNoCheck = {
+    total: lessons.length,
+    unenforced: unenforced.length,
+    ruleOnly: unenforced.filter((l) => l.verdict === 'rule-only').length,
+    notAddressed: unenforced.filter((l) => l.verdict === 'not-addressed').length,
+    addressedButCheckNotFound: claimedNoCheck.map((l) => l.n),
+    list: unenforced.map((l) => l.n + ' [' + l.verdict + '] ' + l.text)
+  };
+
   if (JSON_OUT) return console.log(JSON.stringify(out));
   console.log('');
   out.notes.forEach((item) => console.log('  ⚠ ' + item));
@@ -1534,6 +1578,19 @@ function gaps() {
     '\n  5 · SCREENS NO TEST  — ' + out.screensNoTest.untested + ' of ' + out.screensNoTest.total + ' screens (labs excluded) are reached by no web test'
   );
   out.screensNoTest.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
+  console.log(
+    '\n  6 · ROUTES NO TEST PROVES  — ' + out.routesNoProof.unproven + ' of ' + out.routesNoProof.total +
+      ' routes have no test edge of any kind (a test that calls the path · an error-tests row · a contract row · evidence); by register status ' +
+      JSON.stringify(out.routesNoProof.byRegisterStatus) + '; ' + out.routesNoProof.signedButUnproven + ' of them are signed off'
+  );
+  out.routesNoProof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
+  out.routesNoProof.examples.forEach((item) => console.log('        ' + item));
+  console.log(
+    '\n  7 · LESSONS NOTHING ENFORCES  — ' + out.lessonsNoCheck.unenforced + ' of ' + out.lessonsNoCheck.total + ' API lessons (' +
+      out.lessonsNoCheck.ruleOnly + ' rule only · ' + out.lessonsNoCheck.notAddressed + ' not addressed)' +
+      (out.lessonsNoCheck.addressedButCheckNotFound.length ? '; ADDRESSED but the named check was not found: ' + out.lessonsNoCheck.addressedButCheckNotFound.join(' ') : '')
+  );
+  out.lessonsNoCheck.list.slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
   if (out.navNoDispatch.length) console.log('\n  nav keys in CBSCREENS with no dispatch line found in app.html: ' + out.navNoDispatch.join(' · '));
   console.log('');
 }
