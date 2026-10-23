@@ -26,7 +26,8 @@ const SHOPS = {
 async function api(path, { method = 'GET', token, body } = {}) {
   const res = await fetch(API + path, {
     method,
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    /* API-3 S36: an unsigned write is a public door (order/start, order/confirm): each call is its own attempt with its own key */
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}), ...(!token && method !== 'GET' ? { 'Idempotency-Key': crypto.randomUUID() } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let json = null; try { json = await res.json(); } catch (_) {}
