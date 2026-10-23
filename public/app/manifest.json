@@ -4,7 +4,7 @@
   "editions_": "AX1 (2026-10-13): an EDITION is which entries a showing draws — ONE map here, never a flag per entry, so a showing is read and changed in one place. key → { name (the avatar menu's word), chip (the header chip; absent on full), line (one line on Home saying what the view is for), entries: '*' | [ids] }. An id with no entry yet draws nothing (compare = the parallel-run compare, listed now, drawn when PR1 adds its entry). Read by public/app/edition.js (CBEdition) only. An edition HIDES, it never grants: the server still decides access.",
   "editions": {
     "full": { "name": "Everything", "entries": "*" },
-    "auditor": { "name": "Auditor view", "chip": "Auditor view", "line": "For your auditor: the books, what is owed, the standards and the papers. Nothing here runs the shop.", "entries": ["accounts", "finance", "crm", "standards", "compatibility", "documents", "connectors", "compare", "shop"] }
+    "auditor": { "name": "Auditor view", "chip": "Auditor view", "line": "For your auditor: the books, what is owed, the standards and the papers. Nothing here runs the shop.", "entries": ["accounts", "finance", "crm", "standards", "documents", "connectors", "compare", "shop"] }
   },
   "rail": { "route": "/tasks.html", "facts": "/api/work/facts" },
   "entries": [
