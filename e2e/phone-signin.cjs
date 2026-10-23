@@ -57,7 +57,7 @@ function standIn(reg) {
       return j(200, { message: 'Verification code sent to your email', email: 'a***@example.com' });
     }
     if (u === '/api/entities/verify' || u === '/api/signin/verify') {
-      const p = PEOPLE[String(b.user_id || '').trim().toLowerCase()];
+      const p = PEOPLE[String(b.id || b.user_id || '').trim().toLowerCase()];   /* the sign-in kit sends { id, otp } (SEC-81) */
       if (!p) return j(400, { error: 'Verification failed', message: 'That User ID is not recognised.' });
       if (issued !== p.user_id || b.otp !== '123456') return j(400, { error: 'Verification failed', message: 'Invalid or expired OTP' });
       issued = null;
@@ -162,8 +162,9 @@ async function walk(b, WEB, tag, dev, reg, opts) {
     await p.waitForTimeout(400);
   }
 
-  /* the door a person sees: the "nobody signed in" pill at the top */
-  await tap('[data-testid="till-who"]');
+  /* the door a person sees: the "nobody signed in" pill at the top; on a phone (M112) the pill lives inside ☰ — the same door, one tap deeper */
+  if (phone) { await tap('[data-testid="till-menu"]'); await tap('[data-testid="till-hub-who-act"]'); }
+  else await tap('[data-testid="till-who"]');
   await p.waitForSelector('#usigndlg[open] [data-testid="signin-id"]', { timeout: 10000 });
   res.fitWho = await dialogFits(p);
   res.whoAttrs = await p.evaluate(() => { const i = document.querySelector('[data-testid="signin-id"]');

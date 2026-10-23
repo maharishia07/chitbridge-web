@@ -204,6 +204,13 @@
   .cp-morelist{ margin:10px 0 0; padding-left:22px; font-size:var(--fs-2,12.5px); columns:2 200px; column-gap:24px; } .cp-morelist li{ break-inside:avoid; padding:2px 0; }
   .cp-cname{ display:block; white-space:normal; font-weight:400; font-size:var(--fs-1,11px); color:var(--grey-2,#545A61); }
   .cp-one{ display:none; } .cp-all-pick{ display:none; }
+  .cp-show{ display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; margin:8px 0; padding:6px 10px; border:1px solid var(--line,#e7e3d8); border-radius:8px; font-size:var(--fs-2,12.5px); }
+  .cp-show legend{ padding:0 4px; font-weight:700; } .cp-show-item{ display:inline-flex; gap:4px; align-items:center; cursor:pointer; }
+  /* CTRY-44: the sample sales receipt — a counter slip, drawn once per country by the one invoice layout */
+  .cp-receipt{ max-width:560px; margin:6px auto; padding:12px 14px; border:1px dashed var(--line,#e7e3d8); border-radius:6px; background:var(--card,#fff); }
+  .cp-rc-head{ text-align:center; margin-bottom:8px; } .cp-rc-title{ margin-top:6px; border-top:1px solid var(--line,#e7e3d8); border-bottom:1px solid var(--line,#e7e3d8); padding:4px 0; }
+  .cp-rc-foot{ margin-top:8px; border-top:1px dashed var(--line,#e7e3d8); padding-top:6px; text-align:center; } .cp-rc-thanks{ margin-top:4px; font-weight:700; }
+  @media (max-width:760px){ .cp-show{ display:none; } }
   .cp-link{ font:inherit; color:var(--blue,#3F66A6); background:none; border:0; padding:0; text-decoration:underline; cursor:pointer; text-align:left; }
   .cp-chart{ margin-top:14px; background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:12px 14px; }
   .cp-tree{ columns:3 260px; column-gap:24px; margin:8px 0 0; padding-left:18px; font-size:var(--fs-2,12.5px); } .cp-tree > li{ break-inside:avoid; margin-bottom:8px; } .cp-tree ul{ margin:2px 0 0; padding-left:14px; } .cp-tree ul li{ color:var(--grey-2,#545A61); }
@@ -237,6 +244,7 @@
   <section class="pane left" data-testid="cl-inputs">
 
     <div class="sec">Registered in → registering in</div>
+    <div class="hint" id="what" data-testid="cl-what"></div>
     <div class="line">
       <label>registered in <select id="from" data-testid="cl-from" onchange="setSide('from', this.value)"></select></label>
       <label>registering in <select id="to" data-testid="cl-to" onchange="setSide('to', this.value)"></select></label>
@@ -296,6 +304,7 @@
 <script src="/engine/money.js"></script>
 <script src="/engine/tax.js"></script>
 <script src="/engine/locale.js"></script>
+<script src="/engine/docnumber.js"></script>   <!-- CBDoc: the sample receipt's bill number, written by the country's own numbering rule -->
 <script src="/engine/profilemap.js"></script>
 <script src="/engine/jurisdiction.js"></script>
 <!-- CL3 · THE STANDARD SHELL (page-frame.js's load order): the one-person check, the shell, the kural, the frame; then the readiness reader -->
@@ -316,6 +325,7 @@ var FUEL = (function () {
   var missing = [];
   if (!window.CBMoney) missing.push('engine/money.js');
   if (!window.CBRegulation || !window.CBTax || !window.CBTaxPacks) missing.push('engine/tax.js (the bundle: packs + regulation + tax)');
+  if (!window.CBCountries) missing.push('engine/tax.js (the country reader, CBCountries)');
   if (!window.CBLocale) missing.push('engine/locale.js');
   if (!window.CBProfileMap) missing.push('engine/profilemap.js');
   if (!window.CBJurisdiction) missing.push('engine/jurisdiction.js');
@@ -517,6 +527,111 @@ function cartTotalMinor(p) {
   if (!b) return 0;
   return Math.round(b.money.total * Math.pow(10, CBMoney.decimals(p.currency)));
 }
+/** the engine's one reader of a country's rules (CBCountries.rulesTable): the lab paints its words for the rows below, never a second reading of the pack */
+var RULES = null;
+/** one rule of one country, in the engine's words (null when the pack is silent) */
+function ruleText(id, key) {
+  if (!RULES) RULES = CBCountries.rulesTable({ year: new Date().getFullYear() });
+  var row = RULES.rules.filter(function (item) {
+    return item.key === key;
+  })[0];
+  return row && row.values[id] != null ? row.values[id] : null;
+}
+/** the voucher kinds and their series, as 'Sales SV' words */
+function seriesOf(series) {
+  return Object.keys(series || {}).map(function (kind) {
+    return kind + ' ' + series[kind];
+  });
+}
+/** records kept, by kind: the pack's own years (standard first), a *_months kind in months */
+function keptOf(pack) {
+  var years = (pack.records && pack.records.years) || {};
+  return Object.keys(years).map(function (kind) {
+    var months = /_months$/.test(kind);
+    return { kind: kind.replace(/_months$/, '').replace(/_/g, ' '), n: years[kind], unit: months ? 'months' : 'years' };
+  });
+}
+/** CTRY-39 · the pack rows the lab did not show (records, tax heads paid, time zones, dates and numbers, voucher numbers), added to a pack's facts */
+function withPackRows(pack, base) {
+  var more = {
+    retention: ruleText(pack.id, 'records'),
+    kept: { list: keptOf(pack), cite: (pack.records && pack.records.cite) || null },
+    payheads: { heads: (pack.payHeads || []).slice(), optional: (pack.optionalHeads || []).slice() },
+    zones: { all: (pack.timeZones || []).slice(), words: ruleText(pack.id, 'zones') },
+    formats: { tag: (pack.locale && pack.locale.format) || null, dates: ruleText(pack.id, 'date'), numbers: ruleText(pack.id, 'money') },
+    voucher: { format: pack.voucherFormat || null, series: seriesOf(pack.voucherSeries) }
+  };
+  return Object.assign(base, more);
+}
+/** CTRY-39 · a pack's silence on one of those rows, said on the row (never filled in) */
+var NONE_IN_PACK = 'none in the pack';
+/** Keep records for: the years, in the engine's words */
+function retentionCell(facts) {
+  return facts.retention ? '<b>' + esc(facts.retention) + '</b>' : NONE_IN_PACK;
+}
+/** Records the law names: the first two kinds on the line, all of them and the citation behind the fold */
+function keptCell(facts) {
+  var kept = facts.kept.list;
+  if (!kept.length) return NONE_IN_PACK;
+  var detail = kept.map(function (item) {
+    return esc(item.kind) + ': ' + esc(item.n) + ' ' + item.unit;
+  });
+  var shown = kept.slice(0, 2).map(function (item) {
+    return esc(item.kind) + ' <b>' + esc(item.n) + '</b> ' + item.unit;
+  });
+  return shown.join(' · ') + (kept.length > 2 ? ' · +' + (kept.length - 2) + ' more' : '') + fold('why', list(detail) + cite(facts.kept.cite));
+}
+/** Tax heads paid: the heads a return pays; the optional ones named in the fold */
+function payHeadsCell(facts) {
+  var heads = facts.payheads.heads,
+    optional = facts.payheads.optional;
+  if (!heads.length) return NONE_IN_PACK;
+  return '<b>' + heads.map(esc).join(' · ') + '</b>' + (optional.length ? fold('why', '<div>' + optional.map(esc).join(' · ') + ' only when the shop uses it</div>') : '');
+}
+/** Time zones: the engine's short list, every zone behind the fold */
+function zonesCell(facts) {
+  var zones = facts.zones.all;
+  if (!zones.length) return NONE_IN_PACK;
+  return esc(facts.zones.words || zones.join(', ')) + (zones.length > 1 ? fold('why · ' + zones.length + ' zones', list(zones.map(esc))) : '');
+}
+/** Dates and numbers: a sample date on the line, a sample number and the format tag in the fold */
+function formatsCell(facts) {
+  var formats = facts.formats;
+  if (!formats.tag) return NONE_IN_PACK;
+  var detail = [formats.numbers ? 'a number: ' + esc(formats.numbers) : null, 'format ' + esc(formats.tag)].filter(Boolean);
+  return '<b>' + esc(formats.dates) + '</b>' + fold('why', list(detail));
+}
+/** Voucher numbers: the shape in plain words, the format and the series behind the fold */
+function voucherCell(facts) {
+  var voucher = facts.voucher;
+  if (!voucher.format) return NONE_IN_PACK;
+  var detail = ['format ' + esc(voucher.format)].concat(voucher.series.length ? ['series: ' + voucher.series.map(esc).join(' · ')] : []);
+  return CBLabKit.plain(voucher.format) + fold('why', list(detail));
+}
+var PACK_ROW_CELLS = { retention: retentionCell, kept: keptCell, payheads: payHeadsCell, zones: zonesCell, formats: formatsCell, voucher: voucherCell };
+/** CTRY-39 · one cell of those rows: one plain line, the detail behind the fold */
+function packRowCell(key, facts) {
+  var make = PACK_ROW_CELLS[key];
+  return make ? make(facts) : '';
+}
+/** CTRY-39 · what each of those rows means for the shop */
+function packRowMeaning(key) {
+  switch (key) {
+    case 'retention':
+      return 'How long the books and bills are kept, and the purge waits for it.';
+    case 'kept':
+      return 'Which records the law names, and for how long.';
+    case 'payheads':
+      return 'The tax heads a return pays to the authority.';
+    case 'zones':
+      return "The shop's day opens and closes in its own time zone.";
+    case 'formats':
+      return 'Dates and numbers are written the way people there read them.';
+    case 'voucher':
+      return 'Every voucher number follows this shape; each kind has its own series.';
+  }
+  return '';
+}
 function factsOf(p) {
   if (!p) return null;
   var t = p.tax || {};
@@ -550,7 +665,7 @@ function factsOf(p) {
   });
   var pres = p.presentation || {};
   var th = thresholdOf(p);
-  return {
+  return withPackRows(p, {
     id: p.id,
     name: p.name,
     version: p.version,
@@ -586,7 +701,7 @@ function factsOf(p) {
       thresholdCite: th.cite,
       thresholdVerified: th.verified
     }
-  };
+  });
 }
 function same(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -746,7 +861,7 @@ function cellHTML(key, f) {
       why.push('registered for tax? ' + esc(c.threshold) + (c.thresholdVerified ? '' : ' <span class="chip warn">unverified</span>') + cite(c.thresholdCite));
       return esc(c.country) + ' · ' + esc(c.currency) + ' · ' + esc(monthName(c.fy)) + ' · ' + esc(c.taxid) + fold('why', list(why));
   }
-  return '';
+  return packRowCell(key, f);
 }
 function ledgerDiff(a, b) {
   var added = [],
@@ -830,7 +945,7 @@ function meaning(key, a, b, isSame) {
     case 'setup':
       return 'The setup step asks these four; each starts from the pack.';
   }
-  return '';
+  return packRowMeaning(key);
 }
 var ROWS = [
   ['currency', 'Currency'],
@@ -842,6 +957,12 @@ var ROWS = [
   ['returns', 'The return'],
   ['ledgers', 'Chart of accounts'],
   ['words', 'Statement words'],
+  ['retention', 'Keep records for'],
+  ['kept', 'Records the law names'],
+  ['payheads', 'Tax heads paid'],
+  ['zones', 'Time zones'],
+  ['formats', 'Dates and numbers'],
+  ['voucher', 'Voucher numbers'],
   ['setup', 'Country setup asks']
 ];
 function verdictOf(key, a, b) {
@@ -1276,6 +1397,8 @@ function repaint() {
         return item.id + ' ' + item.version;
       })
       .join(' · ');
+  document.getElementById('what').innerHTML =
+    'Side by side: <b>' + esc(countryName(LAB.from)) + '</b> with <b>' + esc(countryName(LAB.to)) + '</b>. Pick any of the ' + CBRegulation.list().length + ' packs on either side.';
   paintCart();
   paintRows();
   paintBill();

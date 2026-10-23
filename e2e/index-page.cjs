@@ -176,7 +176,7 @@ async function run() {
       ok(navAreas.join() === AREA_LIST.join() && shellAreas.join() === AREA_LIST.join(), '1366 · the nav has SEVEN areas, in order: ' + AREA_LIST.join(' · ') + ' (drawn: ' + navAreas.join(' · ') + ')');
       const sections = await pg.$$eval('.cbsh-sec', (ss) => ss.map((x) => x.dataset.area));
       ok(sections.join() === AREA_LIST.join(), '1366 · one section per area: Home (with the "Your work" box) · Selling · Money · Running it · Trade · Labs · Setup (' + sections.join(' · ') + ')');
-      const heads = await pg.$$eval('.cbsh-ph', (hs) => hs.map((h) => h.textContent.trim()));
+      const heads = await pg.$$eval('.cbsh-ph', (hs) => hs.map((h) => (h.querySelector('.rn') || h).textContent.trim()));   /* Trade · Labs · Setup are phone "rows": the name (.rn) beside a one-line purpose (.rs) */
       ok(heads.length === 7 && heads[0] === W.areas.home && ['selling', 'money', 'running', 'trade', 'labs', 'setup'].every((a, i) => heads[i + 1] === W.caption[a]), '1366 · the section headings (' + heads.join(' · ') + ')');
       const tiles = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => Math.round(b.getBoundingClientRect().height)));
       ok(tiles.length === BUILT.length && tiles.every((h) => h === 148), '1366 · all ' + tiles.length + ' tiles are 148px tall (' + [...new Set(tiles)].join(', ') + ')');
@@ -193,7 +193,7 @@ async function run() {
       /* NAMES-1 (Athi, 17 Oct): "Running it" is one flat group, like Trade; Stock stands in it; every tile says what it is for */
       const run = await pg.evaluate(() => { const s = document.querySelector('.cbsh-sec.running'); const ids = (sel) => [...s.querySelectorAll(sel)].map((n) => n.getAttribute('data-testid').replace(/^shell-(card|chip)-/, ''));
         return { pils: s.querySelectorAll('.cbsh-pil').length, cards: ids('.cbsh-box'), chips: ids('.cbsh-sc'), stock: (s.querySelector('[data-testid="shell-card-stock"] h4') || {}).textContent }; });
-      ok(run.pils === 0 && run.cards.join() === 'operations,stock,tasks,suppliers,counters,employees' && run.chips.join() === 'delivery,people',
+      ok(run.pils === 0 && run.cards.join() === 'operations,stock,tasks,suppliers,counters,employees,coassist' && run.chips.join() === 'delivery',
         '1366 · Running it is flat: ' + run.cards.join(' · ') + ', then the later chips ' + run.chips.join(' · ') + ' (' + run.pils + ' sub-panels)');
       ok(run.stock === 'Stock', '1366 · Stock is a tile under Running it, and a shop with no country reads the neutral word "Stock" (' + run.stock + ')');
       const bare = await pg.$$eval('.cbsh-box', (bs) => bs.filter((b) => !((b.querySelector('.what') || {}).textContent || '').trim()).map((b) => b.dataset.id));
@@ -238,13 +238,13 @@ async function run() {
       await pg.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {});
       /* a tile shows its status, ONE line and a "+n"; every line is in the drop-down (.more) */
       const tf = await pg.$eval('[data-testid="shell-facts-till"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), more: (n.querySelector('.more') || {}).textContent || '', n: (n.querySelector('.more-n') || {}).textContent, lines: n.querySelectorAll('.more .f').length }));
-      ok(/12 bills · ₹4,280/.test(tf.tile) && tf.n === '+1' && tf.lines === 2 && /1 bill waiting to send Send now ›/.test(tf.more) && !/INR|{money}/.test(tf.tile + tf.more), 'planted · the Till tile shows one line and "+1"; its drop-down holds both lines, from the API ("' + tf.tile + '" / "' + tf.more.trim() + '")');
+      ok(/12 bills · ₹4,280/.test(tf.tile) && tf.n === '+1 more' && tf.lines === 2 && /1 bill waiting to send Send now ›/.test(tf.more) && !/INR|{money}/.test(tf.tile + tf.more), 'planted · the Till tile shows one line and "+1"; its drop-down holds both lines, from the API ("' + tf.tile + '" / "' + tf.more.trim() + '")');
       /* RPT2: the Till card's teaser — the sparkline + "↑ +12% vs last year" (arrow + sign + words), a door into Reports › Trend, inside the tile's one row */
       const teaser = await pg.evaluate(() => { const t = document.querySelector('[data-testid="shell-facts-till"] [data-testid="shell-fact-trend"]'); return t ? { words: t.textContent.replace(/\s+/g, ' ').trim(), href: t.getAttribute('data-href'), svg: !!t.querySelector('svg[role="img"][aria-label]'), h: Math.round(t.getBoundingClientRect().height) } : null; });
       ok(teaser && teaser.svg && teaser.words === '↑ +12% vs last year' && teaser.href === '/finance.html#/reports/trend/week' && teaser.h <= 24, 'planted · the Till card carries the teaser: a sparkline + "↑ +12% vs last year", opening Reports › Trend, one line high (' + JSON.stringify(teaser) + ')');
       ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the Accounts tile: one line from the API, no +n');
       const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
-      ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
+      ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2 more' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
       /* STATUS: shell-state on every card whose facts answered (state, or lines); none on a card with no facts read */
       const sts = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => ({ id: b.dataset.id, st: (b.querySelector('[data-testid="shell-state"]') || { dataset: {} }).dataset.state || null })));
       const wrongSt = sts.filter((x) => (PLANTED_STATE[x.id] || null) !== x.st);
@@ -282,7 +282,7 @@ async function run() {
       const pg = await open(ctx);
       await pg.waitForSelector('[data-testid="ledger-waiting"]', { timeout: 8000 }).catch(() => {});
       const t = (id) => pg.evaluate((x) => ((document.querySelector('[data-testid="' + x + '"]') || {}).textContent || '').replace(/\s+/g, ' '), id);
-      ok(/211 things are waiting for you/.test(await t('ledger-waiting')),
+      ok(/(^|[^0-9])211 things are waiting for you/.test(await t('ledger-waiting')),
         'STD1 · > 50 rows: Home says the server count (120 + 90 + 1 = 211) in one row, not the page of 50 (' + (await t('ledger-waiting')) + ')');
       await ctx.close();
     }

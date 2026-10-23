@@ -1373,7 +1373,7 @@ function shopCartBarHtml() {
 } /* the same chip as the app; first paint = every repaint */ /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 var _stockAsked = false;
 function shopAskStock() {
-  if (_stockAsked || !BRIDGE) return;
+  if (_stockAsked || !BRIDGE || _PREVIEW) return; /* the owner's preview of a shop not yet open to the public: the server answers 404 for it by design (publicEntityOfHandle), so do not ask */
   _stockAsked = true;
   var any = ((_SHOPDATA && _SHOPDATA.items) || []).some(function (item) {
     var d = item.item_data || item;
