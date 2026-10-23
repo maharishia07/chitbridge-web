@@ -164,6 +164,17 @@ const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'func
 ok(facts.functions.length === 2 && facts.functions[0].name === 'readShop' && facts.functions[1].complexity === 5, 'measure: two functions, manyBranches has complexity 5 (' + facts.functions.map((fn) => fn.name + ' c' + fn.complexity).join(', ') + ')');
 ok(facts.cryptic.length === 1 && facts.cryptic[0].name === 'q' && facts.emptyCatches.length === 1 && facts.header.card === 'qa/fixture-unit', 'measure: one cryptic name, one empty catch, the CARD line read');
 ok(measure.inScope('web', 'public/app/x.js') && !measure.inScope('web', 'public/till.html') && !measure.inScope('web', 'e2e/x.cjs') && !measure.inScope('api', 'lib/money.js', '/* ADOPTED from chitbridge-engines v1 · money */'), 'measure: scope — own code in, the vendored till / a test / an adopted copy out');
+/* INT7b: a route handler pairs with its own route when the file grows above it; a function with no route pairs as before */
+const ROUTES = (pad) => "/* api fixture */\nconst router = {};\n" + pad + "router.get('/a', async (req, res) => {\n  return 1;\n});\n" +
+  "router.post('/b', auth, async (req, res) => {\n  if (req.x) return 2;\n  if (req.y) return 3;\n  return 4;\n});\nfunction helper(rows) {\n  return rows;\n}\n";
+const routeBase = measure.factsFromText('routes/fixture.js', ROUTES('')).functions;
+const routeHead = measure.factsFromText('routes/fixture.js', ROUTES('\n'.repeat(9))).functions;
+const { matchBase } = require('../tools/readability/guard.cjs');
+const routePairs = matchBase(routeHead, routeBase);
+const pairedRoute = (route) => { const head = routeHead.find((fn) => fn.route === route); const base = routePairs.get(head); return base && base.route; };
+ok(routeHead[0].route === 'GET /a' && routeHead[1].route === 'POST /b' && !routeHead[2].route, 'measure: a handler passed to router.<verb>(\'path\', …) carries its route; a plain function carries none');
+ok(pairedRoute('GET /a') === 'GET /a' && pairedRoute('POST /b') === 'POST /b', 'guard: a handler moved 9 lines down still pairs with its own route (INT7b)');
+ok(routePairs.get(routeHead[2]) === routeBase[2], 'guard: a function with no route pairs by name + params, as before');
 const ratchet = require('../tools/readability/ratchet.cjs');
 const merged = ratchet.tighten({ 'a.js': { score: 3 }, 'b.js': { score: 1 } }, { 'a.js': { score: 1 }, 'b.js': { score: 5 }, 'c.js': { score: 0 } });
 ok(merged.rows['a.js'].score === 1 && merged.rows['b.js'].score === 1 && merged.rows['c.js'].score === 0 && merged.refused.length === 1 && merged.lowered.length === 1, 'ratchet: tighten lowers a.js, refuses b.js, adds c.js');
