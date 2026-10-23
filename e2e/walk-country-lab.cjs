@@ -297,6 +297,43 @@ const walk = async (w) => {
     return { ok: bad.length === 0, saw: notes.join(' · ') + (bad.length ? ' · FAIL ' + bad.join(' | ') : ' · all AA, no sideways scroll, popup inside the window') };
   });
 
+  await w.step('D5', '(UX-112) the popup keeps its header: its body scrolls, the title and the x stay in view; a list inside the popup scrolls in its own list, under its own header', async () => {
+    await page.setViewportSize({ width: 1366, height: 420 });   /* short window: the detail is longer than the popup */
+    await page.click('[data-testid="cl-more-invoice"]'); await page.waitForSelector('[data-testid="lk-pop"]'); await page.waitForTimeout(150);
+    const inView = () => page.evaluate(() => {
+      const p = document.querySelector('[data-testid="lk-pop"]'), h = p.querySelector('header'), x = p.querySelector('.lk-pop-x'), b = p.querySelector('.lk-pop-body');
+      const hr = h.getBoundingClientRect(), pr = p.getBoundingClientRect(), xr = x.getBoundingClientRect();
+      const hit = document.elementFromPoint(xr.left + xr.width / 2, xr.top + xr.height / 2);
+      return { long: b.scrollHeight > b.clientHeight + 4, bodyTop: Math.round(b.scrollTop), frameTop: Math.round(p.scrollTop),
+        header: hr.top >= pr.top - 1 && hr.top >= 0 && hr.bottom <= window.innerHeight, x: !!hit && (hit === x || x.contains(hit)) };
+    });
+    await page.evaluate(() => { const b = document.querySelector('[data-testid="lk-pop"] .lk-pop-body'); b.scrollTop = b.scrollHeight; });
+    await page.waitForTimeout(100);
+    const a = await inView();
+    await page.click('[data-testid="lk-pop-close"]');
+    /* the same popup holding a CBList ("and N more"): the list scrolls in its own .cbl-list, its column header stays, the popup body does not move */
+    await page.addScriptTag({ url: base + '/app/list-ctl.js' });
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'ux112-host'; document.body.appendChild(host);
+      const items = []; for (let i = 1; i <= 120; i++) items.push({ name: 'Line ' + i, note: 'row ' + i });
+      CBLabKit.more(host, { id: 'ux112', title: 'Many lines', items, columns: [{ key: 'name', label: 'Name' }, { key: 'note', label: 'Note' }] });
+    });
+    await page.click('[data-testid="lk-more-ux112"]'); await page.waitForSelector('[data-testid="lk-pop"] .cbl-list'); await page.waitForTimeout(200);
+    await page.evaluate(() => { const l = document.querySelector('[data-testid="lk-pop"] .cbl-list'); l.scrollTop = l.scrollHeight; });
+    await page.waitForTimeout(100);
+    const c = await page.evaluate(() => {
+      const p = document.querySelector('[data-testid="lk-pop"]'), l = p.querySelector('.cbl-list'), ch = p.querySelector('[role=columnheader]'), h = p.querySelector('header');
+      const lr = l.getBoundingClientRect(), cr = ch ? ch.getBoundingClientRect() : null;
+      return { listTop: Math.round(l.scrollTop), bodyTop: Math.round(p.querySelector('.lk-pop-body').scrollTop), header: h.getBoundingClientRect().top >= 0,
+        col: !!cr && cr.top >= 0 && cr.bottom <= lr.bottom && cr.bottom <= window.innerHeight };
+    });
+    await page.click('[data-testid="lk-pop-close"]'); await page.evaluate(() => document.getElementById('ux112-host').remove());
+    await page.setViewportSize({ width: 1366, height: 900 });
+    const ok = a.long && a.bodyTop > 0 && a.frameTop === 0 && a.header && a.x && c.listTop > 0 && c.bodyTop === 0 && c.header && c.col;
+    return { ok, saw: 'detail: longer than the popup ' + a.long + ', body scrolled ' + a.bodyTop + ' px, frame ' + a.frameTop + ' px, title in view ' + a.header + ', x pressable ' + a.x +
+      ' · list popup: list scrolled ' + c.listTop + ' px, popup body ' + c.bodyTop + ' px, title in view ' + c.header + ', column header in view ' + c.col };
+  });
+
   await w.step('K1', '(CTRY-38) one line says what the side-by-side is, and that any pack can be picked on either side', async () => {
     await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
     const a = await text(page, '[data-testid="cl-what"]');
