@@ -93,7 +93,7 @@ async function stub(ctx, sent) {
   await ctx.route('**' + DOORS.todo, (r) => J(r, []));
   await ctx.route('**' + DOORS.preflight, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preflight.push(b); return J(r, preflight(b)); });
   await ctx.route('**' + DOORS.preview, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.preview.push(b);
-    return b.source_country === 'AU' ? J(r, preview(b)) : J(r, { code: 'MOVE_IN_COUNTRY', error: COUNTRY_REFUSAL, message: COUNTRY_REFUSAL }, 422); });
+    return b.source_country === 'AU' ? J(r, preview(b)) : J(r, { code: 'MOVE_IN_COUNTRY', error: COUNTRY_REFUSAL, message: COUNTRY_REFUSAL, type: 'https://chitbridge.com/problems/move_in_country', title: 'Move in country', status: 422, detail: COUNTRY_REFUSAL, hint: 'Check what was sent and try again.', request_id: null }, 422); });
   await ctx.route('**' + DOORS.import, (r) => { const b = JSON.parse(r.request().postData() || '{}'); sent.import.push(b); return J(r, imported(b)); });
 }
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.trim() : ''; }, sel);
