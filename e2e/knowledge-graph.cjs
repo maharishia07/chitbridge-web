@@ -35,7 +35,7 @@ const roots = (fix) => ['--roots', 'web=' + path.join(fix, 'web') + ',api=' + pa
 console.log('');
 /* ── 1 · build on the fixture ────────────────────────────────────────────────────────────────────────────────────── */
 const out1 = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-graph-'));
-const buildArgs = ['build'].concat(roots(FIX), ['--out', out1], haveEU ? ['--endpoint-usage', EU] : []);
+const buildArgs = ['build'].concat(roots(FIX), ['--out', out1, '--home', path.join(FIX, 'home')], haveEU ? ['--endpoint-usage', EU] : []);
 const b = run(buildArgs);
 ok(b.status === 0, 'build on the fixture exits 0' + (b.status ? '\n' + b.stdout + b.stderr : ''));
 const G = JSON.parse(fs.readFileSync(path.join(out1, 'graph.json'), 'utf8'));
@@ -94,6 +94,19 @@ ok(Gp.stepsMissing && Gp.stepsMissing.length === 1, 'gaps: the MISSING step is l
 ok(Gp.routesNoScreen && Gp.routesNoScreen.total === 4 && Gp.routesNoScreen.uncalledByWeb === 1 && Gp.routesNoScreen.examples[0] === 'GET /api/books/never', 'gaps: 1 of 4 routes has no screen call (GET /api/books/never) — /status counts as called through the onclick handler');
 ok(Gp.tablesNoRoute && Gp.tablesNoRoute.declared === 4 && Gp.tablesNoRoute.noRouteTouches === 1 && Gp.tablesNoRoute.list[0] === 'never_touched', 'gaps: 1 of 4 tables is touched by no route (never_touched)');
 ok(Gp.functionsOnNoFlow && Gp.functionsOnNoFlow.off >= 2 && Gp.functionsOnNoFlow.total > Gp.functionsOnNoFlow.off, 'gaps: functions on no flow counted (helperUnused, unusedHelper …) and fewer than all');
+
+/* ── 3b · FEEDGRAPH (tools/graph/apifeed.cjs): the api registers, tests, error codes and lessons audit, joined ───────────────────── */
+const regOf = (id) => (G.nodes.find((n) => n.id === id) || {}).reg || {};
+ok(regOf(ROUTE).status === 'meets standard' && regOf(ROUTE).signed === true && regOf(ROUTE).owner_area === 'books' && regOf(ROUTE).columnsPassing === 2, 'feed: the route node carries its register status, owner, columns and sign-off');
+ok(regOf('route:api:routes/books.js GET /never').status === 'not started' && regOf('route:api:routes/books.js GET /never').signed === false, 'feed: an unsigned, not-started route says so');
+ok(has('route:api:routes/books.js GET /status', 'check:api:docs/contracts/api-error-tests.json', 'tested-by', 'error-tests-refusal'), 'feed: an api-error-tests.json row of only 401/500 becomes a WEAK tested-by edge (via error-tests-refusal)');
+ok(has('route:api:routes/books.js GET /orphan', 'check:api:tools/api-contract-tests.cjs', 'tested-by', 'contract'), 'feed: an api-contract-results.json row becomes a tested-by edge (via contract)');
+ok(has(ROUTE, 'errcode:PAY_REFUSED', 'returns') && ids.has('errcode:NEVER_USED'), 'feed: route → errcode from the code literal in the route text; an unused code is still a node');
+ok((G.nodes.find((n) => n.id === 'test:api:tests/pay.test.cjs') || {}).level === 'T1', 'feed: the test library gives the test node its level');
+ok(has('lesson:api:1', 'test:api:tests/pay.test.cjs', 'enforced-by', 'audit') && has('lesson:api:1', 'file:api:lib/pay.js', 'mentions', 'audit') && !has('lesson:api:1', 'file:api:lib/pay.js', 'enforced-by') && (G.nodes.find((n) => n.id === 'lesson:api:2') || {}).gap === true && (G.nodes.find((n) => n.id === 'lesson:api:3') || {}).verdict === 'not-addressed', 'feed: lesson 1 is enforced by its test and only MENTIONS lib/pay.js (a lib file is named, not run in CI); lessons 2 and 3 are gaps');
+ok(G.meta.notes.some((n) => /api-hardening-evidence-areas\.json is absent/.test(n)), 'feed: the absent areas-evidence file (api #337) is SAID, not an error');
+ok(Gp.routesNoProof && Gp.routesNoProof.total === 4 && Gp.routesNoProof.unproven === 1 && Gp.routesNoProof.weakOnly === 1 && Gp.routesNoProof.weakOnlyRefusal === 1 && Gp.routesNoProof.strong === 2 && /^GET \/api\/books\/never/.test(Gp.routesNoProof.examples[0]) && Gp.routesNoProof.byRegisterStatus['not started'] === 1, 'gaps 6: 1 of 4 routes has no test of any kind (GET /api/books/never, not started), 1 has a refusal-only row (weak), 2 are strong');
+ok(Gp.lessonsNoCheck && Gp.lessonsNoCheck.total === 4 && Gp.lessonsNoCheck.unenforced === 2 && Gp.lessonsNoCheck.partly === 1 && Gp.lessonsNoCheck.ruleOnly === 1 && Gp.lessonsNoCheck.notAddressed === 1, 'gaps 7: 2 of 4 lessons are enforced by nothing (1 rule only, 1 not addressed) and 1 only partly');
 
 /* ── 4 · changed <range> on a throw-away git repo of the fixture ────────────────────────────────────────────────── */
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-graph-git-'));
