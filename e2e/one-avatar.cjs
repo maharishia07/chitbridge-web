@@ -209,9 +209,9 @@ async function run(site, o) {
         ok((await p.evaluate(() => localStorage.getItem('cb_fs'))) === 'l', 'size · saved under the unchanged key cb_fs = l');
         ok(!(await p.evaluate(() => /zoom/.test(document.documentElement.getAttribute('style') || ''))), 'size · never zoom');
         /* bold */
-        const w0 = parseInt(await cs(p, pg.id === 'index' ? '.idea' : 'body', 'fontWeight'), 10);
+        const w0 = parseInt(await cs(p, 'body', 'fontWeight'), 10);
         await p.click('[data-testid="weight-bold"]');
-        const w1 = parseInt(await cs(p, pg.id === 'index' ? '.idea' : 'body', 'fontWeight'), 10);
+        const w1 = parseInt(await cs(p, 'body', 'fontWeight'), 10);
         ok((await html(p, 'data-weight')) === 'bold' && w1 === 600 && w0 < 600, 'bold · ' + pg.id + ': regular text goes ' + w0 + ' → ' + w1);
         const strong = await p.evaluate(() => { const e = document.querySelector('h1,b,strong'); return e ? parseInt(getComputedStyle(e).fontWeight, 10) : 0; });
         ok(strong >= 700, 'bold · ' + pg.id + ': what was bold stays the strongest (' + strong + ' > 600)');

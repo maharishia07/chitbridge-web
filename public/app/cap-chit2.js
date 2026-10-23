@@ -2094,7 +2094,7 @@ function chit2Screen() {
         (item === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') +
         '">' +
         (item === 'them' ? 'Them' : 'Us') +
-        '<span style="display:block;font-size:var(--fs-1);opacity:.72;font-weight:400">' +
+        '<span style="display:block;font-size:var(--fs-1);opacity:.9;font-weight:400">' +
         (item === 'them' ? 'the shared record' : 'our side only') +
         '</span></button>'
       );
@@ -2145,7 +2145,7 @@ function chit2Screen() {
        not appear"* — this header is design 2's own markup and shares nothing with the classic detail, so the
        stamper had nothing to hook onto. One class, and the same stamper works here as everywhere else
        rather than a second copy that knows about this file. */
-    '<span class="dt" style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
+    '<span class="dt" style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow-wrap:anywhere">' +
     esc(h.manual_subject || h.auto_subject || 'Chit') +
     '</span>' +
     /**
@@ -2161,7 +2161,7 @@ function chit2Screen() {
     ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;' +
     'padding:3px 9px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">' +
     tx('design 2') +
-    ' <span style="opacity:.6">→ ' +
+    ' <span style="opacity:.8">→ ' +
     tx('design 1') +
     '</span></button></div>' +
     /* N03: a chit made with a page this install does not have says so here too (CBPage, app/page.js) */
