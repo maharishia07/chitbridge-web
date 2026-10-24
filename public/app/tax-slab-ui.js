@@ -1,7 +1,7 @@
 /* app/tax-slab-ui.js — THE SLAB PICKERS AND THE RATE CHIP, ONE COPY (F5 W1a, 2026-10-24; critic 3: "the slab UI already exists. Move it, do not build it").
  * Classic script, shared global scope. Loaded by app.html, catalogue.html and till.html AFTER engine/tax.js (CBTaxSlab · CBTaxPacks) and helpers.js (esc).
  *
- * OWNS      cbSlabOptionsHTML (MOVED from app.html: the <option>s, governed first, own after) · cbcatSlabPickHTML (MOVED from cap-categories.js: the
+ * OWNS      cbRateColumnKeys (the rate columns setOn owns: no form paints them as a free box, CAT-212) · cbSlabOptionsHTML (MOVED from app.html: the <option>s, governed first, own after) · cbcatSlabPickHTML (MOVED from cap-categories.js: the
  *           category form's picker; W1b: the host's onReady repaint and the role verdict that greys it) · cbTaxCharges (does this shop charge its tax:
  *           the twin of the api's tax-shelf.chargesTax) · cbRateMay and cbRateButtonHTML (who may set a rate — the server's may_set_rate, else owner or
  *           manager; the api's rule and sentence — and the one action, enabled by role) · cbSlabSourceWords and cbSlabChipHTML (the item row: "GST 5%" +
@@ -19,6 +19,14 @@
  * "VAT" for an AE shop); "GST" is never typed here.
  * ⚠️ tx/txf are OPTIONAL: the till has none (its `tx` is a private IndexedDB helper), so every sentence goes through slabT_.
  */
+
+/** the engine's fifth rate key (tax.js inputOf reads it with the three CBTaxSlab exports); the only name typed here */
+var CB_CESS_KEY = 'cess_rate';
+/** CAT-212: the columns CBTaxSlab.setOn owns (tax_slab · tax_slab_name · gst_rate · cess_rate). A rate has ONE door (the chip and its confirm, role-gated), so a form never paints these as a free "More about" box. Import keeps the column. */
+function cbRateColumnKeys() {
+  var slab = typeof CBTaxSlab === 'object' && CBTaxSlab ? CBTaxSlab : {};
+  return [slab.SLAB_KEY, slab.SLAB_NAME_KEY, slab.RATE_KEY, CB_CESS_KEY].filter(Boolean);
+}
 
 /** the page's translator when it has one, else the words as written (the till has no tx); {name} slots are filled either way */
 function slabT_(sentence, vars) {
