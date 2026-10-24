@@ -26,7 +26,7 @@ function listCtlResetRows(key) {
   try {
     if (LAZY) delete LAZY[key];
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('list-legacy:listCtlResetRows - the lazy-render state is not ready yet, so there is nothing to reset', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:listCtlResetRows - the lazy-render state is not ready yet, so there is nothing to reset', failure);
   }
 }
 
@@ -269,7 +269,7 @@ function lazyWrap(id, items, cardFn, empty) {
     try {
       kept._io.disconnect();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-legacy:lazyWrap - the observer could not be changed, it is left as it was', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyWrap - the observer could not be changed, it is left as it was', failure);
     }
   }
   if (!items.length) return empty || '';
@@ -317,7 +317,7 @@ function lazyReveal(id) {
       try {
         s._io.disconnect();
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('list-legacy:lazyReveal - the observer could not be changed, it is left as it was', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyReveal - the observer could not be changed, it is left as it was', failure);
       }
       s._io = null;
     }
@@ -352,6 +352,6 @@ function lazyAttach(id) {
     );
     s._io.observe(sent);
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('list-legacy:lazyAttach - the observer could not be changed, it is left as it was', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyAttach - the observer could not be changed, it is left as it was', failure);
   }
 }

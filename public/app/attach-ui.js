@@ -292,7 +292,7 @@ function cbAttachUnstage(bucket, key) {
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } }));
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('attach:cbAttachUnstage - the page event was not delivered, the page carries on', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('attach:cbAttachUnstage - the page event was not delivered, the page carries on', failure);
   }
 }
 
@@ -359,7 +359,7 @@ async function cbAttachStage(bucket, opts) {
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } }));
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('attach:cbAttachStage - the page event was not delivered, the page carries on', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('attach:cbAttachStage - the page event was not delivered, the page carries on', failure);
   }
   return entry;
 }
@@ -416,7 +416,7 @@ async function cbAttachFlush(bucket, chit_id, opts) {
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } }));
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('attach:cbAttachFlush - the page event was not delivered, the page carries on', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('attach:cbAttachFlush - the page event was not delivered, the page carries on', failure);
   }
   return { uploaded: uploaded, failed: failed };
 }
@@ -535,7 +535,7 @@ function cbAttachChoose() {
       try {
         input.remove();
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('attach:finish - the element was already gone', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('attach:finish - the element was already gone', failure);
       }
       resolve(f || null);
     }
@@ -643,13 +643,13 @@ var CBAttach = (function () {
       try {
         el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } }));
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('attach:done - the page event was not delivered, the page carries on', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('attach:done - the page event was not delivered, the page carries on', failure);
       }
       if (typeof o.onDone === 'function') {
         try {
           o.onDone(att);
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('attach:done - the page callback failed, the page carries on', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('attach:done - the page callback failed, the page carries on', failure);
         }
       }
     }

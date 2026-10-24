@@ -113,7 +113,7 @@
       var R = root.CBRail;
       if (R && R.WHY && Object.prototype.hasOwnProperty.call(R.WHY, word)) return R.WHY[word];
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:why - the engine sentence was unreadable, the server words are used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:why - the engine sentence was unreadable, the server words are used', failure);
     }
     return fallback || T(W.viewOnly);
   }
@@ -167,7 +167,7 @@
       var C = root.CBOffline;
       if (C && C.loadDraft) return C.loadDraft(k) || '';
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:draftGet - the saved draft was unreadable, the box starts empty', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:draftGet - the saved draft was unreadable, the box starts empty', failure);
     }
     return '';
   }
@@ -178,7 +178,7 @@
       var C = root.CBOffline;
       if (C && C.saveDraft) C.saveDraft(k, v);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:draftSet - the draft was not kept offline, it stays in memory', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:draftSet - the draft was not kept offline, it stays in memory', failure);
     }
   }
   function draftClear(o) {
@@ -188,7 +188,7 @@
       var C = root.CBOffline;
       if (C && C.clearDraft) C.clearDraft(k);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:draftClear - the offline draft was not cleared, it is cleared in memory', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:draftClear - the offline draft was not cleared, it is cleared in memory', failure);
     }
   }
 
@@ -258,7 +258,7 @@
         paint(m);
       }
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:readActions - the actions could not be refreshed, the buttons stay as they are', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:readActions - the actions could not be refreshed, the buttons stay as they are', failure);
     }
   }
 
@@ -481,7 +481,7 @@
     try {
       (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('rail-thread:emit - the page event was not delivered, the page carries on', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('rail-thread:emit - the page event was not delivered, the page carries on', failure);
     }
   }
   /** post ONE message through CBAction (busy · one press one write · outcome). btn may be null (a host's own control, or none). */

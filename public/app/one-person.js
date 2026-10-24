@@ -58,14 +58,14 @@
     try {
       root.localStorage.setItem(k, v);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('one-person:lsSet - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:lsSet - the browser refused to store it, so it is not kept this time', failure);
     }
   }
   function lsDel(k) {
     try {
       root.localStorage.removeItem(k);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('one-person:lsDel - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:lsDel - the browser refused to store it, so it is not kept this time', failure);
     }
   }
   function lsKeys() {
@@ -73,7 +73,7 @@
     try {
       for (var index = 0; index < root.localStorage.length; index++) out.push(root.localStorage.key(index));
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('one-person:lsKeys - the browser would not read it, so the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:lsKeys - the browser would not read it, so the default is used', failure);
     }
     return out;
   }
@@ -155,7 +155,7 @@
           try {
             rq.transaction.abort();
           } catch (failure) {
-            if (window.cbQuiet) window.cbQuiet('one-person:onupgradeneeded - the empty probe could not be aborted, the database is taken as absent', failure);
+            if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:onupgradeneeded - the empty probe could not be aborted, the database is taken as absent', failure);
           }
           fin(null);
         };
@@ -185,7 +185,7 @@
             try {
               db.close();
             } catch (failure) {
-              if (window.cbQuiet) window.cbQuiet('one-person:onsuccess - it was already closed', failure);
+              if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:onsuccess - it was already closed', failure);
             }
             fin(null);
           }
@@ -529,7 +529,7 @@
         if (k && CB_KEY.test(k)) out.push(k);
       }
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('one-person:cbKeys - the browser store could not be listed, no keys are cleared from it', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('one-person:cbKeys - the browser store could not be listed, no keys are cleared from it', failure);
     }
     return out;
   }
