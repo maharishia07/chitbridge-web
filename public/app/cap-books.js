@@ -1657,16 +1657,22 @@ function booksAfterPay(r) {
       BK.dues = BK.dues || {};
       BK.dues[pid] = Object.assign({}, BK.dues[pid], { balance_minor: o.balance_minor });
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:booksAfterPay - the balance was not updated in place, the next load shows it', failure);
+  }
   try {
     if (pid && typeof crmLedgerRepaint === 'function') crmLedgerRepaint(pid);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:booksAfterPay - the repaint failed, so the screen keeps what it shows', failure);
+  }
   booksDuesLoad(true).then(function () {
     try {
       if (PAY && PAY.kind === 'supplier') {
         if (typeof paintSupSlide === 'function') paintSupSlide();
       } else if (typeof paintCustDetail === 'function') paintCustDetail();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('cap-books:booksAfterPay - the repaint failed, so the screen keeps what it shows', failure);
+    }
   });
 }
 
@@ -2858,7 +2864,9 @@ function bkLtPrefsRead() {
   var v = null;
   try {
     v = JSON.parse(localStorage.getItem(bkLtPrefKey()) || 'null');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:bkLtPrefsRead - the browser would not read it, so the default is used', failure);
+  }
   v = v || {};
   if (v.open && typeof v.open === 'object') BK.lt.open = v.open;
   if (typeof v.w === 'number') BK.lt.w = Math.max(240, Math.min(520, v.w));
@@ -2872,7 +2880,9 @@ function bkLtPrefsSave() {
       bkLtPrefKey(),
       JSON.stringify({ open: BK.lt.open, w: BK.lt.w, folded: BK.lt.folded, last: s ? { code: s.code, party: s.party || null } : BK.lt.last || null })
     );
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:bkLtPrefsSave - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 function bkLtFolded() {
   if (BK.lt.over) return false;
@@ -4013,7 +4023,9 @@ function bkLgStatement() {
     key = (d && d.party_no) || s.party;
   try {
     window.open('/crm.html#/party/' + encodeURIComponent(key), '_blank', 'noopener');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:bkLgStatement - the window was blocked, nothing opens', failure);
+  }
 }
 /** the filters' options are the values the rows really carry — read when the ledger arrives, never a list the page invents */
 function bkLgFilters() {
@@ -4517,7 +4529,9 @@ async function bkRemindTarget(pid) {
       return e && !e.removed && e.line_id;
     });
     line = ls.length ? ls[0].line_id : null;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-books:bkRemindTarget - the chit read failed, the reminder goes without its action', failure);
+  }
   return { chit_id: bill.against_ref, line_id: line, actions: acts, bill: bill, currency: reply.currency, party: (reply.party && reply.party.name) || '' };
 }
 function bkRemind(pid, btn) {

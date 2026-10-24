@@ -127,7 +127,9 @@ function csuCurrencies(country) {
   try {
     var R = window.CBLocale && CBLocale.REGIONS;
     if (R && R[country]) (R[country].cur || []).forEach(add);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-country:csuCurrencies - the region list was unreadable, no currency is suggested', failure);
+  }
   if (CSU.edit) add(CSU.edit.currency);
   if (CSU.p) add(CSU.p.currency);
   return out;
@@ -163,7 +165,9 @@ function csuDeviceZone() {
   try {
     var g = govCtx();
     if (g && g.timezone && g.timezone.value) return g.timezone.value;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-country:csuDeviceZone - the governance zone was unreadable, the browser zone is used', failure);
+  }
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
   } catch (_) {
@@ -273,7 +277,9 @@ function csuPrefill() {
     g = null;
   try {
     g = govCtx();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-country:csuPrefill - the governance context was unreadable, the form is not prefilled', failure);
+  }
   var e = {
     country: '',
     currency: '',
@@ -1030,7 +1036,9 @@ function csuSave() {
         CSU.p = p || CSU.p;
         try {
           if (p && p.pack) SESSION.booksOn = false;
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('cap-country:outcome - the books flag was not cleared in the session', failure);
+        }
         /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
         if (p && p.rederived) toast(txf('Country now {c} — the rest set from its pack.', { c: csuCountryName(p.rederived.to) }));
         else if (first) toast(tx('Country set.'));

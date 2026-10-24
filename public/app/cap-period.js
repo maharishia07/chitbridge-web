@@ -183,7 +183,9 @@ async function peStockList() {
   if (PE_STOCK.api) {
     try {
       PE_STOCK.api.destroy();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('cap-period:peStockList - the stock list control was already torn down', failure);
+    }
   }
   PE_STOCK.api = CBList.mount(host, {
     key: 'stock',
@@ -779,7 +781,9 @@ async function peAccrBody(node) {
   try {
     const t = peList(await api('booksTodo'), 'items').filter((item) => item.kind === 'accrual_reversals_due')[0];
     list = (t && t.items) || [];
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-period:peAccrBody - the accrual to-do was not read, the due list stays empty', failure);
+  }
   const seen = {};
   PE.accr.forEach((item) => {
     seen[item.ref] = 1;
@@ -1163,7 +1167,9 @@ function peRetRemember() {
         simpler: PE_RET.q.simpler || null
       })
     );
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-period:peRetRemember - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 function peRetRecall() {
   try {
@@ -1478,7 +1484,9 @@ async function peReturnCopy(btn) {
       await navigator.clipboard.writeText(text);
       done = true;
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-period:peReturnCopy - the clipboard was refused, the fallback copy is tried', failure);
+  }
   if (!done) {
     try {
       const node = document.createElement('textarea');
@@ -1490,7 +1498,9 @@ async function peReturnCopy(btn) {
       node.select();
       done = !!(document.execCommand && document.execCommand('copy'));
       document.body.removeChild(node);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('cap-period:peReturnCopy - the fallback copy failed, the person is told to copy by hand', failure);
+    }
   }
   if (done) peOk('pr_out', esc(txf('Copied {n} boxes · paste them into the {who} portal', { n: n, who: r.authority })));
   else peBad('pr_out', tx('Could not copy — select the figures and copy by hand.'));

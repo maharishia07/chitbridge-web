@@ -102,7 +102,9 @@ function enDlg() {
   node.addEventListener('close', function () {
     try {
       document.documentElement.style.overflow = '';
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('cap-entry:enDlg - the page scroll was not restored', failure);
+    }
   });
   node.addEventListener('click', function (e) {
     if (e.target === node) enClose();
@@ -115,7 +117,9 @@ function enClose() {
   if (node && node.open) node.close();
   try {
     document.documentElement.style.overflow = '';
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-entry:enClose - the page scroll was not restored', failure);
+  }
 }
 
 /* ── the one door ── */
@@ -930,11 +934,15 @@ async function enSave(btn) {
       EN.ref = null;
       try {
         if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(EN.saved);
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('cap-entry:enSave - the entry-saved hook failed, the entry itself is saved', failure);
+      }
       try {
         if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
         if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true);
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('cap-entry:enSave - the refresh failed, so the screen keeps what it shows', failure);
+      }
       enPaint();
     } catch (e) {
       EN.saving = false;

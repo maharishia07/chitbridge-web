@@ -417,7 +417,9 @@ async function crmRecordFold(route, tok) {
         route.key;
       return crmGo('#/party/' + encodeURIComponent(crmKey(keeper)), true);
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('cap-crm-record:crmRecordFold - the party read failed, the could-not-open screen is shown', failure);
+  }
   if (tok !== CRMR.tok) return;
   crmBar('<a href="#/parties">‹ ' + esc(tx('Parties')) + '</a>', '');
   node.className = 'screen';
@@ -1363,7 +1365,9 @@ function crmTimelineView(p, tok) {
   if (CRMR.tlApi) {
     try {
       CRMR.tlApi.destroy();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('cap-crm-record:crmTimelineView - the timeline list was already torn down', failure);
+    }
   }
   var el = document.getElementById('crm_tl');
   CRMR.tlApi = CBList.mount(el, {
