@@ -26,7 +26,15 @@ var FC_EP = {
 Object.assign(EP, FC_EP);
 var FC_OWNER_ONLY = 'Only the owner may see the cash position.';
 /* `gst` is the server's kind for the tax return; its row's name is the pack's own word (GST · BAS · VAT return) — W1-FIN, never "GST" typed here */
-var FC_KIND = { due_in: 'Bill due', due_out: 'Bill to pay', cheque_in: 'Cheque in hand', cheque_out: 'Cheque written', gst: 'Return to pay' };
+var FC_KIND = {
+  due_in: 'Bill due',
+  due_out: 'Bill to pay',
+  cheque_in: 'Cheque in hand',
+  cheque_out: 'Cheque written',
+  gst: 'Return to pay',
+  recurring_in: 'Comes in every time',
+  recurring_out: 'Goes out every time' /* R75: the entries that come round (Accounts › Accruals & recurring), counted on their day */
+};
 
 function fcIsIn(it) {
   return /_in$/.test(String(it && it.kind));
@@ -354,14 +362,17 @@ function fcHead() {
     notices = [],
     chips = [];
   if (r && FC.state === 'ready') {
-    notices.push({
-      cls: r.shortfall ? 'warn' : '',
-      tid: 'fc-words',
-      text: r.words,
-      onOpen: function () {
-        if (r.shortfall && FC.api) FC.api.refresh();
-      }
-    });
+    /* R75: a shortfall is a WARNING notice; good news ("You stay above zero…") is a plain chip — never the amber ⚠ */
+    if (r.shortfall)
+      notices.push({
+        cls: 'warn',
+        tid: 'fc-words',
+        text: r.words,
+        onOpen: function () {
+          if (FC.api) FC.api.refresh();
+        }
+      });
+    else chips.push({ tid: 'fc-words', text: r.words });
     if (r.uncounted && r.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: r.uncounted.words });
     if (r.gst && Number(r.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(r.gst, r.currency) });
   }
