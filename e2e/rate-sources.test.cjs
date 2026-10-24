@@ -246,6 +246,25 @@ await t('an editor who reaches Save anyway (the belt to the brace): the sentence
   assert.ok(CALLS.some((c) => c.name === 'toast' && /Ask the owner or a manager/.test(c.words)));
 });
 
+console.log('\nrate-sources · the rate has ONE door on the item form (CAT-212): a declared gst_rate column is not a free box');
+await t('the declared gst_rate / tax_slab / tax_slab_name / cess_rate columns are not editable fields; other columns still are; the chip still shows', () => {
+  UI._catFields = ['gst_rate', 'tax_slab', 'tax_slab_name', 'cess_rate', 'fineness'].map((k) => ({ field_key: k, field_name: k, field_type: 'text' }));
+  assert.deepStrictEqual(globalThis.ctDeclaredList().map((f) => f.field_key), ['fineness']);
+  const rows = globalThis.ctDeclaredRows({ gst_rate: 5, fineness: 999 });
+  assert.ok(rows.indexOf('data-key="fineness"') >= 0 && !/data-key="(gst_rate|tax_slab|tax_slab_name|cess_rate)"/.test(rows), 'no input for a rate column');
+  assert.ok(globalThis.ctDeclaredViewRows({ gst_rate: 5 }, (a, b) => a + b) === '', 'not repeated as a view row');
+  const chip = globalThis.cbSlabChipHTML(S.resolve({ item_data: { gst_rate: 5, tax_slab: 's5' }, face: {}, slabs: SLABS, categories: CATS }), {});
+  assert.ok(/GST 5%/.test(chip), 'the chip still shows the rate: ' + chip.slice(0, 120));
+});
+await t('a Save that leaves the rate alone never sends it: the form starts from the stored record and the patch holds only the changed key', () => {
+  const orig = { name: 'Veg Meals', gst_rate: 5, tax_slab: 's5', fineness: '999' };
+  DOM.byId.ct_declared = { querySelectorAll: () => [{ getAttribute: (a) => ({ 'data-key': 'fineness', 'data-type': 'text' })[a], value: '916' }] };
+  const next = Object.assign({}, orig);
+  globalThis.readDeclared ? globalThis.readDeclared(next) : Object.assign(next, { fineness: '916' });
+  assert.deepStrictEqual(globalThis.prodDiff(orig, next), { fineness: '916' }, 'no gst_rate in the patch');
+  delete DOM.byId.ct_declared;
+});
+
 console.log('\n' + (fail ? '✗ ' : '✓ ') + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
 })();

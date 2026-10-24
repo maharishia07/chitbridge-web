@@ -107,8 +107,10 @@ function ctField(k, label, v, extra) {
  */
 const CT_FIXED_KEYS = ['name', 'unit', 'price', 'code', 'hsn', 'sku', 'desc', 'description', 'note', 'highlight'];
 function ctDeclaredList() {
+  /* CAT-212: the rate columns (gst_rate · tax_slab · tax_slab_name · cess_rate) are the chip's, never a free box: tax-slab-ui.js names them once */
+  var rateKeys = typeof cbRateColumnKeys === 'function' ? cbRateColumnKeys() : [];
   return (UI._catFields || []).filter(function (item) {
-    return item && item.field_key && CT_FIXED_KEYS.indexOf(item.field_key) < 0;
+    return item && item.field_key && CT_FIXED_KEYS.indexOf(item.field_key) < 0 && rateKeys.indexOf(item.field_key) < 0;
   });
 }
 /**
