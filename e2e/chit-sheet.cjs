@@ -143,7 +143,7 @@ async function route(S, r) {
     S.statusCalls.push({ id: x[1], body }); S.calls.push('status');
     /* a bill I received: since "bills-private" my step is a bill_step row in MY state_log — the shared status is the seller's and does not move */
     /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received) — its step is a bill_step too, the header's status never moves */
-    if (/^(invoice|receipt)$/.test(S.chits[x[1]].header.purpose)) { if (!S.staleRead) (S.chits[x[1]].state_log = S.chits[x[1]].state_log || []).push({ action: 'bill_step', code: 'B-2100', step: body.status, mine: true }); S.waiting = S.waiting.filter((w) => w.chit_id !== x[1]); }
+    if (/^(invoice|receipt)$/.test(S.chits[x[1]].header.purpose)) { if (!S.staleRead) (S.chits[x[1]].state_log = S.chits[x[1]].state_log || []).push({ action: 'bill_step', code: 'B-2100', step: body.status, mine: true, action_by_display_name: SHOP, created_at: new Date().toISOString() }); S.waiting = S.waiting.filter((w) => w.chit_id !== x[1]); }
     else S.chits[x[1]].header.current_status = body.status;
     /* the server's answer (routes/chits.js moveStatus): "pending → accepted", or the noop "Already accepted" */
     return J(r, 200, S.noop ? { message: 'Already ' + body.status, chit_id: x[1], status: body.status, noop: true } : { message: 'Chit ' + body.status, warning: null, chit_id: x[1], previous_status: 'pending', new_status: body.status });
@@ -175,6 +175,11 @@ async function route(S, r) {
   const base = 'http://127.0.0.1:' + srv.address().port;
   const b = await chromium.launch();
   const threw = [];
+  /* R102: a bill's Accept asks first (CBConfirm) — the Yes tap; a captured receipt with no use choice asks straight from the Accept tap */
+  async function yesAccept(p) {
+    await p.waitForSelector('#cb_confirm [data-testid="confirm-ok"]', { timeout: 5000 });
+    await p.click('#cb_confirm [data-testid="confirm-ok"]');
+  }
   async function open(S, width) {
     const ctx = await b.newContext({ viewport: { width: width || 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -276,11 +281,23 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="bill-use-choice"]').count() === 1 && await p.locator('[data-testid="bill-use-resale"]').count() === 1 && await p.locator('[data-testid="bill-use-use"]').count() === 1 && await p.locator('[data-testid="bill-use-asset"]').count() === 1, 'Accept shows the same choice Goods in shows (billUseChoiceHTML): For resale · For the shop · An asset');
     ok(S.statusCalls.length === 0 && S.useCalls.length === 0 && /To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'nothing was sent by the Accept tap itself — the step is still "To accept"');
     await shot(p, 'chit-sheet-accept-use');
+    /* R102 (walk 24 Oct): the choice made, the ACCEPT ASKS FIRST — a money promise names the supplier, the bill and the amount; Cancel sends nothing */
     await p.click('[data-testid="bill-use-resale"]');
+    await p.waitForSelector('#cb_confirm [data-testid="confirm-ok"]', { timeout: 5000 }).catch(() => {});
+    const askT = await p.textContent('#cb_confirm').catch(() => '');
+    ok(/Accept bill AM-81 from Agro Mills for ₹\s?2,500\.00\?/.test(askT) && /You will owe them this amount\./.test(askT), 'R102 · Accept asks first: "Accept bill AM-81 from Agro Mills for ₹2,500.00? You will owe them this amount." — got ' + askT.replace(/\s+/g, ' ').slice(0, 120));
+    await shot(p, 'chit-sheet-accept-ask');
+    await p.click('#cb_confirm [data-testid="confirm-cancel"]'); await p.waitForTimeout(300);
+    ok(S.statusCalls.length === 0 && S.useCalls.length === 0 && /To accept/.test(await p.textContent('[data-testid="cs-step"]')) && (await acts(p)).indexOf('accept') >= 0, 'R102 · Cancel: nothing written (no /use, no /status), the step is still "To accept", Accept still offered');
+    await p.click('[data-testid="cs-act-accept"]'); await p.waitForSelector('[data-testid="bill-use-resale"]', { timeout: 5000 });
+    await p.click('[data-testid="bill-use-resale"]'); await p.waitForSelector('#cb_confirm [data-testid="confirm-ok"]', { timeout: 5000 });
+    await p.click('#cb_confirm [data-testid="confirm-ok"]');
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.useCalls.length === 1 && S.useCalls[0].id === 'sb1' && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].id === 'sb1' && S.statusCalls[0].body.status === 'accepted' && S.calls.join() === 'use,status', 'the choice → PUT /use {use:"resale"} then PUT /status {status:"accepted"}, once each, in that order');
+    ok(S.useCalls.length === 1 && S.useCalls[0].id === 'sb1' && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].id === 'sb1' && S.statusCalls[0].body.status === 'accepted' && S.calls.join() === 'use,status', 'the choice → Yes → PUT /use {use:"resale"} then PUT /status {status:"accepted"}, once each, in that order');
     ok(S.chits.sb1.header.current_status === 'pending', 'the shared status did not move (the seller\'s) — only my state_log did');
     ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')), 'the sheet repainted with the new step, read from the state_log bill_step row');
+    const hist = (await p.locator('[data-testid^="cs-hist-"]').allTextContents()).join(' | ');
+    ok(/Accepted by Books Shop/.test(hist) && !/\bStep\b/.test(hist), 'R102 · the history reads "Accepted by Books Shop", not "Step" — got ' + hist.slice(0, 120));
     const a2 = await acts(p);
     ok(JSON.stringify(a2) === JSON.stringify(['dispute', 'page']), 'once accepted the row is Dispute · Open page — got ' + a2.join(' · '));
     /* the Day book\'s to-do and Waiting stop saying "To accept" for it */
@@ -292,7 +309,7 @@ async function route(S, r) {
   {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-accept"]'); await p.click('[data-testid="cs-use-auto"]');
+    await p.click('[data-testid="cs-act-accept"]'); await p.click('[data-testid="cs-use-auto"]'); await yesAccept(p);
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.useCalls.length === 0 && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', '"Let my catalogue decide" → accepted with no /use call');
     await ctx.close();
@@ -301,7 +318,7 @@ async function route(S, r) {
   {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]');
+    await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]'); await yesAccept(p);
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.useCalls.length === 1 && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', 'Goods in → what it is for (PUT /use) then accepted');
     /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in the SAME tab so Back returns (NAV-MAP 13; accounts.html openChitPage sets location.href), never the workshop */
@@ -401,7 +418,7 @@ async function route(S, r) {
     await p.evaluate(() => { document.querySelector('[data-testid="waiting-list"]').__kept = true; });
     await p.getByText('Sri Ganesh Provisions').first().click(); await waitSheet(p, 'SG-103');
     ok(await sheetOpen(p) && /To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'F10W · the NAME on the Waiting row opens the receipt\'s sheet, "To accept"');
-    await p.click('[data-testid="cs-act-accept"]');
+    await p.click('[data-testid="cs-act-accept"]'); await yesAccept(p);
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0 && S.statusCalls.length === 1,
       'F10W · "pending → accepted": the sheet repaints its step (Accepted) and drops Accept — one status call — got ' + (await p.textContent('[data-testid="cs-step"]')));
@@ -419,7 +436,7 @@ async function route(S, r) {
     S.waiting = [{ id: 11, chit_id: 'rc1', ref: 'chit:rc1', todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)', tries: 0, since: TODAY + 'T04:20:00Z' }];
     const { ctx, p } = await open(S);
     await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
-    await p.click('[data-testid="cs-act-accept"]');
+    await p.click('[data-testid="cs-act-accept"]'); await yesAccept(p);
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/Accepted/.test(await p.textContent('[data-testid="cs-step"]')) && await p.locator('[data-testid="cs-act-accept"]').count() === 0,
       'F10W · "Already accepted" (noop) is painted as Accepted even when the read lags — a second Accept is never offered');
