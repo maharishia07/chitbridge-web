@@ -135,7 +135,7 @@
       captured = billRx && purpose === 'receipt';
     var counterBill = !billRx && !!(text.till && iSent && !others.length); /* rung up at a counter and sent to nobody else */
     var agreement = !!(text.repeat && text.repeat.agreement_id); /* RI1: a repeat-supply agreement (purpose subscription) — its verbs are its own panel's */
-    return {
+    return Object.assign(serverAnswers(r), {
       agreement: agreement,
       /* FX-F10W: a captured receipt IS a bill (folder-inventory bill_received), so its step is MY bill_step too (routes/chits.js writes it there);
          the header's status is the sent copy's and never moves — read alone, Accept stayed "To accept" after the server said accepted */
@@ -154,10 +154,6 @@
       isTask: !counterBill && !billRx,
       no: captured && tb ? String(tb.no == null ? '' : tb.no).trim() : bill || h.manual_subject || h.auto_subject || '',
       at: text.billed_at || h.created_at,
-      /* STD1: what the books wait on for this chit, and may I accept it — the SERVER's answers on the read (books_wait · actions.accept) */
-      wait: (r && r.books_wait) || null,
-      may: (r && r.actions && r.actions.accept) || null,
-      mayReject: (r && r.actions && r.actions.reject) || null,
       counter: counterOfBill(bill, text.till),
       by: (text.till && text.till.by && text.till.by.name) || '',
       who: counterBill
@@ -177,7 +173,7 @@
       money: captured && tb && !text.invoice ? receiptMoney(text, tb) : moneyFor(text, money_, cur, sum),
       rec: rec,
       order: orderDetails(sum, purpose)
-    };
+    });
   }
   /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
      counter determined, read out by CBTax.moneyOf — else the header's own summary_json.money — else null. A mapping, never a sum. */
@@ -1103,7 +1099,8 @@
       console.error('chit sheet: Back could not step the history —', (e && e.message) || e);
     }
   }
-  async function open(id) {
+  /** open(id, { act }) — R106: a row's own button opens the sheet AT that action (the Waiting row's Reject asks its reason here, the one Reject door) */
+  async function open(id, opts) {
     if (!id) return;
     var dialog = ensureDlg();
     CS.mode = 'dialog';
@@ -1124,7 +1121,9 @@
       if (CS.id !== id) return;
       CS.err = readSaid(e);
       paint();
+      return;
     }
+    if (opts && opts.act && CS.id === id && CS.view) act(opts.act);
   }
   function retry() {
     return CS.id ? open(CS.id) : undefined;
@@ -1149,6 +1148,8 @@
    */
   function acceptAsk(view) {
     if (!root.CBAction || typeof root.CBAction.ask !== 'function') return Promise.resolve(null);
+    var short = view.short || (typeof root.bkWaitShort === 'function' ? root.bkWaitShort(view.id) : null);
+    if (short) return root.CBAction.ask(shortAsk(view, short));
     var amount = view.money && view.money.total != null ? fmtMoney(view.money.total, view.cur, '') : '';
     return root.CBAction.ask({
       title: amount ? tf('Accept bill {no} from {who} for {amount}?', { who: view.who, no: view.no, amount: amount }) : tf('Accept bill {no} from {who}?', { who: view.who, no: view.no }),
@@ -1156,6 +1157,48 @@
       yes: T('Accept'),
       danger: false
     });
+  }
+  /**
+   * STD1: the SERVER's answers on the chit read — what the books wait on (books_wait: todo · name · why · candidates), may I accept / reject it
+   * (actions.accept / .reject), and R106's shortfall figures when the read carries them (books_wait.short, FIELDS waiting[].short).
+   */
+  function serverAnswers(read) {
+    return {
+      wait: (read && read.books_wait) || null,
+      short: shortOf(read && read.books_wait),
+      may: (read && read.actions && read.actions.accept) || null,
+      mayReject: (read && read.actions && read.actions.reject) || null
+    };
+  }
+  /** the three shortfall figures as integers, or null — never read from a sentence (FIELDS waiting[].short) */
+  function shortOf(wait) {
+    var figures = wait && wait.short;
+    return figures && isFinite(Number(figures.short_minor)) && Number(figures.short_minor) > 0
+      ? { theirs_minor: Number(figures.theirs_minor), ours_minor: Number(figures.ours_minor), short_minor: Number(figures.short_minor) }
+      : null;
+  }
+  /** minor units → the money words (CBMoney says the currency's decimals; fmtMoney the symbol and grouping) */
+  function minorWords(minor, currency) {
+    var decimals = 2;
+    try {
+      decimals = root.CBMoney && root.CBMoney.decimals ? root.CBMoney.decimals(currency) : 2;
+    } catch (e) {
+      if (typeof cblog === 'function') cblog('warn', 'chit sheet: no decimals for ' + currency + ' — two assumed: ' + ((e && e.message) || e));
+    }
+    return fmtMoney(Number(minor || 0) / Math.pow(10, decimals), currency, '');
+  }
+  /**
+   * R106 (OPS-60): their bill is above what was counted — the accept posts ONE entry at the COUNT and notes the gap, so the question names the
+   * counted figure, never their total: "Accept bill SG-1022 from Sri Ganesh Provisions at ₹2,690?" Shared by the sheet and the Waiting row.
+   */
+  function shortAsk(view, short) {
+    var ours = minorWords(short.ours_minor, view.cur);
+    return {
+      title: tf('Accept bill {no} at {ours}?', { who: view.who, no: view.no, ours: ours }),
+      body: esc(tf('{short} short against their {theirs} — noted on the bill. You will owe {who} {ours}.', { who: view.who, short: minorWords(short.short_minor, view.cur), theirs: minorWords(short.theirs_minor, view.cur), ours: ours })),
+      yes: tf('Accept at {ours}', { ours: ours }),
+      danger: false
+    };
   }
   /** Accept (with or without the goods' use): a bill asks first, then the same move every step makes — Cancel sends nothing and the sheet stays as it was; a task just moves */
   async function acceptBill(goodsUse) {
@@ -1390,6 +1433,7 @@
     },
     actionsFor: actionsFor,
     model: model,
+    shortAsk: shortAsk /* R106: the Waiting row asks the same question the sheet asks */,
     titleFor: titleFor,
     stepWord: function (m) {
       return T(STEP[m.status] || m.status);
