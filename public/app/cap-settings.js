@@ -1297,6 +1297,96 @@ var CBSettings = (function () {
   }
 
   /* ═════ POLICY — the flags of lib/policy that have words here, with who may change each (the server's may) ═════ */
+  /* R121 (walk 24 Oct, P6 on 22 Oct): a policy row edits a DRAFT. Save and Cancel sit beside the control, hidden until the draft differs from the
+   * value painted (data-orig); Save asks first, in the shopkeeper's words, then PATCHes through the one policySet path for every row (number or select);
+   * Cancel (or closing the row, which repaints it) puts the old value back. Nothing is written on blur or change. */
+  /** the Save and Cancel buttons of one row, hidden until its draft differs; none on a row the server says is not yours to change */
+  function policyEditButtons(row) {
+    if (grey(row.may)) return '';
+    var key = esc(row.key);
+    return (
+      '<button type="button" class="act" style="display:none" id="sx_pol_save_' + key + '" data-testid="sx-pol-save-' + key + '" data-pol-act="save">' + esc(T('Save')) + '</button>' +
+      '<button type="button" class="act ghost" style="display:none" id="sx_pol_cancel_' + key + '" data-testid="sx-pol-cancel-' + key + '" data-pol-act="cancel">' + esc(T('Cancel')) + '</button>'
+    );
+  }
+  /** the control's value against the one painted. Pure DOM: reads and writes nothing on the server. */
+  function policyDraftOf(key) {
+    var control = $('sx_pol_' + key);
+    return { control: control, changed: !!control && control.value !== control.getAttribute('data-orig') };
+  }
+  function policyShowButtons(key) {
+    var visible = policyDraftOf(key).changed;
+    ['save', 'cancel'].forEach(function (which) {
+      var button = $('sx_pol_' + which + '_' + key);
+      if (button) button.style.display = visible ? '' : 'none';
+    });
+  }
+  /** Cancel: the painted value goes back and the row says nothing was written */
+  function policyCancel(key) {
+    var draft = policyDraftOf(key);
+    if (draft.control) draft.control.value = draft.control.getAttribute('data-orig');
+    policyShowButtons(key);
+    var mark = $('sx_pol_ok_' + key);
+    if (mark) mark.textContent = '';
+  }
+  /** "Change Order overdue after from 7 days to 10 days?" — both values in the words the row shows */
+  function policyAsk(row, shown, newStored) {
+    return T('Change {rule} from {from} to {to}?')
+      .replace('{rule}', T(row.def.label))
+      .replace('{from}', shown(row))
+      .replace('{to}', shown({ def: row.def, v: newStored }));
+  }
+  /** the ONE save path: confirm, PATCH, repaint (ctx.onSaved), say the outcome on the row; a refusal is said on the row in the server's words */
+  function policySave(key, ctx) {
+    var row = ctx.rowOf(key),
+      draft = policyDraftOf(key);
+    if (!row || !draft.control || grey(row.may) || !draft.changed) return;
+    var stored = polStored(row.def, draft.control.value),
+      body = {};
+    body[key] = stored;
+    CBAction.run(
+      $('sx_pol_save_' + key),
+      function () {
+        return api('policySet', { body: body });
+      },
+      {
+        key: 'sx-pol-save-' + key,
+        confirm: { title: policyAsk(row, ctx.shown, stored), body: '', yes: T('Save'), danger: false },
+        failed: T('Could not save that rule'),
+        onFail: function (words) {
+          var failMark = $('sx_pol_ok_' + key);
+          if (failMark) failMark.textContent = words;
+        },
+        outcome: function (answer) {
+          ctx.onSaved(answer);
+          var savedMark = $('sx_pol_ok_' + key);
+          if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
+        }
+      }
+    );
+  }
+  /** typing in a policy control shows its Save and Cancel (or hides them when the draft is back to the painted value) */
+  function policyTouched(event) {
+    var found = event.target && event.target.id && /^sx_pol_(.+)$/.exec(event.target.id);
+    if (found && !/^(ok|save|cancel)_/.test(found[1])) policyShowButtons(found[1]);
+  }
+  /** a press on a row's Save or Cancel button does its one thing */
+  function policyPressed(event, ctx) {
+    var button = event.target && event.target.closest && event.target.closest('[data-pol-act]');
+    var found = button && /^sx_pol_(?:save|cancel)_(.+)$/.exec(button.id);
+    if (!found) return;
+    if (button.getAttribute('data-pol-act') === 'save') policySave(found[1], ctx);
+    else policyCancel(found[1]);
+  }
+  /** wire a policy list: typing shows Save/Cancel; Save and Cancel do their one thing */
+  function policyRowEdit(listEl, ctx) {
+    listEl.addEventListener('input', policyTouched);
+    listEl.addEventListener('change', policyTouched);
+    listEl.addEventListener('click', function (event) {
+      policyPressed(event, ctx);
+    });
+  }
+  /** CB Settings › Policy: one CBList of the rules the server words, each row a draft with Save and Cancel (R121) */
   function policy() {
     frame([
       '<h1 class="sx-h" data-testid="sx-title">' +
@@ -1349,6 +1439,7 @@ var CBSettings = (function () {
       if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
       return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
     }
+    /** the row's editor: a select for a choice, a number box otherwise; data-orig holds the painted value so a draft can be told from it */
     function control(x) {
       var d = x.def,
         id = 'sx_pol_' + d.key,
@@ -1359,6 +1450,8 @@ var CBSettings = (function () {
           id +
           '" data-testid="sx-pol-in-' +
           esc(d.key) +
+          '" data-orig="' +
+          esc(String(x.v)) +
           '"' +
           dis +
           ' aria-label="' +
@@ -1388,6 +1481,8 @@ var CBSettings = (function () {
         (d.step ? ' step="' + esc(String(d.step)) + '"' : '') +
         dis +
         ' value="' +
+        esc(String(polShown(d, x.v))) +
+        '" data-orig="' +
         esc(String(polShown(d, x.v))) +
         '" aria-label="' +
         esc(T(d.label)) +
@@ -1477,8 +1572,8 @@ var CBSettings = (function () {
           }
         }
       ],
-      /* WALK-REG (Athi, 16 Oct: "the text is too much and save button below the box"): ONE line — the control, an ⓘ holding the help, and the
-       * row saves itself on change ("✓ Saved" beside it). A rule set elsewhere shows only the door to where it is set. */
+      /* WALK-REG (Athi, 16 Oct: "the text is too much and save button below the box"): ONE line — the control, an ⓘ holding the help, and (R121) Save / Cancel once the
+       * draft differs; Save asks first, then "✓ Saved" beside it. A rule set elsewhere shows only the door to where it is set. */
       next: function (x) {
         var helpTip = x.def.help
           ? ' <span class="sx-why" title="' + esc(T(x.def.help)) + '" data-testid="sx-pol-why-' + esc(x.key) + '" style="cursor:help;opacity:.7">ⓘ</span>'
@@ -1498,6 +1593,7 @@ var CBSettings = (function () {
           esc(x.key) +
           '" style="display:flex;align-items:center;gap:8px">' +
           control(x) +
+          policyEditButtons(x) +
           helpTip +
           '<span class="sub" id="sx_pol_ok_' +
           esc(x.key) +
@@ -1507,33 +1603,20 @@ var CBSettings = (function () {
         );
       }
     });
-    function polSave(key) {
-      var x = rows().filter(function (row) {
+    policyRowEdit($('sx_pol_list'), {
+      rowOf: function (key) {
+        return rows().filter(function (row) {
           return row.key === key;
-        })[0],
-        el = $('sx_pol_' + key);
-      if (!x || !el || grey(x.may)) return;
-      var body = {},
-        ok = $('sx_pol_ok_' + key);
-      body[key] = polStored(x.def, el.value);
-      if (ok) ok.textContent = T('Saving…');
-      api('policySet', { body: body }).then(
-        function (nestedAnswer) {
-          var policyData = H.data.pol;
-          if (policyData && policyData.r && nestedAnswer && nestedAnswer.flags) policyData.r.flags = nestedAnswer.flags;
-          if (typeof SESSION !== 'undefined' && nestedAnswer && nestedAnswer.flags) SESSION.policy_flags = nestedAnswer.flags;
-          var savedMark = $('sx_pol_ok_' + key);
-          if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
-        },
-        function () {
-          var savedMark = $('sx_pol_ok_' + key);
-          if (savedMark) savedMark.textContent = T('Could not save that rule');
-        }
-      );
-    }
-    $('sx_pol_list').addEventListener('change', function (e) {
-      var idMatch = e.target && e.target.id && /^sx_pol_(.+)$/.exec(e.target.id);
-      if (idMatch && idMatch[1].indexOf('ok_') !== 0) polSave(idMatch[1]);
+        })[0];
+      },
+      shown: shown,
+      /** the server's flags after a save become the list's own and the session's, then the list repaints from them */
+      onSaved: function (saved) {
+        var policyData = H.data.pol;
+        if (policyData && policyData.r && saved && saved.flags) policyData.r.flags = saved.flags;
+        if (typeof SESSION !== 'undefined' && saved && saved.flags) SESSION.policy_flags = saved.flags;
+        if (pl) pl.refresh();
+      }
     });
     read();
   }
