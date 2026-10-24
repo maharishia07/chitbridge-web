@@ -264,4 +264,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { traceOf, layerOf, minimumsOf, MINIMUMS, LAYER_RULES, WEB_ROOT };
+module.exports = { WEB_ROOT };

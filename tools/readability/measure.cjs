@@ -637,4 +637,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic, acornVersion: acorn.version };
+module.exports = { SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };
