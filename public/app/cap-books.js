@@ -5835,53 +5835,58 @@ function bkWaitCols() {
       sort: 'step',
       w: 300,
       html: true,
-      cell: function (w) {
-        var i = (BK.waiting || []).indexOf(w),
-          m = bkWaitModel(w);
-        /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
-        /* F10/F11: a bill naming a supplier the books do not know carries the fix — the existing add-party door (supAdd), then a retry */
-        var who = bkWaitWho(w);
-        /* FX-F10W: the shop's near matches come FIRST ("Is this Sri Ganesh Provisions (P-00001)?" — the server's candidates); adding a new party is the second choice */
-        if (who)
-          return (
-            '<span data-testid="wait-why-' +
-            i +
-            '" style="color:var(--warn-2)">' +
-            esc(w.reason || w.why) +
-            '</span> ' +
-            bkWaitCands(w)
-              .map(function (item, index) {
-                return (
-                  '<button type="button" class="supact-pri" data-testid="wait-link-' +
-                  i +
-                  '-' +
-                  index +
-                  '" onclick="event.stopPropagation(); bkWaitLink(' +
-                  i +
-                  ', ' +
-                  index +
-                  ', this)">' +
-                  esc(CBSheet.isThis(item)) +
-                  '</button> '
-                );
-              })
-              .join('') +
-            '<button type="button"' +
-            (bkWaitCands(w).length ? '' : ' class="supact-pri"') +
-            ' data-testid="wait-addsup-' +
-            i +
-            '" onclick="event.stopPropagation(); bkWaitAddSupplier(' +
-            i +
-            ', this)">' +
-            esc(tx('Add supplier')) +
-            '</button>'
-          );
-        if (bkWaitFailed(w))
-          return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why || tx('No reason given')) + '</span>';
-        return m ? esc(CBSheet.stepWord(m)) : dash;
-      }
+      cell: bkWaitStepCell
     }
   ];
+}
+/**
+ * the Step cell of a Waiting row: a posting that failed says why, in the server's words; a bill naming a supplier the books do not know carries the fix
+ * (F10/F11: the near matches first, then the add-party door); R106: their bill above the count offers the accept AT the count, or Reject; else the step word.
+ */
+function bkWaitStepCell(row) {
+  var rowIndex = (BK.waiting || []).indexOf(row),
+    model = bkWaitModel(row);
+  if (bkWaitWho(row)) return bkWaitSupplierHTML(row, rowIndex);
+  if (bkWaitFailed(row))
+    return '<span data-testid="wait-why-' + rowIndex + '" style="color:var(--warn-2)">' + esc(row.reason || row.why || tx('No reason given')) + '</span>';
+  if (bkWaitShort(row.chit_id)) return bkWaitShortHTML(row, rowIndex, model);
+  return model ? esc(CBSheet.stepWord(model)) : '<span style="color:var(--grey)">—</span>';
+}
+/** FX-F10W: the shop's near matches come FIRST ("Is this Sri Ganesh Provisions (P-00001)?" — the server's candidates); adding a new party is the second choice */
+function bkWaitSupplierHTML(row, rowIndex) {
+  return (
+    '<span data-testid="wait-why-' +
+    rowIndex +
+    '" style="color:var(--warn-2)">' +
+    esc(row.reason || row.why) +
+    '</span> ' +
+    bkWaitCands(row)
+      .map(function (item, index) {
+        return (
+          '<button type="button" class="supact-pri" data-testid="wait-link-' +
+          rowIndex +
+          '-' +
+          index +
+          '" onclick="event.stopPropagation(); bkWaitLink(' +
+          rowIndex +
+          ', ' +
+          index +
+          ', this)">' +
+          esc(CBSheet.isThis(item)) +
+          '</button> '
+        );
+      })
+      .join('') +
+    '<button type="button"' +
+    (bkWaitCands(row).length ? '' : ' class="supact-pri"') +
+    ' data-testid="wait-addsup-' +
+    rowIndex +
+    '" onclick="event.stopPropagation(); bkWaitAddSupplier(' +
+    rowIndex +
+    ', this)">' +
+    esc(tx('Add supplier')) +
+    '</button>'
+  );
 }
 /** the supplier name a row asks to add — the row's `name` (STD1: data the books parked, never parsed from the sentence) */
 function bkWaitWho(w) {
@@ -5994,6 +5999,82 @@ function bkWaitDate(w) {
   var m = bkWaitModel(w),
     d = bkWaitDay(w);
   return String((m && m.at) || (d && d.day) || w.since || '');
+}
+/**
+ * ⭐ R106 (OPS-60): THE SHORTFALL IS DATA ON THE ROW — `waiting[].short` { theirs_minor, ours_minor, short_minor } (api books-hooks shortOf,
+ * FIELDS waiting[].short) when their bill is ABOVE what the counter counted. The row offers the accept AT THE COUNT and Reject; the sheet's
+ * Accept asks the same question through this reader (the chit read carries no `short` yet). Integers only — never the sentence.
+ */
+function bkWaitShort(chitId) {
+  var row = (BK.waiting || []).filter(function (item) {
+    return chitId && item.chit_id === chitId && bkWaitTodo(item) === 'accept' && item.short && Number(item.short.short_minor) > 0;
+  })[0];
+  return row ? { theirs_minor: Number(row.short.theirs_minor), ours_minor: Number(row.short.ours_minor), short_minor: Number(row.short.short_minor) } : null;
+}
+/** the Step cell of a shortfall row: the server's sentence (it names the gap), then "Accept at ₹2,690" and "Reject" — both ask first */
+function bkWaitShortHTML(row, index, model) {
+  var short = bkWaitShort(row.chit_id),
+    currency = (model && model.cur) || bkCur();
+  var said = '<span data-testid="wait-why-' + index + '" style="color:var(--warn-2)">' + esc(row.reason || row.why || '') + '</span> ';
+  if (!model) return said + '<span style="color:var(--grey)">' + esc(tx('Reading the bill…')) + '</span>';
+  return (
+    said +
+    '<button type="button" class="supact-pri" data-testid="wait-accept-short-' +
+    index +
+    '" onclick="event.stopPropagation(); bkWaitAcceptShort(' +
+    index +
+    ', this)">' +
+    esc(txf('Accept at {ours}', { ours: bkMoney(short.ours_minor, currency) })) +
+    '</button> <button type="button" data-testid="wait-reject-short-' +
+    index +
+    '" onclick="event.stopPropagation(); bkWaitRejectShort(' +
+    index +
+    ')">' +
+    esc(tx('Reject')) +
+    '</button>'
+  );
+}
+/** what the outcome line says once the count is accepted: the counted figure, the gap and their figure (all the server's integers) */
+function bkWaitShortDone(short, currency) {
+  return txf('Accepted at {ours} — {short} short against their {theirs}, noted on the bill', {
+    ours: bkMoney(short.ours_minor, currency),
+    short: bkMoney(short.short_minor, currency),
+    theirs: bkMoney(short.theirs_minor, currency)
+  });
+}
+/**
+ * Accept at the count: a money promise — CBAction asks first (the sheet's own question, CBSheet.shortAsk: supplier · bill · the counted ₹), then the
+ * chit's own step (PUT /status accepted — the same move the sheet makes; the server posts ONE entry at the count and notes the gap). The row leaves at once.
+ */
+function bkWaitAcceptShort(index, button) {
+  var row = (BK.waiting || [])[index],
+    model = bkWaitModel(row),
+    short = row && bkWaitShort(row.chit_id);
+  if (!row || !model || !short) return;
+  return CBAction.run(
+    button,
+    function () {
+      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted' } });
+    },
+    {
+      key: 'wait-accept-' + row.chit_id,
+      confirm: CBSheet.shortAsk(model, short),
+      out: 'wait_out',
+      busy: tx('Accepting…'),
+      failed: tx('Could not accept the bill'),
+      outcome: function () {
+        bkWaitGone(row.chit_id);
+        bkHealthAgain(null);
+        var out = document.getElementById('wait_out');
+        if (out) out.textContent = bkWaitShortDone(short, model.cur);
+      }
+    }
+  );
+}
+/** Reject: the sheet's one Reject door (it asks the reason, which goes on the bill) — opened at that question */
+function bkWaitRejectShort(index) {
+  var row = (BK.waiting || [])[index];
+  if (row && row.chit_id) openChitSheet(row.chit_id, { act: 'reject' });
 }
 function bkWaitNext(w) {
   var m = bkWaitModel(w),
