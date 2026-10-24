@@ -76,6 +76,12 @@ const SESSION = () => {
     const asked = await p.locator('dialog[open] [data-testid="confirm-ok"]').count();
     ok(count(/^POST \/api\/books\/payments$/) - n0 === 0 && await p.locator('[data-testid="pay_amt"]').count() === 1, 'A · R102b: a double press on Record writes NOTHING — it asks first (question still up: ' + asked + ')');
     if (!asked) await p.click('[data-testid="pay_record"]');
+    /* UX-115: a double press leaves the question UP (the backdrop's grace); a later tap on the backdrop is still Cancel */
+    ok(asked === 1, 'A · UX-115: after a double press the question is still up (' + asked + ')');
+    await p.waitForTimeout(700);
+    await p.mouse.click(2, 2);
+    ok(await p.locator('dialog[open] [data-testid="confirm-ok"]').count() === 0 && count(/^POST \/api\/books\/payments$/) - n0 === 0, 'A · UX-115: a backdrop tap after the grace is still Cancel, nothing written');
+    await p.click('[data-testid="pay_record"]');
     await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
     const busy = await p.evaluate(() => { const x = document.querySelector('[data-testid="pay_record"]'); return x ? [x.disabled, x.getAttribute('aria-busy'), x.getAttribute('data-action-state')].join('/') : 'gone'; });
     ok(busy === 'true/true/busy', 'A · while the payment is out, Record is disabled + aria-busy + data-action-state=busy (' + busy + ')');

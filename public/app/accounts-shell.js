@@ -717,12 +717,15 @@ var CBUnsaved = (function () {
   return { form: form, reset: reset, leave: leave, isDirty: isDirty, domDirty: domDirty };
 })();
 
+/** how long a tap on the backdrop is ignored after the question opens (milliseconds) */
+var CONFIRM_BACKDROP_GRACE_MS = 600;
 /**
  * ⭐ THE CONFIRM FOR A PAGE THAT IS NOT THE APP — one native <dialog>, used by accounts.html (it is that page's confirmAsk)
  * and by the index tile's Switch on. Same signature as the app's confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel);
  * bodyHtml is raw HTML (escape dynamic parts in the caller). The app keeps its own modal host — confirmAsk there is bound to
  * the app's modal system — so this is the page-level twin, not a second copy of the app's.
- * Cancel, Escape and a click on the backdrop all dismiss, and all call onCancel.
+ * Cancel, Escape and a click on the backdrop all dismiss, and all call onCancel; a backdrop tap in the first
+ * CONFIRM_BACKDROP_GRACE_MS is ignored, so the second tap of a double tap on Record does not close the question (UX-115).
  */
 function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   var old = document.getElementById('cb_confirm');
@@ -774,8 +777,11 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     event.preventDefault();
     close(false);
   });
+  /* a backdrop tap in the first moments is the second tap of a double tap on the button that opened this question: it is not an answer (UX-115) */
+  var openedAt = Date.now();
   node.addEventListener('click', function (ev) {
-    if (ev.target === node) close(false);
+    if (ev.target === node && Date.now() - openedAt >= CONFIRM_BACKDROP_GRACE_MS) close(false);
   });
   node.showModal();
+  openedAt = Date.now();
 }
