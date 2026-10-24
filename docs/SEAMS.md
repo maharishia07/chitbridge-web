@@ -73,7 +73,7 @@ of file each thing is; this says what already does the job.
 | 28 | `changes` | `books-store.js` |  |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
 | 28 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
-| 28 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 29 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 27 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
