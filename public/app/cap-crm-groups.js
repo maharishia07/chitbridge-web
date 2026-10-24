@@ -722,6 +722,13 @@ function crmSendGo(btn) {
     {
       key: 'send-go',
       busy: tx('Sending…'),
+      /* money promise: any send, any size, asks first — the words, the channel and how many (the server's dry count) */
+      confirm: {
+        title: txf('Send this WhatsApp offer to {n}?', { n: crmPlural(SEND.dry.may, 'customer', 'customers') }),
+        body: '<div data-testid="crm-send-confirm-text">“' + esc(body.text) + '”</div><div>' + esc(tx('WhatsApp · offers — only to those who agreed')) + '</div>',
+        yes: txf('Send to {n}', { n: SEND.dry.may }),
+        danger: false
+      },
       onFail: function (words, e) {
         out.innerHTML = '<div class="banner bad" data-testid="crm-send-fail">' + esc(crmSendWords(e)) + '</div>';
       },
