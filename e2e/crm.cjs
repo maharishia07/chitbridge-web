@@ -550,6 +550,18 @@ async function route(S, r) {
     await ctx.close();
   }
   {
+    /* R81 (24 Oct walk): opened straight at #/followups (bookmark, reload) nothing had loaded the Parties list, so the picker said "Nobody matches." */
+    const S = standIn(), { ctx, p } = await open(S, { hash: '#/followups' });
+    await p.waitForSelector('[data-testid="crm-fu-add"]', { timeout: 15000 });
+    await p.click('[data-testid="crm-fu-add"]'); await p.waitForSelector('[data-testid="crm-fu-sheet"]');
+    await p.fill('[data-testid="crm-fu-pq"]', 'chola');
+    await p.waitForSelector('[data-testid^="crm-fu-pick-"]', { timeout: 5000 }).catch(() => {});
+    ok(await p.locator('[data-testid^="crm-fu-pick-"]').count() >= 1 && /Chola Auto Care/.test(await text(p, '#crm_fu_pres')), 'Add follow-up opened straight at #/followups: typing a name finds the party (the list is loaded for the picker)');
+    ok(!/Nobody matches/.test(await text(p, '#crm_fu_pres')), 'and it never answers "Nobody matches." for a party who exists');
+    ok(S.calls.filter((c) => c.split('?')[0] === 'GET /api/crm/parties' && !/view=leads/.test(c)).length === 1, 'the picker loaded the list ONCE through the one Parties read');
+    await ctx.close();
+  }
+  {
     const S = standIn({ dup: true }), { ctx, p } = await open(S, { hash: '#/party/P-0002' });
     await recReady(p);
     await p.click('[data-testid="crm-act-edit"]'); await p.waitForSelector('[data-testid="pe_taxid"]');
