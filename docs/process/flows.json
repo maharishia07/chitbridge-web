@@ -563,7 +563,7 @@
           "engine": [{ "file": "api:lib/policy.js", "fn": "set" }, { "file": "api:lib/policy.js", "fn": "schemaFor" }, { "file": "api:lib/pack-words.js", "fn": "registrationKindsFor" }, { "file": "api:lib/owner.js", "fn": "may" }],
           "route": [{ "m": "GET", "p": "/policy", "file": "api:routes/entities.js" }, { "m": "PATCH", "p": "/policy", "file": "api:routes/entities.js" }],
           "chit": "none", "ledger": "none",
-          "test": ["api:tests/settings-owner-gate.test.cjs", "api:tests/pack-words.test.cjs", "web:e2e/walk-settings-ops.cjs", "web:e2e/walk-au-words.cjs"],
+          "test": ["api:tests/settings-owner-gate.test.cjs", "api:tests/pack-words.test.cjs", "web:e2e/walk-settings-ops.cjs", "web:e2e/walk-au-words.cjs", "web:e2e/walk-policy-card.cjs"],
           "status": "ok", "note": "The labels are POLICY_FLAGS (one list, cap-settings.js); lib/policy FLAGS is the whitelist and the may/why. AU-WORDS (2026-10-15): the rows are worded by the shop's COUNTRY PACK (policy.schemaFor ← lib/pack-words): the registration row offers only the kinds the pack has (AU · AE: registered / not; IN: the four) under the pack's name for the tax; a 0 reads as its word (No expiry · Keep — the law here asks N years); a kind the pack does not offer is refused (REG_KIND_NOT_OFFERED). The same reader words Home's sides panel and the sheet's trade-ready checks (api lib/sides · lib/entity-header)." },
         { "n": 4, "step": "plan and usage: the plan, each quota as a state, what was billed", "module": "Settings", "who": "the owner",
           "screen": [{ "file": "web:public/app/cap-settings.js", "fn": "plan" }],
