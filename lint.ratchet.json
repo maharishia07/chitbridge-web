@@ -2,13 +2,13 @@
  "_about": "lint ratchet (MNT-1): eslint warnings per own-code file, 18 Oct = the baseline. A file may have FEWER warnings than its row, never more. Warn-only: no CI step reads this yet. Lower with `node tools/lint-ratchet.cjs --write`.",
  "_totals": {
   "files": 180,
-  "eslintWarnings": 588,
+  "eslintWarnings": 480,
   "parseErrors": 3,
   "prettierFail": 10,
   "prettierChecked": 141
  },
  "_rules": {
-  "no-empty": 489,
+  "no-empty": 381,
   "no-unused-vars": 58,
   "no-redeclare": 10,
   "no-constant-condition": 2,
@@ -25,7 +25,7 @@
   "prettierOk": null
  },
  "public/app.html": {
-  "warnings": 178,
+  "warnings": 92,
   "prettierOk": null
  },
  "public/app/accounts-shell.js": {
@@ -37,7 +37,7 @@
   "prettierOk": true
  },
  "public/app/attach-ui.js": {
-  "warnings": 9,
+  "warnings": 3,
   "prettierOk": true
  },
  "public/app/avatar.js": {
@@ -361,7 +361,7 @@
   "prettierOk": true
  },
  "public/app/list-legacy.js": {
-  "warnings": 4,
+  "warnings": 0,
   "prettierOk": true
  },
  "public/app/network-app.js": {
@@ -369,7 +369,7 @@
   "prettierOk": true
  },
  "public/app/one-person.js": {
-  "warnings": 8,
+  "warnings": 2,
   "prettierOk": true
  },
  "public/app/page-frame.js": {
@@ -397,7 +397,7 @@
   "prettierOk": true
  },
  "public/app/rail-thread.js": {
-  "warnings": 11,
+  "warnings": 5,
   "prettierOk": true
  },
  "public/app/register-form.js": {
