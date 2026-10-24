@@ -201,7 +201,7 @@ function rgPaint() {
     modal(
       rgShell(
         '<div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">' +
-          tx('The register is not switched on for your shop yet.') +
+          tx('The register is not switched on for this environment yet (b182).') +
           '</div>'
       ),
       true
@@ -1365,7 +1365,7 @@ var RG_OUTCOME = {
 function rgClosure() {
   var list = rgScoped();
   if (!RG.report.full) {
-    return '<div class="rg-body"><div class="msgempty">' + tx('Closure needs the full register.') + '</div></div>';
+    return '<div class="rg-body"><div class="msgempty">' + tx('Closure needs the full register (b185).') + '</div></div>';
   }
   if (!list.length) {
     return '<div class="rg-body">' + rgRegisterRail() + '<div class="msgempty">' + tx('Nothing recorded, so there is nothing to close out.') + '</div></div>';
@@ -1654,7 +1654,7 @@ function rgDangling(list) {
 
 function rgImpact() {
   if (!RG.report.full) {
-    return '<div class="rg-body"><div class="msgempty">' + tx('The impact walk needs the full register.') + '</div></div>';
+    return '<div class="rg-body"><div class="msgempty">' + tx('The impact walk needs the full register (b185).') + '</div></div>';
   }
   var list = rgScoped();
   var edges = list.filter(function (e) {

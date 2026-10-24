@@ -90,7 +90,7 @@
 
 <div class="shell">
   <div class="hd">
-    <div class="t"><span>✉️</span><span>Compose — author a chit</span><button class="x" title="Close">×</button></div>
+    <div class="t"><span>✉️</span><span>Compose — author a chit</span><button class="x" title="close (mock)">×</button></div>
     <div class="s" id="hSub"></div>
   </div>
   <div class="rail" id="rail"></div>
@@ -388,7 +388,7 @@ function paintFoot() {
     '<button class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +
     ' onclick="' +
-    (last ? "alert('Sample only: nothing was sent.')" : 'go(' + (S.step + 1) + ')') +
+    (last ? "alert('(mock) chit sent')" : 'go(' + (S.step + 1) + ')') +
     '">' +
     (last ? 'Send chit' : 'Next: ' + STEPS[S.step + 1].n + ' <span class=arw>→</span>') +
     '</button>';

@@ -627,17 +627,17 @@ function isTester() {
   return document.documentElement.hasAttribute('data-ids');
 }
 /** the Code and Test rows of a comparison row: the paths in the api repo, shown to a tester only */
-function codeRowsHTML(r, ix) {
+function codeRowsHTML(entry, index) {
   if (!isTester()) return '';
   return (
     '<dt>Code</dt><dd data-testid="std-code-' +
-    ix +
+    index +
     '">' +
-    (r.code ? '<code>chitbridge-api ' + esc(r.code) + '</code>' : 'Not built yet') +
+    (entry.code ? '<code>chitbridge-api ' + esc(entry.code) + '</code>' : 'Not built yet') +
     '</dd><dt>Test</dt><dd data-testid="std-test-' +
-    ix +
+    index +
     '">' +
-    (r.test ? '<code>chitbridge-api ' + esc(r.test) + '</code>' : r.s === 'live' ? 'No test in the suite yet — the proof above is the run' : 'No test yet') +
+    (entry.test ? '<code>chitbridge-api ' + esc(entry.test) + '</code>' : entry.s === 'live' ? 'No test in the suite yet — the proof above is the run' : 'No test yet') +
     '</dd>'
   );
 }

@@ -351,7 +351,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(/Covers/.test(dl) && /Kind\s*Law\s*you must/.test(dl) && /Source/.test(dl) && !/Missing:/.test(dl), 'the row opens to label : value — Covers · Kind · Source (what is missing is already in the row, not said twice)');
     ok(/New\s*Adopted 2–3 Oct 2026; not yet in the register/.test(dl), 'a 2–3 Oct 2026 addition says it is New and not yet in the register');
     ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
-    ok(await p.locator('[data-testid="std-go"]').count() === 0 && await p.locator('[data-testid="std-copy"]').count() === 1, 'a row whose only home is the workshop offers Copy only — no Open in the app ›');
+    ok(await p.locator('[data-testid="std-go"]').count() === 1 && await p.locator('[data-testid="std-copy"]').count() === 1, 'UX-99 · a returns row opens its home, Accounts › Tax close (Open in the app ›), and still offers Copy');
     ok(/Copy for a buyer or CA/.test(await p.textContent('[data-testid="std-copy"]')), 'its words are the design' + String.fromCharCode(39) + 's');
     /* M41 · T2: the opened row's terms explain themselves on a tap; on the closed row a tap still opens the row */
     const dab = p.locator('[data-testid="std-detail-' + gi + '"] abbr.gl').first();

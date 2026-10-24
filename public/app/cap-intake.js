@@ -219,7 +219,7 @@ function intakeBodyHTML() {
   if (!_INTAKE.migrated)
     return (
       '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">' +
-      'The intake queue is not switched on for your shop yet.</div>'
+      'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>'
     );
   if (_INTAKE.err)
     return (

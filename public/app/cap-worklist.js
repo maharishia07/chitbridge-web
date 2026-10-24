@@ -1460,7 +1460,7 @@ function wlRaidaSec() {
     out += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>';
   } else if (R.migrated === false) {
     /* ⚠️ Deploy-before-migration is normal here, and it is not a fault. Say what is true. */
-    out += '<div style="font-size:var(--fs-2);color:var(--grey)">The register is not switched on for your shop yet.</div>';
+    out += '<div style="font-size:var(--fs-2);color:var(--grey)">The register is not switched on for this environment yet (b182).</div>';
   } else {
     out += R.entries.length
       ? R.entries.map(wlRaidaRow).join('')

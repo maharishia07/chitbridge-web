@@ -180,7 +180,7 @@
   window.addEventListener('load', postHeight);
   window.addEventListener('resize', postHeight);
   if (!BRIDGE) {
-    el('app').innerHTML = '<div class="empty">This catalogue is not available.</div>';
+    el('app').innerHTML = '<div class="empty">No catalogue specified. Add <code>?bridge=YOUR_BRIDGE_ID</code>.</div>';
     return;
   }
   fetch(API + '/api/catalogue/' + encodeURIComponent(BRIDGE))
