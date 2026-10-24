@@ -93,14 +93,18 @@ W.run('standards-compare', async (w) => {
     const links = await page.$$eval('[data-testid="std-cmp-sources-' + ix + '"] a', (e) => e.map((a) => a.getAttribute('href') + '|' + a.getAttribute('target') + '|' + a.getAttribute('rel')));
     const copy = await page.innerText('[data-testid="std-cmp-sources-' + ix + '"]');
     const btn = await page.getAttribute('[data-testid="std-cmp-source"]', 'disabled');
-    await setFilter('country', 'IN');
-    const ix2 = await open('in-tally-prime-core-books');
+    /* the document-only row is READ from the file, never a typed id (R120, 2026-10-24: every India row now cites a vendor URL; the remaining
+       document-only sources are UAE rows) — a source with no web link and no copy on this checkout */
+    const docOnly = CROWS.find((r) => r.src.length && r.src.every((s) => !s.url && !s.copy));
+    await setFilter('country', docOnly.c[0]);
+    const ix2 = await open(docOnly.cmp);
     const words = await page.innerText('[data-testid="std-cmp-sources-' + ix2 + '"]');
     const why = await page.locator('[data-testid="std-cmp-source-why"]').innerText().catch(() => '');
     const greyed = await page.getAttribute('[data-testid="std-cmp-source"]', 'aria-disabled');
+    await setFilter('country', 'IN');   /* S5 onwards open India rows, as before */
     return { ok: links.length === 1 && /^https:\/\/www\.xero\.com\/au\/pricing-plans\/\|_blank\|noopener$/.test(links[0]) && /a copy is in this repository/.test(copy) && btn === null
-        && /docs library/.test(words) && /FINANCE-COMPARE/.test(words) && greyed === 'true' && /docs library/.test(why),
-      saw: 'xero: link ' + links[0] + ' · tally: "' + words.replace(/\s+/g, ' ').slice(0, 70) + '…" · greyed ' + greyed + ' · why "' + why.slice(0, 60) + '"' };
+        && /docs library/.test(words) && words.indexOf(docOnly.src[0].doc) >= 0 && greyed === 'true' && /docs library/.test(why),
+      saw: 'xero: link ' + links[0] + ' · ' + docOnly.cmp + ': "' + words.replace(/\s+/g, ' ').slice(0, 70) + '…" · greyed ' + greyed + ' · why "' + why.slice(0, 60) + '"' };
   });
 
   await w.step('S5', 'See it on a core-books row -> the parallel run (accounts.html#compare); a non-books row offers no See it', async () => {
