@@ -64,7 +64,7 @@ of file each thing is; this says what already does the job.
 | 29 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 28 | `facts` | `bill-steps.js` | MY state_log — |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
-| 27 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 28 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 26 | `mount` | `attach-ui.js` | var CBAttach = (function () { |

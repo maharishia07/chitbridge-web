@@ -9,6 +9,7 @@
  * ⭐ NEW PATHS (rule 4): FT (this tab's state) · FT_EP (the two /api/books/terms rows + crmParties, which finance.html did not load) · the tab switch
  * (#/terms) — Collections is one list, the nav had no second place to go.
  * ⚠️ Never error.message on a screen: a failure says what happened (CBAction.words) and the button stays.
+ * FLOW GET /api/books/terms (+ crmParties) -> FT.t / FT.parties -> the shop form + CBList party rows -> ftOpen (a party's sheet) -> ftSaveShop / ftSaveParty -> POST /api/books/terms -> ftLoad again
  * CARD 16-finance/terms-and-credit
  */
 'use strict';
@@ -467,7 +468,9 @@ function ftSaveParty(pid, btn) {
       done: tx('Saved'),
       outcome: function () {
         ftLoad(true).then(function () {
-          ftOpen(pid);
+          ftOpen(pid); /* R76: the re-opened dialog wiped the button's "Saved" — say it in the dialog's own line */
+          var said = document.getElementById('ftp_why');
+          if (said) said.textContent = '✓ ' + tx('Saved');
         });
       }
     }

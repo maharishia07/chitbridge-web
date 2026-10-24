@@ -4504,10 +4504,16 @@ function bkPartyKind(pid, ctrl) {
  */
 async function bkRemindTarget(pid) {
   var reply = await api('booksPayPreview', { body: { party_id: pid, direction: 'in', amount_minor: 1, currency: bkCur(), allocate: 'oldest_first' } });
+  /* ⭐ THE ONE DUE FIGURE (R73): due_minor is the bill net of the party's receipts on account too — what the Collections list and the Cash view
+     show; open_minor (what a payment may still be allocated to) is the Pay unit's figure and stands in only on an older server */
+  var dueOf = function (item) {
+    return Number(item.due_minor != null ? item.due_minor : item.open_minor);
+  };
   var bill = ((reply && reply.proposal) || []).filter(function (item) {
-    return Number(item.open_minor) > 0 && !item.disputed;
+    return dueOf(item) > 0 && !item.disputed;
   })[0];
   if (!bill) throw new Error('nothing open');
+  bill = Object.assign({}, bill, { due_minor: dueOf(bill) });
   var line = null,
     acts = null;
   try {
@@ -4535,12 +4541,19 @@ function bkRemind(pid, btn) {
 }
 function bkRemindOpen(t) {
   var name = t.party || '';
-  var text = txf('Hello {name}, a reminder: bill {no} for {amt} was due on {date}. Please pay when you can.', {
-    name: name,
-    no: t.bill.bill_no || '',
-    amt: bkMoney(t.bill.open_minor, t.currency),
-    date: bkDate(t.bill.due_date)
-  });
+  /* R73: a bill not yet late IS due, not WAS due — the day decides the sentence (bkToday: the shop's day, never UTC) */
+  var late = !!(t.bill.due_date && t.bill.due_date < bkToday());
+  var text = txf(
+    late
+      ? 'Hello {name}, a reminder: bill {no} for {amt} was due on {date}. Please pay when you can.'
+      : 'Hello {name}, a reminder: bill {no} for {amt} is due on {date}. Please pay by then.',
+    {
+      name: name,
+      no: t.bill.bill_no || '',
+      amt: bkMoney(t.bill.due_minor, t.currency),
+      date: bkDate(t.bill.due_date)
+    }
+  );
   modal(
     '<div class="mhd"><div class="t" data-testid="remind_title">' +
       esc(tx('Remind')) +
@@ -4548,7 +4561,7 @@ function bkRemindOpen(t) {
       esc(name) +
       '</div></div><div class="mbody">' +
       '<div data-testid="remind_for" style="font-size:var(--fs-1);margin-bottom:8px">' +
-      esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.open_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
+      esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.due_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
       '</div>' +
       '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button onclick="closeModal()">' +
       tx('Close') +
@@ -4600,8 +4613,8 @@ function bkPartyBillsHTML(pid, list, c) {
         .join('')
     : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
-/** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement */
-function bkDuesNext(p, c) {
+/** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
+function bkDuesNext(p, c, list) {
   var side = bkDuesSide(p),
     cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
     known = cols.map(function (item) {
@@ -4640,7 +4653,7 @@ function bkDuesNext(p, c) {
     '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' +
     esc(tx('Bills')) +
     '</div>' +
-    bkPartyBillsHTML(p.party_id, 'dues', c) +
+    bkPartyBillsHTML(p.party_id, list || 'dues', c) +
     '</div>'
   );
 }
