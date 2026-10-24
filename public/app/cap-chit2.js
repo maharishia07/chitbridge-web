@@ -656,9 +656,6 @@ function c2AmendLine(i, wantPick) {
      ambiguous line is often wrong too, and one save has to cover both. */
   if (wantPick) AMD.wantPick = true;
 }
-function c2AmendPick(i) {
-  c2AmendLine(i, true);
-}
 
 /* ── price from catalogue — PREVIEW, then apply ─────────────────────────────────────────────────────────────────
    Athi, 2026-08-13: *"either wholistically or for an individual item the price should be pulled in"* and
