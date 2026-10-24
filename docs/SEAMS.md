@@ -186,6 +186,7 @@ of file each thing is; this says what already does the job.
 | 12 | `units` | `cart.js` |  |
 | 12 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 12 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 11 | `when` | `cap-settings.js` |  |
 | 11 | `stored` | `one-person.js` |  |
 | 12 | `says` | `adopt.js` |  |
 | 12 | `post` | `books-manual.js` | POST /events — |
