@@ -2,11 +2,12 @@
  * Classic script, shared global scope. Loaded by app.html, catalogue.html and till.html AFTER engine/tax.js (CBTaxSlab · CBTaxPacks) and helpers.js (esc).
  *
  * OWNS      cbSlabOptionsHTML (MOVED from app.html: the <option>s, governed first, own after) · cbcatSlabPickHTML (MOVED from cap-categories.js: the
- *           category form's picker) · cbTaxCharges (does this shop charge its tax: the twin of the api's tax-shelf.chargesTax) · cbRateMay and
- *           cbRateButtonHTML (who may set a rate — owner or manager, the api's rule and sentence — and the one action, enabled by role) · cbSlabSourceWords and
- *           cbSlabChipHTML (the item row: "GST 5%" + four words of source, or the amber "No GST rate" + the host's one action) · cbSlabMenu and
- *           cbSlabMenuHTML (the ask-once menu: the shop's live slabs whose rate is on the pack's menu TODAY, the pack's suggestion for the item's
- *           code first with "Use", its citation behind ⓘ).
+ *           category form's picker; W1b: the host's onReady repaint and the role verdict that greys it) · cbTaxCharges (does this shop charge its tax:
+ *           the twin of the api's tax-shelf.chargesTax) · cbRateMay and cbRateButtonHTML (who may set a rate — the server's may_set_rate, else owner or
+ *           manager; the api's rule and sentence — and the one action, enabled by role) · cbSlabSourceWords and cbSlabChipHTML (the item row: "GST 5%" +
+ *           four words of source, or the amber "No GST rate" + the host's one action) · cbSlabMenu and cbSlabMenuHTML (the ask-once menu: the shop's
+ *           live slabs whose rate is on the pack's menu TODAY, the pack's suggestion for the item's code first with "Use", its citation behind ⓘ; the
+ *           shop's 0% exempt slab reads "No GST (exempt)").
  * CALLED BY app.html (prodTaxHTML · prodTaxAttachHTML), cap-categories.js (cbcatPaint), cap-catsetup.js (the catalogue default), cap-definitions.js
  *           (the takeover picker), cap-catalogue.js (the item sheet's rate row), till.html (the bill's "No tax rate · Fix" ask-once sheet).
  * FLOW      resolve() → cbSlabChipHTML → Set rate → cbSlabMenu(slabs, pack, code) → cbSlabMenuHTML → the HOST confirms and writes (PATCH /products/:id
@@ -71,14 +72,14 @@ function cbSlabOptionsHTML(slabs, selected) {
  * fourth private fetch here is how four screens come to disagree about what is on the shelf.
  * ⚠️ A category in a product's list that names no slab is SKIPPED, not treated as "no tax" — see lib/tax-slab.js.
  * MOVED from cap-categories.js (F5 W1a); it repaints that file's form (cbcatPaint) once the slabs arrive.
+ * W1b (R85): `opts.onReady` is the HOST's repaint once the slabs arrive (catalogue.html's sheet; the workshop's cbcatPaint stays the default), and
+ * `opts.may` (cbRateMay's verdict) greys the picker WITH the sentence for anyone but an owner or a manager — a category's slab is a rate on every item in it.
  */
-function cbcatSlabPickHTML(form) {
+function cbcatSlabPickHTML(form, opts) {
+  opts = opts || {};
   var slabs = typeof cbDefsCached === 'function' ? cbDefsCached('tax') : null;
   if (slabs === null) {
-    if (typeof cbDefsLive === 'function')
-      cbDefsLive('tax').then(function () {
-        if (typeof CBCAT_UI !== 'undefined' && CBCAT_UI.form && typeof cbcatPaint === 'function') cbcatPaint();
-      });
+    if (typeof cbDefsLive === 'function') cbDefsLive('tax').then(opts.onReady || slabPickRepaint_);
     return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' + slabT_('reading your slabs…') + '</div>';
   }
   /* ⚠️ An empty picker says WHY and where to go. A lone blank option reads as "this category cannot have one". */
@@ -88,18 +89,27 @@ function cbcatSlabPickHTML(form) {
       slabT_('No live slab yet — name one under {where}.', { where: '<b>' + slabT_('Catalogue setup') + ' › ' + slabT_('Tax') + '</b>' }) +
       '</div>'
     );
-  var chosen = form.default_slab || '';
+  return slabPickSelect_(slabs, form.default_slab || '', opts.may && !opts.may.ok ? opts.may.why : '');
+}
+/** the picker itself: the <select> (greyed with the reason in its title when `greyedWhy` is given) and the one line under it — the reason, or what the picker does */
+function slabPickSelect_(slabs, chosen, greyedWhy) {
   return (
-    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">' +
+    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)"' +
+    (greyedWhy ? ' disabled title="' + esc(greyedWhy) + '"' : '') +
+    '>' +
     '<option value="">— ' +
     esc(slabT_('inherit the catalogue default')) +
     ' —</option>' +
     cbSlabOptionsHTML(slabs, chosen) /* the jurisdiction's slabs first, then this entity's own — one builder, three pickers */ +
     '</select>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">' +
-    slabT_('Products here that name no slab of their own use this.') +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px"' + (greyedWhy ? ' data-testid="catg-slab-why"' : '') + '>' +
+    esc(greyedWhy || slabT_('Products here that name no slab of their own use this.')) +
     '</div>'
   );
+}
+/** the workshop's repaint once the slabs arrive (cap-categories.js's own form) — the default onReady */
+function slabPickRepaint_() {
+  if (typeof CBCAT_UI !== 'undefined' && CBCAT_UI.form && typeof cbcatPaint === 'function') cbcatPaint();
 }
 
 /**
@@ -133,14 +143,17 @@ function cbSlabSourceWords(resolved) {
 }
 
 /**
- * ⭐ WHO MAY SET A RATE — the api's own rule (routes/till.js setsRate; DECISIONS 2026-10-24 14:20: owner or manager ONLY, on every door) and its own
- * sentence, said BEFORE the server has to. cbRateMay({ owner, hat }) → { ok, why }: the business itself, or a co-assist whose hat is manager; a key, a
- * cashier (hat act), a viewer, or nobody signed in → not ok, with the sentence. The HOST supplies the facts it has (the counter: its person session and
- * the staff list's hat; the catalogue: the server's is_owner field) — never a guess from a name.
+ * ⭐ WHO MAY SET A RATE — the api's own rule (lib/rate-door.js setsRate; DECISIONS 2026-10-24 14:20: owner or manager ONLY, on every door) and its own
+ * sentence, said BEFORE the server has to. cbRateMay(facts) → { ok, why }. The facts are whatever the HOST holds, never a guess from a name:
+ *   · the server's VERDICT `may_set_rate` (GET /entities/me/can-see-costs, api #429) — when it is there it decides, whatever else is said;
+ *   · else `owner` / `is_owner` (the business itself) or `hat` === manager (a co-assist). A key, a cashier (hat act), a viewer, nobody → not ok.
+ * The counter passes its person session and the staff list's hat; the catalogue and the setup pass the can-see-costs reply itself (W1b: a manager there
+ * is enabled the day the api sends may_set_rate, greyed until then).
  */
 var CB_RATE_ASK_OWNER = 'Ask the owner or a manager to set the tax rate.';
-function cbRateMay(person) {
-  var ok = !!person && (person.owner === true || String(person.hat || '').toLowerCase() === 'manager');
+function cbRateMay(facts) {
+  var said = facts && typeof facts.may_set_rate === 'boolean' ? facts.may_set_rate : null;
+  var ok = said !== null ? said : !!facts && (facts.owner === true || facts.is_owner === true || String(facts.hat || '').toLowerCase() === 'manager');
   return { ok: ok, why: ok ? '' : CB_RATE_ASK_OWNER };
 }
 /**
@@ -221,6 +234,15 @@ function slabSuggestion_(rows, pack, code) {
 }
 
 /**
+ * a menu button's face: "GST 5%"; the shop's 0% slab whose nil_kind is exempt reads "No GST (exempt)" — the one button the critic's copy asks for.
+ * ⚠️ It EXISTS only when the shop authored such a slab AND 0 is on today's menu (slabMenuRow_): no slab, no button, never an invented one.
+ */
+function slabRowWords_(row, scheme) {
+  if (row.nil_kind === 'exempt') return slabT_('No {t} (exempt)', { t: scheme });
+  return scheme + ' ' + row.rate + '%';
+}
+
+/**
  * ⭐ cbSlabMenu(slabs, pack, code) → { scheme, rows:[{ id, name, rate, words, suggested }], suggestion, cite }
  * The ask-once menu, as DATA: the shop's live slabs on today's menu (3 to 5 big buttons), and the pack's SUGGESTION for the item's SAC / HSN
  * (tax-packs.suggestFor: "996331 · restaurant · 5%") pointing at the slab of that rate, first. A pack without `suggest` (AU · AE) answers none.
@@ -232,7 +254,7 @@ function cbSlabMenu(slabs, pack, code) {
   var scheme = (taxPack && taxPack.scheme) || slabT_('Tax');
   var built = slabMenuRows_(slabs, taxPack);
   var rows = built.rows.map(function (row) {
-    row.words = scheme + ' ' + row.rate + '%' + (row.nil_kind === 'exempt' ? ' (' + slabT_('exempt') + ')' : '');
+    row.words = slabRowWords_(row, scheme);
     return row;
   });
   var suggestion = slabSuggestion_(rows, taxPack, code);

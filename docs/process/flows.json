@@ -19,7 +19,7 @@
       "id": "O2C", "name": "Order to cash", "sap": "SD → FI-AR",
       "steps": [
         { "n": 1, "step": "enquiry", "module": "Network", "who": "a buyer the catalogue was delivered to",
-          "screen": [{ "file": "web:public/app.html", "fn": "enquirySend" }, { "file": "web:public/app/cap-catalogue.js", "fn": "mountItems" }],
+          "screen": [{ "file": "web:public/app.html", "fn": "enquirySend" }, { "file": "web:public/app/cap-catalogue.js", "fn": "mountItems" }, { "file": "web:public/app/cap-catalogue.js", "fn": "ctCategoryChips" }, { "file": "web:public/app/cap-catalogue.js", "fn": "ctCodeSlots" }, { "file": "web:public/app/cap-catsetup.js", "fn": "catsetTaxSave" }],
           "engine": [],
           "route": [{ "m": "POST", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry/:item_id", "file": "api:routes/catalogue.js" }, { "m": "GET", "p": "/api/catalogue/enquiry", "file": "api:routes/catalogue.js" }, { "m": "PATCH", "p": "/api/products/:id", "file": "api:routes/products.js" }],
           "chit": "none — a message thread on the item", "ledger": "none",
