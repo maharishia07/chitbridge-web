@@ -1700,6 +1700,7 @@ body.lab-only #cbtestpanel{
      determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
 <script src="/engine/tax.js"></script>   <!-- the adopted BUNDLE: reg-* packs + regulation + tax-packs + tax-slab (CBTaxSlab) + tax (CBTax), one file (T2-ENGONCE) -->
+<script src="/app/tax-slab-ui.js"></script>   <!-- cbSlabOptionsHTML · cbcatSlabPickHTML · the rate chip and the ask-once menu: ONE copy for app.html, catalogue.html and the counter (F5 W1a) -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
@@ -1832,8 +1833,7 @@ const EP = {
      via b161's generalised anchor, so it is the same thread engine and the same inbox, not a second one. */
   enquiryRead: { m: 'GET', p: '/api/catalogue/enquiry/:itemId', ok: 'y' },
   enquirySend: { m: 'POST', p: '/api/catalogue/enquiry/:itemId', ok: '✓' },
-  catFaceGet: { m: 'GET', p: '/api/catalogue-face', ok: '✓' }, // b112 — load this entity's saved catalogue face (cross-device)
-  catFacePut: { m: 'PUT', p: '/api/catalogue-face', ok: '✓' }, // b112 — save (upsert) the whole catalogue face config
+  /* catFaceGet · catFacePut → app/cap-catalogue.js CB_CATALOGUE_EP (F5 W1a: catalogue.html reads the face for the item row) */
   schemaFieldDrop: { m: 'DELETE', p: '/api/schemas/fields/:key', ok: '✓' }, // remove a column — refused with a COUNT once anything records a value in it
   schemaFieldOrder: { m: 'PATCH', p: '/api/schemas/fields/order', ok: '✓' }, // move one up or down — order is presentation, so it stays free for ever
   schemaFieldPatch: { m: 'PATCH', p: '/api/schemas/fields/:key', ok: '✓' }, // what a column IS: label · type (while unused) · unit (Rec 20) · required · source
@@ -21326,26 +21326,7 @@ function prodSellerState() {
  * What the pane shows. Split out from the loader so the Edit select can repaint it on `change` WITHOUT re-reading
  * anything — the whole point of "verified then and there" is that the outcome moves as you choose.
  */
-/**
- * ⭐ SLAB <option>s — THE JURISDICTION'S FIRST, THE ENTITY'S OWN AFTER. One builder for the three pickers (product ·
- * category · catalogue default). Athi, 2026-09-04: *"it has to come from governance layer and across the country"* —
- * a governed slab (`governance` set, id like IN-GST-18, served by the API from region_layer) is offered exactly like
- * an authored one; the group label says which is which. Accepts either row shape (definition_id or id).
- */
-function cbSlabOptionsHTML(slabs, selected) {
-  const id = (s) => String(s.definition_id || s.id || ''),
-    rate = (s) => (s.rules && s.rules.rate != null ? ' · ' + esc(s.rules.rate) + '%' : '');
-  const opt = (s) => `<option value="${esc(id(s))}"${String(selected || '') === id(s) ? ' selected' : ''}>${esc(s.name)}${rate(s)}</option>`;
-  const list = (slabs || []).filter((item) => item.governance),
-    own = (slabs || []).filter((item) => !item.governance);
-  let h = '';
-  if (list.length) {
-    const g = list[0].governance || {};
-    h += `<optgroup label="${esc(((g.jurisdiction || '') + ' ' + (g.scheme || '')).trim() + ' · ' + tx('governance'))}">${list.map(opt).join('')}</optgroup>`;
-  }
-  if (own.length) h += `<optgroup label="${esc(tx('Your slabs'))}">${own.map(opt).join('')}</optgroup>`;
-  return h;
-}
+/* cbSlabOptionsHTML → app/tax-slab-ui.js (F5 W1a: one builder for every picker, read by catalogue.html and the counter too) */
 function prodTaxHTML(d) {
   const slabs = cbDefsCached('tax') || [],
     cats = cbDefsCached('category') || [];

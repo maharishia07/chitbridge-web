@@ -18,9 +18,9 @@ of file each thing is; this says what already does the job.
 | 73 | `answer` | `availability.js` | from March; then nearest. |
 | 69 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 68 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
-| 66 | `list` | `cap-settings.js` |  |
+| 67 | `list` | `cap-settings.js` |  |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
-| 60 | `here` | `screen-id.js` |  |
+| 61 | `here` | `screen-id.js` |  |
 | 58 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 57 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 57 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
@@ -29,7 +29,7 @@ of file each thing is; this says what already does the job.
 | 54 | `items` | `books-store.js` | PERF1: |
 | 50 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 49 | `toast` | `accounts-shell.js` |  |
-| 49 | `rows` | `cap-settings.js` |  |
+| 50 | `rows` | `cap-settings.js` |  |
 | 49 | `entry` | `books-store.js` |  |
 | 49 | `next` | `dayopen.js` | the next thing to do — |
 | 48 | `record` | `access-events.js` |  |
@@ -48,7 +48,7 @@ of file each thing is; this says what already does the job.
 | 37 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 36 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 35 | `modal` | `app.html` |  |
-| 35 | `host` | `chit-sheet.js` |  |
+| 36 | `host` | `chit-sheet.js` |  |
 | 35 | `rules` | `docnumber.js` | the rule set for a country — |
 | 35 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 35 | `missing` | `variant.browser.js` | refusing with no reason. |
@@ -73,7 +73,7 @@ of file each thing is; this says what already does the job.
 | 28 | `changes` | `books-store.js` |  |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
 | 28 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
-| 27 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 28 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 27 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
@@ -102,7 +102,7 @@ of file each thing is; this says what already does the job.
 | 22 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 22 | `account` | `home-facts.js` | OMITTED: |
 | 22 | `owner` | `books.js` |  |
-| 21 | `form` | `accounts-shell.js` |  |
+| 22 | `form` | `accounts-shell.js` |  |
 | 21 | `shown` | `cap-settings.js` |  |
 | 21 | `guard` | `books-assets.js` | run a store call; a missing table is the one refusal |
 | 21 | `chart` | `fx-rates.js` |  |
@@ -127,7 +127,7 @@ of file each thing is; this says what already does the job.
 | 17 | `step` | `cart.js` |  |
 | 17 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
-| 17 | `chip` | `screen-id.js` | var S = { app: |
+| 18 | `chip` | `screen-id.js` | var S = { app: |
 | 17 | `verify` | `bookpack.js` | manifest's own hash. |
 | 17 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 17 | `notMigrated` | `crm-followups.js` |  |
@@ -175,7 +175,7 @@ of file each thing is; this says what already does the job.
 | 14 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 13 | `resolve` | `page.js` |  |
+| 15 | `resolve` | `page.js` |  |
 | 13 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 13 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 13 | `terms` | `books-store.js` | the party's credit terms, from whichever list holds them (a customer's for a sale, a supplier's for a purchase |
