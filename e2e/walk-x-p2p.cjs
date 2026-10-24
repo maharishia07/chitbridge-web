@@ -312,8 +312,12 @@ const walk = async (w) => {
       await openBillSheet();
       await page.click(T('cs-act-goodsin')); await page.waitForSelector(T('bill-use-choice'), { timeout: 8000 });
       const ask = await txt(page, T('bill-use-choice'));
-      await page.click(T('bill-use-resale')); await page.waitForTimeout(3500);
-      const t = await txt(page, '#chitsheet');
+      await page.click(T('bill-use-resale'));
+      /* R102: accepting the bill asks first — "Accept <supplier>'s bill <no> for ₹…?" — the Yes tap is the deliberate step */
+      await page.waitForSelector('#cb_confirm ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {});
+      const askYes = await txt(page, '#cb_confirm').catch(() => '');
+      await page.click('#cb_confirm ' + T('confirm-ok')).catch(() => {}); await page.waitForTimeout(3500);
+      const t = await txt(page, '#chitsheet') + (askYes ? ' · asked: ' + askYes.replace(/\s+/g, ' ').slice(0, 80) : '');
       await page.click(T('cs-close')).catch(() => {});
       return { ok: /What is it for/.test(ask) && /Accepted/.test(t), saw: '"' + ask.slice(0, 60) + '"; sheet: ' + t.slice(0, 140) };
     });
@@ -360,7 +364,7 @@ const walk = async (w) => {
       const bills = await txt(page, T('pay_bills')), left = await txt(page, T('pay_left'));
       /* a band ("the last bill was settled today" — the duplicate rule) holds Record until its own button is pressed: that press is the acknowledgement */
       const band = await page.locator(T('pay_band')).isVisible().catch(() => false), bandWords = band ? await txt(page, T('pay_band_words')) : '', ackLabel = band ? await txt(page, T('pay_ack')) : '';
-      if (band) await page.click(T('pay_ack')); else await page.click(T('pay_record'));
+      if (band) await page.click(T('pay_ack')); else { await page.click(T('pay_record')); await page.click('dialog[open] ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {}); } /* R102b: Record asks first; the band's button is its own ask */
       await page.waitForSelector(T('pay_outcome'), { timeout: 15000 }).catch(() => {});
       const out = await txt(page, '#pay_body'), adv = await page.locator(T('pay_advice')).count();
       S.paid = /Paid|Recorded/.test(out); S.settledNo = (out.match(/Settled: ([^ ]+)/) || [])[1] || ''; S.settledOther = !!(S.settledNo && S.settledNo !== S.bill.no);
@@ -442,7 +446,7 @@ const walk = async (w) => {
           await row.click({ force: true }).catch(() => {});
           if (await p.waitForSelector(T('pay_title'), { timeout: 8000 }).catch(() => null)) {
             await p.fill(T('pay_amt'), '10.00'); await p.waitForTimeout(1500);
-            if (await p.locator(T('pay_band')).isVisible().catch(() => false)) await p.click(T('pay_ack')); else await p.click(T('pay_record')).catch(() => {});
+            if (await p.locator(T('pay_band')).isVisible().catch(() => false)) await p.click(T('pay_ack')); else { await p.click(T('pay_record')).catch(() => {}); await p.click('dialog[open] ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {}); }
             await p.waitForTimeout(2500);
             paySaw = await txt(p, T('pay_why')) + ' | ' + await txt(p, '#pay_body'); await p.click(T('pay_done')).catch(() => {}); await p.evaluate(() => { try { closeModal(); } catch (_) {} });
           }

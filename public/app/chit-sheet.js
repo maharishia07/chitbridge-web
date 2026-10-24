@@ -16,6 +16,8 @@
  * openChitSheet(id) and get the same row. Each icon calls the function the full page already calls for it
  * (the `status` route through statusWordFor, quickDispute, billUse, openChit) and then repaints the sheet.
  * "Open page" is the only way out: it goes where the link went before (openChit).
+ * Accepting a bill I received is a money promise (R102, walk 24 Oct): acceptAsk() asks first through the page's one confirm
+ * (CBAction.ask), naming the supplier, the bill and the amount; Cancel sends nothing. The history then reads "Accepted by <who>".
  *
  * Phone first. The sheet scrolls; the page behind does not move, so closing returns to the same place.
  *
@@ -732,31 +734,24 @@
   function showsHistory() {
     return CS.mode === 'page' || CS.place !== 'popup';
   }
+  /** the word for one history row: my bill_step row says the step it took (Accepted · Rejected — R102), else the action's word, else the status word */
+  function histWord(e) {
+    var a = String(e.action || '');
+    if (a === 'bill_step' && e.step) return STEP[e.step] || e.step;
+    if (LOGWORD[a]) return LOGWORD[a];
+    if (a.indexOf('status_') === 0) return STEP[a.slice(7)] || a.slice(7);
+    return e.new_status ? STEP[e.new_status] || e.new_status : a || 'Event';
+  }
+  /** one history row: "Accepted by Kaveri R" · the time — who acted is the api's action_by_display_name, the same for every step */
+  function histRowHTML(e, index) {
+    var actor = e.action_by_display_name || e.by_name || '',
+      said = actor ? tf('{what} by {who}', { what: T(histWord(e)), who: actor }) : T(histWord(e));
+    return '<div class="cs-row cs-hist" data-testid="cs-hist-' + index + '"><span>' + esc(said) + '</span><b>' + esc(when(e.created_at || e.at)) + '</b></div>';
+  }
   function historyHTML() {
     var log = (CS.chit && CS.chit.state_log) || [];
     if (!log.length) return '';
-    return (
-      '<div class="cs-sec">' +
-      esc(T('History')) +
-      '</div>' +
-      log
-        .map(function (e, index) {
-          var a = String(e.action || ''),
-            w = LOGWORD[a] || (a.indexOf('status_') === 0 ? STEP[a.slice(7)] || a.slice(7) : e.new_status ? STEP[e.new_status] || e.new_status : a || 'Event');
-          return (
-            '<div class="cs-row cs-hist" data-testid="cs-hist-' +
-            index +
-            '"><span>' +
-            esc(when(e.created_at || e.at)) +
-            ' · ' +
-            esc(T(w)) +
-            '</span><b>' +
-            esc(e.action_by_display_name || e.by_name || '') +
-            '</b></div>'
-          );
-        })
-        .join('')
-    );
+    return '<div class="cs-sec">' + esc(T('History')) + '</div>' + log.map(histRowHTML).join('');
   }
   function pageNoteHTML() {
     try {
@@ -1148,6 +1143,31 @@
     if (pg && document.body.contains(pg.el)) mount(pg.el, pg.id);
   }
 
+  /**
+   * R102 (walk 24 Oct): accepting a bill I received is a money promise — ask first, naming the supplier, the bill and the amount, through the
+   * page's one confirm (CBAction.ask → CBConfirm / confirmAsk). true = yes · false = Cancel · null = this page has no confirm, so nothing may be sent.
+   */
+  function acceptAsk(view) {
+    if (!root.CBAction || typeof root.CBAction.ask !== 'function') return Promise.resolve(null);
+    var amount = view.money && view.money.total != null ? fmtMoney(view.money.total, view.cur, '') : '';
+    return root.CBAction.ask({
+      title: amount ? tf('Accept bill {no} from {who} for {amount}?', { who: view.who, no: view.no, amount: amount }) : tf('Accept bill {no} from {who}?', { who: view.who, no: view.no }),
+      body: esc(T('You will owe them this amount.')),
+      yes: T('Accept'),
+      danger: false
+    });
+  }
+  /** Accept (with or without the goods' use): a bill asks first, then the same move every step makes — Cancel sends nothing and the sheet stays as it was; a task just moves */
+  async function acceptBill(goodsUse) {
+    var view = CS.view;
+    if (!view || CS.busy) return;
+    if (!view.billRx) return move('act', goodsUse);
+    var yes = await acceptAsk(view);
+    if (yes === true) return move('act', goodsUse);
+    CS.useAsk = false;
+    CS.note = yes === null ? T('Nothing sent. This page cannot ask first.') : null;
+    paint();
+  }
   /* the same move the full page makes: `status` through statusWordFor — then the sheet re-reads and repaints */
   async function move(to, use, note) {
     var m = CS.view,
@@ -1267,7 +1287,7 @@
         CS.note = null;
         return paint();
       }
-      return move('act');
+      return acceptBill(); /* R102: a bill is a money promise — it asks first; a task just moves */
     }
     if (k === 'done') return move('close');
     if (k === 'goodsin') {
@@ -1366,7 +1386,7 @@
     mount: mount,
     act: act,
     use: function (u) {
-      return move('act', u);
+      return acceptBill(u); /* the goods' use chosen (Accept or Goods in on a bill) — R102: the accept asks first */
     },
     actionsFor: actionsFor,
     model: model,

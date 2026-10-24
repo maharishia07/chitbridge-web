@@ -17,6 +17,7 @@ const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');
 const C = require('./lib/contract.cjs');   /* M43: every answer for a route in the API contract is held to it (RAIL-LAB-SRV1: the facts family) */
 const J = C.json;
+const CRYPTO = require('crypto');
 const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (GET /api/facts/rail) from its one builder */
 
 W.run('employees', async (w) => {
@@ -28,7 +29,12 @@ W.run('employees', async (w) => {
     { key: 'manager', label: 'Manager', why: 'Sees the whole shop. Cannot see costs.', level: 'editor', whole_entity: true, can_see_costs: false },
     { key: 'books', label: 'Books and costs', why: 'Sees the whole shop and what it costs.', level: 'commenter', whole_entity: true, can_see_costs: true },
   ];
-  const S = { calls: [], addRefused: false, listDenied: false, nextId: 4, people: [] };
+  const S = { calls: [], addRefused: false, listDenied: false, nextId: 4, people: [], mode: 'mail', code: '' };
+  /* R112: the api's answers for a person with no e-mail (lib/employee-code.js): shown (show_code + expires_at), refused (429 / 503 in words), or an OLD api (delivery_note only). The code is made here, per run - never a fixed number. */
+  const newCode = () => { S.code = String(CRYPTO.randomInt(100000, 1000000)); return S.code; };
+  const shownAnswer = (name) => ({ show_code: newCode(), expires_in: '30 minutes', expires_at: new Date(TD.nowMs() + 30 * 60000).toISOString(), delivery: 'shown', delivery_note: 'Give this code to ' + name + ' now. It works once, for 30 minutes, and is not shown again.' });
+  const refusal = (r) => S.mode === 'limit' ? J(r, 429, { error: 'Too many codes', code: 'CODE_ISSUE_LIMIT', message: 'Five codes were made for this person in the last 15 minutes. Wait a few minutes, then make a new one. Nothing was changed.' })
+    : S.mode === 'notready' ? J(r, 503, { error: 'Showing a code is not ready', code: 'CODE_SHOW_NOT_READY', message: 'This environment cannot show a first code yet, so none was made. Add their e-mail, or try again later. Nothing was changed.' }) : null;
   const may = (o) => Object.assign({ access: { ok: true }, email: { ok: true }, reset_pin: { ok: true }, switch: { ok: true, to: 'off' }, cover: { ok: true } }, o || {});
   S.people = [
     { id: 'p1', name: 'Asha Kumar', user_id: 'asha01@walk-shop.br', role: 'Cashier', phone: '9840000001', state: 'on', jobs: 0, last_at: TD.nowIso(), access: CHOICES[0], may: may(), cover: null, cover_options: [{ id: 'p2', name: 'Ravi Nair' }] },
@@ -55,13 +61,20 @@ W.run('employees', async (w) => {
       return J(r, 200, { suggested_key: k, login_format: k + '@walk-shop.br' });
     }
     if (p === '/api/actors' && m === 'POST') {
+      if (S.mode === 'limit' || S.mode === 'notready') return refusal(r);
       const id = 'p' + (S.nextId++), key = body.actor_key;
       const c = CHOICES.find((x) => x.level === body.access_level && !!x.whole_entity === !!body.whole_entity) || CHOICES[0];
       S.people.push({ id, name: body.display_name, user_id: key + '@walk-shop.br', role: body.actor_role || '', phone: body.phone || '', state: 'on', jobs: 0, last_at: null, access: c, may: may(), cover: null, cover_options: [] });
       /* SEC2: the server never answers the code — it says where it went (lib/employee-code.deliver delivery_note) */
+      if (S.mode === 'show') return J(r, 200, Object.assign({ actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' } }, shownAnswer(body.display_name)));
       return J(r, 200, { actor: { identity_id: id, display_name: body.display_name, login_format: key + '@walk-shop.br' }, delivery: 'sent', sent_to: 'k***@walk.test', delivery_note: 'The code went to k***@walk.test.' });
     }
     let mm = /^\/api\/actors\/([^/]+)\/pin$/.exec(p);
+    if (mm && m === 'DELETE' && S.mode !== 'mail') {
+      if (S.mode === 'show') return J(r, 200, shownAnswer(find(mm[1]).name));
+      if (S.mode === 'old') return J(r, 200, { delivery: 'none', delivery_note: 'No e-mail on file, so no code was sent. Add their e-mail, then send a new code.' });
+      return refusal(r);
+    }
     if (mm && m === 'DELETE') return J(r, 200, { delivery: 'sent', sent_to: 'a***@walk.test', delivery_note: 'The code went to a***@walk.test.' });
     mm = /^\/api\/actors\/([^/]+)\/status$/.exec(p);
     if (mm && m === 'PUT') { const x = find(mm[1]); x.state = body.action === 'deactivate' ? 'off' : 'on'; x.may.switch = { ok: true, to: x.state === 'off' ? 'on' : 'off' }; return J(r, 200, body.action === 'reactivate' ? { delivery: 'sent', sent_to: 'm***@walk.test', delivery_note: 'The code went to m***@walk.test.' } : { ok: true }); }
@@ -165,6 +178,68 @@ W.run('employees', async (w) => {
     const out = await txt('[data-testid="emp-out"]'), now = await txt('[data-testid="emp-email-now"]');
     await closeSheet();
     return { ok: /Saved/.test(out) && /asha@walk\.test/.test(now) && wrote(/PATCH \/api\/actors\/p1 \{"email":"asha@walk\.test"\}/) === 1, saw: '"' + out + '"; e-mail now "' + now + '"; ' + wrote(/PATCH \/api\/actors\/p1 \{"email"/) + ' e-mail call(s)' };
+  });
+  /* ── R112 · a worker with no e-mail: the owner is SHOWN the first code once ── */
+  const openAsha = async () => { await open(); await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_pin', { timeout: 6000 }); };
+  const digitsOnScreen = () => page.evaluate((c) => document.body.innerText.replace(/\s+/g, '').includes(c), S.code);
+  const stored = () => page.evaluate((c) => JSON.stringify([localStorage, sessionStorage]).replace(/\s+/g, '').includes(c), S.code);
+  await w.step('R112a', 'R112 · owner -> Asha -> Reset code -> the code is shown big with her name and the time it works, read from expires_at; no Copy button', async () => {
+    S.mode = 'show'; S.people[0].code_given = { by: 'Fixture Owner', at: TD.nowIso(), channel: 'screen' };
+    await openAsha();
+    const given = await txt('[data-testid="emp-code-given"]');
+    await page.click('#emp_pin'); await confirmYes();
+    const digits = (await txt('[data-testid="emp-code-digits"]')).replace(/\s/g, ''), say = await txt('[data-testid="emp-code-say"]');
+    const grouped = /^\d{3} \d{3}$/.test(await txt('[data-testid="emp-code-digits"]'));
+    const copy = await page.locator('#emp_sheet button', { hasText: /copy/i }).count();
+    await page.screenshot({ path: 'e2e/shots/walk-employees-r112.png' }).catch(() => {});
+    const bad = [];   /* AA contrast + no clipping + no sideways scroll, light and dark, 1366 and 390 */
+    for (const [wd, ht] of [[1366, 800], [390, 844]]) {
+      await page.setViewportSize({ width: wd, height: ht });
+      for (const th of ['cream', 'dark']) {
+        await page.evaluate((k) => { if (window.CBAvatar) CBAvatar.applyTheme(k); }, th); await page.waitForTimeout(80);
+        const low = (await page.evaluate(measure)).filter((x) => x.ratio < x.need);
+        const clip = await page.$eval('[data-testid="emp-code-digits"]', (e) => e.scrollWidth > e.clientWidth + 1).catch(() => true);
+        const hs = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+        if (low.length || clip || hs) bad.push(wd + '/' + th);
+      }
+    }
+    await page.setViewportSize({ width: 1366, height: 800 }); await page.evaluate(() => { if (window.CBAvatar) CBAvatar.applyTheme('cream'); });
+    return { ok: !bad.length && grouped && digits === S.code && /Give this code to Asha Kumar\. It works for 30 minutes\./.test(say) && copy === 0 && /Code given by Fixture Owner at/.test(given), saw: 'digits ' + (digits === S.code ? 'match' : 'DIFFER') + '; "' + say + '"; copy buttons ' + copy + '; "' + given + '"; look ' + (bad.length ? 'FAIL ' + bad.join(',') : 'AA/unclipped, light+dark, 1366+390') };
+  });
+  await w.step('R112b', 'R112 · the code is never kept: closing the box removes the digits from the page, and nothing is in the browser store', async () => {
+    const before = await digitsOnScreen(), kept = await stored();
+    await closeSheet();
+    const after = await digitsOnScreen(), boxes = await page.locator('[data-testid="emp-code-box"]').count();
+    return { ok: before && !kept && !after && boxes === 0, saw: 'shown ' + before + '; stored ' + kept + '; after close: on page ' + after + ', boxes ' + boxes };
+  });
+  await w.step('R112c', 'R112 · an OLD api (no show_code) -> Reset code -> the sheet shows the api delivery_note, no box', async () => {
+    S.mode = 'old'; await openAsha(); await page.click('#emp_pin'); await confirmYes();
+    const out = await txt('[data-testid="emp-out"]'), boxes = await page.locator('[data-testid="emp-code-box"]').count();
+    await closeSheet();
+    return { ok: /No e-mail on file, so no code was sent/.test(out) && boxes === 0, saw: '"' + out.slice(0, 70) + '"; boxes ' + boxes };
+  });
+  await w.step('R112d', 'R112 · Add a person with no e-mail -> "Added" shows the big code with the time; Done removes it', async () => {
+    S.mode = 'show'; await open(); await page.click('#emp_add'); await page.waitForSelector('[data-testid="emp-add-name"]', { timeout: 6000 });
+    await page.fill('[data-testid="emp-add-name"]', 'Dev Shah'); await page.fill('[data-testid="emp-add-key"]', 'devshah04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForSelector('[data-testid="emp-code-box"]', { timeout: 6000 });
+    const digits = (await txt('[data-testid="emp-code-digits"]')).replace(/\s/g, ''), say = await txt('[data-testid="emp-code-say"]');
+    await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(300);
+    const left = await digitsOnScreen();
+    return { ok: digits === S.code && /Give this code to Dev Shah\. It works for 30 minutes/.test(say) && !left, saw: 'digits ' + (digits === S.code ? 'match' : 'DIFFER') + '; "' + say + '"; after Done on page: ' + left };
+  });
+  await w.step('R112e', 'R112 · too many codes (429) and not-ready (503) -> the api own sentence is shown, on Reset and on Add', async () => {
+    S.mode = 'limit'; await openAsha(); await page.click('#emp_pin'); await confirmYes();
+    const limit = await txt('[data-testid="emp-out"]'); await closeSheet();
+    S.mode = 'notready'; await page.click('#emp_add'); await page.waitForSelector('[data-testid="emp-add-name"]', { timeout: 6000 });
+    await page.fill('[data-testid="emp-add-name"]', 'Uma Rao'); await page.fill('[data-testid="emp-add-key"]', 'umarao04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForTimeout(600);
+    const notready = await txt('[data-testid="emp-out"]'); S.mode = 'mail'; await closeSheet();
+    return { ok: /Five codes were made/.test(limit) && /cannot show a first code yet/.test(notready), saw: '429 "' + limit.slice(0, 50) + '"; 503 "' + notready.slice(0, 50) + '"' };
+  });
+  await w.step('R112f', 'R112 · a cashier login -> Reset code is greyed WITH the server sentence, and no code line is shown', async () => {
+    S.people[0].may.reset_pin = { ok: false, why: 'Only the owner can give a code.' }; S.people[0].code_given = null;
+    await openAsha();
+    const dis = await page.$eval('#emp_pin', (b) => b.disabled), why = await txt('[data-testid="emp_pin-why"]'), given = await page.locator('[data-testid="emp-code-given"]').count();
+    await closeSheet(); S.people[0].may.reset_pin = { ok: true };
+    return { ok: dis && /Only the owner/.test(why) && given === 0, saw: (dis ? 'greyed' : 'NOT greyed') + ': "' + why + '"; code lines ' + given };
   });
   await w.step('E14', 'Employees (this login may not add) -> "Add a person" is shown greyed with the server\'s sentence', async () => {
     S.addRefused = true; await open();

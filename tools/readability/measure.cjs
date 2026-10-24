@@ -9,7 +9,8 @@
  * CARD      qa/readability-guard
  *
  * SCOPE (MAINT-1 rule): own code only. Excluded: files headed "ADOPTED from chitbridge-engines" (vendored engine copies),
- * web public/till.html (vendored from the api master), qr.js, any vendor/ folder, *.min.*, node_modules, tests, e2e, fixtures.
+ * web public/till.html (vendored from the api master) and every other byte copy that chitbridge-api/scripts/vendor-till.cjs writes
+ * (headed "GENERATED — DO NOT EDIT": till-sw.js, promo.html, app/their-bill.js), qr.js, any vendor/ folder, *.min.*, node_modules, tests, e2e, fixtures.
  * Static only: a name is "used" when an Identifier of that spelling appears in the same file (scope-blind; said in the report).
  */
 'use strict';
@@ -41,7 +42,8 @@ const SCOPE = {
 const SKIP_DIR = /^(node_modules|vendor|\.git|tests?|e2e|fixture|fixtures|out|dist|docs|migrations|seed|data)$/;
 const SKIP_FILE = /(\.min\.|^qr\.js$|\.test\.(c?js|mjs)$)/;
 const CODE_FILE = /\.(js|cjs|mjs|html)$/;
-const ADOPTED_HEAD = /ADOPTED from chitbridge-engines/;
+/* a file whose master lives elsewhere: an engine adopted from chitbridge-engines, or a copy vendor-till.cjs writes (judged at its master) */
+const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
 const VENDORED_TILL = 'public/till.html';
 const HEAD_BYTES = 700;
 

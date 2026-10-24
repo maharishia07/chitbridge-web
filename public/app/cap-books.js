@@ -1503,11 +1503,12 @@ function payLeftPaint() {
   box.textContent = parts.length ? parts.join(' · ') : (pv && pv.words) || '';
   box.style.color = left < 0 ? 'var(--warn-2)' : 'var(--grey)';
 }
-/** Record (viaBand = true: the band's "Pay as advance", which is what acknowledges the warnings). One call; the outcome replaces the form. */
+/** Record (viaBand = true: the band's "Pay as advance", which is what acknowledges the warnings). One call; the outcome replaces the form.
+ *  R102b (walk 24 Oct): a payment is a money promise — Record asks first (payAsk); the band's own button already names who and how much, so it does not ask twice. */
 function payRecord(viaBand) {
   /* ⚠️ M11/M64: through CBAction — one press one call; every attempt from this form carries the SAME client_ref; the outcome is said
      in the form (pay_why), never a thrown error's text */
-  if (!PAY || PAY.done) return;
+  if (!PAY || PAY.done || PAY.asking || PAY.writing) return; /* one question, one write: a press while either is up does nothing */
   var node = document.getElementById('pay_why'),
     amt = bkMoneyRead('pay_amt');
   if (!(amt > 0)) {
@@ -1516,20 +1517,9 @@ function payRecord(viaBand) {
   }
   var open = payOpenWarnings();
   if (open.length && viaBand !== true) return; /* the band is up: only its own buttons record */
-  var list = payAllocs();
-  /* the same refusals the engine makes (check), said before the round trip — the server still decides */
-  var bad = list.filter(function (x) {
-    return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0);
-  })[0];
-  var used = list.reduce(function (total, x) {
-    return total + (x.amount_minor > 0 ? x.amount_minor : 0);
-  }, 0);
-  if (bad) {
-    if (node) node.textContent = bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open');
-    return;
-  }
-  if (used > amt) {
-    if (node) node.textContent = tx('More applied than paid');
+  var refused = payRefusal(payAllocs(), amt);
+  if (refused) {
+    if (node) node.textContent = refused;
     return;
   }
   var ack =
@@ -1538,6 +1528,63 @@ function payRecord(viaBand) {
           return item.code;
         })
       : PAY.ack;
+  if (viaBand === true) return payWrite(amt, ack, true);
+  PAY.asking = true;
+  return payAsk(amt).then(function (yes) {
+    PAY.asking = false;
+    if (yes === true) return payWrite(amt, ack, false);
+    if (node) node.textContent = yes === null ? tx('Nothing sent. This page cannot ask first.') : '';
+  });
+}
+/** the same refusals the engine makes (check), said before the round trip — the server still decides. The sentence, or null when nothing is refused */
+function payRefusal(allocations, amount) {
+  var bad = allocations.filter(function (x) {
+    return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0);
+  })[0];
+  var used = allocations.reduce(function (total, x) {
+    return total + (x.amount_minor > 0 ? x.amount_minor : 0);
+  }, 0);
+  if (bad) return bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open');
+  if (used > amount) return tx('More applied than paid');
+  return null;
+}
+/** the ask, in the screen's own words: who, how much, how (the How select's word) — through CBConfirm, the stacked <dialog> every utility page
+ *  aliases confirmAsk to; on app.html confirmAsk paints into #modalhost, the host this sheet is in, so CBAction.ask there would replace the
+ *  form before the write. true = yes · false = cancel · null = no dialog on this page (nothing is sent, and the form says so) */
+function payAsk(amount) {
+  if (typeof CBConfirm !== 'function') {
+    if (typeof cblog === 'function') cblog('error', 'payAsk: no confirm dialog on this page — nothing sent');
+    return Promise.resolve(null);
+  }
+  var modeSelect = document.getElementById('pay_mode'),
+    howWord = modeSelect && modeSelect.selectedIndex >= 0 ? modeSelect.options[modeSelect.selectedIndex].text : '',
+    out = PAY.kind === 'supplier',
+    words = { name: PAY.name, amt: bkMoney(amount), how: howWord === howWord.toUpperCase() ? howWord : howWord.toLowerCase() };
+  var title = out
+    ? howWord
+      ? txf('Pay {name} {amt} by {how}?', words)
+      : txf('Pay {name} {amt}?', words)
+    : howWord
+      ? txf('Record {amt} from {name} by {how}?', words)
+      : txf('Record {amt} from {name}?', words);
+  return new Promise(function (res) {
+    CBConfirm(
+      title,
+      esc(tx(out ? 'Your books will show it paid.' : 'Your books will show it received.')),
+      tx(out ? 'Pay' : 'Record'),
+      function () {
+        res(true);
+      },
+      false,
+      function () {
+        res(false);
+      }
+    );
+  });
+}
+/** the ONE write: POST /payments through CBAction (busy · one call per press · the outcome painted in the form); PAY.writing holds a second press off while it is out */
+function payWrite(amount, acknowledged, viaBand) {
+  PAY.writing = true;
   return CBAction.run(
     document.querySelector('[data-testid="' + (viaBand === true ? 'pay_ack' : 'pay_record') + '"]'),
     async function () {
@@ -1546,7 +1593,7 @@ function payRecord(viaBand) {
       var body = {
         party_id: PAY.partyId,
         direction: payDirection(),
-        amount_minor: amt,
+        amount_minor: amount,
         currency: bkCur(),
         mode: mode,
         reference: (document.getElementById('pay_ref') || {}).value || null,
@@ -1563,9 +1610,9 @@ function payRecord(viaBand) {
             : null
       };
       if (q.allocations) body.allocations = q.allocations;
-      if (ack.length) body.acknowledge = ack;
+      if (acknowledged.length) body.acknowledge = acknowledged;
       var reply = await api('booksPayRecord', { body: body });
-      PAY.amount = amt;
+      PAY.amount = amount;
       return reply;
     },
     {
@@ -1585,7 +1632,9 @@ function payRecord(viaBand) {
       },
       outcome: payOutcomePaint
     }
-  );
+  ).finally(function () {
+    if (PAY) PAY.writing = false;
+  });
 }
 /** the outcome IS the form's next state: what happened · what it means (the bills named, the balance) · Done */
 function payOutcomePaint(r) {
