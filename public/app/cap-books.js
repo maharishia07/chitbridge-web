@@ -278,6 +278,12 @@ function bkMoneyRead(idOrEl) {
   var el = typeof idOrEl === 'string' ? document.getElementById(idOrEl) : idOrEl;
   return el ? bkMoneyMinor(el.value, el.getAttribute('data-cur')) : NaN;
 }
+/** the bill's own number for a row; a bill that has none says "Bill of 24 Oct" (its date) or "Bill", never its id (R123) */
+function bkBillNo(no, ref, date) {
+  if (no) return no;
+  if (ref && !cbIsRawId(ref)) return ref;
+  return date ? txf('Bill of {date}', { date: bkDate(date) }) : tx('Bill');
+}
 function bkDate(d) {
   if (!d) return '—';
   try {
@@ -1400,7 +1406,7 @@ function payPaint() {
               '<tr data-testid="alloc-row-' +
               index +
               '"><td class="mono">' +
-              esc(item.bill_no || item.against_ref) +
+              esc(bkBillNo(item.bill_no, item.against_ref, item.date || item.due_date)) +
               (item.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('In dispute') + '</span>' : '') +
               '</td><td>' +
               esc(bkDate(item.due_date)) +

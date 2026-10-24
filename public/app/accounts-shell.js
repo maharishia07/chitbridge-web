@@ -309,6 +309,12 @@ function txf(english, vars) {
   });
 }
 
+/** an id that is a machine's, not a person's ("pay:0d102689-…" or a uuid) is never shown (C7, R109, R123); MOVED here from cap-crm-record.js so every screen asks the one test */
+function cbIsRawId(text) {
+  var word = String(text || '');
+  return /^[a-z_]+:[0-9a-f-]{16,}$/i.test(word) || /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(word);
+}
+
 /**
  * ⭐⭐ txn(one, other, n, vars) — a sentence whose wording depends on a COUNT.
  *

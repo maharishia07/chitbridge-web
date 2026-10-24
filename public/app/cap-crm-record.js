@@ -64,10 +64,6 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
-/** an id that is a machine's, not a person's ("pay:0d102689-…") is never shown (C7) */
-function crmIsRawId(s) {
-  return /^[a-z_]+:[0-9a-f-]{16,}$/i.test(String(s || '')) || /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(s || ''));
-}
 /** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
 function crmBillFacts(entries) {
   var chitBills = 0,
@@ -115,6 +111,10 @@ function crmRecordFrom(rec, p) {
   if (!Array.isArray(r.followups)) r.followups = [];
   return r;
 }
+/** who made a change, in words; a machine's id (a shop uuid) is never a name, so it says nothing (R109) */
+function crmWho(by) {
+  return cbIsRawId(by) ? '' : by || '';
+}
 /** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e; // already the page's grammar (the design stand-in's) — accepted as is
@@ -158,7 +158,7 @@ function crmEntryFrom(e, i) {
     o.currency = e.currency;
     var wd = tx(e.ledger_kind === 'bill' ? 'Bill' : 'Payment');
     o.line =
-      crmIsRawId(e.ref) || !e.ref
+      cbIsRawId(e.ref) || !e.ref
         ? wd + (o.kind === 'payment' && e.amount_minor != null ? ' ' + bkMoney(e.amount_minor, e.currency) : '')
         : o.kind === 'payment'
           ? wd + ' · ' + e.ref
@@ -174,14 +174,14 @@ function crmEntryFrom(e, i) {
     o.line = tx('Done') + ' · ' + (e.what || '');
   } else if (k === 'change') {
     o.line = word(e.field) + (e.old != null || e.new != null ? ': ' + (e.old == null ? '—' : e.old) + ' → ' + (e.new == null ? '—' : e.new) : '');
-    o.by = e.by || '';
+    o.by = crmWho(e.by); /* R109: a change row never says who by a shop id */
   }
   /* a stage move: who · when · from → to (the server's memberships row; the words are the Leads module's CRM_STAGE) */
   else if (k === 'stage') {
     var SW = typeof CRM_STAGE === 'object' ? CRM_STAGE : {},
       to = tx(SW[e.stage] || e.stage || '');
     o.line = e.from ? txf('Moved to {to} · from {from}', { to: to, from: tx(SW[e.from] || e.from) }) : txf('Added as {to}', { to: to });
-    o.by = crmIsRawId(e.by) ? '' : e.by || '';
+    o.by = crmWho(e.by);
   } else o.line = e.line || e.title || '';
   return o;
 }
@@ -1077,7 +1077,7 @@ function crmRecordPaint(p, rec) {
               '</b><span>' +
               esc(x.line) +
               ' <span class="sub">· ' +
-              esc(x.by || '') +
+              esc(crmWho(x.by)) +
               '</span></span></div>'
             );
           })

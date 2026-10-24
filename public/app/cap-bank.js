@@ -791,7 +791,7 @@ function bankNext(r) {
                   .map(
                     (entry) =>
                       '<span class="mono">' +
-                      bkbE(entry.bill_no || entry.ref_chit_id) +
+                      bkbE(bkBillNo(entry.bill_no, entry.ref_chit_id, entry.date)) +
                       '</span>' +
                       (entry.applied_minor != null ? ' ' + bkbE(bkMoney(entry.applied_minor)) : '')
                   )
