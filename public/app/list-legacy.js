@@ -7,6 +7,9 @@
  *   · lazyWrap — 50-at-a-time rendering of any container
  * They borrow tx() / esc() / emptyState() from the page, which is exactly why they are NOT in list-ctl.js. MOVED here, not
  * copied: nothing of them is left in list-ctl.js. Delete this file when those lists move onto CBList.mount.
+ *
+ * OWNS      the card-list controls listCtl* (state, view, toolbar, count, empty text) and the 50-at-a-time lazyWrap / lazyBar / lazyReveal.
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
  */
 'use strict';
 /** key → { cfg, q, sort, f:{} } — one entry per list, kept across repaints so a search survives one */
@@ -22,7 +25,9 @@ var LISTCTL = {};
 function listCtlResetRows(key) {
   try {
     if (LAZY) delete LAZY[key];
-  } catch (_) {}
+  } catch (failure) {
+    if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:listCtlResetRows - the lazy-render state is not ready yet, so there is nothing to reset', failure);
+  }
 }
 
 /**
@@ -263,7 +268,9 @@ function lazyWrap(id, items, cardFn, empty) {
   if (kept && kept._io) {
     try {
       kept._io.disconnect();
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyWrap - the observer could not be changed, it is left as it was', failure);
+    }
   }
   if (!items.length) return empty || '';
   const chunk = 50;
@@ -309,7 +316,9 @@ function lazyReveal(id) {
     if (s._io) {
       try {
         s._io.disconnect();
-      } catch (_) {}
+      } catch (failure) {
+        if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyReveal - the observer could not be changed, it is left as it was', failure);
+      }
       s._io = null;
     }
   } else
@@ -342,5 +351,7 @@ function lazyAttach(id) {
       { rootMargin: '0px' }
     );
     s._io.observe(sent);
-  } catch (_) {}
+  } catch (failure) {
+    if (globalThis.cbQuiet) globalThis.cbQuiet('list-legacy:lazyAttach - the observer could not be changed, it is left as it was', failure);
+  }
 }

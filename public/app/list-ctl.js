@@ -80,7 +80,9 @@
     MEM[k] = v;
     try {
       root.localStorage.setItem(k, JSON.stringify(v));
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:lsSet - the browser refused to store it, so it is not kept this time', failure);
+    }
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
@@ -267,8 +269,8 @@
     }
   }
   function cmpVals(a, b) {
-    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')),
-      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.-]/g, '')),
+      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.-]/g, ''));
     if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) {
       return (na || 0) - (nb || 0);
     }
@@ -293,16 +295,22 @@
     I.dead = true;
     try {
       if (I.io) I.io.disconnect();
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+    }
     clearTimeout(I.qt);
     try {
       var node = I.el.querySelector(':scope > .cbl-list');
       if (node && node.__cblRO) node.__cblRO.disconnect();
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+    }
     (I.off || []).forEach(function (x) {
       try {
         I.el.removeEventListener(x[0], x[1]);
-      } catch (_) {}
+      } catch (failure) {
+        if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+      }
     });
     I.off = [];
   }
@@ -1557,7 +1565,6 @@
     I.el.classList.toggle('tbllines', s.view === 'lines');
     var state = typeof o.state === 'function' ? o.state() : o.state;
     var hdr = headerHTML(I, cols, tpl, state === 'loading');
-    var h = '';
     if (state === 'loading') {
       box.innerHTML =
         '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
@@ -1818,7 +1825,7 @@
         : null;
     if (at)
       Object.keys(at).forEach(function (item) {
-        if (/^[a-z][a-z0-9\-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
+        if (/^[a-z][a-z0-9-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
       });
     var tid = o.rowTid
       ? safe(function () {
@@ -2264,7 +2271,9 @@
       setTimeout(function () {
         root.URL.revokeObjectURL(u);
       }, 2000);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:download - the element was already gone', failure);
+    }
   }
 
   /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
@@ -2615,7 +2624,6 @@
       return;
     }
     if (node.hasAttribute('data-cbl-sort')) {
-      var cur = s.sort ? s.sort.dir : 1;
       s.sort = { key: node.value, dir: 1 };
       resetLimit(list);
       saveChoices(list);
@@ -2649,7 +2657,7 @@
     }
   }
   function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
   function refocusCol(I, k) {
     var node = I.el.querySelector('[data-col="' + k + '"]');
@@ -2741,7 +2749,9 @@
     node.classList.add('drag');
     try {
       node.setPointerCapture(event.pointerId);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:onPointerDown - the pointer could not be captured, the drag still works', failure);
+    }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);
     root.document.addEventListener('pointercancel', onPointerUp);

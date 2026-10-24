@@ -89,10 +89,14 @@ function regLangHTML(code) {
     own = '';
   try {
     text = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
-  } catch (_) {}
+  } catch (failure) {
+    if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:regLangHTML - the browser has no language names, the code is shown', failure);
+  }
   try {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
-  } catch (_) {}
+  } catch (failure) {
+    if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:regLangHTML - the browser has no native language name, it is left blank', failure);
+  }
   return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
@@ -245,7 +249,6 @@ function regPayload() {
 function renderRegister() {
   const R = REG;
   const who = 'style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px"';
-  const muted = 'style="color:var(--grey);font-weight:400"';
   let form = '';
   if (R.step === 'form') {
     /* ⭐⭐ THE REGISTRATION SCREEN ASKS FOR THE USER ID, NOT A NAME. Athi, 2026-08-19: *"generally what we say
@@ -466,4 +469,6 @@ var CBRegistration = {
 };
 try {
   window.CBRegistration = CBRegistration;
-} catch (_) {}
+} catch (failure) {
+  if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:page - CBRegistration was not put on window', failure);
+}

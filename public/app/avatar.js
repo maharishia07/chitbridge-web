@@ -106,12 +106,16 @@
   function lsSet(k, v) {
     try {
       root.localStorage.setItem(k, v);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:lsSet - the browser refused to store it, so it is not kept this time', failure);
+    }
   }
   function lsDel(k) {
     try {
       root.localStorage.removeItem(k);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:lsDel - the browser refused to store it, so it is not kept this time', failure);
+    }
   }
 
   /* ── what is saved ── */
@@ -144,7 +148,9 @@
     if (p !== 'device') return 'cream'; /* a stale or unknown saved name never stamps itself on <html> */
     try {
       if (root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches && has(THEMES, 'dark')) return 'dark';
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:themeKey - the system theme was unreadable, the light theme is used', failure);
+    }
     return 'cream';
   }
 
@@ -230,7 +236,9 @@
       saved = {};
     try {
       cs = root.getComputedStyle(node);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
+    }
     Object.keys(FS_BASE).forEach(function (item) {
       saved[item] = node.style.getPropertyValue(item);
       if (saved[item]) node.style.removeProperty(item);
@@ -240,7 +248,9 @@
     var remPx = 16;
     try {
       remPx = parseFloat(root.getComputedStyle(node).fontSize) || 16;
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
+    }
     Object.keys(FS_BASE).forEach(function (item) {
       var raw = cs ? String(cs.getPropertyValue(item)).trim() : '',
         v = parseFloat(raw);
@@ -300,7 +310,9 @@
       weightApply();
       motionApply();
       stripesApply();
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:apply - a saved page setting was not applied', failure);
+    }
     /* W7: the band reads the pref itself (CBKural.repaint); told here so a change shows at once */
     try {
       if (root.CBKural && root.CBKural.repaint) root.CBKural.repaint();
@@ -315,7 +327,9 @@
     if (o && o.apiBase) return o.apiBase;
     try {
       if (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) return CFG.API_BASE;
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:apiBaseOf - the page has no api base, the default is used', failure);
+    }
     return '';
   }
   function tokenOf(o) {
@@ -344,7 +358,9 @@
     try {
       if (Object.keys(o).length) root.localStorage.setItem(PEND, JSON.stringify(o));
       else root.localStorage.removeItem(PEND);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pendPut - the browser refused to store it, so it is not kept this time', failure);
+    }
   }
   function pendMark(kind) {
     var o = pendGet();
@@ -482,7 +498,9 @@
       }
       if (pref('edition') !== edNow) editionReload(); /* this person's saved showing differs from what this machine drew: draw it again */
       if (again) push(); /* the choice that never landed goes up now */
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:hydrate - the repaint failed, so the screen keeps what it shows', failure);
+    }
     return changed;
   }
   function pull(o) {
@@ -512,11 +530,15 @@
              page, not en-IN by default. One read for both; a page with pull:false hydrates itself. */
           try {
             if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null });
-          } catch (_) {}
+          } catch (failure) {
+            if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pull - the saved language was not applied', failure);
+          }
           announceShop(e);
         })
         .catch(function () {});
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pull - the saved preferences were not fetched, the local ones stay', failure);
+    }
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
      own (the Standards page's Compared with tab opens on the shop's country) asks here, never a second /me. shopCountry() answers a late reader. */
@@ -554,7 +576,9 @@
       u.searchParams.delete('edition');
       if (u.href === root.location.href) root.location.reload();
       else root.location.replace(u.href);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:editionReload - the browser would not read it, so the default is used', failure);
+    }
   }
 
   /* ── the menu ── */
@@ -923,7 +947,9 @@
       var r = node.getBoundingClientRect(),
         h = root.innerHeight || doc.documentElement.clientHeight;
       node.style.maxHeight = Math.max(160, Math.floor(h - r.top - 8)) + 'px';
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fit - the pop-up was not fitted to the window', failure);
+    }
   }
   function repaint() {
     if (M) paint();
@@ -945,7 +971,9 @@
         .forEach(function (item) {
           root.localStorage.removeItem(item);
         });
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:forget - the browser refused to store it, so it is not kept this time', failure);
+    }
   }
   function signOut() {
     var o = (M && M.o) || {};
@@ -1021,7 +1049,9 @@
         if (btn) {
           try {
             btn.focus();
-          } catch (_) {}
+          } catch (failure) {
+            if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:wire - the field is not on screen, so nothing takes focus', failure);
+          }
         }
       }
     });
@@ -1082,7 +1112,9 @@
     });
     try {
       cs = root.getComputedStyle(node);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:themeBase - the style was unreadable, the default is used', failure);
+    }
     Object.keys(all).forEach(function (item) {
       saved[item] = node.style.getPropertyValue(item);
       if (saved[item]) node.style.removeProperty(item);
