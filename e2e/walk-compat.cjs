@@ -37,10 +37,10 @@ W.run('compat', async (w) => {
     const R = require('./lib/real-stack.cjs');
     stack = await R.up({ webBase: base }); api = stack.api;
     const owner = await R.signIn(api, process.env.CB_WALK_OWNER || 'compat-walk@example.test');
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', s.api); localStorage.setItem('cb_sess', s.sess); } catch (_) {} }, { api, sess: owner.session });
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', s.api); localStorage.setItem('cb_sess', s.sess); } catch (_) {} }, { api, sess: owner.session });
   } else {
     await ctx.route('**/api/**', (r) => { calls.push(new URL(r.request().url()).pathname); return r.fulfill(J({})); });
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
   }
   await ctx.route('**/data/compat.json', (r) => (failCompat ? r.fulfill({ status: 404, contentType: 'text/plain', body: 'no' }) : r.continue()));
 
