@@ -4915,7 +4915,7 @@ function goCoassistAI() {
   try {
     if (typeof UI !== 'undefined') UI.acTypeF = 'ai';
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-admin:goCoassistAI - the type filter was not preset', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-admin:goCoassistAI - the type filter was not preset', failure);
   }
   if (typeof navTo === 'function') navTo('coassists');
   else if (typeof go === 'function') go('#/coassists');
@@ -8828,7 +8828,7 @@ function bizLedgerSwitch(on) {
         try {
           await ensureCap('books');
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('cap-admin:done - the books capability did not load, the menu repaints anyway', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('cap-admin:done - the books capability did not load, the menu repaints anyway', failure);
         }
       }
       bgRenderApp(); /* the Ledger door appears (or goes) on the menu */

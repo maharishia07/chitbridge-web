@@ -675,7 +675,7 @@
         var M = compute(ns);
         if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.ev.total));
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('cart:total - the basket total was not read, the amount keeps its start value', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('cart:total - the basket total was not read, the amount keeps its start value', failure);
       }
     }
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
@@ -1982,7 +1982,7 @@
       try {
         s.opts.onChange();
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('cart:paint - the onChange hook failed, the cart carries on', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('cart:paint - the onChange hook failed, the cart carries on', failure);
       }
     }
   }

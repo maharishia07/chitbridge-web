@@ -103,7 +103,7 @@ function enDlg() {
     try {
       document.documentElement.style.overflow = '';
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('cap-entry:enDlg - the page scroll was not restored', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('cap-entry:enDlg - the page scroll was not restored', failure);
     }
   });
   node.addEventListener('click', function (e) {
@@ -118,7 +118,7 @@ function enClose() {
   try {
     document.documentElement.style.overflow = '';
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-entry:enClose - the page scroll was not restored', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-entry:enClose - the page scroll was not restored', failure);
   }
 }
 
@@ -935,13 +935,13 @@ async function enSave(btn) {
       try {
         if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(EN.saved);
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('cap-entry:enSave - the entry-saved hook failed, the entry itself is saved', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('cap-entry:enSave - the entry-saved hook failed, the entry itself is saved', failure);
       }
       try {
         if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
         if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true);
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('cap-entry:enSave - the refresh failed, so the screen keeps what it shows', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('cap-entry:enSave - the refresh failed, so the screen keeps what it shows', failure);
       }
       enPaint();
     } catch (e) {

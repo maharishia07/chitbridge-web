@@ -184,7 +184,7 @@ async function peStockList() {
     try {
       PE_STOCK.api.destroy();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('cap-period:peStockList - the stock list control was already torn down', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('cap-period:peStockList - the stock list control was already torn down', failure);
     }
   }
   PE_STOCK.api = CBList.mount(host, {
@@ -782,7 +782,7 @@ async function peAccrBody(node) {
     const t = peList(await api('booksTodo'), 'items').filter((item) => item.kind === 'accrual_reversals_due')[0];
     list = (t && t.items) || [];
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-period:peAccrBody - the accrual to-do was not read, the due list stays empty', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-period:peAccrBody - the accrual to-do was not read, the due list stays empty', failure);
   }
   const seen = {};
   PE.accr.forEach((item) => {
@@ -1168,7 +1168,7 @@ function peRetRemember() {
       })
     );
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-period:peRetRemember - the browser refused to store it, so it is not kept this time', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-period:peRetRemember - the browser refused to store it, so it is not kept this time', failure);
   }
 }
 function peRetRecall() {
@@ -1485,7 +1485,7 @@ async function peReturnCopy(btn) {
       done = true;
     }
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-period:peReturnCopy - the clipboard was refused, the fallback copy is tried', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-period:peReturnCopy - the clipboard was refused, the fallback copy is tried', failure);
   }
   if (!done) {
     try {
@@ -1499,7 +1499,7 @@ async function peReturnCopy(btn) {
       done = !!(document.execCommand && document.execCommand('copy'));
       document.body.removeChild(node);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('cap-period:peReturnCopy - the fallback copy failed, the person is told to copy by hand', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('cap-period:peReturnCopy - the fallback copy failed, the person is told to copy by hand', failure);
     }
   }
   if (done) peOk('pr_out', esc(txf('Copied {n} boxes · paste them into the {who} portal', { n: n, who: r.authority })));
