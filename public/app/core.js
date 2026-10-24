@@ -69,7 +69,9 @@ function cbDropNote(key, keys) {
     keys.forEach(function (item) {
       if (seen.indexOf(item) < 0) seen.push(item);
     });
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:cbDropNote - the drop note is a diagnostic only, nothing is lost', failure);
+  }
 }
 /* capped · cap_note (SIBS below) — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it */
 function unwrap(j, _key) {
@@ -395,12 +397,16 @@ var CBPrefs = (function () {
       if (kind === 'locale' && typeof window !== 'undefined' && window.CBLocale && typeof window.CBLocale.snapshot === 'function') {
         try {
           obj = window.CBLocale.snapshot();
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('core:push - the language snapshot was unreadable, the push sends what it has', failure);
+        }
       }
       if (timers[kind]) {
         try {
           clearTimeout(timers[kind]);
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('core:push - the earlier timer was already gone', failure);
+        }
       }
       timers[kind] = setTimeout(function () {
         try {
@@ -413,14 +419,18 @@ var CBPrefs = (function () {
               if (done) done(null);
             }
           );
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('core:push - the preferences were not sent, the screen keeps them', failure);
+        }
       }, 400);
     }
   };
 })();
 try {
   if (typeof window !== 'undefined') window.CBPrefs = CBPrefs;
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('core:page - CBPrefs was not put on window', failure);
+}
 
 const OUTBOX_KEYS = new Set([
   'advance',
@@ -537,13 +547,17 @@ function catgWithAncestors(ids) {
         .then(function () {
           try {
             if (typeof ccRenderTotal === 'function') ccRenderTotal();
-          } catch (_) {}
+          } catch (failure) {
+            if (window.cbQuiet) window.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
+          }
           try {
             if (typeof prodRepaintSection === 'function') {
               prodRepaintSection('offers');
               prodRepaintSection('pricing');
             }
-          } catch (_) {}
+          } catch (failure) {
+            if (window.cbQuiet) window.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
+          }
         })
         /* ⚠ cleared either way: a failed read must not leave the shelf permanently un-askable */
         .catch(function () {})
@@ -931,13 +945,17 @@ function cbPushStart() {
         var d = {};
         try {
           d = JSON.parse(ev.data || '{}');
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('core:cbPushStart - the text was not JSON, so it is skipped', failure);
+        }
         cbPushArrived(d);
       });
       node.onerror = function () {
         try {
           node.close();
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('core:onerror - it was already closed', failure);
+        }
         _push.es = null;
         _push.up = false;
         if (typeof _autoRefreshTimer !== 'undefined' && _autoRefreshTimer) {
@@ -972,13 +990,17 @@ function cbPushStart() {
 function cbMeId() {
   try {
     if (typeof UI !== 'undefined' && UI && UI._me && UI._me.identity_id) return String(UI._me.identity_id);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:cbMeId - the identity was unreadable, so no id is given', failure);
+  }
   try {
     if (typeof SESSION !== 'undefined' && SESSION) {
       if (SESSION.actorId) return String(SESSION.actorId);
       if (SESSION.entityId) return String(SESSION.entityId);
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:cbMeId - the session was unreadable, so no id is given', failure);
+  }
   return '';
 }
 function cbPushStop() {
@@ -986,7 +1008,9 @@ function cbPushStop() {
   if (_push.es) {
     try {
       _push.es.close();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('core:cbPushStop - it was already closed', failure);
+    }
   }
   _push.es = null;
   _push.up = false;
@@ -1118,7 +1142,9 @@ function scrollKeep(root) {
     (root || document).querySelectorAll('*').forEach(function (el) {
       if (el.scrollTop > 0 || el.scrollLeft > 0) saved.push({ key: _scrollKeyOf(el), top: el.scrollTop, left: el.scrollLeft });
     });
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:scrollKeep - scroll positions were not kept', failure);
+  }
   var wy = window.scrollY || 0,
     wx = window.scrollX || 0;
   return function () {
@@ -1199,7 +1225,9 @@ function cbVisitTick(nav) {
     try {
       window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400), where: String(where || '').slice(0, 200) });
       window.CBERRS.length = Math.min(window.CBERRS.length, 20);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('core:keep - the error list could not take the entry', failure);
+    }
   };
   window.addEventListener('error', function (e) {
     keep((e && e.message) || 'error', ((e && e.filename) || '') + ':' + ((e && e.lineno) || ''));
@@ -1215,10 +1243,14 @@ function cbVisitTick(nav) {
     console.error = function () {
       try {
         keep(Array.prototype.map.call(arguments, String).join(' '), 'console');
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('core:error - a console error was not noted for the speed area', failure);
+      }
       return ce.apply(console, arguments);
     };
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:page - console.error was left unpatched', failure);
+  }
 })();
 
 /**
@@ -1256,10 +1288,14 @@ function _apiCopy(v) {
   if (v === null || typeof v !== 'object') return v;
   try {
     if (typeof structuredClone === 'function') return structuredClone(v);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:_apiCopy - structuredClone failed, the JSON copy is tried next', failure);
+  }
   try {
     return JSON.parse(JSON.stringify(v));
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('core:_apiCopy - the text was not JSON, so it is skipped', failure);
+  }
   /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
      again — said here because a silent share is exactly what this guard exists to prevent */
   return v;
