@@ -1,6 +1,6 @@
 'use strict';
 /**
- * offer-lab-walk-fixes.cjs — the 24 Oct reviewer walk's Offer Lab findings (R41 R44 R46 R47), each pinned.
+ * walk-offer-lab-fixes.cjs — the 24 Oct reviewer walk's Offer Lab findings (R41 R44 R46 R47), each pinned.
  *   R44  a saved ladder carries `percent` and the ONE engine (CBOffers.evaluate) takes it off; the step error disables Add
  *   R41  rupees off >= the item's price is refused in a sentence; no cost = "margin not known", never "All clear"
  *   R46  give-back >= the bill is refused; no Infinity/NaN in the sheet; no cost = "margin not known", not a made-up loss
