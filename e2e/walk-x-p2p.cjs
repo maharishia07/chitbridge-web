@@ -360,7 +360,7 @@ const walk = async (w) => {
       const bills = await txt(page, T('pay_bills')), left = await txt(page, T('pay_left'));
       /* a band ("the last bill was settled today" — the duplicate rule) holds Record until its own button is pressed: that press is the acknowledgement */
       const band = await page.locator(T('pay_band')).isVisible().catch(() => false), bandWords = band ? await txt(page, T('pay_band_words')) : '', ackLabel = band ? await txt(page, T('pay_ack')) : '';
-      if (band) await page.click(T('pay_ack')); else await page.click(T('pay_record'));
+      if (band) await page.click(T('pay_ack')); else { await page.click(T('pay_record')); await page.click('dialog[open] ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {}); } /* R102b: Record asks first; the band's button is its own ask */
       await page.waitForSelector(T('pay_outcome'), { timeout: 15000 }).catch(() => {});
       const out = await txt(page, '#pay_body'), adv = await page.locator(T('pay_advice')).count();
       S.paid = /Paid|Recorded/.test(out); S.settledNo = (out.match(/Settled: ([^ ]+)/) || [])[1] || ''; S.settledOther = !!(S.settledNo && S.settledNo !== S.bill.no);
@@ -442,7 +442,7 @@ const walk = async (w) => {
           await row.click({ force: true }).catch(() => {});
           if (await p.waitForSelector(T('pay_title'), { timeout: 8000 }).catch(() => null)) {
             await p.fill(T('pay_amt'), '10.00'); await p.waitForTimeout(1500);
-            if (await p.locator(T('pay_band')).isVisible().catch(() => false)) await p.click(T('pay_ack')); else await p.click(T('pay_record')).catch(() => {});
+            if (await p.locator(T('pay_band')).isVisible().catch(() => false)) await p.click(T('pay_ack')); else { await p.click(T('pay_record')).catch(() => {}); await p.click('dialog[open] ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {}); }
             await p.waitForTimeout(2500);
             paySaw = await txt(p, T('pay_why')) + ' | ' + await txt(p, '#pay_body'); await p.click(T('pay_done')).catch(() => {}); await p.evaluate(() => { try { closeModal(); } catch (_) {} });
           }

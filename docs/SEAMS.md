@@ -161,7 +161,7 @@ of file each thing is; this says what already does the job.
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `control` | `cap-settings.js` | the row's editor: |
 | 14 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 14 | `cblog` | `core.js` | const __cblog = []; |
+| 15 | `cblog` | `core.js` | const __cblog = []; |
 | 14 | `offers` | `network-app.js` |  |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `label` | `bill-privacy.js` | label(step, mine) — |
