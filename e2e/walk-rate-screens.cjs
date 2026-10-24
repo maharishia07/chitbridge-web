@@ -106,13 +106,13 @@ const walk = async (w) => {
     await page.goto(base + '/till.html?t=' + Date.now());   /* clock-ok: a cache-busting suffix */
     await page.waitForFunction(() => typeof window.rateAskOpen === 'function' && typeof window.addItem === 'function', null, { timeout: 30000 });
     await page.waitForTimeout(600);   /* the page's own boot settles (its sync is refused above) before the shop is set up inside it */
-    await page.evaluate(([api, person, staff, slabs]) => {
+    await page.evaluate(([api, person, staff, slabs, at]) => {
       CloudHost.api = api; CloudHost.key = person ? null : 'k'; CloudHost.person = person; HOST = CloudHost;
       window.lineUp = function () { return true; };
-      window.S = { shop: { name: 'Kaveri Mess', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', country: 'IN', state_code: '33' }, at: new Date().toISOString(),
+      window.S = { shop: { name: 'Kaveri Mess', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', country: 'IN', state_code: '33' }, at: at,   /* the one injected today (QW1-TODAY), never the runner's clock */
         items: [{ item_id: 'veg', name: 'Veg Meals', unit: 'plate', price: 120, code: '996331', categories: ['c1'] }], slabs: slabs, categories: [], face: {}, staff: staff || [], policy: {} };
       CART.length = 0; setMode('sell'); addItem(S.items[0]); price();
-    }, [base, person, staff || [], SLABS]);
+    }, [base, person, staff || [], SLABS, W.nowIso()]);
     await page.waitForSelector('[data-testid="till-warn-norate"]', { timeout: 8000 });
   };
   const OWNER = { token: 't', entity_id: 'e1', kind: 'entity', identity_id: 'ent1', by: 'ent1' };

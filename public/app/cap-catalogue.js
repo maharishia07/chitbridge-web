@@ -963,16 +963,25 @@ var CBCatalogueApp = (function () {
   function taxResolve(data) {
     return CBTaxSlab.resolve({ item_data: data || {}, face: S.face || {}, slabs: cbDefsCached('tax') || [], categories: cbDefsCached('category') || [] });
   }
-  /** the row: label = the pack's word; chip = describe({short}) + four words of source; no rate = amber chip + ONE "Set rate" (the server decides who may) */
+  /**
+   * who may set a rate here — the same rule as the counter's rateMay and the api's setsRate (DECISIONS 2026-10-24 14:20: owner or manager ONLY).
+   * The owner is the server's is_owner field (GET /entities/me/can-see-costs). ⚠️ The api tells this page no HAT, so a manager signed in here is
+   * greyed until it does (cb-api: a `hat` or a `may.set_rate` field) — never a guess from a name.
+   */
+  function rateMay() {
+    return cbRateMay({ owner: !!(S.cost && S.cost.is_owner), hat: null });
+  }
+  /** the row: label = the pack's word; chip = describe({short}) + source words, or the amber "No GST rate yet"; ONE action, enabled by role */
   function taxRowHTML(data) {
     if (!shopCharges()) return '';
     var pack = taxPack(),
       word = (pack && pack.scheme) || T('Tax');
+    var resolved = S.taxReady ? taxResolve(data) : null;
     var inner = S.taxReady
-      ? cbSlabChipHTML(taxResolve(data), {
+      ? cbSlabChipHTML(resolved, {
           country: country(),
           tid: 'cat-tax-chip',
-          action: ' <button type="button" class="act quiet cat-rate-set" data-testid="cat-rate-set" onclick="CBCatalogueApp.ratePickOpen()">' + esc(T('Set rate')) + '</button>'
+          action: cbRateButtonHTML(rateMay(), { word: resolved.rate == null ? T('Set rate') : T('Change'), onclick: 'CBCatalogueApp.ratePickOpen()', cls: 'act quiet cat-rate-set', tid: 'cat-rate-set' })
         })
       : '<span class="sub">' + esc(T('Reading…')) + '</span>';
     return '<div class="cat-kv" id="ct_tax_row" data-testid="cat-tax-row"><b>' + esc(word) + '</b><span>' + inner + '<div id="ct_tax_pick" class="cat-rate-pick"></div></span></div>';
@@ -989,6 +998,10 @@ var CBCatalogueApp = (function () {
     var pickHost = el('ct_tax_pick'),
       item = S.sel ? itemOf(S.sel) : null;
     if (!pickHost || !item) return;
+    if (!rateMay().ok) {
+      say('cat_sheet_out', rateMay().why, 'warn');
+      return;
+    }
     var data = pData(item);
     /* the code only ever SUGGESTS (critic 12): hsn first, then sac, then the shop's own code — never stamped */
     var menu = cbSlabMenu(cbDefsCached('tax') || [], taxPack(), data.hsn || data.sac || data.code || '');
@@ -1022,6 +1035,10 @@ var CBCatalogueApp = (function () {
     var item = S.sel ? itemOf(S.sel) : null,
       slab = slabById(slabId);
     if (!item || !slab) return;
+    if (!rateMay().ok) {
+      say('cat_sheet_out', rateMay().why, 'warn'); /* the door is greyed above; this is the belt to that brace — nothing is sent */
+      return;
+    }
     var data = pData(item),
       patch = slabPatch(data, slab),
       chosen = CBTaxSlab.slabOf(slab) || {},

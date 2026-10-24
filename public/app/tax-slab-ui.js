@@ -2,7 +2,8 @@
  * Classic script, shared global scope. Loaded by app.html, catalogue.html and till.html AFTER engine/tax.js (CBTaxSlab · CBTaxPacks) and helpers.js (esc).
  *
  * OWNS      cbSlabOptionsHTML (MOVED from app.html: the <option>s, governed first, own after) · cbcatSlabPickHTML (MOVED from cap-categories.js: the
- *           category form's picker) · cbTaxCharges (does this shop charge its tax: the twin of the api's tax-shelf.chargesTax) · cbSlabSourceWords and
+ *           category form's picker) · cbTaxCharges (does this shop charge its tax: the twin of the api's tax-shelf.chargesTax) · cbRateMay and
+ *           cbRateButtonHTML (who may set a rate — owner or manager, the api's rule and sentence — and the one action, enabled by role) · cbSlabSourceWords and
  *           cbSlabChipHTML (the item row: "GST 5%" + four words of source, or the amber "No GST rate" + the host's one action) · cbSlabMenu and
  *           cbSlabMenuHTML (the ask-once menu: the shop's live slabs whose rate is on the pack's menu TODAY, the pack's suggestion for the item's
  *           code first with "Use", its citation behind ⓘ).
@@ -132,10 +133,36 @@ function cbSlabSourceWords(resolved) {
 }
 
 /**
+ * ⭐ WHO MAY SET A RATE — the api's own rule (routes/till.js setsRate; DECISIONS 2026-10-24 14:20: owner or manager ONLY, on every door) and its own
+ * sentence, said BEFORE the server has to. cbRateMay({ owner, hat }) → { ok, why }: the business itself, or a co-assist whose hat is manager; a key, a
+ * cashier (hat act), a viewer, or nobody signed in → not ok, with the sentence. The HOST supplies the facts it has (the counter: its person session and
+ * the staff list's hat; the catalogue: the server's is_owner field) — never a guess from a name.
+ */
+var CB_RATE_ASK_OWNER = 'Ask the owner or a manager to set the tax rate.';
+function cbRateMay(person) {
+  var ok = !!person && (person.owner === true || String(person.hat || '').toLowerCase() === 'manager');
+  return { ok: ok, why: ok ? '' : CB_RATE_ASK_OWNER };
+}
+/**
+ * cbRateButtonHTML(may, { word, onclick, cls, tid }) → the row's ONE action, shown to everyone and ENABLED by role: enabled for an owner or a manager;
+ * for anyone else the same button greyed (disabled, the reason in its title) WITH the sentence beside it — never hidden
+ * ([[feedback-show-action-enable-by-role]]). `word` is "Set rate" with no rate yet, "Change" when one is set.
+ */
+function cbRateButtonHTML(verdict, opts) {
+  opts = opts || {};
+  var allowed = !!(verdict && verdict.ok);
+  var testId = opts.tid ? ' data-testid="' + esc(opts.tid) + '"' : '';
+  var button =
+    ' <button type="button" class="' + esc(opts.cls || 'act quiet') + '"' + testId + (allowed ? '' : ' disabled title="' + esc(verdict.why) + '"') +
+    ' onclick="' + esc(opts.onclick || '') + '">' + esc(opts.word || slabT_('Set rate')) + '</button>';
+  return allowed ? button : button + ' <span class="sub" data-testid="' + esc((opts.tid || 'rate') + '-why') + '">' + esc(verdict.why) + '</span>';
+}
+
+/**
  * cbSlabChipHTML(resolved, { country, action, tid }) → the item row's chip.
- * A rate: a green chip with describe({short}) ("GST 5%") plus the source words. No rate: an amber "No GST rate yet" plus the host's ONE action
- * (`action`, HTML: the "Set rate" button, or the greyed one with its reason). The chip is CBTaxSlab.describe's words, so the counter, the pane and the
- * chit never phrase one answer two ways (critic 3).
+ * A rate: a green chip with describe({short}) ("GST 5%") plus the source words. No rate: an amber "No GST rate yet". Either way the host's ONE
+ * action follows (`action`, HTML — cbRateButtonHTML: "Set rate" / "Change", enabled by role). The chip is CBTaxSlab.describe's words, so the
+ * counter, the pane and the chit never phrase one answer two ways (critic 3).
  */
 function cbSlabChipHTML(resolved, opts) {
   opts = opts || {};
@@ -144,7 +171,7 @@ function cbSlabChipHTML(resolved, opts) {
   var testId = opts.tid ? ' data-testid="' + esc(opts.tid) + '"' : '';
   if (!slabHasRate_(resolved)) return '<span class="tag amber" data-tone="none"' + testId + '>' + esc(words) + '</span>' + (opts.action || '');
   var from = cbSlabSourceWords(resolved);
-  return '<span class="tag green" data-tone="rate"' + testId + '>' + esc(words) + '</span>' + (from ? ' <span class="sub">' + esc(from) + '</span>' : '');
+  return '<span class="tag green" data-tone="rate"' + testId + '>' + esc(words) + '</span>' + (from ? ' <span class="sub">' + esc(from) + '</span>' : '') + (opts.action || '');
 }
 
 /** a live slab row (a definition row carries `status`; a shelf row has none and is live) normalised by the engine, else null */

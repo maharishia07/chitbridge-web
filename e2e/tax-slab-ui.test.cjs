@@ -46,8 +46,8 @@ const SLABS = [
 ];
 
 console.log('\ntax-slab-ui · the module loads like a <script> and publishes its functions');
-t('the six functions are globals; nothing private leaks', () => {
-  for (const f of ['cbSlabOptionsHTML', 'cbcatSlabPickHTML', 'cbTaxCharges', 'cbSlabChipHTML', 'cbSlabMenu', 'cbSlabMenuHTML']) assert.strictEqual(typeof globalThis[f], 'function', f);
+t('the eight functions are globals; nothing private leaks', () => {
+  for (const f of ['cbSlabOptionsHTML', 'cbcatSlabPickHTML', 'cbTaxCharges', 'cbSlabChipHTML', 'cbSlabMenu', 'cbSlabMenuHTML', 'cbRateMay', 'cbRateButtonHTML']) assert.strictEqual(typeof globalThis[f], 'function', f);
 });
 
 console.log('\ntax-slab-ui · both pickers render from the ONE builder');
@@ -140,6 +140,31 @@ t('no slab on the menu → one sentence saying where a slab is made', () => {
   const h = globalThis.cbSlabMenuHTML(globalThis.cbSlabMenu([], IN, ''), {});
   assert.ok(/No GST slab yet — Catalogue setup › Tax/.test(h));
   assert.ok(h.indexOf('<button') < 0);
+});
+
+console.log('\ntax-slab-ui · who may set a rate (the api\'s setsRate; DECISIONS 2026-10-24 14:20: owner or manager ONLY, on every door)');
+t('the owner and a manager may; a cashier (hat act), a viewer, a key (nobody) may not, and hear the api\'s own sentence', () => {
+  assert.deepStrictEqual(globalThis.cbRateMay({ owner: true }), { ok: true, why: '' });
+  assert.deepStrictEqual(globalThis.cbRateMay({ owner: false, hat: 'manager' }), { ok: true, why: '' });
+  for (const who of [{ owner: false, hat: 'act' }, { owner: false, hat: 'view_only' }, { owner: false, hat: null }, null]) {
+    assert.deepStrictEqual(globalThis.cbRateMay(who), { ok: false, why: 'Ask the owner or a manager to set the tax rate.' }, JSON.stringify(who));
+  }
+});
+t('⭐ the catalogue row: an editor/cashier SEES Set rate greyed WITH the sentence; the owner and a manager see it enabled', () => {
+  const button = (who) => globalThis.cbRateButtonHTML(globalThis.cbRateMay(who), { word: 'Set rate', onclick: 'go()', tid: 'cat-rate-set' });
+  const greyed = button({ owner: false, hat: 'act' });
+  assert.ok(/<button[^>]*data-testid="cat-rate-set"[^>]*disabled title="Ask the owner or a manager to set the tax rate\."/.test(greyed), 'disabled, the reason in the title');
+  assert.ok(/data-testid="cat-rate-set-why">Ask the owner or a manager to set the tax rate\.</.test(greyed), 'the sentence beside it');
+  assert.ok(/>Set rate</.test(greyed), 'still shown — never hidden');
+  for (const who of [{ owner: true }, { owner: false, hat: 'manager' }]) {
+    const enabled = button(who);
+    assert.ok(enabled.indexOf('disabled') < 0 && enabled.indexOf('-why') < 0 && /onclick="go\(\)"/.test(enabled), 'enabled for ' + JSON.stringify(who));
+  }
+});
+t('a rated item carries the action too ("Change"), after the chip and its source', () => {
+  const r = S.resolve({ item_data: { tax_slab: 's5' }, face: {}, slabs: SLABS, categories: [] });
+  const h = globalThis.cbSlabChipHTML(r, { country: 'IN', action: globalThis.cbRateButtonHTML({ ok: true }, { word: 'Change', onclick: 'go()' }) });
+  assert.ok(h.indexOf('GST 5%') < h.indexOf('on this item') && h.indexOf('on this item') < h.indexOf('>Change<'), 'chip · source · action');
 });
 
 console.log('\ntax-slab-ui · does the shop charge its tax (the api\'s tax-shelf.chargesTax twin; critic 11: never "has a GSTIN")');

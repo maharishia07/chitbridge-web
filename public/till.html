@@ -18423,13 +18423,13 @@ async function billWarnFix(which){
  * the shelf row here takes the same slab, the bill's lines re-read it and re-price through the engine. A refusal (403 a cashier or a key ·
  * 409 the shop charges no tax · 404) is said in the sheet, in the server's words — never silent. Nothing is queued: an intention, not a bill.
  */
-var RATE_ASK_OWNER = 'Ask the owner or a manager to set the tax rate.';   /* the api's own sentence (routes/till.js RATE_ASK_OWNER), said before it is asked */
-/** who may answer: the credential this browser SPEAKS with (the server reads the same one) — the shop itself, or a manager's own session; a key never */
+/** who may answer: the credential this browser SPEAKS with (the server reads the same one) — the shop itself, or a manager's own session; a key never.
+ *  The rule and its sentence are app/tax-slab-ui.js cbRateMay (the api's setsRate, shared with the catalogue's row); an older kit without that file cannot set a rate here at all, and says so */
 function rateMay(){
+  if (typeof cbRateMay !== 'function') return { ok: false, why: 'This counter cannot set a rate yet. Set it in the catalogue.' };
   var p = personOn() ? CloudHost.person : null;
   var row = p ? ((S && S.staff) || []).filter(function(a){ return String(a.id) === String(p.identity_id || p.by); })[0] : null;
-  var ok = !!p && (p.kind === 'entity' || String((row && row.hat) || '').toLowerCase() === 'manager');
-  return { ok: ok, why: ok ? '' : RATE_ASK_OWNER };
+  return cbRateMay(p && { owner: p.kind === 'entity', hat: row && row.hat });
 }
 var RATE = { line: null, item: null };
 function rateAskOpen(line){

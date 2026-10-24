@@ -65,7 +65,7 @@ of file each thing is; this says what already does the job.
 | 30 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 30 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 29 | `lines` | `cart.js` |  |
-| 29 | `sentence` | `one-person.js` |  |
+| 30 | `sentence` | `one-person.js` |  |
 | 29 | `facts` | `bill-steps.js` | MY state_log — |
 | 29 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 29 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
@@ -199,7 +199,7 @@ of file each thing is; this says what already does the job.
 | 11 | `safe` | `country-profiles.js` | text made safe for HTML — |
 | 11 | `confirm` | `lab-kit.js` | opts: |
 | 11 | `session` | `page-frame.js` | FLOW  mount → session() → skeleton()? → CBShell.mount(host, { host:{app·bar}, person, signin, avatar, title, h |
-| 11 | `verdict` | `rail-thread.js` |  |
+| 12 | `verdict` | `rail-thread.js` |  |
 | 11 | `tabs` | `workflow.js` | the folder tabs, in the order the screen shows them |
 | 11 | `actions` | `workflow.js` | actions(chit, me) — |
 | 11 | `patch` | `books-recurring.js` |  |
