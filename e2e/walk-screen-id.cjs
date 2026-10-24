@@ -60,7 +60,7 @@ const walk = async (w) => {
     if (p === '/api/notifications') return J(200, { notifications: [], unseen: 0 });
     return J(404, { error: { message: 'not in this stand-in' } });
   });
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', SHOP));
+  await ctx.addInitScript((s) => { try { if (!sessionStorage.getItem('cb_noids')) localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', SHOP));
 
   const chipCode = () => page.evaluate(() => { const c = document.querySelector('[data-testid="screen-id"]'); return c ? c.getAttribute('data-cbsid') : null; });
   const chipText = () => page.evaluate(() => { const c = document.querySelector('[data-testid="screen-id"]'); return c ? c.innerText.replace(/\s+/g, ' ').trim() : ''; });
@@ -94,6 +94,20 @@ const walk = async (w) => {
   await w.step('S4', 'Tasks & Orders: tap Done -> the chip reads TSK004', async () => {
     await open('/tasks.html'); await page.click('[data-testid="skel-nav-done"]'); await page.waitForTimeout(400);
     const c = await chipCode(); return { ok: c === 'TSK004', saw: c };
+  });
+
+  /* ── UX-1 · a shop never sees the codes; the tester switch (?ids=1) brings them back and keeps them ── */
+  await w.step('H1', 'Accounts without the tester switch -> the chip is in the page but not drawn; ?ids=1 draws it; ?ids=0 hides it again', async () => {
+    await page.goto(base + '/'); await page.evaluate(() => { sessionStorage.setItem('cb_noids', '1'); localStorage.removeItem('cb_ids'); });
+    const seen = async (query) => {
+      await page.goto(base + '/accounts.html' + query + '#ledgers');
+      await page.waitForSelector('[data-testid="screen-id"][data-cbsid]', { state: 'attached', timeout: 20000 });
+      await page.waitForTimeout(300);
+      return page.evaluate(() => { const c = document.querySelector('[data-testid="screen-id"]'); return !!c && c.getBoundingClientRect().width > 0; });
+    };
+    const shop = await seen(''), tester = await seen('?ids=1'), stays = await seen(''), off = await seen('?ids=0');
+    await page.evaluate(() => { sessionStorage.removeItem('cb_noids'); localStorage.setItem('cb_ids', '1'); });
+    return { ok: !shop && tester && stays && !off, saw: 'shop ' + shop + ' · ?ids=1 ' + tester + ' · next visit ' + stays + ' · ?ids=0 ' + off };
   });
 
   /* ── 3 · the sheets: the SAME code from three pages; the page's own chip keeps the page's code ── */

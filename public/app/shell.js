@@ -76,6 +76,9 @@
     noApps: 'The list of apps could not be read.',
     needsHand: 'need you',
     moreWord: 'more',
+    moreTitle: function (total) {
+      return 'All ' + total + ' lines of this tile'; /* UX-3: what the +n badge counts */
+    },
     noShop: 'No shop yet. Add your business first.',
     signInShop: 'Sign in to open your shop.',
     factsFailed: 'Could not read',
@@ -684,7 +687,9 @@
     return (
       badge +
       nestedLineHTML(lines[0]) +
-      '<span class="more-n" aria-hidden="true">+' +
+      '<span class="more-n" title="' +
+      esc(W.moreTitle(lines.length)) +
+      '">+' +
       (lines.length - 1) +
       ' ' +
       esc(T(W.moreWord)) +

@@ -353,10 +353,25 @@
     'background:transparent;color:var(--ink,#2a2418);font:600 var(--fs-1,11px)/1.2 var(--sans,system-ui,sans-serif);white-space:nowrap;cursor:pointer}' +
     '.cbsid:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:2px}' +
     '.cbsid .cbsid-c{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.02em}.cbsid:empty{display:none}' +
-    '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}';
+    '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}' +
+    'html:not([data-ids]) .cbsid{display:none}' /* UX-1: a shop never sees the codes; a tester switches them on */;
+  var IDS_KEY = 'cb_ids';
+  /** UX-1: are screen codes shown? Only for a tester: ?ids=1 switches them on in this browser, ?ids=0 off (nothing else reads the codes but a bug report) */
+  function codesOn() {
+    try {
+      var asked = /[?&]ids=([01])(?:&|$)/.exec(root.location.search || '');
+      if (asked) root.localStorage.setItem(IDS_KEY, asked[1]);
+      return root.localStorage.getItem(IDS_KEY) === '1';
+    } catch (err) {
+      console.warn('screen id: codes stay hidden, the browser keeps no setting', (err && err.message) || err);
+      return false;
+    }
+  }
   function ensureCss() {
     var d = root.document;
-    if (!d || d.getElementById('cbsid-css')) return;
+    if (!d) return;
+    if (codesOn()) d.documentElement.setAttribute('data-ids', '1');
+    if (d.getElementById('cbsid-css')) return;
     var node = d.createElement('style');
     node.id = 'cbsid-css';
     node.textContent = CSS;

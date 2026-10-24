@@ -93,7 +93,7 @@ const walk = async (w) => {
       return J(r, 200, {});
     });
   }
-  await ctx.addInitScript((a) => { try { localStorage.setItem('cb_api_base', a.api); localStorage.setItem('cb_sess', a.sess); } catch (_) {} }, { api, sess });
+  await ctx.addInitScript((a) => { try { localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', a.api); localStorage.setItem('cb_sess', a.sess); } catch (_) {} }, { api, sess });
 
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const wrote = (re) => S.calls.filter((c) => re.test(c));
