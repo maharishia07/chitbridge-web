@@ -1589,7 +1589,6 @@ var IAM_HAT = {
 var IAM_WRITES = ['act', 'manager'];
 
 function iamHTML(e) {
-  var Q = String.fromCharCode(39);
   var tab = iamTab();
   /* kick the fetch on first paint; the tab repaints when it lands */
   if (!UI._iamActors) {
@@ -2023,7 +2022,6 @@ function profGroup(title, rowsHtml) {
 }
 
 function iamMeHTML(e) {
-  var Q = String.fromCharCode(39);
   /* ⚠️ KICKED FROM THE RENDERER because this screen has no mount step — same as iamLoadDocs, same latch. */
   iamLoadTrade();
   iamLoadChannels();
@@ -5504,7 +5502,6 @@ async function localeSetCurrency(code) {
 function _locPendingBar() {
   var list = UI._locStage || [];
   if (!list.length) return '';
-  var Q = String.fromCharCode(39);
   var rowOf = function (o) {
     /* ⚠️ THE VALUE AS THE PICKER SHOWS IT, not the raw code. 'ca=indian' is the thing Athi could not read;
        repeating it in the confirmation would repeat the problem at the moment it matters most. */

@@ -249,7 +249,6 @@ function regPayload() {
 function renderRegister() {
   const R = REG;
   const who = 'style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px"';
-  const muted = 'style="color:var(--grey);font-weight:400"';
   let form = '';
   if (R.step === 'form') {
     /* ⭐⭐ THE REGISTRATION SCREEN ASKS FOR THE USER ID, NOT A NAME. Athi, 2026-08-19: *"generally what we say

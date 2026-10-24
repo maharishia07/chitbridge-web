@@ -1565,7 +1565,6 @@
     I.el.classList.toggle('tbllines', s.view === 'lines');
     var state = typeof o.state === 'function' ? o.state() : o.state;
     var hdr = headerHTML(I, cols, tpl, state === 'loading');
-    var h = '';
     if (state === 'loading') {
       box.innerHTML =
         '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
@@ -2625,7 +2624,6 @@
       return;
     }
     if (node.hasAttribute('data-cbl-sort')) {
-      var cur = s.sort ? s.sort.dir : 1;
       s.sort = { key: node.value, dir: 1 };
       resetLimit(list);
       saveChoices(list);
