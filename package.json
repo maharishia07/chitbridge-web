@@ -21,7 +21,7 @@
     "check:lazy": "node e2e/lazy-screen-guard.cjs",
     "check:modal": "node e2e/modal-safe-repaint.cjs",
     "report:card": "node e2e/report-card.cjs",
-    "check:tax": "node e2e/tax-slab.test.cjs && node e2e/tax-slab-ui.test.cjs",
+    "check:tax": "node e2e/tax-slab.test.cjs && node e2e/tax-slab-ui.test.cjs && node e2e/rate-sources.test.cjs",
     "check:calls": "node e2e/missing-functions.cjs && node e2e/knowledge-graph.cjs",
     "check:markup": "node e2e/markup-balance.cjs",
     "check:controls": "node e2e/list-controls.cjs",

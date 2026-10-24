@@ -90,8 +90,11 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
        inherits, which is most of them. */
     const picker = page.getByTestId('catset-tax-default');
     await expect(picker).toBeVisible({ timeout: 20000 });
-    const saved = page.waitForResponse(isFaceWrite, { timeout: 45000 });
+    /* F5 W1b: the picker is a DRAFT — Save asks first (the workshop's confirmAsk modal); only "Set rate" writes the face */
     await selectByText(picker, lowName.slice(0, 14));
+    const saved = page.waitForResponse(isFaceWrite, { timeout: 45000 });
+    await page.getByTestId('catset-tax-save').click();
+    await page.getByTestId('confirm-ok').click();
     await saved;
     await settle(page);
   });
