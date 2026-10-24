@@ -1481,6 +1481,20 @@ function avgM() {
   });
   return count > 0 ? (count - cb) / count : 0;
 }
+/** does any item in the shop carry a cost: without one no margin can be told, and the lab says so instead of guessing from the price */
+function costKnown() {
+  return P.some(function (item) { return item.cost != null; });
+}
+/** a margin percent from what the shop makes on a bill, or null when the bill is nothing (never Infinity or NaN) */
+function marginOnBill(make, bill) {
+  return bill > 0 && isFinite(make) ? Math.round((make / bill) * 100) : null;
+}
+/** a margin cell: the figure coloured against the threshold, "not known" when null */
+function marginCell(margin, averageMargin) {
+  if (margin == null) return '<span class="sub">not known</span>';
+  return '<span style="color:' + (margin < 0 ? 'var(--red-i)' : margin < num(S.margin) ? 'var(--amber-i)' : 'var(--green-d)') + '">' + margin + '%</span>' +
+    (averageMargin == null ? '' : '<span class="sub">' + Math.round(averageMargin * 100) + '%</span>');
+}
 function catItems(id) {
   return P.filter(function (item) {
     return item.cat === id;
@@ -1835,6 +1849,14 @@ function percentTableHTML(list) {
     '</table></div>';
   return h;
 }
+/** no item here has a cost: the totals row says "not known" instead of painting ₹0 and a failing 0% */
+function percentFootUnknownHTML(count, showLoy) {
+  return (
+    '<tfoot><tr><td>All ' + count + '</td><td>—</td><td>—</td>' + (SHOW_MARKUP ? '<td>—</td>' : '') +
+    '<td class="grp">—</td>' + (showLoy ? '<td class="grp">—</td>' : '') +
+    '<td class="grp"><span class="sub">not known</span></td></tr></tfoot>'
+  );
+}
 function percentFootHTML(list, showLoy) {
   var priced = list.filter(function (item) {
     return item.p.cost != null;
@@ -1854,6 +1876,7 @@ function percentFootHTML(list, showLoy) {
   var tmk = count > 0 ? Math.round(((tp - count) / count) * 100) : null;
   var decide = showLoy ? tmAll : tmPub,
     target = num(S.margin);
+  if (!priced.length) return percentFootUnknownHTML(list.length, showLoy);
   return (
     '<tfoot><tr><td>All ' +
     list.length +
@@ -2057,6 +2080,13 @@ function workDemoHTML(tail) {
     '</div>'
   );
 }
+/** the corner note of rupees-off: "All clear" only when every item has a cost to judge; no cost = the margin is not known */
+function amountMarginNote(list, nestedUnder) {
+  var unknown = list.filter(function (item) { return item.margin == null; }).length;
+  if (unknown === list.length) return 'Margin not known — no cost typed for these items.';
+  if (nestedUnder) return nestedUnder + ' of ' + list.length + ' fall under your ' + num(S.margin) + '%.';
+  return unknown ? 'The ' + (list.length - unknown) + ' with a cost clear your ' + num(S.margin) + '%; ' + unknown + ' have no cost.' : 'All clear your ' + num(S.margin) + '%.';
+}
 function paintWork() {
   var el = document.getElementById('workScrim');
   if (!el) return;
@@ -2111,11 +2141,12 @@ function paintWork() {
         nestedUnder = list.filter(function (item) {
           return item.margin != null && item.margin < num(S.margin);
         }).length;
-      note = nestedUnder ? nestedUnder + ' of ' + list.length + ' fall under your ' + num(S.margin) + '%.' : 'All clear your ' + num(S.margin) + '%.';
+      note = amountMarginNote(list, nestedUnder);
     }
     document.getElementById('workNote').textContent = note;
   }
   document.getElementById('workPromise').textContent = draftPromise(l);
+  paintSaveGate(save);
   el.classList.add('on');
   document.body.style.overflow = 'hidden';
 }
@@ -2734,7 +2765,7 @@ function lineRows(state) {
 /* ── ladders (max three steps, always) ─────────────────────────────────── */
 function tiers(state) {
   return ((state || S).tiers || []).map(function (item) {
-    return { qty: num(item[0]), pct: num(item[1]) };
+    return { qty: num(item[0]), percent: num(item[1]) };
   });
 }
 function setTier(i, which, v) {
@@ -2761,7 +2792,7 @@ function tierFault() {
     list = [];
   for (var index = 1; index < t.length; index++) {
     if (t[index].qty <= t[index - 1].qty) list.push('Step ' + (index + 1) + ' must be more than ' + t[index - 1].qty);
-    if (t[index].pct < t[index - 1].pct) list.push('Buying more should not give less than ' + t[index - 1].pct + '%');
+    if (t[index].percent < t[index - 1].percent) list.push('Buying more should not give less than ' + t[index - 1].percent + '%');
   }
   return list;
 }
@@ -3309,7 +3340,18 @@ function whyRate() {
   if (!reachChosen()) return WHY_REACH;
   var rate = S.goal === 'percent' ? num(S.pctOff) : num(S.rsOff);
   if (rate <= 0) return S.goal === 'percent' ? 'Take off more than zero.' : 'Take off more than ' + moneySymbol() + '0.';
-  return S.goal === 'percent' && rate > 95 ? 'Take off 95% or less.' : '';
+  if (S.goal === 'percent') return rate > 95 ? 'Take off 95% or less.' : '';
+  var dear = items().filter(function (product) { return product.price > 0 && rate >= product.price; })[0];
+  return dear ? 'Take off less than ' + M0(dear.price) + ' — that is what ' + dear.name + ' costs.' : '';
+}
+/** reward a big bill: the bill must reach more than it gives back, or the shop pays out more than it takes in */
+function whySpend() {
+  return num(S.spendVal) >= num(S.spendAt) ? 'Give back less than the bill must reach (' + M0(num(S.spendAt)) + ').' : '';
+}
+/** free delivery: no amount below nothing (a negative "they still pay" would pay the customer to take delivery) */
+function whyShip() {
+  var typed = [S.shipAt, S.shipCost, S.shipCharge];
+  return typed.some(function (amount) { return num(amount) < 0; }) ? 'Type an amount of ' + moneySymbol() + '0 or more.' : '';
 }
 /** what is still missing for a free offer, by shape: a gift, an item, a pair or a category */
 var FREE_MISSING = {
@@ -3335,12 +3377,36 @@ var WHY_BY_GOAL = {
   qty: function () { return reachChosen() ? '' : WHY_REACH; },
   free: whyFree,
   bundle: whyBundle,
+  spend: whySpend,
+  ship: whyShip,
   band: whyBand
 };
 /** why "Work it out" is off right now ('' = it may go): each kind says what is still missing */
 function applyWhy() {
   var check = WHY_BY_GOAL[S.goal];
   return check ? check() : '';
+}
+/**
+ * why "Add to your offers" is off while the sheet is open ('' = it may go): what Work it out refused, plus a ladder whose steps
+ * are edited INSIDE the sheet (a step that is not more than the one before). One sentence; saveOffer asks it too.
+ */
+function sheetWhy() {
+  return applyWhy() || (S.goal === 'qty' ? tierFault().join('. ') + (tierFault().length ? '.' : '') : '');
+}
+/** a kind with no engine kind yet is a worksheet only: the sheet says so and offers no save (R47) */
+function worksheetOnly() {
+  return savedLive() && !subKindOf();
+}
+/** the sheet's save button, its promise sentence and the note beside it, all from the two questions above */
+function paintSaveGate(save) {
+  var reason = sheetWhy(),
+    only = worksheetOnly(),
+    note = document.getElementById('workNote');
+  save.style.display = only ? 'none' : '';
+  save.disabled = !!reason;
+  document.getElementById('workPromise').style.display = only ? 'none' : '';
+  if (reason) note.textContent = reason;
+  else if (only) note.textContent = 'This one is for working out only — it cannot be saved yet.';
 }
 function renderS2() {
   var g = goalOf(S.goal),
@@ -3919,7 +3985,7 @@ function outQty() {
           index +
           ',0,this.value)"><span>or more</span></span>' +
           '<span class="inp" style="width:86px"><input type="number" min="0" max="95" value="' +
-          item.pct +
+          item.percent +
           '" onchange="setTier(' +
           index +
           ',1,this.value)"><span>%</span></span>'
@@ -3942,7 +4008,7 @@ function outQty() {
           index +
           ',0,this.value)"><span>or more</span></span>' +
           '<span class="inp"><input type="number" min="0" max="95" value="' +
-          item.pct +
+          item.percent +
           '" onchange="setTier(' +
           index +
           ',1,this.value)"><span>%</span></span></div>' +
@@ -3968,7 +4034,7 @@ function outQty() {
           '</td>' +
           ts
             .map(function (t) {
-              var nestedR = priceRow(item, t.pct / 100);
+              var nestedR = priceRow(item, t.percent / 100);
               return (
                 '<td class="slab" data-l="buy ' +
                 t.qty +
@@ -3993,18 +4059,17 @@ function outQty() {
       .map(function (item) {
         var tt = totals(
           list.map(function (p) {
-            return priceRow(p, item.pct / 100);
+            return priceRow(p, item.percent / 100);
           })
         );
         return (
           '<td class="slab" data-l="buy ' +
           item.qty +
           '+"><span class="cell">' +
-          '<span class="cm ' +
-          (tt.marginAfter < num(S.margin) ? 'under' : '') +
-          '" style="font-size:15px">' +
-          tt.marginAfter +
-          '%</span></span></td>'
+          (tt.n
+            ? '<span class="cm ' + (tt.marginAfter < num(S.margin) ? 'under' : '') + '" style="font-size:15px">' + tt.marginAfter + '%</span>'
+            : '<span class="sub">not known</span>') +
+          '</span></td>'
         );
       })
       .join('') +
@@ -4014,10 +4079,10 @@ function outQty() {
   if (loyMode() === 'top' && S.loyOn) {
     var top = ts[ts.length - 1],
       one = list[0];
-    var r = one ? priceRow(one, top.pct / 100) : null;
+    var r = one ? priceRow(one, top.percent / 100) : null;
     h +=
       '<div class="note n-ok"><span class="ic">●</span><div>Loyalty: ' +
-      top.pct +
+      top.percent +
       '% from the first one' +
       (r ? ' · ' + esc(one.name) + ' ' + M0(r.shown) + ' · ' + mgnText(r.margin, r.status) : '') +
       '</div></div>';
@@ -4421,63 +4486,29 @@ function outSpend() {
   };
   var at = Math.max(1, num(S.spendAt)),
     give = giveAt(at),
+    known = costKnown(),
     am = avgM();
   var bills = [at, at * 2, at * 4];
   var heads = bills.map(function (item, index) {
     return [M0(item), '', index === 0];
   });
-  var rows = [
-    [
-      'Share',
-      bills.map(function (item) {
-        return PC((giveAt(item) / item) * 100);
-      })
-    ],
-    [
-      'Goods',
-      bills.map(function (item) {
-        return M0(item * (1 - am));
-      })
-    ],
-    [
-      'You make',
-      bills.map(function (item) {
-        return M0(item * am - giveAt(item));
-      }),
-      true
-    ],
-    [
-      'Margin',
-      bills.map(function (item) {
-        var m = Math.round(((item * am - giveAt(item)) / (item - giveAt(item))) * 100);
-        return (
-          '<span style="color:' +
-          (m < 0 ? 'var(--red-i)' : m < num(S.margin) ? 'var(--amber-i)' : 'var(--green-d)') +
-          '">' +
-          m +
-          '%</span><span class="sub">' +
-          Math.round(am * 100) +
-          '%</span>'
-        );
-      }),
-      true
-    ]
-  ];
-  var m0 = Math.round(((at * am - give) / (at - give)) * 100);
+  var rows = [['Share', bills.map(function (item) { return PC((giveAt(item) / item) * 100); })]];
+  if (known) {
+    rows.push(['Goods', bills.map(function (item) { return M0(item * (1 - am)); })]);
+    rows.push(['You make', bills.map(function (item) { return M0(item * am - giveAt(item)); }), true]);
+    rows.push(['Margin', bills.map(function (item) { return marginCell(marginOnBill(item * am - giveAt(item), item - giveAt(item)), am); }), true]);
+  }
+  var m0 = known ? marginOnBill(at * am - give, at - give) : null;
   var h = headline([
     [PC((give / at) * 100), 'at the threshold'],
     [M0(give), 'given back'],
-    [m0 + '%', 'worst case', m0 < num(S.margin) ? 'dn' : 'up']
+    [m0 == null ? 'not known' : m0 + '%', 'worst case', m0 != null && m0 < num(S.margin) ? 'dn' : 'up']
   ]);
   h += '<div class="card pad">' + g3(heads, rows) + '</div>';
-  h +=
-    '<div class="note ' +
-    (m0 < num(S.margin) ? 'n-warn' : 'n-ok') +
-    '"><span class="ic">●</span><div>' +
-    'Worst at exactly ' +
-    M0(at) +
-    '. Above that it only improves.</div></div>';
-  h += '<div class="hint">Goods cost uses your catalogue average.</div>';
+  h += known
+    ? '<div class="note ' + (m0 != null && m0 < num(S.margin) ? 'n-warn' : 'n-ok') + '"><span class="ic">●</span><div>Worst at exactly ' + M0(at) + '. Above that it only improves.</div></div>' +
+      '<div class="hint">Goods cost uses your catalogue average.</div>'
+    : '<div class="note n-say"><span class="ic">●</span><div>Margin not known — no item has a cost yet. It gives back ' + M0(give) + ' on a ' + M0(at) + ' bill.</div></div>';
   return h;
 }
 
@@ -4486,71 +4517,32 @@ function outShip() {
   var at = Math.max(1, num(S.shipAt)),
     c = num(S.shipCost),
     pay = num(S.shipCharge),
+    known = costKnown(),
     am = avgM();
   var absorb = Math.max(0, c - pay),
     bills = [at, at * 2, at * 3];
   var heads = bills.map(function (item, index) {
     return [M0(item), '', index === 0];
   });
-  var rows = [
-    [
-      'Share',
-      bills.map(function (item) {
-        return PC((absorb / item) * 100);
-      })
-    ],
-    [
-      'Goods',
-      bills.map(function (item) {
-        return M0(item * (1 - am));
-      })
-    ],
-    [
-      'Delivery',
-      bills.map(function () {
-        return M0(absorb);
-      })
-    ],
-    [
-      'You make',
-      bills.map(function (item) {
-        return M0(item * am - absorb);
-      }),
-      true
-    ],
-    [
-      'Margin',
-      bills.map(function (item) {
-        var m = Math.round((am - absorb / item) * 100);
-        return (
-          '<span style="color:' +
-          (m < 0 ? 'var(--red-i)' : m < num(S.margin) ? 'var(--amber-i)' : 'var(--green-d)') +
-          '">' +
-          m +
-          '%</span><span class="sub">' +
-          Math.round(am * 100) +
-          '%</span>'
-        );
-      }),
-      true
-    ]
-  ];
+  var rows = [['Share', bills.map(function (item) { return PC((absorb / item) * 100); })]];
+  rows.push(['Delivery', bills.map(function () { return M0(absorb); })]);
+  if (known) {
+    rows.push(['Goods', bills.map(function (item) { return M0(item * (1 - am)); })]);
+    rows.push(['You make', bills.map(function (item) { return M0(item * am - absorb); }), true]);
+    rows.push(['Margin', bills.map(function (item) { return marginCell(Math.round((am - absorb / item) * 100), am); }), true]);
+  }
   var m0 = Math.round((am - absorb / at) * 100),
     be = absorb / (am - num(S.margin) / 100);
   var h = headline([
     [M0(absorb), 'you absorb, a drop'],
     [PC((absorb / at) * 100), 'at the threshold'],
-    [m0 + '%', 'worst case', m0 < num(S.margin) ? 'dn' : 'up']
+    known ? [m0 + '%', 'worst case', m0 < num(S.margin) ? 'dn' : 'up'] : ['not known', 'margin']
   ]);
   h += '<div class="card pad">' + g3(heads, rows) + '</div>';
-  h +=
-    '<div class="note ' +
-    (be > at ? 'n-warn' : 'n-ok') +
-    '"><span class="ic">●</span><div>' +
-    M0(absorb) +
-    ' whatever they order' +
-    (be > 0 ? ' · under your ' + num(S.margin) + '% below ' + M0(be) : '') +
-    '</div></div>';
+  h += known
+    ? '<div class="note ' + (be > at ? 'n-warn' : 'n-ok') + '"><span class="ic">●</span><div>' + M0(absorb) + ' whatever they order' +
+      (be > 0 && isFinite(be) ? ' · under your ' + num(S.margin) + '% below ' + M0(be) : '') + '</div></div>'
+    : '<div class="note n-say"><span class="ic">●</span><div>' + M0(absorb) + ' whatever they order. Margin not known — no item has a cost yet.</div></div>';
   return h;
 }
 
@@ -4664,7 +4656,7 @@ function label() {
   else if (S.goal === 'qty')
     what = tiers()
       .map(function (item) {
-        return item.qty + '+ ' + item.pct + '%';
+        return item.qty + '+ ' + item.percent + '%';
       })
       .join(' · ');
   /**
@@ -4705,7 +4697,7 @@ function marginTotals(state) {
   if (ruleSet.goal !== 'qty' || !top) return null;
   return totals(
     items(ruleSet).map(function (item) {
-      return priceRow(item, top.pct / 100, ruleSet);
+      return priceRow(item, top.percent / 100, ruleSet);
     })
   );
 }
@@ -5265,6 +5257,11 @@ function saveInTab(shown, keyPair, offNote) {
   afterSave(offNote, openId);
 }
 async function saveOffer() {
+  var refusal = sheetWhy();
+  if (refusal) {
+    toastSay(refusal);
+    return;
+  }
   var offNote = takenOffNote(),
     l = label(),
     k = keyNumber(),
