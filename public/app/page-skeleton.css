@@ -47,7 +47,8 @@ html.cbsk[data-themed] .side .nav-btn{color:var(--ink-2,var(--ink,#3d3527))}
 .cbsk .nav-items[hidden]{display:none}
 .cbsk .nav-items{display:flex;flex-direction:column;gap:2px}
 .cbsk .side:has(.side-pinned) .nav{flex:1 1 auto;min-height:140px}
-.cbsk .side-pinned{flex:0 1 auto;max-height:40%;overflow-y:auto;padding:8px 8px 10px;border-top:1px solid var(--line-side,#e2d6bc);background:var(--side,#f4ecdc)}
+.cbsk .side:has(.side-pinned) .brand{flex:0 0 auto} /* UX-117: the shelf above the menu must not squeeze the header line */
+.cbsk .side-pinned{flex:0 1 auto;max-height:45%;overflow-y:auto;padding:8px 8px 10px;border-bottom:1px solid var(--line-side,#e2d6bc);background:var(--side,#f4ecdc)}
 .cbsk .side.collapsed .side-pinned{display:none}
 .cbsk .lab-switch{display:none}
 @media (max-width:760px){
@@ -56,7 +57,7 @@ html.cbsk[data-themed] .side .nav-btn{color:var(--ink-2,var(--ink,#3d3527))}
   .cbsk .lab-switch{display:flex;gap:6px;padding:8px 12px 0;flex:0 0 auto}
   .cbsk .lab-switch-btn{flex:1;min-height:44px;border:1px solid var(--line,#e2d6bc);border-radius:9px;background:var(--card,#fff);color:var(--ink,#1d1b16);font:inherit;font-weight:600;cursor:pointer}
   .cbsk .lab-switch-btn[aria-selected="true"]{background:var(--panel,#f3efe6);color:var(--ink,#1d1b16);border-color:var(--ink,#1d1b16);box-shadow:inset 0 -3px 0 var(--ink,#1d1b16)}
-  .cbsk .main > .side-pinned{display:none;flex:1 1 auto;max-height:none;min-height:0;border-top:0;background:var(--page,#fcfaf5)}
+  .cbsk .main > .side-pinned{display:none;flex:1 1 auto;max-height:none;min-height:0;border-bottom:0;background:var(--page,#fcfaf5)}
   .cbsk .app[data-tab="yours"] .main > .side-pinned{display:block}
   .cbsk .app[data-tab="yours"] .main > #screen{display:none}
 }
