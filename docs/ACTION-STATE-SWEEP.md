@@ -272,8 +272,8 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-books.js:5854 | click | `bkWaitAddSupplier` | POST /api/books/outbox/retry<br>POST /api/relationships/suppliers | no | — | once |
 | app/cap-books.js:6046 | click `wait-retry` | `bkWaitingRetry` | POST /api/books/outbox/retry | no | — | once |
 | app/cap-books.js:6169 | click `ac_add` | `bkAccountAdd` | POST /api/books/accounts | no | — | no |
-| app/cap-catalogue.js:1792 | click `cat-check-run` | `_cfRun` | POST /api/products/import/preflight | no | — | no |
-| app/cap-catalogue.js:1795 | click `cat-import-run` | `_cfImport` | POST /api/products/import | no | yes | no |
+| app/cap-catalogue.js:1801 | click `cat-check-run` | `_cfRun` | POST /api/products/import/preflight | no | — | no |
+| app/cap-catalogue.js:1804 | click `cat-import-run` | `_cfImport` | POST /api/products/import | no | yes | no |
 | app/cap-categories.js:576 | click `catg-seed-go` | `cbcatSeedGo` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
 | app/cap-categories.js:950 | click `catg-save` | `cbcatSave` | POST /api/definitions<br>PUT /api/definitions/:id | no | — | no |
 | app/cap-categories.js:1088 | click `catg-relive` | `cbcatRelive` | PUT /api/definitions/:id | no | — | no |
@@ -451,7 +451,7 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-worklist.js:1809 | click via wlBtn | `wlLineSave` | POST /api/chits/:id/assign-lines | no | — | no |
 | app/cap-worklist.js:1813 | click `wl-mark-done` | `wlSetState` | POST /api/chits/:id/assign-lines | no | — | no |
 | network-design.html:239 | click `lab-check` | `labCheck` | fetch POST | no | — | no |
-| offer-lab-next.html:3364 | click | `apply` | POST /api/network-design/validate | no | — | no |
+| offer-lab-next.html:3430 | click | `apply` | POST /api/network-design/validate | no | — | no |
 | product-lab.html:640 | click `pl-adopt` | `adopt` | fetch POST | no | — | no |
 | shop.html:1926 | click `shop-support-code` | `supSendCode` | fetch POST | no | — | no |
 | shop.html:1933 | click `shop-support-send` | `supSubmit` | fetch POST | no | — | no |

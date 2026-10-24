@@ -120,6 +120,12 @@ await t('ctCategoriesFromForm reads the ticked chips off the DOM into core.js ca
   assert.deepStrictEqual(next, { name: 'Tea', categories: ['c2'], category_names: ['Drinks'] });
   DOM.byId.ct_categories = { querySelectorAll: () => [] };
   assert.deepStrictEqual(globalThis.ctCategoriesFromForm({ name: 'Tea', categories: ['c1'] }), { name: 'Tea' }, 'every chip unticked → the keys go (the Save nulls them)');
+  /* ⚠️ unchanged chips (any order) write NOTHING — no category_names stamped into a patch whose only change is another field (walk-catalogue C5) */
+  DOM.byId.ct_categories = { querySelectorAll: () => [chip('c2'), chip('c1')] };
+  const untouched = { name: 'Tea', desc: 'walked', categories: ['c1', 'c2'] };
+  assert.strictEqual(globalThis.ctCategoriesFromForm(untouched), untouched, 'the same object back');
+  assert.deepStrictEqual(untouched, { name: 'Tea', desc: 'walked', categories: ['c1', 'c2'] }, 'no category key added or changed');
+  assert.deepStrictEqual(globalThis.prodDiff({ categories: ['c1', 'c2'] }, globalThis.ctCategoriesFromForm({ categories: ['c1', 'c2'], desc: 'walked' })), { desc: 'walked' }, 'the patch carries ONLY the changed key');
   delete DOM.byId.ct_categories;
   assert.deepStrictEqual(globalThis.ctCategoriesFromForm({ name: 'Tea', categories: ['c1'] }), { name: 'Tea', categories: ['c1'] }, 'absent is not cleared');
 });

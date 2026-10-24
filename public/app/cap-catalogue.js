@@ -222,7 +222,16 @@ function ctCategoriesFromForm(base) {
   const host = document.getElementById('ct_categories');
   if (!host) return base;
   const ids = Array.prototype.slice.call(host.querySelectorAll('.ctcatg.on[data-cid]')).map((chip) => chip.getAttribute('data-cid'));
+  /* ⚠️ UNCHANGED CHIPS WRITE NOTHING. catgSetOn also stamps the travelling names, so calling it on every Save put `category_names` into a patch whose
+     only change was the description (walk-catalogue C5, web #405 CI): the merge-patch carries ONLY what changed. Same set, any order → base untouched. */
+  if (sameIds(ids, catgIdsOf(base))) return base;
   return catgSetOn(base, ids);
+}
+/** the same set of ids, whatever the order */
+function sameIds(left, right) {
+  const sortedLeft = left.map(String).sort(),
+    sortedRight = right.map(String).sort();
+  return sortedLeft.length === sortedRight.length && sortedLeft.every((id, index) => id === sortedRight[index]);
 }
 
 /* ══ the "Code / HSN" field (F5 W1b, critic 12) — an HSN lands in `hsn`, the slot the invoice stamps; a shop code stays `code`, never read as an HSN ══ */
