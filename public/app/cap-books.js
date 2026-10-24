@@ -93,10 +93,10 @@ function bkCss() {
     /* the primary button of a pane's action row (Pay · Receive · Edit · Lock …) — once here, so accounts.html, crm.html and the app read the same */
     '.supacts button.supact-pri,#bk_body .supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent))}',
     /* ⭐ THE MONEY INPUT (bkMoneyInput): the symbol sits inside the field, the figure runs to the end; the box is the field's, so the symbol never wraps off */
-    '.mi{display:flex;align-items:center;gap:6px;box-sizing:border-box;width:100%;max-width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}',
+    '.mi{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;width:auto;max-width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}',
     '.mi:focus-within{border-color:var(--blue)}',
     '.mi .mi-sym{color:var(--grey);flex:0 0 auto}',
-    '.mi input.mi-in,#entrysheet .mi input.mi-in{flex:1 1 auto;min-width:0;width:100%;min-height:0;height:auto;padding:8px 0;border:0;border-radius:0;outline:0;background:none;color:inherit;font:inherit;text-align:end;font-variant-numeric:tabular-nums;box-shadow:none}',
+    '.mi input.mi-in,#entrysheet .mi input.mi-in{flex:0 1 auto;min-width:0;width:12ch;min-height:0;height:auto;padding:8px 0;border:0;border-radius:0;outline:0;background:none;color:inherit;font:inherit;text-align:end;font-variant-numeric:tabular-nums;box-shadow:none}',
     /* the strip's chips: .optchip is inline-flex, which swallows the whitespace between its text and the figure */
     '.bkchip{gap:4px}',
     /* the day's to-do: one card per line on a narrow pane (flex-basis folds them at ~620px), tappable, phone first */
@@ -1785,7 +1785,12 @@ function bkBack() {
   var node = document.getElementById('panel');
   if (node) node.classList.remove('showdetail');
 }
+/** UX-116 R60: a bill sheet opened on one view never stays over another view */
+function bkCloseSheetOnMove(next) {
+  if (next !== BK.tab && typeof CBSheet !== 'undefined') CBSheet.close();
+}
 function bkTab(t, silent) {
+  bkCloseSheetOnMove(t);
   BK.tab = t;
   /* ⭐ a host page that is not the app's Ledger screen (accounts.html — CB Accounts) paints its own chrome and may own a view:
      BK.onTab(t) is told which tab opened, BK.views[t] replaces a view's painter. Both are absent in the app, so it is unchanged. */

@@ -47,6 +47,7 @@
  * cbAttachButton (attach-ui.js: an attachment is pinned to a sent message, after the send, exactly as before) · CBLocale ·
  * CBOffline.saveDraft (the typed text survives a repaint). ZERO app.html globals: no UI, SESSION, paintDetail, modal, toast.
  
+ * CARD 01-rail-core-the-chit/thread-messages-on-a-chit
  * CALLED BY public/app.html, public/app/cap-admin.js, public/app/cap-books.js, public/app/cap-dispute.js, public/app/cap-messages.js (+5 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
@@ -123,14 +124,14 @@
     '.rt-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:7px}' +
     '.rt-ch{display:inline-flex;border:1px solid var(--line,#DDD6C6);border-radius:9px;overflow:hidden}' +
     '.rt-ch button{border:0;background:var(--card,#fff);font:inherit;font-size:var(--fs-1,12px);font-weight:700;padding:6px 11px;color:var(--grey,#5E594D);cursor:pointer;min-height:32px}' +
-    '.rt-ch button.on.int{background:var(--slate,#5f7682);color:var(--on-accent,#fff)}.rt-ch button.on.ext{background:var(--blue,#1f5fa8);color:var(--on-accent,#fff)}' +
+    '.rt-ch button.on.int{background:var(--slate,#45596a);color:var(--on-slate,#fff)}.rt-ch button.on.ext{background:var(--blue,#1f5fa8);color:var(--on-accent,#fff)}' +
     '.rt-ch button.off{opacity:.45;cursor:not-allowed;text-decoration:line-through}' +
     '.rt-k{border:1px solid var(--line,#DDD6C6);background:var(--card,#fff);border-radius:9px;font:inherit;font-size:var(--fs-1,12px);padding:4px 9px;cursor:pointer;color:var(--grey,#5E594D)}.rt-k.on{border-color:var(--blue,#1f5fa8);color:var(--blue,#1f5fa8);font-weight:700}' +
     '.rt-sel{font:inherit;font-size:var(--fs-1,12px);border:1px solid var(--line,#DDD6C6);border-radius:9px;padding:5px 8px;background:var(--card,#fff);color:inherit;max-width:100%}' +
     '.rt textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#DDD6C6);border-radius:9px;padding:9px;font:inherit;font-size:var(--fs-2,14px);min-height:56px;resize:vertical;background:var(--card,#fff);color:inherit}' +
     '.rt-aud{font-size:var(--fs-1,12px);margin:6px 0;color:var(--grey,#5E594D)}.rt-aud.ext{color:var(--blue,#1f5fa8);font-weight:700}.rt-aud.disp{color:var(--disp,#8E3517);font-weight:700}' +
     '.rt-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
-    '.rt-send{border:0;color:var(--on-accent,#fff);border-radius:9px;font:inherit;font-size:var(--fs-2,14px);font-weight:700;padding:9px 16px;cursor:pointer;min-height:40px;background:var(--slate,#5f7682)}' +
+    '.rt-send{border:0;color:var(--on-accent,#fff);border-radius:9px;font:inherit;font-size:var(--fs-2,14px);font-weight:700;padding:9px 16px;cursor:pointer;min-height:40px;background:var(--slate,#5f7682)}.rt-send.int{background:var(--slate,#45596a);color:var(--on-slate,#fff)}' +
     '.rt-send.ext{background:var(--blue,#1f5fa8)}.rt-send.disp{background:var(--disp,#8E3517)}.rt-send[disabled]{opacity:.55;cursor:not-allowed}' +
     '.rt-out{font-size:var(--fs-1,12px);min-height:1em}.rt-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.rt-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.rt-no{border:1px dashed var(--line,#DDD6C6);border-radius:9px;padding:9px 11px;color:var(--grey,#5E594D);font-size:var(--fs-2,14px)}' +

@@ -483,6 +483,8 @@ async function route(S, r) {
     await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
     const rj = p.locator('#chitsheet [data-testid="cs-act-reject"]');
     ok(await rj.count() === 1 && await rj.isDisabled() && /only read/.test(await rj.getAttribute('title') || ''), 'FX-F10W2 · a refused Reject (actions.reject) is shown greyed WITH the server\'s sentence');
+    ok(/only read/.test(await p.textContent('#chitsheet [data-testid="cs-why"]') || ''), 'UX-116 R60 · the greyed action also says why in a line on the sheet, not only in its tooltip');
+    ok(await p.locator('#chitsheet [data-testid="msg-channel-internal"].on').count() === 1, 'UX-116 R60 · the message box starts as a team note (Internal); the other side is a deliberate switch');
     await p.keyboard.press('Escape'); await ctx.close();
   }
   /* ── 3f · FX-F10W: "Who is Sri Ganesh?" carries the shop's near match — "Is this Sri Ganesh Provisions (P-00001)?" links, never a second party ── */
