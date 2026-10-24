@@ -119,6 +119,14 @@ console.log('\n2 · ⚠️ the refusals — never apply what was not earned');
              tiers: [{ qty: 3, price: 130 }], label: 'bad tier' }]);
   ok('⚠️ a tier that would RAISE the price is refused', r.total === 1000, r.total);
 
+  /* R44 (24 Oct walk): the Offer Lab saves a ladder step as {qty, percent} - the engine's one word. 'pct' is read by nobody. */
+  const idli = [{ key: 'i', item_id: 'idli', qty: 5, unitPrice: 40 }];
+  const ladder = (steps) => CBOffers.evaluate({ lines: idli, offers: [{ id: 'l', kind: 'tier_price', scope: 'line', applies_to: { item_ids: ['idli'] }, tiers: steps, label: 'ladder' }] });
+  r = ladder([{ qty: 3, percent: 10 }, { qty: 5, percent: 15 }]);
+  ok('R44 a {qty, percent} ladder takes 15% off 5 x 40 (Rs30)', Math.abs(r.total - 170) < 0.01, r.total);
+  r = ladder([{ qty: 3, pct: 10 }, { qty: 5, pct: 15 }]);
+  ok('R44 a legacy {qty, pct} ladder discounts nothing here (the engine reads percent only) - the lab never saves it now', r.total === 200, r.total);
+
   r = run([{ id: 'x8', kind: 'price_range', min: 200, max: 250,
              applies_to: { skus: ['OIL-5'] }, label: 'oil band' }]);
   ok('⭐ a price outside the seller band produces a VIOLATION, never a clamp',
