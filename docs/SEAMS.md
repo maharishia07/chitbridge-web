@@ -20,7 +20,7 @@ of file each thing is; this says what already does the job.
 | 68 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 66 | `list` | `cap-settings.js` |  |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
-| 60 | `here` | `screen-id.js` |  |
+| 61 | `here` | `screen-id.js` |  |
 | 58 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 57 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 57 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
@@ -29,7 +29,7 @@ of file each thing is; this says what already does the job.
 | 54 | `items` | `books-store.js` | PERF1: |
 | 50 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 49 | `toast` | `accounts-shell.js` |  |
-| 49 | `rows` | `cap-settings.js` |  |
+| 50 | `rows` | `cap-settings.js` |  |
 | 49 | `entry` | `books-store.js` |  |
 | 49 | `next` | `dayopen.js` | the next thing to do — |
 | 48 | `record` | `access-events.js` |  |
@@ -65,7 +65,7 @@ of file each thing is; this says what already does the job.
 | 30 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 30 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 29 | `lines` | `cart.js` |  |
-| 29 | `sentence` | `one-person.js` |  |
+| 30 | `sentence` | `one-person.js` |  |
 | 29 | `facts` | `bill-steps.js` | MY state_log — |
 | 29 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 29 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
@@ -73,7 +73,7 @@ of file each thing is; this says what already does the job.
 | 28 | `changes` | `books-store.js` |  |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
 | 28 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
-| 27 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 28 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 27 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
@@ -93,7 +93,7 @@ of file each thing is; this says what already does the job.
 | 24 | `view` | `country-ready.js` |  |
 | 24 | `lookup` | `regulation.js` | lookup(country) → its pack, or the DEFAULT one marked { fallback: |
 | 23 | `call` | `cap-assist.js` |  |
-| 23 | `opts` | `cap-stock.js` |  |
+| 24 | `opts` | `cap-stock.js` |  |
 | 23 | `rate` | `convert.js` | A rate, with its evidence. |
 | 23 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 23 | `hold` | `orders.js` |  |
@@ -102,7 +102,7 @@ of file each thing is; this says what already does the job.
 | 22 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 22 | `account` | `home-facts.js` | OMITTED: |
 | 22 | `owner` | `books.js` |  |
-| 21 | `form` | `accounts-shell.js` |  |
+| 22 | `form` | `accounts-shell.js` |  |
 | 21 | `shown` | `country-compare.js` | one side's value for the line: |
 | 21 | `guard` | `books-assets.js` | run a store call; a missing table is the one refusal |
 | 21 | `chart` | `fx-rates.js` |  |
@@ -124,10 +124,11 @@ of file each thing is; this says what already does the job.
 | 18 | `next` | `cap-stock.js` | the next level: |
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `note` | `dbwatch.js` |  |
+| 17 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 17 | `step` | `cart.js` |  |
 | 17 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
-| 17 | `chip` | `screen-id.js` | var S = { app: |
+| 18 | `chip` | `screen-id.js` | var S = { app: |
 | 17 | `verify` | `bookpack.js` | manifest's own hash. |
 | 17 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 17 | `notMigrated` | `crm-followups.js` |  |
@@ -151,7 +152,7 @@ of file each thing is; this says what already does the job.
 | 15 | `bkDate` | `cap-books.js` |  |
 | 15 | `frame` | `cap-settings.js` |  |
 | 15 | `fmtMoney` | `helpers.js` |  |
-| 15 | `today` | `kural.js` |  |
+| 16 | `today` | `kural.js` |  |
 | 15 | `label` | `screen-id.js` |  |
 | 15 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 15 | `orders` | `home-facts.js` | the till said 2 — |
@@ -174,7 +175,7 @@ of file each thing is; this says what already does the job.
 | 14 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 13 | `resolve` | `page.js` |  |
+| 15 | `resolve` | `page.js` |  |
 | 13 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 13 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 13 | `terms` | `books-store.js` | the party's credit terms, from whichever list holds them (a customer's for a sale, a supplier's for a purchase |
@@ -198,7 +199,7 @@ of file each thing is; this says what already does the job.
 | 11 | `safe` | `country-profiles.js` | text made safe for HTML — |
 | 11 | `confirm` | `lab-kit.js` | opts: |
 | 11 | `session` | `page-frame.js` | FLOW  mount → session() → skeleton()? → CBShell.mount(host, { host:{app·bar}, person, signin, avatar, title, h |
-| 11 | `verdict` | `rail-thread.js` |  |
+| 12 | `verdict` | `rail-thread.js` |  |
 | 11 | `tabs` | `workflow.js` | the folder tabs, in the order the screen shows them |
 | 11 | `actions` | `workflow.js` | actions(chit, me) — |
 | 11 | `patch` | `books-recurring.js` |  |
