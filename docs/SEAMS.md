@@ -118,7 +118,7 @@ of file each thing is; this says what already does the job.
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 19 | `card` | `cap-shop.js` |  |
 | 19 | `note` | `device-id.js` | note(where, problem) — |
-| 19 | `more` | `lab-kit.js` | idKey: |
+| 18 | `more` | `lab-kit.js` | idKey: |
 | 19 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 19 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 18 | `next` | `cap-stock.js` | the next level: |

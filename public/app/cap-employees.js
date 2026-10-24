@@ -14,6 +14,7 @@
  *
  *   CBEmployees.mount(el, { token, base, embed, view, onEnded }) → { reload }
  
+ * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in
  * CALLED BY public/app/cap-finance.js, public/app/their-bill.js, public/employees.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
@@ -445,46 +446,47 @@
 
   /* ── R112: a first code SHOWN to the owner (a person with no e-mail). Own box, own slot: changed() never copies it, nothing stores it, closing the sheet empties it. ── */
   /** "30 minutes" / "2 hours", read from the server's expires_at (never a number written here); '' when the api sent none (an older api) */
-  function lastsWords(r) {
-    var at = r && r.expires_at ? Date.parse(r.expires_at) : NaN;
-    if (!at) return '';
-    var mins = Math.max(1, Math.round((at - Date.now()) / 60000));
+  function lastsWords(reply) {
+    var stopsAt = reply && reply.expires_at ? Date.parse(reply.expires_at) : NaN;
+    if (!stopsAt) return '';
+    var mins = Math.max(1, Math.round((stopsAt - Date.now()) / 60000));
     return mins >= 120 ? Math.round(mins / 60) + ' ' + T('hours') : mins + ' ' + T(mins === 1 ? 'minute' : 'minutes');
   }
   /** a six-digit code in two groups of three; anything else as it came */
   function groupDigits(code) {
-    var c = String(code == null ? '' : code);
-    return /^\d{6}$/.test(c) ? c.slice(0, 3) + ' ' + c.slice(3) : c;
+    var text = String(code == null ? '' : code);
+    return /^\d{6}$/.test(text) ? text.slice(0, 3) + ' ' + text.slice(3) : text;
   }
   /** the big-digits box. Text only (textContent), no Copy button, no print: the owner reads it out or types it for them. */
-  function paintCodeBox(name, r) {
+  function paintCodeBox(name, reply) {
     var slot = $('emp_code');
-    if (!slot || !r || !r.show_code) return;
-    var lasts = lastsWords(r);
+    if (!slot || !reply || !reply.show_code) return;
+    var lasts = lastsWords(reply);
     slot.innerHTML = '<div class="emp-code" role="status" data-testid="emp-code-box"><div class="emp-digits mono" data-testid="emp-code-digits"></div><div class="emp-code-say" data-testid="emp-code-say"></div></div>';
-    slot.querySelector('[data-testid="emp-code-digits"]').textContent = groupDigits(r.show_code);
+    slot.querySelector('[data-testid="emp-code-digits"]').textContent = groupDigits(reply.show_code);
     slot.querySelector('[data-testid="emp-code-say"]').textContent = T('Give this code to') + ' ' + name + '. ' + (lasts ? T('It works for') + ' ' + lasts + '.' : T('It works once.'));
   }
-  /** "Code given by Asha at 14:05" — the owner's own trail, from GET /api/people code_given {by, at, channel} (null for anyone else) */
-  function codeGivenNote(g) {
-    if (!g || !g.at) return '';
-    var when = new Date(g.at);
+  /** "Code given by Asha at 24 Oct, 14:05" — the owner's own trail, from GET /api/people code_given {by, at, channel} (null for anyone else) */
+  function codeGivenNote(given) {
+    if (!given || !given.at) return '';
+    var when = new Date(given.at);
     var at = isNaN(when) ? '' : when.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    return '<span class="sub" data-testid="emp-code-given">' + esc(T('Code given') + (g.by ? ' ' + T('by') + ' ' + g.by : '') + (at ? ' ' + T('at') + ' ' + at : '')) + '</span>';
+    return '<span class="sub" data-testid="emp-code-given">' + esc(T('Code given') + (given.by ? ' ' + T('by') + ' ' + given.by : '') + (at ? ' ' + T('at') + ' ' + at : '')) + '</span>';
   }
   /** a refusal the person reads: the server's own words even on a 503 that carries a code; anything else keeps CBAction's sentence */
   function failInto(outId) {
-    return function (words, e) {
+    return function (words, err) {
       var el = $(outId);
       if (!el) return;
-      el.textContent = e && e.code && e.status >= 500 && e.message ? e.message : words;
+      el.textContent = err && err.code && err.status >= 500 && err.message ? err.message : words;
       el.setAttribute('data-tone', 'error');
     };
   }
-  function codeSentence(r) {
-    var lasts = lastsWords(r);
-    if (r && r.otp) return T('Their first code is') + ' ' + r.otp + (lasts ? ' — ' + T('good for') + ' ' + lasts + '.' : '.');
-    return (r && r.delivery_note) || T('A new code is ready.');
+  /** what the sheet says after a code was made: the dev code (local only), else the api's delivery_note */
+  function codeSentence(reply) {
+    var lasts = lastsWords(reply);
+    if (reply && reply.otp) return T('Their first code is') + ' ' + reply.otp + (lasts ? ' — ' + T('good for') + ' ' + lasts + '.' : '.');
+    return (reply && reply.delivery_note) || T('A new code is ready.');
   }
 
   function resetPin(p, btn) {
@@ -746,15 +748,7 @@
       root.CBAction.run(
         $('emp_add_go'),
         function () {
-          return call('POST', '/api/actors', body).then(function (reply) {
-            var id = reply && reply.actor && reply.actor.identity_id;
-            /* the create takes the level and reach; money-sight is the owner's PATCH (b145), so a preset that carries it is one more call */
-            var more =
-              id && c.can_see_costs ? call('PATCH', '/api/actors/' + encodeURIComponent(id), { can_see_costs: true }).catch(function () {}) : Promise.resolve();
-            return more.then(function () {
-              return reply;
-            });
-          });
+          return createPerson(body, !!c.can_see_costs);
         },
         {
           key: 'emp-add',
@@ -768,38 +762,44 @@
       );
     };
   }
+  /** the create; money-sight is the owner's PATCH (b145), so a preset that carries it is one more call, and if that one fails the owner is told */
+  function createPerson(body, seesCosts) {
+    return call('POST', '/api/actors', body).then(function (reply) {
+      var id = reply && reply.actor && reply.actor.identity_id;
+      if (!id || !seesCosts) return reply;
+      return call('PATCH', '/api/actors/' + encodeURIComponent(id), { can_see_costs: true }).then(
+        function () {
+          return reply;
+        },
+        function () {
+          say(T("Added, but couldn't turn on seeing costs. Set it on their sheet."));
+          return reply;
+        }
+      );
+    });
+  }
+  /** the "Added" sheet: name, sign-in name, then the shown code's slot (or the api's delivery_note for an e-mailed code or an older api) */
+  function addedHtml(reply, person) {
+    var name = (person && person.name) || (reply.actor && reply.actor.display_name) || '';
+    var codePart = reply.show_code
+      ? '<div id="emp_code" data-testid="emp-code-slot"></div>'
+      : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(reply)) + '</div>';
+    return (
+      '<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2><div class="emp-sub"><b>' + esc(name) + '</b></div>' +
+      '<div class="mono" data-testid="emp-added-id">' + esc(shortId((person && person.user_id) || (reply.actor && reply.actor.login_format))) + '</div>' +
+      codePart +
+      '<button type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
+    );
+  }
   function added(r) {
     var id = r && r.actor && r.actor.identity_id;
     return load().then(function () {
       if (E.list) E.list.refresh();
       paintBar();
       var p = id ? byId(id) : null;
-      sheet(
-        '<h2 data-testid="emp-added">' +
-          esc(T('Added')) +
-          '</h2>' +
-          '<div class="emp-sub"><b>' +
-          esc((p && p.name) || (r.actor && r.actor.display_name) || '') +
-          '</b></div>' +
-          '<div class="mono" data-testid="emp-added-id">' +
-          esc(shortId((p && p.user_id) || (r.actor && r.actor.login_format))) +
-          '</div>' +
-          (r && r.show_code
-            ? '<div id="emp_code" data-testid="emp-code-slot"></div>'
-            : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(r)) + '</div>') +
-          '<button type="button" class="act" id="emp_done" data-testid="emp-done">' +
-          esc(T('Done')) +
-          '</button>'
-      );
+      sheet(addedHtml(r, p));
       paintCodeBox((p && p.name) || (r.actor && r.actor.display_name) || '', r);
-      $('emp_done').onclick = function () {
-        var node = $('emp_sheet');
-        try {
-          node.close();
-        } catch (_) {}
-        node.innerHTML = '';
-        if (E.o.view === 'add') tell('close');
-      };
+      $('emp_done').onclick = closeSheet;
       tell('added', { id: id, name: (p && p.name) || (r.actor && r.actor.display_name) || '', user_id: (p && p.user_id) || null });
     });
   }
