@@ -117,7 +117,9 @@ W.run('finance-payables', async (w) => {
     return { ok: row.indexOf(OFFER.words) >= 0 && offer === OFFER.words && /29,?400/.test(amt) && /Pay/.test(title) && /Mala Mills/.test(title) && bills === 1, saw: 'row "' + row.slice(0, 90) + '"; offer "' + offer + '"; amount ' + amt + '; title "' + title + '"; bills ' + bills };
   });
   await w.step('P6', 'Pay sheet -> Record -> the one payment route (out, ₹29,400); then the discount step: the offer, Record discount, and GST credit note GREYED with its sentence', async () => {
-    await page.click('[data-testid="pay_record"]'); await page.waitForSelector('[data-testid="pay_disc"]', { timeout: 6000 }).catch(() => {});
+    await page.click('[data-testid="pay_record"]');
+    await page.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }).catch(() => {}); /* R102b: Record asks first — "Pay Mala Mills ₹29,400.00 by cash?" */
+    await page.waitForSelector('[data-testid="pay_disc"]', { timeout: 6000 }).catch(() => {});
     const ok1 = S.pay && S.pay.direction === 'out' && S.pay.amount_minor === 2940000 && S.pay.party_id === MALA;
     const rec = await page.locator('[data-testid="pay_disc_record"]').isEnabled().catch(() => false), gst = await page.locator('[data-testid="pay_gst_note"]').isDisabled().catch(() => false), why = await txt('[data-testid="pay_gst_why"]');
     return { ok: !!ok1 && rec && gst && why === OFFER.gst_note.say && !S.entry, saw: 'payment ' + JSON.stringify(S.pay && { d: S.pay.direction, a: S.pay.amount_minor }) + '; Record discount enabled ' + rec + '; GST greyed ' + gst + ' "' + why + '"; journal sent ' + !!S.entry };
@@ -197,7 +199,7 @@ W.run('finance-payables', async (w) => {
         S.paid = false; S.entry = null;
         await page.click('[data-testid="fp-pay-' + MALA + '"]'); await page.waitForSelector('[data-testid="pay_offer"]', { timeout: 6000 }).catch(() => {}); await page.waitForTimeout(800);
         const a1 = await audit();
-        await page.click('[data-testid="pay_record"]').catch(() => {}); await page.waitForSelector('[data-testid="pay_disc"]', { timeout: 6000 }).catch(() => {}); await page.waitForTimeout(300);
+        await page.click('[data-testid="pay_record"]').catch(() => {}); await page.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }).catch(() => {}); await page.waitForSelector('[data-testid="pay_disc"]', { timeout: 6000 }).catch(() => {}); await page.waitForTimeout(300);
         const a2 = await audit(); await page.keyboard.press('Escape').catch(() => {});
         return { ok: clean(a1) && clean(a2), saw: 'sheet: ' + say(a1) + ' || after Record: ' + say(a2) };
       });

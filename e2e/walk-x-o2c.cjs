@@ -412,6 +412,7 @@ W.run('x-o2c', async (w) => {
         if (await mode.count()) await mode.selectOption('cash').catch(() => {});
         await settle(page, 800);
         await page.click('[data-testid="pay_record"]').catch(() => {});
+        await page.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }).catch(() => {}); /* R102b: Record asks first — "Record ₹… from <who> by cash?" */
         await page.waitForFunction(() => /Received ₹|Recorded/.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
         const out = await txt(page, '[data-testid="pay_outcome"], [data-testid="pay_settled"], [data-testid="pay_done"], .toast'), t = await body(page);
         await shot(page, 'ledger-receive');
@@ -558,7 +559,7 @@ W.run('x-o2c', async (w) => {
         if (await row.count()) { await row.click().catch(() => {}); await settle(v, 1200); }
         const pay = v.locator('[data-testid="party-pay"], [data-testid^="dues-pay-"]').first();
         let said = '';
-        if (await pay.count()) { const dis = await pay.isDisabled().catch(() => false); if (!dis) { await pay.click().catch(() => {}); await settle(v, 1500); said = await txt(v, '[data-testid="pay_why"], [data-testid="pay_outcome"]'); await v.click('[data-testid="pay_record"]').catch(() => {}); await settle(v, 2000); said = said || await txt(v, '[data-testid="pay_why"], [data-testid="pay_outcome"]'); } else said = 'greyed'; }
+        if (await pay.count()) { const dis = await pay.isDisabled().catch(() => false); if (!dis) { await pay.click().catch(() => {}); await settle(v, 1500); said = await txt(v, '[data-testid="pay_why"], [data-testid="pay_outcome"]'); await v.click('[data-testid="pay_record"]').catch(() => {}); await v.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 3000 }).catch(() => {}); await settle(v, 2000); said = said || await txt(v, '[data-testid="pay_why"], [data-testid="pay_outcome"]'); } else said = 'greyed'; }
         const t = await body(v);
         await shot(v, 'viewer-ledger');
         const raw = /403|Forbidden|error\.message|undefined/.test(t);

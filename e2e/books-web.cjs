@@ -423,7 +423,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/settles 2 bills/.test(left) && !/advance/.test(left), 'changed: 2,000 + 2,000 — the line says 2 bills and nothing is left over (' + left + ')');
   /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT: the button is dead while its call is out, and a second press records nothing */
   S.slowRecord = 900;
-  await p.click('[data-testid="pay_record"]');
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }); /* R102b: Record asks first */
   await p.waitForTimeout(250);
   const deadNow = await p.evaluate(() => { const b = document.querySelector('[data-testid="pay_record"]'); return !!(b && b.disabled); });
   await p.evaluate(() => { payRecord(); });                  /* a second press, while that call is still out */
@@ -445,7 +445,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.fill('[data-testid="pay_amt"]', '500');
   await p.selectOption('[data-testid="pay_mode"]', 'cheque');
   await p.fill('[data-testid="pay_chqno"]', '004512');
-  await p.click('[data-testid="pay_record"]');
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
   await p.waitForSelector('[data-testid="pay_chq_steps"]', { timeout: 8000 }).catch(() => {});
   const chqId = Object.keys(S.payments).find((k) => S.payments[k].mode === 'cheque');
   ok(!!chqId && S.payPosts[S.payPosts.length - 1].client_ref !== S.payPosts[0].client_ref, 'a new form has a NEW client_ref, so the cheque is its own payment');
@@ -805,12 +805,12 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   await p.evaluate(() => navTo('customers'));
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
-  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]');
+  await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="pay_outcome"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
   /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
   const nPosts = S.payPosts.length;
-  await p.click('[data-testid="pay_record"]');
+  await p.click('[data-testid="pay_record"]'); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());

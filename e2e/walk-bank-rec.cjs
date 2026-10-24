@@ -176,7 +176,9 @@ function stand() {
   ok('B4', /4,200\.00|4200\.00/.test(pay.amt) && pay.mode === 'bank' && pay.ref === 'N55501' && /Kumar/.test(pay.title), 'the pay sheet opens with their amount, How = bank, their ref (' + JSON.stringify(pay) + ')');
   ok('B4', (pay.a0 === '' || /^0(\.00)?$/.test(pay.a0)) && /4,200\.00|4200\.00/.test(pay.a1), 'THEIR bill (B-140) takes the amount; the older bill B-139 stays 0 — not oldest-first');
   ok('B4', S.bodies.filter((x) => x.p === '/api/books/payments').length === 0, 'nothing posted until Record');
-  await p.click('[data-testid="pay_record"]'); await p.waitForTimeout(800);
+  await p.click('[data-testid="pay_record"]');
+  await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 }).catch(() => {}); /* R102b: Record asks first */
+  await p.waitForTimeout(800);
   const rec = S.bodies.filter((x) => x.p === '/api/books/payments');
   ok('B4', rec.length === 1 && rec[0].body.mode === 'bank' && rec[0].body.reference === 'N55501' && JSON.stringify(rec[0].body.allocations) === JSON.stringify([{ against_ref: 'bill-B-140', amount_minor: 420000 }]),
     'ONE payment through POST /payments, allocated to their bill (' + JSON.stringify(rec[0] && rec[0].body.allocations) + ')');
