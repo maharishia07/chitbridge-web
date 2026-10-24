@@ -51,7 +51,7 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | app/cap-books.js:780 | click | `bkStmtReverse` | POST /api/books/entries/:id/reverse | **yes** | **no** | no |
 | app/cap-definitions.js:2013 | click `cbdef-takeover-go` | `cbDefTakeoverGo` | DELETE /api/definitions/:id | **yes** | **no** | no |
 | app/cap-period.js:737 | click via peBtn | `peRecSave` | POST /api/books/recurring<br>PATCH /api/books/recurring/:id<br>DELETE /api/books/recurring/:id | **yes** | **no** | once |
-| till.html:24611 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
+| till.html:24632 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
 
 ## By file
 
@@ -478,49 +478,49 @@ write deeper than two calls, is not seen. "Irreversible" is read from the method
 | till.html:3621 (vendored) | click `till-dayclose` | `dayClose` | fetch POST | no | — | no |
 | till.html:3682 (vendored) | change `till-set-kot` | `tillOptSet, paintOrderBar` | fetch POST | no | — | no |
 | till.html:3884 (vendored) | click `till-order-settle` | `orderReviewSettle` | fetch POST | no | — | no |
-| till.html:6950 (vendored) | click | `flashHide, act` | fetch POST | no | — | no |
-| till.html:7340 (vendored) | change `till-rp-mode` | `rcvPayPropose` | fetch POST | no | — | no |
-| till.html:9635 (vendored) | click `till-day-img` | `dayImgOpen` | fetch POST | no | — | no |
-| till.html:9680 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
-| till.html:10414 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
-| till.html:11032 (vendored) | click | `tillShowSet, paintViewChips` | fetch POST | no | — | no |
-| till.html:13686 (vendored) | change | `quickGroupToggle, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:13762 (vendored) | change `till-set-group` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
-| till.html:14122 (vendored) | click `till-quick-hide-` | `quickSoldOut` | fetch POST | no | — | no |
-| till.html:14156 (vendored) | click | `quickSoldOut` | fetch POST | no | — | no |
-| till.html:14488 (vendored) | click `till-connect` | `pairAgain` | fetch POST | no | — | no |
-| till.html:14507 (vendored) | click `till-start-shop` | `startOpen` | fetch POST | no | — | no |
-| till.html:15223 (vendored) | click `card-save` | `cardSave` | fetch POST | no | — | no |
-| till.html:15350 (vendored) | click `card-storefront` | `shopPrevOpen` | fetch POST | no | — | no |
-| till.html:15692 (vendored) | click `till-pick-price` | `pickedPrice` | fetch POST | no | — | no |
-| till.html:15693 (vendored) | click `till-pick-group` | `pickedGroup` | fetch POST | no | — | no |
-| till.html:15711 (vendored) | click | `pick` | fetch POST | no | — | no |
-| till.html:17421 (vendored) | click `till-parked-` | `unpark` | fetch POST | no | — | no |
-| till.html:19022 (vendored) | click `till-shop-edit` | `shopEditOpen` | fetch POST | no | — | no |
-| till.html:19181 (vendored) | change | `upRead` | fetch POST | no | — | no |
-| till.html:19483 (vendored) | click `till-signout-go` | `signoutDo` | fetch POST | no | — | no |
-| till.html:19509 (vendored) | click `till-signout-force` | `signoutDo` | fetch POST | no | — | no |
-| till.html:19535 (vendored) | click `till-signout-cloud` | `signoutCloudDo` | fetch POST | no | — | no |
-| till.html:20405 (vendored) | click `till-health-send` | `sendNow` | fetch POST | no | — | no |
-| till.html:20446 (vendored) | click | `healthClose, sureSheet` | fetch POST | no | — | no |
-| till.html:20521 (vendored) | click `till-workbook-get` | `workbookGet` | fetch POST | no | — | no |
-| till.html:20926 (vendored) | click `till-kot` | `sendKOT` | fetch POST | no | — | no |
-| till.html:20945 (vendored) | click `till-part-` | `dropPart` | fetch POST | no | — | no |
-| till.html:21338 (vendored) | click `till-order-go` | `orderGo` | fetch POST | no | — | no |
-| till.html:21354 (vendored) | click | `orderPick` | fetch POST | no | — | no |
-| till.html:21516 (vendored) | click | `pickPay` | fetch POST | no | — | no |
-| till.html:24126 (vendored) | click `till-stuck-release` | `releaseQueue` | fetch POST | no | — | no |
-| till.html:24128 (vendored) | click `till-stuck-copy` | `stuckCopy` | fetch POST | no | — | no |
-| till.html:24130 (vendored) | click `till-storage` | `openStorage` | fetch POST | no | — | no |
-| till.html:24131 (vendored) | click `till-check-sent` | `checkAbsorbedNow` | fetch POST | no | — | no |
-| till.html:24556 (vendored) | change | `retainSet, openStorage` | fetch POST | no | — | no |
-| till.html:24597 (vendored) | click `till-rescue` | `rescueOrphans` | fetch POST | no | — | no |
-| till.html:24611 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
-| till.html:24944 (vendored) | click `till-send-now` | `sendNow` | fetch POST | no | — | no |
-| till.html:24951 (vendored) | click `till-confirm-arrived` | `sendNow` | fetch POST | no | — | no |
-| till.html:26433 (vendored) | click `till-signin-takeover` | `usignBecome` | fetch POST | no | — | no |
-| till.html:26810 (vendored) | click `till-break` | `takeBreak` | fetch POST | no | — | no |
-| till.html:26811 (vendored) | click `till-handover` | `handOver` | fetch POST | no | — | no |
-| till.html:27364 (vendored) | change | `settingsKeySave` | fetch POST | no | — | no |
-| till.html:27400 (vendored) | click `till-set-signin` | `pairAgain` | fetch POST | no | — | no |
-| till.html:27402 (vendored) | click `till-set-signout` | `setClose, signoutOpen` | fetch POST | no | — | no |
+| till.html:6952 (vendored) | click | `flashHide, act` | fetch POST | no | — | no |
+| till.html:7342 (vendored) | change `till-rp-mode` | `rcvPayPropose` | fetch POST | no | — | no |
+| till.html:9637 (vendored) | click `till-day-img` | `dayImgOpen` | fetch POST | no | — | no |
+| till.html:9682 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
+| till.html:10416 (vendored) | click | `fromMenu, sureSheet` | fetch POST | no | — | no |
+| till.html:11034 (vendored) | click | `tillShowSet, paintViewChips` | fetch POST | no | — | no |
+| till.html:13688 (vendored) | change | `quickGroupToggle, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:13764 (vendored) | change `till-set-group` | `tillOptSet, quickMaintPaint` | fetch POST | no | — | no |
+| till.html:14124 (vendored) | click `till-quick-hide-` | `quickSoldOut` | fetch POST | no | — | no |
+| till.html:14158 (vendored) | click | `quickSoldOut` | fetch POST | no | — | no |
+| till.html:14490 (vendored) | click `till-connect` | `pairAgain` | fetch POST | no | — | no |
+| till.html:14509 (vendored) | click `till-start-shop` | `startOpen` | fetch POST | no | — | no |
+| till.html:15225 (vendored) | click `card-save` | `cardSave` | fetch POST | no | — | no |
+| till.html:15352 (vendored) | click `card-storefront` | `shopPrevOpen` | fetch POST | no | — | no |
+| till.html:15694 (vendored) | click `till-pick-price` | `pickedPrice` | fetch POST | no | — | no |
+| till.html:15695 (vendored) | click `till-pick-group` | `pickedGroup` | fetch POST | no | — | no |
+| till.html:15713 (vendored) | click | `pick` | fetch POST | no | — | no |
+| till.html:17423 (vendored) | click `till-parked-` | `unpark` | fetch POST | no | — | no |
+| till.html:19043 (vendored) | click `till-shop-edit` | `shopEditOpen` | fetch POST | no | — | no |
+| till.html:19202 (vendored) | change | `upRead` | fetch POST | no | — | no |
+| till.html:19504 (vendored) | click `till-signout-go` | `signoutDo` | fetch POST | no | — | no |
+| till.html:19530 (vendored) | click `till-signout-force` | `signoutDo` | fetch POST | no | — | no |
+| till.html:19556 (vendored) | click `till-signout-cloud` | `signoutCloudDo` | fetch POST | no | — | no |
+| till.html:20426 (vendored) | click `till-health-send` | `sendNow` | fetch POST | no | — | no |
+| till.html:20467 (vendored) | click | `healthClose, sureSheet` | fetch POST | no | — | no |
+| till.html:20542 (vendored) | click `till-workbook-get` | `workbookGet` | fetch POST | no | — | no |
+| till.html:20947 (vendored) | click `till-kot` | `sendKOT` | fetch POST | no | — | no |
+| till.html:20966 (vendored) | click `till-part-` | `dropPart` | fetch POST | no | — | no |
+| till.html:21359 (vendored) | click `till-order-go` | `orderGo` | fetch POST | no | — | no |
+| till.html:21375 (vendored) | click | `orderPick` | fetch POST | no | — | no |
+| till.html:21537 (vendored) | click | `pickPay` | fetch POST | no | — | no |
+| till.html:24147 (vendored) | click `till-stuck-release` | `releaseQueue` | fetch POST | no | — | no |
+| till.html:24149 (vendored) | click `till-stuck-copy` | `stuckCopy` | fetch POST | no | — | no |
+| till.html:24151 (vendored) | click `till-storage` | `openStorage` | fetch POST | no | — | no |
+| till.html:24152 (vendored) | click `till-check-sent` | `checkAbsorbedNow` | fetch POST | no | — | no |
+| till.html:24577 (vendored) | change | `retainSet, openStorage` | fetch POST | no | — | no |
+| till.html:24618 (vendored) | click `till-rescue` | `rescueOrphans` | fetch POST | no | — | no |
+| till.html:24632 (vendored) | click `till-wipe` | `wipeDevice` | fetch POST | **yes** | **no** | no |
+| till.html:24965 (vendored) | click `till-send-now` | `sendNow` | fetch POST | no | — | no |
+| till.html:24972 (vendored) | click `till-confirm-arrived` | `sendNow` | fetch POST | no | — | no |
+| till.html:26454 (vendored) | click `till-signin-takeover` | `usignBecome` | fetch POST | no | — | no |
+| till.html:26831 (vendored) | click `till-break` | `takeBreak` | fetch POST | no | — | no |
+| till.html:26832 (vendored) | click `till-handover` | `handOver` | fetch POST | no | — | no |
+| till.html:27385 (vendored) | change | `settingsKeySave` | fetch POST | no | — | no |
+| till.html:27421 (vendored) | click `till-set-signin` | `pairAgain` | fetch POST | no | — | no |
+| till.html:27423 (vendored) | click `till-set-signout` | `setClose, signoutOpen` | fetch POST | no | — | no |
