@@ -2195,10 +2195,11 @@ async function crmAddGo(kind, byHandle) {
 }
 
 /* ═══ 4 · ADD FOLLOW-UP — party picker · what · when (presets write into the date) · who ═════════════════════════ */
-var FUADD = { party: null };
+var FUADD = { party: null, asked: false };
 function crmFuAddOpen(partyKey, then, prefill) {
   var p = partyKey && CRM.byKey[partyKey];
   FUADD.party = p || null;
+  FUADD.asked = false;
   FUADD.then = then || null;
   FUADD.source = (prefill && prefill.source) || 'manual';
   modal(
@@ -2280,6 +2281,10 @@ function crmFuPicker(q) {
     box.innerHTML = '';
     return;
   }
+  if (!CRM.loaded) {
+    crmFuPickerLoad(box);
+    return;
+  }
   var list = CRM.rows
     .filter(function (item) {
       return [item.display_name, item.nickname, item.party_no].join(' ').toLowerCase().indexOf(q) >= 0 && item.kind !== 'walk-in';
@@ -2301,6 +2306,21 @@ function crmFuPicker(q) {
         );
       })
       .join('') || '<span class="hint">' + esc(tx('Nobody matches.')) + '</span>';
+}
+/**
+ * R81: the picker searches the Parties list, which only the Parties page used to load - opened straight at #/followups (a bookmark, a reload)
+ * it answered "Nobody matches." with nothing fetched. It now loads the list through crmLoad (the ONE loader Parties uses), once per open sheet, says
+ * so while it waits, repaints with what the person typed, and says in words if the list could not be read.
+ */
+function crmFuPickerLoad(box) {
+  var words = FUADD.asked && CRM.state === 'error' ? tx('Could not read your parties. Close this and try again.') : tx('Loading your parties…');
+  box.innerHTML = '<span class="hint" role="status">' + esc(words) + '</span>';
+  if (FUADD.asked) return;
+  FUADD.asked = true;
+  crmLoad(true).then(function () {
+    var again = document.getElementById('crm_fu_pq');
+    if (again) crmFuPicker(again.value);
+  });
 }
 async function crmFuSave() {
   var node = function (id) {

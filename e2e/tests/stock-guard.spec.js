@@ -18,8 +18,8 @@ test('[STK-02] a fresh zero refuses the order line; a shortfall rides the line t
   const stamp = async (qty, as_of) => { const r = await request.post(API + '/api/products/availability/bulk', { headers: { 'X-Api-Key': key }, data: { items: [{ code: 'BAS-25', qty, source: 'erp', as_of: as_of || new Date().toISOString() }] } }); expect(r.status()).toBe(200); };
   const order = async (quantity) => {
     const ident = 'stk' + Date.now().toString().slice(-7) + '@example.com';
-    const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { data: { identifier: ident, name: 'Stock Buyer' } })).json();
-    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { data: { identifier: ident, name: 'Stock Buyer', otp: st.dev_otp || require('../fixtures').signinCode('customer'), location: 'Chennai', line_items: [{ kind: 'product', item_id: item.item_id, quantity }] } });
+    const st = await (await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/start', { headers: { 'Idempotency-Key': crypto.randomUUID() }, data: { identifier: ident, name: 'Stock Buyer' } })).json();
+    const cf = await request.post(API + '/api/catalogue/' + encodeURIComponent(handle) + '/order/confirm', { headers: { 'Idempotency-Key': crypto.randomUUID() }, data: { identifier: ident, name: 'Stock Buyer', otp: st.dev_otp || require('../fixtures').signinCode('customer'), location: 'Chennai', line_items: [{ kind: 'product', item_id: item.item_id, quantity }] } });
     return { status: cf.status(), j: await cf.json() };
   };
 

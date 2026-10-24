@@ -155,6 +155,10 @@ function finNotSet(what) {
   return '<span data-b="' + what + '-unset" style="color:var(--grey)" title="' + esc(tx('Set it in Terms')) + '">' + esc(tx('Not set')) + '</span>';
 }
 
+/** R76: the early-pay offer the customer's Terms make, in rupees, under the due figure — the server's figures and words (books-engines.earlyOffer); '' when none holds */
+function finEarlyHTML(party) {
+  return party.early && party.early.valid ? '<div data-b="early" style="font-size:var(--fs-1);color:var(--grey)">' + esc(party.early.words || '') + '</div>' : '';
+}
 /* ── the columns: every figure is the server's ── */
 function finCols() {
   var c = function () {
@@ -182,7 +186,7 @@ function finCols() {
       w: 150,
       html: true,
       cell: function (p) {
-        return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>';
+        return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>' + finEarlyHTML(p);
       }
     },
     {
@@ -421,7 +425,7 @@ function finMount(frame) {
       }
     ],
     next: function (p) {
-      return bkDuesNext(p, FIN.cur);
+      return bkDuesNext(p, FIN.cur, 'fin-collect'); /* R76: the statement read repaints THIS list */
     },
     bulk: [{ id: 'remind', label: tx('Remind'), run: finRemindQueue }]
   });

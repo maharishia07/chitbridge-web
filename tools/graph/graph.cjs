@@ -14,15 +14,16 @@
  *   · a decisions file                         NONE exists in any of the three repos (searched by name and heading) — the
  *                                              `decision` node kind and `decided-by` edges are skipped, and meta says so
  *
- * Nodes  step · screen · function · route · table · test · pack · file
+ * Nodes  step · screen · function · route · table · test · pack · file · errcode · lesson · check   (the last three: FEEDGRAPH, tools/graph/apifeed.cjs)
  * Edges  implements (step → code) · calls (fn/screen/route → fn; fn → route via http) · reads / writes (code → table)
  *        tested-by (code → test) · requires (file → file) · vendors (adopted copy → engines source) · uses (file → pack)
  *        opens (screen → screen: a sheet raised from a page — SCREEN-ID, read from tools/screen-list.cjs)
+ *        returns (route → errcode) · enforced-by / mentions (lesson → check) · tested-by also from the api's error-tests / contract / evidence files
  *
  *   node tools/graph/graph.cjs build                      → tools/graph/out/calls.json + graph.json (gitignored)
  *   node tools/graph/graph.cjs impact <file|function>     flow steps, screens, routes and TESTS touched by a change there
  *   node tools/graph/graph.cjs changed <git-range>        git diff → impacted tests (the list a PR should run)  [--repo api|engines]
- *   node tools/graph/graph.cjs gaps                       steps with no test · functions on no flow · routes no screen calls · tables no route touches
+ *   node tools/graph/graph.cjs gaps                       steps with no test · functions on no flow · routes no screen calls · tables no route touches · routes no test proves · lessons nothing enforces
  *   flags: --roots web=DIR,api=DIR,engines=DIR  --out DIR  --json  --depth N  --top N
  *
  * ⚠️ WHAT IT CANNOT SEE, SAID PLAINLY: static names only. Dynamic dispatch (`window[name]()`), a holder chain longer than one
@@ -38,6 +39,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const S = require('./scan.cjs');
+const APIFEED = require('./apifeed.cjs');
 
 /* ── args ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 const argv = process.argv.slice(2);
@@ -45,7 +47,7 @@ const flag = (name, dflt) => {
   const i = argv.indexOf('--' + name);
   return i >= 0 ? (argv[i + 1] == null || /^--/.test(argv[i + 1]) ? true : argv[i + 1]) : dflt;
 };
-const positional = argv.filter((item, index) => !/^--/.test(item) && !(index > 0 && /^--(roots|out|depth|top|repo|endpoint-usage)$/.test(argv[index - 1])));
+const positional = argv.filter((item, index) => !/^--/.test(item) && !(index > 0 && /^--(roots|out|depth|top|repo|endpoint-usage|home)$/.test(argv[index - 1])));
 const CMD = positional[0];
 const ARG = positional[1];
 const HERE = __dirname;
@@ -67,6 +69,8 @@ const JSON_OUT = !!flag('json', false);
    screen and every step, which is true and useless. `--depth 0` lifts the limit. */
 const DEPTH = flag('depth', null) == null ? 4 : Number(flag('depth')) || 0;
 const TOP = Number(flag('top', 10)) || 10;
+/* the folder that holds docs/29-…/tests/TEST-LIBRARY.json and PM/API-LESSONS-AUDIT-*.md (the dev root, beside the repos) */
+const HOME = path.resolve(String(flag('home', path.resolve(ROOTS.web, '..'))));
 
 const exists = (p) => {
   try {
@@ -154,6 +158,18 @@ function linkNamedFiles(testFile, byId, edge) {
     if (file) edge(file, testFile.id, 'tested-by', 'reads');
   }
 }
+
+/** { kind: how many } for a list of nodes or edges, in first-seen order */
+function countKinds(items) {
+  const counts = {};
+  items.forEach((item) => {
+    counts[item.kind] = (counts[item.kind] || 0) + 1;
+  });
+  return counts;
+}
+
+/** the tested-by `via` of a test that calls a path: an open path (variable tail) that is not itself a route matched by PREFIX, which is a guess */
+const httpProofVia = (isOpenPath, isExactRoute) => (isOpenPath && !isExactRoute ? 'http-prefix' : 'http');
 
 function build() {
   const t0 = Date.now();
@@ -677,8 +693,10 @@ function build() {
       const before = f.scan.strings.filter((item) => item.start < p.pos && item.start > p.pos - 40 && /^(GET|POST|PUT|PATCH|DELETE)$/.test(item.text));
       if (before.length) method = before[before.length - 1].text;
       const ids = resolvePath(method, p.path, p.open);
+      /* an open path (a template literal with a variable tail) that is not itself a route is matched by prefix: a guess, weak proof */
+      const testVia = httpProofVia(p.open, pathIndex.has(method + ' ' + norm(p.path)));
       for (const id of ids) {
-        if (isTest) edge(id, f.id, 'tested-by', 'http');
+        if (isTest) edge(id, f.id, 'tested-by', testVia);
         else {
           edge(from, id, 'calls', 'http');
           callEdges.push([from, id, 'http']);
@@ -964,19 +982,16 @@ function build() {
     'no decisions file exists in web, api or engines (searched for *decision* files and "# Decisions" headings): the decision node kind and decided-by edges are skipped'
   );
 
+  /* ── 10b · FEEDGRAPH: the api's generated registers, tests, evidence, error codes and the lessons audit ─────────────── */
+  APIFEED.feed({ A, HOME, node, edge, byId, routes, files, norm, meta, present: meta.present });
+
   /* ── 11 · write ─────────────────────────────────────────────────────────────────────────────────────────────── */
   const list = [...nodes.values()].sort((first, second) => (first.id < second.id ? -1 : 1));
   const Ed = [...edges.values()].sort((first, second) =>
     first.from + first.to + first.kind + (first.via || '') < second.from + second.to + second.kind + (second.via || '') ? -1 : 1
   );
-  const kinds = {};
-  list.forEach((item) => {
-    kinds[item.kind] = (kinds[item.kind] || 0) + 1;
-  });
-  const ekinds = {};
-  Ed.forEach((e) => {
-    ekinds[e.kind] = (ekinds[e.kind] || 0) + 1;
-  });
+  const kinds = countKinds(list);
+  const ekinds = countKinds(Ed);
   meta.counts.nodes = kinds;
   meta.counts.edges = ekinds;
   meta.ms = Date.now() - t0;
@@ -1331,6 +1346,110 @@ function changed() {
 }
 
 /* ── gaps ───────────────────────────────────────────────────────────────────────────────────────────────────────── */
+/** the tested-by `via` values that are a GUESS or a gate-only proof: a path-prefix match, and an error-tests row holding only 401/403/500 */
+const WEAK_PROOF_VIAS = new Set(['http-prefix', 'error-tests-refusal']);
+
+/** how well tests prove one route: 'none' (no tested-by edge) · 'weak' (only guesses / refusals) · 'strong' ; plus which weak kinds it has */
+function proofOf(graph, route) {
+  const vias = (graph.out.get(route.id) || []).filter((link) => link.kind === 'tested-by').map((link) => link.via || '');
+  if (!vias.length) return { strength: 'none', vias };
+  return { strength: vias.every((kind) => WEAK_PROOF_VIAS.has(kind)) ? 'weak' : 'strong', vias };
+}
+
+/** the top files by route count, with each file's own route total */
+function topRouteFiles(list, routes) {
+  const perFile = {};
+  list.forEach((route) => {
+    perFile[route.file] = (perFile[route.file] || 0) + 1;
+  });
+  return Object.entries(perFile)
+    .sort((first, second) => second[1] - first[1])
+    .slice(0, TOP)
+    .map(([file, count]) => ({ file, routes: count, of: routes.filter((item) => item.file === file).length }));
+}
+
+/** gap 6 (FEEDGRAPH): routes by proof strength — none · weak only (a path-prefix guess, a refusal-only row) · strong (a test that calls the exact path, a contract, evidence, a handler status) */
+function routesNoProof(graph, routes) {
+  const graded = routes.map((route) => Object.assign({ route }, proofOf(graph, route)));
+  const unproven = graded.filter((item) => item.strength === 'none').map((item) => item.route);
+  const weak = graded.filter((item) => item.strength === 'weak');
+  const byStatus = {};
+  unproven.forEach((route) => {
+    const status = route.reg ? route.reg.status : 'not in register';
+    byStatus[status] = (byStatus[status] || 0) + 1;
+  });
+  const label = (route) => route.method + ' ' + route.path + (route.reg ? ' [' + route.reg.status + (route.reg.signed ? ', signed' : '') + ']' : '');
+  return {
+    total: routes.length,
+    strong: graded.length - unproven.length - weak.length,
+    unproven: unproven.length,
+    weakOnly: weak.length,
+    weakOnlyPrefixGuess: weak.filter((item) => item.vias.includes('http-prefix')).length,
+    weakOnlyRefusal: weak.filter((item) => !item.vias.includes('http-prefix')).length,
+    byRegisterStatus: byStatus,
+    signedButUnproven: unproven.filter((route) => route.reg && route.reg.signed).length,
+    topFiles: topRouteFiles(unproven, routes),
+    examples: unproven.slice(0, TOP).map(label),
+    weakList: weak.map((item) => label(item.route) + ' (' + (item.vias.includes('http-prefix') ? 'path-prefix guess' : 'refusal only') + ')')
+  };
+}
+
+/** gap 7 (FEEDGRAPH): lessons whose verdict is RULE ONLY or NOT ADDRESSED, those ADDRESSED only partly, and ADDRESSED rows whose named check was not found */
+function lessonsNoCheck(nodes) {
+  const lessons = nodes.filter((item) => item.kind === 'lesson');
+  const unenforced = lessons.filter((lesson) => lesson.gap);
+  const partly = lessons.filter((lesson) => lesson.partly);
+  const claimedNoCheck = lessons.filter((lesson) => !lesson.gap && !lesson.partly && !lesson.checksFound);
+  return {
+    total: lessons.length,
+    unenforced: unenforced.length,
+    ruleOnly: unenforced.filter((lesson) => lesson.verdict === 'rule-only').length,
+    notAddressed: unenforced.filter((lesson) => lesson.verdict === 'not-addressed').length,
+    partly: partly.length,
+    addressedButCheckNotFound: claimedNoCheck.map((lesson) => lesson.n),
+    list: unenforced.map((lesson) => lesson.n + ' [' + lesson.verdict + '] ' + lesson.text),
+    partlyList: partly.map((lesson) => lesson.n + ' [partly] ' + lesson.text)
+  };
+}
+
+/** the tests that cover a flow step: the ones its flows.json row names, and the ones its code reaches within 2 hops (never through a screen) */
+function stepTestsOf(graph, step) {
+  const explicit = (graph.out.get(step.id) || []).filter((link) => link.kind === 'tested-by').map((link) => link.to);
+  const implied = new Set();
+  const seen = new Set();
+  const list = [[step.id, 0]];
+  while (list.length) {
+    const [nodeId, depth] = list.shift();
+    if (seen.has(nodeId)) continue;
+    seen.add(nodeId);
+    for (const link of graph.out.get(nodeId) || []) {
+      if (link.kind === 'tested-by' && nodeId !== step.id) implied.add(link.to);
+      if ((link.kind === 'implements' || link.kind === 'calls') && depth < 2 && !link.to.startsWith('screen:')) list.push([link.to, depth + 1]);
+    }
+  }
+  return { explicit, implied: [...implied] };
+}
+
+/** the console block for gaps 6 and 7 (FEEDGRAPH) */
+function printFeedGaps(out) {
+  const proof = out.routesNoProof;
+  console.log(
+    '\n  6 · ROUTES NO TEST PROVES  — of ' + proof.total + ' routes: ' + proof.strong + ' strongly proven · ' + proof.weakOnly + ' weak proof only (' + proof.weakOnlyPrefixGuess +
+      ' path-prefix guess · ' + proof.weakOnlyRefusal + ' refusal-only 401/403/500) · ' + proof.unproven + ' unproven (no test edge of any kind); unproven by register status ' +
+      JSON.stringify(proof.byRegisterStatus) + '; ' + proof.signedButUnproven + ' of them are signed off'
+  );
+  proof.topFiles.forEach((item) => console.log('      ' + String(item.routes).padStart(4) + ' of ' + String(item.of).padEnd(4) + ' ' + item.file));
+  proof.examples.forEach((item) => console.log('        ' + item));
+  proof.weakList.slice(0, TOP).forEach((item) => console.log('        weak: ' + item));
+  const lessons = out.lessonsNoCheck;
+  console.log(
+    '\n  7 · LESSONS NOTHING ENFORCES  — ' + lessons.unenforced + ' of ' + lessons.total + ' API lessons (' + lessons.ruleOnly + ' rule only · ' + lessons.notAddressed +
+      ' not addressed) + ' + lessons.partly + ' only partly enforced' +
+      (lessons.addressedButCheckNotFound.length ? '; ADDRESSED but no CI check found (the audit only names a file): ' + lessons.addressedButCheckNotFound.join(' ') : '')
+  );
+  lessons.list.concat(lessons.partlyList).slice(0, TOP * 6).forEach((item) => console.log('      ' + item.slice(0, 150)));
+}
+
 function gaps() {
   const g = loadGraph();
   const N = [...g.nodes.values()];
@@ -1340,26 +1459,10 @@ function gaps() {
 
   /* 1 · flow steps with no test: none named in flows.json AND none reaches the step's code (depth 2 forward) */
   const steps = N.filter((item) => item.kind === 'step' && item.status !== 'missing');
-  const stepTests = (s) => {
-    const explicit = (g.out.get(s.id) || []).filter((e) => e.kind === 'tested-by').map((e) => e.to);
-    const implied = new Set();
-    const seen = new Set();
-    const list = [[s.id, 0]];
-    while (list.length) {
-      const [id, d] = list.shift();
-      if (seen.has(id)) continue;
-      seen.add(id);
-      for (const e of g.out.get(id) || []) {
-        if (e.kind === 'tested-by' && id !== s.id) implied.add(e.to);
-        if ((e.kind === 'implements' || e.kind === 'calls') && d < 2 && !e.to.startsWith('screen:')) list.push([e.to, d + 1]);
-      }
-    }
-    return { explicit, implied: [...implied] };
-  };
   const noTest = [],
     noExplicit = [];
   for (const s of steps) {
-    const t = stepTests(s);
+    const t = stepTestsOf(g, s);
     if (!t.explicit.length) noExplicit.push(s);
     if (!t.explicit.length && !t.implied.length) noTest.push(s);
   }
@@ -1473,6 +1576,9 @@ function gaps() {
     (item) => item.nav
   );
 
+  out.routesNoProof = routesNoProof(g, routes);
+  out.lessonsNoCheck = lessonsNoCheck(N);
+
   if (JSON_OUT) return console.log(JSON.stringify(out));
   console.log('');
   out.notes.forEach((item) => console.log('  ⚠ ' + item));
@@ -1534,6 +1640,7 @@ function gaps() {
     '\n  5 · SCREENS NO TEST  — ' + out.screensNoTest.untested + ' of ' + out.screensNoTest.total + ' screens (labs excluded) are reached by no web test'
   );
   out.screensNoTest.list.slice(0, TOP).forEach((item) => console.log('      ' + item));
+  printFeedGaps(out);
   if (out.navNoDispatch.length) console.log('\n  nav keys in CBSCREENS with no dispatch line found in app.html: ' + out.navNoDispatch.join(' · '));
   console.log('');
 }

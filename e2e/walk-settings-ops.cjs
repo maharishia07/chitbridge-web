@@ -20,7 +20,7 @@ const crmApi = require('./lib/crm-api.cjs');   /* RAIL-LAB-SRV1: the rail card (
 
 const walk = async (w) => {
   const { page, ctx, base } = w;
-  const S = { calls: [], coassist: false, ctrFail: false, opened: [] };
+  const S = { calls: [], polFail: false, coassist: false, ctrFail: false, opened: [] };
   const ago = (min) => new Date(TD.nowMs() - min * 60000).toISOString();
   const OWNER_SAYS = 'Only the owner can change the counters.';
   const COUNTERS = () => [
@@ -76,7 +76,7 @@ const walk = async (w) => {
       if (/^\/api\/integrations\/download\//.test(p)) { S.calls.push('GET ' + p + u.search); return r.fulfill({ status: 200, contentType: 'application/zip', body: 'PK' }); }
       if (/\/approve$/.test(p)) return J(r, 200, { ok: true, enrol: { approved: true } });
       if (p === '/api/entities/policy' && m === 'GET') return J(r, 200, { flags: FLAGS, schema: SCHEMA, bound: { dispute_scope: 'per-party' }, bound_schema: BOUND_SCHEMA, may: MAY });
-      if (p === '/api/entities/policy' && m === 'PATCH') { Object.assign(FLAGS, body); return J(r, 200, { flags: FLAGS }); }
+      if (p === '/api/entities/policy' && m === 'PATCH') { if (S.polFail) return J(r, 403, { error: 'Forbidden', message: 'Only the owner changes this rule.' }); Object.assign(FLAGS, body); return J(r, 200, { flags: FLAGS }); }
       if (p === '/api/entities/entitlements') return J(r, 200, { plan: 'test', name: 'Test', sellable: false, limited: false, features: ['chits'], enforced: false,
         quotas: { entities: { state: 'unlimited' }, actors: { state: 'unset' }, chits_per_month: { state: 'capped', limit: 500 } } });
       if (p === '/api/entities/usage') return J(r, 200, { window_days: 30, counts: { billed: 12 }, total_cost_usd: 0.0123, by_meter: [{ meter: 'chit.send', events: 12, cost: 0.0123 }] });
@@ -184,11 +184,37 @@ const walk = async (w) => {
     return { ok: /Orders go to the books/.test(lbl) && hidden && /Policy/.test(title) && optional && /platform/i.test(who) && dis && noSave && /Set by the platform/.test(why || ''), saw: '"' + lbl.slice(0, 40) + '" · hidden rows ' + hidden + ' · who "' + who + '" · greyed ' + dis + ' "' + why + '" · no Save ' + noSave };
   });
   if (!REAL) {
-    await w.step('S14', 'the weighed-goods rule reads 0.5 % -> 0.75 -> Save -> one PATCH { tol_weight_bp: 75 } (stored in basis points, shown as a percentage)', async () => {
+    /* R121 (walk 24 Oct): a policy row edits a DRAFT. Nothing is written on change; Save asks first; Cancel puts the old value back and writes nothing. */
+    const IN = '[data-testid="sx-pol-in-tol_weight_bp"]', SAVE = '[data-testid="sx-pol-save-tol_weight_bp"]', CANCEL = '[data-testid="sx-pol-cancel-tol_weight_bp"]';
+    const policyPatches = () => S.calls.filter((c) => c.includes('PATCH /api/entities/policy') && c.includes('tol_weight_bp'));   /* this row's own writes (S10 left a connectors_in_use one in the log) */
+    const vis = (sel) => page.locator(sel).isVisible().catch(() => false);
+    await w.step('S14', 'R121 · change a rule, leave the box -> nothing is sent; Save and Cancel appear; Cancel puts 0.5 back and still nothing is sent', async () => {
+      await openRow('sx-pol-tol_weight_bp');
+      const before = await vis(SAVE);
+      await page.fill(IN, '0.75'); await page.dispatchEvent(IN, 'change'); await page.dispatchEvent(IN, 'blur'); await page.waitForTimeout(500);
+      const shownNow = (await vis(SAVE)) && (await vis(CANCEL)), sentOnChange = policyPatches().length;
+      await page.click(CANCEL); await page.waitForTimeout(300);
+      const back = await page.inputValue(IN), gone = !(await vis(SAVE)), sent = policyPatches().length;
+      return { ok: !before && shownNow && sentOnChange === 0 && back === '0.5' && gone && sent === 0, saw: 'buttons before ' + before + ' · after edit ' + shownNow + ' · PATCH on change ' + sentOnChange + ' · after Cancel "' + back + '" buttons gone ' + gone + ' · PATCH ' + sent };
+    });
+    await w.step('S14b', 'R121 · change -> Save -> the confirm says "Change … from 0.5 % to 0.75 %?" -> No sends nothing; Yes -> one PATCH { tol_weight_bp: 75 }, the row says Saved, a reload keeps 0.75', async () => {
+      await page.fill(IN, '0.75'); await page.dispatchEvent(IN, 'change'); await page.click(SAVE);
+      await page.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
+      const ask = await txt('[data-testid="confirm"]');
+      await page.click('[data-testid="confirm-cancel"]'); await page.waitForTimeout(400);
+      const afterNo = policyPatches().length;
+      await page.click(SAVE); await yes(); await page.waitForTimeout(400);
+      const p = policyPatches(), out = await txt('[data-testid="sx-pol-ok-tol_weight_bp"]');
+      await go('policy', '[data-testid="sx-pol-tol_weight_bp"]');
       const now = await txt('[data-testid="sx-pol-tol_weight_bp"]');
-      await openRow('sx-pol-tol_weight_bp'); await page.fill('[data-testid="sx-pol-in-tol_weight_bp"]', '0.75'); await page.dispatchEvent('[data-testid="sx-pol-in-tol_weight_bp"]', 'change'); await page.waitForTimeout(600);   /* WALK-REG 2026-10-16: autosaves on change, no Save */
-      const p = wrote(/PATCH \/api\/entities\/policy/).pop() || '', out = await txt('[data-testid="sx-pol-ok-tol_weight_bp"]');
-      return { ok: /0\.5 %/.test(now) && /"tol_weight_bp":75/.test(p) && /Saved/.test(out), saw: '"' + now.slice(-30) + '" · ' + p.slice(0, 80) + ' · "' + out + '"' };
+      return { ok: /Change .*from 0.5.* to 0.75.*?/.test(ask) && afterNo === 0 && p.length === 1 && /"tol_weight_bp":75/.test(p[0]) && /Saved/.test(out) && /0.75 %/.test(now), saw: '"' + ask.slice(0, 80) + '" · after No ' + afterNo + ' · ' + p.length + ' PATCH ' + (p[0] || '').slice(-30) + ' · "' + out + '" · reload "' + now.slice(-24) + '"' };
+    });
+    await w.step('S14c', 'R121 · the server refuses -> the row says so in the words the server gave and keeps the draft; never silent', async () => {
+      S.polFail = true;
+      await openRow('sx-pol-tol_weight_bp'); await page.fill(IN, '1.25'); await page.dispatchEvent(IN, 'change'); await page.click(SAVE); await yes(); await page.waitForTimeout(400);
+      S.polFail = false;
+      const out = await txt('[data-testid="sx-pol-ok-tol_weight_bp"]'), draft = await page.inputValue(IN);
+      return { ok: /Only the owner changes this rule/.test(out) && draft === '1.25', saw: '"' + out + '" · draft "' + draft + '"' };
     });
   }
 

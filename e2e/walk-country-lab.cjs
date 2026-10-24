@@ -40,7 +40,18 @@ const W = require('./lib/walk.cjs');
 const { measure } = require('./lib/theme-measure.cjs');   /* the contrast measurement, run INSIDE the page - one copy, shared with crm-themes.cjs */
 const SA_WHY = 'ChitBridge does not keep books for Saudi Arabia yet — selling and the rail still work; books arrive when its pack ships.';
 const text = (page, sel) => page.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-const verdicts = (page) => page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr[data-row]').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; });
+const verdicts = async (page) => { const raw = await page.evaluate(() => { const o = {}; document.querySelectorAll('#rows-body tr[data-row]').forEach((t) => { o[t.dataset.row] = t.querySelector('.verdict').textContent.trim(); }); return o; }); Object.keys(raw).forEach((k) => { raw[k] = kind(raw[k]); }); return raw; };
+/** CTRY-49: a verdict cell reads "Same" or "Changes: ..." - the word is the first one */
+const kind = (t) => (/^Same/.test(t) ? 'Same' : /^Changes/.test(t) ? 'Changes' : t);
+/** CTRY-49: open a row's popup (the labs' one popup), read it whole, close it with its x; the table keeps one short line, the detail lives here */
+const detail = async (page, key) => {
+  await page.click('[data-testid="cl-more-' + key + '"]'); await page.waitForSelector('[data-testid="lk-pop"]', { timeout: 5000 });
+  const t = await text(page, '[data-testid="lk-pop"]');
+  await page.click('[data-testid="lk-pop-close"]'); await page.waitForSelector('[data-testid="lk-pop"]', { state: 'detached', timeout: 5000 });
+  return t;
+};
+/** the row's line plus its popup: what the CL1 cell once said whole */
+const full = async (page, key) => (await text(page, '[data-testid="cl-row-' + key + '"]')) + ' ' + (await detail(page, key));
 const pick = async (page, side, code) => { await page.selectOption('[data-testid="cl-' + side + '"]', code); await page.waitForTimeout(150); };
 const theme = async (page, key) => { await page.evaluate((k) => { CBAvatar.applyTheme(k); }, key); await page.waitForTimeout(120); };
 /** every visible text on the page against the ground it is painted on; the failing pairs (a gradient ground is not measurable and is left out) */
@@ -73,12 +84,12 @@ const walk = async (w) => {
   await w.step('L2', 'IN -> AU: every row read from the packs and marked - INR -> AUD, April -> July, state-split GST -> one head, BAS with its boxes', async () => {
     await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
     const v = await verdicts(page);
-    const cur = await text(page, '[data-testid="cl-row-currency"]'), fy = await text(page, '[data-testid="cl-row-fy"]'), sch = await text(page, '[data-testid="cl-row-scheme"]');
-    const ret = await text(page, '[data-testid="cl-row-returns"]'), led = await text(page, '[data-testid="cl-row-ledgers"]');
-    const ok = Object.keys(v).length === 16 && Object.entries(v).every(([k, x]) => x === (k === 'voucher' ? 'SAME' : 'DIFFERENT'))   /* CTRY-39: six more rows; IN and AU share one voucher shape */
+    const cur = await full(page, 'currency'), fy = await full(page, 'fy'), sch = await full(page, 'scheme');
+    const ret = await full(page, 'returns'), led = await full(page, 'ledgers');
+    const ok = Object.keys(v).length === 16 && Object.entries(v).every(([k, x]) => x === (k === 'voucher' ? 'Same' : 'Changes'))   /* CTRY-39: six more rows; IN and AU share one voucher shape */
       && /INR/.test(cur) && /AUD/.test(cur) && /April/.test(fy) && /July/.test(fy) && /split by state/.test(sch) && /border/.test(sch) && /heads gst/.test(sch)
       && /none in the pack/.test(ret) && /no returns member/.test(ret) && /BAS/.test(ret) && /8 boxes/.test(ret) && /added/.test(led) && /renamed/.test(led);
-    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'DIFFERENT').length + ' different (voucher numbers the same) · ' + ret.slice(0, 70) };
+    return { ok, saw: Object.keys(v).length + ' rows · ' + Object.values(v).filter((x) => x === 'Changes').length + ' different (voucher numbers the same) · ' + ret.slice(0, 70) };
   });
 
   await w.step('L3', 'IN -> AU: the ABN box answers from the pack (a wrong digit is said); the GSTIN box from the profile-map engine', async () => {
@@ -105,8 +116,8 @@ const walk = async (w) => {
 
   await w.step('L5', 'AU -> AE: GST -> VAT, BAS -> VAT201 with its boxes, TRN 15 digits with no check digit; a kind the UAE pack does not know is said', async () => {
     await pick(page, 'from', 'AU'); await pick(page, 'to', 'AE');
-    const sch = await text(page, '[data-testid="cl-row-scheme"]'), ret = await text(page, '[data-testid="cl-row-returns"]'), tid = await text(page, '[data-testid="cl-row-taxid"]');
-    const inv = await text(page, '[data-testid="cl-row-invoice"]');
+    const sch = await full(page, 'scheme'), ret = await full(page, 'returns'), tid = await full(page, 'taxid');
+    const inv = await full(page, 'invoice');
     await page.fill('[data-testid="cl-id-to"]', '100 0000 0000 0003');
     const trn = await text(page, '[data-testid="cl-idres-to"]');
     const notes = await text(page, '[data-testid="cl-notes-to"]');
@@ -193,19 +204,19 @@ const walk = async (w) => {
     return { ok, saw: 'pane ' + r.paneW + 'px · cards ' + r.stacked + ' · no inner scroll ' + r.noScroll + ' · ' + r.controls.length + ' controls, ' + cut.length + ' cut' + (cut.length ? ' ("' + cut[0].t + '" ' + cut[0].w + ' > ' + cut[0].room + ')' : '') };
   });
 
-  await w.step('C5', '(#5) One plain line per cell (<= 20 words shown); the legal detail and its citation behind a closed "why" fold', async () => {
+  await w.step('C5', '(#5, CTRY-49) One short line per cell (<= 30 words shown), no fold in the table; the legal detail and its citation open in the row\'s popup', async () => {
     await pick(page, 'from', 'AU'); await pick(page, 'to', 'AE');
     const r = await page.evaluate((vwSrc) => {
       const vw = eval(vwSrc);
-      const cells = [...document.querySelectorAll('#rows-body tr[data-row] td.v, #rows-body tr[data-row] td.means')].map((td) => ({ row: td.parentElement.dataset.row, words: vw(td), folds: td.querySelectorAll('details.why').length, open: td.querySelectorAll('details[open]').length }));
+      const cells = [...document.querySelectorAll('#rows-body tr[data-row] td.v, #rows-body tr[data-row] td.verdict')].map((td) => ({ row: td.parentElement.dataset.row, words: vw(td), folds: td.querySelectorAll('details').length }));
       const hints = [...document.querySelectorAll('.pane.left .hint, .pane.right > .hint')].filter((h) => !h.closest('details') && getComputedStyle(h).display !== 'none').map((h) => ({ words: vw(h), t: h.textContent.trim().slice(0, 30) }));
-      const kinds = document.querySelector('[data-testid="cl-row-kinds"] td.v.to');
-      return { cells, hints, citeInText: /DL Art\. 45/.test(kinds.textContent), citeShown: /DL Art\. 45/.test((function () { const c = kinds.cloneNode(true); c.querySelectorAll('details').forEach((d) => d.remove()); return c.textContent; })()), folds: document.querySelectorAll('#rows-body details.why').length };
+      return { cells, hints, citeInTable: /DL Art\. 45/.test(document.querySelector('[data-testid="cl-row-kinds"]').textContent), folds: document.querySelectorAll('#rows-body details').length, more: document.querySelectorAll('#rows-body [data-testid^="cl-more-"]').length };
     }, visibleWords);
-    const over = r.cells.filter((c) => c.words > 20), overHints = r.hints.filter((h) => h.words > 20);
-    const ok = over.length === 0 && overHints.length === 0 && r.citeInText && !r.citeShown && r.folds >= 10 && r.cells.every((c) => c.open === 0);
+    const pop = await detail(page, 'kinds');
+    const over = r.cells.filter((c) => c.words > 30), overHints = r.hints.filter((h) => h.words > 20);
+    const ok = over.length === 0 && overHints.length === 0 && !r.citeInTable && /DL Art\. 45/.test(pop) && r.folds === 0 && r.more === 16;
     await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
-    return { ok, saw: r.cells.length + ' cells, longest ' + Math.max(...r.cells.map((c) => c.words)) + ' words' + (over.length ? ' (over: ' + over.map((c) => c.row + ' ' + c.words).join(', ') + ')' : '') + ' · ' + r.folds + ' why-folds, all closed · DL Art. 45 in the fold only ' + (r.citeInText && !r.citeShown) + ' · hints ≤ 20 words ' + (overHints.length === 0) };
+    return { ok, saw: r.cells.length + ' cells, longest ' + Math.max(...r.cells.map((c) => c.words)) + ' words' + (over.length ? ' (over: ' + over.map((c) => c.row + ' ' + c.words).join(', ') + ')' : '') + ' · ' + r.folds + ' folds in the table · ' + r.more + ' Details buttons · DL Art. 45 in the popup only ' + (!r.citeInTable && /DL Art\. 45/.test(pop)) + ' · hints ≤ 20 words ' + (overHints.length === 0) };
   });
 
   await w.step('C6', '(#6) A reserved right gutter: the table ends before the window\'s edge and nothing fixed overlaps the "what it means" column', async () => {
@@ -239,6 +250,88 @@ const walk = async (w) => {
     const d = await vis();
     const ok = a.same === 16 && a.shown === 0 && /^16 rows are the same · show/.test(a.fold) && b.shown === 16 && /hide/.test(b.fold) && c.shown === 0 && d.same === 1 && /^1 row is the same/.test(d.fold) && d.shown === 15;
     return { ok, saw: 'AU→AU: ' + a.same + ' same, ' + a.shown + ' shown, "' + a.fold.slice(0, 40) + '" → show: ' + b.shown + ' → hide: ' + c.shown + ' · IN→AU: ' + d.same + ' same row folded' };
+  });
+
+  /* ── CTRY-49 (Athi, 23 Oct): "Same" / "Changes", a row compared part by part, the full detail in a popup ───────────────────────────────── */
+  await w.step('D1', '(CTRY-49) IN -> AU, Currency: the line reads "Changes: ₹ → A$ · same rule: 2 decimals" (the code alone no longer decides)', async () => {
+    await pick(page, 'from', 'IN'); await pick(page, 'to', 'AU');
+    const cur = await text(page, '[data-testid="cl-verdict-currency"]');
+    await pick(page, 'to', 'IN');
+    const none = await text(page, '[data-testid="cl-samefold"]');
+    await pick(page, 'to', 'AU');
+    const ok = cur === 'Changes: ₹ → A$ · same rule: 2 decimals' && /^\d+ rows are the same/.test(none);
+    return { ok, saw: '"' + cur + '" · IN→IN: "' + none.slice(0, 40) + '…"' };
+  });
+
+  await w.step('D2', '(CTRY-49) every row says "Same" or "Changes: …" and names its parts; no chip says SAME or DIFFERENT any more', async () => {
+    const r = await page.evaluate(() => [...document.querySelectorAll('#rows-body tr[data-row] .verdict')].map((td) => ({ row: td.parentElement.dataset.row, t: td.textContent.trim() })));
+    const bad = r.filter((x) => !(/^Same$/.test(x.t) || /^Changes: /.test(x.t)) || /SAME|DIFFERENT/.test(x.t));
+    const arrows = r.filter((x) => /→/.test(x.t)).length;
+    return { ok: r.length === 16 && bad.length === 0 && arrows >= 10, saw: r.length + ' rows, ' + bad.length + ' not in the new words · ' + arrows + ' name what changed with an arrow · e.g. fy "' + (r.find((x) => x.row === 'fy') || {}).t + '" · scheme "' + ((r.find((x) => x.row === 'scheme') || {}).t || '').slice(0, 70) + '…"' };
+  });
+
+  await w.step('D3', '(CTRY-49) the Details button opens the popup: both countries\' values, what it means, what ChitBridge does; the x, Esc and a press outside close it', async () => {
+    await page.click('[data-testid="cl-more-currency"]'); await page.waitForSelector('[data-testid="lk-pop"]');
+    const r = await page.evaluate(() => { const q = (s) => (document.querySelector(s) || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim(); return {
+      title: q('[data-testid="lk-pop"] header b'), verdict: q('[data-testid="cl-detail-verdict"]'), from: q('[data-testid="cl-detail-from"]'), to: q('[data-testid="cl-detail-to"]'), means: q('[data-testid="cl-detail-means"]'), does: q('[data-testid="cl-detail-does"]'),
+      parts: document.querySelectorAll('[data-testid="cl-parts"] tbody tr').length, modal: document.querySelector('[data-testid="lk-pop"]').getAttribute('aria-modal') }; });
+    await page.click('[data-testid="lk-pop-close"]'); const x = await page.$('[data-testid="lk-pop"]');
+    await page.click('[data-testid="cl-more-fy"]'); await page.waitForSelector('[data-testid="lk-pop"]'); await page.keyboard.press('Escape'); const esc = await page.$('[data-testid="lk-pop"]');
+    await page.click('[data-testid="cl-more-fy"]'); await page.waitForSelector('[data-testid="lk-pop"]'); await page.mouse.click(4, 4); await page.waitForTimeout(100); const out = await page.$('[data-testid="lk-pop"]');
+    const ok = /Currency · India vs Australia/.test(r.title) && /^Changes: ₹ → A\$/.test(r.verdict) && /INR/.test(r.from) && /AUD/.test(r.to) && /What it means for the shop/.test(r.means) && /What ChitBridge does/.test(r.does) && r.parts >= 2 && r.modal === 'true' && !x && !esc && !out;
+    return { ok, saw: '"' + r.title + '" · ' + r.parts + ' parts · from "' + r.from.slice(0, 40) + '" · to "' + r.to.slice(0, 40) + '" · closes with x ' + !x + ', Esc ' + !esc + ', outside ' + !out };
+  });
+
+  await w.step('D4', '(CTRY-49) the popup, Cream and Dark at 1366 and 390 px: AA on every text, no sideways scroll, nothing cut', async () => {
+    const bad = [], notes = [];
+    for (const [th, wd, ht] of [['cream', 1366, 900], ['dark', 1366, 900], ['cream', 390, 844], ['dark', 390, 844]]) {
+      await page.setViewportSize({ width: wd, height: ht }); await theme(page, th); await page.waitForTimeout(200);
+      await page.click('[data-testid="cl-more-invoice"]'); await page.waitForSelector('[data-testid="lk-pop"]'); await page.waitForTimeout(150);
+      const c = await contrast(page);
+      const g = await page.evaluate(() => { const p = document.querySelector('[data-testid="lk-pop"]'), b = p.getBoundingClientRect(); return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, inside: b.left >= 0 && b.right <= window.innerWidth + 1, inner: p.scrollWidth > p.clientWidth + 1 }; });
+      await page.click('[data-testid="lk-pop-close"]');
+      if (c.bad.length || g.sw > g.iw || !g.inside || g.inner) bad.push(th + '@' + wd + ' ' + c.bad.slice(0, 2).map((x) => '"' + x.text + '" ' + x.ratio + '/' + x.need).join(', ') + ' sw ' + g.sw + '/' + g.iw + ' inside ' + g.inside + ' inner ' + g.inner);
+      notes.push(th + '@' + wd + ': ' + c.n + ' texts');
+    }
+    await theme(page, 'cream'); await page.setViewportSize({ width: 1366, height: 900 });
+    return { ok: bad.length === 0, saw: notes.join(' · ') + (bad.length ? ' · FAIL ' + bad.join(' | ') : ' · all AA, no sideways scroll, popup inside the window') };
+  });
+
+  await w.step('D5', '(UX-112) the popup keeps its header: its body scrolls, the title and the x stay in view; a list inside the popup scrolls in its own list, under its own header', async () => {
+    await page.setViewportSize({ width: 1366, height: 420 });   /* short window: the detail is longer than the popup */
+    await page.click('[data-testid="cl-more-invoice"]'); await page.waitForSelector('[data-testid="lk-pop"]'); await page.waitForTimeout(150);
+    const inView = () => page.evaluate(() => {
+      const p = document.querySelector('[data-testid="lk-pop"]'), h = p.querySelector('header'), x = p.querySelector('.lk-pop-x'), b = p.querySelector('.lk-pop-body');
+      const hr = h.getBoundingClientRect(), pr = p.getBoundingClientRect(), xr = x.getBoundingClientRect();
+      const hit = document.elementFromPoint(xr.left + xr.width / 2, xr.top + xr.height / 2);
+      return { long: b.scrollHeight > b.clientHeight + 4, bodyTop: Math.round(b.scrollTop), frameTop: Math.round(p.scrollTop),
+        header: hr.top >= pr.top - 1 && hr.top >= 0 && hr.bottom <= window.innerHeight, x: !!hit && (hit === x || x.contains(hit)) };
+    });
+    await page.evaluate(() => { const b = document.querySelector('[data-testid="lk-pop"] .lk-pop-body'); b.scrollTop = b.scrollHeight; });
+    await page.waitForTimeout(100);
+    const a = await inView();
+    await page.click('[data-testid="lk-pop-close"]');
+    /* the same popup holding a CBList ("and N more"): the list scrolls in its own .cbl-list, its column header stays, the popup body does not move */
+    await page.addScriptTag({ url: base + '/app/list-ctl.js' });
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'ux112-host'; document.body.appendChild(host);
+      const items = []; for (let i = 1; i <= 120; i++) items.push({ name: 'Line ' + i, note: 'row ' + i });
+      CBLabKit.more(host, { id: 'ux112', title: 'Many lines', items, columns: [{ key: 'name', label: 'Name' }, { key: 'note', label: 'Note' }] });
+    });
+    await page.click('[data-testid="lk-more-ux112"]'); await page.waitForSelector('[data-testid="lk-pop"] .cbl-list'); await page.waitForTimeout(200);
+    await page.evaluate(() => { const l = document.querySelector('[data-testid="lk-pop"] .cbl-list'); l.scrollTop = l.scrollHeight; });
+    await page.waitForTimeout(100);
+    const c = await page.evaluate(() => {
+      const p = document.querySelector('[data-testid="lk-pop"]'), l = p.querySelector('.cbl-list'), ch = p.querySelector('[role=columnheader]'), h = p.querySelector('header');
+      const lr = l.getBoundingClientRect(), cr = ch ? ch.getBoundingClientRect() : null;
+      return { listTop: Math.round(l.scrollTop), bodyTop: Math.round(p.querySelector('.lk-pop-body').scrollTop), header: h.getBoundingClientRect().top >= 0,
+        col: !!cr && cr.top >= 0 && cr.bottom <= lr.bottom && cr.bottom <= window.innerHeight };
+    });
+    await page.click('[data-testid="lk-pop-close"]'); await page.evaluate(() => document.getElementById('ux112-host').remove());
+    await page.setViewportSize({ width: 1366, height: 900 });
+    const ok = a.long && a.bodyTop > 0 && a.frameTop === 0 && a.header && a.x && c.listTop > 0 && c.bodyTop === 0 && c.header && c.col;
+    return { ok, saw: 'detail: longer than the popup ' + a.long + ', body scrolled ' + a.bodyTop + ' px, frame ' + a.frameTop + ' px, title in view ' + a.header + ', x pressable ' + a.x +
+      ' · list popup: list scrolled ' + c.listTop + ' px, popup body ' + c.bodyTop + ' px, title in view ' + c.header + ', column header in view ' + c.col };
   });
 
   await w.step('K1', '(CTRY-38) one line says what the side-by-side is, and that any pack can be picked on either side', async () => {

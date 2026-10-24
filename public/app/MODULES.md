@@ -82,7 +82,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (50)
+## Shared (52)
 
 | file | loading | what it is |
 |---|---|---|
@@ -97,6 +97,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-starter-categories.js` | eager |  |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
+| `country-compare.js` | — |  |
 | `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
 | `country-ready.js` | — |  |
 | `device-id.js` | eager | device-id.js — CBDevice: THIS BROWSER'S DEVICE ID, AND X-Device-Id ON EVERY CALL TO THE API (K-SEC PR A, 2026-10-21) |
@@ -131,6 +132,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-qps.js` | — |  |
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
+| `tax-slab-ui.js` | eager | THE SLAB PICKERS AND THE RATE CHIP, ONE COPY (F5 W1a, 2026-10-24; critic 3: "the slab UI already exists. Move it, do not build it") |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
@@ -139,4 +141,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*112 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*114 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

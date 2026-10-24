@@ -108,6 +108,23 @@
   details.why > summary::before{ content:'▸ '; } details.why[open] > summary::before{ content:'▾ '; }
   details.why > summary::-webkit-details-marker{ display:none; }
   details.why > div, details.why > ul{ margin-top:3px; }
+  /* CTRY-49: the verdict line ("Changes: ₹ → A$ · same rule: 2 decimals" / "Same") and the row's popup */
+  .vline b{ font-weight:700; } .vline.ok{ color:var(--ok-2,#2c7a43); } .vline.bad{ color:var(--bad,#b4453f); } .vline.bad b{ color:var(--bad,#b4453f); }
+  .lk-pop.cl-detail{ width:min(720px,94vw); max-height:88vh; font-size:var(--fs-2,12.5px); }   /* UX-112: no overflow on the frame; lab-kit.css scrolls the body */
+  .cl-detail .lk-pop-body{ padding:6px 16px 14px; }
+  .cl-detail p{ margin:8px 0; }
+  .cl-detail h4{ margin:0 0 4px; font-size:var(--fs-3,14px); }
+  .cl-detail .rd-sides{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+  .cl-detail .rd-side{ border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:8px 10px; min-width:0; overflow-wrap:anywhere; }
+  .cl-detail .why-open{ margin-top:5px; padding-top:4px; border-top:1px solid var(--line-2,#efece4); }
+  .cl-detail table.cmp-parts{ width:100%; border-collapse:collapse; margin:6px 0; table-layout:fixed; }
+  .cl-detail table.cmp-parts th:nth-child(1){ width:24%; } .cl-detail table.cmp-parts th:nth-child(4){ width:20%; }
+  .cl-detail *{ min-width:0; }
+  .cl-detail table.cmp-parts th, .cl-detail table.cmp-parts td{ text-align:left; padding:4px 6px; border-bottom:1px solid var(--line-2,#efece4); vertical-align:top; overflow-wrap:break-word; }
+  .cl-detail table.cmp-parts th{ color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); text-transform:uppercase; letter-spacing:0; }
+  .cl-detail table.cmp-parts td:last-child, .cl-detail table.cmp-parts th:last-child{ white-space:nowrap; }   /* "Changes" never breaks mid-word at 390 px */
+  .cl-detail table.cmp-parts tr.different td:last-child{ color:var(--bad,#b4453f); font-weight:700; }
+  @media (max-width: 640px){ .cl-detail .rd-sides{ grid-template-columns:1fr; } }
   .card{ background:var(--card,#fff); border:1px solid var(--line,#e7e3d8); border-radius:8px; padding:8px 10px; font-size:var(--fs-2,12.5px); }
   .card.nopack{ border-color:var(--gold-line,#e6d9a8); background:var(--warn-tint,#fbf3e3); color:var(--warn-2,#8a5a1e); }
   .card.blocked{ border-color:var(--bad-line,#eccbc9); background:var(--bad-tint,#fbeceb); }
@@ -119,8 +136,8 @@
   table.cmp th{ background:var(--neutral-tint,#EEF1F5); color:var(--grey-2,#545A61); font-size:var(--fs-1,11px); text-transform:uppercase; letter-spacing:.06em; font-weight:700; text-align:left; padding:5px 7px; border-bottom:1px solid var(--line,#e7e3d8); }
   table.cmp td{ padding:6px 7px; border-bottom:1px solid var(--line-2,#efece4); vertical-align:top; overflow-wrap:anywhere; }
   table.cmp tr:last-child td{ border-bottom:0; }
-  table.cmp td.k{ font-weight:700; width:14%; }
-  table.cmp td.v{ width:30%; } table.cmp td.verdict{ width:10%; } table.cmp td.means{ width:16%; color:var(--grey-2,#545A61); }
+  table.cmp td.k{ font-weight:700; width:12%; }
+  table.cmp td.v{ width:24%; } table.cmp td.verdict{ width:30%; } table.cmp td.means{ width:10%; color:var(--grey-2,#545A61); }
   /* ⭐ THE DIFFERENCE IS MARKED, NEVER WASHED (CL2 #1): a 3 px rule on the TO cell's left edge in the theme's --blue (text-grade in all 16 themes,
      so ≥ 3:1 as a mark), plus the verdict chip. The text keeps the card's own ink on the card's own ground in every theme. */
   table.cmp tr.different td.v.to{ box-shadow:inset 3px 0 0 var(--blue,#3F66A6); }
@@ -287,7 +304,7 @@
   <section class="pane right" data-testid="cl-outcome">
     <div class="sec">Side by side — read from the packs</div>
     <table class="cmp" data-testid="cl-rows">
-      <thead><tr><th>Row</th><th id="th-from">Registered</th><th id="th-to">Registering</th><th>Verdict</th><th>What it means for the shop</th></tr></thead>
+      <thead><tr><th>Row</th><th id="th-from">Registered</th><th id="th-to">Registering</th><th>What changes</th><th>More</th></tr></thead>
       <tbody id="rows-body"></tbody>
     </table>
     <details class="why hint" style="margin-top:6px"><summary>why a row says "none in the pack"</summary><div>That is the pack's own silence, painted: this page fills nothing in. Verified: a pack says whether an accountant of that country has read it.</div></details>
@@ -316,6 +333,7 @@
 <script src="/app/page-frame.js"></script>
 <script src="/app/country-ready.js"></script>
 <script src="/app/table-resize.js"></script>   <!-- drag a column edge in All countries; remembered -->
+<script src="/app/country-compare.js"></script>   <!-- CTRY-49: CBCountryCompare, a row compared part by part (reads the same facts; holds none) -->
 <script src="/app/country-profiles.js"></script>   <!-- R6: the Countries view (CBCountryProfiles), reads CBRegulation + CBCountries only -->
 <script>
 'use strict';
@@ -350,11 +368,17 @@ function fromMinor(m, c) {
   var d = CBMoney.decimals(c);
   return fmt(Number(m) / Math.pow(10, d), c);
 }
+/** CTRY-49: the month's name from helpers.monthNames, the ONE reader (this page kept its own Intl copy until now) */
 function monthName(m) {
+  return monthNames('long')[Number(m) - 1] || String(m);
+}
+/** the sign a BILL prints for a currency (CBLocale.moneySign: ₹ · A$ · S$ · RM), whatever this reader's locale; the code when it cannot say (CTRY-51) */
+function symbolOf(code) {
   try {
-    return new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(Date.UTC(2026, Number(m) - 1, 1)));
-  } catch (_) {
-    return String(m);
+    return CBLocale.moneySign(code) || code;
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('country-lab:symbol', failure); /* the reader is missing: the row shows the code, still true */
+    return code;
   }
 }
 /** the country's name as the Country setup step reads it: the served list, else the browser's region names, else the code */
@@ -592,6 +616,8 @@ function payHeadsCell(facts) {
 function zonesCell(facts) {
   var zones = facts.zones.all;
   if (!zones.length) return NONE_IN_PACK;
+  /* CTRY-49: the table keeps one short line - the first two zones and a count; the popup writes them all */
+  if (FOLDS.mode === 'hide' && zones.length > 2) return esc(zones.slice(0, 2).join(', ')) + ' · +' + (zones.length - 2) + ' more';
   return esc(facts.zones.words || zones.join(', ')) + (zones.length > 1 ? fold('why · ' + zones.length + ' zones', list(zones.map(esc))) : '');
 }
 /** Dates and numbers: a sample date on the line, a sample number and the format tag in the fold */
@@ -624,7 +650,7 @@ function packRowMeaning(key) {
     case 'payheads':
       return 'The tax heads a return pays to the authority.';
     case 'zones':
-      return "The shop's day opens and closes in its own time zone.";
+      return "The shop\'s day opens and closes in its own time zone.";
     case 'formats':
       return 'Dates and numbers are written the way people there read them.';
     case 'voucher':
@@ -703,9 +729,6 @@ function factsOf(p) {
     }
   });
 }
-function same(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
 
 /* ── the rows, painted from the facts ──────────────────────────────────────────────────────────────────────── */
 function list(items) {
@@ -721,7 +744,23 @@ function list(items) {
 }
 /** the "why" fold: closed by default; carries the legal detail and its citation (CL2 #5 — one plain line per cell, the rest behind this) */
 function fold(summary, inner) {
-  return inner ? '<details class="why"><summary>' + esc(summary) + '</summary>' + inner + '</details>' : '';
+  if (!inner || FOLDS.mode === 'hide') return '';
+  if (FOLDS.mode === 'open') return '<div class="why-open"><div class="hint"><b>' + esc(summary) + '</b></div>' + inner + '</div>';
+  return '<details class="why"><summary>' + esc(summary) + '</summary>' + inner + '</details>';
+}
+/**
+ * CTRY-49: how a fold is painted. 'details' (everywhere else on the page) is the closed fold it always was; 'hide' (a row of the table) keeps
+ * ONE short line and leaves the legal detail out; 'open' (the row's popup) writes it all out.
+ */
+var FOLDS = { mode: 'details' };
+function withFolds(mode, build) {
+  var before = FOLDS.mode;
+  FOLDS.mode = mode;
+  try {
+    return build();
+  } finally {
+    FOLDS.mode = before;
+  }
 }
 function cite(s) {
   return s ? '<div class="hint">' + esc(s) + '</div>' : '';
@@ -965,72 +1004,140 @@ var ROWS = [
   ['voucher', 'Voucher numbers'],
   ['setup', 'Country setup asks']
 ];
+/** CTRY-49: what the compare module needs from this page's readers (money, symbol, month) - the facts themselves come from the packs */
+var COMPARE_READER = { money: fromMinor, symbol: symbolOf, month: monthName };
+/** CTRY-49 · a row's verdict, part by part (CBCountryCompare): "Same", or "Changes: ₹ → A$ · same rule: 2 decimals" */
 function verdictOf(key, a, b) {
-  if (!a || !b) return { same: false, chip: '<span class="chip warn">no pack</span>', word: 'no pack' };
-  var s = key === 'ledgers' ? same(a.ledgers, b.ledgers) : same(a[key], b[key]);
-  return { same: s, chip: s ? '<span class="chip ok">SAME</span>' : '<span class="chip bad">DIFFERENT</span>', word: s ? 'SAME' : 'DIFFERENT' };
+  if (!a || !b) return { same: false, chip: '<span class="chip warn">no pack</span>', word: 'no pack', rows: [] };
+  var comparison = CBCountryCompare.line(key, a, b, COMPARE_READER),
+    lead = comparison.same ? 'Same' : 'Changes:';
+  return {
+    same: comparison.same,
+    rows: comparison.rows,
+    word: comparison.text,
+    chip: '<span class="vline ' + (comparison.same ? 'ok' : 'bad') + '"><b>' + lead + '</b>' + esc(comparison.text.slice(lead.length)) + '</span>'
+  };
+}
+/** one row of the table: the row's name, both countries' one-line values, the part-by-part verdict and the Details button */
+function rowHTML(item, factsFrom, factsTo, verdict) {
+  var key = item[0],
+    left = key === 'ledgers' ? ledgerCell(factsFrom, factsTo, 'from') : cellHTML(key, factsFrom),
+    right = key === 'ledgers' ? ledgerCell(factsTo, factsFrom, 'to') : cellHTML(key, factsTo);
+  if (key === 'taxid') {
+    left += idCheckHTML('from');
+    right += idCheckHTML('to');
+  }
+  return (
+    '<tr data-row="' + key + '" data-testid="cl-row-' + key + '" class="' + (verdict.same ? 'same' : 'different') + '">' +
+    '<td class="k">' + esc(item[1]) + '</td>' +
+    '<td class="v from" data-side="' + esc(countryName(LAB.from)) + '">' + left + '</td>' +
+    '<td class="v to" data-side="' + esc(countryName(LAB.to)) + '">' + right + '</td>' +
+    '<td class="verdict" data-testid="cl-verdict-' + key + '">' + verdict.chip + '</td>' +
+    '<td class="means"><button type="button" class="btn" data-testid="cl-more-' + key + '" onclick="openRowDetail(\'' + key + '\')" aria-label="Details: ' + esc(item[1]) + '">Details</button></td></tr>'
+  );
+}
+/** CL2 #8 — the same rows collapse under one line, so the eye lands on the changes; the button opens them (and stays open across repaints) */
+function sameFoldHTML(sameNames) {
+  if (!sameNames.length) return '';
+  return (
+    '<tr class="samefold" data-testid="cl-samefold"><td colspan="5"><button type="button" class="btn" data-testid="cl-samefold-btn" onclick="toggleSame()">' +
+    sameNames.length + (sameNames.length === 1 ? ' row is' : ' rows are') + ' the same · ' + (LAB.showSame ? 'hide' : 'show') +
+    '</button><span class="hint">' + esc(sameNames.join(' · ')) + '</span></td></tr>'
+  );
 }
 function paintRows() {
-  var a = FACTS.from,
-    b = FACTS.to,
+  var factsFrom = FACTS.from,
+    factsTo = FACTS.to,
     body = document.getElementById('rows-body'),
-    sameNames = [];
+    verdicts = ROWS.map(function (item) {
+      return verdictOf(item[0], factsFrom, factsTo);
+    }),
+    sameNames = ROWS.filter(function (item, at) {
+      return verdicts[at].same;
+    }).map(function (item) {
+      return item[1];
+    });
   document.getElementById('th-from').textContent = 'Registered · ' + countryName(LAB.from);
   document.getElementById('th-to').textContent = 'Registering · ' + countryName(LAB.to);
   body.className = LAB.showSame ? 'showsame' : '';
   body.innerHTML =
-    ROWS.map(function (item) {
-      var key = item[0],
-        v = verdictOf(key, a, b);
-      if (v.same) sameNames.push(item[1]);
-      var left = key === 'ledgers' ? ledgerCell(a, b, 'from') : cellHTML(key, a);
-      var right = key === 'ledgers' ? ledgerCell(b, a, 'to') : cellHTML(key, b);
-      if (key === 'taxid') {
-        left += idCheckHTML('from');
-        right += idCheckHTML('to');
-      }
-      return (
-        '<tr data-row="' +
-        key +
-        '" data-testid="cl-row-' +
-        key +
-        '" class="' +
-        (v.same ? 'same' : 'different') +
-        '">' +
-        '<td class="k">' +
-        esc(item[1]) +
-        '</td>' +
-        '<td class="v from" data-side="' +
-        esc(countryName(LAB.from)) +
-        '">' +
-        left +
-        '</td>' +
-        '<td class="v to" data-side="' +
-        esc(countryName(LAB.to)) +
-        '">' +
-        right +
-        '</td>' +
-        '<td class="verdict" data-testid="cl-verdict-' +
-        key +
-        '">' +
-        v.chip +
-        '</td>' +
-        '<td class="means">' +
-        esc(a && b ? meaning(key, a, b, v.same) : b ? meaning(key, null, b, false) : 'No pack on this side: the books never open on a guess.') +
-        '</td></tr>'
-      );
-    }).join('') +
-    /* CL2 #8 — the SAME rows collapse under one line, so the eye lands on the differences; the button opens them (and stays open across repaints) */
-    (sameNames.length
-      ? '<tr class="samefold" data-testid="cl-samefold"><td colspan="5"><button type="button" class="btn" data-testid="cl-samefold-btn" onclick="toggleSame()">' +
-        sameNames.length +
-        (sameNames.length === 1 ? ' row is' : ' rows are') +
-        ' the same · ' +
-        (LAB.showSame ? 'hide' : 'show') +
-        '</button><span class="hint">' +
-        esc(sameNames.join(' · ')) +
-        '</span></td></tr>'
-      : '');
+    withFolds('hide', function () {
+      return ROWS.map(function (item, at) {
+        return rowHTML(item, factsFrom, factsTo, verdicts[at]);
+      }).join('');
+    }) + sameFoldHTML(sameNames);
+}
+/** CTRY-49 · what ChitBridge does about a row - one sentence per row, in the shopkeeper's words (the pack's facts are read, never worded here) */
+var CB_DOES = {
+  currency: 'Every amount is kept in the smallest unit of this money and shown with its symbol. Nothing is converted.',
+  fy: 'Month locks, the year close and the reports follow this year.',
+  scheme: 'The bill splits its tax into these heads and the books post each head to its own ledger.',
+  kinds: 'Each line carries a supply kind; the kind sets the rate and whether the credit is kept.',
+  invoice: 'The bill becomes a tax invoice when this rule says so, carrying the fields it must carry.',
+  taxid: 'The setup step checks the number as you type, with this rule.',
+  returns: 'The return is prepared from the posted ledgers, box by box. Filing it stays with the shop.',
+  ledgers: 'The chart of accounts is made from the pack when the books open.',
+  words: 'The statements are headed in this country\'s own words.',
+  retention: 'Books and bills are kept at least this long; the purge waits.',
+  kept: 'Each record the law names is kept for its own period.',
+  payheads: 'A return pays these heads to the authority.',
+  zones: 'The shop\'s day opens and closes in its own time zone.',
+  formats: 'Dates and numbers print the way people there read them.',
+  voucher: 'Every voucher takes the next number in its own series, in this shape.',
+  setup: 'The setup step asks these four and starts each one from the pack.'
+};
+/** CTRY-49 · the popup's part table: each part of the row, both countries' values, and whether it changes */
+function partsTable(verdict, fromName, toName) {
+  if (!verdict.rows.length) return '';
+  return (
+    '<table class="cmp-parts" data-testid="cl-parts"><thead><tr><th>Part</th><th>' + esc(fromName) + '</th><th>' + esc(toName) + '</th><th></th></tr></thead><tbody>' +
+    verdict.rows
+      .map(function (row) {
+        var left = row.from.value == null ? 'none' : row.from.value,
+          right = row.to.value == null ? 'none' : row.to.value;
+        return '<tr class="' + (row.same ? 'same' : 'different') + '"><td>' + esc(row.name) + '</td><td>' + esc(left) + '</td><td>' + esc(right) + '</td><td>' + (row.same ? 'Same' : 'Changes') + '</td></tr>';
+      })
+      .join('') +
+    '</tbody></table>'
+  );
+}
+/** CTRY-49 · the popup body of one row: the verdict, the parts, both countries' full values (every fold open), what it means and what ChitBridge does */
+function rowDetailHTML(key, factsFrom, factsTo, verdict) {
+  var fromName = countryName(LAB.from),
+    toName = countryName(LAB.to);
+  var side = function (facts, other, which, name) {
+    var inner = key === 'ledgers' ? ledgerCell(facts, other, which) : cellHTML(key, facts);
+    return '<section class="rd-side" data-testid="cl-detail-' + which + '"><h4>' + esc(name) + '</h4>' + inner + '</section>';
+  };
+  return withFolds('open', function () {
+    return (
+      '<p class="rd-verdict" data-testid="cl-detail-verdict">' + verdict.chip + '</p>' +
+      partsTable(verdict, fromName, toName) +
+      '<div class="rd-sides">' + side(factsFrom, factsTo, 'from', fromName) + side(factsTo, factsFrom, 'to', toName) + '</div>' +
+      '<p data-testid="cl-detail-means"><b>What it means for the shop</b><br>' + esc(meaning(key, factsFrom, factsTo, verdict.same)) + '</p>' +
+      '<p data-testid="cl-detail-does"><b>What ChitBridge does</b><br>' + esc(CB_DOES[key] || '') + '</p>'
+    );
+  });
+}
+/** CTRY-49 · the row's full detail in the labs' one popup (CBLabKit.popup): Esc, the x and a press outside close it */
+function openRowDetail(key) {
+  var factsFrom = FACTS.from,
+    factsTo = FACTS.to,
+    row = ROWS.filter(function (item) {
+      return item[0] === key;
+    })[0];
+  if (!row) return;
+  var title = row[1] + ' · ' + countryName(LAB.from) + ' vs ' + countryName(LAB.to);
+  if (!factsFrom || !factsTo) {
+    CBLabKit.popup(title, function (body) {
+      body.innerHTML = '<p data-testid="cl-detail-nopack">No pack on this side: the books never open on a guess.</p>';
+    }, 'cl-detail');
+    return;
+  }
+  var verdict = verdictOf(key, factsFrom, factsTo);
+  CBLabKit.popup(title, function (body) {
+    body.innerHTML = rowDetailHTML(key, factsFrom, factsTo, verdict);
+  }, 'cl-detail');
 }
 function toggleSame() {
   LAB.showSame = !LAB.showSame;

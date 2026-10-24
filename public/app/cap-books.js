@@ -1503,11 +1503,12 @@ function payLeftPaint() {
   box.textContent = parts.length ? parts.join(' · ') : (pv && pv.words) || '';
   box.style.color = left < 0 ? 'var(--warn-2)' : 'var(--grey)';
 }
-/** Record (viaBand = true: the band's "Pay as advance", which is what acknowledges the warnings). One call; the outcome replaces the form. */
+/** Record (viaBand = true: the band's "Pay as advance", which is what acknowledges the warnings). One call; the outcome replaces the form.
+ *  R102b (walk 24 Oct): a payment is a money promise — Record asks first (payAsk); the band's own button already names who and how much, so it does not ask twice. */
 function payRecord(viaBand) {
   /* ⚠️ M11/M64: through CBAction — one press one call; every attempt from this form carries the SAME client_ref; the outcome is said
      in the form (pay_why), never a thrown error's text */
-  if (!PAY || PAY.done) return;
+  if (!PAY || PAY.done || PAY.asking || PAY.writing) return; /* one question, one write: a press while either is up does nothing */
   var node = document.getElementById('pay_why'),
     amt = bkMoneyRead('pay_amt');
   if (!(amt > 0)) {
@@ -1516,20 +1517,9 @@ function payRecord(viaBand) {
   }
   var open = payOpenWarnings();
   if (open.length && viaBand !== true) return; /* the band is up: only its own buttons record */
-  var list = payAllocs();
-  /* the same refusals the engine makes (check), said before the round trip — the server still decides */
-  var bad = list.filter(function (x) {
-    return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0);
-  })[0];
-  var used = list.reduce(function (total, x) {
-    return total + (x.amount_minor > 0 ? x.amount_minor : 0);
-  }, 0);
-  if (bad) {
-    if (node) node.textContent = bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open');
-    return;
-  }
-  if (used > amt) {
-    if (node) node.textContent = tx('More applied than paid');
+  var refused = payRefusal(payAllocs(), amt);
+  if (refused) {
+    if (node) node.textContent = refused;
     return;
   }
   var ack =
@@ -1538,6 +1528,63 @@ function payRecord(viaBand) {
           return item.code;
         })
       : PAY.ack;
+  if (viaBand === true) return payWrite(amt, ack, true);
+  PAY.asking = true;
+  return payAsk(amt).then(function (yes) {
+    PAY.asking = false;
+    if (yes === true) return payWrite(amt, ack, false);
+    if (node) node.textContent = yes === null ? tx('Nothing sent. This page cannot ask first.') : '';
+  });
+}
+/** the same refusals the engine makes (check), said before the round trip — the server still decides. The sentence, or null when nothing is refused */
+function payRefusal(allocations, amount) {
+  var bad = allocations.filter(function (x) {
+    return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0);
+  })[0];
+  var used = allocations.reduce(function (total, x) {
+    return total + (x.amount_minor > 0 ? x.amount_minor : 0);
+  }, 0);
+  if (bad) return bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open');
+  if (used > amount) return tx('More applied than paid');
+  return null;
+}
+/** the ask, in the screen's own words: who, how much, how (the How select's word) — through CBConfirm, the stacked <dialog> every utility page
+ *  aliases confirmAsk to; on app.html confirmAsk paints into #modalhost, the host this sheet is in, so CBAction.ask there would replace the
+ *  form before the write. true = yes · false = cancel · null = no dialog on this page (nothing is sent, and the form says so) */
+function payAsk(amount) {
+  if (typeof CBConfirm !== 'function') {
+    if (typeof cblog === 'function') cblog('error', 'payAsk: no confirm dialog on this page — nothing sent');
+    return Promise.resolve(null);
+  }
+  var modeSelect = document.getElementById('pay_mode'),
+    howWord = modeSelect && modeSelect.selectedIndex >= 0 ? modeSelect.options[modeSelect.selectedIndex].text : '',
+    out = PAY.kind === 'supplier',
+    words = { name: PAY.name, amt: bkMoney(amount), how: howWord === howWord.toUpperCase() ? howWord : howWord.toLowerCase() };
+  var title = out
+    ? howWord
+      ? txf('Pay {name} {amt} by {how}?', words)
+      : txf('Pay {name} {amt}?', words)
+    : howWord
+      ? txf('Record {amt} from {name} by {how}?', words)
+      : txf('Record {amt} from {name}?', words);
+  return new Promise(function (res) {
+    CBConfirm(
+      title,
+      esc(tx(out ? 'Your books will show it paid.' : 'Your books will show it received.')),
+      tx(out ? 'Pay' : 'Record'),
+      function () {
+        res(true);
+      },
+      false,
+      function () {
+        res(false);
+      }
+    );
+  });
+}
+/** the ONE write: POST /payments through CBAction (busy · one call per press · the outcome painted in the form); PAY.writing holds a second press off while it is out */
+function payWrite(amount, acknowledged, viaBand) {
+  PAY.writing = true;
   return CBAction.run(
     document.querySelector('[data-testid="' + (viaBand === true ? 'pay_ack' : 'pay_record') + '"]'),
     async function () {
@@ -1546,7 +1593,7 @@ function payRecord(viaBand) {
       var body = {
         party_id: PAY.partyId,
         direction: payDirection(),
-        amount_minor: amt,
+        amount_minor: amount,
         currency: bkCur(),
         mode: mode,
         reference: (document.getElementById('pay_ref') || {}).value || null,
@@ -1563,9 +1610,9 @@ function payRecord(viaBand) {
             : null
       };
       if (q.allocations) body.allocations = q.allocations;
-      if (ack.length) body.acknowledge = ack;
+      if (acknowledged.length) body.acknowledge = acknowledged;
       var reply = await api('booksPayRecord', { body: body });
-      PAY.amount = amt;
+      PAY.amount = amount;
       return reply;
     },
     {
@@ -1585,7 +1632,9 @@ function payRecord(viaBand) {
       },
       outcome: payOutcomePaint
     }
-  );
+  ).finally(function () {
+    if (PAY) PAY.writing = false;
+  });
 }
 /** the outcome IS the form's next state: what happened · what it means (the bills named, the balance) · Done */
 function payOutcomePaint(r) {
@@ -4504,10 +4553,16 @@ function bkPartyKind(pid, ctrl) {
  */
 async function bkRemindTarget(pid) {
   var reply = await api('booksPayPreview', { body: { party_id: pid, direction: 'in', amount_minor: 1, currency: bkCur(), allocate: 'oldest_first' } });
+  /* ⭐ THE ONE DUE FIGURE (R73): due_minor is the bill net of the party's receipts on account too — what the Collections list and the Cash view
+     show; open_minor (what a payment may still be allocated to) is the Pay unit's figure and stands in only on an older server */
+  var dueOf = function (item) {
+    return Number(item.due_minor != null ? item.due_minor : item.open_minor);
+  };
   var bill = ((reply && reply.proposal) || []).filter(function (item) {
-    return Number(item.open_minor) > 0 && !item.disputed;
+    return dueOf(item) > 0 && !item.disputed;
   })[0];
   if (!bill) throw new Error('nothing open');
+  bill = Object.assign({}, bill, { due_minor: dueOf(bill) });
   var line = null,
     acts = null;
   try {
@@ -4535,12 +4590,19 @@ function bkRemind(pid, btn) {
 }
 function bkRemindOpen(t) {
   var name = t.party || '';
-  var text = txf('Hello {name}, a reminder: bill {no} for {amt} was due on {date}. Please pay when you can.', {
-    name: name,
-    no: t.bill.bill_no || '',
-    amt: bkMoney(t.bill.open_minor, t.currency),
-    date: bkDate(t.bill.due_date)
-  });
+  /* R73: a bill not yet late IS due, not WAS due — the day decides the sentence (bkToday: the shop's day, never UTC) */
+  var late = !!(t.bill.due_date && t.bill.due_date < bkToday());
+  var text = txf(
+    late
+      ? 'Hello {name}, a reminder: bill {no} for {amt} was due on {date}. Please pay when you can.'
+      : 'Hello {name}, a reminder: bill {no} for {amt} is due on {date}. Please pay by then.',
+    {
+      name: name,
+      no: t.bill.bill_no || '',
+      amt: bkMoney(t.bill.due_minor, t.currency),
+      date: bkDate(t.bill.due_date)
+    }
+  );
   modal(
     '<div class="mhd"><div class="t" data-testid="remind_title">' +
       esc(tx('Remind')) +
@@ -4548,7 +4610,7 @@ function bkRemindOpen(t) {
       esc(name) +
       '</div></div><div class="mbody">' +
       '<div data-testid="remind_for" style="font-size:var(--fs-1);margin-bottom:8px">' +
-      esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.open_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
+      esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.due_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
       '</div>' +
       '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button onclick="closeModal()">' +
       tx('Close') +
@@ -4600,8 +4662,8 @@ function bkPartyBillsHTML(pid, list, c) {
         .join('')
     : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
-/** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement */
-function bkDuesNext(p, c) {
+/** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
+function bkDuesNext(p, c, list) {
   var side = bkDuesSide(p),
     cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
     known = cols.map(function (item) {
@@ -4640,7 +4702,7 @@ function bkDuesNext(p, c) {
     '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' +
     esc(tx('Bills')) +
     '</div>' +
-    bkPartyBillsHTML(p.party_id, 'dues', c) +
+    bkPartyBillsHTML(p.party_id, list || 'dues', c) +
     '</div>'
   );
 }
@@ -5767,53 +5829,58 @@ function bkWaitCols() {
       sort: 'step',
       w: 300,
       html: true,
-      cell: function (w) {
-        var i = (BK.waiting || []).indexOf(w),
-          m = bkWaitModel(w);
-        /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
-        /* F10/F11: a bill naming a supplier the books do not know carries the fix — the existing add-party door (supAdd), then a retry */
-        var who = bkWaitWho(w);
-        /* FX-F10W: the shop's near matches come FIRST ("Is this Sri Ganesh Provisions (P-00001)?" — the server's candidates); adding a new party is the second choice */
-        if (who)
-          return (
-            '<span data-testid="wait-why-' +
-            i +
-            '" style="color:var(--warn-2)">' +
-            esc(w.reason || w.why) +
-            '</span> ' +
-            bkWaitCands(w)
-              .map(function (item, index) {
-                return (
-                  '<button type="button" class="supact-pri" data-testid="wait-link-' +
-                  i +
-                  '-' +
-                  index +
-                  '" onclick="event.stopPropagation(); bkWaitLink(' +
-                  i +
-                  ', ' +
-                  index +
-                  ', this)">' +
-                  esc(CBSheet.isThis(item)) +
-                  '</button> '
-                );
-              })
-              .join('') +
-            '<button type="button"' +
-            (bkWaitCands(w).length ? '' : ' class="supact-pri"') +
-            ' data-testid="wait-addsup-' +
-            i +
-            '" onclick="event.stopPropagation(); bkWaitAddSupplier(' +
-            i +
-            ', this)">' +
-            esc(tx('Add supplier')) +
-            '</button>'
-          );
-        if (bkWaitFailed(w))
-          return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why || tx('No reason given')) + '</span>';
-        return m ? esc(CBSheet.stepWord(m)) : dash;
-      }
+      cell: bkWaitStepCell
     }
   ];
+}
+/**
+ * the Step cell of a Waiting row: a posting that failed says why, in the server's words; a bill naming a supplier the books do not know carries the fix
+ * (F10/F11: the near matches first, then the add-party door); R106: their bill above the count offers the accept AT the count, or Reject; else the step word.
+ */
+function bkWaitStepCell(row) {
+  var rowIndex = (BK.waiting || []).indexOf(row),
+    model = bkWaitModel(row);
+  if (bkWaitWho(row)) return bkWaitSupplierHTML(row, rowIndex);
+  if (bkWaitFailed(row))
+    return '<span data-testid="wait-why-' + rowIndex + '" style="color:var(--warn-2)">' + esc(row.reason || row.why || tx('No reason given')) + '</span>';
+  if (bkWaitShort(row.chit_id)) return bkWaitShortHTML(row, rowIndex, model);
+  return model ? esc(CBSheet.stepWord(model)) : '<span style="color:var(--grey)">—</span>';
+}
+/** FX-F10W: the shop's near matches come FIRST ("Is this Sri Ganesh Provisions (P-00001)?" — the server's candidates); adding a new party is the second choice */
+function bkWaitSupplierHTML(row, rowIndex) {
+  return (
+    '<span data-testid="wait-why-' +
+    rowIndex +
+    '" style="color:var(--warn-2)">' +
+    esc(row.reason || row.why) +
+    '</span> ' +
+    bkWaitCands(row)
+      .map(function (item, index) {
+        return (
+          '<button type="button" class="supact-pri" data-testid="wait-link-' +
+          rowIndex +
+          '-' +
+          index +
+          '" onclick="event.stopPropagation(); bkWaitLink(' +
+          rowIndex +
+          ', ' +
+          index +
+          ', this)">' +
+          esc(CBSheet.isThis(item)) +
+          '</button> '
+        );
+      })
+      .join('') +
+    '<button type="button"' +
+    (bkWaitCands(row).length ? '' : ' class="supact-pri"') +
+    ' data-testid="wait-addsup-' +
+    rowIndex +
+    '" onclick="event.stopPropagation(); bkWaitAddSupplier(' +
+    rowIndex +
+    ', this)">' +
+    esc(tx('Add supplier')) +
+    '</button>'
+  );
 }
 /** the supplier name a row asks to add — the row's `name` (STD1: data the books parked, never parsed from the sentence) */
 function bkWaitWho(w) {
@@ -5926,6 +5993,82 @@ function bkWaitDate(w) {
   var m = bkWaitModel(w),
     d = bkWaitDay(w);
   return String((m && m.at) || (d && d.day) || w.since || '');
+}
+/**
+ * ⭐ R106 (OPS-60): THE SHORTFALL IS DATA ON THE ROW — `waiting[].short` { theirs_minor, ours_minor, short_minor } (api books-hooks shortOf,
+ * FIELDS waiting[].short) when their bill is ABOVE what the counter counted. The row offers the accept AT THE COUNT and Reject; the sheet's
+ * Accept asks the same question through this reader (the chit read carries no `short` yet). Integers only — never the sentence.
+ */
+function bkWaitShort(chitId) {
+  var row = (BK.waiting || []).filter(function (item) {
+    return chitId && item.chit_id === chitId && bkWaitTodo(item) === 'accept' && item.short && Number(item.short.short_minor) > 0;
+  })[0];
+  return row ? { theirs_minor: Number(row.short.theirs_minor), ours_minor: Number(row.short.ours_minor), short_minor: Number(row.short.short_minor) } : null;
+}
+/** the Step cell of a shortfall row: the server's sentence (it names the gap), then "Accept at ₹2,690" and "Reject" — both ask first */
+function bkWaitShortHTML(row, index, model) {
+  var short = bkWaitShort(row.chit_id),
+    currency = (model && model.cur) || bkCur();
+  var said = '<span data-testid="wait-why-' + index + '" style="color:var(--warn-2)">' + esc(row.reason || row.why || '') + '</span> ';
+  if (!model) return said + '<span style="color:var(--grey)">' + esc(tx('Reading the bill…')) + '</span>';
+  return (
+    said +
+    '<button type="button" class="supact-pri" data-testid="wait-accept-short-' +
+    index +
+    '" onclick="event.stopPropagation(); bkWaitAcceptShort(' +
+    index +
+    ', this)">' +
+    esc(txf('Accept at {ours}', { ours: bkMoney(short.ours_minor, currency) })) +
+    '</button> <button type="button" data-testid="wait-reject-short-' +
+    index +
+    '" onclick="event.stopPropagation(); bkWaitRejectShort(' +
+    index +
+    ')">' +
+    esc(tx('Reject')) +
+    '</button>'
+  );
+}
+/** what the outcome line says once the count is accepted: the counted figure, the gap and their figure (all the server's integers) */
+function bkWaitShortDone(short, currency) {
+  return txf('Accepted at {ours} — {short} short against their {theirs}, noted on the bill', {
+    ours: bkMoney(short.ours_minor, currency),
+    short: bkMoney(short.short_minor, currency),
+    theirs: bkMoney(short.theirs_minor, currency)
+  });
+}
+/**
+ * Accept at the count: a money promise — CBAction asks first (the sheet's own question, CBSheet.shortAsk: supplier · bill · the counted ₹), then the
+ * chit's own step (PUT /status accepted — the same move the sheet makes; the server posts ONE entry at the count and notes the gap). The row leaves at once.
+ */
+function bkWaitAcceptShort(index, button) {
+  var row = (BK.waiting || [])[index],
+    model = bkWaitModel(row),
+    short = row && bkWaitShort(row.chit_id);
+  if (!row || !model || !short) return;
+  return CBAction.run(
+    button,
+    function () {
+      return api('status', { params: { id: row.chit_id }, body: { status: 'accepted' } });
+    },
+    {
+      key: 'wait-accept-' + row.chit_id,
+      confirm: CBSheet.shortAsk(model, short),
+      out: 'wait_out',
+      busy: tx('Accepting…'),
+      failed: tx('Could not accept the bill'),
+      outcome: function () {
+        bkWaitGone(row.chit_id);
+        bkHealthAgain(null);
+        var out = document.getElementById('wait_out');
+        if (out) out.textContent = bkWaitShortDone(short, model.cur);
+      }
+    }
+  );
+}
+/** Reject: the sheet's one Reject door (it asks the reason, which goes on the bill) — opened at that question */
+function bkWaitRejectShort(index) {
+  var row = (BK.waiting || [])[index];
+  if (row && row.chit_id) openChitSheet(row.chit_id, { act: 'reject' });
 }
 function bkWaitNext(w) {
   var m = bkWaitModel(w),

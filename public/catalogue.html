@@ -70,10 +70,25 @@ button{font-family:inherit;cursor:pointer}
 .tag.green{background:var(--ok-tint,#e8f4ed);color:var(--ok-2,#0d4a2b)}
 .tag.amber{background:var(--warn-tint,#fdf3dc);color:var(--warn-3,#7a5205)}
 .cat-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+/* the item form's category chips (F5 W1b, R85): the same chips the workshop draws (cap-catalogue.js ctCategoryChips), tap to put the item in or out */
+.ctcatgs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.ctcatg{border:1px solid var(--line,#e6dcc6);background:var(--card,#fffdf8);color:var(--ink,#2a2418);border-radius:20px;min-height:32px;padding:0 12px;font-size:var(--fs-2);cursor:pointer}
+.ctcatg.on{background:var(--blue-tint-bg,#e6f0ef);border-color:var(--blue,#1f5f5b);color:var(--blue,#1f5f5b);font-weight:700}
+.ctcatg.gone{background:var(--warn-tint,#fdf3dc);border-color:var(--gold-line,#d9b86a);color:var(--warn-3,#7a5205)}
 .cat-facts{display:flex;flex-direction:column}
 .cat-kv{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line,#e6dcc6);font-size:var(--fs-2)}
 .cat-kv b{min-width:110px;color:var(--grey,#5c5240);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em}
 .cat-kv span{min-width:0;overflow-wrap:anywhere}
+/* the rate row (F5 W1a): the chip, one Set rate beside it, the ask-once menu under it as full-width buttons; the citation folds behind ⓘ */
+.cat-rate-set{min-height:30px;padding:0 10px;font-size:13px;margin-inline-start:6px}
+.cat-rate-pick:empty{display:none}
+.slab-menu{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.slab-menu .act{justify-content:flex-start;text-align:start;min-height:48px;flex-direction:column;align-items:flex-start;gap:0;padding:6px 14px}
+.slab-menu .act.suggested{border-color:var(--blue,#1f5f5b)}
+.slab-menu .act .u{font-weight:400;font-size:var(--fs-1);color:var(--grey,#5c5240)}
+.slab-cite{font-size:var(--fs-1)}
+.slab-cite summary{cursor:pointer;list-style:none;color:var(--blue,#1f5f5b);font-weight:700;padding:2px 4px}
+.slab-cite summary::-webkit-details-marker{display:none}
 .cat-pager{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 20px;color:var(--grey,#5c5240);font-size:13px}
 .cat-pager .act{min-height:34px;padding:0 12px;font-size:13px}
 .empty{padding:40px 20px;text-align:center;border:1px dashed var(--line,#e6dcc6);border-radius:14px;color:var(--grey,#5c5240);display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -123,7 +138,8 @@ function go() {
 <script>const confirmAsk = CBConfirm;   /* the page's own confirm — the <dialog> every small app asks through (cbcatRetire and the import's _cfImport ask by this name) */</script>
 <script src="/engine/locale.js"></script>          <!-- CBLocale: the page's language, direction, money and symbols -->
 <script src="/app/helpers.js"></script>         <!-- esc · fmtMoney · packHasHsn · shopReg -->
-<script src="/engine/tax.js"></script>          <!-- CBRegulation: the shop's pack → its words (Code / HSN only under a pack with HSN) -->
+<script src="/engine/tax.js"></script>          <!-- CBRegulation: the shop's pack → its words (Code / HSN only under a pack with HSN); CBTaxSlab · CBTaxPacks: the item row's rate -->
+<script src="/app/tax-slab-ui.js"></script>     <!-- the rate chip, the ask-once menu and the slab pickers: ONE copy with app.html and the counter (F5 W1a) -->
 <script src="/engine/money.js"></script>        <!-- CBMoney: the loose read of a stored price (cbAmount) -->
 <script src="/engine/signin.js"></script>
 <script src="/app/signin-ui.js"></script>

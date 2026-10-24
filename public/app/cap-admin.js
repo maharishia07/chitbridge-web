@@ -9201,7 +9201,7 @@ async function saveSettings() {
 function polDefs() {
   return polDefsOf(_POL.schema, _POL.bound);
 }
-var _POL = { flags: null, schema: null, bound: null, busy: false, err: null, migrated: true };
+var _POL = { flags: null, schema: null, bound: null, may: null, busy: false, err: null, migrated: true };
 function _polVal(def) {
   var o = _POL.flags || {};
   return o[def.key] !== undefined ? o[def.key] : def.def;
@@ -9209,34 +9209,31 @@ function _polVal(def) {
 function _polLocked(gov) {
   return gov === 'bound' || gov === 'protected' || gov === 'inherited';
 }
-/* ⚠️ THE WRITE IS AWAITED AND ITS ANSWER IS SHOWN. The old version toasted "set ✓" the instant you changed a
-   dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
-   The card repaints from what the SERVER returns, so what is on screen is what is stored. */
-async function setPolFlag(key, v) {
-  var def = polDefs().filter(function (item) {
-    return item.key === key;
-  })[0];
-  /**
-   * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
-   * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
-   * means the number that comes back matches the number that was typed.
-   */
-  v = polStored(def, v); /* the shown unit → the stored one (app/cap-settings.js) */
-  _POL.busy = true;
-  _POL.err = null;
-  paintPolicy();
-  try {
-    var body = {};
-    body[key] = v;
-    var reply = await api('policySet', { body: body });
-    _POL.flags = (reply && reply.flags) || _POL.flags;
-    toast((def ? def.label : 'Flag') + ' saved');
-  } catch (e) {
-    _POL.err = (e && e.message) || 'Could not save that setting.';
-    if (/not migrated|b130|503/i.test(_POL.err)) _POL.migrated = false;
-  }
-  _POL.busy = false;
-  paintPolicy();
+/* R121b: a rule here is a DRAFT, like CB Settings › Policy. The card draws its rows with CBSettings.policyControl / policyEditButtons and writes only through
+   CBSettings.policyRun (app/cap-settings.js): Save asks first, Cancel writes nothing, a refusal is said on the row in the server's words. There is no
+   write on change — setPolFlag, which saved the moment a box changed, is gone. */
+/** one flag as the shared row wants it: { key, def, v, may } — the server's may when it gave one (an older server: the PATCH still decides) */
+function _polRow(flag) {
+  return { key: flag.key, def: flag, v: _polVal(flag), may: (_POL.may || {})[flag.key] || { ok: true } };
+}
+/** wire the card's node once: typing shows Save/Cancel, Save and Cancel do their one thing (CBSettings.policyRowEdit) */
+function _polWire(node) {
+  if (node._polWired) return;
+  node._polWired = true;
+  CBSettings.policyRowEdit(node, {
+    rowOf: function (key) {
+      var flag = polDefs().filter(function (item) {
+        return item.key === key;
+      })[0];
+      return flag && _polRow(flag);
+    },
+    shown: CBSettings.policyShown,
+    /** the server's flags after a save become the card's own, then it repaints from them */
+    onSaved: function (saved) {
+      _POL.flags = (saved && saved.flags) || _POL.flags;
+      paintPolicy();
+    }
+  });
 }
 async function loadPolicy() {
   _POL.busy = true;
@@ -9247,6 +9244,7 @@ async function loadPolicy() {
     _POL.flags = (reply && reply.flags) || {};
     _POL.schema = (reply && reply.schema) || null;
     _POL.bound = (reply && reply.bound_schema) || null;
+    _POL.may = (reply && reply.may) || null;
     _POL.migrated = !(_POL.flags._migrated === false);
   } catch (e) {
     _POL.err = (e && e.message) || 'Could not read your policy flags.';
@@ -9256,7 +9254,10 @@ async function loadPolicy() {
 }
 function paintPolicy() {
   var node = document.getElementById('polflags');
-  if (node) node.innerHTML = policyFlagsInner();
+  if (node) {
+    node.innerHTML = policyFlagsInner();
+    _polWire(node);
+  }
 }
 function _polControl(def) {
   var v = _polVal(def);
@@ -9266,60 +9267,13 @@ function _polControl(def) {
       esc(String(v)) +
       '</span> <span style="font-size:var(--fs-1)" title="locked / inherited — cannot change here">🔒</span>'
     );
-  var dis = _POL.busy ? ' disabled' : '';
-  /**
-   * ⚠️ THE VALUE IS THE CODE; THE LABEL IS FOR A PERSON. This rendered raw enum codes — a dropdown offering
-   * "both · sent · received" against a setting about self-chits, where the words a person recognises are Task and
-   * Order. `received` means "Task only" and nothing on screen said so. Athi, 2026-08-16, reasoning it out loud:
-   * *"mostly it is task, a billing counter, very rarely this become order"* — that is the vocabulary, and the
-   * control should have been speaking it.
-   * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
-   */
-  if (def.type === 'enum')
-    return (
-      '<select' +
-      dis +
-      ' data-testid="pol-' +
-      esc(def.key) +
-      '" onchange="setPolFlag(\'' +
-      def.key +
-      '\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
-      def.options
-        .map(function (item) {
-          var lbl = (def.labels && def.labels[item]) || item;
-          return '<option value="' + esc(item) + '"' + (String(v) === String(item) ? ' selected' : '') + '>' + esc(lbl) + '</option>';
-        })
-        .join('') +
-      '</select>'
-    );
-  if (def.type === 'number') {
-    /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
-    var shown = polShown(def, v);
-    return (
-      '<input type="number"' +
-      dis +
-      (def.step ? ' step="' + esc(String(def.step)) + '"' : '') +
-      ' min="0"' +
-      ' data-testid="pol-' +
-      esc(def.key) +
-      '" value="' +
-      esc(String(shown)) +
-      '"' +
-      ' onchange="setPolFlag(\'' +
-      def.key +
-      '\',this.value)"' +
-      ' style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
-      (def.suffix ? '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:5px">' + esc(def.suffix) + '</span>' : '')
-    );
-  }
+  /* ⚠️ THE VALUE IS THE CODE; THE LABEL IS FOR A PERSON (a dropdown that offered "both · sent · received" for self-chits, where the words are Task and Order).
+     CBSettings.policyControl keeps value = code and shows the server's labels; a scaled number is shown in the unit a person reads (0.50 %) and stored in its own (50 bp). */
+  var row = _polRow(def);
   return (
-    '<input' +
-    dis +
-    ' value="' +
-    esc(String(v)) +
-    '" onchange="setPolFlag(\'' +
-    def.key +
-    '\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+    CBSettings.policyControl(row) +
+    CBSettings.policyEditButtons(row) +
+    '<span class="sub" id="sx_pol_ok_' + esc(def.key) + '" data-testid="pol-ok-' + esc(def.key) + '"></span>'
   );
 }
 
@@ -9657,7 +9611,7 @@ async function _chUnbind(id) {
 }
 
 /* S2 — the owner's SHOWCASE chooser: the registered templates (app/showcase-templates.js), one tap to choose (saved as the policy flag
-   showcase_template via setPolFlag — one source), and the live preview is the shop's own page in a frame (shop.html ?showcase=). */
+   showcase_template via CBSettings.policyRun — one write), and the live preview is the shop's own page in a frame (shop.html ?showcase=). */
 function showcaseCard() {
   if (typeof CBShowcase === 'undefined') return '';
   /* T3-P2-CRM: the chooser is app/cap-showcase.js (CBShowcasePick) — ONE copy, drawn here and on CB CRM's Shop window; a click on a template saves the flag (scPick) */
@@ -9677,9 +9631,20 @@ document.addEventListener('click', function (ev) {
   var node = ev.target.closest && ev.target.closest('#scard [data-sc-pick]');
   if (node && !node.disabled) scPick(node.getAttribute('data-sc-pick'));
 });
-async function scPick(n) {
-  await setPolFlag('showcase_template', n);
-  paintShowcase();
+/** a shop-window template is chosen by a tap, so the tap asks first and goes through the same write as a rule's Save (CBSettings.policyRun) */
+function scPick(n) {
+  var from = ((_POL && _POL.flags) || {}).showcase_template || CBShowcase.DEFAULT;
+  if (String(from) === String(n)) return;
+  var btn = document.querySelector('#scard [data-sc-pick="' + n + '"]');
+  CBSettings.policyRun(btn, 'showcase_template', n, tx('Change {rule} from {from} to {to}?').replace('{rule}', tx('Your shop window')).replace('{from}', from).replace('{to}', n), {
+    onFail: function (words) {
+      toast(words, true);
+    },
+    outcome: function (saved) {
+      _POL.flags = (saved && saved.flags) || _POL.flags;
+      paintShowcase();
+    }
+  });
 }
 function paintShowcase() {
   var node = document.getElementById('scard');
