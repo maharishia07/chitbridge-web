@@ -128,7 +128,7 @@ function csuCurrencies(country) {
     var R = window.CBLocale && CBLocale.REGIONS;
     if (R && R[country]) (R[country].cur || []).forEach(add);
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-country:csuCurrencies - the region list was unreadable, no currency is suggested', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-country:csuCurrencies - the region list was unreadable, no currency is suggested', failure);
   }
   if (CSU.edit) add(CSU.edit.currency);
   if (CSU.p) add(CSU.p.currency);
@@ -166,7 +166,7 @@ function csuDeviceZone() {
     var g = govCtx();
     if (g && g.timezone && g.timezone.value) return g.timezone.value;
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-country:csuDeviceZone - the governance zone was unreadable, the browser zone is used', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-country:csuDeviceZone - the governance zone was unreadable, the browser zone is used', failure);
   }
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
@@ -278,7 +278,7 @@ function csuPrefill() {
   try {
     g = govCtx();
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('cap-country:csuPrefill - the governance context was unreadable, the form is not prefilled', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('cap-country:csuPrefill - the governance context was unreadable, the form is not prefilled', failure);
   }
   var e = {
     country: '',
@@ -1037,7 +1037,7 @@ function csuSave() {
         try {
           if (p && p.pack) SESSION.booksOn = false;
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('cap-country:outcome - the books flag was not cleared in the session', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('cap-country:outcome - the books flag was not cleared in the session', failure);
         }
         /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
         if (p && p.rederived) toast(txf('Country now {c} — the rest set from its pack.', { c: csuCountryName(p.rederived.to) }));

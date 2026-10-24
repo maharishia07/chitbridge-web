@@ -81,7 +81,7 @@
     try {
       root.localStorage.setItem(k, JSON.stringify(v));
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-ctl:lsSet - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:lsSet - the browser refused to store it, so it is not kept this time', failure);
     }
   }
 
@@ -296,20 +296,20 @@
     try {
       if (I.io) I.io.disconnect();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
     }
     clearTimeout(I.qt);
     try {
       var node = I.el.querySelector(':scope > .cbl-list');
       if (node && node.__cblRO) node.__cblRO.disconnect();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
     }
     (I.off || []).forEach(function (x) {
       try {
         I.el.removeEventListener(x[0], x[1]);
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:teardown - the observer could not be changed, it is left as it was', failure);
       }
     });
     I.off = [];
@@ -2272,7 +2272,7 @@
         root.URL.revokeObjectURL(u);
       }, 2000);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-ctl:download - the element was already gone', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:download - the element was already gone', failure);
     }
   }
 
@@ -2750,7 +2750,7 @@
     try {
       node.setPointerCapture(event.pointerId);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('list-ctl:onPointerDown - the pointer could not be captured, the drag still works', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('list-ctl:onPointerDown - the pointer could not be captured, the drag still works', failure);
     }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);

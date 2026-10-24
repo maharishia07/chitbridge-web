@@ -1022,7 +1022,7 @@
       document.documentElement.style.overflow = on ? 'hidden' : '';
       document.body.classList.toggle('cs-open', !!on);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('chit-sheet:lock - the page scroll lock was not changed', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('chit-sheet:lock - the page scroll lock was not changed', failure);
     }
   }
   function reset(id) {

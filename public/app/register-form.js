@@ -90,12 +90,12 @@ function regLangHTML(code) {
   try {
     text = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('register-form:regLangHTML - the browser has no language names, the code is shown', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:regLangHTML - the browser has no language names, the code is shown', failure);
   }
   try {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('register-form:regLangHTML - the browser has no native language name, it is left blank', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:regLangHTML - the browser has no native language name, it is left blank', failure);
   }
   return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
@@ -470,5 +470,5 @@ var CBRegistration = {
 try {
   window.CBRegistration = CBRegistration;
 } catch (failure) {
-  if (window.cbQuiet) window.cbQuiet('register-form:page - CBRegistration was not put on window', failure);
+  if (globalThis.cbQuiet) globalThis.cbQuiet('register-form:page - CBRegistration was not put on window', failure);
 }

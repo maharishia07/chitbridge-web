@@ -107,14 +107,14 @@
     try {
       root.localStorage.setItem(k, v);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:lsSet - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:lsSet - the browser refused to store it, so it is not kept this time', failure);
     }
   }
   function lsDel(k) {
     try {
       root.localStorage.removeItem(k);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:lsDel - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:lsDel - the browser refused to store it, so it is not kept this time', failure);
     }
   }
 
@@ -149,7 +149,7 @@
     try {
       if (root.matchMedia && root.matchMedia('(prefers-color-scheme: dark)').matches && has(THEMES, 'dark')) return 'dark';
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:themeKey - the system theme was unreadable, the light theme is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:themeKey - the system theme was unreadable, the light theme is used', failure);
     }
     return 'cream';
   }
@@ -237,7 +237,7 @@
     try {
       cs = root.getComputedStyle(node);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
     }
     Object.keys(FS_BASE).forEach(function (item) {
       saved[item] = node.style.getPropertyValue(item);
@@ -249,7 +249,7 @@
     try {
       remPx = parseFloat(root.getComputedStyle(node).fontSize) || 16;
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fsBase - the style was unreadable, the default is used', failure);
     }
     Object.keys(FS_BASE).forEach(function (item) {
       var raw = cs ? String(cs.getPropertyValue(item)).trim() : '',
@@ -311,7 +311,7 @@
       motionApply();
       stripesApply();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:apply - a saved page setting was not applied', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:apply - a saved page setting was not applied', failure);
     }
     /* W7: the band reads the pref itself (CBKural.repaint); told here so a change shows at once */
     try {
@@ -328,7 +328,7 @@
     try {
       if (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) return CFG.API_BASE;
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:apiBaseOf - the page has no api base, the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:apiBaseOf - the page has no api base, the default is used', failure);
     }
     return '';
   }
@@ -359,7 +359,7 @@
       if (Object.keys(o).length) root.localStorage.setItem(PEND, JSON.stringify(o));
       else root.localStorage.removeItem(PEND);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:pendPut - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pendPut - the browser refused to store it, so it is not kept this time', failure);
     }
   }
   function pendMark(kind) {
@@ -499,7 +499,7 @@
       if (pref('edition') !== edNow) editionReload(); /* this person's saved showing differs from what this machine drew: draw it again */
       if (again) push(); /* the choice that never landed goes up now */
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:hydrate - the repaint failed, so the screen keeps what it shows', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:hydrate - the repaint failed, so the screen keeps what it shows', failure);
     }
     return changed;
   }
@@ -531,13 +531,13 @@
           try {
             if (root.CBLocale && root.CBLocale.hydrate) root.CBLocale.hydrate(e.locale_prefs || {}, { country: e.country || null });
           } catch (failure) {
-            if (window.cbQuiet) window.cbQuiet('avatar:pull - the saved language was not applied', failure);
+            if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pull - the saved language was not applied', failure);
           }
           announceShop(e);
         })
         .catch(function () {});
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:pull - the saved preferences were not fetched, the local ones stay', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:pull - the saved preferences were not fetched, the local ones stay', failure);
     }
   }
   /* STD-COMPARE (2026-10-15): the SAME /me read tells the page the shop's country — `cb:me` on document, { country } — so a page that reads no API of its
@@ -577,7 +577,7 @@
       if (u.href === root.location.href) root.location.reload();
       else root.location.replace(u.href);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:editionReload - the browser would not read it, so the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:editionReload - the browser would not read it, so the default is used', failure);
     }
   }
 
@@ -948,7 +948,7 @@
         h = root.innerHeight || doc.documentElement.clientHeight;
       node.style.maxHeight = Math.max(160, Math.floor(h - r.top - 8)) + 'px';
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:fit - the pop-up was not fitted to the window', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:fit - the pop-up was not fitted to the window', failure);
     }
   }
   function repaint() {
@@ -972,7 +972,7 @@
           root.localStorage.removeItem(item);
         });
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:forget - the browser refused to store it, so it is not kept this time', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:forget - the browser refused to store it, so it is not kept this time', failure);
     }
   }
   function signOut() {
@@ -1050,7 +1050,7 @@
           try {
             btn.focus();
           } catch (failure) {
-            if (window.cbQuiet) window.cbQuiet('avatar:wire - the field is not on screen, so nothing takes focus', failure);
+            if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:wire - the field is not on screen, so nothing takes focus', failure);
           }
         }
       }
@@ -1113,7 +1113,7 @@
     try {
       cs = root.getComputedStyle(node);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('avatar:themeBase - the style was unreadable, the default is used', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('avatar:themeBase - the style was unreadable, the default is used', failure);
     }
     Object.keys(all).forEach(function (item) {
       saved[item] = node.style.getPropertyValue(item);

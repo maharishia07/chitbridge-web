@@ -70,7 +70,7 @@ function cbDropNote(key, keys) {
       if (seen.indexOf(item) < 0) seen.push(item);
     });
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:cbDropNote - the drop note is a diagnostic only, nothing is lost', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:cbDropNote - the drop note is a diagnostic only, nothing is lost', failure);
   }
 }
 /* capped · cap_note (SIBS below) — W2-RAIL R2: a cut list SAYS SO — `capped` (the code) and `cap_note` (the sentence) ride beside the chits array on inbox · sent · folder; pgFooter prints it */
@@ -398,14 +398,14 @@ var CBPrefs = (function () {
         try {
           obj = window.CBLocale.snapshot();
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('core:push - the language snapshot was unreadable, the push sends what it has', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('core:push - the language snapshot was unreadable, the push sends what it has', failure);
         }
       }
       if (timers[kind]) {
         try {
           clearTimeout(timers[kind]);
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('core:push - the earlier timer was already gone', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('core:push - the earlier timer was already gone', failure);
         }
       }
       timers[kind] = setTimeout(function () {
@@ -420,7 +420,7 @@ var CBPrefs = (function () {
             }
           );
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('core:push - the preferences were not sent, the screen keeps them', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('core:push - the preferences were not sent, the screen keeps them', failure);
         }
       }, 400);
     }
@@ -429,7 +429,7 @@ var CBPrefs = (function () {
 try {
   if (typeof window !== 'undefined') window.CBPrefs = CBPrefs;
 } catch (failure) {
-  if (window.cbQuiet) window.cbQuiet('core:page - CBPrefs was not put on window', failure);
+  if (globalThis.cbQuiet) globalThis.cbQuiet('core:page - CBPrefs was not put on window', failure);
 }
 
 const OUTBOX_KEYS = new Set([
@@ -548,7 +548,7 @@ function catgWithAncestors(ids) {
           try {
             if (typeof ccRenderTotal === 'function') ccRenderTotal();
           } catch (failure) {
-            if (window.cbQuiet) window.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
+            if (globalThis.cbQuiet) globalThis.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
           }
           try {
             if (typeof prodRepaintSection === 'function') {
@@ -556,7 +556,7 @@ function catgWithAncestors(ids) {
               prodRepaintSection('pricing');
             }
           } catch (failure) {
-            if (window.cbQuiet) window.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
+            if (globalThis.cbQuiet) globalThis.cbQuiet('core:catgWithAncestors - the repaint failed, so the screen keeps what it shows', failure);
           }
         })
         /* ⚠ cleared either way: a failed read must not leave the shelf permanently un-askable */
@@ -946,7 +946,7 @@ function cbPushStart() {
         try {
           d = JSON.parse(ev.data || '{}');
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('core:cbPushStart - the text was not JSON, so it is skipped', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('core:cbPushStart - the text was not JSON, so it is skipped', failure);
         }
         cbPushArrived(d);
       });
@@ -954,7 +954,7 @@ function cbPushStart() {
         try {
           node.close();
         } catch (failure) {
-          if (window.cbQuiet) window.cbQuiet('core:onerror - it was already closed', failure);
+          if (globalThis.cbQuiet) globalThis.cbQuiet('core:onerror - it was already closed', failure);
         }
         _push.es = null;
         _push.up = false;
@@ -991,7 +991,7 @@ function cbMeId() {
   try {
     if (typeof UI !== 'undefined' && UI && UI._me && UI._me.identity_id) return String(UI._me.identity_id);
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:cbMeId - the identity was unreadable, so no id is given', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:cbMeId - the identity was unreadable, so no id is given', failure);
   }
   try {
     if (typeof SESSION !== 'undefined' && SESSION) {
@@ -999,7 +999,7 @@ function cbMeId() {
       if (SESSION.entityId) return String(SESSION.entityId);
     }
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:cbMeId - the session was unreadable, so no id is given', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:cbMeId - the session was unreadable, so no id is given', failure);
   }
   return '';
 }
@@ -1009,7 +1009,7 @@ function cbPushStop() {
     try {
       _push.es.close();
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('core:cbPushStop - it was already closed', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('core:cbPushStop - it was already closed', failure);
     }
   }
   _push.es = null;
@@ -1143,7 +1143,7 @@ function scrollKeep(root) {
       if (el.scrollTop > 0 || el.scrollLeft > 0) saved.push({ key: _scrollKeyOf(el), top: el.scrollTop, left: el.scrollLeft });
     });
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:scrollKeep - scroll positions were not kept', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:scrollKeep - scroll positions were not kept', failure);
   }
   var wy = window.scrollY || 0,
     wx = window.scrollX || 0;
@@ -1226,7 +1226,7 @@ function cbVisitTick(nav) {
       window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400), where: String(where || '').slice(0, 200) });
       window.CBERRS.length = Math.min(window.CBERRS.length, 20);
     } catch (failure) {
-      if (window.cbQuiet) window.cbQuiet('core:keep - the error list could not take the entry', failure);
+      if (globalThis.cbQuiet) globalThis.cbQuiet('core:keep - the error list could not take the entry', failure);
     }
   };
   window.addEventListener('error', function (e) {
@@ -1244,12 +1244,12 @@ function cbVisitTick(nav) {
       try {
         keep(Array.prototype.map.call(arguments, String).join(' '), 'console');
       } catch (failure) {
-        if (window.cbQuiet) window.cbQuiet('core:error - a console error was not noted for the speed area', failure);
+        if (globalThis.cbQuiet) globalThis.cbQuiet('core:error - a console error was not noted for the speed area', failure);
       }
       return ce.apply(console, arguments);
     };
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:page - console.error was left unpatched', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:page - console.error was left unpatched', failure);
   }
 })();
 
@@ -1289,12 +1289,12 @@ function _apiCopy(v) {
   try {
     if (typeof structuredClone === 'function') return structuredClone(v);
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:_apiCopy - structuredClone failed, the JSON copy is tried next', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:_apiCopy - structuredClone failed, the JSON copy is tried next', failure);
   }
   try {
     return JSON.parse(JSON.stringify(v));
   } catch (failure) {
-    if (window.cbQuiet) window.cbQuiet('core:_apiCopy - the text was not JSON, so it is skipped', failure);
+    if (globalThis.cbQuiet) globalThis.cbQuiet('core:_apiCopy - the text was not JSON, so it is skipped', failure);
   }
   /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
      again — said here because a silent share is exactly what this guard exists to prevent */
