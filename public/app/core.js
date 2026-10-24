@@ -7,6 +7,34 @@
  * Depends on host globals defined in app.html: EP, CFG, SESSION, demoApi, go.
  * Pattern for a NEW panel: add one EP row + one mapper, then a panel module that calls api(). */
 
+/**
+ * cbQuiet(where, problem) — QUIET, BUT NEVER SILENT: the one recorder for a failure a page survives (a best-effort catch).
+ * Same contract as the counter's cbQuiet in till.html: it keeps {where, message, time} in a small ring and does nothing else —
+ * no toast, no network call, no storage write — and it never throws. cbQuietLog() returns the ring, newest last.
+ * Defined only when the page has none, so every `if (window.cbQuiet)` call site in the app now records instead of skipping.
+ */
+(function (root) {
+  if (root.cbQuiet) return;
+  var ring = [];
+  root.cbQuiet = function (where, problem) {
+    var message = 'failed';
+    try {
+      message = String((problem && (problem.message || problem.name)) || problem || 'failed').slice(0, 200);
+    } catch (unreadable) {
+      message = 'failed (unreadable error)';
+    }
+    try {
+      ring.push({ where: String(where || '?'), message: message, time: Date.now() });
+      if (ring.length > 200) ring.splice(0, ring.length - 200);
+    } catch (full) {
+      /* the recorder itself must never throw, and there is nothing left to record it with */
+    }
+  };
+  root.cbQuietLog = function () {
+    return ring.slice();
+  };
+})(window);
+
 function fill(path, params) {
   return path.replace(/:(\w+)/g, (_, k) => encodeURIComponent((params && params[k]) ?? ''));
 }
