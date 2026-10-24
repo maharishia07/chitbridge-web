@@ -34,7 +34,7 @@ const DMY = (s) => Number(s.slice(8, 10)) + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', '
 const KUMAR = 'pk', SRI = 'ps', MALA = 'pm', RAVI = 'pr';
 const LATE = (d) => 'Day 45 was ' + DMY(d) + ' — this bill is an expense only in the year you pay it (Income-tax s.43B(h)).';
 const PAYBY = (d) => 'Pay by ' + DMY(d) + ' — after that this bill cannot be claimed as an expense this year (Income-tax s.43B(h)).';
-const bill = (o) => Object.assign({ ref: 'x', date: dayN(0), due_date: dayN(0), open_minor: 0, age_days: 0, bucket: '0_30', overdue: false, msme_day45: null, msme_days_left: null, msme_risk: false, msme_words: null, note: null, early: null }, o);   /* note: the bill's own word (R106), null here */
+const bill = (o) => Object.assign({ ref: 'x', date: dayN(0), due_date: dayN(0), open_minor: 0, age_days: 0, bucket: '0_30', overdue: false, msme_day45: null, msme_days_left: null, msme_risk: false, msme_words: null, early: null, note: null }, o);   /* note: the bill's own word (R106), null here */
 const buckets = (o) => Object.assign({ '0_30': 0, '31_45': 0, '46_60': 0, '60_plus': 0 }, o);
 const OFFER = { pct: 2, within_days: 10, by: dayN(3), valid: true, save_minor: 60000, pay_minor: 2940000, words: '2% off if paid by ' + DMY(dayN(3)) + ' — saves ₹600',
   record: { ok: true, body: { narration: 'Early-pay discount from Mala Mills (2%)', against_ref: 'M1', client_ref: 'early:M1', lines: [{ account: '2100', party: MALA, dr_minor: 60000, cr_minor: 0 }, { account: '4230', dr_minor: 0, cr_minor: 60000 }] } },

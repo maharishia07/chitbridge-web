@@ -48,11 +48,11 @@ of file each thing is; this says what already does the job.
 | 38 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 36 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 35 | `modal` | `app.html` |  |
-| 35 | `host` | `chit-sheet.js` |  |
+| 36 | `host` | `chit-sheet.js` |  |
 | 35 | `rules` | `docnumber.js` | the rule set for a country — |
 | 35 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 35 | `missing` | `variant.browser.js` | refusing with no reason. |
-| 35 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 36 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 34 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 33 | `closeModal` | `app.html` |  |
 | 33 | `register` | `regulation.js` | register(pack) → the pack — |
@@ -62,10 +62,10 @@ of file each thing is; this says what already does the job.
 | 32 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 32 | `live` | `receivables.js` | the allocations that still count: |
 | 30 | `ensureCap` | `app.html` |  |
-| 32 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
+| 33 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 30 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 29 | `lines` | `cart.js` |  |
-| 30 | `sentence` | `one-person.js` |  |
+| 29 | `sentence` | `one-person.js` |  |
 | 29 | `facts` | `bill-steps.js` | MY state_log — |
 | 29 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 29 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
@@ -73,7 +73,7 @@ of file each thing is; this says what already does the job.
 | 28 | `changes` | `books-store.js` |  |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
 | 28 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
-| 29 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 30 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 27 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
@@ -116,19 +116,19 @@ of file each thing is; this says what already does the job.
 | 20 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
-| 19 | `card` | `cap-shop.js` |  |
+| 20 | `card` | `cap-shop.js` |  |
 | 19 | `note` | `device-id.js` | note(where, problem) — |
-| 19 | `more` | `lab-kit.js` | idKey: |
+| 18 | `more` | `lab-kit.js` | idKey: |
 | 19 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 19 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 18 | `next` | `cap-stock.js` | the next level: |
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `note` | `dbwatch.js` |  |
 | 17 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
-| 17 | `step` | `cart.js` |  |
+| 18 | `step` | `cart.js` |  |
 | 18 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
-| 18 | `chip` | `screen-id.js` | var S = { app: |
+| 19 | `chip` | `screen-id.js` | var S = { app: |
 | 17 | `verify` | `bookpack.js` | manifest's own hash. |
 | 17 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 17 | `notMigrated` | `crm-followups.js` |  |
@@ -152,7 +152,7 @@ of file each thing is; this says what already does the job.
 | 15 | `bkDate` | `cap-books.js` |  |
 | 15 | `frame` | `cap-settings.js` |  |
 | 15 | `fmtMoney` | `helpers.js` |  |
-| 16 | `today` | `kural.js` |  |
+| 17 | `today` | `kural.js` |  |
 | 15 | `label` | `screen-id.js` |  |
 | 15 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 15 | `orders` | `home-facts.js` | the till said 2 — |
@@ -162,7 +162,7 @@ of file each thing is; this says what already does the job.
 | 15 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 17 | `cblog` | `core.js` | const __cblog = []; |
+| 18 | `cblog` | `core.js` | const __cblog = []; |
 | 14 | `offers` | `network-app.js` |  |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `label` | `bill-privacy.js` | label(step, mine) — |
@@ -185,7 +185,8 @@ of file each thing is; this says what already does the job.
 | 13 | `fail` | `books.js` | lib/books-contract.js refusalOf maps every typed refusal of the ledger to its status, code and the old {error, |
 | 12 | `units` | `cart.js` |  |
 | 12 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
-| 12 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 13 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 11 | `when` | `cap-settings.js` |  |
 | 11 | `stored` | `one-person.js` |  |
 | 12 | `says` | `adopt.js` |  |
 | 12 | `post` | `books-manual.js` | POST /events — |
@@ -199,7 +200,7 @@ of file each thing is; this says what already does the job.
 | 11 | `safe` | `country-profiles.js` | text made safe for HTML — |
 | 11 | `confirm` | `lab-kit.js` | opts: |
 | 11 | `session` | `page-frame.js` | FLOW  mount → session() → skeleton()? → CBShell.mount(host, { host:{app·bar}, person, signin, avatar, title, h |
-| 12 | `verdict` | `rail-thread.js` |  |
+| 13 | `verdict` | `rail-thread.js` |  |
 | 11 | `tabs` | `workflow.js` | the folder tabs, in the order the screen shows them |
 | 11 | `actions` | `workflow.js` | actions(chit, me) — |
 | 11 | `patch` | `books-recurring.js` |  |

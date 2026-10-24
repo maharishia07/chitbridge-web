@@ -20,6 +20,7 @@
 :root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */ --serif:'Source Serif 4',Georgia,serif; }
+:root[data-themed]{--ground:var(--paper,#fbf6ec);--surface:var(--card,#fffdf8);--line-3:var(--line,#d8ccb0)}   /* a themed page draws the sheet on the theme card: the person sheet was light-on-light in Dark (R112 walk) */
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper,var(--ground,#fbf6ec));color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
 button{font-family:inherit;cursor:pointer}
@@ -54,6 +55,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 .emp-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .emp-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--green-d,#0D4A2B)}
 .emp-out[data-tone="error"]{color:var(--red-i,#8E3517)}
+.emp-code{margin:10px 0;padding:14px;border:1px solid var(--line,#e6dcc6);border-radius:12px;text-align:center;background:var(--surface,#fffdf8);color:var(--ink,#2a2418)}
+.emp-digits{font-size:40px;font-weight:700;letter-spacing:.12em;line-height:1.2;color:var(--ink,#2a2418)}
+.emp-code-say{margin-top:6px;font-weight:600}
 .emp-acts{display:flex;flex-direction:column;gap:6px}
 .emp-panel,.emp-form{display:flex;flex-direction:column;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e6dcc6)}
 .emp-form label{font-size:13px;font-weight:600;margin-top:4px}
