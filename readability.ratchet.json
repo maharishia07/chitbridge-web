@@ -99,7 +99,7 @@
   "public/app/shop-privacy.js": {"score":40,"long40":1,"long80":1,"complex10":1,"complex15":1,"deep3":0,"deep4":0,"cryptic":32,"noWhatLine":4,"emptyCatch":0,"noHeader":0},
   "public/app/showcase-templates.js": {"score":57,"long40":1,"long80":0,"complex10":2,"complex15":2,"deep3":0,"deep4":0,"cryptic":45,"noWhatLine":6,"emptyCatch":0,"noHeader":1},
   "public/app/sides.js": {"score":30,"long40":3,"long80":1,"complex10":2,"complex15":0,"deep3":0,"deep4":0,"cryptic":18,"noWhatLine":6,"emptyCatch":0,"noHeader":0},
-  "public/app/signin-ui.js": {"score":92,"long40":4,"long80":2,"complex10":9,"complex15":4,"deep3":0,"deep4":0,"cryptic":58,"noWhatLine":0,"emptyCatch":15,"noHeader":0},
+  "public/app/signin-ui.js": {"score":91,"long40":4,"long80":2,"complex10":9,"complex15":4,"deep3":0,"deep4":0,"cryptic":57,"noWhatLine":0,"emptyCatch":15,"noHeader":0},
   "public/app/step-flow.js": {"score":60,"long40":2,"long80":0,"complex10":1,"complex15":0,"deep3":0,"deep4":0,"cryptic":56,"noWhatLine":0,"emptyCatch":1,"noHeader":0},
   "public/app/strings-ar.js": {"score":13,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":6,"noWhatLine":0,"emptyCatch":6,"noHeader":1},
   "public/app/strings-fr.js": {"score":7,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":3,"noWhatLine":0,"emptyCatch":3,"noHeader":1},
