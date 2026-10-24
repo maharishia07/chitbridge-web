@@ -3023,12 +3023,16 @@ function watchDetailPane() {
       nestedT = setTimeout(function () {
         try {
           stampDetailTitle();
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('app:watchDetailPane - the pane title was not stamped, the pane keeps the title it has', failure);
+        }
       }, 50);
     });
     window._dpWatchEl = node;
     window._dpWatch.observe(node, { childList: true, subtree: true });
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:watchDetailPane - the timer was already gone', failure);
+  }
 }
 
 /**
@@ -3070,11 +3074,15 @@ function watchPanelHead(panel, sel, key) {
       nestedT = setTimeout(function () {
         try {
           stampPanelCode(panel.querySelector(sel || '.mhd'), key);
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('app:watchPanelHead - the panel code chip was not stamped, the panel keeps its head', failure);
+        }
       }, 50);
     });
     panel._headWatch.observe(panel, { childList: true, subtree: true });
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:watchPanelHead - the timer was already gone', failure);
+  }
 }
 
 function stampPanelCode(head, key) {
@@ -3186,11 +3194,17 @@ function stampDetailTitle() {
     placeCodeTag(node, tag);
     try {
       stampTestChip(node, info.code, info.label);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:stampDetailTitle - the test chip was not drawn, the title stays plain', failure);
+    }
     try {
       if (typeof screenCasesFollow === 'function') screenCasesFollow();
-    } catch (_) {}
-  } catch (e) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:stampDetailTitle - the test panel did not follow the title, it keeps what it shows', failure);
+    }
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:stampDetailTitle - the detail title was not stamped, the head stays as it is', failure);
+  }
 }
 
 function _fineScreen() {
@@ -4023,7 +4037,9 @@ document.addEventListener('keydown', function (e) {
 function ledgerDoorClosed(view) {
   try {
     if (localStorage.getItem(uk('cb_nav')) === 'ledger') localStorage.setItem(uk('cb_nav'), 'task');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:ledgerDoorClosed - the browser refused to store it, so it is not kept this time', failure);
+  }
   if (UI.nav === 'ledger') UI.nav = 'task';
   var v = view || (typeof BK !== 'undefined' && BK && BK.tab) || '';
   location.replace('/accounts.html' + (v ? '#' + v : ''));
@@ -4324,16 +4340,22 @@ function counterStay() {
 function counterStayHere() {
   try {
     sessionStorage.setItem('cb_stay_in_app', '1');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:counterStayHere - the browser refused to store it, so it is not kept this time', failure);
+  }
   /* ⚠️⚠️ go() MOVES THE HASH, AND A HASH THAT IS ALREADY #/app DOES NOT MOVE. No hashchange fires, route()
      never runs, and the person who just chose to stay is left looking at the leaving screen while the timer
      counts down behind it. So the route is re-run directly. [[feedback-check-after-the-wire]] */
   try {
     if ((location.hash || '') !== '#/app') location.hash = '#/app';
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:counterStayHere - the address could not be reset, the page stays where it is', failure);
+  }
   try {
     route();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:counterStayHere - the screen did not redraw, it keeps what it shows', failure);
+  }
 }
 function toCounter(why) {
   document.getElementById('root').innerHTML =
@@ -4350,7 +4372,9 @@ function toCounter(why) {
     setTimeout(function () {
       if (!counterStay()) location.href = '/till.html';
     }, 1800);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toCounter - the redirect timer could not be set, the person stays on this page', failure);
+  }
 }
 /** the workshop's next step after a verified registration (FX-UX2: the form moved to app/register-form.js; this step stayed) */
 function regIn(r, name) {
@@ -4666,7 +4690,9 @@ function setSession(s) {
      start too. Not awaited: the shell paints while it flies. */
   try {
     mePrefetchStart();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:setSession - the profile prefetch did not start, it loads when the screen asks', failure);
+  }
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession() {
@@ -4682,7 +4708,9 @@ function restoreSession() {
       return;
     }
     setSession(parsed);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:restoreSession - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 /**
  * ⭐⭐⭐ ONE BROWSER, ONE SHOP — THE GATE (Athi, 2026-10-01). *"i have signed in as tallytest in one page, and in the
@@ -4727,7 +4755,9 @@ function sessPersist() {
           shop: SESSION.shop
         })
       );
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:sessPersist - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 function gateRun() {
   var m = sessMine();
@@ -4779,7 +4809,9 @@ function noticePaint(n) {
     sig = n.ent + ':' + n.unsent;
   try {
     if (sessionStorage.getItem(k) === sig) return;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:noticePaint - the browser would not read it, so the default is used', failure);
+  }
   var node = document.createElement('div');
   node.id = 'gate-notice';
   node.setAttribute('data-testid', 'gate-notice');
@@ -4794,7 +4826,9 @@ function noticePaint(n) {
   node.querySelector('button').onclick = function () {
     try {
       sessionStorage.setItem(k, sig);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:onclick - the browser refused to store it, so it is not kept this time', failure);
+    }
     node.remove();
   };
   document.body.appendChild(node);
@@ -4911,7 +4945,9 @@ function sessFollow(e) {
 }
 try {
   window.addEventListener('storage', sessFollow);
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the storage listener was not added, other tabs are not followed', failure);
+}
 try {
   if (window.CBOnePerson)
     CBOnePerson.attach({
@@ -4925,7 +4961,9 @@ try {
         return personLeave('', tx('Signed out — this browser is being cleaned.'));
       }
     });
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the one-person watch was not attached, the page runs without it', failure);
+}
 // The logged-in actor's real id, from the JWT.
 function statusControl(role) {
   if (role === 'actor') {
@@ -5198,7 +5236,9 @@ function apGet(k, d) {
 function apSet(k, v) {
   try {
     localStorage.setItem(k, v);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:apSet - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 
 /**
@@ -5614,13 +5654,17 @@ function testModeToggle() {
   var on = false;
   try {
     on = localStorage.getItem('cb_testmode') === '1';
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:testModeToggle - the browser would not read it, so the default is used', failure);
+  }
   if (on) {
     if (typeof testModeSet === 'function') testModeSet(false);
     else {
       try {
         localStorage.removeItem('cb_testmode');
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('app:testModeToggle - the browser refused to store it, so it is not kept this time', failure);
+      }
       renderApp();
     }
     return;
@@ -5638,12 +5682,16 @@ function logoutNow() {
   if (typeof _netFlush === 'function') {
     try {
       _netFlush();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:logoutNow - the offline queue could not be flushed, the sign-out goes on', failure);
+    }
   }
   /* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */ try {
     localStorage.removeItem('cb_sess');
     localStorage.removeItem(uk('cb_nav'));
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:logoutNow - the browser refused to store it, so it is not kept this time', failure);
+  }
   stopAutoRefresh();
   SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
   /* ⚠️ the gate closes with the session, and the old person's /me (warm or in flight) is not the next person's */ GATE = {
@@ -6662,7 +6710,9 @@ function hookOnlineRefresh() {
     window.addEventListener('online', function () {
       if (SESSION.token) autoRefresh();
     });
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:hookOnlineRefresh - the online listener was not added, the refresh waits for the next action', failure);
+  }
 }
 function startAutoRefresh(sec) {
   hookOnlineRefresh();
@@ -6797,7 +6847,9 @@ function toggleNavGroup(name) {
     if (i >= 0) parsed.splice(i, 1);
     else parsed.push(name);
     localStorage.setItem(uk('cb_nav_shut'), JSON.stringify(parsed));
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toggleNavGroup - the browser refused to store it, so it is not kept this time', failure);
+  }
   renderApp();
 }
 /**
@@ -7265,7 +7317,9 @@ function navToFolder(id) {
   UI.drawer = false;
   try {
     localStorage.setItem(uk('cb_nav'), track);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:navToFolder - the browser refused to store it, so it is not kept this time', failure);
+  }
   renderApp();
 }
 /* Leaving a folder = the same panel with the filter off. */
@@ -7322,7 +7376,9 @@ function toggleTrack(nestedT) {
   UI.trackOpen[nestedT] = !(UI.trackOpen[nestedT] !== false);
   try {
     localStorage.setItem(uk('cb_trackopen'), JSON.stringify(UI.trackOpen));
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toggleTrack - the browser refused to store it, so it is not kept this time', failure);
+  }
   renderApp();
 }
 function trackIsOpen(nestedT) {
@@ -7489,7 +7545,9 @@ async function selfBillCart() {
   if (UI._sbCart) {
     try {
       UI._sbCart.destroy();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:selfBillCart - the earlier cart was already gone', failure);
+    }
   }
   /**
    * ⚠️⚠️ listEl NAMES THE INNER LIST, NOT THE HOST — and getting it wrong looks like a screen that works.
@@ -7704,7 +7762,9 @@ function navTo(k) {
   if (k === 'ledger') return ledgerDoorClosed();
   try {
     if (typeof CBCart !== 'undefined' && CBCart.floatsSync) setTimeout(CBCart.floatsSync, 0);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:navTo - the floating cart was not re-placed, it stays where it was', failure);
+  }
   if (k === 'raida') {
     UI.drawer = false;
     renderApp();
@@ -7721,7 +7781,9 @@ function navTo(k) {
   if (['drafts', 'trash', 'archive'].indexOf(k) >= 0) UI.folder = k;
   try {
     localStorage.setItem(uk('cb_nav'), k);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:navTo - the browser refused to store it, so it is not kept this time', failure);
+  }
   renderApp();
 }
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
@@ -8004,13 +8066,17 @@ async function ccLoadOffers() {
      Re-run the basket once the list is here. */
   try {
     if (typeof ccRenderTotal === 'function') ccRenderTotal();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:ccLoadOffers - the basket total was not re-run, it shows its last total', failure);
+  }
   /* The category shelf, on the same trip and with the same tolerance for failure — it labels the chips above the
      product list. Its own cache means the item form does not fetch it a second time. */
   try {
     await cbCatgLive();
     if (UI._ccCart) UI._ccCart.paintCategories();
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:ccLoadOffers - the category shelf did not load, the form carries on without it', failure);
+  }
   ccRenderCatPick();
 }
 function ccSetLineNote(i, v) {
@@ -10610,7 +10676,9 @@ function toggleSpec() {
   UI.spec = !UI.spec;
   try {
     lsSet('cb_spec', UI.spec ? '1' : '');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toggleSpec - the spec switch was not saved, it applies for this visit only', failure);
+  }
   renderApp();
 }
 
@@ -10623,7 +10691,9 @@ function specStandards(screen) {
           if (specOn()) renderApp();
         })
         .catch(function () {});
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:specStandards - the standards panel did not load, the page keeps what it shows', failure);
+    }
     return '';
   }
   var rows = STANDARDS.filter(function (item) {
@@ -10760,7 +10830,9 @@ function specCallsRepaint() {
   try {
     var el = document.getElementById('speccalls');
     if (el) el.innerHTML = specCalls();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:specCallsRepaint - the spec-calls box was not repainted, it keeps what it shows', failure);
+  }
 }
 
 function specToggleBody(i) {
@@ -15148,7 +15220,9 @@ async function supCatalogueFull(sid) {
     try {
       const j = await res.json();
       msg = j.message || j.error || '';
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:supCatalogueFull - the refusal text was unreadable, a general sentence is used', failure);
+    }
     throw new Error(msg || 'Could not read their catalogue (' + res.status + ')');
   }
   return await res.json();
@@ -15331,7 +15405,9 @@ async function ppAcceptFoot(handle, label) {
   try {
     var reply = await api('supAcceptGet', { params: { handle: handle } });
     prior = reply && reply.acceptance;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:ppAcceptFoot - the earlier acceptance was not readable, the page shows none', failure);
+  }
   var node = document.getElementById('pp_foot');
   if (!node) return; // modal may have closed during the read
   var Q = String.fromCharCode(39);
@@ -16125,7 +16201,9 @@ function setProdSort(v) {
   UI.prodSort = v;
   try {
     if (LAZY) delete LAZY.prodlist;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:setProdSort - the lazy-render state is not ready yet, so there is nothing to reset', failure);
+  }
   paintProdList();
 }
 /* ── select mode + bulk categorise ───────────────────────────────────────────────────────────────────────────── */
@@ -17724,7 +17802,9 @@ function setProdMode(m) {
     setTimeout(function () {
       try {
         setProdTab(UI.prodTab);
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('app:setProdMode - the product tab did not repaint, it keeps what it shows', failure);
+      }
     }, 260);
 }
 function newProduct() {
@@ -18122,7 +18202,9 @@ async function goIntTab(k) {
   UI.intTab = k;
   try {
     lsSet('cb_int_tab', k);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:goIntTab - the integration tab was not saved, it applies for this visit only', failure);
+  }
   if (typeof renderApp === 'function') renderApp();
   if (typeof loadSettings === 'function') loadSettings();
 }
@@ -19345,14 +19427,18 @@ function prodLayout() {
   try {
     const saved = localStorage.getItem(uk('cb.prodLayout'));
     if (saved === 'tabs' || saved === 'page') return (UI.prodLayout = saved);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:prodLayout - the browser would not read it, so the default is used', failure);
+  }
   return (UI.prodLayout = UI.vp === 'mob' ? 'tabs' : 'page');
 }
 function setProdLayout(v) {
   UI.prodLayout = v;
   try {
     localStorage.setItem(uk('cb.prodLayout'), v);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:setProdLayout - the browser refused to store it, so it is not kept this time', failure);
+  }
   paintProdDetail();
 }
 function prodTabBar() {
@@ -21676,7 +21762,9 @@ function prodDetailHTML() {
           CBCatUI.priceHTML(Object.assign({}, d, { price: pPrice(d) }), { id: prodId(p), offers: offs, tax: x.tax, money: inr }) +
           '</span>'
         );
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:prodDetailHTML - the offer price was not drawn, the plain price is shown', failure);
+    }
     return `<bdi>${inr(pPrice(d))}</bdi>`;
   })()} / <bdi>${esc(pUnit(d))}</bdi>${pCode(d) ? ' · ' + esc(pCode(d)) : ''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view', 'View')}${seg('edit', 'Edit')}</div></div>`;
   UI._prodSheetD = d; /* the fact sheet's wrappers read the product from here */
@@ -22890,12 +22978,16 @@ function makeMovable(panel, opts) {
     try {
       var node = document.querySelector('#assisthost > div');
       if (node && !node.getAttribute('data-movable')) makeMovable(node, { key: 'cb_assist', minW: 300, minH: 220 });
-    } catch (e) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:tryMove - the assistant panel could not be made movable, it stays fixed', failure);
+    }
   }
   function start() {
     try {
       new MutationObserver(tryMove).observe(document.body, { childList: true, subtree: true });
-    } catch (e) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:start - the observer was not started, the panel is not made movable', failure);
+    }
   }
   if (document.body) start();
   else document.addEventListener('DOMContentLoaded', start);
@@ -22990,7 +23082,9 @@ function modalCode() {
       var reg = (window.CBSCREENS && window.CBSCREENS.byFn) || {};
       return reg[fn] ? { code: reg[fn].code, fn: fn, ambiguous: !!reg[fn].ambiguous } : null;
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:modalCode - the calling screen could not be read from the stack, no code tag is shown', failure);
+  }
   return null;
 }
 /** put it in the dialog's own header, where a reader is already looking for the title */
@@ -23019,8 +23113,12 @@ function modalStamp(host) {
     /* ⭐ a dialog is the thing in front now, so the test panel follows it there */
     try {
       if (typeof screenCasesFollow === 'function') screenCasesFollow();
-    } catch (_) {}
-  } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:modalStamp - the test panel did not follow the dialog, it keeps what it shows', failure);
+    }
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:modalStamp - the dialog code tag was not placed, the dialog shows without it', failure);
+  }
 }
 
 function modal(html, wide, opt) {
@@ -23101,7 +23199,9 @@ function closeModal() {
   if (typeof d === 'function') {
     try {
       d();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:closeModal - a dialog close callback failed, the dialog still closes', failure);
+    }
   }
 }
 function quickStatus() {
@@ -23421,7 +23521,9 @@ async function restoreChits(ids) {
   }
   try {
     await loadList();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:restoreChits - the list did not reload, it keeps what it shows', failure);
+  }
   toast(ok ? MSG.restored(ok) : MSG.fail('restore', 'check Trash'));
 }
 function openFilter() {
@@ -23497,7 +23599,9 @@ async function loadNotifs(force) {
       node.textContent = UI.notifCount || '';
       node.style.display = UI.notifCount ? '' : 'none';
     }
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:loadNotifs - the bell did not load, the count stays as it was', failure);
+  }
 }
 /**
  * ⭐ WHAT A NOTIFICATION SAYS, AND WHETHER IT IS FOR YOU.
@@ -24107,7 +24211,9 @@ function toggleLhFold() {
   UI.lhFold = !UI.lhFold;
   try {
     localStorage.setItem(uk('cb_lhfold'), UI.lhFold ? '1' : '0');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toggleLhFold - the browser refused to store it, so it is not kept this time', failure);
+  }
   paintMain();
 }
 function listLegend() {
@@ -24198,7 +24304,9 @@ function toggleVoice() {
   UI.voice = !UI.voice;
   try {
     localStorage.setItem('cb_voice', UI.voice ? '1' : '');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:toggleVoice - the browser refused to store it, so it is not kept this time', failure);
+  }
   if (UI.voice) announce('Voice announcements on');
 }
 function announce(msg) {
@@ -24208,7 +24316,9 @@ function announce(msg) {
     try {
       speechSynthesis.cancel();
       speechSynthesis.speak(new SpeechSynthesisUtterance(msg));
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:announce - speech was not available, the message is shown only', failure);
+    }
   }
 }
 function showBusy(msg) {
@@ -24919,7 +25029,9 @@ function getCols() {
   try {
     const parsed = JSON.parse(localStorage.getItem(uk('cb_cols')) || 'null');
     if (Array.isArray(parsed) && parsed.length) return parsed;
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:getCols - the browser would not read it, so the default is used', failure);
+  }
   return DEFCOLS.slice();
 }
 /**
@@ -24987,7 +25099,9 @@ function taskStore() {
       var r = {};
       try {
         r = JSON.parse(localStorage.getItem(uk('cb_cl_task')) || '{}') || {};
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('app:get - the browser would not read it, so the default is used', failure);
+      }
       return { cols: UI.cols || getCols(), widths: r.widths || {}, view: r.view || 'grid' };
     },
     set: function (v) {
@@ -24995,7 +25109,9 @@ function taskStore() {
       try {
         localStorage.setItem(uk('cb_cols'), JSON.stringify(v.cols));
         localStorage.setItem(uk('cb_cl_task'), JSON.stringify({ widths: v.widths, view: v.view }));
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('app:set - the browser refused to store it, so it is not kept this time', failure);
+      }
     }
   };
 }
@@ -25100,7 +25216,9 @@ function sortBy(key) {
 function persistSort() {
   try {
     localStorage.setItem(uk('cb_sort'), JSON.stringify({ sort: UI.sort, dir: UI.dir }));
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:persistSort - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 function setSortPreset(v) {
   if (v === 'latest' || v === 'oldest') {
@@ -25564,7 +25682,9 @@ function paintDetail() {
   }
   try {
     stampDetailTitle();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:paintDetail - the detail title was not stamped, it keeps the title it has', failure);
+  }
 }
 /**
  * ⭐ R02 — EVERY MESSAGE THREAD ON THE DETAIL PANE IS CBThread (app/rail-thread.js), mounted into the `[data-rt]` hosts the
@@ -25615,7 +25735,9 @@ function rtMountAll(scope) {
       if (typeof paintRowsOnly === 'function') {
         try {
           paintRowsOnly();
-        } catch (_) {}
+        } catch (failure) {
+          if (window.cbQuiet) window.cbQuiet('app:onDone - the rows were not repainted, they keep what they show', failure);
+        }
       }
     }
   });
@@ -25778,7 +25900,9 @@ function commercialBlock(c) {
   var when = 'send';
   try {
     when = CBLocale.date(cm.folded_at);
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:commercialBlock - the date could not be formatted, the fallback word stays', failure);
+  }
   var rows = cm.areas
     .map(function (item) {
       var rail = item.on_rail
@@ -26050,7 +26174,9 @@ function clearancesBlock(c) {
   var when = 'send';
   try {
     when = CBLocale.date(cl.folded_at);
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:clearancesBlock - the date could not be formatted, the fallback word stays', failure);
+  }
   var rows = cl.items
     .map(function (item) {
       var vinfo = item.verified_at
@@ -26274,7 +26400,9 @@ function _aiOrderPdf() {
   setTimeout(function () {
     try {
       node.print();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:_aiOrderPdf - the print dialog did not open, nothing is printed', failure);
+    }
   }, 350);
 }
 function askAiOrderDoc() {
@@ -26437,7 +26565,9 @@ function _aiOrderDocPdf() {
   setTimeout(function () {
     try {
       node.print();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:_aiOrderDocPdf - the print dialog did not open, nothing is printed', failure);
+    }
   }, 350);
 }
 // aiRun — the ONE reusable AI affordance (advisory skills). Any screen: aiRun(skill, context, {title}). Global so caps reuse it.
@@ -26521,7 +26651,9 @@ function _aiRunPdf() {
   setTimeout(function () {
     try {
       node.print();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:_aiRunPdf - the print dialog did not open, nothing is printed', failure);
+    }
   }, 350);
 }
 function detailInner() {
@@ -26835,7 +26967,9 @@ async function counterMint() {
   try {
     localStorage.setItem('cb_till_key', reply.key);
     localStorage.setItem('cb_till_entity', SESSION.entityId || '');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:counterMint - the browser refused to store it, so it is not kept this time', failure);
+  }
   return reply.key;
 }
 /**
@@ -27043,7 +27177,9 @@ function setStatusSearch(v) {
       var n = node.value.length;
       try {
         node.setSelectionRange(n, n);
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('app:setStatusSearch - the caret position was not kept', failure);
+      }
     }
   }, 300);
 }
@@ -27181,7 +27317,9 @@ function booksRepaint() {
     var k = scrollKeep();
     el.outerHTML = booksBlockHTML(BOOKS_CTX) || '';
     k();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:booksRepaint - the books block was not repainted, it keeps what it shows', failure);
+  }
 }
 /** read this one chit again and put its books answer into the block (and into the open chit, so a later paint agrees) */
 async function booksRefresh(id) {
@@ -27245,7 +27383,9 @@ function booksOnBell(d) {
     if (!id) return;
     var open = (UI.cur && UI.cur.id) || UI.sel || '';
     if (BOOKS_WAIT[id] || String(open) === String(id)) booksRefresh(id);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:booksOnBell - the books bell update did not refresh, the block keeps what it shows', failure);
+  }
 }
 async function booksSend(id) {
   try {
@@ -27837,7 +27977,9 @@ async function refreshRollup(force) {
     });
     const node = document.getElementById('srchadv');
     if (node) node.innerHTML = advBtnHtml();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:refreshRollup - the roll-up did not load, it keeps its last numbers', failure);
+  }
 }
 async function assignChit(id, actorId, pri, reason) {
   try {
@@ -28247,7 +28389,9 @@ function lsGet(k, def) {
 function lsSet(k, v) {
   try {
     localStorage.setItem(k, v);
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:lsSet - the browser refused to store it, so it is not kept this time', failure);
+  }
 }
 /* ⚠️ THE BODY CLASS IS SET HERE TOO, NOT ONLY IN setVP. `vp` is restored from localStorage on load, so someone
    who left the app in Mobile and reloads never passes through setVP — and the modals would break out of the
@@ -28347,7 +28491,9 @@ function pickToggle(key, list, id, after) {
 function pickReset(key, after) {
   try {
     localStorage.removeItem(key);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:pickReset - the browser refused to store it, so it is not kept this time', failure);
+  }
   renderApp();
   if (typeof after === 'function') after();
 }
@@ -28494,18 +28640,24 @@ function applyPrefs() {
      a preference of the person at the screen, not of the session. */
   try {
     themeApply(themeGet());
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:applyPrefs - the theme was not applied, the page keeps its look', failure);
+  }
   /* Same reasoning as the theme above: applied BEFORE first paint, or the text visibly resizes a moment
      after the screen appears — which reads as a rendering bug rather than a preference being honoured. */
   try {
     appearanceApply();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:applyPrefs - the appearance was not applied, the page keeps its look', failure);
+  }
   UI.vp = lsGet('cb_vp', window.innerWidth <= 820 ? 'mob' : 'lap');
   /* ⭐ Spec is remembered separately from size, because it is a separate question. */
   UI.spec = !!lsGet('cb_spec', '');
   try {
     document.body.classList.toggle('vpmob', UI.vp === 'mob');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:applyPrefs - the mobile layout class was not set, the layout stays as it was', failure);
+  }
   UI.lw = parseInt(lsGet('cb_lw', 340), 10) || 340;
   /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
      kind of pane and must not share a number; 320 is the menu default MIS and Profile already use. */
@@ -28544,7 +28696,9 @@ function setVP(v) {
   lsSet('cb_vp', v);
   try {
     document.body.classList.toggle('vpmob', v === 'mob');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:setVP - the mobile layout class was not set, the layout stays as it was', failure);
+  }
   renderApp();
 }
 /**
@@ -28577,16 +28731,22 @@ function _vpAutoCheck() {
     UI.vp = want;
     try {
       document.body.classList.toggle('vpmob', want === 'mob');
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('app:_vpAutoCheck - the mobile layout class was not set, the layout stays as it was', failure);
+    }
     renderApp();
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:_vpAutoCheck - the width check failed, the layout stays as it was', failure);
+  }
 }
 try {
   window.addEventListener('resize', function () {
     clearTimeout(_vpAutoT);
     _vpAutoT = setTimeout(_vpAutoCheck, 160);
   });
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the resize listener was not added, the layout is not re-checked on resize', failure);
+}
 /* ⚠️ The pill's clearance is geometry, so it has to be re-decided when the geometry changes. A rotation or a
    window drag moves the footer without repainting the screen, and the lift computed for the old size would be
    either wrong or stranded. Same debounce as the viewport check, for the same reason. */
@@ -28596,7 +28756,9 @@ try {
     clearTimeout(_fabT);
     _fabT = setTimeout(fabClear, 180);
   });
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the resize listener was not added, the pill is not re-placed on resize', failure);
+}
 let DRAG = false;
 /**
  * ⚠️ THE DIVIDER MUST WRITE THE WIDTH THE CURRENT SCREEN READS. It always wrote `UI.lw` — the chit list's width
@@ -29801,7 +29963,9 @@ function lbDownload() {
     const a = atts[UI.lb];
     if (a && a.src) window.open(a.src, '_blank', 'noopener');
     else toast('No file URL (stub).');
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:lbDownload - the window was blocked, nothing opens', failure);
+  }
 }
 function paintLB() {
   const host = document.getElementById('lbhost');
@@ -29837,7 +30001,9 @@ try {
     });
     history.replaceState(null, '', location.pathname + location.hash);
   }
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the clean-load notice could not be read, the page opens without it', failure);
+}
 applyPrefs();
 restoreSession();
 try {
@@ -29846,7 +30012,9 @@ try {
     UI.sort = parsed.sort;
     UI.dir = parsed.dir || 'desc';
   }
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the browser would not read it, so the default is used', failure);
+}
 try {
   if (SESSION.token) {
     const _nv = localStorage.getItem(uk('cb_nav'));
@@ -29857,7 +30025,9 @@ try {
       else if (_nv === 'task') UI.folder = 'task';
     }
   }
-} catch (_) {}
+} catch (failure) {
+  if (window.cbQuiet) window.cbQuiet('app:page - the browser would not read it, so the default is used', failure);
+}
 if (!location.hash) location.hash = SESSION.token ? '#/' : '#/login';
 route();
 </script>
@@ -29894,7 +30064,9 @@ route();
     });
     /* not on the load right after a clean-up: the slate stays clean until the next visit */ if (!(typeof CLEAN_LOAD !== 'undefined' && CLEAN_LOAD))
       CBOffline.registerSW('/cb-sw.js');
-  } catch (e) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('app:page - the offline layer did not start, the page runs online only', failure);
+  }
 })();
 </script>
 </body>
