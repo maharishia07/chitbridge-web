@@ -269,8 +269,8 @@
     }
   }
   function cmpVals(a, b) {
-    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')),
-      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.-]/g, '')),
+      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.-]/g, ''));
     if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) {
       return (na || 0) - (nb || 0);
     }
@@ -1826,7 +1826,7 @@
         : null;
     if (at)
       Object.keys(at).forEach(function (item) {
-        if (/^[a-z][a-z0-9\-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
+        if (/^[a-z][a-z0-9-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
       });
     var tid = o.rowTid
       ? safe(function () {
@@ -2659,7 +2659,7 @@
     }
   }
   function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
   function refocusCol(I, k) {
     var node = I.el.querySelector('[data-col="' + k + '"]');

@@ -197,7 +197,7 @@ function bkOwes(v, c) {
   return v ? tx(v > 0 ? 'they owe you' : 'you owe') + ' ' + bkMoney(Math.abs(v), c) : tx('settled');
 }
 function bkToMinor(v, c) {
-  var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, ''));
+  var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.-]/g, ''));
   return isFinite(n) ? Math.round(n * Math.pow(10, bkDec(c))) : NaN;
 }
 /**
