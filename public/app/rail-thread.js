@@ -47,6 +47,7 @@
  * cbAttachButton (attach-ui.js: an attachment is pinned to a sent message, after the send, exactly as before) · CBLocale ·
  * CBOffline.saveDraft (the typed text survives a repaint). ZERO app.html globals: no UI, SESSION, paintDetail, modal, toast.
  
+ * CARD 01-rail-core-the-chit/thread-messages-on-a-chit
  * CALLED BY public/app.html, public/app/cap-admin.js, public/app/cap-books.js, public/app/cap-dispute.js, public/app/cap-messages.js (+5 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
