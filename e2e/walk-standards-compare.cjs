@@ -101,6 +101,7 @@ W.run('standards-compare', async (w) => {
     const words = await page.innerText('[data-testid="std-cmp-sources-' + ix2 + '"]');
     const why = await page.locator('[data-testid="std-cmp-source-why"]').innerText().catch(() => '');
     const greyed = await page.getAttribute('[data-testid="std-cmp-source"]', 'aria-disabled');
+    await setFilter('country', 'IN');   /* S5 onwards open India rows, as before */
     return { ok: links.length === 1 && /^https:\/\/www\.xero\.com\/au\/pricing-plans\/\|_blank\|noopener$/.test(links[0]) && /a copy is in this repository/.test(copy) && btn === null
         && /docs library/.test(words) && words.indexOf(docOnly.src[0].doc) >= 0 && greyed === 'true' && /docs library/.test(why),
       saw: 'xero: link ' + links[0] + ' · ' + docOnly.cmp + ': "' + words.replace(/\s+/g, ' ').slice(0, 70) + '…" · greyed ' + greyed + ' · why "' + why.slice(0, 60) + '"' };
