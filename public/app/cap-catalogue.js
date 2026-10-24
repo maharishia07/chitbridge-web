@@ -22,7 +22,8 @@
  *   CBCatalogueApp                                         the small app: items (CBList, server-paged) · the item sheet · categories (CBList over cap-categories' rows + its writers) · import
  * Host globals (as every cap-*.js): api · EP · UI · SESSION · esc · tx · txf · toast · val · cblog · CBMoney · CBLocale · CBList · CBAction · confirmAsk · fmtMoney · packHasHsn · catgIdsOf · cbCatgLive · cap-categories.js.
  * Flow step: O2C step 1 · enquiry — the catalogue the buyer is shown is shaped here (docs/process/flows.json).
- 
+ * CARD 06-catalogue-pim/items
+
  * CALLED BY public/app.html, public/app/cap-categories.js, public/app/cap-catsetup.js, public/app/cap-compare.js, public/app/cap-network-member.js (+3 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
@@ -37,7 +38,10 @@ var CB_CATALOGUE_EP = {
   prodTemplate: { m: 'GET', p: '/api/products/template', ok: '✓' }, // the blank sheet in THIS catalogue's format
   prodPreflight: { m: 'POST', p: '/api/products/import/preflight', ok: '✓' }, // read a file before it becomes data — WRITES NOTHING
   prodImport: { m: 'POST', p: '/api/products/import', ok: '✓' }, // the commit half — a decision per column, confirm:true required
-  canSeeCosts: { m: 'GET', p: '/api/entities/me/can-see-costs', ok: 'y' } // [OFFR-04] may this login see cost and price — a FIELD the client branches on, never a sentence
+  canSeeCosts: { m: 'GET', p: '/api/entities/me/can-see-costs', ok: 'y' }, // [OFFR-04] may this login see cost and price — a FIELD the client branches on, never a sentence
+  /* MOVED from app.html's EP (F5 W1a): the item row's "from shop default" is resolve()'s catalogue rung, so catalogue.html reads the face too */
+  catFaceGet: { m: 'GET', p: '/api/catalogue-face', ok: '✓' }, // b112 — load this entity's saved catalogue face (cross-device)
+  catFacePut: { m: 'PUT', p: '/api/catalogue-face', ok: '✓' } // b112 — save (upsert) the whole catalogue face config
 };
 
 /* ══ MOVED FROM app.html — the item's slots and the loose price read ══ */
@@ -559,6 +563,8 @@ var CBCatalogueApp = (function () {
     err: '',
     cost: null,
     me: null,
+    face: null /* the catalogue face (its tax.default_slab is resolve()'s last rung), read once the first item sheet opens */,
+    taxReady: false,
     list: null,
     catList: null,
     sel: null,
@@ -887,6 +893,8 @@ var CBCatalogueApp = (function () {
     S.sel = id;
     S.mode = id ? 'view' : 'new';
     paintSheet();
+    /* the rate row's facts arrive once (slabs · categories · face) and the row repaints in place — the sheet is already on screen */
+    if (id && !S.taxReady && shopCharges()) readTax().then(paintTaxRow);
     var node = el('cat_sheet');
     if (node && !node.open) {
       try {
@@ -919,6 +927,147 @@ var CBCatalogueApp = (function () {
   }
   function kv(l, v) {
     return '<div class="cat-kv"><b>' + l + '</b><span>' + (v === '' || v == null ? '—' : esc(v)) + '</span></div>';
+  }
+
+  /* ── the rate row (F5 W1a) — the engine resolves, the pack suggests, the shop taps, the ONE product writer writes what setOn says ── */
+  /** the shop's tax pack (reg-in `tax` …) through helpers.js shopReg — the regulation pack of SESSION.country; null when no pack answers */
+  function taxPack() {
+    var regulation = typeof shopReg === 'function' ? shopReg() : null;
+    return (regulation && regulation.tax) || null;
+  }
+  /** the shop's country, off its own record (the pack the chip's words come from) */
+  function country() {
+    return (S.me && (S.me.country_code || S.me.country)) || '';
+  }
+  /** does a sale of this shop carry its tax — the twin of the counter's shopTax().charges and the api's chargesTax, never "has a GSTIN" (critic 11) */
+  function shopCharges() {
+    var shop = S.me || {},
+      flags = shop.policy_flags || {};
+    return typeof cbTaxCharges === 'function' && cbTaxCharges({ gstin: shop.gstn || shop.gstin, reg_type: flags.gst_registration }, taxPack());
+  }
+  /** the slabs and categories (core.js's one live-definition loader) and the face, once; a re-read is never needed inside one sheet */
+  function readTax() {
+    if (S.taxReady) return Promise.resolve();
+    var face = api('catFaceGet')
+      .then(function (reply) {
+        S.face = (reply && reply.face) || {};
+      })
+      .catch(function (e) {
+        S.face = {};
+        cblog('warn', 'catalogue: the catalogue face could not be read — a shop default is not shown: ' + ((e && e.message) || e));
+      });
+    return Promise.all([cbDefsLive('tax'), cbDefsLive('category'), face]).then(function () {
+      S.taxReady = true;
+    });
+  }
+  function taxResolve(data) {
+    return CBTaxSlab.resolve({ item_data: data || {}, face: S.face || {}, slabs: cbDefsCached('tax') || [], categories: cbDefsCached('category') || [] });
+  }
+  /**
+   * who may set a rate here — the same rule as the counter's rateMay and the api's setsRate (DECISIONS 2026-10-24 14:20: owner or manager ONLY).
+   * The owner is the server's is_owner field (GET /entities/me/can-see-costs). ⚠️ The api tells this page no HAT, so a manager signed in here is
+   * greyed until it does (cb-api: a `hat` or a `may.set_rate` field) — never a guess from a name.
+   */
+  function rateMay() {
+    return cbRateMay({ owner: !!(S.cost && S.cost.is_owner), hat: null });
+  }
+  /** the row: label = the pack's word; chip = describe({short}) + source words, or the amber "No GST rate yet"; ONE action, enabled by role */
+  function taxRowHTML(data) {
+    if (!shopCharges()) return '';
+    var pack = taxPack(),
+      word = (pack && pack.scheme) || T('Tax');
+    var resolved = S.taxReady ? taxResolve(data) : null;
+    var inner = S.taxReady
+      ? cbSlabChipHTML(resolved, {
+          country: country(),
+          tid: 'cat-tax-chip',
+          action: cbRateButtonHTML(rateMay(), { word: resolved.rate == null ? T('Set rate') : T('Change'), onclick: 'CBCatalogueApp.ratePickOpen()', cls: 'act quiet cat-rate-set', tid: 'cat-rate-set' })
+        })
+      : '<span class="sub">' + esc(T('Reading…')) + '</span>';
+    return '<div class="cat-kv" id="ct_tax_row" data-testid="cat-tax-row"><b>' + esc(word) + '</b><span>' + inner + '<div id="ct_tax_pick" class="cat-rate-pick"></div></span></div>';
+  }
+  /** repaint the row IN PLACE (never the sheet: an open picker or outcome line stays where the eye is) */
+  function paintTaxRow() {
+    var rowNode = el('ct_tax_row'),
+      item = S.sel ? itemOf(S.sel) : null;
+    if (!rowNode || !item || S.mode !== 'view') return;
+    rowNode.outerHTML = taxRowHTML(pData(item));
+  }
+  /** Set rate › the ask-once menu under the chip: the shop's live slabs on today's menu, the pack's suggestion for the item's code first */
+  function ratePickOpen() {
+    var pickHost = el('ct_tax_pick'),
+      item = S.sel ? itemOf(S.sel) : null;
+    if (!pickHost || !item) return;
+    if (!rateMay().ok) {
+      say('cat_sheet_out', rateMay().why, 'warn');
+      return;
+    }
+    var data = pData(item);
+    /* the code only ever SUGGESTS (critic 12): hsn first, then sac, then the shop's own code — never stamped */
+    var menu = cbSlabMenu(cbDefsCached('tax') || [], taxPack(), data.hsn || data.sac || data.code || '');
+    pickHost.innerHTML = cbSlabMenuHTML(menu, {
+      cls: 'act quiet',
+      pick: function (slabId) {
+        return "CBCatalogueApp.ratePick('" + esc(slabId) + "', this)";
+      }
+    });
+  }
+  /** the merge-patch setOn makes on this item: every key it changed; a key it removed travels as null (RFC 7386) — the api's slabPatchOf, on the client */
+  function slabPatch(data, slab) {
+    var before = Object.assign({}, data || {}),
+      after = CBTaxSlab.setOn(Object.assign({}, before), slab),
+      patch = {};
+    Object.keys(before)
+      .concat(Object.keys(after))
+      .forEach(function (key) {
+        if (after[key] !== before[key]) patch[key] = after[key] === undefined ? null : after[key];
+      });
+    return patch;
+  }
+  /** the shop's live slab by id (the picker's rows are these) */
+  function slabById(slabId) {
+    return (cbDefsCached('tax') || []).filter(function (slab) {
+      return String(slab.definition_id || slab.id) === String(slabId);
+    })[0];
+  }
+  /** a slab tapped: ASK FIRST (a rate is a money promise on every bill from now on), then ONE PATCH of the diff, then the row repaints in place */
+  function ratePick(slabId, button) {
+    var item = S.sel ? itemOf(S.sel) : null,
+      slab = slabById(slabId);
+    if (!item || !slab) return;
+    if (!rateMay().ok) {
+      say('cat_sheet_out', rateMay().why, 'warn'); /* the door is greyed above; this is the belt to that brace — nothing is sent */
+      return;
+    }
+    var data = pData(item),
+      patch = slabPatch(data, slab),
+      chosen = CBTaxSlab.slabOf(slab) || {},
+      words = CBTaxSlab.describe({ source: 'product', rate: chosen.rate, nil_kind: chosen.nil_kind }, { short: true, country: country() });
+    if (!Object.keys(patch).length) {
+      say('cat_sheet_out', T('{n} already carries {w}.', { n: pName(data), w: words }), 'ok');
+      return;
+    }
+    return CBAction.run(
+      button,
+      function () {
+        return api('prodEdit', { params: { id: S.sel }, body: { item_data: patch, merge: true } });
+      },
+      {
+        key: 'cat-rate-set',
+        confirm: { title: pName(data) + ': ' + words + '?', body: esc(T('Every new bill carries it.')), yes: T('Set rate'), danger: false },
+        out: 'cat_sheet_out',
+        busy: T('Saving…'),
+        outcome: function (reply) {
+          if (reply && reply.item) {
+            var index = S.items.indexOf(item);
+            if (index >= 0) S.items[index] = reply.item;
+          } else Object.assign(data, patch);
+          paintTaxRow();
+          if (S.list) S.list.refresh();
+          say('cat_sheet_out', T('{n} now carries {w}.', { n: pName(data), w: words }), 'ok');
+        }
+      }
+    );
   }
   function priceField(d) {
     var may = seesCosts();
@@ -1023,7 +1172,7 @@ var CBCatalogueApp = (function () {
         '<div class="cat-facts" data-testid="cat-facts">' +
         kv(esc(T('Price')), seesCosts() ? priceText(d.price) : T('not shown') + ' · ' + costWhy()) +
         (seesCosts() && d.cost != null ? kv(esc(T('Cost')), priceText(d.cost)) : '') +
-        kv(esc(T('Unit')), pUnit(d)) +
+        kv(esc(T('Unit')), pUnit(d)) + taxRowHTML(d) /* F5 W1a: the rate row, under Unit */ +
         kv(esc(T('Categories')), catNames(d).join(' · ')) +
         kv(esc(T('Description')), pDesc(d)) +
         ctDeclaredViewRows(d, kv) +
@@ -1548,6 +1697,8 @@ var CBCatalogueApp = (function () {
     show: show,
     page: page,
     changed: changed,
+    ratePickOpen: ratePickOpen,
+    ratePick: ratePick,
     state: function () {
       return S;
     }

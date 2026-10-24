@@ -17,6 +17,7 @@
  *
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
+ * CARD 06-catalogue-pim/categories-and-fields
  
  * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
@@ -266,47 +267,7 @@ function cbcatParentOptions(id) {
   });
 }
 
-/**
- * ⭐⭐ THE MIDDLE RUNG OF THE TAX INHERITANCE — Athi, 2026-09-03: *"each product has different tax criteria, so it
- * has to be product specific, but there are slabs"*.
- *
- * Tally sets a GST rate on the stock item, the stock GROUP and the company, and takes the most specific that
- * answers. This is the group rung: rice does not need its own slab if everything in Grains is 5%.
- *
- * ⚠️ IT RIDES IN `rules`, like `parent` — free-form jsonb, so a second attribute on a category costs no migration.
- * ⚠️ LIVE SLABS ONLY, and read through `cbDefsLive` — core.js's one live-definition loader, cached per kind. A
- * fourth private fetch here is how four screens come to disagree about what is on the shelf.
- * ⚠️ A category in a product's list that names no slab is SKIPPED, not treated as "no tax" — see lib/tax-slab.js.
- */
-function cbcatSlabPickHTML(f) {
-  var slabs = typeof cbDefsCached === 'function' ? cbDefsCached('tax') : null;
-  if (slabs === null) {
-    if (typeof cbDefsLive === 'function')
-      cbDefsLive('tax').then(function () {
-        if (CBCAT_UI.form) cbcatPaint();
-      });
-    return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' + tx('reading your slabs…') + '</div>';
-  }
-  /* ⚠️ An empty picker says WHY and where to go. A lone blank option reads as "this category cannot have one". */
-  if (!slabs.length)
-    return (
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' +
-      txf('No live slab yet — name one under {where}.', { where: '<b>' + tx('Catalogue setup') + ' › ' + tx('Tax') + '</b>' }) +
-      '</div>'
-    );
-  var cur = f.default_slab || '';
-  return (
-    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">' +
-    '<option value="">— ' +
-    esc(tx('inherit the catalogue default')) +
-    ' —</option>' +
-    cbSlabOptionsHTML(slabs, cur) /* the jurisdiction's slabs first, then this entity's own — one builder, three pickers */ +
-    '</select>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">' +
-    tx('Products here that name no slab of their own use this.') +
-    '</div>'
-  );
-}
+/* cbcatSlabPickHTML → app/tax-slab-ui.js (F5 W1a: the middle rung's picker, one copy beside the product's and the catalogue default's) */
 
 /* ── write ───────────────────────────────────────────────────────────────────────────────────────────────────── */
 async function cbcatSave() {

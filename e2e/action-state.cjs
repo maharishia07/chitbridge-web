@@ -70,7 +70,13 @@ const SESSION = () => {
     await p.fill('[data-testid="pay_amt"]', '4000');
     await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 10000 });   /* the bills table: the preview read (a POST, held like every write here) */
     const n0 = count(/^POST \/api\/books\/payments$/);
-    await p.dblclick('[data-testid="pay_record"]');
+    /* R102b: Record ASKS first — a double press opens one question and writes nothing (the second tap lands on the dialog's backdrop, which is
+       CBConfirm's own Cancel); the write is the Yes tap, and that is where the busy state is measured */
+    await p.dblclick('[data-testid="pay_record"]'); await p.waitForTimeout(400);
+    const asked = await p.locator('dialog[open] [data-testid="confirm-ok"]').count();
+    ok(count(/^POST \/api\/books\/payments$/) - n0 === 0 && await p.locator('[data-testid="pay_amt"]').count() === 1, 'A · R102b: a double press on Record writes NOTHING — it asks first (question still up: ' + asked + ')');
+    if (!asked) await p.click('[data-testid="pay_record"]');
+    await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
     const busy = await p.evaluate(() => { const x = document.querySelector('[data-testid="pay_record"]'); return x ? [x.disabled, x.getAttribute('aria-busy'), x.getAttribute('data-action-state')].join('/') : 'gone'; });
     ok(busy === 'true/true/busy', 'A · while the payment is out, Record is disabled + aria-busy + data-action-state=busy (' + busy + ')');
     await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 10000 }).catch(() => {});
@@ -84,7 +90,7 @@ const SESSION = () => {
     await p.fill('[data-testid="pay_amt"]', '100');
     await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 10000 });
     const n1 = count(/^POST \/api\/books\/payments$/);
-    await p.evaluate(() => { payRecord(); payRecord(); });
+    await p.evaluate(() => { payRecord(); payRecord(); }); await p.click('dialog[open] [data-testid="confirm-ok"]', { timeout: 5000 });
     await settle(HOLD + 900);
     ok(count(/^POST \/api\/books\/payments$/) - n1 === 1, 'A · payRecord() twice in one tick → ONE POST (the key guard, not just the disabled button)');
     await p.evaluate(() => closeModal());

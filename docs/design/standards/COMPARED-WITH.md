@@ -6,7 +6,7 @@ This is the doc card (DISCIPLINES §6 pass 3) for the tab; the area card lives i
 ## What it is
 A third saved view of the ONE Standards list (`public/standards.html`, a CBList mount): **All · Works with · Compared with**. Its rows are
 `public/data/compare.json` (the rows of C:/dev/docs/14-accounting/compare.json, byte for byte): country · package · capability · theirs · ours ·
-better · status `ahead | level | behind | n/a` · source · verified `source | memory` · id. They are not standards: they never join the register
+better · status `ahead | level | behind | n/a` · source · verified `source | memory` · id · `checked` (per row, the date it was last held against its source; R120, 24 Oct 2026) · `source_url` (the first official page in `source`). They are not standards: they never join the register
 (STANDARDS), the matrix or the All view — the view carries them itself.
 
 ## Owns · called by · flow
