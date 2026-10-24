@@ -5226,9 +5226,7 @@ function appearanceSettingsHTML() {
         'you to take the Colour Vision theme on trust.<br>' +
         '<b>' +
         tx('These follow you, not this browser.') +
-        '</b> Your theme, text size and motion are stored against you ' +
-        '(b166), so signing in on another device brings them with you — because someone who needs High Contrast ' +
-        'needs it everywhere, not only where they first found it.' +
+        '</b> Sign in on another device and they come with you.' +
         '</div>'
     ) +
     '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">' +

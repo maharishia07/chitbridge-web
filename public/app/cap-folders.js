@@ -583,7 +583,7 @@ async function loadFolderRules() {
     _FLD.rules = (r && r.rules) || [];
     /* A rule surface that cannot store anything must SAY so rather than accept a rule it will lose. */
     _FLD.rulesNote =
-      r && r.migrated === false ? 'Folder rules are not migrated on this environment (b132). You can still PREVIEW a rule — nothing will save.' : null;
+      r && r.migrated === false ? 'Folder rules are not switched on for your shop yet. You can still try a rule; nothing will save.' : null;
   } catch (e) {
     _FLD.err = (e && e.message) || 'Could not read the rules.';
     _FLD.rules = [];

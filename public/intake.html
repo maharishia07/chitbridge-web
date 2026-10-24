@@ -133,7 +133,7 @@ async function load() {
     return loginView('Session expired');
   }
   var caps = (reply.j && reply.j.captures) || [];
-  var mig = reply.j && reply.j.note ? '<div class="note" style="margin-bottom:8px">⚠ ' + esc(reply.j.note) + ' — run migration b104 to enable.</div>' : '';
+  var mig = reply.j && reply.j.note ? '<div class="note" style="margin-bottom:8px">⚠ ' + esc(reply.j.note) + ' The intake queue is not switched on for your shop yet.</div>' : '';
   var sim =
     '<div class="card"><b style="font-size:13px">Simulate an inbound message</b> <span class="note">(stands in for a WhatsApp/email arriving)</span>' +
     '<div class="row" style="margin-top:6px"><select id="s_ch" data-testid="cap-channel" style="width:130px" onchange="saveIntake()"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>' +
