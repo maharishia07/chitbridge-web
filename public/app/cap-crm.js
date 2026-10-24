@@ -775,7 +775,9 @@ function crmGo(hash, replace) {
   if (replace) {
     try {
       history.replaceState(null, '', hash);
-    } catch (_) {}
+    } catch (failure) {
+      if (globalThis.cbQuiet) globalThis.cbQuiet('cap-crm:crmGo - the address bar was not updated', failure);
+    }
     crmRoute();
   } else location.hash = hash;
 }

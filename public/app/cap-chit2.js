@@ -1327,7 +1327,6 @@ function c2PaneWork(d) {
  *   'person' → show the DATE only     'date' → show the PERSON only     'line' → show both
  */
 function c2WorkRow(e, asg, prog, ctx) {
-  var indent = ctx === 'person' || ctx === 'date' ? 'padding-inline-start:28px;' : '';
   var a = asg[e.line_id] || {};
   var l = e.live || e.original || {};
   var p = prog[e.line_id] || {};
