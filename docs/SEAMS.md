@@ -28,7 +28,7 @@ of file each thing is; this says what already does the job.
 | 56 | `order` | `mint.js` | whatever order the array or the driver felt like, which is the same non-determinism in a new coat. |
 | 54 | `items` | `books-store.js` | PERF1: |
 | 50 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
-| 49 | `toast` | `accounts-shell.js` |  |
+| 50 | `toast` | `accounts-shell.js` |  |
 | 50 | `rows` | `cap-settings.js` |  |
 | 49 | `entry` | `books-store.js` |  |
 | 49 | `next` | `dayopen.js` | the next thing to do — |
@@ -45,14 +45,14 @@ of file each thing is; this says what already does the job.
 | 39 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 38 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 38 | `refusal` | `employee-code.js` | and Resend there is no way to hand it over. |
-| 37 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 38 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 36 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 35 | `modal` | `app.html` |  |
 | 35 | `host` | `chit-sheet.js` |  |
 | 35 | `rules` | `docnumber.js` | the rule set for a country — |
 | 35 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 35 | `missing` | `variant.browser.js` | refusing with no reason. |
-| 34 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 35 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 34 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 33 | `closeModal` | `app.html` |  |
 | 33 | `register` | `regulation.js` | register(pack) → the pack — |
@@ -62,7 +62,7 @@ of file each thing is; this says what already does the job.
 | 32 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 32 | `live` | `receivables.js` | the allocations that still count: |
 | 30 | `ensureCap` | `app.html` |  |
-| 30 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
+| 32 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 30 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 29 | `lines` | `cart.js` |  |
 | 30 | `sentence` | `one-person.js` |  |
@@ -73,7 +73,7 @@ of file each thing is; this says what already does the job.
 | 28 | `changes` | `books-store.js` |  |
 | 28 | `mint` | `catalogue-blueprint.js` | the whole pack, unchanged — |
 | 28 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
-| 28 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
+| 29 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 27 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 27 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 27 | `guess` | `move-in.js` | `table` (optional, PR1): |
@@ -93,7 +93,7 @@ of file each thing is; this says what already does the job.
 | 24 | `view` | `country-ready.js` |  |
 | 24 | `lookup` | `regulation.js` | lookup(country) → its pack, or the DEFAULT one marked { fallback: |
 | 23 | `call` | `cap-assist.js` |  |
-| 24 | `opts` | `cap-stock.js` |  |
+| 25 | `opts` | `cap-stock.js` |  |
 | 23 | `rate` | `convert.js` | A rate, with its evidence. |
 | 23 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 23 | `hold` | `orders.js` |  |
@@ -126,7 +126,7 @@ of file each thing is; this says what already does the job.
 | 18 | `note` | `dbwatch.js` |  |
 | 17 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 17 | `step` | `cart.js` |  |
-| 17 | `model` | `chit-sheet.js` |  |
+| 18 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 18 | `chip` | `screen-id.js` | var S = { app: |
 | 17 | `verify` | `bookpack.js` | manifest's own hash. |
@@ -162,7 +162,7 @@ of file each thing is; this says what already does the job.
 | 15 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 15 | `cblog` | `core.js` | const __cblog = []; |
+| 17 | `cblog` | `core.js` | const __cblog = []; |
 | 14 | `offers` | `network-app.js` |  |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `label` | `bill-privacy.js` | label(step, mine) — |
