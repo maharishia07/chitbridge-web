@@ -481,8 +481,10 @@ const walk = async (w) => {
     const resumable = await openRow(signed, { id: liveId });
     const stepWord = (await resumable.open.locator('[data-testid="shelf-step"]').textContent()).trim();
     const leftButtons = await signed.evaluate(() => document.querySelectorAll('.side-pinned [data-testid="cart-live"], .side-pinned [data-testid="shelf-step"], .side-pinned [data-testid="shelf-drop"]').length);
-    return { ok: draftIds.length === 3 && total >= 4 && new RegExp('^and ' + (total - 3) + ' more$').test(more.trim()) && popRows >= 1 && stepWord === 'Resume' && leftButtons === 0,
-      saw: draftIds.length + ' draft rows of ' + total + ' · "' + more.trim() + '" · list rows ' + popRows + ' · paused offer\'s step "' + stepWord + '" · commit buttons on the left ' + leftButtons };
+    /* UX-117: the shop's own offers come first - the shelf sits above the kinds in the left panel */
+    const shelfFirst = await signed.evaluate(() => { const shelf = document.querySelector('.side .side-pinned'), nav = document.querySelector('.side #nav'); return !!shelf && !!nav && !!(shelf.compareDocumentPosition(nav) & Node.DOCUMENT_POSITION_FOLLOWING); });
+    return { ok: shelfFirst && draftIds.length === 3 && total >= 4 && new RegExp('^and ' + (total - 3) + ' more$').test(more.trim()) && popRows >= 1 && stepWord === 'Resume' && leftButtons === 0,
+      saw: 'shelf above the kinds ' + shelfFirst + ' · ' + draftIds.length + ' draft rows of ' + total + ' · "' + more.trim() + '" · list rows ' + popRows + ' · paused offer\'s step "' + stepWord + '" · commit buttons on the left ' + leftButtons };
   });
 
   await w.step('V3', 'Right: "What this promises" says word for word what the confirm popup of the same next step says (draft, approved, live, paused)', async () => {
@@ -567,6 +569,9 @@ const walk = async (w) => {
     await phone.setViewportSize({ width: 390, height: 844 });
     await phone.goto(base + '/offer-lab-next.html?api=' + encodeURIComponent(base));
     await phone.waitForSelector('[data-testid="types-list"]');
+    /* UX-117: the four tools are ONE Tools button on a phone, so the row is one line (60px at most) and the kinds start higher; opening it lists the four */
+    const toolsRowHigh = await phone.evaluate(() => Math.round(document.querySelector('.labtools').getBoundingClientRect().height));
+    await phone.click('[data-testid="tool-menu"]');
     const landing = await phone.evaluate(() => ({
       onSettings: document.getElementById('s0').classList.contains('on'),
       words: document.querySelectorAll('[data-testid="types-list"] .goal b').length,
@@ -583,9 +588,9 @@ const walk = async (w) => {
     await phone.click('#workScrim .shhd .ovlx');
     const closed = await phone.evaluate(() => !document.getElementById('workScrim').classList.contains('on'));
     await phone.close();
-    const toolsOk = landing.tools.length === 4 && landing.tools.every((t) => t.shown && t.word && t.word.trim() && t.high >= 44);
+    const toolsOk = toolsRowHigh <= 60 && landing.tools.length === 4 && landing.tools.every((t) => t.shown && t.word && t.word.trim() && t.high >= 44);
     return { ok: landing.onSettings && landing.words === 8 && landing.lit === 0 && toolsOk && sheet.left >= 0 && sheet.right <= sheet.width && sheet.closeIn && sheet.closeHit && closed,
-      saw: 'landing on settings ' + landing.onSettings + ' · ' + landing.words + ' kinds in words · lit ' + landing.lit + ' · tools ' + landing.tools.map((t) => t.word + ' ' + t.high + 'px').join(', ') + ' · sheet ' + sheet.left + '..' + sheet.right + ' of ' + sheet.width + ' · x reachable ' + sheet.closeHit + ' · closed by x ' + closed };
+      saw: 'landing on settings ' + landing.onSettings + ' · ' + landing.words + ' kinds in words (tools row ' + toolsRowHigh + 'px shut) · lit ' + landing.lit + ' · tools ' + landing.tools.map((t) => t.word + ' ' + t.high + 'px').join(', ') + ' · sheet ' + sheet.left + '..' + sheet.right + ' of ' + sheet.width + ' · x reachable ' + sheet.closeHit + ' · closed by x ' + closed };
   });
 
   await w.step('O8', '390 px: the menu is icons only, so the middle lists the eight types in words; pick one -> form; "All types" -> back', async () => {

@@ -100,11 +100,11 @@
       '</div>'
     );
   }
-  /** a lab with a pinned shelf: at 760 and below the left panel is not drawn (no icons-only rail beside the switch); the shelf moves under the switch, and back above it */
+  /** a lab with a pinned shelf: at 760 and below the left panel is not drawn (no icons-only rail beside the switch); the shelf moves under the switch, and back to the top of the left panel */
   function dockPinned(app, pinned, phone) {
     var main = app.querySelector('.main');
     if (phone) main.insertBefore(pinned, app.querySelector('#screen'));
-    else app.querySelector('#side').insertBefore(pinned, app.querySelector('.side-foot'));
+    else app.querySelector('#side').insertBefore(pinned, app.querySelector('#nav')); /* UX-117: the shop's own offers come first, above the kinds */
   }
   /** a lab's pinned shelf and phone switch: docks the shelf under the switch at 760 and below, and returns what the lab calls (pinned · setPhone · relabelPhone) */
   function wireLabPanel(app, options) {
@@ -151,12 +151,12 @@
       '</div><div class="brand-name label">' +
       esc(sk.name) +
       '</div></div>' +
+      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
       '<nav class="nav" id="nav" aria-label="' +
       esc(sk.name) +
       '">' +
       navHTML(sk.sections || [], sk.active, svg) +
       '</nav>' +
-      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
       '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
@@ -286,7 +286,7 @@
   /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the left menu is THIS lab's own choices (W16; the other labs are the shell's top switcher, fed by manifest.json), one background.
      CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural?, pinned?, phone? }).
      sections: { group: 'Heading', fold: true, count: 3, open: false } makes a heading that folds the entries under it (open by default; count is drawn beside it).
-     pinned: true draws a shelf under the menu (framed.skeleton.pinned is the element the lab fills: its own things, grouped by status, with CBLabKit.more).
+     pinned: true draws a shelf above the menu (UX-117, the lab's own things come first; framed.skeleton.pinned is the element the lab fills: its own things, grouped by status, with CBLabKit.more).
      phone: { items: [{ k, label }], active, onPick(k) } (a lab with a pinned shelf): at 760 and below the left panel is not drawn, a switch above the middle takes its place;
      framed.skeleton.setPhone(k) lights a tab, relabelPhone(k, text) re-words one.
      A lab with no `work` element has its page body moved into the main pane once the page has loaded (scripts and styles stay where they are). */

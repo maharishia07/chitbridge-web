@@ -86,7 +86,13 @@ button{cursor:pointer}
 /* ⭐ "Tools become icon-only (labels drop, icons grow)" — the top-bar's .chip.tool buttons, per the spec's own
    phone rule. `.g` is the icon glyph, `.tx` its label; only .tx hides. */
 .tool .g{font-size:14px;color:var(--faint);line-height:1}
+.toolmenu-btn{display:none}
+.toolmenu-body{display:contents}
 @media(max-width:760px){
+  .toolmenu-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:0 14px}
+  .toolmenu-body{display:none;flex-direction:column;gap:8px;width:100%}
+  .labtools.menu-open .toolmenu-body{display:flex}
+  .toolmenu-body .tool{flex:0 0 auto;justify-content:flex-start}
   .fine button{margin-left:0;width:100%}
   .grid{grid-template-columns:1fr}
   .tool{flex:1 1 calc(50% - 8px);justify-content:center;gap:7px;min-height:44px;padding:0 8px}   /* W34: a word beside every glyph, two to a row */
@@ -854,12 +860,25 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="labtools">   <!-- the lab's tools row (its title, Home and avatar are the frame's — SHELL-ONE) -->
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
+    <!-- UX-117: on a phone the four tools fold into ONE Tools button; wide, they stay in the row -->
+    <button type="button" class="chip toolmenu-btn" id="toolMenuBtn" data-testid="tool-menu" aria-expanded="false" aria-controls="toolMenuBody" onclick="toggleToolMenu()"><span class="g">⋯</span><span class="tx">Tools</span></button>
+    <span class="toolmenu-body" id="toolMenuBody" onclick="toggleToolMenu(false)">
     <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g" id="priceTool">₹</span><span class="tx">Price list</span></button>
     <button class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
     <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
+    </span>
   </div>
+  <script>
+  /* UX-117: the phone's Tools button opens the four tools one under the other; a tap on one closes it again */
+  function toggleToolMenu(force) {
+    var row = document.querySelector('.labtools'),
+      open = typeof force === 'boolean' ? force : !row.classList.contains('menu-open');
+    row.classList.toggle('menu-open', open);
+    document.getElementById('toolMenuBtn').setAttribute('aria-expanded', String(open));
+  }
+  </script>
   <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
        own footer already said "Using a sample catalogue — Apply tries it here, not on a real product" —
        but that sentence only exists inside ONE overlay, three taps in. Cost is typed on the very FIRST
