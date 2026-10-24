@@ -11,6 +11,8 @@
  *   pData · pName · pUnit · pPrice · pCode · pDesc · prodId  the item's slots
  *   ctField · CT_FIXED_KEYS · ctDeclaredList · ctDeclaredFields · ctDeclaredRows · ctDeclaredViewRows · catDeclared   the declared columns on the form
  *   prodDiff                                               the RFC 7386 diff a Save sends (merge:true)
+ *   ctCategoryChips · ctToggleCatg · ctCategoriesFromForm  (F5 W1b, R85) the item form's category chips and their read at save, through core.js catgSetOn
+ *   ctCodeSlots · ctCodeApply                              (F5 W1b, critic 12) the "Code / HSN" field: 4/6/8 digits → `hsn` under a pack with HSN, else `code`; other digit runs refused in words
  *   downloadCatalogueTemplate                              the blank sheet in this catalogue's format (GET /products/template)
  *   _cfPick · _cfRun · _cfImport · _cfImportRun            the import: a file or pasted rows → preflight → a decision per column → import (confirm:true)
  * ── WIDENED HERE (additively) ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -169,6 +171,85 @@ function prodDiff(cur, next) {
     if (JSON.stringify((cur || {})[item]) !== JSON.stringify(next[item])) out[item] = next[item];
   });
   return out;
+}
+
+/* ══ MOVED FROM app.html (F5 W1b, walk R85) — the category chips on the item form, ONE builder for the workshop and catalogue.html ══ */
+/** one chip: ✓ when the item sits in the category; `extra` carries the retired-but-cited state ("gone", kept so a save never strips it unasked) */
+function ctCatgChip_(id, name, on, extra) {
+  return (
+    '<button type="button" class="ctcatg' + (on ? ' on' : '') + (extra && extra.cls ? ' ' + extra.cls : '') + '" data-cid="' + esc(id) + '"' +
+    (extra && extra.tid ? ' data-testid="' + esc(extra.tid) + '"' : '') + (extra && extra.title ? ' title="' + esc(extra.title) + '"' : '') +
+    ' onclick="ctToggleCatg(this)">' + (on ? '✓ ' : '') + esc(name) + '</button>'
+  );
+}
+/**
+ * ctCategoryChips(d, live, opts) → the Categories field of the item form: every live category as a chip (✓ = the item is in it), a retired-but-cited
+ * one kept amber ("no longer live — tap to detach"), then the host's own "＋ New" when it has a door for it (`opts.newAction`: the workshop's
+ * ctNewCategory; catalogue.html has none — its Categories section is a tab away). `live` is core.js's _CATG shelf, handed in so a test renders without
+ * a page; null (not read yet) → '' and the HOST fills the block when the shelf lands. What is chosen is read off the DOM at save time
+ * (ctCategoriesFromForm) — no parallel copy of the answer.
+ */
+function ctCategoryChips(itemData, live, opts) {
+  const data = itemData || {},
+    hostDoor = (opts && opts.newAction) || '';
+  if (!Array.isArray(live)) return '';
+  const list = catgIdsOf(data),
+    names = catgNamesOf(data);
+  const orphans = list.filter((id) => !live.some((item) => item.id === id));
+  const chips = live.map((item) => ctCatgChip_(item.id, item.name, list.indexOf(item.id) >= 0, { tid: 'cat-catg-' + item.id }));
+  const kept = orphans.map((id) => ctCatgChip_(id, names[list.indexOf(id)] || id, true, { cls: 'gone', title: tx('no longer live — tap to detach') }));
+  const newChip = hostDoor ? '<button type="button" class="ctcatg add" data-testid="cat-category-new" onclick="' + esc(hostDoor) + '">＋ ' + esc(tx('New')) + '</button>' : '';
+  const warn = orphans.length
+    ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px">⚠ ' + esc(txf('{n} of these no longer live. Kept as-is — tap to detach.', { n: String(orphans.length) })) + '</div>'
+    : '';
+  return (
+    '<label class="fl">' + esc(tx('Categories')) + '</label>' +
+    '<div class="ctcatgs" id="ct_categories" data-testid="cat-field-category">' + chips.join('') + kept.join('') + newChip + '</div>' + warn
+  );
+}
+/* One handler for every chip, so "what is selected" is read off the DOM at save time and there is no parallel copy of the answer to fall out of step. */
+function ctToggleCatg(btn) {
+  const on = btn.classList.toggle('on');
+  const label = btn.textContent.replace(/^✓\s*/, '');
+  btn.textContent = on ? '✓ ' + label : label;
+}
+/**
+ * the categories the form shows as chosen, written onto `base` through core.js's ONE category writer (catgSetOn: ids + travelling names, the legacy
+ * single key gone). No chips on screen (the shelf could not be read) → `base` untouched: absent is not "cleared", a form that cannot show a field must
+ * never be the thing that erases it. Both hosts' Save read the chips here.
+ */
+function ctCategoriesFromForm(base) {
+  const host = document.getElementById('ct_categories');
+  if (!host) return base;
+  const ids = Array.prototype.slice.call(host.querySelectorAll('.ctcatg.on[data-cid]')).map((chip) => chip.getAttribute('data-cid'));
+  return catgSetOn(base, ids);
+}
+
+/* ══ the "Code / HSN" field (F5 W1b, critic 12) — an HSN lands in `hsn`, the slot the invoice stamps; a shop code stays `code`, never read as an HSN ══ */
+/** the lengths the e-invoice schema takes (reg-in tax.hsn_digits: 4 or 6 by turnover, 8 the full code; the schema accepts no other) */
+const CT_HSN_LENGTHS = [4, 6, 8];
+/**
+ * ctCodeSlots(value) → { hsn } | { code } | { why } | {}: where the one field's value is saved. Under a pack with HSN (helpers.packHasHsn) a run of
+ * 4, 6 or 8 digits is an HSN (engine inputOf reads hsn || sac for the bill); digits of another length are refused IN WORDS, nothing sent; anything else
+ * is the shop's own code. No HSN in the pack → always `code`. Empty → {} (the slot the field showed is cleared by ctCodeApply).
+ */
+function ctCodeSlots(value) {
+  const text = String(value == null ? '' : value).trim();
+  if (!text) return {};
+  if (typeof packHasHsn !== 'function' || !packHasHsn() || !/^\d+$/.test(text)) return { code: text };
+  if (CT_HSN_LENGTHS.indexOf(text.length) < 0) return { why: tx('An HSN has 4, 6 or 8 digits.') };
+  return { hsn: text };
+}
+/**
+ * ctCodeApply(next, orig, slots) → `next` with the field's value in its slot. The field shows `code` first, else `hsn` (pCode): that shown slot is
+ * replaced by what was typed; the other slot is left as it was unless the typed value IS that kind (an HSN typed over a shop code lands in hsn).
+ */
+function ctCodeApply(next, orig, slots) {
+  const shown = orig && !orig.code && orig.hsn ? 'hsn' : 'code';
+  delete next[shown];
+  if (slots.hsn) next.hsn = slots.hsn;
+  if (slots.code) next.code = slots.code;
+  return next;
 }
 
 /* ══ MOVED FROM app.html — the template and the import (preflight → decisions → import) ══ */
@@ -964,18 +1045,27 @@ var CBCatalogueApp = (function () {
     return CBTaxSlab.resolve({ item_data: data || {}, face: S.face || {}, slabs: cbDefsCached('tax') || [], categories: cbDefsCached('category') || [] });
   }
   /**
-   * who may set a rate here — the same rule as the counter's rateMay and the api's setsRate (DECISIONS 2026-10-24 14:20: owner or manager ONLY).
-   * The owner is the server's is_owner field (GET /entities/me/can-see-costs). ⚠️ The api tells this page no HAT, so a manager signed in here is
-   * greyed until it does (cb-api: a `hat` or a `may.set_rate` field) — never a guess from a name.
+   * who may set a rate here — the api's rule (lib/rate-door.js setsRate; DECISIONS 2026-10-24 14:20: owner or manager ONLY), read off the server's own
+   * can-see-costs reply: `may_set_rate` when the api sends it (api #429), else `is_owner` — so a manager is enabled the day the field lands, never guessed.
    */
   function rateMay() {
-    return cbRateMay({ owner: !!(S.cost && S.cost.is_owner), hat: null });
+    return cbRateMay(S.cost);
+  }
+  /** the pack's word for its tax ("GST", "VAT"), the label of every rate row and picker here */
+  function taxWord() {
+    var pack = taxPack();
+    return (pack && pack.scheme) || T('Tax');
+  }
+  /** a slab as the shop reads it ("GST 5%", "GST 0% (exempt)") through the engine's one phrasing; no slab → "no rate of its own" */
+  function slabWords(slab, source) {
+    var chosen = slab ? CBTaxSlab.slabOf(slab) : null;
+    if (!chosen) return T('no rate of its own');
+    return CBTaxSlab.describe({ source: source, rate: chosen.rate, nil_kind: chosen.nil_kind }, { short: true, country: country() });
   }
   /** the row: label = the pack's word; chip = describe({short}) + source words, or the amber "No GST rate yet"; ONE action, enabled by role */
   function taxRowHTML(data) {
     if (!shopCharges()) return '';
-    var pack = taxPack(),
-      word = (pack && pack.scheme) || T('Tax');
+    var word = taxWord();
     var resolved = S.taxReady ? taxResolve(data) : null;
     var inner = S.taxReady
       ? cbSlabChipHTML(resolved, {
@@ -1041,8 +1131,7 @@ var CBCatalogueApp = (function () {
     }
     var data = pData(item),
       patch = slabPatch(data, slab),
-      chosen = CBTaxSlab.slabOf(slab) || {},
-      words = CBTaxSlab.describe({ source: 'product', rate: chosen.rate, nil_kind: chosen.nil_kind }, { short: true, country: country() });
+      words = slabWords(slab, 'product');
     if (!Object.keys(patch).length) {
       say('cat_sheet_out', T('{n} already carries {w}.', { n: pName(data), w: words }), 'ok');
       return;
@@ -1104,38 +1193,58 @@ var CBCatalogueApp = (function () {
       '</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" rows="3">' +
       esc(pDesc(d)) +
       '</textarea>' +
+      '<div id="ct_catg_wrap">' + catgChipsHTML(d) + '</div>' /* F5 W1b (R85): the item goes INTO a category here */ +
       ctDeclaredFields(d)
     );
   }
+  /** the category chips from the live shelf (core.js _CATG); not read yet → '' and fillCatgChips paints the block when it lands */
+  function catgChipsHTML(itemData) {
+    return ctCategoryChips(itemData, typeof _CATG !== 'undefined' ? _CATG : null, {});
+  }
+  /** the shelf landed after the form was painted: fill ONLY the chips block, never the form (what is being typed stays) */
+  function fillCatgChips() {
+    if (typeof _CATG !== 'undefined' && _CATG !== null) return;
+    if (typeof cbCatgLive !== 'function') return;
+    cbCatgLive().then(function () {
+      var block = el('ct_catg_wrap'),
+        item = S.sel ? itemOf(S.sel) : null;
+      if (block && S.mode !== 'view') block.innerHTML = catgChipsHTML(item && S.mode === 'edit' ? pData(item) : {});
+    });
+  }
   /** the form → the item's next shape. Only what is on screen is read; a disabled price is never read (the server would refuse it, and it is not a change) */
-  function readForm(orig) {
+  function readForm(orig, codeSlots) {
     var next = Object.assign({}, orig || {}, {
       name: (val('ct_name') || '').trim(),
       unit: (val('ct_unit') || '').trim() || 'unit',
-      code: (val('ct_code') || '').trim(),
       desc: (val('ct_desc') || '').trim()
     });
-    var node = el('ct_price');
-    if (node && !node.disabled) {
-      var t = String(node.value || '').replace(/[,\s]/g, ''),
-        had = cbHasPrice(orig && orig.price) ? cbAmount(orig.price) : null;
-      if (t === '') delete next.price;
-      else if (had !== null && Number(t) === had)
-        next.price = orig.price; /* the same amount: the stored {amount,currency} is kept, so the diff carries no price */
-      else next.price = Number(t); /* a bare number, as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
-    }
-    var decl = el('ct_declared');
-    if (decl)
-      Array.prototype.forEach.call(decl.querySelectorAll('input[data-key]'), function (x) {
-        var k = x.getAttribute('data-key'),
-          raw = (x.value || '').trim();
-        if (raw === '') {
-          delete next[k];
-          return;
-        }
-        next[k] = x.getAttribute('data-type') === 'number' && isFinite(+raw) ? +raw : raw;
-      });
+    if (!next.desc) delete next.desc; /* an empty description is no key, so an untouched item sends no `desc: ""` (the fixed-key nulling clears one that was there) */
+    ctCodeApply(next, orig || {}, codeSlots || {});
+    ctCategoriesFromForm(next);
+    readPrice(next, orig || {});
+    readDeclared(next);
     return next;
+  }
+  /** the price field, only when it is enabled: empty → no price; the same amount → the stored {amount,currency} kept (no diff); else a bare number the server stamps */
+  function readPrice(next, orig) {
+    var node = el('ct_price');
+    if (!node || node.disabled) return;
+    var typed = String(node.value || '').replace(/[,\s]/g, ''),
+      had = cbHasPrice(orig.price) ? cbAmount(orig.price) : null;
+    if (typed === '') delete next.price;
+    else if (had !== null && Number(typed) === had) next.price = orig.price;
+    else next.price = Number(typed); /* as the workshop sends it — the server stamps the shop's currency (money.stampPrice) */
+  }
+  /** the declared columns' inputs: an empty one removes the key, a number column parses, the rest is text */
+  function readDeclared(next) {
+    var block = el('ct_declared');
+    if (!block) return;
+    Array.prototype.forEach.call(block.querySelectorAll('input[data-key]'), function (input) {
+      var key = input.getAttribute('data-key'),
+        raw = (input.value || '').trim();
+      if (raw === '') delete next[key];
+      else next[key] = input.getAttribute('data-type') === 'number' && isFinite(+raw) ? +raw : raw;
+    });
   }
   function sheetHTML() {
     var p = S.sel ? itemOf(S.sel) : null,
@@ -1205,6 +1314,7 @@ var CBCatalogueApp = (function () {
     node.innerHTML = sheetHTML();
     var x = node.querySelector('[data-testid="cat-sheet-close"]');
     if (x) x.onclick = closeSheet;
+    if (S.mode !== 'view') fillCatgChips();
     var e = el('cat_edit');
     if (e)
       e.onclick = function () {
@@ -1239,12 +1349,21 @@ var CBCatalogueApp = (function () {
         setStatus(st);
       };
   }
+  /** the keys a Save may CLEAR (null in the merge-patch) when the form showed them and they are gone: the fixed fields, and the category pair when the chips were on screen */
+  function clearableKeys() {
+    return el('ct_categories') ? CT_FIXED_KEYS.concat(['categories', 'category_names', 'category', 'category_name']) : CT_FIXED_KEYS;
+  }
   /** ONE write, only the diff, as a merge-patch — the thing the workshop's whole-record Save could not promise ([EXP-01]) */
   function save(btn) {
+    var out = 'cat_sheet_out',
+      codeSlots = ctCodeSlots(val('ct_code'));
+    if (codeSlots.why) {
+      say(out, codeSlots.why, 'error'); /* digits that are not an HSN: refused in words, nothing sent */
+      return;
+    }
     var p = S.sel ? itemOf(S.sel) : null,
       nestedCur = p ? pData(p) : {},
-      next = readForm(nestedCur);
-    var out = 'cat_sheet_out';
+      next = readForm(nestedCur, codeSlots);
     if (!next.name) {
       say(out, T('A name is needed.'), 'error');
       return;
@@ -1268,10 +1387,11 @@ var CBCatalogueApp = (function () {
         }
       );
     }
-    var patch = prodDiff(nestedCur, next);
+    var patch = prodDiff(nestedCur, next),
+      clearable = clearableKeys();
     Object.keys(nestedCur).forEach(function (item) {
-      if (!(item in next) && CT_FIXED_KEYS.indexOf(item) >= 0) patch[item] = null;
-    }); /* a fixed field emptied on screen → null removes it (RFC 7386) */
+      if (!(item in next) && clearable.indexOf(item) >= 0) patch[item] = null;
+    }); /* a fixed field emptied on screen (or every category chip unticked) → null removes it (RFC 7386) */
     if (!Object.keys(patch).length) {
       say(out, T('Nothing changed.'), 'ok');
       return;
@@ -1329,7 +1449,7 @@ var CBCatalogueApp = (function () {
       '<div class="cat-top" data-testid="cat-catg-top"><div class="cat-count" id="catg_count" data-testid="catg-count"></div>' +
       '<div class="cat-acts"><button type="button" class="act" data-testid="catg-new" id="catg_new">＋ ' +
       esc(T('New category')) +
-      '</button></div></div>' +
+      '</button><div class="cat-out" id="catg_out" data-testid="catg-out"></div></div></div>' +
       '<div class="cat-list" id="cat_catgs" data-testid="cat-categories"></div>' +
       '<dialog class="sheet" id="catg_sheet" data-testid="catg-sheet"></dialog>'
     );
@@ -1564,6 +1684,7 @@ var CBCatalogueApp = (function () {
       '</label><input class="inp" id="catg_note" data-testid="catg-note" value="' +
       esc(CBCAT_UI.form.note || '') +
       '" oninput="cbcatField(\'note\', this.value)">' +
+      catgSlabHTML() /* F5 W1b (R85): the category's rate — the middle rung of resolve(); owner or manager only */ +
       '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="catg-save" id="catg_save">' +
       esc(c ? T('Save') : T('Add category')) +
       '</button><button type="button" class="act quiet" data-testid="catg-cancel" id="catg_cancel">' +
@@ -1583,12 +1704,7 @@ var CBCatalogueApp = (function () {
     node.querySelector('[data-testid="catg-sheet-close"]').onclick = close;
     el('catg_cancel').onclick = close;
     el('catg_save').onclick = function (event) {
-      CBAction.once('catg-save', event.currentTarget, async function () {
-        await cbcatSave();
-        if (CBCAT_UI.form) return;
-        /* a refusal keeps the form open with its sentence */ close();
-        await readCatgs();
-      });
+      saveCatg(event.currentTarget, c, close);
     };
     if (!node.open) {
       try {
@@ -1597,6 +1713,60 @@ var CBCatalogueApp = (function () {
         node.setAttribute('open', '');
       }
     }
+  }
+  /** the category form's rate picker (the one in tax-slab-ui.js), under the pack's word; shown to all, greyed WITH the sentence for anyone but an owner or a manager */
+  function catgSlabHTML() {
+    if (!shopCharges()) return '';
+    return (
+      '<label class="fl" for="catg_slab">' + esc(taxWord()) + '</label>' +
+      '<div id="catg_slab_wrap" data-testid="catg-slab-wrap">' + cbcatSlabPickHTML(CBCAT_UI.form, { may: rateMay(), onReady: paintCatgSlab }) + '</div>'
+    );
+  }
+  /** the slabs landed after the sheet was painted: fill ONLY the picker block (the name being typed stays) */
+  function paintCatgSlab() {
+    var block = el('catg_slab_wrap');
+    if (block && CBCAT_UI.form) block.innerHTML = cbcatSlabPickHTML(CBCAT_UI.form, { may: rateMay(), onReady: paintCatgSlab });
+  }
+  /**
+   * the category form's Save. A CHANGED slab is a rate on every item in the category with none of its own → owner or manager only (the door is greyed
+   * above; this is the belt to that brace) and a confirm first, naming the category and the rate. Then cbcatSave (the ONE category writer, shared with
+   * the workshop) — a refusal keeps the sheet open with its sentence; a save closes it, re-reads the list and says the outcome where the list is.
+   */
+  function saveCatg(button, before, close) {
+    var change = catgSlabChange(before);
+    if (change.changed && !rateMay().ok) {
+      say('cbcat_err', rateMay().why, 'error');
+      return;
+    }
+    return CBAction.run(button, cbcatSave, {
+      key: 'catg-save',
+      confirm: change.changed ? { title: change.name + ': ' + change.words + '?', body: esc(T('Every item in it with no rate of its own carries it.')), yes: T('Set rate'), danger: false } : null,
+      out: 'cbcat_err',
+      outcome: function () {
+        if (CBCAT_UI.form) return; /* refused: cbcatSave wrote its sentence into #cbcat_err and left the form open */
+        close();
+        readCatgs();
+        if (change.changed) say('catg_out', catgOutcomeWords(change), 'ok');
+      }
+    });
+  }
+  /** what the form does to the category's slab: { changed, name, words, follow } — the rate in the engine's words, and how many items sit in it today */
+  function catgSlabChange(before) {
+    var form = CBCAT_UI.form || {},
+      wasSlab = String((before && before.default_slab) || ''),
+      nowSlab = String(form.default_slab || ''),
+      counts = (CBCAT_UI.counts && CBCAT_UI.counts.by) || {};
+    return {
+      changed: wasSlab !== nowSlab,
+      name: (form.name || '').trim(),
+      words: slabWords(nowSlab ? slabById(nowSlab) : null, 'category'),
+      follow: before ? counts[before.id] || 0 : 0
+    };
+  }
+  /** "Meals now carries GST 5% · 3 item(s) follow" — the outcome where the list is */
+  function catgOutcomeWords(change) {
+    var head = T('{n} now carries {w}', { n: change.name, w: change.words });
+    return change.follow ? head + ' · ' + T('{n} item(s) follow', { n: String(change.follow) }) : head;
   }
 
   /* ── IMPORT ── */

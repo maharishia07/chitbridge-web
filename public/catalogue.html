@@ -70,6 +70,11 @@ button{font-family:inherit;cursor:pointer}
 .tag.green{background:var(--ok-tint,#e8f4ed);color:var(--ok-2,#0d4a2b)}
 .tag.amber{background:var(--warn-tint,#fdf3dc);color:var(--warn-3,#7a5205)}
 .cat-chips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+/* the item form's category chips (F5 W1b, R85): the same chips the workshop draws (cap-catalogue.js ctCategoryChips), tap to put the item in or out */
+.ctcatgs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.ctcatg{border:1px solid var(--line,#e6dcc6);background:var(--card,#fffdf8);color:var(--ink,#2a2418);border-radius:20px;min-height:32px;padding:0 12px;font-size:var(--fs-2);cursor:pointer}
+.ctcatg.on{background:var(--blue-tint-bg,#e6f0ef);border-color:var(--blue,#1f5f5b);color:var(--blue,#1f5f5b);font-weight:700}
+.ctcatg.gone{background:var(--warn-tint,#fdf3dc);border-color:var(--gold-line,#d9b86a);color:var(--warn-3,#7a5205)}
 .cat-facts{display:flex;flex-direction:column}
 .cat-kv{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line,#e6dcc6);font-size:var(--fs-2)}
 .cat-kv b{min-width:110px;color:var(--grey,#5c5240);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em}

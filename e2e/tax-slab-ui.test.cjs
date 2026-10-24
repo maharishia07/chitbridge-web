@@ -176,5 +176,38 @@ t('regular + GSTIN charges; composition with a GSTIN does not; regular without o
   assert.strictEqual(globalThis.cbTaxCharges({ gstin: '' }, P.packFor('US')), !!P.packFor('US').collect_without_tax_id);
 });
 
+console.log('\ntax-slab-ui · W1b: the server\'s verdict decides, the category picker is enabled by role, the exempt button exists only with an exempt slab');
+t('cbRateMay reads the server\'s may_set_rate FIRST (api #429): a manager it vouches for is ok, an owner it refuses is not; absent → is_owner (main\'s api today)', () => {
+  assert.deepStrictEqual(globalThis.cbRateMay({ can_see_costs: true, is_owner: false, may_set_rate: true }), { ok: true, why: '' });
+  assert.strictEqual(globalThis.cbRateMay({ is_owner: true, may_set_rate: false }).ok, false, 'the server said no: no');
+  assert.strictEqual(globalThis.cbRateMay({ can_see_costs: true, is_owner: true }).ok, true, 'no verdict yet: the owner');
+  assert.strictEqual(globalThis.cbRateMay({ can_see_costs: true, is_owner: false }).ok, false, 'no verdict yet: an editor is greyed');
+  assert.strictEqual(globalThis.cbRateMay(null).ok, false, 'nothing read yet: greyed');
+});
+t('cbcatSlabPickHTML: greyed WITH the sentence for an editor, enabled for an owner; onReady is the HOST\'s repaint once the slabs land', () => {
+  globalThis.cbDefsCached = () => SLABS;
+  const greyed = globalThis.cbcatSlabPickHTML({ default_slab: 's5' }, { may: globalThis.cbRateMay({ is_owner: false }) });
+  assert.ok(/<select[^>]*data-testid="catg-slab"[^>]*disabled title="Ask the owner or a manager to set the tax rate\."/.test(greyed), 'disabled, the reason in its title');
+  assert.ok(/data-testid="catg-slab-why">Ask the owner or a manager to set the tax rate\.</.test(greyed), 'the sentence under it');
+  const enabled = globalThis.cbcatSlabPickHTML({ default_slab: 's5' }, { may: globalThis.cbRateMay({ is_owner: true }) });
+  assert.ok(enabled.indexOf('disabled') < 0 && enabled.indexOf('catg-slab-why') < 0, 'the owner sees it enabled');
+  let repainted = 0;
+  globalThis.cbDefsCached = () => null;
+  globalThis.cbDefsLive = () => ({ then: (fn) => fn([]) }); /* the shelf lands at once */
+  assert.match(globalThis.cbcatSlabPickHTML({}, { onReady: () => repainted++ }), /reading your slabs/);
+  assert.strictEqual(repainted, 1, 'the host\'s own repaint ran (catalogue.html has no cbcatPaint target)');
+  globalThis.cbDefsCached = () => SLABS;
+});
+t('⭐ "No GST (exempt)" is the shop\'s 0% slab whose nil_kind is exempt, on today\'s menu; a 0% slab without the word reads "GST 0%"; no such slab → no such button', () => {
+  const exempt = { definition_id: 'sx', kind: 'tax', name: 'Exempt goods', status: 'live', rules: { rate: 0, nil_kind: 'exempt' } };
+  const m = globalThis.cbSlabMenu(SLABS.concat([exempt]), IN, '');
+  assert.strictEqual(m.rows.filter((r) => r.id === 'sx')[0].words, 'No GST (exempt)');
+  assert.strictEqual(m.rows.filter((r) => r.id === 'IN-GST-0')[0].words, 'GST 0%', 'nil without a word stays a plain 0%');
+  assert.ok(/data-testid="rate-pick-sx"[^>]*>No GST \(exempt\)</.test(globalThis.cbSlabMenuHTML(m, {})), 'the button');
+  const without = globalThis.cbSlabMenu(SLABS, IN, '');
+  assert.ok(without.rows.every((r) => r.words.indexOf('exempt') < 0), 'no exempt slab authored → no exempt button, nothing invented');
+  assert.strictEqual(globalThis.cbSlabMenu([exempt], P.packFor('AE'), '').rows[0].words, 'No VAT (exempt)', 'the pack\'s word');
+});
+
 console.log('\n' + (fail ? '✗ ' : '✓ ') + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -1955,18 +1955,21 @@ var CATSET_SYS = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
  * calls `catsetFaceSet` from the catalogue screen, which knows nothing about this file's newer state object.
  */
 
-/** ⚠️ Merged, never replaced — see the note above. */
 /** ⚠️ Merged, never replaced: the face is upserted WHOLE, so a panel saving only its own key would drop
-    everything else it holds. */
-async function catsetFaceSave(patch) {
+    everything else it holds. THE ONE face writer; it THROWS when the server refuses, so a caller under CBAction says why (F5 W1b). */
+async function catsetFacePut(patch) {
   var face = Object.assign({}, CATSET_FACE || {}, patch || {});
   catsetFaceSet(face);
+  await api('catFacePut', { body: { face: face } });
+  /* ⚠️ THE PRODUCT PAGE KEEPS ITS OWN COPY OF THE FACE (UI._face, read once per session for the Pricing & tax
+     pane). [TAX-01] INHERIT found it: set the catalogue-default slab here, open a product, and it still said
+     "Not set" until a reload. The write is the one place that knows the face changed. */
+  if (typeof UI !== 'undefined') UI._face = undefined;
+}
+/** the same write for the panels that say their failure as a toast (columns · units · order model · facets) */
+async function catsetFaceSave(patch) {
   try {
-    await api('catFacePut', { body: { face: face } });
-    /* ⚠️ THE PRODUCT PAGE KEEPS ITS OWN COPY OF THE FACE (UI._face, read once per session for the Pricing & tax
-       pane). [TAX-01] INHERIT found it: set the catalogue-default slab here, open a product, and it still said
-       "Not set" until a reload. The write is the one place that knows the face changed. */
-    if (typeof UI !== 'undefined') UI._face = undefined;
+    await catsetFacePut(patch);
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true);
   }
@@ -2700,9 +2703,12 @@ function catsetTaxHTML() {
     catsetDefsLoad('tax').then(catsetPaintDetail);
     return '<div class="catset-load">' + tx('reading…') + '</div>';
   }
-  var t = (CATSET_FACE && CATSET_FACE.tax) || {};
-  if (typeof t === 'string') t = { treatment: t };
-  var cur = t.default_slab || '';
+  /* who may set a rate (CATSET_MAY) is read on the FIRST PICK, not here: the card costs the two reads it always did (the face, the slabs) and the
+     gate is on the write — until the server has answered, Save stays greyed and nothing can be sent */
+  var t = catsetTaxFace_(),
+    stored = t.default_slab || '',
+    picked = CATSET_TAX_PICK === undefined ? stored : CATSET_TAX_PICK,
+    verdict = cbRateMay(CATSET_MAY);
   var live = rows.filter(function (item) {
     return item.status === 'live';
   });
@@ -2711,12 +2717,15 @@ function catsetTaxHTML() {
      form follows. "You have no live slabs" and "this catalogue cannot have a default" look identical otherwise. */
   var body = !live.length
     ? '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No live slab yet — author one above and make it live.') + '</div>'
-    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxDefault(this.value)">' +
+    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxPick(this.value)"' +
+      (verdict.ok ? '' : ' disabled title="' + esc(verdict.why) + '"') +
+      '>' +
       '<option value="">— ' +
       esc(tx('none')) +
       ' —</option>' +
-      cbSlabOptionsHTML(live, cur) /* governed first, own after — the same builder the product and category use */ +
-      '</select>';
+      cbSlabOptionsHTML(live, picked) /* governed first, own after — the same builder the product and category use */ +
+      '</select>' +
+      catsetTaxActsHTML_(verdict, picked !== stored);
 
   return (
     '<label class="fl">' +
@@ -2736,20 +2745,112 @@ function catsetTaxHTML() {
       : '')
   );
 }
+/* ── the catalogue default's draft and write (F5 W1b: Save + confirm, never a write on change) ─────────────────────────────────────────── */
 /**
- * ⚠️ MERGED ONTO face.tax, NOT ASSIGNED OVER IT. `catsetFaceSave` merges one level only, so writing
- * `{ tax: {default_slab} }` would drop `tax.treatment` — the exact class of loss the face's own header warns
- * about ("a panel saving only its own key would drop everything else it holds"), one level deeper.
+ * the Save under the picker: the picker is a DRAFT, Save asks first (a default is a rate on every item with none of its own) and the outcome is said
+ * in the card. Shown to everyone and enabled by role (owner or manager — cbRateMay, the api's rule), greyed WITH the sentence for the rest; greyed too
+ * while nothing changed. `verdict` is cbRateMay's; `changed` whether the pick differs from the stored default.
  */
-function catsetTaxDefault(id) {
+function catsetTaxActsHTML_(verdict, changed) {
+  var sentence = !verdict.ok && CATSET_MAY !== null ? '<div data-testid="catset-tax-why" style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(verdict.why) + '</div>' : '';
+  return (
+    '<div class="catset-ca" style="padding:8px 0 0"><button class="composebtn pri" data-testid="catset-tax-save" onclick="catsetTaxSave(this)"' +
+    (verdict.ok && changed ? '' : ' disabled') +
+    '>' +
+    tx('Save') +
+    '</button></div>' +
+    sentence +
+    '<div id="catset_tax_out" data-testid="catset-tax-out" style="font-size:var(--fs-2);font-weight:600;color:var(--ok-2);min-height:20px;margin-top:4px"></div>'
+  );
+}
+var CATSET_TAX_PICK; /* the slab picked but not yet saved: undefined = nothing picked (the stored one stands), '' = cleared, else a slab id */
+var CATSET_MAY = null; /* GET /entities/me/can-see-costs as read: is_owner · may_set_rate (api #429) — who may set a rate here; null = not read yet */
+/** the face's tax object as an object (an old face kept a free-text treatment string there) */
+function catsetTaxFace_() {
   var t = (CATSET_FACE && CATSET_FACE.tax) || {};
-  if (typeof t === 'string') t = { treatment: t };
-  var next = Object.assign({}, t);
-  /* Cleared means INHERIT NOTHING, not "nil-rated" — so the key is removed rather than set to ''. */
+  return typeof t === 'string' ? { treatment: t } : t;
+}
+/** the server's answer to "may this login set a rate", read once (the same field catalogue.html reads); a failed read leaves it unknown, and Save stays greyed */
+function catsetMayLoad() {
+  if (CATSET_MAY !== null) return Promise.resolve(CATSET_MAY);
+  return api('canSeeCosts')
+    .then(function (reply) {
+      CATSET_MAY = reply || {};
+    })
+    .catch(function (e) {
+      CATSET_MAY = {};
+      if (typeof cblog === 'function') cblog('warn', 'catsetup: can-see-costs could not be read — the catalogue default stays read-only: ' + ((e && e.message) || e));
+    });
+}
+/**
+ * a slab picked: the draft changes and only the Save button flips (nothing is written, nothing else repaints). The first pick also asks the server who
+ * may set a rate (one read, once) and repaints the card with its answer: Save enabled for an owner or a manager, the picker greyed WITH the sentence
+ * for anyone else — the pick is kept either way.
+ */
+function catsetTaxPick(id) {
+  CATSET_TAX_PICK = String(id || '');
+  if (CATSET_MAY === null) {
+    catsetMayLoad().then(catsetPaintDetail);
+    return;
+  }
+  var stored = catsetTaxFace_().default_slab || '';
+  var button = document.querySelector('[data-testid="catset-tax-save"]');
+  if (button) button.disabled = !(cbRateMay(CATSET_MAY).ok && CATSET_TAX_PICK !== stored);
+}
+/** the slab as the shop reads it, through the engine's one phrasing ("GST 5%"); '' → "no default" */
+function catsetTaxWords_(id) {
+  var row = (CATSET_DEFS.tax || []).filter(function (item) {
+    return item.id === id;
+  })[0];
+  var slab = row ? CBTaxSlab.slabOf({ definition_id: row.id, name: row.name, rules: row.rules || {} }) : null;
+  if (!slab) return tx('no default');
+  return CBTaxSlab.describe({ source: 'catalogue', rate: slab.rate, nil_kind: slab.nil_kind }, { short: true, country: (typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '' });
+}
+/** how many products a changed default reaches: those resolving to nothing or to the catalogue today (null when the products are not read yet) */
+function catsetTaxFollowers_() {
+  var rows = catsetTaxRows();
+  if (rows === null) return null;
+  return rows.filter(function (x) {
+    return !x.r || x.r.source === 'none' || x.r.source === 'catalogue';
+  }).length;
+}
+/**
+ * Save → ASK FIRST (naming the rate and how many items follow) → ONE PUT of the face through catsetFacePut → the outcome in the card.
+ * ⚠️ MERGED ONTO face.tax, NOT ASSIGNED OVER IT. The face writer merges one level only, so writing `{ tax: {default_slab} }` would drop
+ * `tax.treatment` — the exact class of loss the face's own header warns about, one level deeper. Cleared means INHERIT NOTHING, not "nil-rated":
+ * the key is removed rather than set to ''.
+ */
+function catsetTaxSave(button) {
+  var current = catsetTaxFace_(),
+    next = Object.assign({}, current),
+    id = CATSET_TAX_PICK === undefined ? current.default_slab || '' : CATSET_TAX_PICK,
+    verdict = cbRateMay(CATSET_MAY);
+  if (!verdict.ok) {
+    if (typeof toast === 'function') toast(verdict.why, true); /* the button is greyed above; this is the belt to that brace */
+    return;
+  }
   if (id) next.default_slab = String(id);
   else delete next.default_slab;
-  catsetFaceSave({ tax: next }).then(catsetPaintDetail);
-  if (typeof toast === 'function') toast(id ? tx('Catalogue default slab set') : tx('Catalogue default cleared'));
+  var words = catsetTaxWords_(id),
+    follow = catsetTaxFollowers_();
+  return CBAction.run(
+    button,
+    function () {
+      return catsetFacePut({ tax: next });
+    },
+    {
+      key: 'catset-tax-save',
+      confirm: { title: txf('Every item with no rate of its own: {w}?', { w: words }), body: follow === null ? '' : esc(txf('{n} item(s) follow.', { n: String(follow) })), yes: tx('Set rate'), danger: false },
+      out: 'catset_tax_out',
+      busy: tx('Saving…'),
+      outcome: function () {
+        CATSET_TAX_PICK = undefined;
+        catsetPaintDetail();
+        var out = document.getElementById('catset_tax_out');
+        if (out) out.textContent = txf('Catalogue default: {w}', { w: words }) + (follow ? ' · ' + txf('{n} item(s) follow', { n: String(follow) }) : '');
+      }
+    }
+  );
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
