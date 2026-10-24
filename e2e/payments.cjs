@@ -234,6 +234,34 @@ async function route(S, r) {
   const popup = async (p) => { await p.click('[data-testid="crm-act-pay"]'); await p.waitForSelector('[data-testid="pay_amt"]', { timeout: 8000 }); };
   const type = async (p, amt) => { await p.fill('[data-testid="pay_amt"]', amt); await p.waitForFunction(() => { const e = document.getElementById('pay_left'); return e && !/Type the amount/.test(e.textContent); }, null, { timeout: 8000 }); await p.waitForTimeout(150); };
   const closeIf = (p) => p.evaluate(() => { if (typeof closeModal === 'function') closeModal(); });
+  /* R102b: Record asks first (the app's own <dialog open>, no role attribute) — the Yes tap that writes */
+  const ASK_OK = 'dialog[open] [data-testid="confirm-ok"]', ASK_NO = 'dialog[open] [data-testid="confirm-cancel"]';
+  const askText = (p) => p.evaluate(() => { const d = document.querySelector('#cb_confirm'); return d ? d.textContent.replace(/\s+/g, ' ').trim() : ''; });
+  const yesPay = async (p) => { await p.waitForSelector(ASK_OK, { timeout: 5000 }); await p.click(ASK_OK); };
+
+  /* ── R102b · a payment asks first (walk 24 Oct): who, how much, how — Cancel writes nothing; Yes writes once ── */
+  {
+    const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
+    await popup(p); await type(p, '2000');
+    await p.click('[data-testid="pay_record"]');
+    await p.waitForSelector(ASK_OK, { timeout: 5000 });
+    const ask1 = await askText(p);
+    ok(/Pay Agro Mills ₹\s?2,000(\.00)? by cash\?/.test(ask1) && /Your books will show it paid\./.test(ask1), 'R102b · Record asks first, in the screen\'s words: "Pay Agro Mills ₹2,000.00 by cash? Your books will show it paid." — got ' + ask1.slice(0, 110));
+    ok(await p.locator('dialog[open]#cb_confirm:not([role])').count() === 1, 'R102b · the ask is the app\'s own <dialog open> with no role attribute — never the browser\'s confirm()');
+    await p.click(ASK_NO); await p.waitForTimeout(300);
+    ok(posts(S) === 0 && await p.locator('[data-testid="pay_amt"]').count() === 1 && await p.locator('[data-testid="pay_record"]').isEnabled() && await p.locator('dialog[open]#cb_confirm').count() === 0, 'R102b · Cancel: no POST, the form stays as it was, Record is pressable again (' + posts(S) + ' POST)');
+    await p.selectOption('[data-testid="pay_mode"]', 'bank'); await p.waitForTimeout(300);
+    await p.click('[data-testid="pay_record"]');
+    await p.waitForSelector(ASK_OK, { timeout: 5000 });
+    await p.evaluate(() => payRecord());   /* a second press while the question is up opens no second question */
+    const ask2 = await askText(p);
+    ok(/by bank\?/.test(ask2) && await p.locator('dialog[open]#cb_confirm').count() === 1, 'R102b · the ask names the mode the screen knows, once (' + ask2.slice(0, 60) + ')');
+    await p.click(ASK_OK);
+    await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
+    ok(posts(S) === 1 && S.pay.posts[0].mode === 'bank' && S.pay.posts[0].amount_minor === 200000 && S.pay.posts[0].direction === 'out', 'R102b · Yes: ONE POST — out, by bank, ₹2,000 (' + posts(S) + ' POST)');
+    await p.screenshot({ path: path.join(PNG, 'PayAsk.png') }).catch(() => {});
+    await ctx.close();
+  }
 
   /* ── E10 · the door ── */
   {
@@ -272,7 +300,7 @@ async function route(S, r) {
     const vals = await p.$$eval('input[data-testid^="alloc-"]', (e) => e.map((x) => Math.round(Number(x.value) * 100)));
     ok(JSON.stringify(vals) === JSON.stringify([112000, 56000, 32000, 0]), 'E3 ₹2,000 → two bills and part of the third (' + vals.join(', ') + ')');
     ok(/2,000\.00 settles 3 bills/.test(await text(p, 'pay_left')) && !/advance/.test(await text(p, 'pay_left')) && await p.locator('[data-testid="pay_band"]').isHidden(), 'E3 the line says 3 bills, nothing left over, and no band');
-    await p.click('[data-testid="pay_record"]');
+    await p.click('[data-testid="pay_record"]'); await yesPay(p);
     await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     ok(posts(S) === 1 && JSON.stringify(S.pay.posts[0].allocations) === JSON.stringify([{ against_ref: 'bill-a', amount_minor: 112000 }, { against_ref: 'bill-b', amount_minor: 56000 }, { against_ref: 'bill-c', amount_minor: 32000 }]), 'E3 ONE call, with the allocations in it');
     ok(await text(p, 'pay_outcome') === 'Paid ₹2,000 cash to Agro Mills. Settled 3 bills (₹2,000).', 'E3 outcome words, exact (' + (await text(p, 'pay_outcome')) + ')');
@@ -301,7 +329,7 @@ async function route(S, r) {
     const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
     await popup(p); await type(p, '3720.12');
     ok(await p.locator('[data-testid="pay_band"]').isHidden(), 'E1 paying exactly what is owed raises no band');
-    await p.click('[data-testid="pay_record"]');
+    await p.click('[data-testid="pay_record"]'); await yesPay(p);
     await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     ok(posts(S) === 1 && S.pay.bills.length === 0 && !('acknowledge' in S.pay.posts[0]), 'E1 first payment: one POST, no acknowledge, all four bills settled');
     await p.click('[data-testid="pay_done"]');
@@ -344,7 +372,7 @@ async function route(S, r) {
     const pv = S.pay.previews[S.pay.previews.length - 1];
     ok(pv.allocate === 'none' && !('allocations' in pv), 'E11 "Keep it as an advance" asks for allocate:"none" with no allocation (' + JSON.stringify(pv) + ')');
     ok(await p.locator('[data-testid="pay_band"]').isHidden() && await p.locator('[data-testid="pay_record"]').isEnabled(), 'E11 no allocation → no W1 band, and Record is pressable');
-    await p.click('[data-testid="pay_record"]');
+    await p.click('[data-testid="pay_record"]'); await yesPay(p);
     await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     const po = S.pay.posts[0];
     ok(posts(S) === 1 && po.allocate === 'none' && !('allocations' in po) && !('acknowledge' in po), 'E11 the POST carries allocate:"none", no allocations, no acknowledge');
@@ -448,7 +476,7 @@ async function route(S, r) {
   {
     const S = standIn(), { ctx, p } = await openPay('/crm.html', S);
     await popup(p); await type(p, '2000');
-    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
+    await p.click('[data-testid="pay_record"]'); await yesPay(p); await p.waitForSelector('[data-testid="pay_outcome"]', { timeout: 8000 });
     await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-send"]', { timeout: 8000 });
     ok((S.adv.reads || 0) === 0 && S.calls.filter((c) => /\/advice$/.test(c)).length === 0, 'E5 the outcome panel mounts CBAdvice from the record\'s own advice block — no second read');
     ok(await text(p, 'adv-send') === '✉ Send advice' && !(await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await p.locator('[data-testid="adv-share"]').count() === 1 && (await p.getAttribute('[data-testid="adv-share"]', 'class') || '').split(' ').includes('off'),
@@ -469,7 +497,7 @@ async function route(S, r) {
     /* the failed send: a second payment, the rail down */
     S.adv.failSend = true;
     await popup(p); await type(p, '500');
-    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-send"]', { timeout: 8000 });
+    await p.click('[data-testid="pay_record"]'); await yesPay(p); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-send"]', { timeout: 8000 });
     await p.click('[data-testid="adv-send"]');
     await p.waitForFunction(() => /Send again/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
     ok(S.adv.sends.length === 2 && S.adv.patches.length === 1 && await text(p, 'adv-out') === 'Advice not sent — Send again' && await text(p, 'adv-send') === '✉ Send again' && await p.getAttribute('[data-testid="adv-send"]', 'data-action-state') === 'failed',
@@ -525,7 +553,7 @@ async function route(S, r) {
     const S = standIn(); S.adv.on_rail = false;
     const { ctx, p } = await openPay('/crm.html', S);
     await popup(p); await type(p, '2000');
-    await p.click('[data-testid="pay_record"]'); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-copy"]', { timeout: 8000 });
+    await p.click('[data-testid="pay_record"]'); await yesPay(p); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-copy"]', { timeout: 8000 });
     ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on the network — share the advice instead.',
       'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on the network — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
     const words = adviceOf(S, 'pay1').words, wa = await p.getAttribute('[data-testid="adv-wa"]', 'href'), mail = await p.getAttribute('[data-testid="adv-mail"]', 'href');

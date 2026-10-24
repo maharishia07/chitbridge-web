@@ -18,7 +18,7 @@ of file each thing is; this says what already does the job.
 | 73 | `answer` | `availability.js` | from March; then nearest. |
 | 69 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 68 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
-| 67 | `list` | `cap-settings.js` |  |
+| 66 | `list` | `cap-settings.js` |  |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 61 | `here` | `screen-id.js` |  |
 | 58 | `problem` | `problem.js` | problem(req, res, spec) — |
@@ -48,7 +48,7 @@ of file each thing is; this says what already does the job.
 | 37 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 36 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 35 | `modal` | `app.html` |  |
-| 36 | `host` | `chit-sheet.js` |  |
+| 35 | `host` | `chit-sheet.js` |  |
 | 35 | `rules` | `docnumber.js` | the rule set for a country — |
 | 35 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 35 | `missing` | `variant.browser.js` | refusing with no reason. |
@@ -93,7 +93,7 @@ of file each thing is; this says what already does the job.
 | 24 | `view` | `country-ready.js` |  |
 | 24 | `lookup` | `regulation.js` | lookup(country) → its pack, or the DEFAULT one marked { fallback: |
 | 23 | `call` | `cap-assist.js` |  |
-| 23 | `opts` | `cap-stock.js` |  |
+| 24 | `opts` | `cap-stock.js` |  |
 | 23 | `rate` | `convert.js` | A rate, with its evidence. |
 | 23 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 23 | `hold` | `orders.js` |  |
@@ -103,7 +103,7 @@ of file each thing is; this says what already does the job.
 | 22 | `account` | `home-facts.js` | OMITTED: |
 | 22 | `owner` | `books.js` |  |
 | 22 | `form` | `accounts-shell.js` |  |
-| 21 | `shown` | `cap-settings.js` |  |
+| 21 | `shown` | `country-compare.js` | one side's value for the line: |
 | 21 | `guard` | `books-assets.js` | run a store call; a missing table is the one refusal |
 | 21 | `chart` | `fx-rates.js` |  |
 | 21 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
@@ -124,6 +124,7 @@ of file each thing is; this says what already does the job.
 | 18 | `next` | `cap-stock.js` | the next level: |
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `note` | `dbwatch.js` |  |
+| 17 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 17 | `step` | `cart.js` |  |
 | 17 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
@@ -151,7 +152,7 @@ of file each thing is; this says what already does the job.
 | 15 | `bkDate` | `cap-books.js` |  |
 | 15 | `frame` | `cap-settings.js` |  |
 | 15 | `fmtMoney` | `helpers.js` |  |
-| 15 | `today` | `kural.js` |  |
+| 16 | `today` | `kural.js` |  |
 | 15 | `label` | `screen-id.js` |  |
 | 15 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 15 | `orders` | `home-facts.js` | the till said 2 — |
@@ -160,9 +161,8 @@ of file each thing is; this says what already does the job.
 | 15 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
 | 15 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 14 | `cols` | `cap-catalogue.js` |  |
-| 14 | `control` | `cap-settings.js` | the row's editor: |
 | 14 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
-| 14 | `cblog` | `core.js` | const __cblog = []; |
+| 15 | `cblog` | `core.js` | const __cblog = []; |
 | 14 | `offers` | `network-app.js` |  |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `label` | `bill-privacy.js` | label(step, mine) — |
@@ -186,7 +186,7 @@ of file each thing is; this says what already does the job.
 | 12 | `units` | `cart.js` |  |
 | 12 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 12 | `chips` | `country-profiles.js` | words as chips; null when there are none |
-| 12 | `stored` | `one-person.js` |  |
+| 11 | `stored` | `one-person.js` |  |
 | 12 | `says` | `adopt.js` |  |
 | 12 | `post` | `books-manual.js` | POST /events — |
 | 12 | `migrated` | `country-setup.js` |  |
