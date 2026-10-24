@@ -312,8 +312,12 @@ const walk = async (w) => {
       await openBillSheet();
       await page.click(T('cs-act-goodsin')); await page.waitForSelector(T('bill-use-choice'), { timeout: 8000 });
       const ask = await txt(page, T('bill-use-choice'));
-      await page.click(T('bill-use-resale')); await page.waitForTimeout(3500);
-      const t = await txt(page, '#chitsheet');
+      await page.click(T('bill-use-resale'));
+      /* R102: accepting the bill asks first — "Accept <supplier>'s bill <no> for ₹…?" — the Yes tap is the deliberate step */
+      await page.waitForSelector('#cb_confirm ' + T('confirm-ok'), { timeout: 5000 }).catch(() => {});
+      const askYes = await txt(page, '#cb_confirm').catch(() => '');
+      await page.click('#cb_confirm ' + T('confirm-ok')).catch(() => {}); await page.waitForTimeout(3500);
+      const t = await txt(page, '#chitsheet') + (askYes ? ' · asked: ' + askYes.replace(/\s+/g, ' ').slice(0, 80) : '');
       await page.click(T('cs-close')).catch(() => {});
       return { ok: /What is it for/.test(ask) && /Accepted/.test(t), saw: '"' + ask.slice(0, 60) + '"; sheet: ' + t.slice(0, 140) };
     });
