@@ -691,7 +691,7 @@
           party: m.who || '',
           me: who.entity || who.name || '',
           channel: 'both',
-          thread_type: 'external',
+          thread_type: 'internal' /* UX-116 R60: the note starts as a team note; sending to the other side is a deliberate switch */,
           context: { host: 'chit-sheet' }
         });
     }
@@ -863,31 +863,37 @@
   /** the action row: only what this step allows; a refused action is greyed WITH the server's sentence (a sample's are all greyed, and say so) */
   function actsHTML(view) {
     var no = refusedAccept(view),
-      noR = refusedReject(view);
-    return actsOf(view)
-      .filter(function (item) {
+      noR = refusedReject(view),
+      items = actsOf(view).filter(function (item) {
         return !(CS.mode === 'page' && item === 'page');
-      })
-      .map(function (item) {
-        var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : null,
-          refused = !!why; /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
-        return (
-          '<button type="button" class="cs-act" data-testid="cs-act-' +
-          item +
-          '" onclick="CBSheet.act(\'' +
-          item +
-          '\')"' +
-          (CS.busy || refused ? ' disabled' : '') +
-          ' title="' +
-          esc(refused ? why : T(ACT[item][1])) +
-          '"><span class="ic" aria-hidden="true">' +
-          ACT[item][0] +
-          '</span><span>' +
-          esc(T(ACT[item][1])) +
-          '</span></button>'
-        );
-      })
-      .join('');
+      });
+    /* UX-116 R60: a greyed action says why in a line on the page, not only in a tooltip a phone never shows */
+    var line = CS.sample ? '' : (items.indexOf('accept') >= 0 && no) || (items.indexOf('reject') >= 0 && noR) || '';
+    if (serverSaid(view) && serverSaid(view).why === line) line = ''; /* the body already says it */
+    return (
+      (line ? '<p class="cs-why" data-testid="cs-why">' + esc(line) + '</p>' : '') +
+      items
+        .map(function (item) {
+          var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : null,
+            refused = !!why; /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
+          return (
+            '<button type="button" class="cs-act" data-testid="cs-act-' +
+            item +
+            '" onclick="CBSheet.act(\'' +
+            item +
+            '\')"' +
+            (CS.busy || refused ? ' disabled' : '') +
+            ' title="' +
+            esc(refused ? why : T(ACT[item][1])) +
+            '"><span class="ic" aria-hidden="true">' +
+            ACT[item][0] +
+            '</span><span>' +
+            esc(T(ACT[item][1])) +
+            '</span></button>'
+          );
+        })
+        .join('')
+    );
   }
 
   var CSS =
@@ -912,7 +918,7 @@
     '.cs #cs_reason{display:block;width:100%;box-sizing:border-box;min-height:44px;margin:4px 0;padding:0 10px;border:1px solid var(--line,#E7E2D8);border-radius:8px;background:var(--card,#fff);color:inherit;font:inherit}' +
     '.cs .cs-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}' +
     '.cs .cs-act{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px;padding:4px 6px;border:0;border-radius:8px;background:none;color:inherit;font-size:var(--fs-1,11px)}' +
-    '.cs .cs-act .ic{font-size:20px;line-height:1}.cs .cs-act:disabled{opacity:.5;cursor:default}.cs .cs-act:hover{background:var(--gold-soft,#F7F1E4)}' +
+    '.cs .cs-why{flex:1 0 100%;margin:0 0 4px;font-size:var(--fs-2,12.5px);color:var(--grey,#494F56)}.cs .cs-act .ic{font-size:20px;line-height:1}.cs .cs-act:disabled{opacity:.5;cursor:default}.cs .cs-act:hover{background:var(--gold-soft,#F7F1E4)}' +
     /* print: while the POPUP is open the rest of the page hides; the page form prints as its page, the action row hidden either way */
     '@media print{body.cs-open>*:not(#chitsheet){display:none!important}#chitsheet{position:static;max-height:none;box-shadow:none}.cs .cs-acts,.cs .cs-top button{display:none}}' +
     /* the page form (CBSheet.mount): the same sections full-width in a page's own element; the title row and the action row are the popup's, without a close button */
