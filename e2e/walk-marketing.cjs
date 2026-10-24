@@ -89,10 +89,10 @@ const walk = async (w) => {
   if (REAL) {
     api = await require('./lib/real-api.cjs').start({ origin: base });
     const token = await api.owner();
-    await ctx.addInitScript((o) => { try { localStorage.setItem('cb_api_base', o.b); localStorage.setItem('cb_sess', JSON.stringify({ token: o.t, role: 'entity', name: 'Owner', entity: o.shop, bridgeId: o.shop })); } catch (_) {} }, { b: api.base, t: token, shop: api.shop });
+    await ctx.addInitScript((o) => { try { localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', o.b); localStorage.setItem('cb_sess', JSON.stringify({ token: o.t, role: 'entity', name: 'Owner', entity: o.shop, bridgeId: o.shop })); } catch (_) {} }, { b: api.base, t: token, shop: api.shop });
   } else {
     await ctx.route('**/api/**', route);
-    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
+    await ctx.addInitScript((s) => { try { localStorage.setItem('cb_ids', '1'); localStorage.setItem('cb_api_base', location.origin); localStorage.setItem('cb_sess', s); } catch (_) {} }, W.session('Fixture Owner', 'Fixture Shop'));
   }
   const txt = (sel) => page.locator(sel).first().innerText().then((s) => s.replace(/\s+/g, ' ').trim()).catch(() => '');
   const count = (sel) => page.locator(sel).count();

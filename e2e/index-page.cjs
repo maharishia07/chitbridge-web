@@ -245,6 +245,7 @@ async function run() {
       ok(/Ledger up to 7 Oct/.test(await pg.locator('[data-testid="shell-facts-accounts"]').innerText()) && await pg.locator('[data-testid="shell-facts-accounts"] .more-n').count() === 0, 'planted · the Accounts tile: one line from the API, no +n');
       const fin = await pg.$eval('[data-testid="shell-facts-finance"]', (n) => ({ tile: n.innerText.replace(/\s+/g, ' ').trim(), n: (n.querySelector('.more-n') || {}).textContent, lines: [...n.querySelectorAll('.more .f')].map((x) => x.textContent.trim()) }));
       ok(/3 customers owe you/.test(fin.tile) && fin.n === '+2 more' && fin.lines.join('|') === '3 customers owe you|2 bills to pay|Cash is steady', 'planted · three lines → one on the tile, "+2", all three in the drop-down (' + fin.lines.join(' | ') + ')');
+      ok(await pg.$eval('[data-testid="shell-facts-finance"] .more-n', (n) => n.getAttribute('title')) === 'All 3 lines of this tile', 'UX-3 · the "+2" badge says what it counts: "All 3 lines of this tile"');
       /* STATUS: shell-state on every card whose facts answered (state, or lines); none on a card with no facts read */
       const sts = await pg.$$eval('.cbsh-box', (bs) => bs.map((b) => ({ id: b.dataset.id, st: (b.querySelector('[data-testid="shell-state"]') || { dataset: {} }).dataset.state || null })));
       const wrongSt = sts.filter((x) => (PLANTED_STATE[x.id] || null) !== x.st);
