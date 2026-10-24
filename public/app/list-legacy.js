@@ -25,7 +25,9 @@ var LISTCTL = {};
 function listCtlResetRows(key) {
   try {
     if (LAZY) delete LAZY[key];
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('list-legacy:listCtlResetRows - the lazy-render state is not ready yet, so there is nothing to reset', failure);
+  }
 }
 
 /**
@@ -266,7 +268,9 @@ function lazyWrap(id, items, cardFn, empty) {
   if (kept && kept._io) {
     try {
       kept._io.disconnect();
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('list-legacy:lazyWrap - the observer could not be changed, it is left as it was', failure);
+    }
   }
   if (!items.length) return empty || '';
   const chunk = 50;
@@ -312,7 +316,9 @@ function lazyReveal(id) {
     if (s._io) {
       try {
         s._io.disconnect();
-      } catch (_) {}
+      } catch (failure) {
+        if (window.cbQuiet) window.cbQuiet('list-legacy:lazyReveal - the observer could not be changed, it is left as it was', failure);
+      }
       s._io = null;
     }
   } else
@@ -345,5 +351,7 @@ function lazyAttach(id) {
       { rootMargin: '0px' }
     );
     s._io.observe(sent);
-  } catch (_) {}
+  } catch (failure) {
+    if (window.cbQuiet) window.cbQuiet('list-legacy:lazyAttach - the observer could not be changed, it is left as it was', failure);
+  }
 }

@@ -112,7 +112,9 @@
     try {
       var R = root.CBRail;
       if (R && R.WHY && Object.prototype.hasOwnProperty.call(R.WHY, word)) return R.WHY[word];
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:why - the engine sentence was unreadable, the server words are used', failure);
+    }
     return fallback || T(W.viewOnly);
   }
 
@@ -164,7 +166,9 @@
     try {
       var C = root.CBOffline;
       if (C && C.loadDraft) return C.loadDraft(k) || '';
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:draftGet - the saved draft was unreadable, the box starts empty', failure);
+    }
     return '';
   }
   function draftSet(o, v) {
@@ -173,7 +177,9 @@
     try {
       var C = root.CBOffline;
       if (C && C.saveDraft) C.saveDraft(k, v);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:draftSet - the draft was not kept offline, it stays in memory', failure);
+    }
   }
   function draftClear(o) {
     var k = dkey(o);
@@ -181,7 +187,9 @@
     try {
       var C = root.CBOffline;
       if (C && C.clearDraft) C.clearDraft(k);
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:draftClear - the offline draft was not cleared, it is cleared in memory', failure);
+    }
   }
 
   /* ── eligibility: the engine's verdict per channel ── */
@@ -249,7 +257,9 @@
         m.actions = reply.actions;
         paint(m);
       }
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:readActions - the actions could not be refreshed, the buttons stay as they are', failure);
+    }
   }
 
   /* ── paint ── */
@@ -470,7 +480,9 @@
   function emit(el, chit_id, result) {
     try {
       (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
-    } catch (_) {}
+    } catch (failure) {
+      if (window.cbQuiet) window.cbQuiet('rail-thread:emit - the page event was not delivered, the page carries on', failure);
+    }
   }
   /** post ONE message through CBAction (busy · one press one write · outcome). btn may be null (a host's own control, or none). */
   function post(btn, o, body, say) {
