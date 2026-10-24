@@ -23,8 +23,11 @@ if (typeof EP !== 'undefined') {
 }
 
 /* the server names a band, an icon and a pick; the page only gives them words and a glyph (display, never a rule) */
-var EN_BAND = { paid: 'Paid', received: 'Received', owner: 'The owner', staff: 'Staff', money: 'Money moves', adjust: 'Your own journal' };
-var EN_ICON = { receipt: '🧾', coins: '🪙', 'wallet-in': '👛', 'wallet-out': '💸', 'person-out': '🧑', 'person-in': '🧑', swap: '🔁', pen: '✍️' };
+var EN_BAND = { paid: 'Paid', received: 'Received', owner: 'The owner', staff: 'Staff', money: 'Money moves', adjust: 'Your own journal', bought: 'Bought' };
+var EN_ICON = { receipt: '🧾', 'receipt-minus': '🧾', coins: '🪙', 'wallet-in': '👛', 'wallet-out': '💸', 'person-out': '🧑', 'person-in': '🧑', swap: '🔁', pen: '✍️' };
+/* R106: an event whose Save is a money promise asks first (CBAction.ask), naming the party and the server's ₹ — by the event's kind, the server's own code */
+var EN_ASK = { debit_note: { title: 'Note {amt} against the bill?', body: 'A debit note posts against the bill. What you owe {who} falls by {amt}.', yes: 'Note it' } };
+var EN_ITEM = { name: 'Item', qty: 'Qty', unit_price: 'Rate difference', gst_rate: 'Tax %' };
 var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card' };
 var EN_LABEL = {
   class: 'What for',
@@ -35,7 +38,11 @@ var EN_LABEL = {
   ledger: 'Which staff ledger',
   amount: 'How much',
   date: 'Date',
-  narration: 'Note'
+  narration: 'Note',
+  supplier: 'Supplier',
+  against_ref: 'Which bill',
+  reason: 'Why',
+  lines: 'What differs'
 };
 var EN = {
   step: 1,
@@ -43,6 +50,8 @@ var EN = {
   ev: null,
   v: {},
   lines: [],
+  items: [] /* R106: the typed item lines of a non-journal event (a debit note: name · qty · rate difference · tax %) — sent as typed, taxed by the server */,
+  after: null /* R106: what the opener wants done after a save (Payables reads again) */,
   pv: null,
   pvBusy: false,
   dateRef: null,
@@ -76,6 +85,7 @@ function enCss() {
     '#entrysheet label.en-f{display:block;margin:0 0 12px;font-weight:600}#entrysheet label.en-f>span{display:block;margin-bottom:4px;color:var(--grey,#494F56);font-size:var(--fs-1,11px)}' +
     '#entrysheet .en-f input,#entrysheet .en-f select,#entrysheet .en-ln input,#entrysheet .en-ln select{width:100%;box-sizing:border-box;min-height:44px;padding:0 10px;border:1px solid var(--line,#E7E2D8);border-radius:9px;background:var(--card,#fff);color:inherit;font:inherit}' +
     '#entrysheet .en-ln{display:grid;grid-template-columns:minmax(0,1fr) 84px minmax(0,132px) 44px;gap:6px;margin-bottom:8px}' +
+    '#entrysheet .en-ln.en-item{grid-template-columns:minmax(0,1.5fr) 64px minmax(0,104px) 64px 44px}@media (max-width:420px){#entrysheet .en-ln.en-item{grid-template-columns:minmax(0,1fr) 56px 84px 56px 44px}}' /* R106: item lines — item · qty · rate difference · tax % · remove */ +
     '#entrysheet .en-bad{margin:6px 0 12px;padding:8px 10px;border:1px solid var(--red-b,#E8B7A6);background:var(--red-t,#FBEDE8);color:var(--red-i,#8E3517);border-radius:8px}' +
     '#entrysheet .en-warn{margin:6px 0 12px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}' +
     '#entrysheet .en-bad button,#entrysheet .en-warn button{cursor:pointer;display:block;margin-top:6px;min-height:44px;padding:0 14px;border:1px solid currentColor;border-radius:9px;background:none;color:inherit;font:inherit;font-weight:700}' +
@@ -136,6 +146,8 @@ async function enOpen(preset) {
   EN.photo = null;
   EN.ref = (preset && preset.ref) || bkRef();
   EN.pre = (preset && preset.v) || null;
+  EN.after = enAfterOf(preset);
+  EN.items = [];
   enPaint();
   try {
     document.documentElement.style.overflow = 'hidden';
@@ -167,10 +179,7 @@ async function enOpen(preset) {
         return e.id === preset.kind;
       })
     ) {
-      enPick(preset.kind);
-      EN.step = 4;
-      enPaint();
-      enPreview();
+      enPresetStart(preset.kind);
       return;
     }
   } catch (e) {
@@ -180,6 +189,20 @@ async function enOpen(preset) {
   enPaint();
 }
 
+/** what the opener wants done after a save (R106: Payables reads again), or nothing */
+function enAfterOf(preset) {
+  return preset && typeof preset.after === 'function' ? preset.after : null;
+}
+/** a suggestion with a kind: picked, then (R106) the first step still to answer — a debit note's lines — or the server's preview when everything is answered */
+function enPresetStart(kind) {
+  enPick(kind);
+  var gapStep = enSteps().filter(function (step) {
+    return step > 1 && step < 4 && !enStepReady(step);
+  })[0];
+  EN.step = gapStep || 4;
+  enPaint();
+  if (!gapStep) enPreview();
+}
 /** the server's event → the page's: id = kind, label = words, group = its band's words, icon = a glyph for the server's icon name */
 function enNorm(e) {
   return Object.assign({}, e, {
@@ -385,6 +408,12 @@ function enPick(id) {
       { code: '', side: 'dr', amt: '' },
       { code: '', side: 'cr', amt: '' }
     ];
+  /* R106: an event with item lines (a debit note) starts with one empty line */
+  EN.items = (ev.fields || []).some(function (field) {
+    return field && field.kind === 'lines' && ev.kind !== 'journal';
+  })
+    ? [enItemNew()]
+    : [];
   EN.step = enSteps()[1];
   enPaint();
 }
@@ -406,6 +435,8 @@ function enNext() {
 
 /* ── the fields ── */
 function enOptions(f) {
+  /* R106: the server's `pick: 'supplier'` / `'customer'` (books-manual debit_note) is the party list of that side — the one /dues read, as kind party */
+  if (f.kind === 'pick' && (f.pick === 'supplier' || f.pick === 'customer')) return enOptions({ kind: 'party', side: f.pick });
   if (f.kind === 'pick' && f.pick !== 'ledger' && !(f.options && f.options.length))
     return ((EN.picks || {})[f.pick] || []).map(function (item) {
       return { v: item.role || item.code, l: item.name };
@@ -560,7 +591,7 @@ function enFieldHTML(f) {
       wrap('<input data-testid="' + tid + '" type="file" accept="image/*,application/pdf" onchange="enPhoto(this)">') +
       (EN.photo ? '<div class="en-why" data-testid="en-photo-name">📎 ' + esc(EN.photo.name) + '</div>' : '')
     );
-  if (f.kind === 'lines') return enLinesHTML();
+  if (f.kind === 'lines') return enLinesField();
   return wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
 }
 /** a plain select from a list of options with the current value chosen */
@@ -599,13 +630,7 @@ function enStepReady(step) {
     if (item.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
     if (item.required === false || item.kind === 'photo' || item.kind === 'narration' || item.kind === 'doc_no')
       return !(item.kind === 'doc_no' && item.required);
-    if (item.kind === 'lines')
-      return (
-        EN.lines.length >= 2 &&
-        EN.lines.every(function (entry) {
-          return entry.code && String(entry.amt).trim() !== '';
-        })
-      );
+    if (item.kind === 'lines') return enLinesReady();
     if (item.kind === 'amount') return String(EN.v[item.key] || '').trim() !== '';
     if (item.kind === 'paid_by') return !!EN.v.paid_by && (EN.v.paid_by !== 'cheque' || !!EN.v.cheque_no);
     return String(EN.v[item.key] == null ? '' : EN.v[item.key]).trim() !== '';
@@ -689,6 +714,99 @@ function enLineDel(i) {
   enPaint();
 }
 
+/* ── R106: the ITEM lines of a non-journal event (a debit note: what differs, how many, the rate difference per unit, its tax %) — typed as data, taxed and
+   composed by the server (books-manual debit_note → taxedInvoice); the page adds nothing up ── */
+function enIsJournal() {
+  return !!(EN.ev && EN.ev.kind === 'journal');
+}
+/** the lines field as this event lays it out: a journal's ledger lines, else item lines */
+function enLinesField() {
+  return enIsJournal() ? enLinesHTML() : enItemLinesHTML();
+}
+/** the lines are complete: a journal's two or more ledger lines with amounts; an item list with every line named, counted and rated */
+function enLinesReady() {
+  if (!enIsJournal()) return EN.items.length >= 1 && EN.items.every(enItemFilled);
+  return (
+    EN.lines.length >= 2 &&
+    EN.lines.every(function (entry) {
+      return entry.code && String(entry.amt).trim() !== '';
+    })
+  );
+}
+function enItemNew() {
+  return { name: '', qty: '', unit_price: '', gst_rate: '' };
+}
+/** a typed item line is complete when it is named and its quantity and rate are numbers */
+function enItemFilled(item) {
+  return String(item.name || '').trim() !== '' && isFinite(Number(item.qty)) && String(item.qty).trim() !== '' && isFinite(Number(item.unit_price)) && String(item.unit_price).trim() !== '';
+}
+/** the item lines as a form: one row per line (item · qty · rate difference · tax %), Remove on each, Add a line below */
+function enItemLinesHTML() {
+  var cell = function (index, key, kind) {
+    return '<input data-testid="en-item-' + key + '-' + index + '" ' + kind + ' placeholder="' + esc(tx(EN_ITEM[key])) + '" value="' + esc(String(EN.items[index][key] == null ? '' : EN.items[index][key])) + '" oninput="enItem(' + index + ",'" + key + '\',this.value)">';
+  };
+  return (
+    '<div class="en-sec">' +
+    esc(tx('What differs')) +
+    '</div>' +
+    EN.items
+      .map(function (item, index) {
+        return (
+          '<div class="en-ln en-item" data-testid="en-item-' + index + '">' +
+          cell(index, 'name', 'type="text" autocomplete="off"') +
+          cell(index, 'qty', 'type="text" inputmode="decimal" autocomplete="off"') +
+          cell(index, 'unit_price', 'type="text" inputmode="decimal" autocomplete="off"') +
+          cell(index, 'gst_rate', 'type="text" inputmode="decimal" autocomplete="off"') +
+          '<button type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-item-del-' + index + '" onclick="enItemDel(' + index + ')"' + (EN.items.length <= 1 ? ' disabled' : '') + '>✕</button></div>'
+        );
+      })
+      .join('') +
+    '<button type="button" class="en-btn" data-testid="en-item-add" onclick="enItemAdd()">＋ ' +
+    esc(tx('Add a line')) +
+    '</button>'
+  );
+}
+function enItem(index, key, value) {
+  EN.items[index][key] = value;
+  EN.pv = null;
+  var node = document.getElementById('en_next');
+  if (node) node.disabled = !enStepReady(EN.step);
+}
+function enItemAdd() {
+  EN.items.push(enItemNew());
+  enPaint();
+}
+function enItemDel(index) {
+  if (EN.items.length > 1) EN.items.splice(index, 1);
+  enPaint();
+}
+/** the item lines as the server takes them (books-manual debit_note: name · qty · unit_price · gst_rate, the chit line's own shape) */
+function enItemsBody() {
+  return EN.items.map(function (item) {
+    return { name: String(item.name || '').trim(), qty: Number(item.qty), unit_price: Number(item.unit_price), gst_rate: String(item.gst_rate).trim() === '' ? 0 : Number(item.gst_rate) };
+  });
+}
+/**
+ * R106: the question before a debit note is saved — the party line of the SERVER's preview (its dr_minor is the note's ₹; never summed here), the bill
+ * and the supplier as the row names them. null when this event does not ask.
+ */
+function enAskWords() {
+  var question = EN.ev && EN_ASK[EN.ev.kind];
+  if (!question) return null;
+  /* the preview's party line: books-manual preview names it `party` (the id) and its golden type is personal */
+  var partyLine = ((EN.pv && EN.pv.lines) || []).filter(function (line) {
+    return (line.party || line.party_id || line.type === 'personal') && Number(line.dr_minor) > 0;
+  })[0];
+  var amount = partyLine ? bkMoney(partyLine.dr_minor, EN.pv.currency) : tx('this difference'),
+    supplierName = typeof bkPartyLabel === 'function' ? bkPartyLabel(EN.v.supplier || EN.v.party, '') : '';
+  return {
+    title: txf(question.title, { amt: amount, ref: EN.v.against_ref || '', who: supplierName || tx('the supplier') }),
+    body: esc(txf(question.body, { amt: amount, who: supplierName || tx('the supplier') })),
+    yes: tx(question.yes),
+    danger: false
+  };
+}
+
 /* ── the server's journal ── */
 /* the app's api() refuses a second POST to the same route while one is out, so the page asks one preview at a time and the newest answer wins (EN.seq) */
 function enAsk(body) {
@@ -715,6 +833,7 @@ function enBody() {
       o[item.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkMoneyMinor(item.amt);
       return o;
     });
+  else if (EN.items.length) b.lines = enItemsBody(); /* R106: the item lines, as typed */
   return b;
 }
 /** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
@@ -918,32 +1037,43 @@ function enPreviewHTML() {
 async function enSave(btn) {
   if (!enCanSave() || !EN.ev) return;
   await bkOnce('entry-save', btn, async function () {
-    EN.saving = true;
-    var body = enBody();
-    body.client_ref = EN.ref;
-    if (EN.photo) body.attachment = EN.photo;
-    var key = 'booksEventPost';
-    try {
-      var reply = await api(key, { body: body });
-      EN.saved = reply || {};
-      EN.saving = false;
-      EN.ref = null;
-      try {
-        if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(EN.saved);
-      } catch (_) {}
-      try {
-        if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
-        if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true);
-      } catch (_) {}
-      enPaint();
-    } catch (e) {
-      EN.saving = false;
-      EN.pv = Object.assign({}, EN.pv, {
-        refusals: [{ code: 'SAVE', message: bkWhy(e, tx('Could not save this entry')), fix: { label: tx('Try again'), retry: true } }]
-      });
-      enPaint2();
-    }
+    /* R106: a money promise asks first, INSIDE the busy guard (a second press while the question is open is dropped — the R102b lesson) */
+    var question = enAskWords();
+    if (question && typeof CBAction !== 'undefined' && (await CBAction.ask(question)) !== true) return;
+    await enSaveWrite();
   });
+}
+/** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
+async function enSaveWrite() {
+  EN.saving = true;
+  var body = enBody();
+  body.client_ref = EN.ref;
+  if (EN.photo) body.attachment = EN.photo;
+  try {
+    var reply = await api('booksEventPost', { body: body });
+    EN.saved = reply || {};
+    EN.saving = false;
+    EN.ref = null;
+    enSavedTell(EN.saved);
+    enPaint();
+  } catch (e) {
+    EN.saving = false;
+    EN.pv = Object.assign({}, EN.pv, {
+      refusals: [{ code: 'SAVE', message: bkWhy(e, tx('Could not save this entry')), fix: { label: tx('Try again'), retry: true } }]
+    });
+    enPaint2();
+  }
+}
+/** after a save: the Day book, the Books to-do and the opener (R106: Payables) are told — a painter that fails is logged, the save stands */
+function enSavedTell(saved) {
+  try {
+    if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(saved);
+    if (EN.after) EN.after(saved);
+    if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {});
+    if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true);
+  } catch (e) {
+    if (typeof cblog === 'function') cblog('error', 'entry saved, a painter failed: ' + ((e && e.message) || e));
+  }
 }
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
