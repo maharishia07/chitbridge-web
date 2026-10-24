@@ -62,7 +62,7 @@ buyer GSTIN + HSN). Buttons **Preview** (full-size overlay) and **Print** (test 
 - Connectors: **Running on your PCs** at the top (● Running · <PC> · seen 1 min ago / Stopped / Not installed), then one row per
   connector: name · Available / reason · **Download** · **Guide** (PDF, sample: `C:/dev/docs/23-connectors-and-integrations/guides/Tally-Guide.pdf`).
   Keys live inside their connector. List ordered by country (AU: Xero, MYOB, QuickBooks first).
-- Policy: a table — Rule · Now · Who may change it · ⓘ; edit in place, autosave. Each rule ALSO appears in the step where it acts
+- Policy: a table — Rule · Now · Who may change it · ⓘ; edit in place as a draft: Save and Cancel appear once it differs, Save asks first (R121, 24 Oct: never autosave). Each rule ALSO appears in the step where it acts
   (e.g. short-delivery tolerance on the receiving screen).
 - Plan & usage: table Limit · Allowed · Used; usage shows "US$" (billed in USD).
 - Account: you (name · e-mail · phone), where you are signed in (+ **Sign out** — missing today), devices.
