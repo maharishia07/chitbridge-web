@@ -52,7 +52,7 @@ of file each thing is; this says what already does the job.
 | 35 | `rules` | `docnumber.js` | the rule set for a country — |
 | 35 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 35 | `missing` | `variant.browser.js` | refusing with no reason. |
-| 36 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 37 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 34 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 33 | `closeModal` | `app.html` |  |
 | 33 | `register` | `regulation.js` | register(pack) → the pack — |
