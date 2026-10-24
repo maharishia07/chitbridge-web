@@ -8,6 +8,7 @@
  *
  * ── WHAT IS MOVED HERE (CLAUDE.md rule 1 — moved, never copied; cap-admin.js calls these same names, loaded first through CAP_WITH.admin) ──
  *   polDefsOf                      — the flags' rows from the server's schema[key].ui + bound_schema (T2-POLICY: no flag list on the web; was cap-admin.js polDefs)
+ *   policyRun · policySave · policyControl · policyShown · policyEditButtons · policyRowEdit — the draft-and-Save path of a policy row; the workshop's Business rules card draws and writes through it too (R121b, was cap-admin.js setPolFlag: a write on change)
  *   polShown · polStored           — a flag's value in the unit a person reads (0.50 %) and the unit it is stored in (50 bp) (was inline in setPolFlag/_polControl)
  *   _keySeenAt · _keyAgo · _agentName — when a key last spoke, in words, and which machine (was cap-admin.js)
  *   KEY_SCOPES · keyScopesOf       — what a minted key may do, and the connector rule (was inline in integrationsSettingsHTML/intKeyMint)
@@ -1300,6 +1301,67 @@ var CBSettings = (function () {
   /* R121 (walk 24 Oct, P6 on 22 Oct): a policy row edits a DRAFT. Save and Cancel sit beside the control, hidden until the draft differs from the
    * value painted (data-orig); Save asks first, in the shopkeeper's words, then PATCHes through the one policySet path for every row (number or select);
    * Cancel (or closing the row, which repaints it) puts the old value back. Nothing is written on blur or change. */
+  /** a rule's value in the words the row shows: the enum's label, a named number, or the number with its unit */
+  function policyShown(x) {
+    var d = x.def,
+      v = polShown(d, x.v);
+    if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
+    /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
+    if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
+    return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
+  }
+  /** the row's editor: a select for a choice, a number box otherwise; data-orig holds the painted value so a draft can be told from it */
+  function policyControl(x) {
+    var d = x.def,
+      id = 'sx_pol_' + d.key,
+      dis = grey(x.may) ? ' disabled' : '';
+    if (d.type === 'enum')
+      return (
+        '<select class="inp" id="' +
+        id +
+        '" data-testid="sx-pol-in-' +
+        esc(d.key) +
+        '" data-orig="' +
+        esc(String(x.v)) +
+        '"' +
+        dis +
+        ' aria-label="' +
+        esc(T(d.label)) +
+        '">' +
+        d.options
+          .map(function (item) {
+            return (
+              '<option value="' +
+              esc(item) +
+              '"' +
+              (String(x.v) === String(item) ? ' selected' : '') +
+              '>' +
+              esc(T((d.labels && d.labels[item]) || item)) +
+              '</option>'
+            );
+          })
+          .join('') +
+        '</select>'
+      );
+    return (
+      '<span class="sx-num"><input class="inp" type="number" min="0" id="' +
+      id +
+      '" data-testid="sx-pol-in-' +
+      esc(d.key) +
+      '"' +
+      (d.step ? ' step="' + esc(String(d.step)) + '"' : '') +
+      dis +
+      ' value="' +
+      esc(String(polShown(d, x.v))) +
+      '" data-orig="' +
+      esc(String(polShown(d, x.v))) +
+      '" aria-label="' +
+      esc(T(d.label)) +
+      '">' +
+      (d.suffix ? '<span class="sub">' + esc(T(d.suffix)) + '</span>' : '') +
+      '</span>'
+    );
+  }
   /** the Save and Cancel buttons of one row, hidden until its draft differs; none on a row the server says is not yours to change */
   function policyEditButtons(row) {
     if (grey(row.may)) return '';
@@ -1336,34 +1398,41 @@ var CBSettings = (function () {
       .replace('{from}', shown(row))
       .replace('{to}', shown({ def: row.def, v: newStored }));
   }
-  /** the ONE save path: confirm, PATCH, repaint (ctx.onSaved), say the outcome on the row; a refusal is said on the row in the server's words */
-  function policySave(key, ctx) {
-    var row = ctx.rowOf(key),
-      draft = policyDraftOf(key);
-    if (!row || !draft.control || grey(row.may) || !draft.changed) return;
-    var stored = polStored(row.def, draft.control.value),
-      body = {};
+  /** the ONE write of a policy flag, for every screen that changes one: ask first, PATCH, then hand the server's answer to the caller; a refusal goes to onFail in the server's words */
+  function policyRun(button, key, stored, title, done) {
+    var body = {};
     body[key] = stored;
     CBAction.run(
-      $('sx_pol_save_' + key),
+      button,
       function () {
         return api('policySet', { body: body });
       },
       {
         key: 'sx-pol-save-' + key,
-        confirm: { title: policyAsk(row, ctx.shown, stored), body: '', yes: T('Save'), danger: false },
+        confirm: { title: title, body: '', yes: T('Save'), danger: false },
         failed: T('Could not save that rule'),
-        onFail: function (words) {
-          var failMark = $('sx_pol_ok_' + key);
-          if (failMark) failMark.textContent = words;
-        },
-        outcome: function (answer) {
-          ctx.onSaved(answer);
-          var savedMark = $('sx_pol_ok_' + key);
-          if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
-        }
+        onFail: done.onFail,
+        outcome: done.outcome
       }
     );
+  }
+  /** a row's Save: the draft in its control, the question in both values' words, then the one write; the outcome is said on the row */
+  function policySave(key, ctx) {
+    var row = ctx.rowOf(key),
+      draft = policyDraftOf(key);
+    if (!row || !draft.control || grey(row.may) || !draft.changed) return;
+    var stored = polStored(row.def, draft.control.value);
+    policyRun($('sx_pol_save_' + key), key, stored, policyAsk(row, ctx.shown, stored), {
+      onFail: function (words) {
+        var failMark = $('sx_pol_ok_' + key);
+        if (failMark) failMark.textContent = words;
+      },
+      outcome: function (answer) {
+        ctx.onSaved(answer);
+        var savedMark = $('sx_pol_ok_' + key);
+        if (savedMark) savedMark.textContent = '✓ ' + T('Saved');
+      }
+    });
   }
   /** typing in a policy control shows its Save and Cancel (or hides them when the draft is back to the painted value) */
   function policyTouched(event) {
@@ -1431,66 +1500,8 @@ var CBSettings = (function () {
           return { key: item.key, def: item, v: v, may: m };
         });
     }
-    function shown(x) {
-      var d = x.def,
-        v = polShown(d, x.v);
-      if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
-      /* AU-WORDS: a number the server names (ui.labels[value] — "No expiry", "Keep — the law here asks 5 years") reads as its word, never "0" */
-      if (d.labels && d.labels[String(x.v)] !== undefined) return T(d.labels[String(x.v)]);
-      return String(v) + (d.suffix ? ' ' + T(d.suffix) : '');
-    }
-    /** the row's editor: a select for a choice, a number box otherwise; data-orig holds the painted value so a draft can be told from it */
-    function control(x) {
-      var d = x.def,
-        id = 'sx_pol_' + d.key,
-        dis = grey(x.may) ? ' disabled' : '';
-      if (d.type === 'enum')
-        return (
-          '<select class="inp" id="' +
-          id +
-          '" data-testid="sx-pol-in-' +
-          esc(d.key) +
-          '" data-orig="' +
-          esc(String(x.v)) +
-          '"' +
-          dis +
-          ' aria-label="' +
-          esc(T(d.label)) +
-          '">' +
-          d.options
-            .map(function (item) {
-              return (
-                '<option value="' +
-                esc(item) +
-                '"' +
-                (String(x.v) === String(item) ? ' selected' : '') +
-                '>' +
-                esc(T((d.labels && d.labels[item]) || item)) +
-                '</option>'
-              );
-            })
-            .join('') +
-          '</select>'
-        );
-      return (
-        '<span class="sx-num"><input class="inp" type="number" min="0" id="' +
-        id +
-        '" data-testid="sx-pol-in-' +
-        esc(d.key) +
-        '"' +
-        (d.step ? ' step="' + esc(String(d.step)) + '"' : '') +
-        dis +
-        ' value="' +
-        esc(String(polShown(d, x.v))) +
-        '" data-orig="' +
-        esc(String(polShown(d, x.v))) +
-        '" aria-label="' +
-        esc(T(d.label)) +
-        '">' +
-        (d.suffix ? '<span class="sub">' + esc(T(d.suffix)) + '</span>' : '') +
-        '</span>'
-      );
-    }
+    var shown = policyShown,
+      control = policyControl;
     function read() {
       return load('pol', 'policyGet', null, function () {
         if (pl) pl.refresh();
@@ -2328,5 +2339,14 @@ var CBSettings = (function () {
     H.sec = sec;
     (PAINT[sec] || counters)();
   }
-  return { mount: mount, SECTIONS: Object.keys(PAINT) };
+  /* policyRun · policySave · policyControl · policyShown · policyEditButtons · policyRowEdit: the draft-and-Save path the workshop's Business rules card (cap-admin.js) draws with too (R121b) */
+  return {
+    mount: mount,
+    SECTIONS: Object.keys(PAINT),
+    policyRun: policyRun,
+    policyControl: policyControl,
+    policyShown: policyShown,
+    policyEditButtons: policyEditButtons,
+    policyRowEdit: policyRowEdit
+  };
 })();
