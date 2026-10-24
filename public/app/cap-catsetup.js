@@ -1640,7 +1640,7 @@ function catsetColRow(c, i, n) {
       '" placeholder="' +
       esc(tx('unit · KGM')) +
       '"' +
-      (ready ? '' : ' disabled title="' + esc(tx('Needs migration b200 — run it in the SQL editor')) + '"') +
+      (ready ? '' : ' disabled title="' + esc(tx('Not switched on for your shop yet')) + '"') +
       ' onchange="catsetFieldPatch(\'' +
       key +
       '\',{unit:this.value})" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);text-transform:uppercase">' +
@@ -1750,7 +1750,7 @@ function catsetColsHTML() {
         esc(
           tx('Type is fixed once a product records a value. Unit is a UN/ECE Rec 20 code (KGM · LTR · MTK · H87 = piece) so a sheet stays machine-readable.')
         ) +
-        (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Unit needs migration b200.')) + '</b>') +
+        (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Units are not switched on for your shop yet.')) + '</b>') +
         '</div>' +
         '<datalist id="cb-rec20">' +
         CATSET_REC20.map(function (item) {

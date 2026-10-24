@@ -1649,7 +1649,7 @@ function crmMessage(p, rec) {
     return e.chit_id && /^(message|chit)$/.test(e.kind);
   })[0];
   if (th) return openChitSheet(th.chit_id);
-  toast(tx('Start a message from Chits in the app.'));
+  toast(tx('No messages with them yet.'));
 }
 async function crmGstinTheirs(p, rec) {
   var side = rec.customer || rec.supplier,

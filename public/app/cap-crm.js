@@ -1409,7 +1409,7 @@ function crmMiniActions() {
             return x.chit_id;
           })[0];
           if (e && typeof openChitSheet === 'function') openChitSheet(e.chit_id);
-          else toast(tx('Start a message from Chits in the app.'));
+          else toast(tx('No messages with them yet.'));
         });
       }
     },

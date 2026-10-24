@@ -206,14 +206,14 @@ function crmGroupsBar() {
   var btn = why
     ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), why)
     : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
-  if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Named groups need one database step (b205).'));
+  if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Groups are not switched on for your shop yet.'));
   crmBar('<strong>' + esc(crmAppName()) + '</strong>', btn, true);
 }
 function crmGroupsNotices() {
   var list = [];
-  if (!GROUPS.migrated) list.push({ text: tx('Named groups need one database step (b205). Segments still count.'), cls: 'warn', tid: 'crm-grp-nomig' });
+  if (!GROUPS.migrated) list.push({ text: tx('Groups are not switched on for your shop yet. Segments still count.'), cls: 'warn', tid: 'crm-grp-nomig' });
   if (!GROUPS.consent)
-    list.push({ text: tx('Consent records are not set up yet (b306). Nobody can be sent offers until they are.'), cls: 'warn', tid: 'crm-grp-noconsent' });
+    list.push({ text: tx('Consent records are not set up yet. Nobody can be sent offers until they are.'), cls: 'warn', tid: 'crm-grp-noconsent' });
   return list;
 }
 /** ▸ the mini-card: members · reach · offers — the same three-box shape as a party's */
@@ -276,7 +276,7 @@ function crmGroupsWhyNot(r, act) {
     if (w) return w;
     return r.count ? '' : tx('Nobody to send to');
   }
-  if (act === 'members') return GROUPS.migrated ? crmGroupsMay('group') : tx('Named groups need one database step (b205).');
+  if (act === 'members') return GROUPS.migrated ? crmGroupsMay('group') : tx('Groups are not switched on for your shop yet.');
   if (act === 'delete') return crmGroupsMay('delete');
   if (act === 'offer') return tx(CRM_OFFER_WHY);
   return '';
@@ -532,7 +532,7 @@ function crmGroupTick(k, on) {
 function crmGroupWords(e) {
   var code = e && e.data && e.data.code;
   if (e && e.status === 403) return (e.data && (e.data.why || e.data.message)) || tx('Your login can only view.');
-  if (code === 'GROUPS_NOT_MIGRATED') return tx('Named groups need one database step (b205).');
+  if (code === 'GROUPS_NOT_MIGRATED') return tx('Groups are not switched on for your shop yet.');
   if (code === 'BAD_NAME') return tx('Name the group: up to 40 letters, digits, spaces, - & /.');
   if (code === 'TOO_MANY_GROUPS') return tx('A customer can be in at most 20 groups.');
   if (code === 'TOO_MANY') return tx('At most 500 at a time.');

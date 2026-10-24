@@ -217,7 +217,10 @@ var HOME = {
   identity: '/know-your-business.html',
   integrations: '/settings.html#/connectors',
   catalogue: '/catalogue.html',
-  compare: '/accounts.html#compare'
+  compare: '/accounts.html#compare',
+  catsetup: '/catalogue.html#categories',
+  returns: '/accounts.html#gstclose',
+  crm: '/crm.html'
 }; /* catalogue: CB Catalogue (T3-CATALOGUE) */ /* integrations: CB Settings › Connectors (T3-SETTINGS) */ /* compare: the parallel run, CB Accounts › Books (PR1) — "See it" on a Compared-with core-books row (STD-COMPARE) */
 /* the places stdGoto() (cap-standards.js) sends a reader to: a customer home from the map above, never the workshop; a Settings section has no customer page yet */
 function navTo(k) {
@@ -619,6 +622,25 @@ function seeKey(x) {
 }
 
 /* STD-COMPARE: a comparison row opens to its own detail; a standard to the register's */
+/** UX-99: file names and "not built yet" are for a tester (the ?ids=1 switch, screen-id.js); a shop reads the proof and the sentence, not our paths */
+function isTester() {
+  return document.documentElement.hasAttribute('data-ids');
+}
+/** the Code and Test rows of a comparison row: the paths in the api repo, shown to a tester only */
+function codeRowsHTML(entry, index) {
+  if (!isTester()) return '';
+  return (
+    '<dt>Code</dt><dd data-testid="std-code-' +
+    index +
+    '">' +
+    (entry.code ? '<code>chitbridge-api ' + esc(entry.code) + '</code>' : 'Not built yet') +
+    '</dd><dt>Test</dt><dd data-testid="std-test-' +
+    index +
+    '">' +
+    (entry.test ? '<code>chitbridge-api ' + esc(entry.test) + '</code>' : entry.s === 'live' ? 'No test in the suite yet — the proof above is the run' : 'No test yet') +
+    '</dd>'
+  );
+}
 function openNext(x) {
   return x.r.cmp ? compareNext(x) : nextOf(x);
 }
@@ -655,16 +677,7 @@ function nextOf(x) {
       '">' +
       esc(r.proof || 'Not yet') +
       '</dd>' +
-      '<dt>Code</dt><dd data-testid="std-code-' +
-      x.ix +
-      '">' +
-      (r.code ? '<code>chitbridge-api ' + esc(r.code) + '</code>' : 'Not built yet') +
-      '</dd>' +
-      '<dt>Test</dt><dd data-testid="std-test-' +
-      x.ix +
-      '">' +
-      (r.test ? '<code>chitbridge-api ' + esc(r.test) + '</code>' : r.s === 'live' ? 'No test in the suite yet — the proof above is the run' : 'No test yet') +
-      '</dd>';
+      codeRowsHTML(r, x.ix);
   /* CPS1: the Country Standard's row opens to the GENERATED matrix — every member × every registered pack, read from the engines' file, never typed here */
   if (r.matrix === 'country') h += '<dt>Matrix</dt><dd data-testid="std-country-matrix">' + countryMatrixHTML() + '</dd>';
   h +=
@@ -801,7 +814,7 @@ function statementOf(r) {
   if (r.eq) list.push('Elsewhere: ' + r.eq);
   if (r.dirWords) list.push('Moves: ' + r.dirWords);
   if (r.proof) list.push('Proof: ' + r.proof);
-  if (r.k === 'compat')
+  if (r.k === 'compat' && isTester())
     list.push('Code: ' + (r.code ? 'chitbridge-api ' + r.code : 'not built yet') + ' · Test: ' + (r.test ? 'chitbridge-api ' + r.test : 'none yet'));
   list.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
   return list.join('\n');

@@ -556,7 +556,7 @@ function paintFoot() {
     '<button class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +
     ' onclick="' +
-    (last ? "alert('(mock) request sent')" : 'go(' + (S.step + 1) + ')') +
+    (last ? "alert('Sample only: nothing was sent.')" : 'go(' + (S.step + 1) + ')') +
     '">' +
     (last ? 'Send request to ' + esc(S.st.name) : S.step === 0 ? 'Check out <span class=arw>→</span>' : 'Review <span class=arw>→</span>') +
     '</button>';

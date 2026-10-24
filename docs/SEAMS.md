@@ -125,7 +125,7 @@ of file each thing is; this says what already does the job.
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `note` | `dbwatch.js` |  |
 | 17 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
-| 18 | `step` | `cart.js` |  |
+| 17 | `step` | `cart.js` |  |
 | 18 | `model` | `chit-sheet.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
