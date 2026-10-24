@@ -133,9 +133,13 @@ const walk = async (w) => {
     const goBefore = await page.locator('[data-testid="crm-send-go"]').isDisabled();
     await page.click('[data-testid="crm-send-check"]'); await page.waitForSelector('[data-testid="crm-send-may"]', { timeout: 8000 });
     const who = await txt('[data-testid="crm-send-who"]'), dry = posts(/\/send$/).filter((b) => b.body && b.body.dry).length, goLabel = await txt('[data-testid="crm-send-go"]');
-    await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
+    await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
+    const ask = await txt('[data-testid="confirm"]');   /* R110: the send asks first - words, channel, reach */
+    await page.click('[data-testid="confirm-cancel"]'); await page.waitForTimeout(400);
+    const afterCancel = posts(/\/send$/).filter((b) => b.body && !b.body.dry).length;   /* Cancel sends nothing */
+    await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="confirm-ok"]'); await page.click('[data-testid="confirm-ok"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
     const done = await txt('[data-testid="crm-send-done"]'), lines = await txt('[data-testid="crm-send-lines"]'), real = posts(/\/send$/).filter((b) => b.body && !b.body.dry);
-    const ok = goBefore && dry === 1 && /1 may be sent offers/.test(who) && /1 not — 1 no consent yet/.test(who) && /Big Buyer/.test(who) && goLabel === 'Send to 1' && real.length === 1 && real[0].body.text === 'Diwali offer: 10% off this week' && /0 sent · 1 not sent · 1 not asked — no consent/.test(done) && /WHATSAPP_TOKEN/.test(lines);
+    const ok = /Send this WhatsApp offer to 1 customer\?/.test(ask) && /Diwali offer: 10% off this week/.test(ask) && /WhatsApp/.test(ask) && afterCancel === 0 && goBefore && dry === 1 && /1 may be sent offers/.test(who) && /1 not — 1 no consent yet/.test(who) && /Big Buyer/.test(who) && goLabel === 'Send to 1' && real.length === 1 && real[0].body.text === 'Diwali offer: 10% off this week' && /0 sent · 1 not sent · 1 not asked — no consent/.test(done) && /WHATSAPP_TOKEN/.test(lines);
     return { ok, saw: 'check: "' + who.slice(0, 90) + '" · button "' + goLabel + '" · outcome "' + done + '" · ' + lines.slice(0, 80) };
   });
   await w.step('G5', 'VIP -> Delete group: asks first, then ONE DELETE; the row is gone and the Parties list no longer carries the name', async () => {

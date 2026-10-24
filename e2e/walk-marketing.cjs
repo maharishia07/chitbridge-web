@@ -182,7 +182,7 @@ const walk = async (w) => {
     S.consent['pid-0005'] = 'CONSENT';   /* so the win-back set has someone who may be sent */
     await open('#/results', '[data-testid="mkt-winback-send"]'); await page.click('[data-testid="mkt-winback-send"]'); await page.waitForSelector('[data-testid="crm-send-sheet"]');
     await page.fill('#crm_send_text', 'Come back for 10% off'); await page.click('[data-testid="crm-send-check"]'); await page.waitForSelector('[data-testid="crm-send-may"]');
-    await page.evaluate(() => { const b = document.querySelector('[data-testid="crm-send-go"]'); b.disabled = false; }); await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
+    await page.evaluate(() => { const b = document.querySelector('[data-testid="crm-send-go"]'); b.disabled = false; }); await page.click('[data-testid="crm-send-go"]'); await page.waitForSelector('[data-testid="confirm-ok"]'); await page.click('[data-testid="confirm-ok"]'); await page.waitForSelector('[data-testid="crm-send-done"]', { timeout: 8000 });
     await page.keyboard.press('Escape'); await page.evaluate(() => { location.hash = '#/sent'; }); await page.waitForSelector('[data-testid="mkt-sent-unlogged"]', { timeout: 8000 });
     S.consent['pid-0005'] = 'SAID_NO';
     const t = await txt('[data-testid="mkt-sent-unlogged"]'); const before = S.bodies.filter((b) => /\/send$/.test(b.p) && b.body && !b.body.dry).length;
