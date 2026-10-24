@@ -141,6 +141,7 @@ function frameRows() {
           ok(a.clip.length === 0 && a.cover.length === 0, t2 + ' frame not clipped, nothing over its controls' + (a.clip.length ? ' — clipped ' + a.clip[0] : '') + (a.cover.length ? ' — covered ' + a.cover[0] : ''));
           ok(rows.sw <= rows.iw + 1 && a.app.length === 0, t2 + ' no sideways scroll (' + rows.sw + '/' + rows.iw + '), no app.html link');
           counts[id] = bodyBad.length;
+          if (process.env.WSF_SHOW && bodyBad.length) bodyBad.forEach((x) => console.log('       under · ' + t2 + ' · ' + x.ratio + ' (need ' + x.need + ') "' + x.text + '"'));  /* WSF_SHOW=1: name each body text that reads under AA, so the ratchet can be paid down */
           const was = baseline[id];
           ok(was == null || bodyBad.length <= was, t2 + ' body AA failures ' + bodyBad.length + (was == null ? ' (new page: recorded)' : was === bodyBad.length ? ' (= ratchet)' : bodyBad.length < was ? ' (down from ' + was + ' — lower the ratchet: --write)' : ' — UP from ' + was + ': ' + bodyBad.slice(0, 3).map((x) => x.ratio + ' "' + x.text + '"').join(' · ')));
         }

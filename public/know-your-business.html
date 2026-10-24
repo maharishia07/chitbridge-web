@@ -22,25 +22,25 @@
   label{ font-size:11px; font-weight:700; color:var(--grey); display:block; margin:8px 0 3px; }
   input,select{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:13px; }
   button{ font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; }
-  .pri{ background:var(--blue); color:#fff; } .gh{ background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .pri{ background:var(--blue); color:var(--paper,#fff); } .gh{ background:var(--card,#fff); color:var(--ink); border:1px solid var(--line); }
   .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tabs{ display:flex; gap:4px; margin:6px 0 12px; flex-wrap:wrap; }
-  .tab{ font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:9px; cursor:pointer; background:#eef1f6; color:var(--grey); border:1px solid transparent; }
-  .tab.on{ background:#fff; color:var(--blue); border-color:var(--blue); }
+  .tab{ font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:9px; cursor:pointer; background:var(--neutral-tint,#eef1f6); color:var(--grey); border:1px solid transparent; }
+  .tab.on{ background:var(--card,#fff); color:var(--blue); border-color:var(--blue); }
   .sec{ font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--grey); margin:14px 2px 8px; }
   .cred{ display:flex; align-items:center; gap:9px; padding:9px 0; border-top:1px solid var(--line); }
   .cred .nm{ flex:1; min-width:0; font-weight:600; font-size:13px; }
   .rung{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; border-radius:6px; padding:2px 7px; }
   .r-verified{ background:#eaf6ee; color:var(--verified); } .r-documented{ background:#faf3dd; color:var(--documented); }
-  .r-declared{ background:#eef0f3; color:var(--declared); } .r-null{ background:#f3f4f6; color:var(--declared); }
+  .r-declared{ background:var(--neutral-tint,#eef0f3); color:var(--declared); } .r-null{ background:var(--neutral-tint,#f3f4f6); color:var(--declared); }
   .exp{ font-size:10px; font-weight:700; border-radius:5px; padding:2px 6px; }
   .exp.soon{ background:#fdf3e3; color:var(--warn); } .exp.gone{ background:#fbeaea; color:var(--bad); }
   .bucket{ border-radius:10px; padding:11px 12px; margin-bottom:9px; }
   .bucket.now{ background:#eaf6ee; border:1px solid #bfe3cb; } .bucket.step{ background:#eef3fb; border:1px solid #cfe0f4; } .bucket.struct{ background:#f5f2ee; border:1px solid #e3dbc9; }
   .bucket .bh{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px; }
-  .pill{ display:inline-block; font-size:11.5px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:3px 10px; margin:3px 5px 0 0; }
+  .pill{ display:inline-block; font-size:11.5px; background:var(--card,#fff); border:1px solid var(--line); border-radius:999px; padding:3px 10px; margin:3px 5px 0 0; }
   .lane{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; }
-  .bar{ height:7px; background:#eef1f6; border-radius:4px; overflow:hidden; margin:5px 0; }
+  .bar{ height:7px; background:var(--neutral-tint,#eef1f6); border-radius:4px; overflow:hidden; margin:5px 0; }
   .bar > i{ display:block; height:100%; background:var(--ok); }
   .gap{ font-size:11.5px; padding:3px 0; }
   .gap .k{ font-size:9px; font-weight:800; border-radius:4px; padding:1px 5px; margin-inline-end:5px; }
@@ -56,7 +56,7 @@
   .fres a{ color:var(--blue); font-size:11px; } .asof{ font-size:10px; color:var(--grey); }
   .empty{ text-align:center; color:var(--grey); font-size:13px; padding:22px; } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
   .note{ font-size:10.5px; color:var(--grey); }
-  .netpill{ position:fixed; top:62px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
+  .netpill{ position:fixed; top:62px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:var(--card,#fff); color:var(--ok); }
   .netpill.off{ background:#fdf6e9; color:var(--warn); border-color:#e8d9b8; }
   @media print{ #shell{ display:none; } }
 </style>
