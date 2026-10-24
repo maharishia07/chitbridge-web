@@ -34,6 +34,8 @@
  * The read side is symmetric: GET is entity-scoped through RLS (storage.getBlob), so a caller only ever
  * receives its OWN copy. cbAttachList therefore renders exactly what the server handed this entity — it
  * never filters, and it never claims a wider set than it was given.
+ *
+ * CARD 22-channels-capture-and-messaging/attachments-on-a-chit
  */
 
 /**

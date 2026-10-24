@@ -7,6 +7,9 @@
  *   · lazyWrap — 50-at-a-time rendering of any container
  * They borrow tx() / esc() / emptyState() from the page, which is exactly why they are NOT in list-ctl.js. MOVED here, not
  * copied: nothing of them is left in list-ctl.js. Delete this file when those lists move onto CBList.mount.
+ *
+ * OWNS      the card-list controls listCtl* (state, view, toolbar, count, empty text) and the 50-at-a-time lazyWrap / lazyBar / lazyReveal.
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
  */
 'use strict';
 /** key → { cfg, q, sort, f:{} } — one entry per list, kept across repaints so a search survives one */
