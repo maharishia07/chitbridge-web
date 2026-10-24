@@ -2207,6 +2207,7 @@
   .t.foldrow{justify-content:flex-end;padding:2px 0}
   .foldbtn{background:none;border:0;color:var(--dim);font:inherit;font-size:.85em;cursor:pointer;padding:2px 0}
   .foldbtn:hover{color:var(--ink)}
+  .foldbtn:disabled{opacity:.45;cursor:not-allowed}
   .totdetail[hidden]{display:none}
   .pay{display:flex;gap:8px;padding:8px 12px;flex-wrap:wrap}
   .pay button{flex:1 1 90px;padding:12px 8px;border:1px solid var(--edge);border-radius:var(--radius);background:var(--paper);color:var(--ink);cursor:pointer}
@@ -3118,6 +3119,8 @@
 <!-- ⭐⭐⭐ Working without the line ([TILL-151]) — design-handoff/without-the-line -->
 <!-- ⭐ the caution, at the moment of the act ([TILL-172]) — design-handoff/footer -->
 <dialog id="suredlg" data-testid="till-sure"><div class="dlg" id="surebody"></div></dialog>
+<!-- ⭐ F5 W1a: "Veg Meals: GST?" — the ask-once sheet behind the bill's "No tax rate · Fix" (rateAskOpen); the slabs on today's menu as big buttons, the pack's suggestion first -->
+<dialog id="ratedlg" data-testid="till-rate"><div class="dlg" id="ratebody"></div></dialog>
 <dialog id="linedlg" data-testid="till-line-dlg">
   <!-- ⚠️ a title, not a sentence ([TILL-152]) — the panel is understood from its symbols, not its heading -->
   <div class="lhead"><h3>The line</h3>
@@ -3928,6 +3931,7 @@
 <script src="/engine/pricing.js" onerror="engineMissed('pricing')"></script>
 <script src="/engine/offers.js" onerror="engineMissed('offers')"></script>
 <script src="/engine/tax.js" onerror="engineMissed('tax')"></script>
+<script src="/app/tax-slab-ui.js" onerror="engineMissed('tax-slab-ui')"></script>   <!-- F5 W1a: the ask-once rate menu, ONE copy with the catalogue (cbSlabMenu · cbSlabMenuHTML); an older kit without it still bills, and the sheet says where to set the rate -->
 <script src="/engine/search.js" onerror="engineMissed('search')"></script>
 <!-- ⭐ VARIANTS. One product, many combinations: what makes two of them the same, what the choices add, and
      how to say them. Extracted so the storefront and order capture ask the same question the till does. -->
@@ -4184,7 +4188,7 @@ function personOf(token, idn, who){
            by: (who && who.id) || (idn && (idn.user_id || idn.identity_id)) || null, by_name: (who && who.name) || (idn && idn.display_name) || null,
            /* ⭐ M09: the identity id the SERVER knows this person by — what a bill's till.by must say (tillStamp, lib/holder.js) */
            identity_id: claims.identity_id || (idn && idn.identity_id) || null,
-           kind: (who && who.kind) || (idn && idn.kind) || null, device_id: deviceId(), jti: claims.jti || null,
+           kind: (who && who.kind) || (idn && idn.kind) || claims.identity_type || null, device_id: deviceId(), jti: claims.jti || null,
            /* ⭐ M09: when it was issued — personRenew() trades a session older than a day for a fresh one while the line is up */
            iat: claims.iat ? Number(claims.iat) * 1000 : Date.now(),
            exp: claims.exp ? Number(claims.exp) * 1000 : null, at: Date.now() };
@@ -8211,11 +8215,17 @@ function rowFacts(i){
   (i.facts || []).forEach(function(f){ bits.push('<b>' + esc(f.n) + '</b> ' + esc(f.v)); });
   return bits.length ? '<div class="facts">' + bits.join(' · ') + '</div>' : '';
 }
+/**
+ * ⭐ THE ONE RESOLVE INPUT (F5 W1a; critic 2). Five places built their own narrowed { name, tax_slab, hsn, category }, so a rate typed on the item
+ * (gst_rate) or a category by id never reached the counter and billed 0%. CBTaxSlab.inputOf reads the row as the server and the catalogue do;
+ * without the engine (an old kit offline) a line carries no tax keys, which the absent engine could not have read anyway.
+ */
+function taxInputOf(i){ return (window.CBTax && CBTax.slab && CBTax.slab.inputOf) ? CBTax.slab.inputOf(i) : {}; }
 function rateOf(i){
   if (!S || !window.CBTax || !shopTax().charges) return null;
   if (i._rate !== undefined) return i._rate;
   var r = null;
-  try { var out = CBTax.slab.resolve({ item_data:{ name:i.name, tax_slab:i.tax_slab, hsn:i.hsn, category:i.category },
+  try { var out = CBTax.slab.resolve({ item_data:taxInputOf(i),
           face:S.face||{}, slabs:S.slabs||[], categories:S.categories||[] });
     r = (out && out.rate != null) ? out.rate : null; } catch (_) { r = null; }
   i._rate = r;
@@ -15146,7 +15156,7 @@ function cardPrice(i){
 function cardTaxWords(i){
   if (!shopTax().charges || !window.CBTax || !CBTax.slab) return '';
   try {
-    var r = CBTax.slab.resolve({ item_data:{ name:i.name, tax_slab:i.tax_slab, hsn:i.hsn, category:i.category },
+    var r = CBTax.slab.resolve({ item_data:taxInputOf(i),
       face:S.face || {}, slabs:S.slabs || [], categories:S.categories || [] });
     return (r && r.rate != null) ? (r.rate + '% ' + schemeWord()) : 'no ' + schemeWord() + ' slab set';   /* CX1: the pack's word */
   } catch (_) { return ''; }
@@ -17098,7 +17108,7 @@ async function addWeighed(w){
               mrp: (Number(i.mrp) > 0 ? Number(i.mrp) : null),
               /* ⭐ the same stamp addItem() puts on a line — a reprint must show which item needed checking */
               age: ageOf(i) || null,
-              item_data: { name: i.name, tax_slab: i.tax_slab, hsn: i.hsn, category: i.category } });
+              item_data: Object.assign({ name: i.name }, taxInputOf(i)) });
   toastLine(i.name + ' · ' + n + ' ' + (i.unit || 'kg') + ' — ' + w.why);
   /* ⚠️ INSIDE, AFTER THE AWAIT — not at the call site. addWeighed() can return early (ageAllow() refused),
      and the call site cannot know that without awaiting it; announcing from out there would speak an item
@@ -17146,7 +17156,7 @@ function addItem(i, qty, mods){
                     * [[feedback-the-data-decides-not-the-trade]]
                     */
                    station:i.station || null,
-                   item_data:{ name:i.name, tax_slab:i.tax_slab, hsn:i.hsn, category:i.category } });
+                   item_data:Object.assign({ name:i.name }, taxInputOf(i)) });
   /* ⭐ NO TAX RATE IS SAID WHERE IT IS SOLD (BF1), not found on the slip afterwards. The bill also carries the warning (billWarnHTML). */
   /* ⚠️ M42 (walk 2026-10-10): this also wrote the footer line, which outlived the bill — after Park it still said
      "Masala Dosa has no tax rate" over an empty bill. The bill's own row (billWarnHTML) says it, and clears with the bill. */
@@ -18305,10 +18315,11 @@ function packCollectsWithoutId(){ var pack = shopPack(); return !!(pack && pack.
  * because "Poori" had no slab. So the counter asks it here, on the cart (before paying) and on a stored bill (a reprint), and says
  * the product's name. null rate = "nobody said"; a real 0 (exempt) is a rate and is not listed. Names only — no figure is worked out.
  */
-function unratedNames(lines){
+function unratedLines(lines){
   if (!shopTax().charges) return [];
-  return (lines || CART).filter(function(l){ return l.gst_rate == null; }).map(function(l){ return l.name; });
+  return (lines || CART).filter(function(l){ return l.gst_rate == null; });
 }
+function unratedNames(lines){ return unratedLines(lines).map(function(l){ return l.name; }); }
 /** the same question for a STORED bill: only a tax invoice can be wrong about it */
 function unratedOnBill(bill){
   if (!bill || bill.kind !== 'tax') return [];
@@ -18351,9 +18362,11 @@ function shopStateClash(){
  * ⚠️ ONE LINE PER PROBLEM, A COUNT AND A Fix › (walk 2026-10-09, M40). It was a 7-line red paragraph on every sale, and the
  * dialog said it again. The full wording sits behind Fix › (billWarnFix), with the door to where it is fixed.
  */
-function billWarnLine(which, words, act){
-  return '<div class="t warnrow" data-testid="till-warn-' + which + '"><span>⚠ ' + esc(words) + '</span><span>'
-    + '<button type="button" class="foldbtn" data-testid="till-warn-' + which + '-fix" onclick="billWarnFix(\'' + which + '\')">' + esc(act || 'Fix') + ' ›</button></span></div>';
+function billWarnLine(which, words, act, may){
+  var no = !!(may && !may.ok);   /* F5 W1a: shown, greyed, with the reason — never hidden ([[feedback-show-action-enable-by-role]]) */
+  return '<div class="t warnrow" data-testid="till-warn-' + which + '"><span>⚠ ' + esc(words) + (no ? ' · ' + esc(may.why) : '') + '</span><span>'
+    + '<button type="button" class="foldbtn" data-testid="till-warn-' + which + '-fix"' + (no ? ' disabled title="' + esc(may.why) + '"' : '')
+    + ' onclick="billWarnFix(\'' + which + '\')">' + esc(act || 'Fix') + ' ›</button></span></div>';
 }
 /**
  * ⭐ M32 (walk 2026-10-10) — A COUNTER BILLING ON YESTERDAY'S PRICES SAYS SO WHERE IT BILLS. The till let a whole sale go through
@@ -18369,7 +18382,7 @@ function dayWarnWords(){
 function billWarnHTML(m){
   var out = [], un = unratedNames(), cl = shopTax().charges ? shopStateClash() : null;
   var dw = dayWarnWords(); if (dw) out.push(billWarnLine('day', dw, 'Open the day'));
-  if (un.length) out.push(billWarnLine('norate', un.length + (un.length === 1 ? ' item has' : ' items have') + ' no tax rate'));
+  if (un.length) out.push(billWarnLine('norate', un.length + (un.length === 1 ? ' item has' : ' items have') + ' no tax rate', 'Fix', rateMay()));
   if (cl) out.push(billWarnLine('state', 'GSTIN state ≠ address'));
   var bw = buyerWarnWords(m); if (bw) out.push(billWarnLine('buyer', bw, 'Name them'));
   return out.join('');
@@ -18392,6 +18405,8 @@ function buyerFromMajor(){ try { var t = shopPack().tax.taxInvoice; return books
 async function billWarnFix(which){
   if (which === 'day') { openMenuAt('day'); return; }
   if (which === 'buyer') { var cn = document.getElementById('cname'); if (cn) { try { cn.focus(); } catch (e) { cbQuiet('billWarnFix:1', e); } } return; }   /* CX1: the name box is the fix */
+  /* F5 W1a: an owner or a manager answers HERE, once per item (DECISIONS 2026-10-18 TAX MISSING; "yes F5" (b)); anyone else sees the door greyed above */
+  if (which === 'norate' && rateMay().ok && unratedLines().length) { rateAskOpen(unratedLines()[0]); return; }
   var st = which === 'state', cl = st ? shopStateClash() : null, un = st ? [] : unratedNames();
   var msg = st ? (cl ? cl.words + '\n\n' + cl.fix : 'The shop’s details agree now.')
                : (un.length ? un.join(', ') + '\n\nNo GST is charged on ' + (un.length === 1 ? 'it' : 'them')
@@ -18399,6 +18414,64 @@ async function billWarnFix(which){
   var go = await sure(msg, st ? 'Open the shop’s details' : 'Open the catalogue', st ? 'GSTIN state ≠ address' : 'No tax rate', 'Close');
   /* the state half opens Settings › Your shop (SET1); the rate half still opens the workshop's catalogue until CAT1 builds catalogue.html */
   if (go) { try { window.open(st ? cbRoot() + '/settings.html#/shop' : cbHome() + '#/app/catalogue', '_blank', 'noopener'); } catch (e) { cbQuiet('billWarnFix:2', e); } }
+}
+/**
+ * ── ⭐⭐ F5 W1a · THE COUNTER ASKS THE RATE ONCE, THEN SELLS (DECISIONS 2026-10-18 "TAX MISSING"; critic 1; "yes F5" (b): owner or manager) ──
+ * "Veg Meals: GST?" with the shop's live slabs on TODAY'S menu as big buttons (cbSlabMenu: the pack's dated rate_menu, so a dead 12% is never
+ * offered) and the pack's suggestion for the item's code first ("996331 · restaurant · 5%", its citation behind ⓘ). A tap ASKS FIRST (a rate is a
+ * money promise on every bill from now on), then POST /api/till/rate writes through the engine's one writer on the server (tax-slab.setOn);
+ * the shelf row here takes the same slab, the bill's lines re-read it and re-price through the engine. A refusal (403 a cashier or a key ·
+ * 409 the shop charges no tax · 404) is said in the sheet, in the server's words — never silent. Nothing is queued: an intention, not a bill.
+ */
+/** who may answer: the credential this browser SPEAKS with (the server reads the same one) — the shop itself, or a manager's own session; a key never.
+ *  The rule and its sentence are app/tax-slab-ui.js cbRateMay (the api's setsRate, shared with the catalogue's row); an older kit without that file cannot set a rate here at all, and says so */
+function rateMay(){
+  if (typeof cbRateMay !== 'function') return { ok: false, why: 'This counter cannot set a rate yet. Set it in the catalogue.' };
+  var p = personOn() ? CloudHost.person : null;
+  var row = p ? ((S && S.staff) || []).filter(function(a){ return String(a.id) === String(p.identity_id || p.by); })[0] : null;
+  return cbRateMay(p && { owner: p.kind === 'entity', hat: row && row.hat });
+}
+var RATE = { line: null, item: null };
+function rateAskOpen(line){
+  var d = document.getElementById('ratedlg'), box = document.getElementById('ratebody');
+  if (!d || !box || !line) return;
+  var i = ((S && S.items) || []).filter(function(x){ return String(x.item_id) === String(line.item_id); })[0] || null;
+  RATE.line = line; RATE.item = i;
+  /* the code only ever SUGGESTS (critic 12): hsn first, else the shop's own code — never stamped */
+  var menu = (typeof cbSlabMenu === 'function') ? cbSlabMenu((S && S.slabs) || [], shopPack(), (i && (i.hsn || i.code)) || line.hsn || '') : null;
+  box.innerHTML = '<h3 data-testid="till-rate-title">' + esc(line.name) + ': ' + esc(schemeWord()) + '?</h3>'
+    + (menu ? cbSlabMenuHTML(menu, { pick: function(id){ return "rateAskPick('" + esc(id) + "')"; } })
+            : '<p class="ssay warn">No rate menu on this counter yet. Set the rate in the catalogue.</p>')
+    + '<p class="ssay warn" id="rateout" data-testid="till-rate-out" hidden></p>'
+    + '<div class="sbtns"><button class="pill" data-testid="till-rate-no" onclick="rateAskClose()">Not now</button></div>';
+  if (!d.open) d.showModal();
+}
+function rateAskClose(){ var d = document.getElementById('ratedlg'); if (d && d.open) d.close(); }
+/** the outcome, said in the sheet where the tap happened (or on the note line when the sheet is gone) */
+function rateSaid(words){ var o = document.getElementById('rateout'); if (!o) { toastLine(words); return; } o.textContent = words; o.hidden = false; }
+/** a slab tapped: confirm, POST /api/till/rate (the server decides who may), then the line re-prices */
+async function rateAskPick(id){
+  var line = RATE.line; if (!line || !window.CBTax || !CBTax.slab) return;
+  var slab = ((S && S.slabs) || []).filter(function(x){ return String(x.definition_id || x.id) === String(id); })[0];
+  var s = slab ? CBTax.slab.slabOf(slab) : null;
+  if (!s) return;
+  var words = s.rate != null ? schemeWord() + ' ' + s.rate + '%' : (s.name || 'this slab');
+  var go = await sure(line.name + ': ' + words + ' from now on.', 'Set rate', line.name + ': ' + schemeWord() + '?', 'Not now');
+  if (!go) return;
+  var r = await HOST.tillPost('/api/till/rate', { item_id: String(line.item_id), slab_id: String(s.id) }, { noQueue: true });
+  if (!r || !r.ok) { rateSaid((r && r.why) || 'Not set. Nothing changed.'); return; }
+  rateApplied(line.item_id, slab, r);
+}
+/** the server said yes: the shelf row takes the slab (setOn — the same writer the server used), the bill's lines re-read it, the bill re-prices; the next unrated item is asked */
+function rateApplied(item_id, slab, r){
+  var i = RATE.item;
+  if (i) { CBTax.slab.setOn(i, slab); delete i._rate; }
+  CART.forEach(function(c){ if (i && String(c.item_id) === String(item_id)) c.item_data = Object.assign({ name: i.name }, taxInputOf(i)); });
+  price();
+  toastLine((r && r.words) || ((i ? i.name : 'It') + ' now carries the rate.'));
+  rateAskClose();
+  var next = unratedLines().filter(function(l){ return String(l.item_id) !== String(item_id); })[0];
+  if (next) rateAskOpen(next);
 }
 /**
  * ⭐⭐⭐ WHAT WOULD GO WRONG TODAY (2026-09-08). Athi: *"if the tax is not there, the system should alert — couldn't find the tax
@@ -22574,7 +22647,7 @@ function rcvLineValue(l){ return r2((Number(l.counted) || 0) * (Number(l.rate) |
 function rcvDefaultRate(i){
   if (!i || !window.CBTax || !S || !shopTax().charges) return null;
   try {
-    var r = CBTax.slab.resolve({ item_data:{ name:i.name, tax_slab:i.tax_slab, hsn:i.hsn, category:i.category },
+    var r = CBTax.slab.resolve({ item_data:taxInputOf(i),
       face:S.face || {}, slabs:S.slabs || [], categories:S.categories || [] });
     return (r && r.rate != null) ? r.rate : null;
   } catch (_) { return null; }
