@@ -9213,8 +9213,8 @@ function _polLocked(gov) {
    CBSettings.policyRun (app/cap-settings.js): Save asks first, Cancel writes nothing, a refusal is said on the row in the server's words. There is no
    write on change — setPolFlag, which saved the moment a box changed, is gone. */
 /** one flag as the shared row wants it: { key, def, v, may } — the server's may when it gave one (an older server: the PATCH still decides) */
-function _polRow(def) {
-  return { key: def.key, def: def, v: _polVal(def), may: (_POL.may || {})[def.key] || { ok: true } };
+function _polRow(flag) {
+  return { key: flag.key, def: flag, v: _polVal(flag), may: (_POL.may || {})[flag.key] || { ok: true } };
 }
 /** wire the card's node once: typing shows Save/Cancel, Save and Cancel do their one thing (CBSettings.policyRowEdit) */
 function _polWire(node) {
@@ -9222,10 +9222,10 @@ function _polWire(node) {
   node._polWired = true;
   CBSettings.policyRowEdit(node, {
     rowOf: function (key) {
-      var def = polDefs().filter(function (item) {
+      var flag = polDefs().filter(function (item) {
         return item.key === key;
       })[0];
-      return def && _polRow(def);
+      return flag && _polRow(flag);
     },
     shown: CBSettings.policyShown,
     /** the server's flags after a save become the card's own, then it repaints from them */
