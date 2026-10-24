@@ -133,11 +133,28 @@ function shell() {
       .join('') +
     '</div><div id="body"><div class="card"><div class="empty">Loading…</div></div></div>';
 }
-function go(t) {
-  TAB = t;
+var TAB_NAMES = ['yourself', 'position', 'risk', 'field'];
+function hashName() {
+  return (location.hash || '').replace(/^#\/?/, '');
+}
+/** UX-102: the tab the address names (#position); anything else is Yourself, so Back and a shared link land where they were */
+function tabFromHash() {
+  var named = hashName();
+  return TAB_NAMES.indexOf(named) >= 0 ? named : 'yourself';
+}
+function showTab(tabName) {
+  TAB = tabName;
   shell();
   load();
 }
+/** a tap on a tab writes the address; the hashchange below paints it, so the tap and Back take the same road */
+function go(tabName) {
+  if (hashName() === tabName) return showTab(tabName);
+  location.hash = tabName;
+}
+window.addEventListener('hashchange', function () {
+  if (TOK && tabFromHash() !== TAB) showTab(tabFromHash());
+});
 async function load() {
   var node = el('body');
   node.innerHTML = '<div class="card"><div class="empty">Computing from your data…</div></div>';
@@ -424,6 +441,7 @@ if (window.CBOffline) {
 var FRAME = CBFrame.mount({ app: 'kyb', work: document.querySelector('.wrap') });
 TOK = FRAME.token;
 if (TOK) {
+  TAB = tabFromHash();
   shell();
   load();
 } else {
