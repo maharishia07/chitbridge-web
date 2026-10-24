@@ -49,6 +49,7 @@
             if (!reply.ok) {
               var e = new Error(j.message || j.error || 'API ' + reply.status);
               e.status = reply.status;
+              e.code = j.code || null; /* R112: a refusal that carries a code (CODE_ISSUE_LIMIT, CODE_SHOW_NOT_READY) says its own words even on a 503 */
               throw e;
             }
             return j;
@@ -389,7 +390,8 @@
           m.email || m.access,
           '<span class="sub" data-testid="emp-email-now">' + esc(node.email || (node.has_email ? T('On file') : T('None yet'))) + '</span>'
         ) +
-        actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin) +
+        actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin, codeGivenNote(node.code_given)) +
+        '<div id="emp_code" data-testid="emp-code-slot"></div>' +
         actRow(
           'emp_switch',
           '⏻',
@@ -441,8 +443,47 @@
     });
   }
 
+  /* ── R112: a first code SHOWN to the owner (a person with no e-mail). Own box, own slot: changed() never copies it, nothing stores it, closing the sheet empties it. ── */
+  /** "30 minutes" / "2 hours", read from the server's expires_at (never a number written here); '' when the api sent none (an older api) */
+  function lastsWords(r) {
+    var at = r && r.expires_at ? Date.parse(r.expires_at) : NaN;
+    if (!at) return '';
+    var mins = Math.max(1, Math.round((at - Date.now()) / 60000));
+    return mins >= 120 ? Math.round(mins / 60) + ' ' + T('hours') : mins + ' ' + T(mins === 1 ? 'minute' : 'minutes');
+  }
+  /** a six-digit code in two groups of three; anything else as it came */
+  function groupDigits(code) {
+    var c = String(code == null ? '' : code);
+    return /^\d{6}$/.test(c) ? c.slice(0, 3) + ' ' + c.slice(3) : c;
+  }
+  /** the big-digits box. Text only (textContent), no Copy button, no print: the owner reads it out or types it for them. */
+  function paintCodeBox(name, r) {
+    var slot = $('emp_code');
+    if (!slot || !r || !r.show_code) return;
+    var lasts = lastsWords(r);
+    slot.innerHTML = '<div class="emp-code" role="status" data-testid="emp-code-box"><div class="emp-digits mono" data-testid="emp-code-digits"></div><div class="emp-code-say" data-testid="emp-code-say"></div></div>';
+    slot.querySelector('[data-testid="emp-code-digits"]').textContent = groupDigits(r.show_code);
+    slot.querySelector('[data-testid="emp-code-say"]').textContent = T('Give this code to') + ' ' + name + '. ' + (lasts ? T('It works for') + ' ' + lasts + '.' : T('It works once.'));
+  }
+  /** "Code given by Asha at 14:05" — the owner's own trail, from GET /api/people code_given {by, at, channel} (null for anyone else) */
+  function codeGivenNote(g) {
+    if (!g || !g.at) return '';
+    var when = new Date(g.at);
+    var at = isNaN(when) ? '' : when.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return '<span class="sub" data-testid="emp-code-given">' + esc(T('Code given') + (g.by ? ' ' + T('by') + ' ' + g.by : '') + (at ? ' ' + T('at') + ' ' + at : '')) + '</span>';
+  }
+  /** a refusal the person reads: the server's own words even on a 503 that carries a code; anything else keeps CBAction's sentence */
+  function failInto(outId) {
+    return function (words, e) {
+      var el = $(outId);
+      if (!el) return;
+      el.textContent = e && e.code && e.status >= 500 && e.message ? e.message : words;
+      el.setAttribute('data-tone', 'error');
+    };
+  }
   function codeSentence(r) {
-    if (r && r.otp) return T('Their first code is') + ' ' + r.otp + ' — ' + T('good for 24 hours.');
+    var lasts = lastsWords(r);
+    if (r && r.otp) return T('Their first code is') + ' ' + r.otp + (lasts ? ' — ' + T('good for') + ' ' + lasts + '.' : '.');
     return (r && r.delivery_note) || T('A new code is ready.');
   }
 
@@ -457,9 +498,14 @@
         key: 'emp-pin-' + p.id,
         failed: T("Couldn't reset the code"),
         out: 'emp_out',
+        onFail: failInto('emp_out'),
         outcome: function (r) {
-          $('emp_out').textContent = codeSentence(r);
-          changed(p.id);
+          var shown = !!(r && r.show_code);
+          $('emp_out').textContent = shown ? '' : codeSentence(r);
+          var box = function () {
+            paintCodeBox(p.name, r);
+          };
+          changed(p.id).then(box, box);
         }
       }
     );
@@ -714,6 +760,7 @@
           key: 'emp-add',
           failed: T("Couldn't add them"),
           out: 'emp_out',
+          onFail: failInto('emp_out'),
           outcome: function (r) {
             added(r);
           }
@@ -737,13 +784,14 @@
           '<div class="mono" data-testid="emp-added-id">' +
           esc(shortId((p && p.user_id) || (r.actor && r.actor.login_format))) +
           '</div>' +
-          '<div class="emp-out" data-testid="emp-added-code">' +
-          esc(codeSentence(r)) +
-          '</div>' +
+          (r && r.show_code
+            ? '<div id="emp_code" data-testid="emp-code-slot"></div>'
+            : '<div class="emp-out" data-testid="emp-added-code">' + esc(codeSentence(r)) + '</div>') +
           '<button type="button" class="act" id="emp_done" data-testid="emp-done">' +
           esc(T('Done')) +
           '</button>'
       );
+      paintCodeBox((p && p.name) || (r.actor && r.actor.display_name) || '', r);
       $('emp_done').onclick = function () {
         var node = $('emp_sheet');
         try {
