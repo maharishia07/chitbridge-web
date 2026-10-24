@@ -110,7 +110,7 @@ await t('the workshop\'s "＋ New" door rides only when given; a retired-but-cit
   const h = globalThis.ctCategoryChips({ categories: ['c1', 'gone1'], category_names: ['Meals', 'Old shelf'] }, LIVE, { newAction: 'ctNewCategory()' });
   assert.ok(/data-testid="cat-category-new" onclick="ctNewCategory\(\)"/.test(h));
   assert.ok(/class="ctcatg on gone" data-cid="gone1"[^>]*>✓ Old shelf</.test(h));
-  assert.ok(/1 of these no longer live/.test(h));
+  assert.ok(/1 no longer live/.test(h));
 });
 await t('ctCategoriesFromForm reads the ticked chips off the DOM into core.js catgSetOn (ids + travelling names; the legacy single key gone); no chips on screen → untouched', () => {
   globalThis._CATG = LIVE;

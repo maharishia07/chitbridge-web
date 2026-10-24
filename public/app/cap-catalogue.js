@@ -200,7 +200,7 @@ function ctCategoryChips(itemData, live, opts) {
   const kept = orphans.map((id) => ctCatgChip_(id, names[list.indexOf(id)] || id, true, { cls: 'gone', title: tx('no longer live — tap to detach') }));
   const newChip = hostDoor ? '<button type="button" class="ctcatg add" data-testid="cat-category-new" onclick="' + esc(hostDoor) + '">＋ ' + esc(tx('New')) + '</button>' : '';
   const warn = orphans.length
-    ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px">⚠ ' + esc(txf('{n} of these no longer live. Kept as-is — tap to detach.', { n: String(orphans.length) })) + '</div>'
+    ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px">⚠ ' + esc(txf('{n} no longer live — tap to detach.', { n: String(orphans.length) })) + '</div>'
     : '';
   return (
     '<label class="fl">' + esc(tx('Categories')) + '</label>' +
@@ -1740,7 +1740,7 @@ var CBCatalogueApp = (function () {
     }
     return CBAction.run(button, cbcatSave, {
       key: 'catg-save',
-      confirm: change.changed ? { title: change.name + ': ' + change.words + '?', body: esc(T('Every item in it with no rate of its own carries it.')), yes: T('Set rate'), danger: false } : null,
+      confirm: change.changed ? { title: change.name + ': ' + change.words + '?', body: esc(T('Items with no rate of their own take it.')), yes: T('Set rate'), danger: false } : null,
       out: 'cbcat_err',
       outcome: function () {
         if (CBCAT_UI.form) return; /* refused: cbcatSave wrote its sentence into #cbcat_err and left the form open */
