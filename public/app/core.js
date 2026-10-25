@@ -973,6 +973,10 @@ function cbPushArrived(d) {
     var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
     if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
   } catch (_) {}
+  /* RAIL-119: the chit OPEN on screen is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
+  try {
+    if (typeof chitOnReturn === 'function') chitOnReturn(d);
+  } catch (_) {}
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try {
     if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {

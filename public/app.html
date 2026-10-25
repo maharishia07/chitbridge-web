@@ -25671,6 +25671,36 @@ function quotesMount(node) {
       console.warn('quotes: the Rounds section did not load', e && e.message);
     });
 }
+/**
+ * RAIL-119 (walk 2026-10-25 W14): the far side answered and the OPEN chit still read the old status until a reload. An arrival that names the chit on screen
+ * reads the list row and the chit again, then paints it in place. NEVER over a form being typed in: a focused field in the pane, an open counter form, an
+ * open dialog — the repaint waits (it tries again a few times) and the person's words stay.
+ */
+function chitPaneBusy() {
+  var pane = document.getElementById('detailpane');
+  if (!pane) return true;
+  var a = document.activeElement;
+  if (a && pane.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && (a.type !== 'checkbox' || a.value)) return true;
+  if (pane.querySelector('[data-quote-form]')) return true;
+  var host = document.getElementById('modalhost');
+  return !!(host && host.children.length);
+}
+function chitOnReturn(d, tries) {
+  var c = UI.detail;
+  if (!c || !d || !d.id || String(c.id) !== String(d.id) || c._loading) return;
+  if (!/^(status|message|dispute|proposal|chit)$/.test(String(d.kind || ''))) return;
+  if (chitPaneBusy()) {
+    if ((tries || 0) < 6) setTimeout(function () { chitOnReturn(d, (tries || 0) + 1); }, 5000);
+    return;
+  }
+  Promise.resolve(loadList(true))
+    .catch(function (e) {
+      console.warn('chitOnReturn: the list was not read', e && e.message);
+    })
+    .then(function () {
+      if (UI.detail && String(UI.detail.id) === String(d.id) && !chitPaneBusy()) return openChit(d.id, true);
+    });
+}
 function paintDetail() {
   const node = document.getElementById('detailpane');
   if (node) {
