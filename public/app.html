@@ -19611,6 +19611,7 @@ function prodOutcomeHTML(k, d) {
       case 'invoice': {
         const m = prodInvoiceModel(d, 'same');
         if (!m) return grey(tx('reading…'));
+        if (m.noPack) return '<span data-testid="prod-invoice-nopack" style="color:var(--warn-3)">● ' + esc(prodNoPackWords()) + '</span>';
         const miss =
           m.seller.missing && m.seller.missing.length
             ? ' <span data-testid="prod-invoice-outcome-missing" style="color:var(--warn-3)">● ' +
@@ -20719,12 +20720,27 @@ function prodPartyEnsure() {
 /**
  * the product screen's tax model: which scheme (GST, VAT…) and whether it splits by STATE (India's CGST + SGST · IGST) — the pack's supply
  * model decides, not the word "GST" (CX0). CTRY-72 (walk 2026-10-25 W28): a shop whose country has NO pack (HU, DK on SIT) fell back to
- * 'GST' and then to India's split, so a Hungarian shop read "Tax invoice · same state · CGST + SGST". No pack = no scheme we know: a plain
- * invoice, one head, no Indian words. ONE rule for the preview and the slab pane.
+ * 'GST' and then to India's split, so a Hungarian shop read "Tax invoice · same state · CGST + SGST". Athi, 2026-10-25: "if the tax stuff
+ * not there, we should not fall back rather reject" — no pack = noPack: the screens REFUSE to work out an invoice and say why (prodNoPackWords).
+ * ONE rule for the invoice row, the invoice tab and the slab pane.
  */
 function prodTaxModel(r, P0) {
-  const scheme = String((r && r.scheme) || (P0 && P0.scheme) || (P0 ? 'GST' : '')).toUpperCase();
-  return { scheme: scheme, isGST: P0 ? (P0.supply ? P0.supply === 'state' : scheme === 'GST') : false };
+  if (!P0) return { scheme: '', isGST: false, noPack: true };
+  const scheme = String((r && r.scheme) || P0.scheme || 'GST').toUpperCase();
+  return { scheme: scheme, isGST: P0.supply ? P0.supply === 'state' : scheme === 'GST', noPack: false };
+}
+/** the refusal, in words: which country has no tax rules here, and that nothing was worked out */
+function prodNoPackWords() {
+  const c = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
+  let name = c;
+  try {
+    if (c && typeof Intl !== 'undefined' && Intl.DisplayNames) name = new Intl.DisplayNames([document.documentElement.lang || 'en'], { type: 'region' }).of(c) || c;
+  } catch (_) {
+    name = c; /* an unknown code: the code itself is still a name the shop can read */
+  }
+  return name
+    ? txf('{country} does not have a tax pack yet, so no invoice is worked out.', { country: name })
+    : tx('Your shop has no country set, so no invoice is worked out. Set the country in Settings.');
 }
 function prodInvoiceModel(d, pos) {
   try {
@@ -20777,7 +20793,8 @@ function prodInvoiceModel(d, pos) {
       OTHERC = myC === 'ZZ' ? 'XX' : 'ZZ';
     /* ⭐ CX0: the SPLIT is the pack's supply model (tax.supply 'state' = India's CGST/SGST · IGST; 'border' = one head), not the word "GST" — Australia's scheme is GST too */
     const P0 = (window.CBTaxPacks && CBTaxPacks.packFor && CBTaxPacks.packFor(myC)) || null;
-    const { scheme, isGST } = prodTaxModel(r, P0);
+    const { scheme, isGST, noPack } = prodTaxModel(r, P0);
+    if (noPack) return { noPack: true };
     const om = Object.assign({}, om0, { qty });
     /* a line-scope discount is per unit (× qty); an order-level one is a lump on this single-line sample — both come off before tax */
     const line = {
@@ -20862,6 +20879,7 @@ function prodInvoiceTab(d) {
   const pos = UI._invPos || 'same';
   const m = prodInvoiceModel(d, pos);
   if (!m) return `<div class="sec">${tx('Invoice')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the slabs…')}</div>`;
+  if (m.noPack) return `<div class="sec">${tx('Invoice')}</div><div data-testid="prod-invoice-nopack" style="padding:6px 12px;color:var(--warn-3)">${esc(prodNoPackWords())}</div>`;
   const it = m.item,
     cur = m.cur,
     M = (n) => fmtMoney(Number(n) || 0, cur);
@@ -21506,7 +21524,8 @@ function prodTaxPreviewHTML(d, r) {
     OTHERC = myC === 'ZZ' ? 'XX' : 'ZZ';
   /* ⭐ CX0: the split is the pack's supply model ('state' | 'border'), not the word "GST" — see prodTaxPreview */
   const P0 = (window.CBTaxPacks && CBTaxPacks.packFor && CBTaxPacks.packFor(myC)) || null;
-  const { scheme, isGST } = prodTaxModel(r, P0);
+  const { scheme, isGST, noPack } = prodTaxModel(r, P0);
+  if (noPack) return `<div data-testid="prod-tax-nopack" style="padding:6px 12px;color:var(--warn-3)">${esc(prodNoPackWords())}</div>`;
   const line = {
     name: pName(d),
     qty: 1,
