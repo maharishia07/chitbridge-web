@@ -1300,7 +1300,8 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const idemKey = outboxSafe && CB ? CB._uuid() : null;
+    /* an EP row with idem:true (a proposal write) sends its own fresh Idempotency-Key WITHOUT joining the offline outbox: a money promise is never queued */
+    const idemKey = outboxSafe && CB ? CB._uuid() : ep.idem && ep.m !== 'GET' ? (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + _rid) : null;
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
