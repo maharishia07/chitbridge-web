@@ -285,6 +285,11 @@ var STATUS_WORDS = {
   disputed: 'Disputed',
   draft: 'Draft'
 };
+/** RAIL-117: a chit is a quotation when the server stamped a jurisdiction (another installation) or the buyer asked for a quote (deal_type rfq). ONE predicate (F10) */
+function chitIsQuote(c) {
+  var bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
+  return !!(bj.jurisdiction || bj.deal_type === 'rfq');
+}
 function statusWord(code) {
   var c = String(code == null ? '' : code).trim();
   if (!c) return '';

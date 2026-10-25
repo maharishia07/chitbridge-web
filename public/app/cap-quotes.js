@@ -1,6 +1,6 @@
 /* app/cap-quotes.js — QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown.
  * OWNS      CBQuotes.mount(host, chitId) · refresh(chitId) · steps(host, ...) · askCross(party, onYes) · crossOf(chit) · CB_QUOTE_EP
- * CALLED BY app.html (the chit pane's Rounds section, the first-send confirm, the compose switch) · tasks.html?view=quotes (a follow-up round mounts the same painter)
+ * CALLED BY app.html (the chit pane's Rounds section, the first-send confirm, the compose switch) · app/chit-sheet.js quotesMount (crm.html#/chit, tasks.html — F8) · tasks.html?view=quotes is ORD-68, not built yet
  * CARD      01-rail-core-the-chit/chit-proposal
  *
  * Athi, 2026-10-25 (DECISIONS 13:10 · 13:50 · 14:10): a price from another installation or in another currency is a QUOTATION until the seller
@@ -51,10 +51,6 @@
     if (eps) for (var k in CB_QUOTE_EP) if (!eps[k]) eps[k] = CB_QUOTE_EP[k];
     return root.api(key, o);
   }
-  function money(n, code) {
-    if (n == null || n === '') return '—';
-    return typeof root.fmtMoney === 'function' ? root.fmtMoney(n, code) : (code ? code + ' ' : '') + n;
-  }
   /** a country (code or name) as a person reads it: "AU" -> Australia; a name stays */
   function countryName(c) {
     var v = String(c || '').trim();
@@ -102,8 +98,7 @@
   }
   /** does this chit need the rounds at all? A cross-installation or RFQ chit says so on its header; anything else is exactly as before (DECISIONS 14:10) */
   function crossOf(chit) {
-    var bj = (chit && (chit.business_json || (chit.header && chit.header.business_json))) || {};
-    return !!(bj.jurisdiction || bj.deal_type === 'rfq');
+    return root.chitIsQuote(chit); /* F10: the one predicate lives in helpers.js */
   }
 
   /* ── the words ────────────────────────────────────────────────────────────────────────────────── */
@@ -115,7 +110,8 @@
     var agreed = rounds.some(function (r) { return r.status === 'accepted' && r.kind === 'pro_forma'; });
     if (agreed) return { tone: 'ok', text: T('Pro-forma — agreed by both sides') };
     if (j.document !== 'quotation') return { tone: 'plain', text: '' };
-    var seller = countryName(j.seller_country) || j.seller_installation || T('the seller’s');
+    /* F12: never print an installation KEY as a country ("sit-au rules apply"); before the first priced round the seller's country may be unset */
+    var seller = countryName(j.seller_country) || T('the seller’s');
     var buyer = countryName(j.buyer_country);
     var tail = buyer ? fill(T('duties and taxes in {country} not included'), { country: buyer }) : T('your duties and taxes are not included');
     return { tone: 'warn', text: fill(T('Quotation only — {seller} rules apply; {tail}'), { seller: seller, tail: tail }) };
@@ -250,8 +246,8 @@
     var m = r.money;
     if (!m) return '';
     var total = m.total != null ? m.total : m.net;
-    return '<div data-testid="quote-money-' + r.round + '"><b>' + E(money(total, r.currency_code || cur)) + '</b>' +
-      (m.tax != null ? ' <span style="color:var(--grey)">' + E(fill(T('incl. tax {tax}'), { tax: money(m.tax, r.currency_code || cur) })) + '</span>' : '') + '</div>' +
+    return '<div data-testid="quote-money-' + r.round + '"><b>' + E(root.fmtMoney(total, r.currency_code || cur, '—')) + '</b>' +
+      (m.tax != null ? ' <span style="color:var(--grey)">' + E(fill(T('incl. tax {tax}'), { tax: root.fmtMoney(m.tax, r.currency_code || cur, '—') })) + '</span>' : '') + '</div>' +
       (r.tax_note ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + E(r.tax_note) + '</div>' : '');
   }
   function lineName(S, idx) {
@@ -394,7 +390,7 @@
     var total = r.money ? (r.money.total != null ? r.money.total : r.money.net) : null;
     return act(id, btn, {
       key: 'quoteAccept', tid: 'quote-accept', params: { id: id, pid: pid }, body: {},
-      confirm: { title: fill(T('Accept {name}’s price?'), { name: S.chit.other }), body: '<div>' + E(total != null ? fill(T('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: money(total, r.currency_code || S.chit.currency), cur: r.currency_code || S.chit.currency }) : T('It becomes the agreed version on both copies.')) + '</div>', yes: T('Accept'), danger: false },
+      confirm: { title: fill(T('Accept {name}’s price?'), { name: S.chit.other }), body: '<div>' + E(total != null ? fill(T('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: root.fmtMoney(total, r.currency_code || S.chit.currency, '—'), cur: r.currency_code || S.chit.currency }) : T('It becomes the agreed version on both copies.')) + '</div>', yes: T('Accept'), danger: false },
       done: T('Accepted — this is now the pro-forma')
     });
   }

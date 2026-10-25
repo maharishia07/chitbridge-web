@@ -976,7 +976,9 @@ function cbPushArrived(d) {
   /* RAIL-119: the chit OPEN on screen is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
   try {
     if (typeof chitOnReturn === 'function') chitOnReturn(d);
-  } catch (_) {}
+  } catch (e) {
+    console.warn('chitOnReturn: the open chit was not read again', e && e.message); /* F11: log, never swallow; the person is not told (the next open reads it) */
+  }
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try {
     if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {

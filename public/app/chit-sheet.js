@@ -631,16 +631,12 @@
         : '')
     );
   }
+  /* F10 (critic 2026-10-25): only the verbs the sheet means differently from the status word ("To accept" for what waits on you);
+     every other code reads statusWord (helpers.js) — "In hand" here and "In progress" in the timeline were two names for one status. */
   var STEP = {
     pending: 'To accept',
     delivered: 'To accept',
-    read: 'To accept',
-    accepted: 'Accepted',
-    in_progress: 'In hand',
-    partial: 'Part done',
-    completed: 'Done',
-    cancelled: 'Cancelled',
-    rejected: 'Rejected'
+    read: 'To accept'
   };
   /* the sheet's title is the document: a counter bill is "Bill", a bill received "Supplier bill", the rest the purpose word — never "Chit" */
   var TITLE = {
@@ -713,6 +709,21 @@
       root.CBDispute.inSheet(el, id);
     }
     body.appendChild(CS.disp.el);
+  }
+
+  /** RAIL-117 · F8: the Rounds section of a quotation — the SAME painter app.html mounts (app/cap-quotes.js CBQuotes.mount), so a customer page
+      (crm.html#/chit, tasks.html) can Accept / Counter / Reject. A page opts in by loading cap-quotes.js; a chit that is not a quotation shows nothing new. */
+  function quotesMount(node, m) {
+    var body = node.querySelector('.cs-body'),
+      id = m.id || CS.id;
+    if (!body || !id || !root.CBQuotes || typeof root.chitIsQuote !== 'function' || !root.chitIsQuote(CS.chit)) return;
+    if (!CS.quotes || CS.quotes.id !== id) {
+      var el = document.createElement('div');
+      el.setAttribute('data-testid', 'cs-quotes');
+      CS.quotes = { id: id, el: el };
+      root.CBQuotes.mount(el, id);
+    }
+    body.appendChild(CS.quotes.el);
   }
 
   /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
@@ -793,7 +804,7 @@
       '<div class="cs-who"><span data-testid="cs-who">' +
       esc(m.who) +
       '</span> <span class="cs-step" data-testid="cs-step">' +
-      esc(T(STEP[m.status] || m.status)) +
+      esc(T(STEP[m.status] || statusWord(m.status))) +
       '</span></div>' +
       pageNoteHTML() +
       orderHTML(m) +
@@ -849,6 +860,7 @@
         : '') +
       (showsHistory() ? historyHTML() : '');
     dispMount(node, m);
+    quotesMount(node, m);
     railMount(node, m);
     if (m.agreement)
       repeatCap().then(function (reply) {
