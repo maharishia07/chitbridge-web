@@ -8677,7 +8677,7 @@ function bizChoice(group, val, cur, rows) {
         esc(item[0]) +
         '"' +
         (on ? ' checked' : '') +
-        ' onchange="bizSave(\'' +
+        ' onchange="bizPick(\'' +
         group +
         '\', this.value)" style="margin-top:3px;flex:none">' +
         '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' +
@@ -8726,8 +8726,12 @@ function businessSettingsHTML(s) {
       : '';
   return (
     '<div style="max-width:560px">' +
-    card('What do you do?', 'This is how other businesses understand you.', bizChoice('does', does, does, BIZ_DOES)) +
-    card('Your price list', 'Your products and what they cost.', netNote ? '' : bizChoice('list', list, list, BIZ_LIST), netNote) +
+    /* SET-46 (walk 2026-10-25 W5/W29): a choice MARKS, Save + confirm writes (Settings: Save + confirm); the box is repainted from the answer */
+    card('What do you do?', 'This is how other businesses understand you.', '<div id="biz_does_box">' + bizChoice('does', does, does, BIZ_DOES) + '</div>') +
+    card('Your price list', 'Your products and what they cost.', netNote ? '' : '<div id="biz_list_box">' + bizChoice('list', list, list, BIZ_LIST) + '</div>', netNote) +
+    '<div style="margin:-6px 0 var(--sp-4)"><button type="button" class="act" id="biz_save" data-testid="biz-save" disabled onclick="bizSaveAsk()">' +
+    esc(tx('Save')) +
+    '</button></div>' +
     /* ⚠️⚠️ A PRESELECTED RADIO ASSERTS AN ANSWER NOBODY GAVE. 'goods' is this column's long-standing DEFAULT
        (b238), so a legacy row shows 'I sell products' chosen whether the shop said so or not — and from here
        it is indistinguishable from a real answer. The radio cannot be un-chosen honestly, so the screen SAYS
@@ -8887,23 +8891,62 @@ function bizLedgerSwitch(on) {
 }
 
 /** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */
-async function bizSave(group, val) {
+/** the answer each card shows: what is pending, else what is saved */
+function bizCurrent(group) {
+  var me = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
+  var pend = UI._bizPending || {};
+  if (pend[group] != null) return pend[group];
+  return group === 'does' ? (me.supplies && me.supplies !== 'unknown' ? me.supplies : '') : me.catalogue_visibility === 'public' || me.catalogue_visibility === 'private' ? me.catalogue_visibility : '';
+}
+/** repaint ONE card's choices and the Save button from the current answers (repaint locally) */
+function bizRepaint() {
+  [['does', BIZ_DOES], ['list', BIZ_LIST]].forEach(function (g) {
+    var box = document.getElementById('biz_' + g[0] + '_box');
+    if (box) box.innerHTML = bizChoice(g[0], bizCurrent(g[0]), bizCurrent(g[0]), g[1]);
+  });
+  var btn = document.getElementById('biz_save');
+  if (btn) btn.disabled = !Object.keys(UI._bizPending || {}).length;
+}
+/** a choice is marked, not saved */
+function bizPick(group, val) {
+  UI._bizPending = UI._bizPending || {};
+  var me = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
+  var saved = group === 'does' ? me.supplies : me.catalogue_visibility;
+  if (String(saved) === String(val)) delete UI._bizPending[group];
+  else UI._bizPending[group] = val;
+  var said = document.getElementById('biz_said');
+  if (said) said.textContent = Object.keys(UI._bizPending).length ? tx('Not saved yet — press Save.') : '';
+  bizRepaint();
+}
+/** Save → confirm, naming what changes and who it reaches → write */
+function bizSaveAsk() {
+  var pend = UI._bizPending || {};
+  var rows = [];
+  if (pend.does) rows.push(tx('What you do') + ': ' + tx((BIZ_DOES.find(function (r) { return r[0] === pend.does; }) || [0, pend.does])[1]));
+  if (pend.list) rows.push(tx('Your price list') + ': ' + tx((BIZ_LIST.find(function (r) { return r[0] === pend.list; }) || [0, pend.list])[1]) + ' — ' + tx((BIZ_LIST.find(function (r) { return r[0] === pend.list; }) || [0, 0, ''])[2]));
+  if (!rows.length) return;
+  confirmAsk(tx('Save these changes?'), rows.map(function (r) { return '<div style="margin-bottom:6px">' + esc(r) + '</div>'; }).join(''), tx('Save'), function () {
+    bizSave(pend);
+  });
+}
+async function bizSave(pend) {
   var said = document.getElementById('biz_said');
   if (said) said.textContent = tx('Saving…');
-  var body = group === 'does' ? { supplies: val } : { catalogue_visibility: val };
+  var body = {};
+  if (pend.does) body.supplies = pend.does;
+  if (pend.list) body.catalogue_visibility = pend.list;
   try {
     /* ⚠️ 'saveProfile', not a name I invented. My first version called api('profileUpdate') — no such
        endpoint, so every save would have thrown 'no endpoint profileUpdate' and the catch below would have
        shown that to a shopkeeper. Caught by grepping EP before trusting the name. */
     await api('saveProfile', { body: body });
-    if (UI._me) {
-      if (group === 'does') UI._me.supplies = val;
-      else UI._me.catalogue_visibility = val;
-    }
-    if (UI._set && UI._set.s && UI._set.s.entity) {
-      if (group === 'does') UI._set.s.entity.supplies = val;
-      else UI._set.s.entity.catalogue_visibility = val;
-    }
+    [UI._me, UI._set && UI._set.s && UI._set.s.entity].forEach(function (o) {
+      if (!o) return;
+      if (body.supplies) o.supplies = body.supplies;
+      if (body.catalogue_visibility) o.catalogue_visibility = body.catalogue_visibility;
+    });
+    UI._bizPending = {};
+    bizRepaint();
     if (said) said.textContent = tx('Saved.');
     toast(tx('Saved'));
   } catch (e) {
