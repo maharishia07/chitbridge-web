@@ -10883,7 +10883,8 @@ function suppliersScreen() {
       ${
         UI.supFind || UI.supReq
           ? ''
-          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
+          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" onfocus="supWhereLoad()" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
+      <div id="sp_where_box">${supWhereHTML()}</div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
 `
@@ -15672,6 +15673,42 @@ function supDetailHTML() {
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 let _spSearchT = null;
+/* NET-39 · the Where picker: Here (default) · one installation we deal with · All. Shown only when there IS somewhere else. The server decides what is listed. */
+function supWhereHTML() {
+  const places = UI._supPlaces || [];
+  if (!places.length) return '';
+  const here = UI._supWhere || 'here';
+  const opt = function (value, label) {
+    return '<option value="' + esc(value) + '"' + (value === here ? ' selected' : '') + '>' + esc(label) + '</option>';
+  };
+  return (
+    '<label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:var(--fs-1);color:var(--grey)">' +
+    esc(tx('Where')) +
+    '<select class="inp" data-testid="sup-where" style="flex:1" onchange="supWhere(this.value)">' +
+    opt('here', tx('Here')) +
+    places.map(function (p) { return opt(p.installation_key, p.label + (p.domain ? ' · ' + p.domain : '')); }).join('') +
+    opt('all', tx('All')) +
+    '</select></label>'
+  );
+}
+async function supWhereLoad() {
+  if (UI._supPlaces) return;
+  UI._supPlaces = [];
+  try {
+    const reply = await api('entityPlaces');
+    UI._supPlaces = (reply && reply.places) || [];
+  } catch (ex) {
+    UI._supPlaces = [];
+    console.warn('supWhereLoad: places unread - the search stays on Here', ex && ex.message);
+  }
+  const box = document.getElementById('sp_where_box');
+  if (box) box.innerHTML = supWhereHTML();
+}
+function supWhere(value) {
+  UI._supWhere = value || 'here';
+  const input = document.getElementById('sp_add');
+  if (input) supSearch(input.value);
+}
 function supSearch(q) {
   clearTimeout(_spSearchT);
   q = (q || '').trim();
@@ -15682,36 +15719,47 @@ function supSearch(q) {
   }
   _spSearchT = setTimeout(async function () {
     try {
-      const reply = await api('entitySearch', { query: { q: q } });
-      supRenderSugg(Array.isArray(reply) ? reply : (reply && reply.results) || []);
-    } catch (_) {
+      const reply = await api('entitySearch', { query: { q: q, where: UI._supWhere || 'here' } });
+      supRenderSugg(Array.isArray(reply) ? reply : (reply && reply.results) || [], (reply && reply.answers) || []);
+    } catch (ex) {
       const element = document.getElementById('sp_sugg');
-      if (element) element.innerHTML = '';
+      if (element) element.innerHTML = '<div class="ccsugg-empty">' + esc(ex && ex.message ? ex.message : tx('Search did not work. Try again.')) + '</div>';
     }
   }, 250);
 }
-function supRenderSugg(list) {
+/* answers[] says in words who did not answer; the rest still show */
+function supAnswersNote(answers) {
+  return (answers || [])
+    .filter(function (a) { return a && !a.ok; })
+    .map(function (a) { return '<div class="ccsugg-empty" data-testid="sup-where-note">' + esc(a.why || '') + '</div>'; })
+    .join('');
+}
+function supRenderSugg(list, answers) {
   UI._supSugg = list || [];
   const node = document.getElementById('sp_sugg');
   if (!node) return;
+  const note = supAnswersNote(answers);
   if (!UI._supSugg.length) {
-    node.innerHTML = '<div class="ccsugg-empty">' + tx('No matching business found') + '</div>';
+    node.innerHTML = '<div class="ccsugg-empty">' + tx('No matching business found') + '</div>' + note;
     return;
   }
-  node.innerHTML = UI._supSugg
-    .slice(0, 8)
-    .map(function (e, index) {
-      return (
-        '<div class="ccsugg-item" onclick="supPick(' +
-        index +
-        ')"><span class="ccsugg-nm">' +
-        esc(e.display_name || '') +
-        '</span><span class="ccsugg-id">' +
-        esc(e.user_id || e.bridge_id || '') +
-        '</span></div>'
-      );
-    })
-    .join('');
+  node.innerHTML =
+    UI._supSugg
+      .slice(0, 12)
+      .map(function (e, index) {
+        const far = e.installation_key && e.domain;
+        return (
+          '<div class="ccsugg-item" onclick="supPick(' +
+          index +
+          ')"><span class="ccsugg-nm">' +
+          esc(e.display_name || '') +
+          (far ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(e.where || e.domain) + '</span>' : '') +
+          '</span><span class="ccsugg-id">' +
+          esc(e.user_id || e.bridge_id || '') +
+          '</span></div>'
+        );
+      })
+      .join('') + note;
 }
 async function supPick(i) {
   const e = (UI._supSugg || [])[i];
@@ -15722,17 +15770,21 @@ async function supPick(i) {
   if (err) err.textContent = '';
   const a = document.getElementById('sp_add');
   if (a) a.value = e.display_name || '';
+  const far = e.installation_key && e.domain;
   /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
      a parallel Promise-based twin before spotting it. Callback style is what it offers, so the work moves inside. */
   confirmAsk(
     'Add ' + (e.display_name || e.bridge_id) + ' as your supplier?',
     '<b>' +
       esc(e.user_id || e.bridge_id || '') +
-      '</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
+      '</b>' +
+      (far ? '<br>' + esc(tx('On')) + ' ' + esc(e.where || e.domain) : '') +
+      '<br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier',
     async function () {
       try {
-        var reply = await api('supAdd', { body: { supplier_bridge_id: e.bridge_id, supply_kind: supKind() } });
+        /* the address comes from the server (ctpaddress.format); the ordinary add turns it into the party, placed on that installation */
+        var reply = await api('supAdd', { body: { supplier_bridge_id: e.address || e.bridge_id, supply_kind: supKind() } });
         var os = reply && reply.supplier && reply.supplier.one_sided;
         toast('Supplier added ✓' + (os ? ' — ' + tx('orders to them stay here only') + ': ' + os.why : ''));
         if (a) a.value = '';
