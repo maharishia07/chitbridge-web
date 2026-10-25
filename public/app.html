@@ -2117,6 +2117,11 @@ function curSym(code) {
 // inr() is a legacy NAME, not a legacy behaviour: it now formats in the BUSINESS'S OWN currency. Renaming it
 // across 13 call sites would be churn for no gain; changing what it does fixes all 13 at once.
 const inr = (n) => fmtMoney(n, myCur());
+/* UX-120 (SIT 2026-10-25): a CHIT's figure is in the CHIT's currency, never the reader's: an IN chit read on an AU shop said A$ on rupees.
+   c = a list row (mapApiChit: currency = summary_json.currency_code); the shop's money only when the chit states none (an older local chit). */
+const chitMoney = (amount, chit) => fmtMoney(amount, (chit && chit.currency) || myCur());
+/** the list row of one chit by id, or undefined when it is not on the loaded page */
+const chitRowOf = (chitId) => (UI.rows || []).find((row) => row.id === chitId);
 /* CCY_LOCALE + fmtMoney → app/helpers.js */
 const CURRENCIES = [
   ['INR', '₹ Indian Rupee · 2dp'],
@@ -14374,7 +14379,7 @@ async function addCustomer() {
      tried as a User ID first and, if no business has it, the toast says how to add a name. */
   var asName = !/@/.test(text) && !/^~?[A-Za-z0-9][A-Za-z0-9._-]*$/.test(text);
   var node = ((document.getElementById('cu_add_phone') || {}).value || '').trim();
-  var body = asName ? { name: text.replace(/s+/g, ' ') } : { handle: text };
+  var body = asName ? { name: text.replace(/\s+/g, ' ') } : { handle: text };
   if (asName && node) body.phone = node;
   /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox, not on ChitBridge) */
   try {
@@ -22203,15 +22208,23 @@ function rollupBuckets() {
     cancelled: 'close',
     rejected: 'close'
   };
-  const b = { open: { c: 0, s: 0 }, act: { c: 0, s: 0 }, close: { c: 0, s: 0 } };
+  /* REP-50 / UX-120: `rows` keeps each currency apart (the server's by_currency); `s` is the old single sum, read by nothing that shows money */
+  const b = { open: { c: 0, s: 0, rows: [] }, act: { c: 0, s: 0, rows: [] }, close: { c: 0, s: 0, rows: [] } };
   (UI.rollup || []).forEach((item) => {
     const k = ST[item.key] || 'open';
     if (b[k]) {
       b[k].c += +item.chits || 0;
       b[k].s += +item.total_value || 0;
+      (Array.isArray(item.by_currency) ? item.by_currency : [{ currency_code: null, total_value: item.total_value }]).forEach((part) =>
+        b[k].rows.push({ amt: +part.total_value || 0, currency: part.currency_code })
+      );
     }
   });
   return b;
+}
+/** the server roll-up's money for the ticked states, per currency (cbSumByCurrency shape), never one sum across currencies */
+function rollupMoney(buckets, states) {
+  return cbSumByCurrency(states.flatMap((state) => (buckets[state] && buckets[state].rows) || []), 'amt', 'currency');
 }
 function hasRollup() {
   return !!(UI.rollup && UI.rollup.length);
@@ -23807,10 +23820,10 @@ function mapApiChit(c) {
 /* ⚠️ TAKES A LIVE-SET ENTRY, renders the LIVE version. A removed line has live:null and is rendered from its
    original — struck through by contentItems — because it must stay on screen as evidence of what was asked for
    while counting in nothing. */
-function fmtLine(e) {
+function fmtLine(e, currency) {
   var li = (e && (e.live || e.original)) || e || {};
   var qty = (li.quantity || 0) + (li.unit ? ' ' + li.unit : '') + (li.unit_size ? ' (' + li.unit_size + ')' : '');
-  var money = ' × ' + inr(li.price) + ' = ' + inr(li.total || li.quantity * li.price);
+  var money = ' × ' + chitMoney(li.price, { currency }) + ' = ' + chitMoney(li.total || li.quantity * li.price, { currency }); /* UX-120: the chit's currency */
   var name = (li.particulars || 'Item') + (li.comment ? '  ·  ' + li.comment : '') + (li.asked_unit ? '  (asked in ' + li.asked_unit + ')' : '');
   /* ⚠️ [3] IS THE LIVE-SET ENTRY (b138), carried so the renderer can strike the superseded versions and mark a
      removal without a second lookup. Data, not markup — nothing prints it directly. Appended rather than
@@ -25142,9 +25155,8 @@ function selBar() {
   const rb = rollupBuckets(); /* ⚠️ THE ROLLUP BRANCH STAYS A SINGLE NUMBER — the server groups by STATE, not by currency, so there is no
      per-currency breakdown to render here and inventing one would be a claim the endpoint never made. The
      client-side branch, which does have the rows, is grouped properly. */
-  const ticked = hasRollup() ? [...UI.aggStates].reduce((total, item) => total + ((rb[item] && rb[item].s) || 0), 0) : null;
   const tickedBy = hasRollup()
-    ? null
+    ? rollupMoney(rb, [...UI.aggStates])
     : cbSumByCurrency(
         UI.rows.filter((item) => UI.aggStates.has(item.state)),
         'amt',
@@ -25152,7 +25164,7 @@ function selBar() {
       );
   const lbl = ids.size
     ? `☑ ${ids.size} selected · Σ ${cbMoneyList(sumBy)}`
-    : `states ✓ ${[...UI.aggStates].map(cap).join(' · ') || 'none'} · Σ(all) ${tickedBy ? cbMoneyList(tickedBy) : inr(ticked)}`;
+    : `states ✓ ${[...UI.aggStates].map(cap).join(' · ') || 'none'} · Σ(all) ${cbMoneyList(tickedBy)}`;
   return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size ? `<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">${tx('🧮 Group sum')}</button>` : ``}<button onclick="quickStatus()">${tx('Status')}</button><button class="pri" onclick="quickAssign()">${tx('Assign')}</button>${clr}</span></div>`;
 }
 function updateSelBar() {
@@ -25200,7 +25212,7 @@ function sumScope() {
     var _plain = function (rows) {
       return String(cbMoneyList(cbSumByCurrency(rows, 'amt', 'currency')))
         .replace(/<[^>]+>/g, ' ')
-        .replace(/s+/g, ' ')
+        .replace(/\s+/g, ' ') /* was /s+/: it cut every letter s out of the toast */
         .trim();
     };
     if (kinds.length > 1) {
@@ -25217,8 +25229,8 @@ function sumScope() {
   }
   const rb = rollupBuckets();
   const cnt = states.reduce((total, item) => total + ((rb[item] && rb[item].c) || 0), 0);
-  const tot = states.reduce((total, item) => total + ((rb[item] && rb[item].s) || 0), 0);
-  toast('Roll-up (all) · ' + states.map(cap).join('+') + ' · ' + cnt + ' chit(s) · Σ ' + inr(tot));
+  const tot = String(cbMoneyList(rollupMoney(rb, states))).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  toast('Roll-up (all) · ' + states.map(cap).join('+') + ' · ' + cnt + ' chit(s) · Σ ' + tot);
 }
 
 /* detail */
@@ -25381,7 +25393,7 @@ async function openChit(id, silent) {
           const s = _dli[index] && _dli[index].stock;
           if (s && e && e.live && !e.live.stock) e.live.stock = s;
         });
-      const _items = _live.map(fmtLine);
+      const _items = _live.map((e) => fmtLine(e, base.currency));
       const _ratts = (r.attachments || []).map(mapAtt);
       _ratts
         .filter((item) => item.line_index != null)
@@ -26618,7 +26630,7 @@ function detailInner() {
     ['summary', 'Summary'],
     ['messages', '💬 Messages' + (msgCount(c) ? ' (' + msgCount(c) + ')' : '')]
   ]);
-  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
+  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
    ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
    <div class="db">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
@@ -27825,7 +27837,7 @@ async function pickAssign(id) {
   const reasonbox = `<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote = c.custPri ? `<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>` : '';
   modal(
-    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + inr(c.amt) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
+    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
   );
 }
 function pickActor(aid) {
@@ -29022,7 +29034,7 @@ function chitSpendStrip(c) {
   ) => `<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
-    ${quoted ? cell(tx('Quoted'), esc(inr(quoted))) : ''}
+    ${quoted ? cell(tx('Quoted'), esc(chitMoney(quoted, c))) : ''}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent ? esc(inr(spent)) : '—'}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     ${chitPaymentCell(c, cell, quoted)}
@@ -29551,7 +29563,7 @@ function amendPaint() {
   const items0 = (cat && cat.items) || [];
   const total =
     Number(l.quantity) > 0 && Number(l.price) > 0
-      ? '<span style="color:var(--grey)"> = </span><b>' + esc(inr(CBMoney.round(Number(l.quantity) * Number(l.price)))) + '</b>'
+      ? '<span style="color:var(--grey)"> = </span><b>' + esc(chitMoney(CBMoney.round(Number(l.quantity) * Number(l.price)), chitRowOf(AMD.chit))) + '</b>'
       : '';
 
   modal(`${wrote}
