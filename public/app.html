@@ -14828,6 +14828,13 @@ function supSendOrder(x, isDraft) {
        offers the cart used, so the chit says what the cart said. item_id + code let a targeted offer find the line; the price sent
        is the LIST price (a chit is evidence), the discount and rate are the server's to write. */
     purpose: 'order',
+    /* UX-121 / W24 (walk 2026-10-25, Athi: "always use the seller currency"): the order states the CART's currency — the seller's
+       shop, as its catalogue said — so the server never files it in the buyer's money (an AUD buyer's ₹13,000 order was stored as
+       13000 AUD). Omitted when the cart states none, so a send with no stated money is unchanged. */
+    ...(function () {
+      var cur = UI._supCart && window.CBCart && CBCart.currencyOf ? CBCart.currencyOf(UI._supCart.ns) : null;
+      return cur ? { business_json: { currency: cur } } : {};
+    })(),
     line_items: sel.map(function (item) {
       var list = +(typeof cbAmount === 'function' ? cbAmount(item.price) : item.price) || 0;
       return {
