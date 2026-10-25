@@ -14382,6 +14382,11 @@ async function addCustomer() {
     if (el) el.value = '';
     var pe = document.getElementById('cu_add_phone');
     if (pe) pe.value = '';
+    if (reply && reply.invited) {
+      /* NET-40: a business on the network is INVITED; they become a customer when they accept */
+      toast(tx('Invitation sent. They become your customer when they accept.'));
+      return;
+    }
     var os = reply && reply.customer && reply.customer.one_sided;
     toast(
       asName && reply && reply.message

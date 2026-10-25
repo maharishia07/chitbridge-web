@@ -1701,7 +1701,7 @@ async function crmWalkin(p) {
 async function crmAlsoRole(p, rec) {
   var toSup = p.roles[0] === 'customer';
   try {
-    await api(toSup ? 'supAdd' : 'custAdd', {
+    var reply = await api(toSup ? 'supAdd' : 'custAdd', {
       body: toSup
         ? p.on_chitbridge
           ? { supplier_bridge_id: p.bridge_id }
@@ -1711,7 +1711,7 @@ async function crmAlsoRole(p, rec) {
           : { name: p.display_name, phone: p.phone }
     });
     CRMR.menu = false;
-    toast(tx('Added'));
+    toast(tx(reply && reply.invited ? 'Invitation sent. They become your customer when they accept.' : 'Added')); /* NET-40: a business on the network is invited as a customer */
     await crmLoad(true);
     crmRecordOpen(CRM.route);
   } catch (e) {

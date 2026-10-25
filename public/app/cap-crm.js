@@ -609,6 +609,7 @@ async function crmLoad(quiet) {
     var rows = ((reply && reply.parties) || (Array.isArray(reply) ? reply : [])).concat(((reply && reply.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows);
     CRM.alerts = (reply && reply.alerts) || {};
+    CRM.invites = (reply && reply.invites) || []; /* NET-40: the invitations to be a customer that are waiting or were declined */
     CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
     crmMaySet(crmMayOf(reply));
     await crmFuJoin(CRM.rows, reply); /* the server's may/why for this login — the bar's action is painted again from it below */
@@ -1187,6 +1188,43 @@ function crmPartySorts() {
     }
   ];
 }
+/* ═══ INVITATIONS — a customer is someone who said yes (NET-40, Athi 2026-10-25). The server sends the ones waiting or declined; one notice opens them. ═══ */
+function crmInviteNotices() {
+  var waiting = (CRM.invites || []).filter(function (item) {
+      return item.state === 'waiting';
+    }).length,
+    declined = (CRM.invites || []).length - waiting,
+    out = [];
+  if (waiting) out.push({ text: crmPlural(waiting, 'invite waiting', 'invites waiting'), tid: 'crm-invites-waiting', onOpen: crmInvitesOpen });
+  if (declined) out.push({ text: crmPlural(declined, 'invite declined', 'invites declined'), tid: 'crm-invites-declined', onOpen: crmInvitesOpen });
+  return out;
+}
+/** each invitation with the server's words ("Invited · waiting" · "Declined your invitation") */
+function crmInvitesOpen() {
+  var rows = (CRM.invites || [])
+    .map(function (item) {
+      return (
+        '<div class="result" data-testid="crm-invite-row"><span><b>' +
+        esc(item.name) +
+        '</b><br><span class="hint">' +
+        esc(tx(item.words)) +
+        '</span></span></div>'
+      );
+    })
+    .join('');
+  modal(
+    '<div class="mhd"><div class="t">' +
+      esc(tx('Invitations')) +
+      '</div></div><div class="mbody" data-testid="crm-invites">' +
+      '<p class="hint" style="margin:0">' +
+      esc(tx('They become your customer when they accept.')) +
+      '</p>' +
+      rows +
+      '</div><div class="mfoot"><button type="button" onclick="closeModal()">' +
+      esc(tx('Close')) +
+      '</button></div>'
+  );
+}
 /** the alert line: only failing things, each with the button that fixes it (SYSTEM rule 1). "duplicates" waits for its screen (Phase 6). */
 function crmNotices() {
   var a = CRM.alerts || {},
@@ -1202,6 +1240,7 @@ function crmNotices() {
         crmGo('#/followups');
       }
     });
+  out.push.apply(out, crmInviteNotices());
   if (CRM.ledger && du > 0)
     out.push({
       text: crmPlural(du, 'party with late dues', 'parties with late dues') + ' · ' + tx('See dues'),
@@ -2139,11 +2178,13 @@ function crmAddResults() {
       esc(e.user_id || '') +
       '</span><span class="hint">' +
       (e.city ? ' · ' + esc(e.city) : '') +
-      '</span></span>' +
+      '</span>' +
+      (ADD.role === 'supplier' ? '' : '<br><span class="hint">' + esc(tx('They join your customers when they accept.')) + '</span>') +
+      '</span>' +
       '<button type="button" class="act sm" data-crm="addfound" data-i="' +
       index +
       '" data-testid="crm-add-this">' +
-      esc(tx('Add')) +
+      esc(tx(ADD.role === 'supplier' ? 'Add' : 'Invite')) +
       '</button></div>';
   });
   if (text.indexOf('@') >= 0 && !/\S+@\S+\.\S+/.test(text))
@@ -2184,6 +2225,14 @@ async function crmAddGo(kind, byHandle) {
     var made = (reply && (reply.customer || reply.supplier)) || {},
       id = made.customer_identity_id || made.supplier_entity_id;
     closeModal();
+    if (reply && reply.invited) {
+      /* NET-40: a business on the network is INVITED, not added: they become a customer when they accept */
+      toast(tx(both ? 'Supplier added. Invitation sent.' : 'Invitation sent. They become your customer when they accept.'));
+      await crmLoad(true);
+      crmGo('#/parties');
+      ADD.busy = false;
+      return;
+    }
     toast(tx(both ? 'Customer and supplier added' : role === 'supplier' ? 'Supplier added' : 'Customer added') + ': ' + (made.display_name || ADD.q));
     await crmLoad(true);
     var p = id && CRM.byKey[id];
@@ -2397,6 +2446,7 @@ var CRM_CLICK = {
     document.querySelectorAll('[data-crm="addrole"]').forEach(function (item) {
       item.setAttribute('aria-pressed', String(item.getAttribute('data-v') === value));
     });
+    crmAddResults(); /* the found business's button says Invite for a customer, Add for a supplier */
   },
   addopen: function (control) {
     return crmGo('#/party/' + encodeURIComponent(control.getAttribute('data-k')));
