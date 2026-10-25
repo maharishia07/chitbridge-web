@@ -15210,7 +15210,11 @@ function supCartHTML() {
     empty: 'Nothing in their catalogue matches that.',
     /* The no-search states. `emptyAll` is the honest one when they have simply published nothing; the hidden
        variant fires when the server dropped priced-less items, which looks identical on screen and is not. */
-    emptyAll: txf('{name} has not published anything you can order yet.', { name: supName(_sup) }),
+    /* NET-44 (walk 2026-10-25 W23): a supplier on ANOTHER installation that does not answer with a catalogue says WHY in the server's words
+       (lib/remote-catalogue: "<name> sells only on their own ChitBridge…", "…did not answer in 5 seconds") — never the generic "not published" */
+    emptyAll:
+      (UI.supDet && UI.supDet.cat && UI.supDet.cat.remote && UI.supDet.cat.remote.ok === false && UI.supDet.cat.remote.why) ||
+      txf('{name} has not published anything you can order yet.', { name: supName(_sup) }),
     emptyHidden: txf('{name} lists {n} item(s) with no price yet — a price is needed before they can be ordered.', { name: supName(_sup), n: '{n}' }),
     /* Read from the payload already held for this supplier — a second copy of the same fact would be one more
        thing to keep in step, and this screen already keeps `cat` for exactly as long as the supplier is open. */
