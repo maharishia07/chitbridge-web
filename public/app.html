@@ -14864,7 +14864,7 @@ function supSendOrder(x, isDraft, confirmed) {
         });
       })
       .catch(function () {
-        toast('Could not open the question — nothing was sent.', true);
+        toast('Not sent. Try again.', true);
       });
     return;
   }

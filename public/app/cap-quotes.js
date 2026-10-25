@@ -181,7 +181,7 @@
       (party.currency ? '<li>' + E(fill(T('Their prices are in {cur}.'), { cur: party.currency })) + '</li>' : '') +
       (seller ? '<li>' + E(fill(T('{country} law and tax apply.'), { country: seller })) + '</li>' : '') +
       (party.buyerCountry ? '<li>' + E(fill(T('{country}’s import duty and taxes are not included.'), { country: countryName(party.buyerCountry) })) + '</li>' : '') +
-      '<li>' + E(T('This is a quotation, not a sale: nothing binds until you accept their price.')) + '</li></ul></div>';
+      '<li>' + E(T('A quotation, not a sale. Nothing binds until you accept.')) + '</li></ul></div>';
     ask(fill(T('Ask {name} for a quote?'), { name: party.name }), body, T('Send'), onYes, false, onNo);
   }
 
@@ -236,7 +236,7 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + E(T('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + E(T('Could not read the rounds — this does not mean there are none.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + E(id) + '\')">' + E(T('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + E(T('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + E(T('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + E(id) + '\')">' + E(T('Try again')) + '</button></div>';
         return null;
       });
   }
@@ -295,7 +295,7 @@
         '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + l.index + '" data-line="' + l.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? E(l.price != null ? l.price : '') : '') + '" placeholder="' + E(seller ? S.chit.currency || '' : T('price you want')) + '" aria-label="' + E(seller ? fill(T('Price of {name}'), { name: l.name }) : fill(T('Price you want for {name}'), { name: l.name })) + '"></div>';
     }).join('');
     return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + E(seller ? T('Your price') : T('Your counter')) + '</div>' +
-      '<div style="color:var(--grey);font-size:var(--fs-1)">' + E(seller ? fill(T('Prices are in {cur}. Tax is worked out for you when you send.'), { cur: S.chit.currency || '' }) : T('Say how many you want and the price you would like. {name} sets the price.').replace('{name}', S.chit.other)) + '</div>' +
+      '<div style="color:var(--grey);font-size:var(--fs-1)">' + E(seller ? fill(T('Prices in {cur}. Tax is added when you send.'), { cur: S.chit.currency || '' }) : T('Say how many and the price you want. {name} sets the price.').replace('{name}', S.chit.other)) + '</div>' +
       rows +
       '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + E(T('A note (optional)')) + '"></textarea>' +
       '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + E(S.chit.id) + '\',this)">' + E(seller ? T('Send price') : T('Send counter')) + '</button>' +
@@ -314,7 +314,7 @@
       : '';
     var list = S.rounds.length
       ? S.rounds.map(function (r) { return roundHTML(S, r); }).join('')
-      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + E(c.seller ? fill(T('{name} has not priced anything yet — nothing has been asked of you either way.'), { name: c.other }) : fill(T('Waiting for {name} to price your request.'), { name: c.other })) + '</div>';
+      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + E(c.seller ? fill(T('{name} has not priced yet. Nothing is asked of you.'), { name: c.other }) : fill(T('Waiting for {name} to price your request.'), { name: c.other })) + '</div>';
     var openNew = !S.rounds.length && c.seller
       ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + E(c.id) + '\',\'\')">' + E(T('Price this request')) + '</button>'
       : '';
