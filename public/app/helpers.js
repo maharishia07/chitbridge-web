@@ -264,7 +264,7 @@ function bareAmount(amount) {
 }
 /**
  * UX-123 (walk 2026-10-25 W20): a time the way the SHOP reads it. A Sydney shop opened on a laptop in India showed its messages in India's hours.
- * The shop's zone is the entity's own (/me timezone -> SESSION.timezone); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
+ * The shop's zone is the entity's own (/me timezone -> window.CB_SHOP_TZ); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
  */
 /**
  * UX-122 (walk 2026-10-25 W15): ONE mapping from a status CODE to the words a person reads. The timeline printed "Status → In_progress" and "changed from pending to
@@ -301,7 +301,7 @@ function plainStatuses(text) {
 }
 function shopDateTime(ts, opts) {
   var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
-  var zone = typeof SESSION !== 'undefined' && SESSION && SESSION.timezone ? String(SESSION.timezone) : '';
+  var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : ''; /* set by the app from /me (SESSION.timezone) */
   if (zone) {
     try {
       new Intl.DateTimeFormat('en', { timeZone: zone });

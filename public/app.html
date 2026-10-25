@@ -6399,7 +6399,7 @@ function _renderApp() {
         if (_e.currency_code) SESSION.currency = _e.currency_code;
         if (_e.user_id) SESSION.handle = _e.user_id;
         if (_e.country) SESSION.country = _e.country;
-        if (_e.timezone) SESSION.timezone = _e.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
+        if (_e.timezone) window.CB_SHOP_TZ = SESSION.timezone = _e.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
         /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
          opened, and a second fetch at boot would cost a round trip on the hottest path. */
         if (_e.policy_flags) SESSION.policy_flags = _e.policy_flags;
