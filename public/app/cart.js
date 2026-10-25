@@ -2859,6 +2859,7 @@
        effect of a refactor). A renderer that formats money its own way is a renderer that will one day print a
        different number from the cart popup beside it. */
     fmt: fmt,
+    currencyOf: currencyOf /* UX-121: the cart's ONE currency answer (seller's shop first), for the row and money helpers below */,
     symbolOf: sym,
     paint: paint,
     paintList: paintList,
@@ -2949,7 +2950,10 @@
        sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
     if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') {
       try {
-        return root.fmtMoney(n, root.myCur());
+        /* UX-121 (walk 2026-10-25, Athi: "always use the seller currency"): the CART's currency — the seller's shop on the catalogue it holds —
+           not the viewer's own money. myCur() printed Sydney's A$12.50 as ₹12.50 in Chennai. myCur only when the cart states none. */
+        var cartCur = root.CBCart && root.CBCart.currencyOf ? root.CBCart.currencyOf(ns) : null;
+        return root.fmtMoney(n, cartCur || root.myCur());
       } catch (e) {
         if (typeof console !== 'undefined') console.warn("cart: the app formatter failed — the price shows in the cart's own format", e);
       }
@@ -3205,6 +3209,8 @@
        is stamped on its prices; this asks the layer for its symbol instead of assuming India. */
     var sym =
       opts.sym ||
+      /* UX-121: the cart's currency (the seller's) before the session's — the symbol states whose money the figure is in */
+      (root.CBCart && root.CBCart.currencyOf && root.CBCart.currencyOf(cart.ns) ? CBLocale.symbol(root.CBCart.currencyOf(cart.ns)) : '') ||
       (typeof SESSION !== 'undefined' && SESSION && SESSION.currency ? CBLocale.symbol(SESSION.currency) : ''); /* CART-REG1: no money stated → no symbol */
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
