@@ -78,6 +78,7 @@
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
+    sentWait: '⏳ Waiting for {where} — not delivered yet',
     sentDisp: '⚑ Sent to the dispute',
     empty: 'Type a message first',
     none: 'No messages yet',
@@ -103,6 +104,7 @@
   function when(ts) {
     if (!ts) return '';
     try {
+      if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts); /* UX-123: the shop's zone */
       if (root.CBLocale) return root.CBLocale.datetime(ts);
     } catch (_) {} /* CU4: the one date-time stamp */
     return String(ts).replace('T', ' ').slice(0, 16);
@@ -307,6 +309,8 @@
       '<div class="rt-b">' +
       esc(body) +
       '</div>' +
+      /* RAIL-118: my message the other installation has not confirmed carries the mark until it does */
+      (x.ctp_unconfirmed ? '<div class="rt-why" data-testid="rt-unconfirmed" data-tone="warn">⏳ ' + esc(x.ctp_unconfirmed) + '</div>' : '') +
       atts +
       attBtn +
       '</div>'
@@ -593,10 +597,14 @@
           m.text = '';
           var element = el.querySelector('[data-rt-act="text"]');
           if (element) element.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
+          /* RAIL-118: a message to a business on another installation that is only QUEUED is not "notified" — say it is waiting (silence is the bug) */
+          var held = v && v.ctp && (v.ctp.queued || v.ctp.why);
           var s = o.dispute_id
             ? T(W.sentDisp)
             : body.thread_type === 'external'
-              ? fill(T(W.sentExt), { party: o.party || T('the other party') })
+              ? held
+                ? v.ctp.why || fill(T(W.sentWait), { where: o.where || o.party || T('the other side') })
+                : fill(T(W.sentExt), { party: o.party || T('the other party') })
               : T(W.sentInt);
           var nestedNode = out();
           if (nestedNode) {

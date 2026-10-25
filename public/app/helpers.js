@@ -262,6 +262,23 @@ function bareAmount(amount) {
   var figure = typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose ? CBMoney.amountOfLoose(amount) : Number(amount);
   return (isFinite(figure) ? figure : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+/**
+ * UX-123 (walk 2026-10-25 W20): a time the way the SHOP reads it. A Sydney shop opened on a laptop in India showed its messages in India's hours.
+ * The shop's zone is the entity's own (/me timezone -> SESSION.timezone); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
+ */
+function shopDateTime(ts, opts) {
+  var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
+  var zone = typeof SESSION !== 'undefined' && SESSION && SESSION.timezone ? String(SESSION.timezone) : '';
+  if (zone) {
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: zone });
+      base = Object.assign({}, base, { timeZone: zone });
+    } catch (e) {
+      if (typeof console !== 'undefined') console.warn('shopDateTime: unknown shop time zone', zone);
+    }
+  }
+  return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
+}
 function fmtMoney(amount, code, empty) {
   if (empty !== undefined && (amount == null || amount === '' || (typeof amount !== 'object' && !isFinite(Number(amount))))) return empty;
   var given = String(code == null ? '' : code).trim(),

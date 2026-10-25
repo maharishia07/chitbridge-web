@@ -6399,6 +6399,7 @@ function _renderApp() {
         if (_e.currency_code) SESSION.currency = _e.currency_code;
         if (_e.user_id) SESSION.handle = _e.user_id;
         if (_e.country) SESSION.country = _e.country;
+        if (_e.timezone) SESSION.timezone = _e.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
         /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
          opened, and a second fetch at boot would cost a round trip on the hottest path. */
         if (_e.policy_flags) SESSION.policy_flags = _e.policy_flags;
@@ -25590,6 +25591,7 @@ async function openChit(id, silent) {
         line_delivery: r.line_delivery || {},
         delivery_summary: r.delivery_summary || null,
         line_assignment: r.line_assignment || {},
+        ctp_unconfirmed: r.ctp_unconfirmed || null /* RAIL-118: a change the other installation has not confirmed */,
         order_billed: r.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */,
         /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
         summary_money: (h.summary_json && h.summary_json.money) || null,
@@ -25689,6 +25691,28 @@ function paintDetail() {
  */
 /* the OTHER party: on a copy I received that is the sender; on one I sent, the receivers (c.party) — the thread and the detail head
    (WX-P2P-17: the supplier's head read "Order — Kumar Trade Co · Kumar Trade Co", its own name) */
+/**
+ * RAIL-118 · the installation the OTHER side of this chit lives on, as the chit's jurisdiction names it ('' when it does not say):
+ * an order I sent waits on the seller's, anything else on the buyer's. Words for "Waiting for <where> — not delivered yet".
+ */
+function chitWhere(c) {
+  var bj = (c && (c.business_json || (c.header && c.header.business_json))) || {},
+    j = bj.jurisdiction || {};
+  var mineSent = c && c.sender && chitIsSelf(null, c.sender);
+  return (mineSent ? j.seller_installation : j.buyer_installation) || '';
+}
+/** RAIL-118: the answer of the read said a change of mine has not been confirmed by the other installation yet — say so on the chit (never "notified") */
+function ctpBanner(c) {
+  var u = c && c.ctp_unconfirmed;
+  if (!u) return '';
+  var where = chitWhere(c) || chitOtherParty(c) || tx('the other side');
+  return (
+    '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
+    esc(u.failed ? u.words || tx('Not delivered — we could not reach them') : txf('Waiting for {where} — not delivered yet', { where: where })) +
+    (u.count > 1 ? ' · ' + esc(txf('{n} changes', { n: u.count })) : '') +
+    '</div>'
+  );
+}
 function chitOtherParty(c) {
   return c && c.sender && !chitIsSelf(null, c.sender) ? c.sender : (c && c.party) || '';
 }
@@ -25700,6 +25724,7 @@ function rtMountAll(scope) {
   CBThread.mountAll(scope, {
     actions: c.actions || null,
     party: other,
+    where: chitWhere(c) /* RAIL-118: the installation a held message waits for */,
     me: SESSION.entity || SESSION.name || '',
     kinds: isCust ? ['info', 'query'] : surfacedTypes(),
     channel: isCust ? 'external' : 'both',
@@ -26813,7 +26838,7 @@ function detailInner() {
   ]);
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
    <div class="db">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
