@@ -713,9 +713,9 @@
 
   /** RAIL-117 · F8: the Rounds section of a quotation — the SAME painter app.html mounts (app/cap-quotes.js CBQuotes.mount), so a customer page
       (crm.html#/chit, tasks.html) can Accept / Counter / Reject. A page opts in by loading cap-quotes.js; a chit that is not a quotation shows nothing new. */
-  function quotesMount(node, m) {
+  function quotesMount(node, model) {
     var body = node.querySelector('.cs-body'),
-      id = m.id || CS.id;
+      id = model.id || CS.id;
     if (!body || !id || !root.CBQuotes || typeof root.chitIsQuote !== 'function' || !root.chitIsQuote(CS.chit)) return;
     if (!CS.quotes || CS.quotes.id !== id) {
       var el = document.createElement('div');
@@ -724,6 +724,12 @@
       root.CBQuotes.mount(el, id);
     }
     body.appendChild(CS.quotes.el);
+  }
+  /** the sections under the chit's body, in order: the dispute room, the quotation rounds, the rail thread */
+  function mountSections(node, model) {
+    dispMount(node, model);
+    quotesMount(node, model);
+    railMount(node, model);
   }
 
   /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
@@ -859,9 +865,7 @@
           '</button></div>'
         : '') +
       (showsHistory() ? historyHTML() : '');
-    dispMount(node, m);
-    quotesMount(node, m);
-    railMount(node, m);
+    mountSections(node, m);
     if (m.agreement)
       repeatCap().then(function (reply) {
         if (reply && CS.view === m) {

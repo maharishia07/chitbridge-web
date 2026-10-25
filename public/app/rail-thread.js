@@ -101,6 +101,18 @@
       return v[k] == null ? '' : v[k];
     });
   }
+  /** RAIL-118: my message the other installation has not confirmed carries the mark until it does */
+  function unconfirmedMark(x) {
+    return x.ctp_unconfirmed ? '<div class="rt-why" data-testid="rt-unconfirmed" data-tone="warn">⏳ ' + esc(x.ctp_unconfirmed) + '</div>' : '';
+  }
+  /** RAIL-118: what a send says once it is made. A message to a business on another installation that is only QUEUED is not "notified" — say it is waiting (silence is the bug) */
+  function sentWords(thread, body, reply) {
+    var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
+    if (thread.dispute_id) return T(W.sentDisp);
+    if (body.thread_type !== 'external') return T(W.sentInt);
+    if (held) return reply.ctp.why || fill(T(W.sentWait), { where: thread.where || thread.party || T('the other side') });
+    return fill(T(W.sentExt), { party: thread.party || T('the other party') });
+  }
   function when(ts) {
     if (!ts) return '';
     try {
@@ -308,9 +320,7 @@
       '</span></div>' +
       '<div class="rt-b">' +
       esc(body) +
-      '</div>' +
-      /* RAIL-118: my message the other installation has not confirmed carries the mark until it does */
-      (x.ctp_unconfirmed ? '<div class="rt-why" data-testid="rt-unconfirmed" data-tone="warn">⏳ ' + esc(x.ctp_unconfirmed) + '</div>' : '') +
+      '</div>' + unconfirmedMark(x) +
       atts +
       attBtn +
       '</div>'
@@ -597,15 +607,7 @@
           m.text = '';
           var element = el.querySelector('[data-rt-act="text"]');
           if (element) element.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
-          /* RAIL-118: a message to a business on another installation that is only QUEUED is not "notified" — say it is waiting (silence is the bug) */
-          var held = v && v.ctp && (v.ctp.queued || v.ctp.why);
-          var s = o.dispute_id
-            ? T(W.sentDisp)
-            : body.thread_type === 'external'
-              ? held
-                ? v.ctp.why || fill(T(W.sentWait), { where: o.where || o.party || T('the other side') })
-                : fill(T(W.sentExt), { party: o.party || T('the other party') })
-              : T(W.sentInt);
+          var s = sentWords(o, body, v);
           var nestedNode = out();
           if (nestedNode) {
             nestedNode.textContent = s;

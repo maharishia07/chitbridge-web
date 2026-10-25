@@ -263,10 +263,6 @@ function bareAmount(amount) {
   return (isFinite(figure) ? figure : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 /**
- * UX-123 (walk 2026-10-25 W20): a time the way the SHOP reads it. A Sydney shop opened on a laptop in India showed its messages in India's hours.
- * The shop's zone is the entity's own (/me timezone -> window.CB_SHOP_TZ); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
- */
-/**
  * UX-122 (walk 2026-10-25 W15): ONE mapping from a status CODE to the words a person reads. The timeline printed "Status → In_progress" and "changed from pending to
  * in_progress"; the code is for the machine. statusWord('in_progress') -> "In progress"; plainStatuses('changed from pending to in_progress') -> "changed from Pending to In progress".
  * An unknown code is spaced and capitalised, never shown with its underscore.
@@ -286,24 +282,30 @@ var STATUS_WORDS = {
   draft: 'Draft'
 };
 /** RAIL-117: a chit is a quotation when the server stamped a jurisdiction (another installation) or the buyer asked for a quote (deal_type rfq). ONE predicate (F10) */
-function chitIsQuote(c) {
-  var bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
-  return !!(bj.jurisdiction || bj.deal_type === 'rfq');
+function chitIsQuote(chit) {
+  var business = (chit && (chit.business_json || (chit.header && chit.header.business_json))) || {};
+  return !!(business.jurisdiction || business.deal_type === 'rfq');
 }
+/** a status code as the words a person reads: in_progress -> "In progress" */
 function statusWord(code) {
-  var c = String(code == null ? '' : code).trim();
-  if (!c) return '';
-  var key = c.toLowerCase();
-  var w = STATUS_WORDS[key] || key.replace(/_/g, ' ');
-  w = w.charAt(0).toUpperCase() + w.slice(1);
-  return typeof tx === 'function' ? tx(w) : w;
+  var trimmed = String(code == null ? '' : code).trim();
+  if (!trimmed) return '';
+  var key = trimmed.toLowerCase();
+  var words = STATUS_WORDS[key] || key.replace(/_/g, ' ');
+  words = words.charAt(0).toUpperCase() + words.slice(1);
+  return typeof tx === 'function' ? tx(words) : words;
 }
+/** the status codes inside a sentence turned into words (see statusWord) */
 function plainStatuses(text) {
   /* only a code that follows "from", "to" or an arrow is a status — ordinary prose ("already read") is left alone */
   return String(text == null ? '' : text).replace(/(\bfrom|\bto|→)\s+(pending|delivered|read|accepted|in_progress|partial|completed|cancelled|rejected|on_hold|disputed|draft)\b/gi, function (all, lead, code) {
     return lead + ' ' + statusWord(code);
   });
 }
+/**
+ * UX-123 (walk 2026-10-25 W20): a time the way the SHOP reads it. A Sydney shop opened on a laptop in India showed its messages in India's hours.
+ * The shop's zone is the entity's own (/me timezone -> window.CB_SHOP_TZ); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
+ */
 function shopDateTime(ts, opts) {
   var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
   var zone = typeof window !== 'undefined' && window.CB_SHOP_TZ ? String(window.CB_SHOP_TZ) : ''; /* set by the app from /me (SESSION.timezone) */
