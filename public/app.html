@@ -27174,8 +27174,8 @@ function statusLabel(e) {
   if (a === 'created') return 'Created';
   if (a === 'message_sent') return 'Message sent';
   if (a === 'amended') return '✎ Amended';
-  if (a.indexOf('status_') === 0) return 'Status → ' + a.slice(7);
-  if (e.new_status) return (a || 'updated') + ' → ' + e.new_status;
+  if (a.indexOf('status_') === 0) return tx('Status') + ' → ' + statusWord(a.slice(7));
+  if (e.new_status) return (a || 'updated') + ' → ' + statusWord(e.new_status);
   return a || 'event';
 }
 /* ⚠️ an amendment's detail gets more room than 80 chars: it reads `quantity "5" → "2"`, and the truncation would
@@ -27189,7 +27189,7 @@ function statusEv(e) {
     esc(e.action_by_display_name || '') +
     ' · ' +
     esc(fmtLogTime(e.created_at)) +
-    (e.detail ? ' · ' + esc(String(e.detail).slice(0, cap)) : '') +
+    (e.detail ? ' · ' + esc(plainStatuses(String(e.detail)).slice(0, cap)) : '') +
     '</div></div>'
   );
 }

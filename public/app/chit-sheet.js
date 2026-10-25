@@ -733,10 +733,10 @@
   /** the word for one history row: my bill_step row says the step it took (Accepted · Rejected — R102), else the action's word, else the status word */
   function histWord(e) {
     var a = String(e.action || '');
-    if (a === 'bill_step' && e.step) return STEP[e.step] || e.step;
+    if (a === 'bill_step' && e.step) return STEP[e.step] || statusWord(e.step); /* UX-122: statusWord is the one code -> words mapping (helpers.js) */
     if (LOGWORD[a]) return LOGWORD[a];
-    if (a.indexOf('status_') === 0) return STEP[a.slice(7)] || a.slice(7);
-    return e.new_status ? STEP[e.new_status] || e.new_status : a || 'Event';
+    if (a.indexOf('status_') === 0) return STEP[a.slice(7)] || statusWord(a.slice(7));
+    return e.new_status ? STEP[e.new_status] || statusWord(e.new_status) : a || 'Event';
   }
   /** one history row: "Accepted by Kaveri R" · the time — who acted is the api's action_by_display_name, the same for every step */
   function histRowHTML(e, index) {

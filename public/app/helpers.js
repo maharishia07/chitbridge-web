@@ -266,6 +266,39 @@ function bareAmount(amount) {
  * UX-123 (walk 2026-10-25 W20): a time the way the SHOP reads it. A Sydney shop opened on a laptop in India showed its messages in India's hours.
  * The shop's zone is the entity's own (/me timezone -> SESSION.timezone); with none stated the person's own zone stays (CBLocale), so nothing is guessed.
  */
+/**
+ * UX-122 (walk 2026-10-25 W15): ONE mapping from a status CODE to the words a person reads. The timeline printed "Status → In_progress" and "changed from pending to
+ * in_progress"; the code is for the machine. statusWord('in_progress') -> "In progress"; plainStatuses('changed from pending to in_progress') -> "changed from Pending to In progress".
+ * An unknown code is spaced and capitalised, never shown with its underscore.
+ */
+var STATUS_WORDS = {
+  pending: 'Pending',
+  delivered: 'Delivered',
+  read: 'Read',
+  accepted: 'Accepted',
+  in_progress: 'In progress',
+  partial: 'Part done',
+  completed: 'Done',
+  cancelled: 'Cancelled',
+  rejected: 'Rejected',
+  on_hold: 'On hold',
+  disputed: 'Disputed',
+  draft: 'Draft'
+};
+function statusWord(code) {
+  var c = String(code == null ? '' : code).trim();
+  if (!c) return '';
+  var key = c.toLowerCase();
+  var w = STATUS_WORDS[key] || key.replace(/_/g, ' ');
+  w = w.charAt(0).toUpperCase() + w.slice(1);
+  return typeof tx === 'function' ? tx(w) : w;
+}
+function plainStatuses(text) {
+  /* only a code that follows "from", "to" or an arrow is a status — ordinary prose ("already read") is left alone */
+  return String(text == null ? '' : text).replace(/(\bfrom|\bto|→)\s+(pending|delivered|read|accepted|in_progress|partial|completed|cancelled|rejected|on_hold|disputed|draft)\b/gi, function (all, lead, code) {
+    return lead + ' ' + statusWord(code);
+  });
+}
 function shopDateTime(ts, opts) {
   var base = opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
   var zone = typeof SESSION !== 'undefined' && SESSION && SESSION.timezone ? String(SESSION.timezone) : '';
