@@ -8792,7 +8792,7 @@ function bizAbroadSave() {
         UI._abroadProfile = await api('profilePut', {
           body: { trade_mode: on ? 'export' : 'domestic', markets: profile.markets || [], sectors: profile.sectors || [], adopted: profile.adopted || [] }
         });
-        toast(MSG.profileSaved());
+        toast(tx(on ? 'Saved ✓ — your shop shows outside your own ChitBridge' : 'Saved ✓ — your shop shows only on your own ChitBridge'));
       } catch (ex) {
         toast(ex && ex.message ? ex.message : tx('Not saved. Try again.'));
         bizAbroadLoad();
