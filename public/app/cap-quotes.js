@@ -44,7 +44,11 @@
     });
   }
   function call(key, o) {
-    if (typeof root.EP !== 'undefined') for (var k in CB_QUOTE_EP) if (!root.EP[k]) root.EP[k] = CB_QUOTE_EP[k];
+    /* app.html declares `const EP` at the top of a classic script: a global BINDING, not a window property, so root.EP is undefined there and
+       the rounds were never registered ("Could not read the rounds" on SIT, 25 Oct). Reach it by name, as core.js epOf does; a page that puts
+       EP on window still works. */
+    var eps = typeof EP !== 'undefined' ? EP : root.EP; // eslint-disable-line no-undef
+    if (eps) for (var k in CB_QUOTE_EP) if (!eps[k]) eps[k] = CB_QUOTE_EP[k];
     return root.api(key, o);
   }
   function money(n, code) {
