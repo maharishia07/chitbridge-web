@@ -2859,6 +2859,7 @@
        effect of a refactor). A renderer that formats money its own way is a renderer that will one day print a
        different number from the cart popup beside it. */
     fmt: fmt,
+    currencyOf: currencyOf /* UX-121: the cart's ONE currency answer (seller's shop first), for the row and money helpers below */,
     symbolOf: sym,
     paint: paint,
     paintList: paintList,
@@ -2943,13 +2944,26 @@
    * page as a side effect of a refactor). A second formatter means this renderer and the cart popup beside it can
    * one day print different numbers for the same line, and nobody would know which was right.
    */
+  /** UX-121 (walk 2026-10-25, Athi: "always use the seller currency"): the CART's currency — the seller's shop on the catalogue it holds —
+   *  not the viewer's own money. myCur() printed Sydney's A$12.50 as ₹12.50 in Chennai. myCur only when the cart states none. */
+  function appMoney(namespace, amount) {
+    var cartCur = root.CBCart && root.CBCart.currencyOf ? root.CBCart.currencyOf(namespace) : null;
+    return root.fmtMoney(amount, cartCur || root.myCur());
+  }
+  /** UX-121: the symbol of the cart's currency (the seller's) before the session's — it states whose money the figure is in */
+  function symbolFor(namespace) {
+    var cartCur = root.CBCart && root.CBCart.currencyOf ? root.CBCart.currencyOf(namespace) : '';
+    var cartSymbol = cartCur ? CBLocale.symbol(cartCur) : '';
+    if (cartSymbol) return cartSymbol;
+    return typeof SESSION !== 'undefined' && SESSION && SESSION.currency ? CBLocale.symbol(SESSION.currency) : ''; /* CART-REG1: no money stated → no symbol */
+  }
   function money(ns, n) {
     if (n == null || !isFinite(n)) return '';
     /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
        sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
     if (typeof root.fmtMoney === 'function' && typeof root.myCur === 'function') {
       try {
-        return root.fmtMoney(n, root.myCur());
+        return appMoney(ns, n);
       } catch (e) {
         if (typeof console !== 'undefined') console.warn("cart: the app formatter failed — the price shows in the cart's own format", e);
       }
@@ -3203,9 +3217,7 @@
     /* ⚠️ WAS '₹' AS THE DEFAULT. A symbol is not decoration — it states which currency a figure is in, and a
        rupee sign in front of a dirham amount is a wrong number, not a cosmetic slip. The business's own currency
        is stamped on its prices; this asks the layer for its symbol instead of assuming India. */
-    var sym =
-      opts.sym ||
-      (typeof SESSION !== 'undefined' && SESSION && SESSION.currency ? CBLocale.symbol(SESSION.currency) : ''); /* CART-REG1: no money stated → no symbol */
+    var sym = opts.sym || symbolFor(cart.ns);
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
 

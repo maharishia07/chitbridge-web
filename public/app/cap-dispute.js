@@ -354,6 +354,23 @@ function aiResolutionSuggest(chitId, disputeId) {
     { title: '✨ Suggested resolution wording' }
   );
 }
+/** RAIL-121 (walk 2026-10-25 W17): the room names BOTH sides. `parties` leaves the viewer out (you are not your own opponent), which made the party that did not raise it
+ *  see only the raiser; here the viewer is listed too, marked "(you)", so everyone reads the same two names. */
+function disputeRoster(dispute, parties, mine) {
+  var mineRows = (dispute.participants || []).filter(function (item) {
+    return item.role === 'party' && chitIsSelf(item.entity_id, item.display_name) && String(item.display_name || '') !== String(dispute.raised_by_display_name || '');
+  });
+  return [nm(dispute.raised_by_display_name, '—') + ' (raiser)' + (mine ? ' (' + tx('you') + ')' : '')]
+    .concat(
+      mineRows.map(function (item) {
+        return nm(item.display_name, 'party') + ' (' + tx('you') + ')';
+      }),
+      parties.map(function (item) {
+        return nm(item.display_name, 'party');
+      })
+    )
+    .join(' · ');
+}
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
 function disputeRoomBox(c, d) {
   var readonly = d.status !== 'open';
@@ -374,13 +391,7 @@ function disputeRoomBox(c, d) {
         tx('✨ Suggest wording') +
         '</button>';
   var resolveWrap = resolve || suggestBtn ? '<span style="display:inline-flex;gap:6px;flex-wrap:wrap">' + suggestBtn + resolve + '</span>' : '';
-  var roster = [nm(d.raised_by_display_name, '—') + ' (raiser)']
-    .concat(
-      parties.map(function (item) {
-        return nm(item.display_name, 'party');
-      })
-    )
-    .join(' · ');
+  var roster = disputeRoster(d, parties, mine);
   var to = parties.length
     ? parties
         .map(function (item) {

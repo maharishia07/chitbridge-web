@@ -78,6 +78,7 @@
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
+    sentWait: '⏳ Waiting for {where} — not delivered yet',
     sentDisp: '⚑ Sent to the dispute',
     empty: 'Type a message first',
     none: 'No messages yet',
@@ -100,9 +101,22 @@
       return v[k] == null ? '' : v[k];
     });
   }
+  /** RAIL-118: my message the other installation has not confirmed carries the mark until it does */
+  function unconfirmedMark(x) {
+    return x.ctp_unconfirmed ? '<div class="rt-why" data-testid="rt-unconfirmed" data-tone="warn">⏳ ' + esc(x.ctp_unconfirmed) + '</div>' : '';
+  }
+  /** RAIL-118: what a send says once it is made. A message to a business on another installation that is only QUEUED is not "notified" — say it is waiting (silence is the bug) */
+  function sentWords(thread, body, reply) {
+    var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
+    if (thread.dispute_id) return T(W.sentDisp);
+    if (body.thread_type !== 'external') return T(W.sentInt);
+    if (held) return reply.ctp.why || fill(T(W.sentWait), { where: thread.where || thread.party || T('the other side') });
+    return fill(T(W.sentExt), { party: thread.party || T('the other party') });
+  }
   function when(ts) {
     if (!ts) return '';
     try {
+      if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts); /* UX-123: the shop's zone */
       if (root.CBLocale) return root.CBLocale.datetime(ts);
     } catch (_) {} /* CU4: the one date-time stamp */
     return String(ts).replace('T', ' ').slice(0, 16);
@@ -306,7 +320,7 @@
       '</span></div>' +
       '<div class="rt-b">' +
       esc(body) +
-      '</div>' +
+      '</div>' + unconfirmedMark(x) +
       atts +
       attBtn +
       '</div>'
@@ -593,11 +607,7 @@
           m.text = '';
           var element = el.querySelector('[data-rt-act="text"]');
           if (element) element.value = ''; /* paint re-reads the box, so it is emptied in the DOM too */
-          var s = o.dispute_id
-            ? T(W.sentDisp)
-            : body.thread_type === 'external'
-              ? fill(T(W.sentExt), { party: o.party || T('the other party') })
-              : T(W.sentInt);
+          var s = sentWords(o, body, v);
           var nestedNode = out();
           if (nestedNode) {
             nestedNode.textContent = s;

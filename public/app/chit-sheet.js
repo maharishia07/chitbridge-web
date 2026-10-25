@@ -631,16 +631,12 @@
         : '')
     );
   }
+  /* F10 (critic 2026-10-25): only the verbs the sheet means differently from the status word ("To accept" for what waits on you);
+     every other code reads statusWord (helpers.js) — "In hand" here and "In progress" in the timeline were two names for one status. */
   var STEP = {
     pending: 'To accept',
     delivered: 'To accept',
-    read: 'To accept',
-    accepted: 'Accepted',
-    in_progress: 'In hand',
-    partial: 'Part done',
-    completed: 'Done',
-    cancelled: 'Cancelled',
-    rejected: 'Rejected'
+    read: 'To accept'
   };
   /* the sheet's title is the document: a counter bill is "Bill", a bill received "Supplier bill", the rest the purpose word — never "Chit" */
   var TITLE = {
@@ -715,6 +711,27 @@
     body.appendChild(CS.disp.el);
   }
 
+  /** RAIL-117 · F8: the Rounds section of a quotation — the SAME painter app.html mounts (app/cap-quotes.js CBQuotes.mount), so a customer page
+      (crm.html#/chit, tasks.html) can Accept / Counter / Reject. A page opts in by loading cap-quotes.js; a chit that is not a quotation shows nothing new. */
+  function quotesMount(node, model) {
+    var body = node.querySelector('.cs-body'),
+      id = model.id || CS.id;
+    if (!body || !id || !root.CBQuotes || typeof root.chitIsQuote !== 'function' || !root.chitIsQuote(CS.chit)) return;
+    if (!CS.quotes || CS.quotes.id !== id) {
+      var el = document.createElement('div');
+      el.setAttribute('data-testid', 'cs-quotes');
+      CS.quotes = { id: id, el: el };
+      root.CBQuotes.mount(el, id);
+    }
+    body.appendChild(CS.quotes.el);
+  }
+  /** the sections under the chit's body, in order: the dispute room, the quotation rounds, the rail thread */
+  function mountSections(node, model) {
+    dispMount(node, model);
+    quotesMount(node, model);
+    railMount(node, model);
+  }
+
   /* the page form only: the chit's history as the state_log holds it — when · what · who. Read, never worked out; the step words are the sheet's own. */
   var LOGWORD = {
     created: 'Created',
@@ -733,10 +750,10 @@
   /** the word for one history row: my bill_step row says the step it took (Accepted · Rejected — R102), else the action's word, else the status word */
   function histWord(e) {
     var a = String(e.action || '');
-    if (a === 'bill_step' && e.step) return STEP[e.step] || e.step;
+    if (a === 'bill_step' && e.step) return STEP[e.step] || statusWord(e.step); /* UX-122: statusWord is the one code -> words mapping (helpers.js) */
     if (LOGWORD[a]) return LOGWORD[a];
-    if (a.indexOf('status_') === 0) return STEP[a.slice(7)] || a.slice(7);
-    return e.new_status ? STEP[e.new_status] || e.new_status : a || 'Event';
+    if (a.indexOf('status_') === 0) return STEP[a.slice(7)] || statusWord(a.slice(7));
+    return e.new_status ? STEP[e.new_status] || statusWord(e.new_status) : a || 'Event';
   }
   /** one history row: "Accepted by Kaveri R" · the time — who acted is the api's action_by_display_name, the same for every step */
   function histRowHTML(e, index) {
@@ -793,7 +810,7 @@
       '<div class="cs-who"><span data-testid="cs-who">' +
       esc(m.who) +
       '</span> <span class="cs-step" data-testid="cs-step">' +
-      esc(T(STEP[m.status] || m.status)) +
+      esc(T(STEP[m.status] || statusWord(m.status))) +
       '</span></div>' +
       pageNoteHTML() +
       orderHTML(m) +
@@ -848,8 +865,7 @@
           '</button></div>'
         : '') +
       (showsHistory() ? historyHTML() : '');
-    dispMount(node, m);
-    railMount(node, m);
+    mountSections(node, m);
     if (m.agreement)
       repeatCap().then(function (reply) {
         if (reply && CS.view === m) {

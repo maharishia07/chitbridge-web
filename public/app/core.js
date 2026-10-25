@@ -973,6 +973,12 @@ function cbPushArrived(d) {
     var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
     if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
   } catch (_) {}
+  /* RAIL-119: the chit OPEN on screen is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
+  try {
+    if (typeof chitOnReturn === 'function') chitOnReturn(d);
+  } catch (e) {
+    console.warn('chitOnReturn: the open chit was not read again', e && e.message); /* F11: log, never swallow; the person is not told (the next open reads it) */
+  }
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try {
     if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {
@@ -1241,6 +1247,8 @@ function api(key, opts) {
   var o = opts || {};
   var ep = epOf(key);
   if (!ep || ep.m !== 'GET') return apiOnce(key, opts);
+  /* NET-42: { fresh: true } never joins a read already in flight — a read that started BEFORE a write would hand back the answer from before it */
+  if (o.fresh) return apiOnce(key, opts);
 
   var dk;
   try {
@@ -1300,7 +1308,8 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const idemKey = outboxSafe && CB ? CB._uuid() : null;
+    /* an EP row with idem:true (a proposal write) sends its own fresh Idempotency-Key WITHOUT joining the offline outbox: a money promise is never queued */
+    const idemKey = outboxSafe && CB ? CB._uuid() : ep.idem && ep.m !== 'GET' ? (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + _rid) : null;
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
