@@ -8738,6 +8738,8 @@ function businessSettingsHTML(s) {
         tx('If that is not right, change it — it was filled in for you, not chosen by you.') +
         '</div>'
       : '') +
+    /* NET-39 (Athi, 2026-10-25): most trade stays inside; a shop is shown on other installations only when it opts in (trade_mode = export). Painted after a read, saved with a confirm. */
+    card('Selling abroad', 'Most trade stays on your own ChitBridge. This is for shops that want buyers elsewhere.', '<div id="biz_abroad" data-testid="biz-abroad" style="padding:0 13px 12px;font-size:var(--fs-1);color:var(--grey)">' + esc(tx('Reading…')) + '</div>') +
     '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div>' +
     /* ⭐ THE LEDGER'S SWITCH (Athi, 2026-10-01: "add the switch-on control in settings"). Owner only — the server
        refuses everyone else. Painted from GET /api/books/status once the card is on the screen (bizLedgerLoad), so
@@ -8750,6 +8752,52 @@ function businessSettingsHTML(s) {
         )
       : '') +
     '</div>'
+  );
+}
+/** the Selling abroad card: the switch is the shop's trade profile (trade_mode = export), read once, saved only after a Save and a confirm */
+async function bizAbroadLoad() {
+  var box = document.getElementById('biz_abroad');
+  if (!box) return;
+  try {
+    var profile = await api('profileGet');
+    UI._abroadProfile = profile;
+    var on = profile && profile.trade_mode === 'export';
+    box.innerHTML =
+      '<label style="display:flex;gap:8px;align-items:flex-start;color:var(--on-card)"><input type="checkbox" id="biz_abroad_on" data-testid="biz-abroad-on"' +
+      (on ? ' checked' : '') +
+      ' style="margin-top:3px"><span>' +
+      esc(tx('Show my shop to buyers on other ChitBridge installations and abroad')) +
+      '</span></label><div style="margin-top:8px"><button type="button" class="act" data-testid="biz-abroad-save" onclick="bizAbroadSave()">' +
+      esc(tx('Save')) +
+      '</button></div>';
+  } catch (ex) {
+    box.textContent = tx('Could not read this setting. Try again.');
+    console.warn('bizAbroadLoad: profile unread', ex && ex.message);
+  }
+}
+/** Save → confirm → PUT the whole profile with only trade_mode changed (markets, sectors and certificates are kept as they are) */
+function bizAbroadSave() {
+  var box = document.getElementById('biz_abroad_on');
+  var profile = UI._abroadProfile;
+  if (!box || !profile) return;
+  var on = !!box.checked;
+  confirmAsk(
+    on ? 'Show my shop to buyers on other ChitBridge installations and abroad?' : 'Stop showing my shop outside your own ChitBridge?',
+    on
+      ? 'Buyers elsewhere can find your shop and see your public price list. Your private details stay private.'
+      : 'Only buyers on your own ChitBridge will find your shop.',
+    on ? 'Show it' : 'Keep it here',
+    async function () {
+      try {
+        UI._abroadProfile = await api('profilePut', {
+          body: { trade_mode: on ? 'export' : 'domestic', markets: profile.markets || [], sectors: profile.sectors || [], adopted: profile.adopted || [] }
+        });
+        toast(MSG.profileSaved());
+      } catch (ex) {
+        toast(ex && ex.message ? ex.message : tx('Not saved. Try again.'));
+        bizAbroadLoad();
+      }
+    }
   );
 }
 /** the Ledger card's one read — nothing is shown until the server has answered */
@@ -9159,6 +9207,7 @@ function paintSettings(s, _daOpts) {
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
     node.innerHTML = out + (out ? _capEnd() : '');
+    if (k === 'business') bizAbroadLoad();
     if (k === 'business') bizLedgerLoad(); /* the Ledger card reads its state after it is on the screen */
   }
 }
