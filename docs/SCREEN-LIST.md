@@ -81,6 +81,8 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | NET001 | My network | Network | /network.html | /network.html · Network › My network |
 | NET002 | Offers | Network | /network.html | /network.html · Network › Offers |
 | NET003 | Design | Network | /network.html | /network.html · Network › Design |
+| NPL001 | Installations | Network control panel | /network-panel.html | /network-panel.html · Network control panel › Installations |
+| NPL002 | Certificates | Network control panel | /network-panel.html | /network-panel.html · Network control panel › Certificates |
 | CLB001 | Side by side | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Side by side |
 | CLB002 | Where we are | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Where we are |
 | CLB003 | Countries | Country Lab | /country-lab.html | /country-lab.html · Country Lab › Countries |

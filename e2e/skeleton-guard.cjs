@@ -12,7 +12,7 @@ const OWN = ['finance.html', 'crm.html', 'accounts.html'];      /* the page draw
 /* SHELL-ONE: pages that wear the frame's BAR only (CBFrame.mount({ bar: true }) — header: mark · name · chip · ⌂ Home · avatar) over their own body: the storefront
    (the shop's own brand row and cart under it), the shop screen, the labs; standards.html mounts the frame in app mode above its own two panes (host) */
 const BAR = ['shop.html', 'network-shop.html', 'store.html', 'embed.html', 'promo.html', 'standards.html'];
-const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
+const FRAMED = ['employees.html', 'network.html', 'network-panel.html', 'tasks.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
 /* UX-90: every lab wears the Finance frame through CBFrame.lab (skeleton + the Labs switcher in the left menu, one background); the list only grows with a new lab */
 const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */

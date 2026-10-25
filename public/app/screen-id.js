@@ -176,6 +176,15 @@
         ]
       },
       {
+        app: 'network-panel',
+        name: 'Network control panel',
+        page: '/network-panel.html',
+        rows: [
+          ['NPL001', 'installations', 'Installations'],
+          ['NPL002', 'certificates', 'Certificates']
+        ]
+      },
+      {
         app: 'country-lab',
         name: 'Country Lab',
         page: '/country-lab.html',

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" data-tokens="list">
+<!-- OWNS  the Network control panel, slice 1 (read-only): how many installations there are, and what each one is. The operator's page, for the network master's root only.
+     CALLED BY Platform (app.html, the operator screen) - a link.
+     FLOW  load -> CBFrame -> GET /api/network/installations (ONE call, makes no call of its own to any installation) -> CBList paints Installations and Certificates
+     CARD 28-platform-and-operations/network-control-panel -->
+<head>
+<meta charset="utf-8">
+<script src="/app/device-id.js"></script>
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network control panel</title>
+<!-- ⭐ Network control panel, slice 1. The FRAME is CBFrame's (shell header, Home, the avatar, the one sign-in window, the kural band), as network.html and crm.html; the LISTS are CBList
+     (frozen header, adjustable columns). The server decides everything: the counts, each status in words (from the certificate), and which actions are open (none yet, each with the command that
+     does it). The page computes nothing and dials no installation: version and last seen are what the master recorded when it pulled. -->
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
+<style>
+:root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
+  --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */ --serif:'Source Serif 4',Georgia,serif; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground,#fbf6ec);color:var(--ink,#2a2418);font-family:var(--sans);font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+.sub{color:var(--muted,#5c5240);font-size:13px}
+.np-answer{margin:0;font-family:var(--serif);font-size:30px;line-height:1.15;font-weight:700}
+.np-sub{margin:4px 0 0;color:var(--muted,#5c5240);font-size:14px}
+.tag.red{background:var(--red-t,#FBE9E3);border-color:var(--red-b,#E8B7A6);color:var(--red-i,#8E3517)}
+.np-note{padding:8px 12px;border:1px dashed var(--line-3,#d8ccb0);border-radius:10px;color:var(--muted,#5c5240);font-size:13px}
+.np-act{min-height:28px;padding:0 10px;border:1px solid var(--line-3,#d8ccb0);border-radius:8px;background:transparent;color:var(--ink,#2a2418);font-size:12px}
+#nw{display:flex;flex-direction:column;gap:12px;padding:16px 20px 40px;min-height:60vh}
+.nw-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line,#e6dcc6);padding-bottom:8px}
+.nw-tab{min-height:40px;padding:0 16px;border:1px solid var(--line-3,#d8ccb0);border-radius:9px;background:transparent;color:var(--ink,#2a2418);font-size:14px;font-weight:600}
+.nw-tab.on{background:var(--accent,#1f5f5b);border-color:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec)}
+.nw-tab.no{opacity:.6}
+.nw-body{display:flex;flex-direction:column;gap:12px;flex:1}
+.nw-nets{display:flex;flex-wrap:wrap;gap:10px}
+.nw-net{border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--surface,#fffdf8);padding:10px 14px;min-width:220px}
+.nw-list{flex:1;min-height:420px;display:flex;flex-direction:column}
+.nw-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:4px 0}
+.nw-why{padding:10px 14px;border:1px solid var(--amber-b,#EFD39A);background:var(--amber-t,#FDF3DC);color:var(--amber-i,#7A5205);border-radius:10px;font-weight:600}
+.nw-tree{border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--surface,#fffdf8);padding:10px 14px}
+.nw-node{padding:5px 0;border-bottom:1px dashed var(--line,#e6dcc6)}
+.nw-out{min-height:20px;margin:6px 0;font-weight:600;color:var(--green-d,#0D4A2B)}
+.nw-out[data-tone="error"]{color:var(--red-i,#8E3517)}
+.nw-breaks{margin:0;padding-inline-start:20px}
+.act{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:0 16px;border:1px solid var(--accent,#1f5f5b);border-radius:9px;background:var(--accent,#1f5f5b);color:var(--accent-ink,#fbf6ec);font-size:14px;font-weight:600;text-decoration:none}
+.act.quiet{background:transparent;border-color:var(--line-3,#d8ccb0);color:var(--ink,#2a2418)}
+.act[disabled],.act[aria-disabled="true"]{opacity:.55;cursor:not-allowed}
+.act[data-action-state="busy"]{opacity:.7}
+.tag{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;border:1px solid var(--line-3,#d8ccb0);background:var(--surface,#fffdf8);font-size:12px;font-weight:600}
+.tag.green{background:var(--green-t,#E8F4ED);border-color:var(--green-b,#A9D3BC);color:var(--green-d,#0D4A2B)}
+.tag.amber{background:var(--amber-t,#FDF3DC);border-color:var(--amber-b,#EFD39A);color:var(--amber-i,#7A5205)}
+.empty{padding:40px 20px;text-align:center;border:1px dashed var(--line-3,#d8ccb0);border-radius:14px;color:var(--muted,#5c5240);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink,#2a2418);font-weight:700}
+.loadwrap{display:flex;align-items:center;gap:10px;color:var(--muted,#5c5240);padding:18px 0}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-3,#d8ccb0);border-top-color:var(--accent,#1f5f5b);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+dialog.sheet{border:1px solid var(--line,#e6dcc6);border-radius:14px;padding:20px;width:min(520px,96vw);max-height:92vh;overflow:auto;background:var(--surface,#fffdf8);color:var(--ink,#2a2418);position:relative}
+dialog.sheet::backdrop{background:var(--scrim,rgba(42,36,24,.4))}
+dialog.sheet h2{margin:0 0 4px;font-family:var(--serif);font-size:21px}
+dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transparent;font-size:18px;color:inherit}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
+#toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}
+</style>
+</head>
+<body>
+<div id="nw" data-testid="np-screen"><div class="loadwrap"><span class="spin"></span> Loading</div></div>
+<div id="toast"></div>
+<script src="/engine/screen.js"></script>
+<script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
+<script src="/app/avatar.js"></script>
+<script src="/engine/signin.js"></script>
+<script src="/app/signin-ui.js"></script>
+<script src="/app/one-person.js"></script>
+<script src="/app/accounts-shell.js"></script>
+<script src="/app/rail-bell.js"></script>
+<script src="/engine/locale.js"></script>   <!-- CBLocale: the page's language, direction and formats — the pack the chip's name and the labels read (SCREEN-ID); one home since T2-ENGONCE -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
+<script src="/app/shell.js"></script>
+<script src="/app/page-frame.js"></script>
+<script src="/app/list-ctl.js"></script>   <!-- CBList: the one list control -->
+<script src="/app/kural.js"></script>   <!-- CBKural: the one kural footer band; CBFrame hands it to the shell -->
+<script src="/app/network-panel-app.js"></script>
+<script>
+'use strict';
+(function () {
+  var params = new URLSearchParams(location.search);
+  var API = params.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
+  var host = document.getElementById('nw');
+  var app,
+    frame = CBFrame.mount({
+      app: 'network-panel',
+      kural: 'network',
+      work: host,
+      skeleton: {
+        name: 'Network control panel',
+        icon: 'M12 5a2 2 0 1 0 0 .01M5 19a2 2 0 1 0 0 .01M19 19a2 2 0 1 0 0 .01M12 7v5M12 12l-6 5M12 12l6 5',
+        active: 'installations',
+        sections: [
+          { k: 'installations', label: 'Installations', icon: 'M4 6h16M4 12h16M4 18h16' },
+          { k: 'certificates', label: 'Certificates', icon: 'M6 3h12v18l-6-4-6 4zM9 8h6' }
+        ],
+        onSection: function (section) {
+          if (app) app.go(section);
+        }
+      }
+    });
+  if (!frame.token) {
+    host.innerHTML = '<div class="empty" data-testid="np-signin"><div class="t">Sign in above</div></div>';
+    return;
+  }
+  app = CBNetworkPanel.mount(host, {
+    token: frame.token,
+    base: API,
+    onEnded: function () {
+      CBFrame.ended();
+    }
+  });
+})();
+</script>
+</body>
+</html>

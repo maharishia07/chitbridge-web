@@ -11895,7 +11895,7 @@ function platformScreen() {
     '</span>' +
     '<span style="font-size:var(--fs-1);color:var(--grey);border:1px solid var(--line);border-radius:999px;padding:1px 8px">' +
     tx('operator') +
-    '</span>' +
+    '</span>' + platNetworkPanelLink() +
     '</div>' +
     '<div id="pl_popbar">' +
     platPopBarHTML(ap) +
@@ -12797,6 +12797,14 @@ function platStatsHTML() {
   );
 }
 
+/** the operator's link to the network control panel (a small app; the page itself says, in words, if this installation is not the master) */
+function platNetworkPanelLink() {
+  return (
+    '<a href="/network-panel.html" data-testid="plat-network-panel" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--ink)">' +
+    esc(tx('Network control panel')) +
+    '</a>'
+  );
+}
 function platPopBarHTML(ap) {
   ap = ap || {};
   var live = ap.live_population || 'real';
