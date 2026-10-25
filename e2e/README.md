@@ -35,6 +35,20 @@ operations). Codes come from `public/app/screens.js`; a page with none is UNNUMB
 `tour.json` + `TOUR-FINDINGS.md` (ranked broken · inconsistent · cosmetic + the inventory). On GitHub: Actions → visual-tour (on demand,
 artifact `visual-tour`). The last run's findings: `docs/testing/TOUR-FINDINGS.md`.
 
+## Crossing — trading across installations (CTP pack, 25 Oct 2026)
+
+`e2e/tests/crossing.spec.js` is the SCREEN side of the crossing pack; the headless side (rails, rounds, both databases compared) is chitbridge-api
+`tests/crossing/` (its README says where each runs). Scenario ids are the 25 Oct walk's (`docs/walks/WALK-2026-10-25-IN-AU.md`): R13–R16, G2, G4b/c here;
+the rounds screen, step tracker, first-send confirm, the "Ask for a quote" switch, the unconfirmed-message mark (W18) and the repaint (W14) are `test.fixme`
+with their finding ids — a screen that does not exist is never faked.
+
+- ONE config: the topology (installations, shops, which pair each scenario drives) is the api repo's `tests/crossing/topology.json`, read through
+  `e2e/lib/crossing.cjs` from `CB_API_DIR` (default `../chitbridge-api`). One browser CONTEXT per shop, on that shop's installation origin (single or several).
+- Off by default and in neither default project: `CB_CROSSING=1 CB_API_DIR=<api checkout with tests/crossing> npx playwright test --project=crossing`
+  (add `--headed` to watch). One playwright invocation at a time.
+- Secrets: the tester code is read from the VM over ssh into memory (the api pack's `lib/secret.cjs`); the hard guard refuses any host that does not start with
+  `staging.` or is not in the topology. The specs create only tagged chits (`[CTPX <run>]`), delete nothing, and change no shop setting (R13 cancels its confirm).
+
 ## Shared pieces
 
 - `lib/walk.cjs` — the walk skeleton (steps, shots, show mode, `contextAt`).

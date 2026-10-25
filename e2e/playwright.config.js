@@ -63,6 +63,8 @@ module.exports = defineConfig({
     { name: 'pool', testMatch: /pool\.setup\.js/, use: { ...devices['Desktop Chrome'] } },
     // 1c · SWARM — concurrent global-load simulation over the whole pool (loads pool sessions itself; needs `npm run pool` first)
     { name: 'swarm', testMatch: /swarm\.spec\.js/, use: { ...devices['Desktop Chrome'], viewport: COUNTER } },
+    // 1d · CROSSING — trading across the SIT installations (CTP crossing pack). Opt-in like swarm: in neither default project. Needs CB_CROSSING=1 + the ssh key; contexts are made per shop by e2e/lib/crossing.cjs, so no saved session and no dependency on `setup`.
+    { name: 'crossing', testMatch: /crossing\.spec\.js/, use: { ...devices['Desktop Chrome'], viewport: COUNTER, storageState: undefined } },
     // 2 · flows that reuse the saved session (start signed-in; re-run any one instantly)
     {
       name: 'authed',
@@ -91,7 +93,7 @@ module.exports = defineConfig({
          noauth testMatch below — it is opt-in and must run in neither project by default. Deriving one list from
          the other would quietly start running it. The duplication is real and is the lesser problem; adding a
          noauth spec still means editing both, in the same commit. */
-      testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
+      testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/, /[\\/]crossing\.spec\.js$/,
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
         /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
         /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/,
