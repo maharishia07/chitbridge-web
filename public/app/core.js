@@ -1245,6 +1245,8 @@ function api(key, opts) {
   var o = opts || {};
   var ep = epOf(key);
   if (!ep || ep.m !== 'GET') return apiOnce(key, opts);
+  /* NET-42: { fresh: true } never joins a read already in flight — a read that started BEFORE a write would hand back the answer from before it */
+  if (o.fresh) return apiOnce(key, opts);
 
   var dk;
   try {

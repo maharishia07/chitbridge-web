@@ -14464,7 +14464,12 @@ async function loadSuppliers() {
   const node = document.getElementById('sup_rows');
   if (node) node.innerHTML = '<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try {
-    const reply = await api('supList');
+    /* NET-42 (walk 2026-10-25 W26): after "Add supplier" the list showed the old count until reload. api() hands a second GET of the same URL the read already in
+       flight — and the repaint that follows the confirm had started one BEFORE the add landed, so the "reload" returned the old answer. Now this read is always fresh, and only the
+       NEWEST read may paint (an older answer arriving late is dropped). */
+    const seq = (UI._supSeq = (UI._supSeq || 0) + 1);
+    const reply = await api('supList', { fresh: true });
+    if (seq !== UI._supSeq) return;
     UI.sups = Array.isArray(reply) ? reply : (reply && reply.suppliers) || [];
     UI._supLoading = false;
     paintSupList();
@@ -15177,6 +15182,7 @@ async function selectSupplier(id, silent) {
         UI._supFlow = supStepsFor(x);
       }
     } catch (e) {
+      console.warn('selectSupplier: the catalogue was not read:', (e && e.message) || e);
       UI.supDet = { supplier: x, cat: null, items: [], loading: false, err: e.message };
       supCartRelease();
     }
@@ -15197,10 +15203,24 @@ async function selectSupplier(id, silent) {
  * supplier-hop journey script. Bypassing here is the smaller, contained change.
  */
 async function supCatalogueFull(sid) {
-  const res = await fetch(CFG.API_BASE + '/api/relationships/suppliers/' + encodeURIComponent(sid) + '/catalogue', {
-    cache: 'no-store',
-    headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}
-  });
+  /* NET-45 (walk 2026-10-25 W32): "Could not read their catalogue" with no request reaching the api = the browser's fetch failed before it left. A network error is tried ONCE more, and the reason is
+     logged either way (console.warn), so a repeat can be traced instead of guessed at. */
+  let res;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      res = await fetch(CFG.API_BASE + '/api/relationships/suppliers/' + encodeURIComponent(sid) + '/catalogue', {
+        cache: 'no-store',
+        headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}
+      });
+      break;
+    } catch (netErr) {
+      console.warn('supCatalogueFull: the request failed before it reached the api (attempt ' + attempt + ' of 2): ' + ((netErr && netErr.message) || netErr));
+      if (attempt === 2) throw new Error(tx('Could not reach the server to read their catalogue. Try again.'));
+      await new Promise(function (resolve) {
+        setTimeout(resolve, 700);
+      });
+    }
+  }
   if (!res.ok) {
     let msg = '';
     try {
