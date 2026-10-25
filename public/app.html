@@ -20716,6 +20716,16 @@ function prodPartyEnsure() {
     });
   return null;
 }
+/**
+ * the product screen's tax model: which scheme (GST, VAT…) and whether it splits by STATE (India's CGST + SGST · IGST) — the pack's supply
+ * model decides, not the word "GST" (CX0). CTRY-72 (walk 2026-10-25 W28): a shop whose country has NO pack (HU, DK on SIT) fell back to
+ * 'GST' and then to India's split, so a Hungarian shop read "Tax invoice · same state · CGST + SGST". No pack = no scheme we know: a plain
+ * invoice, one head, no Indian words. ONE rule for the preview and the slab pane.
+ */
+function prodTaxModel(r, P0) {
+  const scheme = String((r && r.scheme) || (P0 && P0.scheme) || (P0 ? 'GST' : '')).toUpperCase();
+  return { scheme: scheme, isGST: P0 ? (P0.supply ? P0.supply === 'state' : scheme === 'GST') : false };
+}
 function prodInvoiceModel(d, pos) {
   try {
     const slabs = cbDefsCached('tax'),
@@ -20767,8 +20777,7 @@ function prodInvoiceModel(d, pos) {
       OTHERC = myC === 'ZZ' ? 'XX' : 'ZZ';
     /* ⭐ CX0: the SPLIT is the pack's supply model (tax.supply 'state' = India's CGST/SGST · IGST; 'border' = one head), not the word "GST" — Australia's scheme is GST too */
     const P0 = (window.CBTaxPacks && CBTaxPacks.packFor && CBTaxPacks.packFor(myC)) || null;
-    const scheme = String(r.scheme || (P0 && P0.scheme) || 'GST').toUpperCase(),
-      isGST = P0 && P0.supply ? P0.supply === 'state' : scheme === 'GST';
+    const { scheme, isGST } = prodTaxModel(r, P0);
     const om = Object.assign({}, om0, { qty });
     /* a line-scope discount is per unit (× qty); an order-level one is a lump on this single-line sample — both come off before tax */
     const line = {
@@ -20807,7 +20816,7 @@ function prodInvoiceModel(d, pos) {
       scheme,
       pos,
       om,
-      title: isGST ? tx('Tax invoice') : txf('{s} invoice', { s: scheme }),
+      title: isGST ? tx('Tax invoice') : scheme ? txf('{s} invoice', { s: scheme }) : tx('Invoice'),
       posWord: pos === 'other' ? (isGST ? tx('other state · IGST') : tx('cross-border')) : isGST ? tx('same state · CGST + SGST') : tx('domestic'),
       seller: {
         name: (party && party.name) || me.display_name || '',
@@ -21497,8 +21506,7 @@ function prodTaxPreviewHTML(d, r) {
     OTHERC = myC === 'ZZ' ? 'XX' : 'ZZ';
   /* ⭐ CX0: the split is the pack's supply model ('state' | 'border'), not the word "GST" — see prodTaxPreview */
   const P0 = (window.CBTaxPacks && CBTaxPacks.packFor && CBTaxPacks.packFor(myC)) || null;
-  const scheme = String(r.scheme || (P0 && P0.scheme) || 'GST').toUpperCase(),
-    isGST = P0 && P0.supply ? P0.supply === 'state' : scheme === 'GST';
+  const { scheme, isGST } = prodTaxModel(r, P0);
   const line = {
     name: pName(d),
     qty: 1,
