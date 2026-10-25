@@ -72,6 +72,12 @@ test.describe('Crossing · screens (IN <-> AU, Grundfos)', () => {
       const sending = page.waitForRequest((r) => /\/api\/chits\/send$/.test(r.url()) && r.method() === 'POST');
       const answered = page.waitForResponse((r) => /\/api\/chits\/send$/.test(r.url()) && r.request().method() === 'POST');
       await nextStep(page).click(); // Send order
+      /* R16c (RAIL-117, DECISIONS 13:50): a send to another installation asks first — who, their money, "a quotation, not a sale" */
+      const ask = page.getByTestId('quote-cross-confirm');
+      await expect(ask, 'no confirm before a send to another ChitBridge (a money promise)').toBeVisible(SETTLE);
+      await expect(ask).toContainText(seller.currency);
+      await expect(ask).toContainText(/quotation, not a sale/i);
+      await page.getByTestId('confirm-ok').click();
       const body = JSON.parse((await sending).postData() || '{}');
       expect(body.purpose, 'the order is purpose order').toBe('order');
       expect(body.business_json && body.business_json.currency, 'the send must STATE the cart\'s currency (W24 / UX-121)').toBe(seller.currency);
@@ -112,6 +118,7 @@ test.describe('Crossing · screens (IN <-> AU, Grundfos)', () => {
     const page = opened.page;
     try {
       await page.getByTestId('nav-suppliers').click();
+      await page.getByTestId('sup-add-input').focus(); // the Where picker loads the installations on focus (app.html supWhereLoad)
       const where = page.getByTestId('sup-where');
       await expect(where, 'the Where picker did not offer another installation').toBeVisible({ timeout: 30000 });
       await where.selectOption(flow.dbKeyOf({ topo }, 'sit-grund'));
@@ -169,14 +176,143 @@ test.describe('Crossing · screens (IN <-> AU, Grundfos)', () => {
   });
 });
 
-test.describe('Crossing · screens that do not exist yet or are known open (kept as fixme, not faked)', () => {
-  test.fixme('[CTPX-R17..R22] the rounds screen: a priced round, accept / counter / reject, "quotation" wording — WALK-10-25 W25', async () => {
-    // Today the rounds are driven only through /api/chits/:id/proposals (api pack R17-R22, R28, G3, G4e-f). When the screen lands:
-    // the seller prices a round, the buyer sees "Quotation" with the seller's money, Counter takes TEXT (money stays null), Accept makes it a pro-forma on both screens.
+/** a quotation made through the api, as the screens make it: the buyer orders from the remote catalogue in the seller's money, the seller prices it. → { chitId, proposalId, round } */
+async function pricedQuote(buyerKey, sellerKey, price, qty) {
+  const { topo, flow } = X.pack();
+  const { stub, seller } = await supplierRow(buyerKey, sellerKey);
+  const buyer = await X.signedIn(buyerKey);
+  const sellerApi = await X.signedIn(sellerKey);
+  const cat = await flow.catalogue(buyer, stub.supplier_entity_id);
+  const item = flow.pickItem(cat.items, (seller.fixture || {}).item_match);
+  expect(item, 'the seller\'s catalogue has no item to quote').toBeTruthy();
+  const ctx = { topo, runId: RUN, subject: (t) => TAG + ' ' + t };
+  const sent = await buyer.post('/api/chits/send', flow.orderBody(ctx, stub, seller, item, qty, { currency: seller.currency, subject: 'rounds screen', ref: 'rs' + Date.now().toString(36) }));
+  expect(sent.ok && sent.body.chit_id, 'the order was not sent: ' + JSON.stringify(sent.body).slice(0, 200)).toBeTruthy();
+  const chitId = sent.body.chit_id;
+  await expect.poll(async () => (await sellerApi.get('/api/chits/' + chitId)).status, { timeout: 120000, intervals: [3000], message: 'the order never reached the seller' }).toBe(200);
+  const quote = await sellerApi.post('/api/chits/' + chitId + '/proposals', { lines: [{ line_index: 0, price, quantity: qty }], note: TAG + ' priced for the rounds screen' });
+  expect(quote.ok && quote.body.proposal_id, 'the seller could not price it: ' + JSON.stringify(quote.body).slice(0, 200)).toBeTruthy();
+  await expect
+    .poll(
+      async () => {
+        const r = await buyer.get('/api/chits/' + chitId + '/proposals');
+        return ((r.body && r.body.proposals) || []).some((p) => p.proposal_id === quote.body.proposal_id);
+      },
+      { timeout: 120000, intervals: [3000], message: 'the priced round never reached the buyer' }
+    )
+    .toBe(true);
+  return { chitId, proposalId: quote.body.proposal_id, round: quote.body.round };
+}
+
+/** open a chit in the pane the way a click on its row does (app.html openChit), without paging the list to find the row */
+async function openChitPane(page, chitId) {
+  await page.waitForFunction(() => typeof window.openChit === 'function', null, { timeout: 30000 });
+  /* the list opens its first row when it lands; open ours after that, or the list's auto-open replaces it */
+  await expect(page.locator('[data-testid^="chit-status-"]').first(), 'the chit list never painted').toBeVisible(SETTLE);
+  await page.evaluate((id) => window.openChit(id), chitId);
+  await expect.poll(() => page.evaluate(() => (typeof UI !== 'undefined' && UI.detail ? String(UI.detail.id) : null)) /* UI is a top-level binding, not window.UI */, { timeout: 30000, message: 'the pane did not open the chit' }).toBe(String(chitId));
+}
+
+test.describe('Crossing · the quote screens (RAIL-117/118/119, web fix/crossing-walk-web)', () => {
+  test('[CTPX-R17..R22 + R21] a priced round reads "Quotation", the tracker says priced, Accept asks first and makes it the pro-forma', async ({ browser }) => {
+    const q = await pricedQuote('chennai', 'sydney', 11.5, 4);
+    const opened = await X.openAs(browser, 'chennai');
+    const page = opened.page;
+    try {
+      await openChitPane(page, q.chitId);
+      await expect(page.getByTestId('quotes'), 'the Rounds section is not on the chit').toBeVisible(SETTLE);
+      await expect(page.getByTestId('quote-jurisdiction'), 'the quotation wording is missing').toContainText(/Quotation/i, SETTLE);
+      await expect(page.getByTestId('quote-money-' + q.round), 'the round is not in the seller\'s money').toContainText(MONEY_WORD.AUD, SETTLE);
+      await expect(page.getByTestId('quote-tracker'), 'no step tracker').toBeVisible();
+      await expect(page.getByTestId('quote-step-priced')).toHaveAttribute('data-step', 'done');
+      await expect(page.getByTestId('quote-step-accepted')).toHaveAttribute('data-step', 'now');
+      await expect(page.getByTestId('quote-counter-' + q.round), 'the buyer has no Counter').toBeVisible();
+      await expect(page.getByTestId('quote-reject-' + q.round), 'the buyer has no Reject').toBeVisible();
+      await page.getByTestId('quote-accept-' + q.round).click();
+      await expect(page.getByTestId('confirm-ok'), 'Accept did not ask first (a money promise)').toBeVisible(SETTLE);
+      await page.getByTestId('confirm-ok').click();
+      await expect(page.getByTestId('quote-step-accepted'), 'the tracker did not reach accepted').toHaveAttribute('data-step', 'done', SETTLE);
+      await expect(page.getByTestId('quote-jurisdiction'), 'after accept the wording must say pro-forma').toContainText(/Pro-forma/i, SETTLE);
+      const sellerApi = await X.signedIn('sydney');
+      await expect
+        .poll(
+          async () => {
+            const r = await sellerApi.get('/api/chits/' + q.chitId + '/proposals');
+            return (((r.body && r.body.proposals) || []).find((p) => p.proposal_id === q.proposalId) || {}).status;
+          },
+          { timeout: 120000, intervals: [3000], message: 'the accept never reached the seller' }
+        )
+        .toBe('accepted');
+    } finally {
+      await opened.context.close();
+    }
   });
-  test.fixme('[CTPX-R21] the step tracker for a cross-installation order (request -> quotation -> pro-forma) — WALK-10-25 W25', async () => {});
-  test.fixme('[CTPX-R16c] a confirm before the FIRST cross-installation send names the other installation and says "they reprice" — WALK-10-25 (open, web)', async () => {});
-  test.fixme('[CTPX-G3] a web switch for "Ask for a quote" (deal_type rfq) on a same-installation order — WALK-10-25 W25', async () => {});
-  test.fixme('[CTPX-R8] a message the far side has not confirmed is marked unconfirmed on the sender\'s screen — WALK-10-25 W18 (the api answers ctp_unconfirmed; app.html never reads it)', async () => {});
-  test.fixme('[CTPX-R1] an open chit repaints when the far side\'s status arrives — WALK-10-25 W14', async () => {});
+
+  test('[CTPX-R29] Reject asks first; Cancel leaves the round open', async ({ browser }) => {
+    const q = await pricedQuote('chennai', 'sydney', 12, 2);
+    const opened = await X.openAs(browser, 'chennai');
+    const page = opened.page;
+    try {
+      await openChitPane(page, q.chitId);
+      await page.getByTestId('quote-reject-' + q.round).click(SETTLE);
+      await expect(page.getByTestId('confirm-cancel'), 'Reject did not ask first').toBeVisible(SETTLE);
+      await page.getByTestId('confirm-cancel').click();
+      await expect(page.getByTestId('quote-accept-' + q.round), 'a cancelled Reject must leave the round open').toBeVisible(SETTLE);
+    } finally {
+      await opened.context.close();
+    }
+  });
+
+  test('[CTPX-G3] same installation: "Ask for a quote" is off by default; ticked, the order is sent as deal_type rfq', async ({ browser }) => {
+    const { page, context } = await browseAndAdd(browser, 'grund-plant', 'grund-hu');
+    try {
+      await nextStep(page).click(); // Check out -> Details
+      const sw = page.getByTestId('sup-ask-quote');
+      await expect(sw, 'no "Ask for a quote" switch on a same-installation order').toBeVisible(SETTLE);
+      await expect(sw, 'the cart must stay the default (switch off)').not.toBeChecked();
+      await sw.check();
+      await page.getByTestId('sup-subject').fill(TAG + ' G3 ask for a quote');
+      await nextStep(page).click(); // Details -> Review
+      const sending = page.waitForRequest((r) => /\/api\/chits\/send$/.test(r.url()) && r.method() === 'POST');
+      await nextStep(page).click(); // Send
+      const body = JSON.parse((await sending).postData() || '{}');
+      expect(body.business_json && body.business_json.deal_type, 'the ticked switch must send deal_type rfq').toBe('rfq');
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('[CTPX-R1] an open chit repaints when the far side moves its status (no reload)', async ({ browser }) => {
+    test.setTimeout(300000); // the far side's answer rides the ctp-return cron (once a minute) and then the push
+    const { topo, flow } = X.pack();
+    const { stub, seller } = await supplierRow('chennai', 'sydney');
+    const buyer = await X.signedIn('chennai');
+    const sellerApi = await X.signedIn('sydney');
+    const ctx = { topo, runId: RUN, subject: (t) => TAG + ' ' + t };
+    const sent = await buyer.post('/api/chits/send', flow.generalBody(ctx, stub, seller, 'R1 repaint'));
+    expect(sent.ok && sent.body.chit_id, 'the chit was not sent').toBeTruthy();
+    const chitId = sent.body.chit_id;
+    await expect.poll(async () => (await sellerApi.get('/api/chits/' + chitId)).status, { timeout: 120000, intervals: [3000] }).toBe(200);
+    const opened = await X.openAs(browser, 'chennai');
+    const page = opened.page;
+    try {
+      await openChitPane(page, chitId);
+      await expect(page.locator('#detailpane'), 'the chit did not open').toBeVisible(SETTLE);
+      /* W14's measure: the Status tab's Lifecycle count (the header word is the sender's OWN state, it does not move) */
+      await page.getByTestId('dtab-status').click();
+      const life = page.locator('#detailpane .mh-t', { hasText: 'Lifecycle' });
+      await expect(life).toBeVisible(SETTLE);
+      const countOf = async () => Number(((await life.textContent()) || '').replace(/\D+/g, '')) || 0;
+      const before = await countOf();
+      const moved = await sellerApi.put('/api/chits/' + chitId + '/status', { status: 'in_progress', note: TAG + ' R1 screen' });
+      expect(moved.ok, 'the seller could not move the status').toBeTruthy();
+      await expect.poll(countOf, { timeout: 200000, intervals: [3000], message: 'the open chit did not repaint the far side\'s status (W14): Lifecycle stayed ' + before }).toBeGreaterThan(before);
+    } finally {
+      await opened.context.close();
+    }
+  });
+});
+
+test.describe('Crossing · known open (kept as fixme, not faked)', () => {
+  test.fixme('[CTPX-R8] a message the far side has not confirmed is marked unconfirmed (rt-unconfirmed): needs the far installation down (the api pack R8 --allow-outage); not run from the browser', async () => {});
 });
