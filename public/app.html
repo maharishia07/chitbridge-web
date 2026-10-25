@@ -3784,7 +3784,8 @@ const MSG = {
   // compose
   draftSaved: () => `Draft saved ✓`,
   chitBridged: (copies, self) =>
-    self ? `Chit bridged — ${copies} copies on the thread (${self} to you) ✓` : `Chit bridged — ${copies || 1} copies on the thread ✓`,
+    /* W30: one copy is "copy" */
+    self ? `Chit bridged — ${copies} ${copies === 1 ? 'copy' : 'copies'} on the thread (${self} to you) ✓` : `Chit bridged — ${copies || 1} ${(copies || 1) === 1 ? 'copy' : 'copies'} on the thread ✓`,
   schemaDefault: () => `Using a default chit template — your chit fields aren't set up yet.`,
   catalogueLoadErr: () => `Couldn't load your catalogue — reopen Compose to retry.`,
   // roster / catalogue / suppliers / settings / network
@@ -15844,7 +15845,8 @@ async function addSupplier() {
     /* ⚠️ SAY WHAT THEY WILL AND WILL NOT BE ABLE TO DO, before the row exists rather than after somebody goes
        looking for the missing button. "Not on ChitBridge" is a sentence about capability, not a status badge. */
     confirmAsk(
-      txf('Add {name} as a local supplier?', { name: '<b>' + esc(bid) + '</b>' }),
+      /* W31: confirmAsk prints its title as TEXT (esc), so a <b> here showed as raw tags; the name is plain */
+      txf('Add {name} as a local supplier?', { name: bid }),
       (note ? '<div style="color:var(--warn-3);margin-bottom:8px">' + note + '</div>' : '') +
         tx('They are <b>not on the network</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.') +
         '<br><br>' +
@@ -15862,6 +15864,28 @@ async function addSupplier() {
       }
     );
   };
+  /* W27 (walk 2026-10-25): the search already found this id — use ITS confirm, which names the shop and carries the address of the
+     installation it lives on, instead of a second confirm that names the typed id and looks it up only here. */
+  const lower = bid.toLowerCase();
+  const found = (UI._supSugg || []).findIndex(function (e) {
+    return [e.user_id, e.bridge_id, e.address].some(function (v) { return v && String(v).toLowerCase() === lower; });
+  });
+  if (found >= 0) {
+    supPick(found);
+    return;
+  }
+  /* W31: searching ANOTHER installation and finding nobody is not "they are off the network". Never offer the off-network row from
+     here: say where we looked and how to find them. */
+  const where = UI._supWhere || 'here';
+  if (where !== 'here') {
+    const place = (UI._supPlaces || []).find(function (p) { return p.installation_key === where; });
+    if (x)
+      x.textContent = txf('No business called {name} on {where}. Check the User ID, or type their shop name to search.', {
+        name: bid,
+        where: where === 'all' ? tx('any installation') : (place && place.label) || where
+      });
+    return;
+  }
   if (!isUserId(bid)) {
     offerLocal(null);
     return;
