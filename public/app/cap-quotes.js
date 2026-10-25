@@ -1,6 +1,7 @@
 /* app/cap-quotes.js — QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown.
  * OWNS      CBQuotes.mount(host, chitId) · refresh(chitId) · steps(host, ...) · askCross(party, onYes) · crossOf(chit) · CB_QUOTE_EP
  * CALLED BY app.html (the chit pane's Rounds section, the first-send confirm, the compose switch) · app/chit-sheet.js quotesMount (crm.html#/chit, tasks.html — F8) · tasks.html?view=quotes is ORD-68, not built yet
+ * FLOW      mount(host, chitId) ──▶ load: GET chit + GET proposals ──▶ paint (banner · tracker · rounds · buttons · form) ──▶ accept / reject / send ──▶ writeRound: confirm ──▶ steps ──▶ load again ──▶ paint
  * CARD      01-rail-core-the-chit/chit-proposal
  *
  * Athi, 2026-10-25 (DECISIONS 13:10 · 13:50 · 14:10): a price from another installation or in another currency is a QUOTATION until the seller
@@ -28,73 +29,89 @@
 
   var STATE = {}; /* chit id -> { host, chit, rounds, form, steps } */
 
-  function T(s) {
-    return typeof root.tx === 'function' ? root.tx(s) : s;
+  function translate(text) {
+    return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function E(s) {
+  function escapeHtml(text) {
     return typeof root.esc === 'function'
-      ? root.esc(s)
-      : String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+      ? root.esc(text)
+      : String(text == null ? '' : text).replace(/[&<>"']/g, function (character) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
         });
   }
-  function fill(s, v) {
-    return String(s).replace(/\{(\w+)\}/g, function (_, k) {
-      return v[k] == null ? '' : v[k];
+  function fill(template, values) {
+    return String(template).replace(/\{(\w+)\}/g, function (_, field) {
+      return values[field] == null ? '' : values[field];
     });
   }
-  function call(key, o) {
+  function call(key, options) {
     /* app.html declares `const EP` at the top of a classic script: a global BINDING, not a window property, so root.EP is undefined there and
        the rounds were never registered ("Could not read the rounds" on SIT, 25 Oct). Reach it by name, as core.js epOf does; a page that puts
        EP on window still works. */
-    var eps = typeof EP !== 'undefined' ? EP : root.EP; // eslint-disable-line no-undef
-    if (eps) for (var k in CB_QUOTE_EP) if (!eps[k]) eps[k] = CB_QUOTE_EP[k];
-    return root.api(key, o);
+    var endpoints = typeof EP !== 'undefined' ? EP : root.EP; // eslint-disable-line no-undef
+    if (endpoints) for (var endpointKey in CB_QUOTE_EP) if (!endpoints[endpointKey]) endpoints[endpointKey] = CB_QUOTE_EP[endpointKey];
+    return root.api(key, options);
   }
   /** a country (code or name) as a person reads it: "AU" -> Australia; a name stays */
-  function countryName(c) {
-    var v = String(c || '').trim();
-    if (!v) return '';
-    if (/^[A-Za-z]{2}$/.test(v)) {
+  function countryName(country) {
+    var text = String(country || '').trim();
+    if (!text) return '';
+    if (/^[A-Za-z]{2}$/.test(text)) {
       try {
-        return new Intl.DisplayNames(['en'], { type: 'region' }).of(v.toUpperCase()) || v;
+        return new Intl.DisplayNames(['en'], { type: 'region' }).of(text.toUpperCase()) || text;
       } catch (e) {
-        return v;
+        return text;
       }
     }
-    return v;
+    return text;
   }
 
   /* ── what the chit is: who sells, who buys, where ─────────────────────────────────────────────── */
   /** { seller: bool (I price), other: name, jurisdiction, rfq, currency } from the chit read (GET /api/chits/:id) */
-  function readChit(r) {
-    var h = (r && r.header) || {},
-      bj = h.business_json || {},
-      me = String(h.entity_id || ''),
-      sender = String(h.sender_entity_id || ''),
-      orderLike = /^(order|offer)$/.test(String(h.purpose || '')),
-      iSent = sender === me,
-      seller = orderLike ? !iSent : iSent,
-      recips = (h.all_recipients || []).filter(function (x) {
-        return x && String(x.entity_id) !== sender;
-      }),
-      senderName = h.sender_entity_display_name || '',
-      other = iSent ? (recips[0] && recips[0].display_name) || '' : senderName;
-    var det = (r && r.detail) || {};
-    var set = Array.isArray(r && r.live_set) ? r.live_set : (det.line_items || []).map(function (li) { return { live: li }; });
+  function readChit(chitRead) {
+    var read = chitRead || {},
+      header = read.header || {},
+      business = header.business_json || {},
+      detail = read.detail || {};
     return {
-      id: h.chit_id,
-      seller: seller,
-      other: other || T('the other business'),
-      jurisdiction: bj.jurisdiction || null,
-      rfq: bj.deal_type === 'rfq',
-      currency: det.currency_code || h.currency_code || (h.summary_json && h.summary_json.currency_code) || '',
-      unconfirmed: (r && r.ctp_unconfirmed) || null,
-      lines: set.map(function (e, i) {
-        var li = (e && (e.live || e.original)) || {};
-        return { index: i, line_id: li.line_id || null, name: li.particulars || T('Item'), quantity: li.quantity, price: li.price, removed: !!(e && e.removed) };
-      })
+      id: header.chit_id,
+      seller: sellerOf(header),
+      other: otherOf(header) || translate('the other business'),
+      jurisdiction: business.jurisdiction || null,
+      rfq: business.deal_type === 'rfq',
+      currency: currencyOf(header, detail),
+      unconfirmed: read.ctp_unconfirmed || null,
+      lines: linesOf(read, detail)
     };
+  }
+  /** did this installation's entity send the chit? */
+  function sentByMe(header) {
+    return String(header.sender_entity_id || '') === String(header.entity_id || '');
+  }
+  /** do I price it? An order or offer is priced by whoever did not send it; anything else by the sender */
+  function sellerOf(header) {
+    var orderLike = /^(order|offer)$/.test(String(header.purpose || ''));
+    return orderLike ? !sentByMe(header) : sentByMe(header);
+  }
+  /** the other business: the sender when I received it, else the first recipient who is not the sender */
+  function otherOf(header) {
+    if (!sentByMe(header)) return header.sender_entity_display_name || '';
+    var sender = String(header.sender_entity_id || '');
+    var recipients = (header.all_recipients || []).filter(function (recipient) {
+      return recipient && String(recipient.entity_id) !== sender;
+    });
+    return (recipients[0] && recipients[0].display_name) || '';
+  }
+  function currencyOf(header, detail) {
+    return detail.currency_code || header.currency_code || (header.summary_json && header.summary_json.currency_code) || '';
+  }
+  /** the chit's lines as the rounds name them: the live set when the read has one, else the detail's lines */
+  function linesOf(read, detail) {
+    var liveSet = Array.isArray(read.live_set) ? read.live_set : (detail.line_items || []).map(function (line) { return { live: line }; });
+    return liveSet.map(function (entry, position) {
+      var line = (entry && (entry.live || entry.original)) || {};
+      return { index: position, line_id: line.line_id || null, name: line.particulars || translate('Item'), quantity: line.quantity, price: line.price, removed: !!(entry && entry.removed) };
+    });
   }
   /** does this chit need the rounds at all? A cross-installation or RFQ chit says so on its header; anything else is exactly as before (DECISIONS 14:10) */
   function crossOf(chit) {
@@ -104,116 +121,119 @@
   /* ── the words ────────────────────────────────────────────────────────────────────────────────── */
   /** the jurisdiction line, filled from the data: Quotation only … / Pro-forma */
   function wordsOf(chit, rounds) {
-    var j = Object.assign({}, chit.jurisdiction || {});
-    var withJ = rounds.filter(function (r) { return r.jurisdiction; });
-    if (withJ.length) Object.assign(j, withJ[withJ.length - 1].jurisdiction);
-    var agreed = rounds.some(function (r) { return r.status === 'accepted' && r.kind === 'pro_forma'; });
-    if (agreed) return { tone: 'ok', text: T('Pro-forma — agreed by both sides') };
-    if (j.document !== 'quotation') return { tone: 'plain', text: '' };
+    var jurisdiction = Object.assign({}, chit.jurisdiction || {});
+    var withJ = rounds.filter(function (round) { return round.jurisdiction; });
+    if (withJ.length) Object.assign(jurisdiction, withJ[withJ.length - 1].jurisdiction);
+    var agreed = rounds.some(function (round) { return round.status === 'accepted' && round.kind === 'pro_forma'; });
+    if (agreed) return { tone: 'ok', text: translate('Pro-forma — agreed by both sides') };
+    if (jurisdiction.document !== 'quotation') return { tone: 'plain', text: '' };
     /* F12: never print an installation KEY as a country ("sit-au rules apply"); before the first priced round the seller's country may be unset */
-    var seller = countryName(j.seller_country) || T('the seller’s');
-    var buyer = countryName(j.buyer_country);
-    var tail = buyer ? fill(T('duties and taxes in {country} not included'), { country: buyer }) : T('your duties and taxes are not included');
-    return { tone: 'warn', text: fill(T('Quotation only — {seller} rules apply; {tail}'), { seller: seller, tail: tail }) };
+    var seller = countryName(jurisdiction.seller_country) || translate('the seller’s');
+    var buyer = countryName(jurisdiction.buyer_country);
+    var tail = buyer ? fill(translate('duties and taxes in {country} not included'), { country: buyer }) : translate('your duties and taxes are not included');
+    return { tone: 'warn', text: fill(translate('Quotation only — {seller} rules apply; {tail}'), { seller: seller, tail: tail }) };
   }
   var KIND = { request: 'Request', pro_forma: 'Quotation', change: 'Change', terms: 'Terms' };
   var STATUS = { proposed: 'Waiting', accepted: 'Agreed', rejected: 'Rejected', countered: 'Answered with a request', superseded: 'Replaced' };
 
   /* ── the step tracker (a sequence, not a spinner) ─────────────────────────────────────────────── */
-  function stepLi(label, st, tid) {
-    var mark = st === 'done' ? '✓' : st === 'now' ? '…' : '○';
-    return '<li data-testid="' + tid + '" data-step="' + st + '"><span aria-hidden="true">' + mark + '</span> ' + E(label) + '</li>';
+  function stepLi(label, state, testId) {
+    var mark = state === 'done' ? '✓' : state === 'now' ? '…' : '○';
+    return '<li data-testid="' + testId + '" data-step="' + state + '"><span aria-hidden="true">' + mark + '</span> ' + escapeHtml(label) + '</li>';
   }
   /** the tracker ON the chit, read from the rounds and the unconfirmed mark: Request sent · Reached · Priced · Accepted */
-  function trackerHTML(chit, rounds) {
-    var priced = rounds.some(function (r) { return r.kind === 'pro_forma' || r.kind === 'change'; });
-    var agreed = rounds.some(function (r) { return r.status === 'accepted'; });
-    var waiting = chit.unconfirmed;
+  /** the "Reached …" step, or "Waiting for …" while the other installation has not confirmed */
+  function reachedStep(chit) {
     var where = (chit.jurisdiction && (chit.chit_installation || chit.jurisdiction.seller_installation || chit.jurisdiction.buyer_installation)) || chit.other;
-    var reached = waiting
-      ? stepLi(fill(T('Waiting for {where} — not delivered yet'), { where: where }), 'now', 'quote-step-reached')
-      : stepLi(fill(T('Reached {name}'), { name: chit.other }), 'done', 'quote-step-reached');
-    var out = [stepLi(chit.seller ? T('Request received') : T('Request sent'), 'done', 'quote-step-sent'), reached];
-    out.push(stepLi(chit.seller ? T('You price it') : fill(T('{name} prices it (a quotation)'), { name: chit.other }), priced ? 'done' : waiting ? 'todo' : 'now', 'quote-step-priced'));
-    out.push(stepLi(chit.seller ? T('They accept — it becomes the pro-forma') : T('You accept — it becomes the pro-forma'), agreed ? 'done' : priced ? 'now' : 'todo', 'quote-step-accepted'));
-    return '<ol class="cq-steps" data-testid="quote-tracker" aria-label="' + E(T('Where this quotation stands')) + '" style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' + out.join('') + '</ol>';
+    return chit.unconfirmed
+      ? stepLi(fill(translate('Waiting for {where} — not delivered yet'), { where: where }), 'now', 'quote-step-reached')
+      : stepLi(fill(translate('Reached {name}'), { name: chit.other }), 'done', 'quote-step-reached');
+  }
+  function trackerHTML(chit, rounds) {
+    var priced = rounds.some(function (round) { return round.kind === 'pro_forma' || round.kind === 'change'; });
+    var agreed = rounds.some(function (round) { return round.status === 'accepted'; });
+    var waiting = chit.unconfirmed;
+    var out = [stepLi(chit.seller ? translate('Request received') : translate('Request sent'), 'done', 'quote-step-sent'), reachedStep(chit)];
+    out.push(stepLi(chit.seller ? translate('You price it') : fill(translate('{name} prices it (a quotation)'), { name: chit.other }), priced ? 'done' : waiting ? 'todo' : 'now', 'quote-step-priced'));
+    out.push(stepLi(chit.seller ? translate('They accept — it becomes the pro-forma') : translate('You accept — it becomes the pro-forma'), agreed ? 'done' : priced ? 'now' : 'todo', 'quote-step-accepted'));
+    return '<ol class="cq-steps" data-testid="quote-tracker" aria-label="' + escapeHtml(translate('Where this quotation stands')) + '" style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' + out.join('') + '</ol>';
   }
   /**
    * steps(host, { name, where }) — the live steps of ONE action that crosses to another installation (DECISIONS 13:50): Contacting … · Sent · Waiting for … · Answered.
    * Returns { sent(), waiting(), answered(), failed(words) }; each paints into host (an element) and says the stage to a screen reader.
    */
-  function steps(host, who) {
+  function steps(host, party) {
     var el = typeof host === 'string' ? document.getElementById(host) : host;
     var names = [
-      fill(T('Contacting {name} on {where}'), { name: who.name, where: who.where || T('their ChitBridge') }),
-      T('Sent'),
-      fill(T('Waiting for {name}’s answer'), { name: who.name }),
-      T('Answered')
+      fill(translate('Contacting {name} on {where}'), { name: party.name, where: party.where || translate('their ChitBridge') }),
+      translate('Sent'),
+      fill(translate('Waiting for {name}’s answer'), { name: party.name }),
+      translate('Answered')
     ];
-    var at = 0;
+    var stage = 0;
     function paint(failedWords) {
       if (!el) return;
       el.setAttribute('role', 'status');
       el.setAttribute('data-testid', 'quote-steps');
       el.innerHTML =
         '<ol style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' +
-        names.map(function (n, i) { return stepLi(n, failedWords && i === at ? 'now' : i < at ? 'done' : i === at ? 'now' : 'todo', 'quote-steps-' + i); }).join('') +
-        '</ol>' + (failedWords ? '<div data-tone="error" data-testid="quote-steps-failed">' + E(failedWords) + '</div>' : '');
+        names.map(function (label, position) { return stepLi(label, failedWords && position === stage ? 'now' : position < stage ? 'done' : position === stage ? 'now' : 'todo', 'quote-steps-' + position); }).join('') +
+        '</ol>' + (failedWords ? '<div data-tone="error" data-testid="quote-steps-failed">' + escapeHtml(failedWords) + '</div>' : '');
     }
     paint();
     return {
-      sent: function () { at = 1; paint(); },
-      waiting: function () { at = 2; paint(); },
-      answered: function () { at = 3; paint(); },
-      failed: function (words) { paint(words || T('That did not go through — try again')); }
+      sent: function () { stage = 1; paint(); },
+      waiting: function () { stage = 2; paint(); },
+      answered: function () { stage = 3; paint(); },
+      failed: function (words) { paint(words || translate('That did not go through — try again')); }
     };
   }
 
   /* ── the confirm before the FIRST send to a business on another installation (money promise) ── */
   function askCross(party, onYes, onNo) {
-    var ask = typeof root.confirmAsk === 'function' ? root.confirmAsk : typeof root.CBConfirm === 'function' ? root.CBConfirm : null;
-    if (!ask) return; /* no dialog on the page = nothing sent (never confirm()) */
+    var askConfirm = typeof root.confirmAsk === 'function' ? root.confirmAsk : typeof root.CBConfirm === 'function' ? root.CBConfirm : null;
+    if (!askConfirm) return; /* no dialog on the page = nothing sent (never confirm()) */
     var seller = countryName(party.country);
     var body =
-      '<div data-testid="quote-cross-confirm"><b>' + E(party.name) + '</b> ' +
-      E(fill(T('is on another ChitBridge{where}.'), { where: party.where ? ' (' + party.where + (seller ? ', ' + seller : '') + ')' : seller ? ' (' + seller + ')' : '' })) +
+      '<div data-testid="quote-cross-confirm"><b>' + escapeHtml(party.name) + '</b> ' +
+      escapeHtml(fill(translate('is on another ChitBridge{where}.'), { where: party.where ? ' (' + party.where + (seller ? ', ' + seller : '') + ')' : seller ? ' (' + seller + ')' : '' })) +
       '<ul style="margin:8px 0 0;padding-inline-start:18px">' +
-      (party.currency ? '<li>' + E(fill(T('Their prices are in {cur}.'), { cur: party.currency })) + '</li>' : '') +
-      (seller ? '<li>' + E(fill(T('{country} law and tax apply.'), { country: seller })) + '</li>' : '') +
-      (party.buyerCountry ? '<li>' + E(fill(T('{country}’s import duty and taxes are not included.'), { country: countryName(party.buyerCountry) })) + '</li>' : '') +
-      '<li>' + E(T('A quotation, not a sale. Nothing binds until you accept.')) + '</li></ul></div>';
-    ask(fill(T('Ask {name} for a quote?'), { name: party.name }), body, T('Send'), onYes, false, onNo);
+      (party.currency ? '<li>' + escapeHtml(fill(translate('Their prices are in {cur}.'), { cur: party.currency })) + '</li>' : '') +
+      (seller ? '<li>' + escapeHtml(fill(translate('{country} law and tax apply.'), { country: seller })) + '</li>' : '') +
+      (party.buyerCountry ? '<li>' + escapeHtml(fill(translate('{country}’s import duty and taxes are not included.'), { country: countryName(party.buyerCountry) })) + '</li>' : '') +
+      '<li>' + escapeHtml(translate('A quotation, not a sale. Nothing binds until you accept.')) + '</li></ul></div>';
+    askConfirm(fill(translate('Ask {name} for a quote?'), { name: party.name }), body, translate('Send'), onYes, false, onNo);
   }
 
   /* ── reading ──────────────────────────────────────────────────────────────────────────────────── */
   function load(id) {
-    var S = STATE[id];
+    var view = STATE[id];
     return Promise.all([call('chit', { params: { id: id } }), call('quoteList', { params: { id: id } })]).then(function (res) {
       if (!STATE[id]) return null;
-      S.chit = readChit(res[0]);
-      S.rounds = (res[1] && res[1].proposals) || [];
-      S.migrated = !res[1] || res[1].migrated !== false;
-      S.err = null;
-      return S;
+      view.chit = readChit(res[0]);
+      view.rounds = (res[1] && res[1].proposals) || [];
+      view.migrated = !res[1] || res[1].migrated !== false;
+      view.err = null;
+      return view;
     });
   }
   function paint(id) {
-    var S = STATE[id];
-    if (!S || !S.host || !S.host.isConnected) return;
-    S.host.innerHTML = html(S);
+    var view = STATE[id];
+    if (!view || !view.host || !view.host.isConnected) return;
+    view.host.innerHTML = html(view);
   }
 
   /** has the person got a form open here? A refresh then leaves the screen alone */
-  function formOpen(S) {
-    return !!(S.host && S.host.querySelector('[data-quote-form]'));
+  function formOpen(view) {
+    return !!(view.host && view.host.querySelector('[data-quote-form]'));
   }
   /** refresh(chitId) — a return-path event arrived: read again and repaint, unless a form is being typed in */
   function refresh(id) {
-    var S = STATE[String(id)];
-    if (!S || !S.host || !S.host.isConnected || formOpen(S) || S.busy) return Promise.resolve(false);
+    var view = STATE[String(id)];
+    if (!view || !view.host || !view.host.isConnected || formOpen(view) || view.busy) return Promise.resolve(false);
     return load(String(id))
       .then(function () {
-        if (!formOpen(S)) paint(String(id));
+        if (!formOpen(view)) paint(String(id));
         return true;
       })
       .catch(function (e) {
@@ -227,7 +247,7 @@
     if (!el) return Promise.resolve(null);
     STATE[id] = { host: el, chit: null, rounds: [], form: null, busy: false };
     el.setAttribute('data-testid', 'quotes');
-    el.innerHTML = '<div class="sec">' + E(T('Rounds')) + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + E(T('Reading…')) + '</div>';
+    el.innerHTML = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + escapeHtml(translate('Reading…')) + '</div>';
     return load(id)
       .then(function () {
         paint(id);
@@ -236,222 +256,247 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + E(T('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + E(T('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + E(id) + '\')">' + E(T('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + escapeHtml(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + escapeHtml(id) + '\')">' + escapeHtml(translate('Try again')) + '</button></div>';
         return null;
       });
   }
 
   /* ── painting ─────────────────────────────────────────────────────────────────────────────────── */
-  function roundMoney(r, cur) {
-    var m = r.money;
-    if (!m) return '';
-    var total = m.total != null ? m.total : m.net;
-    return '<div data-testid="quote-money-' + r.round + '"><b>' + E(root.fmtMoney(total, r.currency_code || cur, '—')) + '</b>' +
-      (m.tax != null ? ' <span style="color:var(--grey)">' + E(fill(T('incl. tax {tax}'), { tax: root.fmtMoney(m.tax, r.currency_code || cur, '—') })) + '</span>' : '') + '</div>' +
-      (r.tax_note ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + E(r.tax_note) + '</div>' : '');
+  function roundMoney(round, currency) {
+    var money = round.money;
+    if (!money) return '';
+    var total = money.total != null ? money.total : money.net;
+    return '<div data-testid="quote-money-' + round.round + '"><b>' + escapeHtml(root.fmtMoney(total, round.currency_code || currency, '—')) + '</b>' +
+      (money.tax != null ? ' <span style="color:var(--grey)">' + escapeHtml(fill(translate('incl. tax {tax}'), { tax: root.fmtMoney(money.tax, round.currency_code || currency, '—') })) + '</span>' : '') + '</div>' +
+      (round.tax_note ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + escapeHtml(round.tax_note) + '</div>' : '');
   }
-  function lineName(S, idx) {
-    var l = (S.chit.lines || [])[idx];
-    return l ? l.name : T('Item');
+  function lineName(view, idx) {
+    var line = (view.chit.lines || [])[idx];
+    return line ? line.name : translate('Item');
   }
-  function roundBody(S, r) {
-    var cur = S.chit.currency;
+  function roundBody(view, round) {
+    var currency = view.chit.currency;
     var out = '';
-    if (r.kind === 'request' && r.request && r.request.lines && r.request.lines.length) {
-      out += '<ul style="margin:4px 0;padding-inline-start:18px">' + r.request.lines.map(function (l) {
-        return '<li>' + E(lineName(S, l.line_index) + (l.quantity != null ? ' × ' + l.quantity : '') + (l.requested_price ? ' · ' + fill(T('asked {price}'), { price: l.requested_price }) : '') + (l.remove ? ' · ' + T('remove') : '')) + '</li>';
+    if (round.kind === 'request' && round.request && round.request.lines && round.request.lines.length) {
+      out += '<ul style="margin:4px 0;padding-inline-start:18px">' + round.request.lines.map(function (line) {
+        return '<li>' + escapeHtml(lineName(view, line.line_index) + (line.quantity != null ? ' × ' + line.quantity : '') + (line.requested_price ? ' · ' + fill(translate('asked {price}'), { price: line.requested_price }) : '') + (line.remove ? ' · ' + translate('remove') : '')) + '</li>';
       }).join('') + '</ul>';
-    } else if (r.kind === 'terms' && r.terms) {
-      out += '<div>' + E(Object.keys(r.terms).map(function (k) { return k.replace(/_/g, ' ') + ': ' + r.terms[k]; }).join(' · ')) + '</div>';
+    } else if (round.kind === 'terms' && round.terms) {
+      out += '<div>' + escapeHtml(Object.keys(round.terms).map(function (key) { return key.replace(/_/g, ' ') + ': ' + round.terms[key]; }).join(' · ')) + '</div>';
     } else {
-      out += roundMoney(r, cur);
+      out += roundMoney(round, currency);
     }
-    if (r.note) out += '<div style="font-style:italic">“' + E(r.note) + '”</div>';
+    if (round.note) out += '<div style="font-style:italic">“' + escapeHtml(round.note) + '”</div>';
     return out;
   }
-  function roundHTML(S, r) {
-    var who = r.mine ? T('You') : r.from_name || S.chit.other;
-    var label = r.label || KIND[r.kind] || '';
-    var st = T(STATUS[r.status] || r.status || '');
+  function roundHTML(view, round) {
+    var speaker = round.mine ? translate('You') : round.from_name || view.chit.other;
+    var label = round.label || KIND[round.kind] || '';
+    var statusText = translate(STATUS[round.status] || round.status || '');
     var acts = '';
-    if (r.awaiting_me) {
+    if (round.awaiting_me) {
       acts =
         '<div class="cq-acts" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">' +
-        (r.kind !== 'request' ? '<button type="button" class="pri" data-testid="quote-accept-' + r.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + E(S.chit.id) + '\',\'' + E(r.proposal_id) + '\',this)">' + E(T('Accept')) + '</button>' : '') +
-        '<button type="button" data-testid="quote-counter-' + r.round + '" onclick="CBQuotes.openForm(\'' + E(S.chit.id) + '\',\'' + E(r.proposal_id) + '\')">' + E(S.chit.seller ? T('Price it') : T('Counter')) + '</button>' +
-        '<button type="button" class="warn" data-testid="quote-reject-' + r.round + '" onclick="CBQuotes.reject(\'' + E(S.chit.id) + '\',\'' + E(r.proposal_id) + '\',this)">' + E(T('Reject')) + '</button></div>';
+        (round.kind !== 'request' ? '<button type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\',this)">' + escapeHtml(translate('Accept')) + '</button>' : '') +
+        '<button type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\')">' + escapeHtml(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
+        '<button type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\',this)">' + escapeHtml(translate('Reject')) + '</button></div>';
     }
-    return '<div class="itab" data-testid="quote-round-' + r.round + '" data-status="' + E(r.status) + '" style="padding:9px;margin-top:7px">' +
-      '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + E(fill(T('Round {n}'), { n: r.round })) + '</b> · ' + E(who) + ' · ' + E(label) + '</span>' +
-      '<span data-testid="quote-status-' + r.round + '" style="color:var(--grey)">' + E(st) + '</span></div>' + roundBody(S, r) + acts + '</div>';
+    return '<div class="itab" data-testid="quote-round-' + round.round + '" data-status="' + escapeHtml(round.status) + '" style="padding:9px;margin-top:7px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + escapeHtml(fill(translate('Round {n}'), { n: round.round })) + '</b> · ' + escapeHtml(speaker) + ' · ' + escapeHtml(label) + '</span>' +
+      '<span data-testid="quote-status-' + round.round + '" style="color:var(--grey)">' + escapeHtml(statusText) + '</span></div>' + roundBody(view, round) + acts + '</div>';
   }
   /** the form: the buyer's request (quantity + asked price per line, text) or the seller's price (a price per line) */
-  function formHTML(S) {
-    var seller = S.chit.seller;
-    var rows = (S.chit.lines || []).filter(function (l) { return !l.removed; }).map(function (l) {
+  function formHTML(view) {
+    var seller = view.chit.seller;
+    var rows = (view.chit.lines || []).filter(function (line) { return !line.removed; }).map(function (line) {
       return '<div class="cq-line" style="display:grid;grid-template-columns:minmax(0,1fr) 84px 110px;gap:6px;align-items:center;margin-top:5px">' +
-        '<span>' + E(l.name) + '</span>' +
-        '<input class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + l.index + '" data-line="' + l.index + '" data-f="quantity" value="' + E(l.quantity != null ? l.quantity : '') + '" aria-label="' + E(fill(T('Quantity of {name}'), { name: l.name })) + '">' +
-        '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + l.index + '" data-line="' + l.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? E(l.price != null ? l.price : '') : '') + '" placeholder="' + E(seller ? S.chit.currency || '' : T('price you want')) + '" aria-label="' + E(seller ? fill(T('Price of {name}'), { name: l.name }) : fill(T('Price you want for {name}'), { name: l.name })) + '"></div>';
+        '<span>' + escapeHtml(line.name) + '</span>' +
+        '<input class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + line.index + '" data-line="' + line.index + '" data-f="quantity" value="' + escapeHtml(line.quantity != null ? line.quantity : '') + '" aria-label="' + escapeHtml(fill(translate('Quantity of {name}'), { name: line.name })) + '">' +
+        '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + line.index + '" data-line="' + line.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? escapeHtml(line.price != null ? line.price : '') : '') + '" placeholder="' + escapeHtml(seller ? view.chit.currency || '' : translate('price you want')) + '" aria-label="' + escapeHtml(seller ? fill(translate('Price of {name}'), { name: line.name }) : fill(translate('Price you want for {name}'), { name: line.name })) + '"></div>';
     }).join('');
-    return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + E(seller ? T('Your price') : T('Your counter')) + '</div>' +
-      '<div style="color:var(--grey);font-size:var(--fs-1)">' + E(seller ? fill(T('Prices in {cur}. Tax is added when you send.'), { cur: S.chit.currency || '' }) : T('Say how many and the price you want. {name} sets the price.').replace('{name}', S.chit.other)) + '</div>' +
+    return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + escapeHtml(seller ? translate('Your price') : translate('Your counter')) + '</div>' +
+      '<div style="color:var(--grey);font-size:var(--fs-1)">' + escapeHtml(seller ? fill(translate('Prices in {cur}. Tax is added when you send.'), { cur: view.chit.currency || '' }) : translate('Say how many and the price you want. {name} sets the price.').replace('{name}', view.chit.other)) + '</div>' +
       rows +
-      '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + E(T('A note (optional)')) + '"></textarea>' +
-      '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + E(S.chit.id) + '\',this)">' + E(seller ? T('Send price') : T('Send counter')) + '</button>' +
-      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + E(S.chit.id) + '\')">' + E(T('Cancel')) + '</button></div>' +
+      '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + escapeHtml(translate('A note (optional)')) + '"></textarea>' +
+      '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + escapeHtml(view.chit.id) + '\',this)">' + escapeHtml(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
+      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + escapeHtml(view.chit.id) + '\')">' + escapeHtml(translate('Cancel')) + '</button></div>' +
       '<div data-testid="quote-out" role="status" style="margin-top:5px"></div>' + '</div>';
   }
-  function html(S) {
-    var c = S.chit;
-    var words = wordsOf(c, S.rounds);
-    var head = '<div class="sec">' + E(T('Rounds')) + '</div>';
-    var banner = words.text
-      ? '<div data-testid="quote-jurisdiction" data-tone="' + words.tone + '" style="margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' + E(words.text) + '</div>'
+  /** the jurisdiction banner (Quotation only … / Pro-forma …), or nothing */
+  function bannerHTML(words) {
+    return words.text
+      ? '<div data-testid="quote-jurisdiction" data-tone="' + words.tone + '" style="margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' + escapeHtml(words.text) + '</div>'
       : '';
-    var unconf = c.unconfirmed
-      ? '<div data-testid="quote-unconfirmed" data-tone="warn" style="margin:4px 0;font-size:var(--fs-2)">⏳ ' + E(c.unconfirmed.words || fill(T('Waiting for {where} — not delivered yet'), { where: (c.jurisdiction && (c.jurisdiction.seller_installation || c.jurisdiction.buyer_installation)) || c.other })) + '</div>'
+  }
+  /** the "not delivered yet" line while the other installation has not confirmed, or nothing */
+  function unconfirmedHTML(chit) {
+    return chit.unconfirmed
+      ? '<div data-testid="quote-unconfirmed" data-tone="warn" style="margin:4px 0;font-size:var(--fs-2)">⏳ ' + escapeHtml(chit.unconfirmed.words || fill(translate('Waiting for {where} — not delivered yet'), { where: (chit.jurisdiction && (chit.jurisdiction.seller_installation || chit.jurisdiction.buyer_installation)) || chit.other })) + '</div>'
       : '';
-    var list = S.rounds.length
-      ? S.rounds.map(function (r) { return roundHTML(S, r); }).join('')
-      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + E(c.seller ? fill(T('{name} has not priced yet. Nothing is asked of you.'), { name: c.other }) : fill(T('Waiting for {name} to price your request.'), { name: c.other })) + '</div>';
-    var openNew = !S.rounds.length && c.seller
-      ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + E(c.id) + '\',\'\')">' + E(T('Price this request')) + '</button>'
+  }
+  /** the rounds, newest last; before the first one, who we are waiting for */
+  function roundListHTML(view) {
+    var chit = view.chit;
+    return view.rounds.length
+      ? view.rounds.map(function (round) { return roundHTML(view, round); }).join('')
+      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + escapeHtml(chit.seller ? fill(translate('{name} has not priced yet. Nothing is asked of you.'), { name: chit.other }) : fill(translate('Waiting for {name} to price your request.'), { name: chit.other })) + '</div>';
+  }
+  /** the buttons under the rounds: the seller's first price, the buyer's ask again */
+  function startButtonsHTML(view) {
+    var chit = view.chit;
+    var openNew = !view.rounds.length && chit.seller
+      ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + escapeHtml(chit.id) + '\',\'\')">' + escapeHtml(translate('Price this request')) + '</button>'
       : '';
-    var live = S.rounds.some(function (r) { return r.status === 'proposed'; });
-    var again = S.rounds.length && !live && !c.seller && S.rounds.some(function (r) { return r.status !== 'accepted'; })
-      ? '<button type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + E(c.id) + '\',\'\')">' + E(T('Ask again')) + '</button>' : '';
-    return head + banner + unconf + trackerHTML(c, S.rounds) + list + '<div style="margin-top:7px">' + openNew + again + '</div>' + (S.form ? formHTML(S) : '') + '<div data-testid="quote-steps-host" id="quote-steps-' + E(c.id) + '"></div>';
+    var live = view.rounds.some(function (round) { return round.status === 'proposed'; });
+    var again = view.rounds.length && !live && !chit.seller && view.rounds.some(function (round) { return round.status !== 'accepted'; })
+      ? '<button type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + escapeHtml(chit.id) + '\',\'\')">' + escapeHtml(translate('Ask again')) + '</button>' : '';
+    return '<div style="margin-top:7px">' + openNew + again + '</div>';
+  }
+  function html(view) {
+    var chit = view.chit;
+    var head = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div>';
+    return head + bannerHTML(wordsOf(chit, view.rounds)) + unconfirmedHTML(chit) + trackerHTML(chit, view.rounds) + roundListHTML(view) + startButtonsHTML(view) + (view.form ? formHTML(view) : '') + '<div data-testid="quote-steps-host" id="quote-steps-' + escapeHtml(chit.id) + '"></div>';
   }
 
   /* ── doing ────────────────────────────────────────────────────────────────────────────────────── */
-  function whereOf(S) {
-    var j = S.chit.jurisdiction || {};
-    return S.chit.seller ? j.buyer_installation : j.seller_installation;
+  function whereOf(view) {
+    var jurisdiction = view.chit.jurisdiction || {};
+    return view.chit.seller ? jurisdiction.buyer_installation : jurisdiction.seller_installation;
   }
-  function stepsFor(S) {
-    return steps(document.getElementById('quote-steps-' + S.chit.id), { name: S.chit.other, where: whereOf(S) });
+  function stepsFor(view) {
+    return steps(document.getElementById('quote-steps-' + view.chit.id), { name: view.chit.other, where: whereOf(view) });
   }
   /** one write: confirm, the steps, the answer, then the rounds read again */
-  function act(id, btn, cfg) {
-    var S = STATE[String(id)];
-    if (!S) return;
-    var ctl = null;
+  function writeRound(id, button, config) {
+    var view = STATE[String(id)];
+    if (!view) return;
+    var stepsControl = null;
     return root.CBAction.run(
-      btn,
+      button,
       function () {
-        S.busy = true;
-        ctl = stepsFor(S);
-        return call(cfg.key, { params: cfg.params, body: cfg.body }).then(function (v) {
-          ctl.sent();
-          var held = v && v.ctp && (v.ctp.queued || v.ctp.why);
+        view.busy = true;
+        stepsControl = stepsFor(view);
+        return call(config.key, { params: config.params, body: config.body }).then(function (reply) {
+          stepsControl.sent();
+          var held = reply && reply.ctp && (reply.ctp.queued || reply.ctp.why);
           if (held) {
             /* the other side did not confirm: say it, never "sent" (silence is the bug) */
-            ctl.waiting();
-            S.notice = (v.ctp.why) || fill(T('Waiting for {where} — not delivered yet'), { where: whereOf(S) || S.chit.other });
+            stepsControl.waiting();
+            view.notice = (reply.ctp.why) || fill(translate('Waiting for {where} — not delivered yet'), { where: whereOf(view) || view.chit.other });
           } else {
-            ctl.answered();
-            S.notice = null;
+            stepsControl.answered();
+            view.notice = null;
           }
-          return v;
+          return reply;
         });
       },
       {
-        key: cfg.tid + ':' + id,
-        confirm: cfg.confirm,
-        out: S.host.querySelector('[data-testid="quote-out"]') || null,
-        done: cfg.done,
-        failed: cfg.failed,
+        key: config.tid + ':' + id,
+        confirm: config.confirm,
+        out: view.host.querySelector('[data-testid="quote-out"]') || null,
+        done: config.done,
+        failed: config.failed,
         onFail: function (words) {
-          if (ctl) ctl.failed(words);
+          if (stepsControl) stepsControl.failed(words);
           else if (root.toast) root.toast(words);
         }
       }
     ).then(function (res) {
-      S.busy = false;
-      if (res && res.ok) {
-        S.form = null;
-        return load(String(id)).then(function () {
-          paint(String(id));
-          var host = S.host.querySelector('[data-testid="quote-steps-host"]');
-          if (host && S.notice) host.insertAdjacentHTML('beforeend', '<div data-tone="warn" data-testid="quote-notice">⏳ ' + E(S.notice) + '</div>');
-          if (typeof root.CBQuotes.onChange === 'function') root.CBQuotes.onChange(id);
-        });
-      }
+      return afterAct(view, id, res);
     });
   }
-  function roundOf(S, pid) {
-    return S.rounds.filter(function (r) { return r.proposal_id === pid; })[0] || null;
-  }
-  function accept(id, pid, btn) {
-    var S = STATE[String(id)],
-      r = S && roundOf(S, pid);
-    if (!r) return;
-    var total = r.money ? (r.money.total != null ? r.money.total : r.money.net) : null;
-    return act(id, btn, {
-      key: 'quoteAccept', tid: 'quote-accept', params: { id: id, pid: pid }, body: {},
-      confirm: { title: fill(T('Accept {name}’s price?'), { name: S.chit.other }), body: '<div>' + E(total != null ? fill(T('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: root.fmtMoney(total, r.currency_code || S.chit.currency, '—'), cur: r.currency_code || S.chit.currency }) : T('It becomes the agreed version on both copies.')) + '</div>', yes: T('Accept'), danger: false },
-      done: T('Accepted — this is now the pro-forma')
+  /** after a write: on success close the form, read the rounds again, say a held send, tell the page */
+  function afterAct(view, id, res) {
+    view.busy = false;
+    if (!(res && res.ok)) return undefined;
+    view.form = null;
+    return load(String(id)).then(function () {
+      paint(String(id));
+      var host = view.host.querySelector('[data-testid="quote-steps-host"]');
+      if (host && view.notice) host.insertAdjacentHTML('beforeend', '<div data-tone="warn" data-testid="quote-notice">⏳ ' + escapeHtml(view.notice) + '</div>');
+      if (typeof root.CBQuotes.onChange === 'function') root.CBQuotes.onChange(id);
     });
   }
-  function reject(id, pid, btn) {
-    var S = STATE[String(id)];
-    if (!S) return;
-    return act(id, btn, {
-      key: 'quoteReject', tid: 'quote-reject', params: { id: id, pid: pid }, body: {},
-      confirm: { title: T('Reject this round?'), body: '<div>' + E(fill(T('It ends here and {name} sees it.'), { name: S.chit.other })) + '</div>', yes: T('Reject'), danger: true },
-      done: T('Rejected')
+  function roundOf(view, proposalId) {
+    return view.rounds.filter(function (round) { return round.proposal_id === proposalId; })[0] || null;
+  }
+  function accept(id, proposalId, button) {
+    var view = STATE[String(id)],
+      round = view && roundOf(view, proposalId);
+    if (!round) return;
+    var total = round.money ? (round.money.total != null ? round.money.total : round.money.net) : null;
+    return writeRound(id, button, {
+      key: 'quoteAccept', tid: 'quote-accept', params: { id: id, pid: proposalId }, body: {},
+      confirm: { title: fill(translate('Accept {name}’s price?'), { name: view.chit.other }), body: '<div>' + escapeHtml(total != null ? fill(translate('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: root.fmtMoney(total, round.currency_code || view.chit.currency, '—'), cur: round.currency_code || view.chit.currency }) : translate('It becomes the agreed version on both copies.')) + '</div>', yes: translate('Accept'), danger: false },
+      done: translate('Accepted — this is now the pro-forma')
     });
   }
-  function openForm(id, pid) {
-    var S = STATE[String(id)];
-    if (!S) return;
-    S.form = { pid: pid || '' };
+  function reject(id, proposalId, button) {
+    var view = STATE[String(id)];
+    if (!view) return;
+    return writeRound(id, button, {
+      key: 'quoteReject', tid: 'quote-reject', params: { id: id, pid: proposalId }, body: {},
+      confirm: { title: translate('Reject this round?'), body: '<div>' + escapeHtml(fill(translate('It ends here and {name} sees it.'), { name: view.chit.other })) + '</div>', yes: translate('Reject'), danger: true },
+      done: translate('Rejected')
+    });
+  }
+  function openForm(id, proposalId) {
+    var view = STATE[String(id)];
+    if (!view) return;
+    view.form = { pid: proposalId || '' };
     paint(String(id));
-    var first = S.host.querySelector('[data-testid^="quote-price-"], [data-testid^="quote-qty-"]');
+    var first = view.host.querySelector('[data-testid^="quote-price-"], [data-testid^="quote-qty-"]');
     if (first && first.focus) first.focus();
   }
   function closeForm(id) {
-    var S = STATE[String(id)];
-    if (!S) return;
-    S.form = null;
+    var view = STATE[String(id)];
+    if (!view) return;
+    view.form = null;
     paint(String(id));
   }
   /** the form's lines, as typed: a text price is kept as typed (the buyer's is never computed on) */
-  function readForm(S) {
-    var by = {};
-    S.host.querySelectorAll('[data-quote-form] input[data-line]').forEach(function (inp) {
-      var i = inp.getAttribute('data-line'),
-        f = inp.getAttribute('data-f'),
-        v = String(inp.value || '').trim();
-      by[i] = by[i] || { line_index: Number(i) };
-      if (f === 'quantity' && v !== '') by[i].quantity = Number(v);
-      else if (f === 'price' && v !== '') by[i].price = Number(v);
-      else if (f === 'requested_price' && v !== '') by[i].requested_price = v;
+  function readForm(view) {
+    var byLine = {};
+    view.host.querySelectorAll('[data-quote-form] input[data-line]').forEach(function (input) {
+      var lineIndex = input.getAttribute('data-line'),
+        field = input.getAttribute('data-f'),
+        value = String(input.value || '').trim();
+      byLine[lineIndex] = byLine[lineIndex] || { line_index: Number(lineIndex) };
+      if (field === 'quantity' && value !== '') byLine[lineIndex].quantity = Number(value);
+      else if (field === 'price' && value !== '') byLine[lineIndex].price = Number(value);
+      else if (field === 'requested_price' && value !== '') byLine[lineIndex].requested_price = value;
     });
-    var note = S.host.querySelector('[data-testid="quote-note"]');
-    return { lines: Object.keys(by).map(function (k) { return by[k]; }), note: note ? String(note.value || '').trim() : '' };
+    var note = view.host.querySelector('[data-testid="quote-note"]');
+    return { lines: Object.keys(byLine).map(function (key) { return byLine[key]; }), note: note ? String(note.value || '').trim() : '' };
   }
-  function send(id, btn) {
-    var S = STATE[String(id)];
-    if (!S || !S.form) return;
-    var body = readForm(S),
-      out = S.host.querySelector('[data-testid="quote-out"]');
-    var bad = body.lines.some(function (l) { return (l.quantity != null && !isFinite(l.quantity)) || (l.price != null && !isFinite(l.price)); });
-    if (bad) {
-      if (out) { out.textContent = T('A price and a quantity must be numbers.'); out.setAttribute('data-tone', 'error'); }
+  /** a typed quantity or price that is not a number */
+  function hasBadNumber(lines) {
+    return lines.some(function (line) { return (line.quantity != null && !isFinite(line.quantity)) || (line.price != null && !isFinite(line.price)); });
+  }
+  /** the confirm before a price or a counter goes out (money promise): names who and what binds */
+  function sendConfirm(view) {
+    var seller = view.chit.seller;
+    return {
+      title: seller ? fill(translate('Send your price to {name}?'), { name: view.chit.other }) : fill(translate('Send this counter to {name}?'), { name: view.chit.other }),
+      body: '<div>' + escapeHtml(seller ? fill(translate('It is a quotation in {cur}. Nothing binds until {name} accepts it.'), { cur: view.chit.currency || '', name: view.chit.other }) : fill(translate('{name} sets the price. Nothing binds until you accept it.'), { name: view.chit.other })) + '</div>',
+      yes: translate('Send'), danger: false
+    };
+  }
+  function send(id, button) {
+    var view = STATE[String(id)];
+    if (!view || !view.form) return;
+    var body = readForm(view),
+      out = view.host.querySelector('[data-testid="quote-out"]');
+    if (hasBadNumber(body.lines)) {
+      if (out) { out.textContent = translate('A price and a quantity must be numbers.'); out.setAttribute('data-tone', 'error'); }
       return;
     }
-    var pid = S.form.pid;
-    var seller = S.chit.seller;
-    return act(id, btn, {
-      key: pid ? 'quoteCounter' : 'quotePropose', tid: 'quote-send', params: pid ? { id: id, pid: pid } : { id: id }, body: body,
-      confirm: {
-        title: seller ? fill(T('Send your price to {name}?'), { name: S.chit.other }) : fill(T('Send this counter to {name}?'), { name: S.chit.other }),
-        body: '<div>' + E(seller ? fill(T('It is a quotation in {cur}. Nothing binds until {name} accepts it.'), { cur: S.chit.currency || '', name: S.chit.other }) : fill(T('{name} sets the price. Nothing binds until you accept it.'), { name: S.chit.other })) + '</div>',
-        yes: T('Send'), danger: false
-      },
-      done: seller ? T('Price sent') : T('Counter sent')
+    var proposalId = view.form.pid;
+    var seller = view.chit.seller;
+    return writeRound(id, button, {
+      key: proposalId ? 'quoteCounter' : 'quotePropose', tid: 'quote-send', params: proposalId ? { id: id, pid: proposalId } : { id: id }, body: body,
+      confirm: sendConfirm(view),
+      done: seller ? translate('Price sent') : translate('Counter sent')
     });
   }
 
