@@ -193,7 +193,12 @@ ok(checklist.problems(filledBody).length === 0, 'the tool\'s own --md output, wi
 ok(checklist.problems(fs.readFileSync(path.join(ROOT, '.github/pull_request_template.md'), 'utf8')).length === 4, 'the untouched template fails on its four placeholder lines');
 ok(checklist.problems('no checklist at all').length === 5, 'a body with no checklist is missing all five lines');
 ok(checklist.skipReason('dependabot[bot]', ['package.json']) && checklist.skipReason('me', ['docs/a.md', 'README.md']) && !checklist.skipReason('me', ['docs/a.md', 'lib/x.js']), 'skips: a dependency bot · docs-only; a code change never skips');
+const naNumbers = (body) => body.replace(/lines [^\n]*complexity \d+ → \d+/, 'lines n/a · complexity n/a');
+const noCodeBody = naNumbers(filledBody).replace(/· \d+ files? · \d+ functions? touched/, '· 0 files · 0 functions touched');
+ok(checklist.problems(noCodeBody).length === 0, 'MNT-18: a PR with 0 own-code files may write n/a for the Pass 1 numbers (api #433)');
+ok(checklist.problems(noCodeBody.replace('· 0 files ·', '· 3 files ·')).length === 1, 'MNT-18: the same n/a is refused when the heading says files changed');
+ok(checklist.problems(filledBody.replace(/lines [^\n]*complexity \d+ → \d+/, 'lines 0 → 0 · complexity 0 → 0')).length === 0, 'MNT-18: the printed 0 → 0 form passes as pasted');
 
-fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
+fs.rmSync(tmp,{ recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
 process.exit(bad ? 1 : 0);

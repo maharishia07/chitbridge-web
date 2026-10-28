@@ -48,6 +48,10 @@ const LINES = [
 ];
 const PLACEHOLDER = /<(before → after[^>]*|word|name|doc|file|files|n)>/i;
 const EXIT_FAIL = 1;
+/** the §6 heading the tool prints when the PR changes no own code: '… · 0 files · 0 functions touched' (MNT-18) */
+const NO_OWN_CODE = /§6 checklist[^\n]*·\s*0 files\b/i;
+/** a number slot on a no-own-code PR: the printed `0 → 0`, or n/a (api #433 wrote n/a and went red) */
+const NA_FORM = /\bn\/a\b/i;
 
 const args = process.argv.slice(2);
 function flag(name) {
@@ -81,6 +85,7 @@ function skipReason(author, files) {
 /** every checklist line that is missing, unfilled or still carries a <placeholder> */
 function problems(body) {
   const found = [];
+  const noOwnCode = NO_OWN_CODE.test(body);
   for (const line of LINES) {
     const match = line.find.exec(body);
     if (!match) {
@@ -89,7 +94,7 @@ function problems(body) {
     }
     const text = match[0];
     if (PLACEHOLDER.test(text)) found.push(line.name + ': a placeholder is still there — ' + PLACEHOLDER.exec(text)[0] + ' (fill it, or write n/a)');
-    else if (!line.filled.test(text)) found.push(line.name + ': not filled — needs ' + line.hint);
+    else if (!line.filled.test(text) && !(noOwnCode && NA_FORM.test(text))) found.push(line.name + ': not filled — needs ' + line.hint);
   }
   return found;
 }

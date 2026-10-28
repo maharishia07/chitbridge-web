@@ -1,6 +1,6 @@
 <!-- Line 1: a build round's VERDICT (BUILD AS BRIEFED · BUILD WITH CHANGES · STOP) — else what this PR does, in one line. -->
 
-## §6 checklist (DISCIPLINES §6 — numbers from `node tools/readability.cjs --changed --ratchet --md`; CI `pr-checklist` fails without them)
+## §6 checklist (DISCIPLINES §6 — numbers from `node tools/readability.cjs --changed --ratchet --md`; paste it verbatim, a 0-file PR prints `0 → 0`; CI `pr-checklist` fails without them)
 - [ ] Pass 0 · seams: `<word>` → reused/widened `<name>` (or "nothing exists")
 - [ ] Pass 1 · shrink: lines `<before → after>` · complexity `<before → after>` · DB trips `<before → after or n/a>`
 - [ ] Pass 2 · humanify: cryptic names `<before → after>` · functions with a what-line `<before → after>` · empty catches `<before → after>`
