@@ -8,6 +8,8 @@
  *  3  no second standards list anywhere in public/: no object outside the register carries a register row's shape (n · w · s:'live|part|plan')
  *     or the old catalogue shape (name · body · status:'in code|roadmap|by reference|vocabulary')
  *  4  the design's data.js holds no rows (derived from the register), and e2e/standards-page.cjs counts rows from the source, never a fixed number
+ *  5  CMP-24 (2026-10-28): every standard this repo CITES is a register row (its n · id · w · note · aka) or a named exclusion in
+ *     public/data/standards-mentioned.json (name · kind · why · cited); nothing is on both; and the guard bites when a row is taken away
  */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -51,6 +53,21 @@ const DJ = fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', '
 ok(!/"rows"\s*:\s*\[|\brows\s*:\s*\[\s*\{/.test(DJ) && /STANDARDS\.map\(/.test(DJ), 'the design\'s data.js holds no rows: it derives them from the register');
 const SP = fs.readFileSync(path.join(__dirname, 'standards-page.cjs'), 'utf8');
 ok(!/REG\.S\.length\s*===\s*\d+/.test(SP) && !/DESIGN\.rows/.test(SP), 'e2e/standards-page.cjs counts the register from the source, never a fixed number, and compares against no copy');
+
+/* 5 */
+const SCAN = require(path.join(ROOT, 'tools', 'standards-scan.cjs'));
+const LISTF = path.join(PUB, 'data', 'standards-mentioned.json');
+const allow = SCAN.readAllowList(LISTF), ALLOW_KINDS = ['holds', 'research', 'detail'];
+ok(allow.length > 0 && allow.every((x) => ALLOW_KINDS.indexOf(x.kind) >= 0 && /^\d{4}-\d{2}-\d{2}$/.test(x.since || '')), 'every one of the ' + allow.length + ' mentioned-only standards says its kind (holds · research · detail), why, where it is cited and since when');
+const regKeys = R.S.map(SCAN.rowKeys), allowKeys = new Set(allow.map((x) => SCAN.keyOf(x.name)));
+const onBoth = allow.filter((x) => regKeys.some((keys) => keys.some((k) => k.includes(SCAN.keyOf(x.name)))));
+ok(onBoth.length === 0, 'no mentioned-only standard is also answered by a register row' + (onBoth.length ? ' — ' + onBoth.map((x) => x.name).join(', ') : ''));
+ok(R.S.filter((r) => 'aka' in r).every((r) => Array.isArray(r.aka) && r.aka.length && r.aka.every((a) => typeof a === 'string' && a.length > 2)), 'aka, where a row has it, is a list of other names');
+const webScan = SCAN.scanRoots([path.join(PUB, 'app'), path.join(ROOT, 'docs')], LISTF);
+const verdict = SCAN.judge(webScan.found, regKeys, allowKeys);
+ok(verdict.missing.length === 0, 'every standard cited in public/app and docs (' + Object.keys(webScan.found).length + ') is a register row or a named exclusion' + (verdict.missing.length ? ' — on neither: ' + verdict.missing.join(', ') : ''));
+const withoutCsv = SCAN.judge(webScan.found, regKeys.filter((_, i) => R.S[i].id !== 'rfc4180'), allowKeys);
+ok(withoutCsv.missing.indexOf('RFC 4180') >= 0, 'the guard bites: take the RFC 4180 row away and its citation is reported as on neither list');
 
 console.log('\n' + pass + ' passed · ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
