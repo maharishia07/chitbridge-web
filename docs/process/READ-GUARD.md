@@ -70,7 +70,8 @@ the same command). One row per own-code module:
      `node tools/readability.cjs --changed --base origin/main --ratchet --md` (api: `node ../chitbridge-web/tools/readability.cjs --changed
      --repo api --root ../chitbridge-api --base origin/main --ratchet --md`) and paste the printed checklist into the PR body, filling
      Pass 0 (the seams word → what you reused/widened, or "nothing exists") and the spec/design docs (or n/a). The CI job `pr-checklist`
-     fails a PR whose body lacks the five lines with numbers. The guard must be green before you push: a touched function over a hard
+     fails a PR whose body lacks the five lines with numbers. Paste the printed block VERBATIM: a PR that changes no own code prints
+     `0 files` and `0 → 0` numbers, and `pr-checklist` accepts that form (and n/a in the number slots only when the heading says `0 files`, MNT-18). The guard must be green before you push: a touched function over a hard
      limit, a new cryptic name, a new empty catch, a touched module with no header / CARD line / test row, or a worse ratchet score fails CI.
 ```
 
