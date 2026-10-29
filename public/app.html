@@ -22311,7 +22311,8 @@ function chitPayAsk(id, form, e) {
     e.data.error || tx('Already paid?'),
     '<p>' + esc(warnings.map((warning) => warning.words).join(' ')) + '</p>',
     over ? tx('Keep {amount} as an advance').replace('{amount}', over.over_words) : tx('Record it again'),
-    () => chitPaySubmit(id, form, warnings.map((warning) => String(warning.code)))
+    /* the Yes carries the figure the person SAW ({ code, over_minor }): a stale one (a colleague recorded in between) is asked again by the server */
+    () => chitPaySubmit(id, form, warnings.map((warning) => (warning.over_minor != null ? { code: String(warning.code), over_minor: warning.over_minor } : String(warning.code))))
   );
   return true;
 }

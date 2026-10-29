@@ -44,7 +44,7 @@ const over = Object.assign(new Error('More than is owed by ₹120. ₹1,300 is m
   assert.deepStrictEqual(calls.api[0].req.body, { method: 'upi', ref: 'U1', amount: 1300, client_ref: 'press-1' }, 'the first press carries no acknowledgement');
   await ask.onOk();
   assert.strictEqual(calls.api.length, 2, 'Yes re-sends once');
-  assert.deepStrictEqual(calls.api[1].req.body, { method: 'upi', ref: 'U1', amount: 1300, client_ref: 'press-1', acknowledge: ['excess'] }, 'the SAME press (same client_ref, same amount) with the code acknowledged');
+  assert.deepStrictEqual(calls.api[1].req.body, { method: 'upi', ref: 'U1', amount: 1300, client_ref: 'press-1', acknowledge: [{ code: 'excess', over_minor: 12000 }] }, 'the SAME press (same client_ref, same amount) with the code AND the figure shown acknowledged');
   assert.deepStrictEqual(calls.toasts, [['Payment recorded ✓', false]], 'then the plain outcome');
 
   /* the same money twice keeps its own title and a Yes that does not name an advance */
