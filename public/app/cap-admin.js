@@ -134,6 +134,16 @@ var MIS_BANDS = [
  */
 var MIS_COMMITTED = { accepted: 1, in_progress: 1, partial: 1, completed: 1 }; // someone said yes
 var MIS_FORECAST = { pending: 1, delivered: 1, read: 1 }; // sent, nobody has committed
+/** RAIL-146: a MIS figure summed over chits the server stripped for a cost-blind co-assist is PARTIAL and says so — never a plausible wrong number */
+function misMoney(figures, value) {
+  return figures.hidden ? tx('partial') + ' · ' + inr(value) : inr(value);
+}
+/** did any row in the window carry no money (stripped for a cost-blind co-assist)? */
+function misAnyHidden(rows) {
+  return rows.some(function (item) {
+    return item.costHidden;
+  });
+}
 var MIS_DEAD = { cancelled: 1, rejected: 1 };
 
 /**
@@ -255,7 +265,7 @@ function misScreen() {
 /* The rail doubles as the summary, so each row needs its own headline — one number and one word of context. */
 function misHeadline(k, m) {
   if (k === 'overview') return { v: MIS_BANDS.length - 1, s: 'bands' };
-  if (k === 'position') return { v: inr(m.committed), s: 'committed' };
+  if (k === 'position') return { v: misMoney(m, m.committed), s: 'committed' };
   if (k === 'flow') return { v: m.chits, s: m.periodLabel };
   if (k === 'friction') {
     const un = (m.unattended || []).length;
@@ -512,10 +522,10 @@ function _misSplitBar(m) {
     (100 - cp) +
     '%;color:var(--on-gold)"></span></div>' +
     '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Committed ' +
-    inr(m.committed) +
+    misMoney(m, m.committed) +
     '</span>' +
     '<span class="k"><i class="sw" style="background:var(--gold);color:var(--on-gold)"></i> Forecast ' +
-    inr(m.forecast) +
+    misMoney(m, m.forecast) +
     '</span></div>'
   );
 }
@@ -599,7 +609,7 @@ function misPosition(m) {
     tx('Committed · someone said yes') +
     '</div>' +
     '<div class="mishero">' +
-    inr(m.committed) +
+    misMoney(m, m.committed) +
     '</div>' +
     '<div class="misnote">' +
     pct +
@@ -610,13 +620,13 @@ function misPosition(m) {
     tx('Forecast · nobody has committed') +
     '</div>' +
     '<div class="misfore">' +
-    inr(m.forecast) +
+    misMoney(m, m.forecast) +
     '</div>' +
     '<div class="misnote" style="margin-top:7px">Sent or received but not yet accepted. Real work — nobody has promised it.</div>' +
-    (m.dead ? '<div class="miswarn">' + inr(m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '') +
+    (m.dead ? '<div class="miswarn">' + misMoney(m, m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '') +
     '</div></div>' +
     '<div class="miswhy">The old screen showed <b>' +
-    inr(m.committed + m.forecast + m.dead) +
+    misMoney(m, m.committed + m.forecast + m.dead) +
     '</b> as one “deal value”, blending all three — which <b>overstates the book</b>.</div>'
   );
 }
@@ -770,7 +780,7 @@ function misFriction(m) {
         esc(item.age) +
         '</td>' +
         '<td class="num">' +
-        (item.amt ? inr(item.amt) : '—') +
+        (item.costHidden ? tx('hidden') : item.amt ? inr(item.amt) : '—') +
         '</td>' +
         '<td><span class="misclock ' +
         item.who +
@@ -965,7 +975,7 @@ function misOverview(m) {
       'Position',
       'How much of the pipeline is real?',
       '<div class="mistwo"><div><div class="mishero" style="font-size:var(--fs-6)">' +
-        inr(m.committed) +
+        misMoney(m, m.committed) +
         '</div>' +
         '<div class="misnote">committed · ' +
         pct +
@@ -1244,7 +1254,7 @@ async function _loadMIS() {
     UI._mis = {
       chits: inWindow.length,
       committed: committed,
-      forecast: forecast,
+      forecast: forecast, hidden: misAnyHidden(inWindow) /* RAIL-146: some rows carried no money (stripped for a cost-blind co-assist) */,
       dead: dead,
       open: byState.open,
       in_progress: byState.act,
