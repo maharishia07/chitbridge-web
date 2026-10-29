@@ -183,9 +183,9 @@ function matchDetail(o, money) {
   return (
     '<div style="border-top:1px solid var(--line);padding:12px 14px">' +
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">' +
-    matchFig(tx('Ordered'), fmtMoney(o.ordered_total, myCur(), '—'), tx('what you asked for')) +
-    matchFig(tx('Received'), fmtMoney(o.received_total, myCur(), '—'), tx('what your own door counted')) +
-    matchFig(tx('Invoiced'), fmtMoney(o.invoiced_total, myCur(), '—'), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet')) +
+    matchFig(tx('Ordered'), matchMoney(o, o.ordered_total), tx('what you asked for')) +
+    matchFig(tx('Received'), matchMoney(o, o.received_total), tx('what your own door counted')) +
+    matchFig(tx('Invoiced'), matchMoney(o, o.invoiced_total), o.invoiced_from ? esc(o.invoiced_from) : o.cost_hidden ? '' : tx('no bill of theirs yet')) +
     '</div>' +
     (gap != null && gap !== 0
       ? '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;color:var(--warn);font-weight:700" data-testid="match-gap">' +
@@ -238,6 +238,12 @@ function matchDetail(o, money) {
     esc(tx('What you counted is never changed to match their bill. Both figures stay, and the difference is yours to settle with them.')) +
     '</div></div>'
   );
+}
+
+/** an amount as the page says it: the figure; "hidden" when the server took the money off this order for a co-assist without can_see_costs (RAIL-146c, cost_hidden), never ₹0 or a dash that reads as "none" */
+function matchMoney(o, amount) {
+  if (amount == null && o.cost_hidden === true) return esc(tx('hidden'));
+  return fmtMoney(amount, myCur(), '—');
 }
 
 function matchFig(label, value, note) {
