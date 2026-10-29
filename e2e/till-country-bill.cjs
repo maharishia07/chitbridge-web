@@ -2,7 +2,7 @@
  *
  * The bill follows the SHOP's pack: from A$1,000 an Australian tax invoice names its buyer (reg-au taxInvoice, s.29-70(1)(c)(ii)) — the bill says
  * so on the screen, and a bill saved without one prints as NOT a tax invoice with the reason; the buyer's ABN / TRN prints on the slip; counts are
- * grouped the shop's way; the Language row offers the shop's region's languages. India's pack has no taxInvoice member: its screen is unchanged.
+ * grouped the shop's way; the Language row offers the shop's region's languages. India (reg-in v1.73.0): no buyer warning on the screen; a registered buyer's GSTIN on the paper (CGST Rules r.46(d)).
  * Each shop at 1366 and 390 px, light and dark (rule 13): the new line's text contrast (AA 4.5:1), no clipped text, no page-wide horizontal scroll,
  * no link to app.html in the new row. Run: NODE_PATH=$PWD/e2e/node_modules node e2e/till-country-bill.cjs (exit 1 on any failure)
  */
@@ -75,7 +75,7 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
       const total = S.items[0].price * 2, bill = (extra) => Object.assign({ no: 'C1/1', at: new Date().toISOString(), kind: 'tax', lines: [], payments: [], total: total, taxable: total, tax: 0, by_rate: {}, supply: 'domestic', customer: { name: 'Walk-in' } }, extra);
       const slipNo = slipHTML(bill({ not_invoice: invoiceRule(total, null) && invoiceRule(total, null).buyer_identity ? 'buyer_identity' : null }), null);
       out.slipNotInvoice = /BILL — NOT A TAX INVOICE/.test(slipNo) && /data-testid="till-slip-nobuyer"/.test(slipNo);
-      out.slipBuyer = /Buyer (ABN|TRN)/.test(slipHTML(bill({ customer: { name: 'Acme', gstin: sh.gstin } }), null));
+      out.slipBuyer = /Buyer (ABN|TRN|GSTIN)/.test(slipHTML(bill({ customer: { name: 'Acme', gstin: sh.gstin } }), null));
       openSettings();
       out.langs = Array.from(document.querySelectorAll('#set_lang option')).map((o) => o.value);
       out.lang = document.getElementById('set_lang').value;
@@ -85,7 +85,7 @@ const toHex = (rgb) => { const m = String(rgb).match(/\d+/g); return m ? '#' + m
     await p.screenshot({ path: path.join(shots, sh.country + '-' + v.w + '-' + theme + '.png') });
 
     if (sh.country === 'IN') {
-      say(tag + ' unchanged', !r.rule && !r.warn && !r.slipBuyer, 'no pack rule, no buyer line, no buyer row (India prints as before)');
+      say(tag + ' buyer GSTIN', !r.warn && r.slipBuyer, 'no buyer warning; the buyer\'s GSTIN on the paper (r.46(d))');
       say(tag + ' counts', r.count === '1,00,000', 'count reads ' + r.count);
       say(tag + ' voice', r.langs.join(',') === 'en-IN,ta-IN,hi-IN,en-GB' && r.lang === 'en-IN', 'the four it always had · ' + r.lang);
     } else if (sh.country === 'AU') {
