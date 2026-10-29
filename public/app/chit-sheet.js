@@ -102,6 +102,10 @@
   function costHiddenOf(read) {
     return !!(read && read.cost_hidden);
   }
+  /** a line's money cell: the figure; "hidden" when the server took it off this read; a dash when the chit never had one */
+  function sheetMoney(value, sheet) {
+    return value == null && sheet.costHidden ? T('hidden') : fmtMoney(value, sheet.cur, '—');
+  }
   function model(r) {
     var h = (r && r.header) || r || {},
       det = (r && r.detail) || {};
@@ -427,9 +431,9 @@
             (item.unit && item.unit !== 'piece' ? ' ' + esc(item.unit) : '') +
             '</td>' +
             '<td class="n">' +
-            esc(fmtMoney(item.price, m.cur, '—')) +
+            esc(sheetMoney(item.price, m)) +
             '</td><td class="n">' +
-            esc(fmtMoney(f ? f.total : lineTotal(item, m), m.cur, '—')) +
+            esc(sheetMoney(f ? f.total : lineTotal(item, m), m)) +
             '</td></tr>'
           );
         })
