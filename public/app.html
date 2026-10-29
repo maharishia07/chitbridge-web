@@ -22279,20 +22279,41 @@ function keepPaymentOnRow(id, payment) {
   row.business_json = Object.assign({}, row.business_json || {}, { payment });
   if (row.header) row.header.business_json = Object.assign({}, row.header.business_json || {}, { payment });
 }
-async function chitPaySubmit(id) {
-  const form = readPayForm();
+/** what a Mark-paid press sends: the form as read when Record was pressed (kept across the books' question) and the codes the owner confirmed */
+function chitPayBody(form, acknowledge) {
+  const body = { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined };
+  if (acknowledge && acknowledge.length) body.acknowledge = acknowledge;
+  return body;
+}
+async function chitPaySubmit(id, form, acknowledge) {
+  form = form || readPayForm();
   try {
-    const reply = await api('chitPay', {
-      params: { id },
-      body: { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined }
-    });
+    const reply = await api('chitPay', { params: { id }, body: chitPayBody(form, acknowledge) });
     closeModal();
     toast(reply && reply.replayed ? tx('Already recorded') : tx('Payment recorded ✓'));
     keepPaymentOnRow(id, reply.payment);
     if (typeof openChit === 'function') openChit(id, true);
   } catch (e) {
-    toast((e && e.message) || tx('Could not record'), true);
+    if (!chitPayAsk(id, form, e)) toast((e && e.message) || tx('Could not record'), true);
   }
+}
+/**
+ * FIN-53 (Athi, 2026-10-29): the books' one question on a Mark-paid — 409 ALREADY_PAID with `warnings` ("More than is owed" · "Already
+ * paid?") — is a deliberate confirm that names the amount over (the server's over_words; the web composes no money words), never a toast
+ * that asks. Yes re-sends the SAME press with every warning's code acknowledged; the books keep the rest as an advance. → true when asked.
+ */
+function chitPayAsk(id, form, e) {
+  const warnings = e && e.status === 409 && e.data && Array.isArray(e.data.warnings) ? e.data.warnings : [];
+  if (!warnings.length) return false;
+  const over = warnings.find((warning) => warning.over_words);
+  closeModal();
+  confirmAsk(
+    e.data.error || tx('Already paid?'),
+    '<p>' + esc(warnings.map((warning) => warning.words).join(' ')) + '</p>',
+    over ? tx('Keep {amount} as an advance').replace('{amount}', over.over_words) : tx('Record it again'),
+    () => chitPaySubmit(id, form, warnings.map((warning) => String(warning.code)))
+  );
+  return true;
 }
 async function chitUnpay(id) {
   try {
