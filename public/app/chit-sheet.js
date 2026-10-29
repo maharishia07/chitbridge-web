@@ -98,6 +98,14 @@
   }
 
   /* ── what the chit read says, in one shape ─────────────────────────────────────────────────────── */
+  /** RAIL-146: did the server take the money off this read (a co-assist who may not see cost)? the field it sends, never a sentence */
+  function costHiddenOf(read) {
+    return !!(read && read.cost_hidden);
+  }
+  /** a line's money cell: the figure; "hidden" when the server took it off this read; a dash when the chit never had one */
+  function sheetMoney(value, sheet) {
+    return value == null && sheet.costHidden ? T('hidden') : fmtMoney(value, sheet.cur, '—');
+  }
   function model(r) {
     var h = (r && r.header) || r || {},
       det = (r && r.detail) || {};
@@ -144,7 +152,7 @@
         ? billStepStatus(log, captured ? String(h.current_status || h.status || 'pending') : null)
         : String(h.current_status || h.status || 'pending'),
       purpose: purpose,
-      cur: cur,
+      cur: cur, costHidden: costHiddenOf(r) /* RAIL-146: the server took the money off this read for a cost-blind co-assist; the total says "hidden" */,
       iSent: iSent,
       counterBill: counterBill,
       billRx: billRx,
@@ -423,9 +431,9 @@
             (item.unit && item.unit !== 'piece' ? ' ' + esc(item.unit) : '') +
             '</td>' +
             '<td class="n">' +
-            esc(fmtMoney(item.price, m.cur, '—')) +
+            esc(sheetMoney(item.price, m)) +
             '</td><td class="n">' +
-            esc(fmtMoney(f ? f.total : lineTotal(item, m), m.cur, '—')) +
+            esc(sheetMoney(f ? f.total : lineTotal(item, m), m)) +
             '</td></tr>'
           );
         })
@@ -589,7 +597,7 @@
       '</span><b data-testid="' +
       esc(tid || 'cs-total') +
       '">' +
-      esc(t == null ? T('not recorded') : fmtMoney(t, m.cur, '—')) +
+      esc(t == null ? T(m.costHidden ? 'hidden' : 'not recorded') : fmtMoney(t, m.cur, '—')) +
       '</b></div>'
     );
   }
