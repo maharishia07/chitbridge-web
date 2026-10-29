@@ -780,7 +780,7 @@ function misFriction(m) {
         esc(item.age) +
         '</td>' +
         '<td class="num">' +
-        (item.amt ? inr(item.amt) : '—') +
+        (item.costHidden ? tx('hidden') : item.amt ? inr(item.amt) : '—') +
         '</td>' +
         '<td><span class="misclock ' +
         item.who +
