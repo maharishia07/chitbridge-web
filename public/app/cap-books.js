@@ -1371,6 +1371,15 @@ async function payPreview() {
     }
   }
 }
+/** the acknowledgements sent: each code with the FIGURE the warning showed ({ code, over_minor }) when it carries one, else the bare code (FIN-53: a stale figure is asked again by the server) */
+function payAckList(codes, warnings) {
+  return (codes || []).map(function (code) {
+    var shown = (warnings || []).find(function (item) {
+      return item.code === code && item.over_minor != null;
+    });
+    return shown ? { code: code, over_minor: shown.over_minor } : code;
+  });
+}
 function payOpenWarnings() {
   return ((PAY.preview && PAY.preview.warnings) || []).filter(function (item) {
     return PAY.ack.indexOf(item.code) < 0;
@@ -1616,7 +1625,7 @@ function payWrite(amount, acknowledged, viaBand) {
             : null
       };
       if (q.allocations) body.allocations = q.allocations;
-      if (acknowledged.length) body.acknowledge = acknowledged;
+      if (acknowledged.length) body.acknowledge = payAckList(acknowledged, PAY.preview && PAY.preview.warnings);
       var reply = await api('booksPayRecord', { body: body });
       PAY.amount = amount;
       return reply;

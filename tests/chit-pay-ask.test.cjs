@@ -61,5 +61,13 @@ const over = Object.assign(new Error('More than is owed by ₹120. ₹1,300 is m
   await chitPaySubmit('c1');
   assert.strictEqual(calls.confirms.length, 0, 'a 422 asks nothing');
   assert.deepStrictEqual(calls.toasts, [['The tender is on the bill', true]]);
-  console.log('chit-pay-ask: 12 checks ok');
+  /* the Ledger's Receive/Pay sheet (cap-books.js payAckList) sends the same shape: the figure the band showed, else the bare code */
+  const books = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-books.js'), 'utf8');
+  const at = books.indexOf('\nfunction payAckList(');
+  assert(at > 0, 'payAckList is in cap-books.js');
+  const body = books.slice(at + 1, at + 1 + books.slice(at + 1).search(/\n(?:\/\*\*|function )/));
+  const payAckList = new Function(body + '\nreturn payAckList;')();
+  assert.deepStrictEqual(payAckList(['excess', 'same_again'], [{ code: 'excess', over_minor: 382000 }, { code: 'same_again', words: 'x' }]), [{ code: 'excess', over_minor: 382000 }, 'same_again'], 'the sheet acknowledges with the figure it showed');
+  assert(/payAckList\(acknowledged, PAY\.preview && PAY\.preview\.warnings\)/.test(books), 'payWrite sends through payAckList');
+  console.log('chit-pay-ask: 14 checks ok');
 })().catch((e) => { console.error(e); process.exit(1); });

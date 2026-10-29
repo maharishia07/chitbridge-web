@@ -90,6 +90,7 @@ jobs:
           node tests/avatar-hydrate.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
+          node tests/chit-pay-ask.test.cjs
           node tests/chit-sheet-captured.test.cjs
           node tests/crm-unbilled-list.test.cjs
           node tests/cu4-datetime.test.cjs
