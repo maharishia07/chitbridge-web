@@ -228,6 +228,10 @@ var c2q = function (l) {
 function c2Money(v) {
   return v === null || v === undefined ? '—' : inr(v);
 } /* CU4: the shop's currency (inr), not always ₹ (inr_) */
+/** RAIL-146: did the server take the money off this read (a co-assist who may not see cost)? the field it sends, never a sentence */
+function c2CostHidden(read) {
+  return !!(read && read.cost_hidden);
+}
 function c2Head(t, s) {
   return (
     '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:var(--fs-3)">' +
@@ -580,7 +584,7 @@ function c2PaneOrd(d) {
   out += frozenMoneyHTML(
     {
       business_json: hh.business_json || (d && d.business_json) || null,
-      summary_money: (hh.summary_json && hh.summary_json.money) || null,
+      summary_money: (hh.summary_json && hh.summary_json.money) || null, cost_hidden: c2CostHidden(d) /* RAIL-146: "Amounts hidden", not "No issued figures" */,
       currency: cat.shop.currency_code,
       isDraft: /^draft$/i.test(String(hh.current_status || hh.status || ''))
     },
@@ -2206,7 +2210,7 @@ function chit2Screen() {
       ? '<div style="padding:8px 14px 2px">' +
         chitSpendStrip({
           id: C2.id,
-          amt: (d.detail && d.detail.total_value) || h.total_value || 0,
+          amt: (d.detail && d.detail.total_value) || h.total_value || 0, cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
           delivery_summary: sum,
           line_delivery: d.line_delivery,
           line_assignment: d.line_assignment,

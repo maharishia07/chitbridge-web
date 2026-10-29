@@ -23770,7 +23770,7 @@ function mapApiChit(c) {
      */
     isDraft: c.role === 'Draft',
     kind: c.purpose || 'order',
-    amt: sum.total_value || 0,
+    amt: sum.total_value || 0, costHidden: !!c.cost_hidden /* ⭐ RAIL-146: the server took the money off this row for a co-assist who may not see cost (api lib/cost-view) — the cell says "hidden", never ₹0 */,
     currency: sum.currency_code,
     state: ST[c.current_status] || 'open',
     _status: c.current_status || 'pending',
@@ -23829,10 +23829,16 @@ function mapApiChit(c) {
 /* ⚠️ TAKES A LIVE-SET ENTRY, renders the LIVE version. A removed line has live:null and is rendered from its
    original — struck through by contentItems — because it must stay on screen as evidence of what was asked for
    while counting in nothing. */
+/** " × price = total" for a line — or " × hidden" when the server took the price off this read for a cost-blind co-assist (RAIL-146): inr(undefined) would print ₹0.00, a figure that was never there */
+function lineMoneyText(li) {
+  var priceHidden = li.price == null && typeof UI !== 'undefined' && !!(UI.detail && UI.detail.cost_hidden);
+  if (priceHidden) return ' × ' + tx('hidden');
+  return ' × ' + inr(li.price) + ' = ' + inr(li.total || li.quantity * li.price);
+}
 function fmtLine(e) {
   var li = (e && (e.live || e.original)) || e || {};
   var qty = (li.quantity || 0) + (li.unit ? ' ' + li.unit : '') + (li.unit_size ? ' (' + li.unit_size + ')' : '');
-  var money = ' × ' + inr(li.price) + ' = ' + inr(li.total || li.quantity * li.price);
+  var money = lineMoneyText(li);
   var name = (li.particulars || 'Item') + (li.comment ? '  ·  ' + li.comment : '') + (li.asked_unit ? '  (asked in ' + li.asked_unit + ')' : '');
   /* ⚠️ [3] IS THE LIVE-SET ENTRY (b138), carried so the renderer can strike the superseded versions and mark a
      removal without a second lookup. Data, not markup — nothing prints it directly. Appended rather than
@@ -24725,7 +24731,7 @@ const LISTCOLS = [
     w: '112px',
     align: 'right',
     cell: function (c) {
-      return '<span style="font-family:\'Space Mono\'">' + (c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
+      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
     }
   },
   /* the rest of the money, off until someone picks them in ⚙ columns. A missing figure is "—", never 0. */
@@ -25301,6 +25307,8 @@ const ONE_COMPUTATION_SINCE = '2026-10-02T05:44:00Z';
 function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const FM = frozenMoney(c);
   if (!FM) {
+    /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
+    if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
     const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
     if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
     const older =
@@ -25442,7 +25450,7 @@ async function openChit(id, silent) {
                contradicting them. */
         line_delivery: r.line_delivery || {},
         delivery_summary: r.delivery_summary || null,
-        line_assignment: r.line_assignment || {},
+        line_assignment: r.line_assignment || {}, cost_hidden: !!r.cost_hidden /* ⭐ RAIL-146: the server's own word that it took the cost off this read for a cost-blind co-assist (api lib/cost-view); the strip, the lines and the money block say "hidden" on it */,
         order_billed: r.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */,
         /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
         summary_money: (h.summary_json && h.summary_json.money) || null,
@@ -29009,11 +29017,21 @@ function openLineCard(chit_id, line_id) {
  * every hour with who recorded it and when — so the strip opens that rather than growing its own copy, which
  * would be a second answer to the same question and would disagree the first time either changed.
  */
+/** a spend-strip figure: the money, or "hidden" when the server took it off this read for a cost-blind co-assist (RAIL-146), else a dash — never ₹0 */
+function spendFigure(value, hidden) {
+  if (value) return esc(inr(value));
+  return hidden ? esc(tx('hidden')) : '—';
+}
+/** the Quoted cell: shown when there is a figure, or when the figure was hidden; nothing when the chit never had one */
+function spendQuotedCell(quoted, hidden, cell) {
+  if (!quoted && !hidden) return '';
+  return cell(tx('Quoted'), spendFigure(quoted, hidden));
+}
 function chitSpendStrip(c) {
   const s = c.delivery_summary;
   if (!s) return '';
   const spent = Number(s.charged || 0);
-  const quoted = Number(c.amt || 0);
+  const quoted = Number(c.amt || 0), hidden = !!c.cost_hidden; /* RAIL-146: the server took the money off this read for a cost-blind co-assist — a cell says "hidden", never ₹0 */
   if (!spent && !s.lines) return '';
   /**
    * ⚠️⚠️ COUNTED THE SAME WAY THE LINES ARE, or the header and the rows disagree in public. `s.complete` is
@@ -29044,8 +29062,8 @@ function chitSpendStrip(c) {
   ) => `<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
-    ${quoted ? cell(tx('Quoted'), esc(inr(quoted))) : ''}
-    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent ? esc(inr(spent)) : '—'}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
+    ${spendQuotedCell(quoted, hidden, cell)}
+    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spendFigure(spent, hidden)}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     ${chitPaymentCell(c, cell, quoted)}
     ${
