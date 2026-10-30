@@ -148,6 +148,7 @@ if (haveApi) {
   ok(R.edges.some((e) => e.to === SEND && e.kind === 'calls' && e.via === 'http' && /^fn:web:/.test(e.from)), 'the real join: a web function calls POST /api/chits/send');
   ok(R.edges.some((e) => e.from === 'step:O2C/3' && e.to === SEND && e.kind === 'implements'), 'the real join: step O2C/3 implements POST /api/chits/send');
   ok(R.nodes.some((n) => n.kind === 'table' && n.name === 'chit_header' && n.declared), 'the real api: chit_header is a declared table');
+  ok(rids.has('route:api:server.js GET /health'), 'the real api: the app own GET /health is a route node of server.js (W2: the register lists it, a module must serve it)');
 } else {
   console.log('  · ../chitbridge-api is not beside this checkout: routes, tables, api functions and the screen→route join are checked by SHAPE only');
   ok(R.meta.present.api === false && R.meta.notes.some((n) => /chitbridge-api is not beside/.test(n)), 'and the build SAYS the api half is absent');
