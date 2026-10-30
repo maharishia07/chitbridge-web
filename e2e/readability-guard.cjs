@@ -96,6 +96,16 @@ ok(ratchet0['public/app/worse.js'] && ratchet0['public/app/worse.js'].score === 
 ok(ratchet0['public/app/better.js'] && ratchet0['public/app/better.js'].long40 === 1, 'better.js starts with one function over 40 lines');
 ok(!ratchet0['docs/notes.md'], 'a doc has no ratchet row');
 
+/* the engines repo has no tool of its own: --repo engines writes its ratchet from here (src/ and tools/ are its own code) */
+const engTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-readability-eng-'));
+fs.mkdirSync(path.join(engTmp, 'src'));
+fs.writeFileSync(path.join(engTmp, 'src/rule.js'), '// OWNS  a fixture rule.\nmodule.exports = (a) => a;\n');
+const wroteEng = run([TOOL, '--repo', 'engines', '--root', engTmp, '--write']);
+const engRows = fs.existsSync(path.join(engTmp, 'readability.ratchet.json')) ? JSON.parse(fs.readFileSync(path.join(engTmp, 'readability.ratchet.json'), 'utf8')) : {};
+ok(wroteEng.status === 0 && engRows['src/rule.js'] && typeof engRows['src/rule.js'].score === 'number', '--repo engines --write writes the engines ratchet, one row per own-code file' + (wroteEng.status ? '\n' + wroteEng.stdout + wroteEng.stderr : ''));
+const wroteEng2 = run([TOOL, '--repo', 'engines', '--root', engTmp, '--write']);
+ok(wroteEng2.status === 0 && /0 lowered · 0 refused/.test(wroteEng2.stdout), '--repo engines --write again changes nothing (lower only)');
+
 console.log('\n2 · the head edits, judged against the base');
 writeAll(HEAD);
 fs.writeFileSync(path.join(tmp, 'trace.json'), JSON.stringify(TRACE));
