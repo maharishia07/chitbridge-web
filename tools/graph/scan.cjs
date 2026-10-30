@@ -370,9 +370,9 @@ function joinedPathsIn(code, strings) {
   }
   return joinedPaths;
 }
-/** W2 (30 Oct): is the string a literal '/api/…' path a CALL? Not when it is the `p:` of a client-registry entry `key: { m: 'POST', p: '/api/x' }`: that NAMES a route, only api('key') calls it (tools/endpoint-usage.cjs says the same). */
-function isApiPathCall(item, sourceText) {
-  return /^\/api\/[\w/:.%-]*/.test(item.text) && !/\bm:\s*["']\w+["']\s*,\s*p:\s*$/.test(sourceText.slice(Math.max(0, item.start - 60), item.start - 1));
+/** W2 (30 Oct): is the string the `p:` of a client-registry entry `key: { m: 'POST', p: '/api/x' }`? That NAMES a route; only api('key') calls it (tools/endpoint-usage.cjs says the same). */
+function isRegistryEntryPath(item, sourceText) {
+  return /\bm:\s*["']\w+["']\s*,\s*p:\s*$/.test(sourceText.slice(Math.max(0, item.start - 60), item.start - 1));
 }
 
 /**
@@ -542,7 +542,7 @@ function scanJs(src, opts) {
       apiKeys.push({ key: s.text, pos: s.start });
       continue;
     }
-    if (isApiPathCall(s, src)) {
+    if (/^\/api\/[\w/:.%-]*/.test(s.text)) {
       const path = s.text.split('?')[0];
       /* method: a `method: 'POST'` string within the next 240 chars, else GET */
       let method = 'GET';
@@ -553,7 +553,7 @@ function scanJs(src, opts) {
         }
         if (t.start >= s.start + 240) break;
       }
-      apiPaths.push({ path, pos: s.start, method, open: /\/$/.test(path) || /\+\s*$/.test(code.slice(s.end + 1, s.end + 6)) });
+      apiPaths.push({ path, pos: s.start, method, entry: isRegistryEntryPath(s, src), open: /\/$/.test(path) || /\+\s*$/.test(code.slice(s.end + 1, s.end + 6)) });
     }
     if (/\bon[a-z]+\s*=/.test(s.text) || (s.q === '`' && /\bon[a-z]+\s*=/.test(s.text))) {
       for (const h of s.text.matchAll(new RegExp('\\bon[a-z]+\\s*=\\s*(?:\\\\?["\'])?\\s*(?:\\w+\\s*;\\s*)*(' + NAME + ')\\s*\\(', 'g')))

@@ -707,7 +707,7 @@ function build() {
         }
       }
     }
-    for (const p of f.scan.apiPaths) {
+    for (const p of f.scan.apiPaths.filter((item) => !(item.entry && registry))) { /* a registry entry's path is a call only where api('key') cannot be joined */
       const from = fromNode(f, p.owner, p.pos);
       let method = p.method;
       /* `call('POST', '/api/…')` — the method sits just BEFORE the path in the api's tests */
