@@ -1,5 +1,5 @@
 {
-  "_about": "readability ratchet (DISCIPLINES §6): one row per own-code file, score = long40 + long80 + complex10 + complex15 + deep3 + deep4 + cryptic + noWhatLine + emptyCatch + noHeader. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write`; it never raises.",
+  "_about": "readability ratchet (DISCIPLINES §6): one row per own-code file, score = long40 + long80 + complex10 + complex15 + deep3 + deep4 + cryptic + noWhatLine + emptyCatch + noHeader. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write` / `--repo engines --write`; it never raises.",
   "public/accounts.html": {"score":90,"long40":3,"long80":0,"complex10":4,"complex15":1,"deep3":0,"deep4":0,"cryptic":70,"noWhatLine":6,"emptyCatch":6,"noHeader":0},
   "public/app.html": {"score":2627,"long40":154,"long80":53,"complex10":213,"complex15":90,"deep3":10,"deep4":2,"cryptic":1524,"noWhatLine":334,"emptyCatch":247,"noHeader":0},
   "public/app/accounts-shell.js": {"score":48,"long40":2,"long80":0,"complex10":3,"complex15":1,"deep3":1,"deep4":0,"cryptic":37,"noWhatLine":2,"emptyCatch":2,"noHeader":0},
@@ -175,6 +175,7 @@
   "tools/readability/changed.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/guard.cjs": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
   "tools/readability/measure.cjs": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
+  "tools/readability/moves.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/ratchet.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/screen-list.cjs": {"score":12,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":9,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "tools/sig-stars.cjs": {"score":26,"long40":1,"long80":0,"complex10":2,"complex15":1,"deep3":1,"deep4":0,"cryptic":19,"noWhatLine":2,"emptyCatch":0,"noHeader":0}
