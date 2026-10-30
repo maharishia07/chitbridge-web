@@ -204,6 +204,82 @@ ok(checklist.problems(fs.readFileSync(path.join(ROOT, '.github/pull_request_temp
 ok(checklist.problems('no checklist at all').length === 5, 'a body with no checklist is missing all five lines');
 ok(checklist.skipReason('dependabot[bot]', ['package.json']) && checklist.skipReason('me', ['docs/a.md', 'README.md']) && !checklist.skipReason('me', ['docs/a.md', 'lib/x.js']), 'skips: a dependency bot · docs-only; a code change never skips');
 
+console.log('\n8 · an EXACT move keeps its score (Athi R-moved (a)): moved code is not new code');
+const moveRules = require('../tools/readability/moves.cjs');
+const summed = moveRules.plus({ score: 2, cryptic: 2, long40: 0 }, { score: 1, cryptic: 0, long40: 1 });
+ok(summed.score === 3 && summed.cryptic === 2 && summed.long40 === 1 && moveRules.plus({ score: 2 }, null).score === 2, 'moves: a carried score adds counter by counter; nothing carried leaves the row as it is');
+/** a base repo, the ratchet written from it, then the head files; returns the guard's verdict and the ratchet before / after */
+function moveScenario(baseFiles, headFiles, extra, slack) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-readability-move-'));
+  const put = (files) => { for (const [file, text] of Object.entries(files)) { fs.mkdirSync(path.join(dir, path.dirname(file)), { recursive: true }); if (text === null) fs.rmSync(path.join(dir, file), { force: true }); else fs.writeFileSync(path.join(dir, file), text); } };
+  put(baseFiles);
+  git(dir, ['init', '-q']); git(dir, ['config', 'user.email', 'fixture@example']); git(dir, ['config', 'user.name', 'fixture']);
+  git(dir, ['add', '-A']); git(dir, ['commit', '-q', '-m', 'base']);
+  const sha = git(dir, ['rev-parse', 'HEAD']);
+  run([TOOL, '--repo', 'web', '--root', dir, '--write']);
+  const rows0 = JSON.parse(fs.readFileSync(path.join(dir, 'readability.ratchet.json'), 'utf8'));
+  if (slack) { const rows = JSON.parse(fs.readFileSync(path.join(dir, 'readability.ratchet.json'), 'utf8')); rows[slack].score += 1; rows[slack].cryptic += 1; fs.writeFileSync(path.join(dir, 'readability.ratchet.json'), JSON.stringify(rows)); }
+  put(headFiles);
+  const verdict = run([TOOL, '--changed', '--repo', 'web', '--root', dir, '--base', sha, '--ratchet', '--trace', 'none', '--md', '--today', '2026-10-31'].concat(extra || []));
+  const rows1 = () => JSON.parse(fs.readFileSync(path.join(dir, 'readability.ratchet.json'), 'utf8'));
+  return { verdict, rows0, rows1, dir };
+}
+const sumOf = (rows) => Object.values(rows).filter((row) => typeof row === 'object').reduce((total, row) => total + row.score, 0);
+const CRYPTIC_FN = '// listTotals: adds the rows up (fixture)\nfunction listTotals(rows) {\n  var q = 0;\n  for (const row of rows) q += row;\n  return q;\n}\n';
+const SRC0 = HEADER('src') + CRYPTIC_FN + 'function keepOne(rows) {\n  return rows.length;\n}\n';
+const SRC1 = HEADER('src') + 'function keepOne(rows) {\n  return rows.length;\n}\n';
+const DST0 = HEADER('dst') + 'function keepTwo(rows) {\n  return rows.length;\n}\n';
+const REFORMATTED = CRYPTIC_FN.replace('// listTotals: adds the rows up (fixture)', '// the same function, a new comment').replace('  var q = 0;', '  var q   =   0; // spaced');
+
+const exact = moveScenario({ 'public/app/src.js': SRC0, 'public/app/dst.js': DST0 }, { 'public/app/src.js': SRC1, 'public/app/dst.js': DST0 + REFORMATTED });
+ok(exact.verdict.status === 0 && /moved: 1 function \(exact body match\)/.test(exact.verdict.stdout), 'an exact move (whitespace and comments differ) passes and prints "moved: N functions (exact body match)"' + (exact.verdict.status ? '\n' + exact.verdict.stdout : ''));
+ok(/listTotals[^\n]*public\/app\/src\.js:\d+ → public\/app\/dst\.js:\d+/.test(exact.verdict.stdout), 'the move is listed with its old and new place');
+
+const intoNew = moveScenario({ 'public/app/src.js': SRC0 }, { 'public/app/src.js': SRC1, 'public/app/fresh.js': HEADER('fresh') + REFORMATTED }, ['--write']);
+const rowsNew = intoNew.rows1();
+ok(intoNew.verdict.status === 0 && rowsNew['public/app/fresh.js'] && rowsNew['public/app/fresh.js'].cryptic === 1, 'a move to a NEW file carries the score: it passes and its row holds the cryptic name (' + JSON.stringify(rowsNew['public/app/fresh.js']) + ')' + (intoNew.verdict.status ? '\n' + intoNew.verdict.stdout : ''));
+ok(rowsNew['public/app/src.js'].cryptic === 0 && sumOf(rowsNew) === sumOf(intoNew.rows0), 'the ratchet total does not move by a move alone (' + sumOf(intoNew.rows0) + ' → ' + sumOf(rowsNew) + ')');
+
+const renamed = moveScenario({ 'public/app/src.js': SRC0 }, { 'public/app/src.js': SRC1, 'public/app/fresh.js': HEADER('fresh') + REFORMATTED.replace(/\bq\b/g, 'z') });
+ok(renamed.verdict.status === 1 && /\[cryptic-name\]/.test(renamed.verdict.stdout) && !/moved: /.test(renamed.verdict.stdout), 'a move plus ONE renamed variable fails as today (judged as new code, no "moved" line)');
+
+const copied = moveScenario({ 'public/app/src.js': SRC0 }, { 'public/app/src.js': SRC0, 'public/app/fresh.js': HEADER('fresh') + REFORMATTED });
+ok(copied.verdict.status === 1 && !/moved: /.test(copied.verdict.stdout), 'a COPY (the old function stays) is not a move: it fails as new code');
+
+const dropped = moveScenario({ 'public/app/src.js': SRC0 }, { 'public/app/src.js': SRC1 });
+ok(dropped.verdict.status === 0 && /tighten the ratchet/.test(dropped.verdict.stdout) && !/moved: /.test(dropped.verdict.stdout), 'a deleted-but-not-re-added function lowers debt as today (tighten told, no move)');
+
+const whole = moveScenario({ 'public/app/src.js': SRC0, 'public/app/keep.js': DST0 }, { 'public/app/src.js': null, 'public/app/fresh.js': HEADER('fresh') + REFORMATTED, 'public/app/keep.js': DST0 });
+ok(whole.verdict.status === 0 && /moved: 1 function \(exact/.test(whole.verdict.stdout), 'a function moved out of a DELETED file counts as a move too');
+
+/* the binding name sits OUTSIDE the function node (const x = () => …, key: function …): renaming it is a change, in EVERY function form (cb-critic, #438) */
+const FORMS = {
+  declaration: ['function sumRows(rows) {\n  let total = 0;\n  for (const row of rows) total += row;\n  return total;\n}\n', 'sumRows'],
+  'const arrow': ['const sumRows = (rows) => {\n  let total = 0;\n  for (const row of rows) total += row;\n  return total;\n};\n', 'sumRows'],
+  'assigned expression': ['const holder = {};\nholder.sumRows = function (rows) {\n  let total = 0;\n  for (const row of rows) total += row;\n  return total;\n};\n', 'sumRows'],
+  'object method': ['const holder = {\n  sumRows(rows) {\n    let total = 0;\n    for (const row of rows) total += row;\n    return total;\n  }\n};\n', 'sumRows'],
+  'class method': ['class Holder {\n  sumRows(rows) {\n    let total = 0;\n    for (const row of rows) total += row;\n    return total;\n  }\n}\n', 'sumRows']
+};
+const formRuns = [];
+for (const [form, [code, binding]] of Object.entries(FORMS)) {
+  const sameName = moveScenario({ 'public/app/src.js': HEADER('src') + code + SRC1.replace(HEADER('src'), '') }, { 'public/app/src.js': SRC1, 'public/app/fresh.js': HEADER('fresh') + code });
+  const otherName = moveScenario({ 'public/app/src.js': HEADER('src') + code + SRC1.replace(HEADER('src'), '') }, { 'public/app/src.js': SRC1, 'public/app/fresh.js': HEADER('fresh') + code.split(binding).join('totalRows') });
+  formRuns.push(sameName, otherName);
+  ok(sameName.verdict.status === 0 && /moved: 1 function/.test(sameName.verdict.stdout), form + ' moved unchanged = a move' + (sameName.verdict.status ? '\n' + sameName.verdict.stdout : ''));
+  ok(!/moved: /.test(otherName.verdict.stdout), form + ' moved with its binding renamed = new code (no "moved" line)');
+}
+const ARROW = FORMS['const arrow'][0];
+const slackBase = { 'public/app/src.js': HEADER('src') + ARROW + SRC1.replace(HEADER('src'), ''), 'public/app/dst.js': DST0 };
+const slackHead = { 'public/app/src.js': SRC1, 'public/app/dst.js': DST0 + ARROW.split('sumRows').join('q') };
+const slack = moveScenario(slackBase, slackHead, [], 'public/app/dst.js');
+formRuns.push(slack);
+ok(slack.verdict.status === 1 && /\[cryptic-name\]/.test(slack.verdict.stdout) && !/moved: /.test(slack.verdict.stdout), 'a moved arrow with its binding renamed to a cryptic name fails even when the target row has slack');
+for (const scenario of formRuns) fs.rmSync(scenario.dir, { recursive: true, force: true });
+
+const movedBody = exact.verdict.stdout.slice(exact.verdict.stdout.indexOf('## §6')).replace(/`<doc>`/g, 'n/a').replace('`<word>` → reused/widened `<name>` (or "nothing exists")', '`readability` → widened');
+ok(/- moved: 1 function/.test(movedBody) && checklist.problems(movedBody).length === 0, 'the §6 checklist with the moved line still passes pr-checklist');
+for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmSync(scenario.dir, { recursive: true, force: true });
+
 fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
 process.exit(bad ? 1 : 0);

@@ -4,7 +4,7 @@
  *           module header · CARD line · trace row · §7 minimums · ratchet score), the before → after numbers, the checklist markdown.
  * CALLED BY tools/readability.cjs (--changed), e2e/readability-guard.cjs (the rule fixtures), the api's tests/readability-guard.test.cjs.
  * FLOW      changed.touched ──▶ for each own-code file: measure(head) + measure(base) ──▶ touchedFunctions ──▶ rules ──▶ findings
- *           ──▶ numbers (Pass 1 · 2 · 3) ──▶ markdown checklist · exit code
+ *           ──▶ numbers (Pass 1 · 2 · 3) ──▶ markdown checklist · exit code   (moves.find first: an exact move is carried, not judged as new)
  * CARD      qa/readability-guard
  *
  * The one judgement the brief asked for (DISCIPLINES §6, 15 Oct): only CHANGED code is judged, so the backlog blocks nobody —
@@ -16,6 +16,7 @@ const path = require('path');
 const measure = require('./measure.cjs');
 const ratchet = require('./ratchet.cjs');
 const changed = require('./changed.cjs');
+const moves = require('./moves.cjs');
 
 const LIMITS = ratchet.LIMITS;
 /** §7 minimums warn for the first week (brief: "warn first week, then fail") */
@@ -186,13 +187,14 @@ function ruleMinimums(file, trace, today) {
 const higherOf = (row, floor) => (floor && (!row || floor.score > row.score) ? floor : row);
 /** the file's score may not rise above its ratchet row (a file with no row is new: it must score 0) — nor above the BASE the change
  *  started from: a row written before other rounds landed cannot blame this change for their score (INT7b: assign-chit row 5, base 13) */
-function ruleRatchet(file, head, base, rows) {
+function ruleRatchet(file, head, base, rows, carried) {
   if (!rows)
     return { level: 'warn', rule: 'ratchet', text: `${file}: no ${ratchet.RATCHET_FILE} in this repo yet (write it: --write)`, score: ratchet.score(head) };
   const now = ratchet.score(head),
     row = rows[file] || null,
     floor = base ? ratchet.score(base) : null;
-  const reference = higherOf(row, floor);
+  const held = higherOf(row, floor);
+  const reference = moves.plus(held, carried);
   const allowed = reference ? reference.score : 0;
   if (now.score > allowed) {
     const reason = ratchet.risen(reference, now).join(', ');
@@ -203,21 +205,32 @@ function ruleRatchet(file, head, base, rows) {
       score: now
     };
   }
-  if (row && now.score < row.score)
-    return { level: 'info', rule: 'ratchet', text: `${file}: score ${row.score} → ${now.score} — tighten the ratchet (--write)`, score: now };
+  const rowScore = row ? moves.plus(row, carried).score : null;
+  if (row && now.score < rowScore)
+    return { level: 'info', rule: 'ratchet', text: `${file}: score ${rowScore} → ${now.score} — tighten the ratchet (--write)`, score: now };
   return { level: 'ok', rule: 'ratchet', score: now };
 }
 
 // ── one file
+/** the functions this change touched; a moved one stands for its whole range (what is nested inside travels with it) */
+function touchedOf(entry, headFns, view) {
+  const inMoved = (fn) => view.into.some(([start, end]) => fn.line >= start && fn.endLine <= end);
+  const touched = entry.status === 'added' ? headFns : headFns.filter((fn) => overlaps(fn, entry.ranges));
+  return touched.filter((fn) => !inMoved(fn) || view.moved.includes(fn));
+}
+
 /** judge one touched file: its touched functions, every rule, the numbers behind the checklist */
 function judgeFile(entry, context) {
-  const { head, base } = entry;
+  const view = context.moved.byFile.get(entry.file) || moves.NO_MOVES;
+  const head = moves.without(entry.head, view.into),
+    base = moves.without(entry.base, view.out);
   const addedLines = entry.status === 'added' ? new Set(head.functions.map((fn) => fn.line)) : linesOf(entry.ranges);
   const headFns = head.functions.filter((fn) => !fn.wrapper),
     baseFns = base ? base.functions.filter((fn) => !fn.wrapper) : [];
-  const touchedFns = entry.status === 'added' ? headFns : headFns.filter((fn) => overlaps(fn, entry.ranges));
-  const pairs = matchBase(touchedFns, baseFns);
-  const scored = ruleRatchet(entry.file, head, base, context.ratchetRows);
+  const touchedFns = touchedOf(entry, headFns, view);
+  const pairs = matchBase(touchedFns.filter((fn) => !view.moved.includes(fn)), baseFns);
+  view.carriedMoves.forEach((move) => pairs.set(move.fn, move.from.fn));
+  const scored = ruleRatchet(entry.file, entry.head, entry.base, context.ratchetRows, view.carried);
   const findings = [
     ...touchedFns.map((fn) => ruleHardLimits(entry.file, fn, pairs.get(fn) || null)),
     ...ruleNewCryptic(entry.file, head, base, addedLines),
@@ -234,6 +247,8 @@ function judgeFile(entry, context) {
     touched: touchedFns.map((fn) => ({ fn, base: pairs.get(fn) || null })),
     findings,
     score: scored.score,
+    carried: view.carried,
+    moved: view.carriedMoves,
     numbers: numbersOf(touchedFns, pairs, head, base)
   };
 }
@@ -263,6 +278,25 @@ function numbersOf(touchedFns, pairs, head, base) {
 }
 
 // ── the run
+/** a touched own-code file measured at head and at the base */
+function entryOf(root, baseSha, touched, text) {
+  const baseText = touched.status === 'added' ? null : changed.baseText(root, baseSha, touched.file);
+  return {
+    file: touched.file,
+    status: baseText == null ? 'added' : touched.status,
+    ranges: touched.ranges,
+    head: measure.factsFromText(touched.file, text),
+    base: baseText == null ? null : measure.factsFromText(touched.file, baseText)
+  };
+}
+
+/** a deleted own-code file measured at the base: its functions may have moved on to another file */
+function removedFile(repo, root, baseSha, file) {
+  const goneText = changed.baseText(root, baseSha, file);
+  if (goneText == null || !measure.inScope(repo, file, goneText)) return null;
+  return { file, base: measure.factsFromText(file, goneText) };
+}
+
 /** everything the guard judges for one repo: the touched own-code files measured before and after */
 function gather(options) {
   const { repo, root, baseRef } = options;
@@ -271,26 +305,21 @@ function gather(options) {
   const diff = changed.touched(root, base.sha);
   if (!diff.files) return { error: diff.why };
   const entries = [],
+    removed = [],
     skipped = [];
   for (const touched of diff.files) {
-    if (touched.status === 'deleted') continue;
+    if (touched.status === 'deleted') {
+      const gone = removedFile(repo, root, base.sha, touched.file);
+      if (gone) removed.push(gone);
+      continue;
+    }
     const absPath = path.join(root, touched.file);
     if (!fs.existsSync(absPath)) continue;
     const text = fs.readFileSync(absPath, 'utf8');
-    if (!measure.inScope(repo, touched.file, text)) {
-      skipped.push(touched.file);
-      continue;
-    }
-    const baseText = touched.status === 'added' ? null : changed.baseText(root, base.sha, touched.file);
-    entries.push({
-      file: touched.file,
-      status: baseText == null ? 'added' : touched.status,
-      ranges: touched.ranges,
-      head: measure.factsFromText(touched.file, text),
-      base: baseText == null ? null : measure.factsFromText(touched.file, baseText)
-    });
+    if (!measure.inScope(repo, touched.file, text)) skipped.push(touched.file);
+    else entries.push(entryOf(root, base.sha, touched, text));
   }
-  return { baseSha: base.sha, entries, skipped };
+  return { baseSha: base.sha, entries, removed, skipped };
 }
 
 /** the guard's one entry: gather, judge every file, fold the findings */
@@ -300,7 +329,8 @@ function judgeChange(options) {
   const context = {
     trace: options.trace || null,
     today: options.today || new Date().toISOString().slice(0, 10),
-    ratchetRows: options.ratchetRows === undefined ? ratchet.read(options.root) : options.ratchetRows
+    ratchetRows: options.ratchetRows === undefined ? ratchet.read(options.root) : options.ratchetRows,
+    moved: moves.find(gathered.entries, gathered.removed)
   };
   const files = gathered.entries.map((entry) => judgeFile(entry, context));
   const findings = files.flatMap((file) => file.findings);
@@ -313,6 +343,7 @@ function judgeChange(options) {
     baseRef: options.baseRef,
     baseSha: gathered.baseSha,
     files,
+    moved: context.moved.moves,
     skipped: gathered.skipped,
     findings,
     failed: findings.some((finding) => finding.level === 'fail'),
@@ -364,6 +395,7 @@ function markdown(result) {
     `- [x] Pass 1 · shrink: lines ${arrow(sum.linesBefore, sum.linesAfter)} · complexity ${arrow(sum.complexityBefore, sum.complexityAfter)} · DB trips n/a`,
     `- [x] Pass 2 · humanify: cryptic names ${arrow(sum.crypticBefore, sum.crypticAfter)} · functions with a what-line ${sum.whatLineBefore}/${sum.whatLineOfBefore} → ${sum.whatLineAfter}/${sum.whatLineOfAfter} · empty catches ${arrow(sum.emptyCatchBefore, sum.emptyCatchAfter)}`,
     `- [x] Pass 3 · structure: module header ${sum.headerBefore}/${sum.files} → ${sum.headerAfter}/${sum.files} · CARD line ${sum.cardAfter}/${sum.files} · TRACE row: tests ${sum.tested}/${sum.files}${result.hadTrace ? '' : ' (no trace.json)'} · spec \`<doc>\` · design \`<doc>\``,
+    ...(result.moved.length ? [`- moved: ${plural(result.moved.length, 'function')} (exact body match) carried with their old score, not new code`] : []),
     `- [${result.failed ? ' ' : 'x'}] Guard green: \`readability --changed --ratchet\` — ${plural(sum.failures, 'failure')} · ${plural(result.warnings, 'warning')}`
   ];
   return lines.join('\n');
@@ -375,6 +407,11 @@ function report(result) {
   const lines = [];
   for (const file of result.files)
     lines.push(`  ${file.file}  ${file.status} · ${file.touched.length} function(s) touched · score ${file.score ? file.score.score : '?'}`);
+  if (result.moved.length) {
+    lines.push(`  moved: ${plural(result.moved.length, 'function')} (exact body match) — carried with their old score, not judged as new code`);
+    for (const move of result.moved)
+      lines.push(`    ${move.fn.name || '(anon)'} ${measures(move.fn)}  ${move.from.file}:${move.from.fn.line} → ${move.file}:${move.fn.line}`);
+  }
   if (result.skipped.length) lines.push('  not judged (tests, docs, vendored, out of scope): ' + result.skipped.join(' · '));
   for (const finding of result.findings.slice().sort((left, right) => order[left.level] - order[right.level]))
     lines.push(`  ${finding.level === 'fail' ? '✗' : finding.level === 'warn' ? '⚠' : '·'} [${finding.rule}] ${finding.text}`);
