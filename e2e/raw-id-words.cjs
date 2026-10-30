@@ -1,3 +1,4 @@
+// @type: unit
 /* raw-id-words.cjs — A RAW ID IS NEVER SHOWN WHERE A NAME BELONGS (R123 Pay sheet bill, R109 timeline "by"; UX-118)
  *
  * cbIsRawId (accounts-shell.js, the one test) and bkBillNo (cap-books.js, the bill's number or "Bill of <date>") are taken from the
