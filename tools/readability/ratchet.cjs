@@ -81,7 +81,7 @@ function write(root, rows) {
   const about =
     'readability ratchet (DISCIPLINES §6): one row per own-code file, score = ' +
     COUNTERS.join(' + ') +
-    '. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write`; it never raises.';
+    '. A file may score LESS than its row, never more. Lower it with `node tools/readability.cjs --write` (web) / `--repo api --write` / `--repo engines --write`; it never raises.';
   const lines = ['  "_about": ' + JSON.stringify(about)];
   for (const file of Object.keys(rows).sort()) lines.push('  ' + JSON.stringify(file) + ': ' + JSON.stringify(rows[file]));
   fs.writeFileSync(ratchetPath(root), '{\n' + lines.join(',\n') + '\n}\n');

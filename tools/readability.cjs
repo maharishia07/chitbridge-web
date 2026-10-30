@@ -12,10 +12,10 @@
  *
  *   node tools/readability.cjs                                   the READ-1 baseline over web · api · engines (--roots web=.,api=..,engines=..)
  *   node tools/readability.cjs --json out.json | --detail api R3 | --top 20
- *   node tools/readability.cjs --changed [--base origin/main] [--repo web|api] [--root DIR] [--ratchet] [--md] [--write] [--today YYYY-MM-DD]
+ *   node tools/readability.cjs --changed [--base origin/main] [--repo web|api|engines] [--root DIR] [--ratchet] [--md] [--write] [--today YYYY-MM-DD]
  *                                                                 judge only what the change touched (git diff vs merge-base); --md prints the
  *                                                                 §6 checklist with numbers; --write tightens the touched files' ratchet rows
- *   node tools/readability.cjs --write [--repo api --root ../chitbridge-api]   write/tighten the whole ratchet (lower only)
+ *   node tools/readability.cjs --write [--repo api|engines --root ../chitbridge-<repo>]   write/tighten the whole ratchet (lower only)
  * acorn: the installed package when there is one, else the vendored tools/vendor/acorn.cjs — no npm dependency, runs offline anywhere.
  */
 'use strict';
