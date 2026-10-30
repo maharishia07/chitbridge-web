@@ -10,7 +10,7 @@
  *           row(module) ──▶ minimums(layer, tests) ──▶ { generated, repo, modules } ──▶ <root>/trace.json | --stdout
  * CARD      qa/readability-guard
  *
- *   node tools/graph/trace.cjs                         web + api (when ../chitbridge-api is beside) → each repo's trace.json
+ *   node tools/graph/trace.cjs                         web + api + engines (when ../chitbridge-api and ../chitbridge-engines are beside) → each repo's trace.json
  *   node tools/graph/trace.cjs --repo api --root DIR   one repo; --stdout prints the JSON instead of writing; --no-build reuses out/graph.json
  * ⚠️ The minimums are EVIDENCE BY KEYWORD over the tests that reach a module (and an explicit `MIN <name>` line in a test) — a guide for
  *    the TRACE table, said as such in every row (`minimums.how`).
@@ -247,7 +247,7 @@ function main() {
   if (typeof root === 'string' && repoFlag !== 'all') process.env.CB_GRAPH_ROOTS = repoFlag + '=' + path.resolve(root);
   const graph = loadGraph();
   const roots = require('./graph.cjs').ROOTS;
-  const repos = repoFlag === 'all' ? ['web', 'api'].filter((repo) => graph.meta.present[repo]) : [repoFlag];
+  const repos = repoFlag === 'all' ? ['web', 'api', 'engines'].filter((repo) => graph.meta.present[repo]) : [repoFlag];
   for (const repo of repos) {
     const trace = traceOf(graph, repo, roots);
     if (flag('stdout')) {
