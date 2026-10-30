@@ -370,6 +370,11 @@ function joinedPathsIn(code, strings) {
   }
   return joinedPaths;
 }
+/** W2 (30 Oct): is the string a literal '/api/…' path a CALL? Not when it is the `p:` of a client-registry entry `key: { m: 'POST', p: '/api/x' }`: that NAMES a route, only api('key') calls it (tools/endpoint-usage.cjs says the same). */
+function isApiPathCall(item, sourceText) {
+  return /^\/api\/[\w/:.%-]*/.test(item.text) && !/\bm:\s*["']\w+["']\s*,\s*p:\s*$/.test(sourceText.slice(Math.max(0, item.start - 60), item.start - 1));
+}
+
 /**
  * scanJs(src, opts) — functions, calls, refs, requires, exports and the strings that matter.
  *   functions[]  { name, kind, start, end, line, endLine, paramsAt }   start/end = body braces (inclusive of `{` … `}`)
@@ -537,7 +542,7 @@ function scanJs(src, opts) {
       apiKeys.push({ key: s.text, pos: s.start });
       continue;
     }
-    if (/^\/api\/[\w/:.%-]*/.test(s.text)) {
+    if (isApiPathCall(s, src)) {
       const path = s.text.split('?')[0];
       /* method: a `method: 'POST'` string within the next 240 chars, else GET */
       let method = 'GET';
