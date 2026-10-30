@@ -171,6 +171,27 @@ function countKinds(items) {
 /** the tested-by `via` of a test that calls a path: an open path (variable tail) that is not itself a route matched by PREFIX, which is a guess */
 const httpProofVia = (isOpenPath, isExactRoute) => (isOpenPath && !isExactRoute ? 'http-prefix' : 'http');
 
+/** W2 (30 Oct): every prefix a route file is mounted at (a router mounted twice, ctp.js at '/' and /api/ctp, is two sets of endpoints; the first is the module's route, the rest are route nodes of their own) */
+function mountsOf(relFile, mounts, mountsAll) {
+  const name = path.basename(relFile);
+  const every = mountsAll && mountsAll[name] && mountsAll[name].length ? mountsAll[name] : [(mounts && mounts[name]) || '/api/' + path.basename(relFile, '.js')];
+  return every.map((prefix) => (prefix === '/' ? '' : prefix));
+}
+const routePath = (base, tail) => (base + tail).replace(/\/$/, '') || base || '/';
+
+/** W2 (30 Oct): the app's own routes (server.js: GET /health, OPTIONS *): the register lists them, so a module must serve them */
+function appRoutesOf(serverFile) {
+  const appRoutes = [];
+  if (!serverFile || !serverFile.scan) return appRoutes;
+  for (const call of serverFile.scan.code.matchAll(/\bapp\.(get|post|put|patch|delete|options)\s*\(\s*(['"])/g)) {
+    const text = serverFile.scan.strings.find((item) => item.start === call.index + call[0].length);
+    if (!text) continue;
+    const method = call[1].toUpperCase();
+    appRoutes.push({ id: 'route:api:server.js ' + method + ' ' + text.text, key: method + ' ' + text.text, node: { kind: 'route', repo: 'api', file: 'server.js', method, tail: text.text, path: text.text, line: serverFile.scan.toLine(call.index) } });
+  }
+  return appRoutes;
+}
+
 function build() {
   const t0 = Date.now();
   const meta = { generated: new Date().toISOString().slice(0, 10), roots: {}, present: {}, notes: [], counts: {} };
@@ -391,7 +412,7 @@ function build() {
   /* ── 4 · routes (api), their mounts and the client's registry — via the api's own scanner ───────────────────── */
   const routes = []; // { id, file, method, tail, path, start, end, fileRec }
   let registry = null,
-    mounts = null,
+    [mounts, mountsAll] = [null, null],
     euRows = null;
   /* --endpoint-usage PATH: the fixture test points at the REAL api scanner while --roots points api= at the fixture */
   const EU = flag('endpoint-usage', null) ? path.resolve(flag('endpoint-usage')) : path.join(A, 'tools', 'endpoint-usage.cjs');
@@ -403,7 +424,7 @@ function build() {
     });
     try {
       const parsed = JSON.parse(r.stdout);
-      mounts = parsed.mounts || null;
+      [mounts, mountsAll] = [parsed.mounts || null, parsed.mountsAll || null];
       euRows = parsed.routes || null;
       registry = parsed.registry || null;
       if (!registry)
@@ -450,18 +471,18 @@ function build() {
     found.forEach((item, index) => {
       item.end = index + 1 < found.length ? found[index + 1].start : code.length;
     });
-    const base = (mounts && mounts[path.basename(f.rel)]) || '/api/' + path.basename(f.rel, '.js');
-    const guessed = !(mounts && mounts[path.basename(f.rel)]);
-    for (const r of found) {
-      const full = (base + r.tail).replace(/\/$/, '') || base;
-      const id = 'route:api:' + f.rel + ' ' + r.method + ' ' + r.tail;
-      node(id, { kind: 'route', repo: 'api', file: f.rel, method: r.method, tail: r.tail, path: full, pathGuessed: guessed || undefined, line: r.line });
-      const key = r.method + ' ' + norm(full);
-      if (!pathIndex.has(key)) pathIndex.set(key, id);
-      routes.push(Object.assign(r, { id, file: f.rel, path: full, fileRec: f }));
-    }
+    mountsOf(f.rel, mounts, mountsAll).forEach((base, which) => {
+      for (const r of found) {
+        const full = routePath(base, r.tail);
+        const id = 'route:api:' + f.rel + ' ' + r.method + ' ' + r.tail + (which ? ' @' + base : '');
+        node(id, { kind: 'route', repo: 'api', file: f.rel, method: r.method, tail: r.tail, path: full, pathGuessed: !(mounts && mounts[path.basename(f.rel)]) || undefined, line: r.line });
+        pathIndex.has(r.method + ' ' + norm(full)) || pathIndex.set(r.method + ' ' + norm(full), id);
+        if (!which) routes.push(Object.assign(r, { id, file: f.rel, path: full, fileRec: f }));
+      }
+    });
     f.routes = found;
   }
+  appRoutesOf(files.find((file) => file.rel === 'server.js')).forEach((app) => (node(app.id, app.node), pathIndex.has(app.key) || pathIndex.set(app.key, app.id)));
   meta.counts.routes = routes.length;
   /* which route owns a position in a route file (outside any named function) */
   const routeAt = (f, pos) => {
