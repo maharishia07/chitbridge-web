@@ -251,15 +251,15 @@ function isPropertyKey(node, parent) {
 
 /** the function's body as acorn tokens (whitespace and comments gone, nothing else changed): two functions with the same key are the
  *  same code. Lazy and not enumerable, so a record still serialises and only the move rule pays for it. */
-function bodyKeyOf(code, node) {
+function bodyKeyOf(code, node, name) {
   const tokens = [],
     text = code.slice(node.start, node.end);
   for (const token of acorn.tokenizer(text, { ecmaVersion: 'latest', allowHashBang: true })) tokens.push(token.type.label + '\u0001' + text.slice(token.start, token.end));
-  return tokens.join('\u0002');
+  return name + '\u0003' + tokens.join('\u0002'); // the binding name (const x = () => …, key: function …) sits outside the node: a rename is a change
 }
 function defineBodyKey(record, code, node) {
   let key;
-  Object.defineProperty(record, 'bodyKey', { enumerable: false, get: () => (key === undefined ? (key = bodyKeyOf(code, node)) : key) });
+  Object.defineProperty(record, 'bodyKey', { enumerable: false, get: () => (key === undefined ? (key = bodyKeyOf(code, node, record.name)) : key) });
 }
 
 /** one chunk's walk state: what the visitor collects, with the line maps of the chunk */
