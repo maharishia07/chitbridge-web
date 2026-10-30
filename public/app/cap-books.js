@@ -4889,6 +4889,13 @@ function bkFyPrev(fy) {
   var y = Number(String(fy).slice(0, 4)) - 1;
   return String(fy).length === 4 ? String(y) : y + '-' + String((y + 1) % 100).padStart(2, '0');
 }
+/** the words beside a month's Lock button: the server's why when it may not lock, and (ACC-204) the tax period the month ends in while its close has not run — GET /periods row `return`, a pack whose return the ledgers close: "BAS FY27 Q1 (Jul–Sep 2026) not closed yet" */
+function bkLockNote(row, periodNo, mayLock, whyNot) {
+  var taxPeriod = row && row.return,
+    note = !mayLock && whyNot ? '<span data-testid="lk-why-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(whyNot)) + '</span>' : '';
+  if (!taxPeriod || taxPeriod.closed) return note;
+  return note + '<span data-testid="lk-return-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{form} {label} not closed yet', { form: taxPeriod.form, label: taxPeriod.label })) + '</span>';
+}
 /** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
 function bkPeriodOfDay(day, L) {
   var text = Object.keys((L && L.info) || {}).filter(function (item) {
@@ -5032,7 +5039,7 @@ function bkLockRowsPaint() {
           '>🔒 ' +
           tx('Lock') +
           '</button>' +
-          (!may && why ? '<span data-testid="lk-why-' + p + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(why)) + '</span>' : '');
+          bkLockNote(x, p, may, why);
       if (own && st === 'soft_locked')
         b =
           '<button data-testid="lk-unlock-' +
