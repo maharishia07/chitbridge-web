@@ -18,7 +18,7 @@ test('[EXP-01] per-item exposure is enforced in the projection and obeyed by the
     const g = items.find((x) => /^grapes$/i.test(((x.item_data || {}).name || ''))), o = items.find((x) => /^oil$/i.test(((x.item_data || {}).name || '')));
     for (const p of [g, o]) await api('prodEdit', { params: { id: p.item_id }, body: { item_data: Object.assign({}, p.item_data, { gst_rate: 5, hsn: '0806' }) } });
     const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
+    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', confirmed: true, rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
     const me = await api('me'); const e = (me && me.entity) || me || {};
     return { handle: e.user_id || e.bridge_id, grapes: g.item_id, oil: o.item_id };
   });

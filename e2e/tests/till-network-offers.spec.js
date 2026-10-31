@@ -31,7 +31,7 @@ test('[TILL-26] network offers: released, taken or declined, and on the counter 
     items: [{ name: 'Smart kettle', category: 'Kitchen' }, { name: 'Toaster', category: 'Kitchen' }] } });
   expect(pub.ok, 'the brand could not publish its catalogue: ' + pub.message).toBe(true);
   const mkOffer = async (name) => {
-    const r = await api(page, 'defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name, status: 'live',
+    const r = await api(page, 'defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name, status: 'live', confirmed: true,
       rules: { kind: 'percent_off', label: name, percent: 10, scope: 'line', applies_to: { category: 'Kitchen' } } } });
     expect(r.ok, 'the brand could not declare an offer: ' + r.message).toBe(true);
     return r.body.definition_id || (r.body.definition && r.body.definition.definition_id) || r.body.id;

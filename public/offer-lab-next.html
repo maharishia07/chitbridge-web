@@ -5377,7 +5377,7 @@ async function setStatus(id, st) {
     render();
     return;
   }
-  var r = await defFetch('PUT', '/' + id, { status: st });
+  var r = await defFetch('PUT', '/' + id, st === 'live' ? { status: st, confirmed: true } : { status: st }); /* UX-110: every caller of 'live' asked first (askPromise); the api refuses a live write without the yes */
   if (!r.ok) {
     toastSay((r.body && r.body.message) || 'That did not save.');
     return;
@@ -6039,7 +6039,7 @@ function attachSaid(reply, patch, wasFor) {
 /** the one attach path: optional rules patch, approve a draft, then live; the outcome is said in the row */
 async function attachOffer(item, patch) {
   var id = item.id,
-    body = { status: 'live' },
+    body = { status: 'live', confirmed: true }, /* UX-110: askPromise has been answered; the api refuses live without it */
     wasFor = !patch && item.group ? item.groupName || groupNameOf(item.group) : '';
   cartSay(id, 'Saving…');
   if (patch || wasFor) {
