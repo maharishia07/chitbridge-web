@@ -86,6 +86,7 @@ const HARNESSES = [
   ['till-lineup.cjs',      'the line is judged by what got through, not by the interface'],
   ['till-selfheal.cjs',    'the line went, the shop kept selling, and the counter put itself right'],
   ['till-bell.cjs',        'a quiet bell is told from a dead one, and rebuilt by itself'],
+  ['till-offers-live.cjs', 'a live offer reaches the next bill, never the open one; the bar says so; offline keeps the last list'],
   ['till-confirm.cjs',     'the caution travels with the action, and carries the numbers'],
   ['till-devbar.cjs',      'the ribbon names the screen, frames the size, and times the line'],
   ['till-orderpad.cjs',    'the pad holds many orders open, and a billing shop never sees it'],
