@@ -124,7 +124,7 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
       await call(page, 'defSave', { params: { id: found.id }, body: { rules } });
       return found.id;
     }
-    const r = await call(page, 'defAdd', { body: { kind: 'offer', sub_kind: rules.kind, name, status: 'live', rules } });
+    const r = await call(page, 'defAdd', { body: { kind: 'offer', sub_kind: rules.kind, name, status: 'live', confirmed: true, rules } });
     expect(r.ok, 'offer ' + name + ': ' + r.message).toBe(true);
     return r.body.definition_id || (r.body.definition && r.body.definition.definition_id) || r.body.id;
   };

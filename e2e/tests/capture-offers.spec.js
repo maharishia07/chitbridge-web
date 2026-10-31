@@ -19,7 +19,7 @@ test('[CAP-02] a WhatsApp-captured order carries the seller\'s offer and rate, a
     await api('prodEdit', { params: { id: g.item_id }, body: { item_data: Object.assign({}, g.item_data, { gst_rate: 5, hsn: '0806' }) } });
     const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token };
-    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: H, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
+    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: H, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', confirmed: true, rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
     /* the captured message, as the intake page sends it after the human confirms: to self, the lines the reader made, the channel */
     const r = await fetch(CFG.API_BASE + '/api/chits/send', { method: 'POST', headers: H, body: JSON.stringify({
       recipients: [{ name: 'self', role: 'to' }], subject: 'WhatsApp: 2 kg grapes', manual_subject: 'WhatsApp: 2 kg grapes', purpose: 'general',

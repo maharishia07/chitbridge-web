@@ -216,7 +216,7 @@ test('the tour', async ({ page }) => {
     const rows = await api('prodList'); const p = rows.find((x) => (x.item_id || x.id) === ids.b);
     const d = Object.assign({}, p.item_data, { categories: [kid] }); delete d.tax_slab; delete d.tax_slab_name; delete d.gst_rate;
     await api('prodEdit', { params: { id: ids.b }, body: { item_data: d } });
-    const off = (await api('defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name: 'Fruits & Veg 8% off', rules: { percent: 8, scope: 'line', priority: 3, applies_to: { category: top } }, status: 'live' } })).definition.definition_id;
+    const off = (await api('defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name: 'Fruits & Veg 8% off', rules: { percent: 8, scope: 'line', priority: 3, applies_to: { category: top } }, status: 'live', confirmed: true } })).definition.definition_id;
     if (typeof _DEFS !== 'undefined') delete _DEFS['category']; UI._ctOffers = undefined; UI._ctOffersThen = [];
     return { top, kid, off };
   }, ids);

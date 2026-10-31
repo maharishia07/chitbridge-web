@@ -19,7 +19,7 @@ test('[PAR-01] the storefront and the Suppliers screen show the same price, tax 
     const g = items.find((x) => /^grapes$/i.test(((x.item_data || {}).name || ''))); const id = g.item_id || g.id;
     await api('prodEdit', { params: { id }, body: { item_data: Object.assign({}, g.item_data, { gst_rate: 5, hsn: '0806' }) } }).catch(async () => { await fetch(CFG.API_BASE + '/api/products/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ item_data: Object.assign({}, g.item_data, { gst_rate: 5, hsn: '0806' }) }) }); });
     const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
+    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Flat 10%', status: 'live', confirmed: true, rules: { kind: 'percent_off', label: 'Flat 10%', percent: 10, scope: 'line', valid_from: today, valid_to: later } }) });
     const me = await api('me'); const e = (me && me.entity) || me || {};
     return { handle: e.user_id || e.bridge_id, itemId: id, email: e.email };
   });

@@ -24,7 +24,7 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
   const pub = await app(page, 'catSourcePut', { body: { source_key: sourceKey, title: 'SfBrand ' + stamp,
     items: [{ name: 'Smart kettle', sku: 'SK-1', category: 'Kitchen' }, { name: 'Desk lamp', sku: 'DL-1', category: 'Lighting' }] } });
   expect(pub.ok, pub.message).toBe(true);
-  const made = await app(page, 'defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name: 'Kitchen week', status: 'live',
+  const made = await app(page, 'defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name: 'Kitchen week', status: 'live', confirmed: true,
     rules: { kind: 'percent_off', label: 'Kitchen week 10%', percent: 10, scope: 'line', applies_to: { category: 'Kitchen' } } } });
   expect(made.ok, made.message).toBe(true);
   const offerId = made.body.definition_id || (made.body.definition && made.body.definition.definition_id) || made.body.id;
