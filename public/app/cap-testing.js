@@ -412,6 +412,14 @@ async function testLoad(force) {
         CBTEST.last[item.case_key] = item;
     });
   } catch (e) {
+    /* ⭐ SEC-122: the shared board is read by builders only. A 403 is not a fault: one plain line, no toast, nothing to retry. */
+    if (e && e.status === 403) {
+      CBTEST.cases = [];
+      CBTEST.notice = { tone: 'bad', text: esc(tx('The test board is for builders.')) };
+      CBTEST.busy = false;
+      testPaint();
+      return;
+    }
     /* ⚠️ a toast fades in four seconds; the reason a read failed has to stay until it is dealt with */
     CBTEST.notice = { tone: 'bad', text: 'Could not read the test cases \u2014 ' + esc(e.message) };
     if (typeof toast === 'function') toast(tx('Could not read the test cases') + ' — ' + e.message, true);
