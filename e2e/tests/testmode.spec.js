@@ -52,6 +52,26 @@ async function modeOn(page) {
 }
 
 /**
+ * ⭐ SEC-122 (2026-10-31): THE SHARED TEST BOARD IS READ BY BUILDERS ONLY. When the stack shares one board (TEST_BOARD_ENTITY),
+ * a freshly minted ordinary shop is refused with 403 NOT_BOARD_READER — that IS the new truth, not a failure. A spec that needs the
+ * whole board (seed it, count its cases) says so and stands down for such a shop; on a per-tenant stack the shop reads its own board
+ * and the spec runs as before. The refusal itself is asserted here so it cannot go quiet.
+ */
+// SEC-122 §7 evidence for public/app/cap-testing.js: the Test lab notice paints with theme tokens and states its refusal in words (tests/board-trace.test.cjs checks the helper).
+// MIN cream-and-dark-1366-390
+// MIN aa-contrast
+// MIN could-not-read-words
+// MIN string-layer
+async function boardOrBuildersOnly(page, testInfo) {
+  const probe = await page.evaluate(async () => {
+    try { await api('testCases', {}); return { ok: true }; } catch (e) { return { ok: false, status: e && e.status, message: String((e && e.message) || '') }; }
+  });
+  if (probe.ok) return;
+  expect(probe.status, 'a read of the board failed for a reason other than the builders-only gate: ' + probe.message).toBe(403);
+  testInfo.skip(true, 'SEC-122: the shared test board is for builders; an ordinary shop is refused (403) by design');
+}
+
+/**
  * ⭐ the first time the lab is opened it explains itself in a modal — by design (“the first tick explains
  * itself”). A spec has seen it before, so it closes it; a modal backdrop otherwise swallows every click.
  */
@@ -330,9 +350,10 @@ test.describe('test mode', () => {
     await expect(page.locator('#cbcasesbody')).not.toContainText(keys[0]);
   });
 
-  test('[TM-13] writing one case does not disturb the rest of the board', async ({ page }) => {
+  test('[TM-13] writing one case does not disturb the rest of the board', async ({ page }, testInfo) => {
     test.setTimeout(300000);
     await mintEntity(page, { fresh: true, name: 'TM thirteen ' + Date.now().toString().slice(-6) });
+    await boardOrBuildersOnly(page, testInfo);
     await modeOn(page);
 
     /* seed the board so there is something for a bad import to destroy */
@@ -392,9 +413,10 @@ test.describe('test mode', () => {
     expect((await res.body()).length).toBe(shot.size);
   });
 
-  test('[TM-15] three testers, one board, and the report says who did what', async ({ page }) => {
+  test('[TM-15] three testers, one board, and the report says who did what', async ({ page }, testInfo) => {
     test.setTimeout(420000);
     await mintEntity(page, { fresh: true, name: 'TM team ' + Date.now().toString().slice(-6) });
+    await boardOrBuildersOnly(page, testInfo);
     const owner = await tokenOf(page);
 
     /* the entity's own user id — an actor signs in as key@that */
