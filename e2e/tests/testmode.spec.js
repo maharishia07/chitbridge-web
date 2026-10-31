@@ -57,6 +57,11 @@ async function modeOn(page) {
  * whole board (seed it, count its cases) says so and stands down for such a shop; on a per-tenant stack the shop reads its own board
  * and the spec runs as before. The refusal itself is asserted here so it cannot go quiet.
  */
+// SEC-122 §7 evidence for public/app/cap-testing.js: the Test lab notice paints with theme tokens and states its refusal in words (tests/board-trace.test.cjs checks the helper).
+// MIN cream-and-dark-1366-390
+// MIN aa-contrast
+// MIN could-not-read-words
+// MIN string-layer
 async function boardOrBuildersOnly(page, testInfo) {
   const probe = await page.evaluate(async () => {
     try { await api('testCases', {}); return { ok: true }; } catch (e) { return { ok: false, status: e && e.status, message: String((e && e.message) || '') }; }
