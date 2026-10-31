@@ -47,7 +47,7 @@ function apiStandIn() {
     calls.push({ m: q.method, u, b });
     const id = String(b.id || b.email || b.user_id || '').toLowerCase();
     if (u === '/api/signin/ask') {
-      if (id !== 'athi@mayur.test' && id !== 'mayuri123') return j(400, { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' });
+      if (id !== 'athi@mayur.test' && id !== 'mayuri123') return j(400, { error: 'Sign-in refused', code: 'SIGNIN_REFUSED', message: "That sign-in didn't work. Check the details and try again." });   /* SEC-81: the real server answers one sentence */
       issued = '123456'; return j(200, { message: 'Verification code sent to your email', kind: 'entity', need: 'code', id: 'mayuri123' });
     }
     if (u === '/api/signin/verify') {
@@ -288,7 +288,7 @@ const fits = (p) => p.evaluate(() => {
     await tap('[data-testid="signin-id"]'); await p.keyboard.type('9876543210'); await tap('[data-testid="signin-go"]');
     await p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-why"]', { timeout: 10000 });
     const why = await p.evaluate(() => { const e = document.querySelector('[data-testid="signin-why"]'); return e ? e.textContent : ''; });
-    say(D + ' an unknown mobile on the index: "No account found. Check the number or e-mail." — nothing registered', why === 'No account found. Check the number or e-mail.' && api.calls.every((c) => c.u !== '/api/entities/register'), why);
+    say(D + ' an unknown mobile on the index: the ONE safe sentence (SEC-81b), never "no account" — nothing registered', why === "That sign-in didn't work. Check the details and try again." && api.calls.every((c) => c.u !== '/api/entities/register'), why);
     errs.push(...perr);
     await ctx.close();
   }
