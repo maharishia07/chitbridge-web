@@ -30,7 +30,7 @@ const WATCH = () => {
   const CODE = /[A-Z]{3}d{3}/;
   const tell = (c) => { try { window.__cbwalkSeen(c); } catch (_) {} };
   const scan = () => { try {
-    document.querySelectorAll('[data-testid="screen-code"],[data-testid="popup-code"]').forEach((e) => { const m = CODE.exec(e.textContent || ''); if (m) tell(m[0]); });
+    document.querySelectorAll('[data-testid="screen-code"],[data-testid="popup-code"],[data-testid="screen-id"]').forEach((e) => { const m = CODE.exec(e.textContent || ''); if (m) tell(m[0]); });
   } catch (_) {} };
   setInterval(scan, 250);
   document.addEventListener('click', (ev) => { try {
