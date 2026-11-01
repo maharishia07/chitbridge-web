@@ -24,10 +24,10 @@ const SHOTS = path.join(__dirname, '..', 'shots');
    (WALK_SCREENS_DIR moves it). TEST HELPER ONLY: it reads the codes the product already stamps on screen (data-testid screen-code / popup-code) and the
    register CBSCREENS; it changes nothing the page does and no assertion. ~/walk/runall.cjs gathers the file per script into the walk-results JSON. */
 const SCREEN_DIR = process.env.WALK_SCREENS_DIR || path.join(__dirname, '..', '.walk-screens');
-const SCRIPT = path.basename(process.argv[1] || 'walk').replace(/.cjs$/, '');
+const SCRIPT = path.basename(process.argv[1] || 'walk').replace(/\.cjs$/, '');
 const WATCH = () => {
   if (window.__cbwalkWatch) return; window.__cbwalkWatch = 1;
-  const CODE = /[A-Z]{3}d{3}/;
+  const CODE = new RegExp(String.fromCharCode(92)+"b[A-Z]{3}"+String.fromCharCode(92)+"d{3}"+String.fromCharCode(92)+"b");
   const tell = (c) => { try { window.__cbwalkSeen(c); } catch (_) {} };
   const scan = () => { try {
     document.querySelectorAll('[data-testid="screen-code"],[data-testid="popup-code"],[data-testid="screen-id"]').forEach((e) => { const m = CODE.exec(e.textContent || ''); if (m) tell(m[0]); });
@@ -35,7 +35,7 @@ const WATCH = () => {
   setInterval(scan, 250);
   document.addEventListener('click', (ev) => { try {
     const el = ev.target && ev.target.closest && ev.target.closest('button,a,[role=button],input[type=button],input[type=submit]'); if (!el) return;
-    const label = String(el.getAttribute('aria-label') || el.textContent || el.value || el.title || '').replace(/s+/g, ' ').trim();
+    const label = String(el.getAttribute('aria-label') || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
     const chip = document.querySelector('[data-testid="screen-code"]'), m = chip && CODE.exec(chip.textContent || ''), reg = window.CBSCREENS;
     if (!label || !m || !reg || !reg.rows) return;
     const scr = reg.rows.find((r) => r.code === m[0]); if (!scr) return;
@@ -46,7 +46,7 @@ const WATCH = () => {
 };
 /** every context gets the binding and the watcher; the codes go to whoever is collecting (the walk's seen-set) */
 async function watchContext(c, seen) {
-  try { await c.exposeFunction('__cbwalkSeen', (code) => { if (/^[A-Z]{3}d{3}$/.test(String(code))) seen.add(String(code)); }); await c.addInitScript(WATCH); } catch (_) { /* a missing log never fails a walk */ }
+  try { await c.exposeFunction('__cbwalkSeen', (code) => { if (/^[A-Z]{3}\d{3}$/.test(String(code))) seen.add(String(code)); }); await c.addInitScript(WATCH); } catch (_) { /* a missing log never fails a walk */ }
 }
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
