@@ -32,13 +32,6 @@
   function translate(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function escapeHtml(text) {
-    return typeof root.esc === 'function'
-      ? root.esc(text)
-      : String(text == null ? '' : text).replace(/[&<>"']/g, function (character) {
-          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
-        });
-  }
   function fill(template, values) {
     return String(template).replace(/\{(\w+)\}/g, function (_, field) {
       return values[field] == null ? '' : values[field];
@@ -139,7 +132,7 @@
   /* ── the step tracker (a sequence, not a spinner) ─────────────────────────────────────────────── */
   function stepLi(label, state, testId) {
     var mark = state === 'done' ? '✓' : state === 'now' ? '…' : '○';
-    return '<li data-testid="' + testId + '" data-step="' + state + '"><span aria-hidden="true">' + mark + '</span> ' + escapeHtml(label) + '</li>';
+    return '<li data-testid="' + testId + '" data-step="' + state + '"><span aria-hidden="true">' + mark + '</span> ' + root.esc(label) + '</li>';
   }
   /** the tracker ON the chit, read from the rounds and the unconfirmed mark: Request sent · Reached · Priced · Accepted */
   /** the "Reached …" step, or "Waiting for …" while the other installation has not confirmed */
@@ -156,7 +149,7 @@
     var out = [stepLi(chit.seller ? translate('Request received') : translate('Request sent'), 'done', 'quote-step-sent'), reachedStep(chit)];
     out.push(stepLi(chit.seller ? translate('You price it') : fill(translate('{name} prices it (a quotation)'), { name: chit.other }), priced ? 'done' : waiting ? 'todo' : 'now', 'quote-step-priced'));
     out.push(stepLi(chit.seller ? translate('They accept — it becomes the pro-forma') : translate('You accept — it becomes the pro-forma'), agreed ? 'done' : priced ? 'now' : 'todo', 'quote-step-accepted'));
-    return '<ol class="cq-steps" data-testid="quote-tracker" aria-label="' + escapeHtml(translate('Where this quotation stands')) + '" style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' + out.join('') + '</ol>';
+    return '<ol class="cq-steps" data-testid="quote-tracker" aria-label="' + root.esc(translate('Where this quotation stands')) + '" style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' + out.join('') + '</ol>';
   }
   /**
    * steps(host, { name, where }) — the live steps of ONE action that crosses to another installation (DECISIONS 13:50): Contacting … · Sent · Waiting for … · Answered.
@@ -178,7 +171,7 @@
       el.innerHTML =
         '<ol style="list-style:none;margin:6px 0;padding:0;font-size:var(--fs-2)">' +
         names.map(function (label, position) { return stepLi(label, failedWords && position === stage ? 'now' : position < stage ? 'done' : position === stage ? 'now' : 'todo', 'quote-steps-' + position); }).join('') +
-        '</ol>' + (failedWords ? '<div data-tone="error" data-testid="quote-steps-failed">' + escapeHtml(failedWords) + '</div>' : '');
+        '</ol>' + (failedWords ? '<div data-tone="error" data-testid="quote-steps-failed">' + root.esc(failedWords) + '</div>' : '');
     }
     paint();
     return {
@@ -195,13 +188,13 @@
     if (!askConfirm) return; /* no dialog on the page = nothing sent (never confirm()) */
     var seller = countryName(party.country);
     var body =
-      '<div data-testid="quote-cross-confirm"><b>' + escapeHtml(party.name) + '</b> ' +
-      escapeHtml(fill(translate('is on another ChitBridge{where}.'), { where: party.where ? ' (' + party.where + (seller ? ', ' + seller : '') + ')' : seller ? ' (' + seller + ')' : '' })) +
+      '<div data-testid="quote-cross-confirm"><b>' + root.esc(party.name) + '</b> ' +
+      root.esc(fill(translate('is on another ChitBridge{where}.'), { where: party.where ? ' (' + party.where + (seller ? ', ' + seller : '') + ')' : seller ? ' (' + seller + ')' : '' })) +
       '<ul style="margin:8px 0 0;padding-inline-start:18px">' +
-      (party.currency ? '<li>' + escapeHtml(fill(translate('Their prices are in {cur}.'), { cur: party.currency })) + '</li>' : '') +
-      (seller ? '<li>' + escapeHtml(fill(translate('{country} law and tax apply.'), { country: seller })) + '</li>' : '') +
-      (party.buyerCountry ? '<li>' + escapeHtml(fill(translate('{country}’s import duty and taxes are not included.'), { country: countryName(party.buyerCountry) })) + '</li>' : '') +
-      '<li>' + escapeHtml(translate('A quotation, not a sale. Nothing binds until you accept.')) + '</li></ul></div>';
+      (party.currency ? '<li>' + root.esc(fill(translate('Their prices are in {cur}.'), { cur: party.currency })) + '</li>' : '') +
+      (seller ? '<li>' + root.esc(fill(translate('{country} law and tax apply.'), { country: seller })) + '</li>' : '') +
+      (party.buyerCountry ? '<li>' + root.esc(fill(translate('{country}’s import duty and taxes are not included.'), { country: countryName(party.buyerCountry) })) + '</li>' : '') +
+      '<li>' + root.esc(translate('A quotation, not a sale. Nothing binds until you accept.')) + '</li></ul></div>';
     askConfirm(fill(translate('Ask {name} for a quote?'), { name: party.name }), body, translate('Send'), onYes, false, onNo);
   }
 
@@ -247,7 +240,7 @@
     if (!el) return Promise.resolve(null);
     STATE[id] = { host: el, chit: null, rounds: [], form: null, busy: false };
     el.setAttribute('data-testid', 'quotes');
-    el.innerHTML = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + escapeHtml(translate('Reading…')) + '</div>';
+    el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + root.esc(translate('Reading…')) + '</div>';
     return load(id)
       .then(function () {
         paint(id);
@@ -256,7 +249,7 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + escapeHtml(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + escapeHtml(id) + '\')">' + escapeHtml(translate('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.esc(id) + '\')">' + root.esc(translate('Try again')) + '</button></div>';
         return null;
       });
   }
@@ -266,9 +259,9 @@
     var money = round.money;
     if (!money) return '';
     var total = money.total != null ? money.total : money.net;
-    return '<div data-testid="quote-money-' + round.round + '"><b>' + escapeHtml(root.fmtMoney(total, round.currency_code || currency, '—')) + '</b>' +
-      (money.tax != null ? ' <span style="color:var(--grey)">' + escapeHtml(fill(translate('incl. tax {tax}'), { tax: root.fmtMoney(money.tax, round.currency_code || currency, '—') })) + '</span>' : '') + '</div>' +
-      (round.tax_note ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + escapeHtml(round.tax_note) + '</div>' : '');
+    return '<div data-testid="quote-money-' + round.round + '"><b>' + root.esc(root.fmtMoney(total, round.currency_code || currency, '—')) + '</b>' +
+      (money.tax != null ? ' <span style="color:var(--grey)">' + root.esc(fill(translate('incl. tax {tax}'), { tax: root.fmtMoney(money.tax, round.currency_code || currency, '—') })) + '</span>' : '') + '</div>' +
+      (round.tax_note ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + root.esc(round.tax_note) + '</div>' : '');
   }
   function lineName(view, idx) {
     var line = (view.chit.lines || [])[idx];
@@ -279,14 +272,14 @@
     var out = '';
     if (round.kind === 'request' && round.request && round.request.lines && round.request.lines.length) {
       out += '<ul style="margin:4px 0;padding-inline-start:18px">' + round.request.lines.map(function (line) {
-        return '<li>' + escapeHtml(lineName(view, line.line_index) + (line.quantity != null ? ' × ' + line.quantity : '') + (line.requested_price ? ' · ' + fill(translate('asked {price}'), { price: line.requested_price }) : '') + (line.remove ? ' · ' + translate('remove') : '')) + '</li>';
+        return '<li>' + root.esc(lineName(view, line.line_index) + (line.quantity != null ? ' × ' + line.quantity : '') + (line.requested_price ? ' · ' + fill(translate('asked {price}'), { price: line.requested_price }) : '') + (line.remove ? ' · ' + translate('remove') : '')) + '</li>';
       }).join('') + '</ul>';
     } else if (round.kind === 'terms' && round.terms) {
-      out += '<div>' + escapeHtml(Object.keys(round.terms).map(function (key) { return key.replace(/_/g, ' ') + ': ' + round.terms[key]; }).join(' · ')) + '</div>';
+      out += '<div>' + root.esc(Object.keys(round.terms).map(function (key) { return key.replace(/_/g, ' ') + ': ' + round.terms[key]; }).join(' · ')) + '</div>';
     } else {
       out += roundMoney(round, currency);
     }
-    if (round.note) out += '<div style="font-style:italic">“' + escapeHtml(round.note) + '”</div>';
+    if (round.note) out += '<div style="font-style:italic">“' + root.esc(round.note) + '”</div>';
     return out;
   }
   function roundHTML(view, round) {
@@ -297,41 +290,41 @@
     if (round.awaiting_me) {
       acts =
         '<div class="cq-acts" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">' +
-        (round.kind !== 'request' ? '<button type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\',this)">' + escapeHtml(translate('Accept')) + '</button>' : '') +
-        '<button type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\')">' + escapeHtml(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
-        '<button type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + escapeHtml(view.chit.id) + '\',\'' + escapeHtml(round.proposal_id) + '\',this)">' + escapeHtml(translate('Reject')) + '</button></div>';
+        (round.kind !== 'request' ? '<button type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Accept')) + '</button>' : '') +
+        '<button type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\')">' + root.esc(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
+        '<button type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Reject')) + '</button></div>';
     }
-    return '<div class="itab" data-testid="quote-round-' + round.round + '" data-status="' + escapeHtml(round.status) + '" style="padding:9px;margin-top:7px">' +
-      '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + escapeHtml(fill(translate('Round {n}'), { n: round.round })) + '</b> · ' + escapeHtml(speaker) + ' · ' + escapeHtml(label) + '</span>' +
-      '<span data-testid="quote-status-' + round.round + '" style="color:var(--grey)">' + escapeHtml(statusText) + '</span></div>' + roundBody(view, round) + acts + '</div>';
+    return '<div class="itab" data-testid="quote-round-' + round.round + '" data-status="' + root.esc(round.status) + '" style="padding:9px;margin-top:7px">' +
+      '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + root.esc(fill(translate('Round {n}'), { n: round.round })) + '</b> · ' + root.esc(speaker) + ' · ' + root.esc(label) + '</span>' +
+      '<span data-testid="quote-status-' + round.round + '" style="color:var(--grey)">' + root.esc(statusText) + '</span></div>' + roundBody(view, round) + acts + '</div>';
   }
   /** the form: the buyer's request (quantity + asked price per line, text) or the seller's price (a price per line) */
   function formHTML(view) {
     var seller = view.chit.seller;
     var rows = (view.chit.lines || []).filter(function (line) { return !line.removed; }).map(function (line) {
       return '<div class="cq-line" style="display:grid;grid-template-columns:minmax(0,1fr) 84px 110px;gap:6px;align-items:center;margin-top:5px">' +
-        '<span>' + escapeHtml(line.name) + '</span>' +
-        '<input class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + line.index + '" data-line="' + line.index + '" data-f="quantity" value="' + escapeHtml(line.quantity != null ? line.quantity : '') + '" aria-label="' + escapeHtml(fill(translate('Quantity of {name}'), { name: line.name })) + '">' +
-        '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + line.index + '" data-line="' + line.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? escapeHtml(line.price != null ? line.price : '') : '') + '" placeholder="' + escapeHtml(seller ? view.chit.currency || '' : translate('price you want')) + '" aria-label="' + escapeHtml(seller ? fill(translate('Price of {name}'), { name: line.name }) : fill(translate('Price you want for {name}'), { name: line.name })) + '"></div>';
+        '<span>' + root.esc(line.name) + '</span>' +
+        '<input class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + line.index + '" data-line="' + line.index + '" data-f="quantity" value="' + root.esc(line.quantity != null ? line.quantity : '') + '" aria-label="' + root.esc(fill(translate('Quantity of {name}'), { name: line.name })) + '">' +
+        '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + line.index + '" data-line="' + line.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? root.esc(line.price != null ? line.price : '') : '') + '" placeholder="' + root.esc(seller ? view.chit.currency || '' : translate('price you want')) + '" aria-label="' + root.esc(seller ? fill(translate('Price of {name}'), { name: line.name }) : fill(translate('Price you want for {name}'), { name: line.name })) + '"></div>';
     }).join('');
-    return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + escapeHtml(seller ? translate('Your price') : translate('Your counter')) + '</div>' +
-      '<div style="color:var(--grey);font-size:var(--fs-1)">' + escapeHtml(seller ? fill(translate('Prices in {cur}. Tax is added when you send.'), { cur: view.chit.currency || '' }) : translate('Say how many and the price you want. {name} sets the price.').replace('{name}', view.chit.other)) + '</div>' +
+    return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + root.esc(seller ? translate('Your price') : translate('Your counter')) + '</div>' +
+      '<div style="color:var(--grey);font-size:var(--fs-1)">' + root.esc(seller ? fill(translate('Prices in {cur}. Tax is added when you send.'), { cur: view.chit.currency || '' }) : translate('Say how many and the price you want. {name} sets the price.').replace('{name}', view.chit.other)) + '</div>' +
       rows +
-      '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + escapeHtml(translate('A note (optional)')) + '"></textarea>' +
-      '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + escapeHtml(view.chit.id) + '\',this)">' + escapeHtml(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
-      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + escapeHtml(view.chit.id) + '\')">' + escapeHtml(translate('Cancel')) + '</button></div>' +
+      '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + root.esc(translate('A note (optional)')) + '"></textarea>' +
+      '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + root.esc(view.chit.id) + '\',this)">' + root.esc(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
+      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + root.esc(view.chit.id) + '\')">' + root.esc(translate('Cancel')) + '</button></div>' +
       '<div data-testid="quote-out" role="status" style="margin-top:5px"></div>' + '</div>';
   }
   /** the jurisdiction banner (Quotation only … / Pro-forma …), or nothing */
   function bannerHTML(words) {
     return words.text
-      ? '<div data-testid="quote-jurisdiction" data-tone="' + words.tone + '" style="margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' + escapeHtml(words.text) + '</div>'
+      ? '<div data-testid="quote-jurisdiction" data-tone="' + words.tone + '" style="margin:4px 0;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' + root.esc(words.text) + '</div>'
       : '';
   }
   /** the "not delivered yet" line while the other installation has not confirmed, or nothing */
   function unconfirmedHTML(chit) {
     return chit.unconfirmed
-      ? '<div data-testid="quote-unconfirmed" data-tone="warn" style="margin:4px 0;font-size:var(--fs-2)">⏳ ' + escapeHtml(chit.unconfirmed.words || fill(translate('Waiting for {where} — not delivered yet'), { where: (chit.jurisdiction && (chit.jurisdiction.seller_installation || chit.jurisdiction.buyer_installation)) || chit.other })) + '</div>'
+      ? '<div data-testid="quote-unconfirmed" data-tone="warn" style="margin:4px 0;font-size:var(--fs-2)">⏳ ' + root.esc(chit.unconfirmed.words || fill(translate('Waiting for {where} — not delivered yet'), { where: (chit.jurisdiction && (chit.jurisdiction.seller_installation || chit.jurisdiction.buyer_installation)) || chit.other })) + '</div>'
       : '';
   }
   /** the rounds, newest last; before the first one, who we are waiting for */
@@ -339,23 +332,23 @@
     var chit = view.chit;
     return view.rounds.length
       ? view.rounds.map(function (round) { return roundHTML(view, round); }).join('')
-      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + escapeHtml(chit.seller ? fill(translate('{name} has not priced yet. Nothing is asked of you.'), { name: chit.other }) : fill(translate('Waiting for {name} to price your request.'), { name: chit.other })) + '</div>';
+      : '<div data-testid="quote-none" style="color:var(--grey);font-size:var(--fs-2);margin-top:6px">' + root.esc(chit.seller ? fill(translate('{name} has not priced yet. Nothing is asked of you.'), { name: chit.other }) : fill(translate('Waiting for {name} to price your request.'), { name: chit.other })) + '</div>';
   }
   /** the buttons under the rounds: the seller's first price, the buyer's ask again */
   function startButtonsHTML(view) {
     var chit = view.chit;
     var openNew = !view.rounds.length && chit.seller
-      ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + escapeHtml(chit.id) + '\',\'\')">' + escapeHtml(translate('Price this request')) + '</button>'
+      ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Price this request')) + '</button>'
       : '';
     var live = view.rounds.some(function (round) { return round.status === 'proposed'; });
     var again = view.rounds.length && !live && !chit.seller && view.rounds.some(function (round) { return round.status !== 'accepted'; })
-      ? '<button type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + escapeHtml(chit.id) + '\',\'\')">' + escapeHtml(translate('Ask again')) + '</button>' : '';
+      ? '<button type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Ask again')) + '</button>' : '';
     return '<div style="margin-top:7px">' + openNew + again + '</div>';
   }
   function html(view) {
     var chit = view.chit;
-    var head = '<div class="sec">' + escapeHtml(translate('Rounds')) + '</div>';
-    return head + bannerHTML(wordsOf(chit, view.rounds)) + unconfirmedHTML(chit) + trackerHTML(chit, view.rounds) + roundListHTML(view) + startButtonsHTML(view) + (view.form ? formHTML(view) : '') + '<div data-testid="quote-steps-host" id="quote-steps-' + escapeHtml(chit.id) + '"></div>';
+    var head = '<div class="sec">' + root.esc(translate('Rounds')) + '</div>';
+    return head + bannerHTML(wordsOf(chit, view.rounds)) + unconfirmedHTML(chit) + trackerHTML(chit, view.rounds) + roundListHTML(view) + startButtonsHTML(view) + (view.form ? formHTML(view) : '') + '<div data-testid="quote-steps-host" id="quote-steps-' + root.esc(chit.id) + '"></div>';
   }
 
   /* ── doing ────────────────────────────────────────────────────────────────────────────────────── */
@@ -413,7 +406,7 @@
     return load(String(id)).then(function () {
       paint(String(id));
       var host = view.host.querySelector('[data-testid="quote-steps-host"]');
-      if (host && view.notice) host.insertAdjacentHTML('beforeend', '<div data-tone="warn" data-testid="quote-notice">⏳ ' + escapeHtml(view.notice) + '</div>');
+      if (host && view.notice) host.insertAdjacentHTML('beforeend', '<div data-tone="warn" data-testid="quote-notice">⏳ ' + root.esc(view.notice) + '</div>');
       if (typeof root.CBQuotes.onChange === 'function') root.CBQuotes.onChange(id);
     });
   }
@@ -427,7 +420,7 @@
     var total = round.money ? (round.money.total != null ? round.money.total : round.money.net) : null;
     return writeRound(id, button, {
       key: 'quoteAccept', tid: 'quote-accept', params: { id: id, pid: proposalId }, body: {},
-      confirm: { title: fill(translate('Accept {name}’s price?'), { name: view.chit.other }), body: '<div>' + escapeHtml(total != null ? fill(translate('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: root.fmtMoney(total, round.currency_code || view.chit.currency, '—'), cur: round.currency_code || view.chit.currency }) : translate('It becomes the agreed version on both copies.')) + '</div>', yes: translate('Accept'), danger: false },
+      confirm: { title: fill(translate('Accept {name}’s price?'), { name: view.chit.other }), body: '<div>' + root.esc(total != null ? fill(translate('{amount}, in {cur}. It becomes the pro-forma on both copies.'), { amount: root.fmtMoney(total, round.currency_code || view.chit.currency, '—'), cur: round.currency_code || view.chit.currency }) : translate('It becomes the agreed version on both copies.')) + '</div>', yes: translate('Accept'), danger: false },
       done: translate('Accepted — this is now the pro-forma')
     });
   }
@@ -436,7 +429,7 @@
     if (!view) return;
     return writeRound(id, button, {
       key: 'quoteReject', tid: 'quote-reject', params: { id: id, pid: proposalId }, body: {},
-      confirm: { title: translate('Reject this round?'), body: '<div>' + escapeHtml(fill(translate('It ends here and {name} sees it.'), { name: view.chit.other })) + '</div>', yes: translate('Reject'), danger: true },
+      confirm: { title: translate('Reject this round?'), body: '<div>' + root.esc(fill(translate('It ends here and {name} sees it.'), { name: view.chit.other })) + '</div>', yes: translate('Reject'), danger: true },
       done: translate('Rejected')
     });
   }
@@ -478,7 +471,7 @@
     var seller = view.chit.seller;
     return {
       title: seller ? fill(translate('Send your price to {name}?'), { name: view.chit.other }) : fill(translate('Send this counter to {name}?'), { name: view.chit.other }),
-      body: '<div>' + escapeHtml(seller ? fill(translate('It is a quotation in {cur}. Nothing binds until {name} accepts it.'), { cur: view.chit.currency || '', name: view.chit.other }) : fill(translate('{name} sets the price. Nothing binds until you accept it.'), { name: view.chit.other })) + '</div>',
+      body: '<div>' + root.esc(seller ? fill(translate('It is a quotation in {cur}. Nothing binds until {name} accepts it.'), { cur: view.chit.currency || '', name: view.chit.other }) : fill(translate('{name} sets the price. Nothing binds until you accept it.'), { name: view.chit.other })) + '</div>',
       yes: translate('Send'), danger: false
     };
   }
