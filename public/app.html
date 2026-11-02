@@ -29422,7 +29422,7 @@ function chitSpendStrip(c) {
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
     ${spendQuotedCell(quoted, hidden, cell, (amount) => chitMoney(amount, c))}
-    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spendFigure(spent, hidden)}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
+    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spendFigure(spent, hidden, (amount) => chitMoney(amount, c))}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     ${chitPaymentCell(c, cell, quoted)}
     ${
