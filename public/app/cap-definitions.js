@@ -1950,9 +1950,68 @@ async function cbDefAfterChange(kind, id) {
   }
 }
 
+/* ═══ UX-110 · AN OFFER GOES LIVE ONLY AFTER THE CONFIRM ═══════════════════════════════════════════════════════════════════════════
+ * The api refuses an offer made live without `confirmed: true` (428 OFFER_LIVE_UNCONFIRMED). This page sends it only after the lab kit's ONE promise
+ * sentence (CBLabKit.promise / .confirm, the one the Offer Lab asks) has been shown and accepted. A category, a slab or a draft is never asked. */
+var _labKitReq = null;
+/** lab-kit.js and its css, loaded once on demand (app.html does not carry them); resolves when CBLabKit is there */
+function cbLabKitLoad() {
+  if (window.CBLabKit) return Promise.resolve();
+  return (_labKitReq =
+    _labKitReq ||
+    new Promise(function (resolve, reject) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/app/lab-kit.css?v=' + CB_BUILD;
+      document.head.appendChild(link);
+      var node = document.createElement('script');
+      node.src = '/app/lab-kit.js?v=' + CB_BUILD;
+      node.onload = resolve;
+      node.onerror = function () {
+        _labKitReq = null;
+        reject(new Error('Could not open the confirm. Nothing was changed.'));
+      };
+      document.head.appendChild(node);
+    }));
+}
+/** how many items and categories an offer's applies_to names */
+function cbOfferNamedCounts(at) {
+  return { items: (at.item_ids || []).length + (at.skus || []).length, cats: (at.category_ids || []).length + (at.category ? 1 : 0) };
+}
+/** what an offer reaches, in words, from its rules; an offer that names no item or category reaches the WHOLE catalogue and says so */
+function cbOfferReachWords(rules) {
+  var named = cbOfferNamedCounts((rules && rules.applies_to) || {});
+  if (named.items) return named.items + (named.items === 1 ? ' item' : ' items');
+  if (named.cats) return named.cats === 1 ? 'one category' : named.cats + ' categories';
+  return 'the whole catalogue (it names no item or category)';
+}
+/** asks first with the Offer Lab's sentence, then runs onYes; parts: { name, detail, rules } */
+function cbOfferAskLive(parts, onYes) {
+  return cbLabKitLoad().then(function () {
+    var said = CBLabKit.promise({ act: 'live', thing: 'offer', name: parts.name, detail: parts.detail || '', on: cbOfferReachWords(parts.rules), group: '', margin: '' });
+    CBLabKit.confirm(said.title, said.html, onYes, { okLabel: said.ok, danger: said.danger });
+  });
+}
+/** Catalogue setup's own lists (CATSET_DEFS, when that screen is loaded) in the shelf's row shape */
+function cbSetupShelf() {
+  var lists = typeof CATSET_DEFS === 'undefined' ? {} : CATSET_DEFS;
+  return Object.keys(lists).reduce(function (all, kind) {
+    return all.concat((lists[kind] || []).map(function (row) { return { definition_id: row.id, kind: kind, name: row.name, rules: row.rules }; }));
+  }, []);
+}
+/** the offer behind a Publish click, from the lists this page keeps (Definitions screen, then Catalogue setup); null when it is not an offer */
+function cbOfferNamed(id) {
+  var found = (CBDEF.mine || []).concat(cbSetupShelf()).filter(function (row) { return row.definition_id === id; })[0];
+  return found && found.kind === 'offer' ? found : null;
+}
 async function cbDefSetStatus(id, status) {
+  var offer = status === 'live' ? cbOfferNamed(id) : null;
+  if (offer) return cbOfferAskLive(offer, function () { return cbDefWriteStatus(id, status, true); }).catch(function (e) { toast((e && e.message) || 'Could not change that.'); });
+  return cbDefWriteStatus(id, status, false);
+}
+async function cbDefWriteStatus(id, status, confirmed) {
   try {
-    await api('defSave', { params: { id: id }, body: { status: status } });
+    await api('defSave', { params: { id: id }, body: confirmed ? { status: status, confirmed: true } : { status: status } });
     toast(status === 'live' ? 'Live — it can be adopted now.' : 'Back to draft.');
     await cbDefAfterChange(null, id);
   } catch (e) {

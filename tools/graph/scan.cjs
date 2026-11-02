@@ -370,6 +370,11 @@ function joinedPathsIn(code, strings) {
   }
   return joinedPaths;
 }
+/** W2 (30 Oct): is the string the `p:` of a client-registry entry `key: { m: 'POST', p: '/api/x' }`? That NAMES a route; only api('key') calls it (tools/endpoint-usage.cjs says the same). */
+function isRegistryEntryPath(item, sourceText) {
+  return /\bm:\s*["']\w+["']\s*,\s*p:\s*$/.test(sourceText.slice(Math.max(0, item.start - 60), item.start - 1));
+}
+
 /**
  * scanJs(src, opts) — functions, calls, refs, requires, exports and the strings that matter.
  *   functions[]  { name, kind, start, end, line, endLine, paramsAt }   start/end = body braces (inclusive of `{` … `}`)
@@ -548,7 +553,7 @@ function scanJs(src, opts) {
         }
         if (t.start >= s.start + 240) break;
       }
-      apiPaths.push({ path, pos: s.start, method, open: /\/$/.test(path) || /\+\s*$/.test(code.slice(s.end + 1, s.end + 6)) });
+      apiPaths.push({ path, pos: s.start, method, entry: isRegistryEntryPath(s, src), open: /\/$/.test(path) || /\+\s*$/.test(code.slice(s.end + 1, s.end + 6)) });
     }
     if (/\bon[a-z]+\s*=/.test(s.text) || (s.q === '`' && /\bon[a-z]+\s*=/.test(s.text))) {
       for (const h of s.text.matchAll(new RegExp('\\bon[a-z]+\\s*=\\s*(?:\\\\?["\'])?\\s*(?:\\w+\\s*;\\s*)*(' + NAME + ')\\s*\\(', 'g')))

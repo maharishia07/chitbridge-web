@@ -35,7 +35,7 @@ test('demo: every offer kind, two products, the screens', async ({ page }) => {
   ];
   const made = await page.evaluate(async (offers) => {
     const out = [];
-    for (const o of offers) { const r = await api('defAdd', { body: { kind: 'offer', sub_kind: o.sub, name: o.name, rules: o.rules, status: 'live' } }); out.push({ name: o.name, id: r && r.definition && r.definition.definition_id, status: r && r.definition && r.definition.status }); }
+    for (const o of offers) { const r = await api('defAdd', { body: { kind: 'offer', sub_kind: o.sub, name: o.name, rules: o.rules, status: 'live', confirmed: true } }); out.push({ name: o.name, id: r && r.definition && r.definition.definition_id, status: r && r.definition && r.definition.status }); }
     return out;
   }, offers);
   console.log('MADE ' + JSON.stringify(made));

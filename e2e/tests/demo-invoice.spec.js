@@ -13,7 +13,7 @@ test('[DEMO-INVOICE] the invoice row', async ({ page }) => {
   const pid = await page.evaluate(() => UI.prodSel);
   await page.evaluate(async ({ pid }) => {
     const slab = (await api('defAdd', { body: { kind: 'tax', name: 'GST 5% · rice', rules: { rate: 5, hsn: ['1006'] }, status: 'live' } })).definition.definition_id;
-    await api('defAdd', { body: { kind: 'offer', name: 'Basmati 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { item_ids: [pid] } }, status: 'live' } });
+    await api('defAdd', { body: { kind: 'offer', name: 'Basmati 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { item_ids: [pid] } }, status: 'live', confirmed: true } });
     const r = await api('prodList', { query: { limit: 50 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid);
     const d = Object.assign({}, p.item_data, { tax_slab: slab, xref: [{ role: 'buyer', system: 'Acme Ltd', id: 'A-778', direction: 'in' }] });
     await api('prodEdit', { params: { id: pid }, body: { item_data: d } });

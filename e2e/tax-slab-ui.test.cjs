@@ -1,4 +1,5 @@
 'use strict';
+// @type: unit
 /**
  * tax-slab-ui.test.cjs — the ONE slab UI module (public/app/tax-slab-ui.js), loaded the way a page loads it (F5 W1a, 2026-10-24).
  *

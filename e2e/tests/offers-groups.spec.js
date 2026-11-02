@@ -18,7 +18,7 @@ test('[OFF-04] an offer "Only for" a named group reaches the customers placed in
     const listId = await page.evaluate(async (h) => {
       const r = await api('custAdd', { body: { handle: h } }); await api('custGroupsSet', { params: { id: r.customer.customer_list_id }, body: { groups: ['dealers'] } });
       const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-      await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'dealers 15', alias: undefined, status: 'live', rules: { kind: 'percent_off', label: 'dealers 15', alias: 'Dealer price', percent: 15, scope: 'line', customer_group: 'group:dealers', customer_name: 'dealers', valid_from: today, valid_to: later } }) });
+      await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'dealers 15', alias: undefined, status: 'live', confirmed: true, rules: { kind: 'percent_off', label: 'dealers 15', alias: 'Dealer price', percent: 15, scope: 'line', customer_group: 'group:dealers', customer_name: 'dealers', valid_from: today, valid_to: later } }) });
       return r.customer.customer_list_id;
     }, bh);
     expect((await page.evaluate(async () => api('custGroupNames'))).names, 'the seller\'s names').toContain('dealers');

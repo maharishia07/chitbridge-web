@@ -1,4 +1,5 @@
 'use strict';
+// @type: static
 /**
  * e2e/developer-words.cjs — NO BUILD CODE, MIGRATION NAME OR WORKSHOP SENTENCE ON A CUSTOMER SCREEN (UX-98 · UX-99 · UX-100).
  *

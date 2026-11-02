@@ -2400,6 +2400,21 @@ async function catsetPlanGo() {
       return;
     }
   }
+  /* UX-110: "Create all as live" is a money promise: the Offer Lab's one sentence first (it names the whole catalogue when a row names no product), then the write with the yes */
+  var allNamed = rows.every(function (item) { return item.product; });
+  ensureCap('definitions')
+    .then(function () {
+      return cbOfferAskLive(
+        { name: rows.length === 1 ? rows[0].name.trim() : rows.length + ' offers', detail: rows.length === 1 ? '' : rows.map(function (item) { return item.name.trim(); }).join(', '), rules: allNamed ? { applies_to: { item_ids: rows.map(function (item) { return item.product; }) } } : {} },
+        function () { return catsetPlanCreate(rows, err); }
+      );
+    })
+    .catch(function (e) {
+      if (err) err.textContent = (e && e.message) || tx('Could not create.');
+    });
+}
+/** the writes of "Create all as live", after the shopkeeper has said yes: each offer goes with confirmed: true */
+async function catsetPlanCreate(rows, err) {
   var made = 0;
   try {
     for (var j = 0; j < rows.length; j++) {
@@ -2410,7 +2425,7 @@ async function catsetPlanGo() {
       if (x.from) rules.valid_from = x.from;
       if (x.to) rules.valid_to = x.to;
       if (x.product) rules.applies_to = { item_ids: [x.product] };
-      await api('defAdd', { body: { kind: 'offer', sub_kind: x.kind, name: x.name.trim(), rules: rules, status: 'live' } });
+      await api('defAdd', { body: { kind: 'offer', sub_kind: x.kind, name: x.name.trim(), rules: rules, status: 'live', confirmed: true } });
       made++;
     }
     closeModal();

@@ -228,6 +228,22 @@ var c2q = function (l) {
 function c2Money(v) {
   return v === null || v === undefined ? '—' : inr(v);
 } /* CU4: the shop's currency (inr), not always ₹ (inr_) */
+/** RAIL-146: did the server take the money off this read (a co-assist who may not see cost)? the field it sends, never a sentence */
+function c2CostHidden(read) {
+  return !!(read && read.cost_hidden);
+}
+/** the lines with no price — none when the server HID the prices from this reader (a hidden price is not a missing one, and no catalogue can fill it) */
+function c2UnpricedCount(read, lines) {
+  if (c2CostHidden(read)) return 0;
+  return lines.filter(function (e) {
+    var l = e.live || e.original || {};
+    return !e.removed && (l.price === null || l.price === undefined || Number(l.price) === 0);
+  }).length;
+}
+/** RAIL-146: the fact a line shows when its price was hidden from this reader, instead of a blank */
+function c2PriceHiddenFact(read, line) {
+  return c2CostHidden(read) && line.price == null ? '<span class="cbcat-fact" style="color:var(--grey)">' + tx('price hidden') + '</span>' : '';
+}
 function c2Head(t, s) {
   return (
     '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:var(--fs-3)">' +
@@ -426,10 +442,7 @@ function c2PaneOrd(d) {
   }).length;
   /* ⚠️ COUNTED, NOT ASSUMED. "3 lines have no price" is the reason someone would reach for the catalogue at all,
      so it is stated on the header rather than left to be discovered line by line. */
-  var unpriced = lines.filter(function (e) {
-    var l = e.live || e.original || {};
-    return !e.removed && (l.price === null || l.price === undefined || Number(l.price) === 0);
-  }).length;
+  var unpriced = c2UnpricedCount(d, lines);
   var out = c2Head(
     'The order',
     lines.length +
@@ -520,7 +533,7 @@ function c2PaneOrd(d) {
           mine = c2Mine(e, asg);
         var deliv = ((d.line_delivery || {})[e.line_id] || {}).delivered;
         var below =
-          '' +
+          c2PriceHiddenFact(d, l) +
           (e.removed ? '<span class="cbcat-fact" style="color:var(--disp)">' + esc(e.removed_reason || 'removed') + '</span>' : '') +
           ((e.history || []).length ? '<span class="cbcat-fact" style="color:var(--grey)">amended ' + (e.history || []).length + '×</span>' : '') +
           (l.comment
@@ -580,7 +593,7 @@ function c2PaneOrd(d) {
   out += frozenMoneyHTML(
     {
       business_json: hh.business_json || (d && d.business_json) || null,
-      summary_money: (hh.summary_json && hh.summary_json.money) || null,
+      summary_money: (hh.summary_json && hh.summary_json.money) || null, cost_hidden: c2CostHidden(d) /* RAIL-146: "Amounts hidden", not "No issued figures" */,
       currency: cat.shop.currency_code,
       isDraft: /^draft$/i.test(String(hh.current_status || hh.status || ''))
     },
@@ -2206,7 +2219,7 @@ function chit2Screen() {
       ? '<div style="padding:8px 14px 2px">' +
         chitSpendStrip({
           id: C2.id,
-          amt: (d.detail && d.detail.total_value) || h.total_value || 0,
+          amt: (d.detail && d.detail.total_value) || h.total_value || 0, cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
           delivery_summary: sum,
           line_delivery: d.line_delivery,
           line_assignment: d.line_assignment,

@@ -15,7 +15,7 @@ The kural is **context, not decoration**. It should feel like a quiet line of wi
 2. `hero` placement only on Home. Every other screen uses `strip`.
 3. Every user can hide the strip for the day. The owner can switch kurals off for the whole business.
 4. Never inside forms, dialogs, modals, error messages, toasts or alerts.
-5. On paper (`print`) only for reports, bills and statements — one line in the footer.
+5. On paper (`print`) only for reports, bills and statements — in the footer, the verse's two lines (line 1: 4 words, line 2: 3 words), never joined into one line, never cut with an ellipsis.
 6. Follows the app language (section 4). The Tamil verse is always shown.
 7. Only the sign-in ticker moves. Respect `prefers-reduced-motion` (stop it).
 
@@ -50,7 +50,7 @@ The kural is **context, not decoration**. It should feel like a quiet line of wi
 | `KuralHero` | hero | Home only | Palm-leaf panel with Valluvar seal. |
 | `KuralEmpty` | empty | Empty lists | Message + verse + one action button. |
 | `KuralSplash` | splash | App start, long reports | Seal, verse, thin progress bar. |
-| `KuralPrintFooter` | print | Report/bill/statement PDFs | One line, black on white, no colour. |
+| `KuralPrintFooter` | print | Report/bill/statement PDFs | The verse's two lines (never joined, never cut), black on white, no colour. |
 | `KuralLibrary` | — | Bottom of index (sign-in) page | All kurals grouped: Modules, Tax & compliance, Governance. Card = page name, `குறள் N`, verse, meaning. |
 
 Sign-in page: "Today's kural" = `kurals[dayOfYear % kurals.length]`; ticker shows the Modules group.

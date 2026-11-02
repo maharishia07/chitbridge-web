@@ -8,7 +8,7 @@ node tools/graph/graph.cjs build                     → tools/graph/out/calls.j
 node tools/graph/graph.cjs impact <file|function>    flow steps · screens · routes · TESTS a change there touches
 node tools/graph/graph.cjs changed <git-range>       git diff → the tests a PR should run      [--repo api|engines]
 node tools/graph/graph.cjs gaps                      steps with no test · functions on no flow · routes no screen calls · tables no route touches
-node tools/graph/trace.cjs [--repo web|api]          READ-GUARD: every module's TRACE row (tests + steps · walks · calls · routes · tables · flow
+node tools/graph/trace.cjs [--repo web|api|engines]          READ-GUARD: every module's TRACE row (tests + steps · walks · calls · routes · tables · flow
                                                      steps · §7 minimums) → <repo>/trace.json (gitignored); docs/process/READ-GUARD.md
 ```
 READ-GUARD (15 Oct) widened the scan: web `tools/` + `scripts/` and api `tools/` + `scripts/` are modules too (kind `web-tool` / `api-lib`),

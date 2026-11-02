@@ -15,7 +15,7 @@ test('[SVC-01] pricing, tax and invoice as services, one key, one contract', asy
   /* the shelf: GST 5% slab cited, a 10% offer, a tiered structure (10 → 950, 50 → 900), a GSTIN for the state */
   await page.evaluate(async ({ pid }) => {
     const slab = (await api('defAdd', { body: { kind: 'tax', name: 'GST 5', rules: { rate: 5 }, status: 'live' } })).definition.definition_id;
-    await api('defAdd', { body: { kind: 'offer', name: 'Basmati 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { item_ids: [pid] } }, status: 'live' } });
+    await api('defAdd', { body: { kind: 'offer', name: 'Basmati 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { item_ids: [pid] } }, status: 'live', confirmed: true } });
     const tiers = [{ qty: 10, price: 950 }, { qty: 50, price: 900 }];
     const pd = (await api('defAdd', { body: { kind: 'pricing', name: 'Bulk bags', sub_kind: 'tiered', rules: { tiers }, status: 'live' } })).definition;
     const r = await api('prodList', { query: { limit: 50 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid);

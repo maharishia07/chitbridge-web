@@ -1,4 +1,5 @@
 'use strict';
+// @type: unit
 /**
  * rate-sources.test.cjs — F5 W1b: a rate from the CATEGORY or the SHOP DEFAULT, and the hsn slot (2026-10-24; walk R85, critic 12).
  *

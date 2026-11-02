@@ -59,6 +59,11 @@
   function T(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
+  /** an amount as the page says it: the figure; "hidden" when the server took the money off this read for a cost-blind co-assist (RAIL-146b, cost_hidden); '' when the row has none */
+  function moneyWord(minor, currency, hidden) {
+    if (minor != null) return root.bkMoney(minor, currency);
+    return hidden ? T('hidden') : '';
+  }
   function $(id) {
     return root.document.getElementById(id);
   }
@@ -310,7 +315,7 @@
         num: true,
         sort: 'amount',
         cell: function (r) {
-          return r.total_minor == null ? '' : root.bkMoney(r.total_minor, r.currency);
+          return moneyWord(r.total_minor, r.currency, r.cost_hidden);
         },
         value: function (r) {
           return Number(r.total_minor) || 0;
@@ -608,7 +613,8 @@
   function headLine(c) {
     var bits = [];
     if (c.party) bits.push(esc(c.party));
-    if (c.total_minor != null) bits.push('<span class="mono">' + esc(root.bkMoney(c.total_minor, c.currency)) + '</span>');
+    var total = moneyWord(c.total_minor, c.currency, c.cost_hidden);
+    if (total) bits.push('<span class="mono">' + esc(total) + '</span>');
     bits.push(esc(ageWord(c.age_days)));
     var how = howWord(c);
     if (how) bits.push(esc(how));
@@ -646,7 +652,7 @@
       st = (l.settings && l.settings.state) || 'open',
       done = st === 'done';
     var who = a.assignee_name || T('No one');
-    var k = esc(l.line_id);
+    var k = esc(l.line_id), price = moneyWord(l.price_minor, c.currency, c.cost_hidden);
     return (
       '<div class="tk-line' +
       (done ? ' done' : '') +
@@ -672,7 +678,7 @@
       '">' +
       esc(who) +
       '</span>' +
-      (l.price_minor != null ? '<span class="sub mono">' + esc(root.bkMoney(l.price_minor, c.currency)) + '</span>' : '') +
+      (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
       esc(T('Delivered')) +

@@ -342,6 +342,14 @@ function testEnsureVerdict() {
 }
 
 /**
+ * What the lab says when the board cannot be read. SEC-122: the shared board is for builders, so a 403 is not a fault: one plain line.
+ * Anything else keeps the reason, because a read that failed has to say why.
+ */
+function testReadFailure(e) {
+  if (e && e.status === 403) return esc(tx('The test board is for builders.'));
+  return 'Could not read the test cases \u2014 ' + esc(e.message);
+}
+/**
  * ── ⚠️⚠️ PRESSING ↻ SAID NOTHING AT ALL ──────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-12: *"when I press the refresh button I asked for a proper reading box, and when done, a
@@ -413,7 +421,7 @@ async function testLoad(force) {
     });
   } catch (e) {
     /* ⚠️ a toast fades in four seconds; the reason a read failed has to stay until it is dealt with */
-    CBTEST.notice = { tone: 'bad', text: 'Could not read the test cases \u2014 ' + esc(e.message) };
+    CBTEST.notice = { tone: 'bad', text: testReadFailure(e) };
     if (typeof toast === 'function') toast(tx('Could not read the test cases') + ' — ' + e.message, true);
   }
   CBTEST.busy = false;

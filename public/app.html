@@ -22389,8 +22389,9 @@ function rollupBuckets() {
     cancelled: 'close',
     rejected: 'close'
   };
-  /* REP-50 / UX-120: `rows` keeps each currency apart (the server's by_currency); `s` is the old single sum, read by nothing that shows money */
-  const b = { open: { c: 0, s: 0, rows: [] }, act: { c: 0, s: 0, rows: [] }, close: { c: 0, s: 0, rows: [] } };
+  /* REP-50 / UX-120: `rows` keeps each currency apart (the server's by_currency); `s` is the old single sum, read by nothing that shows money.
+     RAIL-146: `h` = the server left money out of this group for a cost-blind co-assist, so its sum is partial and says so */
+  const b = { open: { c: 0, s: 0, rows: [], h: false }, act: { c: 0, s: 0, rows: [], h: false }, close: { c: 0, s: 0, rows: [], h: false } };
   (UI.rollup || []).forEach((item) => {
     const k = ST[item.key] || 'open';
     if (b[k]) {
@@ -22399,6 +22400,7 @@ function rollupBuckets() {
       (Array.isArray(item.by_currency) ? item.by_currency : [{ currency_code: null, total_value: item.total_value }]).forEach((part) =>
         b[k].rows.push({ amt: +part.total_value || 0, currency: part.currency_code })
       );
+      if (item.cost_hidden) b[k].h = true; /* RAIL-146: the server left money out of this group for a cost-blind co-assist — its sum is partial, and says so */
     }
   });
   return b;
@@ -22473,20 +22475,42 @@ function keepPaymentOnRow(id, payment) {
   row.business_json = Object.assign({}, row.business_json || {}, { payment });
   if (row.header) row.header.business_json = Object.assign({}, row.header.business_json || {}, { payment });
 }
-async function chitPaySubmit(id) {
-  const form = readPayForm();
+/** what a Mark-paid press sends: the form as read when Record was pressed (kept across the books' question) and the codes the owner confirmed */
+function chitPayBody(form, acknowledge) {
+  const body = { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined };
+  if (acknowledge && acknowledge.length) body.acknowledge = acknowledge;
+  return body;
+}
+async function chitPaySubmit(id, form, acknowledge) {
+  form = form || readPayForm();
   try {
-    const reply = await api('chitPay', {
-      params: { id },
-      body: { method: form.method, ref: form.ref || undefined, amount: isFinite(form.amount) ? form.amount : undefined, client_ref: PAY_PRESS_REF || undefined }
-    });
+    const reply = await api('chitPay', { params: { id }, body: chitPayBody(form, acknowledge) });
     closeModal();
     toast(reply && reply.replayed ? tx('Already recorded') : tx('Payment recorded ✓'));
     keepPaymentOnRow(id, reply.payment);
     if (typeof openChit === 'function') openChit(id, true);
   } catch (e) {
-    toast((e && e.message) || tx('Could not record'), true);
+    if (!chitPayAsk(id, form, e)) toast((e && e.message) || tx('Could not record'), true);
   }
+}
+/**
+ * FIN-53 (Athi, 2026-10-29): the books' one question on a Mark-paid — 409 ALREADY_PAID with `warnings` ("More than is owed" · "Already
+ * paid?") — is a deliberate confirm that names the amount over (the server's over_words; the web composes no money words), never a toast
+ * that asks. Yes re-sends the SAME press with every warning's code acknowledged; the books keep the rest as an advance. → true when asked.
+ */
+function chitPayAsk(id, form, e) {
+  const warnings = e && e.status === 409 && e.data && Array.isArray(e.data.warnings) ? e.data.warnings : [];
+  if (!warnings.length) return false;
+  const over = warnings.find((warning) => warning.over_words);
+  closeModal();
+  confirmAsk(
+    e.data.error || tx('Already paid?'),
+    '<p>' + esc(warnings.map((warning) => warning.words).join(' ')) + '</p>',
+    over ? tx('Keep {amount} as an advance').replace('{amount}', over.over_words) : tx('Record it again'),
+    /* the Yes carries the figure the person SAW ({ code, over_minor }): a stale one (a colleague recorded in between) is asked again by the server */
+    () => chitPaySubmit(id, form, warnings.map((warning) => (warning.over_minor != null ? { code: String(warning.code), over_minor: warning.over_minor } : String(warning.code))))
+  );
+  return true;
 }
 async function chitUnpay(id) {
   try {
@@ -23942,7 +23966,7 @@ function mapApiChit(c) {
      */
     isDraft: c.role === 'Draft',
     kind: c.purpose || 'order',
-    amt: sum.total_value || 0,
+    amt: sum.total_value || 0, costHidden: !!c.cost_hidden /* ⭐ RAIL-146: the server took the money off this row for a co-assist who may not see cost (api lib/cost-view) — the cell says "hidden", never ₹0 */,
     currency: sum.currency_code,
     state: ST[c.current_status] || 'open',
     _status: c.current_status || 'pending',
@@ -24001,10 +24025,16 @@ function mapApiChit(c) {
 /* ⚠️ TAKES A LIVE-SET ENTRY, renders the LIVE version. A removed line has live:null and is rendered from its
    original — struck through by contentItems — because it must stay on screen as evidence of what was asked for
    while counting in nothing. */
+/** " × price = total" for a line in the chit's currency (UX-120) — or " × hidden" when the server took the price off this read for a cost-blind co-assist (RAIL-146): a figure that was never there is never printed as 0 */
+function lineMoneyText(li, currency) {
+  var priceHidden = li.price == null && typeof UI !== 'undefined' && !!(UI.detail && UI.detail.cost_hidden);
+  if (priceHidden) return ' × ' + tx('hidden');
+  return ' × ' + chitMoney(li.price, { currency }) + ' = ' + chitMoney(li.total || li.quantity * li.price, { currency });
+}
 function fmtLine(e, currency) {
   var li = (e && (e.live || e.original)) || e || {};
   var qty = (li.quantity || 0) + (li.unit ? ' ' + li.unit : '') + (li.unit_size ? ' (' + li.unit_size + ')' : '');
-  var money = ' × ' + chitMoney(li.price, { currency }) + ' = ' + chitMoney(li.total || li.quantity * li.price, { currency }); /* UX-120: the chit's currency */
+  var money = lineMoneyText(li, currency);
   var name = (li.particulars || 'Item') + (li.comment ? '  ·  ' + li.comment : '') + (li.asked_unit ? '  (asked in ' + li.asked_unit + ')' : '');
   /* ⚠️ [3] IS THE LIVE-SET ENTRY (b138), carried so the renderer can strike the superseded versions and mark a
      removal without a second lookup. Data, not markup — nothing prints it directly. Appended rather than
@@ -24745,7 +24775,7 @@ function visibleRows() {
   const list = UI.filter || {};
   if (list.kind) rows = rows.filter((item) => item.kind === list.kind);
   if (list.disputeOnly) rows = rows.filter((item) => item.dispute);
-  if (list.sort === 'amount') rows = [...rows].sort((first, second) => (second.amt || 0) - (first.amt || 0));
+  if (list.sort === 'amount') rows = [...rows].sort(byAmountHiddenLast);
   if (list.sort === 'code') rows = [...rows].sort((first, second) => String(first.code).localeCompare(String(second.code)));
   if (list.sort === 'priority')
     rows = [...rows].sort((first, second) => priRank(first.pri) - priRank(second.pri) || (second.custPri ? 1 : 0) - (first.custPri ? 1 : 0));
@@ -24897,7 +24927,7 @@ const LISTCOLS = [
     w: '112px',
     align: 'right',
     cell: function (c) {
-      return '<span style="font-family:\'Space Mono\'">' + (c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
+      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
     }
   },
   /* the rest of the money, off until someone picks them in ⚙ columns. A missing figure is "—", never 0. */
@@ -25344,13 +25374,28 @@ function selBar() {
         'currency'
       );
   const lbl = ids.size
-    ? `☑ ${ids.size} selected · Σ ${cbMoneyList(sumBy)}`
-    : `states ✓ ${[...UI.aggStates].map(cap).join(' · ') || 'none'} · Σ(all) ${cbMoneyList(tickedBy)}`;
+    ? `☑ ${ids.size} selected · Σ ${partialSum(UI.rows.filter((item) => ids.has(item.id)), cbMoneyList(sumBy))}`
+    : `states ✓ ${[...UI.aggStates].map(cap).join(' · ') || 'none'} · Σ(all) ${tickedSumText(tickedBy, rb)}`;
   return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size ? `<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">${tx('🧮 Group sum')}</button>` : ``}<button onclick="quickStatus()">${tx('Status')}</button><button class="pri" onclick="quickAssign()">${tx('Assign')}</button>${clr}</span></div>`;
 }
 function updateSelBar() {
   const el = document.getElementById('selbar');
   if (el) el.outerHTML = selBar();
+}
+/** RAIL-146: a sum over rows the server stripped for a cost-blind co-assist is PARTIAL and says so — never a plausible wrong number */
+function partialSum(rows, text) {
+  return rows.some((item) => item.costHidden) ? tx('partial') + ' · ' + text : text;
+}
+/** the ticked states' sum: per currency from the loaded rows, or the server's rollup; "partial" when either left money out */
+function tickedSumText(tickedBy, buckets) {
+  /* per currency (UX-120: tickedBy is the rollup's or the loaded rows' sum by currency); "partial" when the server hid a group's money or a loaded row's (RAIL-146) */
+  const partial = [...UI.aggStates].some((state) => buckets[state] && buckets[state].h) || UI.rows.some((item) => UI.aggStates.has(item.state) && item.costHidden);
+  const text = String(cbMoneyList(tickedBy));
+  return partial ? tx('partial') + ' · ' + text : text;
+}
+/** the amount order with the rows whose amount is hidden LAST, never ordered by a figure that is not there */
+function byAmountHiddenLast(first, second) {
+  return (first.costHidden ? 1 : 0) - (second.costHidden ? 1 : 0) || (second.amt || 0) - (first.amt || 0);
 }
 /**
  * ⭐ 🧮 GROUP SUM OVER THE TICKED CHITS (backlog 31). Athi: *"is the group sum happens for multiselect chit?"*
@@ -25391,10 +25436,10 @@ function sumScope() {
      * One rule, one place; only the wrapper differs.
      */
     var _plain = function (rows) {
-      return String(cbMoneyList(cbSumByCurrency(rows, 'amt', 'currency')))
+      return partialSum(rows, String(cbMoneyList(cbSumByCurrency(rows, 'amt', 'currency')))
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ') /* was /s+/: it cut every letter s out of the toast */
-        .trim();
+        .trim());
     };
     if (kinds.length > 1) {
       const lines = kinds.map((item) => item + ': ' + _plain(list.filter((c) => c.kind === item)));
@@ -25410,7 +25455,7 @@ function sumScope() {
   }
   const rb = rollupBuckets();
   const cnt = states.reduce((total, item) => total + ((rb[item] && rb[item].c) || 0), 0);
-  const tot = String(cbMoneyList(rollupMoney(rb, states))).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const tot = String(tickedSumText(rollupMoney(rb, states), rb)).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   toast('Roll-up (all) · ' + states.map(cap).join('+') + ' · ' + cnt + ' chit(s) · Σ ' + tot);
 }
 
@@ -25472,6 +25517,8 @@ const ONE_COMPUTATION_SINCE = '2026-10-02T05:44:00Z';
 function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const FM = frozenMoney(c);
   if (!FM) {
+    /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
+    if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
     const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
     if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
     const older =
@@ -25613,7 +25660,7 @@ async function openChit(id, silent) {
                contradicting them. */
         line_delivery: r.line_delivery || {},
         delivery_summary: r.delivery_summary || null,
-        line_assignment: r.line_assignment || {},
+        line_assignment: r.line_assignment || {}, cost_hidden: !!r.cost_hidden /* ⭐ RAIL-146: the server's own word that it took the cost off this read for a cost-blind co-assist (api lib/cost-view); the strip, the lines and the money block say "hidden" on it */,
         ctp_unconfirmed: r.ctp_unconfirmed || null /* RAIL-118: a change the other installation has not confirmed */,
         order_billed: r.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */,
         /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
@@ -27650,7 +27697,7 @@ async function resumeDraft(id) {
         return { name: x.display_name, role: x.role === 'receiver' ? 'to' : x.role, self: ccIsSelf(x.display_name), bridge: x.bridge_id || null };
       });
     const items = (det.line_items || []).map(function (li) {
-      return { particulars: li.particulars, unit: li.unit || 'unit', price: +li.price || 0, qty: +li.quantity || 1 };
+      return { particulars: li.particulars, unit: li.unit || 'unit', price: carriedPrice(li, reply), qty: +li.quantity || 1 };
     });
     const pri = (h.summary_json && h.summary_json.priority_external) || 'normal';
     compose({ draftId: id, subject: h.manual_subject || '', items: items, recipients: rcpts, priority: pri });
@@ -27933,13 +27980,18 @@ async function unarchiveChit(id) {
     toast(MSG.fail('unarchive', e));
   }
 }
+/** RAIL-146: a line's price carried into a new draft — EMPTY (null, for the person to fill) when the server hid it from this cost-blind co-assist; `+undefined || 0` made a ₹0 draft */
+function carriedPrice(li, read) {
+  if (read && read.cost_hidden && li.price == null) return null;
+  return +li.price || 0;
+}
 async function forwardChit(id) {
   try {
     const reply = await api('chit', { params: { id } });
     const h = (reply && reply.header) || reply || {};
     const det = (reply && reply.detail) || {};
     const items = (det.line_items || []).map(function (li) {
-      return { particulars: li.particulars || 'item', unit: 'unit', price: +li.price || 0, qty: +li.quantity || 0 };
+      return { particulars: li.particulars || 'item', unit: 'unit', price: carriedPrice(li, reply), qty: +li.quantity || 0 };
     });
     const subj = h.manual_subject || h.auto_subject || 'chit';
     compose({ items: items, subject: 'Fwd: ' + subj, forwardFrom: id });
@@ -29255,11 +29307,21 @@ function openLineCard(chit_id, line_id) {
  * every hour with who recorded it and when — so the strip opens that rather than growing its own copy, which
  * would be a second answer to the same question and would disagree the first time either changed.
  */
+/** a spend-strip figure: the money, or "hidden" when the server took it off this read for a cost-blind co-assist (RAIL-146), else a dash — never ₹0 */
+function spendFigure(value, hidden, money) {
+  if (value) return esc(money ? money(value) : inr(value)); /* money: the chit's own formatter (UX-120); inr is the reader's */
+  return hidden ? esc(tx('hidden')) : '—';
+}
+/** the Quoted cell: shown when there is a figure, or when the figure was hidden; nothing when the chit never had one */
+function spendQuotedCell(quoted, hidden, cell, money) {
+  if (!quoted && !hidden) return '';
+  return cell(tx('Quoted'), spendFigure(quoted, hidden, money));
+}
 function chitSpendStrip(c) {
   const s = c.delivery_summary;
   if (!s) return '';
   const spent = Number(s.charged || 0);
-  const quoted = Number(c.amt || 0);
+  const quoted = Number(c.amt || 0), hidden = !!c.cost_hidden; /* RAIL-146: the server took the money off this read for a cost-blind co-assist — a cell says "hidden", never ₹0 */
   if (!spent && !s.lines) return '';
   /**
    * ⚠️⚠️ COUNTED THE SAME WAY THE LINES ARE, or the header and the rows disagree in public. `s.complete` is
@@ -29290,8 +29352,8 @@ function chitSpendStrip(c) {
   ) => `<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
-    ${quoted ? cell(tx('Quoted'), esc(chitMoney(quoted, c))) : ''}
-    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent ? esc(inr(spent)) : '—'}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
+    ${spendQuotedCell(quoted, hidden, cell, (v) => chitMoney(v, c))}
+    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spendFigure(spent, hidden)}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     ${chitPaymentCell(c, cell, quoted)}
     ${

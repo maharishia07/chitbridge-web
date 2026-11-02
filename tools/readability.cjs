@@ -12,10 +12,12 @@
  *
  *   node tools/readability.cjs                                   the READ-1 baseline over web · api · engines (--roots web=.,api=..,engines=..)
  *   node tools/readability.cjs --json out.json | --detail api R3 | --top 20
- *   node tools/readability.cjs --changed [--base origin/main] [--repo web|api] [--root DIR] [--ratchet] [--md] [--write] [--today YYYY-MM-DD]
+ *   node tools/readability.cjs --changed [--base origin/main] [--repo web|api|engines] [--root DIR] [--ratchet] [--md] [--write] [--today YYYY-MM-DD]
  *                                                                 judge only what the change touched (git diff vs merge-base); --md prints the
  *                                                                 §6 checklist with numbers; --write tightens the touched files' ratchet rows
- *   node tools/readability.cjs --write [--repo api --root ../chitbridge-api]   write/tighten the whole ratchet (lower only)
+ *   node tools/readability.cjs --write [--repo api|engines --root ../chitbridge-<repo>]   write/tighten the whole ratchet (lower only)
+ * MOVES    a function whose body (tokens: whitespace and comments ignored) EXACTLY equals one the same diff deletes is a MOVE: it keeps the old
+ *           score (tools/readability/moves.cjs), is listed as "moved: N functions (exact body match)", and any other change is new code.
  * acorn: the installed package when there is one, else the vendored tools/vendor/acorn.cjs — no npm dependency, runs offline anywhere.
  */
 'use strict';
@@ -26,6 +28,7 @@ const measure = require('./readability/measure.cjs');
 const baseline = require('./readability/baseline.cjs');
 const guard = require('./readability/guard.cjs');
 const ratchet = require('./readability/ratchet.cjs');
+const moves = require('./readability/moves.cjs');
 
 const WEB_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_ROOTS = 'web=.,api=../chitbridge-api,engines=../chitbridge-engines';
@@ -117,6 +120,7 @@ function runChanged() {
     repo,
     base: result.baseSha,
     failed: result.failed,
+    moved: result.moved.length,
     findings: result.findings,
     files: result.files.map((file) => ({ file: file.file, numbers: file.numbers, score: file.score })),
     markdown: guard.markdown(result)
@@ -132,9 +136,14 @@ function writeJson(target, value) {
 
 /** --changed --write: tighten only the touched files' rows (a lowered score makes the ratchet lower; a raised one is refused) */
 function tightenTouched(root, result) {
-  const scores = {};
-  for (const file of result.files) if (file.score) scores[file.file] = file.score;
-  const merged = ratchet.tighten(ratchet.read(root) || {}, scores);
+  const scores = {},
+    held = ratchet.read(root) || {};
+  for (const file of result.files) {
+    if (file.score) scores[file.file] = file.score;
+    // a move carries its debt in: the target's row may rise by exactly what moved (the source's row falls by the same)
+    if (file.carried && held[file.file]) held[file.file] = moves.plus(held[file.file], file.carried);
+  }
+  const merged = ratchet.tighten(held, scores);
   ratchet.write(root, merged.rows);
   console.log(`  ratchet: ${merged.lowered.length} row(s) lowered · ${merged.refused.length} refused (score rose) → ${ratchet.RATCHET_FILE}`);
   merged.refused.forEach((row) => console.log('    refused ' + row.file + ' ' + row.from + ' → ' + row.to));

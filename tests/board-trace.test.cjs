@@ -20,4 +20,11 @@ const mark = src.slice(src.indexOf('async function testMark('), src.indexOf('asy
 const lost = src.slice(src.indexOf('function testMarkLost('), src.indexOf('async function testMark('));
 ok(/testMarkLost\(key, status, \w+\)/.test(mark) && /CBTEST\.unsent\[key\]/.test(lost) && /CBTEST\.notice = \{\s*tone: 'bad'/.test(lost), 'a failed testMark keeps the verdict and raises a sticky notice');
 ok(/async function testRetryUnsent/.test(src) && /testRetryUnsent\(\)/.test(lost), 'the notice has a Send again that calls testRetryUnsent');
+/* SEC-122: a 403 from the shared board is one plain line, not a fault; every other failure keeps its reason */
+const fail = src.slice(src.indexOf('function testReadFailure('), src.indexOf('async function testLoad('));
+const readFailure = new Function('esc', 'tx', fail + '; return testReadFailure;')((t) => String(t), (t) => t);
+ok(readFailure({ status: 403, message: 'x' }) === 'The test board is for builders.' && fail.includes("tx('The test board is for builders.')"), 'a 403 says one plain line through the string layer (tx, locale), never the server words');
+ok(readFailure({ status: 500, message: 'down' }) === 'Could not read the test cases \u2014 down'.replace('\u2014', String.fromCharCode(8212)), 'any other failure keeps the Could not read words and the reason');
+ok(!/#[0-9a-f]{3,6}|rgb\(/i.test(fail) && src.includes('text: testReadFailure(e)'), 'the line paints in the notice, so the theme (cream and dark, 1366 and 390) and its contrast (a11y, AA) stay the notice own');
+
 console.log(n + ' passed');

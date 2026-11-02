@@ -202,7 +202,7 @@ function csuStoredFields(answer, edit) {
   edit.country = (answer.country && answer.country.code) || '';
   edit.currency = answer.currency || '';
   edit.fy = answer.fy_start_month || 0;
-  edit.registered = !!(answer.tax && answer.tax.registered);
+  edit.registered = answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null; /* SET-49: unknown stays null, never false */
   edit.number = (answer.tax && answer.tax.number) || '';
   edit.scheme = (answer.tax && answer.tax.scheme) || 'regular';
 }
@@ -278,7 +278,7 @@ function csuPrefill() {
     country: '',
     currency: '',
     fy: 0,
-    registered: false,
+    registered: null /* SET-49: no default — unknown until the owner picks */,
     number: '',
     scheme: 'regular',
     timezone: '',
@@ -540,7 +540,7 @@ var CSU_CLEAN = {
     return Number(typed) || 0;
   },
   registered: function (typed) {
-    return typed === true || typed === 'yes';
+    return typed === true || typed === 'yes' ? true : typed === false || typed === 'no' ? false : null;
   },
   number: function (typed) {
     return String(typed || '');
@@ -796,10 +796,19 @@ function csuSchemeInfo(scheme) {
 /** the tax registration row: registered or not, India's regular / composition scheme, and the number */
 function csuTaxRow(e, sources) {
   var india = e.country === 'IN';
-  var summary = e.registered
+  var summary = csuTaxSummary(e, india);
+  return csuTaxRowHTML(e, sources, india, summary);
+}
+/** what the Tax row says once answered: "Not set yet" while unknown (SET-49), else the scheme and number, or "Not registered" */
+function csuTaxSummary(e, india) {
+  if (e.registered === null) return esc(tx('Not set yet'));
+  return e.registered
     ? (india ? esc(e.scheme === 'composition' ? tx('Composition') : tx('Regular')) + csuSchemeInfo(e.scheme) + ' · ' : esc(tx('Registered')) + ' · ') +
       esc(e.number || '')
     : esc(tx('Not registered'));
+}
+/** the Tax row painted: the registered pick (no default), India's scheme, and the number once registered */
+function csuTaxRowHTML(e, sources, india, summary) {
   return csuRow(
     'tax',
     csuScheme(e.country),
@@ -810,10 +819,11 @@ function csuTaxRow(e, sources) {
         'cs-tax-reg',
         'registered',
         [
+          { v: '', t: tx('Pick one'), off: e.registered !== null },
           { v: 'no', t: tx('Not registered') },
           { v: 'yes', t: txf('Registered for {s}', { s: csuScheme(e.country) }) }
         ],
-        e.registered ? 'yes' : 'no'
+        e.registered === null ? '' : e.registered ? 'yes' : 'no'
       ) +
       (e.registered && india
         ? '<span style="display:flex;align-items:center;gap:6px">' +
@@ -995,7 +1005,7 @@ function csuSaveBody(e) {
     country: e.country,
     currency: e.currency,
     fy_start_month: e.fy,
-    tax: { registered: !!e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
+    tax: { registered: e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
     timezone: e.timezone || null,
     source: CSU.src
   };
@@ -1003,6 +1013,10 @@ function csuSaveBody(e) {
 /** WALK-REG R16: the first setup is the one before the server holds the owner's answer (country_setup_at) */
 function csuFirstSetup() {
   return !(CSU.p && CSU.p.done);
+}
+/** SET-49: Tax is unanswered (null) yet the owner opened or touched its row — Save asks instead of sending */
+function csuTaxNeedsPick(e) {
+  return e.registered === null && !!(CSU.open.tax || CSU.answered.tax);
 }
 /** the one write — M64: one press, one call; a server refusal is said in the form, in its own words */
 function csuSave() {
@@ -1012,6 +1026,11 @@ function csuSave() {
   var first = csuFirstSetup();
   CSU.err = '';
   CSU.saved = false;
+  /* SET-49: Tax the owner opened or touched needs an answer before it is sent; Tax left alone goes as null (unknown), never false */
+  if (csuTaxNeedsPick(e)) {
+    CSU.err = tx('Pick registered or not registered for tax.');
+    return renderCountrySetup();
+  }
   var body = csuSaveBody(e);
   CBAction.run(
     btn,

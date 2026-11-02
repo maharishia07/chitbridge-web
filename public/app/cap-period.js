@@ -69,14 +69,15 @@ function peList(r, k) {
 }
 
 /* ── words: the server's sentence, its one fix button, and the calm line for "not migrated yet" ── */
-function peFix(msg) {
+function peFix(msg, code) {
+  if (code === 'PERIOD_RETURN_OPEN') return { label: tx('Open Tax close'), tab: 'gstclose' }; /* ACC-204: the year close waits for every BAS period — branch on the code, never the prose */
   if (/locked|closed for good/i.test(msg)) return { label: tx('Open Month lock'), tab: 'lock' };
   return null;
 }
 function peWhy(e, fallback) {
   if (e && e.status === 503) return { text: tx('Starts after an update'), calm: true, fix: null };
   const text = bkWhy(e, fallback || tx('Could not be saved'));
-  return { text, calm: false, fix: peFix(text) };
+  return { text, calm: false, fix: peFix(text, e && e.data && e.data.code) }; /* the answer's own body rides on e.data (core.js _fail) */
 }
 function peBad(id, e, fallback) {
   const el = peEl(id);
@@ -1527,6 +1528,7 @@ async function peYearView(body) {
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
 function peYearFix(x) {
   const s = (x.name || '') + ' ' + (x.why || '');
+  if (x.code === 'PERIOD_RETURN_OPEN' || x.name === 'return_open') return { label: tx('Open Tax close'), tab: 'gstclose' }; /* ACC-204: the server's code first */
   if (/month|lock/i.test(s)) return { label: tx('Open Month lock'), tab: 'lock' };
   if (/suspense/i.test(s)) return { label: tx('Open the Day book'), tab: 'daybook' };
   if (/balance|trial/i.test(s)) return { label: tx('Open Trial balance'), tab: 'tb' };
