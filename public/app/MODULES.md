@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (62)
+## Capabilities (63)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -64,7 +64,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-period.js` | — | cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close |
 | `cap-print.js` | — | PRINT SETUP: what prints on the bill, set ONCE and previewed LIVE (SET-WALK1 · W27 / W27b, 2026-10-15) |
-| `cap-quotes.js` | lazy · quotes | QUOTES: the rounds of a chit that is a quotation (CBQuotes.mount: rounds, accept / counter / reject, step tracker, the confirm before the first send to another installation) — one painter for the workshop chit pane and the small apps (RAIL-117) |
+| `cap-quotes.js` | lazy · on demand | QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
@@ -142,4 +142,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*114 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*115 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
