@@ -6276,6 +6276,13 @@ function renderApp() {
     setTimeout(fabClear, 0);
   }
 }
+/** copies the business's own currency, handle, country and timezone from the /me entity into SESSION (each only when the server sent it) */
+function sessionFromMe(entity) {
+  if (entity.currency_code) SESSION.currency = entity.currency_code;
+  if (entity.user_id) SESSION.handle = entity.user_id;
+  if (entity.country) SESSION.country = entity.country;
+  if (entity.timezone) window.CB_SHOP_TZ = SESSION.timezone = entity.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
+}
 var _rendering = false,
   _renderAgain = false;
 function _renderApp() {
@@ -6396,10 +6403,7 @@ function _renderApp() {
         // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
         // `unwrap()` returns j.entity for /me, so read both shapes.
         var _e = (reply && reply.entity) || reply || {};
-        if (_e.currency_code) SESSION.currency = _e.currency_code;
-        if (_e.user_id) SESSION.handle = _e.user_id;
-        if (_e.country) SESSION.country = _e.country;
-        if (_e.timezone) window.CB_SHOP_TZ = SESSION.timezone = _e.timezone; /* UX-123: the shop's own zone, for message times (shopDateTime) */
+        sessionFromMe(_e);
         /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
          opened, and a second fetch at boot would cost a round trip on the hottest path. */
         if (_e.policy_flags) SESSION.policy_flags = _e.policy_flags;
@@ -8070,6 +8074,12 @@ async function ensureCatalogue(force) {
   return _catLoading;
 }
 var _catLoading = null;
+/** what kind of chit compose starts (purpose, business_json) and whether "Ask for a quote" starts ticked, from the caller's prefill */
+function ccCarryPurpose(prefill) {
+  CC.purpose = (prefill && prefill.purpose) || null;
+  CC.business_json = (prefill && prefill.business_json) || null;
+  CC.rfq = !!(CC.business_json && CC.business_json.deal_type === 'rfq'); /* RAIL-117: the compose switch "Ask for a quote" */
+}
 async function compose(prefill) {
   UI.drawer = false;
   CC = { items: prefill && prefill.items ? prefill.items.slice() : [], rcpts: prefill && prefill.recipients ? prefill.recipients.slice() : [], fields: {} };
@@ -8099,9 +8109,7 @@ async function compose(prefill) {
    * ⭐ A chit is authored in compose. So compose carries the two things a non-default chit needs — what KIND it
    * is, and where it came from — and everything else stays exactly as it was for every existing caller.
    */
-  CC.purpose = (prefill && prefill.purpose) || null;
-  CC.business_json = (prefill && prefill.business_json) || null;
-  CC.rfq = !!(CC.business_json && CC.business_json.deal_type === 'rfq'); /* RAIL-117: the compose switch "Ask for a quote" */
+  ccCarryPurpose(prefill);
   // SUPPLIER mode uses THEIR catalogue (passed in) → ready now; otherwise show any cached list immediately, else a brief
   // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
   if (UI._supplier && prefill && prefill.catalogue) {
@@ -9147,6 +9155,35 @@ function ccRenderTotal() {
         : '')
     : '';
 }
+/** one compose line as it is minted: list price stays, the offer discount and its name ride on the line, total is what is owed */
+function ccMintedLine(item) {
+  const gross = ccLineTotal(item);
+  const offerOff = Math.min(CBMoney.round(+item._offer_off || 0), gross);
+  const row = {
+    particulars: item.particulars,
+    unit: item.unit || 'unit',
+    quantity: +item.qty || 0,
+    price: +item.price || 0,
+    total: CBMoney.round(gross - offerOff),
+    comment: item.comment || '',
+    ref: item.ref || null
+  };
+  if (offerOff > 0) ccNameTheOffer(row, item, offerOff);
+  return row;
+}
+/** puts the discount on a minted line and NAMES the offer on it, so a reader of the chit is TOLD why */
+function ccNameTheOffer(row, item, offerOff) {
+  row.discount = offerOff;
+  /* ⭐ NAMED ON THE LINE, so a reader of the chit is TOLD why — not left to infer it from a number that
+     does not match the price. Athi: "should be informed as freebie". */
+  row.offer = { id: item._offer_id || null, label: item._offer_label || '', why: item._offer_why || '' };
+  row.freebie = row.total === 0;
+}
+/** the chit's business_json for the send: the prefill's, plus deal_type 'rfq' when "Ask for a quote" is ticked - or nothing at all (RAIL-117) */
+function ccBusinessJson() {
+  if (!CC.business_json && !CC.rfq) return {};
+  return { business_json: Object.assign({}, CC.business_json || {}, CC.rfq ? { deal_type: 'rfq' } : {}) };
+}
 async function submitCompose(isDraft) {
   const err = document.getElementById('cc_err');
   if (err) err.textContent = '';
@@ -9273,27 +9310,7 @@ async function submitCompose(isDraft) {
    * "free" only means something beside what it would have cost; a dispute months later needs both numbers and
    * the reason. The freebie reads as free because total is 0, which is also what the reader is shown.
    */
-  const line_items = CC.items.map((item) => {
-    const gross = ccLineTotal(item);
-    const off = Math.min(CBMoney.round(+item._offer_off || 0), gross);
-    const row = {
-      particulars: item.particulars,
-      unit: item.unit || 'unit',
-      quantity: +item.qty || 0,
-      price: +item.price || 0,
-      total: CBMoney.round(gross - off),
-      comment: item.comment || '',
-      ref: item.ref || null
-    };
-    if (off > 0) {
-      row.discount = off;
-      /* ⭐ NAMED ON THE LINE, so a reader of the chit is TOLD why — not left to infer it from a number that
-         does not match the price. Athi: "should be informed as freebie". */
-      row.offer = { id: item._offer_id || null, label: item._offer_label || '', why: item._offer_why || '' };
-      row.freebie = row.total === 0;
-    }
-    return row;
-  });
+  const line_items = CC.items.map(ccMintedLine);
   const recipients = CC.rcpts.map((item) => ({ name: item.name, role: item.role, self: !!item.self }));
   return await sendChit({
     recipients,
@@ -9305,7 +9322,7 @@ async function submitCompose(isDraft) {
     /* ⚠️ Omitted unless the caller asked, so every existing compose sends a byte-identical payload. */
     ...(CC.purpose ? { purpose: CC.purpose } : {}),
     /* RAIL-117 (DECISIONS 14:10): "Ask for a quote" sets the deal type; the cart stays the default, so nothing is added unless it is ticked */
-    ...(CC.business_json || CC.rfq ? { business_json: Object.assign({}, CC.business_json || {}, CC.rfq ? { deal_type: 'rfq' } : {}) } : {}),
+    ...ccBusinessJson(),
     /* ⭐ The terms this chit cites — frozen inside sendChit at the mint, not here. */
     definition_ids: _defIds,
     priority: CC.priority || val('cc_priority') || 'normal',
@@ -14467,9 +14484,9 @@ async function loadSuppliers() {
     /* NET-42 (walk 2026-10-25 W26): after "Add supplier" the list showed the old count until reload. api() hands a second GET of the same URL the read already in
        flight — and the repaint that follows the confirm had started one BEFORE the add landed, so the "reload" returned the old answer. Now this read is always fresh, and only the
        NEWEST read may paint (an older answer arriving late is dropped). */
-    const seq = (UI._supSeq = (UI._supSeq || 0) + 1);
+    const readNumber = (UI._supSeq = (UI._supSeq || 0) + 1);
     const reply = await api('supList', { fresh: true });
-    if (seq !== UI._supSeq) return;
+    if (readNumber !== UI._supSeq) return;
     UI.sups = Array.isArray(reply) ? reply : (reply && reply.suppliers) || [];
     UI._supLoading = false;
     paintSupList();
@@ -14692,16 +14709,16 @@ function supAddAll() {
 }
 /** RAIL-117: "Ask for a quote" on a supplier order — a switch, off by default (the cart stays the default). A supplier on another installation is always a quote: shown ticked and fixed. */
 function supQuoteSwitch(x) {
-  var o = supOrderState(),
-    far = !!(x && (x.installation_key || x.domain));
+  var orderState = supOrderState(),
+    onAnotherInstallation = !!(x && (x.installation_key || x.domain));
   return (
     '<label class="fl" style="display:flex;gap:6px;align-items:center;font-weight:600;margin-top:10px"><input type="checkbox" data-testid="sup-ask-quote"' +
-    (far || o.rfq ? ' checked' : '') +
-    (far ? ' disabled' : '') +
+    (onAnotherInstallation || orderState.rfq ? ' checked' : '') +
+    (onAnotherInstallation ? ' disabled' : '') +
     ' onchange="UI._supOrder.rfq=this.checked"> ' +
     tx('Ask for a quote') +
     ' <span style="font-weight:400;color:var(--grey)">· ' +
-    (far ? tx('always, for a business on another ChitBridge') : tx('they price it, you accept or counter')) +
+    (onAnotherInstallation ? tx('always, for a business on another ChitBridge') : tx('they price it, you accept or counter')) +
     '</span></label>'
   );
 }
@@ -14714,8 +14731,16 @@ function supCrossParty(x) {
   if (!x.installation_key) return null;
   /* the money is the CART's (the one supSendOrder states): a stub made from an address carries no supplier_money, and the confirm then
      left out "Their prices are in A$" (SIT browser run, 25 Oct) */
-  var cartCur = UI._supCart && window.CBCart && CBCart.currencyOf ? CBCart.currencyOf(UI._supCart.ns) : '';
-  return { name: supName(x), country: x.country || '', where: x.where || x.installation_label || x.installation_key || x.domain || '', currency: cartCur || x.supplier_money || '', buyerCountry: mineCountry };
+  var cartCur = supCartCurrency();
+  return { name: supName(x), country: x.country || '', where: supWhereWords(x), currency: cartCur || x.supplier_money || '', buyerCountry: mineCountry };
+}
+/** the money the supplier order's cart states (the seller's, as its catalogue said), or '' when the cart states none */
+function supCartCurrency() {
+  return UI._supCart && window.CBCart && CBCart.currencyOf ? CBCart.currencyOf(UI._supCart.ns) : '';
+}
+/** where a supplier on another installation lives, in the best words the row carries */
+function supWhereWords(x) {
+  return x.where || x.installation_label || x.installation_key || x.domain || '';
 }
 function supStepDetails(x) {
   var o = supOrderState();
@@ -14846,6 +14871,41 @@ function supStepReview(x) {
     '\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>'
   );
 }
+/** the first send to a business on another installation: ask first (RAIL-117), then send again with confirmed = true. True when it asked (the caller stops). */
+function supAskCross(x, isDraft, confirmed) {
+  var cross = !isDraft && !confirmed && supCrossParty(x);
+  if (!cross) return false;
+  ensureCap('quotes')
+    .then(function () {
+      CBQuotes.askCross(cross, function () {
+        supSendOrder(x, isDraft, true);
+      });
+    })
+    .catch(function () {
+      toast('Not sent. Try again.', true);
+    });
+  return true;
+}
+/** the order's business_json: the cart's currency and, when ticked, the quote deal type - or nothing when neither is stated */
+function supOrderBusinessJson(orderState) {
+  var cartCurrency = supCartCurrency();
+  var businessJson = Object.assign({}, cartCurrency ? { currency: cartCurrency } : {}, orderState.rfq ? { deal_type: 'rfq' } : {}); /* RAIL-117: only when ticked; across installations the server makes it a quote by itself */
+  return Object.keys(businessJson).length ? { business_json: businessJson } : {};
+}
+/** one selected cart line as the order sends it: the LIST price (a chit is evidence), the identity of the product */
+function supOrderLine(item) {
+  var list = +(typeof cbAmount === 'function' ? cbAmount(item.price) : item.price) || 0;
+  return {
+    particulars: item.name,
+    unit: item.unit || 'unit',
+    quantity: +item.qty || 0,
+    item_id: item.item_id || undefined,
+    sku: item.code || undefined,
+    price: list,
+    total: (+item.qty || 0) * list,
+    comment: item.comment || ''
+  };
+}
 /**
  * ⚠️ IT SENDS. Not "open compose pre-filled" — that would have made the redesign LONGER than what it replaced, with
  * two Review steps for one order. It goes through sendChit(), the same one submitCompose uses, so there is exactly
@@ -14858,19 +14918,7 @@ function supSendOrder(x, isDraft, confirmed) {
   var sel = c.selected();
   if (!isDraft && !sel.length) return;
   /* RAIL-117 (DECISIONS 13:50): the FIRST send to a business on another installation asks first — who, where, their money, "a quotation, not a sale" */
-  var cross = !isDraft && !confirmed && supCrossParty(x);
-  if (cross) {
-    ensureCap('quotes')
-      .then(function () {
-        CBQuotes.askCross(cross, function () {
-          supSendOrder(x, isDraft, true);
-        });
-      })
-      .catch(function () {
-        toast('Not sent. Try again.', true);
-      });
-    return;
-  }
+  if (supAskCross(x, isDraft, confirmed)) return;
   sendChit({
     /* the supplier BY IDENTITY, the name beside it for the header (Athi, 2026-09-06: a renamed shop made the name-only send fail) */
     recipients: [{ name: supName(x), entity_id: x.supplier_entity_id || undefined, bridge: x.bridge_id || undefined, role: 'to', self: false }],
@@ -14889,24 +14937,8 @@ function supSendOrder(x, isDraft, confirmed) {
     /* UX-121 / W24 (walk 2026-10-25, Athi: "always use the seller currency"): the order states the CART's currency — the seller's
        shop, as its catalogue said — so the server never files it in the buyer's money (an AUD buyer's ₹13,000 order was stored as
        13000 AUD). Omitted when the cart states none, so a send with no stated money is unchanged. */
-    ...(function () {
-      var cur = UI._supCart && window.CBCart && CBCart.currencyOf ? CBCart.currencyOf(UI._supCart.ns) : null;
-      var bj = Object.assign({}, cur ? { currency: cur } : {}, o.rfq ? { deal_type: 'rfq' } : {}); /* RAIL-117: only when ticked; across installations the server makes it a quote by itself */
-      return Object.keys(bj).length ? { business_json: bj } : {};
-    })(),
-    line_items: sel.map(function (item) {
-      var list = +(typeof cbAmount === 'function' ? cbAmount(item.price) : item.price) || 0;
-      return {
-        particulars: item.name,
-        unit: item.unit || 'unit',
-        quantity: +item.qty || 0,
-        item_id: item.item_id || undefined,
-        sku: item.code || undefined,
-        price: list,
-        total: (+item.qty || 0) * list,
-        comment: item.comment || ''
-      };
-    }),
+    ...supOrderBusinessJson(o),
+    line_items: sel.map(supOrderLine),
     priority: 'normal',
     onSent: function () {
       supCartRelease();
@@ -15061,6 +15093,14 @@ function supCartOpts(x) {
     }
   };
 }
+/** on a phone, a picked supplier slides the detail pane in over the list (unless the caller asked for silence) */
+function supShowDetailOnMobile(silent) {
+  if (UI.vp === 'mob' && !silent) {
+    UI.mdetail = true;
+    const node = document.getElementById('panel');
+    if (node) node.classList.add('showdetail');
+  }
+}
 async function selectSupplier(id, silent) {
   UI.supSel = id;
   /**
@@ -15074,11 +15114,7 @@ async function selectSupplier(id, silent) {
     return item.supplier_list_id === id && item.on_rail === false;
   });
   if (off) {
-    if (UI.vp === 'mob' && !silent) {
-      UI.mdetail = true;
-      const node = document.getElementById('panel');
-      if (node) node.classList.add('showdetail');
-    }
+    supShowDetailOnMobile(silent);
     supCartRelease();
     UI.supDet = { supplier: off, offRail: true };
     if (typeof ensureCap === 'function')
@@ -15101,11 +15137,7 @@ async function selectSupplier(id, silent) {
    * screen would be the third picker again.
    */
   if (id === 'own') {
-    if (UI.vp === 'mob' && !silent) {
-      UI.mdetail = true;
-      const node = document.getElementById('panel');
-      if (node) node.classList.add('showdetail');
-    }
+    supShowDetailOnMobile(silent);
     supCartRelease();
     const own = {
       supplier_list_id: 'own',
@@ -15147,11 +15179,7 @@ async function selectSupplier(id, silent) {
   // A new supplier gets a new cart. The SAME supplier keeps the one you have been filling — the screen knows which
   // it is, so the cart never has to guess (that guess is what create() exists to remove).
   if (UI._supCartFor && UI._supCartFor !== id) supCartRelease();
-  if (UI.vp === 'mob' && !silent) {
-    UI.mdetail = true;
-    const node = document.getElementById('panel');
-    if (node) node.classList.add('showdetail');
-  }
+  supShowDetailOnMobile(silent);
   paintSupSlide();
   const x = (UI.sups || []).find((item) => item.supplier_list_id === id);
   if (!x) {
@@ -15206,12 +15234,24 @@ async function selectSupplier(id, silent) {
  * supplier-hop journey script. Bypassing here is the smaller, contained change.
  */
 async function supCatalogueFull(sid) {
-  /* NET-45 (walk 2026-10-25 W32): "Could not read their catalogue" with no request reaching the api = the browser's fetch failed before it left. A network error is tried ONCE more, and the reason is
-     logged either way (console.warn), so a repeat can be traced instead of guessed at. */
+  const res = await supCatalogueFetch(sid);
+  if (!res.ok) {
+    let msg = '';
+    try {
+      const j = await res.json();
+      msg = j.message || j.error || '';
+    } catch (_) {}
+    throw new Error(msg || 'Could not read their catalogue (' + res.status + ')');
+  }
+  return await res.json();
+}
+/* NET-45 (walk 2026-10-25 W32): "Could not read their catalogue" with no request reaching the api = the browser's fetch failed before it left. A network error is tried ONCE more, and the reason is
+   logged either way (console.warn), so a repeat can be traced instead of guessed at. */
+async function supCatalogueFetch(supplierId) {
   let res;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      res = await fetch(CFG.API_BASE + '/api/relationships/suppliers/' + encodeURIComponent(sid) + '/catalogue', {
+      res = await fetch(CFG.API_BASE + '/api/relationships/suppliers/' + encodeURIComponent(supplierId) + '/catalogue', {
         cache: 'no-store',
         headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}
       });
@@ -15224,15 +15264,7 @@ async function supCatalogueFull(sid) {
       });
     }
   }
-  if (!res.ok) {
-    let msg = '';
-    try {
-      const j = await res.json();
-      msg = j.message || j.error || '';
-    } catch (_) {}
-    throw new Error(msg || 'Could not read their catalogue (' + res.status + ')');
-  }
-  return await res.json();
+  return res;
 }
 /**
  * supCatalogueHTML — THEIR catalogue, rendered the way their own storefront renders it.
@@ -15279,9 +15311,7 @@ function supCartHTML() {
        variant fires when the server dropped priced-less items, which looks identical on screen and is not. */
     /* NET-44 (walk 2026-10-25 W23): a supplier on ANOTHER installation that does not answer with a catalogue says WHY in the server's words
        (lib/remote-catalogue: "<name> sells only on their own ChitBridge…", "…did not answer in 5 seconds") — never the generic "not published" */
-    emptyAll:
-      (UI.supDet && UI.supDet.cat && UI.supDet.cat.remote && UI.supDet.cat.remote.ok === false && UI.supDet.cat.remote.why) ||
-      txf('{name} has not published anything you can order yet.', { name: supName(_sup) }),
+    emptyAll: supEmptyAllWords(_sup),
     emptyHidden: txf('{name} lists {n} item(s) with no price yet — a price is needed before they can be ordered.', { name: supName(_sup), n: '{n}' }),
     /* Read from the payload already held for this supplier — a second copy of the same fact would be one more
        thing to keep in step, and this screen already keeps `cat` for exactly as long as the supplier is open. */
@@ -15291,6 +15321,11 @@ function supCartHTML() {
     searchTestid: 'pick-search-sup',
     listTestid: 'sup-catalogue'
   });
+}
+/** the sentence for a supplier whose catalogue is empty: the server's reason when another installation did not answer, else "has not published anything" */
+function supEmptyAllWords(supplier) {
+  const remote = UI.supDet && UI.supDet.cat && UI.supDet.cat.remote;
+  return (remote && remote.ok === false && remote.why) || txf('{name} has not published anything you can order yet.', { name: supName(supplier) });
 }
 /**
  * ⭐⭐ YOUR OWN FLOOR — the `requirement` definitions you have published (backlog 7).
@@ -15770,11 +15805,12 @@ function supWhereHTML() {
     esc(tx('Where')) +
     '<select class="inp" data-testid="sup-where" style="flex:1" onchange="supWhere(this.value)">' +
     opt('here', tx('Here')) +
-    places.map(function (p) { return opt(p.installation_key, p.label + (p.domain ? ' · ' + p.domain : '')); }).join('') +
+    places.map(function (place) { return opt(place.installation_key, place.label + (place.domain ? ' · ' + place.domain : '')); }).join('') +
     opt('all', tx('All')) +
     '</select></label>'
   );
 }
+/** reads the other installations this shop deals with (once) and puts the Where picker in its box */
 async function supWhereLoad() {
   if (UI._supPlaces) return;
   UI._supPlaces = [];
@@ -15814,8 +15850,8 @@ function supSearch(q) {
 /* answers[] says in words who did not answer; the rest still show */
 function supAnswersNote(answers) {
   return (answers || [])
-    .filter(function (a) { return a && !a.ok; })
-    .map(function (a) { return '<div class="ccsugg-empty" data-testid="sup-where-note">' + esc(a.why || '') + '</div>'; })
+    .filter(function (answer) { return answer && !answer.ok; })
+    .map(function (answer) { return '<div class="ccsugg-empty" data-testid="sup-where-note">' + esc(answer.why || '') + '</div>'; })
     .join('');
 }
 function supRenderSugg(list, answers) {
@@ -15831,13 +15867,13 @@ function supRenderSugg(list, answers) {
     UI._supSugg
       .slice(0, 12)
       .map(function (e, index) {
-        const far = e.installation_key && e.domain;
+        const onAnotherInstallation = e.installation_key && e.domain;
         return (
           '<div class="ccsugg-item" onclick="supPick(' +
           index +
           ')"><span class="ccsugg-nm">' +
           esc(e.display_name || '') +
-          (far ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(e.where || e.domain) + '</span>' : '') +
+          (onAnotherInstallation ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(e.where || e.domain) + '</span>' : '') +
           '</span><span class="ccsugg-id">' +
           esc(e.user_id || e.bridge_id || '') +
           '</span></div>'
@@ -15854,7 +15890,6 @@ async function supPick(i) {
   if (err) err.textContent = '';
   const a = document.getElementById('sp_add');
   if (a) a.value = e.display_name || '';
-  const far = e.installation_key && e.domain;
   /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
      a parallel Promise-based twin before spotting it. Callback style is what it offers, so the work moves inside. */
   confirmAsk(
@@ -15862,15 +15897,14 @@ async function supPick(i) {
     '<b>' +
       esc(e.user_id || e.bridge_id || '') +
       '</b>' +
-      (far ? '<br>' + esc(tx('On')) + ' ' + esc(e.where || e.domain) : '') +
+      supOnWhereHTML(e) +
       '<br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier',
     async function () {
       try {
         /* the address comes from the server (ctpaddress.format); the ordinary add turns it into the party, placed on that installation */
         var reply = await api('supAdd', { body: { supplier_bridge_id: e.address || e.bridge_id, supply_kind: supKind() } });
-        var os = reply && reply.supplier && reply.supplier.one_sided;
-        toast('Supplier added ✓' + (os ? ' — ' + tx('orders to them stay here only') + ': ' + os.why : ''));
+        supAddedToast(reply);
         if (a) a.value = '';
         await loadSuppliers();
       } catch (ex) {
@@ -15878,6 +15912,37 @@ async function supPick(i) {
       }
     }
   );
+}
+/** "On <where>" for a suggestion that lives on another installation, else nothing */
+function supOnWhereHTML(suggestion) {
+  return suggestion.installation_key && suggestion.domain ? '<br>' + esc(tx('On')) + ' ' + esc(suggestion.where || suggestion.domain) : '';
+}
+/** "Supplier added" and, when the server says orders to them stay on this installation only, why */
+function supAddedToast(reply) {
+  var oneSided = reply && reply.supplier && reply.supplier.one_sided;
+  toast('Supplier added ✓' + (oneSided ? ' — ' + tx('orders to them stay here only') + ': ' + oneSided.why : ''));
+}
+/** W27 (walk 2026-10-25): the search already found the typed id - use ITS confirm, which names the shop and carries the address of the installation it lives on. True when it did. */
+function supPickIfFound(bridgeId) {
+  const lower = bridgeId.toLowerCase();
+  const found = (UI._supSugg || []).findIndex(function (suggestion) {
+    return [suggestion.user_id, suggestion.bridge_id, suggestion.address].some(function (field) { return field && String(field).toLowerCase() === lower; });
+  });
+  if (found < 0) return false;
+  supPick(found);
+  return true;
+}
+/** W31: searching ANOTHER installation and finding nobody is not "they are off the network" - say where we looked in the error line. True when it did. */
+function supWhereRefusal(bridgeId, errorNode) {
+  const where = UI._supWhere || 'here';
+  if (where === 'here') return false;
+  const place = (UI._supPlaces || []).find(function (item) { return item.installation_key === where; });
+  if (errorNode)
+    errorNode.textContent = txf('No business called {name} on {where}. Check the User ID, or type their shop name to search.', {
+      name: bridgeId,
+      where: where === 'all' ? tx('any installation') : (place && place.label) || where
+    });
+  return true;
 }
 /**
  * ⭐⭐⭐ A NAME IS NOW A VALID ANSWER. Athi, 2026-09-10: *"still a non-CB person can be a supplier — we can set the
@@ -15935,28 +16000,8 @@ async function addSupplier() {
       }
     );
   };
-  /* W27 (walk 2026-10-25): the search already found this id — use ITS confirm, which names the shop and carries the address of the
-     installation it lives on, instead of a second confirm that names the typed id and looks it up only here. */
-  const lower = bid.toLowerCase();
-  const found = (UI._supSugg || []).findIndex(function (e) {
-    return [e.user_id, e.bridge_id, e.address].some(function (v) { return v && String(v).toLowerCase() === lower; });
-  });
-  if (found >= 0) {
-    supPick(found);
-    return;
-  }
-  /* W31: searching ANOTHER installation and finding nobody is not "they are off the network". Never offer the off-network row from
-     here: say where we looked and how to find them. */
-  const where = UI._supWhere || 'here';
-  if (where !== 'here') {
-    const place = (UI._supPlaces || []).find(function (p) { return p.installation_key === where; });
-    if (x)
-      x.textContent = txf('No business called {name} on {where}. Check the User ID, or type their shop name to search.', {
-        name: bid,
-        where: where === 'all' ? tx('any installation') : (place && place.label) || where
-      });
-    return;
-  }
+  if (supPickIfFound(bid)) return;
+  if (supWhereRefusal(bid, x)) return;
   if (!isUserId(bid)) {
     offerLocal(null);
     return;
@@ -19474,6 +19519,14 @@ function prodTabBar() {
     `</div>`
   );
 }
+/** the invoice line's warning when the seller's own details are incomplete: how many supplier fields are missing, or nothing when none are */
+function prodSellerMissingHTML(model) {
+  return model.seller.missing && model.seller.missing.length
+    ? ' <span data-testid="prod-invoice-outcome-missing" style="color:var(--warn-3)">● ' +
+        esc(txf('{n} supplier field(s) missing', { n: String(model.seller.missing.length) })) +
+        '</span>'
+    : '';
+}
 /**
  * ⭐⭐ THE FACT SHEET — Athi, 2026-09-05: "only the result is required: category → the names attached, offer → the offer
  * names, tax → the slab; each one and its outcome only, not the entire page". One line per section: the label and its
@@ -19683,12 +19736,7 @@ function prodOutcomeHTML(k, d) {
         const m = prodInvoiceModel(d, 'same');
         if (!m) return grey(tx('reading…'));
         if (m.noPack) return '<span data-testid="prod-invoice-nopack" style="color:var(--warn-3)">● ' + esc(prodNoPackWords()) + '</span>';
-        const miss =
-          m.seller.missing && m.seller.missing.length
-            ? ' <span data-testid="prod-invoice-outcome-missing" style="color:var(--warn-3)">● ' +
-              esc(txf('{n} supplier field(s) missing', { n: String(m.seller.missing.length) })) +
-              '</span>'
-            : '';
+        const miss = prodSellerMissingHTML(m);
         if (m.om.negotiable)
           return (
             `<b>${esc(m.title)}</b> ${grey('· ' + esc(tx('at the agreed price')) + ' · ' + esc(tx('indicative') + ' ' + fmtMoney(m.item.TotItemVal, m.cur)) + ' · ' + esc(m.posWord))}` +
@@ -20795,20 +20843,24 @@ function prodPartyEnsure() {
  * not there, we should not fall back rather reject" — no pack = noPack: the screens REFUSE to work out an invoice and say why (prodNoPackWords).
  * ONE rule for the invoice row, the invoice tab and the slab pane.
  */
-function prodTaxModel(r, P0) {
-  if (!P0) return { scheme: '', isGST: false, noPack: true };
-  const scheme = String((r && r.scheme) || P0.scheme || 'GST').toUpperCase();
-  return { scheme: scheme, isGST: P0.supply ? P0.supply === 'state' : scheme === 'GST', noPack: false };
+function prodTaxModel(row, pack) {
+  if (!pack) return { scheme: '', isGST: false, noPack: true };
+  const scheme = String((row && row.scheme) || pack.scheme || 'GST').toUpperCase();
+  return { scheme: scheme, isGST: pack.supply ? pack.supply === 'state' : scheme === 'GST', noPack: false };
+}
+/** a country code as its name in the page's language - the code itself when the browser does not know it (still a name the shop can read) */
+function regionNameOf(countryCode) {
+  try {
+    if (countryCode && typeof Intl !== 'undefined' && Intl.DisplayNames) return new Intl.DisplayNames([document.documentElement.lang || 'en'], { type: 'region' }).of(countryCode) || countryCode;
+  } catch (_) {
+    return countryCode;
+  }
+  return countryCode;
 }
 /** the refusal, in words: which country has no tax rules here, and that nothing was worked out */
 function prodNoPackWords() {
-  const c = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
-  let name = c;
-  try {
-    if (c && typeof Intl !== 'undefined' && Intl.DisplayNames) name = new Intl.DisplayNames([document.documentElement.lang || 'en'], { type: 'region' }).of(c) || c;
-  } catch (_) {
-    name = c; /* an unknown code: the code itself is still a name the shop can read */
-  }
+  const countryCode = String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
+  const name = regionNameOf(countryCode);
   return name
     ? txf('{country} does not have a tax pack yet, so no invoice is worked out.', { country: name })
     : tx('Your shop has no country set, so no invoice is worked out. Set the country in Settings.');
@@ -20946,6 +20998,15 @@ function prodInvoicePos(pos) {
   UI._invPos = pos;
   prodRepaintSection('invoice');
 }
+/** the invoice sample's amber notes (one line per note the model carries), joined; empty when there are none */
+function prodInvoiceNotesHTML(model) {
+  return (model.notes || [])
+    .map(
+      (item) =>
+        `<div data-testid="prod-invoice-note" style="margin-top:6px;color:#7a5a00;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;padding:6px 10px">💡 <b>${esc(item.label)}</b> — ${esc(item.why)}</div>`
+    )
+    .join('');
+}
 function prodInvoiceTab(d) {
   const pos = UI._invPos || 'same';
   const m = prodInvoiceModel(d, pos);
@@ -20974,12 +21035,7 @@ function prodInvoiceTab(d) {
     .concat(heads)
     .concat(cess ? [[txf('Cess {r}%', { r: String(m.line.cess_rate || 0) }), cess]] : [])
     .concat([[tx('Invoice total'), it.TotItemVal]]);
-  const noteRows = (m.notes || [])
-    .map(
-      (item) =>
-        `<div data-testid="prod-invoice-note" style="margin-top:6px;color:#7a5a00;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;padding:6px 10px">💡 <b>${esc(item.label)}</b> — ${esc(item.why)}</div>`
-    )
-    .join('');
+  const noteRows = prodInvoiceNotesHTML(m);
   return (
     `<div class="sec">${tx('Invoice')}</div>` +
     `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST ? tx('Same state') : tx('Domestic'))}${sw('other', m.isGST ? tx('Other state') : tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>` +
@@ -25532,6 +25588,22 @@ function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   const html = CBSheet.moneyBlockHTML({ money: FM, cur: c.currency, bj: c.business_json || (c.header && c.header.business_json) || {} }, totalTid);
   return wrapTid ? `<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>` : html;
 }
+/** the parts of GET /chits/:id that ride onto the open chit unchanged: delivery, assignment, cost-blind flag, unconfirmed change, billed flag */
+function chitDetailCarry(reply) {
+  return {
+    /* ⚠️ ALL THREE ARE CARRIED, and none of them puts anything on design 1's ROWS — that stays as it
+           was. `line_delivery` lets `contentItems` show 🔒 on a delivered line instead of an ✎ the server
+           will refuse; `delivery_summary` feeds the chit-level spend strip; and `line_assignment` is what
+           lets the strip's "n of m done" count the way the lines do, rather than counting deliveries and
+           contradicting them. */
+    line_delivery: reply.line_delivery || {},
+    delivery_summary: reply.delivery_summary || null,
+    line_assignment: reply.line_assignment || {},
+    cost_hidden: !!reply.cost_hidden /* ⭐ RAIL-146: the server's own word that it took the cost off this read for a cost-blind co-assist (api lib/cost-view); the strip, the lines and the money block say "hidden" on it */,
+    ctp_unconfirmed: reply.ctp_unconfirmed || null /* RAIL-118: a change the other installation has not confirmed */,
+    order_billed: reply.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */
+  };
+}
 async function openChit(id, silent) {
   if (UI._byId && id !== UI._byId) UI._byId = null; /* WX-P2P-09: picking another chit un-pins the one opened by id */
   UI.sel = id;
@@ -25653,16 +25725,7 @@ async function openChit(id, silent) {
         log: r.state_log || [],
         amendments: r.amendments || [],
         canAmend: r.amendments_migrated !== false,
-        /* ⚠️ ALL THREE ARE CARRIED, and none of them puts anything on design 1's ROWS — that stays as it
-               was. `line_delivery` lets `contentItems` show 🔒 on a delivered line instead of an ✎ the server
-               will refuse; `delivery_summary` feeds the chit-level spend strip; and `line_assignment` is what
-               lets the strip's "n of m done" count the way the lines do, rather than counting deliveries and
-               contradicting them. */
-        line_delivery: r.line_delivery || {},
-        delivery_summary: r.delivery_summary || null,
-        line_assignment: r.line_assignment || {}, cost_hidden: !!r.cost_hidden /* ⭐ RAIL-146: the server's own word that it took the cost off this read for a cost-blind co-assist (api lib/cost-view); the strip, the lines and the money block say "hidden" on it */,
-        ctp_unconfirmed: r.ctp_unconfirmed || null /* RAIL-118: a change the other installation has not confirmed */,
-        order_billed: r.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */,
+        ...chitDetailCarry(r),
         /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
         summary_money: (h.summary_json && h.summary_json.money) || null,
         issued_at: h.created_at || null,
@@ -25723,9 +25786,10 @@ async function openChit(id, silent) {
  * this file only gives it a place. A chit that is neither an RFQ nor stamped with a jurisdiction is exactly as before (DECISIONS 14:10).
  */
 /* chitIsQuote → app/helpers.js (F10: one predicate for app.html, the chit sheet and cap-quotes.js) */
-function quotesHost(c) {
-  return chitIsQuote(c) && !c._loading ? '<div class="itab" data-quotes-host="' + esc(c.id) + '" style="padding:10px;margin-top:10px"></div>' : '';
+function quotesHost(chit) {
+  return chitIsQuote(chit) && !chit._loading ? '<div class="itab" data-quotes-host="' + esc(chit.id) + '" style="padding:10px;margin-top:10px"></div>' : '';
 }
+/** fills the Rounds host inside a painted chit pane with the quotation section, once the quotes unit has loaded */
 function quotesMount(node) {
   var host = node && node.querySelector && node.querySelector('[data-quotes-host]');
   if (!host) return;
@@ -25746,18 +25810,23 @@ function quotesMount(node) {
 function chitPaneBusy() {
   var pane = document.getElementById('detailpane');
   if (!pane) return true;
-  var a = document.activeElement;
-  if (a && pane.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && (a.type !== 'checkbox' || a.value)) return true;
+  var active = document.activeElement;
+  if (active && pane.contains(active) && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) && (active.type !== 'checkbox' || active.value)) return true;
   if (pane.querySelector('[data-quote-form]')) return true;
   var host = document.getElementById('modalhost');
   return !!(host && host.children.length);
 }
-function chitOnReturn(d, tries) {
-  var c = UI.detail;
-  if (!c || !d || !d.id || String(c.id) !== String(d.id) || c._loading) return;
-  if (!/^(status|message|dispute|proposal|chit)$/.test(String(d.kind || ''))) return;
+/** true when the arrival names the chit now open and is of a kind that changes what it shows (status, message, dispute, proposal, chit) */
+function chitArrivalIsForShown(arrival) {
+  var shownChit = UI.detail;
+  if (!shownChit || !arrival || !arrival.id || String(shownChit.id) !== String(arrival.id) || shownChit._loading) return false;
+  return /^(status|message|dispute|proposal|chit)$/.test(String(arrival.kind || ''));
+}
+/** an arrival that names the chit on screen: read the list and the chit again and paint in place, waiting (up to six tries) while a form is being typed in */
+function chitOnReturn(arrival, tries) {
+  if (!chitArrivalIsForShown(arrival)) return;
   if (chitPaneBusy()) {
-    if ((tries || 0) < 6) setTimeout(function () { chitOnReturn(d, (tries || 0) + 1); }, 5000);
+    if ((tries || 0) < 6) setTimeout(function () { chitOnReturn(arrival, (tries || 0) + 1); }, 5000);
     return;
   }
   Promise.resolve(loadList(true))
@@ -25765,7 +25834,7 @@ function chitOnReturn(d, tries) {
       console.warn('chitOnReturn: the list was not read', e && e.message);
     })
     .then(function () {
-      if (UI.detail && String(UI.detail.id) === String(d.id) && !chitPaneBusy()) return openChit(d.id, true);
+      if (UI.detail && String(UI.detail.id) === String(arrival.id) && !chitPaneBusy()) return openChit(arrival.id, true);
     });
 }
 function paintDetail() {
@@ -25792,26 +25861,26 @@ function paintDetail() {
  * RAIL-118 · the installation the OTHER side of this chit lives on, as the chit's jurisdiction names it ('' when it does not say):
  * an order I sent waits on the seller's, anything else on the buyer's. Words for "Waiting for <where> — not delivered yet".
  */
-function chitWhere(c) {
-  var bj = (c && (c.business_json || (c.header && c.header.business_json))) || {},
-    j = bj.jurisdiction || {};
-  var mineSent = c && c.sender && chitIsSelf(null, c.sender);
-  return (mineSent ? j.seller_installation : j.buyer_installation) || '';
+function chitWhere(chit) {
+  var businessJson = (chit && (chit.business_json || (chit.header && chit.header.business_json))) || {},
+    jurisdiction = businessJson.jurisdiction || {};
+  var mineSent = chit && chit.sender && chitIsSelf(null, chit.sender);
+  return (mineSent ? jurisdiction.seller_installation : jurisdiction.buyer_installation) || '';
 }
 /** RAIL-118: the answer of the read said a change of mine has not been confirmed by the other installation yet — say so on the chit (never "notified") */
-function ctpBanner(c) {
-  var u = c && c.ctp_unconfirmed;
-  if (!u) return '';
-  var where = chitWhere(c) || chitOtherParty(c) || tx('the other side');
+function ctpBanner(chit) {
+  var unconfirmed = chit && chit.ctp_unconfirmed;
+  if (!unconfirmed) return '';
+  var where = chitWhere(chit) || chitOtherParty(chit) || tx('the other side');
   return (
     '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
-    esc(u.failed ? u.words || tx('Not delivered — we could not reach them') : txf('Waiting for {where} — not delivered yet', { where: where })) +
-    (u.count > 1 ? ' · ' + esc(txf('{n} changes', { n: u.count })) : '') +
+    esc(unconfirmed.failed ? unconfirmed.words || tx('Not delivered — we could not reach them') : txf('Waiting for {where} — not delivered yet', { where: where })) +
+    (unconfirmed.count > 1 ? ' · ' + esc(txf('{n} changes', { n: unconfirmed.count })) : '') +
     '</div>'
   );
 }
-function chitOtherParty(c) {
-  return c && c.sender && !chitIsSelf(null, c.sender) ? c.sender : (c && c.party) || '';
+function chitOtherParty(chit) {
+  return chit && chit.sender && !chitIsSelf(null, chit.sender) ? chit.sender : (chit && chit.party) || '';
 }
 function rtMountAll(scope) {
   if (typeof CBThread === 'undefined') return;
@@ -29352,7 +29421,7 @@ function chitSpendStrip(c) {
   ) => `<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra || ''}">${nestedVal}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
-    ${spendQuotedCell(quoted, hidden, cell, (v) => chitMoney(v, c))}
+    ${spendQuotedCell(quoted, hidden, cell, (amount) => chitMoney(amount, c))}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spendFigure(spent, hidden)}</span>`, spent ? 'color:var(--ok-2,#2f6b4f)' : 'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     ${chitPaymentCell(c, cell, quoted)}
