@@ -74,7 +74,8 @@ var CB_PARTY_EP = {
   supAdd: { m: 'POST', p: '/api/relationships/suppliers', ok: '✓' }, // { supplier_bridge_id } · { name }
   supDel: { m: 'DELETE', p: '/api/relationships/suppliers/:id', ok: '✓' },
   supPatch: { m: 'PATCH', p: '/api/relationships/suppliers/:id', ok: 'y' }, // Stage B — owner-side fields (nickname/preferred/notes/category)
-  entitySearch: { m: 'GET', p: '/api/entities/search', ok: '✓' }, // ?q= live recipient lookup (name/bridge_id)
+  entitySearch: { m: 'GET', p: '/api/entities/search', ok: '✓' }, // ?q=&where=here|<installation>|all — listed businesses by name (NET-39)
+  entityPlaces: { m: 'GET', p: '/api/entities/search/places', ok: '✓' }, // the installations the Where picker offers (active only)
   custRewards: { m: 'GET', p: '/api/relationships/customers/:id/rewards', ok: '✓' }, // what this customer holds in points, and what it means — the ONE rewards pane (app/cap-rewards.js), read by the workshop's Customers pane and CB CRM's record (T3-P2-CRM; moved from app.html)
   /* ⭐ read by BOTH CB CRM and CB Finance — one name, one place (the registry guard fails a second declaration) */
   crmParties: { m: 'GET', p: '/api/crm/parties', ok: 'y' }, // { parties:[…], alerts:{…} } — one read, no per-row fetch; terms.customer per party
