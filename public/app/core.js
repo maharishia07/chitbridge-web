@@ -963,22 +963,25 @@ function cbPushStop() {
   _push.es = null;
   _push.up = false;
 }
+/* the screen an arrival touches: the list when a list screen is showing, and (RAIL-119) the chit OPEN on screen, which is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
+function cbPushRefreshScreen(arrival) {
+  try {
+    var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
+    if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
+  } catch (_) {}
+  try {
+    if (typeof chitOnReturn === 'function') chitOnReturn(arrival);
+  } catch (e) {
+    console.warn('chitOnReturn: the open chit was not read again', e && e.message); /* F11: log, never swallow; the person is not told (the next open reads it) */
+  }
+}
 /** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
 function cbPushArrived(d) {
   /* ⚠ forced: something genuinely arrived, so the badge must move even if one was fetched a second ago */
   try {
     if (typeof loadNotifs === 'function') loadNotifs(true);
   } catch (_) {}
-  try {
-    var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
-    if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
-  } catch (_) {}
-  /* RAIL-119: the chit OPEN on screen is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
-  try {
-    if (typeof chitOnReturn === 'function') chitOnReturn(d);
-  } catch (e) {
-    console.warn('chitOnReturn: the open chit was not read again', e && e.message); /* F11: log, never swallow; the person is not told (the next open reads it) */
-  }
+  cbPushRefreshScreen(d);
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try {
     if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {
@@ -1270,6 +1273,12 @@ function api(key, opts) {
   return reply;
 }
 
+/* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
+function cbIdemKey(endpoint, outboxSafe, CB, requestId) {
+  if (outboxSafe && CB) return CB._uuid();
+  if (endpoint.idem && endpoint.m !== 'GET') return CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId;
+  return null;
+}
 async function apiOnce(key, { params, query, body } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
@@ -1308,8 +1317,7 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    /* an EP row with idem:true (a proposal write) sends its own fresh Idempotency-Key WITHOUT joining the offline outbox: a money promise is never queued */
-    const idemKey = outboxSafe && CB ? CB._uuid() : ep.idem && ep.m !== 'GET' ? (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + _rid) : null;
+    const idemKey = cbIdemKey(ep, outboxSafe, CB, _rid);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {

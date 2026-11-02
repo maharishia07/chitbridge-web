@@ -8903,16 +8903,24 @@ function bizLedgerSwitch(on) {
 /** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */
 /** the answer each card shows: what is pending, else what is saved */
 function bizCurrent(group) {
-  var me = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
+  var entity = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
   var pend = UI._bizPending || {};
   if (pend[group] != null) return pend[group];
-  return group === 'does' ? (me.supplies && me.supplies !== 'unknown' ? me.supplies : '') : me.catalogue_visibility === 'public' || me.catalogue_visibility === 'private' ? me.catalogue_visibility : '';
+  return group === 'does' ? bizSavedSupplies(entity) : bizSavedVisibility(entity);
+}
+/** what the shop supplies as saved: goods, services..., or '' while it is still unknown */
+function bizSavedSupplies(entity) {
+  return entity.supplies && entity.supplies !== 'unknown' ? entity.supplies : '';
+}
+/** the price list's saved visibility: 'public' or 'private', else '' (not chosen yet) */
+function bizSavedVisibility(entity) {
+  return entity.catalogue_visibility === 'public' || entity.catalogue_visibility === 'private' ? entity.catalogue_visibility : '';
 }
 /** repaint ONE card's choices and the Save button from the current answers (repaint locally) */
 function bizRepaint() {
-  [['does', BIZ_DOES], ['list', BIZ_LIST]].forEach(function (g) {
-    var box = document.getElementById('biz_' + g[0] + '_box');
-    if (box) box.innerHTML = bizChoice(g[0], bizCurrent(g[0]), bizCurrent(g[0]), g[1]);
+  [['does', BIZ_DOES], ['list', BIZ_LIST]].forEach(function (card) {
+    var box = document.getElementById('biz_' + card[0] + '_box');
+    if (box) box.innerHTML = bizChoice(card[0], bizCurrent(card[0]), bizCurrent(card[0]), card[1]);
   });
   var btn = document.getElementById('biz_save');
   if (btn) btn.disabled = !Object.keys(UI._bizPending || {}).length;
@@ -8920,8 +8928,8 @@ function bizRepaint() {
 /** a choice is marked, not saved */
 function bizPick(group, val) {
   UI._bizPending = UI._bizPending || {};
-  var me = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
-  var saved = group === 'does' ? me.supplies : me.catalogue_visibility;
+  var entity = (UI._set && UI._set.s && UI._set.s.entity) || UI._me || {};
+  var saved = group === 'does' ? entity.supplies : entity.catalogue_visibility;
   if (String(saved) === String(val)) delete UI._bizPending[group];
   else UI._bizPending[group] = val;
   var said = document.getElementById('biz_said');
@@ -8932,13 +8940,14 @@ function bizPick(group, val) {
 function bizSaveAsk() {
   var pend = UI._bizPending || {};
   var rows = [];
-  if (pend.does) rows.push(tx('What you do') + ': ' + tx((BIZ_DOES.find(function (r) { return r[0] === pend.does; }) || [0, pend.does])[1]));
-  if (pend.list) rows.push(tx('Your price list') + ': ' + tx((BIZ_LIST.find(function (r) { return r[0] === pend.list; }) || [0, pend.list])[1]) + ' — ' + tx((BIZ_LIST.find(function (r) { return r[0] === pend.list; }) || [0, 0, ''])[2]));
+  if (pend.does) rows.push(tx('What you do') + ': ' + tx((BIZ_DOES.find(function (choice) { return choice[0] === pend.does; }) || [0, pend.does])[1]));
+  if (pend.list) rows.push(tx('Your price list') + ': ' + tx((BIZ_LIST.find(function (choice) { return choice[0] === pend.list; }) || [0, pend.list])[1]) + ' — ' + tx((BIZ_LIST.find(function (choice) { return choice[0] === pend.list; }) || [0, 0, ''])[2]));
   if (!rows.length) return;
-  confirmAsk(tx('Save these changes?'), rows.map(function (r) { return '<div style="margin-bottom:6px">' + esc(r) + '</div>'; }).join(''), tx('Save'), function () {
+  confirmAsk(tx('Save these changes?'), rows.map(function (sentence) { return '<div style="margin-bottom:6px">' + esc(sentence) + '</div>'; }).join(''), tx('Save'), function () {
     bizSave(pend);
   });
 }
+/** writes the pending answers of the two cards, then mirrors them into the held entity and repaints */
 async function bizSave(pend) {
   var said = document.getElementById('biz_said');
   if (said) said.textContent = tx('Saving…');
@@ -8950,10 +8959,10 @@ async function bizSave(pend) {
        endpoint, so every save would have thrown 'no endpoint profileUpdate' and the catch below would have
        shown that to a shopkeeper. Caught by grepping EP before trusting the name. */
     await api('saveProfile', { body: body });
-    [UI._me, UI._set && UI._set.s && UI._set.s.entity].forEach(function (o) {
-      if (!o) return;
-      if (body.supplies) o.supplies = body.supplies;
-      if (body.catalogue_visibility) o.catalogue_visibility = body.catalogue_visibility;
+    [UI._me, UI._set && UI._set.s && UI._set.s.entity].forEach(function (holder) {
+      if (!holder) return;
+      if (body.supplies) holder.supplies = body.supplies;
+      if (body.catalogue_visibility) holder.catalogue_visibility = body.catalogue_visibility;
     });
     UI._bizPending = {};
     bizRepaint();
@@ -9260,9 +9269,13 @@ function paintSettings(s, _daOpts) {
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
     node.innerHTML = out + (out ? _capEnd() : '');
-    if (k === 'business') bizAbroadLoad();
-    if (k === 'business') bizLedgerLoad(); /* the Ledger card reads its state after it is on the screen */
+    if (k === 'business') bizLoadCards(); /* the Abroad and Ledger cards read their state after they are on the screen */
   }
+}
+/** the Business section's cards that read their own state once painted */
+function bizLoadCards() {
+  bizAbroadLoad();
+  bizLedgerLoad();
 }
 async function saveSettings() {
   const x = document.getElementById('st_err');
