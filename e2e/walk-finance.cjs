@@ -27,14 +27,17 @@ W.run('finance', async (w) => {
      A supplier and a settled customer are in the same answer - Collections must leave them out. */
   /* FIN-R1: limit and interest come from the customer's Terms — credit_limit_from (party · shop · null) and interest_state (on · off · not_set) are the server's codes */
   const fin = (o) => Object.assign({ credit_limit_minor: null, credit_limit_from: o.credit_limit_minor != null ? 'party' : null, over_limit: false, interest_minor: 0, interest_state: 'on', last_remind: null }, o);
+  /* FIN-72: the server's follow-up split (days past the due date) and its page total — codes and minor units, as GET /dues?finance=1 sends them */
+  const FU = (o, worst) => Object.assign({ not_due: 0, d0_30: 0, d31_60: 0, d61_90: 0, d90_plus: 0, worst, no_terms_minor: 0, terms: 'ok' }, o);
+  const TOTAL = FU({ not_due: 800000, d61_90: 4500000, d90_plus: 12000000 }, 'd90_plus');
   const ROWS = [
-    fin({ party_id: 'pa', party_no: 'P-00001', name: 'Sri Hardware', side: 'customer', balance_minor: 12000000, oldest_due: '2026-06-01', credit_limit_minor: 10000000, over_limit: true, interest_minor: 150000, buckets: { lt_6m: 12000000 } }),
-    fin({ party_id: 'pb', party_no: 'P-00002', name: 'Lakshmi Stores', side: 'customer', balance_minor: 4500000, oldest_due: '2026-08-15', credit_limit_minor: 10000000, interest_minor: 20000, last_remind: '2026-09-20', buckets: { lt_6m: 4500000 } }),
-    fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, interest_minor: null, interest_state: 'not_set', buckets: { not_due: 800000 } }),
+    fin({ party_id: 'pa', party_no: 'P-00001', name: 'Sri Hardware', side: 'customer', balance_minor: 12000000, oldest_due: '2026-06-01', credit_limit_minor: 10000000, over_limit: true, interest_minor: 150000, buckets: { lt_6m: 12000000 }, follow_up: FU({ d90_plus: 12000000 }, 'd90_plus') }),
+    fin({ party_id: 'pb', party_no: 'P-00002', name: 'Lakshmi Stores', side: 'customer', balance_minor: 4500000, oldest_due: '2026-08-15', credit_limit_minor: 10000000, interest_minor: 20000, last_remind: '2026-09-20', buckets: { lt_6m: 4500000 }, follow_up: FU({ d61_90: 4500000 }, 'd61_90') }),
+    fin({ party_id: 'pc', party_no: 'P-00003', name: 'Kumar Traders', side: 'customer', balance_minor: 800000, interest_minor: null, interest_state: 'not_set', buckets: { not_due: 800000 }, follow_up: FU({ not_due: 800000 }, null) }),
     fin({ party_id: 'ps', party_no: 'P-00004', name: 'Bharat Steel', side: 'supplier', balance_minor: -300000, buckets: { lt_1y: 300000 } }),
     fin({ party_id: 'pz', party_no: 'P-00005', name: 'Settled Sons', side: 'customer', balance_minor: 0 }),
   ];
-  const S = { rows: ROWS, mode: 'ok', asked: [], writes: [] };
+  const S = { rows: ROWS, mode: 'ok', asked: [], writes: [], total: TOTAL };
   await ctx.route('**/api/**', async (r0) => {
     const r = C.wrap(r0);
     const q = r.request(), u = new URL(q.url()), p = u.pathname;
@@ -48,7 +51,7 @@ W.run('finance', async (w) => {
       const asOf = TD.TODAY, plain = books.dues(S.rows.map((x) => books.dueRow({ party_no: x.party_no, name: x.name, party_id: x.party_id, side: x.side, balance_minor: x.balance_minor, oldest_due: x.oldest_due, buckets: x.buckets })), { asOf });
       C.check('GET', p, 200, plain, 'walk-finance: ');   /* the contract holds the plain answer; the finance fields (credit limit, over_limit, interest, last remind) are served beside it */
       const extra = Object.fromEntries(S.rows.map((x) => [x.party_id, x]));
-      return J(r0, 200, Object.assign({}, plain, { parties: plain.parties.map((x) => Object.assign({}, x, { credit_limit_minor: extra[x.party_id].credit_limit_minor, credit_limit_from: extra[x.party_id].credit_limit_from, over_limit: extra[x.party_id].over_limit, interest_minor: extra[x.party_id].interest_minor, interest_state: extra[x.party_id].interest_state, last_remind: extra[x.party_id].last_remind })) }));
+      return J(r0, 200, Object.assign({}, plain, { parties: plain.parties.map((x) => Object.assign({}, x, { credit_limit_minor: extra[x.party_id].credit_limit_minor, credit_limit_from: extra[x.party_id].credit_limit_from, over_limit: extra[x.party_id].over_limit, interest_minor: extra[x.party_id].interest_minor, interest_state: extra[x.party_id].interest_state, last_remind: extra[x.party_id].last_remind, follow_up: extra[x.party_id].follow_up })), follow_up_total: S.total }));
     }
     if (/\/pay(\/|-)preview$/.test(p)) return J(r, 200, { proposal: [], warnings: [] });   /* no open bill: Remind has nothing to remind about */
     if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
@@ -128,6 +131,53 @@ W.run('finance', async (w) => {
     const t2 = await txt('[data-testid="fin-off"]'); S.mode = 'ok';
     return { ok: /Your ledger is off/.test(t1) && on1 && asked && sent === 0 && /Your ledger is off/.test(t2), saw: '"' + t1 + '"; enabled ' + on1 + '; asked first ' + asked + '; writes before yes ' + sent + '; Terms: "' + t2 + '"' };
   });
+  /* FIN-72 · the follow-up view: the server's days-past-due split, painted and never computed */
+  await w.step('F14', 'Collections -> the head shows the totals by days past due (0-30 · 31-60 · 61-90 · 90+) and "Not due yet" apart, in money', async () => {
+    const chips = await page.locator('[data-testid^="fin-age-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid') + '=' + el.textContent.replace(/\s+/g, ' ').trim()));
+    const t = chips.join(' | ');
+    const ok = chips.length === 5 && /d90_plus=90\+ days .*1,?20,?000/.test(t) && /d61_90=61-90 days .*45,?000/.test(t) && /d0_30=0-30 days/.test(t) && /not_due=Not due yet .*8,?000/.test(t);
+    return { ok, saw: t.slice(0, 260) };
+  });
+  await w.step('F15', 'Collections -> each Age says its oldest late bucket in days (Sri Hardware "90+ days", Lakshmi "61-90 days"); Kumar, not yet due, says "Not due yet"', async () => {
+    const a = await txt('[data-testid="fin-row-pa"] [data-b="age"]'), b = await txt('[data-testid="fin-row-pb"] [data-b="age"]'), c = await txt('[data-testid="fin-row-pc"] [data-b="age"]');
+    return { ok: /90\+ days/.test(a) && /61-90 days/.test(b) && /Not due yet/.test(c), saw: '"' + a + '" | "' + b + '" | "' + c + '"' };
+  });
+  await w.step('F16', 'Collections -> Show 61-90 days -> only Lakshmi Stores is left (the filter reads the worst code)', async () => {
+    if (!await page.locator('[data-testid="cbl-filters-pop-fin-collect"]').count()) await page.click('[data-testid="cbl-filters-fin-collect"]').catch(() => {});
+    await page.selectOption('[data-testid="listctl-filter-flag"]', 'd61_90'); await page.waitForTimeout(400);
+    const n = await rows(), t = await body();
+    await page.selectOption('[data-testid="listctl-filter-flag"]', ''); await page.waitForTimeout(300);
+    return { ok: n === 1 && /Lakshmi Stores/.test(t), saw: n + ' row(s)' };
+  });
+  await w.step('F17', 'Collections -> a bill with no due date and no credit days anywhere -> "Set your credit days" (a note that opens Terms); absent when the shop has days', async () => {
+    S.total = Object.assign({}, TOTAL, { no_terms_minor: 800000, terms: 'not_set' }); await open();
+    const on = await page.locator('[data-testid="fin-set-terms"]').count();
+    S.total = TOTAL; await open();
+    const off = await page.locator('[data-testid="fin-set-terms"]').count();
+    return { ok: on === 1 && off === 0, saw: 'note ' + on + ' (not set) · ' + off + ' (days set)' };
+  });
+  await w.step('F18', 'Collections -> an answer with no follow_up (an older server) keeps the old look: no chips, the Schedule III word in Age, no note', async () => {
+    S.total = null; S.rows = ROWS.map((x) => Object.assign({}, x, { follow_up: undefined })); await open();
+    const chips = await page.locator('[data-testid^="fin-age-"]').count(), age = await txt('[data-testid="fin-row-pa"] [data-b="age"]'), note = await page.locator('[data-testid="fin-set-terms"]').count();
+    S.total = TOTAL; S.rows = ROWS; await open();
+    return { ok: chips === 0 && /6 months|year|Not due|months/.test(age) && !/days/.test(age) && note === 0, saw: chips + ' chips; age "' + age + '"; note ' + note };
+  });
+  for (const theme of ['cream', 'dark']) {
+    for (const [width, height] of [[1366, 768], [390, 844]]) {
+      await w.step('F19-' + theme + '-' + width, 'screen rules · ' + (theme === 'cream' ? 'light' : 'dark') + ' · ' + width + 'x' + height + ' -> the page does not scroll, the head stays inside the width, nothing is clipped, no app.html link', async () => {
+        await page.setViewportSize({ width, height }); await open(); await page.evaluate((t) => CBAvatar.applyTheme(t), theme).catch(() => {}); await page.waitForTimeout(400);
+        const m = await page.evaluate(() => {
+          const de = document.documentElement, head = document.querySelector('.cbl-title');
+          const chips = Array.from(document.querySelectorAll('.cbl-title .cbl-chip')).filter((el) => el.offsetParent);
+          const clipped = chips.filter((el) => el.scrollWidth > el.clientWidth + 1).length;
+          return { vScroll: de.scrollHeight - de.clientHeight, hScroll: de.scrollWidth - de.clientWidth, headOver: head ? head.scrollWidth - head.clientWidth : 0, clipped, appLinks: document.querySelectorAll('a[href*="app.html"]').length };
+        });
+        await page.screenshot({ path: 'e2e/shots/walk-finance-fu-' + theme + '-' + width + '.png' }).catch(() => {});
+        return { ok: m.vScroll <= 1 && m.hScroll <= 1 && m.headOver <= 1 && m.clipped === 0 && m.appLinks === 0, saw: JSON.stringify(m) };
+      });
+    }
+  }
+  await page.setViewportSize({ width: 1280, height: 860 });
   await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   w.note('F12', 'Batch Remind (select parties -> Remind -> the queue sheet, one Remind after another) and a Remind that reaches the message composer', 'needs the chit + rail-thread stand-in (walk-rail-two-sided); not asserted here');
 });
