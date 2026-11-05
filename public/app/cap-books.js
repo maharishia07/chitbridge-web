@@ -4394,6 +4394,7 @@ async function bkBS(body) {
  * 2–3 years · > 3 years; payables < 1 year · 1–2 · 2–3 · > 3 years) and the months list (Australia, UAE, US: not due · < 1 month ·
  * 1–2 months · 2–3 months · > 3 months). No country branch here; a code the table lacks lands in "Other", never vanishes.
  * Words are English; tx() falls back to English, so a language that has no entry shows these.
+ * Age order holds WITHIN one list; a shop ages with ONE pack, so a party never mixes the two lists (bkDuesAge takes the last code with money as the oldest).
  */
 var BK_BUCKETS = [
   ['not_due', 'Not due'],
