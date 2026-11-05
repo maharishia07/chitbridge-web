@@ -7012,7 +7012,7 @@ async function refresh(){
     if (r && r.ok === false) return refreshFailed(Number(r.status) || 0, r.code || null);
     busyAt(1, 1, 'Sorting it out…');
     await load();
-    SHOP_HELD = false; OFFERS_NEW = { n: 0, changed: false }; offersHeldPaint();   /* CTR-157: a read, by anyone, answers the held one */
+    SHOP_HELD = false; OFFERS_NEW = { count: 0, changed: false }; offersHeldPaint();   /* CTR-157: a read, by anyone, answers the held one */
     var n = ((S && S.items) || []).length;
     toastLine(n ? (fmtCount(n) + ' products, up to date.') : 'Read the shop.');
     dayReread(false).catch(function(e){ cbQuiet('refresh:6', e); });   /* FX-CT1: and this counter's day, so a wiped browser gets its bills back */
@@ -28017,7 +28017,7 @@ async function offersPeek(){
   OFFERS_NEW = { count: 0, changed: false };
   if (!canPeekOffers()) return;
   try {
-    var answer = await fetchBy(CloudHost.api + '/api/till/snapshot?since=' + encodeURIComponent(S.at), { headers: CloudHost.auth() }, SLOW);
+    var answer = await fetchBy(CloudHost.api + '/api/till/snapshot?since=' + encodeURIComponent(S.at), { headers: CloudHost.auth() }, SLOW);   /* offers come back WHOLE even on ?since= (api routes/till.js readLiveOffers, never delta-cut), so offersDiff compares like with like */
     if (!answer.ok) return;
     var shop = await answer.json();
     OFFERS_NEW = offersDiff(S.offers || [], shop && shop.offers);
