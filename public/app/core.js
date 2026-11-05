@@ -963,16 +963,25 @@ function cbPushStop() {
   _push.es = null;
   _push.up = false;
 }
+/* the screen an arrival touches: the list when a list screen is showing, and (RAIL-119) the chit OPEN on screen, which is read again when the far side's answer for it arrives (status, message, dispute, proposal) — never over a form being typed in */
+function cbPushRefreshScreen(arrival) {
+  try {
+    var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
+    if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
+  } catch (_) {}
+  try {
+    if (typeof chitOnReturn === 'function') chitOnReturn(arrival);
+  } catch (e) {
+    console.warn('chitOnReturn: the open chit was not read again', e && e.message); /* F11: log, never swallow; the person is not told (the next open reads it) */
+  }
+}
 /** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
 function cbPushArrived(d) {
   /* ⚠ forced: something genuinely arrived, so the badge must move even if one was fetched a second ago */
   try {
     if (typeof loadNotifs === 'function') loadNotifs(true);
   } catch (_) {}
-  try {
-    var listNav = ['task', 'order', 'drafts', 'trash', 'archive', 'intake', 'messages'];
-    if (typeof UI !== 'undefined' && listNav.indexOf(UI.nav) >= 0 && !(UI.detail || UI.mdetail) && typeof loadList === 'function') loadList(true);
-  } catch (_) {}
+  cbPushRefreshScreen(d);
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try {
     if (typeof booksOnBell === 'function' && d && (d.kind === 'books' || d.note === 'books')) {
@@ -1241,6 +1250,8 @@ function api(key, opts) {
   var o = opts || {};
   var ep = epOf(key);
   if (!ep || ep.m !== 'GET') return apiOnce(key, opts);
+  /* NET-42: { fresh: true } never joins a read already in flight — a read that started BEFORE a write would hand back the answer from before it */
+  if (o.fresh) return apiOnce(key, opts);
 
   var dk;
   try {
@@ -1262,6 +1273,40 @@ function api(key, opts) {
   return reply;
 }
 
+/* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
+function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt) {
+  if (outboxSafe && CB) return CB._uuid();
+  const fresh = () => (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId);
+  if (endpoint.idem === 'attempt' && endpoint.m !== 'GET' && attempt) return _attempts[attempt] || (_attempts[attempt] = fresh());
+  if (endpoint.idem && endpoint.m !== 'GET') return fresh();
+  return null;
+}
+
+/* ⭐ FIN-63 · ONE KEY PER ATTEMPT for a money write (EP row idem:'attempt'), the same rule as shop.html attemptKey (API-3 S36).
+   The SAME key goes with every send of the same body (a second tap, a retry after a lost answer or the 90 s deadline), so the
+   server records the payment once and answers the retry with the FIRST answer (middleware/idempotency.js). A settled answer
+   (any 2xx, or any refusal except 409 IDEMPOTENCY_IN_PROGRESS) ends the attempt, so the next press is a new payment.
+   A network failure or a timeout keeps the key: that is exactly the case where the payment may already be recorded. */
+const _attempts = {};
+/** attemptOf(key, params, body) → the attempt id: one door, one target, one body */
+function attemptOf(key, params, body) {
+  return key + ':' + JSON.stringify(params || {}) + ':' + JSON.stringify(body == null ? null : body);
+}
+/** settleAttempt(endpoint, attempt, res) → res, unchanged; ends an idem:'attempt' attempt on a settled answer, keeps it while the first send runs */
+async function settleAttempt(endpoint, attempt, res) {
+  if (endpoint.idem !== 'attempt' || !res) return res;
+  if (res.status === 409) {
+    let code = '';
+    try {
+      code = ((await res.clone().json()) || {}).code || '';
+    } catch (e) {
+      cblog('debug', 'attempt: a 409 without a JSON code, so the attempt ends (' + (e && e.message) + ')');
+    }
+    if (code === 'IDEMPOTENCY_IN_PROGRESS') return res;
+  }
+  delete _attempts[attempt];
+  return res;
+}
 async function apiOnce(key, { params, query, body } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
@@ -1300,7 +1345,7 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const idemKey = outboxSafe && CB ? CB._uuid() : null;
+    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
@@ -1341,7 +1386,7 @@ async function apiOnce(key, { params, query, body } = {}) {
             ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {})
           },
           body: body ? JSON.stringify(body) : undefined
-        });
+        }).then((answer) => settleAttempt(ep, attempt, answer));
       } finally {
         if (_to) clearTimeout(_to);
       }
