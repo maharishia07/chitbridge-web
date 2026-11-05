@@ -1274,10 +1274,38 @@ function api(key, opts) {
 }
 
 /* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
-function cbIdemKey(endpoint, outboxSafe, CB, requestId) {
+function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt) {
   if (outboxSafe && CB) return CB._uuid();
-  if (endpoint.idem && endpoint.m !== 'GET') return CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId;
+  const fresh = () => (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId);
+  if (endpoint.idem === 'attempt' && endpoint.m !== 'GET' && attempt) return _attempts[attempt] || (_attempts[attempt] = fresh());
+  if (endpoint.idem && endpoint.m !== 'GET') return fresh();
   return null;
+}
+
+/* ⭐ FIN-63 · ONE KEY PER ATTEMPT for a money write (EP row idem:'attempt'), the same rule as shop.html attemptKey (API-3 S36).
+   The SAME key goes with every send of the same body (a second tap, a retry after a lost answer or the 90 s deadline), so the
+   server records the payment once and answers the retry with the FIRST answer (middleware/idempotency.js). A settled answer
+   (any 2xx, or any refusal except 409 IDEMPOTENCY_IN_PROGRESS) ends the attempt, so the next press is a new payment.
+   A network failure or a timeout keeps the key: that is exactly the case where the payment may already be recorded. */
+const _attempts = {};
+/** attemptOf(key, params, body) → the attempt id: one door, one target, one body */
+function attemptOf(key, params, body) {
+  return key + ':' + JSON.stringify(params || {}) + ':' + JSON.stringify(body == null ? null : body);
+}
+/** settleAttempt(endpoint, attempt, res) → res, unchanged; ends an idem:'attempt' attempt on a settled answer, keeps it while the first send runs */
+async function settleAttempt(endpoint, attempt, res) {
+  if (endpoint.idem !== 'attempt' || !res) return res;
+  if (res.status === 409) {
+    let code = '';
+    try {
+      code = ((await res.clone().json()) || {}).code || '';
+    } catch (e) {
+      cblog('debug', 'attempt: a 409 without a JSON code, so the attempt ends (' + (e && e.message) + ')');
+    }
+    if (code === 'IDEMPOTENCY_IN_PROGRESS') return res;
+  }
+  delete _attempts[attempt];
+  return res;
 }
 async function apiOnce(key, { params, query, body } = {}) {
   const ep = epOf(key);
@@ -1317,7 +1345,7 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const idemKey = cbIdemKey(ep, outboxSafe, CB, _rid);
+    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
@@ -1358,7 +1386,7 @@ async function apiOnce(key, { params, query, body } = {}) {
             ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {})
           },
           body: body ? JSON.stringify(body) : undefined
-        });
+        }).then((answer) => settleAttempt(ep, attempt, answer));
       } finally {
         if (_to) clearTimeout(_to);
       }

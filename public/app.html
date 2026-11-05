@@ -1852,9 +1852,9 @@ const EP = {
   svcPauseEnd: { m: 'POST', p: '/api/service/:id/pause/:pid/end', ok: '✓' },
   svcPauseAnswer: { m: 'POST', p: '/api/service/:id/pause/:pid/answer', ok: '✓' }, // ⭐ accept or REJECT the other side's pause — the disagreement, made into a fact
   advance: { m: 'PUT', p: '/api/chits/:id/status', ok: '✓' }, // state change is via PUT /status (no /advance route)
-  chitPay: { m: 'POST', p: '/api/chits/:id/payment', ok: '✓' },
+  chitPay: { m: 'POST', p: '/api/chits/:id/payment', ok: '✓', idem: 'attempt' },
   chitBooks: { m: 'POST', p: '/api/chits/:id/books-request', ok: '✓' }, // "Send to books": the connector books this order now (Athi, 2026-09-06)   // the seller records a payment on their copy (level 1)
-  chitUnpay: { m: 'DELETE', p: '/api/chits/:id/payment', ok: '✓' },
+  chitUnpay: { m: 'DELETE', p: '/api/chits/:id/payment', ok: '✓', idem: 'attempt' },
   assign: { m: 'PUT', p: '/api/actors/assign/:id', ok: '✓' }, // body {action:'push', target_actor_id}
   unassign: { m: 'PUT', p: '/api/actors/assign/:id', ok: '✓' }, // SAME route — body {action:'return'}
   setPriority: { m: 'PUT', p: '/api/chits/:id/priority', ok: '✓' }, // {priority,reason} internal — built (baseline-2)
@@ -1880,7 +1880,7 @@ const EP = {
      and least differentiating part of the platform, and depth here competes with Tally on its own ground. */
   supplyList: { m: 'GET', p: '/api/supplies', ok: 'y' },
   supplyAdd: { m: 'POST', p: '/api/supplies', ok: '✓' },
-  supplyBuy: { m: 'POST', p: '/api/supplies/purchase', ok: '✓' },
+  supplyBuy: { m: 'POST', p: '/api/supplies/purchase', ok: '✓', idem: 'attempt' },
   supplyUse: { m: 'POST', p: '/api/supplies/:id/issue', ok: '✓' },
   /* ⭐ ADOPT — a supplier delivery becoming YOUR catalogue. Read offers; accept only what is named. */
   adoptRead: { m: 'GET', p: '/api/adopt/:id', ok: 'y' },

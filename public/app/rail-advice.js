@@ -1,4 +1,5 @@
 /* rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09).
+ * CARD 16-finance/cb-finance
  *
  * SPEC-payments-2026-10-05 §3 · §4.3 · §5; DESIGN-rail-modules §2.1 (CBAdvice); FIT-shell Supplier line: *the payer settles its own books
  * and informs; the payer never sees the payee's books.* M31 (the payee's Accept / Dispute) is the next row — this unit only SENDS.
@@ -39,7 +40,7 @@
    at mount, by assignment (not a second registration) — the attach-ui.js / rail-thread.js pattern. ── */
   var CB_ADVICE_EP = {
     booksPayAdvice: { m: 'GET', p: '/api/books/payments/:id/advice' }, // the read: party · may · words · body · share
-    booksPayPatch: { m: 'PATCH', p: '/api/books/payments/:id' } // the merge-patch: advice_chit_id | advice_shared_at
+    booksPayPatch: { m: 'PATCH', p: '/api/books/payments/:id', idem: 'attempt' } // the merge-patch: advice_chit_id | advice_shared_at
   };
   root.CB_ADVICE_EP = CB_ADVICE_EP;
   function ensureEP() {
