@@ -64,12 +64,17 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
+/** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
+function crmUnbilledMoney(unbilled) {
+  if (unbilled.hidden && !unbilled.minor) return tx('hidden');
+  return bkMoney(unbilled.minor, unbilled.currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
+}
 /** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
 function crmBillFacts(entries) {
   var chitBills = 0,
     ledBills = 0,
     lastBill = '',
-    un = { n: 0, minor: 0, currency: null };
+    un = { n: 0, minor: 0, currency: null, hidden: 0 };
   (entries || []).forEach(function (e) {
     if (e.kind === 'bill') {
       if (e.src === 'ledger') ledBills++;
@@ -77,7 +82,8 @@ function crmBillFacts(entries) {
       if (!lastBill || e.at > lastBill) lastBill = e.at;
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
       un.n++;
-      un.minor += Number(e.amount_minor || 0);
+      if (e.amount_minor == null) un.hidden++; // RAIL-146h: a hidden figure is left out of the sum, never added as 0
+      else un.minor += Number(e.amount_minor);
       un.currency = un.currency || e.currency;
     }
   });
@@ -114,6 +120,12 @@ function crmRecordFrom(rec, p) {
 /** who made a change, in words; a machine's id (a shop uuid) is never a name, so it says nothing (R109) */
 function crmWho(by) {
   return cbIsRawId(by) ? '' : by || '';
+}
+/** RAIL-146h: a chit or ledger entry whose money the server took off (a cost-blind reader: figure null + cost_hidden) is marked, so the Amount column says "hidden" and not a dash */
+function crmMarkHidden(entry, wire) {
+  var figure = entry.src === 'chit' ? wire.value : wire.amount_minor;
+  if ((entry.src === 'chit' || entry.src === 'ledger') && figure == null && wire.cost_hidden) entry.amount_hidden = true;
+  return entry;
 }
 /** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
 function crmEntryFrom(e, i) {
@@ -183,7 +195,7 @@ function crmEntryFrom(e, i) {
     o.line = e.from ? txf('Moved to {to} · from {from}', { to: to, from: tx(SW[e.from] || e.from) }) : txf('Added as {to}', { to: to });
     o.by = crmWho(e.by);
   } else o.line = e.line || e.title || '';
-  return o;
+  return crmMarkHidden(o, e);
 }
 function crmEntriesFrom(r) {
   return ((r && r.entries) || []).map(crmEntryFrom);
@@ -275,7 +287,7 @@ function crmTlCols() {
       cell: function (e) {
         return e.amount_minor != null
           ? '<span class="mono" data-testid="crm-amt-' + esc(e.id) + '">' + esc(bkMoney(e.amount_minor, e.currency)) + '</span>'
-          : '<span class="sub">\u2014</span>';
+          : '<span class="sub"' + (e.amount_hidden ? ' data-testid="crm-amt-hidden-' + esc(e.id) + '"' : '') + '>' + (e.amount_hidden ? esc(tx('hidden')) : '\u2014') + '</span>';
       },
       value: function (e) {
         return e.amount_minor == null ? '' : e.amount_minor;
@@ -982,7 +994,7 @@ function crmRecordPaint(p, rec) {
   /* Customer · Supplier */
   var bf = R.billFacts || crmBillFacts([]);
   var ufact = bf.unbilled.n
-    ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + bkMoney(bf.unbilled.minor, bf.unbilled.currency || CRM.currency)
+    ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + crmUnbilledMoney(bf.unbilled)
     : '';
   if (cu)
     secs.push(

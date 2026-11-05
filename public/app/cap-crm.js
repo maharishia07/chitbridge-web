@@ -261,7 +261,8 @@ function crmSegChip(p) {
 /** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
-  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';
+  if (!CRM.ledger) return '<span class="sub">—</span>';
+  if (p.balance_minor == null) return p.dues && p.dues.cost_hidden ? '<span class="sub" data-testid="party-due-hidden-' + esc(p.party_id) + '">' + esc(tx('hidden')) + '</span>' : '<span class="sub">—</span>';
   var b = Number(p.balance_minor || 0),
     late = p.dues_overdue
       ? ' <span class="late red" data-testid="party-due-late-' +
@@ -1291,7 +1292,7 @@ function crmMiniChitRows(list, key) {
           '</span><span class="w">' +
           esc(e.line || '') +
           '</span><span class="a mono">' +
-          (e.amount_minor != null ? esc(bkMoney(e.amount_minor, e.currency || CRM.currency)) : '') +
+          (e.amount_minor != null ? esc(bkMoney(e.amount_minor, e.currency || CRM.currency)) : e.amount_hidden ? esc(tx('hidden')) : '') +
           '</span></div>'
       );
     });
