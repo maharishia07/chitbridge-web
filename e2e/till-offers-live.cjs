@@ -18,6 +18,7 @@ let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(76) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
 
 const DOSA = { item_id: 'dosa', id: 'dosa', name: 'DOSA', price: 80, unit: 'nos', code: 'DOSA1', category: 'tiffin' };
+const TEA = { item_id: 'tea', id: 'tea', name: 'TEA', price: 100, unit: 'nos', code: 'TEA1', category: 'drinks' };
 const COFFEE = { item_id: 'coffee', id: 'coffee', name: 'COFFEE', price: 40, unit: 'nos', code: 'COF1', category: 'drinks' };
 const offer = (id, item, percent) => ({ id, kind: 'percent_off', label: percent + '% off ' + item, percent, applies_to: { item_ids: [item] } });
 
@@ -38,7 +39,7 @@ const offer = (id, item, percent) => ({ id, kind: 'percent_off', label: percent 
       return;
     }
     if (u === '/api/till/snapshot') return json({ at: '2026-10-31T09:00:00.000Z', entity_id: 'ent-x', shop: { name: 'Shop X', currency: 'INR' },
-      till: { suggested_id: 'C1', assigned_id: 'C1' }, items: [DOSA, COFFEE], offers: OFFERS, slabs: [], categories: [], version: 'v' + OFFERS.length });
+      till: { suggested_id: 'C1', assigned_id: 'C1' }, items: [DOSA, COFFEE, TEA], offers: OFFERS, slabs: [], categories: [], version: 'v' + OFFERS.length });
     if (u === '/api/entities/register' || u === '/api/signin/ask') return json({ message: 'sent', dev_otp: '123456' });
     if (u === '/api/entities/verify' || u === '/api/signin/verify') return json({ token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u.startsWith('/api/')) return json({ ok: true });
@@ -58,11 +59,11 @@ const offer = (id, item, percent) => ({ id, kind: 'percent_off', label: percent 
     localStorage.setItem('cb_till_api', a); localStorage.setItem('cb_till_key', 'KEY-X');
   }, base);
   const p = await ctx.newPage();
-  const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-  await p.goto(base + '/till.html');
+  const errs = []; p.on('pageerror', (e) => { errs.push(String(e)); console.log('PAGEERR', String(e).slice(0,300)); });
+  p.on('console', (m) => { if (m.type() === 'error') console.log('CONSOLE', m.text().slice(0,200)); }); await p.goto(base + '/till.html');
   await p.waitForFunction(() => typeof refresh === 'function' && typeof bellUp === 'function', null, { timeout: 30000 });
   await p.evaluate(() => refresh().catch(function () {}));
-  await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X' && (S.items || []).length === 2, null, { timeout: 30000 });
+  await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X' && (S.items || []).length === 3, null, { timeout: 30000 });
   await SI.signIn(p, 'xclerk'); await SI.signedIn(p);
   await p.evaluate(() => usignClose());
   await p.evaluate(async () => { BELL_AT = 0; await bellUp(); });
@@ -108,6 +109,48 @@ const offer = (id, item, percent) => ({ id, kind: 'percent_off', label: percent 
   await p.waitForTimeout(500);
   say('clearing the bill offline reads nothing and breaks nothing', JSON.stringify(await offersNow()) === '["o1","o2"]', JSON.stringify(await offersNow()));
   await ctx.setOffline(false);
+
+  console.log('\n-- 4- the pill ASKS before it touches the open bill (money promise: names its reach) --');
+  const addTea = async () => { await p.fill('#q', 'TEA'); await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 }); await p.click('[data-testid="till-add-0"]'); };
+  const setShop = async (offers) => { await post('/set-offers', offers); await post('/push-shop'); };
+  const pillUp = () => p.waitForFunction(() => { const e = document.getElementById('offerpill'); return e && !e.hidden; }, null, { timeout: 15000 });
+  const dlg = () => p.evaluate(() => { const d = document.getElementById('askdlg'); return d && d.open ? d.innerText.replace(/\s+/g, ' ').trim() : ''; });
+  const teaOffer = offer('t10', 'tea', 10);
+  await setShop([]); await p.waitForFunction(() => (S.offers || []).length === 0, null, { timeout: 15000 });
+  await addTea(); await addTea();
+  say('open bill: 2 x 100.00 totals 200.00', /200.00/.test(await total()), await total());
+  await setShop([teaOffer]); await pillUp(); await p.click('#offerpill');
+  await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
+  const asked = await dlg();
+  say('the popup says 200.00 -> 180.00 and this bill only', /200.00 → .*180.00/.test(asked) && /this bill only/.test(asked), JSON.stringify(asked));
+  await p.screenshot({ path: process.env.CB_SHOT || 'till-offers-popup.png' });
+  await p.click('#askno');
+  say('Keep: the open bill still totals 200.00', /200.00/.test(await total()), await total());
+  await addTea();
+  say('Keep, then a line added: 3 x 100.00 still uses the OLD offers (300.00)', /300.00/.test(await total()), await total());
+  say('the bill still holds the old list', (await offersNow()).length === 0, JSON.stringify(await offersNow()));
+  await p.evaluate(() => clearBill());
+  await p.waitForFunction(() => (S.offers || []).length === 1, null, { timeout: 15000 });
+  await addTea();
+  say('the NEXT bill gets 10% off: 100.00 becomes 90.00', /90.00/.test(await total()), await total());
+  await p.evaluate(() => clearBill());
+  await setShop([]); await p.waitForFunction(() => (S.offers || []).length === 0, null, { timeout: 15000 });
+  await addTea(); await addTea();
+  await setShop([teaOffer]); await pillUp(); await p.click('#offerpill');
+  await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
+  await p.click('#askok');
+  await p.waitForFunction(() => (S.offers || []).length === 1, null, { timeout: 15000 });
+  say('Use new prices: the open bill re-prices to 180.00', /180.00/.test(await total()), await total());
+  await p.evaluate(() => clearBill());
+  await setShop([]); await p.waitForFunction(() => (S.offers || []).length === 0, null, { timeout: 15000 });
+  await addTea();
+  await setShop([offer('c20', 'coffee', 20)]); await pillUp(); await p.click('#offerpill');
+  await p.waitForTimeout(500);
+  say('a change that does not move the total: no popup', (await dlg()) === '', JSON.stringify(await dlg()));
+  say('the bar says the total is unchanged', /total is unchanged/.test(await p.evaluate(() => document.getElementById('lastnote').textContent)), 'lastnote');
+  await p.evaluate(() => clearBill());
+  await p.waitForFunction(() => (S.offers || []).length === 1, null, { timeout: 15000 });
+  say('and the next bill still reads them', JSON.stringify(await offersNow()) === '["c20"]', JSON.stringify(await offersNow()));
 
   say('no page error', errs.length === 0, errs.join(' | ').slice(0, 120) || 'none');
   await b.close(); srv.close();
