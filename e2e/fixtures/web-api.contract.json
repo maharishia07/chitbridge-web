@@ -1161,8 +1161,12 @@
     }
    },
    "optional": [
+    "parties[].buckets.gt_3m",
+    "parties[].buckets.lt_1m",
     "parties[].buckets.lt_1y",
     "parties[].buckets.lt_6m",
+    "parties[].buckets.m1_2",
+    "parties[].buckets.m2_3",
     "parties[].buckets.m6_1y",
     "parties[].credit_limit_from",
     "parties[].credit_limit_minor",

@@ -128,6 +128,30 @@ W.run('finance', async (w) => {
     const t2 = await txt('[data-testid="fin-off"]'); S.mode = 'ok';
     return { ok: /Your ledger is off/.test(t1) && on1 && asked && sent === 0 && /Your ledger is off/.test(t2), saw: '"' + t1 + '"; enabled ' + on1 + '; asked first ' + asked + '; writes before yes ' + sent + '; Terms: "' + t2 + '"' };
   });
+  /* FIN-73 - the Age word and the age rows follow the SHOP'S pack: India keeps Schedule III, an Australian shop (and AE, US) is aged in months.
+     One table by bucket code on the web; no country branch; a code it knows never lands under "Other". */
+  const ageOf = (id) => txt('[data-testid="fin-row-' + id + '"] [data-b="age"]');
+  const nextOf = async (id) => {
+    await page.click('[data-testid="fin-row-' + id + '"] [data-caret]'); await page.waitForSelector('[data-testid="dues-next-' + id + '"]', { timeout: 6000 }).catch(() => {});
+    return { t: await txt('[data-testid="dues-next-' + id + '"]'), other: await page.locator('[data-testid="dues-next-' + id + '"] [data-b="other"]').count() };
+  };
+  await w.step('F17', 'Collections (India shop, Schedule III buckets) -> the Age word is "< 6 months" and the opened row says the same, no "Other" - exactly as before FIN-73', async () => {
+    await open(); const a = await ageOf('pa'), n = await nextOf('pa');
+    return { ok: /< 6 months/.test(a) && /< 6 months/.test(n.t) && n.other === 0, saw: 'age "' + a + '"; next "' + n.t.slice(0, 80) + '"; Other rows ' + n.other };
+  });
+  const AU = [
+    ['au1', 'Koala Hardware', '2026-10-20', { lt_1m: 100000 }], ['au2', 'Wattle Stores', '2026-09-01', { m1_2: 200000 }],
+    ['au3', 'Gum Traders', '2026-08-15', { m2_3: 300000 }], ['au4', 'Banksia Supply', '2026-05-01', { gt_3m: 400000 }]
+  ].map((r, i) => fin({ party_id: r[0], party_no: 'P-0010' + i, name: r[1], side: 'customer', balance_minor: Object.values(r[3])[0], oldest_due: r[2], buckets: r[3] }));
+  await w.step('F18', 'Collections (Australian shop, months buckets from its own pack) -> Age reads "< 1 month" · "1–2 months" · "2–3 months" · "> 3 months"; opened, each row carries its words and there is NO "Other" group', async () => {
+    S.rows = AU; await open(); const ages = [];
+    for (const r of AU) ages.push(await ageOf(r.party_id));
+    const nx = await nextOf('au4'), n1 = await nextOf('au1');
+    S.rows = ROWS;
+    const want = ['< 1 month', '1–2 months', '2–3 months', '> 3 months'];
+    const ok = want.every((x, i) => ages[i].indexOf(x) >= 0) && /> 3 months/.test(nx.t) && /< 1 month/.test(n1.t) && nx.other === 0 && n1.other === 0 && !/Other/.test(nx.t + n1.t);
+    return { ok, saw: 'ages ' + JSON.stringify(ages) + '; next "' + nx.t.slice(0, 60) + '"; Other rows ' + (nx.other + n1.other) };
+  });
   await w.step('M43', 'the stand-in answered every /api/books call as the API contract says', async () => { const [ok, saw] = C.finish(); return { ok, saw }; });
   w.note('F12', 'Batch Remind (select parties -> Remind -> the queue sheet, one Remind after another) and a Remind that reaches the message composer', 'needs the chit + rail-thread stand-in (walk-rail-two-sided); not asserted here');
 });

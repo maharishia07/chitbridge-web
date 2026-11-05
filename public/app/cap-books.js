@@ -4388,28 +4388,30 @@ async function bkBS(body) {
     body.innerHTML = bkErr(e);
   }
 }
-/** ⭐ Schedule III: not due, then less than 6 months, 6–12 months, 1–2 years, 2–3 years, more than 3 years — disputed apart */
+/**
+ * ⭐ ONE table of age words, keyed by the server's bucket code (FIN-73). It holds the union of the two packs' lists, in age
+ * order, so the shop's OWN pack decides which codes arrive: Schedule III (India: not due · < 6 months · 6–12 months · 1–2 years ·
+ * 2–3 years · > 3 years; payables < 1 year · 1–2 · 2–3 · > 3 years) and the months list (Australia, UAE, US: not due · < 1 month ·
+ * 1–2 months · 2–3 months · > 3 months). No country branch here; a code the table lacks lands in "Other", never vanishes.
+ * Words are English; tx() falls back to English, so a language that has no entry shows these.
+ */
 var BK_BUCKETS = [
   ['not_due', 'Not due'],
+  ['lt_1m', '< 1 month'],
+  ['m1_2', '1–2 months'],
+  ['m2_3', '2–3 months'],
+  ['gt_3m', '> 3 months'],
   ['lt_6m', '< 6 months'],
   ['m6_1y', '6–12 months'],
-  ['y1_2', '1–2 years'],
-  ['y2_3', '2–3 years'],
-  ['gt_3y', '> 3 years']
-];
-/** ⚠️ what the shop OWES is aged differently (Schedule III, payables): not due · under a year · 1–2 · 2–3 · over 3 years */
-var BK_BUCKETS_PAY = [
-  ['not_due', 'Not due'],
   ['lt_1y', '< 1 year'],
   ['y1_2', '1–2 years'],
   ['y2_3', '2–3 years'],
   ['gt_3y', '> 3 years']
 ];
 /**
- * ⚠️⚠️ THE SERVER'S BUCKETS DECIDE THE COLUMNS (2026-09-30, review F11). One table with the six receivable columns
- * showed a supplier's `lt_1y` amount nowhere but under Balance. So: two tables — what customers owe you, what you owe
- * suppliers — each with the columns of its own side, and any bucket the server sends that has no column here lands in
- * "Other" rather than vanishing (a named list of columns must never be a silent filter).
+ * ⚠️⚠️ THE SERVER'S BUCKETS DECIDE THE COLUMNS (2026-09-30, review F11; FIN-73). A supplier's `lt_1y` and an Australian shop's
+ * `lt_1m` each need a column of their own, so BK_BUCKETS holds every code either pack sends, and any bucket the server sends
+ * that has no column here lands in "Other" rather than vanishing (a named list of columns must never be a silent filter).
  */
 /** a supplier the shop has paid ahead (Dr balance: paid with no bill) is an advance — they owe you; the balance sheet reclassifies it the same way (1700). It is never under To pay. */
 function bkDuesAdvance(p) {
@@ -4520,9 +4522,9 @@ function bkDuesForeign(p) {
     })
     .join('');
 }
-/** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
+/** the oldest age bucket the party has money in — the server's own buckets (the shop's pack), in the words of BK_BUCKETS */
 function bkDuesAge(p) {
-  var cols = bkDuesSide(p) === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
+  var cols = BK_BUCKETS,
     b = p.buckets || {},
     w = '';
   cols.forEach(function (item) {
@@ -4682,10 +4684,10 @@ function bkPartyBillsHTML(pid, list, c) {
         .join('')
     : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
-/** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
+/** its next level: the age buckets (the server's, the shop's pack) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
 function bkDuesNext(p, c, list) {
   var side = bkDuesSide(p),
-    cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
+    cols = BK_BUCKETS,
     known = cols.map(function (item) {
       return item[0];
     }),
