@@ -203,6 +203,13 @@ ok(checklist.problems(filledBody).length === 0, 'the tool\'s own --md output, wi
 ok(checklist.problems(fs.readFileSync(path.join(ROOT, '.github/pull_request_template.md'), 'utf8')).length === 4, 'the untouched template fails on its four placeholder lines');
 ok(checklist.problems('no checklist at all').length === 5, 'a body with no checklist is missing all five lines');
 ok(checklist.skipReason('dependabot[bot]', ['package.json']) && checklist.skipReason('me', ['docs/a.md', 'README.md']) && !checklist.skipReason('me', ['docs/a.md', 'lib/x.js']), 'skips: a dependency bot · docs-only; a code change never skips');
+/* MNT-16: the reader judges the §6 block only; an earlier mention of "Pass 3" is prose, not the line */
+const prose = 'Pass 3 is why this PR exists (the header work).\nPass 0 stays as before.\n\n';
+ok(checklist.problems(prose + filledBody).length === 0, 'MNT-16: a body that mentions Pass 3 / Pass 0 before the checklist is judged on the §6 block alone');
+ok(checklist.problems(filledBody.replace(/(Pass 0[^\n]*?) → /, '$1 - ')).length === 0, 'MNT-16: a Pass 0 line written without the arrow still counts as filled');
+const unfilledBlock = filledBody.replace(/(Pass 1[^\n]*)/, '- [x] Pass 1 · shrink: lines `<before → after>`');
+ok(checklist.problems(prose + unfilledBlock + '\n\n## Notes\nlines 3 → 2 · complexity 4 → 3').length === 1, 'MNT-16: strict — a number missing in the block is not rescued by numbers written after it');
+ok(checklist.problems(prose + '## §6 checklist\n- [ ] Pass 0 · seams: `x` → y\n').length === 4, 'MNT-16: a block that omits Pass 1, 2, 3 and Guard green fails on those four');
 
 console.log('\n8 · an EXACT move keeps its score (Athi R-moved (a)): moved code is not new code');
 const moveRules = require('../tools/readability/moves.cjs');

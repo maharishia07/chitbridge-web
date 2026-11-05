@@ -18,30 +18,32 @@ const { spawnSync } = require('child_process');
 
 const DEPENDENCY_BOTS = /^(dependabot|renovate|github-actions)(\[bot\])?$/i;
 const DOCS_ONLY = /^(docs\/|.*\.md$|\.github\/pull_request_template\.md$)/i;
+/** a checklist LINE starts its line (after a bullet and a checkbox): a sentence that only mentions "Pass 3" is not it */
+const lineOf = (label) => new RegExp('^[ \\t]*(?:[-*][ \\t]*)?(?:\\[[ xX]\\][ \\t]*)?' + label + '[^\\n]*', 'im');
 /** the five lines, and what each must carry to count as filled */
 const LINES = [
   {
     name: 'Pass 0 · seams',
-    find: /pass 0[^\n]*/i,
+    find: lineOf('pass 0'),
     filled: /(`[^`<]+`|nothing exists)/i,
     hint: 'the seams word and what was reused / widened, or "nothing exists"'
   },
   {
     name: 'Pass 1 · shrink',
-    find: /pass 1[^\n]*/i,
+    find: lineOf('pass 1'),
     filled: /lines\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*complexity\s*`?\d+\s*(→|->)\s*\d+/i,
     hint: 'lines N → N · complexity N → N'
   },
   {
     name: 'Pass 2 · humanify',
-    find: /pass 2[^\n]*/i,
+    find: lineOf('pass 2'),
     filled: /cryptic names\s*`?\d+\s*(→|->)\s*\d+`?[^\n]*empty catches\s*`?\d+\s*(→|->)\s*\d+/i,
     hint: 'cryptic names N → N · empty catches N → N'
   },
-  { name: 'Pass 3 · structure', find: /pass 3[^\n]*/i, filled: /module header[^\n]*CARD/i, hint: 'module header · CARD line · TRACE row' },
+  { name: 'Pass 3 · structure', find: lineOf('pass 3'), filled: /module header[^\n]*CARD/i, hint: 'module header · CARD line · TRACE row' },
   {
     name: 'Guard green',
-    find: /guard green[^\n]*/i,
+    find: lineOf('guard green'),
     filled: /readability --changed/i,
     hint: 'the guard line, from `node tools/readability.cjs --changed --ratchet --md`'
   }
@@ -78,11 +80,21 @@ function skipReason(author, files) {
   return null;
 }
 
+/** the §6 checklist block: its heading to the next heading of the same or a higher level; no such heading = the whole body (older PRs) */
+function checklistBlock(body) {
+  const heading = /^(#{1,6})[ \t]*§\s*6[^\n]*$/im.exec(body);
+  if (!heading) return body;
+  const rest = body.slice(heading.index + heading[0].length);
+  const next = new RegExp('^#{1,' + heading[1].length + '}[ \\t]+\\S', 'm').exec(rest);
+  return heading[0] + (next ? rest.slice(0, next.index) : rest);
+}
+
 /** every checklist line that is missing, unfilled or still carries a <placeholder> */
 function problems(body) {
   const found = [];
+  const block = checklistBlock(body);
   for (const line of LINES) {
-    const match = line.find.exec(body);
+    const match = line.find.exec(block);
     if (!match) {
       found.push(line.name + ': the line is missing (' + line.hint + ')');
       continue;
@@ -118,4 +130,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { problems, skipReason, LINES, DEPENDENCY_BOTS, DOCS_ONLY };
+module.exports = { problems, checklistBlock, skipReason, LINES, DEPENDENCY_BOTS, DOCS_ONLY };
