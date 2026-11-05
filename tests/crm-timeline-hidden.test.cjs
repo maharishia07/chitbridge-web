@@ -58,8 +58,12 @@ let h = chip({ party_id: 'pid-1', balance_minor: 0, billFacts: allHidden });
 assert(/2 orders not billed yet hidden/.test(h) && !/₹0/.test(h), 'chip, all hidden: ' + h);
 h = chip({ party_id: 'pid-1', balance_minor: 0, billFacts: facts([shown, blind]) });
 assert(/₹1,000 · some hidden/.test(h), 'chip, some hidden: ' + h);
-h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: 0, hidden: 2, currency: 'INR' } });
-assert(/2 orders not billed yet hidden/.test(h) && !/₹0/.test(h), 'list cell, all hidden: ' + h);
+h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: null, currency: 'INR', cost_hidden: true } });
+assert(/2 orders not billed yet hidden/.test(h) && !/₹0/.test(h), 'list cell, the SERVER shape for a blind reader (api rail146e): ' + h);
+h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 0, minor: 0, currency: null } });
+assert(/Settled/.test(h) && !/hidden/.test(h), 'a true zero still says Settled: ' + h);
+h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: null, currency: null } });
+assert(/2 orders not billed yet<\/span>/.test(h) && !/hidden/.test(h), 'two currencies (no flag): the count alone, as before: ' + h);
 h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: 100000, hidden: 1, currency: 'INR' } });
 assert(/₹1,000 · some hidden/.test(h), 'list cell, some hidden: ' + h);
 /* the OWNER's unpriced order (value null, NO cost_hidden) is not "hidden": it adds 0 exactly as before, in the sum, the chip and the cell */

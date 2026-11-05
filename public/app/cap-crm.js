@@ -177,6 +177,7 @@ function crmPlural(n, one, many) {
 }
 /** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
 function crmUnbilledMoney(unbilled, currency) {
+  if (unbilled.cost_hidden && unbilled.minor == null) return tx('hidden'); // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
   if (unbilled.hidden && !unbilled.minor) return tx('hidden');
   return bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
 }
@@ -185,7 +186,7 @@ function crmUnbilledSaid(unbilled, currency) {
   if (!unbilled || !unbilled.n) return '';
   return (
     crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') +
-    (unbilled.minor == null && !unbilled.hidden ? '' : ' ' + crmUnbilledMoney(unbilled, currency))
+    (unbilled.minor == null && !unbilled.hidden && !unbilled.cost_hidden ? '' : ' ' + crmUnbilledMoney(unbilled, currency))
   );
 }
 
