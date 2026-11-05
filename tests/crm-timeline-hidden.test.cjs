@@ -23,8 +23,8 @@ globalThis.CRM = { ledger: true, currency: 'INR' };
 globalThis.crmRolesList = (r) => r; globalThis.crmRealEmail = (v) => v; globalThis.crmPlural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 globalThis.crmNoDate = (s) => s; globalThis.crmEntryWhat = globalThis.crmEntryState = () => '';
 eval(
-  [fn(crm, 'crmDueCell'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmUnbilledMoney'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
-    NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
+  [fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
+    NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.chip = crmDueChip; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
 );
 const amountCell = (e) => cols().filter((c) => c.key === 'amount')[0].cell(e);
 const order = (o) => Object.assign({ kind: 'chit', at: '2026-11-01T10:00:00Z', chit_id: 'c1', purpose: 'order', title: 'Order', currency: 'INR', direction: 'out' }, o);
@@ -52,4 +52,22 @@ const row = (dues) => partyFrom({ party_id: 'pid-1', dues, may_trade: { ok: true
 assert(/>hidden</.test(dueCell(row({ balance_minor: null, oldest_due: null, cost_hidden: true }))) && /party-due-hidden-pid-1/.test(dueCell(row({ balance_minor: null, cost_hidden: true }))), 'blind: Dues says hidden');
 assert(/>\u2014</.test(dueCell(row({ balance_minor: null }))), 'no figure and not hidden: a dash');
 assert(/you'll get/.test(dueCell(row({ balance_minor: 100000 }))), 'owner: the figure and its word');
+/* the chip (record header) and the list cell are the same ONE painter: all hidden -> "hidden" never 0; some hidden -> the figure + "some hidden" */
+const allHidden = facts([blind, entry(order({ chit_id: 'c5', value: null, cost_hidden: true }), 5)]);
+let h = chip({ party_id: 'pid-1', balance_minor: 0, billFacts: allHidden });
+assert(/2 orders not billed yet hidden/.test(h) && !/₹0/.test(h), 'chip, all hidden: ' + h);
+h = chip({ party_id: 'pid-1', balance_minor: 0, billFacts: facts([shown, blind]) });
+assert(/₹1,000 · some hidden/.test(h), 'chip, some hidden: ' + h);
+h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: 0, hidden: 2, currency: 'INR' } });
+assert(/2 orders not billed yet hidden/.test(h) && !/₹0/.test(h), 'list cell, all hidden: ' + h);
+h = listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 2, minor: 100000, hidden: 1, currency: 'INR' } });
+assert(/₹1,000 · some hidden/.test(h), 'list cell, some hidden: ' + h);
+/* the OWNER's unpriced order (value null, NO cost_hidden) is not "hidden": it adds 0 exactly as before, in the sum, the chip and the cell */
+const unpriced = entry(order({ chit_id: 'c6', value: null }), 6);
+f = facts([unpriced]);
+assert.deepStrictEqual([f.unbilled.n, f.unbilled.minor, f.unbilled.hidden], [1, 0, 0], 'unpriced, no flag: counted, adds 0, not hidden');
+h = chip({ party_id: 'pid-1', balance_minor: 0, billFacts: f });
+assert(/1 order not billed yet ₹0/.test(h) && !/hidden/.test(h), 'owner chip unchanged: ' + h);
+assert(/₹1,000/.test(chip({ party_id: 'pid-1', balance_minor: 0, billFacts: facts([shown]) })) && !/hidden/.test(chip({ party_id: 'pid-1', balance_minor: 0, billFacts: facts([shown]) })), 'owner chip with a price unchanged');
+assert(!/hidden/.test(listCell({ party_id: 'pid-1', balance_minor: 0, unbilled: { n: 1, minor: 42000, currency: 'INR' } })), 'owner list cell unchanged (the server sends no hidden)');
 console.log('crm-timeline-hidden: all ok');

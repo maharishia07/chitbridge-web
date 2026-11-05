@@ -66,11 +66,6 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
-/** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
-function crmUnbilledMoney(unbilled) {
-  if (unbilled.hidden && !unbilled.minor) return tx('hidden');
-  return bkMoney(unbilled.minor, unbilled.currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
-}
 /** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
 function crmBillFacts(entries) {
   var chitBills = 0,
@@ -84,8 +79,8 @@ function crmBillFacts(entries) {
       if (!lastBill || e.at > lastBill) lastBill = e.at;
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
       un.n++;
-      if (e.amount_minor == null) un.hidden++; // RAIL-146h: a hidden figure is left out of the sum, never added as 0
-      else un.minor += Number(e.amount_minor);
+      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the sum (an unpriced order, null without the flag, still adds 0)
+      else un.minor += Number(e.amount_minor || 0);
       un.currency = un.currency || e.currency;
     }
   });
