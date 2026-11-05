@@ -133,6 +133,7 @@ W.run('finance', async (w) => {
   });
   /* FIN-72 · the follow-up view: the server's days-past-due split, painted and never computed */
   await w.step('F14', 'Collections -> the head shows the totals by days past due (0-30 · 31-60 · 61-90 · 90+) and "Not due yet" apart, in money', async () => {
+    await open();   /* F13 left the page on the Terms tab with the ledger off: read Collections afresh (mode is ok again) */
     const chips = await page.locator('[data-testid^="fin-age-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid') + '=' + el.textContent.replace(/\s+/g, ' ').trim()));
     const t = chips.join(' | ');
     const ok = chips.length === 5 && /d90_plus=90\+ days .*1,?20,?000/.test(t) && /d61_90=61-90 days .*45,?000/.test(t) && /d0_30=0-30 days/.test(t) && /not_due=Not due yet .*8,?000/.test(t);
