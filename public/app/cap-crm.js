@@ -1,4 +1,6 @@
 /* cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares.
+ * OWNS  the Parties list and its Dues cell, follow-ups, Add party, the router and the helpers every CRM screen shares
+ * CALLED BY  crm.html only; cap-crm-record.js reads its helpers
  * Loaded by crm.html only (after cap-books.js, list-ctl.js, chit-sheet.js). The record, its timeline and the Log sheet are
  * cap-crm-record.js. docs/design/crm/PLAN.md (Phases 3-4) · REQUIREMENT-home.md · REQUIREMENT-followups.md · the designer handoff,
  * where the FROZEN list standard (docs/design/list-standard, SYSTEM.md §3a) wins: every list here is a CBList mount.

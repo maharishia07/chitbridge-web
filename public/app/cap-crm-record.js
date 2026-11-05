@@ -1,6 +1,8 @@
 /* cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit.
  * FLOW  crmRecordOpen(route) → the party and timeline reads (crmParty · crmTimeline) → crmRecordPaint → the actions greyed by the server's may/why
  * CARD 11-crm-and-marketing/crm-record
+ * OWNS  one party's record page and its timeline: the wire entry to page entry grammar (crmEntryFrom), the bill facts, the Log sheet, the party edit
+ * CALLED BY  crm.html, through the router in cap-crm.js (crmRecordOpen)
  * Loaded by crm.html after cap-crm.js (which owns the list, the router and the shared helpers). docs/design/crm/REQUIREMENT-record.md ·
  * REQUIREMENT-timeline.md · FLOWS F3–F8 · the designer handoff, where the FROZEN list standard wins: both timeline views are CBList
  * mounts (the record's latest five, and the full server-paged history) — no entry, row or card is drawn by hand.
