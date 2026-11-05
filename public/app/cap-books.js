@@ -27,7 +27,7 @@ if (typeof EP !== 'undefined') {
     booksTB: { m: 'GET', p: '/api/books/trial-balance' },
     booksPL: { m: 'GET', p: '/api/books/pl' },
     booksBS: { m: 'GET', p: '/api/books/bs' },
-    booksPayRecord: { m: 'POST', p: '/api/books/payments' },
+    booksPayRecord: { m: 'POST', p: '/api/books/payments', idem: 'attempt' /* FIN-63: one key per attempt */ },
     booksPayPreview: { m: 'POST', p: '/api/books/payments/preview' } /* M26: the bills table + the duplicate warnings; writes nothing */,
     booksLock: { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
     booksUnlock: { m: 'POST', p: '/api/books/periods/:fy/:p/unlock' },

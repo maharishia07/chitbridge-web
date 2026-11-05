@@ -32,7 +32,7 @@ if (typeof EP !== 'undefined') {
     perAccrue: { m: 'POST', p: '/api/books/accruals' },
     perAccrueRev: { m: 'POST', p: '/api/books/accruals/:ref/reverse' },
     perGstClose: { m: 'POST', p: '/api/books/gst/close' },
-    perGstPay: { m: 'POST', p: '/api/books/gst/pay' },
+    perGstPay: { m: 'POST', p: '/api/books/gst/pay', idem: 'attempt' },
     perReturn: { m: 'GET', p: '/api/books/returns' } /* BAS1: the shop's OWN return (AU BAS · AE VAT201), read from the posted books */,
     perYearStatus: { m: 'GET', p: '/api/books/year/:fy/status' },
     perYearClose: { m: 'POST', p: '/api/books/year/:fy/close' }
