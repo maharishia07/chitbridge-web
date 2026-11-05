@@ -72,6 +72,11 @@ async function drive(label, masterFile) {
     say('the day check counts a refund apart: "1 bill · ₹1,000.00 and 1 refund · −₹300.00"', /^1 bill · ₹\s?1,000\.00 and 1 refund · \u2212₹\s?300\.00$/.test(side), side);
     const onlyBack = await p.evaluate(() => dayCheckSide([{}], 0, 1, -300));
     say('a refund alone is not called a bill', /^1 refund · \u2212₹\s?300\.00$/.test(onlyBack), onlyBack);
+    const oldDay = await p.evaluate(async () => {
+      var keep = HOST; HOST = { history: async function(){ return { bills: [{ no: 'CN/OLD/1', at: new Date().toISOString(), kind: 'credit_note', total: null }] }; }, cred: function(){ return true; } };
+      try { var chk = await dayServerCheck([]); return { back: chk.moreBackTotal, words: dayCheckSide(chk.more, chk.moreTotal, chk.moreBack, chk.moreBackTotal) }; } finally { HOST = keep; }
+    });
+    say('the day check with an old note that has no amount says "1 refund", never −₹0.00', oldDay.back === null && oldDay.words === '1 refund', JSON.stringify(oldDay));
     say('no page error', errs.length === 0, errs.join(' | ') || 'none');
   } finally { await b.close(); srv.close(); }
 }
