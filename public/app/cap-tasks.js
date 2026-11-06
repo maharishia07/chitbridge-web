@@ -54,10 +54,10 @@
 
   var VIEWS = ['orders_in', 'orders_out', 'tasks', 'done']; /* the views GET /api/work/list answers (drafts wait for the compose route) */
   var LIMIT = 100; /* one read takes the first hundred rows of a folder (PAGE_MAX) */
-  var K = { el: null, o: {}, view: 'orders_in', rows: [], counts: null, total: 0, truncated: false, list: null, people: null, open: null, thread: null };
+  var board = { el: null, o: {}, view: 'orders_in', rows: [], counts: null, total: 0, truncated: false, list: null, people: null, open: null, thread: null };
 
-  function T(s) {
-    return typeof root.tx === 'function' ? root.tx(s) : s;
+  function T(words) {
+    return typeof root.tx === 'function' ? root.tx(words) : words;
   }
   /** an amount as the page says it: the figure; "hidden" when the server took the money off this read for a cost-blind co-assist (RAIL-146b, cost_hidden); '' when the row has none */
   function moneyWord(minor, currency, hidden) {
@@ -74,7 +74,7 @@
   function ensureEP() {
     if (typeof EP === 'undefined' || !EP) return false;
     [root.CB_SHEET_EP, root.CB_THREAD_EP, CB_WORK_EP].forEach(function (set) {
-      if (set) for (var k in set) if (!EP[k]) EP[k] = set[k];
+      if (set) for (var name in set) if (!EP[name]) EP[name] = set[name];
     });
     /* ＋ New task sends through the chit send, under app.html's name for it (one name per endpoint — as rail-advice.js registers it) */
     if (!EP.createChit) EP.createChit = { m: 'POST', p: '/api/chits/send', ok: '✓' };
@@ -86,12 +86,18 @@
     return root.api(key, opts);
   }
 
+  /** a failure this screen survives, said in words in the page log (cblog) instead of swallowed */
+  function logFailure(what, failure) {
+    if (typeof root.cblog === 'function') root.cblog('warn', 'tasks: ' + what + ' — ' + ((failure && failure.message) || 'no answer'));
+  }
   /** what a host page hears (embed only) */
   function tell(event, more) {
-    if (!K.o.embed || !root.parent || root.parent === root) return;
+    if (!board.o.embed || !root.parent || root.parent === root) return;
     try {
       root.parent.postMessage(Object.assign({ cb: 'tasks', event: event }, more || {}), root.location.origin);
-    } catch (_) {}
+    } catch (failure) {
+      logFailure('the host page was not told ' + event, failure); // the screen works on without the host; only its badge stays stale
+    }
   }
 
   /* ── words ── */
@@ -106,73 +112,73 @@
   };
   var STEP_SAID = { accept: 'Accepted.', reject: 'Rejected.', complete: 'Done.', cancel: 'Cancelled.', reopen: 'Reopened.' };
   var STEPS = ['accept', 'reject', 'complete', 'cancel', 'reopen'];
-  function stepLabel(a, r) {
-    if (a === 'complete' && r.kind === 'order_in') return T(r.fulfilment === 'pickup' ? 'Handed over' : 'Delivered');
-    if (a === 'complete' && r.kind === 'order_out') return T('Received');
-    return T(STEP_LABEL[a][r.kind === 'task' ? 'task' : 'order']);
+  function stepLabel(step, row) {
+    if (step === 'complete' && row.kind === 'order_in') return T(row.fulfilment === 'pickup' ? 'Handed over' : 'Delivered');
+    if (step === 'complete' && row.kind === 'order_out') return T('Received');
+    return T(STEP_LABEL[step][row.kind === 'task' ? 'task' : 'order']);
   }
-  function stepSaid(a, r) {
-    return a === 'complete' && r.kind !== 'task' ? stepLabel(a, r) + '.' : T(STEP_SAID[a]);
+  function stepSaid(step, row) {
+    return step === 'complete' && row.kind !== 'task' ? stepLabel(step, row) + '.' : T(STEP_SAID[step]);
   }
-  function ageWord(d) {
-    d = Math.floor(Number(d) || 0);
-    return d <= 0 ? T('Today') : d + ' ' + T('d');
+  function ageWord(stamp) {
+    stamp = Math.floor(Number(stamp) || 0);
+    return stamp <= 0 ? T('Today') : stamp + ' ' + T('d');
   }
   /* the symbols the bell already uses for an order (rail-bell.js O3): 🌐 Online · Delivery / Pick up — a symbol beats a sentence (SYSTEM §1) */
   var CHANNEL_WORD = { online: '🌐 Online', rail: '⇄ Rail', counter: '▤ Counter' };
   var FULFIL_WORD = { delivery: 'Delivery', pickup: 'Pick up' };
-  function channelWord(r) {
-    return r.channel ? T(CHANNEL_WORD[r.channel] || r.channel) : '';
+  function channelWord(row) {
+    return row.channel ? T(CHANNEL_WORD[row.channel] || row.channel) : '';
   }
-  function fulfilWord(r) {
-    return r.fulfilment ? T(FULFIL_WORD[r.fulfilment] || r.fulfilment) : '';
+  function fulfilWord(row) {
+    return row.fulfilment ? T(FULFIL_WORD[row.fulfilment] || row.fulfilment) : '';
   }
-  function howWord(r) {
-    return [channelWord(r), fulfilWord(r)].filter(Boolean).join(' · ');
+  function howWord(row) {
+    return [channelWord(row), fulfilWord(row)].filter(Boolean).join(' · ');
   }
   /** the asked-for time, in the shop's own date words (CBLocale.date; the raw ISO day when the locale unit is not on the page) */
-  function forWord(r) {
-    if (!r.requested_for) return '';
+  function forWord(row) {
+    if (!row.requested_for) return '';
     try {
-      return (root.CBLocale && root.CBLocale.date(r.requested_for, { day: 'numeric', month: 'short' })) || String(r.requested_for).slice(0, 10);
+      return (root.CBLocale && root.CBLocale.date(row.requested_for, { day: 'numeric', month: 'short' })) || String(row.requested_for).slice(0, 10);
     } catch (_) {
-      return String(r.requested_for).slice(0, 10);
+      return String(row.requested_for).slice(0, 10);
     }
   }
   /** the marks the server keeps beside the stage word: billed (the counter bill exists) · sent out (despatched) · stuck (the rail's overdue test, with its why) */
-  function marksHTML(r) {
+  function marksHTML(row) {
     var list = [];
-    if (r.stuck)
-      list.push('<span class="tag red" data-testid="tk-stuck-' + esc(r.chit_id) + '" title="' + esc(r.stuck_why || '') + '">' + esc(T('Stuck')) + '</span>');
-    if (r.billed) list.push('<span class="tag" data-testid="tk-billed-' + esc(r.chit_id) + '">' + esc(T('Billed')) + '</span>');
-    if (r.despatched && r.stage !== 'delivered' && r.stage !== 'closed') list.push('<span class="tag">' + esc(T('Sent out')) + '</span>');
+    if (row.stuck)
+      list.push('<span class="tag red" data-testid="tk-stuck-' + esc(row.chit_id) + '" title="' + esc(row.stuck_why || '') + '">' + esc(T('Stuck')) + '</span>');
+    if (row.billed) list.push('<span class="tag" data-testid="tk-billed-' + esc(row.chit_id) + '">' + esc(T('Billed')) + '</span>');
+    if (row.despatched && row.stage !== 'delivered' && row.stage !== 'closed') list.push('<span class="tag">' + esc(T('Sent out')) + '</span>');
     return list.join(' ');
   }
-  function toneOf(r) {
-    return r.stage === 'new' ? 'amber' : r.stage === 'closed' ? '' : 'green';
+  function toneOf(row) {
+    return row.stage === 'new' ? 'amber' : row.stage === 'closed' ? '' : 'green';
   }
-  function wordTag(r) {
-    return '<span class="tag ' + toneOf(r) + '" data-testid="tk-word-' + esc(r.chit_id) + '">' + esc(T(r.word || '')) + '</span>';
+  function wordTag(row) {
+    return '<span class="tag ' + toneOf(row) + '" data-testid="tk-word-' + esc(row.chit_id) + '">' + esc(T(row.word || '')) + '</span>';
   }
-  function wordCell(r) {
-    var m = marksHTML(r);
-    return wordTag(r) + (m ? ' ' + m : '');
+  function wordCell(row) {
+    var marks = marksHTML(row);
+    return wordTag(row) + (marks ? ' ' + marks : '');
   }
-  function whoWord(r) {
-    if (r.lines_assigned_n) return r.lines_assigned_n + ' ' + T(r.lines_assigned_n === 1 ? 'line held' : 'lines held');
-    return r.assignee && r.assignee.name ? r.assignee.name : T('No one');
+  function whoWord(row) {
+    if (row.lines_assigned_n) return row.lines_assigned_n + ' ' + T(row.lines_assigned_n === 1 ? 'line held' : 'lines held');
+    return row.assignee && row.assignee.name ? row.assignee.name : T('No one');
   }
-  function linesWord(r) {
-    if (r.lines_n == null) return '';
-    if (!r.lines_n) return T('No lines');
-    return r.lines_open_n ? r.lines_open_n + ' ' + T('of') + ' ' + r.lines_n + ' ' + T('open') : r.lines_n + ' ' + T('delivered');
+  function linesWord(row) {
+    if (row.lines_n == null) return '';
+    if (!row.lines_n) return T('No lines');
+    return row.lines_open_n ? row.lines_open_n + ' ' + T('of') + ' ' + row.lines_n + ' ' + T('open') : row.lines_n + ' ' + T('delivered');
   }
-  function sayOf(v) {
-    return v ? v.say || v.why || '' : '';
+  function sayOf(value) {
+    return value ? value.say || value.why || '' : '';
   }
   function byId(id) {
     return (
-      K.rows.filter(function (item) {
+      board.rows.filter(function (item) {
         return item.chit_id === id;
       })[0] || null
     );
@@ -180,12 +186,12 @@
 
   /* ── the read ── */
   function load() {
-    return call('workList', { query: { view: K.view, limit: LIMIT } }).then(function (reply) {
+    return call('workList', { query: { view: board.view, limit: LIMIT } }).then(function (reply) {
       reply = reply || {};
-      K.rows = Array.isArray(reply.rows) ? reply.rows : [];
-      K.counts = reply.counts || null;
-      K.total = reply.total == null ? K.rows.length : reply.total;
-      K.truncated = !!reply.truncated;
+      board.rows = Array.isArray(reply.rows) ? reply.rows : [];
+      board.counts = reply.counts || null;
+      board.total = reply.total == null ? board.rows.length : reply.total;
+      board.truncated = !!reply.truncated;
       return markStuck().then(function () {
         return reply;
       });
@@ -197,7 +203,7 @@
    * a truncated shop or a failed read marks nothing, never a wrong row.
    */
   function markStuck() {
-    if (K.view !== 'orders_in' && K.view !== 'orders_out') return Promise.resolve();
+    if (board.view !== 'orders_in' && board.view !== 'orders_out') return Promise.resolve();
     return call('railChits').then(
       function (reply) {
         var by = {},
@@ -207,7 +213,7 @@
         items.forEach(function (x) {
           if (x && x.stuck) by[x.chit_id] = x.why || T('Waiting too long');
         });
-        K.rows.forEach(function (item) {
+        board.rows.forEach(function (item) {
           item.stuck = !!by[item.chit_id];
           item.stuck_why = by[item.chit_id] || null;
         });
@@ -227,9 +233,9 @@
     );
   }
   function paintFail(e) {
-    if (!K.el) return;
+    if (!board.el) return;
     var refused = e && e.status === 403;
-    K.el.innerHTML =
+    board.el.innerHTML =
       '<div class="empty" data-testid="tk-fail"><div class="t">' +
       esc(T(refused ? 'This sign-in cannot open this' : "Couldn't read your orders")) +
       '</div>' +
@@ -242,14 +248,14 @@
   }
 
   /* ── an action drawn the one way: shown always; greyed with the server's sentence when it may not (as cap-employees) ── */
-  function actRow(id, label, may, extra, cls) {
-    var ok = !may || may.ok !== false;
+  function actRow(id, label, verdict, extra, className) {
+    var ok = !verdict || verdict.ok !== false;
     return (
       '<div class="tk-act' +
       (ok ? '' : ' no') +
       '">' +
       '<button type="button" class="act ' +
-      (cls || 'quiet') +
+      (className || 'quiet') +
       '" id="' +
       id +
       '" data-testid="' +
@@ -257,18 +263,18 @@
       '"' +
       (ok ? '' : ' aria-disabled="true" disabled') +
       ' title="' +
-      esc(ok ? label : sayOf(may)) +
+      esc(ok ? label : sayOf(verdict)) +
       '">' +
       esc(label) +
       '</button>' +
-      (ok ? extra || '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(may)) + '</span>') +
+      (ok ? extra || '' : '<span class="why" data-testid="' + id + '-why">' + esc(sayOf(verdict)) + '</span>') +
       '</div>'
     );
   }
 
   /* ── the list (O2C step 3 · order: the rows the seller works) ── */
   function tkList() {
-    return K.rows;
+    return board.rows;
   }
   function cols() {
     return [
@@ -280,17 +286,17 @@
         w: 260,
         sort: 'what',
         html: true,
-        value: function (r) {
-          return r.subject || '';
+        value: function (row) {
+          return row.subject || '';
         },
-        cell: function (r) {
-          var how = howWord(r);
+        cell: function (row) {
+          var howText = howWord(row);
           return (
             '<b>' +
-            esc(r.subject || T('Untitled')) +
+            esc(row.subject || T('Untitled')) +
             '</b>' +
-            (r.party ? ' <span class="sub">' + esc(r.party) + '</span>' : '') +
-            (how ? ' <span class="sub" data-testid="tk-how-' + esc(r.chit_id) + '">' + esc(how) + '</span>' : '')
+            (row.party ? ' <span class="sub">' + esc(row.party) + '</span>' : '') +
+            (howText ? ' <span class="sub" data-testid="tk-how-' + esc(row.chit_id) + '">' + esc(howText) + '</span>' : '')
           );
         }
       },
@@ -303,8 +309,8 @@
         hfilter: 'state',
         html: true,
         cell: wordCell,
-        value: function (r) {
-          return r.word || '';
+        value: function (row) {
+          return row.word || '';
         }
       },
       {
@@ -314,11 +320,11 @@
         w: 130,
         num: true,
         sort: 'amount',
-        cell: function (r) {
-          return moneyWord(r.total_minor, r.currency, r.cost_hidden);
+        cell: function (row) {
+          return moneyWord(row.total_minor, row.currency, row.cost_hidden);
         },
-        value: function (r) {
-          return Number(r.total_minor) || 0;
+        value: function (row) {
+          return Number(row.total_minor) || 0;
         }
       },
       { key: 'who', label: T('Who has it'), prio: 4, w: 150, sort: 'who', hfilter: 'assignee', cell: whoWord, value: whoWord },
@@ -329,8 +335,8 @@
         w: 110,
         sort: 'for',
         cell: forWord,
-        value: function (r) {
-          return r.requested_for || '';
+        value: function (row) {
+          return row.requested_for || '';
         }
       },
       {
@@ -339,11 +345,11 @@
         prio: 6,
         w: 90,
         sort: 'age',
-        cell: function (r) {
-          return ageWord(r.age_days);
+        cell: function (row) {
+          return ageWord(row.age_days);
         },
-        value: function (r) {
-          return Number(r.age_days) || 0;
+        value: function (row) {
+          return Number(row.age_days) || 0;
         }
       },
       { key: 'lines', label: T('Items'), prio: 7, w: 130, cell: linesWord },
@@ -352,8 +358,8 @@
         label: T('Address'),
         prio: 8,
         w: 200,
-        cell: function (r) {
-          return r.address || '';
+        cell: function (row) {
+          return row.address || '';
         }
       },
       {
@@ -361,8 +367,8 @@
         label: T('Remark'),
         prio: 9,
         w: 200,
-        cell: function (r) {
-          return r.remark || '';
+        cell: function (row) {
+          return row.remark || '';
         }
       },
       {
@@ -371,57 +377,92 @@
         prio: 10,
         w: 110,
         hfilter: 'kind',
-        cell: function (r) {
-          return T(KIND_WORD[r.kind] || r.kind);
+        cell: function (row) {
+          return T(KIND_WORD[row.kind] || row.kind);
         }
       }
     ];
   }
   /** the three columns a folder shows first (SYSTEM §3 rule 7; the rest sit under ⚙): an order's money before its holder; a task's holder before money */
   function defaultCols() {
-    return K.view === 'tasks' ? ['what', 'word', 'who'] : ['what', 'word', 'amount'];
+    return board.view === 'tasks' ? ['what', 'word', 'who'] : ['what', 'word', 'amount'];
+  }
+  /** the list orders: newest first, asked-for date, and the others the board offers */
+  function listSorts() {
+    return [
+      {
+        key: 'age',
+        label: T('Newest first'),
+        cmp: function (left, right) {
+          return (Number(left.age_days) || 0) - (Number(right.age_days) || 0);
+        }
+      },
+      {
+        key: 'for',
+        label: T('Asked for'),
+        cmp: function (left, right) {
+          return String(left.requested_for || '9').localeCompare(String(right.requested_for || '9'));
+        }
+      },
+      {
+        key: 'amount',
+        label: T('Amount'),
+        cmp: function (left, right) {
+          return (Number(right.total_minor) || 0) - (Number(left.total_minor) || 0);
+        }
+      },
+      {
+        key: 'what',
+        label: T('Name'),
+        cmp: function (left, right) {
+          return String(left.subject || '').localeCompare(String(right.subject || ''));
+        }
+      }
+    ];
   }
   function mountList(host) {
     if (!host) return;
-    if (K.list) {
+    if (board.list) {
       try {
-        K.list.destroy();
-      } catch (_) {}
+        board.list.destroy();
+      } catch (failure) {
+        logFailure('the old list could not be torn down', failure); // it is replaced right below
+      }
     }
     var names = [];
-    K.rows.forEach(function (item) {
-      var n = item.assignee && item.assignee.name;
-      if (n && names.indexOf(n) < 0) names.push(n);
+    board.rows.forEach(function (item) {
+      var name = item.assignee && item.assignee.name;
+      if (name && names.indexOf(name) < 0) names.push(name);
     });
     var stages = (WF() ? WF().STAGES : ['new', 'accepted', 'delivered', 'closed']).filter(function (item) {
-      return K.rows.some(function (r) {
-        return r.stage === item;
+      return board.rows.some(function (row) {
+        return row.stage === item;
       });
     });
     var stageLabel = { new: 'New', accepted: 'Accepted', delivered: 'Delivered', closed: 'Closed' };
     var kinds = Object.keys(KIND_WORD).filter(function (item) {
-      return K.rows.some(function (r) {
-        return r.kind === item;
+      return board.rows.some(function (row) {
+        return row.kind === item;
       });
     });
     var stateOpts = stages.map(function (item) {
       return { v: item, label: T(stageLabel[item] || item) };
     });
     if (
-      K.rows.some(function (item) {
+      board.rows.some(function (item) {
         return item.stuck;
       })
     )
       stateOpts.push({ v: 'stuck', label: T('Stuck') });
-    K.list = root.CBList.mount(host, {
-      key: 'tasks-' + K.view,
+    board.list = root.CBList.mount(host, {
+      key: 'tasks-' + board.view,
       t: T,
       rows: tkList,
-      id: function (r) {
-        return r.chit_id;
+      id: function (row) {
+        return row.chit_id;
       },
-      rowTid: function (r) {
-        return 'tk-row-' + r.chit_id;
+      rowTid: function (row) {
+        return 'tk-row-' + row.chit_id;
       },
       columns: cols(),
       defaultCols: defaultCols(),
@@ -433,8 +474,8 @@
           options: kinds.map(function (item) {
             return { v: item, label: T(KIND_WORD[item]) };
           }),
-          match: function (r, v) {
-            return r.kind === v;
+          match: function (row, value) {
+            return row.kind === value;
           }
         },
         {
@@ -442,8 +483,8 @@
           label: T('Where it is'),
           all: T('Anywhere'),
           options: stateOpts,
-          match: function (r, v) {
-            return v === 'stuck' ? !!r.stuck : r.stage === v;
+          match: function (row, value) {
+            return value === 'stuck' ? !!row.stuck : row.stage === value;
           }
         },
         {
@@ -455,94 +496,67 @@
               return { v: item, label: item };
             })
           ),
-          match: function (r, v) {
-            return v === 'none' ? !(r.assignee && r.assignee.name) && !r.lines_assigned_n : !!(r.assignee && r.assignee.name === v);
+          match: function (row, value) {
+            return value === 'none' ? !(row.assignee && row.assignee.name) && !row.lines_assigned_n : !!(row.assignee && row.assignee.name === value);
           }
         }
       ],
-      search: function (r) {
-        return [r.subject, r.party, r.ref, r.word, r.assignee && r.assignee.name, r.remark, r.address, howWord(r)].join(' ');
+      search: function (row) {
+        return [row.subject, row.party, row.ref, row.word, row.assignee && row.assignee.name, row.remark, row.address, howWord(row)].join(' ');
       },
-      sorts: [
-        {
-          key: 'age',
-          label: T('Newest first'),
-          cmp: function (a, b) {
-            return (Number(a.age_days) || 0) - (Number(b.age_days) || 0);
-          }
-        },
-        {
-          key: 'for',
-          label: T('Asked for'),
-          cmp: function (a, b) {
-            return String(a.requested_for || '9').localeCompare(String(b.requested_for || '9'));
-          }
-        },
-        {
-          key: 'amount',
-          label: T('Amount'),
-          cmp: function (a, b) {
-            return (Number(b.total_minor) || 0) - (Number(a.total_minor) || 0);
-          }
-        },
-        {
-          key: 'what',
-          label: T('Name'),
-          cmp: function (a, b) {
-            return String(a.subject || '').localeCompare(String(b.subject || ''));
-          }
-        }
-      ],
-      onOpen: function (r) {
-        tkOpen(r.chit_id);
+      sorts: listSorts(),
+      onOpen: function (row) {
+        tkOpen(row.chit_id);
       },
-      empty: { title: T(K.view === 'done' ? 'Nothing closed yet' : K.view === 'tasks' ? 'No tasks waiting' : 'No orders here') }
+      empty: { title: T(board.view === 'done' ? 'Nothing closed yet' : board.view === 'tasks' ? 'No tasks waiting' : 'No orders here') }
     });
   }
 
-  function viewLabel(v) {
-    var t = WF()
+  function viewLabel(value) {
+    var tabRow = WF()
       ? WF()
           .tabs()
           .filter(function (x) {
-            return x.id === v;
+            return x.id === value;
           })[0]
       : null;
-    return T(t ? t.label : v);
+    return T(tabRow ? tabRow.label : value);
   }
   function paintBar() {
     var node = $('tk_bar');
     if (!node) return;
-    var n = K.total,
-      more = K.rows.length < n ? ' · ' + T('first') + ' ' + K.rows.length + ' ' + T('shown') : '';
-    var count = K.truncated ? T('Too many to count') : '<b>' + n + '</b> ' + esc(T(n === 1 ? 'row' : 'rows')) + esc(more);
+    var total = board.total,
+      more = board.rows.length < total ? ' · ' + T('first') + ' ' + board.rows.length + ' ' + T('shown') : '';
+    var count = board.truncated ? T('Too many to count') : '<b>' + total + '</b> ' + esc(T(total === 1 ? 'row' : 'rows')) + esc(more);
     var pick = '';
-    if (K.o.embed) {
+    if (board.o.embed) {
       pick =
         '<select class="inp tk-pick" id="tk_view" data-testid="tk-view" aria-label="' +
         esc(T('Folder')) +
         '">' +
         VIEWS.map(function (item) {
-          var c = K.counts && K.counts[item] != null ? ' (' + K.counts[item] + ')' : '';
-          return '<option value="' + item + '"' + (item === K.view ? ' selected' : '') + '>' + esc(viewLabel(item) + c) + '</option>';
+          var chit = board.counts && board.counts[item] != null ? ' (' + board.counts[item] + ')' : '';
+          return '<option value="' + item + '"' + (item === board.view ? ' selected' : '') + '>' + esc(viewLabel(item) + chit) + '</option>';
         }).join('') +
         '</select>';
     }
     /* ＋ New (TOUR-FIX1): a task, started HERE in this page's own sheet — never the workshop (index-not-app). An order to a supplier waits for the
        compose route outside app.html (docs/design/tasks-orders/REQUIREMENT.md §＋ New). */
-    var fresh = K.o.embed ? '' : '<button type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
+    var fresh = board.o.embed ? '' : '<button type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
     node.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
-    var sel = $('tk_view');
-    if (sel)
-      sel.onchange = function () {
-        show(sel.value);
+    var viewSelect = $('tk_view');
+    if (viewSelect)
+      viewSelect.onchange = function () {
+        show(viewSelect.value);
       };
-    var nb = $('tk_new');
-    if (nb) nb.onclick = tkNew;
-    if (typeof K.o.onCounts === 'function') {
+    var newButton = $('tk_new');
+    if (newButton) newButton.onclick = tkNew;
+    if (typeof board.o.onCounts === 'function') {
       try {
-        K.o.onCounts(K.counts);
-      } catch (_) {}
+        board.o.onCounts(board.counts);
+      } catch (failure) {
+        logFailure('the counts callback of the host page failed', failure); // the host page own code; this screen is unaffected
+      }
     }
   }
 
@@ -563,11 +577,13 @@
   function closeSheet() {
     var node = $('tk_sheet');
     if (!node) return;
-    if (K.thread) {
+    if (board.thread) {
       try {
-        K.thread.destroy();
-      } catch (_) {}
-      K.thread = null;
+        board.thread.destroy();
+      } catch (failure) {
+        logFailure('the old thread could not be torn down', failure); // it is dropped on the next line
+      }
+      board.thread = null;
     }
     try {
       node.close();
@@ -575,7 +591,7 @@
       node.removeAttribute('open');
     }
     node.innerHTML = '';
-    K.open = null;
+    board.open = null;
   }
   /** a row → its sheet, read fresh (the lines, the verdicts); the list row stays the row */
   function tkOpen(id) {
@@ -589,7 +605,7 @@
     );
     return call('workOne', { params: { id: id } }).then(
       function (reply) {
-        K.open = reply;
+        board.open = reply;
         paintSheet(reply);
         tell('open', { chit_id: reply.chit_id, kind: reply.kind, stage: reply.stage, word: reply.word });
       },
@@ -610,123 +626,123 @@
       }
     );
   }
-  function headLine(c) {
+  function headLine(chit) {
     var bits = [];
-    if (c.party) bits.push(esc(c.party));
-    var total = moneyWord(c.total_minor, c.currency, c.cost_hidden);
+    if (chit.party) bits.push(esc(chit.party));
+    var total = moneyWord(chit.total_minor, chit.currency, chit.cost_hidden);
     if (total) bits.push('<span class="mono">' + esc(total) + '</span>');
-    bits.push(esc(ageWord(c.age_days)));
-    var how = howWord(c);
-    if (how) bits.push(esc(how));
-    if (c.requested_for) bits.push(esc(T('for')) + ' ' + esc(forWord(c)));
+    bits.push(esc(ageWord(chit.age_days)));
+    var howText = howWord(chit);
+    if (howText) bits.push(esc(howText));
+    if (chit.requested_for) bits.push(esc(T('for')) + ' ' + esc(forWord(chit)));
     return bits.join(' · ');
   }
   /** under the header: the delivery address, the remark, and — when the rail says it is stuck — why (the button that clears it is the next step below) */
-  function headMore(c) {
-    var h = '';
-    if (c.address) h += '<div class="sub" data-testid="tk-address">📍 ' + esc(c.address) + '</div>';
-    if (c.remark) h += '<div class="sub" data-testid="tk-remark">' + esc(c.remark) + '</div>';
-    if (c.stuck)
-      h += '<div class="tk-stuck" data-testid="tk-stuck-why"><span class="tag red">' + esc(T('Stuck')) + '</span> ' + esc(c.stuck_why || '') + '</div>';
-    return h;
+  function headMore(chit) {
+    var html = '';
+    if (chit.address) html += '<div class="sub" data-testid="tk-address">📍 ' + esc(chit.address) + '</div>';
+    if (chit.remark) html += '<div class="sub" data-testid="tk-remark">' + esc(chit.remark) + '</div>';
+    if (chit.stuck)
+      html += '<div class="tk-stuck" data-testid="tk-stuck-why"><span class="tag red">' + esc(T('Stuck')) + '</span> ' + esc(chit.stuck_why || '') + '</div>';
+    return html;
   }
   /**
    * Bill it (O2C step 5 · invoice): an order in becomes the counter bill on the TILL — invoice number and tax frozen by the till's one bill path
    * (orderToBill), never a second bill path here. In a frame on the till: the host hears { event: 'bill', chit_id } and bills it. Standalone: the
    * till opens, where its 🛒 pill holds the same order (one queue, two places). Greyed with its sentence once the server says it is billed.
    */
-  function billRow(c) {
-    if (c.kind !== 'order_in') return '';
-    var may = c.billed ? { ok: false, say: T('Already billed') } : c.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
-    return actRow('tk_do_bill', T('Bill it'), may, K.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', may.ok ? '' : 'quiet');
+  function billRow(chit) {
+    if (chit.kind !== 'order_in') return '';
+    var verdict = chit.billed ? { ok: false, say: T('Already billed') } : chit.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
+    return actRow('tk_do_bill', T('Bill it'), verdict, board.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', verdict.ok ? '' : 'quiet');
   }
-  function tkBill(c) {
-    if (K.o.embed) {
-      tell('bill', { chit_id: c.chit_id, kind: c.kind, stage: c.stage, word: c.word, party: c.party || null });
+  function tkBill(chit) {
+    if (board.o.embed) {
+      tell('bill', { chit_id: chit.chit_id, kind: chit.kind, stage: chit.stage, word: chit.word, party: chit.party || null });
       return;
     }
     root.location.href = '/till.html';
   }
-  function lineHTML(l, c) {
-    var a = l.assignment || {},
-      st = (l.settings && l.settings.state) || 'open',
-      done = st === 'done';
-    var who = a.assignee_name || T('No one');
-    var k = esc(l.line_id), price = moneyWord(l.price_minor, c.currency, c.cost_hidden);
+  function lineHTML(line, chit) {
+    var assignment = line.assignment || {},
+      lineState = (line.settings && line.settings.state) || 'open',
+      done = lineState === 'done';
+    var assigneeName = assignment.assignee_name || T('No one');
+    var lineId = esc(line.line_id), price = moneyWord(line.price_minor, chit.currency, chit.cost_hidden);
     return (
       '<div class="tk-line' +
       (done ? ' done' : '') +
       '" data-testid="tk-line-' +
-      k +
+      lineId +
       '">' +
       '<div class="tk-line-top"><b>' +
-      esc(l.particulars || T('Line')) +
+      esc(line.particulars || T('Line')) +
       '</b> <span class="mono">' +
-      esc(l.qty) +
+      esc(line.qty) +
       ' ' +
-      esc(l.unit || '') +
+      esc(line.unit || '') +
       '</span>' +
       '<span class="tag ' +
-      (done ? '' : l.remaining > 0 ? 'amber' : 'green') +
+      (done ? '' : line.remaining > 0 ? 'amber' : 'green') +
       '" data-testid="tk-line-state-' +
-      k +
+      lineId +
       '">' +
-      esc(T(done ? 'Done' : l.remaining > 0 ? 'Open' : 'Delivered')) +
+      esc(T(done ? 'Done' : line.remaining > 0 ? 'Open' : 'Delivered')) +
       '</span>' +
       '<span class="sub" data-testid="tk-line-who-' +
-      k +
+      lineId +
       '">' +
-      esc(who) +
+      esc(assigneeName) +
       '</span>' +
       (price ? '<span class="sub mono">' + esc(price) + '</span>' : '') +
       '</div>' +
       '<div class="tk-line-sub sub">' +
       esc(T('Delivered')) +
       ' ' +
-      esc(l.delivered) +
+      esc(line.delivered) +
       ' · ' +
       esc(T('left')) +
       ' ' +
-      esc(l.remaining) +
-      (l.settings && l.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(l.settings.due) : '') +
-      (l.settings && l.settings.task ? ' · ' + esc(l.settings.task) : '') +
+      esc(line.remaining) +
+      (line.settings && line.settings.due ? ' · ' + esc(T('due')) + ' ' + esc(line.settings.due) : '') +
+      (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
       '</div>' +
       '<div class="tk-line-acts">' +
-      actRow('tk_la_' + k, T('Assign'), l.actions && l.actions.assign_line) +
-      actRow('tk_ld_' + k, T(done ? 'Reopen' : 'Done'), l.actions && l.actions.assign_line) +
-      actRow('tk_lv_' + k, T('Deliver'), l.remaining > 0 ? l.actions && l.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }) +
+      actRow('tk_la_' + lineId, T('Assign'), line.actions && line.actions.assign_line) +
+      actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line) +
+      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }) +
       '</div><div id="tk_lmore_' +
-      k +
+      lineId +
       '"></div></div>'
     );
   }
-  function paintSheet(c) {
-    var acts = c.actions || {};
+  function paintSheet(chit) {
+    var acts = chit.actions || {};
     var keep = $('tk_out') ? $('tk_out').textContent : '';
-    var node = byId(c.chit_id);
+    var node = byId(chit.chit_id);
     if (node) {
-      c.stuck = !!node.stuck;
-      c.stuck_why = node.stuck_why || null;
+      chit.stuck = !!node.stuck;
+      chit.stuck_why = node.stuck_why || null;
     } /* the rail's stuck mark rides the list row; the sheet paints it */
     var steps = STEPS.map(function (item) {
-      return actRow('tk_do_' + item, stepLabel(item, c), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet');
+      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet');
     });
-    steps.splice(1, 0, billRow(c)); /* Accept → Bill it → Delivered, the brief's order */
+    steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
     steps = steps.join('');
     /* the whole task's holder (the list column prefers the lines' summary, b143's rule; the sheet shows both: the task's, then the lines held) */
-    var who =
-      ((c.assignee && c.assignee.name) || T('No one')) +
-      (c.lines_assigned_n ? ' · ' + c.lines_assigned_n + ' ' + T(c.lines_assigned_n === 1 ? 'line held' : 'lines held') : '');
+    var assigneeName =
+      ((chit.assignee && chit.assignee.name) || T('No one')) +
+      (chit.lines_assigned_n ? ' · ' + chit.lines_assigned_n + ' ' + T(chit.lines_assigned_n === 1 ? 'line held' : 'lines held') : '');
     sheet(
       '<h2 data-testid="tk-subject">' +
-        esc(c.subject || T('Order')) +
+        esc(chit.subject || T('Order')) +
         '</h2>' +
         '<div class="tk-sub">' +
-        wordCell(c) +
+        wordCell(chit) +
         ' <span class="sub" data-testid="tk-head">' +
-        headLine(c) +
+        headLine(chit) +
         '</span></div>' +
-        headMore(c) +
+        headMore(chit) +
         '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out">' +
         esc(keep) +
         '</div>' +
@@ -738,15 +754,15 @@
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Who has it')) +
         '</div>' +
-        actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(who) + '</span>') +
+        actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(assigneeName) + '</span>') +
         '<div id="tk_amore"></div></div>' +
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Lines')) +
         '</div><div class="tk-lines" data-testid="tk-lines">' +
-        ((c.lines || []).length
-          ? c.lines
+        ((chit.lines || []).length
+          ? chit.lines
               .map(function (item) {
-                return lineHTML(item, c);
+                return lineHTML(item, chit);
               })
               .join('')
           : '<div class="sub">' + esc(T('No lines on this one')) + '</div>') +
@@ -759,52 +775,54 @@
       var element = $('tk_do_' + item);
       if (element && acts[item] && acts[item].ok !== false)
         element.onclick = function () {
-          tkMove(c, item, element);
+          tkMove(chit, item, element);
         };
     });
     var bill = $('tk_do_bill');
     if (bill && !bill.disabled)
       bill.onclick = function () {
-        tkBill(c);
+        tkBill(chit);
       };
     if (acts.assign_task && acts.assign_task.ok !== false)
       $('tk_assign').onclick = function () {
-        assignPanel(c, null);
+        assignPanel(chit, null);
       };
-    (c.lines || []).forEach(function (item) {
-      var k = item.line_id,
-        element = $('tk_la_' + k),
-        target = $('tk_ld_' + k),
-        nestedNode = $('tk_lv_' + k);
+    (chit.lines || []).forEach(function (item) {
+      var lineId = item.line_id,
+        element = $('tk_la_' + lineId),
+        target = $('tk_ld_' + lineId),
+        nestedNode = $('tk_lv_' + lineId);
       if (element && !element.disabled)
         element.onclick = function () {
-          assignPanel(c, item);
+          assignPanel(chit, item);
         };
       if (target && !target.disabled)
         target.onclick = function () {
-          tkAssignLine(c, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, target);
+          tkAssignLine(chit, item, { state: (item.settings && item.settings.state) === 'done' ? 'open' : 'done' }, target);
         };
       if (nestedNode && !nestedNode.disabled)
         nestedNode.onclick = function () {
-          deliverPanel(c, item);
+          deliverPanel(chit, item);
         };
     });
-    mountThread(c);
+    mountThread(chit);
   }
-  function mountThread(c) {
+  function mountThread(chit) {
     var el = $('tk_thread');
     if (!el || !root.CBThread) return;
-    if (K.thread) {
+    if (board.thread) {
       try {
-        K.thread.destroy();
-      } catch (_) {}
+        board.thread.destroy();
+      } catch (failure) {
+        logFailure('the old thread could not be torn down', failure); // it is replaced right below
+      }
     }
-    K.thread = root.CBThread.mount(el, {
-      chit_id: c.chit_id,
-      party: c.party || undefined,
+    board.thread = root.CBThread.mount(el, {
+      chit_id: chit.chit_id,
+      party: chit.party || undefined,
       kinds: ['info'],
       context: { host: 'tasks' },
-      lines: (c.lines || []).map(function (item) {
+      lines: (chit.lines || []).map(function (item) {
         return { line_id: item.line_id, label: item.particulars };
       })
     });
@@ -814,7 +832,7 @@
   function changed(id, event, more) {
     return call('workOne', { params: { id: id } }).then(
       function (reply) {
-        K.open = reply;
+        board.open = reply;
         if ($('tk_sheet') && $('tk_sheet').open) paintSheet(reply);
         tell(event, Object.assign({ chit_id: reply.chit_id, kind: reply.kind, stage: reply.stage, word: reply.word, status: reply.status }, more || {}));
         return load().then(function () {
@@ -833,20 +851,20 @@
 
   /* ── the writes (O2C step 4 · delivery: the seller's staff move the order and its lines) ── */
   /** a status step through the ONE status writer (PUT /chits/:id/status = moveStatus); the status is the engine's STEP_TO */
-  function tkMove(c, action, btn) {
+  function tkMove(chit, action, btn) {
     var to =
       (WF() && WF().STEP_TO[action]) || { accept: 'accepted', reject: 'rejected', complete: 'completed', cancel: 'cancelled', reopen: 'in_progress' }[action];
-    var needs = (c.actions && c.actions[action] && c.actions[action].needs) || [];
-    var run = function (note) {
-      return call('status', { params: { id: c.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) });
+    var needs = (chit.actions && chit.actions[action] && chit.actions[action].needs) || [];
+    var runMove = function (note) {
+      return call('status', { params: { id: chit.chit_id }, body: Object.assign({ status: to }, note ? { note: note } : {}) });
     };
     var opts = {
-      key: 'tk-' + action + '-' + c.chit_id,
+      key: 'tk-' + action + '-' + chit.chit_id,
       failed: T("That step didn't go through"),
       out: 'tk_out',
       outcome: function () {
-        $('tk_out').textContent = stepSaid(action, c);
-        changed(c.chit_id, 'moved', { action: action });
+        $('tk_out').textContent = stepSaid(action, chit);
+        changed(chit.chit_id, 'moved', { action: action });
       }
     };
     if (needs.indexOf('reason') >= 0) {
@@ -856,7 +874,7 @@
         '</label>' +
         '<input class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">' +
         '<button type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' +
-        esc(stepLabel(action, c)) +
+        esc(stepLabel(action, chit)) +
         '</button></div>';
       $('tk_reason').focus();
       $('tk_reason_go').onclick = function () {
@@ -868,7 +886,7 @@
         root.CBAction.run(
           $('tk_reason_go'),
           function () {
-            return run(node);
+            return runMove(node);
           },
           opts
         );
@@ -879,13 +897,13 @@
       return root.CBAction.run(
         btn,
         function () {
-          return run('');
+          return runMove('');
         },
         Object.assign(
           {
             confirm: {
               title: T('Cancel this?'),
-              body: esc(c.subject || '') + ' ' + esc(T('stops here. The other party is told.')),
+              body: esc(chit.subject || '') + ' ' + esc(T('stops here. The other party is told.')),
               yes: T('Cancel it'),
               danger: true
             }
@@ -897,151 +915,151 @@
     return root.CBAction.run(
       btn,
       function () {
-        return run('');
+        return runMove('');
       },
       opts
     );
   }
 
   function loadPeople() {
-    if (K.people) return Promise.resolve(K.people);
+    if (board.people) return Promise.resolve(board.people);
     return call('people').then(
       function (reply) {
-        K.people = ((reply && reply.people) || []).filter(function (item) {
+        board.people = ((reply && reply.people) || []).filter(function (item) {
           return item.state !== 'off';
         });
-        return K.people;
+        return board.people;
       },
       function () {
-        K.people = [];
-        return K.people;
+        board.people = [];
+        return board.people;
       }
     );
   }
   /** the picker, for the whole task (line null) or one line: the shop's people, "No one" to take it off someone */
-  function assignPanel(c, line) {
+  function assignPanel(chit, line) {
     var host = line ? $('tk_lmore_' + line.line_id) : $('tk_amore');
     if (!host) return;
     host.innerHTML = '<div class="tk-panel"><span class="sub">' + esc(T('Loading')) + '</span></div>';
     loadPeople().then(function (people) {
-      var cur = line ? line.assignment && line.assignment.assignee_actor_id : c.assignee && c.assignee.id;
+      var current = line ? line.assignment && line.assignment.assignee_actor_id : chit.assignee && chit.assignee.id;
       var opts =
         '<option value="">' +
         esc(T('No one')) +
         '</option>' +
         people
           .map(function (item) {
-            return '<option value="' + esc(item.id) + '"' + (item.id === cur ? ' selected' : '') + '>' + esc(item.name) + '</option>';
+            return '<option value="' + esc(item.id) + '"' + (item.id === current ? ' selected' : '') + '>' + esc(item.name) + '</option>';
           })
           .join('');
-      var tid = line ? 'tk-line-pick' : 'tk-pick';
+      var testId = line ? 'tk-line-pick' : 'tk-pick';
       host.innerHTML =
         '<div class="tk-panel"><label class="sub" for="tk_who_sel">' +
         esc(T('Who does this?')) +
         '</label>' +
         '<select id="tk_who_sel" class="inp" data-testid="' +
-        tid +
+        testId +
         '">' +
         opts +
         '</select>' +
         '<button type="button" class="act" id="tk_who_go" data-testid="' +
-        tid +
+        testId +
         '-go">' +
         esc(T('Save')) +
         '</button></div>';
       $('tk_who_go').onclick = function () {
         var node = $('tk_who_sel').value || null,
-          p =
+          panel =
             people.filter(function (x) {
               return x.id === node;
             })[0] || null;
-        if (line) return tkAssignLine(c, line, { who: node, name: p ? p.name : null }, $('tk_who_go'));
-        return tkAssignTask(c, node, p ? p.name : null, $('tk_who_go'));
+        if (line) return tkAssignLine(chit, line, { who: node, name: panel ? panel.name : null }, $('tk_who_go'));
+        return tkAssignTask(chit, node, panel ? panel.name : null, $('tk_who_go'));
       };
     });
   }
   /** who holds the whole task: PUT /actors/assign/:id push · return (the route app.html's Assign uses) */
-  function tkAssignTask(c, who, name, btn) {
+  function tkAssignTask(chit, assigneeId, name, btn) {
     return root.CBAction.run(
       btn,
       function () {
-        return call('assign', { params: { id: c.chit_id }, body: who ? { action: 'push', target_actor_id: who } : { action: 'return' } });
+        return call('assign', { params: { id: chit.chit_id }, body: assigneeId ? { action: 'push', target_actor_id: assigneeId } : { action: 'return' } });
       },
       {
-        key: 'tk-assign-' + c.chit_id,
+        key: 'tk-assign-' + chit.chit_id,
         failed: T("Couldn't assign it"),
         out: 'tk_out',
         outcome: function () {
-          $('tk_out').textContent = who ? T('Assigned to') + ' ' + (name || '') + '.' : T('Taken off.');
-          changed(c.chit_id, 'assigned', { line_id: null, assignee: who ? { id: who, name: name } : null });
+          $('tk_out').textContent = assigneeId ? T('Assigned to') + ' ' + (name || '') + '.' : T('Taken off.');
+          changed(chit.chit_id, 'assigned', { line_id: null, assignee: assigneeId ? { id: assigneeId, name: name } : null });
         }
       }
     );
   }
   /** a LINE's holder or state: ONE append on chit_line_assignment (lib/assign — reassign, re-date and mark done ride the same row) */
-  function tkAssignLine(c, l, x, btn) {
-    var a = l.assignment || {},
-      st = (l.settings && l.settings.state) || 'open';
-    var who = 'who' in x ? x.who : a.assignee_actor_id || null,
-      name = 'who' in x ? x.name : a.assignee_name || null,
-      state = x.state || st;
-    var edit = { line_id: l.line_id, assignee_actor_id: who, assignee_name: name, assignee_type: who ? 'human' : null, state: state };
-    var said = x.state ? T(x.state === 'done' ? 'Line done.' : 'Line reopened.') : who ? T('Line given to') + ' ' + (name || '') + '.' : T('Line taken off.');
+  function tkAssignLine(chit, line, x, btn) {
+    var assignment = line.assignment || {},
+      lineState = (line.settings && line.settings.state) || 'open';
+    var assigneeId = 'who' in x ? x.who : assignment.assignee_actor_id || null,
+      name = 'who' in x ? x.name : assignment.assignee_name || null,
+      state = x.state || lineState;
+    var edit = { line_id: line.line_id, assignee_actor_id: assigneeId, assignee_name: name, assignee_type: assigneeId ? 'human' : null, state: state };
+    var said = x.state ? T(x.state === 'done' ? 'Line done.' : 'Line reopened.') : assigneeId ? T('Line given to') + ' ' + (name || '') + '.' : T('Line taken off.');
     return root.CBAction.run(
       btn,
       function () {
-        return call('wlAssign', { params: { id: c.chit_id }, body: { edits: [edit] } });
+        return call('wlAssign', { params: { id: chit.chit_id }, body: { edits: [edit] } });
       },
       {
-        key: 'tk-line-' + l.line_id + '-' + (x.state || 'who'),
+        key: 'tk-line-' + line.line_id + '-' + (x.state || 'who'),
         failed: T("Couldn't save the line"),
         out: 'tk_out',
         outcome: function () {
           $('tk_out').textContent = said;
-          changed(c.chit_id, x.state ? 'moved' : 'assigned', { line_id: l.line_id, state: state, assignee: who ? { id: who, name: name } : null });
+          changed(chit.chit_id, x.state ? 'moved' : 'assigned', { line_id: line.line_id, state: state, assignee: assigneeId ? { id: assigneeId, name: name } : null });
         }
       }
     );
   }
-  function deliverPanel(c, l) {
-    var host = $('tk_lmore_' + l.line_id);
+  function deliverPanel(chit, line) {
+    var host = $('tk_lmore_' + line.line_id);
     if (!host) return;
     host.innerHTML =
       '<div class="tk-panel"><label class="sub" for="tk_dq">' +
       esc(T('How much went out?')) +
       ' <span class="mono">' +
-      esc(l.unit || '') +
+      esc(line.unit || '') +
       '</span></label>' +
       '<input class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
-      esc(l.remaining) +
+      esc(line.remaining) +
       '" autocomplete="off">' +
       '<button type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
       esc(T('Record')) +
       '</button></div>';
     $('tk_dq').focus();
     $('tk_dq_go').onclick = function () {
-      var q = parseFloat(String($('tk_dq').value).replace(/[^0-9.\-]/g, ''));
-      if (!isFinite(q) || q === 0) {
+      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.\-]/g, ''));
+      if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
         return;
       }
-      tkDeliver(c, l, q, $('tk_dq_go'));
+      tkDeliver(chit, line, typed, $('tk_dq_go'));
     };
   }
   /** what went out on a line: POST /chits/:id/deliver-lines (lib/deliverline — events, never a stored total) */
-  function tkDeliver(c, l, qty, btn) {
+  function tkDeliver(chit, line, amount, btn) {
     return root.CBAction.run(
       btn,
       function () {
-        return call('wlDeliver', { params: { id: c.chit_id }, body: { rows: [{ line_id: l.line_id, quantity: qty, unit: l.unit || undefined }] } });
+        return call('wlDeliver', { params: { id: chit.chit_id }, body: { rows: [{ line_id: line.line_id, quantity: amount, unit: line.unit || undefined }] } });
       },
       {
-        key: 'tk-deliver-' + l.line_id,
+        key: 'tk-deliver-' + line.line_id,
         failed: T("Couldn't record it"),
         out: 'tk_out',
         outcome: function () {
-          $('tk_out').textContent = T('Recorded') + ' ' + qty + ' ' + (l.unit || '') + '.';
-          changed(c.chit_id, 'moved', { line_id: l.line_id, delivered: qty });
+          $('tk_out').textContent = T('Recorded') + ' ' + amount + ' ' + (line.unit || '') + '.';
+          changed(chit.chit_id, 'moved', { line_id: line.line_id, delivered: amount });
         }
       }
     );
@@ -1104,20 +1122,22 @@
   /* ── the screen ── */
   function show(view) {
     if (VIEWS.indexOf(view) < 0) view = 'orders_in';
-    K.view = view;
+    board.view = view;
     closeSheet();
-    if (typeof K.o.onView === 'function') {
+    if (typeof board.o.onView === 'function') {
       try {
-        K.o.onView(view);
-      } catch (_) {}
+        board.o.onView(view);
+      } catch (failure) {
+        logFailure('the view callback of the host page failed', failure); // the host page own code; the view still changes
+      }
     }
     return reload();
   }
   function start() {
-    K.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
+    board.el.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Loading')) + '</div>';
     return load().then(
       function () {
-        K.el.innerHTML =
+        board.el.innerHTML =
           '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-testid="tk-sheet"></dialog>';
         var node = $('tk_sheet');
         node.addEventListener('cancel', function (e) {
@@ -1130,9 +1150,9 @@
         paintBar();
         mountList($('tk_list'));
         /* a host may name the row to open (?open=<chit_id>): the sheet, over the list */
-        if (K.o.open) {
-          var id = K.o.open;
-          K.o.open = null;
+        if (board.o.open) {
+          var id = board.o.open;
+          board.o.open = null;
           tkOpen(id);
         }
       },
@@ -1141,10 +1161,10 @@
       }
     );
   }
-  function mount(el, o) {
-    K.el = el;
-    K.o = o || {};
-    if (VIEWS.indexOf(K.o.view) >= 0) K.view = K.o.view;
+  function mount(el, options) {
+    board.el = el;
+    board.o = options || {};
+    if (VIEWS.indexOf(board.o.view) >= 0) board.view = board.o.view;
     ensureEP();
     start();
     return { reload: reload, show: show, open: tkOpen, close: closeSheet };
