@@ -83,6 +83,7 @@ jobs:
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
+          node e2e/offer-live-confirm.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/shop-t2b.cjs
