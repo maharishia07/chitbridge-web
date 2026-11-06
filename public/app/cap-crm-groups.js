@@ -45,25 +45,25 @@ var CRM_CODE_WORD = {
 var CRM_OFFER_WHY = 'Offer Lab cannot pick a group yet.';
 
 /* ═══ THE READ — one answer: segments + groups, counts, offers, reach, may ═══════════════════════════════════════════ */
-function crmGroupsRows(r) {
-  var segs = ((r && r.segments) || []).map(function (item) {
+function crmGroupsRows(reply) {
+  var segs = ((reply && reply.segments) || []).map(function (item) {
     return Object.assign({ kind: 'segment' }, item);
   });
-  var grs = ((r && r.groups) || []).map(function (item) {
+  var groupRows = ((reply && reply.groups) || []).map(function (item) {
     return Object.assign({ kind: 'group' }, item);
   });
-  return segs.concat(grs);
+  return segs.concat(groupRows);
 }
 /** read the segments and named groups from the server (the latest call wins); quiet keeps the list on screen while it reloads */
 async function crmGroupsLoad(quiet) {
-  var g = ++GROUPS.gen;
+  var generation = ++GROUPS.gen;
   if (!quiet || !GROUPS.loaded) {
     GROUPS.state = 'loading';
     crmGroupsRefresh();
   }
   try {
     var reply = await api('crmSegments');
-    if (g !== GROUPS.gen) return;
+    if (generation !== GROUPS.gen) return;
     GROUPS.rows = crmGroupsRows(reply);
     GROUPS.may = (reply && reply.may) || null;
     GROUPS.channel = (reply && reply.channel) || 'whatsapp';
@@ -74,7 +74,7 @@ async function crmGroupsLoad(quiet) {
     GROUPS.loaded = true;
     GROUPS.err = null;
   } catch (e) {
-    if (g !== GROUPS.gen) return;
+    if (generation !== GROUPS.gen) return;
     if (GROUPS.loaded) GROUPS.state = 'ready';
     else {
       GROUPS.state = 'error';
@@ -85,14 +85,14 @@ async function crmGroupsLoad(quiet) {
   crmGroupsRefresh();
 }
 function crmGroupsRefresh() {
-  var a = GROUPS.api;
-  if (a && a.el && document.body.contains(a.el)) a.refresh();
+  var listApi = GROUPS.api;
+  if (listApi && listApi.el && document.body.contains(listApi.el)) listApi.refresh();
 }
 /** the server's may/why for an action; before the answer lands the login's level is the guess (the server refuses anyway) */
-function crmGroupsMay(k) {
-  var m = GROUPS.may && GROUPS.may[k];
-  if (m) return m.may ? '' : m.why || tx('Not allowed');
-  if (k === 'delete') return crmOwner() ? '' : tx('Only the owner deletes a group.');
+function crmGroupsMay(key) {
+  var verdict = GROUPS.may && GROUPS.may[key];
+  if (verdict) return verdict.may ? '' : verdict.why || tx('Not allowed');
+  if (key === 'delete') return crmOwner() ? '' : tx('Only the owner deletes a group.');
   return crmEdit() ? '' : tx('Your login can only view.');
 }
 /** the members of a row, from the Parties list in memory (never a lead, never a walk-in — the same rule the server counts with) */
@@ -103,13 +103,13 @@ function crmGroupMembers(row) {
   });
 }
 function crmReachWords(reach) {
-  var r = reach || { may: 0, not: 0, refused_by: [] };
-  var why = (r.refused_by || [])
+  var figures = reach || { may: 0, not: 0, refused_by: [] };
+  var refusals = (figures.refused_by || [])
     .map(function (x) {
       return x.n + ' ' + tx(CRM_CODE_WORD[x.code] || x.code.toLowerCase());
     })
     .join(' · ');
-  return { may: txf('{n} may be sent offers', { n: r.may }), not: r.not ? txf('{n} not', { n: r.not }) + (why ? ' — ' + why : '') : '' };
+  return { may: txf('{n} may be sent offers', { n: figures.may }), not: figures.not ? txf('{n} not', { n: figures.not }) + (refusals ? ' — ' + refusals : '') : '' };
 }
 function crmGroupsParamsHref(row) {
   return row.kind === 'segment' ? '#/parties?seg=' + encodeURIComponent(row.key) : '#/parties?group=' + encodeURIComponent(row.name);
@@ -125,14 +125,14 @@ function crmGroupsCols() {
       w: 260,
       sort: 'name',
       html: true,
-      cell: function (r) {
-        return '<b>' + esc(r.name) + '</b> <span class="tag' + (r.kind === 'segment' ? ' seg' : '') + '">' + esc(tx(CRM_KIND_WORD[r.kind])) + '</span>';
+      cell: function (group) {
+        return '<b>' + esc(group.name) + '</b> <span class="tag' + (group.kind === 'segment' ? ' seg' : '') + '">' + esc(tx(CRM_KIND_WORD[group.kind])) + '</span>';
       },
-      value: function (r) {
-        return r.name;
+      value: function (group) {
+        return group.name;
       },
-      tid: function (r) {
-        return 'crm-grp-name-' + crmGroupTid(r);
+      tid: function (group) {
+        return 'crm-grp-name-' + crmGroupTid(group);
       }
     },
     {
@@ -142,14 +142,14 @@ function crmGroupsCols() {
       w: 110,
       num: true,
       sort: 'count',
-      cell: function (r) {
-        return String(r.count);
+      cell: function (group) {
+        return String(group.count);
       },
-      value: function (r) {
-        return r.count;
+      value: function (group) {
+        return group.count;
       },
-      tid: function (r) {
-        return 'crm-grp-count-' + crmGroupTid(r);
+      tid: function (group) {
+        return 'crm-grp-count-' + crmGroupTid(group);
       }
     },
     {
@@ -159,19 +159,19 @@ function crmGroupsCols() {
       w: 220,
       html: true,
       sort: 'reach',
-      cell: function (r) {
-        var w = crmReachWords(r.reach);
+      cell: function (group) {
+        var words = crmReachWords(group.reach);
         return (
           '<span data-testid="crm-grp-reach-' +
-          crmGroupTid(r) +
+          crmGroupTid(group) +
           '">' +
-          esc(String((r.reach || {}).may || 0)) +
+          esc(String((group.reach || {}).may || 0)) +
           '</span>' +
-          (r.reach && r.reach.not ? ' <span class="sub">· ' + esc(w.not) + '</span>' : '')
+          (group.reach && group.reach.not ? ' <span class="sub">· ' + esc(words.not) + '</span>' : '')
         );
       },
-      value: function (r) {
-        return (r.reach || {}).may || 0;
+      value: function (group) {
+        return (group.reach || {}).may || 0;
       }
     },
     {
@@ -180,11 +180,11 @@ function crmGroupsCols() {
       prio: 4,
       w: 160,
       num: true,
-      cell: function (r) {
-        return String(r.offers || 0);
+      cell: function (group) {
+        return String(group.offers || 0);
       },
-      value: function (r) {
-        return r.offers || 0;
+      value: function (group) {
+        return group.offers || 0;
       }
     },
     {
@@ -192,19 +192,19 @@ function crmGroupsCols() {
       label: 'Rule',
       prio: 5,
       w: 280,
-      cell: function (r) {
-        return r.rule ? r.rule + (r.overrides ? ' · ' + txf('{n} set by you', { n: r.overrides }) : '') : tx('Named by you');
+      cell: function (group) {
+        return group.rule ? group.rule + (group.overrides ? ' · ' + txf('{n} set by you', { n: group.overrides }) : '') : tx('Named by you');
       }
     }
   ];
 }
-function crmGroupTid(r) {
-  return String(r.key).replace(/[^A-Za-z0-9_-]/g, '_');
+function crmGroupTid(group) {
+  return String(group.key).replace(/[^A-Za-z0-9_-]/g, '_');
 }
 function crmGroupsBar() {
-  var why = crmGroupsMay('group');
-  var btn = why
-    ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), why)
+  var blocked = crmGroupsMay('group');
+  var btn = blocked
+    ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), blocked)
     : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
   if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Groups are not switched on for your shop yet.'));
   crmBar('<strong>' + esc(crmAppName()) + '</strong>', btn, true);
@@ -217,10 +217,10 @@ function crmGroupsNotices() {
   return list;
 }
 /** ▸ the mini-card: members · reach · offers — the same three-box shape as a party's */
-function crmGroupMini(r) {
-  var ms = crmGroupMembers(r),
-    key = crmGroupTid(r),
-    w = crmReachWords(r.reach);
+function crmGroupMini(group) {
+  var ms = crmGroupMembers(group),
+    key = crmGroupTid(group),
+    words = crmReachWords(group.reach);
   var names = ms
     .slice(0, 6)
     .map(function (item) {
@@ -240,21 +240,21 @@ function crmGroupMini(r) {
     ms.length > 6
       ? crmMiniRow(
           '',
-          '<a href="' + crmGroupsParamsHref(r) + '" data-testid="crm-grp-seeall-' + key + '">' + esc(txf('See all {n} in Parties', { n: ms.length })) + '</a>'
+          '<a href="' + crmGroupsParamsHref(group) + '" data-testid="crm-grp-seeall-' + key + '">' + esc(txf('See all {n} in Parties', { n: ms.length })) + '</a>'
         )
       : '';
   var members = ms.length
     ? names + more
     : '<div class="mc-r sub" style="white-space:normal">' +
-      esc(r.kind === 'group' ? tx('Nobody is in this group yet. Use Members.') : tx('Nobody is in this segment right now.')) +
+      esc(group.kind === 'group' ? tx('Nobody is in this group yet. Use Members.') : tx('Nobody is in this segment right now.')) +
       '</div>';
   var reach = [
-    crmMiniRow('msg', '<b data-testid="crm-grp-may-' + key + '">' + esc(w.may) + '</b>'),
-    w.not ? '<div class="mc-r sub" style="white-space:normal;min-height:0" data-testid="crm-grp-not-' + key + '">' + esc(w.not) + '</div>' : '',
+    crmMiniRow('msg', '<b data-testid="crm-grp-may-' + key + '">' + esc(words.may) + '</b>'),
+    words.not ? '<div class="mc-r sub" style="white-space:normal;min-height:0" data-testid="crm-grp-not-' + key + '">' + esc(words.not) + '</div>' : '',
     crmMiniKV('Channel', esc(tx('WhatsApp')) + ' · ' + esc(tx('offers')))
   ];
   var offers = [
-    crmMiniKV('Offers only for them', '<b>' + esc(String(r.offers || 0)) + '</b>'),
+    crmMiniKV('Offers only for them', '<b>' + esc(String(group.offers || 0)) + '</b>'),
     '<div class="mc-r sub" style="white-space:normal;min-height:0">' +
       esc(tx('An offer "Only for" this set reaches its members in the app and at the counter.')) +
       '</div>'
@@ -270,15 +270,15 @@ function crmGroupMini(r) {
   );
 }
 /** the sentence that greys a row action (send · members · delete) for this row, or "" when it is allowed */
-function crmGroupsWhyNot(r, act) {
-  if (act === 'send') {
-    var w = crmGroupsMay('send');
-    if (w) return w;
-    return r.count ? '' : tx('Nobody to send to');
+function crmGroupsWhyNot(group, action) {
+  if (action === 'send') {
+    var words = crmGroupsMay('send');
+    if (words) return words;
+    return group.count ? '' : tx('Nobody to send to');
   }
-  if (act === 'members') return GROUPS.migrated ? crmGroupsMay('group') : tx('Groups are not switched on for your shop yet.');
-  if (act === 'delete') return crmGroupsMay('delete');
-  if (act === 'offer') return tx(CRM_OFFER_WHY);
+  if (action === 'members') return GROUPS.migrated ? crmGroupsMay('group') : tx('Groups are not switched on for your shop yet.');
+  if (action === 'delete') return crmGroupsMay('delete');
+  if (action === 'offer') return tx(CRM_OFFER_WHY);
   return '';
 }
 /** the row actions of the Groups list (send, members, delete…), each with its test id and its why-not */
@@ -289,11 +289,11 @@ function crmGroupsActions() {
       label: tx('Send offer message'),
       icon: '💬',
       tid: 'crm-grp-send',
-      why: function (r) {
-        return crmGroupsWhyNot(r, 'send');
+      why: function (group) {
+        return crmGroupsWhyNot(group, 'send');
       },
-      run: function (r) {
-        crmSendOpen(r);
+      run: function (group) {
+        crmSendOpen(group);
       }
     },
     {
@@ -301,8 +301,8 @@ function crmGroupsActions() {
       label: tx('Make an offer'),
       icon: '%',
       tid: 'crm-grp-offer',
-      why: function (r) {
-        return crmGroupsWhyNot(r, 'offer');
+      why: function (group) {
+        return crmGroupsWhyNot(group, 'offer');
       },
       run: function () {
         toast(tx(CRM_OFFER_WHY));
@@ -313,14 +313,14 @@ function crmGroupsActions() {
       label: tx('Members'),
       icon: '☑',
       tid: 'crm-grp-members',
-      when: function (r) {
-        return r.kind === 'group';
+      when: function (group) {
+        return group.kind === 'group';
       },
-      why: function (r) {
-        return crmGroupsWhyNot(r, 'members');
+      why: function (group) {
+        return crmGroupsWhyNot(group, 'members');
       },
-      run: function (r) {
-        crmGroupOpen(r.name);
+      run: function (group) {
+        crmGroupOpen(group.name);
       }
     },
     {
@@ -328,14 +328,14 @@ function crmGroupsActions() {
       label: tx('Delete group'),
       icon: '✕',
       tid: 'crm-grp-delete',
-      when: function (r) {
-        return r.kind === 'group';
+      when: function (group) {
+        return group.kind === 'group';
       },
-      why: function (r) {
-        return crmGroupsWhyNot(r, 'delete');
+      why: function (group) {
+        return crmGroupsWhyNot(group, 'delete');
       },
-      run: function (r) {
-        crmGroupDelete(r);
+      run: function (group) {
+        crmGroupDelete(group);
       }
     },
     {
@@ -343,8 +343,34 @@ function crmGroupsActions() {
       label: tx('Open in Parties'),
       icon: '↗',
       tid: 'crm-grp-open',
-      run: function (r) {
-        crmGo(crmGroupsParamsHref(r));
+      run: function (group) {
+        crmGo(crmGroupsParamsHref(group));
+      }
+    }
+  ];
+}
+/** the groups list's orders */
+function crmGroupSorts() {
+  return [
+    {
+      key: 'name',
+      label: tx('Name'),
+      cmp: function (left, right) {
+        return String(left.name).localeCompare(String(right.name), undefined, { sensitivity: 'base' });
+      }
+    },
+    {
+      key: 'count',
+      label: tx('Members'),
+      cmp: function (left, right) {
+        return (right.count || 0) - (left.count || 0);
+      }
+    },
+    {
+      key: 'reach',
+      label: tx('May be sent offers'),
+      cmp: function (left, right) {
+        return ((right.reach || {}).may || 0) - ((left.reach || {}).may || 0);
       }
     }
   ];
@@ -358,7 +384,10 @@ function crmGroups(frame) {
   if (GROUPS.api && GROUPS.api.destroy) {
     try {
       GROUPS.api.destroy();
-    } catch (_) {}
+    } catch (failure) {
+      // the old list is replaced right below, so a failed tear-down only leaves stale listeners; say so and carry on
+      if (typeof cblog === 'function') cblog('warn', 'crm groups: the old list could not be torn down — ' + ((failure && failure.message) || 'no answer'));
+    }
   }
   GROUPS.api = CBList.mount(document.getElementById('crm_groups'), {
     key: 'crm-groups',
@@ -366,11 +395,11 @@ function crmGroups(frame) {
     rows: function () {
       return GROUPS.rows;
     },
-    id: function (r) {
-      return r.key;
+    id: function (group) {
+      return group.key;
     },
-    rowTid: function (r) {
-      return 'crm-grp-' + crmGroupTid(r);
+    rowTid: function (group) {
+      return 'crm-grp-' + crmGroupTid(group);
     },
     columns: crmGroupsCols,
     defaultCols: ['name', 'count', 'reach'],
@@ -389,33 +418,11 @@ function crmGroups(frame) {
       crmGroupsLoad();
     },
     empty: { title: tx('No groups yet'), sub: tx('Name one to offer or message a set of customers together. Use + New group.') },
-    search: function (r) {
-      return [r.name, r.rule].join(' ');
+    search: function (group) {
+      return [group.name, group.rule].join(' ');
     },
     searchHint: tx('Segment or group'),
-    sorts: [
-      {
-        key: 'name',
-        label: tx('Name'),
-        cmp: function (a, b) {
-          return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' });
-        }
-      },
-      {
-        key: 'count',
-        label: tx('Members'),
-        cmp: function (a, b) {
-          return (b.count || 0) - (a.count || 0);
-        }
-      },
-      {
-        key: 'reach',
-        label: tx('May be sent offers'),
-        cmp: function (a, b) {
-          return ((b.reach || {}).may || 0) - ((a.reach || {}).may || 0);
-        }
-      }
-    ],
+    sorts: crmGroupSorts(),
     group: {
       options: [
         ['kind', 'Kind'],
@@ -427,12 +434,12 @@ function crmGroups(frame) {
       fig: function (rows) {
         return crmPlural(rows.length, 'row', 'rows');
       },
-      by: function (r, mode) {
-        return mode === 'kind' ? [tx(r.kind === 'segment' ? 'Segments' : 'Groups'), r.kind] : null;
+      by: function (group, mode) {
+        return mode === 'kind' ? [tx(group.kind === 'segment' ? 'Segments' : 'Groups'), group.kind] : null;
       }
     },
-    next: function (r) {
-      return crmGroupMini(r);
+    next: function (group) {
+      return crmGroupMini(group);
     },
     actions: crmGroupsActions()
   });
@@ -487,21 +494,21 @@ function crmGroupCands() {
   });
 }
 /** filter the member picker of the group sheet by the typed text and repaint the list */
-function crmGroupPick(q) {
-  GSHEET.q = String(q || '')
+function crmGroupPick(query) {
+  GSHEET.q = String(query || '')
     .trim()
     .toLowerCase();
   var box = document.getElementById('crm_grp_list');
   if (!box) return;
   var all = crmGroupCands(),
-    m = all.filter(function (item) {
+    matches = all.filter(function (item) {
       return !GSHEET.q || [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(GSHEET.q) >= 0;
     });
   var ticked = all.filter(function (item) {
     return GSHEET.on[item.party_id];
   });
-  box.innerHTML = m.length
-    ? m
+  box.innerHTML = matches.length
+    ? matches
         .slice(0, 60)
         .map(function (item) {
           return (
@@ -518,14 +525,14 @@ function crmGroupPick(q) {
             '</span></label>'
           );
         })
-        .join('') + (m.length > 60 ? '<div class="hint">' + esc(txf('{n} more — type to narrow', { n: m.length - 60 })) + '</div>' : '')
+        .join('') + (matches.length > 60 ? '<div class="hint">' + esc(txf('{n} more — type to narrow', { n: matches.length - 60 })) + '</div>' : '')
     : '<div class="hint">' + esc(all.length ? tx('Nobody matches.') : tx('No customers yet. They appear when you bill them.')) + '</div>';
   var node = document.getElementById('crm_grp_n');
   if (node) node.textContent = crmPlural(ticked.length, 'member', 'members');
 }
-function crmGroupTick(k, on) {
-  if (on) GSHEET.on[k] = 1;
-  else delete GSHEET.on[k];
+function crmGroupTick(key, on) {
+  if (on) GSHEET.on[key] = 1;
+  else delete GSHEET.on[key];
   var node = document.getElementById('crm_grp_n');
   if (node) node.textContent = crmPlural(Object.keys(GSHEET.on).length, 'member', 'members');
 }
@@ -549,20 +556,20 @@ function crmGroupSave(btn) {
     msg.textContent = tx('Name the group.');
     return;
   }
-  var add = Object.keys(GSHEET.on).filter(function (item) {
+  var toAdd = Object.keys(GSHEET.on).filter(function (item) {
       return !GSHEET.orig[item];
     }),
     remove = Object.keys(GSHEET.orig).filter(function (item) {
       return !GSHEET.on[item];
     });
-  if (!add.length && !remove.length) {
+  if (!toAdd.length && !remove.length) {
     msg.textContent = tx('Tick at least one customer.');
     return;
   }
   return CBAction.run(
     btn,
     async function () {
-      return api('crmGroupSet', { body: { name: name, add: add, remove: remove } });
+      return api('crmGroupSet', { body: { name: name, add: toAdd, remove: remove } });
     },
     {
       key: 'group-save',
@@ -570,9 +577,9 @@ function crmGroupSave(btn) {
       onFail: function (words, e) {
         msg.textContent = crmGroupWords(e);
       },
-      outcome: async function (r) {
+      outcome: async function (reply) {
         closeModal();
-        toast(txf('{name}: {n}', { name: (r && r.name) || name, n: crmPlural((r && r.count) || 0, 'member', 'members') }));
+        toast(txf('{name}: {n}', { name: (reply && reply.name) || name, n: crmPlural((reply && reply.count) || 0, 'member', 'members') }));
         await crmLoad(true);
         crmGroupsLoad(true);
       }
@@ -580,23 +587,23 @@ function crmGroupSave(btn) {
   );
 }
 /** a delete asks first — with the offers that name it (the server's count): they would reach no one */
-function crmGroupDelete(r) {
-  var body = r.offers
-    ? txf('{n} only for this group. They will reach no one.', { n: crmPlural(r.offers, 'offer is', 'offers are') })
+function crmGroupDelete(group) {
+  var body = group.offers
+    ? txf('{n} only for this group. They will reach no one.', { n: crmPlural(group.offers, 'offer is', 'offers are') })
     : tx('Its members stay your customers; only the name goes.');
   CBAction.run(
     null,
     async function () {
-      return api('crmGroupDel', { params: { name: r.name } });
+      return api('crmGroupDel', { params: { name: group.name } });
     },
     {
       key: 'group-del',
-      confirm: { title: txf('Delete group {name}?', { name: r.name }), body: esc(body), yes: r.offers ? tx('Delete anyway') : tx('Delete') },
+      confirm: { title: txf('Delete group {name}?', { name: group.name }), body: esc(body), yes: group.offers ? tx('Delete anyway') : tx('Delete') },
       onFail: function (words, e) {
         toast(crmGroupWords(e));
       },
       outcome: async function () {
-        toast(txf('{name} deleted', { name: r.name }));
+        toast(txf('{name} deleted', { name: group.name }));
         await crmLoad(true);
         crmGroupsLoad(true);
       }
@@ -607,13 +614,13 @@ function crmGroupDelete(r) {
 /* ═══ SEND — the one sheet: who may (the server's dry answer, by code), then the send through the one sender ═══════ */
 var SEND = { row: null, dry: null, done: null };
 /** open the Send-to-group sheet for a row; pre is an optional starting message */
-function crmSendOpen(r, pre) {
-  SEND = { row: r, dry: null, done: null };
+function crmSendOpen(group, prefill) {
+  SEND = { row: group, dry: null, done: null };
   modal(
     '<div class="mhd"><div class="t">' +
-      esc(txf('Send to {name}', { name: r.name })) +
+      esc(txf('Send to {name}', { name: group.name })) +
       '</div><span class="sub">' +
-      esc(crmPlural(r.count, 'member', 'members')) +
+      esc(crmPlural(group.count, 'member', 'members')) +
       '</span></div><div class="mbody" data-testid="crm-send-sheet">' +
       '<div class="kv"><b>' +
       esc(tx('Channel')) +
@@ -625,7 +632,7 @@ function crmSendOpen(r, pre) {
       '<label>' +
       esc(tx('Message')) +
       '<textarea class="inp" id="crm_send_text" data-testid="crm-send-text" rows="4" maxlength="1000">' +
-      esc((pre && pre.text) || '') +
+      esc((prefill && prefill.text) || '') +
       '</textarea></label>' +
       '<div id="crm_send_who" class="hint" role="status" data-testid="crm-send-who">' +
       esc(tx('Check who may be sent first; nothing goes out until you press Send.')) +
@@ -647,21 +654,21 @@ function crmSendOpen(r, pre) {
 }
 function crmSendWords(e) {
   var code = e && e.data && e.data.code,
-    m = e && e.data && (e.data.why || e.data.message);
-  if (e && e.status === 403) return m || tx('Your login can only view.');
+    words = e && e.data && (e.data.why || e.data.message);
+  if (e && e.status === 403) return words || tx('Your login can only view.');
   if (code === 'NO_TEXT') return tx('Write the message.');
   if (code === 'TOO_LONG') return tx('Keep the message under 1000 characters.');
-  if (code === 'TOO_MANY') return m || tx('Send to at most 100 at a time. Make a smaller group.');
+  if (code === 'TOO_MANY') return words || tx('Send to at most 100 at a time. Make a smaller group.');
   if (code === 'CHANNEL_NOT_SENDABLE') return tx('Only WhatsApp can be sent from here today.');
   return tx("Couldn't send. Try again.");
 }
-function crmSendBody(dry) {
-  return { channel: GROUPS.channel, purpose: GROUPS.purpose, text: String((document.getElementById('crm_send_text') || {}).value || '').trim(), dry: !!dry };
+function crmSendBody(dryRun) {
+  return { channel: GROUPS.channel, purpose: GROUPS.purpose, text: String((document.getElementById('crm_send_text') || {}).value || '').trim(), dry: !!dryRun };
 }
 /** the dry run: ask the server who may be sent this message and show the count before anything is sent */
 function crmSendCheck(btn) {
   var node = document.getElementById('crm_send_who'),
-    go = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
+    goButton = document.getElementById('crm_send_go') || document.querySelector('[data-testid="crm-send-go"]');
   var body = crmSendBody(true);
   if (!body.text) {
     node.textContent = tx('Write the message.');
@@ -678,29 +685,29 @@ function crmSendCheck(btn) {
       onFail: function (words, e) {
         node.textContent = crmSendWords(e);
       },
-      outcome: function (r) {
-        SEND.dry = r;
-        var w = crmReachWords({ may: r.may, not: r.refused_n, refused_by: r.refused_by });
+      outcome: function (reply) {
+        SEND.dry = reply;
+        var words = crmReachWords({ may: reply.may, not: reply.refused_n, refused_by: reply.refused_by });
         node.innerHTML =
           '<b data-testid="crm-send-may">' +
-          esc(w.may) +
+          esc(words.may) +
           '</b>' +
-          (w.not ? ' · ' + esc(w.not) : '') +
-          (r.refused && r.refused.length
+          (words.not ? ' · ' + esc(words.not) : '') +
+          (reply.refused && reply.refused.length
             ? '<div class="sub" data-testid="crm-send-refused">' +
-              r.refused
+              reply.refused
                 .slice(0, 5)
                 .map(function (x) {
                   return esc(x.name) + ' — ' + esc(x.why);
                 })
                 .join('<br>') +
-              (r.refused.length > 5 ? '<br>…' : '') +
+              (reply.refused.length > 5 ? '<br>…' : '') +
               '</div>'
             : '');
-        if (go) {
-          go.disabled = !(r.may > 0);
-          go.title = r.may > 0 ? '' : tx('Nobody may be sent this');
-          go.textContent = r.may > 0 ? txf('Send to {n}', { n: r.may }) : tx('Send');
+        if (goButton) {
+          goButton.disabled = !(reply.may > 0);
+          goButton.title = reply.may > 0 ? '' : tx('Nobody may be sent this');
+          goButton.textContent = reply.may > 0 ? txf('Send to {n}', { n: reply.may }) : tx('Send');
         }
       }
     }
@@ -732,18 +739,18 @@ function crmSendGo(btn) {
       onFail: function (words, e) {
         out.innerHTML = '<div class="banner bad" data-testid="crm-send-fail">' + esc(crmSendWords(e)) + '</div>';
       },
-      outcome: function (r) {
-        SEND.done = r;
-        document.dispatchEvent(new CustomEvent('crm-send-done', { detail: r })); /* MKT (cap-marketing.js): Offers sent says when this send's refusals were not recorded */
+      outcome: function (reply) {
+        SEND.done = reply;
+        document.dispatchEvent(new CustomEvent('crm-send-done', { detail: reply })); /* MKT (cap-marketing.js): Offers sent says when this send's refusals were not recorded */
         /* three facts, never one number: sent · not sent (the sender refused or failed — its reason is on each line) · not asked (no consent — the server's codes) */
-        var notSent = (r.sent || []).filter(function (x) {
+        var notSent = (reply.sent || []).filter(function (x) {
             return x.status !== 'sent';
           }).length,
-          notAsked = (r.refused_by || []).reduce(function (total, x) {
+          notAsked = (reply.refused_by || []).reduce(function (total, x) {
             return total + (Number(x.n) || 0);
           }, 0);
         var line = [
-          txf('{n} sent', { n: r.sent_n || 0 }),
+          txf('{n} sent', { n: reply.sent_n || 0 }),
           notSent ? txf('{n} not sent', { n: notSent }) : '',
           notAsked ? txf('{n} not asked — no consent', { n: notAsked }) : ''
         ]
@@ -755,15 +762,15 @@ function crmSendGo(btn) {
           '</span><b>' +
           esc(line) +
           '</b></span></div>' +
-          ((r.sent || []).length
+          ((reply.sent || []).length
             ? '<div class="sub" data-testid="crm-send-lines">' +
-              r.sent
+              reply.sent
                 .slice(0, 8)
                 .map(function (x) {
                   return esc(x.name || x.party_id) + ' — ' + esc(tx(x.status)) + (x.reason ? ': ' + esc(x.reason) : '');
                 })
                 .join('<br>') +
-              (r.sent.length > 8 ? '<br>…' : '') +
+              (reply.sent.length > 8 ? '<br>…' : '') +
               '</div>'
             : '');
         var node = document.querySelector('[data-testid="crm-send-go"]');
@@ -823,14 +830,14 @@ function crmShowcase(frame) {
 }
 /** read the policy flags (the chosen template) and repaint the chooser; an unreadable answer shows the default */
 async function crmShowcaseLoad() {
-  var g = ++SHOW.gen;
+  var generation = ++SHOW.gen;
   try {
     var reply = await api('policyGet');
-    if (g !== SHOW.gen) return;
+    if (generation !== SHOW.gen) return;
     SHOW.flags = (reply && reply.flags) || {};
     SHOW.state = 'ready';
   } catch (e) {
-    if (g !== SHOW.gen) return;
+    if (generation !== SHOW.gen) return;
     SHOW.flags = {};
     SHOW.state = 'error';
     SHOW.err = e;
@@ -841,7 +848,7 @@ async function crmShowcaseLoad() {
 function crmShowcasePaint() {
   var box = document.getElementById('crm_sc_pick');
   if (!box || typeof CBShowcasePick === 'undefined') return;
-  var why = crmEdit() ? '' : tx('Your login can only view.');
+  var blocked = crmEdit() ? '' : tx('Your login can only view.');
   box.innerHTML =
     (SHOW.state === 'error'
       ? '<div class="hint" data-testid="crm-sc-readfail">' + esc(tx('Could not read the current choice. The default is shown.')) + '</div>'
@@ -852,7 +859,7 @@ function crmShowcasePaint() {
       t: tx,
       cls: 'act sm quiet',
       clsOn: 'act sm',
-      why: why,
+      why: blocked,
       origin: ''
     }) +
     '<div id="crm_sc_msg" class="hint" role="status" data-testid="crm-sc-msg"></div>';
@@ -880,19 +887,19 @@ function crmShowcasePick(name, btn) {
   );
 }
 /* share with a party: the record's own consent verdict (contact_prefs.may — the server's code) decides whether Share is lit */
-function crmSharePick(q) {
+function crmSharePick(query) {
   var box = document.getElementById('crm_sc_res');
   if (!box) return;
-  q = String(q || '')
+  query = String(query || '')
     .trim()
     .toLowerCase();
-  if (!q) {
+  if (!query) {
     box.innerHTML = '';
     return;
   }
   var list = CRM.rows
     .filter(function (item) {
-      return item.kind !== 'walk-in' && [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(q) >= 0;
+      return item.kind !== 'walk-in' && [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(query) >= 0;
     })
     .slice(0, 5);
   box.innerHTML =
@@ -913,74 +920,74 @@ function crmSharePick(q) {
       .join('') || '<div class="hint">' + esc(tx('Nobody matches.')) + '</div>';
 }
 /** choose the party to share the shop link with, then paint the share box */
-async function crmShareParty(k) {
-  var p =
-      CRM.byKey[k] ||
+async function crmShareParty(partyKey) {
+  var party =
+      CRM.byKey[partyKey] ||
       CRM.rows.filter(function (x) {
-        return x.party_id === k;
+        return x.party_id === partyKey;
       })[0],
     box = document.getElementById('crm_sc_party');
-  if (!p || !box) return;
-  SHOW.party = p;
+  if (!party || !box) return;
+  SHOW.party = party;
   SHOW.rec = null;
   box.innerHTML = '<div class="loadwrap"><span class="spin"></span>' + esc(tx('Reading their consent…')) + '</div>';
-  var g = ++SHOW.gen;
+  var generation = ++SHOW.gen;
   try {
-    SHOW.rec = await api('crmParty', { params: { id: p.party_id } });
+    SHOW.rec = await api('crmParty', { params: { id: party.party_id } });
   } catch (e) {
     if (typeof cblog === 'function') cblog('error', 'share: record read failed: ' + ((e && e.message) || e));
     SHOW.rec = null;
   }
-  if (g !== SHOW.gen || SHOW.party !== p) return;
+  if (generation !== SHOW.gen || SHOW.party !== party) return;
   crmSharePaint();
 }
 function crmShareVerdict() {
   var rec = SHOW.rec,
-    cp = rec && rec.contact_prefs,
-    v = cp && cp.may && cp.may[GROUPS.channel] && cp.may[GROUPS.channel][GROUPS.purpose];
+    prefs = rec && rec.contact_prefs,
+    allowed = prefs && prefs.may && prefs.may[GROUPS.channel] && prefs.may[GROUPS.channel][GROUPS.purpose];
   if (!rec) return { may: false, code: 'UNREADABLE', why: tx('Could not read their consent, so nothing can be sent.') };
-  if (!v) return { may: false, code: 'NO_CONSENT', why: tx('No consent for offers on WhatsApp. Ask them first.') };
-  return v;
+  if (!allowed) return { may: false, code: 'NO_CONSENT', why: tx('No consent for offers on WhatsApp. Ask them first.') };
+  return allowed;
 }
 /** paint the share box: the server's verdict on this party, greyed with its reason (no phone, not allowed, view-only) */
 function crmSharePaint() {
-  var p = SHOW.party,
+  var party = SHOW.party,
     box = document.getElementById('crm_sc_party');
-  if (!p || !box) return;
-  var v = crmShareVerdict(),
-    phone = String(p.phone || '').replace(/[^0-9]/g, ''),
-    why = v.may ? (phone ? '' : tx('No phone number yet')) : v.why || tx('Not allowed');
-  if (!crmEdit()) why = tx('Your login can only view.');
+  if (!party || !box) return;
+  var verdict = crmShareVerdict(),
+    phone = String(party.phone || '').replace(/[^0-9]/g, ''),
+    blockedWhy = verdict.may ? (phone ? '' : tx('No phone number yet')) : verdict.why || tx('Not allowed');
+  if (!crmEdit()) blockedWhy = tx('Your login can only view.');
   box.innerHTML =
     '<div class="result" data-testid="crm-sc-verdict" data-code="' +
-    esc(v.code || '') +
+    esc(verdict.code || '') +
     '"><span><span class="k">' +
     esc(tx('Share with')) +
     '</span><b>' +
-    esc(p.display_name) +
+    esc(party.display_name) +
     '</b></span>' +
     '<span class="tag' +
-    (v.may ? ' on' : ' amber') +
+    (verdict.may ? ' on' : ' amber') +
     '" data-testid="crm-sc-may">' +
-    esc(v.may ? tx('They agreed to offers') : tx('Not now')) +
+    esc(verdict.may ? tx('They agreed to offers') : tx('Not now')) +
     '</span></div>' +
     '<div class="supacts" style="margin-top:8px">' +
-    (why
-      ? crmViewOnlyBtn('crm-sc-share', tx('Share on WhatsApp'), why)
+    (blockedWhy
+      ? crmViewOnlyBtn('crm-sc-share', tx('Share on WhatsApp'), blockedWhy)
       : '<button type="button" class="act sm" data-crm="scshare" data-testid="crm-sc-share">' + esc(tx('Share on WhatsApp')) + '</button>') +
     '</div>';
 }
 /** the share: the shop's own phone sends it (wa.me, the device), and the out message is LOGGED through the gated route — the server decides again */
 function crmShareGo(btn) {
-  var p = SHOW.party;
-  if (!p) return;
-  var phone = String(p.phone || '').replace(/[^0-9]/g, ''),
+  var party = SHOW.party;
+  if (!party) return;
+  var phone = String(party.phone || '').replace(/[^0-9]/g, ''),
     text = txf('Have a look at our shop window: {url}', { url: crmShopUrl() });
   return CBAction.run(
     btn,
     async function () {
       return api('crmLog', {
-        params: { id: p.party_id },
+        params: { id: party.party_id },
         body: { kind: 'message', direction: 'out', channel: GROUPS.channel, purpose: GROUPS.purpose, body: text }
       });
     },
@@ -998,8 +1005,8 @@ function crmShareGo(btn) {
           );
       },
       outcome: function () {
-        var w = window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
-        if (!w && typeof cblog === 'function') cblog('warn', 'share: the WhatsApp window was blocked');
+        var popup = window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(text), '_blank', 'noopener');
+        if (!popup && typeof cblog === 'function') cblog('warn', 'share: the WhatsApp window was blocked');
         toast(tx('Shared — the message is on their timeline'));
       }
     }
@@ -1044,63 +1051,63 @@ function crmShareGroup() {
 }
 
 /* ═══ the clicks this module answers (cap-crm.js's one listener asks) ═══════════════════════════════════════════════ */
-function crmGroupsClick(a, node) {
-  if (a === 'grpnew') {
+function crmGroupsClick(action, node) {
+  if (action === 'grpnew') {
     crmGroupOpen(null);
     return true;
   }
-  if (a === 'grptick') {
+  if (action === 'grptick') {
     crmGroupTick(node.getAttribute('data-k'), node.checked);
     return true;
   }
-  if (a === 'grpsave') {
+  if (action === 'grpsave') {
     crmGroupSave(node);
     return true;
   }
-  if (a === 'sendcheck') {
+  if (action === 'sendcheck') {
     crmSendCheck(node);
     return true;
   }
-  if (a === 'sendgo') {
+  if (action === 'sendgo') {
     crmSendGo(node);
     return true;
   }
-  if (a === 'sccopy') {
-    var u = crmShopUrl();
-    (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject(new Error('no clipboard'))).then(
+  if (action === 'sccopy') {
+    var shopUrl = crmShopUrl();
+    (navigator.clipboard ? navigator.clipboard.writeText(shopUrl) : Promise.reject(new Error('no clipboard'))).then(
       function () {
         toast(tx('Link copied'));
       },
       function () {
-        toast(u);
+        toast(shopUrl);
       }
     );
     return true;
   }
-  if (a === 'scgroup') {
+  if (action === 'scgroup') {
     crmShareGroup();
     return true;
   }
-  if (a === 'scgrouppick') {
-    var r = GROUPS.rows.filter(function (x) {
+  if (action === 'scgrouppick') {
+    var group = GROUPS.rows.filter(function (x) {
       return x.key === node.getAttribute('data-k');
     })[0];
     closeModal();
-    if (r) crmSendOpen(r, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
+    if (group) crmSendOpen(group, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
     return true;
   }
-  if (a === 'scparty') {
+  if (action === 'scparty') {
     crmShareParty(node.getAttribute('data-k'));
     return true;
   }
-  if (a === 'scshare') {
+  if (action === 'scshare') {
     crmShareGo(node);
     return true;
   }
   return false;
 }
-document.addEventListener('click', function (ev) {
-  var node = ev.target.closest && ev.target.closest('[data-sc-pick]');
+document.addEventListener('click', function (event) {
+  var node = event.target.closest && event.target.closest('[data-sc-pick]');
   if (!node || node.disabled) return;
   if (CRM.route && CRM.route.view === 'showcase') crmShowcasePick(node.getAttribute('data-sc-pick'), node);
 });
