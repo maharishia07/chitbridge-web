@@ -162,7 +162,7 @@ jobs:
         env:
           CB_API_REPO: .side/chitbridge-api
         run: node e2e/engines-pins-agree.cjs
-      - name: The connector adapters against their fakes (QA wave 2: Tally, Zoho, GoFrugal, B2B purchase; the kit is the api's tools/tally-connector)
+      - name: "The connector adapters against their fakes (QA wave 2 - Tally, Zoho, GoFrugal, B2B purchase; the kit is the api's tools/tally-connector)"
         env:
           CB_API_REPO: .side/chitbridge-api
         run: |
