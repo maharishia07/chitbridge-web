@@ -1858,7 +1858,7 @@ const EP = {
   assign: { m: 'PUT', p: '/api/actors/assign/:id', ok: '✓' }, // body {action:'push', target_actor_id}
   unassign: { m: 'PUT', p: '/api/actors/assign/:id', ok: '✓' }, // SAME route — body {action:'return'}
   setPriority: { m: 'PUT', p: '/api/chits/:id/priority', ok: '✓' }, // {priority,reason} internal — built (baseline-2)
-  custFlag: { m: 'PUT', p: '/api/chits/:id/priority-flag', ok: '✓' }, // {flag} customer request, write-once — built (baseline-2)
+  custFlag: { m: 'PUT', p: '/api/chits/:id/priority-flag', ok: '✓' }, // {priority} customer request, write-once — built (baseline-2)
   actors: { m: 'GET', p: '/api/actors', ok: '✓' },
   actorBreak: { m: 'PUT', p: '/api/actors/break', ok: '✓' },
   actorStatus: { m: 'PUT', p: '/api/actors/:id/status', ok: '✓' }, // deactivate/remove/reactivate (+ task routing)
@@ -28347,7 +28347,7 @@ async function toggleCustPri(id) {
   const c = UI.detail || {};
   const nf = !c.custPri;
   try {
-    await api('custFlag', { params: { id }, body: { flag: nf } });
+    await api('custFlag', { params: { id }, body: { priority: nf } }); // the api reads priority (routes/chits.js priority-flag); {flag} always got 400
     const i = UI.rows.findIndex((x) => x.id === id);
     if (i >= 0) UI.rows[i].custPri = nf;
     if (UI.detail && UI.detail.id === id) UI.detail.custPri = nf;
