@@ -22,7 +22,7 @@ of file each thing is; this says what already does the job.
 | 67 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 67 | `next` | `dayopen.js` | the next thing to do — |
 | 67 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
-| 66 | `list` | `cap-settings.js` |  |
+| 67 | `list` | `cap-settings.js` |  |
 | 66 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 63 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |

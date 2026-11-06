@@ -47,6 +47,7 @@ var CRM_EP = {
   /* T3-P3-CONSENT: consent (b306) and the privacy-request register (b307) — cap-crm-privacy.js; 503 PRIVACY_NOT_MIGRATED before the migrations */
   crmPrefs: { m: 'GET', p: '/api/crm/parties/:id/contact-prefs', ok: 'y' }, // { history[], may[channel][purpose] { may, code, why }, law }
   crmPrefSet: { m: 'POST', p: '/api/crm/parties/:id/contact-prefs', ok: 'y' }, // { channel, purpose, allowed } → 201 { pref } (append-only; a withdrawal is a new row)
+  crmPrivFacts: { m: 'GET', p: '/api/privacy/facts', ok: 'y' }, // no sign-in needed -> { notice, contact_line, processors[{ name, role, region|null, on }], due_days } - who holds the data, where
   crmPrivReqs: { m: 'GET', p: '/api/crm/privacy-requests', ok: 'y' }, // ?open=1&page=&limit= → { requests, total, page, limit, open, late, may_answer, why }
   crmPrivReqAdd: { m: 'POST', p: '/api/crm/privacy-requests', ok: 'y' }, // { who, kind, received_at?, party_id?, country? } → 201 { request } — due_at is the law's
   crmPrivReqAnswer: { m: 'POST', p: '/api/crm/privacy-requests/:id/answer', ok: 'y' }, // owner only: { outcome, answer } → { request } — answered once   // { outcome, after?|due_at? } → 201 { interaction, followup, stage, suggest } — one transaction (L2)
