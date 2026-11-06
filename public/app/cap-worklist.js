@@ -825,6 +825,7 @@ var WLL = {
   /* b182 — null means NOT ASKED YET, which is not the same as an empty register. */
   raida: null,
   raidaErr: false,
+  raidaOff: false /* RAIL-90: the api said CAPABILITY_OFF, so the register is not on for this shop */,
   raidaBusy: false,
   raidaClosing: null,
   raidaDisp: null
@@ -982,6 +983,7 @@ async function wlLine(line_id) {
    */
   WLL.raida = null;
   WLL.raidaErr = false;
+  WLL.raidaOff = false;
   WLL.raidaClosing = null;
   wlPaintCard(true);
   try {
@@ -1215,7 +1217,7 @@ function wlSec(k) {
      loading them for every line someone glances at would be one request per glance for data almost nobody asks
      for. Same rule as the actor list and the history. */
   /* the two threads read themselves (CBThread, R02); the register still loads here */
-  if (WLL.tab === 'raida' && WLL.raida === null && !WLL.raidaErr) wlRaidaLoad();
+  if (WLL.tab === 'raida' && WLL.raida === null && !WLL.raidaErr && !WLL.raidaOff) wlRaidaLoad();
 }
 /**
  * A section heading: caret · name · a hint of what is inside, so you can choose without opening.
@@ -1274,7 +1276,9 @@ async function wlRaidaLoad() {
        empty register on purpose; saying "could not read" there would send someone looking for a fault. */
     WLL.raida = out || { entries: [], migrated: false };
   } catch (e) {
-    WLL.raidaErr = true;
+    /* RAIL-90: an off register is a switch, not a fault. */
+    if (e && e.data && e.data.code === 'CAPABILITY_OFF') WLL.raidaOff = true;
+    else WLL.raidaErr = true;
   }
   wlPaintCard(WLL.loading);
 }
@@ -1448,12 +1452,14 @@ function wlRaidaRow(e) {
 
 function wlRaidaSec() {
   var R = WLL.raida;
-  var hint = WLL.raidaErr ? 'could not read' : R === null ? (WLL.tab === 'raida' ? 'reading…' : '') : R.open ? R.open + ' open' : 'none';
+  var hint = WLL.raidaOff ? 'off' : WLL.raidaErr ? 'could not read' : R === null ? (WLL.tab === 'raida' ? 'reading…' : '') : R.open ? R.open + ' open' : 'none';
   var out = wlSecHead('raida', tx('Register'), hint, WLL.raidaErr ? 'var(--disp)' : R && R.open ? 'var(--warn-2)' : null);
   if (WLL.tab !== 'raida') return out;
 
   out += '<div style="padding:0 0 12px">';
-  if (WLL.raidaErr) {
+  if (WLL.raidaOff) {
+    out += '<div style="font-size:var(--fs-2);color:var(--grey)">' + esc(tx('The register is off for your shop.')) + '</div>';
+  } else if (WLL.raidaErr) {
     out +=
       '<div style="font-size:var(--fs-2);color:var(--disp)">Could not read the register just now — this does NOT mean there is nothing on it. Close and reopen to try again.</div>';
   } else if (R === null) {
