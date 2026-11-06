@@ -83,7 +83,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (52)
+## Shared (53)
 
 | file | loading | what it is |
 |---|---|---|
@@ -115,6 +115,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
 | `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
+| `product-lab-rows.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell.js` | — | rail-bell.js — CBBell.mount: THE BELL, mountable in any header (R06, 2026-10-09) |
 | `rail-thread.js` | eager | rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09) |
@@ -142,4 +143,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*115 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*116 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
