@@ -204,6 +204,78 @@
     return tok && role !== 'customer' ? tok : null;
   }
 
+  /** the bell button with its count dot, as markup */
+  function bellButtonHtml(bell) {
+    var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
+    return (
+      '<button type="button" class="cbb-btn" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
+      (bell.open ? 'true' : 'false') +
+      '" aria-label="' +
+      esc(T(W.aria)) +
+      (bell.count ? ' (' + bell.count + ')' : '') +
+      '">🔔' +
+      dot +
+      '</button>'
+    );
+  }
+
+  /** one notification row, as markup */
+  function recordHtml(x) {
+    return (
+      '<button type="button" class="cbb-row" data-testid="bell-row"' +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
+      (x.order ? ' data-order="1"' : '') +
+      '><span aria-hidden="true">' +
+      x.i +
+      '</span><span style="min-width:0">' +
+      '<div class="cbb-t">' +
+      (x.who ? '<b>' + esc(x.who) + '</b> ' : '') +
+      esc(x.say) +
+      ' <b>' +
+      esc(x.subj) +
+      '</b></div>' +
+      (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') +
+      '<div class="cbb-s">' +
+      esc(x.s) +
+      '</div></span></button>'
+    );
+  }
+
+  /** the open panel: title, the rows (yours first) or the error / empty line, and the footer with Clear all */
+  function panelHtml(bell) {
+    var items = bell.rows.map(line),
+      mine = items.filter(function (x) {
+        return x.mine;
+      }),
+      rest = items.filter(function (x) {
+        return !x.mine;
+      });
+    var body = bell.err
+      ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
+      : items.length
+        ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(recordHtml).join('') : '') +
+          (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
+        : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
+    return (
+      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
+      esc(T(W.title)) +
+      '"><div class="cbb-hd">' +
+      esc(T(W.title)) +
+      '</div>' +
+      body +
+      '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
+      esc(bell.tone) +
+      '">' +
+      esc(bell.out) +
+      '</span>' +
+      '<button type="button" class="cbb-clear" data-testid="bell-clear"' +
+      (items.length ? '' : ' disabled') +
+      '>' +
+      esc(T(W.clear)) +
+      '</button></div></div>'
+    );
+  }
+
   function mount(el, opts) {
     el = typeof el === 'string' ? doc.getElementById(el) : el;
     if (!el) return null;
@@ -219,69 +291,7 @@
 
     function paint() {
       if (bell.dead) return;
-      var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
-      var html =
-        '<button type="button" class="cbb-btn" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
-        (bell.open ? 'true' : 'false') +
-        '" aria-label="' +
-        esc(T(W.aria)) +
-        (bell.count ? ' (' + bell.count + ')' : '') +
-        '">🔔' +
-        dot +
-        '</button>';
-      if (bell.open) {
-        var items = bell.rows.map(line),
-          mine = items.filter(function (x) {
-            return x.mine;
-          }),
-          rest = items.filter(function (x) {
-            return !x.mine;
-          });
-        var record = function (x) {
-          return (
-            '<button type="button" class="cbb-row" data-testid="bell-row"' +
-            (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
-            (x.order ? ' data-order="1"' : '') +
-            '><span aria-hidden="true">' +
-            x.i +
-            '</span><span style="min-width:0">' +
-            '<div class="cbb-t">' +
-            (x.who ? '<b>' + esc(x.who) + '</b> ' : '') +
-            esc(x.say) +
-            ' <b>' +
-            esc(x.subj) +
-            '</b></div>' +
-            (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') +
-            '<div class="cbb-s">' +
-            esc(x.s) +
-            '</div></span></button>'
-          );
-        };
-        var body = bell.err
-          ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
-          : items.length
-            ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(record).join('') : '') +
-              (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(record).join('') : '')
-            : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
-        html +=
-          '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
-          esc(T(W.title)) +
-          '"><div class="cbb-hd">' +
-          esc(T(W.title)) +
-          '</div>' +
-          body +
-          '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
-          esc(bell.tone) +
-          '">' +
-          esc(bell.out) +
-          '</span>' +
-          '<button type="button" class="cbb-clear" data-testid="bell-clear"' +
-          (items.length ? '' : ' disabled') +
-          '>' +
-          esc(T(W.clear)) +
-          '</button></div></div>';
-      }
-      el.innerHTML = html;
+      el.innerHTML = bellButtonHtml(bell) + (bell.open ? panelHtml(bell) : '');
     }
     function setCount(total) {
       total = Number(total) || 0;
