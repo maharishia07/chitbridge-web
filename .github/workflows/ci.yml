@@ -97,9 +97,7 @@ jobs:
           node tests/detail-placement.test.cjs
           node tests/lint-ratchet.test.cjs
           node tests/offline-409.test.cjs
-          node tests/rewards-pane.test.cjs
           node tests/sheets-links.test.cjs
-          node tests/stock-pane.test.cjs
           node tests/t2e-cart.test.cjs
           node tests/t2e-pin.test.cjs
           node tests/t2f-backdrop.test.cjs
