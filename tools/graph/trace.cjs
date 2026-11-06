@@ -115,11 +115,25 @@ const fileOf = (id) =>
     .replace(/ (GET|POST|PUT|PATCH|DELETE|ALL) .*$/, '');
 const repoOf = (id) => (/^(?:fn|file|screen|route|test):(web|api|engines):/.exec(String(id)) || [])[1];
 
-/** the check labels inside a test file: the strings on its ok( / t( / check( / it( / test( lines */
+/** one read per file per run: a test that reaches hundreds of modules was re-read from disk once for each (MNT-49). null = not there */
+const textCache = new Map();
+function readText(absPath) {
+  if (!textCache.has(absPath)) textCache.set(absPath, fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : null);
+  return textCache.get(absPath);
+}
+
+const stepsCache = new Map();
+/** the steps of one test file, parsed once per run (the same test is reached by many modules) */
 function stepsOf(absPath) {
-  if (!fs.existsSync(absPath)) return [];
+  if (!stepsCache.has(absPath)) stepsCache.set(absPath, parseSteps(readText(absPath)));
+  return stepsCache.get(absPath);
+}
+
+/** the check labels inside a test's text: the strings on its ok( / t( / check( / it( / test( lines */
+function parseSteps(text) {
+  if (text === null) return [];
   const labels = [];
-  for (const line of fs.readFileSync(absPath, 'utf8').split('\n')) {
+  for (const line of text.split('\n')) {
     if (!/\b(ok|t|check|it|test|assert|expect|pass|fail)\s*\(/.test(line)) continue;
     const match = /(['"`])((?:(?!\1)[^\\]|\\.){12,}?)\1/.exec(line);
     if (match && match[2].length >= MIN_STEP_WORDS) labels.push(match[2].slice(0, 120));
@@ -129,8 +143,9 @@ function stepsOf(absPath) {
 }
 
 function cardOf(absPath) {
-  if (!fs.existsSync(absPath)) return null;
-  const head = fs.readFileSync(absPath, 'utf8').slice(0, HEAD_BYTES);
+  const text = readText(absPath);
+  if (text === null) return null;
+  const head = text.slice(0, HEAD_BYTES);
   const match = CARD_LINE.exec(head);
   return match ? match[1] : null;
 }
@@ -143,7 +158,7 @@ function minimumsOf(layer, tests, roots) {
   const text = tests
     .map((test) => {
       const absPath = path.join(roots[test.repo] || '', test.file);
-      return (fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : '') + '\n' + test.file;
+      return (readText(absPath) || '') + '\n' + test.file;
     })
     .join('\n');
   const explicit = new Set([...text.matchAll(/\bMIN[: ]+([\w-]+)/g)].map((match) => match[1]));
