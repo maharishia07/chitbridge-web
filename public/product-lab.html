@@ -107,8 +107,8 @@ tr.has .ul.got{opacity:1}
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
-<script src="/app/lab-kit.js"></script>
-<script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
@@ -492,7 +492,7 @@ function unitLine(product, entry) {
   return (
     '<div class="ul ' +
     (got ? 'got' : '') +
-    '"><input type="checkbox" ' +
+    '" data-testid="pl-unit-line"><input type="checkbox" data-testid="pl-unit-tick" ' +
     (PICKED[keyOf(row)] ? 'checked' : '') +
     (got ? ' disabled' : '') +
     ' data-name="' +
@@ -504,7 +504,7 @@ function unitLine(product, entry) {
     '" onchange="pick(this.checked, this.dataset.name, this.dataset.unit)"> <b>' +
     esc(entry.unit) +
     '</b>' +
-    (entry.uqc ? ' <span class="uqc" title="GST unit code">' + esc(entry.uqc) + '</span>' : '') +
+    (entry.uqc ? ' <span class="uqc" data-testid="pl-uqc" title="GST unit code">' + esc(entry.uqc) + '</span>' : '') +
     ' <span class="num">' +
     fmtMoneyWhole(pr.n, DATA.currency || 'INR', '—') +
     '</span>' +
@@ -607,7 +607,7 @@ function paintReview() {
           esc(p.name) +
           '</td><td>' +
           esc(p.unit) +
-          (CBProductLabRows.uqcOf(p.unit) ? ' <span class="uqc" title="GST unit code">' + esc(CBProductLabRows.uqcOf(p.unit)) + '</span>' : '') +
+          (CBProductLabRows.uqcOf(p.unit) ? ' <span class="uqc" data-testid="pl-review-uqc" title="GST unit code">' + esc(CBProductLabRows.uqcOf(p.unit)) + '</span>' : '') +
           '</td>' +
           '<td class="num"><input type="number" min="0" step="0.01" value="' +
           (p.price == null ? '' : p.price) +
