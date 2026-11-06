@@ -13,7 +13,7 @@ const path = require('path'), fs = require('fs');
 const ROOT = path.join(__dirname, '..');
 const PUB = path.join(ROOT, 'public');
 const LABS = [
-  { id: 'product-lab', file: '/product-lab.html', title: 'Price Lab · ChitBridge' },
+  { id: 'product-lab', file: '/product-lab.html', title: 'Product Lab · ChitBridge' },
   { id: 'offer-lab', file: '/offer-lab-next.html', title: 'Offer Lab · ChitBridge' },
   { id: 'combo-lab', file: '/offer-lab-next.html?mode=combo', title: 'Combo Lab · ChitBridge' },
   { id: 'conversion-lab', file: '/conversion-lab.html', title: 'Conversion Lab · ChitBridge' },

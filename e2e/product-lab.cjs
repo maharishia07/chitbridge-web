@@ -100,11 +100,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
   /* ── what the shop already sells ───────────────────────────────────────────────────────────── */
   console.log('\n── what it already sells is not offered twice ' + '─'.repeat(16));
-  const tom = await p.$eval('[data-testid=pl-table] tbody tr.has', (t) => t.innerText.replace(/\s+/g, ' ').trim());
-  say('a product the shop already has is greyed and cannot be ticked', /Tomato/.test(tom) && /you sell this/.test(tom),
+  /* CAT-218: a product is ONE row; its units are choices, so "already sold" greys the UNIT line (the whole row only when every unit is sold) */
+  const tom = await p.$eval('[data-testid=pl-table] tbody .ul.got', (t) => t.closest('tr').innerText.replace(/\s+/g, ' ').trim());
+  say('a unit the shop already sells is greyed and cannot be ticked', /Tomato/.test(tom) && /you sell this/.test(tom),
     tom.slice(0, 48));
   say('and its checkbox is disabled, not merely unticked',
-    await p.$eval('[data-testid=pl-table] tbody tr.has input', (i) => i.disabled), 'disabled');
+    await p.$eval('[data-testid=pl-table] tbody .ul.got input', (i) => i.disabled), 'disabled');
 
   /* ── search, by name AND by local name ─────────────────────────────────────────────────────── */
   console.log('\n── finding something in two hundred products ' + '─'.repeat(17));
@@ -123,8 +124,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   /* ── the shelf filter ──────────────────────────────────────────────────────────────────────── */
   await p.selectOption('#cat', 'Greens');
   const greens = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
-  say('a shelf can be looked at on its own',
-    greens === BP.blueprint('veg').starter.filter((x) => x.category === 'Greens').length, 'Greens · ' + greens + ' rows');
+  const greenRows = BP.blueprint('veg').starter.filter((x) => x.category === 'Greens');
+  say('a shelf can be looked at on its own (one row per product)',
+    greens === new Set(greenRows.map((x) => x.name)).size, 'Greens · ' + greens + ' products');
 
   /* ── tick a whole shelf, adopt it ──────────────────────────────────────────────────────────── */
   console.log('\n── adopting one shelf, in the language they asked for ' + '─'.repeat(8));
@@ -154,18 +156,22 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the shelf count is re-read from the server, not assumed',
     /23 products/.test(await p.textContent('#who')), (await p.textContent('#who')).trim());
   await p.selectOption('#cat', 'Greens');
-  const nowHas = await p.$$eval('[data-testid=pl-table] tbody tr.has', (r) => r.length);
+  const nowHas = await p.$$eval('[data-testid=pl-table] tbody .ul.got', (r) => r.length);
   say('⚠️ and what was just added is now greyed — a second visit cannot double it',
-    nowHas === greens, nowHas + ' of ' + greens + ' greens now marked "you sell this"');
+    nowHas === greenRows.length, nowHas + ' of ' + greenRows.length + ' green units now marked "you sell this"');
 
   /* ── one row per unit ──────────────────────────────────────────────────────────────────────── */
-  console.log('\n── the same product in two units is two rows ' + '─'.repeat(17));
+  console.log('\n── the same product in three units is ONE row ' + '─'.repeat(17));
   await p.click('[data-testid=pl-list-egg]');
   await p.fill('#q', 'Hen egg (white)');
   const eggs = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
-  say('⭐ one row per unit, each with its own price, so a shop picks what it sells in',
-    eggs.length === 3 && /piece/.test(eggs.join(' ')) && /dozen/.test(eggs.join(' ')) && /box/.test(eggs.join(' ')),
-    eggs.length + ' rows: ' + eggs.map((e) => e.replace('Hen egg (white) ', '')).join(' | ').slice(0, 70));
+  const eggLines = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow) .ul', (r) => r.length);
+  say('⭐ CAT-218: one row per product, its units as choices, each with its own price',
+    eggs.length === 1 && eggLines === 3 && /piece/.test(eggs.join(' ')) && /dozen/.test(eggs.join(' ')) && /box/.test(eggs.join(' ')),
+    eggs.length + ' row, ' + eggLines + ' units: ' + eggs.map((e) => e.replace('Hen egg (white) ', '')).join(' | ').slice(0, 70));
+  say('each unit carries its GST unit code (PCS · DOZ · BOX)',
+    /PCS/.test(eggs.join(' ')) && /DOZ/.test(eggs.join(' ')) && /BOX/.test(eggs.join(' ')), 'UQC beside the unit');
+  say('a whole-rupee price shows no .00', !/\.00/.test(eggs.join(' ')), (eggs.join(' ').match(/₹[\d,.]+/g) || []).join(' '));
 
   /**
    * ── ⭐⭐ WHAT I ALREADY SELL, AND AT WHOSE PRICE ────────────────────────────────────────────────────
@@ -191,11 +197,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
   await p.click('[data-testid=pl-own-new]');
   const newRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  const vegProducts = new Set(BP.blueprint('veg').starter.map((x) => x.name + '|' + (x.category || ''))).size;
   /* ⚠️ derived, never a literal — the list grows (202 → 216 the day bulk rows landed) and a hardcoded
      count turns a healthy change into a red test. */
   const vegTotal = BP.blueprint('veg').starter.length;
   say('"Not yet" shows the rest — the question somebody adding products actually has',
-    newRows === vegTotal - shelf.length, newRows + ' of ' + vegTotal + ' still to add');
+    newRows === vegProducts, newRows + ' products still have a unit to add (' + vegTotal + ' units in the list)');
 
   /**
    * ⚠️⚠️ AND A BULK ROW IS NOT GREYED JUST BECAUSE ITS kg SIBLING IS SOLD ([found by adding veg@3]).
@@ -206,8 +213,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
    */
   await p.click('#own .pill[data-own=""]');
   await p.fill('#q', 'tomato');
-  const tomBoth = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)',
-    (rows) => rows.map((x) => ({ t: x.innerText.replace(/\s+/g, ' ').trim(), had: x.classList.contains('has') })));
+  const tomBoth = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow) .ul',
+    (lines) => lines.map((x) => ({ t: x.closest('tr').firstElementChild.innerText.trim() + ' ' + x.innerText.replace(/\s+/g, ' ').trim(), had: x.classList.contains('got') })));
   const tomKg = tomBoth.find((x) => /^Tomato /.test(x.t) && / kg /.test(x.t));
   const tomBox = tomBoth.find((x) => /^Tomato /.test(x.t) && / box /.test(x.t));
   say('⚠️⚠️ the kg row is greyed (they sell it) but the B2B box row is still offered',
@@ -229,12 +236,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const unitPills = await p.$$eval('#units .pill', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
   const eggUnits = new Set(BP.blueprint('egg').starter.map((x) => x.unit));
   say('the units this list actually uses, counted', unitPills.length === eggUnits.size, unitPills.join(' · '));
-  const allEgg = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  const allEgg = await p.$$eval('[data-testid=pl-table] tbody .ul', (r) => r.length);   /* the unit LINES: a product row holds one per unit */
 
   await p.click('[data-testid=pl-unit-box]');
-  const noBox = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  const noBox = await p.$$eval('[data-testid=pl-table] tbody .ul', (r) => r.length);
   say('⭐ switching a unit off shortens the list by exactly its count',
-    noBox === allEgg - 1, allEgg + ' → ' + noBox + ' rows without "box"');
+    noBox === allEgg - 1, allEgg + ' → ' + noBox + ' unit lines without "box"');
   say('and no row sold in that unit is left behind',
     !/\bbox\b/.test(await p.innerText('[data-testid=pl-table]')), 'no box rows shown');
 
@@ -270,6 +277,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
    */
   console.log('\n── the checkbox a person actually clicks ' + '─'.repeat(20));
   await p.click('[data-testid=pl-list-egg]');
+  say('⭐ CAT-218: Next is grey with nothing chosen, and says why beside it',
+    (await p.$eval('[data-testid=pl-next]', (b) => b.disabled)) && /Tick a product/.test(await p.textContent('[data-testid=pl-next-why]')),
+    (await p.textContent('[data-testid=pl-next-why]')).trim());
   await p.click('[data-testid=pl-table] tbody tr:not(.catrow):not(.has) input[type=checkbox]');
   say('⭐ ticking one row with the mouse registers it', /1 product chosen/.test(await p.textContent('#count')),
     (await p.textContent('#count')).trim());
