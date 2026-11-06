@@ -55,7 +55,7 @@ of file each thing is; this says what already does the job.
 | 40 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 40 | `rules` | `docnumber.js` | the rule set for a country — |
 | 40 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
-| 39 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 40 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 38 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 38 | `host` | `chit-sheet.js` |  |
