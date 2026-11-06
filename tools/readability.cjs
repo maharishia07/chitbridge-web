@@ -14,7 +14,8 @@
  *   node tools/readability.cjs --json out.json | --detail api R3 | --top 20
  *   node tools/readability.cjs --changed [--base origin/main] [--repo web|api|engines] [--root DIR] [--ratchet] [--md] [--write] [--today YYYY-MM-DD]
  *                                                                 judge only what the change touched (git diff vs merge-base); --md prints the
- *                                                                 §6 checklist with numbers; --write tightens the touched files' ratchet rows
+ *                                                                 §6 checklist with numbers; --write tightens the touched files' ratchet rows;
+ *                                                                 --strict = the touch rule FAILS a touched file not at 0 now (MNT-30; warn mode until the date in tools/readability/touch.cjs)
  *   node tools/readability.cjs --write [--repo api|engines --root ../chitbridge-<repo>]   write/tighten the whole ratchet (lower only)
  * MOVES    a function whose body (tokens: whitespace and comments ignored) EXACTLY equals one the same diff deletes is a MOVE: it keeps the old
  *           score (tools/readability/moves.cjs), is listed as "moved: N functions (exact body match)", and any other change is new code.
@@ -94,7 +95,8 @@ function judgeChange(repo, root) {
     baseRef: String(flag('base', DEFAULT_BASE)),
     trace: trace.trace,
     today: typeof today === 'string' ? today : undefined,
-    ratchetRows: flag('ratchet') ? undefined : null
+    ratchetRows: flag('ratchet') ? undefined : null,
+    touch: flag('strict') ? 'fail' : flag('touch')
   });
   if (result.error) {
     console.error('  readability --changed: ' + result.error);
