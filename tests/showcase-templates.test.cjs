@@ -7,6 +7,7 @@
  *   5  mix-and-match: assemble() drops/reorders sections, never drops the range; an unknown choice falls back to the vertical's seed
  *   6  390px: no fixed width over 390 in the template CSS; only the chip row scrolls sideways
  * Run: node tests/showcase-templates.test.cjs   · no browser, no network.
+ * CARD      10-online-shop-and-storefront-orders/the-online-shop
  */
 'use strict';
 const fs = require('fs'), path = require('path');

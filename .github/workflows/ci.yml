@@ -104,6 +104,7 @@ jobs:
           node tests/repeat-supply-render.test.cjs
           node tests/rewards-pane.test.cjs
           node tests/sheets-links.test.cjs
+          node tests/showcase-templates.test.cjs
           node tests/stock-pane.test.cjs
           node tests/t2e-cart.test.cjs
           node tests/t2e-pin.test.cjs
@@ -160,6 +161,14 @@ jobs:
         env:
           CB_API_REPO: .side/chitbridge-api
         run: node e2e/engines-pins-agree.cjs
+      - name: The connector adapters against their fakes (QA wave 2: Tally, Zoho, GoFrugal, B2B purchase; the kit is the api's tools/tally-connector)
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: |
+          node e2e/connector-b2b.test.cjs
+          node e2e/connector-gofrugal.test.cjs
+          node e2e/connector-purchase.test.cjs
+          node e2e/connector-zoho.test.cjs
 
   seams-drift:
     # DOC-68 (docs truth): docs/SEAMS.md is GENERATED (node C:/dev/seams.cjs --write), so a drift check fails the build the way MODULES.md does.
