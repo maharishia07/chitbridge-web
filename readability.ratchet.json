@@ -173,10 +173,11 @@
   "tools/readability.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/baseline.cjs": {"score":2,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
   "tools/readability/changed.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
-  "tools/readability/guard.cjs": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
+  "tools/readability/guard.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/measure.cjs": {"score":1,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":1,"emptyCatch":0,"noHeader":0},
   "tools/readability/moves.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/readability/ratchet.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
+  "tools/readability/touch.cjs": {"score":0,"long40":0,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":0,"noWhatLine":0,"emptyCatch":0,"noHeader":0},
   "tools/screen-list.cjs": {"score":12,"long40":1,"long80":0,"complex10":0,"complex15":0,"deep3":0,"deep4":0,"cryptic":9,"noWhatLine":2,"emptyCatch":0,"noHeader":0},
   "tools/sig-stars.cjs": {"score":26,"long40":1,"long80":0,"complex10":2,"complex15":1,"deep3":1,"deep4":0,"cryptic":19,"noWhatLine":2,"emptyCatch":0,"noHeader":0}
 }
