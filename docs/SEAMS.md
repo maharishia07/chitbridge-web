@@ -58,7 +58,7 @@ of file each thing is; this says what already does the job.
 | 40 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 38 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
-| 37 | `host` | `chit-sheet.js` |  |
+| 38 | `host` | `chit-sheet.js` |  |
 | 37 | `facts` | `bill-steps.js` | MY state_log — |
 | 37 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 37 | `missing` | `variant.browser.js` | refusing with no reason. |
@@ -102,7 +102,7 @@ of file each thing is; this says what already does the job.
 | 26 | `mine` | `crm.js` | the party must be on this shop's list (the same test the log uses) |
 | 25 | `load` | `cap-assist.js` |  |
 | 25 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 25 | `opts` | `cap-stock.js` |  |
+| 26 | `opts` | `cap-stock.js` |  |
 | 25 | `view` | `country-ready.js` |  |
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 24 | `call` | `cap-assist.js` |  |
@@ -151,7 +151,7 @@ of file each thing is; this says what already does the job.
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `step` | `cart.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
-| 17 | `panel` | `sides.js` |  |
+| 18 | `panel` | `sides.js` |  |
 | 17 | `says` | `adopt.js` |  |
 | 17 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 17 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
@@ -172,7 +172,7 @@ of file each thing is; this says what already does the job.
 | 15 | `fmtMoney` | `helpers.js` |  |
 | 15 | `offers` | `network-app.js` |  |
 | 15 | `resolve` | `page.js` |  |
-| 15 | `verdict` | `rail-thread.js` |  |
+| 16 | `verdict` | `rail-thread.js` |  |
 | 15 | `label` | `screen-id.js` |  |
 | 15 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 15 | `terms` | `books-store.js` | the party's credit terms, from whichever list holds them (a customer's for a sale, a supplier's for a purchase |
@@ -199,7 +199,7 @@ of file each thing is; this says what already does the job.
 | 13 | `sheet` | `stock-store.js` | the shop's whole shelf, for a report — |
 | 13 | `heads` | `tax-lines.js` | The heads, summed. |
 | 12 | `units` | `cart.js` |  |
-| 12 | `link` | `chit-sheet.js` |  |
+| 13 | `link` | `chit-sheet.js` |  |
 | 12 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 12 | `payment` | `books-store.js` |  |
 | 12 | `migrated` | `country-setup.js` |  |
