@@ -78,8 +78,9 @@
       return name + ' is signed in.';
     },
     sent: 'Code sent.',
-    noAccount: 'No account found. Check the number or e-mail.',
-    tooMany: 'Too many tries. Wait 15 minutes.',
+    /* the ONE sentence for every refusal before sign-in — it never says which part was wrong (api SEC-81) */
+    refused: "That sign-in didn't work. Check the details and try again.",
+    tooMany: 'Too many tries from here. Wait a little, then try again.',
     working: 'Working…',
     register: 'New shop? Register',
     pinName: 'Your PIN',
@@ -241,6 +242,20 @@
     } catch (_) {}
   }
 
+  var SAME_REFUSAL = /NO_ACCOUNT|SIGNIN_REFUSED| (401|403|404)$/;
+
+  /** the sentence for a refused sign-in call: the server's own wins; unknown account, wrong secret and locked all read as W.refused */
+  function refusalSentence(reply, sentences, engine) {
+    var body = reply.body || {};
+    /* the server's own sentence wins (SIGNIN_REFUSED, DEVICE_REVOKED, AMBIGUOUS_NAME, …) — never the generic "wrong code" */
+    if (body.code && body.code !== 'NO_ACCOUNT' && body.message) return String(body.message);
+    /* a 429 is the line being busy, not a fact about the account (an account lockout now answers SIGNIN_REFUSED) */
+    if (reply.status === 429) return sentences.tooMany;
+    /* an old server, or none: unknown account, wrong secret and locked all read the same — never "no account here" */
+    if (SAME_REFUSAL.test(body.code + ' ' + reply.status)) return sentences.refused;
+    return engine.refusal({ status: reply.status, message: body.message || body.error });
+  }
+
   /* ── the state machine ──────────────────────────────────────────────────────────────────────────────────────────── */
   function machine(c, io) {
     c = c || {};
@@ -309,13 +324,7 @@
       return S;
     }
     function refusalOf(r) {
-      var b = r.body || {},
-        code = b.code;
-      if (code === 'NO_ACCOUNT') return W.noAccount;
-      if (r.status === 429) return W.tooMany;
-      /* a NAMED refusal (DEVICE_REVOKED, AMBIGUOUS_NAME, …) already carries the sentence the server chose — say that, not "wrong code" */
-      if (code && b.message) return String(b.message);
-      return E.refusal({ status: r.status, message: b.message || b.error });
+      return refusalSentence(r, W, E);
     }
     function needOf(b) {
       return b.need === 'pin' || b.use_pin === true ? 'pin' : 'code';
