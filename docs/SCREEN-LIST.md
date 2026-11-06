@@ -94,7 +94,7 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | STR001 | Store | Store | /store.html | /store.html?net=<network> |
 | EMB001 | Catalogue embed | Catalogue embed | /embed.html | /embed.html?bridge=<shop> · inside another site |
 | PRM001 | Shop screen | Shop screen | /promo.html | /promo.html#key=… · the till › Shop screen |
-| PLB001 | Price Lab | Price Lab | /product-lab.html | /product-lab.html |
+| PLB001 | Product Lab | Product Lab | /product-lab.html | /product-lab.html |
 | OLB001 | Offer Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html · Home › Labs |
 | OLB002 | Combo Lab | Offer Lab | /offer-lab-next.html | /offer-lab-next.html?mode=combo · Home › Labs |
 | CVL001 | Conversion Lab | Conversion Lab | /conversion-lab.html | /conversion-lab.html · the Country Lab |
