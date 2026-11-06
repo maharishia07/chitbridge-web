@@ -38,7 +38,7 @@
     "check:tokens": "node e2e/token-guard.cjs",
     "check:money": "node e2e/money-input-guard.cjs",
     "check:thread": "node e2e/rail-thread-guard.cjs",
-    "check:registeroff": "node e2e/register-off.cjs",
+    "check:registeroff": "node e2e/register-off.cjs && node tests/register-off-callers.test.cjs",
     "check:skeleton": "node e2e/skeleton-guard.cjs",
     "check:process": "node e2e/process-map.cjs",
     "check:words": "node e2e/developer-words.cjs",

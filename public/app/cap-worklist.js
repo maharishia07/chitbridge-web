@@ -1277,7 +1277,7 @@ async function wlRaidaLoad() {
     WLL.raida = out || { entries: [], migrated: false };
   } catch (e) {
     /* RAIL-90: an off register is a switch, not a fault. */
-    if (e && e.data && e.data.code === 'CAPABILITY_OFF') WLL.raidaOff = true;
+    if (registerOffWords(e)) WLL.raidaOff = true;
     else WLL.raidaErr = true;
   }
   wlPaintCard(WLL.loading);
@@ -1361,7 +1361,7 @@ async function wlRaidaClose(rid) {
     await wlRaidaLoad();
     toast('Closed');
   } catch (e) {
-    toast((e && e.message) || 'Could not close it.');
+    toast(registerOffWords(e) || (e && e.message) || 'Could not close it.');
   }
 }
 
@@ -1452,7 +1452,7 @@ function wlRaidaRow(e) {
 
 function wlRaidaSec() {
   var R = WLL.raida;
-  var hint = WLL.raidaOff ? 'off' : WLL.raidaErr ? 'could not read' : R === null ? (WLL.tab === 'raida' ? 'reading…' : '') : R.open ? R.open + ' open' : 'none';
+  var hint = WLL.raidaOff ? tx('The register is off for your shop.') : WLL.raidaErr ? 'could not read' : R === null ? (WLL.tab === 'raida' ? 'reading…' : '') : R.open ? R.open + ' open' : 'none';
   var out = wlSecHead('raida', tx('Register'), hint, WLL.raidaErr ? 'var(--disp)' : R && R.open ? 'var(--warn-2)' : null);
   if (WLL.tab !== 'raida') return out;
 

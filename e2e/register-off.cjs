@@ -19,12 +19,14 @@
 // MIN string-layer
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-worklist.js'), 'utf8'); // public/app/cap-worklist.js
-const grab = (name) => {
-  const at = SRC.search(new RegExp('^(async )?function ' + name + '[(]', 'm'));
+const HTML = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8'); // registerOffWords lives beside MSG in app.html
+const grab = (name, text) => {
+  text = text || SRC;
+  const at = text.search(new RegExp('^(async )?function ' + name + '[(]', 'm'));
   if (at < 0) throw new Error('no ' + name);
-  let depth = 0, i = SRC.indexOf('{', at);
-  for (; i < SRC.length; i++) { if (SRC[i] === '{') depth++; else if (SRC[i] === '}' && --depth === 0) break; }
-  return SRC.slice(at, i + 1);
+  let depth = 0, i = text.indexOf('{', at);
+  for (; i < text.length; i++) { if (text[i] === '{') depth++; else if (text[i] === '}' && --depth === 0) break; }
+  return text.slice(at, i + 1);
 };
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ok  ' : '  FAIL ') + m); if (!c) bad++; };
@@ -37,7 +39,7 @@ async function run(apiFails) {
   ctx.wlSecHead = (id, label, hint) => '[' + label + '|' + hint + ']';
   ctx.wlRaidaRow = () => '';
   vm.createContext(ctx);
-  vm.runInContext(grab('wlRaidaLoad') + '\n' + grab('wlRaidaSec') + '\nthis.load = wlRaidaLoad; this.sec = wlRaidaSec;', ctx);
+  vm.runInContext(grab('registerOffWords', HTML) + '\n' + grab('wlRaidaLoad') + '\n' + grab('wlRaidaSec') + '\nthis.load = wlRaidaLoad; this.sec = wlRaidaSec;', ctx);
   await ctx.load();
   return { ctx, html: ctx.sec() };
 }
@@ -45,7 +47,7 @@ async function run(apiFails) {
   const off = Object.assign(new Error('The register is off for your shop.'), { status: 403, data: { code: 'CAPABILITY_OFF' } });
   const a = await run(off);
   ok(a.ctx.WLL.raidaOff === true && a.ctx.WLL.raidaErr === false, 'CAPABILITY_OFF sets off, not the fault flag');
-  ok(/off for your shop/.test(a.html) && !/could not read/i.test(a.html), 'the section says it is off, in words, not "could not read"');
+  ok(/off for your shop/.test(a.html) && /\[Register\|The register is off for your shop[.]\]/.test(a.html) && !/could not read/i.test(a.html), 'the heading hint and the line both say the same sentence as the api refusal, not "could not read"');
   ok(/var\(--grey\)/.test(a.html) && !/#[0-9a-f]{3,6}\b/i.test(a.html), 'the line uses a theme token only');
   const b = await run(Object.assign(new Error('Server error'), { status: 500, data: { code: 'X' } }));
   ok(b.ctx.WLL.raidaErr === true && b.ctx.WLL.raidaOff === false && /could not read/i.test(b.html), 'any other failure is still "could not read"');
