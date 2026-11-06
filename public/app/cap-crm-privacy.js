@@ -184,7 +184,9 @@ async function crmConsentHolders() {
     if (node) node.textContent = list.length ? tx('Your data is held by') + ': ' + list.join(', ') : '';
   } catch (_) {
     node = document.getElementById('crm_consent_holders');
-    if (node) node.removeAttribute('data-loaded');
+    if (!node) return;
+    node.removeAttribute('data-loaded'); /* opening the block again retries */
+    node.textContent = tx("Couldn't read who holds the data.");
   }
 }
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
