@@ -161,9 +161,9 @@ const walk = async (w) => {
     /* WALK-REG 2026-10-16 R43: the tag now says "without a device name" (was "older than the list - sign in again", which signing in again could not cure) */
     return { ok: tag && /This one/.test(row) && /device name/.test(legacy), saw: '"' + row.slice(0, 60) + '" · "' + legacy.slice(0, 60) + '"' };
   });
-  await w.step('A14', 'W22/W23 · WALK-REG 2026-10-16: removed by decision — the trade-documents vault (section picker) is not on a local shop\'s Account', async () => {
-    const hidden = await page.$eval('[data-testid="sx-vault-wrap"]', (n) => n.hidden).catch(() => false);
-    return { ok: hidden, saw: 'vault wrap hidden ' + hidden };
+  await w.step('A14', 'W22/W23 · SET-34 (6 Nov 2026): the vault SHOWS on Account (it was hidden by the 16 Oct decision)', async () => {
+    const shown = await page.locator('[data-testid="sx-vault-wrap"]:visible').count();
+    return { ok: shown === 1, saw: 'vault wrap visible ' + shown };
   });
 
   /* ── W15 · W16 · W11 ── */
