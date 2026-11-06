@@ -1,4 +1,8 @@
 /* rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09).
+ *
+ * OWNS      the payment-advice panel only: paint the Send / Share buttons from the server's `may`, press them through CBAction, repaint locally.
+ * CALLED BY see the knowledge-graph line at the foot of this header.
+ * FLOW      mount ──▶ load (GET advice) ──▶ paint ──▶ sendPress | sharePress ──▶ settle ──▶ cb:rail event on the host
  * CARD 16-finance/cb-finance
  *
  * SPEC-payments-2026-10-05 §3 · §4.3 · §5; DESIGN-rail-modules §2.1 (CBAdvice); FIT-shell Supplier line: *the payer settles its own books
@@ -81,14 +85,16 @@
     if (!ts) return '';
     try {
       if (root.CBLocale) return root.CBLocale.datetime(ts);
-    } catch (_) {} /* CU4: the one date-time stamp */
+    } catch (_) {
+      /* CU4: the one date-time stamp; a locale fault falls through to the plain stamp below */
+    }
     return String(ts).replace('T', ' ').slice(0, 16);
   }
   /** the chip a row paints for a state: "✉ advice sent · delivered" · "↗ advice shared · 04 Oct, 17:11" — '' when none */
-  function stateWords(a) {
-    if (!a || !a.state || !STATE_WORDS[a.state]) return '';
-    var w = T(STATE_WORDS[a.state]);
-    return a.state === 'shared' && a.shared_at ? w + ' · ' + when(a.shared_at) : w;
+  function stateWords(block) {
+    if (!block || !block.state || !STATE_WORDS[block.state]) return '';
+    var w = T(STATE_WORDS[block.state]);
+    return block.state === 'shared' && block.shared_at ? w + ' · ' + when(block.shared_at) : w;
   }
 
   /* ── CSS, once, prefixed ra- (tokens with the page's fallbacks — e2e/token-guard) ── */
@@ -111,85 +117,97 @@
   }
 
   /* ── eligibility: the server's verdict, as handed ── */
-  function may(m, k) {
-    var a = m.a && m.a.may;
+  function may(panel, k) {
+    var a = panel.a && panel.a.may;
     return (a && a[k]) || { ok: false, why: 'unknown', say: T(W.reading) };
   }
 
   /* ── the read ── */
-  async function load(m) {
+  async function load(panel) {
     if (!ensureEP()) {
-      m.err = 'no EP';
-      paint(m);
+      panel.err = 'no EP';
+      paint(panel);
       return;
     }
-    m.err = null;
+    panel.err = null;
     try {
-      m.a = await api('booksPayAdvice', { params: { id: m.o.payment_id } });
+      panel.a = await api('booksPayAdvice', { params: { id: panel.o.payment_id } });
     } catch (e) {
-      m.err = (e && e.message) || 'fail';
+      panel.err = (e && e.message) || 'fail';
     }
-    paint(m);
+    paint(panel);
   }
 
   /* ── paint ── */
-  function paint(m) {
-    if (!m.el || !m.el.isConnected) return;
-    var a = m.a,
-      o = m.o,
-      id = esc(o.payment_id);
-    if (!a) {
-      m.el.innerHTML =
-        '<div class="ra" data-testid="adv" data-payment="' +
-        id +
-        '"><span class="ra-why" data-testid="adv-' +
-        (m.err ? 'err' : 'reading') +
-        '">' +
-        esc(T(m.err ? W.readFail : W.reading)) +
-        '</span></div>';
-      return;
-    }
-    var party = (a.party && a.party.name) || o.party || T('the other party');
-    var send = may(m, 'send_advice'),
-      share = may(m, 'share_advice'),
-      st = stateWords(a.advice);
-    var sendBtn =
+  /** the Send button: always painted; greyed with the server's sentence when this login may not press it */
+  function sendButtonHtml(panel, send) {
+    return (
       '<button type="button" class="ra-b pri' +
       (send.ok ? '' : ' off') +
       '" data-ra-act="send" data-testid="adv-send"' +
-      (m.failed ? ' data-action-state="failed"' : '') +
+      (panel.failed ? ' data-action-state="failed"' : '') +
       (send.ok ? '' : ' aria-disabled="true" title="' + esc(send.say || '') + '"') +
       '>' +
       '✉ ' +
-      esc(T(m.failed ? (m.sentChit ? W.recordAgain : W.again) : W.send)) +
-      '</button>';
-    var links =
-      share.ok && a.share
-        ? '<button type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
-          esc(T(W.copy)) +
-          '</button>' +
-          '<a class="ra-b" href="' +
-          esc(a.share.wa) +
-          '" target="_blank" rel="noopener" data-ra-act="shared" data-testid="adv-wa">' +
-          esc(T(W.wa)) +
-          '</a>' +
-          '<a class="ra-b" href="' +
-          esc(a.share.mailto) +
-          '" data-ra-act="shared" data-testid="adv-mail">' +
-          esc(T(W.mail)) +
-          '</a>'
-        : '<button type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
-          esc(share.say || '') +
-          '">↗ ' +
-          esc(T(W.share)) +
-          '</button>';
+      esc(T(panel.failed ? (panel.sentChit ? W.recordAgain : W.again) : W.send)) +
+      '</button>'
+    );
+  }
+  /** the Share controls (copy · WhatsApp · e-mail), or one greyed Share button carrying the server's sentence */
+  function shareLinksHtml(block, share) {
+    if (share.ok && block.share)
+      return (
+        '<button type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
+        esc(T(W.copy)) +
+        '</button>' +
+        '<a class="ra-b" href="' +
+        esc(block.share.wa) +
+        '" target="_blank" rel="noopener" data-ra-act="shared" data-testid="adv-wa">' +
+        esc(T(W.wa)) +
+        '</a>' +
+        '<a class="ra-b" href="' +
+        esc(block.share.mailto) +
+        '" data-ra-act="shared" data-testid="adv-mail">' +
+        esc(T(W.mail)) +
+        '</a>'
+      );
+    return (
+      '<button type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
+      esc(share.say || '') +
+      '">↗ ' +
+      esc(T(W.share)) +
+      '</button>'
+    );
+  }
+  /** paint the panel (or its reading / could-not-read line) into the host element */
+  function paint(panel) {
+    if (!panel.el || !panel.el.isConnected) return;
+    var block = panel.a,
+      opts = panel.o,
+      id = esc(opts.payment_id);
+    if (!block) {
+      panel.el.innerHTML =
+        '<div class="ra" data-testid="adv" data-payment="' +
+        id +
+        '"><span class="ra-why" data-testid="adv-' +
+        (panel.err ? 'err' : 'reading') +
+        '">' +
+        esc(T(panel.err ? W.readFail : W.reading)) +
+        '</span></div>';
+      return;
+    }
+    var send = may(panel, 'send_advice'),
+      share = may(panel, 'share_advice'),
+      st = stateWords(block.advice);
+    var sendBtn = sendButtonHtml(panel, send);
+    var links = shareLinksHtml(block, share);
     /* ONE sentence on screen: the send refusal (off rail says "share the advice instead"; sent already; view-only…). A greyed Share carries its own sentence as its title. */
     var whys = !send.ok ? '<span class="ra-why" data-testid="adv-why-send">' + esc(send.say || '') + '</span>' : '';
-    m.el.innerHTML =
+    panel.el.innerHTML =
       '<div class="ra" data-testid="adv" data-payment="' +
       id +
       '" data-state="' +
-      esc((a.advice && a.advice.state) || 'none') +
+      esc((block.advice && block.advice.state) || 'none') +
       '">' +
       (st ? '<span class="ra-st" data-testid="adv-state">' + esc(st) + '</span>' : '') +
       '<div class="ra-row">' +
@@ -199,9 +217,9 @@
       '</span></div>' +
       whys +
       '<span class="ra-out" data-testid="adv-out" data-tone="' +
-      esc(m.tone || '') +
+      esc(panel.tone || '') +
       '">' +
-      esc(m.outWords || '') +
+      esc(panel.outWords || '') +
       '</span></div>';
   }
 
@@ -209,39 +227,43 @@
   function emit(el, payment_id, result) {
     try {
       (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'advice', payment_id: payment_id, result: result } }));
-    } catch (_) {}
+    } catch (_) {
+      /* the repaint event is a courtesy to the host; a host that throws must not break the press */
+    }
   }
   function needAction() {
     if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function')
       throw new Error('CBAdvice needs CBAction (app/accounts-shell.js) on the page — every press goes through the action-state helper');
   }
-  function out(m) {
-    return m.el.querySelector('[data-testid="adv-out"]');
+  function out(panel) {
+    return panel.el.querySelector('[data-testid="adv-out"]');
   }
-  function say(m, words, tone) {
-    m.outWords = words;
-    m.tone = tone;
-    var node = out(m);
+  function say(panel, words, tone) {
+    panel.outWords = words;
+    panel.tone = tone;
+    var node = out(panel);
     if (node) {
       node.textContent = words;
       node.setAttribute('data-tone', tone);
     }
   }
-  function settle(m, result, words, tone) {
-    m.a = Object.assign({}, m.a, {
-      advice: Object.assign({}, m.a && m.a.advice, result),
+  function settle(panel, result, words, tone) {
+    panel.a = Object.assign({}, panel.a, {
+      advice: Object.assign({}, panel.a && panel.a.advice, result),
       body: null,
-      may: Object.assign({}, m.a && m.a.may, { send_advice: { ok: false, why: 'already_sent', say: T('An advice is already sent for this payment.') } })
+      may: Object.assign({}, panel.a && panel.a.may, { send_advice: { ok: false, why: 'already_sent', say: T('An advice is already sent for this payment.') } })
     });
-    if (result.state === 'shared') m.a.may = Object.assign({}, m.a.may, { send_advice: (m.a.may && m.a.may.send_advice) || { ok: false } });
-    m.outWords = words;
-    m.tone = tone;
-    paint(m);
-    emit(m.el, m.o.payment_id, result);
-    if (typeof m.o.onDone === 'function') {
+    if (result.state === 'shared') panel.a.may = Object.assign({}, panel.a.may, { send_advice: (panel.a.may && panel.a.may.send_advice) || { ok: false } });
+    panel.outWords = words;
+    panel.tone = tone;
+    paint(panel);
+    emit(panel.el, panel.o.payment_id, result);
+    if (typeof panel.o.onDone === 'function') {
       try {
-        m.o.onDone(result, m.o);
-      } catch (_) {}
+        panel.o.onDone(result, panel.o);
+      } catch (_) {
+        /* the host's onDone is its own business; the advice is already settled */
+      }
     }
   }
   /** the ONE send of a rail body this page did not compose (the server's advice; the bank-recon engine's question, BR1) — POST /api/chits/send,
@@ -251,82 +273,93 @@
     var sent = await api('createChit', { body: body });
     return (sent && (sent.chit_id || (sent.chit && sent.chit.chit_id))) || null;
   }
+  /** a failed send: say why under the buttons and keep Send as "Send again" (or "Save again" once the chit itself went) */
+  function sendFailed(panel, party, words, fault) {
+    panel.failed = true;
+    if (panel.sentChit) words = fill(T(W.notRecorded), { party: party }); /* the advice WENT; only the record failed */
+    /* a 4xx carries the server's own refusal (its words are for people); a 5xx / a network fault keeps the unit's sentence — never a server message */
+    var data = fault && fault.data,
+      shown = fault && fault.status >= 400 && fault.status < 500 && data && data.message ? data.message : words;
+    if (data && data.why && panel.a && panel.a.may) panel.a.may.send_advice = { ok: false, why: data.why, say: shown };
+    panel.outWords = shown;
+    panel.tone = 'error';
+    paint(panel);
+  }
   /** Send: the chit (the server's ready body) then the merge-patch — one press, one outcome; a failed send keeps the button as "Send again" */
-  function sendPress(m, btn) {
+  function sendPress(panel, btn) {
     needAction();
     ensureEP();
-    var a = m.a,
-      v = may(m, 'send_advice');
-    if (!v.ok) {
-      say(m, v.say || '', 'error');
+    var block = panel.a,
+      verdict = may(panel, 'send_advice');
+    if (!verdict.ok) {
+      say(panel, verdict.say || '', 'error');
       return Promise.resolve({ ok: false });
     }
-    var party = (a.party && a.party.name) || m.o.party || T('the other party');
+    var party = (block.party && block.party.name) || panel.o.party || T('the other party');
     return CBAction.run(
       btn,
       async function () {
         /* M30-2: once the chit is SENT, a failed RECORD is retried with the SAME chit - never a second advice to the party */
-        var chit_id = m.sentChit;
+        var chit_id = panel.sentChit;
         if (!chit_id) {
-          chit_id = await sendBody(a.body);
+          chit_id = await sendBody(block.body);
           if (!chit_id) throw new Error('no chit id');
-          m.sentChit = chit_id;
+          panel.sentChit = chit_id;
         }
-        var reply = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_chit_id: chit_id } });
+        var reply = await api('booksPayPatch', { params: { id: panel.o.payment_id }, body: { advice_chit_id: chit_id } });
         return Object.assign({ chit_id: chit_id }, (reply && reply.advice) || { state: 'sent', shared_at: null });
       },
       {
-        key: 'adv:' + m.o.payment_id,
+        key: 'adv:' + panel.o.payment_id,
         busy: T(W.sending),
-        out: out(m),
+        out: out(panel),
         failed: T(W.notSent),
         outcome: function (res) {
-          m.failed = false;
-          settle(m, { chit_id: res.chit_id, state: res.state || 'sent', shared_at: res.shared_at || null }, fill(T(W.sent), { party: party }), 'ok');
+          panel.failed = false;
+          settle(panel, { chit_id: res.chit_id, state: res.state || 'sent', shared_at: res.shared_at || null }, fill(T(W.sent), { party: party }), 'ok');
         },
         onFail: function (words, e) {
-          m.failed = true;
-          if (m.sentChit) words = fill(T(W.notRecorded), { party: party }); /* the advice WENT; only the record failed */
-          /* a 4xx carries the server's own refusal (its words are for people); a 5xx / a network fault keeps the unit's sentence — never a server message */
-          var d = e && e.data,
-            w = e && e.status >= 400 && e.status < 500 && d && d.message ? d.message : words;
-          if (d && d.why && m.a && m.a.may) m.a.may.send_advice = { ok: false, why: d.why, say: w };
-          m.outWords = w;
-          m.tone = 'error';
-          paint(m);
+          sendFailed(panel, party, words, e);
         }
       }
     );
   }
+  /** put the advice words on the clipboard; best effort, the share record goes ahead either way */
+  function copyText(text) {
+    try {
+      if (root.navigator && root.navigator.clipboard)
+        root.navigator.clipboard.writeText(text).catch(function () {
+          /* copy is best effort: the share link and the record still go ahead */
+        });
+    } catch (_) {
+      /* no clipboard on this page: the same best-effort rule */
+    }
+  }
   /** Share: the words left this page (copy · WhatsApp · e-mail) → the payment remembers when */
-  function sharePress(m, btn, how) {
+  function sharePress(panel, btn, how) {
     needAction();
     ensureEP();
-    var a = m.a,
-      v = may(m, 'share_advice');
-    if (!v.ok) {
-      say(m, v.say || '', 'error');
+    var block = panel.a,
+      verdict = may(panel, 'share_advice');
+    if (!verdict.ok) {
+      say(panel, verdict.say || '', 'error');
       return Promise.resolve({ ok: false });
     }
-    var party = (a.party && a.party.name) || m.o.party || T('the other party');
-    if (how === 'copy') {
-      try {
-        if (root.navigator && root.navigator.clipboard) root.navigator.clipboard.writeText(a.share.text).catch(function () {});
-      } catch (_) {}
-    }
+    var party = (block.party && block.party.name) || panel.o.party || T('the other party');
+    if (how === 'copy') copyText(block.share.text);
     return CBAction.run(
       how === 'copy' ? btn : null,
       async function () {
-        var reply = await api('booksPayPatch', { params: { id: m.o.payment_id }, body: { advice_shared_at: true } });
+        var reply = await api('booksPayPatch', { params: { id: panel.o.payment_id }, body: { advice_shared_at: true } });
         return (reply && reply.advice) || { chit_id: null, state: 'shared', shared_at: new Date().toISOString() };
       },
       {
-        key: 'adv-share:' + m.o.payment_id,
-        out: out(m),
+        key: 'adv-share:' + panel.o.payment_id,
+        out: out(panel),
         failed: T(W.notSent),
         outcome: function (res) {
           settle(
-            m,
+            panel,
             { chit_id: res.chit_id || null, state: res.state || 'shared', shared_at: res.shared_at || null },
             how === 'copy' ? fill(T(W.copied), { party: party }) : T(W.shared),
             'ok'
@@ -334,62 +367,65 @@
         },
         onFail: function (words, e) {
           var d = e && e.data;
-          say(m, e && e.status >= 400 && e.status < 500 && d && d.message ? d.message : words, 'error');
+          say(panel, e && e.status >= 400 && e.status < 500 && d && d.message ? d.message : words, 'error');
         }
       }
     );
   }
 
   /* ── mount ── */
-  function mount(el, o) {
-    el = typeof el === 'string' ? doc.getElementById(el) : el;
-    if (!el || !o || !o.payment_id) return null;
-    addCss();
-    ensureEP();
-    if (el.__cbadvice) el.__cbadvice.api.destroy();
-    var m = { el: el, o: o, a: o.advice || null, err: null, failed: false, outWords: '', tone: '' };
-    function onClick(event) {
+  /** the one click listener of a mounted panel: Send, Copy, or a WhatsApp / e-mail link (the link opens; the patch rides beside it) */
+  function clickHandler(panel) {
+    return function onClick(event) {
       var node = event.target.closest ? event.target.closest('[data-ra-act]') : null;
-      if (!node || !el.contains(node)) return;
+      if (!node || !panel.el.contains(node)) return;
       var act = node.getAttribute('data-ra-act');
       if (act === 'send') {
         event.preventDefault();
         if (node.classList.contains('off')) {
-          say(m, may(m, 'send_advice').say || '', 'error');
+          say(panel, may(panel, 'send_advice').say || '', 'error');
           return;
         }
-        sendPress(m, node);
+        sendPress(panel, node);
         return;
       }
       if (act === 'copy') {
         event.preventDefault();
-        sharePress(m, node, 'copy');
+        sharePress(panel, node, 'copy');
         return;
       }
-      if (act === 'shared') {
-        sharePress(m, node, node.getAttribute('data-testid') === 'adv-wa' ? 'wa' : 'mail');
-      } /* the link opens; the patch rides beside it */
-    }
+      if (act === 'shared') sharePress(panel, node, node.getAttribute('data-testid') === 'adv-wa' ? 'wa' : 'mail');
+    };
+  }
+  /** mount the advice panel into `el` (an element or id); returns { refresh, destroy, state, el }, or null without a payment_id */
+  function mount(el, opts) {
+    el = typeof el === 'string' ? doc.getElementById(el) : el;
+    if (!el || !opts || !opts.payment_id) return null;
+    addCss();
+    ensureEP();
+    if (el.__cbadvice) el.__cbadvice.api.destroy();
+    var panel = { el: el, o: opts, a: opts.advice || null, err: null, failed: false, outWords: '', tone: '' };
+    var onClick = clickHandler(panel);
     el.addEventListener('click', onClick);
     var api_ = {
       el: el,
       refresh: function () {
-        return load(m);
+        return load(panel);
       },
       destroy: function () {
         el.removeEventListener('click', onClick);
         el.__cbadvice = null;
       },
       state: function () {
-        return { advice: m.a && m.a.advice, may: m.a && m.a.may, words: m.a && m.a.words, failed: m.failed };
+        return { advice: panel.a && panel.a.advice, may: panel.a && panel.a.may, words: panel.a && panel.a.words, failed: panel.failed };
       }
     };
-    m.api = api_;
-    el.__cbadvice = m;
-    if (m.a) paint(m);
+    panel.api = api_;
+    el.__cbadvice = panel;
+    if (panel.a) paint(panel);
     else {
-      paint(m);
-      load(m);
+      paint(panel);
+      load(panel);
     }
     return api_;
   }
