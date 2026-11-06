@@ -148,6 +148,7 @@ function crmConsentHTML(p, rec) {
     '</div>' +
     (why && cp && cp.migrated ? '<div class="why" data-testid="crm-consent-why">' + esc(why) + '</div>' : '') +
     '<div class="hint" id="crm_consent_law" data-testid="crm-consent-law"></div>' +
+    '<div class="hint" id="crm_consent_holders" data-testid="crm-consent-holders"></div>' +
     '<div id="crm_consent_hist" data-testid="crm-consent-hist"></div>' +
     '<div class="supacts" style="margin-top:8px">' +
     reqBtn +
@@ -164,6 +165,27 @@ function crmConsentHow(row, partyId) {
   if (row.noted_by && row.noted_by === partyId) return tx('By them, online');
   if (row.noted_by && me && row.noted_by === me) return tx('Noted by you');
   return row.noted_by ? tx('Noted by the shop') : tx('Noted');
+}
+/** who holds the data and where: the public facts list (GET /api/privacy/facts), printed as the server words it; a region it does not state says so */
+async function crmConsentHolders() {
+  var node = document.getElementById('crm_consent_holders');
+  if (!node || node.getAttribute('data-loaded')) return;
+  node.setAttribute('data-loaded', '1');
+  try {
+    var held = await api('crmPrivFacts');
+    var list = (held.processors || [])
+      .filter(function (item) {
+        return item.on;
+      })
+      .map(function (item) {
+        return item.name + ' (' + (item.region || tx('region not stated')) + ')';
+      });
+    node = document.getElementById('crm_consent_holders');
+    if (node) node.textContent = list.length ? tx('Your data is held by') + ': ' + list.join(', ') : '';
+  } catch (_) {
+    node = document.getElementById('crm_consent_holders');
+    if (node) node.removeAttribute('data-loaded');
+  }
 }
 /** on open: the history (what · when · how given · withdrawn) and the law's words — one GET, a CBList mount; could-not-read in words */
 async function crmConsentOpen(p) {
@@ -319,7 +341,9 @@ function crmConsentMount(p) {
   var node = document.querySelector('[data-testid="crm-sec-consent"]');
   if (!node) return;
   node.addEventListener('toggle', function () {
-    if (node.open) crmConsentOpen(p);
+    if (!node.open) return;
+    crmConsentOpen(p);
+    crmConsentHolders();
   });
   if (CRMR.keep.consentOpen) {
     CRMR.keep.consentOpen = false;
