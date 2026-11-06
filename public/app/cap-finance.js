@@ -17,7 +17,7 @@
  * CARD 16-finance/cb-finance */
 'use strict';
 
-var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null, unbilled: null };
+var FIN = { gen: 0, rows: [], cur: null, state: 'loading', err: null, api: null, queue: null, back: null, unbilled: null, fu: null };
 /* WALK2 W36 (FIN-2): the open orders no bill names yet — GET /api/work/facts?unbilled=1 (lib/work-rows unbilledOf, open-orders' ONE billed test).
    An order is a promise and never posts, so the ledger's "Nobody owes you" was true and still misled: the promise is said BESIDE the dues, never in them. */
 var FIN_EP = { workFacts: { m: 'GET', p: '/api/work/facts', ok: 'y' } }; /* the Home box's read (manifest rail.facts), with ?unbilled=1 */
@@ -47,6 +47,7 @@ async function finDuesRead() {
   );
   var dues = await api('booksDues', { query: { finance: '1' } });
   FIN.unbilled = await unbilledAsk;
+  FIN.fu = (dues && dues.follow_up_total) || null; /* FIN-72: the server's follow-up total; absent = the old look */
   return dues;
 }
 
@@ -159,6 +160,67 @@ function finNotSet(what) {
 function finEarlyHTML(party) {
   return party.early && party.early.valid ? '<div data-b="early" style="font-size:var(--fs-1);color:var(--grey)">' + esc(party.early.words || '') + '</div>' : '';
 }
+/* ── FIN-72 · the follow-up view: days past the due date. Every figure and every code is the server's (follow_up, follow_up_total); this file only paints them ── */
+/** the server's four late buckets (follow_up keys) in order, with the words the chips, the filter and the Age column share */
+var FIN_AGES = [
+  ['d0_30', '0-30 days'],
+  ['d31_60', '31-60 days'],
+  ['d61_90', '61-90 days'],
+  ['d90_plus', '90+ days']
+];
+/** the words of one follow-up code, or '' for a code this screen does not know */
+function finAgeWord(code) {
+  var match = FIN_AGES.filter(function (item) {
+    return item[0] === code;
+  })[0];
+  return match ? tx(match[1]) : '';
+}
+/** the Age column's tail for a row: the oldest late bucket, else "Not due yet" when it holds money, else ''; a row with no follow_up keeps the old Schedule III word */
+function finAgeTail(party) {
+  var follow = party.follow_up;
+  if (!follow) return tx(bkDuesAge(party));
+  return follow.worst ? finAgeWord(follow.worst) : Number(follow.not_due) ? tx('Not due yet') : '';
+}
+/** the head's chips: each late bucket's money, then "Not due yet" apart (the server's follow_up_total, in the books' money unit) — none when the server sent none */
+function finAgeChips() {
+  var total = FIN.fu;
+  if (!total) return [];
+  var chips = FIN_AGES.map(function (item) {
+    return { tid: 'fin-age-' + item[0], text: tx(item[1]) + ' ' + bkMoney(Number(total[item[0]] || 0), FIN.cur) };
+  });
+  chips.push({ tid: 'fin-age-not_due', text: tx('Not due yet') + ' ' + bkMoney(Number(total.not_due || 0), FIN.cur) });
+  return chips;
+}
+/** the note when a bill had no due date and the shop has no credit days (the server's terms code 'not_set'): it opens Terms, where days are set */
+function finTermsNotice() {
+  if (!FIN.fu || FIN.fu.terms !== 'not_set') return [];
+  return [
+    {
+      cls: 'warn',
+      tid: 'fin-set-terms',
+      text: tx('Set your credit days'),
+      onOpen: function () {
+        location.hash = '#terms';
+      }
+    }
+  ];
+}
+/** the "Show" filter: over limit, overdue, then each late bucket (a row's worst, the server's code) */
+function finFilterOptions() {
+  return [
+    { v: 'over', label: tx('Over limit') },
+    { v: 'late', label: tx('Overdue') }
+  ].concat(
+    FIN_AGES.map(function (item) {
+      return { v: item[0], label: tx(item[1]) };
+    })
+  );
+}
+function finFilterMatch(party, value) {
+  if (value === 'over') return !!party.over_limit;
+  if (finAgeWord(value)) return !!party.follow_up && party.follow_up.worst === value;
+  return Number(party.interest_minor) > 0 || (party.oldest_due && party.oldest_due < bkToday());
+}
 /* ── the columns: every figure is the server's ── */
 function finCols() {
   var c = function () {
@@ -197,13 +259,11 @@ function finCols() {
       w: 200,
       html: true,
       cell: function (p) {
-        var ag = bkDuesAge(p);
-        return p.oldest_due
-          ? '<span data-b="due">' +
-              esc(bkDate(p.oldest_due)) +
-              '</span>' +
-              (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '')
-          : dash;
+        var ag = finAgeTail(p);
+        var ageSpan = ag ? '<span data-b="age" title="' + esc(tx('Days past the due date')) + '" style="color:var(--grey)">' + (p.oldest_due ? '· ' : '') + esc(ag) + '</span>' : '';
+        // no overdue bill but money owed later still says so ("Not due yet"), never a bare dash (FIN-72, walk F15)
+        if (!p.oldest_due) return ageSpan || dash;
+        return '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span> ' + ageSpan;
       }
     },
     {
@@ -323,18 +383,21 @@ function finMount(frame) {
       var said = finUnbilledWords(FIN.unbilled);
       return {
         title: tx('Collections'),
-        notices: said
-          ? [
-              {
-                cls: 'warn',
-                tid: 'fin-unbilled',
-                text: said,
-                onOpen: function () {
-                  location.href = '/tasks.html';
+        chips: finAgeChips(),
+        notices: finTermsNotice().concat(
+          said
+            ? [
+                {
+                  cls: 'warn',
+                  tid: 'fin-unbilled',
+                  text: said,
+                  onOpen: function () {
+                    location.href = '/tasks.html';
+                  }
                 }
-              }
-            ]
-          : []
+              ]
+            : []
+        )
       };
     },
     state: function () {
@@ -415,13 +478,8 @@ function finMount(frame) {
         key: 'flag',
         label: tx('Show'),
         all: tx('Everyone'),
-        options: [
-          { v: 'over', label: tx('Over limit') },
-          { v: 'late', label: tx('Overdue') }
-        ],
-        match: function (p, v) {
-          return v === 'over' ? !!p.over_limit : Number(p.interest_minor) > 0 || (p.oldest_due && p.oldest_due < bkToday());
-        }
+        options: finFilterOptions(),
+        match: finFilterMatch
       }
     ],
     next: function (p) {

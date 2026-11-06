@@ -189,7 +189,7 @@ of file each thing is; this says what already does the job.
 | 14 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 13 | `save` | `app.html` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 13 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 14 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 13 | `confirm` | `lab-kit.js` | opts: |
 | 13 | `verdict` | `rail-thread.js` |  |
 | 13 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |
