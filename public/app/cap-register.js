@@ -17,6 +17,10 @@
  
  * CALLED BY public/app.html, public/app/cap-worklist.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/* OWNS the register screens: live, closure, impact; recording against a chit or a line
+ * CALLED BY app.html (ensureCap('register')), cap-worklist.js (rgQuickAdd)
+ * FLOW api raidaReport / reg* -> RG -> rgPaint; a refusal CAPABILITY_OFF is said in words (registerOffWords), any other failure through MSG.fail
+ * CARD 03-disputes-service-and-register/raida-register-and-report */
 var RG = {
   view: 'live',
   subjects: null,
@@ -113,6 +117,16 @@ function rgGo(v) {
 
 /* ── loading ────────────────────────────────────────────────────────────────────────────────────────────── */
 
+/** a failed register call in words: the off register says so, anything else goes through MSG.fail */
+function rgFail(verb, e) {
+  return registerOffWords(e) || MSG.fail(verb, e);
+}
+
+/** why a register read failed, in words: the off register says so, else the error's own words, else `fallback` */
+function rgWhy(e, fallback) {
+  return registerOffWords(e) || (e && e.message) || fallback;
+}
+
 /**
  * ⚠️ THE THREE VIEWS SHARE ONE LOAD. The report is every entry this entity holds; subjects are the registers
  * they hang off. Fetching per-view would make switching tabs a network round trip for data already in hand.
@@ -141,7 +155,7 @@ async function rgLoad(force) {
       }
     }
   } catch (e) {
-    RG.err = (e && e.message) || tx('Could not read the register just now.');
+    RG.err = rgWhy(e, tx('Could not read the register just now.'));
   }
   RG.busy = false;
 }
@@ -910,7 +924,7 @@ async function rgSave() {
       into = made && made.subject_id;
       RG.sel = into;
     } catch (e) {
-      toast(MSG.fail('open the register', e));
+      toast(rgFail('open the register', e));
       return;
     }
   }
@@ -954,7 +968,7 @@ async function rgSave() {
     toast(tx('Recorded.'));
     await openRegister(true);
   } catch (e) {
-    toast(MSG.fail('record it', e));
+    toast(rgFail('record it', e));
   }
 }
 
@@ -1015,7 +1029,7 @@ async function rgSaveOnChit() {
       RG.report = null;
     }
   } catch (e) {
-    toast(MSG.fail('record it', e));
+    toast(rgFail('record it', e));
   }
 }
 
@@ -1237,7 +1251,7 @@ async function rgEditSave(id) {
     toast(tx('Updated.'));
     await openRegister(true);
   } catch (e) {
-    toast(MSG.fail('update it', e));
+    toast(rgFail('update it', e));
   }
 }
 
@@ -1335,7 +1349,7 @@ async function rgCloseSave(id) {
     toast(tx('Ended.'));
     await openRegister(true);
   } catch (e) {
-    toast(MSG.fail('end it', e));
+    toast(rgFail('end it', e));
   }
 }
 
@@ -1505,7 +1519,7 @@ async function rgSubjectClose() {
   } catch (e) {
     /* ⚠️ The 409 NAMES what is outstanding. Showing "could not close" would throw that away. */
     var out = (e && e.outstanding) || null;
-    toast(out && out.length ? txf('{n} still need an ending.', { n: out.length }) : MSG.fail('close the register', e));
+    toast(out && out.length ? txf('{n} still need an ending.', { n: out.length }) : rgFail('close the register', e));
     await openRegister(true);
   }
 }
@@ -1537,7 +1551,7 @@ async function rgWalkLoad() {
   try {
     RG.walk = await api('regWalk', { params: { from: RG.walkFrom }, query: { backwards: RG.walkBack ? '1' : '0' } });
   } catch (e) {
-    RG.walk = { hops: [], err: (e && e.message) || 'failed' };
+    RG.walk = { hops: [], err: rgWhy(e, 'failed') };
   }
   rgPaint();
 }
