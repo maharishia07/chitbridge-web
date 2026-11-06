@@ -336,7 +336,7 @@ function fmtMoney(amount, code, empty) {
 function fmtMoneyWhole(amount, code, empty) {
   var text = fmtMoney(amount, code, empty);
   var whole = amount !== null && amount !== '' && isFinite(Number(amount)) && Number(amount) % 1 === 0;
-  return whole && typeof text === 'string' ? text.replace(/[.,]00(?=D*$)/, '') : text;
+  return whole && typeof text === 'string' ? text.replace(/[.,]00(?=\D*$)/, '') : text;
 }
 /* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
    their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */

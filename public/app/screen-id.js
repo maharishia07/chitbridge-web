@@ -218,7 +218,7 @@
         rows: [['EMB001', null, 'Catalogue embed', '/embed.html?bridge=<shop> · inside another site']]
       },
       { app: 'promo', name: 'Shop screen', page: '/promo.html', rows: [['PRM001', null, 'Shop screen', '/promo.html#key=… · the till › Shop screen']] },
-      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab']] },
+      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab', '/product-lab.html · Home › Labs · its controls: pl-unit-line, pl-unit-tick, pl-uqc, pl-review-uqc, pl-next-why']] },
       {
         app: 'offer-lab',
         name: 'Offer Lab',

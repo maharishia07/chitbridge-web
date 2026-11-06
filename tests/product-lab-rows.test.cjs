@@ -28,10 +28,14 @@ ok(R.nextWhy(3) === '', 'with something chosen there is nothing to explain');
 const src = fs.readFileSync(__dirname + '/../public/app/helpers.js', 'utf8');
 const at = src.indexOf('function fmtMoneyWhole(');
 const lifted = src.slice(at, src.indexOf('\n}\n', at) + 3);
-const ctx = vm.createContext({ fmtMoney: (a, c, e) => (a == null ? e : '₹' + Number(a).toFixed(2)) });
+/* the stub puts the code AFTER the figure for AED (as Intl does for many locales), the case a lookahead typo once missed */
+const ctx = vm.createContext({ fmtMoney: (a, c, e) => (a == null ? e : c === 'AED' ? Number(a).toFixed(2) + ' AED' : '₹' + Number(a).toFixed(2)) });
 vm.runInContext(lifted, ctx);
-const whole = (a, e) => vm.runInContext('fmtMoneyWhole(' + JSON.stringify(a) + ', "INR", ' + JSON.stringify(e) + ')', ctx);
+const whole = (a, e, c) => vm.runInContext('fmtMoneyWhole(' + JSON.stringify(a) + ', "' + (c || 'INR') + '", ' + JSON.stringify(e) + ')', ctx);
 ok(whole(40) === '₹40', 'a whole price drops its .00');
 ok(whole(12.5) === '₹12.50', 'a price with paise keeps them');
+ok(whole(40, '', 'AED') === '40 AED', 'a code AFTER the figure still drops its .00');
+ok(whole(12.5, '', 'AED') === '12.50 AED', 'a code after the figure keeps paise (no mixed column)');
+ok(whole(-40) === '₹-40' && whole(0) === '₹0', 'a negative whole and zero drop .00 too');
 ok(whole(null, '—') === '—', 'no price shows the empty mark');
 console.log(n + ' checks');
