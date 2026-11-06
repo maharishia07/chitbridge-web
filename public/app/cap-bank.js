@@ -56,6 +56,15 @@ const bkbStatus = {
   missing: ['blue', 'Not on the statement'],
   'told-only': ['blue', 'Told, not in the bank yet']
 };
+/* FIN-27 · THREE GROUPS, one count each: every engine state answers one question — is the pair in both, only in the bank, or only in your books?
+   (the states stay on each row's chip; the head and the filter speak the three) */
+const BKB_GROUPS = [
+  { key: 'books', label: 'Missing in your books', states: ['bank-only', 'check', 'suggested', 'told', 'asked'] },
+  { key: 'matched', label: 'Matched', states: ['settled', 'matched', 'accepted'] },
+  { key: 'bank', label: 'Missing in the bank', states: ['missing', 'told-only'] }
+];
+/** the group a row's state belongs to; a state nobody listed lands in "Missing in your books", where a person looks at it */
+const bkbGroupOf = (status) => (BKB_GROUPS.filter((item) => item.states.indexOf(status) >= 0)[0] || BKB_GROUPS[0]).key;
 const BKB_ORDER = ['bank-only', 'check', 'suggested', 'told', 'asked', 'settled', 'matched', 'accepted', 'missing', 'told-only'];
 /* ── ON THIS DEVICE: the marks (accept · note · file) of a bank account, and the rules learned — keyed by the shop, never uploaded ── */
 const bkbShop = () => {
@@ -382,6 +391,7 @@ function bankPaint() {
   const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
   res.innerHTML =
     warn +
+    bankFinish() +
     '<div class="tabs" role="tablist">' +
     [
       ['lines', 'Lines'],
@@ -406,11 +416,50 @@ function bankPaint() {
   else bankList();
 }
 
+/** FIN-27 · the finish line: Statement · Books · Difference as the engine's BRS states them (nothing is summed here), green at zero, and the BRS as a file */
+function bankFinish() {
+  const worked = BKB.brs;
+  if (!worked || !worked.ok)
+    return '<div class="pe-note" data-testid="bank-finish-ask">' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</div>';
+  const tied = worked.difference_minor === 0,
+    part = (label, text, testId) => '<span data-testid="' + testId + '"><b>' + bkbE(tx(label)) + '</b> ' + bkbE(text) + '</span>';
+  return (
+    '<div class="' +
+    (tied ? 'pe-ok' : 'pe-warn') +
+    '" data-testid="bank-finish" data-tied="' +
+    tied +
+    '" style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center">' +
+    part('Statement', bkDrCr(worked.bank_balance_minor), 'bank-finish-statement') +
+    part('Books', bkDrCr(worked.book_balance_minor), 'bank-finish-books') +
+    part('Difference', bkMoney(Math.abs(worked.difference_minor)), 'bank-finish-diff') +
+    '<button type="button" class="act" data-testid="bank-brs-download" onclick="bankBrsDownload()">' +
+    bkbE(tx('Download the statement')) +
+    '</button></div>'
+  );
+}
+const BKB_BRS_ITEMS = [
+  ['Cheques issued, not yet presented', 'issued_not_presented'],
+  ['Cheques deposited, not yet credited', 'deposited_not_credited'],
+  ['Credits by the bank not in your books', 'bank_credits_not_in_books'],
+  ['Debits by the bank not in your books', 'bank_debits_not_in_books']
+];
+/** the BRS as a CSV: its lines as the engine worked them, then each named reconciling item (amounts as plain decimals) */
+function bankBrsCsv(worked) {
+  const rows = [[tx('Bank reconciliation statement as at'), worked.asOf]].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor)]));
+  BKB_BRS_ITEMS.forEach(([title, key]) =>
+    (worked[key] || []).forEach((x) => rows.push([tx(title), x.date || '', x.name || '', x.ref || '', bkMinorText(x.amount_minor)]))
+  );
+  return rows.map((row) => row.map(bkCsvCell).join(',')).join('\r\n') + '\r\n';
+}
+function bankBrsDownload() {
+  if (BKB.brs && BKB.brs.ok) bkSaveCsv('bank-reconciliation-' + BKB.acct + '-' + BKB.brs.asOf + '.csv', bankBrsCsv(BKB.brs));
+}
+
 function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
   const own = peOwner(),
-    count = (st) => BKB.rows.filter((item) => item.status === st).length,
+    count = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length,
     need = (BKB.counts || {}).needs_you || 0;
   const may = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
@@ -428,7 +477,7 @@ function bankList() {
     id: (r) => r.id,
     rowTid: (r) => 'bank-row-' + r.id,
     head: () => ({
-      chips: BKB_ORDER.filter((item) => count(item)).map((item) => ({ tid: 'bank-count-' + item, text: tx(bkbStatus[item][1]) + ' ' + count(item) })),
+      chips: BKB_GROUPS.map((item) => ({ tid: 'bank-group-' + item.key, text: tx(item.label) + ' ' + count(item.key) })),
       notices
     }),
     columns: [
@@ -506,11 +555,11 @@ function bankList() {
     ],
     filters: [
       {
-        key: 'status',
-        label: tx('Status'),
-        all: tx('Every status'),
-        options: BKB_ORDER.map((item) => ({ v: item, label: tx(bkbStatus[item][1]) })),
-        match: (r, v) => r.status === v
+        key: 'group',
+        label: tx('Show'),
+        all: tx('All three'),
+        options: BKB_GROUPS.map((item) => ({ v: item.key, label: tx(item.label) })),
+        match: (r, v) => bkbGroupOf(r.status) === v
       }
     ],
     search: (r) => [r.narration, r.ref, r.date, bkbStatus[r.status][1], bkMoney(r.amount_minor), (r.party && r.party.name) || ''].join(' '),
