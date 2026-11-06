@@ -318,8 +318,8 @@ function bkTermVal(f, v, c) {
   }
   return String(v);
 }
-/** the change events the server lists (newest first): date · what · from → to */
-function bkTermEvents(list, c, tid) {
+/** the change events the server lists (newest first): date · what · from → to; `extra(x, index)` may add html to a row (FIN-46: the Terms tab's Undo) */
+function bkTermEvents(list, c, tid, extra) {
   if (!list || !list.length) return '<div class="hint" data-testid="' + tid + '-none">' + esc(tx('No changes yet')) + '</div>';
   return list
     .map(function (x, index) {
@@ -337,7 +337,9 @@ function bkTermEvents(list, c, tid) {
         esc(bkTermVal(f, x.old, c)) +
         ' → ' +
         esc(bkTermVal(f, x.new, c)) +
-        '</span></div>'
+        '</span>' +
+        (extra ? extra(x, index) : '') +
+        '</div>'
       );
     })
     .join('');
@@ -2118,17 +2120,32 @@ function bkDvGroupOf(date, mode) {
   }
   return { key: day, label: bkDvFmt(day, { weekday: 'short', day: '2-digit', month: 'short' }) };
 }
+/** one CSV cell: a cell that starts like a formula is quoted as text, a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
+function bkCsvCell(v) {
+  var text = String(v == null ? '' : v);
+  if (/^[=+\-@]/.test(text)) text = "'" + text;
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+/** hand a CSV text to the person as a file (BOM first so a spreadsheet reads the rupee sign) — the one saver */
+function bkSaveCsv(name, text) {
+  var blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
+  var node = document.createElement('a');
+  node.href = URL.createObjectURL(blob);
+  node.download = name;
+  document.body.appendChild(node);
+  node.click();
+  node.remove();
+  setTimeout(function () {
+    URL.revokeObjectURL(node.href);
+  }, 2000);
+}
 /** the shown rows as a CSV — client-side, one line per row; a cell that starts like a formula is quoted as text */
 function bkDvCsv(list, c) {
   var pow = Math.pow(10, bkDec(c)),
     amt = function (m) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
-  var cell = function (v) {
-    var text = String(v == null ? '' : v);
-    if (/^[=+\-@]/.test(text)) text = "'" + text;
-    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
-  };
+  var cell = bkCsvCell;
   var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'dr', 'cr', 'gist']];
   list.forEach(function (e) {
     var s = e.source || {},
@@ -2169,16 +2186,7 @@ function bkDvCsv(list, c) {
 function bkDvDownload(rows) {
   var d = BK.dv;
   if (!d) return;
-  var blob = new Blob(['﻿' + bkDvCsv(rows, d.r.currency)], { type: 'text/csv;charset=utf-8' });
-  var node = document.createElement('a');
-  node.href = URL.createObjectURL(blob);
-  node.download = 'day-book-' + d.range.from + '-' + d.range.to + '.csv';
-  document.body.appendChild(node);
-  node.click();
-  node.remove();
-  setTimeout(function () {
-    URL.revokeObjectURL(node.href);
-  }, 2000);
+  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency));
 }
 /** what the search looks in: the entry, its bill, its party (by name AND by number — "P0007"), its lines, and its amounts the way they are read */
 function bkDvText(e, c) {

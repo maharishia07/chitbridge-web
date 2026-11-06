@@ -255,7 +255,7 @@ function stand() {
       const lr = list.getBoundingClientRect();
       const floats = Array.from(document.querySelectorAll('body *')).filter((e) => { const cs = getComputedStyle(e); if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return false;
         if (e.closest('dialog,#toast,.side,header,.top,.toast')) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left < lr.right && r.right > lr.left && r.top < lr.bottom && r.bottom > lr.top; }).map((e) => e.tagName + '.' + e.className);
-      const words = Array.from(host.querySelectorAll('[data-testid="bank-next-s0"] span, .cbl-notice, [data-testid^="bank-count-"]')).map((e) => e.textContent.trim()).filter((t) => t.split(/\s+/).length > 22);
+      const words = Array.from(host.querySelectorAll('[data-testid="bank-next-s0"] span, .cbl-notice, [data-testid^="bank-group-"]')).map((e) => e.textContent.trim()).filter((t) => t.split(/\s+/).length > 22);
       return { dsw: document.documentElement.scrollWidth, iw: innerWidth, lsw: list.scrollWidth, lcw: list.clientWidth, clipped, floats, app: document.querySelectorAll('a[href*="app.html"]').length, words };
     });
     ok('B9', g.dsw <= g.iw && g.lsw <= g.lcw + 1, tag + ': nothing scrolls sideways (page ' + g.dsw + '/' + g.iw + ', list ' + g.lsw + '/' + g.lcw + ')');
