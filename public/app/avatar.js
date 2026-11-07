@@ -934,7 +934,7 @@
     paint();
   }
 
-  /** the session and the per-person nav memory go; every other tab hears cb_sess go */
+  /** the session and the per-person nav memory go; every other tab hears cb_sess go. → true when they went. A browser that refuses the delete is SAID (SEC-131), never swallowed: the person would be "signed out" and still signed in. */
   function forget() {
     try {
       root.localStorage.removeItem('cb_sess');
@@ -945,14 +945,53 @@
         .forEach(function (item) {
           root.localStorage.removeItem(item);
         });
-    } catch (_) {}
+      return true;
+    } catch (failure) {
+      var words = 'Could not clear the sign-in saved on this device. Close this window, or clear the site data, before you leave this device.';
+      console.error('avatar: sign-out could not clear the saved session', (failure && failure.message) || failure);
+      try {
+        if (typeof root.toast === 'function') root.toast(words, true);
+        else if (typeof root.alert === 'function') root.alert(words);
+      } catch (_) {}
+      return false;
+    }
+  }
+  /**
+   * ⭐ THE ONE SIGN-OUT (SEC-131). Every sign-out button reaches this: the server is told to revoke THIS session's token (POST /api/signin/logout,
+   * so a copied token stops working), then the device forgets it. The device forgets even when the call cannot be made (offline): the request is
+   * sent first (it needs the token) and not waited for. o.token is the session of THIS tab when the page knows it (a tab told "another shop opened
+   * here" must revoke its own token, not the one now in storage); otherwise the stored session. → Promise({ revoked, cleared }).
+   */
+  function endSession(asked) {
+    var sessionToken = asked && asked.token !== undefined ? asked.token : tokenOf(asked),
+      base = apiBaseOf(asked),
+      wire = Promise.resolve(false);
+    if (sessionToken && root.fetch) {
+      try {
+        wire = Promise.resolve(root.fetch(base + '/api/signin/logout', { method: 'POST', keepalive: true, headers: { Authorization: 'Bearer ' + sessionToken } })).then(
+          function (reply) {
+            return !!(reply && reply.ok);
+          },
+          function (failure) {
+            console.warn('avatar: sign-out could not reach the server — this device forgets the session anyway', (failure && failure.message) || failure);
+            return false;
+          }
+        );
+      } catch (failure) {
+        console.warn('avatar: sign-out could not start the server call', (failure && failure.message) || failure);
+      }
+    }
+    var cleared = forget();
+    return wire.then(function (revoked) {
+      return { revoked: revoked, cleared: cleared };
+    });
   }
   function signOut() {
     var o = (M && M.o) || {};
     openNow = false;
-    if (typeof o.onSignOut === 'function') return o.onSignOut();
-    /* the app's sign-out (logoutNow) for a page that has no app behind it */
-    forget();
+    if (typeof o.onSignOut === 'function') return o.onSignOut(); /* the app's: confirm, then logoutNow(), which ends the session here */
+    /* a page that has no app behind it */
+    endSession(o);
     root.location.href = o.signInHref || '/';
   }
 
@@ -1144,6 +1183,7 @@
     },
     close: close,
     signOut: signOut,
+    endSession: endSession,
     THEMES: THEMES,
     FONTS: FONTS,
     TEXT_SIZES: TEXT_SIZES,
