@@ -57,6 +57,8 @@ const BASE = {
   'public/app/minimums.js': HEADER('minimums') + 'function paintMinimums(rows) {\n  return rows.length;\n}\n',
   'public/app/worse.js': HEADER('worse') + 'function paintWorse(rows) {\n  return rows.length;\n}\n',
   'public/app/better.js': HEADER('better') + longFunction('getsShorter', 45),
+  'public/app/partial.js': HEADER('partial') + longFunction('stillLongA', 45) + longFunction('stillLongB', 45),
+  'public/app/stuck.js': HEADER('stuck') + longFunction('stuckLong', 45),
   'docs/notes.md': '# notes\n'
 };
 const HEAD = {
@@ -73,6 +75,8 @@ const HEAD = {
   'public/app/minimums.js': HEADER('minimums') + 'function paintMinimums(rows) {\n  return rows.length + 1;\n}\n',
   'public/app/worse.js': HEADER('worse') + 'function paintWorse(rows) {\n  return rows.length;\n}\n' + longFunction('nowLong', 45),
   'public/app/better.js': HEADER('better') + longFunction('getsShorter', 20),
+  'public/app/partial.js': HEADER('partial') + longFunction('stillLongA', 45) + longFunction('stillLongB', 20),
+  'public/app/stuck.js': HEADER('stuck') + longFunction('stuckLong', 45).replace('total += 3;', 'total += 30;'),
   'docs/notes.md': '# notes\n\nmore words\n'
 };
 const TRACE = { generated: '2026-10-15', repo: 'web', modules: {} };
@@ -147,6 +151,22 @@ const ratchet1 = JSON.parse(fs.readFileSync(path.join(tmp, 'readability.ratchet.
 ok(ratchet1['public/app/better.js'].score < ratchet0['public/app/better.js'].score, '--write lowered better.js (' + ratchet0['public/app/better.js'].score + ' → ' + ratchet1['public/app/better.js'].score + ')');
 ok(ratchet1['public/app/worse.js'].score === 0 && /refused public\/app\/worse\.js/.test(tightened.stdout), '--write refused to raise worse.js (lower only)');
 
+console.log('\n3b · the touch rule (MNT-30): warn mode today, fail with --strict or from the switch date');
+const touchOf = (file, level) => result.findings.filter((finding) => finding.rule === 'touch' && finding.text.includes(file) && finding.level === level);
+const touchRule = require(path.join(ROOT, 'tools/readability/touch.cjs'));
+ok(touchOf('partial.js', 'warn').length === 1 && /better but not at 0/.test(touchOf('partial.js', 'warn')[0].text), 'a touched file that got better but is not at 0 WARNS (partial.js)');
+ok(touchOf('stuck.js', 'warn').length === 1 && /not better/.test(touchOf('stuck.js', 'warn')[0].text), 'a touched file that is not better WARNS (stuck.js)');
+ok(touchOf('better.js', 'warn').length === 0 && touchOf('rename.js', 'warn').length === 0, 'a touched file at 0 raises no touch finding');
+ok(!result.findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail'), 'warn mode turns nothing red on its own');
+ok(/Touch rule \(report, warn mode until \d{4}-\d\d-\d\d\): touched files at 0 failures \d+\/\d+/.test(result.markdown), 'the --md checklist carries the Touch rule line');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--strict', '--today', '2026-10-16', '--json', out]);
+const strictResult = JSON.parse(fs.readFileSync(out, 'utf8'));
+ok(['partial.js', 'stuck.js'].every((file) => strictResult.findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail' && finding.text.includes(file))), '--strict makes the touch rule FAIL both files');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--today', touchRule.FAIL_FROM, '--json', out]);
+ok(JSON.parse(fs.readFileSync(out, 'utf8')).findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail'), 'from ' + touchRule.FAIL_FROM + ' the touch rule fails without a flag');
+ok(touchRule.verdictOf({ score: 3 }, { score: 0 }) === 'zero' && touchRule.verdictOf({ score: 3 }, { score: 2 }) === 'better' && touchRule.verdictOf({ score: 3 }, { score: 3 }) === 'same' && touchRule.verdictOf({ score: 2 }, { score: 3 }) === 'worse' && touchRule.verdictOf(null, { score: 1 }) === 'same', 'verdictOf: zero, better, same, worse, a new file not at 0');
+ok(touchRule.modeFor('2026-11-06') === 'warn' && touchRule.modeFor(touchRule.FAIL_FROM) === 'fail' && touchRule.modeFor('2026-11-06', 'fail') === 'fail', 'modeFor: warn before the date, fail from it, an explicit option wins');
+
 console.log('\n4 · a docs-only change judges nothing and passes');
 git(tmp, ['add', '-A']); git(tmp, ['commit', '-q', '-m', 'head']);
 fs.writeFileSync(path.join(tmp, 'docs/notes.md'), '# notes\n\nonly docs now\n');
@@ -167,6 +187,12 @@ ok(booksRow && booksRow.routesServed.some((route) => /POST \/api\/books\/payment
 ok(booksRow && Array.isArray(booksRow.minimums.missing) && booksRow.minimums.have.includes('one-success-path'), 'its §7 minimums are evidenced from its tests (one-success-path present)');
 const libRow = trace && trace.modules['lib/pay.js'];
 ok(libRow && libRow.layer === 'lib' && libRow.calledBy.some((file) => /routes\/books\.js/.test(file)), 'lib/pay.js is called by routes/books.js');
+/* MNT-49 part 2: a run that cannot finish is stopped and says so; the guard asks for ONE repo */
+const stopped = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no-build', '--stdout', '--max-seconds', '0.001'], { encoding: 'utf8' });
+ok(stopped.status === 124 && /stopped after 0\.001s \(--max-seconds\)/.test(stopped.stderr), 'trace.cjs past its --max-seconds is stopped: exit 124 and a sentence saying why');
+const bareFlag = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no-build', '--stdout', '--max-seconds'], { encoding: 'utf8', timeout: 60000, env: Object.assign({}, process.env, { CB_GRAPH_ROOTS: 'web=' + path.join(KG_FIXTURE, 'web') + ',api=' + path.join(KG_FIXTURE, 'api') + ',engines=' + path.join(KG_FIXTURE, 'engines') }) });
+ok(bareFlag.status !== 124, 'a bare --max-seconds means the default, not one second');
+ok(/\[TRACE_TOOL, '--repo', repo,/.test(fs.readFileSync(path.join(ROOT, 'tools/readability.cjs'), 'utf8')), 'the readability guard builds a missing trace for ONE repo (--repo), never the three-repo default');
 
 console.log('\n6 · the modules behind the tool, one unit each');
 const measure = require('../tools/readability/measure.cjs');
@@ -194,7 +220,7 @@ const parsed = diffReader.parseDiff('diff --git a/x.js b/x.js\n--- a/x.js\n+++ b
 ok(parsed.length === 3 && parsed[0].status === 'modified' && JSON.stringify(parsed[0].ranges) === '[[4,5],[12,12]]' && parsed[1].status === 'added' && parsed[2].status === 'deleted', 'changed: the diff grammar — modified ranges, an added file, a deleted file');
 const baselineReport = require('../tools/readability/baseline.cjs');
 const metrics = baselineReport.metrics('web', tmp, 5);
-ok(metrics.files === 13 && metrics.R3.over_80 === 4 && metrics.R1.cryptic_declarations >= 2, 'baseline: R1–R6 over the fixture (13 files, 4 functions over 80 lines)');
+ok(metrics.files === 15 && metrics.R3.over_80 === 4 && metrics.R1.cryptic_declarations >= 2, 'baseline: R1–R6 over the fixture (15 files, 4 functions over 80 lines)');
 
 console.log('\n7 · pr-checklist (tools/pr-checklist.cjs): the body must carry the five lines with numbers; bots and docs-only skip');
 const checklist = require('../tools/pr-checklist.cjs');
@@ -203,6 +229,13 @@ ok(checklist.problems(filledBody).length === 0, 'the tool\'s own --md output, wi
 ok(checklist.problems(fs.readFileSync(path.join(ROOT, '.github/pull_request_template.md'), 'utf8')).length === 4, 'the untouched template fails on its four placeholder lines');
 ok(checklist.problems('no checklist at all').length === 5, 'a body with no checklist is missing all five lines');
 ok(checklist.skipReason('dependabot[bot]', ['package.json']) && checklist.skipReason('me', ['docs/a.md', 'README.md']) && !checklist.skipReason('me', ['docs/a.md', 'lib/x.js']), 'skips: a dependency bot · docs-only; a code change never skips');
+/* MNT-16: the reader judges the §6 block only; an earlier mention of "Pass 3" is prose, not the line */
+const prose = 'Pass 3 is why this PR exists (the header work).\nPass 0 stays as before.\n\n';
+ok(checklist.problems(prose + filledBody).length === 0, 'MNT-16: a body that mentions Pass 3 / Pass 0 before the checklist is judged on the §6 block alone');
+ok(checklist.problems(filledBody.replace(/(Pass 0[^\n]*?) → /, '$1 - ')).length === 0, 'MNT-16: a Pass 0 line written without the arrow still counts as filled');
+const unfilledBlock = filledBody.replace(/(Pass 1[^\n]*)/, '- [x] Pass 1 · shrink: lines `<before → after>`');
+ok(checklist.problems(prose + unfilledBlock + '\n\n## Notes\nlines 3 → 2 · complexity 4 → 3').length === 1, 'MNT-16: strict — a number missing in the block is not rescued by numbers written after it');
+ok(checklist.problems(prose + '## §6 checklist\n- [ ] Pass 0 · seams: `x` → y\n').length === 4, 'MNT-16: a block that omits Pass 1, 2, 3 and Guard green fails on those four');
 
 console.log('\n8 · an EXACT move keeps its score (Athi R-moved (a)): moved code is not new code');
 const moveRules = require('../tools/readability/moves.cjs');

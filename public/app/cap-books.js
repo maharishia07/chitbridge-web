@@ -60,6 +60,7 @@ if (typeof EP !== 'undefined') {
 function bkOnce(key, btn, fn) {
   return CBAction.once(key, btn, fn);
 }
+/* a fresh random client_ref for one money-recording form (web-<time>-<random>) */
 function bkRef() {
   var r = '';
   try {
@@ -76,6 +77,11 @@ function bkRef() {
   return 'web-' + Date.now().toString(36) + '-' + r;
 }
 
+/* a failure this screen survives: recorded through the page's cbQuiet when it has one, and the fallback handed back so the catch stays one line */
+function bkQuiet(where, failure, fallback) {
+  if (typeof cbQuiet === 'function') cbQuiet('books:' + where, failure);
+  return fallback;
+}
 /* the tables' look, once, the way cap-categories does it (cbcatCss) */
 function bkCss() {
   if (typeof document === 'undefined' || document.getElementById('bk_css')) return;
@@ -174,8 +180,8 @@ function bkCur(c) {
 function bkDec(c) {
   try {
     return CBMoney.decimals(bkCur(c));
-  } catch (_) {
-    return 2;
+  } catch (failure) {
+    return bkQuiet('decimals', failure, 2);
   }
 }
 function bkMoney(minor, c) {
@@ -215,6 +221,7 @@ function bkMinorText(minor, c) {
   text = text.padStart(d + 1, '0');
   return (n < 0 ? '-' : '') + text.slice(0, -d) + '.' + text.slice(-d);
 }
+/* keep a money input to digits and one decimal point, no more places than its currency allows */
 function bkMoneyClamp(el) {
   var d = bkDec(el.getAttribute('data-cur')),
     text = String(el.value || '').replace(/[^0-9.]/g, ''),
@@ -237,6 +244,7 @@ function bkSymbol(code) {
     return code || '';
   }
 }
+/* the HTML of one money input: currency symbol, amount text, the currency kept on the field */
 function bkMoneyInput(o) {
   var c = bkCur(o.cur),
     tid = o.tid || o.id,
@@ -303,6 +311,7 @@ function bkToday() {
 }
 /* ── CB Finance · Terms (F2): the words for a term and for a change to one — read by the Finance Terms tab AND the CRM record (one wording, two screens) ── */
 var BK_TERM_FIELD = { credit_days: 'Credit days', credit_limit_minor: 'Credit limit', interest: 'Interest', early: 'Early pay', allowed: 'Over limit allowed' };
+/* the words for one term value (credit limit as money, interest as its rate text, the rest as typed) */
 function bkTermVal(f, v, c) {
   if (v == null || v === '') return tx('not set');
   if (f === 'credit_limit_minor' || f === 'allowed') return bkMoney(Number(v), c);
@@ -382,16 +391,16 @@ async function booksDuesLoad(force) {
   }
   try {
     if (typeof paintCustList === 'function' && document.getElementById('cu_rows')) paintCustList();
-  } catch (_) {}
+  } catch (failure) { bkQuiet('repaint-customers', failure); }
   try {
     if (typeof paintSupList === 'function' && document.getElementById('sup_rows')) paintSupList();
-  } catch (_) {}
+  } catch (failure) { bkQuiet('repaint-suppliers', failure); }
   /* the open party block was painted before the balances arrived — repaint that pane (never a modal) */
   try {
     if (document.querySelector('#detailpane [data-testid^="party-books-"]') && typeof paintCustDetail === 'function' && UI.nav === 'customers')
       paintCustDetail();
     if (document.querySelector('#supslide [data-testid^="party-books-"]') && typeof paintSupSlide === 'function') paintSupSlide();
-  } catch (_) {}
+  } catch (failure) { bkQuiet('repaint-open-party', failure); }
   return BK.dues;
 }
 /** the row chip: what this party owes you (or you them), and the oldest due date */
@@ -427,24 +436,24 @@ function partyDueChipHTML(partyId, opts) {
 function partyBooksHTML(kind, partyId, row, moneyOnly) {
   /* moneyOnly (the CRM record, C5/C19): the section already has its title, the head has Edit and Pay/Receive - this block is the money and the statement */
   if (!partyId) return '';
-  var d = (BK.dues && BK.dues[partyId]) || {};
-  var r = row || {};
-  var kv = function (l, v) {
+  var dues = (BK.dues && BK.dues[partyId]) || {};
+  var partyRow = row || {};
+  var labelValue = function (label, value) {
     return (
       '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:112px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">' +
-      l +
+      label +
       '</b><span style="font-weight:600;flex:1">' +
-      (v == null || v === '' ? '—' : v) +
+      (value == null || value === '' ? '—' : value) +
       '</span></div>'
     );
   };
-  var tax = (r.tax_ids || [])
+  var taxText = (partyRow.tax_ids || [])
     .map(function (item) {
       return esc(item.scheme) + ' <span class="mono">' + esc(item.value) + '</span>';
     })
     .join(' · ');
-  var b = Number(d.balance_minor || 0);
-  var act = kind === 'supplier' ? tx('Pay') : tx('Receive');
+  var balance = Number(dues.balance_minor || 0);
+  var actionWord = kind === 'supplier' ? tx('Pay') : tx('Receive');
   setTimeout(function () {
     partyStatementLoad(partyId);
   }, 0);
@@ -455,17 +464,17 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
     '" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">' +
     (moneyOnly
       ? ''
-      : kv(tx('Party no'), '<span class="mono" data-testid="party-no">' + esc(d.party_no || r.party_no || '—') + '</span>') +
-        kv(tx('Legal name'), esc(r.legal_name || '')) +
-        kv(tx('Nickname'), esc(r.nickname || '')) +
-        kv(tx('Tax ids'), tax)) +
-    kv(
+      : labelValue(tx('Party no'), '<span class="mono" data-testid="party-no">' + esc(dues.party_no || partyRow.party_no || '—') + '</span>') +
+        labelValue(tx('Legal name'), esc(partyRow.legal_name || '')) +
+        labelValue(tx('Nickname'), esc(partyRow.nickname || '')) +
+        labelValue(tx('Tax ids'), taxText)) +
+    labelValue(
       tx('Credit'),
-      (r.credit_days != null ? txf('{n} days', { n: r.credit_days }) : '—') +
-        (r.credit_limit_minor != null ? ' · ' + tx('limit') + ' ' + esc(bkMoney(r.credit_limit_minor)) : '')
+      (partyRow.credit_days != null ? txf('{n} days', { n: partyRow.credit_days }) : '—') +
+        (partyRow.credit_limit_minor != null ? ' · ' + tx('limit') + ' ' + esc(bkMoney(partyRow.credit_limit_minor)) : '')
     ) +
-    kv(tx('Balance'), '<b data-testid="party-balance"' + (b ? '' : ' style="color:var(--grey);font-weight:400"') + '>' + esc(bkOwes(b, BK.duesCur)) + '</b>') +
-    kv(tx('Oldest due'), d.oldest_due ? esc(bkDate(d.oldest_due)) : '—') +
+    labelValue(tx('Balance'), '<b data-testid="party-balance"' + (balance ? '' : ' style="color:var(--grey);font-weight:400"') + '>' + esc(bkOwes(balance, BK.duesCur)) + '</b>') +
+    labelValue(tx('Oldest due'), dues.oldest_due ? esc(bkDate(dues.oldest_due)) : '—') +
     (moneyOnly
       ? ''
       : '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">' +
@@ -481,7 +490,7 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
         "','" +
         esc(partyId) +
         '\')">' +
-        act +
+        actionWord +
         '</button></div>') +
     '<div id="bk_stmt_' +
     esc(partyId) +
@@ -491,6 +500,7 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
     '</div>'
   );
 }
+/* fetch a party's statement once and paint it into its box (a second call finds data-done and leaves) */
 async function partyStatementLoad(partyId) {
   var box = document.getElementById('bk_stmt_' + partyId);
   if (!box || box.getAttribute('data-done') === '1') return;
@@ -528,6 +538,7 @@ function bkDayBillsLink(s, tid) {
     '<a href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>'
   );
 }
+/* open the popover listing the bills one day-book entry settled */
 function bkDayBillsOpen(tid) {
   var bills = (BK.dayBills || {})[tid] || [];
   /* M132b: the shared popover look (the cb-design tokens: card ground, line, radius, readable size) - the sheet host (accounts.html) carries no .mhd/.mbody/.mfoot of its own */
@@ -598,6 +609,7 @@ function bkHowPart(text, tid, cur) {
 function bkRungPart(s) {
   return s && s.by ? esc(tx('rung by')) + ' ' + esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '') : '';
 }
+/* the words that say where an entry came from: the kind word once, then its number and who made it */
 function bkSourceParts(s, tid, cur, lead) {
   if (!s) return [];
   var out = [];
@@ -633,8 +645,8 @@ function bkEntryHead(e, tid, cur, party) {
 function bkTime(ts) {
   try {
     return CBLocale.time(ts) || '';
-  } catch (_) {
-    return '';
+  } catch (failure) {
+    return bkQuiet('time', failure, '');
   }
 }
 /**
@@ -674,6 +686,7 @@ function bkRecordedHTML(e, tid) {
 function bkCanReverse(l) {
   return !!(l && l.entry_id && !l.reversed_by && !l.reverses_entry_id && l.event_type !== 'reversal');
 }
+/* reverse one statement line through the shared reverse dialog, then show the reversal on that line */
 function bkReverseLine(l, partyId) {
   if (!bkCanReverse(l) || typeof enReverse !== 'function') return;
   enReverse(l.entry_id, l.entry_no || l.ref, false, function (r, why) {
@@ -774,6 +787,7 @@ function bkAdviceFlip(pid, res, cell) {
     node.insertAdjacentText('beforebegin', ' ');
   }
 }
+/* the statement table of one party: lines with their running balance, reverse links and chips */
 function statementHTML(r, partyId) {
   var c = r && r.currency,
     pid = partyId || (r && r.party_id) || '';
@@ -901,6 +915,7 @@ function partyTaxAdd(kind, partyId) {
   node.innerHTML = partyTaxRowHTML(kind, partyId, {}, n);
   box.appendChild(node.firstChild);
 }
+/* open the party edit form (name, contact, tax ids) for a customer or supplier */
 function partyEditOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
   var taxes = r.tax_ids && r.tax_ids.length ? r.tax_ids : [{}];
@@ -1035,6 +1050,7 @@ function partyDupCheck(kind, partyId) {
   });
   box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: hs }) : '';
 }
+/* save the party edit form: send only what changed, then repaint the party record */
 async function partyEditSave(kind, partyId) {
   var node = function (id) {
     return String((document.getElementById(id) || {}).value || '').trim();
@@ -1240,6 +1256,7 @@ function payDiscHTML(f) {
     '<span id="pay_disc_out" data-testid="pay_disc_out" class="hint"></span></div>'
   );
 }
+/* record the early-pay discount the server offered, as its ready entry body */
 function payDiscRecord(btn) {
   var f = PAY && PAY.offer;
   if (!f || !f.record || !f.record.ok) return;
@@ -1709,6 +1726,7 @@ function payOutcomePaint(r) {
   booksAfterPay(r);
   if (PAY.after) PAY.after(); /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
+/* after a payment is recorded: drop the stale statement, repaint the balance and chip from the answer */
 function booksAfterPay(r) {
   var pid = PAY && PAY.partyId;
   if (PAY) {
@@ -1721,16 +1739,22 @@ function booksAfterPay(r) {
       BK.dues = BK.dues || {};
       BK.dues[pid] = Object.assign({}, BK.dues[pid], { balance_minor: o.balance_minor });
     }
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('pay-balance', failure);
+  }
   try {
     if (pid && typeof crmLedgerRepaint === 'function') crmLedgerRepaint(pid);
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('pay-crm-repaint', failure);
+  }
   booksDuesLoad(true).then(function () {
     try {
       if (PAY && PAY.kind === 'supplier') {
         if (typeof paintSupSlide === 'function') paintSupSlide();
       } else if (typeof paintCustDetail === 'function') paintCustDetail();
-    } catch (_) {}
+    } catch (failure) {
+      bkQuiet('pay-repaint', failure);
+    }
   });
 }
 
@@ -1749,6 +1773,7 @@ var BK_TABS = [
   ['opening', '📥', 'Opening balances'],
   ['accounts', '🗂️', 'Shop ledgers']
 ];
+/* the Ledger screen: the tab list on the left, the open tab's body on the right */
 function ledgerScreen() {
   var list =
     '<div class="list"><div class="lh"><div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📒 ' +
@@ -1774,7 +1799,9 @@ function ledgerScreen() {
     '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   setTimeout(function () {
     bkTab(BK.tab, true);
-    if (BK.tab !== 'waiting' && BK.tab !== 'cheques') bkHealthLoad().catch(function () {});
+    if (BK.tab !== 'waiting' && BK.tab !== 'cheques') bkHealthLoad().catch(function (failure) {
+      bkQuiet('health-load', failure);
+    });
   }, 0); /* the Waiting count, on the list itself */
   return (
     '<div class="panel" id="panel" style="--lw:' +
@@ -1798,6 +1825,7 @@ function bkBack() {
 function bkCloseSheetOnMove(next) {
   if (next !== BK.tab && typeof CBSheet !== 'undefined') CBSheet.close();
 }
+/* open one Ledger tab (day book, ledgers, trial balance and so on), telling a host page which tab opened */
 function bkTab(t, silent) {
   bkCloseSheetOnMove(t);
   BK.tab = t;
@@ -1844,6 +1872,7 @@ function bkRange(id) {
     to = (document.getElementById(id + '_to') || {}).value;
   return { from: from || bkFyFrom(), to: to || bkToday() };
 }
+/* the from / to date pair and its Apply button for one report */
 function bkRangeHTML(id, again) {
   var r = bkRange(id);
   return (
@@ -1862,6 +1891,7 @@ function bkRangeHTML(id, again) {
     '</button></div>'
   );
 }
+/* a report table from its head cells, row HTML and optional foot */
 function bkTable(head, rows, foot) {
   return (
     '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' +
@@ -2022,6 +2052,7 @@ function bkWaitN(r) {
  * read the SAME shown list (the unit's); nothing here adds to a figure the server did not send.
  */
 var BK_KINDS = ['Sales', 'Receipts', 'Purchases', 'Payments', 'Expenses', 'Returns', 'Other'];
+/* which day-book group an entry belongs to (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
 function bkDvKind(e) {
   var t = String((e && e.event_type) || ''),
     k = String((e && e.source && e.source.kind) || '');
@@ -2102,21 +2133,21 @@ function bkDvFmt(day, o) {
 }
 /** Day = the date · Week = Mon–Sun with the ISO week number · Month = its name */
 function bkDvGroupOf(date, mode) {
-  var day = String(date || '').slice(0, 10),
-    t = new Date(day + 'T00:00:00Z');
-  if (mode === 'month') return { key: day.slice(0, 7), label: bkDvFmt(day, { month: 'long', year: 'numeric' }) };
+  var dayKey = String(date || '').slice(0, 10),
+    dayStart = new Date(dayKey + 'T00:00:00Z');
+  if (mode === 'month') return { key: dayKey.slice(0, 7), label: bkDvFmt(dayKey, { month: 'long', year: 'numeric' }) };
   if (mode === 'week') {
-    var mon = new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5),
-      thu = new Date(mon.getTime() + 3 * 864e5),
-      sun = new Date(mon.getTime() + 6 * 864e5);
-    var wk = Math.ceil(((thu - Date.UTC(thu.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7),
-      iso = function (x) {
+    var monday = new Date(dayStart.getTime() - ((dayStart.getUTCDay() + 6) % 7) * 864e5),
+      thursday = new Date(monday.getTime() + 3 * 864e5),
+      sunday = new Date(monday.getTime() + 6 * 864e5);
+    var isoWeek = Math.ceil(((thursday - Date.UTC(thursday.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7),
+      isoDate = function (x) {
         return x.toISOString().slice(0, 10);
       },
-      o = { day: '2-digit', month: 'short' };
-    return { key: iso(mon), label: txf('Week {n}', { n: wk }) + ' · ' + bkDvFmt(iso(mon), o) + ' – ' + bkDvFmt(iso(sun), o) };
+      dateFormat = { day: '2-digit', month: 'short' };
+    return { key: isoDate(monday), label: txf('Week {n}', { n: isoWeek }) + ' · ' + bkDvFmt(isoDate(monday), dateFormat) + ' – ' + bkDvFmt(isoDate(sunday), dateFormat) };
   }
-  return { key: day, label: bkDvFmt(day, { weekday: 'short', day: '2-digit', month: 'short' }) };
+  return { key: dayKey, label: bkDvFmt(dayKey, { weekday: 'short', day: '2-digit', month: 'short' }) };
 }
 /** the shown rows as a CSV — client-side, one line per row; a cell that starts like a formula is quoted as text */
 function bkDvCsv(list, c) {
@@ -2405,6 +2436,7 @@ function bkDvGistText(e, c) {
     })
     .join(' · ');
 }
+/* the Details cell of one day-book entry: kind, party, the entry's lines with their rate */
 function bkDvNext(e, c, lines, noParty, mine) {
   var no = esc(e.entry_no);
   var gist = bkDvGistHTML(e, c);
@@ -2489,26 +2521,26 @@ function bkNoCloseNotice(strip, stripDay) {
 }
 /** the head the Day book declares: its period, today's strip (sales per counter and by tender) as chips, and what waits on you as notices that open their fix */
 function bkDvHead() {
-  var d = BK.dv,
-    r = d.r,
-    c = r && r.currency,
-    q = d.range,
-    n = d.todo,
-    p = BK.dbp || bkDbPeriod('fy');
-  var t = bkDaySales((r && r.entries) || [], q.to),
+  var view = BK.dv,
+    reply = view.r,
+    currency = reply && reply.currency,
+    dayRange = view.range,
+    n = view.todo,
+    period = BK.dbp || bkDbPeriod('fy');
+  var sales = bkDaySales((reply && reply.entries) || [], dayRange.to),
     chips = [],
     notices = [];
-  t.counters.forEach(function (x) {
+  sales.counters.forEach(function (x) {
     chips.push({
       tid: 'strip-counter-' + x.counter,
-      text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txn('{count} bill', '{count} bills', x.bills)
+      text: x.counter + ' ' + bkMoney(x.amount_minor, currency) + ' · ' + txn('{count} bill', '{count} bills', x.bills)
     });
   });
-  t.tenders.forEach(function (x) {
-    chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, c) });
+  sales.tenders.forEach(function (x) {
+    chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, currency) });
   });
   /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
-  if (!t.day_closed) notices.push(bkNoCloseNotice(t, q.to));
+  if (!sales.day_closed) notices.push(bkNoCloseNotice(sales, dayRange.to));
   if (n.accept)
     notices.push({
       cls: 'warn',
@@ -2559,9 +2591,9 @@ function bkDvHead() {
   if (!n.accept && !n.supplier && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return {
     period: {
-      label: bkDbPeriodLabel(q, p.preset),
-      value: p.preset,
-      custom: { from: q.from, to: q.to },
+      label: bkDbPeriodLabel(dayRange, period.preset),
+      value: period.preset,
+      custom: { from: dayRange.from, to: dayRange.to },
       presets: [
         ['today', tx('Today')],
         ['month', tx('This month')],
@@ -2753,6 +2785,7 @@ function bkDvMount(el) {
     empty: { title: tx('Nothing in these dates') }
   });
 }
+/* the Day book tab: one date range of entries, the strip and the to-do read together */
 async function bkDaybook(body) {
   var q = bkRange('db');
   try {
@@ -2921,13 +2954,16 @@ function bkLtPrefKey() {
   var s = (typeof SESSION !== 'undefined' && SESSION) || {};
   return 'cb_lt.' + (s.entityId || s.entity || '') + '.' + (s.bridgeId || s.name || '');
 }
+/* read the ledger tree's saved preferences once from localStorage */
 function bkLtPrefsRead() {
   if (BK.lt.prefs) return;
   BK.lt.prefs = true;
   var v = null;
   try {
     v = JSON.parse(localStorage.getItem(bkLtPrefKey()) || 'null');
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('ledger-prefs-read', failure);
+  }
   v = v || {};
   if (v.open && typeof v.open === 'object') BK.lt.open = v.open;
   if (typeof v.w === 'number') BK.lt.w = Math.max(240, Math.min(520, v.w));
@@ -2941,7 +2977,9 @@ function bkLtPrefsSave() {
       bkLtPrefKey(),
       JSON.stringify({ open: BK.lt.open, w: BK.lt.w, folded: BK.lt.folded, last: s ? { code: s.code, party: s.party || null } : BK.lt.last || null })
     );
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('ledger-prefs-write', failure);
+  }
 }
 function bkLtFolded() {
   if (BK.lt.over) return false;
@@ -3037,6 +3075,7 @@ function bkLtMark(s) {
   if (i < 0) return esc(s);
   return esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + text.length)) + '</mark>' + esc(s.slice(i + text.length));
 }
+/* the HTML of the ledger tree: bands, ledgers and parties with their balances */
 function bkLtTreeHTML() {
   var sel = BK.lt.sel,
     narrow = bkLtNarrow(),
@@ -3044,6 +3083,7 @@ function bkLtTreeHTML() {
     c = BK.lt.bal && BK.lt.bal.cur,
     widest = 6;
   var selId = sel ? (sel.party ? 'P:' + sel.party : 'L:' + sel.code) : '';
+  /* the balance text on the right of one tree row */
   function amt(n) {
     if (n.t === 'band' || n.t === 'grp') return '<span class="am">' + n.count + '</span>';
     /* the open ledger shows no figure here: the title row beside it already does (on a phone's first page there is no title row, so it does) */
@@ -3065,6 +3105,7 @@ function bkLtTreeHTML() {
     if (m) widest = Math.max(widest, m[1].length);
     return b;
   }
+  /* write one tree node and, when it is open, its children */
   function walk(n, lvl) {
     var kids = n.t === 'ledger' ? n.parties.length : (n.kids || []).length,
       open = kids ? bkLtOpenNow(n.id, n.t === 'ledger' ? false : true) : false;
@@ -3114,6 +3155,7 @@ function bkLtTreeHTML() {
       '</div>'
   );
 }
+/* repaint the ledger tree and put the keyboard focus back where it was */
 function bkLtTreePaint(focusId) {
   var node = document.getElementById('lt_tree');
   if (!node) return;
@@ -3126,6 +3168,7 @@ function bkLtTreePaint(focusId) {
   if (f) f.tabIndex = 0;
   if (focusId && f) f.focus();
 }
+/* move the keyboard focus to one tree row (roving tabindex) */
 function bkLtFocus(id) {
   var node = document.getElementById('lt_tree');
   if (!node) return;
@@ -3151,6 +3194,7 @@ function bkLtPaneHTML() {
   if (!sel) return emptyState('📒', tx('Pick a ledger'), esc(tx('Open a group on the left, then a ledger, to see its entries.')));
   return '<div id="lg_out" data-testid="lg_out"></div>';
 }
+/* leave the open ledger and go back to the tree */
 function bkLtBack() {
   var s = BK.lt.sel;
   if (s) BK.lt.last = { code: s.code, party: s.party || null };
@@ -3166,6 +3210,7 @@ function bkLtBack() {
   if (node) node.innerHTML = bkLtPaneHTML();
   bkLtTreePaint(s ? (s.party ? 'P:' + s.party : 'L:' + s.code) : null);
 }
+/* open a ledger or a party in the right pane and load its lines */
 function bkLtOpen(sel) {
   if (typeof BK.onLedger === 'function')
     BK.onLedger(sel); /* a host page takes its own header away (accounts.html) BEFORE the title row takes the shop · Home · avatar */
@@ -3198,6 +3243,7 @@ function bkLtOpen(sel) {
   bkKuralFor();
   bkLtLoad();
 }
+/* find a ledger by its account code in the tree model and open it */
 function bkLtAcct(code) {
   var f = null;
   (BK.lt.model || []).forEach(function (item) {
@@ -3242,6 +3288,7 @@ function bkKuralFor() {
   else if (/^3/.test(code)) route = 'period-close'; /* Your capital → 385 */
   CBKural.set(route);
 }
+/* fetch the open ledger's lines from the server and paint them */
 async function bkLtLoad() {
   var sel = BK.lt.sel;
   if (!sel) return;
@@ -3303,6 +3350,7 @@ function bkLgDetails(l) {
   } else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (text ? esc(text) + ' ' : '')) + bkBillPart(s, tid);
   return out + bkRecordedHTML(l, tid) + (l.ref && !s.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + bkLineChips(l, 'stmt-' + l._ix);
 }
+/* the column list of the open ledger's grid (control account or one party) */
 function bkLgCols(c, kind) {
   var dash = bkLgDash(),
     ctrl = kind === 'control';
@@ -3331,9 +3379,9 @@ function bkLgCols(c, kind) {
       sort: 'party',
       w: 250,
       html: true,
-      cell: function (l) {
-        var n = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : l.party_name || '';
-        return n ? '<b class="lg-party">' + esc(n) + '</b>' : '<span class="lg-noparty" style="color:var(--grey)">' + esc(tx(BK_NO_PARTY)) + '</span>';
+      cell: function (line) {
+        var partyName = line.party_id ? bkPartyLabel(line.party_id, line.party_name) : line.party_name || '';
+        return partyName ? '<b class="lg-party">' + esc(partyName) + '</b>' : '<span class="lg-noparty" style="color:var(--grey)">' + esc(tx(BK_NO_PARTY)) + '</span>';
       }
     });
   cols.push(
@@ -3388,9 +3436,9 @@ function bkLgCols(c, kind) {
       prio: 7,
       w: 120,
       html: true,
-      cell: function (l) {
-        var s = l.source || {};
-        return s.counter ? esc(counterWord(s.counter)) : dash;
+      cell: function (line) {
+        var source = line.source || {};
+        return source.counter ? esc(counterWord(source.counter)) : dash;
       }
     },
     {
@@ -3399,9 +3447,9 @@ function bkLgCols(c, kind) {
       prio: 8,
       w: 130,
       html: true,
-      cell: function (l) {
-        var s = l.source || {};
-        return s.by ? esc(s.by) + (bkIsShopName(s.by) ? ' <span style="color:var(--grey)">' + esc(tx('(owner)')) + '</span>' : '') : dash;
+      cell: function (line) {
+        var source = line.source || {};
+        return source.by ? esc(source.by) + (bkIsShopName(source.by) ? ' <span style="color:var(--grey)">' + esc(tx('(owner)')) + '</span>' : '') : dash;
       }
     }
   );
@@ -3457,62 +3505,64 @@ function bkLgPeriodHead() {
  * and for a control account "✓ parties agree". Every figure is the server's. The parties check reads the API's `parties_check` when it sends one; until it does the page makes the
  * one comparison it always made — the parties' balances (the one /dues read) against the ledger's closing (listed in the PR as an API field).
  */
-function bkLgFigs(r, c, sel) {
-  var op = Number(r.opening_minor || 0),
-    cl = Number(r.closing_minor || 0),
-    same = op === cl,
-    parts = same ? [tx('Balance') + ' ' + bkDrCr(cl, c)] : [tx('Opening') + ' ' + bkDrCr(op, c), tx('Closing') + ' ' + bkDrCr(cl, c)],
+function bkLgFigs(ledgerReply, currency, selection) {
+  var opening = Number(ledgerReply.opening_minor || 0),
+    closing = Number(ledgerReply.closing_minor || 0),
+    same = opening === closing,
+    parts = same ? [tx('Balance') + ' ' + bkDrCr(closing, currency)] : [tx('Opening') + ' ' + bkDrCr(opening, currency), tx('Closing') + ' ' + bkDrCr(closing, currency)],
     check = null;
-  if (!sel.party && BK_CTRL[sel.code]) {
-    var pc = r.parties_check,
-      none = (r.lines || []).filter(function (item) {
+  if (!selection.party && BK_CTRL[selection.code]) {
+    var partiesCheck = ledgerReply.parties_check,
+      none = (ledgerReply.lines || []).filter(function (item) {
         return !item.party_id && !item.party_name;
       }).length;
-    if (pc && typeof pc.agree === 'boolean')
-      check = pc.agree ? { agree: true } : { agree: false, amount: Number(pc.amount_minor || 0), n: pc.entries != null ? Number(pc.entries) : none };
+    if (partiesCheck && typeof partiesCheck.agree === 'boolean')
+      check = partiesCheck.agree ? { agree: true } : { agree: false, amount: Number(partiesCheck.amount_minor || 0), n: partiesCheck.entries != null ? Number(partiesCheck.entries) : none };
     else {
-      var total = bkLtParties(sel.code).reduce(function (sum, item) {
+      var total = bkLtParties(selection.code).reduce(function (sum, item) {
         return sum + Number(item.balance_minor || 0);
       }, 0);
-      check = total === cl ? { agree: true } : { agree: false, amount: cl - total, n: none };
+      check = total === closing ? { agree: true } : { agree: false, amount: closing - total, n: none };
     }
   }
   return { text: parts.join(' · ') + (check && check.agree ? ' · ' + tx('✓ parties agree') : ''), same: same, check: check };
 }
+/* the head line above the grid: the ledger name, its balance and whether the parties agree */
 function bkLgHead() {
-  var sel = BK.lt.sel;
-  if (!sel) return null;
-  var r = BK.lt.r,
-    own = !!sel.party,
-    c = (r && r.currency) || BK.duesCur,
-    h = { title: bkLtTitle(), chips: [], notices: [] };
-  if (!own) h.period = bkLgPeriodHead();
-  if (r) {
-    var f = bkLgFigs(r, c, sel);
-    h.chips.push({ tid: 'lg-sum', text: f.text });
-    var ag = own ? bkAgreedTo(r) || bkAgreedTo(BK.dues && BK.dues[sel.party]) : '';
-    if (ag) h.chips.push({ tid: 'lg-agreed', text: tx('✓ Agreed up to') + ' ' + bkDate(ag) });
-    if (f.check && !f.check.agree) {
-      h.notices.push({
+  var selection = BK.lt.sel;
+  if (!selection) return null;
+  var ledgerReply = BK.lt.r,
+    ownsParty = !!selection.party,
+    currency = (ledgerReply && ledgerReply.currency) || BK.duesCur,
+    head = { title: bkLtTitle(), chips: [], notices: [] };
+  if (!ownsParty) head.period = bkLgPeriodHead();
+  if (ledgerReply) {
+    var figures = bkLgFigs(ledgerReply, currency, selection);
+    head.chips.push({ tid: 'lg-sum', text: figures.text });
+    var agreedUpTo = ownsParty ? bkAgreedTo(ledgerReply) || bkAgreedTo(BK.dues && BK.dues[selection.party]) : '';
+    if (agreedUpTo) head.chips.push({ tid: 'lg-agreed', text: tx('✓ Agreed up to') + ' ' + bkDate(agreedUpTo) });
+    if (figures.check && !figures.check.agree) {
+      head.notices.push({
         cls: 'warn',
         tid: 'lg-parties-diff',
         text: BK.lt.noParty
-          ? txf(f.check.n === 1 ? 'Showing the {n} entry with no party · Show all' : 'Showing the {n} entries with no party · Show all', { n: f.check.n })
-          : bkDrCr(f.check.amount, c) + ' ' + tx('with no party'),
+          ? txf(figures.check.n === 1 ? 'Showing the {n} entry with no party · Show all' : 'Showing the {n} entries with no party · Show all', { n: figures.check.n })
+          : bkDrCr(figures.check.amount, currency) + ' ' + tx('with no party'),
         onOpen: function () {
           BK.lt.noParty = !BK.lt.noParty;
           if (BK.lt.api) BK.lt.api.refresh();
           if (BK.lt.noParty && typeof toast === 'function')
             toast(
-              txf(f.check.n === 1 ? 'Showing the {n} entry with no party. Open it and pick the party.' : 'Showing the {n} entries with no party.', {
-                n: f.check.n
+              txf(figures.check.n === 1 ? 'Showing the {n} entry with no party. Open it and pick the party.' : 'Showing the {n} entries with no party.', {
+                n: figures.check.n
               })
             );
         }
       });
     }
   }
-  h.slot = function (el) {
+  /* the grid's top-bar slot: back, fold and download buttons */
+  head.slot = function (el) {
     var x = '';
     if (bkLtNarrow())
       x += '<button type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
@@ -3523,7 +3573,7 @@ function bkLgHead() {
         '">☰ ' +
         esc(tx('Ledgers')) +
         '</button>';
-    if (own) {
+    if (ownsParty) {
       x += '<span style="display:inline-flex;gap:6px;flex-wrap:nowrap">';
       x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
       x +=
@@ -3535,8 +3585,9 @@ function bkLgHead() {
     el.innerHTML = x;
     if (typeof BK.slotWho === 'function') BK.slotWho(el);
   };
-  return h;
+  return head;
 }
+/* the open ledger's lines as CSV text, amounts in whole currency units */
 function bkLgCsv(rows, c) {
   var pow = Math.pow(10, bkDec(c)),
     amt = function (m) {
@@ -3570,6 +3621,7 @@ function bkLgCsv(rows, c) {
       .join('\r\n') + '\r\n'
   );
 }
+/* download the shown rows as a CSV file */
 function bkLgDownload(rows) {
   var r = BK.lt.r,
     sel = BK.lt.sel;
@@ -3585,6 +3637,7 @@ function bkLgDownload(rows) {
     URL.revokeObjectURL(node.href);
   }, 2000);
 }
+/* build the grid of the open ledger: columns, sorting, filters, row actions */
 function bkLgMount(el) {
   var by = function (g, num) {
     return function (a, b) {
@@ -3828,13 +3881,13 @@ function bkLgJournal(l) {
     }));
 }
 /** the opened entry, in place: its journal's Dr / Cr lines (the ledger you are in is bold) and ONE quiet line of the facts no visible column already shows */
-function bkLgNext(l, c) {
-  var e = bkLgEntry(l),
-    own = !!(BK.lt.sel && BK.lt.sel.party);
+function bkLgNext(line, currency) {
+  var e = bkLgEntry(line),
+    ownsParty = !!(BK.lt.sel && BK.lt.sel.party);
   if (!e)
     return (
       '<div data-testid="stmt-lines-' +
-      l._ix +
+      line._ix +
       '" style="color:var(--grey);font-size:var(--fs-1)">' +
       esc(tx('The journal lines of this entry are not on this page.')) +
       '</div>'
@@ -3842,24 +3895,24 @@ function bkLgNext(l, c) {
   var shown = [];
   try {
     shown = (BK.lt.api && BK.lt.api.state().cols) || [];
-  } catch (_) {
-    shown = [];
+  } catch (failure) {
+    shown = bkQuiet('grid-columns', failure, []);
   }
-  var def = bkLgKind() === 'control' ? ['date', 'party', 'what'] : ['date', 'what', 'bal'],
+  var defaultColumns = bkLgKind() === 'control' ? ['date', 'party', 'what'] : ['date', 'what', 'bal'],
     on = function (k) {
-      return (shown.length ? shown : def).indexOf(k) >= 0;
+      return (shown.length ? shown : defaultColumns).indexOf(k) >= 0;
     },
-    s = l.source || {},
+    source = line.source || {},
     facts = [];
-  if (!on('entry') && (l.entry_no || l.ref)) facts.push(esc(tx('Entry')) + ' <span class="mono">' + esc(l.entry_no || l.ref) + '</span>');
-  if (!on('tender') && s.how) facts.push(esc(tx(s.how)));
-  if (!on('counter') && s.counter) facts.push(esc(counterWord(s.counter)));
-  if (!on('person') && s.by) facts.push(bkRungPart(s));
+  if (!on('entry') && (line.entry_no || line.ref)) facts.push(esc(tx('Entry')) + ' <span class="mono">' + esc(line.entry_no || line.ref) + '</span>');
+  if (!on('tender') && source.how) facts.push(esc(tx(source.how)));
+  if (!on('counter') && source.counter) facts.push(esc(counterWord(source.counter)));
+  if (!on('person') && source.by) facts.push(bkRungPart(source));
   return (
-    bkDvNext(e, c, true, own, BK.lt.sel && BK.lt.sel.code) +
+    bkDvNext(e, currency, true, ownsParty, BK.lt.sel && BK.lt.sel.code) +
     (facts.length
       ? '<div class="lg-facts" data-testid="lg-facts-' +
-        l._ix +
+        line._ix +
         '">' +
         facts
           .map(function (item) {
@@ -4045,7 +4098,7 @@ function bkLtBind(root) {
       node.classList.add('drag');
       try {
         node.setPointerCapture(event.pointerId);
-      } catch (_) {}
+      } catch (failure) { bkQuiet('pointer-capture', failure); }
     });
     node.addEventListener('pointermove', function (ev) {
       if (drag) bkLtWidth(drag.w + (ev.clientX - drag.x), true);
@@ -4082,7 +4135,9 @@ function bkLgStatement() {
     key = (d && d.party_no) || s.party;
   try {
     window.open('/crm.html#/party/' + encodeURIComponent(key), '_blank', 'noopener');
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('open-party', failure);
+  }
 }
 /** the filters' options are the values the rows really carry — read when the ledger arrives, never a list the page invents */
 function bkLgFilters() {
@@ -4177,12 +4232,13 @@ function bkLtRestore() {
     bkLtOpen({ code: l.code, party: l.party });
   } else bkLtOpen({ code: l.code });
 }
+/* the Ledgers tab: the tree of control accounts and parties and the pane for the open one */
 async function bkLedgers(body) {
   try {
     var rr = await Promise.all([
       api('booksAccounts'),
-      bkBalances().catch(function () {
-        return null;
+      bkBalances().catch(function (failure) {
+        return bkQuiet('balances', failure, null);
       }),
       booksDuesLoad(true)
     ]);
@@ -4237,7 +4293,7 @@ async function bkLedgers(body) {
             if (BK.lt.api) BK.lt.api.refresh();
           }
         }).observe(root);
-      } catch (_) {}
+      } catch (failure) { bkQuiet('resize-observer', failure); }
     }
     var s0 = BK.lt.sel,
       go = !!BK.lt.go;
@@ -4250,6 +4306,7 @@ async function bkLedgers(body) {
     body.innerHTML = bkErr(e);
   }
 }
+/* the Trial balance tab: every account's debit and credit as of one date */
 async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
   try {
@@ -4309,6 +4366,7 @@ function bkOpenLedger(code) {
   if (typeof hashView === 'function') location.hash = 'ledgers';
   else bkTab('ledgers'); /* CB Accounts moves by its menu's hash (show) — the menu and the header follow */
 }
+/* a link that opens one ledger by its account code */
 function bkLedgerLink(code, name, tid) {
   return (
     '<a href="#" data-testid="' +
@@ -4324,6 +4382,7 @@ function bkLedgerLink(code, name, tid) {
     '</a>'
   );
 }
+/* one side of the balance sheet or P&L: its title, rows and total */
 function bkSideHTML(title, rows, c, total) {
   return (
     '<div class="sec">' +
@@ -4346,6 +4405,7 @@ function bkSideHTML(title, rows, c, total) {
     )
   );
 }
+/* the P&L tab: income and expenses for one date range */
 async function bkPL(body) {
   var q = bkRange('pl');
   try {
@@ -4364,6 +4424,7 @@ async function bkPL(body) {
     body.innerHTML = bkErr(e);
   }
 }
+/* the Balance sheet tab: assets, liabilities and equity as of one date */
 async function bkBS(body) {
   var asOf = (document.getElementById('bs_asof') || {}).value || bkToday();
   try {
@@ -4429,13 +4490,14 @@ async function bkStmtRead(pid, list) {
   BK.stmtBusy[pid] = true;
   try {
     BK.stmt[pid] = await api('booksStatement', { params: { id: pid } });
-  } catch (_) {
-    BK.stmt[pid] = { lines: [], failed: true };
+  } catch (failure) {
+    BK.stmt[pid] = bkQuiet('statement', failure, { lines: [], failed: true });
   }
   delete BK.stmtBusy[pid];
   var lst = CBList.get(list);
   if (lst) lst.refresh();
 }
+/* the column list of the Dues grid (who, bills, oldest, amount owed) */
 function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>',
     amt = function (p, v) {
@@ -4478,13 +4540,13 @@ function bkDuesCols(c) {
       sort: 'oldest',
       w: 220,
       html: true,
-      cell: function (p) {
-        var ag = bkDuesAge(p);
-        return p.oldest_due
+      cell: function (party) {
+        var ageWord = bkDuesAge(party);
+        return party.oldest_due
           ? '<span data-b="due">' +
-              esc(bkDate(p.oldest_due)) +
+              esc(bkDate(party.oldest_due)) +
               '</span>' +
-              (ag ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ag)) + '</span>' : '')
+              (ageWord ? ' <span data-b="age" style="color:var(--grey)">· ' + esc(tx(ageWord)) + '</span>' : '')
           : dash;
       }
     },
@@ -4521,14 +4583,14 @@ function bkDuesForeign(p) {
     .join('');
 }
 /** the oldest age bucket the party has money in — the server's own buckets (Schedule III), in the words of BK_BUCKETS */
-function bkDuesAge(p) {
-  var cols = bkDuesSide(p) === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
-    b = p.buckets || {},
-    w = '';
+function bkDuesAge(party) {
+  var cols = bkDuesSide(party) === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
+    buckets = party.buckets || {},
+    word = '';
   cols.forEach(function (item) {
-    if (Number(b[item[0]])) w = item[1];
+    if (Number(buckets[item[0]])) word = item[1];
   });
-  return w;
+  return word;
 }
 /** the buttons on a Dues row: Receive (or Pay) opens the ONE unit — an ADVANCE row says what it does: "Get back" (paid ahead to a supplier) or "Adjust" (a customer's advance), never "Pay" (M167); Remind (only on what is owed to you) messages the oldest open bill */
 function bkDuesActs(p) {
@@ -4592,9 +4654,12 @@ async function bkRemindTarget(pid) {
       return e && !e.removed && e.line_id;
     });
     line = ls.length ? ls[0].line_id : null;
-  } catch (_) {}
+  } catch (failure) {
+    bkQuiet('bill-line', failure);
+  }
   return { chit_id: bill.against_ref, line_id: line, actions: acts, bill: bill, currency: reply.currency, party: (reply.party && reply.party.name) || '' };
 }
+/* start a reminder to one party by opening their chit thread */
 function bkRemind(pid, btn) {
   if (typeof CBThread === 'undefined' || !CBThread) {
     toast(tx('Could not open the reminder'));
@@ -4608,6 +4673,7 @@ function bkRemind(pid, btn) {
     { key: 'remind:' + pid, failed: tx('No open bill to remind about'), outcome: bkRemindOpen }
   );
 }
+/* open the reminder thread for one bill with the reminder words already written */
 function bkRemindOpen(t) {
   var name = t.party || '';
   /* R73: a bill not yet late IS due, not WAS due — the day decides the sentence (bkToday: the shop's day, never UTC) */
@@ -4683,37 +4749,37 @@ function bkPartyBillsHTML(pid, list, c) {
     : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
 /** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement. `list` = the CBList key that asked (R76: Collections is 'fin-collect'; the statement read repaints THAT list, else "Reading the bills…" never ends) */
-function bkDuesNext(p, c, list) {
-  var side = bkDuesSide(p),
+function bkDuesNext(party, currency, list) {
+  var side = bkDuesSide(party),
     cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,
     known = cols.map(function (item) {
       return item[0];
     }),
-    b = p.buckets || {};
-  var amt = function (v) {
-    return esc(bkMoney(side === 'pay' ? -Number(v) : Number(v), c));
+    buckets = party.buckets || {};
+  var amountText = function (value) {
+    return esc(bkMoney(side === 'pay' ? -Number(value) : Number(value), currency));
   };
-  var other = Object.keys(b)
+  var other = Object.keys(buckets)
     .filter(function (item) {
       return known.indexOf(item) < 0;
     })
     .reduce(function (total, item) {
-      return total + Number(b[item] || 0);
+      return total + Number(buckets[item] || 0);
     }, 0);
   var rows =
     cols
       .filter(function (item) {
-        return b[item[0]];
+        return buckets[item[0]];
       })
       .map(function (item) {
-        return CBList.nextRow(['<span data-b="' + item[0] + '">' + esc(tx(item[1])) + '</span>', amt(b[item[0]])], [120]);
+        return CBList.nextRow(['<span data-b="' + item[0] + '">' + esc(tx(item[1])) + '</span>', amountText(buckets[item[0]])], [120]);
       })
       .join('') +
-    (other ? CBList.nextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amt(other)], [120]) : '') +
-    (p.disputed_minor ? CBList.nextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amt(p.disputed_minor)], [120]) : '');
+    (other ? CBList.nextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amountText(other)], [120]) : '') +
+    (party.disputed_minor ? CBList.nextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amountText(party.disputed_minor)], [120]) : '');
   return (
     '<div data-testid="dues-next-' +
-    esc(p.party_id) +
+    esc(party.party_id) +
     '">' +
     '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' +
     esc(tx('Age')) +
@@ -4722,10 +4788,11 @@ function bkDuesNext(p, c, list) {
     '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' +
     esc(tx('Bills')) +
     '</div>' +
-    bkPartyBillsHTML(p.party_id, list || 'dues', c) +
+    bkPartyBillsHTML(party.party_id, list || 'dues', currency) +
     '</div>'
   );
 }
+/* the Dues tab: what parties owe you and what you owe, grouped by side */
 async function bkDues(body, onlySide) {
   /* onlySide 'rcv' | 'pay' (CB Accounts: Receivables / Payables) opens the same list on that side */
   try {
@@ -4796,15 +4863,15 @@ async function bkDues(body, onlySide) {
         {
           key: 'party',
           label: tx('Party no'),
-          cmp: function (a, b) {
-            return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true });
+          cmp: function (left, right) {
+            return String(left.party_no || '').localeCompare(String(right.party_no || ''), undefined, { numeric: true });
           }
         },
         {
           key: 'name',
           label: tx('Name'),
-          cmp: function (a, b) {
-            return String(a.name || '').localeCompare(String(b.name || ''));
+          cmp: function (left, right) {
+            return String(left.name || '').localeCompare(String(right.name || ''));
           }
         },
         {
@@ -4817,8 +4884,8 @@ async function bkDues(body, onlySide) {
         {
           key: 'oldest',
           label: tx('Oldest due'),
-          cmp: function (a, b) {
-            return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999'));
+          cmp: function (left, right) {
+            return String(left.oldest_due || '9999').localeCompare(String(right.oldest_due || '9999'));
           }
         }
       ],
@@ -4833,8 +4900,8 @@ async function bkDues(body, onlySide) {
                 { v: 'rcv', label: tx('To collect') },
                 { v: 'pay', label: tx('To pay') }
               ],
-              match: function (p, v) {
-                return v === 'pay' ? bkDuesSide(p) === 'pay' && !bkDuesAdvance(p) : bkDuesSide(p) === 'rcv' || bkDuesAdvance(p);
+              match: function (party, filterValue) {
+                return filterValue === 'pay' ? bkDuesSide(party) === 'pay' && !bkDuesAdvance(party) : bkDuesSide(party) === 'rcv' || bkDuesAdvance(party);
               }
             }
           ],
@@ -4897,16 +4964,16 @@ function bkLockNote(row, periodNo, mayLock, whyNot) {
   return note + '<span data-testid="lk-return-' + periodNo + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{form} {label} not closed yet', { form: taxPeriod.form, label: taxPeriod.label })) + '</span>';
 }
 /** the year and month a day falls in — the server's own row first (GET /periods start_date…end_date), the shop's year start when the month has no row yet */
-function bkPeriodOfDay(day, L) {
-  var text = Object.keys((L && L.info) || {}).filter(function (item) {
-    var x = L.info[item];
-    return x.start_date && x.end_date && String(x.start_date).slice(0, 10) <= day && day <= String(x.end_date).slice(0, 10) && Number(x.period) >= 1;
+function bkPeriodOfDay(dayKey, lockState) {
+  var text = Object.keys((lockState && lockState.info) || {}).filter(function (item) {
+    var x = lockState.info[item];
+    return x.start_date && x.end_date && String(x.start_date).slice(0, 10) <= dayKey && dayKey <= String(x.end_date).slice(0, 10) && Number(x.period) >= 1;
   })[0];
   if (text) return { fy: text.split('|')[0], p: Number(text.split('|')[1]) };
-  var st = bkYearStart(),
-    m = Number(day.slice(5, 7)),
-    y = m >= st ? Number(day.slice(0, 4)) : Number(day.slice(0, 4)) - 1;
-  return { fy: bkFyName(y), p: ((m - st + 12) % 12) + 1 };
+  var startMonth = bkYearStart(),
+    month = Number(dayKey.slice(5, 7)),
+    y = month >= startMonth ? Number(dayKey.slice(0, 4)) : Number(dayKey.slice(0, 4)) - 1;
+  return { fy: bkFyName(y), p: ((month - startMonth + 12) % 12) + 1 };
 }
 /** "This FY (Jul–Jun)" / "Whole year (Jul–Jun)" — the word with the shop's own months, ONE catalogue sentence (CX2) */
 function bkFyWord(w) {
@@ -4945,6 +5012,7 @@ async function bkPeriodsLoad() {
   if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();
   return L;
 }
+/* a select of the financial years for the Month lock and Packs tabs */
 function bkFyPicker(id, tid, sty) {
   return (
     '<select class="inp" id="' +
@@ -4967,6 +5035,7 @@ function bkFyPick(v) {
   if (BK.tab === 'lock') bkLockRowsPaint();
   else bkPackCtlPaint();
 }
+/* the Month lock tab: the year picker and its twelve month rows */
 async function bkLockView(body) {
   try {
     await bkPeriodsLoad();
@@ -5086,45 +5155,49 @@ function bkLockRowsPaint() {
     })
     .join('');
 }
-async function bkLockDo(what, p) {
-  var L = BK.lk,
-    fy = L.fy,
+/* lock or unlock one month, asking the server and flipping only that row */
+async function bkLockDo(what, period) {
+  var lockState = BK.lk,
+    fiscalYear = lockState.fy,
     node = (document.getElementById('lk_why') || {}).value || '',
     out = document.getElementById('lk_out');
-  var m = tx(bkMonths()[p - 1] || String(p));
+  var monthName = tx(bkMonths()[period - 1] || String(period));
   if (what === 'unlock' && !node.trim()) {
     if (out) out.textContent = tx('Say why — the reason is kept');
-    var w = document.getElementById('lk_why');
-    if (w) w.focus();
+    var reasonBox = document.getElementById('lk_why');
+    if (reasonBox) reasonBox.focus();
     return;
   }
   /* ⭐ M64: through CBAction — ONE write per month at a time (whichever of its buttons), Close for good asks first in the
      page's own dialog (Cancel sends nothing), and the outcome is said in lk_out beside the months */
-  var btn = document.querySelector('[data-testid="lk-' + what + '-' + p + '"]');
+  var btn = document.querySelector('[data-testid="lk-' + what + '-' + period + '"]');
   return CBAction.run(
     btn,
     function () {
-      return api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fy, p: p }, body: { reason: node, hard: what === 'hard' } });
+      return api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fiscalYear, p: period }, body: { reason: node, hard: what === 'hard' } });
     },
     {
-      key: 'lk-' + fy + '-' + p,
+      key: 'lk-' + fiscalYear + '-' + period,
       out: 'lk_out',
       failed: tx('Could not change it'),
       confirm:
         what === 'hard'
-          ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: m, fy: fy })), yes: tx('Close for good') }
+          ? { title: tx('Close for good?'), body: esc(txf('{m} {fy} will never open again.', { m: monthName, fy: fiscalYear })), yes: tx('Close for good') }
           : null,
-      outcome: function (r) {
-        var st = r && r.period && r.period.status;
-        if (st) L.rows[fy + '|' + p] = st; /* flip the ROW, never the whole list */
-        if (L.fy === fy) bkLockRowsPaint();
+      /* after the server answers: flip the one month row, then reload the periods */
+      outcome: function (answer) {
+        var status = answer && answer.period && answer.period.status;
+        if (status) lockState.rows[fiscalYear + '|' + period] = status; /* flip the ROW, never the whole list */
+        if (lockState.fy === fiscalYear) bkLockRowsPaint();
         bkPeriodsLoad()
           .then(function () {
-            if (BK.lk.fy === fy) bkLockRowsPaint();
+            if (BK.lk.fy === fiscalYear) bkLockRowsPaint();
           })
-          .catch(function () {}); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
+          .catch(function (failure) {
+            bkQuiet('periods-reload', failure);
+          }); /* M157: the server's may/why moves with the lock (the next month opens up, the reason box follows) */
         var element = document.getElementById('lk_out');
-        if (element) element.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
+        if (element) element.textContent = txf('{m} {fy} · {s}', { m: monthName, fy: fiscalYear, s: tx(BK_PERIOD_WORD[status] || 'Done') });
       }
     }
   );
@@ -5138,16 +5211,17 @@ async function bkLockDo(what, p) {
  * ⭐ ONE reader of "has it a file": has_file when the server says it (on the row, or on GET /packs/:id beside `file`),
  * else the older `stored` / `download`. null = the row does not say — GET /packs/:id is asked before anything is offered.
  */
-function bkPackHasFile(k, r) {
-  var pick = function (o) {
-    return !o ? null : typeof o.has_file === 'boolean' ? o.has_file : typeof o.stored === 'boolean' ? o.stored : null;
+function bkPackHasFile(listedPack, reply) {
+  var pick = function (source) {
+    return !source ? null : typeof source.has_file === 'boolean' ? source.has_file : typeof source.stored === 'boolean' ? source.stored : null;
   };
-  var v = pick(r);
-  if (v == null && r) v = pick(r.pack);
-  if (v == null && r && ('file' in r || 'download' in r)) v = !!(r.file || r.download);
-  if (v == null) v = pick(k);
-  return v;
+  var hasFile = pick(reply);
+  if (hasFile == null && reply) hasFile = pick(reply.pack);
+  if (hasFile == null && reply && ('file' in reply || 'download' in reply)) hasFile = !!(reply.file || reply.download);
+  if (hasFile == null) hasFile = pick(listedPack);
+  return hasFile;
 }
+/* the Packs tab: the handover packs built so far and the form to build one */
 async function bkPacks(body) {
   try {
     var rr = await Promise.all([api('booksPacks'), bkPeriodsLoad()]),
@@ -5255,6 +5329,7 @@ function bkPackPick() {
   var node = document.getElementById('pk_build');
   if (node) node.disabled = !(document.getElementById('pk_p') || {}).value;
 }
+/* build a handover pack for the chosen year and month */
 async function bkPackBuild() {
   var out = document.getElementById('pk_out');
   var node = (document.getElementById('pk_fy') || {}).value,
@@ -5351,6 +5426,7 @@ async function bkPackGet(id) {
     }
   });
 }
+/* record that a handover pack was received, after the owner says it was saved */
 async function bkPackAck(id) {
   await bkOnce('packack:' + id, document.querySelector('[data-testid="pack-ack-' + id + '"]'), async function () {
     try {
@@ -5384,6 +5460,7 @@ async function bkPackAck(id) {
     }
   });
 }
+/* the Opening balances form: one line per account balance */
 function bkOpeningView(body) {
   BK.openingRef = BK.openingRef || bkRef(); /* one ref for this form until the server has said yes (M11) */
   body.innerHTML =
@@ -5395,6 +5472,7 @@ function bkOpeningView(body) {
     tx('Enter opening balances') +
     '</button></div><div id="op_out" data-testid="op_out" style="font-size:var(--fs-1);margin-top:6px"></div>';
 }
+/* send the typed opening balances to the server once */
 async function bkOpeningGo() {
   var out = document.getElementById('op_out');
   var lines = String((document.getElementById('op_csv') || {}).value || '')
@@ -5462,6 +5540,7 @@ function bkChequeStatus(s) {
 function bkChequeNext(c) {
   return c && Array.isArray(c.next) ? c.next : BK_CHQ_NEXT[c && c.status] || [];
 }
+/* keep one cheque's latest state in the BK.cheques cache */
 function bkChequeKeep(c) {
   var id = c && (c.payment_id || c.id);
   if (!id) return null;
@@ -5481,6 +5560,7 @@ function bkChequeKeep(c) {
   }; /* T3-P1-MONEY (widened): in = received · out = written by the shop — CB Finance › Cheques groups on it; a recorded Receive is `in` */
   return BK.cheques[id];
 }
+/* the buttons for the steps a cheque may take next */
 function bkChequeStepsHTML(c) {
   if (!c) return '';
   var id = esc(c.payment_id),
@@ -5515,6 +5595,7 @@ function bkChequeStepsHTML(c) {
       : '')
   );
 }
+/* move a cheque to its next step (deposit, clear, bounce), asking first for a bounce */
 async function bkChequeStep(id, to) {
   var c = BK.cheques[id];
   if (!c || bkChequeNext(c).indexOf(to) < 0) return;
@@ -5605,6 +5686,7 @@ function bkChequeList() {
     return BK.cheques[item];
   });
 }
+/* the column list of the cheques grid */
 function bkChequeCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
@@ -5669,6 +5751,7 @@ function bkChequeCols() {
     }
   ];
 }
+/* the Cheques tab: held cheques grouped by what happens next */
 async function bkChequesView(body) {
   try {
     await bkChequesLoad();
@@ -5783,8 +5866,8 @@ function bkWaitModel(w) {
   var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_id];
   try {
     return r && window.CBSheet ? CBSheet.model(r) : null;
-  } catch (_) {
-    return null;
+  } catch (failure) {
+    return bkQuiet('bill-sheet', failure, null);
   }
 }
 /** a walk-in DAY waiting (job 'day': no bill of its own) — its counter and day, read from the server's own source ref "walkin:<counter>:<day>" (WX-R2R:
@@ -5793,6 +5876,7 @@ function bkWaitDay(w) {
   var m = w && w.job === 'day' ? /^walkin:([^:]+):(\d{4}-\d{2}-\d{2})$/.exec(String(w.ref || '')) : null;
   return m ? { counter: (w.source && w.source.counter) || m[1], day: m[2] } : null;
 }
+/* the column list of the Waiting grid (what is stuck and why) */
 function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
@@ -5803,10 +5887,10 @@ function bkWaitCols() {
       sort: 'who',
       w: 240,
       html: true,
-      cell: function (w) {
-        var m = bkWaitModel(w),
-          d = bkWaitDay(w);
-        return m && m.who ? esc(m.who) : d ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + d.counter) : dash;
+      cell: function (waitingRow) {
+        var billModel = bkWaitModel(waitingRow),
+          waitDay = bkWaitDay(waitingRow);
+        return billModel && billModel.who ? esc(billModel.who) : waitDay ? esc(tx('Walk-in day') + ' · ' + tx('Counter') + ' ' + waitDay.counter) : dash;
       }
     },
     /* FX-F10W2: Party · Bill no · Amount · Step keep their place at ≥ 1024 px — the bill number was the first to go at 1366 */
@@ -5817,9 +5901,9 @@ function bkWaitCols() {
       sort: 'no',
       w: 170,
       html: true,
-      cell: function (w) {
-        var m = bkWaitModel(w);
-        return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash;
+      cell: function (waitingRow) {
+        var billModel = bkWaitModel(waitingRow);
+        return billModel && billModel.no ? '<span class="mono">' + esc(billModel.no) + '</span>' : dash;
       }
     },
     {
@@ -5830,10 +5914,10 @@ function bkWaitCols() {
       num: true,
       w: 140,
       html: true,
-      cell: function (w) {
-        var m = bkWaitModel(w),
-          t = m && m.money && m.money.total;
-        return t != null ? esc(bkMajor(t, m.cur)) : dash;
+      cell: function (waitingRow) {
+        var billModel = bkWaitModel(waitingRow),
+          billTotal = billModel && billModel.money && billModel.money.total;
+        return billTotal != null ? esc(bkMajor(billTotal, billModel.cur)) : dash;
       }
     },
     {
@@ -5843,10 +5927,10 @@ function bkWaitCols() {
       sort: 'date',
       w: 120,
       html: true,
-      cell: function (w) {
-        var m = bkWaitModel(w),
-          d = bkWaitDay(w);
-        return esc(bkDate((m && m.at) || (d && d.day) || w.since));
+      cell: function (waitingRow) {
+        var billModel = bkWaitModel(waitingRow),
+          waitDay = bkWaitDay(waitingRow);
+        return esc(bkDate((billModel && billModel.at) || (waitDay && waitDay.day) || waitingRow.since));
       }
     },
     {
@@ -5923,6 +6007,7 @@ function bkNoticeGo(kind) {
   if (BK.noticeTarget && BK.noticeTarget[kind]) return BK.noticeTarget[kind]();
   bkTab('waiting');
 }
+/* add a supplier by name; one that already exists counts as added */
 async function bkAddSupplier(name) {
   try {
     await api('supAdd', { body: { name: name, supply_kind: 'resale' } });
@@ -5936,11 +6021,12 @@ async function bkAddSupplier(name) {
   }
   return bkHealthAgain(tx('Added — open Waiting again to see the bill'));
 }
-async function bkWaitAddSupplier(i, btn) {
-  var w = (BK.waiting || [])[i],
-    name = bkWaitWho(w);
+/* add the supplier a waiting row names, then refresh the waiting list */
+async function bkWaitAddSupplier(rowIndex, btn) {
+  var waitingRow = (BK.waiting || [])[rowIndex],
+    name = bkWaitWho(waitingRow);
   if (!name) return;
-  await bkOnce('addsup-' + i, btn, async function () {
+  await bkOnce('addsup-' + rowIndex, btn, async function () {
     var said = await bkAddSupplier(name);
     /* STD1: the ROW flips (the list repaints its rows from the new /health read) — the view, its search and scroll stay */
     var wl = CBList.get('waiting');
@@ -5981,16 +6067,17 @@ async function bkHealthAgain(said) {
     return said;
   }
 }
-async function bkWaitLink(i, j, btn) {
-  var w = (BK.waiting || [])[i],
-    c = bkWaitCands(w)[j];
-  if (!w || !c || !w.chit_id) return;
-  await bkOnce('link-' + i, btn, async function () {
-    var said = await bkLinkSupplier(w.chit_id, c);
+/* link a waiting row to one of its candidate suppliers */
+async function bkWaitLink(rowIndex, candidateIndex, btn) {
+  var waitingRow = (BK.waiting || [])[rowIndex],
+    candidate = bkWaitCands(waitingRow)[candidateIndex];
+  if (!waitingRow || !candidate || !waitingRow.chit_id) return;
+  await bkOnce('link-' + rowIndex, btn, async function () {
+    var said = await bkLinkSupplier(waitingRow.chit_id, candidate);
     var wl = CBList.get('waiting');
     if (wl && BK.tab === 'waiting') wl.refresh();
     var out = document.getElementById('wait_out');
-    if (out) out.textContent = said || txf('Linked to {name} — the bill waits for you to accept it', { name: c.name });
+    if (out) out.textContent = said || txf('Linked to {name} — the bill waits for you to accept it', { name: candidate.name });
   });
 }
 /**
@@ -6016,10 +6103,10 @@ function bkWaitGone(chitId) {
   var wl = CBList.get('waiting');
   if (wl && BK.tab === 'waiting') wl.refresh();
 }
-function bkWaitDate(w) {
-  var m = bkWaitModel(w),
-    d = bkWaitDay(w);
-  return String((m && m.at) || (d && d.day) || w.since || '');
+function bkWaitDate(waitingRow) {
+  var billModel = bkWaitModel(waitingRow),
+    waitDay = bkWaitDay(waitingRow);
+  return String((billModel && billModel.at) || (waitDay && waitDay.day) || waitingRow.since || '');
 }
 /**
  * ⭐ R106 (OPS-60): THE SHORTFALL IS DATA ON THE ROW — `waiting[].short` { theirs_minor, ours_minor, short_minor } (api books-hooks shortOf,
@@ -6097,32 +6184,33 @@ function bkWaitRejectShort(index) {
   var row = (BK.waiting || [])[index];
   if (row && row.chit_id) openChitSheet(row.chit_id, { act: 'reject' });
 }
-function bkWaitNext(w) {
-  var m = bkWaitModel(w),
-    tid = 'wait-lines-' + (BK.waiting || []).indexOf(w);
-  if (!m)
+/* the bill lines under one waiting row, or the reason there are none yet */
+function bkWaitNext(waitingRow) {
+  var billModel = bkWaitModel(waitingRow),
+    testId = 'wait-lines-' + (BK.waiting || []).indexOf(waitingRow);
+  if (!billModel)
     return (
       '<div data-testid="' +
-      tid +
+      testId +
       '" style="color:var(--grey);font-size:var(--fs-1)">' +
-      esc(tx(w.chit_id ? 'Reading the bill…' : 'No bill attached')) +
+      esc(tx(waitingRow.chit_id ? 'Reading the bill…' : 'No bill attached')) +
       '</div>'
     );
-  var ml = (m.money && m.money.lines) || [];
-  var lines = (m.lines || [])
+  var moneyLines = (billModel.money && billModel.money.lines) || [];
+  var lines = (billModel.lines || [])
     .map(function (item, index) {
-      var f = ml[index],
-        tot = f ? f.total : item.total != null ? item.total : item.net,
-        q = item.quantity != null ? item.quantity : item.qty != null ? item.qty : '';
+      var moneyLine = moneyLines[index],
+        lineTotal = moneyLine ? moneyLine.total : item.total != null ? item.total : item.net,
+        quantity = item.quantity != null ? item.quantity : item.qty != null ? item.qty : '';
       return CBList.nextRow(
-        [esc(item.particulars || item.name || ''), esc(String(q) + (item.unit && item.unit !== 'piece' ? ' ' + item.unit : '')), esc(bkMajor(tot, m.cur))],
+        [esc(item.particulars || item.name || ''), esc(String(quantity) + (item.unit && item.unit !== 'piece' ? ' ' + item.unit : '')), esc(bkMajor(lineTotal, billModel.cur))],
         [90, 110]
       );
     })
     .join('');
   return (
     '<div data-testid="' +
-    tid +
+    testId +
     '">' +
     (lines || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No lines on this bill')) + '</div>') +
     '</div>'
@@ -6143,8 +6231,8 @@ async function bkWaitReads() {
       var w = todo[next++];
       try {
         BK.wchit[w.chit_id] = await api('chit', { params: { id: w.chit_id } });
-      } catch (_) {
-        BK.wchit[w.chit_id] = false;
+      } catch (failure) {
+        BK.wchit[w.chit_id] = bkQuiet('waiting-bill', failure, false);
       }
       if (BK.tab === 'waiting') {
         var wl = CBList.get('waiting');
@@ -6154,6 +6242,7 @@ async function bkWaitReads() {
   }
   await Promise.all([worker(), worker(), worker(), worker()]);
 }
+/* the Waiting tab: bills and payments the server could not post yet */
 async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
@@ -6188,48 +6277,48 @@ async function bkWaitingView(body) {
       onOpen: function (w) {
         if (w.chit_id) openChitSheet(w.chit_id);
       },
-      search: function (w) {
-        var m = bkWaitModel(w);
-        return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' ');
+      search: function (waitingRow) {
+        var billModel = bkWaitModel(waitingRow);
+        return [billModel && billModel.who, billModel && billModel.no, billModel && billModel.money && billModel.money.total, waitingRow.reason, waitingRow.why].join(' ');
       },
       sorts: [
         {
           key: 'date',
           label: tx('Oldest first'),
-          cmp: function (a, b) {
-            return bkWaitDate(a) < bkWaitDate(b) ? -1 : bkWaitDate(a) > bkWaitDate(b) ? 1 : 0;
+          cmp: function (left, right) {
+            return bkWaitDate(left) < bkWaitDate(right) ? -1 : bkWaitDate(left) > bkWaitDate(right) ? 1 : 0;
           }
         },
         {
           key: 'who',
           label: tx('Party'),
-          cmp: function (a, b) {
-            return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || ''));
+          cmp: function (left, right) {
+            return String((bkWaitModel(left) || {}).who || '').localeCompare(String((bkWaitModel(right) || {}).who || ''));
           }
         },
         {
           key: 'no',
           label: tx('Bill no'),
-          cmp: function (a, b) {
-            return String((bkWaitModel(a) || {}).no || '').localeCompare(String((bkWaitModel(b) || {}).no || ''), undefined, { numeric: true });
+          cmp: function (left, right) {
+            return String((bkWaitModel(left) || {}).no || '').localeCompare(String((bkWaitModel(right) || {}).no || ''), undefined, { numeric: true });
           }
         },
         {
           key: 'amount',
           label: tx('Amount'),
-          cmp: function (a, b) {
-            var g = function (w) {
-              var m = bkWaitModel(w);
-              return Number(m && m.money && m.money.total) || 0;
+          cmp: function (left, right) {
+            var g = function (waitingRow) {
+              var billModel = bkWaitModel(waitingRow);
+              return Number(billModel && billModel.money && billModel.money.total) || 0;
             };
-            return g(a) - g(b);
+            return g(left) - g(right);
           }
         },
         {
           key: 'step',
           label: tx('Step'),
-          cmp: function (a, b) {
-            return Number(bkWaitFailed(b)) - Number(bkWaitFailed(a));
+          cmp: function (left, right) {
+            return Number(bkWaitFailed(right)) - Number(bkWaitFailed(left));
           }
         }
       ],
@@ -6242,8 +6331,8 @@ async function bkWaitingView(body) {
             { v: 'confirm', label: tx('To accept') },
             { v: 'failed', label: tx('Could not be recorded') }
           ],
-          match: function (w, v) {
-            return v === 'failed' ? bkWaitFailed(w) : !bkWaitFailed(w);
+          match: function (waitingRow, filterValue) {
+            return filterValue === 'failed' ? bkWaitFailed(waitingRow) : !bkWaitFailed(waitingRow);
           }
         }
       ],
@@ -6255,6 +6344,7 @@ async function bkWaitingView(body) {
     body.innerHTML = bkErr(e);
   }
 }
+/* ask the server to retry every waiting item, then report how many cleared */
 async function bkWaitingRetry() {
   await bkOnce('retry', document.querySelector('[data-testid="wait-retry"]'), async function () {
     var before = (BK.waiting || []).length;
@@ -6271,6 +6361,7 @@ async function bkWaitingRetry() {
     }
   });
 }
+/* the Accounts tab: the chart of accounts by group, with the add-account form */
 async function bkAccounts(body) {
   try {
     var reply = await api('booksAccounts');
@@ -6312,6 +6403,7 @@ async function bkAccounts(body) {
     body.innerHTML = bkErr(e);
   }
 }
+/* add one account under a parent group */
 async function bkAccountAdd() {
   var node = String((document.getElementById('ac_name') || {}).value || '').trim(),
     p = (document.getElementById('ac_parent') || {}).value;

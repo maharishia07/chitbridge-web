@@ -83,26 +83,38 @@ jobs:
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
+          node e2e/offer-live-confirm.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
           node tests/avatar-hydrate.test.cjs
+          node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
           node tests/chit-pay-ask.test.cjs
           node tests/chit-sheet-captured.test.cjs
+          node tests/chit-sheet-lines.test.cjs
+          node tests/crm-groups-reach.test.cjs
+          node tests/crm-leads-import.test.cjs
           node tests/crm-unbilled-list.test.cjs
           node tests/crm-timeline-hidden.test.cjs
           node tests/cu4-datetime.test.cjs
           node tests/detail-placement.test.cjs
+          node tests/dispute-helpers.test.cjs
           node tests/lint-ratchet.test.cjs
+          node tests/move-in-render.test.cjs
           node tests/offline-409.test.cjs
+          node tests/repeat-supply-render.test.cjs
+          node tests/rewards-pane.test.cjs
           node tests/sheets-links.test.cjs
+          node tests/showcase-templates.test.cjs
+          node tests/stock-pane.test.cjs
           node tests/t2e-cart.test.cjs
           node tests/t2e-pin.test.cjs
           node tests/t2f-backdrop.test.cjs
           node tests/t3a-money.test.cjs
+          node tests/tasks-orders-list.test.cjs
           node tests/wx-bills-cols.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
@@ -153,6 +165,14 @@ jobs:
         env:
           CB_API_REPO: .side/chitbridge-api
         run: node e2e/engines-pins-agree.cjs
+      - name: "The connector adapters against their fakes (QA wave 2 - Tally, Zoho, GoFrugal, B2B purchase; the kit is the api's tools/tally-connector)"
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: |
+          node e2e/connector-b2b.test.cjs
+          node e2e/connector-gofrugal.test.cjs
+          node e2e/connector-purchase.test.cjs
+          node e2e/connector-zoho.test.cjs
 
   seams-drift:
     # DOC-68 (docs truth): docs/SEAMS.md is GENERATED (node C:/dev/seams.cjs --write), so a drift check fails the build the way MODULES.md does.
