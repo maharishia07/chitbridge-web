@@ -58,7 +58,7 @@ const PEOPLE = {
       if (!p) return j(403, { message: 'no shop' });
       const s = SHOPS[p.entity_id];
       return j(200, { key: jwt({ identity_id: s.identity_id, bridge_id: s.bridge_id, display_name: s.display_name, kind: 'api_key', scopes: ['till'] }),
-                      shop: { name: s.display_name, bridge_id: s.bridge_id } });
+                      shop: { country: 'IN', name: s.display_name, bridge_id: s.bridge_id } });
     }
     if (u === '/api/till/snapshot') { const e = new URL(q.url, 'http://x').searchParams.get('eng'); if (e) snapEng.push(e); }
     const who = unjwt(q.headers['x-api-key']);
@@ -66,7 +66,7 @@ const PEOPLE = {
     if (u === '/api/till/snapshot') {
       if (!s) return j(401, { message: 'key refused' });
       return j(200, { at: new Date().toISOString(), version: s.bridge_id + '-1', entity_id: s.identity_id,
-        shop: { name: s.display_name, bridge_id: s.bridge_id },
+        shop: { country: 'IN', name: s.display_name, bridge_id: s.bridge_id },
         items: [{ id: s.item.toLowerCase(), name: s.item, price: 50, unit: 'nos', code: s.item }] });
     }
     if (u.indexOf('/api/till/engine/') === 0) {

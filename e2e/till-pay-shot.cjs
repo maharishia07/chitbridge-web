@@ -28,7 +28,7 @@ const ITEMS = [
   await p.waitForFunction(()=>typeof window.setMode==='function'&&!!window.CBSearch,null,{timeout:30000});
 
   const before = await p.evaluate((items)=>{
-    window.S={shop:{name:'CB Test Traders',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
+    window.S={shop:{country: 'IN', name:'CB Test Traders',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
     /* the TABLET layout — the case this exists for: pay is a 'step' while the shape stays wide */
     screenSet({ layout:'tablet' });
     setMode('sell');

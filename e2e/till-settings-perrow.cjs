@@ -40,7 +40,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   await p.evaluate((api) => {
     CloudHost.key = 'old-key-0000'; CloudHost.api = api; HOST = CloudHost;
     ls.set(tillGivenKey(), 'C1');
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [] };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [] };
     setMode('sell');
     openSettings();
   }, base);

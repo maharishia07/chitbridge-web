@@ -160,7 +160,7 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
     let raw = ''; for await (const c of q) raw += c;
     const j = (c2, o) => { r.writeHead(c2, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
     if (dead.on) return j(503, { message: 'refusing on purpose' });
-    if (q.url.split('?')[0] === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { name: 'Anbu' }, items: [] });
+    if (q.url.split('?')[0] === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { country: 'IN', name: 'Anbu' }, items: [] });
     if (q.url.startsWith('/api/till/engine/')) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('//'); }
     return j(200, { chit_id: 'c1', ok: true });
   });

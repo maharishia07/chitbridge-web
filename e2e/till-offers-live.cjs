@@ -38,7 +38,7 @@ const offer = (id, item, percent) => ({ id, kind: 'percent_off', label: percent 
       q.on('close', () => { const i = conns.indexOf(r); if (i >= 0) conns.splice(i, 1); });
       return;
     }
-    if (u === '/api/till/snapshot') return json({ at: '2026-10-31T09:00:00.000Z', entity_id: 'ent-x', shop: { name: 'Shop X', currency: 'INR' },
+    if (u === '/api/till/snapshot') return json({ at: '2026-10-31T09:00:00.000Z', entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', currency: 'INR' },
       till: { suggested_id: 'C1', assigned_id: 'C1' }, items: [DOSA, COFFEE, TEA], offers: OFFERS, slabs: [], categories: [], version: 'v' + OFFERS.length });
     if (u === '/api/entities/register' || u === '/api/signin/ask') return json({ message: 'sent', dev_otp: '123456' });
     if (u === '/api/entities/verify' || u === '/api/signin/verify') return json({ token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });

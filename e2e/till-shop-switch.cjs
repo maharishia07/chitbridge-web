@@ -27,8 +27,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
 
 /* two shops, one person each — and one person from a server too old to say which shop they belong to */
 const SHOPS = {
-  'KEY-X': { entity_id: 'ent-x', shop: { name: 'Shop X', bridge_id: 'CB-X' }, item: 'XMANGO' },
-  'KEY-Y': { entity_id: 'ent-y', shop: { name: 'Shop Y', bridge_id: 'CB-Y' }, item: 'YPANEER' },
+  'KEY-X': { entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' }, item: 'XMANGO' },
+  'KEY-Y': { entity_id: 'ent-y', shop: { country: 'IN', name: 'Shop Y', bridge_id: 'CB-Y' }, item: 'YPANEER' },
 };
 const PEOPLE = {
   xclerk:  { identity_id: 'p-x', user_id: 'xclerk',  display_name: 'X Clerk', identity_type: 'actor',  entity_id: 'ent-x', key: 'KEY-X' },
