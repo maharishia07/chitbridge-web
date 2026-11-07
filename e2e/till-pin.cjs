@@ -47,7 +47,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(68) + '· ' + d 
       /* M10: after its first sign-in a browser bills as the PERSON (Bearer + X-Device-Id) — its key is retired; the key still opens the shop before that */
       const asPerson = q.headers.authorization === 'Bearer TOKEN-x' && !!q.headers['x-device-id'];
       if (!asPerson && q.headers['x-api-key'] !== 'KEY-X') return j(401, { message: 'key refused' });
-      return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { name: 'Shop X', bridge_id: 'CB-X' },
+      return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' },
         staff: [{ id: 'p-x', name: 'X Clerk', hat: 'cashier' }, { id: 'p-z', name: 'Zed New', hat: 'cashier' }],
         items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     }

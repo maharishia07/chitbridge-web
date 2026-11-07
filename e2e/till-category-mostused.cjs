@@ -38,7 +38,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(54) + '· ' + d 
     /* ⭐ TIFFIN: five products, one sale each. DRINKS: two products, sold constantly — fewer items, far
        more actual turnover. The old fallback (most products first) would put Tiffin on top; real sales rank
        must not. */
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
       items: [
         { item_id: 't1', name: 'Idli', price: 40, unit: 'plate', category: 'Tiffin' },
         { item_id: 't2', name: 'Dosa', price: 60, unit: 'plate', category: 'Tiffin' },

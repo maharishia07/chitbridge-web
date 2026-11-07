@@ -45,7 +45,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     ls.set(tillGivenKey(), 'C2');
     ls.set(shopLs('cb_till_counter_name'), 'Front');
     WHO = { id:'w1', name:'Bala', kind:'coassist', since:new Date().toISOString(), float:2000 };
-    window.S = { shop:{ name:'Mayur Bhavan', currency:'INR' }, at:new Date().toISOString(),
+    window.S = { shop:{ country: 'IN', name:'Mayur Bhavan', currency:'INR' }, at:new Date().toISOString(),
       items:[{item_id:'i1',name:'Masala Dosa',price:70,unit:'plate'},{item_id:'i2',name:'Filter Coffee',price:25,unit:'cup'}] };
     TILL_CLAIM = { resume_next: 43 }; TILL_CLASH = null;
     setMode('sell');

@@ -52,7 +52,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(60) + '· ' + d 
   await p.waitForFunction(() => typeof window.openScreen === 'function', null, { timeout: 30000 });
   await p.evaluate((api) => {
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [], offers: [] };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [], offers: [] };
     window.sure = async () => true;
     window.__copied = null;
     try { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); } catch (_) {}

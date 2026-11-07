@@ -38,7 +38,7 @@ const eng = { }; eng.window = eng; eng.self = eng; vm.createContext(eng);
 for (const f of ['engine/money.js', 'engine/tax.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), eng);
 const LINES = [{ name: 'Rice 5kg', unit: 'piece', qty: 2, unit_price: 97.16, discount: 10, gst_rate: 12 }, { name: 'Soap', unit: 'piece', qty: 3, unit_price: 98.7, discount: 0, gst_rate: 18 },
                { name: 'Oil 1L', unit: 'piece', qty: 1, unit_price: 89.48, discount: 5.25, gst_rate: 12 }, { name: 'Tea', unit: 'piece', qty: 2, unit_price: 54.8, discount: 0, gst_rate: 18 }];
-const INV = eng.CBTax.determine({ seller: { Gstin: '33AAAAA0000A1Z5', State: '33', LglNm: SHOP }, buyer: { LglNm: 'Walk-in', State: '', Pos: '33' }, lines: LINES, priceIncludesTax: true });
+const INV = eng.CBTax.determine({ seller: { Gstin: '33AAAAA0000A1Z5', State: '33', Country: 'IN', LglNm: SHOP }, buyer: { LglNm: 'Walk-in', State: '', Pos: '33', Country: 'IN' }, lines: LINES, priceIncludesTax: true });
 const EXP = eng.CBTax.moneyOf(INV, 'INR');   /* what every screen must show, to the paisa */
 /* RCM-POST: a GTA's freight bill from an UNREGISTERED transporter to the registered shop — the line names its category (rcm_category), the engine assesses it as the
    recipient's purchase (rcm: true, as api lib/tax-lines invoiceFor does): the tax sits in the RCM heads, the supplier charges none, the bill total is the freight */

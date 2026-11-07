@@ -18760,11 +18760,14 @@ function prodOfferTaxFooterHTML(d, qty, off) {
   if (r.rate == null)
     return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('No tax slab resolves for this product — see Pricing & tax.')}</div>`;
   const price = cbAmount(d.price) || 0;
+  const myCountry = prodShopCountry();
+  if (!myCountry)
+    return `<div class="prodprev-tax" data-testid="prod-tax-nocountry" style="font-size:var(--fs-1);color:var(--warn-3);padding:6px 0 0">${esc(prodNoCountryWords())}</div>`;
   const S = prodSellerState() || '29';
   const one = (disc) =>
     CBTax.determine({
-      seller: { State: S, RegType: prodRegType() },
-      buyer: { Pos: S },
+      seller: { State: S, Country: myCountry, RegType: prodRegType() },
+      buyer: { Pos: S, Country: myCountry },
       lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }]
     }).ItemList[0];
   const it = one(off);
@@ -19639,11 +19642,13 @@ function prodOutcomeHTML(k, d) {
           return grey(tx('checking the slab…'));
         }
         if (r.rate == null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
+        const myCountry = prodShopCountry();
+        if (!myCountry) return `<span style="color:var(--warn-3)">${esc(prodNoCountryWords())}</span>`;
         const price = Number(pPrice(d)) || 0,
           st = prodSellerState() || '29';
         const it = CBTax.determine({
-          seller: { State: st, RegType: prodRegType() },
-          buyer: { Pos: st },
+          seller: { State: st, Country: myCountry, RegType: prodRegType() },
+          buyer: { Pos: st, Country: myCountry },
           lines: [{ name: pName(d), qty: 1, unit_price: price, rate: r.rate, cess_rate: r.cess || 0 }]
         }).ItemList[0];
         const dead = !!(r.unresolved && r.cited),
@@ -20949,7 +20954,7 @@ function prodInvoiceModel(d, pos) {
       hsn: (r.hsn && r.hsn[0]) || d.hsn || '',
       tax_scheme: scheme
     };
-    const seller = { State: S, RegType: prodRegType() };
+    const seller = { State: S, Country: myC, RegType: prodRegType() };
     if (!isGST) {
       delete seller.State;
       seller.Country = myC;
@@ -21532,6 +21537,15 @@ async function prodTaxLoad() {
 function prodRegType() {
   return String(((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).gst_registration || 'regular');
 }
+/** The shop's own country, from its settings (SESSION.country); '' when none is stated. The tax engines never guess one (CTRY-94). */
+function prodShopCountry() {
+  return String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').trim().toUpperCase();
+}
+/** The registered NO_COUNTRY words, from the regulation engine: what to say when the shop has no country yet. */
+function prodNoCountryWords() {
+  const st = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
+  return (st && st.why) || 'Set the shop country first (Country setup).';
+}
 function prodSellerState() {
   const g = String(UI._meGstn || '').trim();
   return /^\d{2}/.test(g) ? g.slice(0, 2) : null;
@@ -21690,7 +21704,7 @@ function prodTaxPreviewHTML(d, r) {
     hsn: (r.hsn && r.hsn[0]) || d.hsn || '',
     tax_scheme: scheme
   };
-  const seller = isGST ? { State: S, RegType: prodRegType() } : { Country: myC, RegType: prodRegType() };
+  const seller = isGST ? { State: S, Country: myC, RegType: prodRegType() } : { Country: myC, RegType: prodRegType() };
   const one = (pos) => CBTax.determine({ seller, buyer: isGST ? { Pos: pos } : { Country: pos }, lines: [line] }).ItemList[0];
   const one0 = (pos) =>
     CBTax.determine({ seller, buyer: isGST ? { Pos: pos } : { Country: pos }, lines: [Object.assign({}, line, { discount: 0 })] })

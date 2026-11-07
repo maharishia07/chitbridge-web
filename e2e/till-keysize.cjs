@@ -26,7 +26,7 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
    const p=await b.newPage({viewport:{width:w,height:h}});
    await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
    await p.waitForFunction(()=>typeof window.styleFit==='function',null,{timeout:30000});
-   await p.evaluate(()=>{ window.S={shop:{name:'M',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
+   await p.evaluate(()=>{ window.S={shop:{country: 'IN', name:'M',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
    for (const k of ['xlarge','large','medium','small']) {
      const r = await p.evaluate((k)=>{
        keySizePick(k);

@@ -36,7 +36,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
   await p.evaluate(() => {
     ls.set(tillGivenKey(), 'C1');
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [] };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [] };
     setMode('sell');
   });
 
