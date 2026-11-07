@@ -143,7 +143,7 @@ of file each thing is; this says what already does the job.
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 19 | `summary` | `catalogue-read.js` | A count a person can act on: |
-| 18 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
+| 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 18 | `next` | `cap-stock.js` | the next level: |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |

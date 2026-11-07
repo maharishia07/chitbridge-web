@@ -87,8 +87,8 @@ t('⭐⭐ THE PANE\'S OWN SUM: one unit, intra halves the rate and inter carries
      this drifts from the server the product page is lying about the invoice it is previewing. */
   const r = S.resolve({ item_data: { tax_slab: 's5' }, face: {}, slabs: SLABS, categories: [] });
   const line = S.applyToLine({ name: 'Rice', qty: 1, unit_price: 100 }, r);
-  const intra = T.determine({ seller: { State: '29' }, buyer: { Pos: '29' }, lines: [line] }).ItemList[0];
-  const inter = T.determine({ seller: { State: '29' }, buyer: { Pos: '27' }, lines: [line] }).ItemList[0];
+  const intra = T.determine({ seller: { State: '29', Country: 'IN' }, buyer: { Pos: '29', Country: 'IN' }, lines: [line] }).ItemList[0];
+  const inter = T.determine({ seller: { State: '29', Country: 'IN' }, buyer: { Pos: '27', Country: 'IN' }, lines: [line] }).ItemList[0];
   assert.strictEqual(intra.CgstAmt, 2.5);
   assert.strictEqual(intra.SgstAmt, 2.5);
   assert.strictEqual(intra.IgstAmt, 0);
@@ -102,7 +102,7 @@ t('⭐⭐ THE PANE\'S OWN SUM: one unit, intra halves the rate and inter carries
 t('cess from the slab reaches the previewed line', () => {
   const r = S.resolve({ item_data: { tax_slab: 's28' }, face: {}, slabs: SLABS, categories: [] });
   const line = S.applyToLine({ qty: 1, unit_price: 100 }, r);
-  const it = T.determine({ seller: { State: '29' }, buyer: { Pos: '27' }, lines: [line] }).ItemList[0];
+  const it = T.determine({ seller: { State: '29', Country: 'IN' }, buyer: { Pos: '27', Country: 'IN' }, lines: [line] }).ItemList[0];
   assert.strictEqual(it.CesRt, 12);
   assert.strictEqual(it.CesAmt, 12);
   assert.strictEqual(it.TotItemVal, 140);

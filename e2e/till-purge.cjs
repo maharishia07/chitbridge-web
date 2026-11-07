@@ -38,7 +38,7 @@ function chitbridge(state) {
     const u = q.url.split('?')[0];
     if (state.dead) return j(503, { message: 'stub is refusing on purpose' });
     if (u === '/api/chits/send') { got.push(JSON.parse(raw || '{}')); return j(200, { chit_id: 'c' + got.length }); }
-    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { name: 'Anbu' }, items: [] });
+    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { country: 'IN', name: 'Anbu' }, items: [] });
     if (u.startsWith('/api/till/engine/')) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('/* stub */'); }
     return j(200, { ok: true });
   });

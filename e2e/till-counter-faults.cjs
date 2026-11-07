@@ -31,7 +31,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
     const j = (c2, o) => { r.writeHead(c2, Object.assign({ 'content-type': 'application/json' }, cors)); r.end(JSON.stringify(o)); };
     if (q.method === 'OPTIONS') { r.writeHead(204, cors); return r.end(); }
     const u = q.url.split('?')[0];
-    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { name: 'Shop X', bridge_id: 'CB-X' },
+    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' },
       till: { suggested_id: 'C1', assigned_id: 'C1' },
       items: [
         { id: 'beer', name: 'BEER', price: 200, unit: 'nos', code: 'BEER1', category: 'Drinks', age_check: 21 },

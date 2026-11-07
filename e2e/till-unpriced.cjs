@@ -32,7 +32,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   await p.waitForFunction(() => typeof window.modOpen === 'function' && typeof window.refuseUnpriced === 'function', null, { timeout: 30000 });
   await p.evaluate((api) => {
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), offers: [],
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), offers: [],
       items: [{ item_id: 'blank', name: 'Blank Price Dosa', price: null, unit: 'plate' },
               { item_id: 'zero', name: 'Free Chutney', price: 0, unit: 'plate' },
               { item_id: 'ok', name: 'Masala Dosa', price: 70, unit: 'plate' }] };

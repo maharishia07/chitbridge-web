@@ -20,7 +20,7 @@ const DOSA={item_id:'d1',name:'Masala Dosa',code:'T1',category:'Tiffin',unit:'pl
  const threw=[];p.on('pageerror',e=>threw.push(e.message));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.setMode==='function'&&!!window.CBSearch,null,{timeout:30000});
- await p.evaluate((d)=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[d],offers:[],at:new Date().toISOString()};
+ await p.evaluate((d)=>{ window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:[d],offers:[],at:new Date().toISOString()};
    setMode('sell'); addItem(d,1,[{group:'Spice',option:'Mild',price:0}]); price(); }, DOSA);
  const before=await p.evaluate(()=>({mods:CART[0].mods.map(m=>m.option).join('+'),key:CART[0].key,lines:CART.length,net:billMoney().net}));
  console.log('added    · '+before.mods+'  key='+before.key+'  lines='+before.lines+'  total='+before.net);

@@ -56,7 +56,7 @@ async function drive(label, masterFile) {
       CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
       ls.set(tillGivenKey(), 'C1');
       WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
-      window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), items: [], offers: [] };
+      window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), items: [], offers: [] };
     }, base);
     await p.evaluate(() => paintEarlier());
     await p.waitForSelector('[data-testid="till-old-amount-CN/C1/26-27/0001"]', { timeout: 15000 });

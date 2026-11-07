@@ -41,7 +41,7 @@ function chitbridge() {
     const j = (code, o) => { r.writeHead(code, { 'content-type': 'application/json' }); r.end(JSON.stringify(o)); };
     const u = q.url.split('?')[0];
     if (u === '/api/chits/send') { const b = JSON.parse(raw || '{}'); got.push(b); return j(200, { chit_id: 'chit-' + got.length }); }
-    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { name: 'Anbu Vegetables' }, items: [] });
+    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), shop: { country: 'IN', name: 'Anbu Vegetables' }, items: [] });
     if (u.startsWith('/api/till/engine/')) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('/* stub */'); }
     return j(200, { ok: true });
   });

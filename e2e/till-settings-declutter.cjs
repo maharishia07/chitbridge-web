@@ -36,7 +36,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(52) + '· ' + d 
 
   await p.evaluate(async () => {
     ls.set(tillGivenKey(), 'C1');
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
       items: [
         { item_id: 'i1', name: 'Masala Dosa', price: 70, unit: 'plate', category: 'Tiffin' },
         { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup', category: 'Drinks' },

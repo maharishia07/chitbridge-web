@@ -25,7 +25,7 @@ const DAY = [
   await p.waitForFunction(() => typeof window.dayCloseSheet === 'function' && !!window.CBSearch, null, { timeout: 30000 });
 
   const sheet = await p.evaluate((rows) => {
-    window.S = { shop: { name: 'Test Stores' } };
+    window.S = { shop: { country: 'IN', name: 'Test Stores' } };
     window.WHO = { id: 'a1', name: 'Kavitha', float: 500 };
     const d = dayCloseSheet(rows);
     const html = dayCloseHTML(d);

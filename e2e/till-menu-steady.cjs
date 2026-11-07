@@ -16,7 +16,7 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  const threw=[];p.on('pageerror',e=>threw.push(e.message));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.setMode==='function',null,{timeout:30000});
- await p.evaluate(()=>{ window.S={shop:{name:'X'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
+ await p.evaluate(()=>{ window.S={shop:{country: 'IN', name:'X'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
  await p.click('[data-testid="till-side-open"]');
  await p.waitForSelector('#tillmenu',{state:'visible',timeout:5000});
 

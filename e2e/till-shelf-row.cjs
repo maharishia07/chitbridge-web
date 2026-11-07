@@ -29,7 +29,7 @@ const ITEMS=[{item_id:'a1',name:'Filter Coffee',code:'D1',category:'Drinks',unit
    await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
    await p.waitForFunction(()=>typeof window.paintHits==='function',null,{timeout:30000});
    await p.evaluate(({items,hand,pics,mode})=>{
-     window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
+     window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
      setMode(mode);
      ls.set('cb_till_hand',hand); ls.set(shopLs('cb_till_thumbs'), pics?'on':'off');
      applyLook(); paintHits();

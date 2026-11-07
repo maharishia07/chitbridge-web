@@ -38,7 +38,7 @@ const SIZES = [{ n: '1366', o: { viewport: { width: 1366, height: 768 } } },
     await p.goto(WEB + '/till.html');
     await p.waitForFunction(() => typeof modOpen === 'function' && typeof finish === 'function', null, { timeout: 30000 });
     await p.evaluate((items) => {
-      window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR', gstin: '33ABCDE1234F1Z5', reg_type: 'regular' }, items: items, offers: [], at: new Date().toISOString() };
+      window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', gstin: '33ABCDE1234F1Z5', reg_type: 'regular' }, items: items, offers: [], at: new Date().toISOString() };
       CloudHost.key = 'demo-key'; ls.set(tillGivenKey(), 'C1'); window.WHO = { id: 'c1', name: 'Clerk', kind: 'coassist' };
       var BILLS = [];
       window.HOST = { mode: 'cloud', key: 'demo-key',

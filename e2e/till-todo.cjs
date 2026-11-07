@@ -16,7 +16,7 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  const threw=[];p.on('pageerror',e=>threw.push(e.message));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.setMode==='function'&&typeof window.todoOpen==='function',null,{timeout:30000});
- await p.evaluate(()=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
+ await p.evaluate(()=>{ window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
 
  /* ⭐ it is its own item on the strip */
  const onStrip=await p.evaluate(()=>!document.querySelector('[data-testid="till-side-todo"]'));
