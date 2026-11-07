@@ -25,7 +25,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
   const b = await chromium.launch();
   const p = await b.newPage();
   const errs = [];
-  p.on('pageerror', (e) => errs.push(String(e)));
+  p.on('pageerror', (e) => errs.push(String(e.stack||e).slice(0,600)));
   await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
   await p.waitForFunction(() => typeof slipHTML === 'function' && typeof shopStateClash === 'function' && window.CBProfileMap && window.CBTax, null, { timeout: 30000 });
 
@@ -189,13 +189,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + (d
       var none = billMoney();
       return { ae: { buyer: seen[0], supply: ae.supply, notes: (ae.invoice && ae.invoice._cb && ae.invoice._cb.notes) || [] },
                inn: { buyer: seen[1], supply: inn.supply, cgst: inn.byRate['5'] && inn.byRate['5'].cgst, sgst: inn.byRate['5'] && inn.byRate['5'].sgst, notes: (inn.invoice && inn.invoice._cb && inn.invoice._cb.notes) || [] },
-               none: { buyer: seen[2], supply: none.supply, notes: (none.invoice && none.invoice._cb && none.invoice._cb.notes) || [] } };
+               none: { engineCalls: seen.length - 2, noCountry: none.noCountry === true, invoice: none.invoice, supply: none.supply, notes: (none.invoice && none.invoice._cb && none.invoice._cb.notes) || [] } };
     } finally { CBTax.determine = realDet; }
   });
   say('a UAE shop\'s walk-in reaches the engine with Country AE — the shop\'s own, upper-cased', r8.ae.buyer.Country === 'AE' && r8.ae.buyer.RegType === 'unregistered', JSON.stringify(r8.ae.buyer));
   say('…and when the border decides (domestic), the invoice notes "Walk-in: taxed as a sale inside AE."', r8.ae.supply === 'domestic' && r8.ae.notes.indexOf('Walk-in: taxed as a sale inside AE.') >= 0, JSON.stringify(r8.ae.notes));
   say('an Indian shop\'s walk-in: Country IN, place of supply 29 (the counter), CGST + SGST — and NO walk-in note (the state rule, not a guess)', r8.inn.buyer.Country === 'IN' && r8.inn.buyer.Pos === '29' && r8.inn.supply === 'intra' && r8.inn.cgst > 0 && r8.inn.cgst === r8.inn.sgst && !r8.inn.notes.some(function(n){ return /^Walk-in/.test(n); }), JSON.stringify(r8.inn));
-  say('a shop with no country on record hands the engine none — nothing is invented', r8.none.buyer.Country === '' && !r8.none.notes.some(function(n){ return /^Walk-in/.test(n); }), JSON.stringify(r8.none.buyer));
+  say('a shop with no country on record never reaches the engine and has no invoice — nothing is invented (api #966)', r8.none.engineCalls === 0 && r8.none.noCountry === true && r8.none.invoice === null && !r8.none.notes.some(function(n){ return /^Walk-in/.test(n); }), JSON.stringify(r8.none));
 
   say('no page errors', errs.length === 0, errs.join(' | ') || 'none');
   console.log(bad ? '\n' + bad + ' FAILED' : '\nthe bill\'s data checks hold in the real page');
