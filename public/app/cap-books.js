@@ -1437,7 +1437,7 @@ function payPaint() {
               '</td><td>' +
               esc(bkDate(item.due_date)) +
               '</td><td class="num">' +
-              esc(bkMoney(item.open_minor)) +
+              (item.open_minor == null ? '<span class="sub" data-testid="alloc-hidden-' + index + '">' + esc(tx('hidden')) + '</span>' : esc(bkMoney(item.open_minor))) /* ⭐ RAIL-146n: the server sent cost_hidden — the bill's figure is not this login's to see; the cell says so, never ₹0 */ +
               '</td>' +
               '<td class="num">' +
               bkMoneyInput({
@@ -1696,6 +1696,7 @@ function payOutcomePaint(r) {
   }
   html +=
     '<p data-testid="pay_outcome" style="margin:0;font-weight:600">' + esc(o.words || (r.payment.duplicate ? tx('Already recorded') : tx('Recorded'))) + '</p>';
+  if (r.cost_hidden) html += '<p data-testid="pay_hidden" style="margin:0;color:var(--grey)">' + esc(tx('Amounts hidden')) + '</p>'; /* ⭐ RAIL-146n: the server left the supplier bills' figures out for a co-assist who may not see cost */
   if (bills.length) html += '<p data-testid="pay_settled" style="margin:0">' + esc(txf('Settled: {bills}', { bills: bills.join(', ') })) + '</p>';
   if (o.balance_minor != null)
     html +=
