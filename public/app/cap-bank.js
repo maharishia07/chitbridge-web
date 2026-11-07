@@ -92,6 +92,12 @@ const bkbBy = () => {
 function bkbCountry() {
   return String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
 }
+/** the engine's one sentence for a shop with no country (CBRegulation.status(null).why); '' when the shop has one. The bank rules are the pack's, so with none the page says this and never calls the engine (CTRY-94) */
+function bkbNoCountryWords() {
+  if (bkbCountry()) return '';
+  const said = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
+  return (said && said.why) || tx('Set the shop country first (Country setup).');
+}
 function bkbStep(action) {
   const next = CBBankRecon.step(bkbRec(), Object.assign({ at: new Date().toISOString(), by: bkbBy() }, action));
   if (next.why) {
@@ -104,6 +110,7 @@ function bkbStep(action) {
 }
 /** a confirmed explanation → a suggestion rule (the newest wins for the same words) */
 function bkbLearn(line, x) {
+  if (bkbNoCountryWords()) return;
   const r = CBBankRecon.learn(line, x, { at: new Date().toISOString(), by: bkbBy(), country: bkbCountry() });
   if (!r.ok) return;
   BKB.rules = bkbRules()
@@ -201,6 +208,7 @@ async function bankPick(inp) {
     return peBad('bk_out', tx('That file could not be read.'));
   }
   const hash = await bkbHash(text);
+  if (bkbNoCountryWords()) return peBad('bk_out', bkbNoCountryWords());
   const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() });
   if (!parsed || !parsed.ok) {
     BKB.parsed = null;
@@ -700,6 +708,7 @@ function bankAskBody() {
     to = peVal('bk_askto'),
     p = ((BKB.rail && BKB.rail.parties) || []).filter((x) => x.party_id === to)[0];
   if (!r) return { ok: false, why: tx('That line is gone') };
+  if (bkbNoCountryWords()) return { ok: false, why: bkbNoCountryWords() };
   return CBBankRecon.ask(r.stmt, {
     party: p ? { id: p.party_id, name: p.name } : null,
     currency: (BKB.rail && BKB.rail.currency) || bkCur(),
