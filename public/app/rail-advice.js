@@ -203,6 +203,7 @@
     var links = shareLinksHtml(block, share);
     /* ONE sentence on screen: the send refusal (off rail says "share the advice instead"; sent already; view-only…). A greyed Share carries its own sentence as its title. */
     var whys = !send.ok ? '<span class="ra-why" data-testid="adv-why-send">' + esc(send.say || '') + '</span>' : '';
+    if (block.cost_hidden) whys += '<span class="ra-why" data-testid="adv-hidden">' + esc(T('Amounts hidden')) + '</span>'; /* ⭐ RAIL-146n: the advice names what the bills cost — the server hides it (may.*: cost_blind) and says so */
     panel.el.innerHTML =
       '<div class="ra" data-testid="adv" data-payment="' +
       id +
