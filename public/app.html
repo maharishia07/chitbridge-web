@@ -5657,6 +5657,15 @@ function logoutNow() {
     CBAvatar.endSession({ token: SESSION.token, apiBase: CFG.API_BASE });
   } catch (failure) {
     console.error('logoutNow: the sign-out did not run', failure);
+    /* fail-safe: the avatar script is missing or threw - the device still forgets the session and the per-person keys (what forget() does) */
+    try {
+      localStorage.removeItem('cb_sess');
+      Object.keys(localStorage).forEach(function (key) {
+        if (/^cb_nav(@|$)/.test(key)) localStorage.removeItem(key);
+      });
+    } catch (clearFailure) {
+      console.error('logoutNow: the device could not clear the saved session', clearFailure);
+    }
     if (typeof toast === 'function') toast(tx('Could not sign out cleanly. Close this window before you leave this device.'), true);
   }
   stopAutoRefresh();

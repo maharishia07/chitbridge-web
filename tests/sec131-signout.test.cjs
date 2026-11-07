@@ -124,7 +124,8 @@ const it = (what, fn) => Promise.resolve().then(fn).then(() => { pass++; console
     const app = fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8');
     const body = app.slice(app.indexOf('function logoutNow()'), app.indexOf('const UI0 = {'));
     assert.ok(/CBAvatar\.endSession\(\{ token: SESSION\.token/.test(body), 'logoutNow calls endSession with this tab\'s token');
-    assert.ok(!/removeItem\('cb_sess'\)/.test(body), 'logoutNow clears nothing by itself');
+    const clears = body.match(/removeItem[(]'cb_sess'[)]/g) || [];
+    assert.ok(clears.length === 1 && body.indexOf("removeItem('cb_sess')") > body.indexOf('} catch (failure)'), 'logoutNow clears by itself only in the fail-safe catch');
     const hits = [];
     (function walk(dir) {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -134,6 +135,17 @@ const it = (what, fn) => Promise.resolve().then(fn).then(() => { pass++; console
       }
     })(ROOT);
     assert.deepStrictEqual(hits, ['app/avatar.js'], 'callers of the logout endpoint: ' + hits.join(', '));
+  });
+  await it('CBAvatar absent (avatar.js did not load): logoutNow still clears cb_sess and the per-person keys', () => {
+    const app = fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8');
+    const from = app.indexOf('function logoutNow()');
+    const body = app.slice(from, app.indexOf('stopAutoRefresh();', from));
+    const raw = store();
+    const ls = new Proxy(raw, { ownKeys: () => Array.from(raw._m.keys()), getOwnPropertyDescriptor: (target, key) => (raw._m.has(key) ? { enumerable: true, configurable: true, value: raw._m.get(key) } : undefined) });
+    ['cb_sess', 'cb_nav', 'cb_nav@shop1', 'cb_theme'].forEach((key) => ls.setItem(key, 'x'));
+    const run = new Function('localStorage', 'SESSION', 'CFG', 'console', 'tx', '_netFlush', body.replace('function logoutNow()', 'return (function ()') + '})()');
+    run(ls, { token: 't' }, { API_BASE: 'http://api' }, { error() {} }, (x) => x, undefined);
+    assert.deepStrictEqual(Array.from(raw._m.keys()), ['cb_theme']);
   });
   console.log((fail ? 'FAIL' : 'PASS') + ' · SEC-131 sign-out · ' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
