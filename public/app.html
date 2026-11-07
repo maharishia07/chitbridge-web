@@ -21394,6 +21394,14 @@ function cbPricingOptionsHTML(defs, selected) {
     )
     .join('');
 }
+/** ⭐ CAT-258: the list price a pricing structure is read against — undefined (not 0) for a product nobody priced */
+function pricingListOf(product) {
+  return cbHasPrice(pPrice(product)) ? cbAmount(pPrice(product)) : undefined;
+}
+/** ⭐ CAT-258: one price in the Pricing row — a band or unit with no price says so, never a free 0 */
+function pricingAmountHTML(amount) {
+  return amount == null ? esc(tx('no price set')) : esc(inr(amount));
+}
 function prodPricingHTML(d) {
   const grey = (nestedT) => '<span style="color:var(--grey)">' + nestedT + '</span>';
   if (typeof CBPricing === 'undefined') return grey(tx('Pricing module not loaded.'));
@@ -21405,7 +21413,7 @@ function prodPricingHTML(d) {
     const chosen = defs.find((x) => String(x.definition_id || x.id) === String(node.value)) || null;
     CBPricing.setOn(row, chosen);
   }
-  const list = cbAmount(pPrice(d));
+  const list = pricingListOf(d);
   const qty = UI._invQty && UI._invQty > 0 ? UI._invQty : 1;
   const u = CBPricing.unitPrice(row, qty, list);
   const pick = editing
@@ -21425,13 +21433,13 @@ function prodPricingHTML(d) {
       bands
         .map(
           (item) =>
-            `<tr class="cbm-row${u.tier && u.tier.qty === item.from ? ' cbm-tot' : ''}"><td class="cbm-l">${esc(item.to == null ? txf('{n} and above', { n: String(item.from) }) : item.from === item.to ? String(item.from) : item.from + '–' + item.to)} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${esc(inr(item.price))}</bdi></td></tr>`
+            `<tr class="cbm-row${u.tier && u.tier.qty === item.from ? ' cbm-tot' : ''}"><td class="cbm-l">${esc(item.to == null ? txf('{n} and above', { n: String(item.from) }) : item.from === item.to ? String(item.from) : item.from + '–' + item.to)} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${pricingAmountHTML(item.price)}</bdi></td></tr>`
         )
         .join('') +
       `</tbody></table>`
     : '';
   const at = row.pricing_kind
-    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n: String(qty), u: esc(pUnit(d)), p: '<b>' + esc(inr(u.amount)) + '</b>' })} ${grey(esc(u.why))}${u.violation ? `<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>` : ''}</div>`
+    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n: String(qty), u: esc(pUnit(d)), p: '<b>' + pricingAmountHTML(u.amount) + '</b>' })} ${grey(esc(u.why))}${u.violation ? `<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>` : ''}</div>`
     : '';
   return `<div style="padding-bottom:4px">${pick}</div>${table}${at}`;
 }
