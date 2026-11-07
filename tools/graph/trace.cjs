@@ -39,6 +39,8 @@ const MIN_STEP_WORDS = 12;
 // ── layers (§7) and what each layer's tests must evidence
 const LAYER_RULES = [
   { repo: 'api', test: /^routes\//, layer: 'route' },
+  /* prove.js is a dev proof script (live api + CB_TOKEN, ships to no shop, is not the till): it takes the tool minimums, not the counter's */
+  { repo: 'api', test: /^tools\/tally-connector\/prove\.js$/, layer: 'tool' },
   { repo: 'api', test: /^tools\/tally-connector\//, layer: 'counter' },
   { repo: 'api', test: /^(tools|scripts)\//, layer: 'tool' },
   { repo: 'api', test: /./, layer: 'lib' },
@@ -299,4 +301,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { WEB_ROOT };
+module.exports = { WEB_ROOT, layerOf };
