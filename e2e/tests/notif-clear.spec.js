@@ -46,7 +46,7 @@ test.describe('Activity · clear hides the row, never the event', () => {
     subject = uniq('activity chit');
     const sent = await api('/api/chits/send', { method: 'POST', token: B.token, body: {
       subject, recipients: [{ entity_id: idOf(A), role: 'to' }],
-      items: [{ name: 'Widget', quantity: 1, price: 5 }],
+      line_items: [{ name: 'Widget', quantity: 1, price: 5 }],
     } });
     expect([200, 201].includes(sent.status), `B must send to A, got ${sent.status}`).toBe(true);
     chitId = sent.json && (sent.json.chit_id || (sent.json.chit && sent.json.chit.chit_id));
