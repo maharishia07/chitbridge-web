@@ -165,6 +165,27 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.strictEqual(m.state().at, 'in'); assert.strictEqual(m.state().session.entity, 'Alpha Timers');
   });
 
+  await it('⭐ SEC-143 verify answers 409 with 2 accounts: the chooser shows exactly those, one pick re-verifies ONCE, a double tap does not repost, held is cleared', async () => {
+    const api = standIn(); const { m } = run({ need: 'person' }, api);
+    m.typed('9876543210'); await m.go(); await m.verify('2580');
+    const shown = m.state().choices.map((c) => c.id).sort();
+    assert.strictEqual(m.state().at, 'choose');
+    assert.deepStrictEqual(shown, ['athi@alpha-timers.br', 'mayuri123'], 'exactly the accounts the 409 listed');
+    const before = api.calls.filter((c) => c.path === '/api/signin/verify').length;
+    const i = m.state().choices.findIndex((c) => c.id === 'athi@alpha-timers.br');
+    const first = m.choose(i); const second = m.choose(i);   /* a double tap */
+    await first; await second;
+    assert.strictEqual(api.calls.filter((c) => c.path === '/api/signin/verify').length, before + 1, 'one pick = one re-verify, the double tap posted nothing');
+    assert.strictEqual(m.state().at, 'in');
+    const after = api.calls.length; await m.choose(i);
+    assert.strictEqual(api.calls.length, after, 'held is cleared after the sign-in: choosing again posts nothing');
+    /* and a window torn down while the chooser is open drops the secret too */
+    const b = run({ need: 'person' }, standIn()); b.m.typed('9876543210'); await b.m.go(); await b.m.verify('2580');
+    assert.strictEqual(b.m.state().at, 'choose'); b.m.close();
+    const api2 = standIn(); const c2 = run({ need: 'person' }, api2); c2.m.typed('9876543210'); await c2.m.go(); await c2.m.verify('2580'); c2.m.close();
+    const k = api2.calls.length; await c2.m.choose(0); assert.strictEqual(api2.calls.length, k, 'close() cleared held: nothing to repost');
+  });
+
   await it('⭐ SEC-143 the same box and the same words for an unknown person, a PIN holder and a first-timer', async () => {
     const seen = [];
     for (const typed of ['nobody@nowhere.test', '9000000001', 'athi@alpha-timers.br']) {
