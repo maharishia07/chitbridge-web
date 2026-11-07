@@ -49,7 +49,7 @@ test.describe('Dispute privacy · the USP, across three entities', () => {
     const sent = await api('/api/chits/send', { method: 'POST', token: A.token, body: {
       subject: uniq('dispute usp chit'),
       recipients: [{ entity_id: idOf(B), role: 'to' }, { entity_id: idOf(C), role: 'to' }],
-      items: [{ name: 'Widget', quantity: 2, price: 25 }],
+      line_items: [{ name: 'Widget', quantity: 2, price: 25 }],
     } });
     expect([200, 201].includes(sent.status), `A must send to B and C, got ${sent.status}: ${JSON.stringify(sent.json)}`).toBe(true);
     chitId = (sent.json && (sent.json.chit_id || (sent.json.chit && sent.json.chit.chit_id))) || null;
