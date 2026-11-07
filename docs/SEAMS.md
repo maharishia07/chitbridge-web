@@ -53,14 +53,14 @@ of file each thing is; this says what already does the job.
 | 43 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 43 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 42 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
+| 40 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 40 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 40 | `rules` | `docnumber.js` | the rule set for a country — |
 | 40 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
-| 39 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
-| 39 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
+| 38 | `host` | `chit-sheet.js` |  |
 | 38 | `facts` | `bill-steps.js` | MY state_log — |
 | 38 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
-| 37 | `host` | `chit-sheet.js` |  |
 | 37 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 37 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 35 | `modal` | `app.html` |  |
@@ -95,15 +95,15 @@ of file each thing is; this says what already does the job.
 | 27 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 27 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 27 | `sheet` | `cap-employees.js` |  |
+| 27 | `money` | `cart.js` |  |
 | 27 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 27 | `mine` | `crm.js` | the party must be on this shop's list (the same test the log uses) |
-| 26 | `money` | `cart.js` |  |
+| 26 | `opts` | `cap-stock.js` |  |
 | 26 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 26 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 26 | `owner` | `books.js` |  |
 | 25 | `load` | `cap-assist.js` |  |
 | 25 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
-| 25 | `opts` | `cap-stock.js` |  |
 | 25 | `view` | `country-ready.js` |  |
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 25 | `account` | `home-facts.js` | OMITTED: |
@@ -123,6 +123,7 @@ of file each thing is; this says what already does the job.
 | 21 | `chart` | `fx-rates.js` |  |
 | 21 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 20 | `card` | `cap-shop.js` |  |
+| 20 | `cblog` | `core.js` | const __cblog = []; |
 | 20 | `note` | `device-id.js` | note(where, problem) — |
 | 20 | `reason` | `lab-kit.js` | W9: |
 | 20 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
@@ -131,6 +132,7 @@ of file each thing is; this says what already does the job.
 | 20 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
+| 19 | `model` | `chit-sheet.js` |  |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `says` | `adopt.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
@@ -139,10 +141,9 @@ of file each thing is; this says what already does the job.
 | 19 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 18 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 18 | `next` | `cap-stock.js` | the next level: |
-| 18 | `model` | `chit-sheet.js` |  |
-| 18 | `cblog` | `core.js` | const __cblog = []; |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |
+| 18 | `panel` | `sides.js` |  |
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `verify` | `bookpack.js` | manifest's own hash. |
 | 18 | `summary` | `catalogue-read.js` | A count a person can act on: |
@@ -162,7 +163,7 @@ of file each thing is; this says what already does the job.
 | 17 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 16 | `message` | `cap-print.js` | the one message: |
 | 16 | `head` | `list-ctl.js` |  |
-| 16 | `panel` | `sides.js` |  |
+| 16 | `verdict` | `rail-thread.js` |  |
 | 16 | `orders` | `home-facts.js` | the till said 2 — |
 | 16 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 16 | `connectors` | `home-facts.js` | declare (said in words — |
@@ -194,14 +195,13 @@ of file each thing is; this says what already does the job.
 | 13 | `save` | `app.html` |  |
 | 13 | `units` | `cart.js` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
+| 13 | `link` | `chit-sheet.js` |  |
 | 13 | `confirm` | `lab-kit.js` | opts: |
-| 13 | `verdict` | `rail-thread.js` |  |
 | 13 | `post` | `books-manual.js` | POST /events — |
 | 13 | `setting` | `books-store.js` | const n = (v) => (v == null ? 0 : |
 | 13 | `decimals` | `money.js` | decimals(currency) → how many minor-unit digits it has: |
 | 13 | `sheet` | `stock-store.js` | the shop's whole shelf, for a report — |
 | 13 | `heads` | `tax-lines.js` | The heads, summed. |
-| 12 | `link` | `chit-sheet.js` |  |
 | 12 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 12 | `payment` | `books-store.js` |  |
 | 12 | `migrated` | `country-setup.js` |  |

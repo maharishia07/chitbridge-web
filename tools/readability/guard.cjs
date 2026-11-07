@@ -17,6 +17,7 @@ const measure = require('./measure.cjs');
 const ratchet = require('./ratchet.cjs');
 const changed = require('./changed.cjs');
 const moves = require('./moves.cjs');
+const touch = require('./touch.cjs');
 
 const LIMITS = ratchet.LIMITS;
 /** §7 minimums warn for the first week (brief: "warn first week, then fail") */
@@ -131,6 +132,7 @@ function ruleNewEmptyCatch(file, head, base, addedLines) {
   };
 }
 
+/** the module header must carry OWNS, CALLED BY and a FLOW / INIT line; names what is missing */
 function ruleHeader(file, head) {
   const header = head.header,
     missing = [];
@@ -239,7 +241,8 @@ function judgeFile(entry, context) {
     ruleCard(entry.file, head),
     ruleTraceRow(entry.file, context.trace),
     ruleMinimums(entry.file, context.trace, context.today),
-    scored.level === 'ok' ? null : scored
+    scored.level === 'ok' ? null : scored,
+    touch.ruleTouch(entry.file, entry.base ? ratchet.score(entry.base) : null, scored.score, context.touchMode)
   ].filter(Boolean);
   return {
     file: entry.file,
@@ -247,6 +250,7 @@ function judgeFile(entry, context) {
     touched: touchedFns.map((fn) => ({ fn, base: pairs.get(fn) || null })),
     findings,
     score: scored.score,
+    touchVerdict: touch.verdictOf(entry.base ? ratchet.score(entry.base) : null, scored.score),
     carried: view.carried,
     moved: view.carriedMoves,
     numbers: numbersOf(touchedFns, pairs, head, base)
@@ -330,6 +334,7 @@ function judgeChange(options) {
     trace: options.trace || null,
     today: options.today || new Date().toISOString().slice(0, 10),
     ratchetRows: options.ratchetRows === undefined ? ratchet.read(options.root) : options.ratchetRows,
+    touchMode: touch.modeFor(options.today || new Date().toISOString().slice(0, 10), options.touch),
     moved: moves.find(gathered.entries, gathered.removed)
   };
   const files = gathered.entries.map((entry) => judgeFile(entry, context));
@@ -349,6 +354,7 @@ function judgeChange(options) {
     failed: findings.some((finding) => finding.level === 'fail'),
     warnings: findings.filter((finding) => finding.level === 'warn').length,
     today: context.today,
+    touch: touch.summary(files, context.touchMode),
     hadRatchet: !!context.ratchetRows,
     hadTrace: !!context.trace
   };
@@ -396,6 +402,7 @@ function markdown(result) {
     `- [x] Pass 2 · humanify: cryptic names ${arrow(sum.crypticBefore, sum.crypticAfter)} · functions with a what-line ${sum.whatLineBefore}/${sum.whatLineOfBefore} → ${sum.whatLineAfter}/${sum.whatLineOfAfter} · empty catches ${arrow(sum.emptyCatchBefore, sum.emptyCatchAfter)}`,
     `- [x] Pass 3 · structure: module header ${sum.headerBefore}/${sum.files} → ${sum.headerAfter}/${sum.files} · CARD line ${sum.cardAfter}/${sum.files} · TRACE row: tests ${sum.tested}/${sum.files}${result.hadTrace ? '' : ' (no trace.json)'} · spec \`<doc>\` · design \`<doc>\``,
     ...(result.moved.length ? [`- moved: ${plural(result.moved.length, 'function')} (exact body match) carried with their old score, not new code`] : []),
+    touch.line(result.touch),
     `- [${result.failed ? ' ' : 'x'}] Guard green: \`readability --changed --ratchet\` — ${plural(sum.failures, 'failure')} · ${plural(result.warnings, 'warning')}`
   ];
   return lines.join('\n');

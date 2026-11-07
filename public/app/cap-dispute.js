@@ -17,11 +17,16 @@
  * CARD 03-disputes-service-and-register/disputes-per-party-confidential
  */
 
+/** a failure this screen survives, said in words in the page log (cblog) instead of swallowed */
+function disputeLogFailure(what, failure) {
+  if (typeof cblog === 'function') cblog('warn', 'disputes: ' + what + ' — ' + ((failure && failure.message) || 'no answer'));
+}
+
 /* ── Shared roster renderers — ONE definition, used by BOTH the banner and the Disputes screen (was
  *    duplicated in two places, hence wrong-name/scope drift). A "party" = a dispute_participants row
  *    with role='party'; we exclude the viewer via chitIsSelf so you never see yourself as an opponent. */
-function disputeParties(d) {
-  return (d.participants || []).filter(function (item) {
+function disputeParties(dispute) {
+  return (dispute.participants || []).filter(function (item) {
     return item.role === 'party' && !chitIsSelf(item.entity_id, item.display_name);
   });
 }
@@ -40,13 +45,13 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls) {
   var open = parties.filter(function (item) {
     return item.dispute_status !== 'resolved';
   });
-  var b = btnCls || 'db-res';
+  var className = btnCls || 'db-res';
   var inner = open.length
     ? open
         .map(function (item) {
           return (
             '<button class="' +
-            b +
+            className +
             '" data-testid="dispute-resolve-open" onclick="resolveDispute(\'' +
             chitId +
             "','" +
@@ -62,7 +67,7 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls) {
         })
         .join('')
     : '<button class="' +
-      b +
+      className +
       '" data-testid="dispute-resolve-open" onclick="resolveDispute(\'' +
       chitId +
       "','" +
@@ -93,16 +98,16 @@ function disputeByline(body) {
   var text = body || '';
   if (!text) return { by: null, body: text, kind: null };
   var by = null;
-  var mm = text.match(/\s+[—-]\s+(\S+@.+?)\s*$/); // actor provenance "— name@entity" → byline (KEEP: shows as "· by …")
-  if (mm) {
-    by = mm[1].trim();
-    text = text.slice(0, mm.index).replace(/\s+$/, '');
+  var byMatch = text.match(/\s+[—-]\s+(\S+@.+?)\s*$/); // actor provenance "— name@entity" → byline (KEEP: shows as "· by …")
+  if (byMatch) {
+    by = byMatch[1].trim();
+    text = text.slice(0, byMatch.index).replace(/\s+$/, '');
   }
   var kind = null;
-  var pm = text.match(/^\[(resolved|quality|quantity|delivery|payment|docs|other)\]\s*/i); // dispute prefix → strip (the badge already says it)
-  if (pm) {
-    kind = /resolved/i.test(pm[1]) ? 'resolved' : 'raised';
-    text = text.slice(pm[0].length);
+  var prefixMatch = text.match(/^\[(resolved|quality|quantity|delivery|payment|docs|other)\]\s*/i); // dispute prefix → strip (the badge already says it)
+  if (prefixMatch) {
+    kind = /resolved/i.test(prefixMatch[1]) ? 'resolved' : 'raised';
+    text = text.slice(prefixMatch[0].length);
   }
   return { by: by, body: text, kind: kind };
 }
@@ -116,39 +121,39 @@ function disputeByline(body) {
  *    still be a dispute TARGET and needs to find the disputed record. Revisit if opt-in must fully hide it. */
 function dispChipHtml() {
   if (['task', 'order'].indexOf(UI.folder) < 0) return '';
-  var n = UI.disputeOpen || 0,
+  var openCount = UI.disputeOpen || 0,
     on = (UI.adv || {}).dispute;
-  if (!n && !on) return '';
+  if (!openCount && !on) return '';
   return (
     '<button class="advbtn' +
     (on ? ' on' : '') +
     '" style="color:var(--disp);border-color:#f0c9c6' +
     (on ? ';background:var(--danger-tint)' : '') +
     '" onclick="event.stopPropagation();toggleDisputeFilter()" title="Chits with an open dispute">⚠ ' +
-    n +
+    openCount +
     '</button>'
   );
 }
 /** the advanced-search toggle: show only chits with an open dispute, or clear that filter */
 function toggleDisputeFilter() {
-  var a = UI.adv || {};
-  if (a.dispute) {
-    delete a.dispute;
+  var advanced = UI.adv || {};
+  if (advanced.dispute) {
+    delete advanced.dispute;
   } else {
-    a.dispute = 'open';
+    advanced.dispute = 'open';
   }
-  UI.adv = a;
+  UI.adv = advanced;
   UI.sel = null;
   UI.detail = null;
   renderApp();
 }
-function dispSearchRow(a) {
-  a = a || {};
+function dispSearchRow(advanced) {
+  advanced = advanced || {};
   return (
     '<div class="advrow"><label>' +
     tx('Dispute') +
     '</label><label class="advchk"><input type="checkbox" id="adv_disp" ' +
-    (a.dispute ? 'checked' : '') +
+    (advanced.dispute ? 'checked' : '') +
     '> ⚠ Only open disputes</label></div>'
   );
 }
@@ -161,8 +166,8 @@ function dispSearchRow(a) {
  *    Dispute messaging is external-only (participant-scoped); internal team notes use the normal Messages tab. */
 /* Pick a dispute from the dropdown → its ROOM opens as an overlay over the detail pane; ✕ closes it.
  * Nothing open by default (UI.dispSel=null). One room at a time — 1 or N disputes look identical. */
-function disputeSelect(did) {
-  UI.dispSel = did || null;
+function disputeSelect(disputeId) {
+  UI.dispSel = disputeId || null;
   UI.dispCompose = false;
   UI.dispFiles = [];
   var node = document.getElementById('detailpane');
@@ -175,15 +180,15 @@ function disputeClose() {
   UI.dispFiles = [];
   paintDetail();
 }
-function dispOpp(d) {
-  var list = disputeParties(d);
+function dispOpp(dispute) {
+  var list = disputeParties(dispute);
   return list.length
     ? list
         .map(function (x) {
           return x.display_name || 'party';
         })
         .join(', ')
-    : nm(d.raised_by_display_name, 'party');
+    : nm(dispute.raised_by_display_name, 'party');
 }
 /** one <optgroup> (OPEN or CLOSED) of the dispute picker: category · with whom · status, the chosen one selected */
 function dispOptGroup(list, label) {
@@ -209,8 +214,8 @@ function dispOptGroup(list, label) {
   );
 }
 /* the DETAIL dropdown (always shown when disputes exist) + the overlay when one is picked */
-function disputeBanner(c) {
-  var all = (c && c.disputes) || [];
+function disputeBanner(chit) {
+  var all = (chit && chit.disputes) || [];
   var open = all.filter(function (item) {
     return item.status === 'open';
   });
@@ -218,30 +223,30 @@ function disputeBanner(c) {
     return item.status !== 'open';
   });
   if (!open.length && !closed.length) return '';
-  var proof = c.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
+  var proof = chit.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
   var head =
     '<div class="db-row"><span class="db-tag">⚑ ' +
     (open.length ? open.length + ' dispute' + (open.length > 1 ? 's' : '') + ' open on this record' : 'Disputes (resolved)') +
     '</span>' +
     proof +
     '</div>';
-  var dd =
+  var dropdown =
     '<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     '<option value="">— select a dispute to open —</option>' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
     '</select>';
-  var sel = UI.dispSel
+  var selected = UI.dispSel
     ? all.filter(function (item) {
         return String(item.dispute_id) === String(UI.dispSel);
       })[0]
     : null; // stale id (other chit) → no overlay
-  return '<div class="dispbanner">' + head + dd + '</div>' + (sel ? disputeOverlay(c, sel, open, closed) : '');
+  return '<div class="dispbanner">' + head + dropdown + '</div>' + (selected ? disputeOverlay(chit, selected, open, closed) : '');
 }
 /* the overlay frame over the detail pane: header + ✕, a dropdown to switch, and the room */
-function disputeOverlay(c, d, open, closed) {
-  var proof = c.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
-  var dd =
+function disputeOverlay(chit, dispute, open, closed) {
+  var proof = chit.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
+  var dropdown =
     '<select onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
@@ -250,13 +255,13 @@ function disputeOverlay(c, d, open, closed) {
     '<div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;z-index:30;color:var(--on-card)">' +
     '<div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:var(--danger-tint);color:var(--on-card)">' +
     '<span style="font-weight:700;color:var(--disp);font-size:var(--fs-3)">⚑ ' +
-    esc(cap(d.category || '')) +
+    esc(cap(dispute.category || '')) +
     '</span>' +
     proof +
     '<button onclick="aiDisputeSummary(\'' +
-    c.id +
+    chit.id +
     "','" +
-    d.dispute_id +
+    dispute.dispute_id +
     '\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-inline-start:auto;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">' +
     tx('✨ Summarize') +
     '</button>' +
@@ -264,32 +269,32 @@ function disputeOverlay(c, d, open, closed) {
     tx('✕ Close') +
     '</button></div>' +
     '<div style="padding:15px 16px;overflow:auto;flex:1">' +
-    dd +
-    disputeRoomBox(c, d) +
+    dropdown +
+    disputeRoomBox(chit, dispute) +
     '</div></div>'
   );
 }
 // AI dispute summary — invoked, neutral, INFORMATIONAL (resolve stays human, raiser-only). Reuses the global _aiMd (app.html).
 async function aiDisputeSummary(chitId, disputeId) {
-  var c = UI.detail;
-  if (!c) {
+  var chit = UI.detail;
+  if (!chit) {
     if (typeof toast === 'function') toast('Open the dispute first');
     return;
   }
-  var d = (c.disputes || []).filter(function (x) {
+  var dispute = (chit.disputes || []).filter(function (x) {
     return String(x.dispute_id) === String(disputeId);
   })[0];
-  if (!d) return;
+  if (!dispute) return;
   if (typeof modal !== 'function' || typeof _aiMd !== 'function') {
     if (typeof toast === 'function') toast('AI unavailable here');
     return;
   }
-  var msgs = (c.dispMsgs || {})[d.dispute_id] || []; /* the room's rows as CBThread listed them (rtMountAll onList) */
+  var msgs = (chit.dispMsgs || {})[dispute.dispute_id] || []; /* the room's rows as CBThread listed them (rtMountAll onList) */
   var ctx = {
-    category: d.category,
-    status: d.status,
-    raised_by: d.raised_by_display_name,
-    subject: c.code,
+    category: dispute.category,
+    status: dispute.status,
+    raised_by: dispute.raised_by_display_name,
+    subject: chit.code,
     thread: msgs.map(function (item) {
       return { from: item.sender_display_name || item.from || '', text: item.message_text || item.body || '' };
     })
@@ -306,17 +311,17 @@ async function aiDisputeSummary(chitId, disputeId) {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
       body: JSON.stringify({ skill_id: 'dispute-summary', context: ctx })
     });
-    var j = await res.json();
-    if (!res.ok || !j || !j.draft) throw new Error((j && j.message) || (res.status === 503 ? 'AI is not connected on this environment.' : 'Summary failed'));
+    var payload = await res.json();
+    if (!res.ok || !payload || !payload.draft) throw new Error((payload && payload.message) || (res.status === 503 ? 'AI is not connected on this environment.' : 'Summary failed'));
     var html =
       '<style>' +
       (typeof _AI_MDCSS !== 'undefined' ? _AI_MDCSS : '') +
       '</style>' +
       '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. ' +
-      (j.usage ? '<span style="color:var(--grey)">· $' + j.usage.est_cost_usd + '</span>' : '') +
+      (payload.usage ? '<span style="color:var(--grey)">· $' + payload.usage.est_cost_usd + '</span>' : '') +
       '</div>' +
       '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto;color:var(--on-card)">' +
-      _aiMd(j.draft) +
+      _aiMd(payload.draft) +
       '</div>' +
       '<div style="margin-top:12px;text-align:end"><button onclick="closeModal()" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer;color:var(--on-card)">' +
       tx('Done') +
@@ -324,9 +329,9 @@ async function aiDisputeSummary(chitId, disputeId) {
     var node = document.getElementById('adbody');
     if (node) node.innerHTML = html;
   } catch (e) {
-    var b2 = document.getElementById('adbody');
-    if (b2)
-      b2.innerHTML =
+    var bodyNode = document.getElementById('adbody');
+    if (bodyNode)
+      bodyNode.innerHTML =
         '<div style="font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">' +
         esc((e && e.message) || 'Summary failed') +
         '</div>';
@@ -334,19 +339,19 @@ async function aiDisputeSummary(chitId, disputeId) {
 }
 // AI resolution wording — invoked, neutral DRAFT; the raiser still decides whether to resolve (human gate holds). Reuses global aiRun.
 function aiResolutionSuggest(chitId, disputeId) {
-  var c = UI.detail;
-  if (!c || typeof aiRun !== 'function') return;
-  var d = (c.disputes || []).filter(function (x) {
+  var chit = UI.detail;
+  if (!chit || typeof aiRun !== 'function') return;
+  var dispute = (chit.disputes || []).filter(function (x) {
     return String(x.dispute_id) === String(disputeId);
   })[0];
-  if (!d) return;
-  var msgs = (c.dispMsgs || {})[d.dispute_id] || []; /* the room's rows as CBThread listed them (rtMountAll onList) */
+  if (!dispute) return;
+  var msgs = (chit.dispMsgs || {})[dispute.dispute_id] || []; /* the room's rows as CBThread listed them (rtMountAll onList) */
   aiRun(
     'resolution-suggest',
     {
-      category: d.category,
-      raised_by: d.raised_by_display_name,
-      subject: c.code,
+      category: dispute.category,
+      raised_by: dispute.raised_by_display_name,
+      subject: chit.code,
       thread: msgs.map(function (item) {
         return { from: item.sender_display_name || item.from || '', text: item.message_text || item.body || '' };
       })
@@ -372,26 +377,26 @@ function disputeRoster(dispute, parties, mine) {
     .join(' · ');
 }
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
-function disputeRoomBox(c, d) {
-  var readonly = d.status !== 'open';
-  var mine = chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
-  var parties = disputeParties(d);
-  var st = readonly
+function disputeRoomBox(chit, dispute) {
+  var readonly = dispute.status !== 'open';
+  var mine = chitIsSelf(dispute.raised_by_entity_id, dispute.raised_by_display_name);
+  var parties = disputeParties(dispute);
+  var statusChip = readonly
     ? '<span style="color:var(--ok-2);font-size:var(--fs-1);font-weight:700">' + tx('✓ resolved') + '</span>'
     : '<span style="color:var(--disp);font-size:var(--fs-1);font-weight:700">' + tx('● open') + '</span>';
-  var resolve = readonly ? '' : disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
+  var resolve = readonly ? '' : disputeResolveBtns(parties, chit.id, dispute.dispute_id, mine, 'db-res');
   var suggestBtn =
     readonly || typeof aiRun !== 'function'
       ? ''
       : '<button onclick="aiResolutionSuggest(\'' +
-        c.id +
+        chit.id +
         "','" +
-        d.dispute_id +
+        dispute.dispute_id +
         '\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">' +
         tx('✨ Suggest wording') +
         '</button>';
   var resolveWrap = resolve || suggestBtn ? '<span style="display:inline-flex;gap:6px;flex-wrap:wrap">' + suggestBtn + resolve + '</span>' : '';
-  var roster = disputeRoster(d, parties, mine);
+  var roster = disputeRoster(dispute, parties, mine);
   var to = parties.length
     ? parties
         .map(function (item) {
@@ -405,8 +410,8 @@ function disputeRoomBox(c, d) {
     '<div data-rt="' +
     esc(
       JSON.stringify({
-        chit_id: c.id,
-        dispute_id: d.dispute_id,
+        chit_id: chit.id,
+        dispute_id: dispute.dispute_id,
         channel: 'external',
         readOnly: readonly,
         party: to,
@@ -417,11 +422,11 @@ function disputeRoomBox(c, d) {
   return (
     '<div style="border:1px solid #f0c9c6;border-radius:12px;padding:13px 14px">' +
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">' +
-    esc(cap(d.category || '')) +
+    esc(cap(dispute.category || '')) +
     '</span>' +
     (parties.length ? '<span style="font-size:var(--fs-2);color:var(--grey)">with ' + disputeChips(parties, 'dpchip') + '</span>' : '') +
     '<span style="margin-inline-start:auto;display:inline-flex;gap:9px;align-items:center">' +
-    st +
+    statusChip +
     resolveWrap +
     '</span></div>' +
     '<div style="font-size:var(--fs-2);color:var(--grey-2);margin:10px 0 2px">Participants: <b>' +
@@ -476,8 +481,8 @@ function dispCtl() {
     rows: function () {
       return _DISP.mine.concat(_DISP.other);
     },
-    text: function (d) {
-      return [d.auto_subject, d.purpose, d.category, d.reason, d.raised_by_display_name, d.scope, d.resolution_note].filter(Boolean).join(' ');
+    text: function (dispute) {
+      return [dispute.auto_subject, dispute.purpose, dispute.category, dispute.reason, dispute.raised_by_display_name, dispute.scope, dispute.resolution_note].filter(Boolean).join(' ');
     },
     noun: tx('dispute'),
     plural: tx('disputes'),
@@ -491,8 +496,8 @@ function dispCtl() {
           { v: 'open', label: tx('Still open') },
           { v: 'resolved', label: tx('Resolved') }
         ],
-        match: function (d, v) {
-          return v === 'open' ? d.status === 'open' : d.status !== 'open';
+        match: function (dispute, value) {
+          return value === 'open' ? dispute.status === 'open' : dispute.status !== 'open';
         }
       }
     ].concat(
@@ -505,8 +510,8 @@ function dispCtl() {
               options: cats.map(function (item) {
                 return { v: item, label: cap(item) };
               }),
-              match: function (d, v) {
-                return d.category === v;
+              match: function (dispute, value) {
+                return dispute.category === value;
               }
             }
           ]
@@ -516,22 +521,22 @@ function dispCtl() {
       {
         key: 'old',
         label: tx('Oldest first'),
-        cmp: function (a, b) {
-          return Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0);
+        cmp: function (left, right) {
+          return Date.parse(left.created_at || 0) - Date.parse(right.created_at || 0);
         }
       },
       {
         key: 'new',
         label: tx('Newest first'),
-        cmp: function (a, b) {
-          return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0);
+        cmp: function (left, right) {
+          return Date.parse(right.created_at || 0) - Date.parse(left.created_at || 0);
         }
       },
       {
         key: 'kind',
         label: tx('By kind'),
-        cmp: function (a, b) {
-          return String(a.category || '').localeCompare(String(b.category || ''));
+        cmp: function (left, right) {
+          return String(left.category || '').localeCompare(String(right.category || ''));
         }
       }
     ],
@@ -542,8 +547,8 @@ function dispCtl() {
 }
 
 /** one dispute, as a card. canResolve = the "raised by you" side (raiser-only resolve, BR-D3). */
-function dispCardHTML(d, canResolve) {
-  var parties = disputeParties(d);
+function dispCardHTML(dispute, canResolve) {
+  var parties = disputeParties(dispute);
   var roster = parties.length
     ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">' +
       parties
@@ -561,27 +566,27 @@ function dispCardHTML(d, canResolve) {
         .join('') +
       '</div>'
     : '';
-  var btns = disputeResolveBtns(parties, d.chit_id, d.dispute_id, canResolve && d.status === 'open', 'composebtn');
+  var btns = disputeResolveBtns(parties, dispute.chit_id, dispute.dispute_id, canResolve && dispute.status === 'open', 'composebtn');
   var resolveRow = btns ? '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div>' : '';
   return (
     '<div class="card" data-testid="disp-card" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px">' +
     '<div style="display:flex;justify-content:space-between;gap:8px"><b>' +
-    esc(d.auto_subject || d.purpose || 'chit') +
+    esc(dispute.auto_subject || dispute.purpose || 'chit') +
     '</b><span class="optchip ' +
-    (d.status === 'open' ? 'brk' : 'on') +
+    (dispute.status === 'open' ? 'brk' : 'on') +
     '">' +
-    esc(d.status) +
+    esc(dispute.status) +
     '</span></div>' +
     '<div style="font-size:var(--fs-2);color:var(--ink);margin:5px 0"><b>' +
-    esc(cap(d.category || '')) +
+    esc(cap(dispute.category || '')) +
     '</b> — ' +
-    esc(d.reason || '') +
+    esc(dispute.reason || '') +
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey)">raised by ' +
-    nm(d.raised_by_display_name, '—') +
+    nm(dispute.raised_by_display_name, '—') +
     ' · ' +
-    esc(d.scope || '') +
-    (d.resolution_note ? ' · ✓ ' + esc(d.resolution_note) : '') +
+    esc(dispute.scope || '') +
+    (dispute.resolution_note ? ' · ✓ ' + esc(dispute.resolution_note) : '') +
     '</div>' +
     roster +
     resolveRow +
@@ -615,8 +620,8 @@ function paintDisputes() {
   matched.forEach(function (item, index) {
     pos[item.dispute_id] = index;
   });
-  var byOrder = function (a, b) {
-    return pos[a.dispute_id] - pos[b.dispute_id];
+  var byOrder = function (left, right) {
+    return pos[left.dispute_id] - pos[right.dispute_id];
   };
   mine.sort(byOrder);
   other.sort(byOrder);
@@ -635,8 +640,8 @@ function paintDisputes() {
     lazyWrap(
       'dm',
       mine,
-      function (d) {
-        return dispCardHTML(d, true);
+      function (dispute) {
+        return dispCardHTML(dispute, true);
       },
       none
     ) +
@@ -648,8 +653,8 @@ function paintDisputes() {
     lazyWrap(
       'do',
       other,
-      function (d) {
-        return dispCardHTML(d, false);
+      function (dispute) {
+        return dispCardHTML(dispute, false);
       },
       none
     );
@@ -670,7 +675,9 @@ async function loadDisputes() {
         delete LAZY.dm;
         delete LAZY.do;
       }
-    } catch (_) {}
+    } catch (failure) {
+      disputeLogFailure('the revealed-state of the old list was not reset', failure); // the disputes are repainted just below
+    }
     paintDisputes();
   } catch (e) {
     host.innerHTML = scrErr(e, tx('disputes'), 'loadDisputes()');
@@ -691,9 +698,9 @@ async function quickDispute(idArg, opt) {
   var partyRows = '';
   try {
     var reply = await api('chit', { params: { id } });
-    var h = (reply && reply.header) || reply || {};
+    var header = (reply && reply.header) || reply || {};
     var seen = {};
-    var parties = (h.all_recipients || []).filter(function (x) {
+    var parties = (header.all_recipients || []).filter(function (x) {
       return x && x.entity_id && !chitIsSelf(x.entity_id, x.display_name) && !seen[x.entity_id] && (seen[x.entity_id] = 1);
     });
     MODALS.disp.parties = parties;
@@ -714,7 +721,9 @@ async function quickDispute(idArg, opt) {
           })
           .join('');
     }
-  } catch (_) {}
+  } catch (failure) {
+    disputeLogFailure('the parties to tick could not be read, the form opens without them', failure); // it then raises against everyone involved
+  }
   modal(
     '<div class="mhd"><div class="t">' +
       tx('⚑ Raise dispute') +
@@ -764,10 +773,10 @@ async function confirmDispute() {
     var _dr2 = await api('dispute', { params: { id }, body });
     if (window.CBOffline) CBOffline.clearDraft('disp.reason.' + id);
     if (_dr2 && _dr2.warning) toast(_dr2.warning);
-    var i = UI.rows.findIndex(function (x) {
+    var rowIndex = UI.rows.findIndex(function (x) {
       return x.id === id;
     });
-    if (i >= 0) UI.rows[i].dispute = true;
+    if (rowIndex >= 0) UI.rows[rowIndex].dispute = true;
   } catch (e) {
     toast(MSG.fail('raise the dispute', e));
     return;
@@ -790,7 +799,7 @@ async function confirmDispute() {
 /* ── Resolve flow (BR-D3): raiser-only; per party (partyId) or chit-wide (no partyId). */
 function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
   var partyName = partyNameEnc ? decodeURIComponent(partyNameEnc) : '';
-  var who = partyName
+  var withParty = partyName
     ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">Resolving with <b>' +
       esc(partyName) +
       '</b>. Any other parties stay open until you resolve them too.</div>'
@@ -799,7 +808,7 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
     '<div class="mhd"><div class="t">Resolve dispute' +
       (partyName ? ' — ' + esc(partyName) : '') +
       '</div></div><div class="mbody">' +
-      who +
+      withParty +
       '<label class="fl">' +
       tx('Resolution note (required)') +
       '</label><textarea id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.' +
@@ -837,14 +846,14 @@ async function submitResolve(chitId, disputeId, partyId) {
     toast(MSG.disputeResolved());
     if (document.getElementById('disprows')) loadDisputes();
     if (UI.sel === chitId) {
-      var i = UI.rows.findIndex(function (x) {
+      var rowIndex = UI.rows.findIndex(function (x) {
         return x.id === chitId;
       });
       // FULLY resolved → 0 open, but bump the resolved count so openChit STILL fetches disputes (else the Closed
       // dispute + its wall vanish). Partial (per-party) resolve leaves dispute=true, so the fetch already fires.
-      if (i >= 0 && reply && reply.status === 'resolved') {
-        UI.rows[i].dispute = false;
-        UI.rows[i].dispResolved = (UI.rows[i].dispResolved || 0) + 1;
+      if (rowIndex >= 0 && reply && reply.status === 'resolved') {
+        UI.rows[rowIndex].dispute = false;
+        UI.rows[rowIndex].dispResolved = (UI.rows[rowIndex].dispResolved || 0) + 1;
       }
       await openChit(chitId);
     }
@@ -876,24 +885,24 @@ async function submitResolve(chitId, disputeId, partyId) {
 (function (root) {
   'use strict';
   var node = { el: null, rows: [], total: 0, page: 1, limit: 50, counts: null, q: '', filt: { status: 'open' }, sort: 'old', list: null, focus: null };
-  var SH = { id: null, el: null, data: null, err: null, raising: false, talk: {}, threads: {} };
+  var sheetState = { id: null, el: null, data: null, err: null, raising: false, talk: {}, threads: {} };
   var KIND = { quality: 'Quality', quantity: 'Quantity', delivery: 'Delivery', payment: 'Payment', docs: 'Documents', other: 'Other' };
 
-  function T(s) {
-    return typeof root.tx === 'function' ? root.tx(s) : s;
+  function T(words) {
+    return typeof root.tx === 'function' ? root.tx(words) : words;
   }
   function $(id) {
     return root.document.getElementById(id);
   }
-  function say(lvl, msg) {
-    if (typeof root.cblog === 'function') root.cblog(lvl, msg);
+  function say(level, msg) {
+    if (typeof root.cblog === 'function') root.cblog(level, msg);
   }
-  function call(key, o) {
-    if (typeof EP !== 'undefined' && root.CB_DISPUTE_EP) for (var k in root.CB_DISPUTE_EP) if (!EP[k]) EP[k] = root.CB_DISPUTE_EP[k];
-    return root.api(key, o);
+  function call(key, options) {
+    if (typeof EP !== 'undefined' && root.CB_DISPUTE_EP) for (var name in root.CB_DISPUTE_EP) if (!EP[name]) EP[name] = root.CB_DISPUTE_EP[name];
+    return root.api(key, options);
   }
-  function kindWord(c) {
-    return T(KIND[c] || 'Other');
+  function kindWord(kind) {
+    return T(KIND[kind] || 'Other');
   }
   function dayWord(ts) {
     if (!ts) return '';
@@ -904,17 +913,17 @@ async function submitResolve(chitId, disputeId, partyId) {
       return String(ts).slice(0, 10);
     }
   }
-  function withWord(d) {
+  function withWord(dispute) {
     return (
-      (d.others || [])
+      (dispute.others || [])
         .map(function (item) {
           return item.display_name || T('a party');
         })
         .join(', ') || T('everyone on the chit')
     );
   }
-  function actRow(id, label, may, extra, cls) {
-    return root.CBTasks.actRow(id, label, may, extra, cls);
+  function actRow(id, label, verdict, extra, className) {
+    return root.CBTasks.actRow(id, label, verdict, extra, className);
   }
   function failWords(e, what) {
     if (e && e.status === 403) return T('This sign-in cannot open disputes');
@@ -923,10 +932,10 @@ async function submitResolve(chitId, disputeId, partyId) {
 
   /* ── the list (DSP step 1 · the queue) ── */
   function query() {
-    var q = { status: node.filt.status || 'all', sort: node.sort, page: node.page, limit: node.limit };
-    if (node.filt.side) q.side = node.filt.side;
-    if (node.q) q.q = node.q;
-    return q;
+    var params = { status: node.filt.status || 'all', sort: node.sort, page: node.page, limit: node.limit };
+    if (node.filt.side) params.side = node.filt.side;
+    if (node.q) params.q = node.q;
+    return params;
   }
   function listLoad() {
     return call('disputeQueue', { query: query() }).then(
@@ -973,16 +982,16 @@ async function submitResolve(chitId, disputeId, partyId) {
     };
   }
   function bar() {
-    var b = $('dp_bar');
-    if (!b) return;
-    var c = node.counts;
-    b.innerHTML = c
+    var barNode = $('dp_bar');
+    if (!barNode) return;
+    var counts = node.counts;
+    barNode.innerHTML = counts
       ? '<span class="tk-count" data-testid="dp-count"><b>' +
-        esc(c.open) +
+        esc(counts.open) +
         '</b> ' +
         esc(T('open')) +
         ' · ' +
-        esc(c.resolved) +
+        esc(counts.resolved) +
         ' ' +
         esc(T('resolved')) +
         '</span>'
@@ -993,7 +1002,7 @@ async function submitResolve(chitId, disputeId, partyId) {
   }
   function pagerHTML() {
     if (node.total <= node.limit) return '';
-    var n = pages();
+    var pageCount = pages();
     return (
       '<div class="tk-act dp-pager" data-testid="dp-pager"><button type="button" class="act quiet" data-dp-page="-1" data-testid="dp-prev"' +
       (node.page <= 1 ? ' disabled' : '') +
@@ -1007,27 +1016,27 @@ async function submitResolve(chitId, disputeId, partyId) {
       ' ' +
       esc(T('of')) +
       ' ' +
-      n +
+      pageCount +
       '</span>' +
       '<button type="button" class="act quiet" data-dp-page="1" data-testid="dp-next"' +
-      (node.page >= n ? ' disabled' : '') +
+      (node.page >= pageCount ? ' disabled' : '') +
       '>' +
       esc(T('Next')) +
       ' ›</button></div>'
     );
   }
-  function whereCell(d) {
-    var nestedOpen = d.status === 'open';
+  function whereCell(dispute) {
+    var nestedOpen = dispute.status === 'open';
     return (
       '<span class="tag ' +
       (nestedOpen ? 'amber' : 'green') +
       '" data-testid="dp-word-' +
-      esc(d.dispute_id) +
+      esc(dispute.dispute_id) +
       '">' +
       esc(T(nestedOpen ? 'Open' : 'Resolved')) +
       '</span> ' +
       '<span class="sub">' +
-      esc(T(d.mine ? 'You raised' : 'Against you')) +
+      esc(T(dispute.mine ? 'You raised' : 'Against you')) +
       '</span>'
     );
   }
@@ -1039,11 +1048,11 @@ async function submitResolve(chitId, disputeId, partyId) {
         prio: 1,
         w: 240,
         html: true,
-        value: function (d) {
-          return d.auto_subject || '';
+        value: function (dispute) {
+          return dispute.auto_subject || '';
         },
-        cell: function (d) {
-          return '<b>' + esc(d.auto_subject || d.purpose || T('Chit')) + '</b> <span class="sub">' + esc(kindWord(d.category)) + '</span>';
+        cell: function (dispute) {
+          return '<b>' + esc(dispute.auto_subject || dispute.purpose || T('Chit')) + '</b> <span class="sub">' + esc(kindWord(dispute.category)) + '</span>';
         }
       },
       {
@@ -1053,8 +1062,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         w: 190,
         html: true,
         cell: whereCell,
-        value: function (d) {
-          return d.status;
+        value: function (dispute) {
+          return dispute.status;
         }
       },
       { key: 'with', label: T('With'), prio: 3, w: 170, cell: withWord, value: withWord },
@@ -1063,8 +1072,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         label: T('Why'),
         prio: 4,
         w: 260,
-        cell: function (d) {
-          return d.reason || '';
+        cell: function (dispute) {
+          return dispute.reason || '';
         }
       },
       {
@@ -1072,8 +1081,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         label: T('Raised on'),
         prio: 5,
         w: 130,
-        cell: function (d) {
-          return dayWord(d.created_at);
+        cell: function (dispute) {
+          return dayWord(dispute.created_at);
         }
       },
       {
@@ -1081,8 +1090,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         label: T('How it ended'),
         prio: 6,
         w: 220,
-        cell: function (d) {
-          return d.resolution_note || '';
+        cell: function (dispute) {
+          return dispute.resolution_note || '';
         }
       }
     ];
@@ -1096,11 +1105,11 @@ async function submitResolve(chitId, disputeId, partyId) {
       rows: function () {
         return node.rows;
       },
-      id: function (d) {
-        return d.dispute_id;
+      id: function (dispute) {
+        return dispute.dispute_id;
       },
-      rowTid: function (d) {
-        return 'dp-row-' + d.dispute_id;
+      rowTid: function (dispute) {
+        return 'dp-row-' + dispute.dispute_id;
       },
       columns: cols(),
       defaultCols: ['what', 'where', 'with'],
@@ -1144,16 +1153,16 @@ async function submitResolve(chitId, disputeId, partyId) {
           listLoad();
         }
       },
-      onOpen: function (d) {
-        open(d);
+      onOpen: function (dispute) {
+        open(dispute);
       },
       empty: { title: T('No disputes.'), sub: T('When you or the other side raise one on a bill or order, it shows here.') }
     });
   }
   /** a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) */
-  function open(d) {
-    node.focus = { chit: d.chit_id, dispute: d.dispute_id };
-    if (root.CBSheet && root.CBSheet.open) return root.CBSheet.open(d.chit_id);
+  function open(picked) {
+    node.focus = { chit: picked.chit_id, dispute: picked.dispute_id };
+    if (root.CBSheet && root.CBSheet.open) return root.CBSheet.open(picked.chit_id);
     say('error', 'disputes: the chit sheet is not on this page');
   }
   function mount(el) {
@@ -1173,9 +1182,9 @@ async function submitResolve(chitId, disputeId, partyId) {
       '</div></div>';
     $('dp_list').innerHTML = '';
     el.onclick = function (e) {
-      var b = e.target && e.target.closest ? e.target.closest('[data-dp-page]') : null;
-      if (!b || b.disabled) return;
-      node.page = Math.min(pages(), Math.max(1, node.page + Number(b.getAttribute('data-dp-page'))));
+      var pagerButton = e.target && e.target.closest ? e.target.closest('[data-dp-page]') : null;
+      if (!pagerButton || pagerButton.disabled) return;
+      node.page = Math.min(pages(), Math.max(1, node.page + Number(pagerButton.getAttribute('data-dp-page'))));
       listLoad();
     };
     return listLoad();
@@ -1183,25 +1192,25 @@ async function submitResolve(chitId, disputeId, partyId) {
 
   /* ── the chit sheet's section (DSP step 1 · raise · DSP step 2 · resolve) ── */
   function inSheet(el, id) {
-    SH = { id: id, el: el, data: null, err: null, raising: false, talk: {}, threads: {} };
-    if (node.focus && node.focus.chit === id && node.focus.dispute) SH.talk[node.focus.dispute] = true;
+    sheetState = { id: id, el: el, data: null, err: null, raising: false, talk: {}, threads: {} };
+    if (node.focus && node.focus.chit === id && node.focus.dispute) sheetState.talk[node.focus.dispute] = true;
     sheetRead();
   }
   function sheetRead() {
-    var id = SH.id,
-      el = SH.el;
+    var id = sheetState.id,
+      el = sheetState.el;
     return call('disputes', { params: { id: id } })
       .then(
         function (reply) {
-          if (SH.id !== id) return;
-          SH.data = reply || { disputes: [] };
-          SH.err = null;
+          if (sheetState.id !== id) return;
+          sheetState.data = reply || { disputes: [] };
+          sheetState.err = null;
           sheetPaint();
         },
         function (e) {
-          if (SH.id !== id) return;
+          if (sheetState.id !== id) return;
           say('error', "disputes: this chit's disputes could not be read — " + ((e && e.message) || e));
-          SH.err = failWords(e, 'the disputes on this chit');
+          sheetState.err = failWords(e, 'the disputes on this chit');
           sheetPaint();
         }
       )
@@ -1209,59 +1218,59 @@ async function submitResolve(chitId, disputeId, partyId) {
         return el;
       });
   }
-  function disputeHTML(d) {
-    var k = esc(d.dispute_id);
+  function disputeHTML(dispute) {
+    var idText = esc(dispute.dispute_id);
     return (
       '<div class="tk-panel" data-testid="dp-one-' +
-      k +
+      idText +
       '">' +
       '<div class="tk-line-top"><b>' +
-      esc(kindWord(d.category)) +
+      esc(kindWord(dispute.category)) +
       '</b> ' +
-      whereCell(d) +
+      whereCell(dispute) +
       '</div>' +
       '<div class="sub" data-testid="dp-with-' +
-      k +
+      idText +
       '">' +
       esc(T('With')) +
       ' ' +
-      esc(withWord(d)) +
+      esc(withWord(dispute)) +
       ' · ' +
       esc(T('raised by')) +
       ' ' +
-      esc(d.raised_by_display_name || '') +
+      esc(dispute.raised_by_display_name || '') +
       ' · ' +
-      esc(dayWord(d.created_at)) +
+      esc(dayWord(dispute.created_at)) +
       '</div>' +
       '<div data-testid="dp-why-' +
-      k +
+      idText +
       '">' +
-      esc(d.reason || '') +
+      esc(dispute.reason || '') +
       '</div>' +
-      (d.resolution_note ? '<div class="sub">✓ ' + esc(d.resolution_note) + '</div>' : '') +
+      (dispute.resolution_note ? '<div class="sub">✓ ' + esc(dispute.resolution_note) + '</div>' : '') +
       '<div class="tk-line-acts">' +
-      actRow('dp_res_' + k, T('Resolve'), (d.actions && d.actions.resolve) || { ok: false, say: T('Resolve is not answered for this dispute') }) +
+      actRow('dp_res_' + idText, T('Resolve'), (dispute.actions && dispute.actions.resolve) || { ok: false, say: T('Resolve is not answered for this dispute') }) +
       '<div class="tk-act"><button type="button" class="act quiet" id="dp_talk_' +
-      k +
+      idText +
       '" data-testid="dp_talk_' +
-      k +
+      idText +
       '">' +
-      esc(T(SH.talk[d.dispute_id] ? 'Hide messages' : 'Messages')) +
+      esc(T(sheetState.talk[dispute.dispute_id] ? 'Hide messages' : 'Messages')) +
       '</button></div></div>' +
       '<div id="dp_rmore_' +
-      k +
+      idText +
       '"></div>' +
       '<div id="dp_room_' +
-      k +
+      idText +
       '" data-testid="dp-room-' +
-      k +
+      idText +
       '"' +
-      (SH.talk[d.dispute_id] ? '' : ' hidden') +
+      (sheetState.talk[dispute.dispute_id] ? '' : ' hidden') +
       '></div></div>'
     );
   }
   function raiseHTML() {
-    var parties = (SH.data && SH.data.raise_parties) || [];
+    var parties = (sheetState.data && sheetState.data.raise_parties) || [];
     return (
       '<div class="tk-panel" data-testid="dp-raise-form"><label class="sub" for="dp_cat">' +
       esc(T('What is wrong?')) +
@@ -1301,43 +1310,43 @@ async function submitResolve(chitId, disputeId, partyId) {
     );
   }
   function sheetPaint() {
-    var el = SH.el;
+    var el = sheetState.el;
     if (!el) return;
-    Object.keys(SH.threads).forEach(function (item) {
+    Object.keys(sheetState.threads).forEach(function (item) {
       try {
-        SH.threads[item].destroy();
+        sheetState.threads[item].destroy();
       } catch (x) {
         say('warn', 'disputes: room teardown — ' + x.message);
       }
     });
-    SH.threads = {};
+    sheetState.threads = {};
     var keep = $('dp_out') ? $('dp_out').textContent : '';
-    var h = '<div class="cs-sec">' + esc(T('Disputes')) + '</div>';
-    if (SH.err)
-      h +=
+    var html = '<div class="cs-sec">' + esc(T('Disputes')) + '</div>';
+    if (sheetState.err)
+      html +=
         '<div class="cs-mute" data-testid="dp-sheet-fail">' +
-        esc(SH.err) +
+        esc(sheetState.err) +
         ' <button type="button" class="act quiet" id="dp_sheet_retry">' +
         esc(T('Try again')) +
         '</button></div>';
-    else if (!SH.data) h += '<div class="cs-mute">' + esc(T('Reading…')) + '</div>';
+    else if (!sheetState.data) html += '<div class="cs-mute">' + esc(T('Reading…')) + '</div>';
     else {
-      var list = SH.data.disputes || [];
-      h += list.length ? list.map(disputeHTML).join('') : '<div class="sub" data-testid="dp-none">' + esc(T('No dispute on this chit.')) + '</div>';
-      h +=
-        actRow('dp_raise', T('⚑ Raise a dispute'), (SH.data.actions && SH.data.actions.raise) || { ok: false, say: T('Raise is not answered for this chit') }) +
-        (SH.raising ? raiseHTML() : '');
+      var list = sheetState.data.disputes || [];
+      html += list.length ? list.map(disputeHTML).join('') : '<div class="sub" data-testid="dp-none">' + esc(T('No dispute on this chit.')) + '</div>';
+      html +=
+        actRow('dp_raise', T('⚑ Raise a dispute'), (sheetState.data.actions && sheetState.data.actions.raise) || { ok: false, say: T('Raise is not answered for this chit') }) +
+        (sheetState.raising ? raiseHTML() : '');
     }
-    h += '<div id="dp_out" class="tk-out" role="status" data-testid="dp-out">' + esc(keep) + '</div>';
-    el.innerHTML = h;
+    html += '<div id="dp_out" class="tk-out" role="status" data-testid="dp-out">' + esc(keep) + '</div>';
+    el.innerHTML = html;
     var element = $('dp_sheet_retry');
     if (element)
       element.onclick = function () {
-        SH.err = null;
+        sheetState.err = null;
         sheetPaint();
         sheetRead();
       };
-    if (!SH.data) return;
+    if (!sheetState.data) return;
     var nestedNode = $('dp_raise');
     if (nestedNode && !nestedNode.disabled)
       nestedNode.onclick = function () {
@@ -1348,38 +1357,38 @@ async function submitResolve(chitId, disputeId, partyId) {
       localNode.onclick = function () {
         raise(localNode);
       };
-    (SH.data.disputes || []).forEach(function (item) {
-      var k = item.dispute_id,
-        target = $('dp_res_' + k),
-        innerNode = $('dp_talk_' + k);
+    (sheetState.data.disputes || []).forEach(function (item) {
+      var disputeKey = item.dispute_id,
+        target = $('dp_res_' + disputeKey),
+        innerNode = $('dp_talk_' + disputeKey);
       if (target && !target.disabled)
         target.onclick = function () {
           resolveAsk(item);
         };
       if (innerNode)
         innerNode.onclick = function () {
-          SH.talk[k] = !SH.talk[k];
+          sheetState.talk[disputeKey] = !sheetState.talk[disputeKey];
           sheetPaint();
         };
-      if (SH.talk[k]) room(item);
+      if (sheetState.talk[disputeKey]) room(item);
     });
   }
   /** one dispute's room: CBThread, dispute-scoped (the roster's audience), read-only once resolved — mounted only when asked for */
-  function room(d) {
-    var box = $('dp_room_' + d.dispute_id);
+  function room(dispute) {
+    var box = $('dp_room_' + dispute.dispute_id);
     if (!box || !root.CBThread) return;
-    SH.threads[d.dispute_id] = root.CBThread.mount(box, {
-      chit_id: SH.id,
-      dispute_id: d.dispute_id,
+    sheetState.threads[dispute.dispute_id] = root.CBThread.mount(box, {
+      chit_id: sheetState.id,
+      dispute_id: dispute.dispute_id,
       channel: 'external',
-      readOnly: d.status !== 'open',
-      party: withWord(d),
+      readOnly: dispute.status !== 'open',
+      party: withWord(dispute),
       context: { host: 'tasks-dispute' },
       decorate: typeof disputeByline === 'function' ? disputeByline : undefined
     }); /* CBThread hands decorate the message TEXT */
   }
   function raiseAsk() {
-    SH.raising = true;
+    sheetState.raising = true;
     sheetPaint();
     var element = $('dp_reason');
     if (element) {
@@ -1394,37 +1403,37 @@ async function submitResolve(chitId, disputeId, partyId) {
   }
   function raise(btn) {
     var reason = String(($('dp_reason') || {}).value || '').trim(),
-      cat = ($('dp_cat') || {}).value || 'other';
+      kindChoice = ($('dp_cat') || {}).value || 'other';
     if (reason.length < 10) {
       $('dp_out').textContent = T('Say a little more — at least 10 letters.');
       return;
     }
-    var parties = [].slice.call(SH.el.querySelectorAll('.dp-party:checked')).map(function (x) {
+    var parties = [].slice.call(sheetState.el.querySelectorAll('.dp-party:checked')).map(function (x) {
       return x.value;
     });
-    var body = { category: cat, reason: reason };
+    var body = { category: kindChoice, reason: reason };
     if (parties.length) body.participant_entity_ids = parties;
     return root.CBAction.run(
       btn,
       function () {
-        return call('dispute', { params: { id: SH.id }, body: body });
+        return call('dispute', { params: { id: sheetState.id }, body: body });
       },
       {
-        key: 'dp-raise-' + SH.id,
+        key: 'dp-raise-' + sheetState.id,
         failed: T("The dispute didn't go through"),
         out: 'dp_out',
-        outcome: function (r) {
-          SH.raising = false;
-          $('dp_out').textContent = T('Dispute raised. The other side is told.') + (r && r.warning ? ' ' + r.warning : '');
+        outcome: function (reply) {
+          sheetState.raising = false;
+          $('dp_out').textContent = T('Dispute raised. The other side is told.') + (reply && reply.warning ? ' ' + reply.warning : '');
           changed();
         }
       }
     );
   }
-  function resolveAsk(d) {
-    var host = $('dp_rmore_' + d.dispute_id);
+  function resolveAsk(dispute) {
+    var host = $('dp_rmore_' + dispute.dispute_id);
     if (!host) return;
-    var nestedOpen = (d.others || []).filter(function (item) {
+    var nestedOpen = (dispute.others || []).filter(function (item) {
       return item.role === 'party' && item.dispute_status !== 'resolved';
     });
     host.innerHTML =
@@ -1461,14 +1470,14 @@ async function submitResolve(chitId, disputeId, partyId) {
       root.CBAction.run(
         $('dp_rgo'),
         function () {
-          return call('resolveDispute', { params: { id: SH.id, disputeId: d.dispute_id }, body: body });
+          return call('resolveDispute', { params: { id: sheetState.id, disputeId: dispute.dispute_id }, body: body });
         },
         {
-          key: 'dp-resolve-' + d.dispute_id,
+          key: 'dp-resolve-' + dispute.dispute_id,
           failed: T("That didn't resolve it"),
           out: 'dp_out',
-          outcome: function (r) {
-            $('dp_out').textContent = r && r.fully_resolved === false ? T('Resolved with them. Still open for the others.') : T('Resolved.');
+          outcome: function (reply) {
+            $('dp_out').textContent = reply && reply.fully_resolved === false ? T('Resolved with them. Still open for the others.') : T('Resolved.');
             changed();
           }
         }
