@@ -1668,6 +1668,10 @@ function payWrite(amount, acknowledged, viaBand) {
     if (PAY) PAY.writing = false;
   });
 }
+/** RAIL-146n: the one line the outcome adds when the server answered cost_hidden (a co-assist without can_see_costs paying a supplier) */
+function payHiddenNote(hidden) {
+  return hidden ? '<p data-testid="pay_hidden" style="margin:0;color:var(--grey)">' + esc(tx('Amounts hidden')) + '</p>' : '';
+}
 /** the outcome IS the form's next state: what happened · what it means (the bills named, the balance) · Done */
 function payOutcomePaint(r) {
   var node = document.getElementById('pay_body'),
@@ -1695,8 +1699,7 @@ function payOutcomePaint(r) {
     });
   }
   html +=
-    '<p data-testid="pay_outcome" style="margin:0;font-weight:600">' + esc(o.words || (r.payment.duplicate ? tx('Already recorded') : tx('Recorded'))) + '</p>';
-  if (r.cost_hidden) html += '<p data-testid="pay_hidden" style="margin:0;color:var(--grey)">' + esc(tx('Amounts hidden')) + '</p>'; /* ⭐ RAIL-146n: the server left the supplier bills' figures out for a co-assist who may not see cost */
+    '<p data-testid="pay_outcome" style="margin:0;font-weight:600">' + esc(o.words || (r.payment.duplicate ? tx('Already recorded') : tx('Recorded'))) + '</p>' + payHiddenNote(r.cost_hidden); /* ⭐ RAIL-146n: figures left out for a co-assist who may not see cost */
   if (bills.length) html += '<p data-testid="pay_settled" style="margin:0">' + esc(txf('Settled: {bills}', { bills: bills.join(', ') })) + '</p>';
   if (o.balance_minor != null)
     html +=
