@@ -4,7 +4,8 @@
  * The server is a stand-in `post` that answers what routes/signin.js answers (tests/signin-contact.test.cjs is the API side of
  * the same cases). What is proved here is the WINDOW's rules:
  *   owner by e-mail · owner by mobile · employee by mobile → code → set PIN → the PIN works · customer by e-mail ·
- *   one contact → two identities → the chooser re-asks with the STORED id · a spent code is never re-sent ·
+ *   ⭐ SEC-143: ask answers EVERYONE the same (api #883) so the window shows one PIN-or-code box for every person; one contact → two
+ *   identities → the chooser appears only AFTER a correct secret (at verify) and re-verifies with the STORED id · a spent code is never re-sent ·
  *   social / SSO / passkey slots are hidden until switched on with a handler · the window never posts to a register door ·
  *   the session kept is the apps' shape (cb_sess) and a customer's is not cb_sess.
  *
@@ -49,20 +50,21 @@ function standIn() {
     calls.push({ path, body, tok });
     const id = body.id || body.email || body.user_id;
     if (path === '/api/signin/ask') {
+      /* SEC-143: the SAME 200 for an unknown person, a PIN holder, a first-timer and a shared contact; only the side effect differs */
       const ps = who(id);
-      if (!ps.length) return { status: 400, body: { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' } };
-      if (ps.length > 1) return { status: 409, body: { code: 'CHOOSE_IDENTITY', message: 'That contact is on more than one account. Choose one.', choices: choices(ps) } };
-      const p = ps[0];
-      if (p.kind === 'actor' && p.pin) return { status: 200, body: { message: 'Enter your PIN.', use_pin: true, user_id: p.id, kind: 'actor', need: 'pin', id: p.id } };
-      p.code = p.kind === 'customer' ? '123123' : '123456'; p.sent = (p.sent || 0) + 1;
-      return { status: 200, body: { message: 'Verification code sent', kind: p.kind, need: 'code', id: p.id } };
+      if (ps.length === 1 && !(ps[0].kind === 'actor' && ps[0].pin)) { const p = ps[0]; p.code = p.kind === 'customer' ? '123123' : '123456'; p.sent = (p.sent || 0) + 1; }
+      return { status: 200, body: { message: 'If that sign-in exists, enter your PIN or the code we sent.', need: 'pin_or_code' } };
     }
     if (path === '/api/signin/verify') {
       const ps = who(id);
-      if (ps.length > 1) return { status: 409, body: { code: 'CHOOSE_IDENTITY', choices: choices(ps) } };
-      const p = ps[0]; if (!p) return { status: 400, body: { code: 'NO_ACCOUNT', message: 'That User ID is not recognised.' } };
-      if (p.kind === 'actor' && p.pin) { if (body.pin !== p.pin) return { status: 400, body: { message: 'Incorrect PIN. 4 attempts remaining.' } }; }
-      else { if (!p.code || body.otp !== p.code) return { status: 400, body: { message: 'Invalid or expired OTP' } }; p.code = null; }
+      const secretOk = (p) => (p.kind === 'actor' && p.pin ? body.pin === p.pin : !!p.code && body.otp === p.code);
+      const refused = { status: 400, body: { message: 'Invalid or expired OTP' } };
+      if (!ps.length) return refused;
+      /* SEC-143: a contact on several accounts is chosen AFTER a correct secret, never listed before */
+      if (ps.length > 1) return ps.some(secretOk) ? { status: 409, body: { code: 'CHOOSE_IDENTITY', message: 'Choose one.', choices: choices(ps) } } : refused;
+      const p = ps[0];
+      if (!secretOk(p)) return p.kind === 'actor' && p.pin ? { status: 400, body: { message: 'Incorrect PIN. 4 attempts remaining.' } } : refused;
+      if (!(p.kind === 'actor' && p.pin)) p.code = null;
       const t = token(p.claims); tokens.set(t, p);
       return { status: 200, body: Object.assign({ token: t, identity: { identity_id: p.claims.identity_id, display_name: p.name, user_id: p.kind === 'entity' ? p.id : null, identity_type: p.kind, bridge_id: p.claims.bridge_id || 'B' } },
         p.kind === 'actor' && !p.pin ? { requires_pin_setup: true } : {}) };
@@ -82,7 +84,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     const api = standIn(); let got = null;
     const { m, st } = run({ need: 'person', onIn: (s) => { got = s; } }, api);
     m.typed('Athi@Mayur.test'); await m.go();
-    assert.strictEqual(m.state().at, 'credential'); assert.strictEqual(m.state().need, 'code'); assert.strictEqual(m.state().kind, 'owner');
+    assert.strictEqual(m.state().at, 'credential'); assert.strictEqual(m.state().need, 'either'); assert.strictEqual(m.state().kind, '', 'the window learns no kind before a secret');
     assert.deepStrictEqual(api.calls[0].body, { mode: 'login', email: 'athi@mayur.test' }, 'the engine\'s ask body, the e-mail tidied');
     await m.verify('123456');
     assert.strictEqual(m.state().at, 'in');
@@ -92,21 +94,21 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     assert.ok(got && got.token === sess.token && got.person.kind === 'owner' && got.person.id === 'mayuri123');
   });
 
-  await it('owner by mobile (typed with spaces): sent as id; the stored user id comes back and is what verify sends', async () => {
+  await it('owner by mobile (typed with spaces): sent as id; what was TYPED (tidied) is what verify sends', async () => {
     const api = standIn(); const { m } = run({ need: 'person' }, api);
     m.typed('98765 43210');
     api.P.athiAtAlpha.contacts = [];           /* only the owner holds this number in this case */
     await m.go();
     assert.deepStrictEqual(api.calls[0].body, { mode: 'login', id: '9876543210' });
-    assert.strictEqual(m.state().resolved, 'mayuri123', 'the STORED id, never typed');
+    assert.strictEqual(m.state().resolved, '9876543210', 'the typed id, tidied: the server no longer sends one back');
     await m.verify('123456');
-    assert.strictEqual(api.calls[1].body.id, 'mayuri123'); assert.strictEqual(m.state().at, 'in');
+    assert.strictEqual(api.calls[1].body.id, '9876543210'); assert.strictEqual(m.state().at, 'in');
   });
 
   await it('⭐ employee by mobile: code → signed in → asked to set a PIN (4 digits, twice) → in; next time the PIN alone, by mobile', async () => {
     const api = standIn(); const { m, st } = run({ need: 'person' }, api);
     m.typed('9000000001'); await m.go();
-    assert.strictEqual(m.state().kind, 'employee'); assert.strictEqual(m.state().need, 'code'); assert.strictEqual(m.state().resolved, 'bala@mayuri123.br');
+    assert.strictEqual(m.state().need, 'either'); assert.strictEqual(m.state().resolved, '9000000001');
     await m.verify('123456');
     assert.strictEqual(m.state().at, 'setpin', 'requires_pin_setup → the set-PIN step');
     assert.strictEqual(st.getItem('cb_sess'), null, 'not signed in to the apps before the PIN is set');
@@ -125,10 +127,13 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     /* the next day */
     const again = run({ need: 'person' }, api);
     again.m.typed('9000000001'); await again.m.go();
-    assert.strictEqual(again.m.state().need, 'pin');
+    assert.strictEqual(again.m.state().need, 'either', 'the same box for a PIN holder');
+    assert.strictEqual(again.m.state().said, 'If that sign-in exists, enter your PIN or the code we sent.');
     await again.m.verify('123456');
-    assert.ok(/four digits/.test(again.m.state().why), 'a 6-digit code in the PIN box is refused before any call');
+    assert.strictEqual(again.m.state().at, 'credential'); assert.ok(again.m.state().why, 'a wrong secret is the server\'s refusal, not a client rule about kinds');
+    assert.strictEqual(again.m.state().session, null);
     await again.m.verify('4826');
+    assert.strictEqual(api.calls.filter((c) => c.path === '/api/signin/verify' && c.body.pin === '4826').length, 1, 'a 4-digit secret goes as pin');
     assert.strictEqual(again.m.state().at, 'in');
     assert.strictEqual(api.P.bala.sent, 1, 'no second code was ever issued for Bala');
   });
@@ -136,23 +141,39 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
   await it('customer by e-mail: the customer\'s code; kept under sessionStorage cb_cust@<shop>, never cb_sess', async () => {
     const api = standIn(); const { m, st } = run({ need: 'customer', shop: 'mayur' }, api);
     m.typed('kavi@mail.test'); await m.go();
-    assert.strictEqual(m.state().kind, 'customer'); assert.strictEqual(m.state().resolved, 'kavi=mail.test@mayuri123.cr');
+    assert.strictEqual(m.state().resolved, 'kavi@mail.test');
     await m.verify('123123');
     assert.strictEqual(m.state().at, 'in');
     assert.strictEqual(st.getItem('cb_sess'), null);
     assert.ok(JSON.parse(st.getItem('cb_cust@mayur')).token, 'kept under cb_cust@<shop> in the host store (sessionStorage in a page), never cb_sess');
   });
 
-  await it('⭐ one mobile, two people: the chooser; choosing re-asks with the STORED id (grammar and all) and continues', async () => {
+  await it('⭐ SEC-143 one mobile, two people: ask says nothing of it; the chooser comes AFTER the correct secret, then verifies with the STORED id', async () => {
     const api = standIn(); const { m } = run({ need: 'person' }, api);
     m.typed('9876543210'); await m.go();
+    assert.strictEqual(m.state().at, 'credential', 'the same one box, no chooser at ask'); assert.deepStrictEqual(m.state().choices, []);
+    await m.verify('9999');
+    assert.strictEqual(m.state().at, 'credential', 'a wrong secret shows no list'); assert.ok(m.state().why);
+    await m.verify('2580');
     assert.strictEqual(m.state().at, 'choose'); assert.strictEqual(m.state().choices.length, 2);
+    assert.ok(!JSON.stringify(m.state()).includes('2580'), 'the held secret is not in the state the page paints');
     const i = m.state().choices.findIndex((c) => c.kind === 'employee');
     await m.choose(i);
-    assert.strictEqual(api.calls[1].body.id, 'athi@alpha-timers.br');
-    assert.strictEqual(m.state().at, 'credential'); assert.strictEqual(m.state().need, 'pin');
-    await m.verify('2580');
+    const last = api.calls[api.calls.length - 1];
+    assert.strictEqual(last.path, '/api/signin/verify'); assert.strictEqual(last.body.id, 'athi@alpha-timers.br'); assert.strictEqual(last.body.pin, '2580');
+    assert.strictEqual(api.calls.filter((c) => c.path === '/api/signin/ask').length, 1, 'choosing never asks again');
     assert.strictEqual(m.state().at, 'in'); assert.strictEqual(m.state().session.entity, 'Alpha Timers');
+  });
+
+  await it('⭐ SEC-143 the same box and the same words for an unknown person, a PIN holder and a first-timer', async () => {
+    const seen = [];
+    for (const typed of ['nobody@nowhere.test', '9000000001', 'athi@alpha-timers.br']) {
+      const api = standIn(); if (typed === '9000000001') api.P.bala.pin = '4826';
+      const { m } = run({ need: 'person' }, api); m.typed(typed); await m.go();
+      const S = m.state(); seen.push(JSON.stringify([S.at, S.need, S.kind, S.said, S.why]));
+    }
+    assert.strictEqual(new Set(seen).size, 1, 'one screen for everyone: ' + seen.join(' | '));
+    assert.ok(!/no account|not found|pin|code sent/i.test(JSON.parse(seen[0])[3].replace('PIN or the code we sent', '')), 'nothing before the secret says whether the person exists or has a PIN');
   });
 
   await it('⚠️ a spent code is never re-sent: Continue twice = one ask; a wrong code never re-asks; "Send a new code" is the only second ask; once in, nothing asks', async () => {
@@ -177,7 +198,9 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
   await it('refusals are sentences: an unknown contact, too many tries, the line down — and the register door is never posted to', async () => {
     const api = standIn(); const { m } = run({ need: 'person' }, api);
     m.typed('nobody@nowhere.test'); await m.go();
-    assert.strictEqual(m.state().why, 'No account found. Check the number or e-mail.'); assert.strictEqual(m.state().at, 'out');
+    assert.strictEqual(m.state().at, 'credential', 'SEC-143: ask does not say the person is unknown');
+    await m.verify('123456'); assert.ok(m.state().why, 'the refusal comes with the secret'); assert.strictEqual(m.state().at, 'credential');
+    assert.ok(!/no account/i.test(m.state().why), 'and does not say which part was wrong');
     m.typed(''); await m.go(); assert.ok(m.state().why);
     const flaky = { post: async (p) => ({ status: 429, body: {} }) };
     const n = E.machine({ need: 'person' }, { post: flaky.post, store: store() }); n.typed('athi@mayur.test'); await n.go();
@@ -243,7 +266,7 @@ const run = (c, api) => { const st = store(); const m = E.machine(Object.assign(
     await m.line(); assert.strictEqual(m.state().at, 'credential'); assert.ok(m.state().local, 'offline: the PIN box stays');
     online = true; api.P.xc = { id: 'xclerk', kind: 'actor', name: 'X Clerk', contacts: [], code: null, pin: null, claims: { identity_id: 'xc', identity_type: 'actor', display_name: 'X Clerk', parent_entity_id: 'mayur' } };
     await m.line();
-    assert.strictEqual(api.calls[0].path, '/api/signin/ask'); assert.strictEqual(m.state().local, null); assert.strictEqual(m.state().need, 'code');
+    assert.strictEqual(api.calls[0].path, '/api/signin/ask'); assert.strictEqual(m.state().local, null); assert.strictEqual(m.state().need, 'either');
     assert.ok(b.calls.filter((c) => c[0] === 'find').length >= 2, 'the book was consulted first each time');
   });
 
