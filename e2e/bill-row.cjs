@@ -22,7 +22,7 @@ function fnSource(name) {
   for (; i < src.length; i++) { const ch = src[i]; if (ch === '{') depth++; else if (ch === '}') { depth--; if (!depth) return src.slice(at, i + 1); } }
   return null;
 }
-const ctx = { fmtMoney: (n, cur) => '₹' + Number(n).toFixed(2), tx: (s) => s, txf: (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k]) };
+const ctx = { fmtMoney: (n, cur, empty) => (empty !== undefined && (n == null || n === '' || !isFinite(Number(n))) ? empty : '₹' + Number(n).toFixed(2)), tx: (s) => s, txf: (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k]) };
 vm.createContext(ctx);
 vm.runInContext("var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];", ctx);
 for (const n of ['billRowOf', 'statusOptsFor', 'statusWordFor', 'mapApiChit', 'billUseChoiceHTML']) {
@@ -40,6 +40,9 @@ if (!bad) {
   say('a received counter bill, to accept: "Bill from Tally Test Shop · ₹481.65 · to accept"', ctx.billRowOf(bill('pending')) === 'Bill from Tally Test Shop · ₹481.65 · to accept', ctx.billRowOf(bill('pending')));
   say('…once accepted it is still the bill, no longer "to accept"', ctx.billRowOf(bill('accepted')) === 'Bill from Tally Test Shop · ₹481.65', ctx.billRowOf(bill('accepted')));
   say('a task (the shop\'s own counter sale, an order) is not a bill row', ctx.billRowOf(task) === null, String(ctx.billRowOf(task)));
+  /* ACC-252: the server answers total null for a bill it has no figure for — unknown stays unknown, never ₹0.00 */
+  const unknown = bill('pending'); unknown.summary_json.bill_received.total = null;
+  say('a bill with no known total reads "Bill from Tally Test Shop · — · to accept", never ₹0.00', ctx.billRowOf(unknown) === 'Bill from Tally Test Shop · — · to accept', ctx.billRowOf(unknown));
   const row = ctx.mapApiChit(bill('pending')), trow = ctx.mapApiChit(task);
   say('the list row of the bill carries those words, and knows it is a bill received', row.code === 'Bill from Tally Test Shop · ₹481.65 · to accept' && row.billRx === true && row.kind === 'invoice', JSON.stringify([row.code, row.billRx, row.kind]));
   say('…a task\'s row keeps its subject and is not a bill', trow.code === 'Counter sale C2/26-27/0002' && !trow.billRx, JSON.stringify([trow.code, trow.billRx]));

@@ -23950,11 +23950,12 @@ function notifClearAll() {
  * "Bill from Tally Test Shop · ₹481.65 · to accept" — never a task. null for anything else, which keeps its own words.
  */
 function billRowOf(c) {
+  /* ACC-252: a bill whose total the server does not know sends total null — shown as '—' (fmtMoney's empty word), never ₹0.00 */
   var s = (c && c.summary_json) || {},
     b = s.bill_received;
   if (!b || !c || c.purpose !== 'invoice') return null;
   var open = /^(pending|delivered|read)$/.test(String(c.current_status || 'pending'));
-  return txf('Bill from {from}', { from: b.from || '—' }) + ' · ' + fmtMoney(b.total, s.currency_code) + (open ? ' · ' + tx('to accept') : '');
+  return txf('Bill from {from}', { from: b.from || '—' }) + ' · ' + fmtMoney(b.total, s.currency_code, '—') + (open ? ' · ' + tx('to accept') : '');
 }
 /** the change-status picker — a received bill's move is ACCEPTANCE, in its own words; a task keeps Open · Act · Close */
 function statusOptsFor(rows) {
