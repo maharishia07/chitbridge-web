@@ -5651,10 +5651,23 @@ function logoutNow() {
       _netFlush();
     } catch (_) {}
   }
-  /* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */ try {
-    localStorage.removeItem('cb_sess');
-    localStorage.removeItem(uk('cb_nav'));
-  } catch (_) {}
+  /* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */
+  /* SEC-131: the ONE sign-out - the server revokes THIS tab's token, the device forgets it (CBAvatar.endSession, public/app/avatar.js); it says so itself when it cannot */
+  try {
+    CBAvatar.endSession({ token: SESSION.token, apiBase: CFG.API_BASE });
+  } catch (failure) {
+    console.error('logoutNow: the sign-out did not run', failure);
+    /* fail-safe: the avatar script is missing or threw - the device still forgets the session and the per-person keys (what forget() does) */
+    try {
+      localStorage.removeItem('cb_sess');
+      Object.keys(localStorage).forEach(function (key) {
+        if (/^cb_nav(@|$)/.test(key)) localStorage.removeItem(key);
+      });
+    } catch (clearFailure) {
+      console.error('logoutNow: the device could not clear the saved session', clearFailure);
+    }
+    if (typeof toast === 'function') toast(tx('Could not sign out cleanly. Close this window before you leave this device.'), true);
+  }
   stopAutoRefresh();
   SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
   /* ⚠️ the gate closes with the session, and the old person's /me (warm or in flight) is not the next person's */ GATE = {
