@@ -194,7 +194,7 @@ function appRoutesOf(serverFile) {
   return appRoutes;
 }
 
-/** run the api's own route scanner as a child; a stuck one is stopped after EU_TIMEOUT_MS and said so, never a silent freeze (MNT-49) */
+/** run the api's own route scanner as a child; a stuck one is stopped after EU_TIMEOUT_MS and throws, so build() notes it, never a silent freeze (MNT-49) */
 function runEndpointScanner(scannerFile, apiDir, webDir) {
   const result = spawnSync(process.execPath, [scannerFile, '--json'], {
     encoding: 'utf8',
@@ -202,7 +202,7 @@ function runEndpointScanner(scannerFile, apiDir, webDir) {
     timeout: EU_TIMEOUT_MS,
     env: Object.assign({}, process.env, { CB_API_DIR: apiDir, CB_WEB_DIR: webDir })
   });
-  if (result.error) console.error('  ⚠ api tools/endpoint-usage.cjs stopped (' + result.error.code + ' after ' + EU_TIMEOUT_MS / 1000 + 's): route joins fall back to file names');
+  if (result.error) throw new Error('stopped: ' + result.error.code + ' after ' + EU_TIMEOUT_MS / 1000 + 's'); /* build() records it in meta.notes, so graph.json says why */
   return result;
 }
 
@@ -431,8 +431,8 @@ function build() {
   /* --endpoint-usage PATH: the fixture test points at the REAL api scanner while --roots points api= at the fixture */
   const EU = flag('endpoint-usage', null) ? path.resolve(flag('endpoint-usage')) : path.join(A, 'tools', 'endpoint-usage.cjs');
   if (meta.present.api && exists(EU)) {
-    const r = runEndpointScanner(EU, A, W);
     try {
+      const r = runEndpointScanner(EU, A, W);
       const parsed = JSON.parse(r.stdout);
       [mounts, mountsAll] = [parsed.mounts || null, parsed.mountsAll || null];
       euRows = parsed.routes || null;
