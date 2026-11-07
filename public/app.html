@@ -19641,14 +19641,12 @@ function prodOutcomeHTML(k, d) {
           });
           return grey(tx('checking the slab…'));
         }
-        if (r.rate == null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
-        const myCountry = prodShopCountry();
-        if (!myCountry) return `<span style="color:var(--warn-3)">${esc(prodNoCountryWords())}</span>`;
+        if (prodTaxNote(r)) return `<span style="color:var(--warn-3)">${esc(prodTaxNote(r))}</span>`;
         const price = Number(pPrice(d)) || 0,
           st = prodSellerState() || '29';
         const it = CBTax.determine({
-          seller: { State: st, Country: myCountry, RegType: prodRegType() },
-          buyer: { Pos: st, Country: myCountry },
+          seller: { State: st, Country: prodShopCountry(), RegType: prodRegType() },
+          buyer: { Pos: st, Country: prodShopCountry() },
           lines: [{ name: pName(d), qty: 1, unit_price: price, rate: r.rate, cess_rate: r.cess || 0 }]
         }).ItemList[0];
         const dead = !!(r.unresolved && r.cited),
@@ -21543,8 +21541,13 @@ function prodShopCountry() {
 }
 /** The registered NO_COUNTRY words, from the regulation engine: what to say when the shop has no country yet. */
 function prodNoCountryWords() {
-  const st = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
-  return (st && st.why) || 'Set the shop country first (Country setup).';
+  const noCountry = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
+  return (noCountry && noCountry.why) || 'Set the shop country first (Country setup).';
+}
+/** Why the slab pane cannot work a line out: the slab's own words, else the NO_COUNTRY words; '' when it can. */
+function prodTaxNote(resolved) {
+  if (resolved.rate == null) return CBTaxSlab.describe(resolved);
+  return prodShopCountry() ? '' : prodNoCountryWords();
 }
 function prodSellerState() {
   const g = String(UI._meGstn || '').trim();
