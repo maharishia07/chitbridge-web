@@ -377,8 +377,8 @@ async function loadIntake(quiet) {
     _INTAKE.list = (reply && reply.captures) || [];
     _INTAKE.migrated = true;
   } catch (e) {
-    // 503 CAPTURE_STORE_MISSING is the migration gate the route declares, not a fault — tell them apart by the code (never by the words).
-    if (e && (e.status === 503 || (e.data && e.data.code === 'CAPTURE_STORE_MISSING'))) {
+    // 503 is the migration gate the route declares, not a fault — tell them apart.
+    if (/not migrated|b104|503/i.test((e && e.message) || '')) {
       _INTAKE.migrated = false;
     } else _INTAKE.err = (e && e.message) || 'Could not read the intake queue.';
     _INTAKE.list = _INTAKE.list || [];
