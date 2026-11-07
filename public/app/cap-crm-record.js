@@ -1,6 +1,8 @@
 /* cap-crm-record.js — CB CRM: ONE party's record, its timeline, the Log sheet, the Next block, and the party edit.
  * FLOW  crmRecordOpen(route) → the party and timeline reads (crmParty · crmTimeline) → crmRecordPaint → the actions greyed by the server's may/why
  * CARD 11-crm-and-marketing/crm-record
+ * OWNS  one party's record page and its timeline: the wire entry to page entry grammar (crmEntryFrom), the bill facts, the Log sheet, the party edit
+ * CALLED BY  crm.html, through the router in cap-crm.js (crmRecordOpen)
  * Loaded by crm.html after cap-crm.js (which owns the list, the router and the shared helpers). docs/design/crm/REQUIREMENT-record.md ·
  * REQUIREMENT-timeline.md · FLOWS F3–F8 · the designer handoff, where the FROZEN list standard wins: both timeline views are CBList
  * mounts (the record's latest five, and the full server-paged history) — no entry, row or card is drawn by hand.
@@ -69,7 +71,7 @@ function crmBillFacts(entries) {
   var chitBills = 0,
     ledBills = 0,
     lastBill = '',
-    un = { n: 0, minor: 0, currency: null };
+    un = { n: 0, minor: 0, currency: null, hidden: 0 };
   (entries || []).forEach(function (e) {
     if (e.kind === 'bill') {
       if (e.src === 'ledger') ledBills++;
@@ -77,7 +79,8 @@ function crmBillFacts(entries) {
       if (!lastBill || e.at > lastBill) lastBill = e.at;
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
       un.n++;
-      un.minor += Number(e.amount_minor || 0);
+      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the sum (an unpriced order, null without the flag, still adds 0)
+      else un.minor += Number(e.amount_minor || 0);
       un.currency = un.currency || e.currency;
     }
   });
@@ -114,6 +117,12 @@ function crmRecordFrom(rec, p) {
 /** who made a change, in words; a machine's id (a shop uuid) is never a name, so it says nothing (R109) */
 function crmWho(by) {
   return cbIsRawId(by) ? '' : by || '';
+}
+/** RAIL-146h: a chit or ledger entry whose money the server took off (a cost-blind reader: figure null + cost_hidden) is marked, so the Amount column says "hidden" and not a dash */
+function crmMarkHidden(entry, wire) {
+  var figure = entry.src === 'chit' ? wire.value : wire.amount_minor;
+  if ((entry.src === 'chit' || entry.src === 'ledger') && figure == null && wire.cost_hidden) entry.amount_hidden = true;
+  return entry;
 }
 /** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
 function crmEntryFrom(e, i) {
@@ -183,7 +192,7 @@ function crmEntryFrom(e, i) {
     o.line = e.from ? txf('Moved to {to} · from {from}', { to: to, from: tx(SW[e.from] || e.from) }) : txf('Added as {to}', { to: to });
     o.by = crmWho(e.by);
   } else o.line = e.line || e.title || '';
-  return o;
+  return crmMarkHidden(o, e);
 }
 function crmEntriesFrom(r) {
   return ((r && r.entries) || []).map(crmEntryFrom);
@@ -275,7 +284,7 @@ function crmTlCols() {
       cell: function (e) {
         return e.amount_minor != null
           ? '<span class="mono" data-testid="crm-amt-' + esc(e.id) + '">' + esc(bkMoney(e.amount_minor, e.currency)) + '</span>'
-          : '<span class="sub">\u2014</span>';
+          : '<span class="sub"' + (e.amount_hidden ? ' data-testid="crm-amt-hidden-' + esc(e.id) + '"' : '') + '>' + (e.amount_hidden ? esc(tx('hidden')) : '\u2014') + '</span>';
       },
       value: function (e) {
         return e.amount_minor == null ? '' : e.amount_minor;
@@ -982,7 +991,7 @@ function crmRecordPaint(p, rec) {
   /* Customer · Supplier */
   var bf = R.billFacts || crmBillFacts([]);
   var ufact = bf.unbilled.n
-    ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + bkMoney(bf.unbilled.minor, bf.unbilled.currency || CRM.currency)
+    ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + crmUnbilledMoney(bf.unbilled)
     : '';
   if (cu)
     secs.push(

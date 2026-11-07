@@ -1,4 +1,6 @@
 /* cap-crm.js — CB CRM: the parties list (home), follow-ups, Add party, and the plumbing every CRM screen shares.
+ * OWNS  the Parties list and its Dues cell, follow-ups, Add party, the router and the helpers every CRM screen shares
+ * CALLED BY  crm.html only; cap-crm-record.js reads its helpers
  * Loaded by crm.html only (after cap-books.js, list-ctl.js, chit-sheet.js). The record, its timeline and the Log sheet are
  * cap-crm-record.js. docs/design/crm/PLAN.md (Phases 3-4) · REQUIREMENT-home.md · REQUIREMENT-followups.md · the designer handoff,
  * where the FROZEN list standard (docs/design/list-standard, SYSTEM.md §3a) wins: every list here is a CBList mount.
@@ -174,12 +176,18 @@ function crmLocalISO(date) {
 function crmPlural(n, one, many) {
   return n + ' ' + (n === 1 ? tx(one) : tx(many));
 }
+/** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
+function crmUnbilledMoney(unbilled, currency) {
+  if (unbilled.cost_hidden && unbilled.minor == null) return tx('hidden'); // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
+  if (unbilled.hidden && !unbilled.minor) return tx('hidden');
+  return bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
+}
 /** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency } (the record's chip says the same words); '' when nothing is waiting. minor is null across two currencies: the count alone. */
 function crmUnbilledSaid(unbilled, currency) {
   if (!unbilled || !unbilled.n) return '';
   return (
     crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') +
-    (unbilled.minor == null ? '' : ' ' + bkMoney(unbilled.minor, unbilled.currency || currency))
+    (unbilled.minor == null && !unbilled.hidden && !unbilled.cost_hidden ? '' : ' ' + crmUnbilledMoney(unbilled, currency))
   );
 }
 
@@ -262,7 +270,8 @@ function crmSegChip(p) {
 /** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
-  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';
+  if (!CRM.ledger) return '<span class="sub">—</span>';
+  if (p.balance_minor == null) return p.dues && p.dues.cost_hidden ? '<span class="sub" data-testid="party-due-hidden-' + esc(p.party_id) + '">' + esc(tx('hidden')) + '</span>' : '<span class="sub">—</span>';
   var b = Number(p.balance_minor || 0),
     late = p.dues_overdue
       ? ' <span class="late red" data-testid="party-due-late-' +
@@ -1292,7 +1301,7 @@ function crmMiniChitRows(list, key) {
           '</span><span class="w">' +
           esc(e.line || '') +
           '</span><span class="a mono">' +
-          (e.amount_minor != null ? esc(bkMoney(e.amount_minor, e.currency || CRM.currency)) : '') +
+          (e.amount_minor != null ? esc(bkMoney(e.amount_minor, e.currency || CRM.currency)) : e.amount_hidden ? esc(tx('hidden')) : '') +
           '</span></div>'
       );
     });

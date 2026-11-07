@@ -98,6 +98,7 @@ jobs:
           node tests/crm-groups-reach.test.cjs
           node tests/crm-leads-import.test.cjs
           node tests/crm-unbilled-list.test.cjs
+          node tests/crm-timeline-hidden.test.cjs
           node tests/cu4-datetime.test.cjs
           node tests/detail-placement.test.cjs
           node tests/dispute-helpers.test.cjs
