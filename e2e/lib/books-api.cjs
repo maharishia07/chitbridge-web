@@ -30,7 +30,7 @@ const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
 /** one row of GET /api/books/periods */
-const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30' });
+const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
 const periods = (rows) => ({ periods: rows || [] });
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
