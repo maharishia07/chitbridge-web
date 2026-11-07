@@ -40,6 +40,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const S = require('./scan.cjs');
 const APIFEED = require('./apifeed.cjs');
+/** the most the api's own route scanner may take inside a build (MNT-49): it ran about 7 s here, so 90 s is a hang, not work */
+const EU_TIMEOUT_MS = 90000;
 
 /* ── args ─────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 const argv = process.argv.slice(2);
@@ -190,6 +192,18 @@ function appRoutesOf(serverFile) {
     appRoutes.push({ id: 'route:api:server.js ' + method + ' ' + text.text, key: method + ' ' + text.text, node: { kind: 'route', repo: 'api', file: 'server.js', method, tail: text.text, path: text.text, line: serverFile.scan.toLine(call.index) } });
   }
   return appRoutes;
+}
+
+/** run the api's own route scanner as a child; a stuck one is stopped after EU_TIMEOUT_MS and said so, never a silent freeze (MNT-49) */
+function runEndpointScanner(scannerFile, apiDir, webDir) {
+  const result = spawnSync(process.execPath, [scannerFile, '--json'], {
+    encoding: 'utf8',
+    maxBuffer: 64 << 20,
+    timeout: EU_TIMEOUT_MS,
+    env: Object.assign({}, process.env, { CB_API_DIR: apiDir, CB_WEB_DIR: webDir })
+  });
+  if (result.error) console.error('  ⚠ api tools/endpoint-usage.cjs stopped (' + result.error.code + ' after ' + EU_TIMEOUT_MS / 1000 + 's): route joins fall back to file names');
+  return result;
 }
 
 function build() {
@@ -417,11 +431,7 @@ function build() {
   /* --endpoint-usage PATH: the fixture test points at the REAL api scanner while --roots points api= at the fixture */
   const EU = flag('endpoint-usage', null) ? path.resolve(flag('endpoint-usage')) : path.join(A, 'tools', 'endpoint-usage.cjs');
   if (meta.present.api && exists(EU)) {
-    const r = spawnSync(process.execPath, [EU, '--json'], {
-      encoding: 'utf8',
-      maxBuffer: 64 << 20,
-      env: Object.assign({}, process.env, { CB_API_DIR: A, CB_WEB_DIR: W })
-    });
+    const r = runEndpointScanner(EU, A, W);
     try {
       const parsed = JSON.parse(r.stdout);
       [mounts, mountsAll] = [parsed.mounts || null, parsed.mountsAll || null];

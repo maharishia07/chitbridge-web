@@ -12,12 +12,14 @@
  *
  *   node tools/graph/trace.cjs                         web + api + engines (when ../chitbridge-api and ../chitbridge-engines are beside) → each repo's trace.json
  *   node tools/graph/trace.cjs --repo api --root DIR   one repo; --stdout prints the JSON instead of writing; --no-build reuses out/graph.json
+ *   --max-seconds N                                    hard stop (default 120): the run is killed and exits 124 with a sentence (MNT-49)
  * ⚠️ The minimums are EVIDENCE BY KEYWORD over the tests that reach a module (and an explicit `MIN <name>` line in a test) — a guide for
  *    the TRACE table, said as such in every row (`minimums.how`).
  */
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const HERE = __dirname;
 const WEB_ROOT = path.resolve(HERE, '..', '..');
@@ -255,8 +257,24 @@ function traceOf(graph, repo, roots) {
   };
 }
 
+/** a hard stop: run this same script as a child that is killed after --max-seconds (default 120); exit 124 says so in words (MNT-49) */
+function runWithLimit() {
+  const seconds = Number(flag('max-seconds', 120)) || 120;
+  const limited = spawnSync(process.execPath, [__filename, ...argv], {
+    stdio: 'inherit',
+    timeout: seconds * 1000,
+    env: Object.assign({}, process.env, { CB_TRACE_CHILD: '1' })
+  });
+  if (limited.error && limited.error.code === 'ETIMEDOUT') {
+    console.error(`trace.cjs: stopped after ${seconds}s (--max-seconds). Use --repo <one> --no-build, or raise the limit.`);
+    process.exit(124);
+  }
+  process.exit(limited.status === null ? 1 : limited.status);
+}
+
 /** the command line: which repos, which root; one trace per repo to <root>/trace.json or --stdout */
 function main() {
+  if (!process.env.CB_TRACE_CHILD) return runWithLimit();
   const repoFlag = String(flag('repo', 'all'));
   const root = flag('root');
   if (typeof root === 'string' && repoFlag !== 'all') process.env.CB_GRAPH_ROOTS = repoFlag + '=' + path.resolve(root);

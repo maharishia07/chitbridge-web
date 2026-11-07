@@ -187,6 +187,10 @@ ok(booksRow && booksRow.routesServed.some((route) => /POST \/api\/books\/payment
 ok(booksRow && Array.isArray(booksRow.minimums.missing) && booksRow.minimums.have.includes('one-success-path'), 'its §7 minimums are evidenced from its tests (one-success-path present)');
 const libRow = trace && trace.modules['lib/pay.js'];
 ok(libRow && libRow.layer === 'lib' && libRow.calledBy.some((file) => /routes\/books\.js/.test(file)), 'lib/pay.js is called by routes/books.js');
+/* MNT-49 part 2: a run that cannot finish is stopped and says so; the guard asks for ONE repo */
+const stopped = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no-build', '--stdout', '--max-seconds', '0.001'], { encoding: 'utf8' });
+ok(stopped.status === 124 && /stopped after 0\.001s \(--max-seconds\)/.test(stopped.stderr), 'trace.cjs past its --max-seconds is stopped: exit 124 and a sentence saying why');
+ok(/\[TRACE_TOOL, '--repo', repo,/.test(fs.readFileSync(path.join(ROOT, 'tools/readability.cjs'), 'utf8')), 'the readability guard builds a missing trace for ONE repo (--repo), never the three-repo default');
 
 console.log('\n6 · the modules behind the tool, one unit each');
 const measure = require('../tools/readability/measure.cjs');
