@@ -1,6 +1,6 @@
 {
  "generated_by": "tools/country-samples.cjs",
- "engines": "1.64.1",
+ "engines": "1.78.0",
  "note": "A sample shop per country, simulated (tests/helpers/year-any.js) — never a real shop's figures. Amounts in minor units.",
  "prerequisites": [
   "Country setup done — registered for the tax, the number checks out",
@@ -139,7 +139,7 @@
     "periods": [
      {
       "period": "2026-Q1",
-      "label": "2026-27 Q1 (Jul–Sep 2026)",
+      "label": "FY27 Q1 (Jul–Sep 2026)",
       "start": "2026-07-01",
       "end": "2026-09-30",
       "due": "2026-10-28",
@@ -185,7 +185,7 @@
      },
      {
       "period": "2026-Q2",
-      "label": "2026-27 Q2 (Oct–Dec 2026)",
+      "label": "FY27 Q2 (Oct–Dec 2026)",
       "start": "2026-10-01",
       "end": "2026-12-31",
       "due": "2027-02-28",
@@ -231,7 +231,7 @@
      },
      {
       "period": "2027-Q3",
-      "label": "2026-27 Q3 (Jan–Mar 2027)",
+      "label": "FY27 Q3 (Jan–Mar 2027)",
       "start": "2027-01-01",
       "end": "2027-03-31",
       "due": "2027-04-28",
@@ -277,7 +277,7 @@
      },
      {
       "period": "2027-Q4",
-      "label": "2026-27 Q4 (Apr–Jun 2027)",
+      "label": "FY27 Q4 (Apr–Jun 2027)",
       "start": "2027-04-01",
       "end": "2027-06-30",
       "due": "2027-07-28",
