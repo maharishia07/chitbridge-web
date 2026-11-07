@@ -720,12 +720,12 @@ function bankAskBody() {
 function bankAskWords() {
   const a = bankAskBody(),
     el = bkbEl('bk_askwords');
-  if (el) el.textContent = a.ok ? a.words : tx('Choose who to ask.');
+  if (el) el.textContent = a.ok ? a.words : bkbNoCountryWords() || tx('Choose who to ask.');
 }
 function bankAskSend(btn) {
   const a = bankAskBody(),
     r = BKB.rows.filter((x) => x.id === BKB.asking)[0];
-  if (!a.ok) return peBad('bk_askout', tx('Choose who to ask.'));
+  if (!a.ok) return peBad('bk_askout', bkbNoCountryWords() || tx('Choose who to ask.'));
   /* the rail's one send of a composed body (rail-advice.js CBAdvice.sendBody) — never a second mint */
   return CBAction.run(btn, () => CBAdvice.sendBody(a.body), {
     key: 'bankask:' + a.key,
