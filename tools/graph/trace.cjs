@@ -12,12 +12,14 @@
  *
  *   node tools/graph/trace.cjs                         web + api + engines (when ../chitbridge-api and ../chitbridge-engines are beside) → each repo's trace.json
  *   node tools/graph/trace.cjs --repo api --root DIR   one repo; --stdout prints the JSON instead of writing; --no-build reuses out/graph.json
+ *   --max-seconds N                                    hard stop (default 100, under the guard's 120): killed, exit 124 + a sentence; on Windows only this script is killed, not its scanner child
  * ⚠️ The minimums are EVIDENCE BY KEYWORD over the tests that reach a module (and an explicit `MIN <name>` line in a test) — a guide for
  *    the TRACE table, said as such in every row (`minimums.how`).
  */
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const HERE = __dirname;
 const WEB_ROOT = path.resolve(HERE, '..', '..');
@@ -31,6 +33,7 @@ const flag = (name, fallback) => {
 const HEAD_BYTES = 6000;
 const CARD_LINE = /\bCARD\s+([\w.-]+\/[\w.-]+)/;
 const MAX_STEPS = 40;
+const DEFAULT_LIMIT_SECONDS = 100;
 const MIN_STEP_WORDS = 12;
 
 // ── layers (§7) and what each layer's tests must evidence
@@ -255,8 +258,25 @@ function traceOf(graph, repo, roots) {
   };
 }
 
+/** a hard stop: run this same script as a child that is killed after --max-seconds (default 100: under the readability guard's own 120 s timer, so this sentence is the one you see); exit 124 says so in words (MNT-49) */
+function runWithLimit() {
+  const asked = flag('max-seconds', DEFAULT_LIMIT_SECONDS); /* a bare `--max-seconds` reads as true: that is the default, not 1 second */
+  const seconds = asked !== true && Number(asked) > 0 ? Number(asked) : DEFAULT_LIMIT_SECONDS;
+  const limited = spawnSync(process.execPath, [...process.execArgv, __filename, ...argv], {
+    stdio: 'inherit',
+    timeout: seconds * 1000,
+    env: Object.assign({}, process.env, { CB_TRACE_CHILD: '1' })
+  });
+  if (limited.error && limited.error.code === 'ETIMEDOUT') {
+    console.error(`trace.cjs: stopped after ${seconds}s (--max-seconds). Use --repo <one> --no-build, or raise the limit.`);
+    process.exit(124);
+  }
+  process.exit(limited.status === null ? 1 : limited.status);
+}
+
 /** the command line: which repos, which root; one trace per repo to <root>/trace.json or --stdout */
 function main() {
+  if (!process.env.CB_TRACE_CHILD) return runWithLimit();
   const repoFlag = String(flag('repo', 'all'));
   const root = flag('root');
   if (typeof root === 'string' && repoFlag !== 'all') process.env.CB_GRAPH_ROOTS = repoFlag + '=' + path.resolve(root);
