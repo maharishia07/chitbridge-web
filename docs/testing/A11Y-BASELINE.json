@@ -54,7 +54,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -88,7 +89,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -173,7 +175,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -273,7 +276,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -329,7 +333,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -395,7 +400,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -456,7 +462,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -490,7 +497,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -529,7 +537,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -568,7 +577,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -602,7 +612,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -636,7 +647,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -675,7 +687,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -709,7 +722,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -743,7 +757,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -782,7 +797,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -821,7 +837,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -887,7 +904,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -921,7 +939,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -955,7 +974,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -1016,7 +1036,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -1050,7 +1071,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -1106,7 +1128,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -1189,7 +1212,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -1228,7 +1252,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -1267,7 +1292,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -1306,7 +1332,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -1372,7 +1399,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -1458,7 +1486,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -1497,7 +1526,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -1536,7 +1566,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -1570,7 +1601,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -1705,7 +1737,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -1818,7 +1851,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -1857,7 +1891,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -1896,7 +1931,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -2012,7 +2048,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -2051,7 +2088,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -2085,7 +2123,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -2124,7 +2163,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -2163,7 +2203,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -2202,7 +2243,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -2241,7 +2283,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -2280,7 +2323,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -2314,7 +2358,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -2353,7 +2398,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -2397,7 +2443,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -2478,7 +2525,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -2564,7 +2612,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -2651,7 +2700,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -2690,7 +2740,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -2729,7 +2780,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -2768,7 +2820,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -2807,7 +2860,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -2846,7 +2900,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -2885,7 +2940,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -2924,7 +2980,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -2963,7 +3020,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -3002,7 +3060,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -3041,7 +3100,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -3075,7 +3135,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -3111,7 +3172,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -3148,7 +3210,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -3182,7 +3245,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -3238,7 +3302,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -3405,7 +3470,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -3572,7 +3638,8 @@
      "serious": 14
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -3633,7 +3700,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -3694,7 +3762,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -3728,7 +3797,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -3767,7 +3837,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -3828,7 +3899,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -3862,7 +3934,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -3940,7 +4013,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -3974,7 +4048,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -4097,7 +4172,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -4131,7 +4207,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -4263,7 +4340,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -4319,7 +4397,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -4353,7 +4432,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   },
   {
    "url": "/",
@@ -4387,7 +4467,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -4421,7 +4502,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -4506,7 +4588,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -4606,7 +4689,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -4662,7 +4746,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -4728,7 +4813,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -4789,7 +4875,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -4823,7 +4910,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -4862,7 +4950,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -4901,7 +4990,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -4935,7 +5025,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -4969,7 +5060,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -5008,7 +5100,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -5042,7 +5135,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -5076,7 +5170,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -5115,7 +5210,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -5154,7 +5250,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -5220,7 +5317,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -5254,7 +5352,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -5288,7 +5387,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -5349,7 +5449,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -5383,7 +5484,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -5439,7 +5541,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -5522,7 +5625,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -5561,7 +5665,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -5600,7 +5705,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -5639,7 +5745,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -5705,7 +5812,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -5791,7 +5899,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -5830,7 +5939,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -5869,7 +5979,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -5903,7 +6014,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -6038,7 +6150,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -6151,7 +6264,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -6190,7 +6304,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -6229,7 +6344,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -6345,7 +6461,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -6384,7 +6501,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -6418,7 +6536,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -6457,7 +6576,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -6518,7 +6638,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -6557,7 +6678,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -6596,7 +6718,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -6635,7 +6758,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -6669,7 +6793,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -6708,7 +6833,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -6752,7 +6878,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -6833,7 +6960,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -6919,7 +7047,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -7006,7 +7135,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -7045,7 +7175,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -7084,7 +7215,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -7123,7 +7255,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -7162,7 +7295,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -7201,7 +7335,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -7240,7 +7375,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -7279,7 +7415,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -7318,7 +7455,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -7357,7 +7495,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -7396,7 +7535,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -7430,7 +7570,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -7466,7 +7607,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -7503,7 +7645,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -7537,7 +7680,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -7593,7 +7737,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -7760,7 +7905,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -7944,7 +8090,8 @@
      "serious": 15
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -8005,7 +8152,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -8066,7 +8214,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -8100,7 +8249,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -8139,7 +8289,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -8200,7 +8351,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -8234,7 +8386,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -8312,7 +8465,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -8346,7 +8500,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -8469,7 +8624,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -8503,7 +8659,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -8635,7 +8792,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -8691,7 +8849,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -8725,7 +8884,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   },
   {
    "url": "/",
@@ -8759,7 +8919,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -8793,7 +8954,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -8878,7 +9040,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -8978,7 +9141,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -9034,7 +9198,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -9100,7 +9265,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -9161,7 +9327,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -9195,7 +9362,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -9234,7 +9402,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -9273,7 +9442,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -9307,7 +9477,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -9341,7 +9512,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -9380,7 +9552,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -9414,7 +9587,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -9448,7 +9622,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -9487,7 +9662,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -9526,7 +9702,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -9592,7 +9769,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -9626,7 +9804,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -9660,7 +9839,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -9721,7 +9901,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -9755,7 +9936,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -9811,7 +9993,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -9913,7 +10096,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -9952,7 +10136,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -9991,7 +10176,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -10030,7 +10216,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -10096,7 +10283,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -10182,7 +10370,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -10221,7 +10410,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -10260,7 +10450,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -10294,7 +10485,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -10429,7 +10621,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -10542,7 +10735,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -10581,7 +10775,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -10620,7 +10815,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -10736,7 +10932,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -10775,7 +10972,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -10809,7 +11007,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -10848,7 +11047,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -10887,7 +11087,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -10926,7 +11127,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -10965,7 +11167,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -11004,7 +11207,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -11038,7 +11242,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -11077,7 +11282,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -11121,7 +11327,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -11202,7 +11409,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -11288,7 +11496,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -11375,7 +11584,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -11414,7 +11624,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -11453,7 +11664,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -11492,7 +11704,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -11531,7 +11744,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -11570,7 +11784,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -11609,7 +11824,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -11648,7 +11864,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -11687,7 +11904,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -11726,7 +11944,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -11765,7 +11984,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -11799,7 +12019,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -11862,7 +12083,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -11899,7 +12121,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -11933,7 +12156,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -12013,7 +12237,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -12180,7 +12405,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -12347,7 +12573,8 @@
      "serious": 14
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -12386,7 +12613,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -12425,7 +12653,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -12491,7 +12720,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -12530,7 +12760,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -12591,7 +12822,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -12647,7 +12879,8 @@
      "serious": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -12725,7 +12958,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -12759,7 +12993,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -12936,7 +13171,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -12970,7 +13206,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -13119,7 +13356,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -13175,7 +13413,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -13209,7 +13448,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   },
   {
    "url": "/",
@@ -13243,7 +13483,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -13277,7 +13518,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -13362,7 +13604,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -13462,7 +13705,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -13518,7 +13762,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -13584,7 +13829,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -13645,7 +13891,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -13679,7 +13926,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -13718,7 +13966,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -13757,7 +14006,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -13791,7 +14041,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -13825,7 +14076,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -13864,7 +14116,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -13898,7 +14151,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -13932,7 +14186,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -13971,7 +14226,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -14010,7 +14266,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -14076,7 +14333,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -14110,7 +14368,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -14144,7 +14403,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -14205,7 +14465,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -14239,7 +14500,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -14295,7 +14557,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -14397,7 +14660,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -14436,7 +14700,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -14475,7 +14740,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -14514,7 +14780,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -14580,7 +14847,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -14666,7 +14934,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -14705,7 +14974,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -14744,7 +15014,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -14778,7 +15049,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -14913,7 +15185,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -15026,7 +15299,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -15065,7 +15339,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -15104,7 +15379,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -15220,7 +15496,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -15259,7 +15536,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -15293,7 +15571,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -15332,7 +15611,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -15393,7 +15673,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -15432,7 +15713,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -15471,7 +15753,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -15510,7 +15793,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -15544,7 +15828,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -15583,7 +15868,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -15627,7 +15913,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -15708,7 +15995,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -15794,7 +16082,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -15881,7 +16170,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -15920,7 +16210,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -15959,7 +16250,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -15998,7 +16290,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -16037,7 +16330,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -16076,7 +16370,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -16115,7 +16410,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -16154,7 +16450,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -16193,7 +16490,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -16232,7 +16530,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -16271,7 +16570,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -16305,7 +16605,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -16368,7 +16669,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -16405,7 +16707,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -16439,7 +16742,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -16519,7 +16823,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -16686,7 +16991,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -16870,7 +17176,8 @@
      "serious": 15
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -16909,7 +17216,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -16948,7 +17256,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -17014,7 +17323,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -17053,7 +17363,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -17114,7 +17425,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -17170,7 +17482,8 @@
      "serious": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -17248,7 +17561,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -17282,7 +17596,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -17459,7 +17774,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -17493,7 +17809,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -17642,7 +17959,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -17698,7 +18016,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -17732,7 +18051,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   },
   {
    "url": "/",
@@ -17766,7 +18086,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -17800,7 +18121,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -17885,7 +18207,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -17985,7 +18308,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -18041,7 +18365,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -18107,7 +18432,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -18168,7 +18494,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -18202,7 +18529,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -18241,7 +18569,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -18280,7 +18609,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -18314,7 +18644,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -18348,7 +18679,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -18387,7 +18719,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -18421,7 +18754,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -18455,7 +18789,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -18494,7 +18829,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -18533,7 +18869,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -18599,7 +18936,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -18633,7 +18971,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -18667,7 +19006,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -18728,7 +19068,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -18762,7 +19103,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -18818,7 +19160,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -18901,7 +19244,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -18940,7 +19284,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -18979,7 +19324,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -19018,7 +19364,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -19084,7 +19431,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -19170,7 +19518,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -19209,7 +19558,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -19248,7 +19598,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -19282,7 +19633,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -19417,7 +19769,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -19530,7 +19883,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -19569,7 +19923,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -19608,7 +19963,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -19724,7 +20080,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -19763,7 +20120,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -19797,7 +20155,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -19836,7 +20195,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -19875,7 +20235,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -19914,7 +20275,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -19953,7 +20315,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -19992,7 +20355,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -20026,7 +20390,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -20065,7 +20430,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -20109,7 +20475,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -20190,7 +20557,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -20276,7 +20644,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -20363,7 +20732,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -20402,7 +20772,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -20441,7 +20812,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -20480,7 +20852,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -20519,7 +20892,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -20558,7 +20932,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -20597,7 +20972,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -20636,7 +21012,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -20675,7 +21052,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -20714,7 +21092,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -20753,7 +21132,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -20787,7 +21167,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -20823,7 +21204,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -20860,7 +21242,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -20894,7 +21277,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -20950,7 +21334,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -21117,7 +21502,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -21284,7 +21670,8 @@
      "serious": 14
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -21323,7 +21710,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -21362,7 +21750,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -21396,7 +21785,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -21435,7 +21825,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -21496,7 +21887,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -21530,7 +21922,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -21608,7 +22001,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -21642,7 +22036,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -21765,7 +22160,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -21799,7 +22195,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -21931,7 +22328,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -21987,7 +22385,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -22021,7 +22420,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   },
   {
    "url": "/",
@@ -22055,7 +22455,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 2431
   },
   {
    "url": "/accounts.html#todo",
@@ -22089,7 +22490,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#daybook",
@@ -22174,7 +22576,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 726
   },
   {
    "url": "/accounts.html#ledgers",
@@ -22274,7 +22677,8 @@
      "serious": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/accounts.html#tb",
@@ -22330,7 +22734,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 434
   },
   {
    "url": "/accounts.html#pl",
@@ -22396,7 +22801,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 428
   },
   {
    "url": "/accounts.html#bs",
@@ -22457,7 +22863,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 465
   },
   {
    "url": "/accounts.html#compare",
@@ -22491,7 +22898,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 441
   },
   {
    "url": "/accounts.html#receivables",
@@ -22530,7 +22938,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 425
   },
   {
    "url": "/accounts.html#payables",
@@ -22569,7 +22978,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html",
@@ -22603,7 +23013,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 385
   },
   {
    "url": "/accounts.html#bills",
@@ -22637,7 +23048,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 393
   },
   {
    "url": "/accounts.html#cheques",
@@ -22676,7 +23088,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/accounts.html#bank",
@@ -22710,7 +23123,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 422
   },
   {
    "url": "/accounts.html#lock",
@@ -22744,7 +23158,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 724
   },
   {
    "url": "/accounts.html#closingstock",
@@ -22783,7 +23198,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 505
   },
   {
    "url": "/accounts.html#assets",
@@ -22822,7 +23238,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 484
   },
   {
    "url": "/accounts.html#accruals",
@@ -22888,7 +23305,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 478
   },
   {
    "url": "/accounts.html#gstclose",
@@ -22922,7 +23340,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 469
   },
   {
    "url": "/accounts.html#yearclose",
@@ -22956,7 +23375,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 495
   },
   {
    "url": "/accounts.html#packs",
@@ -23017,7 +23437,8 @@
      "critical": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 451
   },
   {
    "url": "/accounts.html#opening",
@@ -23051,7 +23472,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 456
   },
   {
    "url": "/accounts.html#accounts",
@@ -23107,7 +23529,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 466
   },
   {
    "url": "/accounts.html#movein",
@@ -23190,7 +23613,8 @@
      "critical": 4
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 784
   },
   {
    "url": "/accounts.html#rates",
@@ -23229,7 +23653,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 449
   },
   {
    "url": "/finance.html#/collections",
@@ -23268,7 +23693,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 201
   },
   {
    "url": "/finance.html#/payables",
@@ -23307,7 +23733,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 187
   },
   {
    "url": "/finance.html#/cash",
@@ -23373,7 +23800,8 @@
      "critical": 2
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/terms",
@@ -23459,7 +23887,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/finance.html#/repeat",
@@ -23498,7 +23927,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 265
   },
   {
    "url": "/finance.html#/cheques",
@@ -23537,7 +23967,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 203
   },
   {
    "url": "/finance.html#/returns",
@@ -23571,7 +24002,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 220
   },
   {
    "url": "/finance.html#/reports",
@@ -23706,7 +24138,8 @@
      "serious": 8
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 460
   },
   {
    "url": "/crm.html#/parties",
@@ -23819,7 +24252,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/chits",
@@ -23858,7 +24292,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 271
   },
   {
    "url": "/crm.html#/followups",
@@ -23897,7 +24332,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 232
   },
   {
    "url": "/crm.html",
@@ -24013,7 +24449,8 @@
      "serious": 9
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 910
   },
   {
    "url": "/crm.html#/groups",
@@ -24052,7 +24489,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 281
   },
   {
    "url": "/crm.html#/showcase",
@@ -24086,7 +24524,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 399
   },
   {
    "url": "/crm.html#/privacy",
@@ -24125,7 +24564,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 262
   },
   {
    "url": "/crm.html?app=marketing#/leads",
@@ -24186,7 +24626,8 @@
      "serious": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 445
   },
   {
    "url": "/crm.html?app=marketing#/groups",
@@ -24225,7 +24666,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 278
   },
   {
    "url": "/crm.html?app=marketing#/sent",
@@ -24264,7 +24706,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 195
   },
   {
    "url": "/crm.html?app=marketing#/results",
@@ -24303,7 +24746,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/crm.html?app=marketing#/showcase",
@@ -24337,7 +24781,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 402
   },
   {
    "url": "/crm.html?app=marketing",
@@ -24376,7 +24821,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 268
   },
   {
    "url": "/tasks.html",
@@ -24420,7 +24866,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 176
   },
   {
    "url": "/settings.html#/shop",
@@ -24501,7 +24948,8 @@
      "critical": 6
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 247
   },
   {
    "url": "/settings.html#/country",
@@ -24587,7 +25035,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html",
@@ -24674,7 +25123,8 @@
      "critical": 6
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 752
   },
   {
    "url": "/settings.html#/counters",
@@ -24713,7 +25163,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 272
   },
   {
    "url": "/settings.html#/connectors",
@@ -24752,7 +25203,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 289
   },
   {
    "url": "/settings.html#/policy",
@@ -24791,7 +25243,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 230
   },
   {
    "url": "/settings.html#/plan",
@@ -24830,7 +25283,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 294
   },
   {
    "url": "/settings.html#/account",
@@ -24869,7 +25323,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 382
   },
   {
    "url": "/operations.html#/stock",
@@ -24908,7 +25363,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 204
   },
   {
    "url": "/operations.html#/suppliers",
@@ -24947,7 +25403,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 241
   },
   {
    "url": "/employees.html",
@@ -24986,7 +25443,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 134
   },
   {
    "url": "/catalogue.html#/items",
@@ -25025,7 +25483,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 191
   },
   {
    "url": "/catalogue.html#/categories",
@@ -25064,7 +25523,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 192
   },
   {
    "url": "/catalogue.html#/import",
@@ -25098,7 +25558,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 311
   },
   {
    "url": "/network.html",
@@ -25134,7 +25595,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 162
   },
   {
    "url": "/country-lab.html",
@@ -25171,7 +25633,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 3533
   },
   {
    "url": "/know-your-business.html",
@@ -25205,7 +25668,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 575
   },
   {
    "url": "/authority-forms.html",
@@ -25261,7 +25725,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 482
   },
   {
    "url": "/standards.html",
@@ -25428,7 +25893,8 @@
      "serious": 50
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 8305
   },
   {
    "url": "/standards.html#works-with",
@@ -25612,7 +26078,8 @@
      "serious": 15
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 3428
   },
   {
    "url": "/shop.html?s=<shop>",
@@ -25651,7 +26118,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 279
   },
   {
    "url": "/network-shop.html?bridge=<network>",
@@ -25690,7 +26158,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 69
   },
   {
    "url": "/store.html?net=<network>",
@@ -25724,7 +26193,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 229
   },
   {
    "url": "/embed.html?bridge=<shop>",
@@ -25763,7 +26233,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 2
-   }
+   },
+   "paintedText": 108
   },
   {
    "url": "/promo.html#key=…",
@@ -25824,7 +26295,8 @@
      "serious": 2
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 622
   },
   {
    "url": "/product-lab.html",
@@ -25858,7 +26330,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 121
   },
   {
    "url": "/offer-lab-next.html",
@@ -25936,7 +26409,8 @@
      "critical": 3
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 989
   },
   {
    "url": "/offer-lab-next.html?mode=combo",
@@ -25970,7 +26444,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 546
   },
   {
    "url": "/conversion-lab.html",
@@ -26093,7 +26568,8 @@
      "critical": 32
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 2016
   },
   {
    "url": "/network-design.html",
@@ -26127,7 +26603,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 594
   },
   {
    "url": "/list-lab.html",
@@ -26259,7 +26736,8 @@
      "critical": 1
     },
     "incomplete": 2
-   }
+   },
+   "paintedText": 4527
   },
   {
    "url": "/signin-lab.html",
@@ -26315,7 +26793,8 @@
      "critical": 1
     },
     "incomplete": 1
-   }
+   },
+   "paintedText": 415
   },
   {
    "url": "/shell-lab.html",
@@ -26349,7 +26828,8 @@
     "byImpact": {},
     "nodesByImpact": {},
     "incomplete": 1
-   }
+   },
+   "paintedText": 151
   }
  ]
 }

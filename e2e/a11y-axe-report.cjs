@@ -23,7 +23,6 @@
  */
 'use strict';
 const fs = require('fs'), path = require('path');
-const { chromium } = require('playwright');
 const A = require('./lib/a11y-check.cjs');
 const { serve } = require('./lib/serve.cjs');
 const { standIn, route } = require('./lib/standin.cjs');
@@ -37,6 +36,10 @@ const SIZES = String(arg('sizes', 'm,xl')).split(',');
 const LIMIT = Number(arg('limit', 0)) || 0;
 const BASELINE = arg('baseline', null);
 const IMPACTS = ['critical', 'serious', 'moderate', 'minor'];
+/* a screen counts as PAINTED (so a clean result means something) only with this much visible text, no sign-in window and no placeholder address */
+const PAINTED_MIN = 300;
+const isPlaceholder = (url) => /[<>…]/.test(url);
+const paintedOk = (r) => !r.error && !!r.painted && r.painted.text >= PAINTED_MIN && !r.painted.signin && !isPlaceholder(r.url);
 const THEME_NAME = { cream: 'Cream', dark: 'Dark', hc: 'High Contrast' };
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -69,6 +72,7 @@ async function main() {
   const t0 = Date.now();
   const { list, pressRows } = screens();
   fs.mkdirSync(OUT, { recursive: true });
+  const { chromium } = require('playwright');   /* here, not at the top: summary() is read without a browser (docs regeneration) */
   const site = await serve(), browser = await chromium.launch();
   const runs = [];   /* one per screen x theme x size */
   const errors = [];
@@ -90,7 +94,9 @@ async function main() {
         await page.waitForTimeout(700);
         rec.applied = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme') || null, fs: (localStorage.getItem('cb_fs') || null) }));
         rec.themeTaken = rec.applied.theme === theme;
+        rec.paintedText = null;
         rec.painted = await page.evaluate(() => ({ text: (document.body.innerText || '').trim().length, chip: (document.querySelector('[data-testid="screen-id"][data-cbsid]') || {}).textContent ? document.querySelector('[data-testid="screen-id"]').getAttribute('data-cbsid') : null, signin: !!document.querySelector('[data-testid="signin-id"]'), title: document.title.slice(0, 50) }));
+        rec.paintedText = rec.painted.text;
         const r = await A.check(page, { maxNodes: 8 });
         rec.violations = r.violations; rec.incomplete = r.incomplete.map((v) => ({ id: v.id, impact: v.impact, count: v.count })); rec.counts = r.counts;
       } catch (e) { rec.error = String(e.message || e).split('\n')[0].slice(0, 200); errors.push(rec.theme + '/' + rec.size + ' ' + s.url + ': ' + rec.error); }
@@ -120,6 +126,12 @@ function summary(d) {
   L.push('Set-up: ' + d.standIn + '. axe finds about 57% of accessibility issues (its README): this is a floor, not a pass.');
   L.push('A *violation* = one rule failing on one screen in one theme+size; *nodes* = the elements it names. ' + d.pressRowsCheckedAtPage + ' register rows are reached by a press inside a page, so they are checked at their page only; sheets are not visited.', '');
   const notTaken = ok.filter((r) => !r.themeTaken).length;
+  const urls = Array.from(new Set(d.runs.map((r) => r.url)));
+  const paintedUrls = urls.filter((u) => d.runs.filter((r) => r.url === u).every(paintedOk));
+  const cleanPainted = paintedUrls.filter((u) => d.runs.filter((r) => r.url === u).every((r) => r.counts && r.counts.violations === 0));
+  const placeholders = urls.filter(isPlaceholder).length, signins = urls.filter((u) => d.runs.some((r) => r.url === u && r.painted && r.painted.signin)).length;
+  const thin = urls.filter((u) => !isPlaceholder(u) && d.runs.some((r) => r.url === u && r.painted && !r.painted.signin && r.painted.text < PAINTED_MIN)).length;
+  L.push('**Clean means painted and clean:** of ' + urls.length + ' addresses, ' + paintedUrls.length + ' painted at least ' + PAINTED_MIN + ' characters of text in every run; ' + cleanPainted.length + ' of those are clean to axe. The other ' + (urls.length - paintedUrls.length) + ' are not counted as clean: ' + placeholders + ' placeholder address(es) shown as visited, ' + signins + ' sign-in window, ' + thin + ' near-empty in the stand-in shop (under ' + PAINTED_MIN + ' characters). Their zero means nothing was there to check.', '');
   if (notTaken) L.push('Theme not confirmed on <html> in ' + notTaken + ' run(s): those runs measured the default look.', '');
   const blank = Array.from(new Set(ok.filter((r) => r.painted && (r.painted.text < 60 || r.painted.signin)).map((r) => r.url + (r.painted.signin ? ' (sign-in shown)' : ' (blank)'))));
   if (blank.length) L.push('Screens that showed a sign-in window or almost no text (so a clean result means little): ' + blank.join(', ') + '.', '');
@@ -140,18 +152,20 @@ function summary(d) {
   L.push('## Top 10 rules (by runs that fail it)', '', '| Rule | Impact | WCAG | Screens | Runs | Nodes | What |', '|---|---|---|---|---|---|---|');
   for (const e of byScreens.slice(0, 10)) L.push('| ' + e.id + ' | ' + e.impact + ' | ' + (e.wcag.join(', ') || '-') + ' | ' + e.screens.size + ' | ' + e.runs + ' | ' + e.nodes + ' | ' + e.help + ' |');
   L.push('', 'All rules seen: ' + ranked.map((e) => e.id + ' (' + e.impact + ')').join(', ') + '.', '');
-  L.push('## Per screen (distinct rules failing in any theme/size, by impact; worst run in brackets)', '', '| Screen | Address | crit | serious | mod | minor | Top rules (nodes, worst run) |', '|---|---|---|---|---|---|---|');
+  L.push('## Per screen (distinct rules failing in any theme/size, by impact; worst run in brackets)', '', '| Screen | Address | Painted (chars) | crit | serious | mod | minor | Top rules (nodes, worst run) |', '|---|---|---|---|---|---|---|---|');
   const per = new Map();
   for (const r of d.runs) { const a = per.get(r.url) || { codes: r.codes, runs: [] }; a.runs.push(r); per.set(r.url, a); }
   for (const [url, a] of per) {
-    if (a.runs.every((r) => r.error)) { L.push('| ' + a.codes.slice(0, 3).join(' ') + ' | ' + url + ' | load failed | | | | ' + a.runs[0].error + ' |'); continue; }
+    if (a.runs.every((r) => r.error)) { L.push('| ' + a.codes.slice(0, 3).join(' ') + ' | ' + url + ' | load failed | | | | | ' + a.runs[0].error + ' |'); continue; }
     const rr = a.runs.filter((r) => !r.error), seen = new Map();
     for (const r of rr) for (const v of r.violations) { const e = seen.get(v.id) || { id: v.id, impact: v.impact, n: 0 }; e.n = Math.max(e.n, v.count); seen.set(v.id, e); }
     const vs = Array.from(seen.values());
     const c = IMPACTS.map((i) => vs.filter((v) => v.impact === i).length);
     const top = vs.sort((x, y) => (IMPACTS.indexOf(x.impact) - IMPACTS.indexOf(y.impact)) || (y.n - x.n)).slice(0, 3).map((v) => v.id + ' (' + v.n + ')').join(', ');
     const worst = rr.slice().sort((x, y) => IMPACTS.reduce((s, i) => s + (inst(y, i) - inst(x, i)) * (100 - 10 * IMPACTS.indexOf(i)), 0))[0];
-    L.push('| ' + a.codes.slice(0, 3).join(' ') + (a.codes.length > 3 ? ' +' + (a.codes.length - 3) : '') + ' | ' + url + (a.runs[0].viaPress ? ' (page)' : '') + ' | ' + c.join(' | ') + ' | ' + (top || 'none') + (worst ? ' [' + worst.theme + '/' + worst.size + ']' : '') + ' |');
+    const chars = Math.min(...rr.map((x) => (x.painted ? x.painted.text : 0)));
+    const tag = isPlaceholder(url) ? ' placeholder' : (rr.some((x) => x.painted && x.painted.signin) ? ' sign-in' : (chars < PAINTED_MIN ? ' thin' : ''));
+    L.push('| ' + a.codes.slice(0, 3).join(' ') + (a.codes.length > 3 ? ' +' + (a.codes.length - 3) : '') + ' | ' + url + (a.runs[0].viaPress ? ' (page)' : '') + ' | ' + chars + tag + ' | ' + c.join(' | ') + ' | ' + (top || 'none') + (worst ? ' [' + worst.theme + '/' + worst.size + ']' : '') + ' |');
   }
   if (BASELINE) L.push('', newSince(d));
   return L.join('\n') + '\n';
@@ -166,4 +180,4 @@ function newSince(d) {
 }
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
-module.exports = { screens, summary };
+module.exports = { screens, summary, paintedOk };

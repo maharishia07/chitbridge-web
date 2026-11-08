@@ -26,14 +26,15 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 let cached = null;
 
 /** the vendored source, after its sha256 is checked against VERSION.json */
-function source() {
-  if (cached) return cached;
-  const meta = JSON.parse(fs.readFileSync(path.join(DIR, 'VERSION.json'), 'utf8'));
-  const bytes = fs.readFileSync(path.join(DIR, meta.file));
+function source(dir) {
+  if (!dir && cached) return cached;   /* `dir` is for tests/a11y-check.test.cjs: a temp copy, never cached */
+  const meta = JSON.parse(fs.readFileSync(path.join(dir || DIR, 'VERSION.json'), 'utf8'));
+  const bytes = fs.readFileSync(path.join(dir || DIR, meta.file));
   const sha = crypto.createHash('sha256').update(bytes).digest('hex');
   if (sha !== meta.sha256) throw new Error('a11y-check: vendored ' + meta.file + ' sha256 ' + sha + ' is not the recorded ' + meta.sha256 + ' (VERSION.json): refusing to run a changed copy');
-  cached = { src: bytes.toString('utf8'), meta };
-  return cached;
+  const got = { src: bytes.toString('utf8'), meta };
+  if (!dir) cached = got;
+  return got;
 }
 
 /** a WCAG success criterion from axe's tag: wcag143 -> 1.4.3, wcag2411 -> 2.4.11 (levels wcag2a/wcag2aa/wcag21aa are not criteria) */
@@ -79,7 +80,7 @@ async function check(page, o) {
     counts: { violations: violations.length, byImpact: by(violations, () => 1), nodesByImpact: by(violations, (v) => v.count), incomplete: incomplete.length } };
 }
 
-module.exports = { check, source, TAGS };
+module.exports = { check, source, criterion, TAGS };
 
 if (require.main === module && process.argv.includes('--self-test')) {
   (async () => {
