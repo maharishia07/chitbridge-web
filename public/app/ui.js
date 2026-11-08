@@ -51,8 +51,21 @@ var CBUi = (function () {
   };
   var HANDLERS = {};
 
-  function words(text) {
-    return typeof tx === 'function' ? tx(text) : text;
+  /** English through the catalogue; with a key (CMP001.label) the translation is found by the key and English is only the default */
+  function words(text, key) {
+    if (typeof tx !== 'function') return text;
+    return key ? tx(text, { key: key }) : tx(text);
+  }
+  /** a sentence with {placeholders} (ICU style): translated by its key, the values put in after */
+  function phrase(english, key, values) {
+    if (typeof txf === 'function') return txf(english, values, { key: key });
+    return english.replace(/\{(\w+)\}/g, function (whole, name) {
+      return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole;
+    });
+  }
+  /** the stable key of one text of a component: CMP001.label, CMP001.shown, CMP001.aria (the register's code, never the English words) */
+  function textKey(component, part) {
+    return component.code + '.' + part;
   }
   function escapeText(text) {
     if (typeof esc === 'function') return esc(text);
@@ -110,9 +123,8 @@ var CBUi = (function () {
   }
   /** the accessible name: the label plus the object when one is given ("Save" + "policy" -> "Save policy"); an icon-only action always has one */
   function accessibleName(component, options) {
-    var name = words(component.label);
-    if (options.object) return name + ' ' + words(options.object);
-    return component.nameOnly ? name : null;
+    if (options.object) return phrase(component.label + ' {object}', textKey(component, 'aria'), { object: words(options.object) });
+    return component.nameOnly ? words(component.label, textKey(component, 'label')) : null;
   }
   /** one press handler per mount (+ key), found again by the single delegated listener below */
   function registerPress(options) {
@@ -139,7 +151,7 @@ var CBUi = (function () {
   }
   /** the visible text: a glyph stays as written, a word goes through tx() */
   function shownText(component) {
-    return escapeText(component.nameOnly ? component.shown : words(component.shown));
+    return escapeText(component.nameOnly ? component.shown : words(component.shown, textKey(component, 'shown')));
   }
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
@@ -206,7 +218,7 @@ var CBUi = (function () {
     );
   }
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
-  var library = { action: action, dialog: dialog, components: ACTION_SET };
+  var library = { action: action, dialog: dialog, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;
