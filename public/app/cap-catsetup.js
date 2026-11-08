@@ -1065,8 +1065,7 @@ function catsetBody(k) {
   }
   if (k === 'pricing') {
     return (
-      catsetRecheckCard() +
-      catsetCard(
+      catsetRecheckCard() + catsetCard(
         'How a price is arrived at, and where it came from',
         'A catalogue can declare more than one — a list price, a bulk tier, a regional price, a negotiated one. ' +
           'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.' +
