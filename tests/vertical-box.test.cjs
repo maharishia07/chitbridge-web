@@ -29,7 +29,7 @@ const till = read('till.html');
 const hs = till.slice(till.indexOf('function holdsStock(){'), till.indexOf('function modeWhy('));
 ok(hs.indexOf('kotOn') < 0 && hs.indexOf('purposeHas') < 0 && /holds_stock === false/.test(hs), "CTR-2: holdsStock is the counter override, else the server's holds_stock — no kitchen / open-order branch");
 
-/* ── VERT-8 · the Price Lab ── */
-ok(/DATA\.pick \|\| DATA\.lists\[0\]\.key/.test(read('product-lab.html')), "VERT-8: the Price Lab opens on the list the server picked from the shop's trade");
+/* ── VERT-8 · the Product Lab ── */
+ok(/DATA\.pick \|\| DATA\.lists\[0\]\.key/.test(read('product-lab.html')), "VERT-8: the Product Lab opens on the list the server picked from the shop's trade");
 
 console.log(n + ' checks');

@@ -683,7 +683,7 @@ function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
       : (valueHtml || esc(tx('not known'))) +
         (locked
           ? ''
-          : '<a data-testid="cs-change-' +
+          : '<a data-cbsid="ACC002-B10" data-testid="cs-change-' +
             key +
             '" onclick="csuOpen(\'' +
             key +
@@ -705,7 +705,7 @@ function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
 }
 function csuSel(id, k, opts, cur) {
   return (
-    '<select class="inp" id="' +
+    '<select data-cbsid="ACC002-S04" class="inp" id="' +
     id +
     '" data-testid="' +
     id +
@@ -840,7 +840,7 @@ function csuTaxRowHTML(e, sources, india, summary) {
           '</span>'
         : '') +
       (e.registered
-        ? '<input class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' +
+        ? '<input data-cbsid="ACC002-I06" class="inp" id="cs-tax-number" data-testid="cs-tax-number" placeholder="' +
           esc(csuTaxIdHint(e.country)) +
           '" value="' +
           esc(e.number) +
@@ -867,7 +867,7 @@ function csuCountryMoneyRows(e, sources, fixed) {
     return { v: code, t: code };
   });
   var typedCurrency =
-    '<input class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' +
+    '<input data-cbsid="ACC002-I07" class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' +
     esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') +
     '" value="' +
     esc(e.currency) +
@@ -933,7 +933,7 @@ function csuAssumedHTML(e, answer) {
   return (
     '<div class="hint" data-testid="cs-assumed" style="color:var(--warn-2)">' +
     esc(txf('Country: {c} (assumed) — confirm or change', { c: csuCountryName(e.country) })) +
-    ' <button class="btn" data-testid="cs-confirm" onclick="csuSave()">' +
+    ' <button data-cbsid="ACC002-B11" class="btn" data-testid="cs-confirm" onclick="csuSave()">' +
     esc(tx('Confirm')) +
     '</button></div>'
   );
@@ -945,10 +945,10 @@ function csuBodyHTML(e, answer) {
   /* WALK-REG R16: the first setup saves and moves on ("Save & continue"); a later visit saves and STAYS, with "Saved ✓" on the page */
   var first = csuFirstSetup();
   var action = CSU.later
-    ? '<button class="btn" id="cs-open" data-testid="cs-open" onclick="csuDone()">' +
+    ? '<button data-cbsid="ACC002-B12" class="btn" id="cs-open" data-testid="cs-open" onclick="csuDone()">' +
       esc(tx(CSU.host ? 'Done' : 'Open the app')) +
       ' <span class=arw>→</span></button>'
-    : '<button class="btn" id="cs-save" data-testid="cs-save">' +
+    : '<button data-cbsid="ACC002-B13" class="btn" id="cs-save" data-testid="cs-save">' +
       esc(first ? tx('Save & continue') : tx('Save')) +
       (first ? ' <span class=arw>→</span>' : '') +
       '</button>' +
