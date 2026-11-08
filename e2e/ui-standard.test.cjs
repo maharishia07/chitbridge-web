@@ -1,0 +1,48 @@
+'use strict';
+// @type: unit
+/**
+ * ui-standard.test.cjs — the UI standard page (public/ui-standard.html, screen APP002), offline: no browser.
+ * Cases: the page is public and mock-only (no api, session, shell, storage or fetch in the page or its script; a CSP that refuses every
+ * connection); every component of the action set (CMP001..CMP010) has a row; the nine action labels are in all four packs; the page's own
+ * labels are in all four packs; the census rows name real components. The browser half (render, language switch, scroll) is e2e/walk-ui-standard.cjs.
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
+ * Run: node e2e/ui-standard.test.cjs
+ */
+const fs = require('fs'), path = require('path'), vm = require('vm');
+const read = (file) => fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8');
+let failures = 0;
+const check = (condition, message) => { console.log((condition ? '  ok ' : '  FAIL ') + message); if (!condition) failures++; };
+const strip = (source) => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+
+console.log('public and mock-only');
+const html = read('ui-standard.html'), page = strip(read('app/ui-standard.js')), pageHtml = strip(html);
+const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
+check(scripts.every((src) => src.charAt(0) === '/' && !/^https?:/.test(src)), 'only same-origin scripts: ' + scripts.length);
+['config.js', 'device-id.js', 'shell.js', 'page-frame.js', 'avatar.js', 'core.js', 'one-person.js', 'rail-bell.js'].forEach((name) => check(scripts.indexOf('/app/' + name) < 0 && scripts.indexOf('/' + name) < 0, 'does not load ' + name));
+check(/Content-Security-Policy" content="[^"]*connect-src 'none'/.test(html) && /default-src 'none'/.test(html), "a CSP of its own with connect-src 'none'");
+check(!/<script(?![^>]*\ssrc=)[^>]*>/.test(pageHtml), 'no inline script (script-src self)');
+check(!/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|cb_sess|cb_lang|document\.cookie|api\()/.test(page.replace(/the page's own[^\n]*/g, '')), 'the page script never fetches, stores or reads a session');
+check(!/https?:\/\//.test(pageHtml.replace(/http-equiv[^>]*>/, '')), 'no external address in the page');
+
+console.log('every component has a row');
+const ctx = { console, window: {}, document: { addEventListener() {} }, esc: (s) => String(s), tx: (s) => s, txf: (s) => s, fmtMoney: String, toast() {}, CBAction: { run() {} }, CBStr: 0 };
+ctx.CBSTR = { en: {}, ta: {}, hi: {}, ar: {}, fr: {} };
+ctx.window = ctx;
+vm.createContext(ctx);
+['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
+const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
+const used = new Set(model.ROWS.map((row) => row.name).concat('dialog'));
+check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
+check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
+
+console.log('language');
+const actions = Object.keys(components).filter((name) => name !== 'dialog');
+actions.forEach((name) => check(model.translatedIn(components[name].label).length === 4, name + ': label "' + components[name].label + '" is in all four packs'));
+const gaps = actions.filter((name) => model.coverageOf(components[name]).missing.length).map((name) => components[name].code + ' ' + components[name].shown);
+console.log('  note  not keyed or not translated today (visible text): ' + (gaps.join(', ') || 'none'));
+const chrome = ['UI standard', 'Components', 'Popups', 'Icons', 'Tokens', 'Before and after', 'Light', 'Dark', 'Language', 'Screen', 'Desktop', 'Mobile', 'Size', '24 px target', 'Default', 'Hover', 'Focus', 'Pressed', 'Disabled', 'Busy', 'Example dialog', 'Post this bill?', 'Post bill', 'Post this bill for {amount} to {count} recipients?', 'Remove this supplier?'];
+chrome.forEach((key) => check(model.translatedIn(key).length === 4, 'page label "' + key + '" is in ta hi ar fr'));
+check(model.LANGS.map((lang) => lang[0]).join() === 'en,ta,hi,ar,fr' && model.LANGS.filter((lang) => lang[2] === 'rtl').length === 1, 'five languages, one right-to-left (ar)');
+check(model.contrastRatio('rgb(0,0,0)', 'rgb(255,255,255)') > 20.9 && model.contrastRatio('rgb(22,105,63)', 'rgb(255,255,255)') >= 4.5, 'the contrast helper: black on white 21:1, the accent on white AA');
+console.log(failures ? failures + ' FAILED' : 'all ok');
+process.exit(failures ? 1 : 0);

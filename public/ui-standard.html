@@ -1,0 +1,114 @@
+<!doctype html>
+<!-- OWNS  the UI standard page (screen APP002): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js.
+     CALLED BY the Standards page (a live example on the UI-standard rows), and anyone with the address. Opens without sign-in.
+     FLOW  load -> app/ui-standard.js paint() -> a switch (language, theme, screen, size, 24 px) sets state -> paint() again, no reload
+     CARD  29-qa-test-tooling-ux-locale-and-design-system/ui-action-set -->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ⭐ A PUBLIC PAGE WITH MOCK DATA ONLY. It loads no config.js, device-id.js, shell, avatar or api script, so it has no api address and no token to send;
+     connect-src 'none' makes the browser refuse any request the page might try, and nothing is stored (no localStorage, no cookie).
+     The language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. Any session that exists is ignored. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>UI standard</title>
+<style>
+/* tokens: the action set draws from these; the page reads them back live (Tokens tab) */
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6; --ink:#1D1B16; --muted:#5E594D; --line:#8A8374; --soft:#DDD6C6;
+  --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus:#2F74C9; --danger:#8E3517; --ok:#16693F; --bad:#C4562F;
+  --scrim:rgba(0,0,0,.45); --press-shadow:rgba(0,0,0,.35); --bad-tint:rgba(196,86,47,.18); --art-bg:#FFFFFF; --act-h:44px; --act-pad:20px; --act-radius:9px; --act-font:14px; --act-weight:700; --hdr-h:120px;
+}
+:root[data-theme="dark"]{
+  --page:#14130F; --card:#1F1D18; --panel:#2A2720; --ink:#F3EFE6; --muted:#BDB7A7; --line:#8F8979; --soft:#3A372E;
+  --accent:#4CB782; --accent-ink:#0B2417; --accent-text:#7FD6A8; --focus:#7FB2F0; --danger:#F0A58C; --ok:#7FD6A8; --bad:#F08A6A;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Tamil","Noto Sans Devanagari","Noto Naskh Arabic",sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#hdr{flex:none;border-bottom:1px solid var(--soft);padding:6px 12px;background:var(--page)}
+.hrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:2px 0}
+h1{font-size:18px;margin:0}
+h3{font-size:14px;margin:14px 0 6px}
+h4{font-size:12px;margin:0 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.chip{display:inline-block;font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;background:var(--panel);border:1px solid var(--soft);border-radius:6px;padding:4px 6px;color:var(--ink);user-select:all}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.seg{display:flex;flex-wrap:wrap;gap:2px;align-items:center}
+.seglabel{font-size:12px;color:var(--muted);margin-inline-end:4px}
+.seg button,.tabs button{min-height:28px;min-width:28px;padding:2px 8px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;font-size:12px;cursor:pointer}
+.seg button[aria-pressed="true"],.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.tabs button{font-size:13px}
+button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+#stage{flex:1;min-height:0;display:flex;justify-content:center;padding:0;overflow:hidden}
+#frame{container-type:inline-size;width:100%;height:100%;background:var(--page);border:0}
+#stage.framed #frame{border:1px solid var(--line)}
+#panel{height:100%;overflow:auto;padding:8px 12px 24px}
+#content{position:relative}
+.line{margin:4px 0 10px;color:var(--muted);max-width:70ch}
+.note{color:var(--muted);font-size:13px}
+.crow{display:grid;grid-template-columns:260px minmax(0,1fr);gap:8px 16px;padding:10px 0;border-bottom:1px solid var(--soft);align-items:start}
+@container (max-width:640px){.crow{grid-template-columns:minmax(0,1fr)}}
+.cid{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.meta,.st figcaption{unicode-bidi:plaintext}
+.meta{flex-basis:100%;font-size:12px;color:var(--muted)}
+.cov{flex-basis:100%;font-size:12px}.cov .yes{color:var(--ok)}.cov .no{color:var(--bad);font-weight:700}
+.states{display:flex;flex-wrap:wrap;gap:8px 14px}
+.st{margin:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.st figcaption{font-size:11px;color:var(--muted)}
+.slot{min-height:28px;display:flex;align-items:center}
+/* the action set: one look from the tokens (the page-level .act every small app defines for itself today) */
+.act{display:inline-flex;align-items:center;justify-content:center;height:var(--act-h);padding:0 var(--act-pad);border:1px solid var(--accent);border-radius:var(--act-radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-size:var(--act-font);font-weight:var(--act-weight);cursor:pointer}
+.act.ghost{background:transparent;color:var(--accent-text);border-color:var(--line)}
+.act:hover,.act[data-demo="hover"]{filter:brightness(.9)}
+.act:focus-visible,.act[data-demo="focus"]{outline:3px solid var(--focus);outline-offset:2px}
+.act:active,.act[data-demo="pressed"]{transform:translateY(1px);box-shadow:inset 0 2px 4px var(--press-shadow)}
+.act:disabled{opacity:.5;cursor:not-allowed}
+.act[aria-busy="true"]{opacity:.75;cursor:progress}
+.act[aria-busy="true"]::after{content:"";width:.9em;height:.9em;margin-inline-start:8px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.act[aria-busy="true"]::after{animation:none}}
+.ba{display:flex;flex-wrap:wrap;gap:12px 24px}
+.bcol{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.bcol h4{flex-basis:100%}
+.old{display:inline-block;border:1px dashed var(--line);border-radius:4px;padding:4px 8px;font-size:13px;color:var(--muted)}.old small{opacity:.8}
+.icgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.ic{margin:0;border:1px solid var(--soft);border-radius:8px;padding:8px;background:var(--card);display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.ic figcaption{display:flex;flex-direction:column;font-size:12px}
+.ic img{background:var(--art-bg);border-radius:4px;max-width:100%;height:auto}
+.glyph{font-size:28px;line-height:1;min-height:34px}
+.tok{border-collapse:collapse;font-size:13px;width:100%}.tok th,.tok td{border-bottom:1px solid var(--soft);padding:4px 6px;text-align:start}
+.sw{display:inline-block;width:14px;height:14px;border:1px solid var(--line);border-radius:3px;vertical-align:middle;margin-inline-end:6px}
+.meas{display:flex;gap:8px;flex-wrap:wrap}.mline{font-size:13px;margin:6px 0}
+.ovl{position:absolute;inset:0;pointer-events:none}
+.ovl i{position:absolute;width:24px;height:24px;border:2px dashed var(--ok);border-radius:3px}
+.ovl i.bad{border-color:var(--bad);background:var(--bad-tint)}
+/* the dialog host (the same classes as app.html's modal), below the header so the switches stay reachable */
+#modalhost .mover{position:fixed;inset:var(--hdr-h) 0 0 0;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:12px;z-index:50}
+#modalhost .modal{width:360px;max-width:94vw;background:var(--card);color:var(--ink);border-radius:14px;overflow:hidden;box-shadow:0 8px 30px var(--press-shadow);border:1px solid var(--soft)}
+.mxrow{display:flex;justify-content:flex-end;padding:4px 6px 0}
+.modal .mhd{padding:0 16px 8px}.modal .mhd .t{font-weight:700;font-size:17px}
+.modal .mbody{padding:4px 16px 12px;max-height:54vh;overflow-y:auto}
+.modal .mfoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--soft)}
+.modal .mfoot button{flex:1 1 0;min-width:0;height:var(--act-h);border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--act-radius);font:inherit;font-size:var(--act-font);font-weight:var(--act-weight);cursor:pointer}
+.modal .mfoot button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.modal .mfoot button.danger{background:var(--danger);border-color:var(--danger);color:var(--card)}
+.modal .mxrow .act{height:var(--act-h);min-width:var(--act-h)}
+#toast{position:fixed;inset-inline:0;bottom:10px;display:flex;justify-content:center;pointer-events:none;z-index:60}
+#toast .toast{background:var(--ink);color:var(--page);border-radius:8px;padding:8px 14px;font-size:14px}
+</style>
+</head>
+<body>
+<header id="hdr" data-testid="gal-header"></header>
+<main id="stage"><div id="frame" data-testid="gal-frame"><div id="panel"><div id="content" data-testid="gal-content"></div></div></div></main>
+<div id="modalhost" data-testid="gal-modalhost"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/app/helpers.js"></script>   <!-- esc · fmtMoney -->
+<script src="/app/accounts-shell.js"></script>   <!-- tx · txf · toast · CBAction · CBConfirm: the string door and the one confirm -->
+<script src="/app/strings-ta.js"></script>
+<script src="/app/strings-hi.js"></script>
+<script src="/app/strings-ar.js"></script>
+<script src="/app/strings-fr.js"></script>
+<script src="/app/strings-ui-standard.js"></script>   <!-- this page's own labels, same shape as the packs -->
+<script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set, CMP001..CMP010 -->
+<script src="/app/ui-standard.js"></script>
+</body>
+</html>
