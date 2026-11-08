@@ -6,3 +6,5 @@
 - [ ] Pass 2 · humanify: cryptic names `<before → after>` · functions with a what-line `<before → after>` · empty catches `<before → after>`
 - [ ] Pass 3 · structure: module header present · CARD line · TRACE row: spec `<doc>` · design `<doc>` · unit `<file>` · walks `<files>`
 - [ ] Guard green: `readability --changed --ratchet`
+
+<!-- Gate record (REL-22): add a "### Gate record" block with one line per gate G0-G7. Make it in the docs repo: node toolset/gate-evidence.cjs <web|api|engines> <pr number> --write-body . CI pr-checklist fails without the heading. -->
