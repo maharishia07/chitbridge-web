@@ -266,6 +266,13 @@ var CBSTR = { en: {}, fr: {}, ta: {}, hi: {}, ar: {} };
 function tx(english, context) {
   var m = CBSTR[cbLang()];
   if (!m) return english;
+  /* a stable key (tx(english, { key: 'CMP001.label' })): the pack's entry for the KEY wins, English stays the default and the fallback, so
+     rewording English never breaks a translation. hasOwnProperty, because the pseudo-locale answers every name (it has no keys, only English). */
+  if (context && typeof context === 'object') {
+    var named = context.key && Object.prototype.hasOwnProperty.call(m, context.key) ? m[context.key] : '';
+    if (named) return named;
+    context = context.context;
+  }
   if (context) {
     var c = m[context + '\u0004' + english];
     if (c) return c;
@@ -302,8 +309,8 @@ function bidiWrap(v) {
   return '⁨' + String(v) + '⁩';
 }
 
-function txf(english, vars) {
-  var out = tx(english);
+function txf(english, vars, context) {
+  var out = tx(english, context);
   if (!vars) return out;
   return out.replace(/\{(\w+)\}/g, function (whole, k) {
     return Object.prototype.hasOwnProperty.call(vars, k) ? bidiWrap(vars[k]) : whole;
