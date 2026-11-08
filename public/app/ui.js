@@ -38,19 +38,17 @@ var CBUi = (function () {
    * verb is the fcode verb (closed list in docs toolset/ui-identity/ui-stamp.cjs VERBS); effect null = the mount must declare it.
    */
   var ACTION_SET = {
-    save: { code: 'CMP001', label: 'Save', shown: 'Save', verb: 'SAVE', effect: null, effectFixed: false, tone: 'primary' },
-    dialog: { code: 'CMP002', label: 'Dialog', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
-    cancel: { code: 'CMP003', label: 'Cancel', shown: 'Cancel', verb: 'CANCEL', effect: 'none', effectFixed: true, tone: 'quiet' },
-    done: { code: 'CMP004', label: 'Done', shown: 'Done', verb: 'DONE', effect: 'none', effectFixed: true, tone: 'primary' },
-    close: { code: 'CMP005', label: 'Close', shown: '✕', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
-    back: { code: 'CMP006', label: 'Back', shown: '‹ Back', verb: 'BACK', effect: 'none', effectFixed: true, tone: 'quiet' },
-    add: { code: 'CMP007', label: 'Add', shown: '+ Add', verb: 'ADD', effect: 'none', effectFixed: false, tone: 'quiet', nameOnly: false },
-    remove: { code: 'CMP008', label: 'Remove', shown: 'Remove', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet' },
-    reload: { code: 'CMP009', label: 'Try again', shown: 'Try again', verb: 'RELOAD', effect: 'none', effectFixed: true, tone: 'quiet' },
-    open: { code: 'CMP010', label: 'Open', shown: 'Open', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' }
+    save: { code: 'CMP001', element: 'CMP001-B01', label: 'Save', shown: 'Save', verb: 'SAVE', effect: null, effectFixed: false, tone: 'primary' },
+    dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
+    cancel: { code: 'CMP003', element: 'CMP003-B01', label: 'Cancel', shown: 'Cancel', verb: 'CANCEL', effect: 'none', effectFixed: true, tone: 'quiet' },
+    done: { code: 'CMP004', element: 'CMP004-B01', label: 'Done', shown: 'Done', verb: 'DONE', effect: 'none', effectFixed: true, tone: 'primary' },
+    close: { code: 'CMP005', element: 'CMP005-B01', label: 'Close', shown: '✕', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
+    back: { code: 'CMP006', element: 'CMP006-B01', label: 'Back', shown: '‹ Back', verb: 'BACK', effect: 'none', effectFixed: true, tone: 'quiet' },
+    add: { code: 'CMP007', element: 'CMP007-B01', label: 'Add', shown: '+ Add', verb: 'ADD', effect: 'none', effectFixed: false, tone: 'quiet', nameOnly: false },
+    remove: { code: 'CMP008', element: 'CMP008-B01', label: 'Remove', shown: 'Remove', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet' },
+    reload: { code: 'CMP009', element: 'CMP009-B01', label: 'Try again', shown: 'Try again', verb: 'RELOAD', effect: 'none', effectFixed: true, tone: 'quiet' },
+    open: { code: 'CMP010', element: 'CMP010-B01', label: 'Open', shown: 'Open', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' }
   };
-  var BUTTON_ELEMENT = 'B01';
-  var DIALOG_ELEMENT = 'D01';
   var HANDLERS = {};
 
   function words(text) {
@@ -124,7 +122,7 @@ var CBUi = (function () {
   /** the attributes of one button, in reading order; a null value is left out by attributeList */
   function buttonAttributes(component, options, surface, effect) {
     return [
-      ['data-cbsid', component.code + '-' + BUTTON_ELEMENT],
+      ['data-cbsid', component.element],
       ['data-cbmount', options.mount],
       ['data-effect', effect === 'none' ? null : effect],
       ['type', 'button'],
@@ -196,7 +194,7 @@ var CBUi = (function () {
     if (list.length > 4) refuse('dialog: at most 4 actions');
     var footer = list.map(footerAction).join('');
     modal(
-      '<div class="mhd" data-cbsid="' + ACTION_SET.dialog.code + '-' + DIALOG_ELEMENT + '" data-cbmount="' + escapeText(options.mount) + '"><div class="t">' +
+      '<div class="mhd" data-cbsid="' + ACTION_SET.dialog.element + '" data-cbmount="' + escapeText(options.mount) + '"><div class="t">' +
         escapeText(words(options.title)) +
         '</div></div><div class="mbody">' +
         (options.body || '') +
