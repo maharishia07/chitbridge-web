@@ -237,7 +237,22 @@
       { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] },
       { app: 'list-lab', name: 'List Lab', page: '/list-lab.html', rows: [['LLB001', null, 'List Lab', "/list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark"]] },
       { app: 'signin-lab', name: 'Sign-in Lab', page: '/signin-lab.html', rows: [['SLB001', null, 'Sign-in Lab', '/signin-lab.html · the one sign-in window on a bare page']] },
-      { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] }
+      { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] },
+      {
+        app: 'ui-standard',
+        name: 'UI standard',
+        page: '/ui-standard.html',
+        hash: true,
+        rows: [
+          ['UIS001', 'components', 'Components', '/ui-standard.html · Standards › Web design'],
+          ['UIS002', 'popups', 'Popups'],
+          ['UIS003', 'icons', 'Icons'],
+          ['UIS004', 'tokens', 'Tokens'],
+          ['UIS005', 'themes', 'Across themes'],
+          ['UIS006', 'meets', 'Meets the standard'],
+          ['UIS007', 'before', 'Before and after']
+        ]
+      }
     ],
     /* SHELL-ONE: DESIGN REFERENCES — pages kept as the drawing a build was checked against, or a tool's own board. NOT customer navigation: no
        Home card, no link from a framed page; they wear no frame and carry no code. A page here that gains a customer door moves UP into apps. */
@@ -253,8 +268,7 @@
       ['/iot-howitworks.html', 'IoT — how it works', 'a showcase page opened in an overlay by the workshop'],
       ['/bill-print.html', 'Bill print', 'the printed bill (a print surface, single-theme by decision)'],
       ['/offer-lab.html', 'Offer Lab (old address)', 'forwards to offer-lab-next.html'],
-      ['/combo-lab.html', 'Combo Lab (old address)', 'forwards to offer-lab-next.html?mode=combo'],
-      ['/ui-standard.html', 'UI standard', 'the gallery every button, popup and icon is checked against (APP002); opened from the Standards page']
+      ['/combo-lab.html', 'Combo Lab (old address)', 'forwards to offer-lab-next.html?mode=combo']
     ],
     /* the chit sheet (app/chit-sheet.js CBSheet) — one painter, three kinds (its sheetKind()); opened from every page that loads it */
     sheets: [

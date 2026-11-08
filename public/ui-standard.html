@@ -1,19 +1,22 @@
 <!doctype html>
-<!-- OWNS  the UI standard page (screen APP002): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js.
-     CALLED BY the Standards page (a live example on the UI-standard rows), and anyone with the address. Opens without sign-in.
-     FLOW  load -> app/ui-standard.js paint() -> a switch (language, theme, screen, size, 24 px) sets state -> paint() again, no reload
-     CARD  29-qa-test-tooling-ux-locale-and-design-system/ui-action-set -->
 <html lang="en" data-appearance-fixed>
+<!-- OWNS  the UI standard page (screen UIS001): every component of the standard action set, its popups, icons, tokens and the language switch, drawn by the real ui.js.
+     CALLED BY the Standards page (a live example on the UI-standard rows), and anyone with the address. Opens without sign-in.
+     FLOW  load -> CBFrame.lab (the standard frame, public: signin false) -> app/ui-standard.js paint() -> a switch (language, theme, section, screen, size, 24 px) sets state -> paint() again, no reload
+     CARD  29-qa-test-tooling-ux-locale-and-design-system/ui-action-set -->
 <head>
 <meta charset="utf-8">
+<script src="/app/device-id.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- ⭐ A PUBLIC PAGE WITH MOCK DATA ONLY. It loads no config.js, shell or api script, so it has no api address and no token to send (device-id.js, accounts-shell.js and avatar.js are loaded for tx, the confirm and the avatar's own theme apply; nothing here signs in);
-     connect-src 'none' makes the browser refuse any request the page might try, and nothing is stored (no localStorage, no cookie).
-     The language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. Any session that exists is ignored. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<!-- A PUBLIC PAGE WITH MOCK DATA ONLY, in the standard frame (CBFrame.lab, signin false, as the Country lab): the shell header, the avatar with its look and language, the sidebar of sections.
+     It loads no config.js and no sign-in script, so it has no api address and no token to send; the frame is told so (avatar token none, api none).
+     The one request the frame makes is the shell's own /app/manifest.json (its labs and apps list), so the CSP is connect-src 'self', the narrowest that lets the frame run; every other origin is refused.
+     Nothing is stored (no localStorage write, no cookie); the language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-TdK3tIewp/af0r7xtro0FQ/bO8ZnHgwbolms97lm5tc='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">
 <title>UI standard</title>
-<!-- the product's own faces, loaded the way app.html loads them (Google Fonts): Inter is the default, Space Grotesk and Space Mono are the avatar's Grotesk and Monospace. Self-hosting is a later decision. Only font-src and style-src name Google; connect-src stays none. -->
+<!-- the product's own faces, loaded the way app.html loads them (Google Fonts): Inter is the default, Space Grotesk and Space Mono are the avatar's Grotesk and Monospace. Self-hosting is a later decision. Only font-src and style-src name Google; connect-src stays 'self'. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <style>
 /* tokens: the action set draws from these; the page reads them back live (Tokens tab) */
 :root{
@@ -30,30 +33,18 @@
 :root[data-weight="bold"] body{font-weight:600}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--page);color:var(--ink);font-size:calc(15px*var(--k,1));line-height:1.4;font-family:var(--font-ui,Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Tamil","Noto Sans Devanagari","Noto Naskh Arabic",sans-serif);display:flex;flex-direction:column;overflow:hidden}
+body{margin:0;background:var(--page);color:var(--ink);font-size:calc(15px*var(--k,1));line-height:1.4;font-family:var(--font-ui,Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Tamil","Noto Sans Devanagari","Noto Naskh Arabic",sans-serif)}
 h3{font-size:calc(14px*var(--k,1));margin:14px 0 6px}
 h4{font-size:calc(12px*var(--k,1));margin:0 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .chip{display:inline-block;font:600 12px/1 ui-monospace,Menlo,Consolas,monospace;background:var(--panel);border:1px solid var(--soft);border-radius:6px;padding:4px 6px;color:var(--ink);user-select:all}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:calc(12px*var(--k,1))}
 /* ── Option B "Workbench": the one shell bar, then a left pane (what this is + the sections) and a main pane with the view tools on top ── */
-.sh{flex:none;height:56px;border-bottom:1px solid var(--soft);background:var(--card);display:flex;align-items:center;gap:10px;padding:0 14px;position:relative;z-index:70}
-.shellbar{flex:1;min-width:0;overflow:hidden;display:flex;align-items:center;gap:10px}
-.mark{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:calc(13px*var(--k,1));font-weight:700;flex:none}
-.apptitle{overflow:hidden;text-overflow:ellipsis;min-width:0;font-size:calc(16px*var(--k,1));font-weight:800;letter-spacing:-.015em;white-space:nowrap;margin:0}
 .grow{flex:1}
 .tohome{display:inline-flex;align-items:center;gap:5px;min-height:44px;padding:0 12px;border:1px solid currentColor;border-radius:8px;background:var(--card);color:var(--accent-text);font-size:calc(14px*var(--k,1));font-weight:600;white-space:nowrap;text-decoration:none}
-#avatarhost{flex:none}
-.body{flex:1 1 auto;min-height:0;display:flex}
-.side{flex:none;width:248px;border-inline-end:1px solid var(--soft);background:var(--page);display:flex;flex-direction:column;padding:0 10px 10px 16px;gap:6px;overflow:auto}
-.lead{margin:12px 6px 10px 0;font-size:calc(13px*var(--k,1));line-height:1.4;color:var(--muted)}.lead b{color:var(--ink);font-weight:600}
-.side nav{display:flex;flex-direction:column;gap:2px}
-.item{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:0;border-radius:var(--act-radius);background:transparent;text-align:start;font-size:calc(14px*var(--k,1));font-weight:500;color:var(--ink);cursor:pointer}
-.item .c{margin-inline-start:auto;font-size:calc(12px*var(--k,1));color:var(--muted);font-variant-numeric:tabular-nums}
-.item:hover{background:var(--panel)}
-.item[aria-current="true"]{background:var(--panel);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
-.foot{margin-top:auto;font-size:calc(11px*var(--k,1));color:var(--muted);padding:8px 4px 0}
+.uiwork{display:flex;flex-direction:column;height:100%;min-height:0;background:var(--page)}
+.topline{flex:none;display:flex;align-items:center;gap:12px;padding:6px 16px;border-bottom:1px solid var(--soft);flex-wrap:wrap}
+.lead{flex:1 1 320px;margin:0;font-size:calc(13px*var(--k,1));line-height:1.4;color:var(--muted)}.lead b{color:var(--ink);font-weight:600}
 .pick{display:none}
-.mainc{flex:1 1 auto;min-width:0;min-height:0;display:flex;flex-direction:column}
 .bar{flex:none;display:flex;align-items:center;gap:16px;padding:6px 16px;min-height:56px;border-bottom:1px solid var(--soft);background:var(--page);flex-wrap:wrap}
 .tools{display:flex;align-items:center;gap:14px;flex:1 1 auto;min-width:0;flex-wrap:wrap;justify-content:center}
 .grp{display:flex;align-items:center;gap:8px}
@@ -151,25 +142,22 @@ select{min-height:28px;border:1px solid var(--line);background:var(--card);color
 html[data-open] .sheet,html[data-open] .scrim{display:block}
 @media (max-width:640px){
   .tohome,.bar{display:none}
-  .body{flex-direction:column}
-  .side{width:auto;border-inline-end:0;border-bottom:1px solid var(--soft);padding:8px 12px 10px;gap:8px;overflow:visible}
-  .side nav,.foot{display:none}
-  .lead{margin:0}.lead .x{display:none}
+  .lead .x{display:none}
   .pick{display:flex;gap:8px;align-items:center}
   #panel{padding:8px 12px 20px}
 }
 </style>
 </head>
 <body>
-<header class="sh" data-testid="gal-header"><div id="shellbar" class="shellbar"></div><div id="avatarhost" data-testid="gal-avatarhost"></div></header>
-<div class="body">
-<aside class="side" data-testid="gal-side"><div id="sidebox"></div></aside>
-<div class="mainc"><div class="bar" id="hdr" data-testid="gal-tools"></div>
-<main id="stage"><div id="frame" data-testid="gal-frame"><div id="panel"><div id="content" data-testid="gal-content"></div></div></div></main></div>
+<!-- the work area: CBFrame.lab (the standard frame: header, avatar, sidebar of sections) draws everything around it and puts this in its main pane -->
+<div id="uiwork" class="uiwork" data-testid="gal-work">
+<div class="topline" id="topline" data-testid="gal-topline"></div>
+<div class="bar" id="hdr" data-testid="gal-tools"></div>
+<main id="stage"><div id="frame" data-testid="gal-frame"><div id="panel"><div id="content" data-testid="gal-content"></div></div></div></main>
+<div id="toast" role="status" aria-live="polite" data-testid="gal-toast"></div>
 </div>
 <div class="scrim" id="scrim" data-testid="gal-scrim"></div><div class="sheet" id="sheet" role="dialog" data-testid="gal-sheet"></div>
 <div id="probe" class="probe" aria-hidden="true"></div>
-<div id="toast" role="status" aria-live="polite" data-testid="gal-toast"></div>
 <div id="modalhost" data-testid="gal-modalhost"></div>
 <script src="/app/device-id.js"></script>   <!-- first, as on every page that loads a session reader (e2e/device-id.cjs); the page never signs in, so no id is made -->
 <script src="/app/helpers.js"></script>   <!-- esc · fmtMoney -->
@@ -181,7 +169,16 @@ html[data-open] .sheet,html[data-open] .scrim{display:block}
 <script src="/app/strings-ui-standard.js"></script>   <!-- this page's own labels, same shape as the packs -->
 <script src="/engine/screen.js"></script>   <!-- CBScreen.APP_THEMES: the avatar's 16 themes (no storage, no request) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar.applyWith: the avatar's own apply, on a fixed-look page (data-appearance-fixed) it never touches storage -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's code in the header -->
+<script src="/app/shell.js"></script>   <!-- CBShell: the one header -->
+<script src="/app/lab-kit.js"></script>   <!-- the Labs switcher the frame reads -->
+<script src="/app/page-frame.js"></script>   <!-- CBFrame.lab: the standard frame -->
 <script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set, CMP001..CMP010 -->
 <script src="/app/ui-standard.js"></script>
+<!-- the frame call: inline so the guards read it here (e2e/skeleton-guard.cjs, screen-id-guard.cjs); the CSP names this script by its hash, e2e/ui-standard.test.cjs recomputes it -->
+<script>
+CBUiStandard.start(CBFrame.lab({ app: 'ui-standard', name: 'UI standard', icon: '▤', svg: CBUiStandard.sections()[0].icon, work: document.getElementById('uiwork'), active: CBUiStandard.firstSection(), sections: CBUiStandard.sections(), avatar: CBUiStandard.avatarOptions(),
+  phone: { items: CBUiStandard.sections(), active: CBUiStandard.firstSection(), onPick: CBUiStandard.chooseSection }, onSection: CBUiStandard.chooseSection }));
+</script>
 </body>
 </html>

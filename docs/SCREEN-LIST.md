@@ -102,6 +102,13 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | LLB001 | List Lab | List Lab | /list-lab.html | /list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark |
 | SLB001 | Sign-in Lab | Sign-in Lab | /signin-lab.html | /signin-lab.html · the one sign-in window on a bare page |
 | SHL001 | Shell Lab | Shell Lab | /shell-lab.html | /shell-lab.html · the shell on a bare page |
+| UIS001 | Components | UI standard | /ui-standard.html | /ui-standard.html · Standards › Web design |
+| UIS002 | Popups | UI standard | /ui-standard.html | /ui-standard.html#/popups · UI standard › Popups |
+| UIS003 | Icons | UI standard | /ui-standard.html | /ui-standard.html#/icons · UI standard › Icons |
+| UIS004 | Tokens | UI standard | /ui-standard.html | /ui-standard.html#/tokens · UI standard › Tokens |
+| UIS005 | Across themes | UI standard | /ui-standard.html | /ui-standard.html#/themes · UI standard › Across themes |
+| UIS006 | Meets the standard | UI standard | /ui-standard.html | /ui-standard.html#/meets · UI standard › Meets the standard |
+| UIS007 | Before and after | UI standard | /ui-standard.html | /ui-standard.html#/before · UI standard › Before and after |
 
 ## Sheets — one screen, wherever it is opened from
 

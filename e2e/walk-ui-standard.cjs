@@ -1,7 +1,7 @@
 'use strict';
 // @type: walk
 /**
- * walk-ui-standard.cjs — the UI standard page (public/ui-standard.html, APP002) in a real browser.
+ * walk-ui-standard.cjs — the UI standard page (public/ui-standard.html, UIS001) in a real browser.
  *
  * Proves: the page loads with no sign-in and makes NO request except its own static files (no api, no third party); every component
  * (CMP001..CMP010) renders with its code chip and fcode; the six states draw; a language switch (ta, ar) changes the labels, the
@@ -97,8 +97,8 @@ const noScroll = (page) => page.evaluate(() => {
     check(states.length === 6 && states.some((s) => s[1]) && states.some((s) => s[2] === 'true') && states.filter((s) => s[0]).length === 3, 'six states: default, hover, focus, pressed (static), disabled, busy');
     const idsOk = await page.$$eval('#content button', (nodes) => nodes.every((node) => node.getAttribute('data-cbsid') && node.getAttribute('data-cbmount')));
     check(idsOk, 'every component button carries its element code and its mount');
-    const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^APP002-B\d\d$/.test(node.getAttribute('data-cbsid'))));
-    check(headIds, 'every page control carries APP002-Bnn');
+    const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^UIS001-B\d\d$/.test(node.getAttribute('data-cbsid'))));
+    check(headIds, 'every page control carries UIS001-Bnn');
 
     for (const [theme, key] of [['light', 'cream'], ['dark', 'dark'], ['terminal', 'terminal']]) {
       await pick(page, 'theme', key);
@@ -246,7 +246,7 @@ const noScroll = (page) => page.evaluate(() => {
     await page.click('[data-testid="gal-open-commit"]');
     await page.waitForSelector('#cb_confirm');
     const ask = await page.textContent('#cb_confirm');
-    check(/1,180\.00/.test(ask) && /INR/.test(ask) && /3 recipients/.test(ask) && /Asha Traders/.test(ask), 'commit confirm shows amount + currency, recipients and count: ' + ask.replace(/\s+/g, ' ').slice(0, 120));
+    check(/1,180\.00/.test(ask) && /USD/.test(ask) && /3 recipients/.test(ask) && /Asha Traders/.test(ask), 'commit confirm shows amount + currency, recipients and count: ' + ask.replace(/\s+/g, ' ').slice(0, 120));
     await page.screenshot({ path: path.join(OUT, label + '-light-en-commit-confirm.png') });
     await page.click('[data-testid="confirm-cancel"]');
     check((await page.$$('#toast .toast')).length === 0, 'Cancel sends nothing (no toast)');
@@ -297,8 +297,8 @@ const noScroll = (page) => page.evaluate(() => {
   check((await shellPage.$$('[data-testid^="gal-tab-"] .c')).length === 7, 'the left list shows seven sections with their counts');
   const heights = await shellPage.$$eval('#hdr button, [data-testid^="gal-tab-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
   check(heights.every((height) => height >= 44), 'every control in the bar, the list and the shell is at least 44 px high (' + Math.min(...heights) + ')');
-  const codes = await shellPage.$$eval('[data-cbsid^="APP002-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));
-  check(['APP002-B01', 'APP002-B08', 'APP002-B11', 'APP002-B17', 'APP002-B18'].every((code) => codes.indexOf(code) >= 0), 'the controls carry APP002-B01..B18: ' + codes.length);
+  const codes = await shellPage.$$eval('[data-cbsid^="UIS001-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));
+  check(['UIS001-B01', 'UIS001-B08', 'UIS001-B11', 'UIS001-B17', 'UIS001-B18'].every((code) => codes.indexOf(code) >= 0), 'the controls carry UIS001-B01..B18: ' + codes.length);
   await shellContext.close();
   /* the Mobile frame on a desktop viewport */
   const context = await browser.newContext({ viewport: { width: 1366, height: 650 } });

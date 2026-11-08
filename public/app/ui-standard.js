@@ -4,7 +4,7 @@
  *
  * OWNS       the page's model (what rows exist, the size presets, the census of old spellings, the translation coverage),
  *            the page chrome (tabs, switches) and the repaint when a switch changes. It owns no component: it calls ui.action / ui.dialog.
- * CALLED BY  public/ui-standard.html (screen APP002). Loaded AFTER helpers.js, accounts-shell.js (tx, CBAction, CBConfirm, toast),
+ * CALLED BY  public/ui-standard.html (screen UIS001). Loaded AFTER helpers.js, accounts-shell.js (tx, CBAction, CBConfirm, toast),
  *            the string packs and ui.js.
  * READS      ui.components (CMP codes, labels, verbs), CBSTR (the packs), the CSS custom properties of the page (live), getComputedStyle.
  * WRITES     only this page's own DOM. It calls no api, reads no session or token, and stores nothing (no localStorage, no cookie).
@@ -15,7 +15,7 @@
  *            moving it to a shared file is a ui.js / accounts-shell change and is listed in the PR, not made here.
  */
 var CBUiStandard = (function () {
-  var SCREEN = 'APP002';
+  var SCREEN = 'UIS001';
   var LANGS = [['en', 'English', 'ltr'], ['ta', 'தமிழ்', 'ltr'], ['hi', 'हिन्दी', 'ltr'], ['ar', 'العربية', 'rtl'], ['fr', 'Français', 'ltr']];
   var PACK_LANGS = ['ta', 'hi', 'ar', 'fr'];
   /** the size presets: the four tokens the action set draws from (px). 'small' is below the 24 px floor on purpose. */
@@ -49,7 +49,8 @@ var CBUiStandard = (function () {
     { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
-  var MOCK = { amount: 1180, currency: 'INR', recipients: ['Asha Traders', 'Mohan Stores', 'Kavya Foods'], lines: 2 };
+  /* a mock record states its own currency (N1: no page guesses India's): USD, a code no shop here is assumed to hold */
+  var MOCK = { amount: 1180, currency: 'USD', recipients: ['Asha Traders', 'Mohan Stores', 'Kavya Foods'], lines: 2 };
   var ROWS = [
     { name: 'save', variant: 'preference', object: 'settings', opts: { effect: 'preference' } },
     { name: 'save', variant: 'commit', object: 'bill', opts: { effect: 'commit' }, confirmKind: 'post' },
@@ -80,7 +81,17 @@ var CBUiStandard = (function () {
   function codeOf(number) {
     return SCREEN + '-B' + String(number).padStart(2, '0');
   }
-  var avatarOptions = null, avatarHandle = null;
+  var pageFrame = null;
+  /** one drawing per section for the frame's sidebar (svg path data, 24 px box) */
+  var SECTION_ICON = {
+    components: 'M4 6h16v5H4zM4 14h10v4H4z',
+    popups: 'M5 5h14v10H9l-4 4z',
+    icons: 'M12 4l2.5 5 5.5.8-4 3.9.9 5.5-4.9-2.6-4.9 2.6.9-5.5-4-3.9 5.5-.8z',
+    tokens: 'M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3c0-5-4-11-8-11z',
+    themes: 'M12 3v18M3 12h18M5 5l14 14M19 5L5 19',
+    meets: 'M5 12l4 4 10-10',
+    before: 'M4 5h7v14H4zM13 5h7v14h-7z'
+  };
   var counters = { mount: 0, control: 0 };
 
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
@@ -94,7 +105,7 @@ var CBUiStandard = (function () {
     counters.mount += 1;
     return SCREEN + '-U' + String(counters.mount).padStart(2, '0');
   }
-  /** the page's own controls (switches, tabs): native buttons with a stable code, APP002-B01.. in reading order */
+  /** the page's own controls (switches, tabs): native buttons with a stable code, UIS001-B01.. in reading order */
   function controlCode() {
     counters.control += 1;
     return SCREEN + '-B' + String(counters.control).padStart(2, '0');
@@ -364,7 +375,7 @@ var CBUiStandard = (function () {
       entries.push({ label: component.code + ' ' + words(component.label), node: node });
     });
     var chrome = document.querySelector('#hdr .seg button');
-    if (chrome) entries.push({ label: 'APP002 page switches (not a component)', node: chrome });
+    if (chrome) entries.push({ label: 'UIS001 page switches (not a component)', node: chrome });
     return entries;
   }
   function typeProbesHTML() {
@@ -422,11 +433,6 @@ var CBUiStandard = (function () {
   }
 
   /* ── chrome: header controls ── */
-  /** the sections of the left list, each with the count of what it shows (read live, not typed) */
-  function sectionCount(tab) {
-    var counts = { components: Object.keys(ui.components).length, popups: 3, icons: ILLUSTRATIONS.length + 3, tokens: TOKENS.length, themes: Object.keys((window.CBScreen && window.CBScreen.APP_THEMES) || {}).length, before: CENSUS.length, meets: MEETS.length + 2 };
-    return counts[tab];
-  }
   /** a segmented control of two-line buttons (title over value); 'bad' marks the value in red (below the floor) */
   function twoLine(group, items, current, firstCode, label) {
     return '<div class="seg" role="group" aria-label="' + esc(words(label)) + '">' + items.map(function (item, index) {
@@ -448,21 +454,11 @@ var CBUiStandard = (function () {
     return '<div class="tools"><div class="grp"><span class="lab">' + esc(words('Screen')) + '</span>' + twoLine('screen', screenItems(), state.screen, CODE.screen, 'Screen') + '</div>' +
       '<div class="grp"><span class="lab">' + esc(words('Size')) + '</span>' + twoLine('size', sizeItems(), state.size, CODE.size, 'Size') + '</div>' + overlaySwitch(CODE.overlay) + '</div>';
   }
-  /** the ONE shell bar (what shell.js draws on every page): mark, title, the screen code, the way back, Home; the real avatar is mounted beside it */
-  function shellHTML() {
-    return '<span class="mark" aria-hidden="true">CB</span><b class="apptitle">' + esc(words('UI standard')) + '</b><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span><span class="grow"></span>' +
-      '<a class="tohome" href="/standards.html" data-cbsid="' + codeOf(CODE.standards) + '" data-testid="gal-to-standards">‹ ' + esc(words('Standards')) + '</a><a class="tohome" href="/" data-cbsid="' + codeOf(CODE.home) + '" data-testid="gal-to-home">⌂ ' + esc(words('Home')) + '</a>';
-  }
-  /** the left pane: the lead line, the Section select and View button (390 only) and the section list with counts */
-  function sideHTML() {
-    var options = TABS.map(function (tab) { return '<option value="' + tab + '"' + (tab === state.tab ? ' selected' : '') + '>' + esc(words(TAB_LABEL[tab])) + '</option>'; }).join('');
-    var items = TABS.map(function (tab, index) {
-      return '<button type="button" class="item" data-cbsid="' + codeOf(CODE.item + index) + '" data-g="tab" data-v="' + tab + '" aria-current="' + (tab === state.tab) + '" data-testid="gal-tab-' + tab + '">' + esc(words(TAB_LABEL[tab])) + '<span class="c">' + sectionCount(tab) + '</span></button>';
-    }).join('');
+  /** the strip above the tools: the lead line, the way back to the Standards page, and (390 only) the View button that opens the sheet */
+  function topHTML() {
     return '<p class="lead" data-testid="gal-lead">' + esc(words('Every button, popup and sign in ChitBridge, drawn by the real code so it looks and works the same on every screen.')) + ' <b>' + esc(words('Start with Components.')) + '</b><span class="x"> ' + esc(words('Theme and language sit in the avatar, top right.')) + '</span></p>' +
-      '<div class="pick"><select class="sel" data-cbsid="' + codeOf(CODE.section) + '" data-g="tab" data-testid="gal-section" aria-label="' + esc(words('Section')) + '">' + options + '</select>' +
-      '<button type="button" class="viewbtn" data-cbsid="' + codeOf(CODE.view) + '" data-g="sheet" data-v="open" data-testid="gal-view" aria-haspopup="dialog">' + esc(words('View')) + '</button></div>' +
-      '<nav aria-label="' + esc(words('Section')) + '">' + items + '</nav><p class="foot">' + esc(words('Public page · mock data · nothing is saved')) + '</p>';
+      '<a class="tohome" href="/standards.html" data-cbsid="' + codeOf(CODE.standards) + '" data-testid="gal-to-standards">‹ ' + esc(words('Standards')) + '</a>' +
+      '<div class="pick"><button type="button" class="viewbtn" data-cbsid="' + codeOf(CODE.view) + '" data-g="sheet" data-v="open" data-testid="gal-view" aria-haspopup="dialog">' + esc(words('View')) + '</button></div>';
   }
   /** the View sheet (390): the same Screen and Size choices, and the 24 px switch, as radio rows */
   function sheetOptions(group, items, current, firstCode) {
@@ -506,8 +502,8 @@ var CBUiStandard = (function () {
   /* ── fit: the frame for the chosen screen, scaled to the room there is; no page scroll ── */
   function fitFrame() {
     var stage = document.getElementById('stage'), frame = document.getElementById('frame'), box = SCREENS[state.screen];
-    var shell = document.querySelector('.sh');
-    document.documentElement.style.setProperty('--hdr-h', shell.offsetHeight + 'px');
+    var shellHeader = document.getElementById('shell');
+    document.documentElement.style.setProperty('--hdr-h', (shellHeader ? shellHeader.offsetHeight : 0) + 'px');
     stage.classList.toggle('framed', !!box.w);
     if (!box.w) {
       frame.style.cssText = '';
@@ -593,23 +589,23 @@ var CBUiStandard = (function () {
   }
 
   /* ── the 'Meets the standard' tab: each rule, its source, how the page proves it, the live result per theme ── */
-  var W3C = 'https://www.w3.org/WAI/WCAG22/Understanding/';
+  var WCAG_UNDERSTANDING = 'https://www.w3.org/WAI/WCAG22/Understanding/';
   var MEETS = [
     { rule: 'Every control shows where the keyboard is, with a ring you can see.', pairs: ['Ring on page', 'Ring on card'], proof: 'The ring is drawn on a real button and its colour measured against the page and the card, in each theme (3:1 needed).',
-      sources: [['WCAG 2.4.7 Focus Visible', W3C + 'focus-visible.html'], ['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html'], ['GOV.UK focus states', 'https://design-system.service.gov.uk/get-started/focus-states/'], ['Fluent 2 accessibility', 'https://fluent2.microsoft.design/accessibility']] },
+      sources: [['WCAG 2.4.7 Focus Visible', WCAG_UNDERSTANDING + 'focus-visible.html'], ['WCAG 1.4.11 Non-text Contrast', WCAG_UNDERSTANDING + 'non-text-contrast.html'], ['GOV.UK focus states', 'https://design-system.service.gov.uk/get-started/focus-states/'], ['Fluent 2 accessibility', 'https://fluent2.microsoft.design/accessibility']] },
     { rule: 'The ring is thick enough and sits clear of the button.', pairs: ['Ring width', 'Ring gap'], proof: 'The drawn outline width (3 px, 2 px or more needed) and its gap are read from the browser.',
-      sources: [['WCAG 2.4.13 Focus Appearance (AAA)', W3C + 'focus-appearance.html']] },
+      sources: [['WCAG 2.4.13 Focus Appearance (AAA)', WCAG_UNDERSTANDING + 'focus-appearance.html']] },
     { rule: 'A quiet button still shows its edge: the edge is the same colour as its label.', pairs: ['Quiet edge'], proof: 'The edge colour the browser draws is measured against the page (3:1 needed).',
-      sources: [['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html'], ['IBM Carbon button style', 'https://carbondesignsystem.com/components/button/style/']] },
+      sources: [['WCAG 1.4.11 Non-text Contrast', WCAG_UNDERSTANDING + 'non-text-contrast.html'], ['IBM Carbon button style', 'https://carbondesignsystem.com/components/button/style/']] },
     { rule: 'Words on buttons and on the page are easy to read.', pairs: ['Done label', 'Quiet label', 'Page text'], proof: 'Label and page text colour against what is behind them (4.5:1 needed).',
-      sources: [['WCAG 1.4.3 Contrast (Minimum)', W3C + 'contrast-minimum.html']] },
+      sources: [['WCAG 1.4.3 Contrast (Minimum)', WCAG_UNDERSTANDING + 'contrast-minimum.html']] },
     { rule: 'The main button stands out from the page.', pairs: ['Done fill'], proof: 'The fill of the Done button against the page (3:1 needed).',
-      sources: [['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html']] }
+      sources: [['WCAG 1.4.11 Non-text Contrast', WCAG_UNDERSTANDING + 'non-text-contrast.html']] }
   ];
   /** the figure a chip shows: a contrast ratio for a colour pair, but the measured px for the ring's width and gap (never a ratio-looking number) */
   function figureOf(found) {
-    var width = found.filter(function (pair) { return pair.name === 'Ring width'; })[0], gap = found.filter(function (pair) { return pair.name === 'Ring gap'; })[0];
-    if (width && gap) return width.ratio + ' px · gap ' + gap.ratio + ' px';
+    var width = found.filter(function (pair) { return pair.name === 'Ring width'; })[0], ringGap = found.filter(function (pair) { return pair.name === 'Ring gap'; })[0];
+    if (width && ringGap) return width.ratio + ' px · gap ' + ringGap.ratio + ' px';
     return Math.min.apply(null, found.map(function (pair) { return pair.ratio; })).toFixed(1) + ':1';
   }
   function resultChips(rows, names) {
@@ -630,13 +626,19 @@ var CBUiStandard = (function () {
   }
   function meetsPanel() {
     var rows = auditAll();
-    var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.2 · SC 2.5.8 Target Size (Minimum)', W3C + 'target-size-minimum.html']], custom: targetResult };
-    var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', W3C + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
+    var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.2 · SC 2.5.8 Target Size (Minimum)', WCAG_UNDERSTANDING + 'target-size-minimum.html']], custom: targetResult };
+    var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', WCAG_UNDERSTANDING + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
     return MEETS.concat([target, obscured]).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
       '<section class="country" data-testid="gal-country"><h3>Country rules (UK, EU, US, India, Australia, UAE)</h3><p class="note">Empty on purpose. A country research file will fill this section later; nothing about any country is stated here.</p></section>';
   }
 
   /* ── paint: the whole page again, from state ── */
+  /** the frame's sidebar and phone switch light the section on show (a hash change or a pick moves it) */
+  function syncFrame() {
+    if (!pageFrame || !pageFrame.skeleton) return;
+    pageFrame.skeleton.setActive(state.tab);
+    if (pageFrame.skeleton.setPhone) pageFrame.skeleton.setPhone(state.tab);
+  }
   function applyState() {
     var root = document.documentElement, preset = PRESETS[state.size];
     window.cbLang = function () { return state.lang; };
@@ -655,11 +657,11 @@ var CBUiStandard = (function () {
     counters.mount = 0;
     applyState();
     document.getElementById('probe').innerHTML = probeHTML();
-    document.getElementById('shellbar').innerHTML = shellHTML();
+    document.getElementById('topline').innerHTML = topHTML();
     document.getElementById('hdr').innerHTML = headerHTML();
-    document.getElementById('sidebox').innerHTML = sideHTML();
     document.getElementById('sheet').innerHTML = sheetHTML();
     document.getElementById('content').innerHTML = panelHTML();
+    syncFrame();
     fitFrame();
     paintMeasure();
     paintFocus();
@@ -683,33 +685,50 @@ var CBUiStandard = (function () {
     if (group === 'tab' && window.history && window.history.replaceState) window.history.replaceState(null, '', '#' + value);
     paint();
   }
-  /** the REAL avatar panel (CBAvatar.mount), on a fixed-look page: every pick is applied and reported here, none is saved; it also owns the language here */
-  function mountAvatar() {
-    var list = {};
-    LANGS.forEach(function (lang) { list[lang[0]] = lang[1]; });
-    avatarOptions = {
+  /** the options the frame hands the REAL avatar (CBAvatar.mount via CBFrame.lab) on this fixed-look page: every pick is applied and reported here, none is saved; it also owns the language here.
+   *  The person is a preview and there is no token or api address, so the avatar reads and sends nothing. 'current' is read when the menu draws, so it always names the language on show. */
+  function avatarOptions() {
+    var names = {};
+    LANGS.forEach(function (lang) { names[lang[0]] = lang[1]; });
+    var languages = { list: names, onPick: pickLanguage };
+    Object.defineProperty(languages, 'current', { enumerable: true, get: function () { return state.lang; } });
+    return {
       person: { name: 'Preview', role: 'nothing is saved', owner: false },
       items: [],
       sync: false,
       pull: false,
+      token: null,
+      apiBase: '',
       testid: 'avatar',
-      languages: { list: list, current: state.lang, onPick: pickLanguage },
+      languages: languages,
       onLook: paint
     };
-    avatarHandle = window.CBAvatar.mount(document.getElementById('avatarhost'), avatarOptions);
   }
   function pickLanguage(code) {
     state.lang = code;
-    avatarOptions.languages.current = code;
     paint();
-    avatarHandle.update(avatarOptions.person);
+  }
+  /** the sections the frame's sidebar and phone switch list, in order: { k, label, icon } */
+  function sections() {
+    return TABS.map(function (key) { return { k: key, label: TAB_LABEL[key], icon: SECTION_ICON[key] }; });
+  }
+  /** a pick in the frame's sidebar or phone switch */
+  function chooseSection(key) {
+    chooseValue('tab', key);
+  }
+  /** the section the address asks for (#meets ...), else the first: the frame opens on it */
+  function firstSection() {
+    state.tab = tabFromHash() || state.tab;
+    return state.tab;
   }
   /** #meets, #icons ...: a section has its own address, so the Standards page can link straight to it */
   function tabFromHash() {
     var name = String(window.location.hash || '').replace('#', '');
     return TABS.indexOf(name) >= 0 ? name : null;
   }
-  function start() {
+  /** start the page inside the frame the HTML mounted (CBFrame.lab, an inline call the guards read there) */
+  function start(framed) {
+    pageFrame = framed;
     document.addEventListener('click', onSwitch);
     document.addEventListener('change', onChange);
     document.addEventListener('keydown', function (event) {
@@ -722,17 +741,14 @@ var CBUiStandard = (function () {
       fitFrame();
       paintOverlay();
     });
-    state.tab = tabFromHash() || state.tab;
     window.addEventListener('hashchange', function () {
       state.tab = tabFromHash() || state.tab;
       paint();
     });
-    mountAvatar();
     window.modal = modal;
     window.closeModal = closeModal;
     paint();
     whenFacesLoad();
   }
-  return { start: start, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
+  return { start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
 })();
-if (typeof document !== 'undefined' && document.getElementById && document.getElementById('frame')) CBUiStandard.start();
