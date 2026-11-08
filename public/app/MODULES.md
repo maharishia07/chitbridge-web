@@ -83,7 +83,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (53)
+## Shared (54)
 
 | file | loading | what it is |
 |---|---|---|
@@ -138,9 +138,10 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
+| `ui.js` | eager |  |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
 | `workflow.js` | — | ADOPTED from chitbridge-engines v1.33.0 · workflow · sha256 f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b — DO NOT EDIT HERE. Chang |
 
 ---
 
-*116 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*117 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
