@@ -377,9 +377,8 @@ var CBPrint = (function () {
       paperRowHTML() +
       '<div class="err" id="pr_err" data-testid="pr-err" style="margin-top:8px"></div>' +
       '<div class="pr-savebar" data-testid="pr-savebar" style="position:sticky;bottom:0;z-index:5;margin-top:8px;padding:8px 0;background:var(--bg,#fff)">' +
-      '<button data-cbsid="ACC002-B22" type="button" class="act" id="pr-save" data-testid="pr-save">' +
-      esc(tx('Save')) +
-      '</button></div>' +
+      ui.action('save', { mount: 'ACC002-U03', object: 'print layout', effect: 'preference', id: 'pr-save', testid: 'pr-save' }) +
+      '</div>' +
       '<p class="sub"><a class="sx-link" href="/settings.html#/shop" data-testid="pr-shop-link">' +
       esc(tx('Your business')) +
       ' ›</a></p></div>'

@@ -651,7 +651,10 @@
     'Your price ▢': 'आपकी कीमत ▢',
     'Your profile': 'आपकी प्रोफ़ाइल',
     'Your storefront link': 'आपके स्टोरफ़्रंट का लिंक',
-    'YOURS': 'आपका'
+    'YOURS': 'आपका',
+    'policy value': 'नीति का मान',
+    'print layout': 'प्रिंट लेआउट',
+    'policy edit': 'नीति में बदलाव'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
   try {

@@ -680,7 +680,10 @@
     'Your own details for this supplier — they never see them': 'تفاصيلك الخاصة لهذا المورّد — لا يرونها أبدًا',
     'Your profile': 'ملفك الشخصي',
     'Your storefront link': 'رابط واجهة متجرك',
-    'YOURS': 'لك'
+    'YOURS': 'لك',
+    'policy value': 'قيمة السياسة',
+    'print layout': 'تخطيط الطباعة',
+    'policy edit': 'تعديل السياسة'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
   try {
