@@ -37,6 +37,25 @@ const avatarPick = async (page, testid) => {
   await page.click('[data-testid="' + testid + '"]');
   if (await page.$('[data-testid="avatar-menu"]')) await page.click('[data-testid="avatar"]');
 };
+/** a section: the left list at desktop, the Section select at 390 (the list is hidden there) */
+const goTab = async (page, tab) => {
+  if (await page.isVisible('[data-testid="gal-tab-' + tab + '"]')) await page.click('[data-testid="gal-tab-' + tab + '"]');
+  else await page.selectOption('[data-testid="gal-section"]', tab);
+};
+/** a view choice (Screen, Size): the tools strip at desktop, the View sheet at 390 */
+const viewPick = async (page, group, value) => {
+  if (await page.isVisible('[data-testid="gal-' + group + '-' + value + '"]')) return page.click('[data-testid="gal-' + group + '-' + value + '"]');
+  if (!(await page.$('html[data-open]'))) await page.click('[data-testid="gal-view"]');
+  await page.click('[data-testid="gal-sheet-' + group + '-' + value + '"]');
+  await page.click('[data-testid="gal-scrim"]', { position: { x: 5, y: 5 } });
+};
+const setOverlay = async (page, on) => {
+  const desk = await page.isVisible('[data-testid="gal-overlay-switch"]');
+  if (!desk && !(await page.$('html[data-open]'))) await page.click('[data-testid="gal-view"]');
+  const sel = desk ? '[data-testid="gal-overlay-switch"]' : '[data-testid="gal-sheet-overlay-switch"]';
+  if ((await page.getAttribute(sel, 'aria-checked')) !== String(on)) await page.click(sel);
+  if (!desk) await page.click('[data-testid="gal-scrim"]', { position: { x: 5, y: 5 } });
+};
 const pick = (page, group, value) => avatarPick(page, (group === 'theme' ? 'theme-' : 'font-') + value);
 /** the toast row must not overlap any visible button (it is a row of the page, so it takes room instead of covering) */
 const toastClear = (page) => page.evaluate(() => {
@@ -84,14 +103,14 @@ const noScroll = (page) => page.evaluate(() => {
     for (const [theme, key] of [['light', 'cream'], ['dark', 'dark'], ['terminal', 'terminal']]) {
       await pick(page, 'theme', key);
       for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before']) {
-        await page.click('[data-testid="gal-tab-' + tab + '"]');
+        await goTab(page, tab);
         const scroll = await noScroll(page);
         check(scroll.page <= 0 && scroll.pageX <= 0 && scroll.panelX <= 0, label + ' ' + theme + ' ' + tab + ': page does not scroll, nothing scrolls sideways ' + JSON.stringify(scroll));
         await page.screenshot({ path: path.join(OUT, label + '-' + theme + '-en-' + tab + '.png') });
       }
     }
     await pick(page, 'theme', 'cream');
-    await page.click('[data-testid="gal-tab-tokens"]');
+    await goTab(page, 'tokens');
     await page.waitForFunction(() => document.fonts.check('14px Inter') || document.fonts.status === 'loaded', null, { timeout: 15000 }).catch(() => {});
     const faceNote = await page.evaluate(() => ({ inter: document.fonts.check('14px Inter'), loaded: [...document.fonts].filter((face) => face.status === 'loaded').map((face) => face.family) }));
     console.log('  faces loaded from the product font host: ' + JSON.stringify(faceNote.loaded));
@@ -111,17 +130,17 @@ const noScroll = (page) => page.evaluate(() => {
     check(/×44 px/.test(measure) && /AA/.test(measure), 'measured on the real button: ' + measure.replace(/\s+/g, ' ').slice(0, 90));
 
     /* the size toggle moves the token and the real button follows */
-    await press(page, 'size', 'large');
+    await viewPick(page, 'size', 'large');
     const largeHeight = await page.$eval('[data-testid="gal-measure-primary"]', (node) => Math.round(node.getBoundingClientRect().height));
     check(largeHeight === 56, 'Size: large sets --act-h and the real Done button is 56 px high (' + largeHeight + ')');
-    await press(page, 'size', 'small');
-    await press(page, 'overlay', 'on');
-    await page.click('[data-testid="gal-tab-components"]');
+    await viewPick(page, 'size', 'small');
+    await setOverlay(page, true);
+    await goTab(page, 'components');
     check((await page.$$eval('[data-testid="gal-target-bad"]', (nodes) => nodes.length)) > 0, '24 px overlay marks the too-small preset red');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-overlay-small.png') });
-    await press(page, 'size', 'standard');
+    await viewPick(page, 'size', 'standard');
     check((await page.$$eval('[data-testid="gal-target-bad"]', (nodes) => nodes.length)) === 0, '24 px overlay: no control below 24 px at the standard size');
-    await press(page, 'overlay', 'off');
+    await setOverlay(page, false);
 
     /* the language switch repaints in place */
     const before = await page.textContent('[data-testid="gal-row-CMP003"] .st .slot button');
@@ -145,7 +164,8 @@ const noScroll = (page) => page.evaluate(() => {
     const baseSize = await bodySize();
     await avatarPick(page, 'fs-xl');
     check((await bodySize()) > baseSize * 1.25, 'Text size: extra large scales the whole page (' + baseSize + ' to ' + (await bodySize()) + ' px)');
-    check((await noScroll(page)).pageX <= 0, 'Text size xl: nothing scrolls sideways');
+    const xlWide = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((node) => node.scrollWidth > node.clientWidth + 1 && node.clientWidth > 0).slice(0, 8).map((node) => node.tagName + '.' + node.className + ' sw' + node.scrollWidth + ' cw' + node.clientWidth));
+    check((await noScroll(page)).pageX <= 0, 'Text size xl: nothing scrolls sideways ' + JSON.stringify(xlWide) + JSON.stringify(await noScroll(page)));
     await page.screenshot({ path: path.join(OUT, label + '-light-en-textsize-xl.png') });
     await avatarPick(page, 'fs-m');
     await pick(page, 'font', 'serif');
@@ -165,7 +185,7 @@ const noScroll = (page) => page.evaluate(() => {
 
     /* the request: open the REAL panel, pick Terminal + Mono + XL: the components repaint and nothing is written */
     const lookBefore = await page.evaluate(() => ({ face: getComputedStyle(document.querySelector('[data-testid="gal-measure-primary"]') || document.body).fontFamily, size: parseFloat(getComputedStyle(document.body).fontSize), keys: Object.keys(localStorage).sort().join() }));
-    await page.click('[data-testid="gal-tab-tokens"]');
+    await goTab(page, 'tokens');
     await avatarPick(page, 'theme-terminal');
     await avatarPick(page, 'font-mono');
     await avatarPick(page, 'fs-xl');
@@ -173,7 +193,7 @@ const noScroll = (page) => page.evaluate(() => {
     check(after.theme === 'terminal' && /Space Mono|monospace/.test(after.face) && after.size > lookBefore.size * 1.25, 'Terminal + Mono + XL through the real panel: the components repaint (theme ' + after.theme + ', face ' + after.face.split(',')[0] + ', ' + lookBefore.size + ' to ' + after.size + ' px)');
     check(after.keys === lookBefore.keys && after.theme2 === 'navy' && !/SHOULD/.test(after.pressed), 'the panel pick wrote nothing: storage keys unchanged (' + after.keys + ')');
     await page.screenshot({ path: path.join(OUT, label + '-terminal-mono-xl-tokens.png') });
-    await page.click('[data-testid="gal-tab-components"]');
+    await goTab(page, 'components');
     await page.screenshot({ path: path.join(OUT, label + '-terminal-mono-xl-components.png') });
     await avatarPick(page, 'theme-cream');
     await avatarPick(page, 'font-default');
@@ -187,15 +207,15 @@ const noScroll = (page) => page.evaluate(() => {
     console.log('  FINDINGS theme x component pairs below the minimum: ' + failing.length + ' of ' + audit.length * audit[0].pairs.length);
     failing.forEach((line) => console.log('    finding ' + line));
     fs.writeFileSync(path.join(OUT, label + '-theme-contrast-findings.json'), JSON.stringify({ failing, audit: audit.map((row) => ({ theme: row.name, pairs: row.pairs.map((pair) => [pair.name, +pair.ratio.toFixed(2), pair.min, pair.rule, pair.ok]) })) }, null, 1));
-    await page.click('[data-testid="gal-tab-tokens"]');
+    await goTab(page, 'tokens');
     const focusLines = await page.$$eval('[data-testid="gal-focus-line"]', (nodes) => nodes.map((node) => node.textContent));
     check(focusLines.length === 5, 'the Tokens tab lists the focus ring and quiet edge results per pair');
     focusLines.forEach((line) => console.log('  FINDING focus: ' + line));
     const ringRows = audit.map((row) => row.pairs.filter((pair) => /^Ring|Quiet edge|label/.test(pair.name)).every((pair) => pair.ok));
     check(ringRows.every(Boolean) && ringRows.length === 16, 'the ring (>= 3:1 on page and card, 3 px, gap 2 px), the quiet edge (>= 3:1) and the labels (>= 4.5:1) pass in ALL 16 themes');
-    await page.click('[data-testid="gal-tab-themes"]');
+    await goTab(page, 'themes');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
-    await page.click('[data-testid="gal-tab-meets"]');
+    await goTab(page, 'meets');
     check((await page.$$('[data-testid="gal-meets-row"]')).length === 7, 'Meets the standard: seven rules, each with its source, its proof and its live result');
     check((await page.$$eval('[data-testid="gal-meets-row"] a[href^="https://"]', (nodes) => nodes.length)) >= 9, 'the sources are plain links');
     check((await page.$$('[data-testid="gal-meet-pass"]')).length >= 80 && (await page.$$('[data-testid="gal-meet-fail"]')).length === 0, 'the live results: every theme PASSES every rule');
@@ -204,7 +224,7 @@ const noScroll = (page) => page.evaluate(() => {
     check((await page.textContent('[data-testid="gal-country"]')).indexOf('Empty on purpose') >= 0, 'the country section is present and empty, marked');
     check((await noScroll(page)).pageX <= 0 && (await noScroll(page)).panelX <= 0, 'Meets tab: nothing scrolls sideways');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-meets.png') });
-    await page.click('[data-testid="gal-tab-components"]');
+    await goTab(page, 'components');
 
     /* an OPEN dialog repaints in place when the language changes */
     await page.click('[data-testid="gal-open-dialog"]');
@@ -222,7 +242,7 @@ const noScroll = (page) => page.evaluate(() => {
     await avatarPick(page, 'lang-en');
 
     /* the commit confirm shows its reach BEFORE anything is sent, and Cancel sends nothing */
-    await page.click('[data-testid="gal-tab-popups"]');
+    await goTab(page, 'popups');
     await page.click('[data-testid="gal-open-commit"]');
     await page.waitForSelector('#cb_confirm');
     const ask = await page.textContent('#cb_confirm');
@@ -258,15 +278,37 @@ const noScroll = (page) => page.evaluate(() => {
     check(await page.evaluate(() => localStorage.getItem('cb_lang') === 'fr' && localStorage.getItem('cb_theme') === 'navy' && localStorage.getItem('cb_sess').includes('SHOULD-NOT') && localStorage.length === 3), 'the page wrote nothing to storage and left the visitor\'s own keys alone');
     await context.close();
   }
+  /* the hash routes: a section has its own address */
+  for (const route of ['meets', 'icons', 'themes']) {
+    const routed = await browser.newContext({ viewport: { width: 1366, height: 650 } });
+    const routedPage = await routed.newPage();
+    await routedPage.goto(base + '/ui-standard.html#' + route);
+    await routedPage.waitForSelector('[data-testid="gal-tab-' + route + '"][aria-current="true"]');
+    check(true, '#' + route + ' opens its section directly');
+    await routedPage.screenshot({ path: path.join(OUT, '1366-hash-' + route + '.png') });
+    await routed.close();
+  }
+  /* the shell bar and the left pane (Option B) */
+  const shellContext = await browser.newContext({ viewport: { width: 1366, height: 650 } });
+  const shellPage = await shellContext.newPage();
+  await shellPage.goto(base + '/ui-standard.html');
+  await shellPage.waitForSelector('[data-testid="gal-screen-code"]');
+  check((await shellPage.textContent('[data-testid="gal-to-standards"]')).indexOf('Standards') >= 0 && (await shellPage.getAttribute('[data-testid="gal-to-standards"]', 'href')) === '/standards.html', 'the shell bar has "‹ Standards" back to the Standards page');
+  check((await shellPage.$$('[data-testid^="gal-tab-"] .c')).length === 7, 'the left list shows seven sections with their counts');
+  const heights = await shellPage.$$eval('#hdr button, [data-testid^="gal-tab-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
+  check(heights.every((height) => height >= 44), 'every control in the bar, the list and the shell is at least 44 px high (' + Math.min(...heights) + ')');
+  const codes = await shellPage.$$eval('[data-cbsid^="APP002-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));
+  check(['APP002-B01', 'APP002-B08', 'APP002-B11', 'APP002-B17', 'APP002-B18'].every((code) => codes.indexOf(code) >= 0), 'the controls carry APP002-B01..B18: ' + codes.length);
+  await shellContext.close();
   /* the Mobile frame on a desktop viewport */
   const context = await browser.newContext({ viewport: { width: 1366, height: 650 } });
   const page = await context.newPage();
   await page.goto(base + '/ui-standard.html');
-  await press(page, 'screen', 'mobile');
+  await viewPick(page, 'screen', 'mobile');
   const frame = await page.$eval('#frame', (node) => [node.offsetWidth, node.offsetHeight]);
   check(frame[0] === 390 && frame[1] === 844, 'Screen: Mobile draws a 390x844 frame (' + frame.join('x') + ')');
   await page.screenshot({ path: path.join(OUT, '1366-light-en-mobile-frame.png') });
-  await press(page, 'screen', 'desktop');
+  await viewPick(page, 'screen', 'desktop');
   await page.screenshot({ path: path.join(OUT, '1366-light-en-desktop-frame.png') });
   await context.close();
   await browser.close();

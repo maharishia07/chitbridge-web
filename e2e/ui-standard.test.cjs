@@ -45,5 +45,11 @@ const chrome = ['UI standard', 'Components', 'Popups', 'Icons', 'Tokens', 'Befor
 chrome.forEach((key) => check(model.translatedIn(key).length === 4, 'page label "' + key + '" is in ta hi ar fr'));
 check(model.LANGS.map((lang) => lang[0]).join() === 'en,ta,hi,ar,fr' && model.LANGS.filter((lang) => lang[2] === 'rtl').length === 1, 'five languages, one right-to-left (ar)');
 check(model.contrastRatio('rgb(0,0,0)', 'rgb(255,255,255)') > 20.9 && model.contrastRatio('rgb(22,105,63)', 'rgb(255,255,255)') >= 4.5, 'the contrast helper: black on white 21:1, the accent on white AA');
+console.log('the Standards page links here');
+const register = read('app/cap-standards.js'), standardsPage = read('standards.html');
+check(register.indexOf("['web', 'Web design']") >= 0, "the register has the Web design subject (STD_AREAS 'web')");
+const linked = register.split(/\n  \{\n/).map((block) => [/id: '([^']+)'/.exec(block), /go: '([^']*)'/.exec(block)]).filter((pair) => pair[0] && pair[1] && pair[1][1] === 'ui-standard').map((pair) => pair[0][1]);
+check(linked.length >= 5 && ['wcag-1.4.3', 'wcag-1.4.11', 'wcag-2.4.7', 'ui-action-set'].every((id) => linked.indexOf(id) >= 0), 'rows that open this page (go: ui-standard): ' + linked.join(' '));
+check(standardsPage.indexOf("'ui-standard': '/ui-standard.html'") >= 0, "standards.html maps the go key 'ui-standard' to /ui-standard.html");
 console.log(failures ? failures + ' FAILED' : 'all ok');
 process.exit(failures ? 1 : 0);

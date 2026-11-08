@@ -12,6 +12,7 @@
   if (typeof CBSTR === 'undefined') return;
   var packs = {
     ta: {
+      Section: 'பிரிவு', View: 'பார்வை', Home: 'முகப்பு', Standards: 'தரநிலைகள்', 'Below the floor': 'குறைந்தபட்சத்திற்கும் கீழ்', 'as it is': 'உள்ளபடி', '24 px targets': '24 px இலக்குகள்',
       'Bill posted': 'பில் பதிவிடப்பட்டது', 'Supplier removed': 'சப்ளையர் நீக்கப்பட்டார்', 'Supplier restored': 'சப்ளையர் மீட்கப்பட்டார்', 'Settings saved': 'அமைப்புகள் சேமிக்கப்பட்டன',
       Type: 'எழுத்து வடிவம்', 'not the product face': 'தயாரிப்பின் எழுத்துரு அல்ல',
       Font: 'எழுத்துரு', 'Text size': 'எழுத்து அளவு', Weight: 'தடிமன்', Normal: 'இயல்பான', Bold: 'தடித்த', 'Across themes': 'தீம்கள் முழுவதும்',
@@ -26,6 +27,7 @@
       Value: 'மதிப்பு', Measured: 'அளந்தது', Contrast: 'வேறுபாடு'
     },
     hi: {
+      Section: 'अनुभाग', View: 'दृश्य', Home: 'होम', Standards: 'मानक', 'Below the floor': 'न्यूनतम से नीचे', 'as it is': 'जैसा है', '24 px targets': '24 px लक्ष्य',
       'Bill posted': 'बिल पोस्ट हो गया', 'Supplier removed': 'सप्लायर हटाया गया', 'Supplier restored': 'सप्लायर वापस जोड़ा गया', 'Settings saved': 'सेटिंग्स सहेजी गईं',
       Type: 'टाइपोग्राफ़ी', 'not the product face': 'उत्पाद का फ़ॉन्ट नहीं',
       Font: 'फ़ॉन्ट', 'Text size': 'टेक्स्ट आकार', Weight: 'मोटाई', Normal: 'सामान्य', Bold: 'बोल्ड', 'Across themes': 'सभी थीम में',
@@ -40,6 +42,7 @@
       Value: 'मान', Measured: 'मापा', Contrast: 'कंट्रास्ट'
     },
     ar: {
+      Section: 'القسم', View: 'العرض', Home: 'الرئيسية', Standards: 'المعايير', 'Below the floor': 'أقل من الحد الأدنى', 'as it is': 'كما هي', '24 px targets': 'أهداف 24 بكسل',
       'Bill posted': 'تم ترحيل الفاتورة', 'Supplier removed': 'تمت إزالة المورّد', 'Supplier restored': 'تمت استعادة المورّد', 'Settings saved': 'تم حفظ الإعدادات',
       Type: 'الخط والطباعة', 'not the product face': 'ليس خط المنتج',
       Font: 'الخط', 'Text size': 'حجم النص', Weight: 'السُمك', Normal: 'عادي', Bold: 'غامق', 'Across themes': 'عبر السمات',
@@ -54,6 +57,7 @@
       Value: 'القيمة', Measured: 'المقاس', Contrast: 'التباين'
     },
     fr: {
+      Section: 'Section', View: 'Vue', Home: 'Accueil', Standards: 'Normes', 'Below the floor': 'Sous le minimum', 'as it is': 'tel quel', '24 px targets': 'Cibles de 24 px',
       'Bill posted': 'Facture validée', 'Supplier removed': 'Fournisseur retiré', 'Supplier restored': 'Fournisseur rétabli', 'Settings saved': 'Paramètres enregistrés',
       Type: 'Typographie', 'not the product face': 'pas la police du produit',
       Font: 'Police', 'Text size': 'Taille du texte', Weight: 'Graisse', Normal: 'Normal', Bold: 'Gras', 'Across themes': 'Selon les thèmes',

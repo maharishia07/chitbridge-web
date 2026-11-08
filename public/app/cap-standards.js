@@ -246,7 +246,7 @@ var STANDARDS = [
   {
     id: 'wcag-1.4.3',
     pa: 'settings',
-    a: 'look',
+    a: 'web',
     k: 'std',
     c: ['GLOBAL'],
     p: 'Text is readable in every theme — measured, not guessed',
@@ -259,8 +259,71 @@ var STANDARDS = [
     s: 'live',
     note: 'All 16 themes are checked by the theme-contrast test (WCAG 2.x AA, 4.5:1), 0 failures. Until 14 Oct 2026 this row also claimed 1.4.6; the test measures AA only, so 1.4.6 is its own row below.',
     at: 'Appearance · themes',
-    go: 'appearance',
+    go: 'ui-standard',
     why: '⭐ It found 117 real contrast failures in themes that had shipped and that nobody had caught by eye — including body text at 2.57:1 in the smallest font.'
+  },
+  /* ⭐ WEB DESIGN (8 Nov 2026, UX-137): status is set by hand from what the UI standard page measured live, with the date in limit. cb-compliance reviews these rows. */
+  {
+    id: 'wcag-1.4.11',
+    pa: 'settings',
+    a: 'web',
+    k: 'std',
+    c: ['GLOBAL'],
+    p: 'A button stands out from the page: its edge and fill are 3 to 1 against it',
+    g: 'Accessibility',
+    n: 'WCAG 2.2 — 1.4.11',
+    w: 'Non-text contrast: the parts of a control that identify it need 3:1 against what is next to them',
+    ex: 'quiet button edge = its label colour',
+    exWhy: 'The quiet button draws its edge in the same colour as its words, so the edge is as clear as the label. The pale divider colour is kept for dividers only.',
+    s: 'live',
+    limit: '16 of 16 themes · checked 8 Nov 2026 on the UI standard page',
+    note: 'Read at w3.org (Understanding 1.4.11): a boundary is required only when nothing else identifies the control; we draw one anyway. Measured on the real buttons in every theme on the Across themes and Meets the standard tabs.',
+    at: 'Every button',
+    go: 'ui-standard',
+    why: 'A button you cannot see is a button you do not press. The check runs on the real buttons, in every theme.',
+    added: '2026-11-08'
+  },
+  {
+    id: 'wcag-2.4.7',
+    pa: 'settings',
+    a: 'web',
+    k: 'std',
+    c: ['GLOBAL'],
+    p: 'You always see where the keyboard is: a 3 px ring in the text colour with a 2 px gap',
+    g: 'Accessibility',
+    n: 'WCAG 2.2 — 2.4.7',
+    aka: ['WCAG 2.2 — 2.4.13'],
+    w: 'Focus visible: any keyboard-operable control shows where the focus is',
+    ex: 'outline: 3px solid var(--focus-ring); outline-offset: 2px',
+    exWhy: 'The ring is the theme\'s own text colour with a gap in the page colour, so it is judged against the page only and works on every theme.',
+    s: 'live',
+    limit: '16 of 16 themes · checked 8 Nov 2026 on the UI standard page',
+    note: 'One rule for every theme, built from colours each theme already has. The ring width and gap are read from the browser on the UI standard page. Applied to the shared button style (page-skeleton.css) and the UI standard page; pages that style their own buttons follow.',
+    at: 'Every button',
+    go: 'ui-standard',
+    why: 'Someone using only the keyboard needs to see where they are. One rule means no theme can lose it.',
+    added: '2026-11-08'
+  },
+  {
+    id: 'ui-action-set',
+    pa: 'settings',
+    a: 'web',
+    k: 'prac',
+    c: ['GLOBAL'],
+    p: 'One Save, one Cancel, one Done: the same button on every screen, with a code on the register',
+    m: 'Ten components are built and shown; only a few screens use them so far',
+    g: 'Verification',
+    n: 'UI standard — action set',
+    w: 'One component per everyday action, drawn by one factory',
+    ex: 'Save · Cancel · Done · Close · Back · Add · Remove · Try again · Open',
+    exWhy: 'Improve one and every screen improves; a screen never draws its own Save.',
+    s: 'part',
+    limit: 'checked 8 Nov 2026 on the UI standard page',
+    note: 'Our own rule (decided 8 Nov 2026), not an international standard. The UI standard page draws all of them with the real code, in every state and theme.',
+    at: 'Every screen',
+    go: 'ui-standard',
+    why: 'Every improvised button is one more thing to learn. One component each means a fix lands everywhere at once.',
+    added: '2026-11-08'
   },
   /* STDREG1 (14 Oct 2026): 1.4.6 (enhanced contrast, 7:1) split out of the 1.4.3 row — nothing measures it, so it is not In force */
   {
@@ -289,7 +352,7 @@ var STANDARDS = [
   {
     id: 'wcag-1.4.4',
     pa: 'settings',
-    a: 'look',
+    a: 'web',
     k: 'std',
     c: ['GLOBAL'],
     p: 'Text can grow and nothing breaks',
@@ -302,7 +365,7 @@ var STANDARDS = [
     s: 'part',
     note: "What we test: the Extra large text size (132%) applies across the scale (e2e/tests/ux.spec.js, the text-size test). The rule asks for 200% — the browser's zoom — and no walk checks the screens at 200% yet.",
     at: 'Appearance · text size',
-    go: 'appearance',
+    go: 'ui-standard',
     why: 'Someone can keep using the product as their eyes change, instead of leaving it.'
   },
   {
@@ -2437,6 +2500,7 @@ var STANDARDS = [
 /* ⭐ THE VOCABULARIES the new fields draw from, and the date the register was last checked. A status word is said here once; the Settings
    card, the Legend and the page all say In force / Partly / Planned. Adding a country is one line in STD_COUNTRIES. */
 var STD_AREAS = [
+  ['web', 'Web design'], /* UX-137: the rules every screen is drawn to; each row's status is what the UI standard page measured, on the date it says */
   ['sell', 'Selling'],
   ['buy', 'Buying'],
   ['money', 'Money & GST'],

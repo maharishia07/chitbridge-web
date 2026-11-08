@@ -75,6 +75,11 @@ var CBUiStandard = (function () {
   var state = { lang: 'en', screen: 'this', size: 'standard', overlay: false, tab: 'components' };
   /** the page's switches that simply set one state key; the 24 px overlay is the only one with its own rule */
   var STATE_KEYS = ['screen', 'size', 'tab'];
+  /** the button codes of the page (Option B): tools B01-B08, View B09, Section select B10, section list B11-B17, links B18-B19, View sheet B20-B27 */
+  var CODE = { screen: 1, size: 4, overlay: 8, view: 9, section: 10, item: 11, standards: 18, home: 19, sheet: 20 };
+  function codeOf(number) {
+    return SCREEN + '-B' + String(number).padStart(2, '0');
+  }
   var avatarOptions = null, avatarHandle = null;
   var counters = { mount: 0, control: 0 };
 
@@ -417,24 +422,57 @@ var CBUiStandard = (function () {
   }
 
   /* ── chrome: header controls ── */
-  function segment(group, items, current, extra) {
-    return '<div class="seg" role="group" aria-label="' + esc(words(extra.label)) + '"><span class="seglabel">' + esc(words(extra.label)) + '</span>' + items.map(function (item) {
-      return '<button type="button" data-cbsid="' + controlCode() + '" data-g="' + group + '" data-v="' + item[0] + '" aria-pressed="' + (item[0] === current) + '" data-testid="gal-' + group + '-' + item[0] + '"' +
-        (item[2] ? ' lang="' + item[2] + '"' : '') + '>' + esc(item[1]) + '</button>';
+  /** the sections of the left list, each with the count of what it shows (read live, not typed) */
+  function sectionCount(tab) {
+    var counts = { components: Object.keys(ui.components).length, popups: 3, icons: ILLUSTRATIONS.length + 3, tokens: TOKENS.length, themes: Object.keys((window.CBScreen && window.CBScreen.APP_THEMES) || {}).length, before: CENSUS.length, meets: MEETS.length + 2 };
+    return counts[tab];
+  }
+  /** a segmented control of two-line buttons (title over value); 'bad' marks the value in red (below the floor) */
+  function twoLine(group, items, current, firstCode, label) {
+    return '<div class="seg" role="group" aria-label="' + esc(words(label)) + '">' + items.map(function (item, index) {
+      return '<button type="button" data-cbsid="' + codeOf(firstCode + index) + '" data-g="' + group + '" data-v="' + item[0] + '" aria-pressed="' + (item[0] === current) + '" data-testid="gal-' + group + '-' + item[0] + '"><span class="t">' + esc(item[1]) +
+        '</span><span class="n' + (item[3] ? ' bad' : '') + '">' + esc(item[2]) + '</span></button>';
     }).join('') + '</div>';
   }
+  function screenItems() {
+    return [['this', words('This screen'), words('as it is')], ['desktop', words('Desktop'), '1366×768'], ['mobile', words('Mobile'), '390×844']];
+  }
+  function sizeItems() {
+    return Object.keys(PRESETS).map(function (key) { return [key, key === 'small' ? words('Below the floor') : words(PRESETS[key].label), PRESETS[key].h + ' px', key === 'small']; });
+  }
+  function overlaySwitch(code) {
+    return '<button type="button" class="tgl" role="switch" aria-checked="' + state.overlay + '" data-cbsid="' + codeOf(code) + '" data-g="overlay" data-v="' + (state.overlay ? 'off' : 'on') + '" data-testid="gal-overlay-switch"><span class="tr"></span>' + esc(words('24 px targets')) + '</button>';
+  }
+  /** the tools strip above the main pane: Screen, Size (two-line segments), the 24 px switch */
   function headerHTML() {
-    counters.control = 0;
-    var screens = Object.keys(SCREENS).map(function (key) { return [key, words(SCREENS[key].label) + (SCREENS[key].w ? ' ' + SCREENS[key].w + '×' + SCREENS[key].h : '')]; });
-    var sizes = Object.keys(PRESETS).map(function (key) { return [key, words(PRESETS[key].label) + ' ' + PRESETS[key].h]; });
-    var overlay = [['on', '24 px'], ['off', '—']];
-    var tabs = TABS.map(function (tabName) {
-      return '<button type="button" role="tab" data-cbsid="' + controlCode() + '" data-g="tab" data-v="' + tabName + '" aria-selected="' + (tabName === state.tab) + '" data-testid="gal-tab-' + tabName + '">' + esc(words(TAB_LABEL[tabName])) + '</button>';
+    return '<div class="tools"><div class="grp"><span class="lab">' + esc(words('Screen')) + '</span>' + twoLine('screen', screenItems(), state.screen, CODE.screen, 'Screen') + '</div>' +
+      '<div class="grp"><span class="lab">' + esc(words('Size')) + '</span>' + twoLine('size', sizeItems(), state.size, CODE.size, 'Size') + '</div>' + overlaySwitch(CODE.overlay) + '</div>';
+  }
+  /** the ONE shell bar (what shell.js draws on every page): mark, title, the screen code, the way back, Home; the real avatar is mounted beside it */
+  function shellHTML() {
+    return '<span class="mark" aria-hidden="true">CB</span><b class="apptitle">' + esc(words('UI standard')) + '</b><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span><span class="grow"></span>' +
+      '<a class="tohome" href="/standards.html" data-cbsid="' + codeOf(CODE.standards) + '" data-testid="gal-to-standards">‹ ' + esc(words('Standards')) + '</a><a class="tohome" href="/" data-cbsid="' + codeOf(CODE.home) + '" data-testid="gal-to-home">⌂ ' + esc(words('Home')) + '</a>';
+  }
+  /** the left pane: the lead line, the Section select and View button (390 only) and the section list with counts */
+  function sideHTML() {
+    var options = TABS.map(function (tab) { return '<option value="' + tab + '"' + (tab === state.tab ? ' selected' : '') + '>' + esc(words(TAB_LABEL[tab])) + '</option>'; }).join('');
+    var items = TABS.map(function (tab, index) {
+      return '<button type="button" class="item" data-cbsid="' + codeOf(CODE.item + index) + '" data-g="tab" data-v="' + tab + '" aria-current="' + (tab === state.tab) + '" data-testid="gal-tab-' + tab + '">' + esc(words(TAB_LABEL[tab])) + '<span class="c">' + sectionCount(tab) + '</span></button>';
     }).join('');
-    return '<div class="hrow"><h1>' + esc(words('UI standard')) + '</h1><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span><span class="hint" data-testid="gal-hint">' + esc([words('Theme'), words('Font'), words('Text size'), words('Weight'), words('Language')].join(' · ')) + ' ▸</span></div>' +
-      '<div class="hrow ctl">' + segment('screen', screens, state.screen, { label: 'Screen' }) +
-      segment('size', sizes, state.size, { label: 'Size' }) + segment('overlay', overlay, state.overlay ? 'on' : 'off', { label: '24 px target' }) + '</div>' +
-      '<div class="hrow tabs" role="tablist">' + tabs + '</div>';
+    return '<p class="lead" data-testid="gal-lead">' + esc(words('Every button, popup and sign in ChitBridge, drawn by the real code so it looks and works the same on every screen.')) + ' <b>' + esc(words('Start with Components.')) + '</b><span class="x"> ' + esc(words('Theme and language sit in the avatar, top right.')) + '</span></p>' +
+      '<div class="pick"><select class="sel" data-cbsid="' + codeOf(CODE.section) + '" data-g="tab" data-testid="gal-section" aria-label="' + esc(words('Section')) + '">' + options + '</select>' +
+      '<button type="button" class="viewbtn" data-cbsid="' + codeOf(CODE.view) + '" data-g="sheet" data-v="open" data-testid="gal-view" aria-haspopup="dialog">' + esc(words('View')) + '</button></div>' +
+      '<nav aria-label="' + esc(words('Section')) + '">' + items + '</nav><p class="foot">' + esc(words('Public page · mock data · nothing is saved')) + '</p>';
+  }
+  /** the View sheet (390): the same Screen and Size choices, and the 24 px switch, as radio rows */
+  function sheetOptions(group, items, current, firstCode) {
+    return items.map(function (item, index) {
+      return '<button type="button" class="opt" role="radio" aria-checked="' + (item[0] === current) + '" data-cbsid="' + codeOf(firstCode + index) + '" data-g="' + group + '" data-v="' + item[0] + '" data-testid="gal-sheet-' + group + '-' + item[0] + '"><i></i><span class="l">' + esc(item[1]) + '</span><span class="n' + (item[3] ? ' bad' : '') + '">' + esc(item[2]) + '</span></button>';
+    }).join('');
+  }
+  function sheetHTML() {
+    return '<div class="g"><h4>' + esc(words('Screen')) + '</h4>' + sheetOptions('screen', screenItems(), state.screen, CODE.sheet) + '</div><div class="g"><h4>' + esc(words('Size')) + '</h4>' + sheetOptions('size', sizeItems(), state.size, CODE.sheet + 3) +
+      '</div><div class="g">' + overlaySwitch(CODE.sheet + 7).replace('gal-overlay-switch', 'gal-sheet-overlay-switch') + '</div>';
   }
 
   /* ── the 24 px target overlay: a dashed 24 by 24 box centred on every control, red when the control is smaller ── */
@@ -468,8 +506,8 @@ var CBUiStandard = (function () {
   /* ── fit: the frame for the chosen screen, scaled to the room there is; no page scroll ── */
   function fitFrame() {
     var stage = document.getElementById('stage'), frame = document.getElementById('frame'), box = SCREENS[state.screen];
-    var header = document.getElementById('hdr');
-    document.documentElement.style.setProperty('--hdr-h', header.offsetHeight + 'px');
+    var shell = document.querySelector('.sh');
+    document.documentElement.style.setProperty('--hdr-h', shell.offsetHeight + 'px');
     stage.classList.toggle('framed', !!box.w);
     if (!box.w) {
       frame.style.cssText = '';
@@ -592,7 +630,7 @@ var CBUiStandard = (function () {
   }
   function meetsPanel() {
     var rows = auditAll();
-    var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.5.8 Target Size (Minimum)', W3C + 'target-size-minimum.html']], custom: targetResult };
+    var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.2 · SC 2.5.8 Target Size (Minimum)', W3C + 'target-size-minimum.html']], custom: targetResult };
     var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', W3C + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
     return MEETS.concat([target, obscured]).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
       '<section class="country" data-testid="gal-country"><h3>Country rules (UK, EU, US, India, Australia, UAE)</h3><p class="note">Empty on purpose. A country research file will fill this section later; nothing about any country is stated here.</p></section>';
@@ -617,7 +655,10 @@ var CBUiStandard = (function () {
     counters.mount = 0;
     applyState();
     document.getElementById('probe').innerHTML = probeHTML();
+    document.getElementById('shellbar').innerHTML = shellHTML();
     document.getElementById('hdr').innerHTML = headerHTML();
+    document.getElementById('sidebox').innerHTML = sideHTML();
+    document.getElementById('sheet').innerHTML = sheetHTML();
     document.getElementById('content').innerHTML = panelHTML();
     fitFrame();
     paintMeasure();
@@ -628,7 +669,9 @@ var CBUiStandard = (function () {
   }
   function onSwitch(event) {
     var button = event.target.closest && event.target.closest('[data-g]');
+    if (event.target.id === 'scrim') return document.documentElement.removeAttribute('data-open');
     if (!button || button.tagName === 'SELECT' || button.tagName === 'OPTION') return;
+    if (button.getAttribute('data-g') === 'sheet') return document.documentElement.setAttribute('data-open', '');
     chooseValue(button.getAttribute('data-g'), button.getAttribute('data-v'));
   }
   function onChange(event) {
@@ -637,6 +680,7 @@ var CBUiStandard = (function () {
   function chooseValue(group, value) {
     if (STATE_KEYS.indexOf(group) >= 0) state[group] = value;
     else if (group === 'overlay') state.overlay = value === 'on';
+    if (group === 'tab' && window.history && window.history.replaceState) window.history.replaceState(null, '', '#' + value);
     paint();
   }
   /** the REAL avatar panel (CBAvatar.mount), on a fixed-look page: every pick is applied and reported here, none is saved; it also owns the language here */
@@ -660,15 +704,28 @@ var CBUiStandard = (function () {
     paint();
     avatarHandle.update(avatarOptions.person);
   }
+  /** #meets, #icons ...: a section has its own address, so the Standards page can link straight to it */
+  function tabFromHash() {
+    var name = String(window.location.hash || '').replace('#', '');
+    return TABS.indexOf(name) >= 0 ? name : null;
+  }
   function start() {
     document.addEventListener('click', onSwitch);
     document.addEventListener('change', onChange);
     document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') closeModal();
+      if (event.key === 'Escape') {
+        closeModal();
+        document.documentElement.removeAttribute('data-open');
+      }
     });
     window.addEventListener('resize', function () {
       fitFrame();
       paintOverlay();
+    });
+    state.tab = tabFromHash() || state.tab;
+    window.addEventListener('hashchange', function () {
+      state.tab = tabFromHash() || state.tab;
+      paint();
     });
     mountAvatar();
     window.modal = modal;
