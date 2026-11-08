@@ -7,9 +7,10 @@
 <head>
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
+<script src="/config.js"></script>   <!-- HX1: window.CB_API, loaded first as on every page that loads shell.js (guard-static 16); this page passes apiBase '' to the frame, so nothing calls it -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- A PUBLIC PAGE WITH MOCK DATA ONLY, in the standard frame (CBFrame.lab, signin false, as the Country lab): the shell header, the avatar with its look and language, the sidebar of sections.
-     It loads no config.js and no sign-in script, so it has no api address and no token to send; the frame is told so (avatar token none, api none).
+     It loads config.js first (the guard's rule for any page with shell.js) but no sign-in script, and tells the frame apiBase '' and no token, so no api request or token leaves the page.
      The one request the frame makes is the shell's own /app/manifest.json (its labs and apps list), so the CSP is connect-src 'self', the narrowest that lets the frame run; every other origin is refused.
      Nothing is stored (no localStorage write, no cookie); the language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-TdK3tIewp/af0r7xtro0FQ/bO8ZnHgwbolms97lm5tc='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; base-uri 'none'">

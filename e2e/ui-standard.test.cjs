@@ -20,7 +20,7 @@ const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => 
 check(scripts.every((src) => src.charAt(0) === '/' && !/^https?:/.test(src)), 'only same-origin scripts: ' + scripts.length);
 /* the standard frame (CBFrame.lab, public, signin false) is loaded; nothing that holds an api address, a session or a sign-in is */
 ['/app/shell.js', '/app/page-frame.js', '/app/lab-kit.js', '/app/screen-id.js'].forEach((src) => check(scripts.indexOf(src) >= 0, 'wears the standard frame: loads ' + src));
-['config.js', 'core.js', 'one-person.js', 'rail-bell.js', 'signin-ui.js', 'kural.js'].forEach((name) => check(scripts.indexOf('/app/' + name) < 0 && scripts.indexOf('/' + name) < 0, 'does not load ' + name));
+['core.js', 'one-person.js', 'rail-bell.js', 'signin-ui.js', 'kural.js'].forEach((name) => check(scripts.indexOf('/app/' + name) < 0 && scripts.indexOf('/' + name) < 0, 'does not load ' + name));
 check(/CBFrame\.lab\(\{\s*app:\s*'ui-standard'/.test(html) && /CBFrame\.lab\([\s\S]*?avatar:/.test(html), 'mounts CBFrame.lab (the Country lab way) with its own avatar options');
 /* device-id.js loads first, as on every page with a session reader (e2e/device-id.cjs, 8 Nov); no script on this page calls CBDevice, so no id is made and nothing is stored */
 check(scripts.indexOf('/app/device-id.js') >= 0 && scripts.indexOf('/app/device-id.js') < scripts.indexOf('/app/helpers.js'), 'loads device-id.js before any other script');
