@@ -50,9 +50,14 @@ const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(62)
     return billMoney().net;
   }, { setting, row });
   const net = () => page.evaluate(() => { price(); return billMoney().net; });
-  const popup = async () => { await page.waitForSelector('#askdlg[open]', { timeout: 10000 }); return page.evaluate(() => ({ text: document.getElementById('askbody').innerText.replace(/\s+/g, ' '), ok: document.getElementById('askok').textContent, no: document.getElementById('askno').textContent })); };
-  const start = () => page.evaluate(() => { window.__r = recheckBeforeBill(); });
-  const finishWith = (id) => page.evaluate(async (button) => { document.getElementById(button).click(); return JSON.stringify(await window.__r); }, id);
+  const popup = async () => { await page.waitForSelector('#askdlg[open]', { timeout: 20000 }); return page.evaluate(() => ({ text: document.getElementById('askbody').innerText.replace(/\s+/g, ' '), ok: document.getElementById('askok').textContent, no: document.getElementById('askno').textContent })); };
+  const start = async () => { await page.waitForSelector('#askdlg:not([open])', { state: 'attached', timeout: 10000 }); await page.evaluate(() => { window.__r = recheckBeforeBill(); }); };
+  /* press a button, take the answer, and wait until the dialog is CLOSED so the next case starts from a quiet page */
+  const finishWith = async (id) => {
+    const answer = await page.evaluate(async (button) => { document.getElementById(button).click(); return JSON.stringify(await window.__r); }, id);
+    await page.waitForSelector('#askdlg:not([open])', { state: 'attached', timeout: 10000 });
+    return answer;
+  };
 
   console.log('\n── price 100 → 120, the owner said "every bill" ──');
   say('the bill rings 236.00 before the check (hand)', (await setup('on', { price: 120 })) === 236, '236.00');
