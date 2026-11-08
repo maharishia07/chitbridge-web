@@ -47,6 +47,7 @@
   function callDoor(name, opts) {
     var door = doors[name];
     if (!door) return Promise.reject(new Error(name));
+    if (!tag.token) return Promise.reject(new Error('Sign in again to record results'));
     opts = opts || {};
     var path = door.path.replace(/:(\w+)/g, function (_, key) {
       return encodeURIComponent((opts.params || {})[key]);
@@ -64,7 +65,7 @@
       body = JSON.stringify(payload);
       headers['Content-Type'] = 'application/json';
     }
-    return fetch((win.CB_API || '') + '/api/testing/' + path + (query ? '?' + query : ''), { method: door.method, headers: headers, body: body }).then(
+    return fetch((win.CB_API || '') + '/api/testing/' + path + (query ? '?' + query : ''), { method: door.method, headers: headers, body: body, credentials: 'omit' }).then(
       function (reply) {
         if (reply.status === 401) throw new Error('Sign in again to record results');
         return reply.json().then(function (json) {

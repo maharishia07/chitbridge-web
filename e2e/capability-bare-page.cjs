@@ -36,7 +36,7 @@ function standIn(mode) {
   const fetchFn = (url, init = {}) => {
     const u = String(url), method = (init.method || 'GET').toUpperCase();
     const body = init.body ? JSON.parse(init.body) : null;
-    seen.push({ url: u, method, headers: init.headers || {}, body });
+    seen.push({ url: u, method, headers: init.headers || {}, body, credentials: init.credentials });
     const reply = (status, json) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(json), clone() { return this; }, headers: { get: () => null } });
     if (mode === '401') return reply(401, { error: 'unauthorised' });
     const p = u.split('?')[0];
@@ -161,6 +161,8 @@ const casesOf = (pg) => (pg.ctx.CBTEST && pg.ctx.CBTEST.cases) || [];
 
   console.log('\n══ credentials only (SEC-29) ══');
   ok('every request carries Authorization: Bearer T', st.seen.length > 0 && st.seen.every((r) => r.headers.Authorization === 'Bearer T'), st.seen.length + ' requests');
+  ok('credentials: omit on every request, so no same-origin cookie rides along', st.seen.length > 0 && st.seen.every((r) => r.credentials === 'omit'), st.seen.filter((r) => r.credentials !== 'omit').length + ' requests without it');
+  ok('no request carries a Cookie header', st.seen.every((r) => !Object.keys(r.headers).some((h) => /^cookie$/i.test(h))));
   ok('no request body names entity_id or actor (addressing is explicit, defaults are the server\'s)', st.seen.filter((r) => r.body && /"(entity_id|actor|actor_id)"/.test(JSON.stringify(r.body))).length === 0);
   ok('the page had no SESSION and nothing threw', typeof pg.ctx.SESSION === 'undefined');
 
@@ -173,6 +175,17 @@ const casesOf = (pg) => (pg.ctx.CBTEST && pg.ctx.CBTEST.cases) || [];
     await until(said, 1500);
     ok('negative-401: the panel says "Sign in again to record results"', said(), JSON.stringify(p401.ctx.CBTEST && p401.ctx.CBTEST.notice));
     ok('negative-401: nothing is posted', s401.seen.filter((r) => r.method === 'POST').length === 0);
+  }
+
+  console.log('\n══ no token ══');
+  {
+    const noToken = standIn();
+    const pageNone = blankPage(noToken);
+    pageNone.run('app/cap-attach.js', { cap: 'testing', area: 'crm' });
+    const saidNone = () => /Sign in again to record results/.test((pageNone.ctx.CBTEST && pageNone.ctx.CBTEST.notice && pageNone.ctx.CBTEST.notice.text) || '');
+    await until(saidNone, 1500);
+    ok('no-token: no request leaves the page (never "Bearer undefined")', noToken.seen.length === 0, noToken.seen.map((r) => r.headers.Authorization).join(','));
+    ok('no-token: the panel says "Sign in again to record results"', saidNone(), JSON.stringify(pageNone.ctx.CBTEST && pageNone.ctx.CBTEST.notice));
   }
 
   console.log('\n══ the shim\'s doors repeat app.html (no drift) ══');
