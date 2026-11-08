@@ -1640,6 +1640,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
