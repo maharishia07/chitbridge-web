@@ -34,13 +34,14 @@ const press = (page, group, value) => page.click('[data-testid="gal-' + group + 
 /** a pick in the REAL avatar panel: open it, press the choice, close it again (toggling the button, so an open dialog is left alone) */
 const avatarPick = async (page, testid) => {
   if (!(await page.$('[data-testid="avatar-menu"]'))) await page.click('[data-testid="avatar"]');
-  await page.click('[data-testid="' + testid + '"]');
-  if (await page.$('[data-testid="avatar-menu"]')) await page.click('[data-testid="avatar"]');
+  /* the choice is pressed in the page itself: with a dialog open its backdrop sits over the panel, and a real pointer would hit the backdrop */
+  await page.$eval('[data-testid="' + testid + '"]', (el) => el.click());
+  if (await page.$('[data-testid="avatar-menu"]')) await page.$eval('[data-testid="avatar"]', (el) => el.click());
 };
-/** a section: the left list at desktop, the Section select at 390 (the list is hidden there) */
+/** a section: the frame's sidebar at desktop (skel-nav-*), the frame's phone switch at 390 (lab-switch-*) */
 const goTab = async (page, tab) => {
-  if (await page.isVisible('[data-testid="gal-tab-' + tab + '"]')) await page.click('[data-testid="gal-tab-' + tab + '"]');
-  else await page.selectOption('[data-testid="gal-section"]', tab);
+  if (await page.isVisible('[data-testid="skel-nav-' + tab + '"]')) await page.click('[data-testid="skel-nav-' + tab + '"]');
+  else await page.click('[data-testid="lab-switch-' + tab + '"]');
 };
 /** a view choice (Screen, Size): the tools strip at desktop, the View sheet at 390 */
 const viewPick = async (page, group, value) => {
@@ -283,7 +284,7 @@ const noScroll = (page) => page.evaluate(() => {
     const routed = await browser.newContext({ viewport: { width: 1366, height: 650 } });
     const routedPage = await routed.newPage();
     await routedPage.goto(base + '/ui-standard.html#' + route);
-    await routedPage.waitForSelector('[data-testid="gal-tab-' + route + '"][aria-current="true"]');
+    await routedPage.waitForSelector('[data-testid="skel-nav-' + route + '"][aria-current="page"]');
     check(true, '#' + route + ' opens its section directly');
     await routedPage.screenshot({ path: path.join(OUT, '1366-hash-' + route + '.png') });
     await routed.close();
@@ -292,13 +293,13 @@ const noScroll = (page) => page.evaluate(() => {
   const shellContext = await browser.newContext({ viewport: { width: 1366, height: 650 } });
   const shellPage = await shellContext.newPage();
   await shellPage.goto(base + '/ui-standard.html');
-  await shellPage.waitForSelector('[data-testid="gal-screen-code"]');
+  await shellPage.waitForSelector('[data-testid="gal-to-standards"]');
   check((await shellPage.textContent('[data-testid="gal-to-standards"]')).indexOf('Standards') >= 0 && (await shellPage.getAttribute('[data-testid="gal-to-standards"]', 'href')) === '/standards.html', 'the shell bar has "‹ Standards" back to the Standards page');
-  check((await shellPage.$$('[data-testid^="gal-tab-"] .c')).length === 7, 'the left list shows seven sections with their counts');
-  const heights = await shellPage.$$eval('#hdr button, [data-testid^="gal-tab-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
+  check((await shellPage.$$('[data-testid^="skel-nav-"]')).length === 7, 'the frame sidebar lists the seven sections');
+  const heights = await shellPage.$$eval('#hdr button, [data-testid^="skel-nav-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
   check(heights.every((height) => height >= 44), 'every control in the bar, the list and the shell is at least 44 px high (' + Math.min(...heights) + ')');
   const codes = await shellPage.$$eval('[data-cbsid^="UIS001-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));
-  check(['UIS001-B01', 'UIS001-B08', 'UIS001-B11', 'UIS001-B17', 'UIS001-B18'].every((code) => codes.indexOf(code) >= 0), 'the controls carry UIS001-B01..B18: ' + codes.length);
+  check(['UIS001-B01', 'UIS001-B08', 'UIS001-B09', 'UIS001-B18', 'UIS001-B20', 'UIS001-B27'].every((code) => codes.indexOf(code) >= 0), 'the page controls carry UIS001-B01..B09, B18, B20..B27 (the section list belongs to the frame): ' + codes.length);
   await shellContext.close();
   /* the Mobile frame on a desktop viewport */
   const context = await browser.newContext({ viewport: { width: 1366, height: 650 } });
