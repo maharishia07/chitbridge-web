@@ -76,7 +76,7 @@ const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(62)
 
   console.log('\n── unit piece → kg, the price unchanged (CAT-264b: a unit move is a commercial change like price) ──');
   await setup('on', { unit: 'kg' }); await start(); shown = await popup();
-  say('the popup names the unit move and offers no Keep (Go back)', /sold per piece → per kg/.test(shown.text) && /Go back/.test(shown.no) && !/Keep/.test(shown.no), shown.text.slice(0, 100));
+  say('the popup names the unit move and offers no Keep (Go back)', /sold per piece → per kg [(]the quantity stays 2[)]/.test(shown.text) && /Go back/.test(shown.no) && !/Keep/.test(shown.no), shown.text.slice(0, 100));
   await finishWith('askok');
   say('Use new prices: the line is now sold per kg and the bill is still 236.00 (hand: price unchanged)', (await page.evaluate(() => CART[0].unit)) === 'kg' && (await net()) === 236, 'kg · 236.00');
   await setup('on', { unit: 'kg' }); await start(); await popup(); await finishWith('askno');
@@ -84,6 +84,10 @@ const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(62)
   console.log('\n── unit unchanged (piece → piece) ──');
   await setup('on', { unit: 'piece' }); const calm = await page.evaluate(async () => JSON.stringify(await recheckBeforeBill()));
   say('nothing is shown: no popup opened, the door was asked once, 236.00', (await page.evaluate(() => document.getElementById('askdlg').open)) === false && (await page.evaluate(() => window.__posts)) === 1 && (await net()) === 236, calm.slice(0, 80));
+
+  await setup('on', { unit: 'Kg' }); await page.evaluate(() => { CART[0].unit = 'kg'; });
+  await page.evaluate(async () => { window.__r = recheckBeforeBill(); await window.__r; });
+  say('unit kg → Kg (the same unit, case folded): no popup, 236.00', (await page.evaluate(() => document.getElementById('askdlg').open)) === false && (await net()) === 236, 'no popup');
 
   console.log('\n── a product the shop deleted ──');
   await setup('on', { found: false }); await start(); shown = await popup();
