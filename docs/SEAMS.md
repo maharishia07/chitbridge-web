@@ -111,19 +111,19 @@ of file each thing is; this says what already does the job.
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 24 | `call` | `cap-assist.js` |  |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
-| 24 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
+| 24 | `profile` | `country-setup.js` | skips the EXISTS read — |
 | 24 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 24 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
 | 23 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
-| 23 | `keep` | `signin.js` | see. |
 | 22 | `form` | `accounts-shell.js` |  |
 | 22 | `shown` | `country-compare.js` | one side's value for the line: |
 | 22 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 22 | `governance` | `home-facts.js` |  |
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
+| 22 | `keep` | `signin.js` | see. |
 | 21 | `says` | `adopt.js` |  |
 | 21 | `entries` | `books-store.js` |  |
 | 21 | `chart` | `fx-rates.js` |  |
@@ -205,6 +205,6 @@ of file each thing is; this says what already does the job.
 | 13 | `link` | `chit-sheet.js` |  |
 | 13 | `confirm` | `lab-kit.js` | opts: |
 | 13 | `dialog` | `ui.js` | modal(); the corner X is modal()'s own .mx. |
-| 13 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 13 | `tables` | `bookpack.js` | the CSV parts: |
 | 13 | `payment` | `books-store.js` |  |
+| 13 | `members` | `crm-groups.js` | the customers (never a lead) in a segment or a group, from the list's own rows |

@@ -2,6 +2,7 @@
  * tests/cur1-money-reader.test.cjs - CUR-1 slice 5: the web tolerant reader (app/helpers.js moneyRead, and the three painters that use it).
  * The old shapes and the new shape both render; a currency is never guessed; an unreadable amount is a dash, never a false 0.00.
  * Every expected value below is written by hand from the shape (minor / 10^exponent), not computed by the code under test.
+ * MIN unit-test
  * Run: node tests/cur1-money-reader.test.cjs
  */
 'use strict';
@@ -53,4 +54,7 @@ ok(cx.bareAmount({ amount: 1234.5 }) === '1,234.50', 'bareAmount: an object amou
 const rows = [{ amt: { amount_minor: 10000, currency: 'INR' } }, { amt: { amount_minor: 250, currency: 'USD' } }, { amt: { amount: 50, currency: 'INR' } }, { amt: { amount_minor: 0, currency: 'INR' } }];
 eq(JSON.parse(JSON.stringify(cx.cbSumByCurrency(rows, 'amt'))), [{ currency: 'INR', total: 150 }, { currency: 'USD', total: 2.5 }], 'cbSumByCurrency: pairs add under their own currencies, INR 150 and USD 2.5, zero skipped');
 eq(JSON.parse(JSON.stringify(cx.cbSumByCurrency([{ amt: 200, currency: 'AUD' }, { amt: { amount_minor: 100, currency: 'AUD' } }], 'amt'))), [{ currency: 'AUD', total: 201 }], 'cbSumByCurrency: old row and new pair of one currency add: 200 + 1.00 = 201');
+/* the harness that lifts fmtMoney out of helpers.js (scripts/check-adoption.js) must lift every function fmtMoney now calls, or its 11 cases fail on "is not defined" */
+const lifter = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'check-adoption.js'), 'utf8');
+for (const fn of ['moneyValueFor', 'moneyRead', 'moneyReadMajor', 'moneyReadMinor', 'isoCodeOf', 'bareAmount']) ok(lifter.includes("'" + fn + "'"), 'scripts/check-adoption.js lifts ' + fn + ' beside fmtMoney');
 console.log(n + ' checks passed');
