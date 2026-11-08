@@ -2088,7 +2088,7 @@ function workDemoHTML(tail) {
     (S.loyOn ? ' on' : '') +
     '" onclick="edit(\'loyOn\',' +
     !S.loyOn +
-    ')" role="switch" aria-checked="' +
+    ')" role="switch" aria-label="Loyalty discount" aria-checked="' +
     (S.loyOn ? 'true' : 'false') +
     '"></button></div>' +
     '<div class="sum" style="margin-top:12px;padding:11px 15px">' +
@@ -2972,7 +2972,7 @@ function s0LimitsHTML() {
   return (
     '<div class="two">' +
     '<div><span class="lbl">Margin threshold</span>' +
-    '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="' +
+    '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Margin threshold" value="' +
     esc(S.margin == null ? '' : String(S.margin)) +
     '" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div>' +
     '<div class="now">Your catalogue is at <b>' +
@@ -2988,11 +2988,11 @@ function s0LimitsHTML() {
     '" onclick="edit(\'custOn\',' +
     !S.custOn +
     ')" ' +
-    'role="switch" aria-checked="' +
+    'role="switch" aria-label="Loyalty bonus" aria-checked="' +
     (S.custOn ? 'true' : 'false') +
     '"></button>' +
     (S.custOn
-      ? '<span>up to</span><span class="sm"><input type="text" inputmode="decimal" min="0" max="95" ' +
+      ? '<span>up to</span><span class="sm"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus cap" ' +
         'value="' +
         esc(S.cap == null ? '' : String(S.cap)) +
         '" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></span>'
@@ -3313,7 +3313,7 @@ function loyBar() {
     '" onclick="edit(\'loyOn\',' +
     !S.loyOn +
     ')" ' +
-    'role="switch" aria-checked="' +
+    'role="switch" aria-label="Loyalty bonus" aria-checked="' +
     (S.loyOn ? 'true' : 'false') +
     '"></button>' +
     '<span class="lt">Loyalty bonus</span>';
@@ -3497,11 +3497,11 @@ function loyBoxHTML() {
     '" style="margin-left:auto" onclick="edit(\'loyOn\',' +
     !S.loyOn +
     ')" ' +
-    'role="switch" aria-checked="' +
+    'role="switch" aria-label="Loyalty bonus" aria-checked="' +
     (S.loyOn ? 'true' : 'false') +
     '"></button></div>' +
     (S.loyOn
-      ? '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="' +
+      ? '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus" value="' +
         esc(S.loyPct == null ? '' : String(S.loyPct)) +
         '" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span class="u">%</span></span>'
       : '') +
@@ -3547,7 +3547,7 @@ function cfgPercent() {
        that's actually being typed. Reworded to describe the discount itself, matching "For selected
        customers only" right beside it. */
     '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>' +
-    '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="' +
+    '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Discount" value="' +
     esc(S.pctOff == null ? '' : String(S.pctOff)) +
     '" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>' +
     '<div class="hint">Applied to every customer.</div></div>' +

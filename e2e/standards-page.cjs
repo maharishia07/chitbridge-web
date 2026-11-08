@@ -107,7 +107,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   const count = (p) => p.evaluate(() => (document.querySelector('.cbl-count') || {}).textContent || '');
   const rowIds = (p) => p.$$eval('[data-testid^="std-row-"]', (n) => n.map((x) => x.getAttribute('data-testid').replace('std-row-', '')));
   const chips = (p) => p.$$eval('.cbl-fchip', (n) => n.map((x) => x.textContent.replace('×', '').trim()));
-  const pressed = (p) => p.$$eval('#mxBody [aria-pressed="true"]:not([data-dim])', (n) => n.map((x) => x.getAttribute('data-testid')));
+  const pressed = (p) => p.$$eval('#mxBody [aria-pressed="true"]:not([data-dim]), #mxBody [aria-selected="true"]', (n) => n.map((x) => x.getAttribute('data-testid')));
   const idx = (name) => REG.S.findIndex((r) => r.n === name);
 
   /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */

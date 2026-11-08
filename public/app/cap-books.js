@@ -1882,11 +1882,15 @@ function bkRangeHTML(id, again) {
   return (
     '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap"><input type="date" class="inp" id="' +
     id +
-    '_from" value="' +
+    '_from" aria-label="' +
+    esc(tx('From')) +
+    '" value="' +
     r.from +
     '"><span>→</span><input type="date" class="inp" id="' +
     id +
-    '_to" value="' +
+    '_to" aria-label="' +
+    esc(tx('To')) +
+    '" value="' +
     r.to +
     '"><button onclick="' +
     again +
@@ -4333,7 +4337,7 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button onclick="bkTab(\'tb\')">' +
       tx('Show') +
@@ -4436,7 +4440,7 @@ async function bkBS(body) {
     var c = reply && reply.currency;
     var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="bs_asof" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button onclick="bkTab(\'bs\')">' +
       tx('Show') +
@@ -5023,6 +5027,8 @@ function bkFyPicker(id, tid, sty) {
     id +
     '" data-testid="' +
     tid +
+    '" aria-label="' +
+    esc(tx('Financial year')) +
     '" onchange="bkFyPick(this.value)" style="' +
     (sty || 'flex:1 1 110px;min-width:0') +
     '">' +
@@ -5308,7 +5314,7 @@ function bkPackCtlPaint() {
   el.innerHTML =
     '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' +
     bkFyPicker('pk_fy', 'pk_fy') +
-    '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
+    '<select class="inp" id="pk_p" data-testid="pk_p" aria-label="' + esc(tx('Month')) + '" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
     '><option value="">' +
     esc(tx('Month')) +
     '</option><option value="year">' +
@@ -6376,7 +6382,7 @@ async function bkAccounts(body) {
     body.innerHTML =
       '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="ac_name" data-testid="ac_name" placeholder="' +
       esc(tx('New ledger name')) +
-      '"><select class="inp" id="ac_parent" data-testid="ac_parent">' +
+      '"><select class="inp" id="ac_parent" data-testid="ac_parent" aria-label="' + esc(tx('Parent group')) + '">' +
       groups
         .map(function (item) {
           return '<option value="' + esc(item.code) + '">' + esc(item.code + ' · ' + item.name) + '</option>';

@@ -703,12 +703,25 @@ function csuRow(key, what, valueHtml, from, editHtml, locked, lockHtml) {
     '</div>'
   );
 }
+/* the visible words of each select's row: they become its accessible name (axe select-name, WCAG 4.1.2); the row's own label is a span, not a for= label */
+var CSU_SEL_NAME = {
+  'cs-country': 'Country',
+  'cs-currency': 'Money',
+  'cs-words': 'Big numbers',
+  'cs-fy': 'Year starts',
+  'cs-timezone': 'Time zone',
+  'cs-supplies': 'What you sell',
+  'cs-tax-reg': 'Registered',
+  'cs-tax-scheme': 'Regular'
+};
 function csuSel(id, k, opts, cur) {
   return (
     '<select data-cbsid="ACC002-S04" class="inp" id="' +
     id +
     '" data-testid="' +
     id +
+    '" aria-label="' +
+    esc(tx(CSU_SEL_NAME[id] || id)) +
     '" onchange="csuSet(\'' +
     k +
     '\', this.value)">' +
@@ -867,7 +880,7 @@ function csuCountryMoneyRows(e, sources, fixed) {
     return { v: code, t: code };
   });
   var typedCurrency =
-    '<input data-cbsid="ACC002-I07" class="inp" id="cs-currency" data-testid="cs-currency" maxlength="3" placeholder="' +
+    '<input data-cbsid="ACC002-I07" class="inp" id="cs-currency" data-testid="cs-currency" aria-label="' + esc(tx('Money')) + '" maxlength="3" placeholder="' +
     esc((csuPackOf(e.country) || csuPack(e.country) || {}).currency || '') +
     '" value="' +
     esc(e.currency) +
