@@ -466,7 +466,7 @@ function navPaint(active) {
   $('nav').innerHTML = NAV_GROUPS.map(([text, ids]) => {
     const shut = !!(text && fold[text] && ids.indexOf(active) < 0);
     const head = text
-      ? `<button type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
+      ? `<button type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-label="${esc(tx(text))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
       : '';
     return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
@@ -740,11 +740,11 @@ async function accBills(body) {
     const list = Array.isArray(rows) ? rows : (rows && (rows.chits || rows.rows || rows.data)) || [];
     const word = (f) => (f.code === 'B-2100' ? 'Received' : 'Issued');
     const tabs =
-      '<div class="tabs" role="tablist">' +
+      '<div class="tabs" role="group">' +
       sys
         .map(
           (item) =>
-            `<button type="button" class="tab" role="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
+            `<button type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
         )
         .join('') +
       '</div>';

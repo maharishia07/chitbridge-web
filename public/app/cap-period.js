@@ -506,14 +506,14 @@ async function peAccrualsView(body) {
     return;
   }
   body.innerHTML =
-    '<div class="tabs" role="tablist">' +
+    '<div class="tabs" role="group">' +
     [
       ['rec', 'Repeating'],
       ['acc', 'Accruals']
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" role="tab" data-testid="pr-tab-' +
+          '<button type="button" class="pe-tab" data-testid="pr-tab-' +
           item[0] +
           '" aria-pressed="' +
           (PE.tab === item[0]) +

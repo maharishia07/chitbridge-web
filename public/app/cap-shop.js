@@ -395,7 +395,9 @@ function vaultRowHTML(r, i, j, type) {
       .join('');
     var keep = r.value && !known ? '<option value="' + esc(r.value) + '" selected>' + esc(r.value) + ' — not a standard code</option>' : '';
     val =
-      '<select data-cbsid="ACC002-S03" class="inp" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
+      '<select data-cbsid="ACC002-S03" class="inp" aria-label="' +
+      esc(tx('Value')) +
+      '" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
       i +
       ',' +
       j +
@@ -408,7 +410,9 @@ function vaultRowHTML(r, i, j, type) {
       '</select>';
   } else {
     val =
-      '<input data-cbsid="ACC002-I02" class="inp" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
+      '<input data-cbsid="ACC002-I02" class="inp" aria-label="' +
+      esc(tx('Value')) +
+      '" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
       esc(r.value || '') +
       '" placeholder="' +
       esc(hint) +
@@ -745,7 +749,7 @@ function shopCc() {
 /** the three inputs (ids pf_gstn · pf_addr · pf_sup — saveProfile and SHOP_FIELDS read them by id) */
 function shopFieldsHTML(e, licLabel) {
   return (
-    '<label class="fl">' +
+    '<label class="fl" for="pf_gstn">' +
     esc(licLabel) +
     ' <span title="' +
     esc(tx('Your business registration')) +
@@ -753,7 +757,7 @@ function shopFieldsHTML(e, licLabel) {
     '<input data-cbsid="ACC002-I04" class="inp" id="pf_gstn" value="' +
     esc(e.gstn || '') +
     '">' +
-    '<label class="fl">' +
+    '<label class="fl" for="pf_addr">' +
     tx('Address') +
     '</label>' +
     '<input data-cbsid="ACC002-I05" class="inp" id="pf_addr" value="' +

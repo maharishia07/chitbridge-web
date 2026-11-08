@@ -395,14 +395,14 @@ function bankPaint() {
   const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
   res.innerHTML =
     warn +
-    '<div class="tabs" role="tablist">' +
+    '<div class="tabs" role="group">' +
     [
       ['lines', 'Lines'],
       ['brs', 'Statement']
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" role="tab" data-testid="bank-tab-' +
+          '<button type="button" class="pe-tab" data-testid="bank-tab-' +
           item[0] +
           '" aria-pressed="' +
           (BKB.tab === item[0]) +

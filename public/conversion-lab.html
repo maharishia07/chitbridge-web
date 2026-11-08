@@ -333,7 +333,7 @@ function setVal(what, i, field, v, nestedNum) {
 function provSelect(what, i, cur) {
   var opts = (window.CBConvert && CBConvert.PROVENANCE) || ['unknown'];
   return (
-    '<select onchange="setVal(\'' +
+    '<select aria-label="' + what + ' provenance" onchange="setVal(\'' +
     what +
     "'," +
     i +
@@ -348,7 +348,7 @@ function provSelect(what, i, cur) {
 }
 function txt(what, i, field, v, w) {
   return (
-    '<input type="text" value="' +
+    '<input type="text" aria-label="' + what + ' ' + field + '" value="' +
     esc(v == null ? '' : v) +
     '"' +
     (w ? ' style="width:' + w + '"' : '') +
@@ -363,7 +363,7 @@ function txt(what, i, field, v, w) {
 }
 function num(what, i, field, v, step) {
   return (
-    '<input type="number" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
+    '<input type="number" aria-label="' + what + ' ' + field + '" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
   );
 }
 function del(what, i) {
@@ -423,7 +423,7 @@ function paintInputs() {
           '<td>' +
           txt('prices', index, 'currency', item.currency, '58px') +
           '</td>' +
-          '<td><input type="date" value="' +
+          '<td><input type="date" aria-label="prices as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'prices\',' +
           index +
@@ -454,7 +454,7 @@ function paintInputs() {
           '<td class="r">' +
           num('rates', index, 'rate', item.rate) +
           '</td>' +
-          '<td><input type="date" value="' +
+          '<td><input type="date" aria-label="rates as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'rates\',' +
           index +
