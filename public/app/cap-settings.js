@@ -1370,8 +1370,24 @@ var CBSettings = (function () {
     if (grey(row.may)) return '';
     var key = esc(row.key);
     return (
-      '<button data-cbsid="ACC002-B19" type="button" class="act" style="display:none" id="sx_pol_save_' + key + '" data-testid="sx-pol-save-' + key + '" data-pol-act="save">' + esc(T('Save')) + '</button>' +
-      '<button data-cbsid="ACC002-B20" type="button" class="act ghost" style="display:none" id="sx_pol_cancel_' + key + '" data-testid="sx-pol-cancel-' + key + '" data-pol-act="cancel">' + esc(T('Cancel')) + '</button>'
+      ui.action('save', {
+        mount: 'ACC002-U01',
+        object: 'policy value',
+        hidden: true,
+        effect: 'commit',
+        confirmedBy: 'page',
+        id: 'sx_pol_save_' + key,
+        testid: 'sx-pol-save-' + key,
+        data: { 'pol-act': 'save' }
+      }) +
+      ui.action('cancel', {
+        mount: 'ACC002-U02',
+        object: 'policy edit',
+        hidden: true,
+        id: 'sx_pol_cancel_' + key,
+        testid: 'sx-pol-cancel-' + key,
+        data: { 'pol-act': 'cancel' }
+      })
     );
   }
   /** the control's value against the one painted. Pure DOM: reads and writes nothing on the server. */

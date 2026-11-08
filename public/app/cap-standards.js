@@ -237,7 +237,7 @@ var STANDARDS = [
     ex: 'msgid "Save"',
     exWhy: 'The English IS the key, so an untranslated label shows correct English rather than a leaked <code>btn.save.label</code>.',
     s: 'part',
-    note: 'Primitive and a 449-entry catalogue exist; the call sites are not wrapped yet.',
+    note: 'Primitive and a 449-entry catalogue exist; the call sites are not wrapped yet. The standard buttons already use a stable key tied to their code, with the English as the default text, so rewording English never breaks a translation.',
     at: 'Localisation · language',
     go: 'locale',
     why: 'A translator can be handed a file instead of a codebase.'
