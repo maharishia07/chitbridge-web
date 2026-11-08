@@ -549,6 +549,7 @@
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
+    if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
     pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
@@ -559,6 +560,14 @@
     } /* the person's own choice outranks a showing link */
     push(); /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
+  }
+  /** a pick on a fixed-look page (the UI standard page): the look is applied and the host told, but nothing is saved, held, pushed or reloaded */
+  function setFixed(kind, value) {
+    OVERRIDE[kind] = value;
+    BASE = null;
+    apply();
+    repaint();
+    if (M && M.o && typeof M.o.onLook === 'function') M.o.onLook(kind, value);
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
   function editionReload(force) {
@@ -1094,6 +1103,7 @@
    *   onProfile · onSettings · onSupport · onSignOut     a page that has the screen in place; otherwise a link into the app
    *   languages { list:{code:name}, current, onPick }    the app only: it has no other door to its language
    *   testid   the button's data-testid (default `avatar`)      signInHref · apiBase · token
+   *   onLook(kind, value)  a fixed-look page only (data-appearance-fixed): told after each pick, which is applied but never saved
    *   sync:false  no server at all (the counter offline)      pull:false  the host reads /me itself and calls hydrate()
    */
   function mount(el, o) {

@@ -31,7 +31,13 @@ function serve() {
   });
 }
 const press = (page, group, value) => page.click('[data-testid="gal-' + group + '-' + value + '"]');
-const pick = (page, group, value) => page.selectOption('[data-testid="gal-' + group + '"]', value);
+/** a pick in the REAL avatar panel: open it, press the choice, close it again (toggling the button, so an open dialog is left alone) */
+const avatarPick = async (page, testid) => {
+  if (!(await page.$('[data-testid="avatar-menu"]'))) await page.click('[data-testid="avatar"]');
+  await page.click('[data-testid="' + testid + '"]');
+  if (await page.$('[data-testid="avatar-menu"]')) await page.click('[data-testid="avatar"]');
+};
+const pick = (page, group, value) => avatarPick(page, (group === 'theme' ? 'theme-' : 'font-') + value);
 /** the toast row must not overlap any visible button (it is a row of the page, so it takes room instead of covering) */
 const toastClear = (page) => page.evaluate(() => {
   const bar = document.querySelector('#toast .toast');
@@ -120,38 +126,58 @@ const noScroll = (page) => page.evaluate(() => {
     /* the language switch repaints in place */
     const before = await page.textContent('[data-testid="gal-row-CMP003"] .st .slot button');
     const nameBefore = await page.getAttribute('[data-testid="gal-CMP003-std-default"]', 'aria-label');
-    await press(page, 'lang', 'ta');
+    await avatarPick(page, 'lang-ta');
     const afterTa = await page.textContent('[data-testid="gal-row-CMP003"] .st .slot button');
     check(before === 'Cancel' && afterTa !== before && /[஀-௿]/.test(afterTa), 'Tamil: Cancel repaints in place (' + afterTa + ')');
     check((await page.getAttribute('[data-testid="gal-CMP003-std-default"]', 'aria-label')) !== nameBefore, 'Tamil: the accessible name (aria-label) repaints too');
     await page.screenshot({ path: path.join(OUT, label + '-light-ta-components.png') });
-    await press(page, 'lang', 'ar');
+    await avatarPick(page, 'lang-ar');
     check(await page.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'ar'), 'Arabic: the page turns right-to-left');
     await page.screenshot({ path: path.join(OUT, label + '-light-ar-components.png') });
     const wide = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((node) => node.getBoundingClientRect().right > innerWidth + 1 || node.getBoundingClientRect().left < -1).slice(0, 4).map((node) => node.tagName + '.' + node.className + ' ' + Math.round(node.getBoundingClientRect().left) + '..' + Math.round(node.getBoundingClientRect().right)));
     check((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0, 'Arabic: no sideways page scroll ' + JSON.stringify(wide));
-    await press(page, 'lang', 'fr');
+    await avatarPick(page, 'lang-fr');
     check(/Annuler/.test(await page.textContent('[data-testid="gal-row-CMP003"] .st .slot button')), 'French: Annuler');
-    await press(page, 'lang', 'en');
+    await avatarPick(page, 'lang-en');
 
     /* the avatar's look: font, text size and weight go through the avatar's own apply and write nothing */
     const bodySize = () => page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
     const baseSize = await bodySize();
-    await press(page, 'textSize', 'xl');
+    await avatarPick(page, 'fs-xl');
     check((await bodySize()) > baseSize * 1.25, 'Text size: extra large scales the whole page (' + baseSize + ' to ' + (await bodySize()) + ' px)');
     check((await noScroll(page)).pageX <= 0, 'Text size xl: nothing scrolls sideways');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-textsize-xl.png') });
-    await press(page, 'textSize', 'm');
+    await avatarPick(page, 'fs-m');
     await pick(page, 'font', 'serif');
     check(/Georgia/.test(await page.evaluate(() => getComputedStyle(document.body).fontFamily)), 'Font: serif reaches the page through the avatar apply');
     await pick(page, 'font', 'default');
-    await press(page, 'weight', 'bold');
+    await avatarPick(page, 'weight-bold');
     check(await page.evaluate(() => document.documentElement.getAttribute('data-weight') === 'bold'), 'Weight: bold stamps data-weight like the avatar');
-    await press(page, 'weight', 'normal');
-    check(await page.evaluate(() => document.getElementById('hdr').querySelectorAll('select').length === 2 && document.querySelector('[data-testid="gal-theme"]').options.length === 16), 'the Theme control lists all 16 avatar themes by their own names');
-    check(await page.evaluate(() => /Terminal/.test(document.querySelector('[data-testid="gal-theme"]').textContent)), 'Terminal is one of them');
+    await avatarPick(page, 'weight-normal');
+    await page.click('[data-testid="avatar"]');
+    check((await page.$$eval('[data-testid^="theme-"]:not([data-testid="theme-device"])', (nodes) => nodes.length)) === 16, 'the REAL avatar panel lists the 16 themes (the same component the app opens)');
+    check(await page.evaluate(() => /Terminal/.test(document.querySelector('[data-testid="avatar-menu"]').textContent)), 'Terminal is one of them');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-avatar-panel.png') });
+    await page.click('[data-testid="avatar"]');
+    check((await page.$$('[data-testid="gal-lang-ta"], [data-testid="gal-theme"], [data-testid="gal-font"]')).length === 0, 'the page keeps no copy of the panel: no own Theme, Font or Language switch');
     check(await page.evaluate(() => document.documentElement.hasAttribute('data-appearance-fixed') && localStorage.getItem('cb_theme') === 'navy' && localStorage.getItem('cb_fs') === null && localStorage.getItem('cb_font') === null && localStorage.getItem('cb_weight') === null), 'the avatar apply wrote nothing: cb_theme stays the visitor\'s own, cb_font / cb_fs / cb_weight absent');
     check(await page.evaluate(() => document.documentElement.getAttribute('data-theme') === 'cream'), 'the visitor\'s stored theme (navy) did not leak into the page: it starts in Cream');
+
+    /* the request: open the REAL panel, pick Terminal + Mono + XL: the components repaint and nothing is written */
+    const lookBefore = await page.evaluate(() => ({ face: getComputedStyle(document.querySelector('[data-testid="gal-measure-primary"]') || document.body).fontFamily, size: parseFloat(getComputedStyle(document.body).fontSize), keys: Object.keys(localStorage).sort().join() }));
+    await page.click('[data-testid="gal-tab-tokens"]');
+    await avatarPick(page, 'theme-terminal');
+    await avatarPick(page, 'font-mono');
+    await avatarPick(page, 'fs-xl');
+    const after = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), face: getComputedStyle(document.querySelector('[data-testid="gal-measure-primary"]')).fontFamily, size: parseFloat(getComputedStyle(document.body).fontSize), pressed: document.querySelector('[data-testid="gal-measure"]').textContent, keys: Object.keys(localStorage).sort().join(), sess: localStorage.getItem('cb_sess'), theme2: localStorage.getItem('cb_theme') }));
+    check(after.theme === 'terminal' && /Space Mono|monospace/.test(after.face) && after.size > lookBefore.size * 1.25, 'Terminal + Mono + XL through the real panel: the components repaint (theme ' + after.theme + ', face ' + after.face.split(',')[0] + ', ' + lookBefore.size + ' to ' + after.size + ' px)');
+    check(after.keys === lookBefore.keys && after.theme2 === 'navy' && !/SHOULD/.test(after.pressed), 'the panel pick wrote nothing: storage keys unchanged (' + after.keys + ')');
+    await page.screenshot({ path: path.join(OUT, label + '-terminal-mono-xl-tokens.png') });
+    await page.click('[data-testid="gal-tab-components"]');
+    await page.screenshot({ path: path.join(OUT, label + '-terminal-mono-xl-components.png') });
+    await avatarPick(page, 'theme-cream');
+    await avatarPick(page, 'font-default');
+    await avatarPick(page, 'fs-m');
 
     /* every theme, applied by the avatar code and measured on the real buttons: the failures are findings, never hidden */
     const audit = await page.evaluate(() => CBUiStandard.audit());
@@ -170,15 +196,15 @@ const noScroll = (page) => page.evaluate(() => {
     await page.waitForSelector('[data-testid="gal-mover"]');
     const dialogEn = await page.textContent('.mhd .t');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-dialog.png') });
-    await press(page, 'lang', 'ta');
+    await avatarPick(page, 'lang-ta');
     const dialogTa = await page.textContent('.mhd .t');
     check(dialogEn === 'Example dialog' && dialogTa !== dialogEn, 'the open dialog repaints in Tamil without a reload (' + dialogTa + ')');
     await page.screenshot({ path: path.join(OUT, label + '-light-ta-dialog.png') });
-    await press(page, 'lang', 'ar');
+    await avatarPick(page, 'lang-ar');
     await page.screenshot({ path: path.join(OUT, label + '-light-ar-dialog.png') });
     await page.keyboard.press('Escape');
     check((await page.$$('[data-testid="gal-mover"]')).length === 0, 'Escape closes the dialog');
-    await press(page, 'lang', 'en');
+    await avatarPick(page, 'lang-en');
 
     /* the commit confirm shows its reach BEFORE anything is sent, and Cancel sends nothing */
     await page.click('[data-testid="gal-tab-popups"]');
@@ -206,13 +232,13 @@ const noScroll = (page) => page.evaluate(() => {
     await page.click('#undoBtn');
     await page.waitForFunction(() => document.querySelectorAll('#toast .toast').length === 0 || /restored/.test(document.querySelector('#toast .toast').textContent));
     check(true, 'Undo runs (the bar clears)');
-    await press(page, 'lang', 'ta');
+    await avatarPick(page, 'lang-ta');
     await page.click('[data-testid="gal-open-commit"]');
     await page.waitForSelector('#cb_confirm');
     await page.click('[data-testid="confirm-ok"]');
     await page.waitForFunction(() => /[஀-௿]/.test((document.querySelector('#toast .toast') || {}).textContent || ''));
     check(await toastClear(page), label + ': the Tamil toast ("' + (await page.textContent('#toast .toast')) + '") covers no button');
-    await press(page, 'lang', 'en');
+    await avatarPick(page, 'lang-en');
 
     check(await page.evaluate(() => localStorage.getItem('cb_lang') === 'fr' && localStorage.getItem('cb_theme') === 'navy' && localStorage.getItem('cb_sess').includes('SHOULD-NOT') && localStorage.length === 3), 'the page wrote nothing to storage and left the visitor\'s own keys alone');
     await context.close();

@@ -71,10 +71,10 @@ var CBUiStandard = (function () {
     ['archive-sunset.svg', 'Archive (sunset)'], ['message-update.svg', 'Message update'], ['forward.svg', 'Forward'], ['attachment.svg', 'Attachment'],
     ['priority-sla.svg', 'Priority / SLA'], ['dispute-flag.svg', 'Dispute flag'], ['empty-inbox.svg', 'Empty list'], ['no-results.svg', 'No results']
   ];
-  var state = { lang: 'en', theme: 'cream', font: 'default', textSize: 'm', weight: 'normal', screen: 'this', size: 'standard', overlay: false, tab: 'components' };
-  var WEIGHTS = [['normal', 'Normal'], ['bold', 'Bold']];
+  var state = { lang: 'en', screen: 'this', size: 'standard', overlay: false, tab: 'components' };
   /** the page's switches that simply set one state key; the 24 px overlay is the only one with its own rule */
-  var STATE_KEYS = ['lang', 'theme', 'font', 'textSize', 'weight', 'screen', 'size', 'tab'];
+  var STATE_KEYS = ['screen', 'size', 'tab'];
+  var avatarOptions = null, avatarHandle = null;
   var counters = { mount: 0, control: 0 };
 
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
@@ -261,7 +261,7 @@ var CBUiStandard = (function () {
       return '<figure class="ic" data-testid="gal-art"><img src="/illustrations/' + item[0] + '" alt="" loading="lazy" width="96" height="64"><figcaption><b>' + esc(item[1]) +
         '</b><span class="mono">' + item[0] + '</span></figcaption></figure>';
     }).join('');
-    return '<h3>' + esc(words('Icons')) + ' · typed signs (ui.js ACTION_SET)</h3><div class="icgrid">' + glyphs + '</div>' +
+    return '<p class="note" data-testid="gal-icon-rule">Rule for the icon set (UX-140): draw every icon in currentColor, so it follows each theme, the quiet and busy states and Dark. The typed signs below do (they are text); the drawings keep their own fixed palette and do not.</p><h3>' + esc(words('Icons')) + ' · typed signs (ui.js ACTION_SET)</h3><div class="icgrid">' + glyphs + '</div>' +
       '<h3>Drawings · public/illustrations (no code yet)</h3><div class="icgrid">' + drawings + '</div>';
   }
 
@@ -409,33 +409,16 @@ var CBUiStandard = (function () {
         (item[2] ? ' lang="' + item[2] + '"' : '') + '>' + esc(item[1]) + '</button>';
     }).join('') + '</div>';
   }
-  /** a drop-down for a long list (the 16 themes): a native select, same code scheme, changed through the 'change' event */
-  function selectControl(group, items, current, label) {
-    return '<label class="seg"><span class="seglabel">' + esc(words(label)) + '</span><select data-cbsid="' + controlCode() + '" data-g="' + group + '" data-testid="gal-' + group + '">' + items.map(function (item) {
-      return '<option value="' + item[0] + '"' + (item[0] === current ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
-    }).join('') + '</select></label>';
-  }
-  function avatarThemes() {
-    var table = (window.CBScreen && window.CBScreen.APP_THEMES) || {};
-    return Object.keys(table).map(function (key) { return [key, table[key].name]; });
-  }
-  function avatarFonts() {
-    return window.CBAvatar.FONTS.map(function (row) { return [row[0], words(row[1])]; });
-  }
-  function avatarSizes() {
-    return window.CBAvatar.TEXT_SIZES.map(function (row) { return [row[0], words(row[1])]; });
-  }
   function headerHTML() {
     counters.control = 0;
-    var langs = LANGS.map(function (lang) { return [lang[0], lang[1], lang[0]]; });
     var screens = Object.keys(SCREENS).map(function (key) { return [key, words(SCREENS[key].label) + (SCREENS[key].w ? ' ' + SCREENS[key].w + '×' + SCREENS[key].h : '')]; });
     var sizes = Object.keys(PRESETS).map(function (key) { return [key, words(PRESETS[key].label) + ' ' + PRESETS[key].h]; });
     var overlay = [['on', '24 px'], ['off', '—']];
     var tabs = TABS.map(function (tabName) {
       return '<button type="button" role="tab" data-cbsid="' + controlCode() + '" data-g="tab" data-v="' + tabName + '" aria-selected="' + (tabName === state.tab) + '" data-testid="gal-tab-' + tabName + '">' + esc(words(TAB_LABEL[tabName])) + '</button>';
     }).join('');
-    return '<div class="hrow"><h1>' + esc(words('UI standard')) + '</h1><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span></div>' +
-      '<div class="hrow ctl">' + segment('lang', langs, state.lang, { label: 'Language' }) + selectControl('theme', avatarThemes(), state.theme, 'Theme') + selectControl('font', avatarFonts(), state.font, 'Font') + segment('textSize', avatarSizes(), state.textSize, { label: 'Text size' }) + segment('weight', WEIGHTS.map(function (row) { return [row[0], words(row[1])]; }), state.weight, { label: 'Weight' }) + segment('screen', screens, state.screen, { label: 'Screen' }) +
+    return '<div class="hrow"><h1>' + esc(words('UI standard')) + '</h1><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span><span class="hint" data-testid="gal-hint">' + esc([words('Theme'), words('Font'), words('Text size'), words('Weight'), words('Language')].join(' · ')) + ' ▸</span></div>' +
+      '<div class="hrow ctl">' + segment('screen', screens, state.screen, { label: 'Screen' }) +
       segment('size', sizes, state.size, { label: 'Size' }) + segment('overlay', overlay, state.overlay ? 'on' : 'off', { label: '24 px target' }) + '</div>' +
       '<div class="hrow tabs" role="tablist">' + tabs + '</div>';
   }
@@ -515,7 +498,7 @@ var CBUiStandard = (function () {
   }
   /** every theme, one after the other: the figures per pair, then the page's own theme is put back */
   function auditAll() {
-    var table = window.CBScreen.APP_THEMES, rows = [];
+    var table = window.CBScreen.APP_THEMES, rows = [], saved = window.CBAvatar.get().theme;
     document.getElementById('probe').innerHTML = probeHTML();
     Object.keys(table).forEach(function (key) {
       window.CBAvatar.applyWith({ theme: key });
@@ -529,7 +512,7 @@ var CBUiStandard = (function () {
         })
       });
     });
-    window.CBAvatar.applyWith({ theme: state.theme });
+    window.CBAvatar.applyWith({ theme: saved });
     return rows;
   }
   function themeRowHTML(row) {
@@ -551,7 +534,6 @@ var CBUiStandard = (function () {
     window.cbLang = function () { return state.lang; };
     root.setAttribute('lang', state.lang);
     root.setAttribute('dir', LANGS.filter(function (lang) { return lang[0] === state.lang; })[0][2]);
-    window.CBAvatar.applyWith({ theme: state.theme, font: state.font, fs: state.textSize, weight: state.weight });
     root.style.setProperty('--act-h', preset.h + 'px');
     root.style.setProperty('--act-pad', preset.pad + 'px');
     root.style.setProperty('--act-radius', preset.radius + 'px');
@@ -586,6 +568,27 @@ var CBUiStandard = (function () {
     else if (group === 'overlay') state.overlay = value === 'on';
     paint();
   }
+  /** the REAL avatar panel (CBAvatar.mount), on a fixed-look page: every pick is applied and reported here, none is saved; it also owns the language here */
+  function mountAvatar() {
+    var list = {};
+    LANGS.forEach(function (lang) { list[lang[0]] = lang[1]; });
+    avatarOptions = {
+      person: { name: 'Preview', role: 'nothing is saved', owner: false },
+      items: [],
+      sync: false,
+      pull: false,
+      testid: 'avatar',
+      languages: { list: list, current: state.lang, onPick: pickLanguage },
+      onLook: paint
+    };
+    avatarHandle = window.CBAvatar.mount(document.getElementById('avatarhost'), avatarOptions);
+  }
+  function pickLanguage(code) {
+    state.lang = code;
+    avatarOptions.languages.current = code;
+    paint();
+    avatarHandle.update(avatarOptions.person);
+  }
   function start() {
     document.addEventListener('click', onSwitch);
     document.addEventListener('change', onChange);
@@ -596,6 +599,7 @@ var CBUiStandard = (function () {
       fitFrame();
       paintOverlay();
     });
+    mountAvatar();
     window.modal = modal;
     window.closeModal = closeModal;
     paint();

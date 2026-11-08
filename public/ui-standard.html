@@ -31,6 +31,9 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--page);color:var(--ink);font-size:calc(15px*var(--k,1));line-height:1.4;font-family:var(--font-ui,Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Tamil","Noto Sans Devanagari","Noto Naskh Arabic",sans-serif);display:flex;flex-direction:column;overflow:hidden}
+#hdrwrap{flex:none;position:relative}
+#avatarhost{position:absolute;inset-inline-end:12px;top:6px;z-index:70}
+.hint{margin-inline-start:auto;margin-inline-end:44px;font-size:calc(12px*var(--k,1));color:var(--muted)}
 #hdr{flex:none;border-bottom:1px solid var(--soft);padding:6px 12px;background:var(--page)}
 .hrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:2px 0}
 h1{font-size:calc(18px*var(--k,1));margin:0}
@@ -107,7 +110,7 @@ select{min-height:28px;border:1px solid var(--line);background:var(--card);color
 </style>
 </head>
 <body>
-<header id="hdr" data-testid="gal-header"></header>
+<div id="hdrwrap"><header id="hdr" data-testid="gal-header"></header><div id="avatarhost" data-testid="gal-avatarhost"></div></div>
 <main id="stage"><div id="frame" data-testid="gal-frame"><div id="panel"><div id="content" data-testid="gal-content"></div></div></div></main>
 <div id="probe" class="probe" aria-hidden="true"></div>
 <div id="toast" role="status" aria-live="polite" data-testid="gal-toast"></div>
