@@ -18,7 +18,7 @@
 /* tokens: the action set draws from these; the page reads them back live (Tokens tab) */
 :root{
   --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6; --ink:#1D1B16; --muted:#5E594D; --line:#8A8374; --soft:#DDD6C6;
-  --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus:#2F74C9; --danger:#8E3517; --ok:#16693F; --bad:#C4562F;
+  --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus-ring:var(--ink); --focus-halo:var(--page); --danger:#8E3517; --ok:#16693F; --bad:#C4562F;
   --scrim:rgba(0,0,0,.45); --press-shadow:rgba(0,0,0,.35); --bad-tint:rgba(196,86,47,.18); --art-bg:#FFFFFF; --act-h:44px; --act-pad:20px; --act-radius:9px; --act-font:14px; --act-weight:700; --hdr-h:120px;
 }
 /* the avatar's themes (engine APP_THEMES) set the app's tokens on <html>; the page's own names follow them. Cream sets none and keeps the values above. */
@@ -46,7 +46,9 @@ h4{font-size:calc(12px*var(--k,1));margin:0 0 4px;color:var(--muted);text-transf
 .seg button,.tabs button{min-height:28px;min-width:28px;padding:2px 8px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;font-size:calc(12px*var(--k,1));cursor:pointer}
 .seg button[aria-pressed="true"],.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
 .tabs button{font-size:calc(13px*var(--k,1))}
-button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+/* the one focus rule (the same as page-skeleton.css): ring = body ink, halo = the surface; forced colours use Highlight */
+button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-halo)}
+@media (forced-colors:active){button:focus-visible,select:focus-visible,a:focus-visible,.act:focus-visible{outline-color:Highlight;box-shadow:none}}
 #stage{flex:1;min-height:0;display:flex;justify-content:center;padding:0;overflow:hidden}
 #frame{container-type:inline-size;width:100%;height:100%;background:var(--page);border:0}
 #stage.framed #frame{border:1px solid var(--line)}
@@ -66,9 +68,9 @@ button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .slot{min-height:28px;display:flex;align-items:center}
 /* the action set: one look from the tokens (the page-level .act every small app defines for itself today) */
 .act{display:inline-flex;align-items:center;justify-content:center;min-height:var(--act-h);padding:0 var(--act-pad);border:1px solid var(--accent);border-radius:var(--act-radius);background:var(--accent);color:var(--accent-ink);font:inherit;font-size:calc(var(--act-font)*var(--k,1));font-weight:var(--act-weight);cursor:pointer}
-.act.ghost{background:transparent;color:var(--accent-text);border-color:var(--line)}
+.act.ghost{background:transparent;color:var(--accent-text);border:1px solid currentColor}
 .act:hover,.act[data-demo="hover"]{filter:brightness(.9)}
-.act:focus-visible,.act[data-demo="focus"]{outline:3px solid var(--focus);outline-offset:2px}
+.act:focus-visible,.act[data-demo="focus"]{outline:3px solid var(--focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-halo)}
 .act:active,.act[data-demo="pressed"]{transform:translateY(1px);box-shadow:inset 0 2px 4px var(--press-shadow)}
 .act:disabled{opacity:.5;cursor:not-allowed}
 .act[aria-busy="true"]{opacity:.75;cursor:progress}
@@ -88,6 +90,9 @@ button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 .meas{display:flex;gap:8px;flex-wrap:wrap}.mline{font-size:calc(13px*var(--k,1));margin:6px 0}
 .probe{position:fixed;left:0;top:0;visibility:hidden;pointer-events:none}
 .tok{table-layout:fixed}.tok td,.tok th{overflow-wrap:anywhere}
+.meets-row{border-bottom:1px solid var(--soft);padding:8px 0}.meets-row h3{margin:0 0 4px}.meets-row p{margin:2px 0}.src a{color:var(--accent-text)}
+.res{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.res span{border:1px solid currentColor;border-radius:4px;padding:1px 6px;font-size:calc(11px*var(--k,1))}.res .pass{color:var(--ok)}.res .fail{color:var(--bad);font-weight:700}
+.country{margin-top:12px;border:2px dashed var(--line);border-radius:8px;padding:8px 12px}
 .themes th,.themes td{padding:3px 2px;font-size:calc(11px*var(--k,1))}.themes td{text-align:center}.themes td.fail{color:var(--bad);font-weight:700}.themes th{font-weight:600}.themes small{font-weight:400;color:var(--muted)}
 select{min-height:28px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;font-size:calc(12px*var(--k,1))}
 .ovl{position:absolute;inset:0;pointer-events:none}

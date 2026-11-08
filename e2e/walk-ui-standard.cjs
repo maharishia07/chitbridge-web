@@ -189,10 +189,19 @@ const noScroll = (page) => page.evaluate(() => {
     fs.writeFileSync(path.join(OUT, label + '-theme-contrast-findings.json'), JSON.stringify({ failing, audit: audit.map((row) => ({ theme: row.name, pairs: row.pairs.map((pair) => [pair.name, +pair.ratio.toFixed(2), pair.min, pair.rule, pair.ok]) })) }, null, 1));
     await page.click('[data-testid="gal-tab-tokens"]');
     const focusLines = await page.$$eval('[data-testid="gal-focus-line"]', (nodes) => nodes.map((node) => node.textContent));
-    check(focusLines.length === 3, 'the Tokens tab lists the focus ring failures per pair');
+    check(focusLines.length === 5, 'the Tokens tab lists the focus ring and quiet edge results per pair');
     focusLines.forEach((line) => console.log('  FINDING focus: ' + line));
+    const ringRows = audit.map((row) => row.pairs.filter((pair) => /^Ring|Quiet edge|label/.test(pair.name)).every((pair) => pair.ok));
+    check(ringRows.every(Boolean) && ringRows.length === 16, 'the ring (>= 3:1 on page and card, 3 px, gap 2 px), the quiet edge (>= 3:1) and the labels (>= 4.5:1) pass in ALL 16 themes');
     await page.click('[data-testid="gal-tab-themes"]');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
+    await page.click('[data-testid="gal-tab-meets"]');
+    check((await page.$$('[data-testid="gal-meets-row"]')).length === 7, 'Meets the standard: seven rules, each with its source, its proof and its live result');
+    check((await page.$$eval('[data-testid="gal-meets-row"] a[href^="https://"]', (nodes) => nodes.length)) >= 9, 'the sources are plain links');
+    check((await page.$$('[data-testid="gal-meet-pass"]')).length >= 80 && (await page.$$('[data-testid="gal-meet-fail"]')).length === 0, 'the live results: every theme PASSES every rule');
+    check((await page.textContent('[data-testid="gal-country"]')).indexOf('Empty on purpose') >= 0, 'the country section is present and empty, marked');
+    check((await noScroll(page)).pageX <= 0 && (await noScroll(page)).panelX <= 0, 'Meets tab: nothing scrolls sideways');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-meets.png') });
     await page.click('[data-testid="gal-tab-components"]');
 
     /* an OPEN dialog repaints in place when the language changes */

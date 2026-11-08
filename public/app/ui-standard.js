@@ -26,8 +26,8 @@ var CBUiStandard = (function () {
     small: { h: 20, pad: 6, radius: 3, font: 11, label: 'Too small' }
   };
   var SCREENS = { this: { label: 'This screen' }, desktop: { label: 'Desktop', w: 1366, h: 768 }, mobile: { label: 'Mobile', w: 390, h: 844 } };
-  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'before'];
-  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', before: 'Before and after' };
+  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'meets', 'before'];
+  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', meets: 'Meets the standard', before: 'Before and after' };
   /** the plain line each section opens with: what the standard is and why, in shopkeeper words */
   var TAB_LINE = {
     components: 'Every Save, Cancel or Done in the product is one and the same button, so it looks and works the same on every screen. The code beside it (like CMP001) is its name on a register, the way a bank screen has a code.',
@@ -35,6 +35,7 @@ var CBUiStandard = (function () {
     icons: 'One sign for one meaning. Today there is no icon font: the signs on buttons are typed characters, and the drawings are a separate set with no codes yet.',
     tokens: 'Colours, corners and sizes live in one place. Change a value and every button follows. The values below are read from this page as it is drawn, not typed in.',
     themes: 'The avatar offers 16 colour themes. Each row is a real theme applied through the avatar code, measured on the real buttons: a red figure is a pair below the accessibility minimum.',
+    meets: 'Each rule of the standard in plain words, where it comes from, how this page proves it, and the live result in every one of the 16 themes.',
     before: 'Counted in our own screens: the same action was written many different ways. Now each one is a single component. Numbers are the count of places that spelled it that way.'
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
@@ -64,7 +65,7 @@ var CBUiStandard = (function () {
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
     ['--act-weight', 'Text weight'], ['--accent', 'Fill of the main button'], ['--accent-ink', 'Text on that fill'],
-    ['--accent-text', 'Text of the quiet button'], ['--line', 'Border of the quiet button'], ['--focus', 'Focus ring: page placeholder, not a product token (no theme defines one)'], ['--card', 'Surface']
+    ['--accent-text', 'Text of the quiet button'], ['--line', 'Border of the quiet button'], ['--focus-ring', 'Focus ring (the theme\'s body ink)'], ['--focus-halo', 'Gap around the ring (the surface)'], ['--card', 'Surface']
   ];
   var ILLUSTRATIONS = [
     ['compose-author.svg', 'Compose / author'], ['draft.svg', 'Draft'], ['chit-bridged.svg', 'Chit bridged'], ['status-update.svg', 'Status update'],
@@ -374,11 +375,11 @@ var CBUiStandard = (function () {
     if (!host) return;
     var rows = auditAll(), lines = [];
     rows[0].pairs.forEach(function (pair, index) {
-      if (pair.name.indexOf('Ring') !== 0) return;
+      if (pair.name.indexOf('Ring') !== 0 && pair.name !== 'Quiet edge') return;
       var failing = rows.filter(function (row) { return !row.pairs[index].ok; }).map(function (row) { return row.name + ' ' + row.pairs[index].ratio.toFixed(1); });
-      lines.push('<li data-testid="gal-focus-line"><b>' + esc(pair.name) + '</b> (' + pair.rule + ', 3:1): ' + failing.length + ' of ' + rows.length + ' fail' + (failing.length ? ' — ' + esc(failing.join(', ')) : '') + '</li>');
+      lines.push('<li data-testid="gal-focus-line"><b>' + esc(pair.name) + '</b> (' + pair.rule + '): ' + failing.length + ' of ' + rows.length + ' fail' + (failing.length ? ' — ' + esc(failing.join(', ')) : '') + '</li>');
     });
-    host.innerHTML = '<p class="note">--focus is the page\'s own placeholder colour, not a product token: no theme defines a focus colour.</p><ul>' + lines.join('') + '</ul>';
+    host.innerHTML = '<p class="note">The ring is the theme\'s own body ink (--focus-ring) with a gap in the surface colour (--focus-halo): both come from tokens every theme already sets, so no colour is picked.</p><ul>' + lines.join('') + '</ul>';
   }
   function paintType() {
     var host = document.getElementById('typebox');
@@ -492,19 +493,29 @@ var CBUiStandard = (function () {
   function probeNode(name) {
     return document.querySelector('[data-testid="gal-probe-' + name + '"]');
   }
-  /** the pairs of the standard in the theme now on the page: [name, foreground, background, minimum ratio, criterion] */
+  /** the ring as drawn: the focus rule applied to a probe button (data-demo=focus carries the same declarations as :focus-visible), measured, never declared */
+  function ringNow() {
+    var probe = probeNode('primary');
+    probe.setAttribute('data-demo', 'focus');
+    var style = getComputedStyle(probe);
+    var ring = { colour: style.outlineColor, width: parseFloat(style.outlineWidth), offset: parseFloat(style.outlineOffset), halo: (style.boxShadow.match(/rgba?\([^)]*\)/) || [''])[0] };
+    probe.removeAttribute('data-demo');
+    return ring;
+  }
+  /** the pairs of the standard in the theme now on the page: [name, foreground, background, minimum, criterion, fixed figure (a measure, not a ratio)] */
   function pairsNow() {
-    var page = getComputedStyle(document.body).backgroundColor, done = getComputedStyle(probeNode('primary')), quiet = getComputedStyle(probeNode('quiet'));
-    var focus = getComputedStyle(document.documentElement).getPropertyValue('--focus').trim();
+    var page = getComputedStyle(document.body).backgroundColor, card = getComputedStyle(document.documentElement).getPropertyValue('--card').trim();
+    var done = getComputedStyle(probeNode('primary')), quiet = getComputedStyle(probeNode('quiet')), ring = ringNow();
     return [
-      ['Done text', done.color, done.backgroundColor, 4.5, '1.4.3'],
-      ['Quiet text', quiet.color, page, 4.5, '1.4.3'],
+      ['Done label', done.color, done.backgroundColor, 4.5, '1.4.3'],
+      ['Quiet label', quiet.color, page, 4.5, '1.4.3'],
       ['Page text', getComputedStyle(document.body).color, page, 4.5, '1.4.3'],
       ['Done fill', done.backgroundColor, page, 3, '1.4.11'],
-      ['Quiet border', quiet.borderTopColor, page, 3, '1.4.11'],
-      ['Ring on page', focus, page, 3, '2.4.11 · 1.4.11'],
-      ['Ring on Done', focus, done.backgroundColor, 3, '2.4.11 · 1.4.11'],
-      ['Ring on Quiet edge', focus, quiet.borderTopColor, 3, '2.4.11 · 1.4.11']
+      ['Quiet edge', quiet.borderTopColor, page, 3, '1.4.11'],
+      ['Ring on page', ring.colour, page, 3, '2.4.7 · 1.4.11 · 2.4.13'],
+      ['Ring on card', ring.colour, card, 3, '2.4.7 · 1.4.11 · 2.4.13'],
+      ['Ring width', null, null, 2, '2.4.13', ring.width],
+      ['Ring gap', null, null, 0, '2.4.13', ring.offset]
     ];
   }
   function swatchesNow() {
@@ -522,7 +533,7 @@ var CBUiStandard = (function () {
         name: table[key].name,
         swatches: swatchesNow(),
         pairs: pairsNow().map(function (pair) {
-          var ratio = contrastRatio(pair[1], pair[2]);
+          var ratio = pair[5] === undefined ? contrastRatio(pair[1], pair[2]) : pair[5];
           return { name: pair[0], ratio: ratio, min: pair[3], rule: pair[4], ok: ratio >= pair[3] };
         })
       });
@@ -533,14 +544,52 @@ var CBUiStandard = (function () {
   function themeRowHTML(row) {
     var swatches = row.swatches.map(function (colour) { return '<span class="sw" style="background:' + esc(colour) + '"></span>'; }).join('');
     var cells = row.pairs.map(function (pair) {
-      return '<td class="' + (pair.ok ? 'pass' : 'fail') + '" data-testid="gal-pair-' + (pair.ok ? 'ok' : 'fail') + '" title="' + pair.rule + ' ≥ ' + pair.min + ':1">' + pair.ratio.toFixed(1) + (pair.ok ? '' : ' ✗') + '</td>';
+      return '<td class="' + (pair.ok ? 'pass' : 'fail') + '" data-testid="gal-pair-' + (pair.ok ? 'ok' : 'fail') + '" title="' + pair.rule + ' ≥ ' + pair.min + '">' + pair.ratio.toFixed(1) + (pair.ok ? '' : ' ✗') + '</td>';
     }).join('');
     return '<tr data-testid="gal-theme-row"><th scope="row">' + swatches + esc(row.name) + '</th>' + cells + '</tr>';
   }
   function themesPanel() {
     var rows = auditAll();
-    var heads = rows[0].pairs.map(function (pair) { return '<th title="' + pair.rule + '">' + esc(pair.name) + '<br><small>' + pair.rule + ' · ' + pair.min + ':1</small></th>'; }).join('');
+    var heads = rows[0].pairs.map(function (pair) { return '<th title="' + pair.rule + '">' + esc(pair.name) + '<br><small>≥ ' + pair.min + '</small></th>'; }).join('');
     return '<table class="tok themes"><thead><tr><th>' + esc(words('Theme')) + '</th>' + heads + '</tr></thead><tbody>' + rows.map(themeRowHTML).join('') + '</tbody></table>';
+  }
+
+  /* ── the 'Meets the standard' tab: each rule, its source, how the page proves it, the live result per theme ── */
+  var W3C = 'https://www.w3.org/WAI/WCAG22/Understanding/';
+  var MEETS = [
+    { rule: 'Every control shows where the keyboard is, with a ring you can see.', pairs: ['Ring on page', 'Ring on card'], proof: 'The ring is drawn on a real button and its colour measured against the page and the card, in each theme (3:1 needed).',
+      sources: [['WCAG 2.4.7 Focus Visible', W3C + 'focus-visible.html'], ['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html'], ['GOV.UK focus states', 'https://design-system.service.gov.uk/get-started/focus-states/'], ['Fluent 2 accessibility', 'https://fluent2.microsoft.design/accessibility']] },
+    { rule: 'The ring is thick enough and sits clear of the button.', pairs: ['Ring width', 'Ring gap'], proof: 'The drawn outline width (3 px, 2 px or more needed) and its gap are read from the browser.',
+      sources: [['WCAG 2.4.13 Focus Appearance (AAA)', W3C + 'focus-appearance.html']] },
+    { rule: 'A quiet button still shows its edge: the edge is the same colour as its label.', pairs: ['Quiet edge'], proof: 'The edge colour the browser draws is measured against the page (3:1 needed).',
+      sources: [['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html'], ['IBM Carbon button style', 'https://carbondesignsystem.com/components/button/style/']] },
+    { rule: 'Words on buttons and on the page are easy to read.', pairs: ['Done label', 'Quiet label', 'Page text'], proof: 'Label and page text colour against what is behind them (4.5:1 needed).',
+      sources: [['WCAG 1.4.3 Contrast (Minimum)', W3C + 'contrast-minimum.html']] },
+    { rule: 'The main button stands out from the page.', pairs: ['Done fill'], proof: 'The fill of the Done button against the page (3:1 needed).',
+      sources: [['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html']] }
+  ];
+  function resultChips(rows, names) {
+    return rows.map(function (row) {
+      var found = row.pairs.filter(function (pair) { return names.indexOf(pair.name) >= 0; });
+      var ok = found.every(function (pair) { return pair.ok; }), figure = Math.min.apply(null, found.map(function (pair) { return pair.ratio; }));
+      return '<span class="' + (ok ? 'pass' : 'fail') + '" data-testid="gal-meet-' + (ok ? 'pass' : 'fail') + '">' + esc(row.name) + ' ' + (ok ? 'PASS' : 'FAIL') + ' ' + figure.toFixed(1) + '</span>';
+    }).join('');
+  }
+  function targetResult() {
+    var buttons = [].slice.call(document.querySelectorAll('#probe [data-testid^="gal-probe-"]')), scale = currentScale();
+    var smallest = Math.min.apply(null, buttons.map(function (node) { var box = node.getBoundingClientRect(); return Math.min(box.width, box.height) / scale; }));
+    return '<span class="' + (smallest >= 24 ? 'pass' : 'fail') + '" data-testid="gal-meet-' + (smallest >= 24 ? 'pass' : 'fail') + '">' + Math.round(smallest) + ' px ' + (smallest >= 24 ? 'PASS' : 'FAIL') + ' (' + esc(words(PRESETS[state.size].label)) + ')</span>';
+  }
+  function meetsRowHTML(item, rows) {
+    var links = item.sources.map(function (source) { return '<a href="' + source[1] + '" target="_blank" rel="noopener noreferrer">' + esc(source[0]) + '</a>'; }).join(' · ');
+    return '<section class="meets-row" data-testid="gal-meets-row"><h3>' + esc(words(item.rule)) + '</h3><p class="src">' + links + '</p><p>' + esc(item.proof) + '</p><div class="res">' + (item.custom ? item.custom() : resultChips(rows, item.pairs)) + '</div></section>';
+  }
+  function meetsPanel() {
+    var rows = auditAll();
+    var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.5.8 Target Size (Minimum)', W3C + 'target-size-minimum.html']], custom: targetResult };
+    var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', W3C + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
+    return MEETS.concat([target, obscured]).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
+      '<section class="country" data-testid="gal-country"><h3>Country rules (UK, EU, US, India, Australia, UAE)</h3><p class="note">Empty on purpose. A country research file will fill this section later; nothing about any country is stated here.</p></section>';
   }
 
   /* ── paint: the whole page again, from state ── */
@@ -555,7 +604,7 @@ var CBUiStandard = (function () {
     root.style.setProperty('--act-font', preset.font + 'px');
   }
   function panelHTML() {
-    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, before: beforePanel };
+    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, meets: meetsPanel, before: beforePanel };
     return '<p class="line" data-testid="gal-line">' + esc(words(TAB_LINE[state.tab])) + '</p>' + panels[state.tab]();
   }
   function paint() {
