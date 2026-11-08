@@ -113,7 +113,7 @@ var CBUiStandard = (function () {
   /** which of the four packs hold this exact text (the English is the key); a glyph-only name needs none */
   function translatedIn(text) {
     return PACK_LANGS.filter(function (lang) {
-      return !!(CBSTR[lang] && CBSTR[lang][text]);
+      return !!(window.CBSTR[lang] && window.CBSTR[lang][text]);
     });
   }
   /** one component's translation coverage: its label (the accessible name) and its visible text, per pack */
@@ -345,7 +345,7 @@ var CBUiStandard = (function () {
   }
   /** the first face of this page's own stack, then the usual system faces of the script, that has glyphs for the sample */
   function faceThatDraws(lang) {
-    var sample = (lang === 'en' ? 'SaveCancelDone' : (CBSTR[lang].Save || '') + (CBSTR[lang].Cancel || '')).replace(/\s/g, ''); /* no space: a space exists in every face and would pass the probe */
+    var sample = (lang === 'en' ? 'SaveCancelDone' : (window.CBSTR[lang].Save || '') + (window.CBSTR[lang].Cancel || '')).replace(/\s/g, ''); /* no space: a space exists in every face and would pass the probe */
     var ownFaces = getComputedStyle(document.body).fontFamily.split(',').map(function (name) { return name.trim().replace(/^["']|["']$/g, ''); });
     var names = ownFaces.filter(function (name) { return !/^(system-ui|-apple-system|sans-serif|serif|monospace)$/.test(name); }).concat(SCRIPT_FACES[lang]);
     var found = names.filter(function (name, index) { return names.indexOf(name) === index && drawsSample(sample, name); })[0];
