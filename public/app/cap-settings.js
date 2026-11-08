@@ -1303,6 +1303,8 @@ var CBSettings = (function () {
    * Cancel (or closing the row, which repaints it) puts the old value back. Nothing is written on blur or change. */
   /** a rule's value in the words the row shows: the enum's label, a named number, or the number with its unit */
   function policyShown(x) {
+    /* CTR-212: a flag the server says nobody answered reads "Not answered yet", never its default word ("Off") */
+    if (x.asked === false) return T('Not answered yet');
     var d = x.def,
       v = polShown(d, x.v);
     if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
@@ -1322,19 +1324,20 @@ var CBSettings = (function () {
         '" data-testid="sx-pol-in-' +
         esc(d.key) +
         '" data-orig="' +
-        esc(String(x.v)) +
+        esc(x.asked === false ? '' : String(x.v)) +
         '"' +
         dis +
         ' aria-label="' +
         esc(T(d.label)) +
         '">' +
+        (x.asked === false ? '<option value="" disabled selected>' + esc(T('Not answered yet')) + '</option>' : '') +
         d.options
           .map(function (item) {
             return (
               '<option value="' +
               esc(item) +
               '"' +
-              (String(x.v) === String(item) ? ' selected' : '') +
+              (x.asked !== false && String(x.v) === String(item) ? ' selected' : '') +
               '>' +
               esc(T((d.labels && d.labels[item]) || item)) +
               '</option>'
@@ -1497,7 +1500,7 @@ var CBSettings = (function () {
               : { ok: true });
           /* W11: the registration is set in ONE place — Country setup (PUT /governance/country-setup writes the flag); here it is read, with the door */
           if (item.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
-          return { key: item.key, def: item, v: v, may: m };
+          return { key: item.key, def: item, v: v, may: m, asked: (r.asked || {})[item.key] };
         });
     }
     var shown = policyShown,
