@@ -1000,14 +1000,30 @@ function renderCountrySetup() {
   if (saveButton) saveButton.onclick = csuSave;
 }
 /** the body of the one write, from the edit record; CS2: the zone picked of the pack's several (a one-zone pack: the server sets it anyway) */
-function csuSaveBody(e) {
-  return {
+function csuSaveBody(e, confirmed) {
+  var body = {
     country: e.country,
     currency: e.currency,
     fy_start_month: e.fy,
     tax: { registered: e.registered, number: e.registered ? e.number : null, scheme: e.registered ? e.scheme : null },
     timezone: e.timezone || null,
     source: CSU.src
+  };
+  /* SET-86: the server wants the owner's deliberate confirm to take a registered shop off its tax; sent only after the popup said yes */
+  if (confirmed === true && csuDeregisters(e)) body.confirm_deregister = true;
+  return body;
+}
+/** SET-86: this save would take a shop the server holds as registered off its tax (registered true → not registered): the money promise asks first, naming its reach */
+function csuDeregisters(e) {
+  return e.registered === false && !!(CSU.p && CSU.p.tax && CSU.p.tax.registered === true);
+}
+/** SET-86: the one confirm for csuDeregisters — what happens (every new invoice carries no tax) and who learns when (an open till at its next refresh) */
+function csuDeregisterConfirm() {
+  return {
+    title: tx('Stop charging tax?'),
+    body: esc(tx('Every new invoice from now on carries no tax. A till that is already open keeps the old answer until it refreshes.')),
+    yes: tx('Not registered'),
+    danger: true
   };
 }
 /** WALK-REG R16: the first setup is the one before the server holds the owner's answer (country_setup_at) */
@@ -1031,7 +1047,8 @@ function csuSave() {
     CSU.err = tx('Pick registered or not registered for tax.');
     return renderCountrySetup();
   }
-  var body = csuSaveBody(e);
+  var deregisters = csuDeregisters(e);
+  var body = csuSaveBody(e, deregisters);
   CBAction.run(
     btn,
     function () {
@@ -1044,6 +1061,7 @@ function csuSave() {
     {
       key: 'cs-save',
       busy: tx('Saving…'),
+      confirm: deregisters ? csuDeregisterConfirm() : undefined,
       outcome: function (p) {
         CSU.touched = false;
         CSU.p = p || CSU.p;
@@ -1115,12 +1133,37 @@ var CBCountry = {
     renderCountrySetup();
   }
 };
+/** SET-86: resolves true when there is nothing to ask, or the owner confirms stopping the tax; false on No or when this page has no dialog (then nothing is sent) */
+function csuSaveAsked(e) {
+  if (!csuDeregisters(e)) return Promise.resolve(true);
+  return new Promise(function (resolve) {
+    var dialog = typeof confirmAsk === 'function' ? confirmAsk : typeof CBConfirm === 'function' ? CBConfirm : null;
+    var words = csuDeregisterConfirm();
+    if (!dialog) return resolve(false);
+    dialog(
+      words.title,
+      words.body,
+      words.yes,
+      function () {
+        resolve(true);
+      },
+      words.danger,
+      function () {
+        resolve(false);
+      }
+    );
+  });
+}
 /** W24: the same save as the button, awaited by CBUnsaved (resolve on the outcome, reject on a refusal) */
 function csuSaveThen(ok, no) {
   var e = CSU.edit;
   if (!e) return ok();
-  var body = csuSaveBody(e);
-  api('countrySetupSave', { body: body })
+  /* SET-86: the save from a page leave asks the same question first; a No keeps the page as it is */
+  csuSaveAsked(e)
+    .then(function (yes) {
+      if (!yes) throw new Error('Not saved — the tax answer was left as it is.');
+      return api('countrySetupSave', { body: csuSaveBody(e, csuDeregisters(e)) });
+    })
     .then(function (reply) {
       CSU.p = reply || CSU.p;
       return csuSaveBeside(e);
