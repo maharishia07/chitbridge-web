@@ -39,7 +39,7 @@ var CBUi = (function () {
    */
   var ACTION_SET = {
     save: { code: 'CMP001', element: 'CMP001-B01', label: 'Save', shown: 'Save', verb: 'SAVE', effect: null, effectFixed: false, tone: 'primary' },
-    dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
+    dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'SHOW', effect: 'none', effectFixed: true, tone: 'primary' },
     cancel: { code: 'CMP003', element: 'CMP003-B01', label: 'Cancel', shown: 'Cancel', verb: 'CANCEL', effect: 'none', effectFixed: true, tone: 'quiet' },
     done: { code: 'CMP004', element: 'CMP004-B01', label: 'Done', shown: 'Done', verb: 'DONE', effect: 'none', effectFixed: true, tone: 'primary' },
     close: { code: 'CMP005', element: 'CMP005-B01', label: 'Close', shown: '✕', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
@@ -206,7 +206,7 @@ var CBUi = (function () {
     );
   }
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
-  var library = { action: action, dialog: dialog, set: ACTION_SET };
+  var library = { action: action, dialog: dialog, components: ACTION_SET };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

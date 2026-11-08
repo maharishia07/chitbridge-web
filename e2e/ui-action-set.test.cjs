@@ -32,14 +32,14 @@ vm.runInContext(read('app/ui.js'), sandbox);
 const ui = sandbox.ui;
 
 console.log('the set');
-const names = Object.keys(ui.set).filter((name) => name !== 'dialog');
+const names = Object.keys(ui.components).filter((name) => name !== 'dialog');
 check(names.length === 9, 'nine actions: ' + names.join(' '));
-const codes = Object.values(ui.set).map((component) => component.code);
+const codes = Object.values(ui.components).map((component) => component.code);
 check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'ten distinct CMP codes (nine actions and the dialog)');
 const forced = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' } };
 names.forEach((name) => {
   const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));
-  check(/^<button /.test(html) && html.includes('type="button"') && html.includes('data-cbsid="' + ui.set[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button with element code and mount');
+  check(/^<button /.test(html) && html.includes('type="button"') && html.includes('data-cbsid="' + ui.components[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button with element code and mount');
 });
 
 console.log('refusals (silence is the bug)');

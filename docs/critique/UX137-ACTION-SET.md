@@ -9,3 +9,4 @@ Written before the code (cloud-build-rules 00), by the builder; the coordinator'
 (c) Simpler way: none that keeps one component per action.
 (d) Risks: settings walks name testids/ids (kept by generation); cap-settings.js/cap-print.js touched with 2 attribute-size edits (rebase risk low); ui.js adds one document click listener (only acts on [data-cbmount] with a registered onPress).
 (e) VERDICT: BUILD WITH CHANGES: mounts only where the markup stays the same (3 mounts); Add/Remove/Done/Back/Open/Reload/Close/Dialog get components and tests but no mount yet (a mount would change a visible label or add a confirm: Athi's call).
+Review changes (cb-capability, 8 Nov): CMP002 (the dialog container) takes fcode verb SHOW (`SHOW <object> dialog`), not OPEN: OPEN stays CMP010's verb (an action that opens a record); SHOW is added to the closed verb list. CMP005 records `behaves_as: CANCEL`; CMP009 carries the alias "Try again"; `ui.set` is now `ui.components`.

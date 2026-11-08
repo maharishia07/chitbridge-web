@@ -650,7 +650,10 @@
     'Your price ▢': 'Votre prix ▢',
     'Your profile': 'Votre profil',
     'Your storefront link': 'Lien de votre vitrine',
-    'YOURS': 'LE VÔTRE'
+    'YOURS': 'LE VÔTRE',
+    'policy value': 'valeur de la règle',
+    'print layout': 'mise en page d’impression',
+    'policy edit': 'modification de la règle'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
   try {

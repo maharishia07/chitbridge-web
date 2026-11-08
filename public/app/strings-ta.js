@@ -650,7 +650,10 @@
     'Your price ▢': 'உங்கள் விலை ▢',
     'Your profile': 'உங்கள் சுயவிவரம்',
     'Your storefront link': 'உங்கள் கடைமுக இணைப்பு',
-    'YOURS': 'உங்களது'
+    'YOURS': 'உங்களது',
+    'policy value': 'கொள்கை மதிப்பு',
+    'print layout': 'அச்சு அமைப்பு',
+    'policy edit': 'கொள்கை மாற்றம்'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
   try {
