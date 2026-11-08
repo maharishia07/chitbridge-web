@@ -37,6 +37,7 @@
     "check:order": "node e2e/list-behaviour.cjs",
     "check:till": "node e2e/till-contrast.cjs",
     "check:a11y": "node e2e/a11y-contrast.cjs",
+    "a11y:axe": "node e2e/a11y-axe-report.cjs --out docs/testing/a11y",
     "check:envelope": "node e2e/api-envelope.cjs",
     "check:eps": "node e2e/ep-aliases.cjs",
     "check:undeclared": "node e2e/undeclared.cjs",
