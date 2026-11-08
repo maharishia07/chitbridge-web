@@ -185,7 +185,7 @@ test('[ADOPT-01] goods arrive from two trades; one is offered, one is refused un
 
   await test.step('⭐⭐ SUPPLIES: a sundry purchase that never came through a channel', async () => {
     const r = await page.request.post(API + '/api/supplies/purchase', {
-      headers: await authOf(page),
+      headers: Object.assign(await authOf(page), { 'Idempotency-Key': 'adopt-purchase-' + Date.now() }), /* OPS-114: a purchase requires one key per attempt */
       data: { ref: 'CASH-' + Date.now().toString().slice(-6), from: 'Corner Hardware',
               lines: [{ name: 'Floor cleaner 5L', qty: 2, unit: 'can', cost: 400 },
                       { name: 'Carry covers', qty: 2000, unit: 'piece', cost: 0.9, keep_stock: true }] } });
