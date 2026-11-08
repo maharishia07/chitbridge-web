@@ -115,8 +115,22 @@
   }
 
   /* ── what is saved ── */
+  /* FIXED LOOK (the UI standard page, public/ui-standard.html): a page whose <html> carries data-appearance-fixed takes its look from CBAvatar.applyWith(), never from
+     storage, and nothing here saves, pushes or reads cb_sess for it. OVERRIDE is null on every other page, so nothing changes there. */
+  var OVERRIDE = doc && doc.documentElement && typeof doc.documentElement.hasAttribute === 'function' && doc.documentElement.hasAttribute('data-appearance-fixed') ? {} : null;
   function pref(kind) {
+    if (OVERRIDE) return has(OVERRIDE, kind) ? OVERRIDE[kind] : DEFAULTS[kind];
     return lsGet(KEY[kind], DEFAULTS[kind]);
+  }
+  /** apply a look given as { theme, font, fs, weight, motion } without reading or writing storage (only on a fixed-look page) */
+  function applyWith(look) {
+    if (!OVERRIDE) return false;
+    Object.keys(look || {}).forEach(function (kind) {
+      OVERRIDE[kind] = look[kind];
+    });
+    BASE = null;
+    apply();
+    return true;
   }
   function get() {
     return {
@@ -1161,12 +1175,13 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener)
     root.addEventListener('online', function () {
-      if (Object.keys(pendGet()).length) push();
+      if (!OVERRIDE && Object.keys(pendGet()).length) push();
     });
 
   root.CBAvatar = {
     mount: mount,
     apply: apply,
+    applyWith: applyWith,
     hydrate: hydrate,
     set: set,
     get: get,

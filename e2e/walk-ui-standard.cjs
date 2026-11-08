@@ -31,6 +31,17 @@ function serve() {
   });
 }
 const press = (page, group, value) => page.click('[data-testid="gal-' + group + '-' + value + '"]');
+const pick = (page, group, value) => page.selectOption('[data-testid="gal-' + group + '"]', value);
+/** the toast row must not overlap any visible button (it is a row of the page, so it takes room instead of covering) */
+const toastClear = (page) => page.evaluate(() => {
+  const bar = document.querySelector('#toast .toast');
+  if (!bar) return false;
+  const box = bar.getBoundingClientRect();
+  return [...document.querySelectorAll('button:not(#undoBtn)')].every((button) => {
+    const other = button.getBoundingClientRect();
+    return !other.width || other.right <= box.left || other.left >= box.right || other.bottom <= box.top || other.top >= box.bottom;
+  });
+});
 const noScroll = (page) => page.evaluate(() => {
   const panel = document.getElementById('panel');
   return { page: document.documentElement.scrollHeight - innerHeight, pageX: document.documentElement.scrollWidth - innerWidth, panelX: panel.scrollWidth - panel.clientWidth };
@@ -40,13 +51,13 @@ const noScroll = (page) => page.evaluate(() => {
   const server = await serve();
   const base = 'http://127.0.0.1:' + server.address().port;
   const browser = await chromium.launch();
-  const stray = [], errors = [];
+  const stray = [], errors = [], fontRequests = [];
   for (const [label, size] of [['1366', { width: 1366, height: 650 }], ['390', { width: 390, height: 740 }]]) {
     const context = await browser.newContext({ viewport: size, locale: 'en-US' });
     /* a session that happens to exist must be ignored: plant one */
-    await context.addInitScript(() => { try { localStorage.setItem('cb_sess', JSON.stringify({ token: 'SHOULD-NOT-BE-READ' })); localStorage.setItem('cb_lang', 'fr'); } catch (_) {} });
+    await context.addInitScript(() => { try { localStorage.setItem('cb_sess', JSON.stringify({ token: 'SHOULD-NOT-BE-READ' })); localStorage.setItem('cb_lang', 'fr'); localStorage.setItem('cb_theme', 'navy'); } catch (_) {} });
     const page = await context.newPage();
-    page.on('request', (request) => { if (!request.url().startsWith(base) || /\/api\//.test(request.url())) stray.push(request.url()); });
+    page.on('request', (request) => { const url = request.url(), fontHost = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(url); if (fontHost) fontRequests.push(url); else if (!url.startsWith(base) || /\/api\//.test(url)) stray.push(url); });
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(base + '/ui-standard.html');
@@ -64,17 +75,31 @@ const noScroll = (page) => page.evaluate(() => {
     const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^APP002-B\d\d$/.test(node.getAttribute('data-cbsid'))));
     check(headIds, 'every page control carries APP002-Bnn');
 
-    for (const theme of ['light', 'dark']) {
-      await press(page, 'theme', theme);
-      for (const tab of ['components', 'popups', 'icons', 'tokens', 'before']) {
+    for (const [theme, key] of [['light', 'cream'], ['dark', 'dark'], ['terminal', 'terminal']]) {
+      await pick(page, 'theme', key);
+      for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before']) {
         await page.click('[data-testid="gal-tab-' + tab + '"]');
         const scroll = await noScroll(page);
         check(scroll.page <= 0 && scroll.pageX <= 0 && scroll.panelX <= 0, label + ' ' + theme + ' ' + tab + ': page does not scroll, nothing scrolls sideways ' + JSON.stringify(scroll));
         await page.screenshot({ path: path.join(OUT, label + '-' + theme + '-en-' + tab + '.png') });
       }
     }
-    await press(page, 'theme', 'light');
+    await pick(page, 'theme', 'cream');
     await page.click('[data-testid="gal-tab-tokens"]');
+    await page.waitForFunction(() => document.fonts.check('14px Inter') || document.fonts.status === 'loaded', null, { timeout: 15000 }).catch(() => {});
+    const faceNote = await page.evaluate(() => ({ inter: document.fonts.check('14px Inter'), loaded: [...document.fonts].filter((face) => face.status === 'loaded').map((face) => face.family) }));
+    console.log('  faces loaded from the product font host: ' + JSON.stringify(faceNote.loaded));
+    check(faceNote.inter && faceNote.loaded.some((name) => /Inter/.test(name)), 'the product face Inter is loaded (document.fonts has it)');
+    check(await page.evaluate(() => /Inter/.test(getComputedStyle(document.body).fontFamily.split(',')[0])), 'the page draws in Inter by default (avatar FONTS[0])');
+    const typeRows = await page.$$eval('[data-testid="gal-type-row"]', (nodes) => nodes.map((node) => node.textContent.replace(/\s+/g, ' ')));
+    check(typeRows.length >= 11, 'Type: ' + typeRows.length + ' measured rows (10 components and the page switches)');
+    console.log('  type rows: ' + JSON.stringify(typeRows.slice(0, 3)) + ' ... ' + JSON.stringify(typeRows.slice(-1)));
+    const small = await page.$$eval('[data-testid="gal-type-small"]', (nodes) => nodes.map((node) => node.parentElement.textContent.replace(/\s+/g, ' ')));
+    console.log('  FINDINGS labels under 14 px at Standard 44: ' + small.length + ' ' + JSON.stringify(small));
+    const faces = await page.$$eval('[data-testid^="gal-face-"]', (nodes) => nodes.map((node) => node.textContent.replace(/\s+/g, ' ')));
+    check(faces.length === 5, 'every language names the face that drew it: ' + JSON.stringify(faces));
+    check((await page.$$eval('[data-testid="gal-type-ok"]', (nodes) => nodes.length)) >= 10, 'every component label is 14 px or more at Standard 44');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-type.png') });
     check((await page.$$eval('[data-testid="gal-token"]', (nodes) => nodes.length)) >= 8, 'tokens are read live: a row per custom property');
     const measure = await page.textContent('[data-testid="gal-measure"]');
     check(/×44 px/.test(measure) && /AA/.test(measure), 'measured on the real button: ' + measure.replace(/\s+/g, ' ').slice(0, 90));
@@ -103,10 +128,42 @@ const noScroll = (page) => page.evaluate(() => {
     await press(page, 'lang', 'ar');
     check(await page.evaluate(() => document.documentElement.dir === 'rtl' && document.documentElement.lang === 'ar'), 'Arabic: the page turns right-to-left');
     await page.screenshot({ path: path.join(OUT, label + '-light-ar-components.png') });
-    check((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0, 'Arabic: no sideways page scroll');
+    const wide = await page.evaluate(() => [...document.querySelectorAll('body *')].filter((node) => node.getBoundingClientRect().right > innerWidth + 1 || node.getBoundingClientRect().left < -1).slice(0, 4).map((node) => node.tagName + '.' + node.className + ' ' + Math.round(node.getBoundingClientRect().left) + '..' + Math.round(node.getBoundingClientRect().right)));
+    check((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0, 'Arabic: no sideways page scroll ' + JSON.stringify(wide));
     await press(page, 'lang', 'fr');
     check(/Annuler/.test(await page.textContent('[data-testid="gal-row-CMP003"] .st .slot button')), 'French: Annuler');
     await press(page, 'lang', 'en');
+
+    /* the avatar's look: font, text size and weight go through the avatar's own apply and write nothing */
+    const bodySize = () => page.evaluate(() => parseFloat(getComputedStyle(document.body).fontSize));
+    const baseSize = await bodySize();
+    await press(page, 'textSize', 'xl');
+    check((await bodySize()) > baseSize * 1.25, 'Text size: extra large scales the whole page (' + baseSize + ' to ' + (await bodySize()) + ' px)');
+    check((await noScroll(page)).pageX <= 0, 'Text size xl: nothing scrolls sideways');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-textsize-xl.png') });
+    await press(page, 'textSize', 'm');
+    await pick(page, 'font', 'serif');
+    check(/Georgia/.test(await page.evaluate(() => getComputedStyle(document.body).fontFamily)), 'Font: serif reaches the page through the avatar apply');
+    await pick(page, 'font', 'default');
+    await press(page, 'weight', 'bold');
+    check(await page.evaluate(() => document.documentElement.getAttribute('data-weight') === 'bold'), 'Weight: bold stamps data-weight like the avatar');
+    await press(page, 'weight', 'normal');
+    check(await page.evaluate(() => document.getElementById('hdr').querySelectorAll('select').length === 2 && document.querySelector('[data-testid="gal-theme"]').options.length === 16), 'the Theme control lists all 16 avatar themes by their own names');
+    check(await page.evaluate(() => /Terminal/.test(document.querySelector('[data-testid="gal-theme"]').textContent)), 'Terminal is one of them');
+    check(await page.evaluate(() => document.documentElement.hasAttribute('data-appearance-fixed') && localStorage.getItem('cb_theme') === 'navy' && localStorage.getItem('cb_fs') === null && localStorage.getItem('cb_font') === null && localStorage.getItem('cb_weight') === null), 'the avatar apply wrote nothing: cb_theme stays the visitor\'s own, cb_font / cb_fs / cb_weight absent');
+    check(await page.evaluate(() => document.documentElement.getAttribute('data-theme') === 'cream'), 'the visitor\'s stored theme (navy) did not leak into the page: it starts in Cream');
+
+    /* every theme, applied by the avatar code and measured on the real buttons: the failures are findings, never hidden */
+    const audit = await page.evaluate(() => CBUiStandard.audit());
+    check(audit.length === 16, 'themes audited: ' + audit.length);
+    const failing = [];
+    audit.forEach((row) => row.pairs.forEach((pair) => { if (!pair.ok) failing.push(row.name + ' · ' + pair.name + ' ' + pair.ratio.toFixed(2) + ' < ' + pair.min + ' (WCAG ' + pair.rule + ')'); }));
+    console.log('  FINDINGS theme x component pairs below the minimum: ' + failing.length + ' of ' + audit.length * audit[0].pairs.length);
+    failing.forEach((line) => console.log('    finding ' + line));
+    fs.writeFileSync(path.join(OUT, label + '-theme-contrast-findings.json'), JSON.stringify({ failing, audit: audit.map((row) => ({ theme: row.name, pairs: row.pairs.map((pair) => [pair.name, +pair.ratio.toFixed(2), pair.min, pair.rule, pair.ok]) })) }, null, 1));
+    await page.click('[data-testid="gal-tab-themes"]');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
+    await page.click('[data-testid="gal-tab-components"]');
 
     /* an OPEN dialog repaints in place when the language changes */
     await page.click('[data-testid="gal-open-dialog"]');
@@ -131,14 +188,33 @@ const noScroll = (page) => page.evaluate(() => {
     check(/1,180\.00/.test(ask) && /INR/.test(ask) && /3 recipients/.test(ask) && /Asha Traders/.test(ask), 'commit confirm shows amount + currency, recipients and count: ' + ask.replace(/\s+/g, ' ').slice(0, 120));
     await page.screenshot({ path: path.join(OUT, label + '-light-en-commit-confirm.png') });
     await page.click('[data-testid="confirm-cancel"]');
-    check((await page.$$('#toast .toast')).length === 0, 'Cancel sends nothing (no Done toast)');
+    check((await page.$$('#toast .toast')).length === 0, 'Cancel sends nothing (no toast)');
     await page.click('[data-testid="gal-open-commit"]');
     await page.waitForSelector('#cb_confirm');
     await page.click('[data-testid="confirm-ok"]');
-    await page.waitForSelector('#toast .toast');
-    check(true, 'Confirm runs the mock press (toast Done): no request left the page');
+    await page.waitForFunction(() => /Bill posted/.test((document.querySelector('#toast .toast') || {}).textContent || ''));
+    check(true, 'Confirm names the result in the toast: "Bill posted" (not a bare Done)');
+    check(await toastClear(page), label + ': the toast covers no button');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-toast-posted.png') });
+    await page.click('[data-testid="gal-open-remove"]');
+    await page.waitForSelector('#cb_confirm');
+    await page.click('[data-testid="confirm-ok"]');
+    await page.waitForFunction(() => /Supplier removed/.test((document.querySelector('#toast .toast') || {}).textContent || ''));
+    check((await page.$$('#toast #undoBtn')).length === 1, 'a remove offers Undo in the same bar');
+    check(await toastClear(page), label + ': the remove toast with Undo covers no button');
+    await page.screenshot({ path: path.join(OUT, label + '-light-en-toast-removed.png') });
+    await page.click('#undoBtn');
+    await page.waitForFunction(() => document.querySelectorAll('#toast .toast').length === 0 || /restored/.test(document.querySelector('#toast .toast').textContent));
+    check(true, 'Undo runs (the bar clears)');
+    await press(page, 'lang', 'ta');
+    await page.click('[data-testid="gal-open-commit"]');
+    await page.waitForSelector('#cb_confirm');
+    await page.click('[data-testid="confirm-ok"]');
+    await page.waitForFunction(() => /[஀-௿]/.test((document.querySelector('#toast .toast') || {}).textContent || ''));
+    check(await toastClear(page), label + ': the Tamil toast ("' + (await page.textContent('#toast .toast')) + '") covers no button');
+    await press(page, 'lang', 'en');
 
-    check(await page.evaluate(() => !JSON.stringify(localStorage).includes('cb_lang":"en') && localStorage.getItem('cb_lang') === 'fr' && localStorage.getItem('cb_sess').includes('SHOULD-NOT')), 'the page wrote nothing to storage and left the visitor\'s own keys alone');
+    check(await page.evaluate(() => localStorage.getItem('cb_lang') === 'fr' && localStorage.getItem('cb_theme') === 'navy' && localStorage.getItem('cb_sess').includes('SHOULD-NOT') && localStorage.length === 3), 'the page wrote nothing to storage and left the visitor\'s own keys alone');
     await context.close();
   }
   /* the Mobile frame on a desktop viewport */
@@ -154,6 +230,7 @@ const noScroll = (page) => page.evaluate(() => {
   await context.close();
   await browser.close();
   server.close();
+  check(fontRequests.every((url) => /\.(css|woff2?)|css2\?/.test(url) || /fonts\.gstatic\.com\//.test(url)) , 'the only third-party requests are the product faces (Google Fonts, as app.html loads them): ' + fontRequests.length);
   check(stray.length === 0, 'no request left the page except its own static files ' + JSON.stringify(stray.slice(0, 3)));
   check(errors.length === 0, 'no page error or console error ' + JSON.stringify(errors.slice(0, 3)));
   console.log(failures ? failures + ' FAILED' : 'all ok');

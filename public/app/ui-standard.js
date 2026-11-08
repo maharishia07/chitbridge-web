@@ -26,14 +26,15 @@ var CBUiStandard = (function () {
     small: { h: 20, pad: 6, radius: 3, font: 11, label: 'Too small' }
   };
   var SCREENS = { this: { label: 'This screen' }, desktop: { label: 'Desktop', w: 1366, h: 768 }, mobile: { label: 'Mobile', w: 390, h: 844 } };
-  var TABS = ['components', 'popups', 'icons', 'tokens', 'before'];
-  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', before: 'Before and after' };
+  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'before'];
+  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', before: 'Before and after' };
   /** the plain line each section opens with: what the standard is and why, in shopkeeper words */
   var TAB_LINE = {
     components: 'Every Save, Cancel or Done in the product is one and the same button, so it looks and works the same on every screen. The code beside it (like CMP001) is its name on a register, the way a bank screen has a code.',
     popups: 'Before anything is posted, sent or paid, the screen asks first and shows how far it reaches: how much, to whom, how many. Cancel sends nothing.',
     icons: 'One sign for one meaning. Today there is no icon font: the signs on buttons are typed characters, and the drawings are a separate set with no codes yet.',
     tokens: 'Colours, corners and sizes live in one place. Change a value and every button follows. The values below are read from this page as it is drawn, not typed in.',
+    themes: 'The avatar offers 16 colour themes. Each row is a real theme applied through the avatar code, measured on the real buttons: a red figure is a pair below the accessibility minimum.',
     before: 'Counted in our own screens: the same action was written many different ways. Now each one is a single component. Numbers are the count of places that spelled it that way.'
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
@@ -70,7 +71,10 @@ var CBUiStandard = (function () {
     ['archive-sunset.svg', 'Archive (sunset)'], ['message-update.svg', 'Message update'], ['forward.svg', 'Forward'], ['attachment.svg', 'Attachment'],
     ['priority-sla.svg', 'Priority / SLA'], ['dispute-flag.svg', 'Dispute flag'], ['empty-inbox.svg', 'Empty list'], ['no-results.svg', 'No results']
   ];
-  var state = { lang: 'en', theme: 'light', screen: 'this', size: 'standard', overlay: false, tab: 'components' };
+  var state = { lang: 'en', theme: 'cream', font: 'default', textSize: 'm', weight: 'normal', screen: 'this', size: 'standard', overlay: false, tab: 'components' };
+  var WEIGHTS = [['normal', 'Normal'], ['bold', 'Bold']];
+  /** the page's switches that simply set one state key; the 24 px overlay is the only one with its own rule */
+  var STATE_KEYS = ['lang', 'theme', 'font', 'textSize', 'weight', 'screen', 'size', 'tab'];
   var counters = { mount: 0, control: 0 };
 
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
@@ -103,6 +107,7 @@ var CBUiStandard = (function () {
   }
   /** WCAG contrast ratio of two css rgb() strings */
   function channels(colourText) {
+    if (/^#/.test(String(colourText).trim())) colourText = hexToRgb(String(colourText).trim());
     var found = String(colourText).match(/[\d.]+/g) || [0, 0, 0];
     return found.slice(0, 3).map(Number);
   }
@@ -157,8 +162,22 @@ var CBUiStandard = (function () {
       danger: false
     };
   }
-  function mockPress() {
-    toast(words('Done'));
+  /** what the toast says for each press: the result in words, in the chosen language; a remove also offers Undo in the same bar */
+  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', save: 'Settings saved' };
+  /**
+   * CBAction.run says a bare "Done" when the press returns (ui.js passes it no sentence), so the result is said one tick later and replaces it.
+   * ui.js should pass done / outcome through to CBAction.run; until then this is the page's own way to show the standard.
+   */
+  function resultToast(kind) {
+    setTimeout(function () {
+      var undo = kind === 'remove' ? function () { toast(words('Supplier restored')); } : null;
+      toast(words(RESULTS[kind]), undo);
+    }, 0);
+  }
+  function pressFor(kind) {
+    return function () {
+      resultToast(kind);
+    };
   }
 
   /* ── the component rows ── */
@@ -177,7 +196,7 @@ var CBUiStandard = (function () {
     var base = Object.assign({ mount: mountCode(), testid: 'gal-' + ui.components[row.name].code + '-' + (row.variant || 'std') + '-' + which }, row.opts, stateExtras(which));
     if (row.object) base.object = row.object;
     if (row.confirmKind) base.confirm = reachConfirm(row.confirmKind);
-    if (which === 'default' && (row.confirmKind || row.opts.effect)) base.onPress = mockPress;
+    if (which === 'default' && (row.confirmKind || row.opts.effect)) base.onPress = pressFor(row.confirmKind || 'save');
     return base;
   }
   var STATES = ['default', 'hover', 'focus', 'pressed', 'disabled', 'busy'];
@@ -219,15 +238,12 @@ var CBUiStandard = (function () {
     return '<section class="crow"><div class="cid"><b>' + esc(words(title)) + '</b><span class="meta">' + esc(note) + '</span></div><div class="states"><figure class="st"><div class="slot">' + button + '</div></figure></div></section>';
   }
   function popupsPanel() {
-    var press = function () {
-      mockPress();
-    };
     return popupRow('Example dialog', 'ui.dialog() · CMP002 · modal shell, X, Cancel and Done',
       ui.action('open', { mount: mountCode(), object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog-2' })) +
       popupRow('Post this bill?', 'CMP001 commit · CBConfirm · amount + currency, recipients, count',
-        ui.action('save', { mount: mountCode(), object: 'bill', effect: 'commit', confirm: reachConfirm('post'), onPress: press, testid: 'gal-open-commit' })) +
+        ui.action('save', { mount: mountCode(), object: 'bill', effect: 'commit', confirm: reachConfirm('post'), onPress: pressFor('post'), testid: 'gal-open-commit' })) +
       popupRow('Remove this supplier?', 'CMP008 commit · CBConfirm · always asks',
-        ui.action('remove', { mount: mountCode(), object: 'supplier', confirm: reachConfirm('remove'), onPress: press, testid: 'gal-open-remove' })) +
+        ui.action('remove', { mount: mountCode(), object: 'supplier', confirm: reachConfirm('remove'), onPress: pressFor('remove'), testid: 'gal-open-remove' })) +
       '<p class="note">CBConfirm still draws its own Cancel and OK buttons (accounts-shell.js), not CMP003 and CMP004: found, listed for its owner.</p>';
   }
 
@@ -258,6 +274,7 @@ var CBUiStandard = (function () {
   }
   function tokensPanel() {
     return '<table class="tok"><thead><tr><th>Token</th><th>' + esc(words('What it sets')) + '</th><th>' + esc(words('Value')) + '</th></tr></thead><tbody>' + TOKENS.map(tokenRow).join('') + '</tbody></table>' +
+      '<h3>' + esc(words('Type')) + '</h3><div id="typebox" data-testid="gal-type"></div>' +
       '<h3>' + esc(words('Measured')) + '</h3><div class="meas">' +
       ui.action('done', { mount: mountCode(), object: 'step', testid: 'gal-measure-primary' }) + ' ' +
       ui.action('cancel', { mount: mountCode(), object: 'edit', testid: 'gal-measure-quiet' }) + '</div><div id="measure" data-testid="gal-measure"></div>';
@@ -282,6 +299,96 @@ var CBUiStandard = (function () {
     return 'rgb(' + [0, 2, 4].map(function (start) { return parseInt(value.substr(start, 2), 16); }).join(',') + ')';
   }
 
+  /* ── type: what is actually drawn, measured on real buttons (never declared) ── */
+  var SCRIPT_FACES = {
+    en: ['Inter', 'Segoe UI', 'Arial'],
+    fr: ['Inter', 'Segoe UI', 'Arial'],
+    ta: ['Inter', 'Nirmala UI', 'Latha', 'Vijaya', 'Noto Sans Tamil', 'Segoe UI', 'Arial Unicode MS'],
+    hi: ['Inter', 'Nirmala UI', 'Mangal', 'Kokila', 'Noto Sans Devanagari', 'Segoe UI', 'Arial Unicode MS'],
+    ar: ['Inter', 'Segoe UI', 'Tahoma', 'Arial', 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Times New Roman']
+  };
+  var MIN_LABEL_PX = 14;
+  function probeBox() {
+    return document.getElementById('probe');
+  }
+  function widthOf(sample, stack) {
+    var node = document.createElement('span');
+    node.style.cssText = 'font:48px/1 ' + stack + ';white-space:nowrap';
+    node.textContent = sample;
+    probeBox().appendChild(node);
+    var width = node.getBoundingClientRect().width;
+    node.remove();
+    return width;
+  }
+  /** a face draws the sample only if naming it changes the width against both generic fallbacks (a width probe: document.fonts.check cannot see system faces) */
+  function drawsSample(sample, face) {
+    var named = '"' + face + '"';
+    return widthOf(sample, named + ',monospace') !== widthOf(sample, 'monospace') && widthOf(sample, named + ',serif') !== widthOf(sample, 'serif');
+  }
+  /** the first face of this page's own stack, then the usual system faces of the script, that has glyphs for the sample */
+  function faceThatDraws(lang) {
+    var sample = (lang === 'en' ? 'SaveCancelDone' : (CBSTR[lang].Save || '') + (CBSTR[lang].Cancel || '')).replace(/\s/g, ''); /* no space: a space exists in every face and would pass the probe */
+    var ownFaces = getComputedStyle(document.body).fontFamily.split(',').map(function (name) { return name.trim().replace(/^["']|["']$/g, ''); });
+    var names = ownFaces.filter(function (name) { return !/^(system-ui|-apple-system|sans-serif|serif|monospace)$/.test(name); }).concat(SCRIPT_FACES[lang]);
+    var found = names.filter(function (name, index) { return names.indexOf(name) === index && drawsSample(sample, name); })[0];
+    return { sample: sample, face: found || 'a system fallback the page does not name' };
+  }
+  function faceRowHTML(lang) {
+    var drawn = faceThatDraws(lang);
+    return '<tr data-testid="gal-face-' + lang + '"><th scope="row">' + lang + '</th><td lang="' + lang + '">' + esc(drawn.sample) + '</td><td class="mono">' + esc(drawn.face) +
+      (drawn.face === 'Inter' || /Grotesk|Mono/.test(drawn.face) ? '' : ' ◂ ' + esc(words('not the product face'))) + '</td></tr>';
+  }
+  /** the real size, weight, line height and face of a rendered button's text (the line box from a Range, so 'normal' is a number) */
+  function typeOf(button) {
+    var style = getComputedStyle(button), range = document.createRange();
+    range.selectNodeContents(button);
+    return { face: style.fontFamily.split(',')[0].replace(/["']/g, '').trim(), size: parseFloat(style.fontSize), weight: style.fontWeight, line: range.getBoundingClientRect().height };
+  }
+  function typeRowHTML(entry) {
+    var measured = typeOf(entry.node), small = measured.size < MIN_LABEL_PX;
+    return '<tr data-testid="gal-type-row"><th scope="row">' + esc(entry.label) + '</th><td class="mono">' + esc(measured.face) + '</td><td class="' + (small ? 'fail' : '') + '" data-testid="' +
+      (small ? 'gal-type-small' : 'gal-type-ok') + '">' + measured.size.toFixed(1) + ' px' + (small ? ' ✗ under ' + MIN_LABEL_PX : '') + '</td><td>' + measured.weight + '</td><td>' + measured.line.toFixed(1) + ' px</td></tr>';
+  }
+  /** every component's button, then this page's own switches (12 px: a finding, they are not components) */
+  function typeEntries() {
+    var entries = [];
+    document.querySelectorAll('#probe [data-testid^="gal-type-probe-"]').forEach(function (node) {
+      var component = ui.components[node.getAttribute('data-testid').split('-')[3]];
+      entries.push({ label: component.code + ' ' + words(component.label), node: node });
+    });
+    var chrome = document.querySelector('#hdr .seg button');
+    if (chrome) entries.push({ label: 'APP002 page switches (not a component)', node: chrome });
+    return entries;
+  }
+  function typeProbesHTML() {
+    return ROWS.map(function (row, index) {
+      var options = Object.assign({ mount: SCREEN + '-U' + (80 + index), testid: 'gal-type-probe-' + row.name + '-' + index, object: row.object || undefined }, row.opts);
+      if (row.confirmKind) options.confirm = reachConfirm(row.confirmKind);
+      return ui.action(row.name, options);
+    }).join('');
+  }
+  function paintType() {
+    var host = document.getElementById('typebox');
+    if (!host) return;
+    var probes = document.createElement('div');
+    probes.innerHTML = typeProbesHTML();
+    probeBox().appendChild(probes);
+    var rows = typeEntries().map(typeRowHTML).join('');
+    probes.remove();
+    var faces = LANGS.map(function (lang) { return faceRowHTML(lang[0]); }).join('');
+    host.innerHTML = '<table class="tok"><thead><tr><th>' + esc(words('Code')) + '</th><th>Face</th><th>Size</th><th>' + esc(words('Weight')) + '</th><th>Line</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<h4>Which face drew each language</h4><table class="tok"><tbody>' + faces + '</tbody></table>';
+  }
+  /** the product's faces come from Google Fonts like app.html loads them; repaint once they have arrived */
+  function whenFacesLoad() {
+    if (!document.fonts || !document.fonts.load) return;
+    Promise.all(['14px Inter', '14px "Space Grotesk"', '14px "Space Mono"'].map(function (face) { return document.fonts.load(face); }))
+      .then(paint)
+      .catch(function (error) {
+        console.warn('ui-standard: the product faces did not load, the page shows its fallback', (error && error.message) || error);
+      });
+  }
+
   /* ── before and after ── */
   function beforePanel() {
     return CENSUS.map(function (entry) {
@@ -302,10 +409,25 @@ var CBUiStandard = (function () {
         (item[2] ? ' lang="' + item[2] + '"' : '') + '>' + esc(item[1]) + '</button>';
     }).join('') + '</div>';
   }
+  /** a drop-down for a long list (the 16 themes): a native select, same code scheme, changed through the 'change' event */
+  function selectControl(group, items, current, label) {
+    return '<label class="seg"><span class="seglabel">' + esc(words(label)) + '</span><select data-cbsid="' + controlCode() + '" data-g="' + group + '" data-testid="gal-' + group + '">' + items.map(function (item) {
+      return '<option value="' + item[0] + '"' + (item[0] === current ? ' selected' : '') + '>' + esc(item[1]) + '</option>';
+    }).join('') + '</select></label>';
+  }
+  function avatarThemes() {
+    var table = (window.CBScreen && window.CBScreen.APP_THEMES) || {};
+    return Object.keys(table).map(function (key) { return [key, table[key].name]; });
+  }
+  function avatarFonts() {
+    return window.CBAvatar.FONTS.map(function (row) { return [row[0], words(row[1])]; });
+  }
+  function avatarSizes() {
+    return window.CBAvatar.TEXT_SIZES.map(function (row) { return [row[0], words(row[1])]; });
+  }
   function headerHTML() {
     counters.control = 0;
     var langs = LANGS.map(function (lang) { return [lang[0], lang[1], lang[0]]; });
-    var themes = [['light', words('Light')], ['dark', words('Dark')]];
     var screens = Object.keys(SCREENS).map(function (key) { return [key, words(SCREENS[key].label) + (SCREENS[key].w ? ' ' + SCREENS[key].w + '×' + SCREENS[key].h : '')]; });
     var sizes = Object.keys(PRESETS).map(function (key) { return [key, words(PRESETS[key].label) + ' ' + PRESETS[key].h]; });
     var overlay = [['on', '24 px'], ['off', '—']];
@@ -313,7 +435,7 @@ var CBUiStandard = (function () {
       return '<button type="button" role="tab" data-cbsid="' + controlCode() + '" data-g="tab" data-v="' + tabName + '" aria-selected="' + (tabName === state.tab) + '" data-testid="gal-tab-' + tabName + '">' + esc(words(TAB_LABEL[tabName])) + '</button>';
     }).join('');
     return '<div class="hrow"><h1>' + esc(words('UI standard')) + '</h1><span class="chip" data-cbsid="' + SCREEN + '" data-testid="gal-screen-code" title="Screen code">' + SCREEN + '</span></div>' +
-      '<div class="hrow ctl">' + segment('lang', langs, state.lang, { label: 'Language' }) + segment('theme', themes, state.theme, { label: 'Theme' }) + segment('screen', screens, state.screen, { label: 'Screen' }) +
+      '<div class="hrow ctl">' + segment('lang', langs, state.lang, { label: 'Language' }) + selectControl('theme', avatarThemes(), state.theme, 'Theme') + selectControl('font', avatarFonts(), state.font, 'Font') + segment('textSize', avatarSizes(), state.textSize, { label: 'Text size' }) + segment('weight', WEIGHTS.map(function (row) { return [row[0], words(row[1])]; }), state.weight, { label: 'Weight' }) + segment('screen', screens, state.screen, { label: 'Screen' }) +
       segment('size', sizes, state.size, { label: 'Size' }) + segment('overlay', overlay, state.overlay ? 'on' : 'off', { label: '24 px target' }) + '</div>' +
       '<div class="hrow tabs" role="tablist">' + tabs + '</div>';
   }
@@ -367,46 +489,106 @@ var CBUiStandard = (function () {
     frame.style.marginBottom = -(box.h * (1 - scale)) + 'px';
   }
 
+  /* ── the themes: each one applied through the avatar's own code and measured on the real buttons ── */
+  function probeHTML() {
+    return ui.action('done', { mount: SCREEN + '-U90', object: 'step', testid: 'gal-probe-primary' }) + ui.action('cancel', { mount: SCREEN + '-U91', object: 'edit', testid: 'gal-probe-quiet' });
+  }
+  function probeNode(name) {
+    return document.querySelector('[data-testid="gal-probe-' + name + '"]');
+  }
+  /** the pairs of the standard in the theme now on the page: [name, foreground, background, minimum ratio, criterion] */
+  function pairsNow() {
+    var page = getComputedStyle(document.body).backgroundColor, done = getComputedStyle(probeNode('primary')), quiet = getComputedStyle(probeNode('quiet'));
+    var focus = getComputedStyle(document.documentElement).getPropertyValue('--focus').trim();
+    return [
+      ['Done text', done.color, done.backgroundColor, 4.5, '1.4.3'],
+      ['Quiet text', quiet.color, page, 4.5, '1.4.3'],
+      ['Page text', getComputedStyle(document.body).color, page, 4.5, '1.4.3'],
+      ['Done fill', done.backgroundColor, page, 3, '1.4.11'],
+      ['Quiet border', quiet.borderTopColor, page, 3, '1.4.11'],
+      ['Focus ring', focus, page, 3, '1.4.11']
+    ];
+  }
+  function swatchesNow() {
+    var style = getComputedStyle(document.documentElement);
+    return ['--page', '--card', '--ink', '--accent'].map(function (token) { return style.getPropertyValue(token).trim(); });
+  }
+  /** every theme, one after the other: the figures per pair, then the page's own theme is put back */
+  function auditAll() {
+    var table = window.CBScreen.APP_THEMES, rows = [];
+    document.getElementById('probe').innerHTML = probeHTML();
+    Object.keys(table).forEach(function (key) {
+      window.CBAvatar.applyWith({ theme: key });
+      rows.push({
+        key: key,
+        name: table[key].name,
+        swatches: swatchesNow(),
+        pairs: pairsNow().map(function (pair) {
+          var ratio = contrastRatio(pair[1], pair[2]);
+          return { name: pair[0], ratio: ratio, min: pair[3], rule: pair[4], ok: ratio >= pair[3] };
+        })
+      });
+    });
+    window.CBAvatar.applyWith({ theme: state.theme });
+    return rows;
+  }
+  function themeRowHTML(row) {
+    var swatches = row.swatches.map(function (colour) { return '<span class="sw" style="background:' + esc(colour) + '"></span>'; }).join('');
+    var cells = row.pairs.map(function (pair) {
+      return '<td class="' + (pair.ok ? 'pass' : 'fail') + '" data-testid="gal-pair-' + (pair.ok ? 'ok' : 'fail') + '" title="' + pair.rule + ' ≥ ' + pair.min + ':1">' + pair.ratio.toFixed(1) + (pair.ok ? '' : ' ✗') + '</td>';
+    }).join('');
+    return '<tr data-testid="gal-theme-row"><th scope="row">' + swatches + esc(row.name) + '</th>' + cells + '</tr>';
+  }
+  function themesPanel() {
+    var rows = auditAll();
+    var heads = rows[0].pairs.map(function (pair) { return '<th title="' + pair.rule + '">' + esc(pair.name) + '<br><small>' + pair.rule + ' · ' + pair.min + ':1</small></th>'; }).join('');
+    return '<table class="tok themes"><thead><tr><th>' + esc(words('Theme')) + '</th>' + heads + '</tr></thead><tbody>' + rows.map(themeRowHTML).join('') + '</tbody></table>';
+  }
+
   /* ── paint: the whole page again, from state ── */
   function applyState() {
     var root = document.documentElement, preset = PRESETS[state.size];
     window.cbLang = function () { return state.lang; };
     root.setAttribute('lang', state.lang);
     root.setAttribute('dir', LANGS.filter(function (lang) { return lang[0] === state.lang; })[0][2]);
-    root.setAttribute('data-theme', state.theme);
+    window.CBAvatar.applyWith({ theme: state.theme, font: state.font, fs: state.textSize, weight: state.weight });
     root.style.setProperty('--act-h', preset.h + 'px');
     root.style.setProperty('--act-pad', preset.pad + 'px');
     root.style.setProperty('--act-radius', preset.radius + 'px');
     root.style.setProperty('--act-font', preset.font + 'px');
   }
   function panelHTML() {
-    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, before: beforePanel };
+    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, before: beforePanel };
     return '<p class="line" data-testid="gal-line">' + esc(words(TAB_LINE[state.tab])) + '</p>' + panels[state.tab]();
   }
   function paint() {
     counters.mount = 0;
     applyState();
+    document.getElementById('probe').innerHTML = probeHTML();
     document.getElementById('hdr').innerHTML = headerHTML();
     document.getElementById('content').innerHTML = panelHTML();
     fitFrame();
     paintMeasure();
+    paintType();
     paintOverlay();
     if (document.querySelector('#modalhost .mover')) openExampleDialog();
   }
   function onSwitch(event) {
     var button = event.target.closest && event.target.closest('[data-g]');
-    if (!button) return;
-    var group = button.getAttribute('data-g'), value = button.getAttribute('data-v');
-    if (group === 'lang') state.lang = value;
-    else if (group === 'theme') state.theme = value;
-    else if (group === 'screen') state.screen = value;
-    else if (group === 'size') state.size = value;
+    if (!button || button.tagName === 'SELECT' || button.tagName === 'OPTION') return;
+    chooseValue(button.getAttribute('data-g'), button.getAttribute('data-v'));
+  }
+  function onChange(event) {
+    if (event.target.tagName === 'SELECT' && event.target.getAttribute('data-g')) chooseValue(event.target.getAttribute('data-g'), event.target.value);
+  }
+  function chooseValue(group, value) {
+    if (STATE_KEYS.indexOf(group) >= 0) state[group] = value;
     else if (group === 'overlay') state.overlay = value === 'on';
-    else if (group === 'tab') state.tab = value;
     paint();
   }
   function start() {
     document.addEventListener('click', onSwitch);
+    document.addEventListener('change', onChange);
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') closeModal();
     });
@@ -417,7 +599,8 @@ var CBUiStandard = (function () {
     window.modal = modal;
     window.closeModal = closeModal;
     paint();
+    whenFacesLoad();
   }
-  return { start: start, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint };
+  return { start: start, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
 })();
 if (typeof document !== 'undefined' && document.getElementById && document.getElementById('frame')) CBUiStandard.start();

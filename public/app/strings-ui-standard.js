@@ -12,6 +12,9 @@
   if (typeof CBSTR === 'undefined') return;
   var packs = {
     ta: {
+      'Bill posted': 'பில் பதிவிடப்பட்டது', 'Supplier removed': 'சப்ளையர் நீக்கப்பட்டார்', 'Supplier restored': 'சப்ளையர் மீட்கப்பட்டார்', 'Settings saved': 'அமைப்புகள் சேமிக்கப்பட்டன',
+      Type: 'எழுத்து வடிவம்', 'not the product face': 'தயாரிப்பின் எழுத்துரு அல்ல',
+      Font: 'எழுத்துரு', 'Text size': 'எழுத்து அளவு', Weight: 'தடிமன்', Normal: 'இயல்பான', Bold: 'தடித்த', 'Across themes': 'தீம்கள் முழுவதும்',
       'UI standard': 'UI தரநிலை', Components: 'கூறுகள்', Popups: 'பாப்-அப்கள்', Icons: 'குறியீடுகள்', Tokens: 'வடிவ மதிப்புகள்',
       'Before and after': 'முன்பும் பின்பும்', Light: 'வெளிச்சம்', Dark: 'இருள்', Language: 'மொழி', Screen: 'திரை',
       'This screen': 'இந்தத் திரை', Desktop: 'மேசைக்கணினி', Mobile: 'கைபேசி', Size: 'அளவு', Compact: 'சிறியது', Large: 'பெரியது',
@@ -23,6 +26,9 @@
       Value: 'மதிப்பு', Measured: 'அளந்தது', Contrast: 'வேறுபாடு'
     },
     hi: {
+      'Bill posted': 'बिल पोस्ट हो गया', 'Supplier removed': 'सप्लायर हटाया गया', 'Supplier restored': 'सप्लायर वापस जोड़ा गया', 'Settings saved': 'सेटिंग्स सहेजी गईं',
+      Type: 'टाइपोग्राफ़ी', 'not the product face': 'उत्पाद का फ़ॉन्ट नहीं',
+      Font: 'फ़ॉन्ट', 'Text size': 'टेक्स्ट आकार', Weight: 'मोटाई', Normal: 'सामान्य', Bold: 'बोल्ड', 'Across themes': 'सभी थीम में',
       'UI standard': 'UI मानक', Components: 'घटक', Popups: 'पॉप-अप', Icons: 'आइकन', Tokens: 'डिज़ाइन टोकन',
       'Before and after': 'पहले और बाद', Light: 'हल्का', Dark: 'गहरा', Language: 'भाषा', Screen: 'स्क्रीन',
       'This screen': 'यह स्क्रीन', Desktop: 'डेस्कटॉप', Mobile: 'मोबाइल', Size: 'आकार', Compact: 'छोटा', Large: 'बड़ा',
@@ -34,6 +40,9 @@
       Value: 'मान', Measured: 'मापा', Contrast: 'कंट्रास्ट'
     },
     ar: {
+      'Bill posted': 'تم ترحيل الفاتورة', 'Supplier removed': 'تمت إزالة المورّد', 'Supplier restored': 'تمت استعادة المورّد', 'Settings saved': 'تم حفظ الإعدادات',
+      Type: 'الخط والطباعة', 'not the product face': 'ليس خط المنتج',
+      Font: 'الخط', 'Text size': 'حجم النص', Weight: 'السُمك', Normal: 'عادي', Bold: 'غامق', 'Across themes': 'عبر السمات',
       'UI standard': 'معيار الواجهة', Components: 'المكوّنات', Popups: 'النوافذ المنبثقة', Icons: 'الأيقونات', Tokens: 'رموز التصميم',
       'Before and after': 'قبل وبعد', Light: 'فاتح', Dark: 'داكن', Language: 'اللغة', Screen: 'الشاشة',
       'This screen': 'هذه الشاشة', Desktop: 'سطح المكتب', Mobile: 'الجوال', Size: 'الحجم', Compact: 'مضغوط', Large: 'كبير',
@@ -45,6 +54,9 @@
       Value: 'القيمة', Measured: 'المقاس', Contrast: 'التباين'
     },
     fr: {
+      'Bill posted': 'Facture validée', 'Supplier removed': 'Fournisseur retiré', 'Supplier restored': 'Fournisseur rétabli', 'Settings saved': 'Paramètres enregistrés',
+      Type: 'Typographie', 'not the product face': 'pas la police du produit',
+      Font: 'Police', 'Text size': 'Taille du texte', Weight: 'Graisse', Normal: 'Normal', Bold: 'Gras', 'Across themes': 'Selon les thèmes',
       'UI standard': 'Norme d’interface', Components: 'Composants', Popups: 'Fenêtres', Icons: 'Icônes', Tokens: 'Jetons de style',
       'Before and after': 'Avant et après', Light: 'Clair', Dark: 'Sombre', Language: 'Langue', Screen: 'Écran',
       'This screen': 'Cet écran', Desktop: 'Bureau', Mobile: 'Mobile', Size: 'Taille', Compact: 'Compact', Large: 'Grand',
