@@ -6,8 +6,6 @@ A *violation* = one rule failing on one screen in one theme+size; *nodes* = the 
 
 **Clean means painted and clean:** of 80 addresses, 45 painted at least 300 characters of text in every run; 24 of those are clean to axe. The other 35 are not counted as clean: 5 placeholder address(es) shown as visited, 1 sign-in window, 29 near-empty in the stand-in shop (under 300 characters). Their zero means nothing was there to check.
 
-Screens that showed a sign-in window or almost no text (so a clean result means little): /signin-lab.html (sign-in shown).
-
 ## Totals by theme and text size
 
 | Theme | Size | Runs | critical | serious | moderate | minor | incomplete (needs a person) |
@@ -124,7 +122,7 @@ All rules seen: label (critical), select-name (critical), aria-allowed-attr (cri
 
 ## What this baseline is, and is not
 
-- It is a floor. axe-core finds about 57% of accessibility issues (its own README). Only 24 of 80 addresses are both painted (300+ characters in every run) and clean to axe; that does not make them accessible, and the other 56 are unknown rather than clean (placeholders, a sign-in window, near-empty stand-in screens). The keyboard walk, a screen reader and the manual WCAG 2.2 items (focus order, consistent help, accessible authentication) stay with a person.
+- It is a floor. axe-core finds about 57% of accessibility issues (its own README). Only 24 of 80 addresses are both painted (300+ characters in every run) and clean to axe; that does not make them accessible. Of the other 56, 21 painted screens have at least one violation and 35 are unknown rather than clean (placeholders, a sign-in window, near-empty stand-in screens; see Clean means painted and clean above). The keyboard walk, a screen reader and the manual WCAG 2.2 items (focus order, consistent help, accessible authentication) stay with a person.
 - WCAG 2.2 AA is the standard checked (axe tags wcag2a, wcag2aa, wcag21aa, wcag22aa). axe's best-practice rules are NOT in these tags, which is why moderate and minor read 0: the impacts that matter here are critical and serious.
 - The shop behind the screens is the walks' stand-in (a small fixture shop), not the demo month. A screen that is mostly rows in real life is checked here in its ordinary, near-empty state; a second pass on the full local stack (the demo shop) is the next widening. Colour contrast, target size and label problems that depend on real rows will be under-counted.
 - Five addresses carry a placeholder in the register (counted as not painted, never as clean) (`/shop.html?s=<shop>`, `/network-shop.html?bridge=<network>`, `/store.html?net=<network>`, `/embed.html?bridge=<shop>`, `/promo.html#key=…`): they were visited with the placeholder as written, so they show their "not found" state. `/signin-lab.html` shows the sign-in window.
@@ -151,4 +149,4 @@ All rules seen: label (critical), select-name (critical), aria-allowed-attr (cri
 
 **Before the gate can start:** (a) the stand-in shop widened or the run moved to the demo shop so the baseline is not flattered; (b) the sheet pass added; (c) one owner for the fixes, starting with the five critical rule families (a handful of controls in accounts, finance, settings and the labs).
 
-Reuse: `e2e/a11y-contrast.cjs` (themes' declared contrast claims) stays; this adds what it cannot see. `e2e/tests/axe.spec.js` (3 specs on the old workshop, via @axe-core/playwright from npm) is left alone: its pages are not in the register and it does not use the vendored copy; folding it into this module is a follow-up for the same owner.
+Reuse: `e2e/a11y-contrast.cjs` (themes' declared contrast claims) stays; this adds what it cannot see. `e2e/tests/axe.spec.js` (3 specs on the old workshop) now runs through this module (`A.check`, same wcag2a/wcag2aa tags) on the vendored copy; `@axe-core/playwright` is removed, so there is one axe engine.

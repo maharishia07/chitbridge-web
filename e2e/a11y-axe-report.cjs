@@ -133,8 +133,6 @@ function summary(d) {
   const thin = urls.filter((u) => !isPlaceholder(u) && d.runs.some((r) => r.url === u && r.painted && !r.painted.signin && r.painted.text < PAINTED_MIN)).length;
   L.push('**Clean means painted and clean:** of ' + urls.length + ' addresses, ' + paintedUrls.length + ' painted at least ' + PAINTED_MIN + ' characters of text in every run; ' + cleanPainted.length + ' of those are clean to axe. The other ' + (urls.length - paintedUrls.length) + ' are not counted as clean: ' + placeholders + ' placeholder address(es) shown as visited, ' + signins + ' sign-in window, ' + thin + ' near-empty in the stand-in shop (under ' + PAINTED_MIN + ' characters). Their zero means nothing was there to check.', '');
   if (notTaken) L.push('Theme not confirmed on <html> in ' + notTaken + ' run(s): those runs measured the default look.', '');
-  const blank = Array.from(new Set(ok.filter((r) => r.painted && (r.painted.text < 60 || r.painted.signin)).map((r) => r.url + (r.painted.signin ? ' (sign-in shown)' : ' (blank)'))));
-  if (blank.length) L.push('Screens that showed a sign-in window or almost no text (so a clean result means little): ' + blank.join(', ') + '.', '');
   L.push('## Totals by theme and text size', '', '| Theme | Size | Runs | critical | serious | moderate | minor | incomplete (needs a person) |', '|---|---|---|---|---|---|---|---|');
   for (const t of d.themes) for (const s of d.sizes) {
     const rs = ok.filter((r) => r.theme === t && r.size === s);
