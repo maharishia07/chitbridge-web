@@ -88,6 +88,7 @@ jobs:
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/ui-action-set.test.cjs
+          node e2e/ui-standard.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/tx-key.test.cjs
           node e2e/ui-script-loaded.cjs

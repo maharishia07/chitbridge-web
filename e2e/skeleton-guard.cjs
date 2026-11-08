@@ -14,7 +14,7 @@ const OWN = ['finance.html', 'crm.html', 'accounts.html'];      /* the page draw
 const BAR = ['shop.html', 'network-shop.html', 'store.html', 'embed.html', 'promo.html', 'standards.html'];
 const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html', 'operations.html', 'catalogue.html'];   /* CBFrame.mount({ skeleton }) draws it (the Country lab: CL3, public — signin:false · CB Settings: SET1 · CB Operations: T3-OPS · CB Catalogue: T3-CATALOGUE) */
 /* UX-90: every lab wears the Finance frame through CBFrame.lab (skeleton + the Labs switcher in the left menu, one background); the list only grows with a new lab */
-const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html'];
+const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html', 'ui-standard.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
 const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html'];
