@@ -678,9 +678,9 @@
     'CMP009.label': 'Réessayer',
     'CMP009.shown': 'Réessayer',
     'CMP009.aria': 'Réessayer {object}',
-    'CMP010.label': 'Ouvert',
-    'CMP010.shown': 'Ouvert',
-    'CMP010.aria': 'Ouvert {object}'
+    'CMP010.label': 'Ouvrir',
+    'CMP010.shown': 'Ouvrir',
+    'CMP010.aria': 'Ouvrir {object}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
   try {

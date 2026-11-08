@@ -678,9 +678,9 @@
     'CMP009.label': 'மீண்டும் முயற்சி',
     'CMP009.shown': 'மீண்டும் முயற்சி',
     'CMP009.aria': 'மீண்டும் முயற்சி {object}',
-    'CMP010.label': 'திறந்தது',
-    'CMP010.shown': 'திறந்தது',
-    'CMP010.aria': 'திறந்தது {object}'
+    'CMP010.label': 'திற',
+    'CMP010.shown': 'திற',
+    'CMP010.aria': 'திற {object}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
   try {

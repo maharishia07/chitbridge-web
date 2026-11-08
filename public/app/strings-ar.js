@@ -708,9 +708,9 @@
     'CMP009.label': 'حاول مجددًا',
     'CMP009.shown': 'حاول مجددًا',
     'CMP009.aria': 'حاول مجددًا {object}',
-    'CMP010.label': 'مفتوح',
-    'CMP010.shown': 'مفتوح',
-    'CMP010.aria': 'مفتوح {object}'
+    'CMP010.label': 'فتح',
+    'CMP010.shown': 'فتح',
+    'CMP010.aria': 'فتح {object}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
   try {

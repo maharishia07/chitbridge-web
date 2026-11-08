@@ -679,9 +679,9 @@
     'CMP009.label': 'फिर कोशिश करें',
     'CMP009.shown': 'फिर कोशिश करें',
     'CMP009.aria': 'फिर कोशिश करें {object}',
-    'CMP010.label': 'खुला',
-    'CMP010.shown': 'खुला',
-    'CMP010.aria': 'खुला {object}'
+    'CMP010.label': 'खोलें',
+    'CMP010.shown': 'खोलें',
+    'CMP010.aria': 'खोलें {object}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
   try {
