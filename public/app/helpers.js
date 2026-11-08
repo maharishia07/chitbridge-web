@@ -332,6 +332,12 @@ function fmtMoney(amount, code, empty) {
     return shown + ' ' + n.toFixed(2);
   } /* a code Intl does not know: the code and the figure, never a guessed symbol */
 }
+/** fmtMoneyWhole(amount, code, empty) → fmtMoney, but a whole figure drops its .00 (₹40, not ₹40.00); 12.5 keeps its paise. For a price LIST, never a bill or a ledger. */
+function fmtMoneyWhole(amount, code, empty) {
+  var text = fmtMoney(amount, code, empty);
+  var whole = amount !== null && amount !== '' && isFinite(Number(amount)) && Number(amount) % 1 === 0;
+  return whole && typeof text === 'string' ? text.replace(/[.,]00(?=\D*$)/, '') : text;
+}
 /* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
    their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */
 /* month WORDS in the screen's language (WALK-REG R49, 16 Oct: a UAE shop read Arabic months on an English screen) — the ORDER of a date is the
