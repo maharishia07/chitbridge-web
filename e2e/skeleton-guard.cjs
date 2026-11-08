@@ -17,7 +17,7 @@ const FRAMED = ['employees.html', 'network.html', 'tasks.html', 'settings.html',
 const LABS = ['product-lab.html', 'offer-lab-next.html', 'conversion-lab.html', 'country-lab.html', 'network-design.html', 'list-lab.html', 'signin-lab.html', 'shell-lab.html'];
 /* pages that load the frame or the list control but are not small apps: the app itself, the labs and the standards page, and two older single-purpose pages (their own round) */
 /* testing.html: the test board's printable report — it loads list-ctl.js only for CBList.every (every page of a paged list, T2-PAGING), it mounts no list */
-const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html'];
+const NOT_APPS = ['app.html', 'standards.html', 'authority-forms.html', 'know-your-business.html', 'testing.html', 'ui-standard.html'];   /* ui-standard.html (APP002, UX-137 8 Nov): the UI standard gallery, a Standards subject (Web design); public mock data, CSP connect-src none */
 
 OWN.forEach((f) => {
   const h = read('public/' + f);
@@ -70,7 +70,8 @@ const SHELL_NOT_YET_WHY = {
   'bill-print.html': 'the printed bill: a print surface, single-theme by decision', 'cart-design.html': 'design reference', 'design-mock.html': 'design reference',
   'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
   'testing.html': 'the test board', 'intake.html': 'a prototype, no customer door', 'iot-howitworks.html': 'a showcase opened in the workshop\'s overlay',
-  'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo'
+  'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo',
+  'ui-standard.html': 'design reference: the UI standard gallery (APP002), public mock data with connect-src none, so the signed-in shell cannot run there'
 };   /* shell-lab.html mounts CBShell itself (the unit's pass mark, e2e/shell.cjs): it loads the shell, so it is not here */
 const SHELL_NOT_YET = Object.keys(SHELL_NOT_YET_WHY);
 /* every page on the no-shell list is a design reference in the register, or one of the named exceptions (the workshop · the counter · the print surface · the two forwards) */

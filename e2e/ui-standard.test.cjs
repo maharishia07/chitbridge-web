@@ -18,7 +18,10 @@ console.log('public and mock-only');
 const html = read('ui-standard.html'), page = strip(read('app/ui-standard.js')), pageHtml = strip(html);
 const scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((match) => match[1]);
 check(scripts.every((src) => src.charAt(0) === '/' && !/^https?:/.test(src)), 'only same-origin scripts: ' + scripts.length);
-['config.js', 'device-id.js', 'shell.js', 'page-frame.js', 'core.js', 'one-person.js', 'rail-bell.js'].forEach((name) => check(scripts.indexOf('/app/' + name) < 0 && scripts.indexOf('/' + name) < 0, 'does not load ' + name));
+['config.js', 'shell.js', 'page-frame.js', 'core.js', 'one-person.js', 'rail-bell.js'].forEach((name) => check(scripts.indexOf('/app/' + name) < 0 && scripts.indexOf('/' + name) < 0, 'does not load ' + name));
+/* device-id.js loads first, as on every page with a session reader (e2e/device-id.cjs, 8 Nov); no script on this page calls CBDevice, so no id is made and nothing is stored */
+check(scripts.indexOf('/app/device-id.js') >= 0 && scripts.indexOf('/app/device-id.js') < scripts.indexOf('/app/helpers.js'), 'loads device-id.js before any other script');
+['accounts-shell.js', 'avatar.js', 'ui.js', 'ui-standard.js', 'helpers.js'].forEach((name) => check(!/CBDevice/.test(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', name), 'utf8')), name + ' never asks for the device id, so none is made here'));
 check(/Content-Security-Policy" content="[^"]*connect-src 'none'/.test(html) && /default-src 'none'/.test(html), "a CSP of its own with connect-src 'none'");
 check(/<html[^>]*data-appearance-fixed/.test(html) && scripts.indexOf('/app/avatar.js') > 0 && scripts.indexOf('/engine/screen.js') > 0 && scripts.indexOf('/engine/screen.js') < scripts.indexOf('/app/avatar.js'), 'the avatar look is applied through avatar.js on a fixed-look page (no storage), after the theme library');
 check(!/<script(?![^>]*\ssrc=)[^>]*>/.test(pageHtml), 'no inline script (script-src self)');

@@ -253,7 +253,8 @@
       ['/iot-howitworks.html', 'IoT — how it works', 'a showcase page opened in an overlay by the workshop'],
       ['/bill-print.html', 'Bill print', 'the printed bill (a print surface, single-theme by decision)'],
       ['/offer-lab.html', 'Offer Lab (old address)', 'forwards to offer-lab-next.html'],
-      ['/combo-lab.html', 'Combo Lab (old address)', 'forwards to offer-lab-next.html?mode=combo']
+      ['/combo-lab.html', 'Combo Lab (old address)', 'forwards to offer-lab-next.html?mode=combo'],
+      ['/ui-standard.html', 'UI standard', 'the gallery every button, popup and icon is checked against (APP002); opened from the Standards page']
     ],
     /* the chit sheet (app/chit-sheet.js CBSheet) — one painter, three kinds (its sheetKind()); opened from every page that loads it */
     sheets: [

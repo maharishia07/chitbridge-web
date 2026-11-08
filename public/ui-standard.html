@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- ⭐ A PUBLIC PAGE WITH MOCK DATA ONLY. It loads no config.js, device-id.js, shell, avatar or api script, so it has no api address and no token to send;
+<!-- ⭐ A PUBLIC PAGE WITH MOCK DATA ONLY. It loads no config.js, shell or api script, so it has no api address and no token to send (device-id.js, accounts-shell.js and avatar.js are loaded for tx, the confirm and the avatar's own theme apply; nothing here signs in);
      connect-src 'none' makes the browser refuse any request the page might try, and nothing is stored (no localStorage, no cookie).
      The language is held in the page, never in cb_lang, so a visitor's own choice on the real app is not touched. Any session that exists is ignored. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
@@ -171,6 +171,7 @@ html[data-open] .sheet,html[data-open] .scrim{display:block}
 <div id="probe" class="probe" aria-hidden="true"></div>
 <div id="toast" role="status" aria-live="polite" data-testid="gal-toast"></div>
 <div id="modalhost" data-testid="gal-modalhost"></div>
+<script src="/app/device-id.js"></script>   <!-- first, as on every page that loads a session reader (e2e/device-id.cjs); the page never signs in, so no id is made -->
 <script src="/app/helpers.js"></script>   <!-- esc · fmtMoney -->
 <script src="/app/accounts-shell.js"></script>   <!-- tx · txf · toast · CBAction · CBConfirm: the string door and the one confirm -->
 <script src="/app/strings-ta.js"></script>
