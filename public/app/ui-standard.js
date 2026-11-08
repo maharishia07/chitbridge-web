@@ -64,7 +64,7 @@ var CBUiStandard = (function () {
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
     ['--act-weight', 'Text weight'], ['--accent', 'Fill of the main button'], ['--accent-ink', 'Text on that fill'],
-    ['--accent-text', 'Text of the quiet button'], ['--line', 'Border of the quiet button'], ['--focus', 'Focus ring'], ['--card', 'Surface']
+    ['--accent-text', 'Text of the quiet button'], ['--line', 'Border of the quiet button'], ['--focus', 'Focus ring: page placeholder, not a product token (no theme defines one)'], ['--card', 'Surface']
   ];
   var ILLUSTRATIONS = [
     ['compose-author.svg', 'Compose / author'], ['draft.svg', 'Draft'], ['chit-bridged.svg', 'Chit bridged'], ['status-update.svg', 'Status update'],
@@ -274,6 +274,7 @@ var CBUiStandard = (function () {
   }
   function tokensPanel() {
     return '<table class="tok"><thead><tr><th>Token</th><th>' + esc(words('What it sets')) + '</th><th>' + esc(words('Value')) + '</th></tr></thead><tbody>' + TOKENS.map(tokenRow).join('') + '</tbody></table>' +
+      '<h3>Focus ring across the 16 themes</h3><div id="focusbox" data-testid="gal-focus"></div>' +
       '<h3>' + esc(words('Type')) + '</h3><div id="typebox" data-testid="gal-type"></div>' +
       '<h3>' + esc(words('Measured')) + '</h3><div class="meas">' +
       ui.action('done', { mount: mountCode(), object: 'step', testid: 'gal-measure-primary' }) + ' ' +
@@ -366,6 +367,18 @@ var CBUiStandard = (function () {
       if (row.confirmKind) options.confirm = reachConfirm(row.confirmKind);
       return ui.action(row.name, options);
     }).join('');
+  }
+  /** the focus ring, which no theme defines: the failing themes per pair, listed here and in the PR (the colour is an engines decision, not picked here) */
+  function paintFocus() {
+    var host = document.getElementById('focusbox');
+    if (!host) return;
+    var rows = auditAll(), lines = [];
+    rows[0].pairs.forEach(function (pair, index) {
+      if (pair.name.indexOf('Ring') !== 0) return;
+      var failing = rows.filter(function (row) { return !row.pairs[index].ok; }).map(function (row) { return row.name + ' ' + row.pairs[index].ratio.toFixed(1); });
+      lines.push('<li data-testid="gal-focus-line"><b>' + esc(pair.name) + '</b> (' + pair.rule + ', 3:1): ' + failing.length + ' of ' + rows.length + ' fail' + (failing.length ? ' — ' + esc(failing.join(', ')) : '') + '</li>');
+    });
+    host.innerHTML = '<p class="note">--focus is the page\'s own placeholder colour, not a product token: no theme defines a focus colour.</p><ul>' + lines.join('') + '</ul>';
   }
   function paintType() {
     var host = document.getElementById('typebox');
@@ -489,7 +502,9 @@ var CBUiStandard = (function () {
       ['Page text', getComputedStyle(document.body).color, page, 4.5, '1.4.3'],
       ['Done fill', done.backgroundColor, page, 3, '1.4.11'],
       ['Quiet border', quiet.borderTopColor, page, 3, '1.4.11'],
-      ['Focus ring', focus, page, 3, '1.4.11']
+      ['Ring on page', focus, page, 3, '2.4.11 · 1.4.11'],
+      ['Ring on Done', focus, done.backgroundColor, 3, '2.4.11 · 1.4.11'],
+      ['Ring on Quiet edge', focus, quiet.borderTopColor, 3, '2.4.11 · 1.4.11']
     ];
   }
   function swatchesNow() {
@@ -551,6 +566,7 @@ var CBUiStandard = (function () {
     document.getElementById('content').innerHTML = panelHTML();
     fitFrame();
     paintMeasure();
+    paintFocus();
     paintType();
     paintOverlay();
     if (document.querySelector('#modalhost .mover')) openExampleDialog();

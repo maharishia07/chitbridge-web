@@ -187,6 +187,10 @@ const noScroll = (page) => page.evaluate(() => {
     console.log('  FINDINGS theme x component pairs below the minimum: ' + failing.length + ' of ' + audit.length * audit[0].pairs.length);
     failing.forEach((line) => console.log('    finding ' + line));
     fs.writeFileSync(path.join(OUT, label + '-theme-contrast-findings.json'), JSON.stringify({ failing, audit: audit.map((row) => ({ theme: row.name, pairs: row.pairs.map((pair) => [pair.name, +pair.ratio.toFixed(2), pair.min, pair.rule, pair.ok]) })) }, null, 1));
+    await page.click('[data-testid="gal-tab-tokens"]');
+    const focusLines = await page.$$eval('[data-testid="gal-focus-line"]', (nodes) => nodes.map((node) => node.textContent));
+    check(focusLines.length === 3, 'the Tokens tab lists the focus ring failures per pair');
+    focusLines.forEach((line) => console.log('  FINDING focus: ' + line));
     await page.click('[data-testid="gal-tab-themes"]');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
     await page.click('[data-testid="gal-tab-components"]');
