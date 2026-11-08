@@ -568,11 +568,17 @@ var CBUiStandard = (function () {
     { rule: 'The main button stands out from the page.', pairs: ['Done fill'], proof: 'The fill of the Done button against the page (3:1 needed).',
       sources: [['WCAG 1.4.11 Non-text Contrast', W3C + 'non-text-contrast.html']] }
   ];
+  /** the figure a chip shows: a contrast ratio for a colour pair, but the measured px for the ring's width and gap (never a ratio-looking number) */
+  function figureOf(found) {
+    var width = found.filter(function (pair) { return pair.name === 'Ring width'; })[0], gap = found.filter(function (pair) { return pair.name === 'Ring gap'; })[0];
+    if (width && gap) return width.ratio + ' px · gap ' + gap.ratio + ' px';
+    return Math.min.apply(null, found.map(function (pair) { return pair.ratio; })).toFixed(1) + ':1';
+  }
   function resultChips(rows, names) {
     return rows.map(function (row) {
       var found = row.pairs.filter(function (pair) { return names.indexOf(pair.name) >= 0; });
-      var ok = found.every(function (pair) { return pair.ok; }), figure = Math.min.apply(null, found.map(function (pair) { return pair.ratio; }));
-      return '<span class="' + (ok ? 'pass' : 'fail') + '" data-testid="gal-meet-' + (ok ? 'pass' : 'fail') + '">' + esc(row.name) + ' ' + (ok ? 'PASS' : 'FAIL') + ' ' + figure.toFixed(1) + '</span>';
+      var ok = found.every(function (pair) { return pair.ok; });
+      return '<span class="' + (ok ? 'pass' : 'fail') + '" data-testid="gal-meet-' + (ok ? 'pass' : 'fail') + '">' + esc(row.name) + ' ' + (ok ? 'PASS' : 'FAIL') + ' ' + figureOf(found) + '</span>';
     }).join('');
   }
   function targetResult() {

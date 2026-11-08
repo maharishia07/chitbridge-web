@@ -199,6 +199,8 @@ const noScroll = (page) => page.evaluate(() => {
     check((await page.$$('[data-testid="gal-meets-row"]')).length === 7, 'Meets the standard: seven rules, each with its source, its proof and its live result');
     check((await page.$$eval('[data-testid="gal-meets-row"] a[href^="https://"]', (nodes) => nodes.length)) >= 9, 'the sources are plain links');
     check((await page.$$('[data-testid="gal-meet-pass"]')).length >= 80 && (await page.$$('[data-testid="gal-meet-fail"]')).length === 0, 'the live results: every theme PASSES every rule');
+    const ringChips = await page.$$eval('[data-testid="gal-meets-row"]:nth-of-type(2) [data-testid^="gal-meet-"]', (nodes) => nodes.map((node) => node.textContent));
+    check(ringChips.length === 16 && ringChips.every((text) => /\d+(\.\d+)? px · gap \d+(\.\d+)? px/.test(text) && !/:1/.test(text)), 'the ring-thickness row shows measured px and gap, not a ratio: ' + ringChips.slice(0, 2).join(' | '));
     check((await page.textContent('[data-testid="gal-country"]')).indexOf('Empty on purpose') >= 0, 'the country section is present and empty, marked');
     check((await noScroll(page)).pageX <= 0 && (await noScroll(page)).panelX <= 0, 'Meets tab: nothing scrolls sideways');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-meets.png') });
