@@ -6,7 +6,7 @@
  *   2 x 100.00 excl at 18% intra = 200.00 + 18.00 + 18.00 = 236.00; price 120 = 240.00 + 21.60 + 21.60 = 283.20; rate 12 = 200.00 + 12.00 + 12.00 = 224.00.
  * Proves, through the screen: the popup says 236.00 → 283.20 and "Use new prices" makes the bill 283.20 · a rate move has no Keep (the cancel
  * button reads Go back) and 224.00 is what it says · a product the shop deleted offers only Remove or Go back and, removed, is not on the bill ·
- * Keep as quoted (price only) asks the owner and leaves 236.00 · a check that is not due (answered "off", never parked) never calls the door ·
+ * Keep as quoted (price only) asks the owner and leaves 236.00 · a unit moved (piece → kg) shows the line, an unchanged unit shows nothing · a check that is not due (answered "off", never parked) never calls the door ·
  * a door that fails never stops the sale (236.00, reason recheck_failed). The popup is the CTR-157 offersReread shape: this bill before → after.
  * UI ids: till-recheck-popup (the askdlg that carries it) · path till.html › finish/unpark › recheckAsk.
  *
@@ -73,6 +73,21 @@ const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(62)
   say('Go back leaves the bill as it was (236.00) and asks for no owner', (await net()) === 236 && (await page.evaluate(() => window.__owner)) === 0, '236.00');
   await setup('on', { gst_rate: 12 }); await start(); await popup(); await finishWith('askok');
   say('Use new prices: the bill is 224.00 (hand: 200.00 + 12.00 + 12.00)', (await net()) === 224, String(await net()));
+
+  console.log('\n── unit piece → kg, the price unchanged (CAT-264b: a unit move is a commercial change like price) ──');
+  await setup('on', { unit: 'kg' }); await start(); shown = await popup();
+  say('the popup names the unit move and offers no Keep (Go back)', /sold per piece → per kg [(]the quantity stays 2[)]/.test(shown.text) && /Go back/.test(shown.no) && !/Keep/.test(shown.no), shown.text.slice(0, 100));
+  await finishWith('askok');
+  say('Use new prices: the line is now sold per kg and the bill is still 236.00 (hand: price unchanged)', (await page.evaluate(() => CART[0].unit)) === 'kg' && (await net()) === 236, 'kg · 236.00');
+  await setup('on', { unit: 'kg' }); await start(); await popup(); await finishWith('askno');
+  say('Go back leaves the line per piece and asks for no owner', (await page.evaluate(() => CART[0].unit)) === 'piece' && (await page.evaluate(() => window.__owner)) === 0, 'piece');
+  console.log('\n── unit unchanged (piece → piece) ──');
+  await setup('on', { unit: 'piece' }); const calm = await page.evaluate(async () => JSON.stringify(await recheckBeforeBill()));
+  say('nothing is shown: no popup opened, the door was asked once, 236.00', (await page.evaluate(() => document.getElementById('askdlg').open)) === false && (await page.evaluate(() => window.__posts)) === 1 && (await net()) === 236, calm.slice(0, 80));
+
+  await setup('on', { unit: 'Kg' }); await page.evaluate(() => { CART[0].unit = 'kg'; });
+  await page.evaluate(async () => { window.__r = recheckBeforeBill(); await window.__r; });
+  say('unit kg → Kg (the same unit, case folded): no popup, 236.00', (await page.evaluate(() => document.getElementById('askdlg').open)) === false && (await net()) === 236, 'no popup');
 
   console.log('\n── a product the shop deleted ──');
   await setup('on', { found: false }); await start(); shown = await popup();
