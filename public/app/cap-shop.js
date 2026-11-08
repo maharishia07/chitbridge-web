@@ -395,9 +395,7 @@ function vaultRowHTML(r, i, j, type) {
       .join('');
     var keep = r.value && !known ? '<option value="' + esc(r.value) + '" selected>' + esc(r.value) + ' — not a standard code</option>' : '';
     val =
-      '<select data-cbsid="ACC002-S03" class="inp" aria-label="' +
-      esc(tx('Value')) +
-      '" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
+      '<select data-cbsid="ACC002-S03" class="inp" aria-label="' + esc(tx('Value')) + '" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
       i +
       ',' +
       j +
@@ -410,9 +408,7 @@ function vaultRowHTML(r, i, j, type) {
       '</select>';
   } else {
     val =
-      '<input data-cbsid="ACC002-I02" class="inp" aria-label="' +
-      esc(tx('Value')) +
-      '" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
+      '<input data-cbsid="ACC002-I02" class="inp" aria-label="' + esc(tx('Value')) + '" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
       esc(r.value || '') +
       '" placeholder="' +
       esc(hint) +
