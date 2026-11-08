@@ -162,14 +162,22 @@ var CBUiStandard = (function () {
   }
 
   /* ── the component rows ── */
+  /** what each non-default state adds to the options: a role gate, busy, or the static hover / focus / pressed look */
+  function stateExtras(which) {
+    var extras = {
+      disabled: { role: { ok: false, why: words('Disabled') } },
+      busy: { busy: true },
+      hover: { data: { demo: 'hover' } },
+      focus: { data: { demo: 'focus' } },
+      pressed: { data: { demo: 'pressed' } }
+    };
+    return extras[which] || {};
+  }
   function stateOptions(row, which) {
-    var base = Object.assign({ mount: mountCode(), testid: 'gal-' + ui.components[row.name].code + '-' + (row.variant || 'std') + '-' + which }, row.opts);
+    var base = Object.assign({ mount: mountCode(), testid: 'gal-' + ui.components[row.name].code + '-' + (row.variant || 'std') + '-' + which }, row.opts, stateExtras(which));
     if (row.object) base.object = row.object;
     if (row.confirmKind) base.confirm = reachConfirm(row.confirmKind);
     if (which === 'default' && (row.confirmKind || row.opts.effect)) base.onPress = mockPress;
-    if (which === 'disabled') base.role = { ok: false, why: words('Disabled') };
-    if (which === 'busy') base.busy = true;
-    if (which === 'hover' || which === 'focus' || which === 'pressed') base.data = { demo: which };
     return base;
   }
   var STATES = ['default', 'hover', 'focus', 'pressed', 'disabled', 'busy'];
