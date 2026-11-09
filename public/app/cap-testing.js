@@ -2247,7 +2247,6 @@ function testReqHTML() {
     );
   }
 
-  var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--grey-4,#646A72)' };
   /**
    * ── ⭐⭐⭐ ONE ROW, THREE SURFACES ─────────────────────────────────────────────────────────────────────
    *
@@ -4059,7 +4058,6 @@ function testTechHTML() {
   var tab = TUI.chip() + 'margin-top:4px;';
   var on = TUI.on,
     off = TUI.off;
-  var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--grey-4,#646A72);' + 'border-radius:6px;background:var(--card,#fff)';
 
   /**
    * ⚠️ FOLDED SHUT UNTIL IT IS ASKED FOR. Athi, 2026-09-13: *"I am not sure what those chips are doing while

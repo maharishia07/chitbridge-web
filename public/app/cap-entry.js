@@ -296,7 +296,6 @@ function enPaint() {
 function enActs() {
   var acts = document.getElementById('en_acts'),
     last = EN.step === 4,
-    pv = EN.pv,
     can = enCanSave();
   acts.innerHTML =
     '<button class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' +

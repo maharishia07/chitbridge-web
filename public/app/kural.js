@@ -38,7 +38,6 @@
     LOADING = null,
     ROUTE = '',
     LEAD = 'ta',
-    LANG = 'en',
     HOST = null,
     EL = null,
     TIMER = null,
