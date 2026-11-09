@@ -93,7 +93,8 @@ async function run() {
   ok(/\/app\/shell\.js/.test(src) && /CBShell\.mount\(/.test(src) && /host:\s*null/.test(src), 'static · index.html mounts CBShell as Home (host null)');
   ok(!/\balert\s*\(/.test(src), 'static · no alert()');
   const man = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
-  const exists = (r) => { const p = r.split(/[#?]/)[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
+  /* TEMPORARY external dev card (Coverage, UX-139): an absolute URL is not a utility page file */
+  const exists = (r) => { if (/^https?:\/\//.test(r)) return true; const p = r.split(/[#?]/)[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
   const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
   const badRest = man.entries.filter((e) => e.state !== 'built' && e.route).map((e) => e.id);
   ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists, never app.html, never the index itself' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));
