@@ -917,7 +917,7 @@ function crmPartyCols() {
       key: 'rail',
       label: 'On the network',
       prio: 6,
-      w: 150,
+      w: 200,   /* label + arrow + a 24 px filter button + the 24 px resize handle, at text size xl too (axe target-size) */
       sort: 'rail',
       hfilter: 'rail',
       html: true,
