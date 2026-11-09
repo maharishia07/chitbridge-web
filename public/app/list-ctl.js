@@ -131,7 +131,7 @@
     '.cbl .cbl-vtab[aria-selected="true"]{background:var(--cl-ink);border-color:var(--cl-ink);color:var(--cl-page)}',
     '.cbl .cbl-vtab[aria-selected="true"] .n{color:var(--cl-page)}',
     /* a column heading's own filter (opts.columns[].hfilter = a filter key) */
-    '.cbl .cbl-hf{border:0;background:none;padding:0 2px;margin:0;color:var(--cl-blue-i);font-size:calc(11px * var(--k,1));line-height:1;cursor:pointer;border-radius:5px;min-width:18px;height:20px}',
+    '.cbl .cbl-hf{border:0;background:none;padding:0 2px;margin:0;color:var(--cl-blue-i);font-size:calc(11px * var(--k,1));line-height:1;cursor:pointer;border-radius:5px;min-width:24px;height:24px}',
     '.cbl .cbl-hf.on{background:var(--cl-blue-t);font-weight:800}',
     '.cbl .cbl-pop.hf{position:absolute;inset-inline-end:auto;min-width:170px;padding:6px;text-transform:none;letter-spacing:normal}',
     '.cbl .cbl-pop.hf button{display:block;width:100%;text-align:start;border:0;background:none;border-radius:7px;padding:6px 10px;font-size:calc(13.5px * var(--k,1));color:var(--cl-ink)}',
@@ -179,11 +179,13 @@
     '.cbl .cbl-hc.r{justify-content:flex-end}',
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
-    '.cbl .cbl-rz{position:absolute;inset-inline-end:-4px;top:0;bottom:0;width:9px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
+    '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
     /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
     '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
-    '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:4px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
-    '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--cl-blue)}',
+    '.cbl .cbl-hc:last-child > .cbl-rz::after{inset-inline-start:auto;inset-inline-end:4px}',
+    '.cbl .cbl-hc:last-child > .cbl-rz:hover::after,.cbl .cbl-hc:last-child > .cbl-rz:focus-visible::after,.cbl .cbl-hc:last-child > .cbl-rz.drag::after{inset-inline-start:auto;inset-inline-end:3px}',
+    '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:11px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
+    '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:10px;background:var(--cl-blue)}',
     '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
     /* ZEBRA (Athi, 2026-10-09): every other data row, one shade from a theme token (--zebra, else the ink mixed 4% into the card, so every theme keeps its contrast); a group head, the hover row and the selected row stay distinct; a multi-line row is ONE stripe */
     '.cbl .cbl-row.z,.cbl .cbl-lrec.z{background:var(--cl-zebra)}',
@@ -1642,7 +1644,7 @@
         var shut = !!R.gcol[it.gkey],
           gt = o.group && o.group.tid;
         body +=
-          '<div class="cbl-group" role="button" tabindex="0" aria-expanded="' +
+          '<div class="cbl-group" role="row" tabindex="0" aria-expanded="' +
           !shut +
           '" data-g="' +
           esc(it.gkey) +
@@ -1650,9 +1652,9 @@
           (gt || o.group.headTid ? ' data-testid="' + esc(o.group.headTid ? o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') +
           ' style="cursor:pointer"><span class="cbl-tw" aria-hidden="true">' +
           (shut ? '▸' : '▾') +
-          '</span><b>' +
+          '</span><b role="gridcell">' +
           esc(it.group) +
-          '</b> <span class="fig"' +
+          '</b> <span class="fig" role="gridcell"' +
           (gt ? ' data-testid="' + esc(gt) + '-gsum-' + esc(it.gkey) + '"' : '') +
           '>' +
           esc(it.fig) +
@@ -1689,7 +1691,7 @@
     box.innerHTML =
       '<div class="cbl-grid' +
       (s.view === 'lines' ? ' cbl-lines' : '') +
-      '" role="grid" aria-rowcount="' +
+      '" role="' + gridRole(I, items) + '" aria-rowcount="' +
       total +
       '">' +
       (s.view === 'grid' ? hdr : '') +
@@ -1732,6 +1734,15 @@
         }, '')
       : '';
     return v ? '<div class="cbl-foot" data-testid="cbl-foot-' + esc(I.key) + '">' + v + '</div>' : '';
+  }
+  /* a row that opens (aria-expanded) and a group head that folds are only valid inside a treegrid (axe aria-conditional-attr, aria-required-children) */
+  function gridRole(unit, items) {
+    return hasNext(unit) ||
+      items.some(function (entry) {
+        return entry.group != null;
+      })
+      ? 'treegrid'
+      : 'grid';
   }
   function setHdrH(I, box) {
     var node = box.querySelector('.cbl-hdr');
@@ -1971,7 +1982,7 @@
       '" tabindex="0"' +
       (nx ? ' aria-expanded="' + !!open + '"' : '') +
       rowAttrs(I, row, id) +
-      '><div class="cbl-lline">' +
+      '><div class="cbl-lline" role="gridcell">' +
       lead +
       (nx
         ? '<span class="cbl-tw" data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>'
@@ -1981,7 +1992,7 @@
       '</span>' +
       (pin ? '<span class="cbl-lamt">' + cellOf(I, pin, row) + '</span>' : '') +
       '</div>' +
-      (gist ? '<div class="cbl-lgist"' + (o.gistTid ? ' data-testid="' + esc(o.gistTid(row)) + '"' : '') + '>' + esc(gist) + '</div>' : '') +
+      (gist ? '<div class="cbl-lgist" role="gridcell"' + (o.gistTid ? ' data-testid="' + esc(o.gistTid(row)) + '"' : '') + '>' + esc(gist) + '</div>' : '') +
       '</div>';
     if (open) out += nextHTML(I, row, id);
     return out;
@@ -2026,7 +2037,7 @@
       inner +
       '</div>' +
       (acts.length
-        ? '<div class="cbl-acts">' +
+        ? '<div class="cbl-acts" role="cell">' +
           (function () {
             var whys = acts.map(function (item) {
               return item.why

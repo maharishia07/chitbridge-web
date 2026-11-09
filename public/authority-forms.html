@@ -21,14 +21,14 @@
   h1{ font-size:20px; margin:4px 0 2px; } .sub{ font-size:12.5px; color:var(--grey); margin-bottom:14px; }
   .card{ background:var(--card); border:1px solid var(--line); border-radius:13px; padding:14px 15px; margin-bottom:12px; }
   label{ font-size:11px; font-weight:700; color:var(--grey); display:block; margin:8px 0 3px; }
-  input,select{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fff; color:var(--ink); }
+  input,select{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:var(--card,#fff); color:var(--ink); }
   button{ font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; }
   button:disabled{ opacity:.45; cursor:not-allowed; }
-  .pri{ background:var(--blue); color:#fff; } .gh{ background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .pri{ background:var(--blue); color:#fff; } .gh{ background:var(--card,#fff); color:var(--ink); border:1px solid var(--line); }
   .ok{ background:var(--ok); color:#fff; }
   .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .note{ font-size:11px; color:var(--grey); } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
-  .formcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; cursor:pointer; background:#fff; }
+  .formcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; cursor:pointer; background:var(--card,#fff); }
   .formcard:hover{ border-color:var(--blue); } .formcard.on{ border-color:var(--blue); background:#f4f7fc; }
   .formcard .t{ font-weight:700; font-size:13.5px; } .formcard .a{ font-size:11px; color:var(--grey); }
   .fld{ display:grid; grid-template-columns:1fr; gap:3px; padding:9px 0; border-top:1px solid var(--line); }
@@ -50,7 +50,7 @@
   .doc .sigline{ border-top:1px solid #333; padding-top:4px; font-size:12px; min-width:190px; }
   .doc .meta{ margin-top:22px; font-size:9.5px; color:#999; border-top:1px solid #eee; padding-top:8px; }
   .empty{ text-align:center; color:var(--grey); font-size:13px; padding:20px; }
-  .netpill{ position:fixed; top:62px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
+  .netpill{ position:fixed; top:62px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:var(--card,#fff); color:var(--ok); }
   .netpill.off{ background:#fdf6e9; color:var(--warn); border-color:#e8d9b8; }
   .restored{ font-size:11.5px; font-weight:600; color:var(--blue); background:#eef3fb; border:1px solid #cfe0f4; border-radius:8px; padding:7px 10px; margin-bottom:9px; }
   @media print{ .netpill{ display:none; }
@@ -248,7 +248,7 @@ function render() {
         ' fields</div></div>'
       );
     }).join('') +
-    '<label>Draw from one of your orders (optional)</label>' +
+    '<label for="ctx">Draw from one of your orders (optional)</label>' +
     orderSelect('ctx', CTX, 'No order — fill from my data') +
     '<div class="note" style="margin-top:4px">Pick an order to fill the buyer, invoice and value from it.</div>' +
     '</div>';
