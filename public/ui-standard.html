@@ -22,13 +22,13 @@
 /* tokens: the action set draws from these; the page reads them back live (Tokens tab) */
 :root{
   --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6; --ink:#1D1B16; --muted:#5E594D; --line:#8A8374; --soft:#DDD6C6;
-  --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus-ring:var(--ink); --focus-halo:var(--page); --danger:#8E3517; --ok:#16693F; --bad:#C4562F;
+  --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus-ring:var(--ink); --focus-halo:var(--page); --danger:#8E3517; --ok:#16693F; --bad:#B0401C;
   --scrim:rgba(0,0,0,.45); --press-shadow:rgba(0,0,0,.35); --bad-tint:rgba(196,86,47,.18); --art-bg:#FFFFFF; --act-h:44px; --act-pad:20px; --act-radius:9px; --act-font:14px; --act-weight:700; --hdr-h:120px;
 }
 /* the avatar's themes (engine APP_THEMES) set the app's tokens on <html>; the page's own names follow them. Cream sets none and keeps the values above. */
 :root[data-themed]{
   --page:var(--paper,#FCFAF5); --panel:var(--neutral-tint,var(--card)); --soft:var(--line); --muted:var(--grey,#5E594D);
-  --accent:var(--blue,#16693F); --accent-ink:var(--on-accent,#FFFFFF); --accent-text:var(--blue,#16693F); 
+  --accent:var(--blue,#16693F); --accent-ink:var(--on-accent,#FFFFFF); --accent-text:var(--blue,#16693F); --bad:var(--disp,#B0401C);
 }
 :root[data-weight="bold"]{--act-weight:800}
 :root[data-weight="bold"] body{font-weight:600}
@@ -90,7 +90,7 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(
 .act:focus-visible,.act[data-demo="focus"]{outline:3px solid var(--focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-halo)}
 .act:active,.act[data-demo="pressed"]{transform:translateY(1px);box-shadow:inset 0 2px 4px var(--press-shadow)}
 .act:disabled{opacity:.5;cursor:not-allowed}
-.act[aria-busy="true"]{opacity:.75;cursor:progress}
+.act[aria-busy="true"]{cursor:progress}   /* busy is said by the spinner and the cursor; fading the label dropped it under 4.5:1 (axe color-contrast) */
 .act[aria-busy="true"]::after{content:"";width:.9em;height:.9em;margin-inline-start:8px;border:2px solid currentColor;border-inline-end-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.act[aria-busy="true"]::after{animation:none}}
