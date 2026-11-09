@@ -182,6 +182,8 @@
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
     /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
     '.cbl .cbl-hc:last-child > .cbl-rz{inset-inline-end:0}',
+    /* the last column's handle sits inside its cell: a filter button there keeps clear of the 24 px handle (axe target-size, partially obscured) */
+    '.cbl .cbl-hc:last-child:has(.cbl-hf){padding-inline-end:36px}',
     '.cbl .cbl-hc:last-child > .cbl-rz::after{inset-inline-start:auto;inset-inline-end:4px}',
     '.cbl .cbl-hc:last-child > .cbl-rz:hover::after,.cbl .cbl-hc:last-child > .cbl-rz:focus-visible::after,.cbl .cbl-hc:last-child > .cbl-rz.drag::after{inset-inline-start:auto;inset-inline-end:3px}',
     '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:11px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
