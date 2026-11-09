@@ -218,6 +218,7 @@ var CBUiStandard = (function () {
   }
   var STATES = ['default', 'hover', 'focus', 'pressed', 'disabled', 'busy'];
   function stateCell(row, which) {
+    /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
     return '<figure class="st"><div class="slot">' + ui.action(row.name, stateOptions(row, which)) + '</div><figcaption>' + esc(words(which.charAt(0).toUpperCase() + which.slice(1))) + '</figcaption></figure>';
   }
   function coverageHTML(component) {
@@ -241,7 +242,7 @@ var CBUiStandard = (function () {
     var component = ui.components.dialog;
     return '<section class="crow" data-testid="gal-row-CMP002"><div class="cid"><span class="chip" data-testid="gal-code">CMP002</span><b>' + esc(words('Example dialog')) + '</b>' +
       '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">SHOW dialog</span></span></div>' +
-      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: mountCode(), object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
+      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U61', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
   }
   function componentsPanel() {
@@ -256,10 +257,13 @@ var CBUiStandard = (function () {
   }
   function popupsPanel() {
     return popupRow('Example dialog', 'ui.dialog() · CMP002 · modal shell, X, Cancel and Done',
+      /* where-used: out-of-scope counter mount: restarts at U01 on every tab, so the code repeats across tabs */
       ui.action('open', { mount: mountCode(), object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog-2' })) +
       popupRow('Post this bill?', 'CMP001 commit · CBConfirm · amount + currency, recipients, count',
+        /* where-used: out-of-scope counter mount: restarts at U01 on every tab, so the code repeats across tabs */
         ui.action('save', { mount: mountCode(), object: 'bill', effect: 'commit', confirm: reachConfirm('post'), onPress: pressFor('post'), testid: 'gal-open-commit' })) +
       popupRow('Remove this supplier?', 'CMP008 commit · CBConfirm · always asks',
+        /* where-used: out-of-scope counter mount: restarts at U01 on every tab, so the code repeats across tabs */
         ui.action('remove', { mount: mountCode(), object: 'supplier', confirm: reachConfirm('remove'), onPress: pressFor('remove'), testid: 'gal-open-remove' })) +
       '<p class="note">CBConfirm still draws its own Cancel and OK buttons (accounts-shell.js), not CMP003 and CMP004: found, listed for its owner.</p>';
   }
@@ -294,7 +298,9 @@ var CBUiStandard = (function () {
       '<h3>Focus ring across the 16 themes</h3><div id="focusbox" data-testid="gal-focus"></div>' +
       '<h3>' + esc(words('Type')) + '</h3><div id="typebox" data-testid="gal-type"></div>' +
       '<h3>' + esc(words('Measured')) + '</h3><div class="meas">' +
+      /* where-used: out-of-scope counter mount: restarts at U01 on every tab, so the code repeats across tabs */
       ui.action('done', { mount: mountCode(), object: 'step', testid: 'gal-measure-primary' }) + ' ' +
+      /* where-used: out-of-scope counter mount: restarts at U01 on every tab, so the code repeats across tabs */
       ui.action('cancel', { mount: mountCode(), object: 'edit', testid: 'gal-measure-quiet' }) + '</div><div id="measure" data-testid="gal-measure"></div>';
   }
   function paintMeasure() {
@@ -382,6 +388,7 @@ var CBUiStandard = (function () {
     return ROWS.map(function (row, index) {
       var options = Object.assign({ mount: SCREEN + '-U' + (80 + index), testid: 'gal-type-probe-' + row.name + '-' + index, object: row.object || undefined }, row.opts);
       if (row.confirmKind) options.confirm = reachConfirm(row.confirmKind);
+      /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
       return ui.action(row.name, options);
     }).join('');
   }
@@ -428,6 +435,7 @@ var CBUiStandard = (function () {
       }).join('');
       return '<section class="crow" data-testid="gal-before-' + entry.name + '"><div class="cid"><span class="chip">' + component.code + '</span><b>' + esc(words(component.label)) + '</b><span class="meta">' +
         entry.before.length + ' → 1</span></div><div class="ba"><div class="bcol"><h4>' + esc(words('Before')) + '</h4>' + old + '</div><div class="bcol"><h4>' + esc(words('After')) + '</h4>' +
+        /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
         ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined }) + '</div></div></section>';
     }).join('');
   }
