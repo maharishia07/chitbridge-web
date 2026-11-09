@@ -28,8 +28,8 @@ const ALLOW = [
 /* ── the pages a customer reaches from Home: index.html + every manifest route / via + the pages those link to ── */
 const manifest = JSON.parse(read('public/app/manifest.json'));
 const pageOf = (r) => String(r || '').replace(/\{bridge_id\}/g, 'x').split(/[?#]/)[0].replace(/^\//, '');
-const PAGES = new Set(['index.html']);
-manifest.entries.forEach((e) => { if (e.route && e.route.indexOf('app.html') >= 0) bad('manifest: ' + e.id + ' routes into the workshop (' + e.route + ')'); [e.route, e.via].forEach((r) => { if (r) PAGES.add('public/' + pageOf(r)); }); });
+const PAGES = new Set(['index.html']);   /* an absolute http(s) route (TEMPORARY Coverage card, UX-139) is no page of ours */
+manifest.entries.forEach((e) => { if (e.route && e.route.indexOf('app.html') >= 0) bad('manifest: ' + e.id + ' routes into the workshop (' + e.route + ')'); [e.route, e.via].forEach((r) => { if (r && !/^https?:\/\//.test(r)) PAGES.add('public/' + pageOf(r)); }); });
 if (manifest.rail && manifest.rail.route) PAGES.add('public/' + pageOf(manifest.rail.route));
 ['public/country-lab.html', 'public/conversion-lab.html'].forEach((p) => PAGES.add(p));   /* Country lab (the brief's list) and the lab it links to */
 
