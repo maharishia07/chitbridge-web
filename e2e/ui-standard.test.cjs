@@ -67,5 +67,26 @@ check(register.indexOf("['web', 'Web design']") >= 0, "the register has the Web 
 const linked = register.split(/\n  \{\n/).map((block) => [/id: '([^']+)'/.exec(block), /go: '([^']*)'/.exec(block)]).filter((pair) => pair[0] && pair[1] && pair[1][1] === 'ui-standard').map((pair) => pair[0][1]);
 check(linked.length >= 5 && ['wcag-1.4.3', 'wcag-1.4.11', 'wcag-2.4.7', 'ui-action-set'].every((id) => linked.indexOf(id) >= 0), 'rows that open this page (go: ui-standard): ' + linked.join(' '));
 check(standardsPage.indexOf("'ui-standard': '/ui-standard.html'") >= 0, "standards.html maps the go key 'ui-standard' to /ui-standard.html");
+console.log('where-used: every mount argument is a literal, or the call declares itself out of scope (docs ui-where-used.cjs reads the same rule)');
+/* the components-tab dialogRow is the 61st counter mount (10 rows x 6 states first); written as a literal it must stay UIS001-U61 */
+const rowsBlock = /var ROWS = \[([\s\S]*?)\n  \];/.exec(page), rowCount = rowsBlock ? (rowsBlock[1].match(/\{ name: /g) || []).length : -1;
+check(/ui\.action\('open', \{ mount: SCREEN \+ '-U61', object: 'dialog'/.test(page), "dialogRow mount is the literal SCREEN + '-U61' (the code the counter gave it)");
+check(/var SCREEN = 'UIS001'/.test(page) && rowCount === 10, 'SCREEN is UIS001 and 10 rows x 6 states precede dialogRow, so U61 is unchanged (rows ' + rowCount + ')');
+const appDir = path.join(__dirname, '..', 'public', 'app'), literalMount = /^(?:'[^'\\]*'|"[^"\\]*"|SCREEN\s*\+\s*'[^'\\]*')$/;
+let callCount = 0;
+const blank = (source) => source.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/^[ \t]*\/\/.*$/gm, (m) => ' '.repeat(m.length)); /* comments blanked, line numbers kept */
+fs.readdirSync(appDir).filter((name) => /\.js$/.test(name)).forEach((name) => {
+  const raw = fs.readFileSync(path.join(appDir, name), 'utf8').split('\r\n').join('\n'), lines = raw.split('\n'), text = blank(raw);
+  for (const call of text.matchAll(/(?<![\w.'"])ui\.(action|dialog)\((?!\))/g)) {
+    const start = call.index + call[0].length, line = text.slice(0, call.index).split('\n').length;
+    let depth = 1, end = start;
+    while (end < text.length && depth > 0) { if (text[end] === '(') depth++; else if (text[end] === ')') depth--; end++; }
+    const mounts = [...text.slice(start, end).matchAll(/\bmount:\s*([^,}\n]+?)\s*(?=[,}\n])/g)].map((m) => m[1]);
+    const declared = /where-used:\s*out-of-scope/.test((lines[line - 1] || '') + '\n' + (lines[line - 2] || ''));
+    callCount++;
+    check(declared || (mounts.length > 0 && mounts.every((m) => literalMount.test(m))), name + ':' + line + ' ui.' + call[1] + ' mount is a literal or SCREEN + literal, or says where-used: out-of-scope');
+  }
+});
+check(callCount >= 15, 'the scan saw the call sites (' + callCount + ')');
 console.log(failures ? failures + ' FAILED' : 'all ok');
 process.exit(failures ? 1 : 0);
