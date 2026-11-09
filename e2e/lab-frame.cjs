@@ -39,7 +39,7 @@ function staticChecks() {
   }
   const manifest = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
   const kit = fs.readFileSync(path.join(PUB, 'app', 'lab-kit.js'), 'utf8');
-  (manifest.entries || []).filter((e) => e.pillar === 'labs' && e.state === 'built' && e.route).forEach((e) =>
+  (manifest.entries || []).filter((e) => e.pillar === 'labs' && e.state === 'built' && e.route && !/^https?:\/\//.test(e.route)).forEach((e) =>
     ok(kit.indexOf("route: '" + e.route + "'") >= 0, 'lab-kit.js · Labs list has the manifest lab ' + e.name + ' (' + e.route + ')'));
 }
 
