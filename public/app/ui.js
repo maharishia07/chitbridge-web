@@ -375,10 +375,14 @@ var CBUi = (function () {
     var component = ACTION_SET[button.getAttribute('data-cbname')];
     return confirmation && component && component.danger ? Object.assign({}, confirmation, { danger: true }) : confirmation;
   }
+  /** the nearest element of the click that matches a selector, or null */
+  function closestOf(event, selector) {
+    return event.target && event.target.closest ? event.target.closest(selector) : null;
+  }
   function onDocumentClick(event) {
-    var segment = event.target && event.target.closest && event.target.closest('[data-choice-value]');
+    var segment = closestOf(event, '[data-choice-value]');
     if (segment && segment.getAttribute('data-choice-value') !== null) return onChoiceClick(segment);
-    var button = event.target && event.target.closest && event.target.closest('[data-cbmount]');
+    var button = closestOf(event, '[data-cbmount]');
     if (!button || button.disabled) return;
     var options = HANDLERS[button.getAttribute('data-cbmount') + '|' + (button.getAttribute('data-key') || '')];
     if (options) press(button, options);
