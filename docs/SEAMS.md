@@ -71,9 +71,9 @@ of file each thing is; this says what already does the job.
 | 37 | `modal` | `app.html` |  |
 | 37 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 36 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
+| 36 | `page` | `cap-catalogue.js` |  |
 | 36 | `rate` | `convert.js` | A rate, with its evidence. |
 | 35 | `closeModal` | `app.html` |  |
-| 35 | `page` | `cap-catalogue.js` |  |
 | 35 | `shell` | `pick.js` |  |
 | 35 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
 | 34 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
@@ -112,12 +112,12 @@ of file each thing is; this says what already does the job.
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 25 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 24 | `call` | `cap-assist.js` |  |
+| 24 | `shown` | `country-compare.js` | one side's value for the line: |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 24 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 24 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 23 | `shown` | `country-compare.js` | one side's value for the line: |
 | 23 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 23 | `keep` | `signin.js` | see. |
 | 22 | `form` | `accounts-shell.js` |  |
@@ -142,13 +142,13 @@ of file each thing is; this says what already does the job.
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
-| 19 | `next` | `cap-stock.js` | the next level: |
+| 20 | `next` | `cap-stock.js` | the next level: |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
+| 19 | `panel` | `sides.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 18 | `step` | `cart.js` |  |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |
-| 18 | `panel` | `sides.js` |  |
 | 18 | `later` | `signin-ui.js` |  |
 | 18 | `verify` | `bookpack.js` | manifest's own hash. |
 | 18 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
