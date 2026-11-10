@@ -371,7 +371,7 @@
     '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}' +
     /* CMP019 the screen's "?": a 44 px target (WCAG 2.2 2.5.8 asks 24), the glyph small inside it, at the chip's place on every screen */
     '.cbsid-help{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:44px;min-height:44px;padding:0;border:0;border-radius:999px;' +
-    'background:transparent;color:var(--ink,#2a2418);font:700 16px/1 var(--sans,system-ui,sans-serif);cursor:pointer}' +
+    'background:transparent;color:var(--ink,#2a2418);font:700 calc(16px*var(--k,1))/1 var(--sans,system-ui,sans-serif);cursor:pointer}' +
     '.cbsid-help:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid-help:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     'html:not([data-ids]) .cbsid{display:none}' /* UX-1: a shop never sees the codes; a tester switches them on */;
   var IDS_KEY = 'cb_ids';

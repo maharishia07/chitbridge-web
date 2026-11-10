@@ -18,13 +18,15 @@ const refused = (call) => { try { call(); return false; } catch (error) { return
 
 const pressed = [], runs = [], opened = [];
 const listeners = {};
+let panelOnScreen = true; /* the progress panel is in the page while true */
+const panelRoot = { focus() {}, querySelector: () => ({ hidden: false, style: {}, firstChild: { style: {} } }), closest: () => null, innerHTML: '' };
 const sandbox = {
   console,
   tx: (text) => text,
   esc: (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])),
   CBAction: { run: (button, fn, options) => { runs.push(options); return Promise.resolve(fn()); } },
   window: {},
-  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelector: () => null },
+  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelector: (selector) => (panelOnScreen && /data-cbprogress/.test(selector) ? panelRoot : null) },
   setTimeout, clearTimeout,
   modal: (html) => { opened.push(html); }, closeModal: () => { opened.push('closed'); },
 };
@@ -63,7 +65,11 @@ console.log('icons and tap size are properties of the component (Athi 10 Nov)');
 ['save', 'cancel', 'done', 'remove', 'delete', 'reload', 'open', 'clear', 'notnow', 'info'].forEach((name) => {
   check(refused(() => ui.action(name, { mount: 'TST001-U01', display: 'icon', effect: name === 'save' ? 'preference' : undefined, confirmedBy: 'page' })), name + ': icon alone refused (icon and label)');
 });
-check(/>✓ Done</.test(ui.action('done', { mount: 'TST001-U01', display: 'icon+label' })), 'icon+label draws the one icon and the label');
+check(/><span aria-hidden="true">✓<[/]span> Done</.test(ui.action('done', { mount: 'TST001-U01', display: 'icon+label' })), 'icon+label draws the one icon (hidden from screen readers) and the label');
+['search', 'delete', 'notnow'].forEach((name) => {
+  const html = ui.action(name, Object.assign({ mount: 'TST001-U01', display: 'icon+label' }, name === 'delete' ? { effect: 'commit', confirmedBy: 'page' } : {}));
+  check(/<span aria-hidden="true"><svg [^>]*width="1em" height="1em"[^>]*stroke="currentColor"/.test(html) && !/[⌕⏳🗑]/.test(html), name + ': drawn as inline SVG in currentColor, sized in em, no font glyph');
+});
 check(/data-size="compact"/.test(ui.action('edit', { mount: 'TST001-U01', size: 'compact' })) && !/data-size/.test(ui.action('edit', { mount: 'TST001-U01' })), 'compact is a property; standard is the default and writes nothing');
 check(refused(() => ui.action('edit', { mount: 'TST001-U01', size: 'tiny' })), 'a size outside standard and compact refused');
 console.log('refusals (silence is the bug)');
@@ -126,6 +132,14 @@ check((() => { try { ui.progress.start({ mount: 'TST003-D01-U01', steps: 2, tota
   check(!/data-cbname="cancel"/.test(html), 'no Cancel unless the caller gives a safe cancel');
   job.done();
   check(opened[opened.length - 1] === 'closed', 'done() closes the panel');
+  opened.length = 0;
+  const gone = ui.progress.start({ mount: 'TST003-D01-U04', steps: 2, delay: 0 });
+  await wait(20);
+  opened.length = 0;
+  panelOnScreen = false; /* the person already closed it, another modal may be open */
+  gone.done();
+  check(opened.indexOf('closed') < 0, 'done() after the panel is gone closes no other modal');
+  panelOnScreen = true;
   opened.length = 0;
   const cancellable = ui.progress.start({ mount: 'TST003-D01-U03', total: 100, delay: 0, cancel: () => {} });
   await wait(20);

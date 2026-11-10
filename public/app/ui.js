@@ -33,9 +33,14 @@ var CBUi = (function () {
   /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
      (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
      with an aria-label and a tooltip. Everything else shows icon and label. */
+  /* the three glyphs that failed (tofu on minimal Android fonts; emoji ignore the theme colour) are drawn as inline SVG: currentColor, sized in em, decorative */
+  var SVG_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">';
+  var ICON_SVG_SEARCH = SVG_OPEN + '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
+  var ICON_SVG_NOTNOW = SVG_OPEN + '<path d="M6 3h12M6 21h12M7 3v3.5L12 12l-5 5.5V21M17 3v3.5L12 12l5 5.5V21"/></svg>';
+  var ICON_SVG_DELETE = SVG_OPEN + '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
   var ICON = {
-    save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: '🗑', edit: '✎',
-    search: '⌕', clear: '✕', notnow: '⏳', help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?'
+    save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: ICON_SVG_DELETE, edit: '✎',
+    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?'
   };
   var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
   var DISPLAYS = ['icon', 'icon+label'];
@@ -81,7 +86,7 @@ var CBUi = (function () {
        Change is Edit unless it picks a value from a list (Athi 10 Nov); Not now DEFERS and is not Close (Athi 10 Nov); Search/Clear are the list toolbar's two plain actions. */
     delete: { code: 'CMP011', element: 'CMP011-B01', label: 'Delete', shown: 'Delete', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet', danger: true },
     edit: { code: 'CMP012', element: 'CMP012-B01', label: 'Edit', shown: '✎ Edit', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet' },
-    search: { code: 'CMP013', element: 'CMP013-B01', label: 'Search', shown: '⌕ Search', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet' },
+    search: { code: 'CMP013', element: 'CMP013-B01', label: 'Search', shown: 'Search', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet' },
     clear: { code: 'CMP014', element: 'CMP014-B01', label: 'Clear', shown: '✕ Clear', verb: 'REMOVE', effect: 'none', effectFixed: true, tone: 'quiet' },
     notnow: { code: 'CMP015', element: 'CMP015-B01', label: 'Not now', shown: 'Not now', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet' },
     help: { code: 'CMP016', element: 'CMP016-B01', label: 'Help', shown: '?', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
@@ -226,18 +231,23 @@ var CBUi = (function () {
   /** the visible text: a glyph stays as written, a word goes through tx() */
   function shownText(component, options) {
     var look = displayOf(component, options || {});
-    if (look === 'icon') return escapeText(options && options.display === 'icon' ? ICON[component.name] : component.shown);
-    if (look === 'icon+label') return escapeText(withIcon(component, labelText(component)));
+    if (look === 'icon') return options && options.display === 'icon' ? iconHtml(component.name) : escapeText(component.shown);
+    if (look === 'icon+label') return withIcon(component, labelText(component));
     return escapeText(component.nameOnly ? component.shown : labelText(component));
   }
   /** the words of a component: a glyph-only one says its label, the others their visible text, both through their keys */
   function labelText(component) {
     return component.nameOnly ? words(component.label, textKey(component, 'label')) : words(component.shown, textKey(component, 'shown'));
   }
-  /** icon and label: the one icon in front, unless the text already carries it */
+  /** the icon as markup: an SVG is trusted markup, a glyph is text */
+  function iconHtml(name) {
+    var icon = ICON[name];
+    return icon.charAt(0) === '<' ? icon : escapeText(icon);
+  }
+  /** icon and label: the one icon in front (hidden from screen readers, which read only the label), unless the text already carries it */
   function withIcon(component, text) {
-    var icon = ICON[component.name];
-    return text.indexOf(icon) < 0 ? icon + ' ' + text : text;
+    if (text.indexOf(ICON[component.name]) >= 0) return escapeText(text);
+    return '<span aria-hidden="true">' + iconHtml(component.name) + '</span> ' + escapeText(text);
   }
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
@@ -435,7 +445,7 @@ var CBUi = (function () {
     model.opened = true;
   }
   function closePanel(model) {
-    if (model.opened && typeof closeModal === 'function') closeModal();
+    if (model.opened && panelRoot(model) && typeof closeModal === 'function') closeModal();
     if (model.opener && model.opener.isConnected && model.opener.focus) model.opener.focus();
   }
   /** a failure stays on the panel in words, with Done to close it (opened first if the delay had not passed) */

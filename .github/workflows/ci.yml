@@ -87,6 +87,7 @@ jobs:
           node e2e/pack-parity.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
+          node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-component-keys.cjs
