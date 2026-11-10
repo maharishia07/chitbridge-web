@@ -59,6 +59,9 @@ var CBUiStandard = (function () {
     { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] },
     { name: 'home', before: [['⌂ Home link drawn by hand in the shared shell, 26 px wide on a phone', 1]] },
     { name: 'assistant', before: [['💬 Assistant pill drawn by hand with inline style, app.html', 1]] },
+    { name: 'menu', before: [['☰ drawer button in the main top bar, 32 x 29 px, no component code', 1]] },
+    { name: 'legend', before: [['key button in the main top bar, 34 px, no component code', 1]] },
+    { name: 'activity', before: [['bell button in the main top bar, 34 px, no component code', 1]] },
     { name: 'choice', before: [['Open · Away · Closed as a plain select, 30 px high, app.html', 1]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
@@ -88,7 +91,10 @@ var CBUiStandard = (function () {
   /* the components added after the dialog row's literal mount (U115) was fixed: drawn after it, from U120, so no mount is used twice */
   var SHELL_ROWS = [
     { name: 'home', object: '', opts: { href: '#', display: 'icon+label', size: 'compact', surface: 'shell' } },
-    { name: 'assistant', object: '', opts: { surface: 'float' } }
+    { name: 'assistant', object: '', opts: { surface: 'float' } },
+    { name: 'menu', object: '', opts: { display: 'icon', surface: 'topbar' } },
+    { name: 'legend', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
+    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } }
   ];
   var SHELL_ROWS_FIRST_MOUNT = 125;
   var TOKENS = [
