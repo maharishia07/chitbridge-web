@@ -33,15 +33,37 @@ const ui = sandbox.ui;
 
 console.log('the set');
 const names = Object.keys(ui.components).filter((name) => name !== 'dialog');
-check(names.length === 9, 'nine actions: ' + names.join(' '));
+check(names.length === 18, 'eighteen actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
-check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'ten distinct CMP codes (nine actions and the dialog)');
-const forced = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' } };
+check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'eighteen distinct CMP codes (eighteen actions and the dialog)');
+const forced = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
 names.forEach((name) => {
   const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));
   check(/^<button /.test(html) && html.includes('type="button"') && html.includes('data-cbsid="' + ui.components[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button with element code and mount');
 });
 
+console.log('born accessible (axe label-title-only / button-name cannot return through a component)');
+names.forEach((name) => {
+  const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));
+  const text = html.replace(/<[^>]*>/g, '').trim();
+  const named = ui.components[name].nameOnly ? /aria-label="[^"]+"/.test(html) : text.length > 0;
+  check(text.length > 0 && named, name + ': a visible text and an accessible name, no title-only');
+});
+check(/aria-haspopup="menu"/.test(ui.action('more', { mount: 'TST001-U01' })) && /aria-expanded="false"/.test(ui.action('more', { mount: 'TST001-U01' })), 'More says it opens a menu and whether it is open');
+check(refused(() => ui.action('delete', { mount: 'TST001-U01' })), 'Delete with no confirm refused (it is always a commit)');
+check(refused(() => ui.action('delete', { mount: 'TST001-U01', effect: 'preference', confirmedBy: 'page' })), 'the fixed effect of Delete cannot be overridden');
+check(refused(() => ui.action('done', { mount: 'TST001-U01', surface: 'nope' })), 'an unknown surface refused');
+console.log('icons and tap size are properties of the component (Athi 10 Nov)');
+['close', 'search', 'add', 'more', 'back', 'edit', 'help'].forEach((name) => {
+  const html = ui.action(name, { mount: 'TST001-U01', display: 'icon' });
+  check(/aria-label="[^"]+"/.test(html) && / title="[^"]+"/.test(html), name + ': icon alone is allowed, with an aria-label and a tooltip');
+});
+['save', 'cancel', 'done', 'remove', 'delete', 'reload', 'open', 'clear', 'notnow', 'info'].forEach((name) => {
+  check(refused(() => ui.action(name, { mount: 'TST001-U01', display: 'icon', effect: name === 'save' ? 'preference' : undefined, confirmedBy: 'page' })), name + ': icon alone refused (icon and label)');
+});
+check(/>✓ Done</.test(ui.action('done', { mount: 'TST001-U01', display: 'icon+label' })), 'icon+label draws the one icon and the label');
+check(/data-size="compact"/.test(ui.action('edit', { mount: 'TST001-U01', size: 'compact' })) && !/data-size/.test(ui.action('edit', { mount: 'TST001-U01' })), 'compact is a property; standard is the default and writes nothing');
+check(refused(() => ui.action('edit', { mount: 'TST001-U01', size: 'tiny' })), 'a size outside standard and compact refused');
 console.log('refusals (silence is the bug)');
 check(refused(() => ui.action('nope', { mount: 'TST001-U01' })), 'unknown component refused');
 check(refused(() => ui.action('done', { mount: 'TST001-U01', colour: 'red' })), 'a property outside the schema refused');

@@ -23,6 +23,7 @@
       Pressed: 'அழுத்தியது', Disabled: 'முடக்கம்', Busy: 'வேலை நடக்கிறது', Code: 'குறியீடு', Before: 'முன்பு', After: 'பின்பு',
       'Example dialog': 'எடுத்துக்காட்டு உரையாடல்', 'Post this bill?': 'இந்த பில்லை பதிவிடவா?', 'Post bill': 'பில்லை பதிவிடு',
       'Post this bill for {amount} to {count} recipients?': 'இந்த பில்லை {count} பெறுநர்களுக்கு {amount} தொகையுடன் பதிவிடவா?',
+      'Supplier deleted': 'சப்ளையர் அழிக்கப்பட்டார்', 'Delete this supplier?': 'இந்த சப்ளையரை அழிக்கவா?', 'Delete {name} for good? This cannot be undone.': '{name} ஐ நிரந்தரமாக அழிக்கவா? இதைத் திரும்பப் பெற முடியாது.',
       'Remove this supplier?': 'இந்த சப்ளையரை நீக்கவா?', 'Remove {name} from this list?': 'இந்தப் பட்டியலிலிருந்து {name} ஐ நீக்கவா?',
       Value: 'மதிப்பு', Measured: 'அளந்தது', Contrast: 'வேறுபாடு'
     },
@@ -38,6 +39,7 @@
       Pressed: 'दबाया', Disabled: 'बंद', Busy: 'चालू है', Code: 'कोड', Before: 'पहले', After: 'बाद',
       'Example dialog': 'उदाहरण संवाद', 'Post this bill?': 'यह बिल पोस्ट करें?', 'Post bill': 'बिल पोस्ट करें',
       'Post this bill for {amount} to {count} recipients?': 'यह बिल {amount} के साथ {count} प्राप्तकर्ताओं को पोस्ट करें?',
+      'Supplier deleted': 'सप्लायर मिटाया गया', 'Delete this supplier?': 'इस सप्लायर को मिटाएँ?', 'Delete {name} for good? This cannot be undone.': '{name} को हमेशा के लिए मिटाएँ? इसे वापस नहीं किया जा सकता।',
       'Remove this supplier?': 'इस सप्लायर को हटाएँ?', 'Remove {name} from this list?': '{name} को इस सूची से हटाएँ?',
       Value: 'मान', Measured: 'मापा', Contrast: 'कंट्रास्ट'
     },
@@ -53,6 +55,7 @@
       Pressed: 'مضغوط عليه', Disabled: 'معطّل', Busy: 'قيد التنفيذ', Code: 'الرمز', Before: 'قبل', After: 'بعد',
       'Example dialog': 'نافذة مثال', 'Post this bill?': 'ترحيل هذه الفاتورة؟', 'Post bill': 'ترحيل الفاتورة',
       'Post this bill for {amount} to {count} recipients?': 'هل تريد ترحيل هذه الفاتورة بمبلغ {amount} إلى {count} مستلمين؟',
+      'Supplier deleted': 'تم حذف المورّد', 'Delete this supplier?': 'حذف هذا المورّد؟', 'Delete {name} for good? This cannot be undone.': 'حذف {name} نهائيًا؟ لا يمكن التراجع عن ذلك.',
       'Remove this supplier?': 'إزالة هذا المورّد؟', 'Remove {name} from this list?': 'هل تريد إزالة {name} من هذه القائمة؟',
       Value: 'القيمة', Measured: 'المقاس', Contrast: 'التباين'
     },
@@ -68,6 +71,7 @@
       Pressed: 'Appuyé', Disabled: 'Désactivé', Busy: 'En cours', Code: 'Code', Before: 'Avant', After: 'Après',
       'Example dialog': 'Fenêtre d’exemple', 'Post this bill?': 'Valider cette facture ?', 'Post bill': 'Valider la facture',
       'Post this bill for {amount} to {count} recipients?': 'Valider cette facture de {amount} pour {count} destinataires ?',
+      'Supplier deleted': 'Fournisseur supprimé', 'Delete this supplier?': 'Supprimer ce fournisseur ?', 'Delete {name} for good? This cannot be undone.': 'Supprimer {name} définitivement ? Cette action est irréversible.',
       'Remove this supplier?': 'Retirer ce fournisseur ?', 'Remove {name} from this list?': 'Retirer {name} de cette liste ?',
       Value: 'Valeur', Measured: 'Mesuré', Contrast: 'Contraste'
     }

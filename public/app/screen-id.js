@@ -369,6 +369,10 @@
     '.cbsid:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:2px}' +
     '.cbsid .cbsid-c{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.02em}.cbsid:empty{display:none}' +
     '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}' +
+    /* CMP019 the screen's "?": a 44 px target (WCAG 2.2 2.5.8 asks 24), the glyph small inside it, at the chip's place on every screen */
+    '.cbsid-help{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:44px;min-height:44px;padding:0;border:0;border-radius:999px;' +
+    'background:transparent;color:var(--ink,#2a2418);font:700 16px/1 var(--sans,system-ui,sans-serif);cursor:pointer}' +
+    '.cbsid-help:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid-help:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     'html:not([data-ids]) .cbsid{display:none}' /* UX-1: a shop never sees the codes; a tester switches them on */;
   var IDS_KEY = 'cb_ids';
   /** UX-1: are screen codes shown? Only for a tester: ?ids=1 switches them on in this browser, ?ids=0 off (nothing else reads the codes but a bug report) */
@@ -434,7 +438,27 @@
     paint();
     return node;
   }
+  /* ── CMP019, the screen's "?" ── one button, in the chip's container, so it sits in the same place on every screen. It is drawn by the standard action
+     set (ui.js) and shown only while HELP_TEXT (app.html, hasHelp) holds a note for this screen's code; with none it stays display:none, so adding
+     help later is adding a note and nothing else. A page that does not load ui.js has no notes and no button. */
+  var helpButton = { el: null };
+  function pressHelp() {
+    var code = current();
+    if (code && typeof root.showHelp === 'function') root.showHelp(code);
+  }
+  function paintHelp() {
+    var code = current();
+    var known = !!code && typeof root.hasHelp === 'function' && root.hasHelp(code);
+    if (!helpButton.el && known && root.ui && S.el && S.el.parentNode) {
+      var wrap = root.document.createElement('span');
+      wrap.innerHTML = root.ui.action('screenhelp', { mount: 'SHL001-U01', testid: 'screen-help', hidden: true, onPress: pressHelp });
+      helpButton.el = wrap.firstChild;
+      S.el.parentNode.appendChild(helpButton.el);
+    }
+    if (helpButton.el) helpButton.el.style.display = known ? '' : 'none';
+  }
   function paint() {
+    paintHelp();
     if (!S.el) return;
     var r = S.app ? row(S.app, S.key) : null;
     S.el.innerHTML = inner(r);
@@ -444,6 +468,7 @@
       S.el.title = label(r);
     } else S.el.removeAttribute('data-cbsid');
   }
+  if (root.addEventListener) root.addEventListener('load', paintHelp);
   function here(app, key) {
     S.app = app;
     S.key = key == null ? null : String(key);

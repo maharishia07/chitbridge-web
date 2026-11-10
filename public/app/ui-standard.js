@@ -40,13 +40,22 @@ var CBUiStandard = (function () {
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
   var CENSUS = [
-    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Not now', 6], ['Dismiss', 2], ['close', 2]] },
+    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Dismiss', 2], ['close', 2]] },
     { name: 'cancel', before: [['Cancel', 89]] },
     { name: 'save', before: [['Save', 31], ['Save and continue', 1], ['Save & continue', 1]] },
     { name: 'done', before: [['Done', 15], ['Got it', 6], ['OK', 5]] },
     { name: 'back', before: [['‹ Back', 8], ['Back', 7], ['‹', 1], ['arrow', 1], ['arrow back', 1]] },
     { name: 'reload', before: [['Try again', 18], ['Retry', 3], ['Reload', 1]] },
-    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] }
+    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] },
+    { name: 'delete', before: [['Delete', 4]] },
+    { name: 'edit', before: [['Edit', 10], ['Change', 10], ['pencil Edit', 3], ['Edit arrow', 1]] },
+    { name: 'search', before: [['Search', 2]] },
+    { name: 'clear', before: [['clear', 9]] },
+    { name: 'notnow', before: [['Not now', 6]] },
+    { name: 'help', before: [['?', 3]] },
+    { name: 'info', before: [['info glyph', 1]] },
+    { name: 'more', before: [['more', 2], ['More', 1], ['ellipsis', 1]] },
+    { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
   /* a mock record states its own currency (N1: no page guesses India's): USD, a code no shop here is assumed to hold */
@@ -61,7 +70,16 @@ var CBUiStandard = (function () {
     { name: 'add', object: 'row', opts: {} },
     { name: 'remove', object: 'row', opts: {}, confirmKind: 'remove' },
     { name: 'reload', object: 'list', opts: {} },
-    { name: 'open', object: 'guide', opts: {} }
+    { name: 'open', object: 'guide', opts: {} },
+    { name: 'delete', object: 'supplier', opts: {}, confirmKind: 'delete' },
+    { name: 'edit', object: 'supplier', opts: {} },
+    { name: 'search', object: 'list', opts: {} },
+    { name: 'clear', object: 'search', opts: {} },
+    { name: 'notnow', object: 'tip', opts: {} },
+    { name: 'help', object: 'page', opts: {} },
+    { name: 'info', object: 'field', opts: {} },
+    { name: 'more', object: 'row', opts: {} },
+    { name: 'screenhelp', object: '', opts: {} }
   ];
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
@@ -170,6 +188,9 @@ var CBUiStandard = (function () {
     if (kind === 'remove') {
       return { title: words('Remove this supplier?'), body: '<p>' + esc(formatWords('Remove {name} from this list?', { name: MOCK.recipients[0] })) + '</p>', yes: words('Remove') };
     }
+    if (kind === 'delete') {
+      return { title: words('Delete this supplier?'), body: '<p>' + esc(formatWords('Delete {name} for good? This cannot be undone.', { name: MOCK.recipients[0] })) + '</p>', yes: words('Delete'), danger: true };
+    }
     var amount = fmtMoney(MOCK.amount, MOCK.currency) + ' (' + MOCK.currency + ')';
     return {
       title: words('Post this bill?'),
@@ -180,7 +201,7 @@ var CBUiStandard = (function () {
     };
   }
   /** what the toast says for each press: the result in words, in the chosen language; a remove also offers Undo in the same bar */
-  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', save: 'Settings saved' };
+  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', delete: 'Supplier deleted', save: 'Settings saved' };
   /**
    * CBAction.run says a bare "Done" when the press returns (ui.js passes it no sentence), so the result is said one tick later and replaces it.
    * ui.js should pass done / outcome through to CBAction.run; until then this is the page's own way to show the standard.
@@ -242,7 +263,7 @@ var CBUiStandard = (function () {
     var component = ui.components.dialog;
     return '<section class="crow" data-testid="gal-row-CMP002"><div class="cid"><span class="chip" data-testid="gal-code">CMP002</span><b>' + esc(words('Example dialog')) + '</b>' +
       '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">SHOW dialog</span></span></div>' +
-      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U61', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
+      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U115', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
   }
   function componentsPanel() {

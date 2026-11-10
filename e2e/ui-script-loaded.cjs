@@ -13,7 +13,8 @@
  */
 const fs = require('fs'), path = require('path');
 const publicDir = path.join(__dirname, '..', 'public');
-const callsUi = /\bui\.(?:action|dialog)\(/;
+/* a call written root.ui.action( is the OPTIONAL use: the file checks for ui first (screen-id.js: no ui.js on the page, no notes, no button), so it needs no tag */
+const callsUi = /(?<!root\.)\bui\.(?:action|dialog)\(/;
 const scriptTag = /<script[^>]*\bsrc="\/?(app\/[\w.-]+\.js)"/g;
 
 const appFiles = fs.readdirSync(path.join(publicDir, 'app')).filter((file) => /\.js$/.test(file) && file !== 'ui.js');

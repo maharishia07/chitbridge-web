@@ -8,6 +8,8 @@
  * CALLED BY  a page script that draws a button: settings.html (cap-settings.js policy Save/Cancel, cap-print.js Save).
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
  *            (app.html) for the dialog. It adds no second confirm dialog and no second dialog path.
+ * KEYBOARD   a native <button>: Tab reaches it, Enter and Space press it, the focus ring is the theme's; Esc closes a dialog (modal()) and so
+ *            leaves Cancel/Close/Not now unpressed; Enter on a form commits through its Save only; a disabled action stays focusable-visible with its reason.
  * REGISTER   each component is CMP### in SCREENS.json with its own element CMP###-B01; each use is a mount
  *            <screen>-U## written as data-cbmount; the element carries data-cbsid = the component element code.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
@@ -21,17 +23,44 @@
  *     already confirms says so with confirmedBy: 'page' (legacy handlers move to onPress, one at a time).
  */
 var CBUi = (function () {
-  var MOUNT_CODE = /^[A-Z]{3}\d{3}(?:-D\d{2})?-U\d{2}$/;
+  var MOUNT_CODE = /^[A-Z]{3}\d{3}(?:-D\d{2})?-U\d{2,3}$/; /* two digits at least: the UI standard page alone mounts more than 99 (19 components x 6 states) */
   var TONES = ['primary', 'quiet'];
   var EFFECTS = ['none', 'preference', 'commit'];
   var ALLOWED_OPTIONS = [
     'mount', 'object', 'tone', 'hidden', 'disabled', 'busy', 'role', 'key', 'effect', 'confirm',
-    'confirmedBy', 'onPress', 'id', 'testid', 'data'
+    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size'
   ];
+  /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
+     (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
+     with an aria-label and a tooltip. Everything else shows icon and label. */
+  var ICON = {
+    save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: '🗑', edit: '✎',
+    search: '⌕', clear: '✕', notnow: '⏳', help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?'
+  };
+  var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
+  var DISPLAYS = ['icon', 'icon+label'];
+  /* TAP SIZE (Athi 10 Nov): a target under 24 px is never drawn. Standard is 44 px and is the default; compact is 32 px, for dense lists on a wide screen only;
+     on a phone width every target is 44 px whatever the mount asked. One stylesheet, written here, so the size is changed in one place. */
+  var SIZES = ['standard', 'compact'];
+  var SIZE_CSS =
+    '[data-cbname]{min-height:var(--act-h,44px);min-width:var(--act-h,44px)}' +
+    '[data-cbname][data-size="compact"]{min-height:32px;min-width:32px}' +
+    '@media(max-width:700px){[data-cbname][data-cbname]{min-height:44px;min-width:44px}}';
+  function ensureStyle() {
+    if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbui-css')) return;
+    var node = document.createElement('style');
+    node.id = 'cbui-css';
+    node.textContent = SIZE_CSS;
+    document.head.appendChild(node);
+  }
   /* CSS class per tone and surface: a page uses the small apps' .act family, a dialog footer uses the modal's own .pri / .danger */
   var TONE_CLASS = {
     page: { primary: 'act', quiet: 'act ghost' },
-    dialog: { primary: 'pri', quiet: '', danger: 'danger' }
+    dialog: { primary: 'pri', quiet: '', danger: 'danger' },
+    /* a host that already styles its own button family keeps that look: the surface names the family, the component stays one */
+    chip: { primary: 'optchip', quiet: 'optchip' },
+    list: { primary: 'cbl-btn', quiet: 'cbl-btn' },
+    bar: { primary: 'cbsid-help', quiet: 'cbsid-help' }
   };
   /**
    * The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight);
@@ -47,8 +76,23 @@ var CBUi = (function () {
     add: { code: 'CMP007', element: 'CMP007-B01', label: 'Add', shown: '+ Add', verb: 'ADD', effect: 'none', effectFixed: false, tone: 'quiet', nameOnly: false },
     remove: { code: 'CMP008', element: 'CMP008-B01', label: 'Remove', shown: 'Remove', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet' },
     reload: { code: 'CMP009', element: 'CMP009-B01', label: 'Try again', shown: 'Try again', verb: 'RELOAD', effect: 'none', effectFixed: true, tone: 'quiet' },
-    open: { code: 'CMP010', element: 'CMP010-B01', label: 'Open', shown: 'Open', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' }
+    open: { code: 'CMP010', element: 'CMP010-B01', label: 'Open', shown: 'Open', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' },
+    /* the eight of section 3a that CMP001..CMP018 did not yet carry. Delete destroys the record (always a commit, always asks, in the danger style);
+       Change is Edit unless it picks a value from a list (Athi 10 Nov); Not now DEFERS and is not Close (Athi 10 Nov); Search/Clear are the list toolbar's two plain actions. */
+    delete: { code: 'CMP011', element: 'CMP011-B01', label: 'Delete', shown: 'Delete', verb: 'DELETE', effect: 'commit', effectFixed: true, tone: 'quiet', danger: true },
+    edit: { code: 'CMP012', element: 'CMP012-B01', label: 'Edit', shown: '✎ Edit', verb: 'EDIT', effect: 'none', effectFixed: true, tone: 'quiet' },
+    search: { code: 'CMP013', element: 'CMP013-B01', label: 'Search', shown: '⌕ Search', verb: 'SEARCH', effect: 'none', effectFixed: true, tone: 'quiet' },
+    clear: { code: 'CMP014', element: 'CMP014-B01', label: 'Clear', shown: '✕ Clear', verb: 'CLEAR', effect: 'none', effectFixed: true, tone: 'quiet' },
+    notnow: { code: 'CMP015', element: 'CMP015-B01', label: 'Not now', shown: 'Not now', verb: 'DEFER', effect: 'none', effectFixed: true, tone: 'quiet' },
+    help: { code: 'CMP016', element: 'CMP016-B01', label: 'Help', shown: '?', verb: 'HELP', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
+    info: { code: 'CMP017', element: 'CMP017-B01', label: 'Info', shown: 'ⓘ Info', verb: 'EXPLAIN', effect: 'none', effectFixed: true, tone: 'quiet' },
+    /* Athi 10 Nov: ONE "?" at a FIXED place on every screen (WCAG 2.2 3.2.6 Consistent Help), 44 px target, shown only when HELP_TEXT holds a note for the screen */
+    screenhelp: { code: 'CMP019', element: 'CMP019-B01', label: 'Help for this screen', shown: '?', verb: 'HELP', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, tooltip: true },
+    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'MORE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
+  Object.keys(ACTION_SET).forEach(function (key) {
+    ACTION_SET[key].name = key;
+  });
   var HANDLERS = {};
 
   /** English through the catalogue; with a key (CMP001.label) the translation is found by the key and English is only the default */
@@ -76,12 +120,23 @@ var CBUi = (function () {
   function refuse(reason) {
     throw new Error('ui.action: ' + reason);
   }
+  /** the look properties: surface, size and display (icon alone only where the rule allows it) */
+  function checkLook(name, component, options) {
+    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list or bar');
+    if (options.size && SIZES.indexOf(options.size) < 0) refuse(name + ': size must be standard or compact');
+    if (options.display && DISPLAYS.indexOf(options.display) < 0) refuse(name + ': display must be icon or icon+label');
+    var iconAlone = options.display === 'icon';
+    if (iconAlone && (ICON_ONLY.indexOf(name) < 0 || component.effect === 'commit')) {
+      refuse(name + ': icon alone is for close, search, add, menu, back, edit and help only; this action shows icon and label');
+    }
+  }
   /** a property outside the schema, or one that only the component fixes, is refused (never silently dropped) */
   function checkOptions(name, component, options) {
     Object.keys(options).forEach(function (property) {
       if (ALLOWED_OPTIONS.indexOf(property) < 0) refuse(name + ': "' + property + '" is not a property of the component');
     });
     if (!MOUNT_CODE.test(options.mount || '')) refuse(name + ': mount must be a screen mount code like ACC002-U01');
+    checkLook(name, component, options);
     if (options.tone && TONES.indexOf(options.tone) < 0) refuse(name + ': tone must be primary or quiet');
     if (options.effect && EFFECTS.indexOf(options.effect) < 0) refuse(name + ': effect must be none, preference or commit');
     if (options.effect && component.effectFixed && options.effect !== component.effect) refuse(name + ': effect is fixed at ' + component.effect);
@@ -122,9 +177,12 @@ var CBUi = (function () {
     return classes[tone] !== undefined ? classes[tone] : classes.primary;
   }
   /** the accessible name: the label plus the object when one is given ("Save" + "policy" -> "Save policy"); an icon-only action always has one */
+  function displayOf(component, options) {
+    return options.display || (component.nameOnly ? 'icon' : null);
+  }
   function accessibleName(component, options) {
     if (options.object) return phrase(component.label + ' {object}', textKey(component, 'aria'), { object: words(options.object) });
-    return component.nameOnly ? words(component.label, textKey(component, 'label')) : null;
+    return displayOf(component, options) === 'icon' ? words(component.label, textKey(component, 'label')) : null;
   }
   /** one press handler per mount (+ key), found again by the single delegated listener below */
   function registerPress(options) {
@@ -135,6 +193,7 @@ var CBUi = (function () {
   function buttonAttributes(component, options, surface, effect) {
     return [
       ['data-cbsid', component.element],
+      ['data-cbname', component.name],
       ['data-cbmount', options.mount],
       ['data-effect', effect === 'none' ? null : effect],
       ['type', 'button'],
@@ -146,12 +205,35 @@ var CBUi = (function () {
       ['data-key', options.key || null],
       ['aria-busy', options.busy ? 'true' : null]
     ]
+      .concat(lookAttributes(component, options))
       .concat(gateAttributes(options.role))
       .concat(dataAttributes(options.data));
   }
+  /** the tooltip of an icon alone, the compact size, and the menu a More opens */
+  function lookAttributes(component, options) {
+    var tooltip = component.tooltip || displayOf(component, options) === 'icon';
+    return [
+      ['title', tooltip ? accessibleName(component, options) : null],
+      ['data-size', options.size === 'compact' ? 'compact' : null],
+      ['aria-haspopup', component.popup || null],
+      ['aria-expanded', component.popup ? String(!!options.expanded) : null]
+    ];
+  }
   /** the visible text: a glyph stays as written, a word goes through tx() */
-  function shownText(component) {
-    return escapeText(component.nameOnly ? component.shown : words(component.shown, textKey(component, 'shown')));
+  function shownText(component, options) {
+    var look = displayOf(component, options || {});
+    if (look === 'icon') return escapeText(options && options.display === 'icon' ? ICON[component.name] : component.shown);
+    if (look === 'icon+label') return escapeText(withIcon(component, labelText(component)));
+    return escapeText(component.nameOnly ? component.shown : labelText(component));
+  }
+  /** the words of a component: a glyph-only one says its label, the others their visible text, both through their keys */
+  function labelText(component) {
+    return component.nameOnly ? words(component.label, textKey(component, 'label')) : words(component.shown, textKey(component, 'shown'));
+  }
+  /** icon and label: the one icon in front, unless the text already carries it */
+  function withIcon(component, text) {
+    var icon = ICON[component.name];
+    return text.indexOf(icon) < 0 ? icon + ' ' + text : text;
   }
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
@@ -161,10 +243,14 @@ var CBUi = (function () {
     checkOptions(name, component, options);
     var effect = effectOf(name, component, options);
     registerPress(options);
-    return '<button ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component) + '</button>';
+    ensureStyle();
+    var html = '<button ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</button>';
+    /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
+    if (!shownText(component, options).trim()) refuse(name + ': no visible text');
+    return html;
   }
   function action(name, options) {
-    return render(name, options, 'page');
+    return render(name, options, (options && options.surface) || 'page');
   }
   /** a footer button: the same component, drawn in the modal's own button classes */
   function dialogAction(name, options) {
@@ -179,7 +265,13 @@ var CBUi = (function () {
     var effect = button.getAttribute('data-effect');
     /* a plain press (Cancel, Back, Open) has no busy state and no outcome sentence: only a write goes through CBAction */
     if (!effect || typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') return pressHandler();
-    return CBAction.run(button, pressHandler, effect === 'commit' ? { key: key, confirm: options.confirm } : { key: key });
+    return CBAction.run(button, pressHandler, effect === 'commit' ? { key: key, confirm: confirmOf(button, options) } : { key: key });
+  }
+  /** a Delete always asks in the danger style, whatever the mount wrote */
+  function confirmOf(button, options) {
+    var confirmation = options.confirm;
+    var component = ACTION_SET[button.getAttribute('data-cbname')];
+    return confirmation && component && component.danger ? Object.assign({}, confirmation, { danger: true }) : confirmation;
   }
   function onDocumentClick(event) {
     var button = event.target && event.target.closest && event.target.closest('[data-cbmount]');
