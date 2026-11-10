@@ -68,27 +68,27 @@ var CBUi = (function () {
    */
   var ACTION_SET = {
     save: { code: 'CMP001', element: 'CMP001-B01', label: 'Save', shown: 'Save', verb: 'SAVE', effect: null, effectFixed: false, tone: 'primary' },
-    dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'SHOW', effect: 'none', effectFixed: true, tone: 'primary' },
+    dialog: { code: 'CMP002', element: 'CMP002-D01', label: 'Dialog', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
     cancel: { code: 'CMP003', element: 'CMP003-B01', label: 'Cancel', shown: 'Cancel', verb: 'CANCEL', effect: 'none', effectFixed: true, tone: 'quiet' },
-    done: { code: 'CMP004', element: 'CMP004-B01', label: 'Done', shown: 'Done', verb: 'DONE', effect: 'none', effectFixed: true, tone: 'primary' },
+    done: { code: 'CMP004', element: 'CMP004-B01', label: 'Done', shown: 'Done', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'primary' },
     close: { code: 'CMP005', element: 'CMP005-B01', label: 'Close', shown: '✕', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
-    back: { code: 'CMP006', element: 'CMP006-B01', label: 'Back', shown: '‹ Back', verb: 'BACK', effect: 'none', effectFixed: true, tone: 'quiet' },
+    back: { code: 'CMP006', element: 'CMP006-B01', label: 'Back', shown: '‹ Back', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet' },
     add: { code: 'CMP007', element: 'CMP007-B01', label: 'Add', shown: '+ Add', verb: 'ADD', effect: 'none', effectFixed: false, tone: 'quiet', nameOnly: false },
     remove: { code: 'CMP008', element: 'CMP008-B01', label: 'Remove', shown: 'Remove', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet' },
     reload: { code: 'CMP009', element: 'CMP009-B01', label: 'Try again', shown: 'Try again', verb: 'RELOAD', effect: 'none', effectFixed: true, tone: 'quiet' },
     open: { code: 'CMP010', element: 'CMP010-B01', label: 'Open', shown: 'Open', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' },
     /* the eight of section 3a that CMP001..CMP018 did not yet carry. Delete destroys the record (always a commit, always asks, in the danger style);
        Change is Edit unless it picks a value from a list (Athi 10 Nov); Not now DEFERS and is not Close (Athi 10 Nov); Search/Clear are the list toolbar's two plain actions. */
-    delete: { code: 'CMP011', element: 'CMP011-B01', label: 'Delete', shown: 'Delete', verb: 'DELETE', effect: 'commit', effectFixed: true, tone: 'quiet', danger: true },
-    edit: { code: 'CMP012', element: 'CMP012-B01', label: 'Edit', shown: '✎ Edit', verb: 'EDIT', effect: 'none', effectFixed: true, tone: 'quiet' },
-    search: { code: 'CMP013', element: 'CMP013-B01', label: 'Search', shown: '⌕ Search', verb: 'SEARCH', effect: 'none', effectFixed: true, tone: 'quiet' },
-    clear: { code: 'CMP014', element: 'CMP014-B01', label: 'Clear', shown: '✕ Clear', verb: 'CLEAR', effect: 'none', effectFixed: true, tone: 'quiet' },
-    notnow: { code: 'CMP015', element: 'CMP015-B01', label: 'Not now', shown: 'Not now', verb: 'DEFER', effect: 'none', effectFixed: true, tone: 'quiet' },
-    help: { code: 'CMP016', element: 'CMP016-B01', label: 'Help', shown: '?', verb: 'HELP', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
-    info: { code: 'CMP017', element: 'CMP017-B01', label: 'Info', shown: 'ⓘ Info', verb: 'EXPLAIN', effect: 'none', effectFixed: true, tone: 'quiet' },
+    delete: { code: 'CMP011', element: 'CMP011-B01', label: 'Delete', shown: 'Delete', verb: 'REMOVE', effect: 'commit', effectFixed: true, tone: 'quiet', danger: true },
+    edit: { code: 'CMP012', element: 'CMP012-B01', label: 'Edit', shown: '✎ Edit', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet' },
+    search: { code: 'CMP013', element: 'CMP013-B01', label: 'Search', shown: '⌕ Search', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet' },
+    clear: { code: 'CMP014', element: 'CMP014-B01', label: 'Clear', shown: '✕ Clear', verb: 'REMOVE', effect: 'none', effectFixed: true, tone: 'quiet' },
+    notnow: { code: 'CMP015', element: 'CMP015-B01', label: 'Not now', shown: 'Not now', verb: 'CLOSE', effect: 'none', effectFixed: true, tone: 'quiet' },
+    help: { code: 'CMP016', element: 'CMP016-B01', label: 'Help', shown: '?', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
+    info: { code: 'CMP017', element: 'CMP017-B01', label: 'Info', shown: 'ⓘ Info', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' },
     /* Athi 10 Nov: ONE "?" at a FIXED place on every screen (WCAG 2.2 3.2.6 Consistent Help), 44 px target, shown only when HELP_TEXT holds a note for the screen */
-    screenhelp: { code: 'CMP019', element: 'CMP019-B01', label: 'Help for this screen', shown: '?', verb: 'HELP', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, tooltip: true },
-    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'MORE', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
+    screenhelp: { code: 'CMP019', element: 'CMP019-B01', label: 'Help for this screen', shown: '?', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, tooltip: true },
+    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
