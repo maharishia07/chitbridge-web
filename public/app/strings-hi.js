@@ -506,6 +506,8 @@
     'Product': 'उत्पाद',
     'Product (browse name)': 'उत्पाद (दिखने वाला नाम)',
     'Product details': 'उत्पाद विवरण',
+    'What this does': 'यह क्या करता है',
+    'What a counter key can do': 'काउंटर कुंजी क्या कर सकती है',
     'Entity details': 'इकाई का विवरण',
     'Platform summary': 'प्लेटफ़ॉर्म सारांश',
     'Customer details': 'ग्राहक विवरण',

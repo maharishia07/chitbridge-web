@@ -505,6 +505,8 @@
     'Product': 'பொருள்',
     'Product (browse name)': 'பொருள் (காட்டப்படும் பெயர்)',
     'Product details': 'பொருள் விவரங்கள்',
+    'What this does': 'இது என்ன செய்கிறது',
+    'What a counter key can do': 'கவுண்டர் சாவி என்ன செய்யலாம்',
     'Entity details': 'நிறுவன விவரங்கள்',
     'Platform summary': 'தளச் சுருக்கம்',
     'Customer details': 'வாடிக்கையாளர் விவரங்கள்',

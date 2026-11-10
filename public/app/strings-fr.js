@@ -505,6 +505,8 @@
     'Product': 'Produit',
     'Product (browse name)': 'Produit (nom affiché)',
     'Product details': 'Détails du produit',
+    'What this does': 'Ce que cela fait',
+    'What a counter key can do': 'Ce que peut faire une clé de caisse',
     'Entity details': 'Détails de l’entité',
     'Platform summary': 'Résumé de la plateforme',
     'Customer details': 'Détails du client',

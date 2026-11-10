@@ -555,6 +555,8 @@
     'Product': 'المنتج',
     'Product (browse name)': 'المنتج (اسم التصفّح)',
     'Product details': 'تفاصيل المنتج',
+    'What this does': 'ماذا يفعل هذا',
+    'What a counter key can do': 'ما يمكن لمفتاح الكاونتر فعله',
     'Entity details': 'تفاصيل الكيان',
     'Platform summary': 'ملخص المنصة',
     'Customer details': 'تفاصيل العميل',
