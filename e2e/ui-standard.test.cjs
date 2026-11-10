@@ -70,14 +70,14 @@ console.log('waves: one row per wave, from public/app/ui-waves.json');
   const rows = [...drawn.matchAll(/data-testid="gal-wave-([0-9][0-9a-z]*)"/g)].map((match) => match[1]);
   check(rows.join() === data.waves.map((wave) => wave.id).join() && rows.join() === '0,1a,1b,2,3', 'one row per wave, in the order of the file: ' + rows.join(' '));
   check((drawn.match(/role="progressbar"/g) || []).length === data.waves.length, 'each wave row carries a progress bar (CMP021)');
-  check(data.waves.every((wave) => ['done', 'in progress', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress or next');
+  check(data.waves.every((wave) => ['done', 'in progress', 'landed, measuring', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress, landed measuring or next');
   check(data.waves.every((wave) => wave.progress.value === null || (wave.progress.value >= 0 && wave.progress.value <= wave.progress.total)), 'no progress value is above its total');
   const unmeasured = data.waves.reduce((sum, wave) => sum + wave.pairs.filter((pair) => pair.after === null).length + (wave.progress.value === null ? 1 : 0), 0);
-  check(unmeasured > 0 && (drawn.match(/measuring/g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
-  check(drawn.indexOf('aria-valuemax="109" aria-valuenow="2"') > 0, 'Wave 0 draws 2 of 109 from the file, not from the page');
+  check(unmeasured > 0 && (drawn.match(/>measuring</g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
+  check(drawn.indexOf('aria-valuemax="109" aria-valuenow="11"') > 0, 'Wave 0 draws 11 of 109 from the file, not from the page');
   check(model.wavesHTML(null).indexOf('gal-waves-wait') > 0 && model.wavesHTML(null).indexOf('gal-wave-0') < 0, 'before the file arrives the section says measuring and draws no rows');
   check(model.sections().some((section) => section.k === 'waves'), 'Waves is a section of the page');
-  const keys = ['Waves', 'Wave {id}', 'In progress', 'Next', 'measuring', 'Measured {date}', 'of {total}'];
+  const keys = ['Waves', 'Wave {id}', 'In progress', 'Landed, measuring', 'Next', 'measuring', 'Measured {date}', 'of {total}'];
   data.waves.forEach((wave) => { keys.push(wave.title, wave.progress.label); wave.pairs.forEach((pair) => keys.push(pair.label)); });
   keys.forEach((key) => check(model.translatedIn(key).length === 4, 'waves label "' + key + '" is in ta hi ar fr'));
 }

@@ -491,7 +491,7 @@ var CBUiStandard = (function () {
   }
 
   /* ── waves: one row per wave from public/app/ui-waves.json, a progress bar (CMP021) and a before to after pair each ── */
-  var STATUS_WORDS = { done: 'Done', 'in progress': 'In progress', next: 'Next' };
+  var STATUS_WORDS = { done: 'Done', 'in progress': 'In progress', next: 'Next', 'landed, measuring': 'Landed, measuring' };
   /** a whole number with thousands separators, the same in every language so the figures line up with the register */
   function figure(value) {
     return Number(value).toLocaleString('en-US');
