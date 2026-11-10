@@ -2935,7 +2935,7 @@ function catsetDetailHTML() {
     '</div><div class="ds">' +
     esc(s.q) +
     '</div></div>' +
-    '<div class="db" id="catsetbody">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category setup details')) + '" id="catsetbody">' +
     catsetBody(k) +
     '</div>'
   );
@@ -3011,7 +3011,7 @@ function catalogueSetupHubScreen() {
        🧾 Spec, so an ordinary setup screen is unchanged. */
     '</div>' +
     specStandards('catalogue') +
-    '<div class="rows" id="catset_rows">' +
+    '<div class="rows" id="catset_rows" tabindex="0" role="region" aria-label="' + esc(tx('Catalogue setup')) + '">' +
     catsetRowsHTML() +
     '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';

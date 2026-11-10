@@ -231,7 +231,7 @@ function misScreen() {
     '</button></span></div>';
   var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>' + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
   var detail =
-    '<div class="detail" id="detailpane"><div id="misbody">' +
+    '<div class="detail" id="detailpane"><div id="misbody" tabindex="0" role="region" aria-label="' + esc(tx('Your numbers')) + '">' +
     /* ⚠️ NO INLINE SPINNER, AND A WAY OUT WHILE IT LOADS. api() already shows the centred "Reading data…" pill,
        so a second spinner in the pane is two indicators for one fetch. And on mobile the loading pane COVERS the
        rail — without this button a slow read (measured ~3.6s against Railway) strands you on a blank screen. */

@@ -1817,7 +1817,7 @@ function ledgerScreen() {
     divider +
     '<div class="detail" id="detailpane"><div id="bk_back"><button class="supback" data-testid="bk-back" onclick="bkBack()">‹ ' +
     tx('Ledger') +
-    '</button></div><div class="db" id="bk_body" data-testid="bk-body">' +
+    '</button></div><div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Ledger details')) + '" id="bk_body" data-testid="bk-body">' +
     tx('Reading…') +
     '</div></div></div>'
   );
