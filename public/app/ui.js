@@ -341,7 +341,7 @@ var CBUi = (function () {
     '.cbp-blocks{display:flex;gap:3px;margin:12px 0}.cbp-blk{flex:1;height:12px;border-radius:2px;background:var(--blue-tint,var(--line));border:1px solid var(--blue-tint-line,var(--line))}' +
     '.cbp-blk[data-s="done"]{background:var(--blue,var(--accent));border-color:var(--blue,var(--accent))}.cbp-blk[data-s="failed"]{background:var(--bad);border-color:var(--bad)}' +
     '.cbp-fails{margin:8px 0 0;padding-inline-start:1.2em;font-size:.9em;color:var(--bad)}' +
-    '.cbp-tray{position:fixed;inset-block-end:16px;inset-inline-end:16px;z-index:60;width:min(340px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--blue-tint-line,var(--line));border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 6px 24px var(--scrim)}' +
+    '.cbp-tray{position:fixed;inset-block-end:calc(72px + var(--fab-lift,0px) + env(safe-area-inset-bottom,0px));inset-inline-end:16px;z-index:60;width:min(340px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--blue-tint-line,var(--line));border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 6px 24px var(--scrim)}' +
     '.cbp-tray .cbp-title{margin:0;font-weight:700}.cbp-tray .cbp-tfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.cbp-tray summary{cursor:pointer}' +
     '.cbp-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
     '@media (prefers-reduced-motion:reduce){.cbp-spin,.cbp-fill{animation:none;transition:none}}';
@@ -565,7 +565,7 @@ var CBUi = (function () {
     document.body.appendChild(holder);
     model.holder = holder;
     model.opened = true;
-    if (typeof options.cancel === 'function') trayFoot(panelRoot(model), dialogAction('cancel', { mount: options.mount, key: 'cancel', onPress: function () { model.cancelNow(); } }));
+    if (typeof options.cancel === 'function') trayFoot(panelRoot(model), dialogAction('cancel', { mount: options.mount, key: 'cancel-' + model.id, onPress: function () { model.cancelNow(); } }));
   }
   function closeTray(model) {
     if (model.holder && model.holder.remove) model.holder.remove();
@@ -597,6 +597,7 @@ var CBUi = (function () {
    * ui.progress.batch({ mount, total, label, unit, cancel, delay }) -> { done(n), failed(n | [names], reason), finish(), cancel() }.
    * done(n) adds n finished items; failed adds n failed ones (a list of names gives the summary its list). finish() ends it: a short summary stays on the panel
    * (with Done) when anything failed or the panel was open; a quiet batch that ended inside the delay shows nothing. cancel() works only when the caller gave a safe cancel().
+   * Callers wrap the work in try { ... } finally { batch.finish(); } so the leave-the-page guard never sticks after an error.
    */
   function batchProgress(options) {
     options = options || {};
@@ -658,7 +659,7 @@ var CBUi = (function () {
     var root = panelRoot(model);
     if (root) paintBatch(model, root);
     announce(summary.text);
-    var doneButton = dialogAction('done', { mount: options.mount, key: 'batch', onPress: function () { closePanel(model); } });
+    var doneButton = dialogAction('done', { mount: options.mount, key: 'done-' + model.id, onPress: function () { closePanel(model); } });
     if (model.tray) { trayFoot(root, doneButton); return summary; }
     var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
     if (foot) foot.innerHTML = doneButton;
