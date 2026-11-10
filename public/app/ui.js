@@ -61,7 +61,9 @@ var CBUi = (function () {
     '.cbui-choice .cbui-choice-menu:not([hidden]){display:flex;flex-direction:column;position:absolute;inset-inline-end:0;top:calc(100% + 4px);min-width:100%;background:var(--card,#fff);border:1px solid var(--line,#d8ccb0);border-radius:9px;z-index:1000;box-shadow:0 6px 18px var(--sh-shadow,rgba(0,0,0,.18))}' +
     '.cbui-choice-menu button{display:flex;align-items:center;justify-content:flex-start;text-align:start;padding:0 14px}}' +
     '.cbui-choice button:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
-    '@media(max-width:700px){[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}}';
+    '@media(max-width:700px){[data-cbname][data-size="compact"],.cbav-btn{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}' + /* the avatar (avatar.js) is a 34 px round button that is not a ui.action mount: it is lifted here, in the one rule */
+    /* a phone: the status word gives way (ellipsis) before the bar scrolls, the group keeps its 44 px */
+    '.cbui-choice{max-width:100%}.cbui-choice .cbui-choice-btn{min-width:44px;max-width:100%;padding:0 8px}.cbui-choice .cbui-cur{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}}';
   function ensureStyle() {
     if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbui-css')) return;
     var node = document.createElement('style');

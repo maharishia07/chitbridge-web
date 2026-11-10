@@ -505,7 +505,8 @@
   .topbar .cbtb[data-cbname="legend"]{color:var(--chrome-ink);opacity:.75;font-size:var(--fs-1)}
   .topbar .cbtb[data-cbname="activity"]{color:var(--chrome-ink);font-size:var(--fs-1);opacity:.55}
   .topbar .cbtb[data-cbname="legend"]>span:first-child,.topbar .cbtb[data-cbname="activity"]>span:first-child{font-size:var(--fs-4)}
-  @media(max-width:700px){.topbar .cbtb .hw{display:none}.topbar .cbav-btn{width:44px;height:44px}}
+  .topbar .cbtb:focus-visible{outline:2px solid var(--chrome-on);outline-offset:-2px}
+  @media(max-width:700px){.topbar .cbtb .hw{display:none}}
 
   /* ⚠️ THE RAIL NEEDS THE INSETS TOO — I padded the topbar for viewport-fit=cover and stopped there, which is
      half a fix. In LANDSCAPE on a notched phone the cutout is on a SIDE, and the side it is on is where this
@@ -543,7 +544,6 @@
   .purpose.open{max-height:90px;padding:9px 16px;border-bottom:1px solid var(--line)}
   .purpose b{font-family:'Space Grotesk';color:var(--ink)}
   .purpose .x{margin-inline-start:auto;border:0;background:none;color:var(--grey);font-size:var(--fs-3);cursor:pointer}
-  .topbar .info{border:0;background:none;color:#9fb4bf;font-size:var(--fs-4);cursor:pointer;padding:2px 5px;line-height:1}
   /**
    * ⭐ TOOLBAR ICONS ARE A FINGERTIP TALL — measured, not guessed. They rendered ~30×20px, because `padding:2px`
    * on a 16px glyph is all the height there is. Three of the four smallest tap targets on the busiest screen were
@@ -557,9 +557,7 @@
    *
    * inline-flex + centring so the glyph stays optically centred as the box grows — padding alone would push it.
    */
-  .topbar .info,.topbar .bell,.topbar .msgc{min-width:34px;min-height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0}
 
-  .topbar .info.on{color:var(--gold)}
 
   /**
    * ⚠️ THE LIST WIDTH IS CLAMPED SO THE DETAIL ALWAYS SURVIVES.
@@ -919,7 +917,6 @@
   .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2);color:var(--grey-2);position:relative;cursor:pointer;user-select:none}
   .tool:hover{background:var(--paper);border-color:var(--on-bg)}
   .tool.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
-  .topbar .bell{position:relative;border:0;background:none;color:var(--chrome-ink);font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
   /**
    * ⚠️ ONE RULE FOR BOTH DOTS. This selector existed TWICE, byte-identical — once under `.bell`, once under
    * `.msgc` — so the unread-mail dot and the notification dot were two declarations of one thing, and darkening
@@ -928,7 +925,7 @@
    * needs attention", which is exactly what this dot means. Size 9px in a 15px disc — still small, but the count
    * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
    */
-  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;inset-inline-end:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .topbar .bdot{position:absolute;top:-2px;inset-inline-end:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:var(--fs-2)}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
   .filterpanel select{color:var(--on-card);font-size:var(--fs-2);padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
@@ -1113,7 +1110,6 @@
   .busybox{background:var(--card);border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:var(--fs-3);font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
   .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
   @keyframes bspin{to{transform:rotate(360deg)}}
-  .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-inline-start:4px}
