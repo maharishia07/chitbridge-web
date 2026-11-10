@@ -100,22 +100,22 @@ const walk = async (w) => {
     const key = await ring('.topbar [data-testid="icon-legend"]');
     return { ok: home.focused && home.w >= 2 && home.style !== 'none' && key.focused && key.w >= 2 && key.style !== 'none', saw: JSON.stringify({ home, key }) };
   });
-  for (const theme of ['dark', 'light']) {
-    await w.step('T-' + theme, '390 · ' + theme + ' theme: the bar\'s icons keep 3:1 against the bar (the dimmed bell is deliberate, 0.55)', async () => {
+  for (const theme of ['dark', 'light']) for (const vw of [390, 1366]) {
+    await w.step('T-' + theme + '-' + vw, vw + ' · ' + theme + ' theme: the bar\'s controls carry words, so they keep 4.5:1 text contrast against the bar (WCAG 1.4.3; no dimming)', async () => {
       Object.assign(state, { size: 'm', theme, lang: 'en' });
-      await open(390);
+      await open(vw);
       const r = await w.page.evaluate(() => {
         const rgb = (c) => (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
         const lum = (c) => { const v = c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
         const bg = rgb(getComputedStyle(document.querySelector('.topbar')).backgroundColor), out = {};
         ['nav-drawer', 'nav-home', 'icon-legend', 'icon-notifications'].forEach((id) => {
-          const el = document.querySelector('.topbar [data-testid="' + id + '"]'), cs = getComputedStyle(el), op = parseFloat(cs.opacity), fg = rgb(cs.color);
+          const el = document.querySelector('.topbar [data-testid="' + id + '"]'); if (!el || !el.getClientRects().length) return; const cs = getComputedStyle(el), op = parseFloat(cs.opacity), fg = rgb(cs.color);
           const mix = fg.map((x, i) => x * op + bg[i] * (1 - op)), a = lum(mix), b = lum(bg);
           out[id] = Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 10) / 10;
         });
         return out;
       });
-      return { ok: Object.keys(r).every((k) => r[k] >= 3), saw: JSON.stringify(r) };
+      return { ok: Object.keys(r).length >= 3 && Object.keys(r).every((k) => r[k] >= 4.5), saw: JSON.stringify(r) };
     });
   }
   await w.step('T-rtl', '390 · Arabic (right to left): the bar mirrors, every control is still 44 x 44 and the bar ends inside the screen with 4 px spare', async () => {
