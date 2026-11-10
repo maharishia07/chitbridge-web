@@ -16,7 +16,7 @@ let failures = 0;
 const check = (condition, message) => { console.log((condition ? '  ok ' : '  FAIL ') + message); if (!condition) failures++; };
 const refused = (call) => { try { call(); return false; } catch (error) { return /ui\.action|ui\.dialog/.test(error.message); } };
 
-const pressed = [], runs = [];
+const pressed = [], runs = [], opened = [];
 const listeners = {};
 const sandbox = {
   console,
@@ -24,7 +24,9 @@ const sandbox = {
   esc: (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])),
   CBAction: { run: (button, fn, options) => { runs.push(options); return Promise.resolve(fn()); } },
   window: {},
-  document: { addEventListener: (name, fn) => { listeners[name] = fn; } },
+  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelector: () => null },
+  setTimeout, clearTimeout,
+  modal: (html) => { opened.push(html); }, closeModal: () => { opened.push('closed'); },
 };
 vm.createContext(sandbox);
 sandbox.window = sandbox;
@@ -32,7 +34,7 @@ vm.runInContext(read('app/ui.js'), sandbox);
 const ui = sandbox.ui;
 
 console.log('the set');
-const names = Object.keys(ui.components).filter((name) => name !== 'dialog');
+const names = Object.keys(ui.components).filter((name) => name !== 'dialog' && !ui.components[name].nonButton);
 check(names.length === 18, 'eighteen actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
 check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'eighteen distinct CMP codes (eighteen actions and the dialog)');
@@ -102,5 +104,40 @@ runs.length = 0;
 click('TST002-U02')();
 check(pressed.length === 2 && runs.length === 0, 'a plain press does not go through CBAction (no Done toast)');
 
-if (failures) { console.log(failures + ' FAILED'); process.exit(1); }
-console.log('all passed');
+console.log('CMP020 progress (three levels), CMP021 bar, CMP022 spinner');
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+check(['progress', 'progressbar', 'spinner'].every((name) => ui.components[name] && ui.components[name].nonButton && ui.components[name].verb === 'OPEN') && ui.components.progress.code === 'CMP020' && ui.components.progressbar.code === 'CMP021' && ui.components.spinner.code === 'CMP022', 'CMP020, CMP021, CMP022 are registered, none is a button, the verb is OPEN');
+check(refused(() => ui.action('progress', { mount: 'TST003-U01' })), 'ui.action refuses the progress parts (they are not buttons)');
+const bar = ui.progress.bar({ max: 4, now: 1, label: 'Import' });
+check(/role="progressbar"/.test(bar) && /aria-valuemin="0"/.test(bar) && /aria-valuemax="4"/.test(bar) && /aria-valuenow="1"/.test(bar) && /width:25%/.test(bar), 'the bar is a role=progressbar with aria-valuenow, min and max');
+check(!/aria-valuenow/.test(ui.progress.bar({ max: 0, now: 0, label: 'Import' })) && /data-indeterminate/.test(ui.progress.bar({ max: 0, now: 0, label: 'Import' })), 'an unknown length is indeterminate, with no false value');
+check(/aria-hidden="true"/.test(ui.progress.spinner()), 'the spinner is decorative (the words carry the meaning)');
+check(refused(() => ui.progress.start({ mount: 'bad' })) || (() => { try { ui.progress.start({ mount: 'bad' }); return false; } catch (error) { return /progress: mount/.test(error.message); } })(), 'a progress panel needs a mount code');
+check((() => { try { ui.progress.start({ mount: 'TST003-D01-U01', steps: 2, total: 5 }); return false; } catch (error) { return /steps or total/.test(error.message); } })(), 'steps and total together are refused');
+(async () => {
+  const quick = ui.progress.start({ mount: 'TST003-D01-U01', steps: 4, line: 'Reading', delay: 50 });
+  quick.done();
+  await wait(90);
+  check(opened.length === 0, 'level 1: finished inside the delay, nothing was ever shown');
+  const job = ui.progress.start({ mount: 'TST003-D01-U02', steps: 4, line: 'Reading the file', delay: 0 });
+  await wait(20);
+  const html = opened.join('');
+  check(/role="status" aria-live="polite"/.test(html) && /role="progressbar"/.test(html) && />Step 0 of 4</.test(html) && /Reading the file/.test(html), 'level 3: the panel has a polite status region, the bar, "Step n of m" and one plain line');
+  check(!/data-cbname="cancel"/.test(html), 'no Cancel unless the caller gives a safe cancel');
+  job.done();
+  check(opened[opened.length - 1] === 'closed', 'done() closes the panel');
+  opened.length = 0;
+  const cancellable = ui.progress.start({ mount: 'TST003-D01-U03', total: 100, delay: 0, cancel: () => {} });
+  await wait(20);
+  check(/data-cbname="cancel"/.test(opened.join('')) && />0 of 100</.test(opened.join('')), 'Cancel appears when a cancel is given; a total reads "n of total"');
+  cancellable.done();
+  const button = { attrs: {}, disabled: false, innerHTML: 'Save', getAttribute(name) { return this.attrs[name] || null; }, setAttribute(name, value) { this.attrs[name] = value; }, removeAttribute(name) { delete this.attrs[name]; } };
+  const busy = ui.progress.inline(button, 'Saving…', 30);
+  check(button.disabled && button.attrs['aria-busy'] === 'true' && button.innerHTML === 'Save', 'level 2: disabled and aria-busy at once (no second press), look unchanged inside the delay');
+  await wait(60);
+  check(/cbp-spin/.test(button.innerHTML) && /Saving…/.test(button.innerHTML), 'level 2: after the delay the button shows the spinner and its words');
+  busy.stop();
+  check(button.innerHTML === 'Save' && !button.disabled && !button.attrs['aria-busy'], 'level 2: stop() restores the button');
+  if (failures) { console.log(failures + ' FAILED'); process.exit(1); }
+  console.log('all passed');
+})();

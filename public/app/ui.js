@@ -3,7 +3,7 @@
  * (Save, Done, Cancel, Close, Back, Add, Remove, Reload, Open); a screen never hand-writes the markup, it MOUNTS one.
  * Improve a component here and every mount on every screen improves.
  *
- * OWNS       ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
+ * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
  * CALLED BY  a page script that draws a button: settings.html (cap-settings.js policy Save/Cancel, cap-print.js Save).
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
@@ -40,12 +40,12 @@ var CBUi = (function () {
   var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
   var DISPLAYS = ['icon', 'icon+label'];
   /* TAP SIZE (Athi 10 Nov): a target under 24 px is never drawn. Standard is 44 px and is the default; compact is 32 px, for dense lists on a wide screen only;
-     on a phone width every target is 44 px whatever the mount asked. One stylesheet, written here, so the size is changed in one place. */
+     on a phone width a compact mount is lifted to 44 px; the 44 is a MINIMUM (a page that sets --act-h larger keeps it, and the UI standard page's deliberately small preset is still drawn small). One stylesheet, written here, so the size is changed in one place. */
   var SIZES = ['standard', 'compact'];
   var SIZE_CSS =
     '[data-cbname]{min-height:var(--act-h,44px);min-width:var(--act-h,44px)}' +
     '[data-cbname][data-size="compact"]{min-height:32px;min-width:32px}' +
-    '@media(max-width:700px){[data-cbname][data-cbname]{min-height:44px;min-width:44px}}';
+    '@media(max-width:700px){[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}}';
   function ensureStyle() {
     if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbui-css')) return;
     var node = document.createElement('style');
@@ -88,6 +88,10 @@ var CBUi = (function () {
     info: { code: 'CMP017', element: 'CMP017-B01', label: 'Info', shown: 'ⓘ Info', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet' },
     /* Athi 10 Nov: ONE "?" at a FIXED place on every screen (WCAG 2.2 3.2.6 Consistent Help), 44 px target, shown only when HELP_TEXT holds a note for the screen */
     screenhelp: { code: 'CMP019', element: 'CMP019-B01', label: 'Help for this screen', shown: '?', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, tooltip: true },
+    /* Athi 10 Nov: ONE progress component, three levels (see PROGRESS below). Its two parts are components too: the bar (CMP021) and the spinner (CMP022). None is a button. */
+    progress: { code: 'CMP020', element: 'CMP020-D01', label: 'Progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
+    progressbar: { code: 'CMP021', element: 'CMP021-D01', label: 'Progress bar', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
+    spinner: { code: 'CMP022', element: 'CMP022-D01', label: 'Spinner', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
@@ -238,7 +242,7 @@ var CBUi = (function () {
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
     var component = ACTION_SET[name];
-    if (!component || name === 'dialog') refuse('unknown action "' + name + '"');
+    if (!component || name === 'dialog' || component.nonButton) refuse('unknown action "' + name + '"');
     options = options || {};
     checkOptions(name, component, options);
     var effect = effectOf(name, component, options);
@@ -309,8 +313,186 @@ var CBUi = (function () {
       options.opt
     );
   }
+  /* ── CMP020 PROGRESS (Athi 10 Nov): one component, three levels (Nielsen response-time limits, Apple HIG, Material).
+     1  under about 1 s  nothing shows: the indicator waits PROGRESS_DELAY_MS, so a quick reply never flashes
+     2  1 to 10 s        inline: the pressed button goes busy (spinner CMP022 + words), disabled, no second press; a list uses CBList's own skeleton rows
+     3  over 10 s        a panel through ui.dialog: a bar (CMP021) or "Step n of m", one plain line, Cancel only when the caller gives a safe cancel
+     The words sit in a role=status aria-live=polite region (WCAG 4.1.3); the panel takes focus and gives it back. Colours are theme tokens only. */
+  var PROGRESS_DELAY_MS = 400;
+  var PROGRESS_CSS =
+    '.cbp-spin{display:inline-block;width:1em;height:1em;margin-inline-end:.5em;vertical-align:-.15em;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:cbp-turn .8s linear infinite}' +
+    '@keyframes cbp-turn{to{transform:rotate(360deg)}}' +
+    '.cbp-bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin:12px 0}' +
+    '.cbp-fill{display:block;height:100%;background:var(--accent);transition:width .2s}' +
+    '.cbp-bar[data-indeterminate] .cbp-fill{width:40%;animation:cbp-slide 1.2s ease-in-out infinite alternate}' +
+    '@keyframes cbp-slide{to{transform:translateX(150%)}}' +
+    '.cbp-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+    '@media (prefers-reduced-motion:reduce){.cbp-spin,.cbp-fill{animation:none;transition:none}}';
+  var panelCount = 0;
+  function ensureProgressStyle() {
+    if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbp-css')) return;
+    var node = document.createElement('style');
+    node.id = 'cbp-css';
+    node.textContent = PROGRESS_CSS;
+    document.head.appendChild(node);
+  }
+  /** CMP022: the spinner, decorative (the words beside it carry the meaning) */
+  function spinnerHtml() {
+    ensureProgressStyle();
+    return '<span class="cbp-spin" data-cbsid="' + ACTION_SET.spinner.element + '" aria-hidden="true"></span>';
+  }
+  /** CMP021: the bar; a number of steps or a total makes it determinate (aria-valuenow/min/max), otherwise it slides */
+  function barHtml(model) {
+    ensureProgressStyle();
+    var known = model.max > 0;
+    var percent = known ? Math.round((100 * model.now) / model.max) : 0;
+    var values = known ? ' aria-valuemin="0" aria-valuemax="' + model.max + '" aria-valuenow="' + model.now + '"' : ' data-indeterminate="true"';
+    return '<div class="cbp-bar" role="progressbar" data-cbsid="' + ACTION_SET.progressbar.element + '" aria-label="' + escapeText(model.label) + '"' + values + '><span class="cbp-fill" style="width:' + percent + '%"></span></div>';
+  }
+  /** the one polite live region of the page: what a screen reader hears when a button goes busy or a panel ends */
+  function announce(text) {
+    if (typeof document === 'undefined' || !document.body || !document.createElement) return;
+    var region = document.getElementById('cbp-live');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'cbp-live';
+      region.className = 'cbp-live';
+      region.setAttribute('role', 'status');
+      region.setAttribute('aria-live', 'polite');
+      document.body.appendChild(region);
+    }
+    region.textContent = text;
+  }
+  /** LEVEL 2: the button goes busy after the delay (spinner and words), and comes back on stop(). One press: it is disabled at once. */
+  function inline(button, label, delay) {
+    var saved = null;
+    var ownedBusy = button.getAttribute('aria-busy') !== 'true';
+    if (ownedBusy) {
+      button.setAttribute('aria-busy', 'true');
+      button.disabled = true;
+    }
+    var timer = setTimeout(function () {
+      saved = button.innerHTML;
+      button.innerHTML = spinnerHtml() + escapeText(label);
+      announce(label);
+    }, delayOf(delay));
+    return {
+      stop: function () {
+        clearTimeout(timer);
+        if (saved !== null) button.innerHTML = saved;
+        if (ownedBusy) {
+          button.removeAttribute('aria-busy');
+          button.disabled = false;
+        }
+      }
+    };
+  }
+  /** LEVEL 1 + 2 through CBAction.run: the write runs once, the busy look starts after the delay, a confirm (if any) is asked first */
+  function runInline(button, work, options) {
+    options = options || {};
+    var label = words(options.label || 'Working…', textKey(ACTION_SET.progress, 'working'));
+    var wrapped = function () {
+      var busy = inline(button, label, options.delay);
+      return Promise.resolve().then(work).then(
+        function (value) { busy.stop(); return value; },
+        function (error) { busy.stop(); throw error; }
+      );
+    };
+    if (typeof CBAction === 'undefined' || !CBAction || typeof CBAction.run !== 'function') return wrapped();
+    return CBAction.run(button, wrapped, Object.assign({}, options.run));
+  }
+  /** the words under the bar: "Step 2 of 4" for steps, "30 of 120" for a total, nothing when the length is unknown */
+  function countText(model) {
+    if (!(model.max > 0)) return '';
+    if (model.steps) return phrase('Step {n} of {m}', textKey(ACTION_SET.progress, 'step'), { n: model.now, m: model.max });
+    return phrase('{n} of {total}', textKey(ACTION_SET.progress, 'count'), { n: model.now, total: model.max });
+  }
+  function panelBody(model) {
+    return '<div data-cbprogress="' + model.id + '" tabindex="-1"><div role="status" aria-live="polite"><p class="cbp-line">' + escapeText(model.line) + '</p><p class="cbp-count">' + escapeText(countText(model)) + '</p></div>' + barHtml(model) + '</div>';
+  }
+  function panelRoot(model) {
+    return typeof document === 'undefined' ? null : document.querySelector('[data-cbprogress="' + model.id + '"]');
+  }
+  /** repaint the open panel in place (focus stays); a panel the person closed is simply not there */
+  function paintPanel(model) {
+    var root = panelRoot(model);
+    if (!root) return;
+    root.querySelector('.cbp-line').textContent = model.line;
+    root.querySelector('.cbp-count').textContent = countText(model);
+    var bar = root.querySelector('[role="progressbar"]');
+    if (bar && model.max > 0) {
+      bar.setAttribute('aria-valuenow', String(model.now));
+      bar.firstChild.style.width = Math.round((100 * model.now) / model.max) + '%';
+    }
+  }
+  function openPanel(model, options) {
+    ensureProgressStyle();
+    model.opener = typeof document !== 'undefined' ? document.activeElement : null;
+    var cancelAction = typeof options.cancel === 'function' ? [{ name: 'cancel', options: { mount: options.mount, key: 'cancel', onPress: function () { model.finished = true; closeModal(); options.cancel(); } } }] : [];
+    dialog({ mount: options.mount, title: model.label, body: panelBody(model), actions: cancelAction });
+    var root = panelRoot(model);
+    if (root && root.focus) root.focus();
+    model.opened = true;
+  }
+  function closePanel(model) {
+    if (model.opened && typeof closeModal === 'function') closeModal();
+    if (model.opener && model.opener.isConnected && model.opener.focus) model.opener.focus();
+  }
+  /** a failure stays on the panel in words, with Done to close it (opened first if the delay had not passed) */
+  function failPanel(model, options, message) {
+    if (!model.opened) openPanel(model, options);
+    model.line = message || words('That did not finish', textKey(ACTION_SET.progress, 'failed'));
+    paintPanel(model);
+    var root = panelRoot(model);
+    if (!root) return;
+    root.querySelector('[role="progressbar"]').hidden = true;
+    var foot = root.closest('.modal').querySelector('.mfoot');
+    if (foot) foot.innerHTML = dialogAction('done', { mount: options.mount, key: 'fail', onPress: function () { closePanel(model); } });
+  }
+  /** the state of one panel: its words, its length (steps or total, 0 = unknown) and where it is */
+  function progressModel(options) {
+    var label = words(options.label || 'Working…', textKey(ACTION_SET.progress, 'working'));
+    return { id: 'p' + panelCount, label: label, line: options.line || '', max: options.steps || options.total || 0, now: 0, steps: !!options.steps, opened: false, finished: false };
+  }
+  /** the wait before anything shows: the default unless the caller (a test, a demo) says 0 */
+  function delayOf(delay) {
+    return delay == null ? PROGRESS_DELAY_MS : delay;
+  }
+  /**
+   * LEVEL 3: ui.progress.start({ mount, label, steps | total, line, cancel, delay }) -> { step(line), set(n, line), done(), fail(message) }.
+   * Nothing shows for the first delay (400 ms); then a panel with the bar or "Step n of m". Cancel appears only when the caller passes a safe cancel().
+   */
+  function startProgress(options) {
+    options = options || {};
+    if (!MOUNT_CODE.test(options.mount || '')) refuse('progress: mount must be a screen mount code like ACC002-U01');
+    if (options.steps && options.total) refuse('progress: give steps or total, not both');
+    panelCount += 1;
+    var model = progressModel(options);
+    var timer = setTimeout(function () { if (!model.finished) openPanel(model, options); }, delayOf(options.delay));
+    function move(now, line) {
+      model.now = model.max > 0 ? Math.min(model.max, now) : now;
+      if (line) model.line = line;
+      paintPanel(model);
+    }
+    return {
+      set: function (now, line) { move(now, line); },
+      step: function (line) { move(model.now + 1, line); },
+      done: function () {
+        clearTimeout(timer);
+        model.finished = true;
+        if (model.opened) announce(words('Finished', textKey(ACTION_SET.progress, 'finished')));
+        closePanel(model);
+      },
+      fail: function (message) {
+        clearTimeout(timer);
+        model.finished = true;
+        failPanel(model, options, message);
+      }
+    };
+  }
+  var progress = { start: startProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
-  var library = { action: action, dialog: dialog, components: ACTION_SET, textKey: textKey };
+  var library = { action: action, dialog: dialog, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

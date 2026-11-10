@@ -3,7 +3,7 @@
 /**
  * ui-standard.test.cjs — the UI standard page (public/ui-standard.html, screen UIS001), offline: no browser.
  * Cases: the page is public and mock-only (no api, session, shell, storage or fetch in the page or its script; a CSP that refuses every
- * connection); every component of the action set (CMP001..CMP019) has a row; the nine action labels are in all four packs; the page's own
+ * connection); every component of the action set (CMP001..CMP019, CMP020..CMP022) has a row; the nine action labels are in all four packs; the page's own
  * labels are in all four packs; the census rows name real components. The browser half (render, language switch, scroll) is e2e/walk-ui-standard.cjs.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * Run: node e2e/ui-standard.test.cjs
@@ -47,7 +47,7 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.map((row) => row.name).concat('dialog'));
+const used = new Set(model.ROWS.map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner')); /* CMP020..CMP022 are drawn by the progress row, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
 

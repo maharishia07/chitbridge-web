@@ -99,8 +99,8 @@ of file each thing is; this says what already does the job.
 | 28 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 28 | `sheet` | `cap-employees.js` |  |
 | 28 | `money` | `cart.js` |  |
+| 28 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 28 | `guess` | `move-in.js` | `table` (optional, PR1): |
-| 27 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 27 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 27 | `owner` | `books.js` |  |
@@ -125,6 +125,7 @@ of file each thing is; this says what already does the job.
 | 22 | `governance` | `home-facts.js` |  |
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
+| 21 | `model` | `chit-sheet.js` |  |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `says` | `adopt.js` |  |
 | 21 | `entries` | `books-store.js` |  |
@@ -132,7 +133,6 @@ of file each thing is; this says what already does the job.
 | 21 | `match` | `itemmatch.js` | actually state. |
 | 21 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 20 | `card` | `cap-shop.js` |  |
-| 20 | `model` | `chit-sheet.js` |  |
 | 20 | `cblog` | `core.js` | const __cblog = []; |
 | 20 | `note` | `device-id.js` | note(where, problem) — |
 | 20 | `summary` | `catalogue-read.js` | A count a person can act on: |
@@ -145,6 +145,7 @@ of file each thing is; this says what already does the job.
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 18 | `next` | `cap-stock.js` | the next level: |
+| 18 | `step` | `cart.js` |  |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |
 | 18 | `panel` | `sides.js` |  |
@@ -159,7 +160,6 @@ of file each thing is; this says what already does the job.
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
 | 18 | `move` | `rail.js` | Order = the order the server refused in: |
 | 17 | `send` | `cap-quotes.js` |  |
-| 17 | `step` | `cart.js` |  |
 | 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 17 | `label` | `screen-id.js` |  |
 | 17 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
@@ -192,6 +192,7 @@ of file each thing is; this says what already does the job.
 | 15 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `chips` | `country-profiles.js` | words as chips; null when there are none |
+| 14 | `confirm` | `lab-kit.js` | opts: |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `refuse_` | `bookpack.js` | an Error with status 422 — |
 | 14 | `apply` | `ctpreturn.js` | Apply one event the door has already verified (peer known, signature, membership, crossing). |
@@ -205,7 +206,6 @@ of file each thing is; this says what already does the job.
 | 13 | `units` | `cart.js` |  |
 | 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 13 | `link` | `chit-sheet.js` |  |
-| 13 | `confirm` | `lab-kit.js` | opts: |
 | 13 | `dialog` | `ui.js` | modal(); the corner X is modal()'s own .mx. |
 | 13 | `actions` | `workflow.js` | actions(chit, me) — |
 | 13 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |

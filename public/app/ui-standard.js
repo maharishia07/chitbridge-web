@@ -266,9 +266,48 @@ var CBUiStandard = (function () {
       '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U115', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
   }
+  /* CMP020 progress: the three levels, each a real button running a fake wait (no api). The times are short so the demo is quick to try. */
+  var DEMO_QUICK_MS = 150, DEMO_SLOW_MS = 2500, DEMO_STEP_MS = 800;
+  var DEMO_STEP_LINES = ['Reading the file', 'Checking each row', 'Saving the rows', 'Almost done'];
+  function wait(milliseconds) {
+    return new Promise(function (resolve) { setTimeout(resolve, milliseconds); });
+  }
+  /** levels 1 and 2: the press already runs through CBAction (busy, one press); the progress component adds the spinner and words after its delay */
+  function demoInline(milliseconds) {
+    return function (button) {
+      var busy = ui.progress.inline(button, words('Saving…'));
+      return wait(milliseconds).then(busy.stop);
+    };
+  }
+  /** level 3: a panel with "Step n of m" and a plain line; Cancel stops the fake import (safe: nothing was written) */
+  function demoPanel() {
+    var cancelled = false;
+    var importProgress = ui.progress.start({ mount: SCREEN + '-D02-U01', label: 'Importing your file', steps: DEMO_STEP_LINES.length, line: words(DEMO_STEP_LINES[0]), delay: 0, cancel: function () { cancelled = true; } });
+    DEMO_STEP_LINES.reduce(function (chain, line, index) {
+      return chain.then(function () { return wait(DEMO_STEP_MS); }).then(function () {
+        if (cancelled) return;
+        if (index === DEMO_STEP_LINES.length - 1) importProgress.done();
+        else importProgress.step(words(DEMO_STEP_LINES[index + 1]));
+      });
+    }, Promise.resolve());
+  }
+  function progressCell(caption, button) {
+    return '<figure class="st"><div class="slot">' + button + '</div><figcaption>' + esc(words(caption)) + '</figcaption></figure>';
+  }
+  function progressRow() {
+    var component = ui.components.progress;
+    return '<section class="crow" data-testid="gal-row-CMP020"><div class="cid"><span class="chip" data-testid="gal-code">CMP020</span><b>' + esc(words('Progress')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN progress</span> · parts <span class="mono">CMP021 ' +
+      esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP022 ' + esc(ui.components.spinner.label) + '</span></span></div><div class="states">' +
+      progressCell('Quick: nothing shows', ui.action('save', { mount: SCREEN + '-U116', object: 'reply', effect: 'preference', testid: 'gal-progress-quick', onPress: demoInline(DEMO_QUICK_MS) })) +
+      progressCell('Slow: the button goes busy', ui.action('save', { mount: SCREEN + '-U117', object: 'settings', effect: 'preference', testid: 'gal-progress-slow', onPress: demoInline(DEMO_SLOW_MS) })) +
+      progressCell('Long: a panel with steps', ui.action('open', { mount: SCREEN + '-U118', object: 'import', testid: 'gal-progress-long', onPress: demoPanel })) +
+      '</div></section>';
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     rows.splice(1, 0, dialogRow());
+    rows.push(progressRow());
     return rows.join('');
   }
 
@@ -457,7 +496,7 @@ var CBUiStandard = (function () {
       return '<section class="crow" data-testid="gal-before-' + entry.name + '"><div class="cid"><span class="chip">' + component.code + '</span><b>' + esc(words(component.label)) + '</b><span class="meta">' +
         entry.before.length + ' → 1</span></div><div class="ba"><div class="bcol"><h4>' + esc(words('Before')) + '</h4>' + old + '</div><div class="bcol"><h4>' + esc(words('After')) + '</h4>' +
         /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
-        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined }) + '</div></div></section>';
+        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined, confirm: component.effect === 'commit' ? reachConfirm(entry.name) : undefined }) + '</div></div></section>';
     }).join('');
   }
 
