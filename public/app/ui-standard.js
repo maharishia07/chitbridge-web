@@ -6,7 +6,7 @@
  *            the page chrome (tabs, switches) and the repaint when a switch changes. It owns no component: it calls ui.action / ui.dialog.
  * CALLED BY  public/ui-standard.html (screen UIS001). Loaded AFTER helpers.js, accounts-shell.js (tx, CBAction, CBConfirm, toast),
  *            the string packs and ui.js.
- * READS      ui.components (CMP codes, labels, verbs), CBSTR (the packs), the CSS custom properties of the page (live), getComputedStyle.
+ * READS      public/app/ui-waves.json (the Waves section: one row per wave, the numbers updated in that one file), ui.components (CMP codes, labels, verbs), CBSTR (the packs), the CSS custom properties of the page (live), getComputedStyle.
  * WRITES     only this page's own DOM. It calls no api, reads no session or token, and stores nothing (no localStorage, no cookie).
  * CARD       29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * FLOW       load -> paint() -> a switch sets state -> paint() again (the same strings run through tx() again: no reload).
@@ -26,8 +26,8 @@ var CBUiStandard = (function () {
     small: { h: 20, pad: 6, radius: 3, font: 11, label: 'Too small' }
   };
   var SCREENS = { this: { label: 'This screen' }, desktop: { label: 'Desktop', w: 1366, h: 768 }, mobile: { label: 'Mobile', w: 390, h: 844 } };
-  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'meets', 'before'];
-  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', meets: 'Meets the standard', before: 'Before and after' };
+  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'meets', 'before', 'waves'];
+  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', meets: 'Meets the standard', before: 'Before and after', waves: 'Waves' };
   /** the plain line each section opens with: what the standard is and why, in shopkeeper words */
   var TAB_LINE = {
     components: 'Every Save, Cancel or Done in the product is one and the same button, so it looks and works the same on every screen. The code beside it (like CMP001) is its name on a register, the way a bank screen has a code.',
@@ -36,6 +36,7 @@ var CBUiStandard = (function () {
     tokens: 'Colours, corners and sizes live in one place. Change a value and every button follows. The values below are read from this page as it is drawn, not typed in.',
     themes: 'The avatar offers 16 colour themes. Each row is a real theme applied through the avatar code, measured on the real buttons: a red figure is a pair below the accessibility minimum.',
     meets: 'Each rule of the standard in plain words, where it comes from, how this page proves it, and the live result in every one of the 16 themes.',
+    waves: 'The work comes in waves, each one making the next smaller. For each wave: what it gives you, how far it has got, and the number before and after. A number not measured yet says measuring.',
     before: 'Counted in our own screens: the same action was written many different ways. Now each one is a single component. Numbers are the count of places that spelled it that way.'
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
@@ -108,9 +109,12 @@ var CBUiStandard = (function () {
     tokens: 'M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3c0-5-4-11-8-11z',
     themes: 'M12 3v18M3 12h18M5 5l14 14M19 5L5 19',
     meets: 'M5 12l4 4 10-10',
-    before: 'M4 5h7v14H4zM13 5h7v14h-7z'
+    before: 'M4 5h7v14H4zM13 5h7v14h-7z',
+    waves: 'M3 18c3 0 3-12 6-12s3 12 6 12 3-12 6-12'
   };
   var counters = { mount: 0, control: 0 };
+  /** the waves data (public/app/ui-waves.json), read once by loadWaves(); null until it arrives */
+  var wavesData = null;
 
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
   function words(text) {
@@ -486,6 +490,54 @@ var CBUiStandard = (function () {
       });
   }
 
+  /* ── waves: one row per wave from public/app/ui-waves.json, a progress bar (CMP021) and a before to after pair each ── */
+  var STATUS_WORDS = { done: 'Done', 'in progress': 'In progress', next: 'Next' };
+  /** a whole number with thousands separators, the same in every language so the figures line up with the register */
+  function figure(value) {
+    return Number(value).toLocaleString('en-US');
+  }
+  /** a number not measured yet is null: say measuring, never a guess */
+  function figureOrMeasuring(value) {
+    return value === null || value === undefined ? words('measuring') : figure(value);
+  }
+  /** one wave's progress: the bar (value of total) and the line under it; a null value draws an empty bar and says measuring */
+  function waveProgress(progress) {
+    var known = progress.value !== null && progress.value !== undefined;
+    var bar = ui.progress.bar({ label: words(progress.label), now: known ? progress.value : 0, max: progress.total });
+    var line = known ? formatWords('{n} of {total}', { n: figure(progress.value), total: figure(progress.total) }) : words('measuring');
+    return '<div class="wv-prog" data-testid="gal-wave-progress"><span class="wv-lab">' + esc(words(progress.label)) + '</span>' + bar + '<span class="wv-num">' + esc(line) + '</span></div>';
+  }
+  /** a before to after pair: the label, then 67 → measuring; the optional total says out of how many */
+  function wavePair(pair) {
+    var total = pair.of ? ' <small>' + esc(formatWords('of {total}', { total: figure(pair.of) })) + '</small>' : '';
+    return '<p class="wv-pair" data-testid="gal-wave-pair"><span class="wv-lab">' + esc(words(pair.label)) + '</span><b>' + esc(figure(pair.before)) + '</b> → <b>' +
+      esc(figureOrMeasuring(pair.after)) + '</b>' + total + '</p>';
+  }
+  function waveRow(wave) {
+    var status = wave.status;
+    return '<section class="crow" data-testid="gal-wave-' + esc(wave.id) + '"><div class="cid"><span class="chip" data-testid="gal-code">' + esc(formatWords('Wave {id}', { id: wave.id })) + '</span>' +
+      '<b>' + esc(words(wave.title)) + '</b><span class="wv-status" data-status="' + esc(status) + '" data-testid="gal-wave-status">' + esc(words(STATUS_WORDS[status] || status)) + '</span>' +
+      '<span class="meta">' + esc(words(wave.offers)) + '</span></div><div class="wv-body">' + waveProgress(wave.progress) + wave.pairs.map(wavePair).join('') + '</div></section>';
+  }
+  /** the Waves section: one row per wave, in the order of the file */
+  function wavesHTML(data) {
+    if (!data || !data.waves) return '<p class="note" data-testid="gal-waves-wait">' + esc(words('measuring')) + '</p>';
+    return data.waves.map(waveRow).join('') + '<p class="note" data-testid="gal-waves-asof">' + esc(formatWords('Measured {date}', { date: data.measured })) + '</p>';
+  }
+  function wavesPanel() {
+    return wavesHTML(wavesData);
+  }
+  /** read the one data file the section draws from (a static file of this site), then draw again; a failed read leaves the section saying measuring */
+  function loadWaves() {
+    /* a static data file of this site: no api, no session; the page's CSP allows connect-src 'self' only */
+    window.fetch('/app/ui-waves.json').then(function (answer) { return answer.json(); }).then(function (data) {
+      wavesData = data;
+      paint();
+    }).catch(function (problem) {
+      if (typeof cblog === 'function') cblog('warn', 'ui-waves.json did not load: ' + problem);
+    });
+  }
+
   /* ── before and after ── */
   function beforePanel() {
     return CENSUS.map(function (entry) {
@@ -718,7 +770,7 @@ var CBUiStandard = (function () {
     root.style.setProperty('--act-font', preset.font + 'px');
   }
   function panelHTML() {
-    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, meets: meetsPanel, before: beforePanel };
+    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, meets: meetsPanel, before: beforePanel, waves: wavesPanel };
     return '<p class="line" data-testid="gal-line">' + esc(words(TAB_LINE[state.tab])) + '</p>' + panels[state.tab]();
   }
   function paint() {
@@ -816,7 +868,8 @@ var CBUiStandard = (function () {
     window.modal = modal;
     window.closeModal = closeModal;
     paint();
+    loadWaves();
     whenFacesLoad();
   }
-  return { start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
+  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
 })();

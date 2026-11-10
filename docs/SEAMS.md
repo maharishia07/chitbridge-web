@@ -56,10 +56,10 @@ of file each thing is; this says what already does the job.
 | 43 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 43 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 42 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
+| 41 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 41 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 41 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 41 | `rules` | `docnumber.js` | the rule set for a country — |
-| 40 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 40 | `gate` | `country-setup.js` | gate(h, entity): |
 | 40 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 39 | `host` | `chit-sheet.js` |  |
@@ -126,6 +126,7 @@ of file each thing is; this says what already does the job.
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 21 | `model` | `chit-sheet.js` |  |
+| 21 | `cblog` | `core.js` | const __cblog = []; |
 | 21 | `note` | `device-id.js` | note(where, problem) — |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `says` | `adopt.js` |  |
@@ -134,7 +135,6 @@ of file each thing is; this says what already does the job.
 | 21 | `match` | `itemmatch.js` | actually state. |
 | 21 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 20 | `card` | `cap-shop.js` |  |
-| 20 | `cblog` | `core.js` | const __cblog = []; |
 | 20 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 20 | `plan` | `crm-leads.js` | `existing`: |
 | 20 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |

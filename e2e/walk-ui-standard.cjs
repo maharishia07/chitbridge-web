@@ -100,10 +100,13 @@ const noScroll = (page) => page.evaluate(() => {
     check(idsOk, 'every component button carries its element code and its mount');
     const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^UIS001-B\d\d$/.test(node.getAttribute('data-cbsid'))));
     check(headIds, 'every page control carries UIS001-Bnn');
+    await goTab(page, 'waves');
+    await page.waitForSelector('[data-testid="gal-wave-0"]');
+    check((await page.$$('section[data-testid^="gal-wave-"]')).length === 5 && (await page.$$('[data-testid="gal-wave-progress"] [role="progressbar"]')).length === 5, label + ': the Waves section draws five rows, each with a progress bar, from ui-waves.json');
 
     for (const [theme, key] of [['light', 'cream'], ['dark', 'dark'], ['terminal', 'terminal']]) {
       await pick(page, 'theme', key);
-      for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before']) {
+      for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before', 'waves']) {
         await goTab(page, tab);
         const scroll = await noScroll(page);
         check(scroll.page <= 0 && scroll.pageX <= 0 && scroll.panelX <= 0, label + ' ' + theme + ' ' + tab + ': page does not scroll, nothing scrolls sideways ' + JSON.stringify(scroll));
@@ -295,7 +298,7 @@ const noScroll = (page) => page.evaluate(() => {
   await shellPage.goto(base + '/ui-standard.html');
   await shellPage.waitForSelector('[data-testid="gal-to-standards"]');
   check((await shellPage.textContent('[data-testid="gal-to-standards"]')).indexOf('Standards') >= 0 && (await shellPage.getAttribute('[data-testid="gal-to-standards"]', 'href')) === '/standards.html', 'the shell bar has "‹ Standards" back to the Standards page');
-  check((await shellPage.$$('[data-testid^="skel-nav-"]')).length === 7, 'the frame sidebar lists the seven sections');
+  check((await shellPage.$$('[data-testid^="skel-nav-"]')).length === 8, 'the frame sidebar lists the eight sections');
   const heights = await shellPage.$$eval('#hdr button, [data-testid^="skel-nav-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
   check(heights.every((height) => height >= 44), 'every control in the bar, the list and the shell is at least 44 px high (' + Math.min(...heights) + ')');
   const codes = await shellPage.$$eval('[data-cbsid^="UIS001-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));
