@@ -26,7 +26,7 @@ const sandbox = {
   esc: (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])),
   CBAction: { run: (button, fn, options) => { runs.push(options); return Promise.resolve(fn()); } },
   window: {},
-  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelector: (selector) => (panelOnScreen && /data-cbprogress/.test(selector) ? panelRoot : null) },
+  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelectorAll: () => [], querySelector: (selector) => (panelOnScreen && /data-cbprogress/.test(selector) ? panelRoot : null) },
   setTimeout, clearTimeout,
   modal: (html) => { opened.push(html); }, closeModal: () => { opened.push('closed'); },
 };
@@ -43,7 +43,9 @@ check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/
 const forced = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
 const unmatched = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'none', items: [{ value: 'a', label: 'Open' }, { value: 'b', label: 'Away' }] });
 check((unmatched.match(/tabindex="0"/g) || []).length === 1, 'a choice with no matching value still has one tab stop (the first segment)');
-check(/aria-label="Open"/.test(ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'a', items: [{ value: 'a', label: '🟢 Open' }, { value: 'b', label: 'Away' }] })), 'a glyph label keeps its word as the accessible name');
+const phone = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'b', items: [{ value: 'a', label: '🟢 Open' }, { value: 'b', label: '🌙 Away' }] });
+check(/data-choice-trigger[^>]*aria-haspopup="listbox"/.test(phone) && phone.includes('class="cbui-cur">🌙 Away</span>') && /role="listbox"[^>]*hidden/.test(phone), 'the phone mode is one button showing the current value as icon and word, opening a listbox');
+check(!/aria-label="Open"/.test(phone), 'no value is drawn as a glyph alone');
 check(/title="Explain"/.test(ui.action('help', { mount: 'TST001-U01', hint: 'Explain' })), 'a hint is the hover text of a component');
 names.forEach((name) => {
   const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));

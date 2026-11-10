@@ -485,7 +485,8 @@
     border-radius:9px;padding:6px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer;color-scheme:dark}
   .topbar .who .shopsel:hover{background:rgba(255,255,255,.10)}
   /* CMP025 Choice in the dark top bar: the segments take the bar's ink, the chosen one the green */
-  .topbar .who .shopsel{padding:0;overflow:hidden;flex:0 0 auto}@media(max-width:700px){.topbar{gap:6px;padding-inline-start:10px;padding-inline-end:10px}.topbar .who{gap:4px}.topbar .who .shopsel button{padding:0 8px}}.topbar .who .shopsel button{color:var(--on-dark,#e8f0f5);background:transparent}
+  .topbar .who .shopsel{padding:0;overflow:hidden;flex:0 0 auto}@media(max-width:700px){.topbar{gap:6px;padding-inline-start:10px;padding-inline-end:10px}.topbar .who{gap:4px}.topbar .who .shopsel{overflow:visible}.topbar .who .shopsel .cbui-choice-menu{background:var(--chrome);border-color:rgba(255,255,255,.18)}}
+  .topbar .who .shopsel button[aria-selected="true"]{background:var(--ok-solid,#1f7a4d);color:var(--on-accent,#fff)}.topbar .who .shopsel button{color:var(--on-dark,#e8f0f5);background:transparent}
   .topbar .who .shopsel button[aria-checked="true"]{background:var(--ok-solid,#1f7a4d);color:var(--on-accent,#fff)}
   .topbar .who .shopsel:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
