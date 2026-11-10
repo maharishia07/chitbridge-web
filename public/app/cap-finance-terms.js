@@ -23,8 +23,7 @@ var FT = {
   api: null,
   cur: null,
   inherited: {} /* FIN-46: what each form falls back to (the shop's terms under a party's sheet), for the preview */,
-  base: {} /* FIN-46: each form's values as loaded, so "nothing changed yet" is known */,
-  undo: null /* FIN-46: the newest change the Undo button puts back */
+  base: {} /* FIN-46: each form's values as loaded, so "nothing changed yet" is known */
 }; /* CX0: the shop's currency is the ledger's (bkCur → SESSION.currency, set by the dues answer), never typed */
 var FT_EP = {
   /* booksTerms (the read) and crmParties live in accounts-shell.js CB_PARTY_EP — CRM reads them too; one name, one place */
@@ -216,7 +215,7 @@ function ftSentences(effective, currency) {
         : txf('Due {n} days after the bill date.', { n: effective.days })
   );
   if (effective.pct > 0 && effective.within > 0) lines.push(txf('{pct}% off if paid within {n} days of the bill.', { pct: effective.pct, n: effective.within }));
-  if (effective.days != null) lines.push(txf('Counted as late after day {n}.', { n: effective.days + effective.grace }));
+  if (effective.days != null) lines.push(txf('Preview: counted as late after day {n}.', { n: effective.days + effective.grace }));
   lines.push(
     effective.on && effective.rate > 0
       ? txf('Interest of {rate}% a year is shown from then, a day at a time. It is shown, never charged.', { rate: effective.rate })
@@ -347,14 +346,18 @@ function ftUndoFor(list, greyed, partyId) {
   return function (change, index) {
     var field = String(change.field || '').replace(/^(customer|supplier)\./, '');
     if (index !== newest || !FT_UNDOABLE[field]) return '';
-    FT.undo = { field: field, old: change.old, partyId: partyId || null };
-    return ' <button type="button" class="act" data-testid="ft-undo"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
+    var old = change.old == null ? '' : typeof change.old === 'object' ? JSON.stringify(change.old) : String(change.old);
+    return ' <button type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
   };
+}
+/** the standard confirm for a money setting (CBAction asks in the page's own dialog; Cancel sends nothing) */
+function ftMoneyConfirm(title, body, yes) {
+  return { title: title, body: esc(body), yes: yes, danger: false };
 }
 /** Undo: send the newest change's old value back as a new change, then read the terms again */
 function ftUndo(btn) {
-  var undo = FT.undo;
-  if (!undo) return;
+  var undo = { field: btn.dataset.field, old: btn.dataset.old, partyId: btn.dataset.party || null };
+  if (!undo.field) return;
   var body = undo.partyId ? { party_id: undo.partyId, side: 'customer' } : {},
     lineId = undo.partyId ? 'ftp_why' : 'ft_why';
   try {
@@ -369,6 +372,7 @@ function ftUndo(btn) {
     },
     {
       key: 'ft-undo',
+      confirm: ftMoneyConfirm(tx('Undo this change?'), tx('The earlier terms are put back as a new change. It shows in the Changes list.'), tx('Undo')),
       out: lineId,
       failed: tx('Could not undo'),
       done: '✓ ' + tx('Undone'),
@@ -640,6 +644,7 @@ function ftSaveShop(btn) {
     },
     {
       key: 'ft-save',
+      confirm: ftMoneyConfirm(tx('Save these terms?'), tx('Credit, interest and discount terms apply to new bills from now on. Each change shows in the Changes list.'), tx('Save terms')),
       out: 'ft_why',
       failed: tx('Could not save terms'),
       done: '✓ ' + tx('Saved'),
@@ -720,6 +725,7 @@ function ftSaveParty(pid, btn) {
     },
     {
       key: 'ftp-save:' + pid,
+      confirm: ftMoneyConfirm(tx('Save these terms?'), tx('Credit, interest and discount terms apply to new bills from now on. Each change shows in the Changes list.'), tx('Save terms')),
       out: 'ftp_why',
       failed: tx('Could not save terms'),
       done: tx('Saved'),

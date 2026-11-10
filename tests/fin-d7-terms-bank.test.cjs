@@ -33,7 +33,7 @@ it('FIN-46 · the preview says due, discount, late-after, interest and limit fro
   assert.deepStrictEqual(lines, [
     'Due 30 days after the bill date.',
     '2% off if paid within 10 days of the bill.',
-    'Counted as late after day 35.',
+    'Preview: counted as late after day 35.',
     'Interest of 18% a year is shown from then, a day at a time. It is shown, never charged.',
     'Owes up to M50000 before you are warned.'
   ]);
@@ -74,6 +74,12 @@ it('FIN-46 · Undo reads the stored old value: a number, the interest/early obje
   assert.strictEqual(T.ftUndoVal('credit_days', null), null);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(T.ftUndoVal('interest', '{"on":true,"rate_pct":18,"grace_days":3}'))), { on: true, rate_pct: 18, grace_days: 3 });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(T.ftUndoVal('early', { pct: 2, within_days: 10 }))), { pct: 2, within_days: 10 });
+});
+it('FIN-27 · a CSV cell: a plain number (negative too) stays a number, a formula is still quoted', () => {
+  const src = read('cap-books.js'), from = src.indexOf('function bkCsvCell'), body = src.slice(from, src.indexOf('function bkSaveCsv'));
+  const cell = new Function(body + 'return bkCsvCell;')();
+  assert.strictEqual(cell('-1250.50'), '-1250.50'); assert.strictEqual(cell('42'), '42');
+  assert.strictEqual(cell('=1+1'), "'=1+1"); assert.strictEqual(cell('-1+2'), "'-1+2"); assert.strictEqual(cell('+5'), "'+5");
 });
 it('FIN-46 · the four questions come in the customer\'s and the supplier\'s words, four each', () => {
   assert.strictEqual(T.FT_Q.customer.length, 4); assert.strictEqual(T.FT_Q.supplier.length, 4);

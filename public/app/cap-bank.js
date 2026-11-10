@@ -446,7 +446,7 @@ function bankFinish() {
     part('Books', bkDrCr(worked.book_balance_minor), 'bank-finish-books') +
     part('Difference', bkMoney(Math.abs(worked.difference_minor)), 'bank-finish-diff') +
     '<button type="button" class="act" data-testid="bank-brs-download" onclick="bankBrsDownload()">' +
-    bkbE(tx('Download the statement')) +
+    bkbE(tx('Download the reconciliation')) +
     '</button></div>'
   );
 }
@@ -458,9 +458,10 @@ const BKB_BRS_ITEMS = [
 ];
 /** the BRS as a CSV: its lines as the engine worked them, then each named reconciling item (amounts as plain decimals) */
 function bankBrsCsv(worked) {
-  const rows = [[tx('Bank reconciliation statement as at'), worked.asOf]].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor)]));
+  const cur = bkCur();
+  const rows = [[tx('Bank reconciliation statement as at'), worked.asOf], [tx('Currency'), cur || '']].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor, cur)]));
   BKB_BRS_ITEMS.forEach(([title, key]) =>
-    (worked[key] || []).forEach((x) => rows.push([tx(title), x.date || '', x.name || '', x.ref || '', bkMinorText(x.amount_minor)]))
+    (worked[key] || []).forEach((x) => rows.push([tx(title), x.date || '', x.name || '', x.ref || '', bkMinorText(x.amount_minor, cur)]))
   );
   return rows.map((row) => row.map(bkCsvCell).join(',')).join('\r\n') + '\r\n';
 }

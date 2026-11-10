@@ -2159,10 +2159,10 @@ function bkDvGroupOf(date, mode) {
   }
   return { key: dayKey, label: bkDvFmt(dayKey, { weekday: 'short', day: '2-digit', month: 'short' }) };
 }
-/** one CSV cell: a cell that starts like a formula is quoted as text, a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
+/** one CSV cell: a cell that starts like a formula is quoted as text (a plain number, negative too, stays a number), a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
 function bkCsvCell(v) {
   var text = String(v == null ? '' : v);
-  if (/^[=+\-@]/.test(text)) text = "'" + text;
+  if (/^[=+\-@]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
   return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
 }
 /** hand a CSV text to the person as a file (BOM first so a spreadsheet reads the rupee sign) — the one saver */
