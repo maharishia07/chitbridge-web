@@ -68,7 +68,7 @@ function chitbridge(shop) {
                       shop: { entity_id: shop.entity_id, bridge_id: shop.bridge_id, name: shop.name } });
     }
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: shop.entity_id,
-      shop: { name: shop.name }, items: [{ item_id: 'x1', name: 'Tomato', code: 'V1', unit: 'kg', price: 40 }] });
+      shop: { country: 'IN', name: shop.name }, items: [{ item_id: 'x1', name: 'Tomato', code: 'V1', unit: 'kg', price: 40 }] });
     if (u.startsWith('/api/till/engine/')) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('/* stub engine */'); }
     if (u === '/api/integrations/heartbeat') return j(200, { ok: true });
     return j(404, { message: 'no' });

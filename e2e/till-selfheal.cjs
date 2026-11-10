@@ -62,7 +62,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(30) + '· ' + d 
   /* a shop with something to sell, and a key, so the counter is in a real working state */
   await p.evaluate((api) => {
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
-    window.S = { shop: { name: 'Mayur Bhavan' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan' }, at: new Date().toISOString(),
                  items: [{ item_id: 'i1', name: 'Masala Dosa', price: 70, unit: 'plate' },
                          { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup' }] };
     /**

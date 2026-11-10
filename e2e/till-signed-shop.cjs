@@ -18,8 +18,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, 'FAILED'))); };
 const SHOPS = {
-  'KEY-A': { entity_id: 'ent-a', shop: { name: 'Veg Shop', bridge_id: 'CB-A' }, item: 'AMANGO' },
-  'KEY-B': { entity_id: 'ent-b', shop: { name: 'Fish Shop', bridge_id: 'CB-B' }, item: 'BPRAWN' },
+  'KEY-A': { entity_id: 'ent-a', shop: { country: 'IN', name: 'Veg Shop', bridge_id: 'CB-A' }, item: 'AMANGO' },
+  'KEY-B': { entity_id: 'ent-b', shop: { country: 'IN', name: 'Fish Shop', bridge_id: 'CB-B' }, item: 'BPRAWN' },
 };
 const PEOPLE = {
   mayri123: { identity_id: 'p-b', user_id: 'mayri123', display_name: 'Mayri', identity_type: 'actor', entity_id: 'ent-b', key: 'KEY-B' },

@@ -18,7 +18,7 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  const threw=[];p.on('pageerror',e=>threw.push(e.message));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.openSettings==='function',null,{timeout:30000});
- await p.evaluate(()=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
+ await p.evaluate(()=>{ window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
 
  /* ⚠️⚠️ IT MUST OPEN. An unguarded .value on a removed control throws here. */
  const opened=await p.evaluate(()=>{ try{ openSettings(); return 'ok'; }catch(e){ return 'THREW: '+e.message; } });

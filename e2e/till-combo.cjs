@@ -26,7 +26,7 @@ const say=(l,ok,d)=>{console.log(l.padEnd(9)+'· '+d+'  '+(ok?'OK':(bad++,'✗ F
  const threw=[];p.on('pageerror',e=>threw.push(e.message));
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.modOpen==='function'&&!!window.CBVariant,null,{timeout:30000});
- await p.evaluate(({m,v})=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[m,v],offers:[],at:new Date().toISOString()};
+ await p.evaluate(({m,v})=>{ window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:[m,v],offers:[],at:new Date().toISOString()};
    setMode('sell');
    /* ⚠️ Vada is OFF TODAY — the spec says show it struck through, not hide it, so staff know why it is gone */
    try{ ls.set(shopLs('cb_till_qsold'), JSON.stringify([{id:'v1',day:bizDay()}])); }catch(_){}

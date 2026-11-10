@@ -12,12 +12,14 @@
  *
  *   node tools/graph/trace.cjs                         web + api + engines (when ../chitbridge-api and ../chitbridge-engines are beside) → each repo's trace.json
  *   node tools/graph/trace.cjs --repo api --root DIR   one repo; --stdout prints the JSON instead of writing; --no-build reuses out/graph.json
+ *   --max-seconds N                                    hard stop (default 100, under the guard's 120): killed, exit 124 + a sentence; on Windows only this script is killed, not its scanner child
  * ⚠️ The minimums are EVIDENCE BY KEYWORD over the tests that reach a module (and an explicit `MIN <name>` line in a test) — a guide for
  *    the TRACE table, said as such in every row (`minimums.how`).
  */
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const HERE = __dirname;
 const WEB_ROOT = path.resolve(HERE, '..', '..');
@@ -31,11 +33,14 @@ const flag = (name, fallback) => {
 const HEAD_BYTES = 6000;
 const CARD_LINE = /\bCARD\s+([\w.-]+\/[\w.-]+)/;
 const MAX_STEPS = 40;
+const DEFAULT_LIMIT_SECONDS = 100;
 const MIN_STEP_WORDS = 12;
 
 // ── layers (§7) and what each layer's tests must evidence
 const LAYER_RULES = [
   { repo: 'api', test: /^routes\//, layer: 'route' },
+  /* prove.js is a dev proof script (live api + CB_TOKEN, ships to no shop, is not the till): it takes the tool minimums, not the counter's */
+  { repo: 'api', test: /^tools\/tally-connector\/prove\.js$/, layer: 'tool' },
   { repo: 'api', test: /^tools\/tally-connector\//, layer: 'counter' },
   { repo: 'api', test: /^(tools|scripts)\//, layer: 'tool' },
   { repo: 'api', test: /./, layer: 'lib' },
@@ -115,11 +120,25 @@ const fileOf = (id) =>
     .replace(/ (GET|POST|PUT|PATCH|DELETE|ALL) .*$/, '');
 const repoOf = (id) => (/^(?:fn|file|screen|route|test):(web|api|engines):/.exec(String(id)) || [])[1];
 
-/** the check labels inside a test file: the strings on its ok( / t( / check( / it( / test( lines */
+/** one read per file per run: a test that reaches hundreds of modules was re-read from disk once for each (MNT-49). null = not there */
+const textCache = new Map();
+function readText(absPath) {
+  if (!textCache.has(absPath)) textCache.set(absPath, fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : null);
+  return textCache.get(absPath);
+}
+
+const stepsCache = new Map();
+/** the steps of one test file, parsed once per run (the same test is reached by many modules) */
 function stepsOf(absPath) {
-  if (!fs.existsSync(absPath)) return [];
+  if (!stepsCache.has(absPath)) stepsCache.set(absPath, parseSteps(readText(absPath)));
+  return stepsCache.get(absPath);
+}
+
+/** the check labels inside a test's text: the strings on its ok( / t( / check( / it( / test( lines */
+function parseSteps(text) {
+  if (text === null) return [];
   const labels = [];
-  for (const line of fs.readFileSync(absPath, 'utf8').split('\n')) {
+  for (const line of text.split('\n')) {
     if (!/\b(ok|t|check|it|test|assert|expect|pass|fail)\s*\(/.test(line)) continue;
     const match = /(['"`])((?:(?!\1)[^\\]|\\.){12,}?)\1/.exec(line);
     if (match && match[2].length >= MIN_STEP_WORDS) labels.push(match[2].slice(0, 120));
@@ -129,8 +148,9 @@ function stepsOf(absPath) {
 }
 
 function cardOf(absPath) {
-  if (!fs.existsSync(absPath)) return null;
-  const head = fs.readFileSync(absPath, 'utf8').slice(0, HEAD_BYTES);
+  const text = readText(absPath);
+  if (text === null) return null;
+  const head = text.slice(0, HEAD_BYTES);
   const match = CARD_LINE.exec(head);
   return match ? match[1] : null;
 }
@@ -143,7 +163,7 @@ function minimumsOf(layer, tests, roots) {
   const text = tests
     .map((test) => {
       const absPath = path.join(roots[test.repo] || '', test.file);
-      return (fs.existsSync(absPath) ? fs.readFileSync(absPath, 'utf8') : '') + '\n' + test.file;
+      return (readText(absPath) || '') + '\n' + test.file;
     })
     .join('\n');
   const explicit = new Set([...text.matchAll(/\bMIN[: ]+([\w-]+)/g)].map((match) => match[1]));
@@ -240,8 +260,25 @@ function traceOf(graph, repo, roots) {
   };
 }
 
+/** a hard stop: run this same script as a child that is killed after --max-seconds (default 100: under the readability guard's own 120 s timer, so this sentence is the one you see); exit 124 says so in words (MNT-49) */
+function runWithLimit() {
+  const asked = flag('max-seconds', DEFAULT_LIMIT_SECONDS); /* a bare `--max-seconds` reads as true: that is the default, not 1 second */
+  const seconds = asked !== true && Number(asked) > 0 ? Number(asked) : DEFAULT_LIMIT_SECONDS;
+  const limited = spawnSync(process.execPath, [...process.execArgv, __filename, ...argv], {
+    stdio: 'inherit',
+    timeout: seconds * 1000,
+    env: Object.assign({}, process.env, { CB_TRACE_CHILD: '1' })
+  });
+  if (limited.error && limited.error.code === 'ETIMEDOUT') {
+    console.error(`trace.cjs: stopped after ${seconds}s (--max-seconds). Use --repo <one> --no-build, or raise the limit.`);
+    process.exit(124);
+  }
+  process.exit(limited.status === null ? 1 : limited.status);
+}
+
 /** the command line: which repos, which root; one trace per repo to <root>/trace.json or --stdout */
 function main() {
+  if (!process.env.CB_TRACE_CHILD) return runWithLimit();
   const repoFlag = String(flag('repo', 'all'));
   const root = flag('root');
   if (typeof root === 'string' && repoFlag !== 'all') process.env.CB_GRAPH_ROOTS = repoFlag + '=' + path.resolve(root);
@@ -264,4 +301,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { WEB_ROOT };
+module.exports = { WEB_ROOT, layerOf };

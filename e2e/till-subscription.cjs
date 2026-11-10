@@ -56,7 +56,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(62) + '· ' + d 
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
     ls.set(tillGivenKey(), 'C1');
     WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'card', label: 'Card' }, { id: 'upi', label: 'UPI' }] },
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'card', label: 'Card' }, { id: 'upi', label: 'UPI' }] },
                  at: new Date().toISOString(), items: [], offers: [] };
     window.sure = async () => true;   /* the confirmation itself is proven elsewhere; this test drives the form */
   }, base);

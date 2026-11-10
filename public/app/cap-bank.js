@@ -97,6 +97,16 @@ const bkbBy = () => {
     return null;
   }
 };
+/** the shop's own country, upper-cased; '' when none is stated. The bank rules are the country pack's, so every engine call names it (CTRY-94: the engine never guesses one) */
+function bkbCountry() {
+  return String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').toUpperCase();
+}
+/** the engine's one sentence for a shop with no country (CBRegulation.status(null).why); '' when the shop has one. The bank rules are the pack's, so with none the page says this and never calls the engine (CTRY-94) */
+function bkbNoCountryWords() {
+  if (bkbCountry()) return '';
+  const said = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
+  return (said && said.why) || tx('Set the shop country first (Country setup).');
+}
 function bkbStep(action) {
   const next = CBBankRecon.step(bkbRec(), Object.assign({ at: new Date().toISOString(), by: bkbBy() }, action));
   if (next.why) {
@@ -109,7 +119,8 @@ function bkbStep(action) {
 }
 /** a confirmed explanation → a suggestion rule (the newest wins for the same words) */
 function bkbLearn(line, x) {
-  const r = CBBankRecon.learn(line, x, { at: new Date().toISOString(), by: bkbBy() });
+  if (bkbNoCountryWords()) return;
+  const r = CBBankRecon.learn(line, x, { at: new Date().toISOString(), by: bkbBy(), country: bkbCountry() });
   if (!r.ok) return;
   BKB.rules = bkbRules()
     .filter((y) => y.id !== r.rule.id)
@@ -206,7 +217,8 @@ async function bankPick(inp) {
     return peBad('bk_out', tx('That file could not be read.'));
   }
   const hash = await bkbHash(text);
-  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined });
+  if (bkbNoCountryWords()) return peBad('bk_out', bkbNoCountryWords());
+  const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() });
   if (!parsed || !parsed.ok) {
     BKB.parsed = null;
     BKB.rows = [];
@@ -285,7 +297,7 @@ function bankExplain() {
   const asks = chits
     .filter((item) => item.direction === 'sent' && (item.business_json || {}).kind === 'bank_query' && item.business_json.bank_query)
     .map((item) => ({ key: item.business_json.bank_query.key, chit_id: item.chit_id, party: item.party, at: item.created_at }));
-  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, learned: bkbRules(), bank: BKB.preset || undefined });
+  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, learned: bkbRules(), bank: BKB.preset || undefined, country: bkbCountry() });
   BKB.m = {
     unmatched_ledger: M.unmatched_ledger || [],
     unmatched_stmt: M.rows.filter((item) => !item.ledger.length).map((item) => Object.assign({ i: item.i }, P.lines[item.i]))
@@ -371,6 +383,7 @@ function bankBrs() {
     asOf: BKB.to,
     bookBalance_minor: Number((BKB.ledgerRaw || {}).closing_minor) || 0,
     bankBalance_minor: bank,
+    country: bkbCountry(),
     unmatched_ledger: BKB.m.unmatched_ledger || [],
     unmatched_stmt: BKB.m.unmatched_stmt || []
   });
@@ -392,14 +405,14 @@ function bankPaint() {
   res.innerHTML =
     warn +
     bankFinish() +
-    '<div class="tabs" role="tablist">' +
+    '<div class="tabs" role="group">' +
     [
       ['lines', 'Lines'],
       ['brs', 'Statement']
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" role="tab" data-testid="bank-tab-' +
+          '<button type="button" class="pe-tab" data-testid="bank-tab-' +
           item[0] +
           '" aria-pressed="' +
           (BKB.tab === item[0]) +
@@ -744,22 +757,24 @@ function bankAskBody() {
     to = peVal('bk_askto'),
     p = ((BKB.rail && BKB.rail.parties) || []).filter((x) => x.party_id === to)[0];
   if (!r) return { ok: false, why: tx('That line is gone') };
+  if (bkbNoCountryWords()) return { ok: false, why: bkbNoCountryWords() };
   return CBBankRecon.ask(r.stmt, {
     party: p ? { id: p.party_id, name: p.name } : null,
     currency: (BKB.rail && BKB.rail.currency) || bkCur(),
     me: BKB.rail && BKB.rail.me,
+    country: bkbCountry(),
     key: r.key
   });
 }
 function bankAskWords() {
   const a = bankAskBody(),
     el = bkbEl('bk_askwords');
-  if (el) el.textContent = a.ok ? a.words : tx('Choose who to ask.');
+  if (el) el.textContent = a.ok ? a.words : bkbNoCountryWords() || tx('Choose who to ask.');
 }
 function bankAskSend(btn) {
   const a = bankAskBody(),
     r = BKB.rows.filter((x) => x.id === BKB.asking)[0];
-  if (!a.ok) return peBad('bk_askout', tx('Choose who to ask.'));
+  if (!a.ok) return peBad('bk_askout', bkbNoCountryWords() || tx('Choose who to ask.'));
   /* the rail's one send of a composed body (rail-advice.js CBAdvice.sendBody) — never a second mint */
   return CBAction.run(btn, () => CBAdvice.sendBody(a.body), {
     key: 'bankask:' + a.key,

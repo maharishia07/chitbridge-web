@@ -47,7 +47,7 @@ const SG = '33333333-3333-4333-8333-333333333333';
     HOST.drain = function () {};                       /* the chit is read from the queue below, not sent */
     ls.set(tillGivenKey(), 'C1');
     WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
-    window.S = { shop: { name: 'Mayur Stores', currency: 'INR', state_code: '33', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', pay: [{ id: 'cash', label: 'Cash' }] },
+    window.S = { shop: { country: 'IN', name: 'Mayur Stores', currency: 'INR', state_code: '33', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', pay: [{ id: 'cash', label: 'Cash' }] },
                  at: new Date().toISOString(), items: [], offers: [], customers: [],
                  suppliers: [{ party_id: sg, name: 'Sri Ganesh Provisions', state: '33', party_no: 'P-00001' }, { party_id: '44444444-4444-4444-8444-444444444444', name: 'Lakshmi Agencies' }] };
     window.__q = [];
@@ -197,7 +197,7 @@ const SG = '33333333-3333-4333-8333-333333333333';
     const m = await n.evaluate(() => {
       CloudHost.key = 'demo-key'; HOST = CloudHost; HOST.drain = function () {}; ls.set(tillGivenKey(), 'C1');
       WHO = { id: 'w1', name: 'Bala', kind: 'coassist' };
-      window.S = { shop: { name: 'Mayur Stores', currency: 'INR', state_code: '33', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), items: [], offers: [], customers: [], suppliers: [] };
+      window.S = { shop: { country: 'IN', name: 'Mayur Stores', currency: 'INR', state_code: '33', gstin: '33AAAAA0000A1Z5', reg_type: 'regular', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), items: [], offers: [], customers: [], suppliers: [] };
       setMode('receive'); rcvAdd({ item_id: 'i1', name: 'Toor dal premium 25kg', unit: 'bag', price: 105 }, 4); RCV.lines[0].gst_rate = 5; RCV.lines[0].rate = 105; RCV.bill_total = 420; paintReceive();
       const pane = document.getElementById('pane_receive'), r = document.getElementById('rcv_save').getBoundingClientRect();
       return { page: document.documentElement.scrollWidth, pane: pane.scrollWidth - pane.clientWidth, btn: [Math.round(r.left), Math.round(r.right)], vw: innerWidth };

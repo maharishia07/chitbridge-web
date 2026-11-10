@@ -7,6 +7,7 @@
  * Offer Lab's own sentence (CBLabKit.promise, the REAL lab-kit.js here) has been shown and accepted. Cases: Publish on an offer asks first and sends
  * nothing until OK; Cancel sends nothing; a category, a slab and "back to draft" are never asked; an offer that names no item says "the whole catalogue";
  * the Offer Lab's Go live / Make live and the setup plan's "Create all as live" carry the yes (static, they are inline page code).
+ * CARD      07-offers-pricing-and-combos/offer-lab
  * Run: node e2e/offer-live-confirm.test.cjs
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');

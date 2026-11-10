@@ -55,58 +55,58 @@ var RP_VERB = {
 };
 var RP_TONE = { proposed: 'amber', agreed: 'green', countered: 'amber', paused: '', declined: '', ended: '' };
 
-function rpT(s) {
-  return typeof tx === 'function' ? tx(s) : s;
+function rpT(words) {
+  return typeof tx === 'function' ? tx(words) : words;
 }
 /** "every 2 weeks" · "every day" — the schedule in words, from the server's fields */
 function rpEvery(list) {
-  var u = RP_UNIT[list.unit] || [list.unit, list.unit];
-  var n = Number(list.every) || 1;
-  return rpT('every') + ' ' + (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0]));
+  var unitWords = RP_UNIT[list.unit] || [list.unit, list.unit];
+  var interval = Number(list.every) || 1;
+  return rpT('every') + ' ' + (interval > 1 ? interval + ' ' + rpT(unitWords[1]) : rpT(unitWords[0]));
 }
 /** the per-run money as the agreement chit was frozen with — a mapping, never a sum */
-function rpMoney(a) {
-  var m = a && a.money;
-  if (!m || m.total == null) return '—';
-  return typeof fmtMoney === 'function' ? fmtMoney(m.total, a.currency || m.currency_code) : String(m.total);
+function rpMoney(agreement) {
+  var money = agreement && agreement.money;
+  if (!money || money.total == null) return '—';
+  return typeof fmtMoney === 'function' ? fmtMoney(money.total, agreement.currency || money.currency_code) : String(money.total);
 }
-function rpDate(d) {
-  return typeof bkDate === 'function' ? bkDate(d) : d || '—';
+function rpDate(date) {
+  return typeof bkDate === 'function' ? bkDate(date) : date || '—';
 }
 function rpSession() {
   return (typeof SESS !== 'undefined' && SESS) || (typeof SESSION !== 'undefined' && SESSION) || {};
 }
 /** a verb button: enabled when the server says ok; otherwise greyed, its sentence on the control and said on a tap */
-function rpBtn(a, verb, tid, cls, sayInline) {
-  var v = (a.actions || {})[verb];
-  if (!v) return '';
-  var ok = !!v.ok,
-    say = v.say || '';
+function rpBtn(agreement, verb, testId, className, sayInline) {
+  var verbState = (agreement.actions || {})[verb];
+  if (!verbState) return '';
+  var ok = !!verbState.ok,
+    sentence = verbState.say || '';
   return (
     '<button type="button" class="' +
-    (cls || 'act sm') +
+    (className || 'act sm') +
     '" data-testid="' +
-    esc(tid) +
+    esc(testId) +
     '" data-verb="' +
     verb +
     '"' +
-    (ok ? '' : ' disabled aria-disabled="true" title="' + esc(say) + '" data-why="' + esc(say) + '"') +
+    (ok ? '' : ' disabled aria-disabled="true" title="' + esc(sentence) + '" data-why="' + esc(sentence) + '"') +
     ' onclick="CBRepeat.act(\'' +
-    esc(a.agreement_id) +
+    esc(agreement.agreement_id) +
     "','" +
     verb +
     '\',this)">' +
     esc(rpT(RP_VERB[verb] || verb)) +
     '</button>' +
     /* greyed WITH its sentence: a disabled button never answers a tap, so the sentence stands beside it */
-    (!ok && sayInline ? '<div class="hint" data-testid="' + esc(tid) + '-say">' + esc(say) + '</div>' : '')
+    (!ok && sayInline ? '<div class="hint" data-testid="' + esc(testId) + '-say">' + esc(sentence) + '</div>' : '')
   );
 }
 /** the greyed verbs' sentences, once each, with the verbs they refuse — under the panel's buttons */
-function rpSaysHTML(a, verbs) {
+function rpSaysHTML(agreement, verbs) {
   var by = {};
   verbs.forEach(function (item) {
-    var x = (a.actions || {})[item];
+    var x = (agreement.actions || {})[item];
     if (x && !x.ok && x.say) (by[x.say] = by[x.say] || []).push(rpT(RP_VERB[item] || item));
   });
   return Object.keys(by)
@@ -120,21 +120,21 @@ function rpSaysHTML(a, verbs) {
 
 /** fetch the agreements into RP.rows (denied on a 403, error otherwise); quiet = no loading state, a stale reply is dropped */
 async function rpLoad(quiet) {
-  var g = ++RP.gen;
+  var generation = ++RP.gen;
   if (!quiet) {
     RP.state = 'loading';
     if (RP.api) RP.api.refresh();
   }
   try {
     var reply = await api('repeatList');
-    if (g !== RP.gen) return;
+    if (generation !== RP.gen) return;
     RP.rows = (reply && reply.agreements) || [];
     RP.migrated = !(reply && reply.migrated === false);
     RP.msg = (reply && reply.message) || null;
     RP.state = 'ready';
     RP.err = null;
   } catch (e) {
-    if (g !== RP.gen) return;
+    if (generation !== RP.gen) return;
     RP.state = e && e.status === 403 ? 'denied' : 'error';
     RP.err = e;
   }
@@ -156,15 +156,15 @@ function rpHead() {
     node.innerHTML = '<p data-testid="rp-not-yet" style="opacity:.75">' + esc(rpT(RP.msg || 'Repeat supply arrives after the next update.')) + '</p>';
     return;
   }
-  var due = RP.rows.filter(function (item) {
+  var dueCount = RP.rows.filter(function (item) {
     return item.due;
   }).length;
   node.innerHTML =
     '<div class="kv"><b data-testid="rp-due">' +
-    esc(due ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', due) : due + ' due') : rpT('Nothing due today')) +
+    esc(dueCount ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', dueCount) : dueCount + ' due') : rpT('Nothing due today')) +
     '</b>' +
     '<span><button type="button" class="act sm" data-testid="rp-run-due"' +
-    (due ? '' : ' disabled aria-disabled="true" title="' + esc(rpT('Nothing is due.')) + '"') +
+    (dueCount ? '' : ' disabled aria-disabled="true" title="' + esc(rpT('Nothing is due.')) + '"') +
     ' onclick="rpSweep(this)">' +
     esc(rpT('Run what is due')) +
     '</button>' +
@@ -185,14 +185,14 @@ function rpSweep(btn) {
       key: 'rp-sweep',
       out: 'rp_why',
       failed: rpT('Could not run them'),
-      outcome: function (r) {
-        var n = ((r && r.ran) || []).length,
-          p = ((r && r.problems) || []).length;
+      outcome: function (reply) {
+        var ranCount = ((reply && reply.ran) || []).length,
+          problemCount = ((reply && reply.problems) || []).length;
         RP.said = {
           text:
-            (n ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', n) : n + ' made') : rpT('Nothing to run')) +
-            (p ? ' · ' + rpT('some could not: see the row') : ''),
-          tone: p ? 'warn' : 'ok'
+            (ranCount ? (typeof txn === 'function' ? txn('{count} run made', '{count} runs made', ranCount) : ranCount + ' made') : rpT('Nothing to run')) +
+            (problemCount ? ' · ' + rpT('some could not: see the row') : ''),
+          tone: problemCount ? 'warn' : 'ok'
         };
         rpHead();
         rpLoad(true);
@@ -211,13 +211,13 @@ function rpCols() {
       sort: 'name',
       w: 220,
       html: true,
-      cell: function (a) {
+      cell: function (agreement) {
         return (
           '<b>' +
-          esc((a.customer && a.customer.name) || rpT('Customer')) +
+          esc((agreement.customer && agreement.customer.name) || rpT('Customer')) +
           '</b><div class="hint" data-b="each">' +
-          esc(rpEvery(a)) +
-          (a.mode === 'send' ? ' · ' + esc(rpT('sent')) : ' · ' + esc(rpT('drafted'))) +
+          esc(rpEvery(agreement)) +
+          (agreement.mode === 'send' ? ' · ' + esc(rpT('sent')) : ' · ' + esc(rpT('drafted'))) +
           '</div>'
         );
       }
@@ -229,8 +229,8 @@ function rpCols() {
       num: true,
       w: 130,
       html: true,
-      cell: function (a) {
-        return '<span data-b="money">' + esc(rpMoney(a)) + '</span>';
+      cell: function (agreement) {
+        return '<span data-b="money">' + esc(rpMoney(agreement)) + '</span>';
       }
     },
     {
@@ -240,9 +240,9 @@ function rpCols() {
       sort: 'next',
       w: 150,
       html: true,
-      cell: function (a) {
-        return a.state === 'agreed' || a.state === 'paused'
-          ? '<span data-b="next">' + esc(rpDate(a.next_on)) + '</span>' + (a.due ? ' <span class="tag amber">' + esc(rpT('Due')) + '</span>' : '')
+      cell: function (agreement) {
+        return agreement.state === 'agreed' || agreement.state === 'paused'
+          ? '<span data-b="next">' + esc(rpDate(agreement.next_on)) + '</span>' + (agreement.due ? ' <span class="tag amber">' + esc(rpT('Due')) + '</span>' : '')
           : dash;
       }
     },
@@ -252,13 +252,13 @@ function rpCols() {
       prio: 4,
       w: 130,
       html: true,
-      cell: function (a) {
-        return a.last_run_on
+      cell: function (agreement) {
+        return agreement.last_run_on
           ? '<span data-b="last">' +
-              esc(rpDate(a.last_run_on)) +
+              esc(rpDate(agreement.last_run_on)) +
               '</span> <span class="hint">' +
-              esc(String(a.runs_done)) +
-              (a.runs_max ? '/' + esc(String(a.runs_max)) : '') +
+              esc(String(agreement.runs_done)) +
+              (agreement.runs_max ? '/' + esc(String(agreement.runs_max)) : '') +
               '</span>'
           : dash;
       }
@@ -270,14 +270,14 @@ function rpCols() {
       sort: 'state',
       w: 200,
       html: true,
-      cell: function (a) {
+      cell: function (agreement) {
         return (
           '<span class="tag ' +
-          (RP_TONE[a.state] || '') +
+          (RP_TONE[agreement.state] || '') +
           '" data-b="state">' +
-          esc(rpT(a.words || a.state)) +
+          esc(rpT(agreement.words || agreement.state)) +
           '</span>' +
-          (a.state_note ? '<div class="hint" data-b="note">' + esc(a.state_note) + '</div>' : '')
+          (agreement.state_note ? '<div class="hint" data-b="note">' + esc(agreement.state_note) + '</div>' : '')
         );
       }
     },
@@ -288,13 +288,61 @@ function rpCols() {
       pin: 'end',
       w: 170,
       html: true,
-      cell: function (a) {
-        var v = a.state === 'countered' ? 'agree' : a.state === 'paused' ? 'resume' : 'run';
+      cell: function (agreement) {
+        var verb = agreement.state === 'countered' ? 'agree' : agreement.state === 'paused' ? 'resume' : 'run';
         return (
           '<span style="display:inline-flex;gap:6px;flex-direction:column;align-items:flex-start" onclick="event.stopPropagation()">' +
-          rpBtn(a, v, 'rp-' + v + '-' + a.agreement_id, 'cbl-tbtn', true) +
+          rpBtn(agreement, verb, 'rp-' + verb + '-' + agreement.agreement_id, 'cbl-tbtn', true) +
           '</span>'
         );
+      }
+    }
+  ];
+}
+/** the list's three orders: next run, customer name, their side */
+function rpSorts() {
+  return [
+    {
+      key: 'next',
+      label: rpT('Next run'),
+      cmp: function (left, right) {
+        return String(left.next_on || '9999').localeCompare(String(right.next_on || '9999'));
+      }
+    },
+    {
+      key: 'name',
+      label: rpT('Customer'),
+      cmp: function (left, right) {
+        return String((left.customer && left.customer.name) || '').localeCompare(String((right.customer && right.customer.name) || ''));
+      }
+    },
+    {
+      key: 'state',
+      label: rpT('Their side'),
+      cmp: function (left, right) {
+        return String(left.state).localeCompare(String(right.state));
+      }
+    }
+  ];
+}
+/** the list's one filter: running · waiting on them · ended */
+function rpFilters() {
+  return [
+    {
+      key: 'state',
+      label: rpT('Show'),
+      all: rpT('All'),
+      options: [
+        { v: 'live', label: rpT('Running') },
+        { v: 'waiting', label: rpT('Waiting on them') },
+        { v: 'over', label: rpT('Ended') }
+      ],
+      match: function (agreement, value) {
+        return value === 'live'
+          ? /^(agreed|paused)$/.test(agreement.state)
+          : value === 'waiting'
+            ? /^(proposed|countered)$/.test(agreement.state)
+            : /^(ended|declined)$/.test(agreement.state);
       }
     }
   ];
@@ -314,11 +362,11 @@ function rpMount(frame) {
     rows: function () {
       return RP.rows;
     },
-    id: function (a) {
-      return a.agreement_id;
+    id: function (agreement) {
+      return agreement.agreement_id;
     },
-    rowTid: function (a) {
-      return 'rp-row-' + a.agreement_id;
+    rowTid: function (agreement) {
+      return 'rp-row-' + agreement.agreement_id;
     },
     columns: rpCols(),
     defaultCols: ['customer', 'next', 'state', 'money', 'last'],
@@ -335,63 +383,23 @@ function rpMount(frame) {
     },
     onRetry: rpRetry,
     empty: { title: rpT('No repeat supply yet'), sub: rpT('Open a sent bill and press Repeat this…') },
-    onOpen: function (a) {
-      if (typeof openChitSheet === 'function') openChitSheet(a.chit_id);
+    onOpen: function (agreement) {
+      if (typeof openChitSheet === 'function') openChitSheet(agreement.chit_id);
     },
-    search: function (a) {
-      return [a.customer && a.customer.name, a.subject, a.words].join(' ');
+    search: function (agreement) {
+      return [agreement.customer && agreement.customer.name, agreement.subject, agreement.words].join(' ');
     },
-    sorts: [
-      {
-        key: 'next',
-        label: rpT('Next run'),
-        cmp: function (a, b) {
-          return String(a.next_on || '9999').localeCompare(String(b.next_on || '9999'));
-        }
-      },
-      {
-        key: 'name',
-        label: rpT('Customer'),
-        cmp: function (a, b) {
-          return String((a.customer && a.customer.name) || '').localeCompare(String((b.customer && b.customer.name) || ''));
-        }
-      },
-      {
-        key: 'state',
-        label: rpT('Their side'),
-        cmp: function (a, b) {
-          return String(a.state).localeCompare(String(b.state));
-        }
-      }
-    ],
-    filters: [
-      {
-        key: 'state',
-        label: rpT('Show'),
-        all: rpT('All'),
-        options: [
-          { v: 'live', label: rpT('Running') },
-          { v: 'waiting', label: rpT('Waiting on them') },
-          { v: 'over', label: rpT('Ended') }
-        ],
-        match: function (a, v) {
-          return v === 'live'
-            ? /^(agreed|paused)$/.test(a.state)
-            : v === 'waiting'
-              ? /^(proposed|countered)$/.test(a.state)
-              : /^(ended|declined)$/.test(a.state);
-        }
-      }
-    ]
+    sorts: rpSorts(),
+    filters: rpFilters()
   });
   if (!frame) rpLoad(RP.rows.length > 0);
 }
 
 /* ── "Repeat this…" on a sent invoice: the composer (CBSteps) ─────────────────────────────────────────────── */
 
-function rpDraftOf(m) {
+function rpDraftOf(model) {
   var today = typeof bkToday === 'function' ? bkToday() : new Date().toISOString().slice(0, 10);
-  return { chit_id: m.id, lines: m.lines || [], who: m.who || '', every: 1, unit: 'weekly', start_on: today, until: 'none', runs: 12, on: '', mode: 'draft' };
+  return { chit_id: model.id, lines: model.lines || [], who: model.who || '', every: 1, unit: 'weekly', start_on: today, until: 'none', runs: 12, on: '', mode: 'draft' };
 }
 function rpField(label, input) {
   return '<div class="kv"><b style="flex:1 1 140px">' + esc(label) + '</b><span style="flex:1 1 160px">' + input + '</span></div>';
@@ -399,11 +407,11 @@ function rpField(label, input) {
 /** step 1 of Repeat this…: every how many days, weeks or months, from when, until when */
 function rpStepSchedule() {
   var list = RP.draft,
-    sel = function (v) {
-      return list.unit === v ? ' selected' : '';
+    selectedIf = function (unit) {
+      return list.unit === unit ? ' selected' : '';
     },
-    chk = function (k, v) {
-      return list[k] === v ? ' checked' : '';
+    checkedIf = function (field, value) {
+      return list[field] === value ? ' checked' : '';
     };
   return (
     rpField(
@@ -412,15 +420,15 @@ function rpStepSchedule() {
         esc(String(list.every)) +
         '" style="width:70px" oninput="CBRepeat.read()"> ' +
         '<select class="inp" id="rp_unit" data-testid="rp-unit" onchange="CBRepeat.read()"><option value="daily"' +
-        sel('daily') +
+        selectedIf('daily') +
         '>' +
         esc(rpT('day(s)')) +
         '</option><option value="weekly"' +
-        sel('weekly') +
+        selectedIf('weekly') +
         '>' +
         esc(rpT('week(s)')) +
         '</option><option value="monthly"' +
-        sel('monthly') +
+        selectedIf('monthly') +
         '>' +
         esc(rpT('month(s)')) +
         '</option></select>'
@@ -429,19 +437,19 @@ function rpStepSchedule() {
     rpField(
       rpT('Until'),
       '<label><input type="radio" name="rp_until" value="none" data-testid="rp-until-none"' +
-        chk('until', 'none') +
+        checkedIf('until', 'none') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('You end it')) +
         '</label> ' +
         '<label><input type="radio" name="rp_until" value="runs" data-testid="rp-until-runs"' +
-        chk('until', 'runs') +
+        checkedIf('until', 'runs') +
         ' onchange="CBRepeat.read()"> <input class="inp" id="rp_runs" data-testid="rp-runs" inputmode="numeric" value="' +
         esc(String(list.runs)) +
         '" style="width:60px" oninput="CBRepeat.read()"> ' +
         esc(rpT('runs')) +
         '</label> ' +
         '<label><input type="radio" name="rp_until" value="on" data-testid="rp-until-on"' +
-        chk('until', 'on') +
+        checkedIf('until', 'on') +
         ' onchange="CBRepeat.read()"> <input class="inp" type="date" id="rp_on" data-testid="rp-on" value="' +
         esc(list.on) +
         '" onchange="CBRepeat.read()"></label>'
@@ -449,12 +457,12 @@ function rpStepSchedule() {
     rpField(
       rpT('Each run'),
       '<label><input type="radio" name="rp_mode" value="draft" data-testid="rp-mode-draft"' +
-        chk('mode', 'draft') +
+        checkedIf('mode', 'draft') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('Draft for me to send')) +
         '</label> ' +
         '<label><input type="radio" name="rp_mode" value="send" data-testid="rp-mode-send"' +
-        chk('mode', 'send') +
+        checkedIf('mode', 'send') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('Send it')) +
         '</label>'
@@ -464,8 +472,8 @@ function rpStepSchedule() {
 /** step 2 of Repeat this…: the schedule in words, read back before Send */
 function rpStepReview() {
   var list = RP.draft,
-    u = RP_UNIT[list.unit] || [list.unit, list.unit],
-    n = Number(list.every) || 1;
+    unitWords = RP_UNIT[list.unit] || [list.unit, list.unit],
+    interval = Number(list.every) || 1;
   var until =
     list.until === 'runs'
       ? typeof txn === 'function'
@@ -481,7 +489,7 @@ function rpStepReview() {
     esc(
       rpT('every') +
         ' ' +
-        (n > 1 ? n + ' ' + rpT(u[1]) : rpT(u[0])) +
+        (interval > 1 ? interval + ' ' + rpT(unitWords[1]) : rpT(unitWords[0])) +
         ' · ' +
         rpT('from') +
         ' ' +
@@ -510,28 +518,28 @@ function rpRead() {
     var el = document.getElementById(id);
     return el ? String(el.value || '').trim() : '';
   };
-  var r = function (n) {
-    var el = document.querySelector('input[name="' + n + '"]:checked');
+  var radioValue = function (groupName) {
+    var el = document.querySelector('input[name="' + groupName + '"]:checked');
     return el ? el.value : '';
   };
   if (document.getElementById('rp_every')) {
     list.every = node('rp_every');
     list.unit = node('rp_unit') || list.unit;
     list.start_on = node('rp_start');
-    list.until = r('rp_until') || list.until;
+    list.until = radioValue('rp_until') || list.until;
     list.runs = node('rp_runs');
     list.on = node('rp_on');
-    list.mode = r('rp_mode') || list.mode;
+    list.mode = radioValue('rp_mode') || list.mode;
   }
   if (RP.flow) RP.flow.paintFoot();
 }
 /** what stops the schedule step going on, as a sentence (null = nothing); only the schedule step is checked here */
-function rpGuard(k) {
+function rpGuard(stepKey) {
   var list = RP.draft;
   if (!list) return null;
-  if (k !== 'schedule') return null;
-  var n = Number(list.every);
-  if (!(n >= 1 && n <= 365) || n !== Math.floor(n)) return rpT('Every how many? 1 to 365.');
+  if (stepKey !== 'schedule') return null;
+  var every = Number(list.every);
+  if (!(every >= 1 && every <= 365) || every !== Math.floor(every)) return rpT('Every how many? 1 to 365.');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(list.start_on)) return rpT('From when?');
   if (list.until === 'runs' && !(Number(list.runs) >= 1)) return rpT('How many runs?');
   if (list.until === 'on' && !/^\d{4}-\d{2}-\d{2}$/.test(list.on)) return rpT('Until when?');
@@ -548,13 +556,13 @@ function rpBody() {
   };
 }
 /** the composer over the page's own sheet: Schedule → Review → Send agreement */
-function rpStart(chitId, m) {
+function rpStart(chitId, model) {
   if (typeof modal !== 'function' || typeof CBSteps === 'undefined') {
     if (typeof toast === 'function') toast(rpT('Open this bill on the app to repeat it'));
     return;
   }
   if (typeof CBSheet !== 'undefined' && CBSheet.close) CBSheet.close();
-  RP.draft = rpDraftOf(m || { id: chitId });
+  RP.draft = rpDraftOf(model || { id: chitId });
   modal(
     '<div class="mhd"><div class="t" data-testid="rp-title">' +
       esc(rpT('Repeat this bill')) +
@@ -570,8 +578,8 @@ function rpStart(chitId, m) {
     bodyEl: 'rp_body',
     footEl: 'rp_foot',
     subEl: 'rp_sub',
-    render: function (k) {
-      return k === 'schedule' ? rpStepSchedule() : rpStepReview();
+    render: function (stepKey) {
+      return stepKey === 'schedule' ? rpStepSchedule() : rpStepReview();
     },
     guard: rpGuard,
     sendLabel: rpT('Send agreement'),
@@ -607,8 +615,8 @@ function rpStart(chitId, m) {
 /* ── the agreement's panel in the chit sheet (either side) ────────────────────────────────────────────────── */
 
 /** the sheet's model → is this chit an agreement? (business_json.repeat is stamped at send on both copies) */
-function rpIsAgreement(m) {
-  return !!(m && m.bj && m.bj.repeat && m.bj.repeat.agreement_id);
+function rpIsAgreement(model) {
+  return !!(model && model.bj && model.bj.repeat && model.bj.repeat.agreement_id);
 }
 function rpPanelHTML() {
   return (
@@ -620,66 +628,66 @@ function rpPanelHTML() {
   );
 }
 /** mount after the sheet has painted: read the agreement as THIS side sees it and paint the verbs the server allows */
-async function rpPanel(m) {
+async function rpPanel(model) {
   var el = document.getElementById('rp_panel');
-  if (!el || !rpIsAgreement(m)) return;
-  var id = m.bj.repeat.agreement_id;
+  if (!el || !rpIsAgreement(model)) return;
+  var id = model.bj.repeat.agreement_id;
   try {
-    var reply = await api('repeatGet', { params: { id: id }, query: { chit: m.id } });
-    RP.panel = { id: id, chit: m.id, a: reply.agreement, lines: m.lines || [] };
+    var reply = await api('repeatGet', { params: { id: id }, query: { chit: model.id } });
+    RP.panel = { id: id, chit: model.id, a: reply.agreement, lines: model.lines || [] };
     rpPanelPaint();
   } catch (e) {
-    var w = typeof CBAction !== 'undefined' ? CBAction.words(e, rpT('Could not read the agreement')) : rpT('Could not read the agreement');
-    el.innerHTML = '<div class="cs-mute" data-testid="rp-panel-err">' + esc(w) + '</div>';
+    var words = typeof CBAction !== 'undefined' ? CBAction.words(e, rpT('Could not read the agreement')) : rpT('Could not read the agreement');
+    el.innerHTML = '<div class="cs-mute" data-testid="rp-panel-err">' + esc(words) + '</div>';
   }
 }
 /** paint the agreement's panel in the chit sheet: its state, then the verbs this side may use, greyed with the server's why */
 function rpPanelPaint() {
   var el = document.getElementById('rp_panel'),
-    p = RP.panel;
-  if (!el || !p) return;
-  var a = p.a,
-    seller = a.side === 'seller';
-  var until = a.runs_max
+    agreementPanel = RP.panel;
+  if (!el || !agreementPanel) return;
+  var agreement = agreementPanel.a,
+    seller = agreement.side === 'seller';
+  var until = agreement.runs_max
     ? typeof txn === 'function'
-      ? txn('{count} run', '{count} runs', a.runs_max)
-      : a.runs_max + ' runs'
-    : a.end_on
-      ? rpT('until') + ' ' + rpDate(a.end_on)
+      ? txn('{count} run', '{count} runs', agreement.runs_max)
+      : agreement.runs_max + ' runs'
+    : agreement.end_on
+      ? rpT('until') + ' ' + rpDate(agreement.end_on)
       : rpT('until ended');
-  var line = rpEvery(a) + ' · ' + until + ' · ' + (a.mode === 'send' ? rpT('each run is sent') : rpT('each run is drafted'));
+  var line = rpEvery(agreement) + ' · ' + until + ' · ' + (agreement.mode === 'send' ? rpT('each run is sent') : rpT('each run is drafted'));
   var verbs = seller ? ['run', 'pause', 'resume', 'agree', 'refuse', 'skip', 'end'] : ['accept', 'counter', 'decline', 'skip'];
-  var c = a.counter;
+  var counterOffer = agreement.counter;
   el.innerHTML =
     '<div class="cs-row"><span data-testid="rp-schedule">' +
     esc(line) +
     '</span><span class="tag ' +
-    (RP_TONE[a.state] || '') +
+    (RP_TONE[agreement.state] || '') +
     '" data-testid="rp-state">' +
-    esc(rpT(a.words || a.state)) +
+    esc(rpT(agreement.words || agreement.state)) +
     '</span></div>' +
     '<div class="cs-row cs-mute"><span>' +
     esc(rpT('Next run')) +
     '</span><span data-testid="rp-next">' +
-    esc(/^(agreed|paused)$/.test(a.state) ? rpDate(a.next_on) : '—') +
+    esc(/^(agreed|paused)$/.test(agreement.state) ? rpDate(agreement.next_on) : '—') +
     '</span></div>' +
     '<div class="cs-row cs-mute"><span>' +
     esc(rpT('Last run')) +
     '</span><span data-testid="rp-last">' +
-    esc(a.last_run_on ? rpDate(a.last_run_on) + ' · ' + a.runs_done : '—') +
+    esc(agreement.last_run_on ? rpDate(agreement.last_run_on) + ' · ' + agreement.runs_done : '—') +
     '</span></div>' +
-    (a.state_note
-      ? '<div class="cs-row cs-mute"><span>' + esc(rpT('Note')) + '</span><span data-testid="rp-note">' + esc(a.state_note) + '</span></div>'
+    (agreement.state_note
+      ? '<div class="cs-row cs-mute"><span>' + esc(rpT('Note')) + '</span><span data-testid="rp-note">' + esc(agreement.state_note) + '</span></div>'
       : '') +
-    (c ? '<div class="cs-note" data-testid="rp-counter">' + esc(rpT('Proposed change') + ': ' + rpCounterWords(c, p.lines)) + '</div>' : '') +
+    (counterOffer ? '<div class="cs-note" data-testid="rp-counter">' + esc(rpT('Proposed change') + ': ' + rpCounterWords(counterOffer, agreementPanel.lines)) + '</div>' : '') +
     '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px" data-testid="rp-verbs">' +
     verbs
       .map(function (item) {
-        return rpBtn(a, item, 'rp-act-' + item);
+        return rpBtn(agreement, item, 'rp-act-' + item);
       })
       .join('') +
     '</div>' +
-    rpSaysHTML(a, verbs) +
+    rpSaysHTML(agreement, verbs) +
     '<div id="rp_form" data-testid="rp-form"></div><div class="cs-mute" id="rp_panel_why" data-testid="rp-panel-why"></div>';
 }
 /** the counter-offer in words: each line's asked quantity against the agreed one */
@@ -692,8 +700,8 @@ function rpCounterWords(list, lines) {
     list.lines
       ? list.lines
           .map(function (x) {
-            var l = byId[x.line_id];
-            return (l ? l.particulars || l.name || x.line_id : x.line_id) + ' × ' + x.quantity;
+            var line = byId[x.line_id];
+            return (line ? line.particulars || line.name || x.line_id : x.line_id) + ' × ' + x.quantity;
           })
           .join(', ')
       : null,
@@ -704,13 +712,13 @@ function rpCounterWords(list, lines) {
     .join(' · ');
 }
 /** the Counter form: a quantity per line, how often, from when, a note */
-function rpCounterForm(p) {
-  var list = p.a;
+function rpCounterForm(panel) {
+  var list = panel.a;
   return (
     '<div class="cs-sec">' +
     esc(rpT('Your counter')) +
     '</div>' +
-    (p.lines || [])
+    (panel.lines || [])
       .map(function (item, index) {
         return (
           '<div class="cs-row"><span>' +
@@ -750,10 +758,10 @@ function rpCounterForm(p) {
   );
 }
 /** the reason input and its one button, for the verbs that take a why (skip, decline, end, pause, refuse) */
-function rpReasonForm(verb, label, ph) {
+function rpReasonForm(verb, label, placeholder) {
   return (
     '<div class="cs-row"><input class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' +
-    esc(ph) +
+    esc(placeholder) +
     '" style="flex:1">' +
     '<button type="button" class="act sm" data-testid="rp-' +
     verb +
@@ -766,17 +774,17 @@ function rpReasonForm(verb, label, ph) {
 }
 /** a verb pressed: the forms that need words first (counter · skip · decline · end · pause · refuse); the rest go straight to the server */
 function rpAct(id, verb, btn) {
-  var p = RP.panel;
+  var panel = RP.panel;
   var form = document.getElementById('rp_form');
-  if (!p || p.id !== id) {
+  if (!panel || panel.id !== id) {
     return rpRowAct(id, verb, btn);
   }
   if (verb === 'counter') {
-    form.innerHTML = rpCounterForm(p);
+    form.innerHTML = rpCounterForm(panel);
     return;
   }
   if (verb === 'skip') {
-    form.innerHTML = rpReasonForm('skip', rpT('Skip it'), p.a.side === 'customer' ? rpT('Why — they will read it') : rpT('Why (optional)'));
+    form.innerHTML = rpReasonForm('skip', rpT('Skip it'), panel.a.side === 'customer' ? rpT('Why — they will read it') : rpT('Why (optional)'));
     return;
   }
   if (verb === 'decline' || verb === 'end' || verb === 'pause' || verb === 'refuse') {
@@ -787,10 +795,10 @@ function rpAct(id, verb, btn) {
 }
 /** a verb from the LIST row (no panel open): run · agree · resume straight to the server, the row re-read */
 function rpRowAct(id, verb, btn) {
-  var a = RP.rows.filter(function (x) {
+  var agreement = RP.rows.filter(function (x) {
     return x.agreement_id === id;
   })[0];
-  if (!a) return;
+  if (!agreement) return;
   return CBAction.run(
     btn,
     function () {
@@ -801,8 +809,8 @@ function rpRowAct(id, verb, btn) {
       out: 'rp_why',
       failed: rpT('That did not go through'),
       done: rpT(RP_VERB[verb]) + ' ✓',
-      outcome: function (r) {
-        rpSaid(verb, r);
+      outcome: function (reply) {
+        rpSaid(verb, reply);
         rpLoad(true);
       }
     }
@@ -812,14 +820,14 @@ function rpEpOf(verb) {
   return 'repeat' + verb.charAt(0).toUpperCase() + verb.slice(1);
 }
 /** the sentence said beside the control after a verb: how many ran for run, otherwise what was done */
-function rpSaid(verb, r) {
-  var n = verb === 'run' ? ((r && r.ran) || []).length : 0;
+function rpSaid(verb, reply) {
+  var ranCount = verb === 'run' ? ((reply && reply.ran) || []).length : 0;
   var text =
     verb === 'run'
-      ? n
+      ? ranCount
         ? typeof txn === 'function'
-          ? txn('{count} run made', '{count} runs made', n)
-          : n + ' made'
+          ? txn('{count} run made', '{count} runs made', ranCount)
+          : ranCount + ' made'
         : rpT('Nothing to run')
       : rpT(RP_VERB[verb]) + ' ✓';
   var panel = document.getElementById('rp_panel_why');
@@ -833,11 +841,11 @@ function rpSaid(verb, r) {
 }
 /** run one agreement verb (with the typed reason, if any) through CBAction; End and Decline ask first */
 function rpGo(verb, btn) {
-  var p = RP.panel;
-  if (!p) return;
+  var panel = RP.panel;
+  if (!panel) return;
   var reason = (document.getElementById('rp_reason') || {}).value || '';
-  var body = Object.assign({ chit_id: p.chit }, reason ? { reason: String(reason).trim() } : {});
-  var ask =
+  var body = Object.assign({ chit_id: panel.chit }, reason ? { reason: String(reason).trim() } : {});
+  var confirmation =
     verb === 'end'
       ? { title: rpT('End this agreement?'), body: rpT('No more runs. What was billed stays.'), yes: rpT('End it') }
       : verb === 'decline'
@@ -846,47 +854,47 @@ function rpGo(verb, btn) {
   return CBAction.run(
     btn,
     function () {
-      return api(rpEpOf(verb), { params: { id: p.id }, body: body });
+      return api(rpEpOf(verb), { params: { id: panel.id }, body: body });
     },
     {
-      key: 'rp-' + verb + '-' + p.id,
+      key: 'rp-' + verb + '-' + panel.id,
       out: 'rp_panel_why',
-      confirm: ask,
+      confirm: confirmation,
       busy: rpT('Working…'),
       failed: rpT('That did not go through'),
-      outcome: function (r) {
-        if (r && r.agreement) p.a = r.agreement;
+      outcome: function (reply) {
+        if (reply && reply.agreement) panel.a = reply.agreement;
         rpPanelPaint();
-        rpSaid(verb, r);
+        rpSaid(verb, reply);
         if (document.getElementById('rp_list')) rpLoad(true);
         /* the sheet's step word (accepted · rejected) is the rail's: read the chit again */
-        if ((verb === 'accept' || verb === 'decline') && typeof CBSheet !== 'undefined' && CBSheet.open) CBSheet.open(p.chit);
+        if ((verb === 'accept' || verb === 'decline') && typeof CBSheet !== 'undefined' && CBSheet.open) CBSheet.open(panel.chit);
       }
     }
   );
 }
 /** send the customer's counter-offer: one changed quantity per line, through CBAction */
 function rpSendCounter(btn) {
-  var p = RP.panel;
-  if (!p) return;
+  var panel = RP.panel;
+  if (!panel) return;
   var lines = [];
   document.querySelectorAll('[data-testid^="rp-cq-"]').forEach(function (item) {
-    var q = Number(item.value);
-    if (item.getAttribute('data-line') && isFinite(q)) lines.push({ line_id: item.getAttribute('data-line'), quantity: q });
+    var typedQuantity = Number(item.value);
+    if (item.getAttribute('data-line') && isFinite(typedQuantity)) lines.push({ line_id: item.getAttribute('data-line'), quantity: typedQuantity });
   });
   var node = function (id) {
     var el = document.getElementById(id);
     return el ? String(el.value || '').trim() : '';
   };
-  var body = { chit_id: p.chit, note: node('rp_c_note') };
+  var body = { chit_id: panel.chit, note: node('rp_c_note') };
   var changed = lines.filter(function (x) {
-    var l = (p.lines || []).filter(function (y) {
+    var line = (panel.lines || []).filter(function (y) {
       return y.line_id === x.line_id;
     })[0];
-    return l && Number(l.quantity != null ? l.quantity : l.qty) !== x.quantity;
+    return line && Number(line.quantity != null ? line.quantity : line.qty) !== x.quantity;
   });
   if (changed.length) body.lines = changed;
-  if (Number(node('rp_c_every')) !== Number(p.a.every) || node('rp_c_unit') !== p.a.unit || (node('rp_c_start') && node('rp_c_start') !== p.a.next_on)) {
+  if (Number(node('rp_c_every')) !== Number(panel.a.every) || node('rp_c_unit') !== panel.a.unit || (node('rp_c_start') && node('rp_c_start') !== panel.a.next_on)) {
     body.every = Number(node('rp_c_every'));
     body.unit = node('rp_c_unit');
     body.start_on = node('rp_c_start');
@@ -894,17 +902,17 @@ function rpSendCounter(btn) {
   return CBAction.run(
     btn,
     function () {
-      return api('repeatCounter', { params: { id: p.id }, body: body });
+      return api('repeatCounter', { params: { id: panel.id }, body: body });
     },
     {
-      key: 'rp-counter-' + p.id,
+      key: 'rp-counter-' + panel.id,
       out: 'rp_panel_why',
       busy: rpT('Sending…'),
       failed: rpT('Could not send the counter'),
-      outcome: function (r) {
-        if (r && r.agreement) p.a = r.agreement;
+      outcome: function (reply) {
+        if (reply && reply.agreement) panel.a = reply.agreement;
         rpPanelPaint();
-        rpSaid('counter', r);
+        rpSaid('counter', reply);
       }
     }
   );

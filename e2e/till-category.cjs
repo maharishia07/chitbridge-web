@@ -28,7 +28,7 @@ const ITEMS=[
  await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
  await p.waitForFunction(()=>typeof window.setMode==='function'&&!!window.CBSearch,null,{timeout:30000});
  await p.evaluate((items)=>{
-   window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
+   window.S={shop:{country: 'IN', name:'Mayur Bhavan',currency:'INR'},items:items,offers:[],at:new Date().toISOString()};
    const o=tillOpt(); o.groups={'Morning':items.map(x=>x.item_id)};
    tillOptSet({groups:o.groups, group:'Morning', quickSource:'groups'});
    screenSet({photos:true});

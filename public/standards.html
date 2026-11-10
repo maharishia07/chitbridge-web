@@ -127,7 +127,7 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .mx-c.nil{color:var(--muted);font-weight:400}
 .mx .c-live,.mx .c-live b{color:var(--green-d)}   /* the deeper green: on the panel behind the headings, --green falls under AA in Vibrant and Flowery (measured) */
 .mx-c:hover,.mx-rh:hover,.mx-ch:hover{background:var(--page)}
-.mx-c[aria-pressed="true"],.mx-rh[aria-pressed="true"],.mx-ch[aria-pressed="true"]{background:var(--blue-t);box-shadow:inset 0 0 0 2px var(--blue)}
+.mx-c[aria-selected="true"],.mx-rh[aria-selected="true"],.mx-ch[aria-selected="true"]{background:var(--blue-t);box-shadow:inset 0 0 0 2px var(--blue)}
 .mx-all > *{border-bottom:0;border-top:1.5px solid var(--line);background:var(--panel)}
 .mx-all .mx-rh{font-weight:700}
 .mx-hint{font-size:calc(12px * var(--k,1));color:var(--muted)}
@@ -220,7 +220,8 @@ var HOME = {
   compare: '/accounts.html#compare',
   catsetup: '/catalogue.html#categories',
   returns: '/accounts.html#gstclose',
-  crm: '/crm.html'
+  crm: '/crm.html',
+  'ui-standard': '/ui-standard.html'
 }; /* catalogue: CB Catalogue (T3-CATALOGUE) */ /* integrations: CB Settings › Connectors (T3-SETTINGS) */ /* compare: the parallel run, CB Accounts › Books (PR1) — "See it" on a Compared-with core-books row (STD-COMPARE) */
 /* the places stdGoto() (cap-standards.js) sends a reader to: a customer home from the map above, never the workshop; a Settings section has no customer page yet */
 function navTo(k) {
@@ -1045,7 +1046,7 @@ function paintMatrix() {
         item[0] +
         '" data-testid="std-mx-col-' +
         item[0] +
-        '" aria-pressed="' +
+        '" aria-selected="' +
         on +
         '" title="Show every ' +
         item[1].toLowerCase() +
@@ -1070,7 +1071,7 @@ function paintMatrix() {
         esc(item.id) +
         '" data-testid="std-mx-row-' +
         esc(item.id) +
-        '" aria-pressed="' +
+        '" aria-selected="' +
         rowOn +
         '">' +
         esc(item.label) +
@@ -1080,7 +1081,7 @@ function paintMatrix() {
           var c = n[t[0]],
             on = f.status === t[0] && (all ? !f[fk] : f[fk] === item.id);
           return c
-            ? '<button type="button" role="cell" class="mx-c c-' +
+            ? '<button type="button" role="gridcell" class="mx-c c-' +
                 t[0] +
                 '" data-mxr="' +
                 esc(item.id) +
@@ -1090,7 +1091,7 @@ function paintMatrix() {
                 esc(item.id) +
                 '-' +
                 t[0] +
-                '" aria-pressed="' +
+                '" aria-selected="' +
                 on +
                 '" aria-label="' +
                 esc(item.label) +

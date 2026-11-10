@@ -1,5 +1,6 @@
 /**
  * step-flow.js — THE step flow. One implementation, used by every screen that composes an order in steps.
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/step-flow
  *
  * Athi, 2026-08-08: *"we do not want the left half, we are going to show just the product list and the cart, nothing
  * else, once all the selection is over, then we show the rest in order one by one."*
@@ -409,7 +410,7 @@
       '.cbst .n{width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.08);display:inline-flex;' +
       'align-items:center;justify-content:center;font-size:var(--fs-1);font-weight:800;flex:none}' +
       '.cbst.done{border-color:#cfe0d6;background:var(--cbst-soft,var(--ok-tint));color:var(--cbst-accent,var(--ok-2))}' +
-      '.cbst.now{border-color:var(--cbst-accent,var(--blue));background:var(--cbst-accent,var(--blue));color:#fff;font-weight:700}' +
+      '.cbst.now{border-color:var(--cbst-accent,var(--blue));background:var(--cbst-accent,var(--blue));color:var(--on-accent,#fff);font-weight:700}' +
       '.cbst.now .n{background:rgba(255,255,255,.24)}' +
       /**
        * ⚠️ `width:100%` — WITHOUT IT THE FOOTER COLLAPSES AND THE LABELS WRAP. This div is itself a flex ITEM of

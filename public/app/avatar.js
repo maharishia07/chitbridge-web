@@ -115,8 +115,22 @@
   }
 
   /* ── what is saved ── */
+  /* FIXED LOOK (the UI standard page, public/ui-standard.html): a page whose <html> carries data-appearance-fixed takes its look from CBAvatar.applyWith(), never from
+     storage, and nothing here saves, pushes or reads cb_sess for it. OVERRIDE is null on every other page, so nothing changes there. */
+  var OVERRIDE = doc && doc.documentElement && typeof doc.documentElement.hasAttribute === 'function' && doc.documentElement.hasAttribute('data-appearance-fixed') ? {} : null;
   function pref(kind) {
+    if (OVERRIDE) return has(OVERRIDE, kind) ? OVERRIDE[kind] : DEFAULTS[kind];
     return lsGet(KEY[kind], DEFAULTS[kind]);
+  }
+  /** apply a look given as { theme, font, fs, weight, motion } without reading or writing storage (only on a fixed-look page) */
+  function applyWith(look) {
+    if (!OVERRIDE) return false;
+    Object.keys(look || {}).forEach(function (kind) {
+      OVERRIDE[kind] = look[kind];
+    });
+    BASE = null;
+    apply();
+    return true;
   }
   function get() {
     return {
@@ -535,6 +549,7 @@
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
+    if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
     pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
@@ -545,6 +560,14 @@
     } /* the person's own choice outranks a showing link */
     push(); /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
+  }
+  /** a pick on a fixed-look page (the UI standard page): the look is applied and the host told, but nothing is saved, held, pushed or reloaded */
+  function setFixed(kind, value) {
+    OVERRIDE[kind] = value;
+    BASE = null;
+    apply();
+    repaint();
+    if (M && M.o && typeof M.o.onLook === 'function') M.o.onLook(kind, value);
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
   function editionReload(force) {
@@ -934,7 +957,7 @@
     paint();
   }
 
-  /** the session and the per-person nav memory go; every other tab hears cb_sess go */
+  /** the session and the per-person nav memory go; every other tab hears cb_sess go. → true when they went. A browser that refuses the delete is SAID (SEC-131), never swallowed: the person would be "signed out" and still signed in. */
   function forget() {
     try {
       root.localStorage.removeItem('cb_sess');
@@ -945,14 +968,53 @@
         .forEach(function (item) {
           root.localStorage.removeItem(item);
         });
-    } catch (_) {}
+      return true;
+    } catch (failure) {
+      var words = 'Could not clear the sign-in saved on this device. Close this window, or clear the site data, before you leave this device.';
+      console.error('avatar: sign-out could not clear the saved session', (failure && failure.message) || failure);
+      try {
+        if (typeof root.toast === 'function') root.toast(words, true);
+        else if (typeof root.alert === 'function') root.alert(words);
+      } catch (_) {}
+      return false;
+    }
+  }
+  /**
+   * ⭐ THE ONE SIGN-OUT (SEC-131). Every sign-out button reaches this: the server is told to revoke THIS session's token (POST /api/signin/logout,
+   * so a copied token stops working), then the device forgets it. The device forgets even when the call cannot be made (offline): the request is
+   * sent first (it needs the token) and not waited for. o.token is the session of THIS tab when the page knows it (a tab told "another shop opened
+   * here" must revoke its own token, not the one now in storage); otherwise the stored session. → Promise({ revoked, cleared }).
+   */
+  function endSession(asked) {
+    var sessionToken = asked && asked.token !== undefined ? asked.token : tokenOf(asked),
+      base = apiBaseOf(asked),
+      wire = Promise.resolve(false);
+    if (sessionToken && root.fetch) {
+      try {
+        wire = Promise.resolve(root.fetch(base + '/api/signin/logout', { method: 'POST', keepalive: true, headers: { Authorization: 'Bearer ' + sessionToken } })).then(
+          function (reply) {
+            return !!(reply && reply.ok);
+          },
+          function (failure) {
+            console.warn('avatar: sign-out could not reach the server — this device forgets the session anyway', (failure && failure.message) || failure);
+            return false;
+          }
+        );
+      } catch (failure) {
+        console.warn('avatar: sign-out could not start the server call', (failure && failure.message) || failure);
+      }
+    }
+    var cleared = forget();
+    return wire.then(function (revoked) {
+      return { revoked: revoked, cleared: cleared };
+    });
   }
   function signOut() {
     var o = (M && M.o) || {};
     openNow = false;
-    if (typeof o.onSignOut === 'function') return o.onSignOut();
-    /* the app's sign-out (logoutNow) for a page that has no app behind it */
-    forget();
+    if (typeof o.onSignOut === 'function') return o.onSignOut(); /* the app's: confirm, then logoutNow(), which ends the session here */
+    /* a page that has no app behind it */
+    endSession(o);
     root.location.href = o.signInHref || '/';
   }
 
@@ -1041,6 +1103,7 @@
    *   onProfile · onSettings · onSupport · onSignOut     a page that has the screen in place; otherwise a link into the app
    *   languages { list:{code:name}, current, onPick }    the app only: it has no other door to its language
    *   testid   the button's data-testid (default `avatar`)      signInHref · apiBase · token
+   *   onLook(kind, value)  a fixed-look page only (data-appearance-fixed): told after each pick, which is applied but never saved
    *   sync:false  no server at all (the counter offline)      pull:false  the host reads /me itself and calls hydrate()
    */
   function mount(el, o) {
@@ -1122,12 +1185,13 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener)
     root.addEventListener('online', function () {
-      if (Object.keys(pendGet()).length) push();
+      if (!OVERRIDE && Object.keys(pendGet()).length) push();
     });
 
   root.CBAvatar = {
     mount: mount,
     apply: apply,
+    applyWith: applyWith,
     hydrate: hydrate,
     set: set,
     get: get,
@@ -1144,6 +1208,7 @@
     },
     close: close,
     signOut: signOut,
+    endSession: endSession,
     THEMES: THEMES,
     FONTS: FONTS,
     TEXT_SIZES: TEXT_SIZES,
