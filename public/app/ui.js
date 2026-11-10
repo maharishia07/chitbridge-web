@@ -28,7 +28,7 @@ var CBUi = (function () {
   var EFFECTS = ['none', 'preference', 'commit'];
   var ALLOWED_OPTIONS = [
     'mount', 'object', 'tone', 'hidden', 'disabled', 'busy', 'role', 'key', 'effect', 'confirm',
-    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size'
+    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href'
   ];
   /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
      (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
@@ -40,7 +40,7 @@ var CBUi = (function () {
   var ICON_SVG_DELETE = SVG_OPEN + '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
   var ICON = {
     save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: ICON_SVG_DELETE, edit: '✎',
-    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?'
+    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?', home: '⌂', assistant: '💬'
   };
   var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
   var DISPLAYS = ['icon', 'icon+label'];
@@ -50,6 +50,12 @@ var CBUi = (function () {
   var SIZE_CSS =
     '[data-cbname]{min-height:var(--act-h,44px);min-width:var(--act-h,44px)}' +
     '[data-cbname][data-size="compact"]{min-height:32px;min-width:32px}' +
+    /* CMP024 the Assistant pill and CMP025 the segmented choice: theme tokens only */
+    '.cbui-fab{border:0;border-radius:24px;padding:10px 16px;background:var(--blue,#1f5f5b);color:var(--on-accent,#fff);font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--sh-shadow,rgba(0,0,0,.18));font-size:var(--fs-3,15px)}' +
+    '.cbui-choice{display:inline-flex;border:1px solid var(--line,#d8ccb0);border-radius:9px;overflow:hidden;background:var(--card,#fff)}' +
+    '.cbui-choice button{border:0;background:transparent;color:var(--ink,#2a2418);font-family:inherit;font-weight:600;font-size:var(--fs-1,12px);padding:0 12px;cursor:pointer;white-space:nowrap}' +
+    '.cbui-choice button[aria-checked="true"]{background:var(--blue,#1f5f5b);color:var(--on-accent,#fff)}' +
+    '.cbui-choice button:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     '@media(max-width:700px){[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}}';
   function ensureStyle() {
     if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbui-css')) return;
@@ -65,7 +71,10 @@ var CBUi = (function () {
     /* a host that already styles its own button family keeps that look: the surface names the family, the component stays one */
     chip: { primary: 'optchip', quiet: 'optchip' },
     list: { primary: 'cbl-btn', quiet: 'cbl-btn' },
-    bar: { primary: 'cbsid-help', quiet: 'cbsid-help' }
+    bar: { primary: 'cbsid-help', quiet: 'cbsid-help' },
+    /* the shell header's own look (shell.js .cbsh-tohome) and the floating Assistant pill (.cbui-fab, above) */
+    shell: { primary: 'cbsh-tohome', quiet: 'cbsh-tohome' },
+    float: { primary: 'cbui-fab', quiet: 'cbui-fab' }
   };
   /**
    * The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight);
@@ -97,6 +106,11 @@ var CBUi = (function () {
     progress: { code: 'CMP020', element: 'CMP020-D01', label: 'Progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     progressbar: { code: 'CMP021', element: 'CMP021-D01', label: 'Progress bar', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     spinner: { code: 'CMP022', element: 'CMP022-D01', label: 'Spinner', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* Athi 10 Nov (wave 2): the three controls the shared shell and the workshop drew by hand. Home is a link (a real address, so it works in a new tab); the label sits in .hw so a phone can show the glyph alone while the aria-label keeps the word. */
+    home: { code: 'CMP023', element: 'CMP023-B01', label: 'Home', shown: 'Home', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', link: true, labelClass: 'hw' },
+    assistant: { code: 'CMP024', element: 'CMP024-B01', label: 'Assistant', shown: '💬 Assistant', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
+    /* CMP025: a segmented choice of 2 to 4 values, one selected (a radio group; a presence switch Open, Away, Closed). It is not a button: ui.choice draws it. */
+    choice: { code: 'CMP025', element: 'CMP025-D01', label: 'Choice', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
@@ -131,7 +145,7 @@ var CBUi = (function () {
   }
   /** the look properties: surface, size and display (icon alone only where the rule allows it) */
   function checkLook(name, component, options) {
-    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list or bar');
+    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, bar, shell or float');
     if (options.size && SIZES.indexOf(options.size) < 0) refuse(name + ': size must be standard or compact');
     if (options.display && DISPLAYS.indexOf(options.display) < 0) refuse(name + ': display must be icon or icon+label');
     var iconAlone = options.display === 'icon';
@@ -191,6 +205,7 @@ var CBUi = (function () {
   }
   function accessibleName(component, options) {
     if (options.object) return phrase(component.label + ' {object}', textKey(component, 'aria'), { object: words(options.object) });
+    if (component.labelClass) return words(component.label, textKey(component, 'label'));
     return displayOf(component, options) === 'icon' ? words(component.label, textKey(component, 'label')) : null;
   }
   /** one press handler per mount (+ key), found again by the single delegated listener below */
@@ -205,7 +220,8 @@ var CBUi = (function () {
       ['data-cbname', component.name],
       ['data-cbmount', options.mount],
       ['data-effect', effect === 'none' ? null : effect],
-      ['type', 'button'],
+      ['type', component.link ? null : 'button'],
+      ['href', component.link ? options.href : null],
       ['class', toneClass(options, component, surface) || null],
       ['style', options.hidden ? 'display:none' : null],
       ['id', options.id || null],
@@ -247,7 +263,8 @@ var CBUi = (function () {
   /** icon and label: the one icon in front (hidden from screen readers, which read only the label), unless the text already carries it */
   function withIcon(component, text) {
     if (text.indexOf(ICON[component.name]) >= 0) return escapeText(text);
-    return '<span aria-hidden="true">' + iconHtml(component.name) + '</span> ' + escapeText(text);
+    var label = component.labelClass ? '<span class="' + component.labelClass + '">' + escapeText(text) + '</span>' : escapeText(text);
+    return '<span aria-hidden="true">' + iconHtml(component.name) + '</span>' + (component.labelClass ? '' : ' ') + label;
   }
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
@@ -258,7 +275,14 @@ var CBUi = (function () {
     var effect = effectOf(name, component, options);
     registerPress(options);
     ensureStyle();
-    var html = '<button ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</button>';
+    return markup(component, options, surface, effect);
+  }
+  /** the one element of a component: a button, or an a for a link (which must carry its href) */
+  function markup(component, options, surface, effect) {
+    var name = component.name;
+    var tag = component.link ? 'a' : 'button';
+    if (component.link && !options.href) refuse(name + ': a link needs href');
+    var html = '<' + tag + ' ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</' + tag + '>';
     /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
     if (!shownText(component, options).trim()) refuse(name + ': no visible text');
     return html;
@@ -269,6 +293,70 @@ var CBUi = (function () {
   /** a footer button: the same component, drawn in the modal's own button classes */
   function dialogAction(name, options) {
     return render(name, options, 'dialog');
+  }
+
+  /* ── CMP025 CHOICE: a segmented choice (radio group) of 2 to 4 values. Each segment is a 44 px target (32 px compact on a wide screen only, the one size rule);
+     arrows move the selection, a press calls onChange(value); choiceSet(group, value) repaints from outside (a refused change, a confirm that said no). ── */
+  var CHOICES = {};
+  function choiceItem(options, item, selected, size) {
+    var attrs = [
+      ['type', 'button'], ['role', 'radio'], ['aria-checked', String(selected)], ['tabindex', selected ? '0' : '-1'],
+      ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-choice-value', item.value],
+      ['data-size', size === 'compact' ? 'compact' : null], ['data-testid', options.testid ? options.testid + '-' + item.value : null]
+    ];
+    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+  }
+  function checkChoice(options) {
+    if (!MOUNT_CODE.test(options.mount || '')) refuse('choice: mount must be a screen mount code like ACC002-U01');
+    if (!options.items || options.items.length < 2 || options.items.length > 4) refuse('choice: 2 to 4 values');
+    if (!options.label) refuse('choice: a label (the group\'s accessible name)');
+    if (options.size && SIZES.indexOf(options.size) < 0) refuse('choice: size must be standard or compact');
+  }
+  /** the attributes of the group element */
+  function choiceHead(options) {
+    return attributeList([
+      ['role', 'radiogroup'], ['class', 'cbui-choice' + (options.cls ? ' ' + options.cls : '')], ['data-cbsid', ACTION_SET.choice.element],
+      ['data-cbmount', options.mount], ['data-key', options.key || null], ['aria-label', words(options.label)], ['id', options.id || null], ['data-testid', options.testid || null]
+    ]);
+  }
+  /** ui.choice({ mount, key, label, value, items: [{ value, label }], onChange, size, id, testid, cls }) -> the group's HTML */
+  function choice(options) {
+    options = options || {};
+    checkChoice(options);
+    CHOICES[options.mount + '|' + (options.key || '')] = options;
+    ensureStyle();
+    var head = choiceHead(options);
+    return '<div ' + head + '>' + options.items.map(function (item) { return choiceItem(options, item, item.value === options.value, options.size); }).join('') + '</div>';
+  }
+  /** repaint the group to a value (no onChange): used when a change was refused or confirmed away */
+  function choiceSet(group, value) {
+    if (!group || !group.querySelectorAll) return;
+    Array.prototype.forEach.call(group.querySelectorAll('[role="radio"]'), function (segment) {
+      var on = segment.getAttribute('data-choice-value') === String(value);
+      segment.setAttribute('aria-checked', String(on));
+      segment.setAttribute('tabindex', on ? '0' : '-1');
+    });
+  }
+  function choiceOf(segment) {
+    var group = segment.closest('[role="radiogroup"]');
+    return { group: group, options: group && CHOICES[group.getAttribute('data-cbmount') + '|' + (group.getAttribute('data-key') || '')] };
+  }
+  function onChoiceClick(segment) {
+    var found = choiceOf(segment);
+    if (!found.options || segment.getAttribute('aria-checked') === 'true') return;
+    choiceSet(found.group, segment.getAttribute('data-choice-value'));
+    if (typeof found.options.onChange === 'function') found.options.onChange(segment.getAttribute('data-choice-value'));
+  }
+  /** arrow keys move the selection to the next segment (radio-group keyboard, WAI-ARIA APG) */
+  function onChoiceKey(event) {
+    var segment = event.target && event.target.closest && event.target.closest('[role="radio"][data-choice-value]');
+    var step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    if (!segment || !step) return;
+    var all = Array.prototype.slice.call(segment.closest('[role="radiogroup"]').querySelectorAll('[role="radio"]'));
+    var next = all[(all.indexOf(segment) + step + all.length) % all.length];
+    event.preventDefault();
+    next.focus();
+    onChoiceClick(next);
   }
   /** runs the registered press through CBAction (busy, one press one write, and the confirm for a commit) */
   function press(button, options) {
@@ -288,6 +376,8 @@ var CBUi = (function () {
     return confirmation && component && component.danger ? Object.assign({}, confirmation, { danger: true }) : confirmation;
   }
   function onDocumentClick(event) {
+    var segment = event.target && event.target.closest && event.target.closest('[data-choice-value]');
+    if (segment && segment.getAttribute('data-choice-value') !== null) return onChoiceClick(segment);
     var button = event.target && event.target.closest && event.target.closest('[data-cbmount]');
     if (!button || button.disabled) return;
     var options = HANDLERS[button.getAttribute('data-cbmount') + '|' + (button.getAttribute('data-key') || '')];
@@ -502,7 +592,8 @@ var CBUi = (function () {
   }
   var progress = { start: startProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
-  var library = { action: action, dialog: dialog, progress: progress, components: ACTION_SET, textKey: textKey };
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
+  var library = { action: action, dialog: dialog, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

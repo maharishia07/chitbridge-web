@@ -56,7 +56,10 @@ var CBUiStandard = (function () {
     { name: 'help', before: [['?', 3]] },
     { name: 'info', before: [['info glyph', 1]] },
     { name: 'more', before: [['more', 2], ['More', 1], ['ellipsis', 1]] },
-    { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] }
+    { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] },
+    { name: 'home', before: [['⌂ Home link drawn by hand in the shared shell, 26 px wide on a phone', 1]] },
+    { name: 'assistant', before: [['💬 Assistant pill drawn by hand with inline style, app.html', 1]] },
+    { name: 'choice', before: [['Open · Away · Closed as a plain select, 30 px high, app.html', 1]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
   /* a mock record states its own currency (N1: no page guesses India's): USD, a code no shop here is assumed to hold */
@@ -82,6 +85,12 @@ var CBUiStandard = (function () {
     { name: 'more', object: 'row', opts: {} },
     { name: 'screenhelp', object: '', opts: {} }
   ];
+  /* the components added after the dialog row's literal mount (U115) was fixed: drawn after it, from U120, so no mount is used twice */
+  var SHELL_ROWS = [
+    { name: 'home', object: '', opts: { href: '#', display: 'icon+label', size: 'compact', surface: 'shell' } },
+    { name: 'assistant', object: '', opts: { surface: 'float' } }
+  ];
+  var SHELL_ROWS_FIRST_MOUNT = 119;
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
     ['--act-weight', 'Text weight'], ['--accent', 'Fill of the main button'], ['--accent-ink', 'Text on that fill'],
@@ -266,7 +275,7 @@ var CBUiStandard = (function () {
   function dialogRow() {
     var component = ui.components.dialog;
     return '<section class="crow" data-testid="gal-row-CMP002"><div class="cid"><span class="chip" data-testid="gal-code">CMP002</span><b>' + esc(words('Example dialog')) + '</b>' +
-      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">SHOW dialog</span></span></div>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + ' dialog</span></span></div>' +
       '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U115', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
   }
@@ -308,9 +317,21 @@ var CBUiStandard = (function () {
       progressCell('Long: a panel with steps', ui.action('open', { mount: SCREEN + '-U118', object: 'import', testid: 'gal-progress-long', onPress: demoPanel })) +
       '</div></section>';
   }
+  /** CMP025 Choice: the segmented choice in its three values; a press moves the selection (no api, nothing is saved) */
+  function choiceRow() {
+    var component = ui.components.choice;
+    var group = ui.choice({ mount: SCREEN + '-U140', label: 'Shop status', value: 'open', size: 'compact', testid: 'gal-choice', items: [{ value: 'open', label: 'Open' }, { value: 'away', label: 'Away' }, { value: 'closed', label: 'Closed' }], onChange: function () {} });
+    return '<section class="crow" data-testid="gal-row-CMP025"><div class="cid"><span class="chip" data-testid="gal-code">CMP025</span><b>' + esc(words('Choice')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + ' choice</span></span></div>' +
+      '<div class="states"><figure class="st"><div class="slot">' + group + '</div><figcaption>ui.choice()</figcaption></figure></div></section>';
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
-    rows.splice(1, 0, dialogRow());
+    var dialog = dialogRow();
+    counters.mount = SHELL_ROWS_FIRST_MOUNT;
+    rows.splice(1, 0, dialog);
+    rows = rows.concat(SHELL_ROWS.map(componentRow));
+    rows.push(choiceRow());
     rows.push(progressRow());
     return rows.join('');
   }
@@ -539,6 +560,12 @@ var CBUiStandard = (function () {
   }
 
   /* ── before and after ── */
+  /** the "after" of one census entry: its one component, drawn by its own factory (a link needs an address; the choice is not a button) */
+  function afterOf(entry, component) {
+    if (entry.name === 'choice') return ui.choice({ mount: mountCode(), key: 'before', label: 'Shop status', value: 'open', size: 'compact', items: [{ value: 'open', label: 'Open' }, { value: 'away', label: 'Away' }, { value: 'closed', label: 'Closed' }] });
+    /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
+    return ui.action(entry.name, { mount: mountCode(), href: component.link ? '#' : undefined, object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined, confirm: component.effect === 'commit' ? reachConfirm(entry.name) : undefined });
+  }
   function beforePanel() {
     return CENSUS.map(function (entry) {
       var component = ui.components[entry.name];
@@ -548,7 +575,7 @@ var CBUiStandard = (function () {
       return '<section class="crow" data-testid="gal-before-' + entry.name + '"><div class="cid"><span class="chip">' + component.code + '</span><b>' + esc(words(component.label)) + '</b><span class="meta">' +
         entry.before.length + ' → 1</span></div><div class="ba"><div class="bcol"><h4>' + esc(words('Before')) + '</h4>' + old + '</div><div class="bcol"><h4>' + esc(words('After')) + '</h4>' +
         /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
-        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined, confirm: component.effect === 'commit' ? reachConfirm(entry.name) : undefined }) + '</div></div></section>';
+        afterOf(entry, component) + '</div></div></section>';
     }).join('');
   }
 
@@ -871,5 +898,5 @@ var CBUiStandard = (function () {
     loadWaves();
     whenFacesLoad();
   }
-  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
+  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, SHELL_ROWS: SHELL_ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
 })();

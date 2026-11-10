@@ -484,6 +484,9 @@
   .topbar .who .shopsel{background:rgba(255,255,255,.05);color:#e8f0f5;border:1px solid rgba(255,255,255,.18);
     border-radius:9px;padding:6px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer;color-scheme:dark}
   .topbar .who .shopsel:hover{background:rgba(255,255,255,.10)}
+  /* CMP025 Choice in the dark top bar: the segments take the bar's ink, the chosen one the green */
+  .topbar .who .shopsel{padding:0;overflow:hidden}.topbar .who .shopsel button{color:var(--on-dark,#e8f0f5);background:transparent}
+  .topbar .who .shopsel button[aria-checked="true"]{background:var(--ok-solid,#1f7a4d);color:var(--on-accent,#fff)}
   .topbar .who .shopsel:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
   .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:var(--fs-1);font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
@@ -3311,7 +3314,7 @@ function mountAssist() {
      control no stylesheet can ever reposition. */
   const node = document.createElement('div');
   node.id = 'assistfab';
-  node.innerHTML = `<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">${tx('💬 Assistant')}</button>`;
+  node.innerHTML = ui.action('assistant', { mount: 'PNL001-U01', surface: 'float', testid: 'assistant-open', onPress: () => openAssist() });
   document.body.appendChild(node);
   const h = document.createElement('div');
   h.id = 'assisthost';
@@ -4939,6 +4942,11 @@ try {
     });
 } catch (_) {}
 // The logged-in actor's real id, from the JWT.
+/** the mount of a control the top bar draws on every screen: the screen's own code and a chrome number */
+function chromeMount(number) {
+  const code = typeof CBScreenId !== 'undefined' && CBScreenId.current && CBScreenId.current();
+  return (code || 'HOM001') + '-U' + number;
+}
 function statusControl(role) {
   if (role === 'actor') {
     const d = SESSION.duty || 'duty';
@@ -4960,12 +4968,21 @@ function statusControl(role) {
    */
   if (role === 'entity') {
     const sh = SESSION.shop || 'open';
-    const opt = (v, l) => `<option value="${v}"${sh === v ? ' selected' : ''}>${l}</option>`;
-    return `<select class="shopsel" data-testid="shop-status" aria-label="${tx('Shop status')}"
-        title="${tx('Whether this shop is accepting orders')}" onchange="setShop(this.value)">
-      ${opt('open', tx('🟢 Open'))}
-      ${opt('away', tx('🌙 Away'))}
-      ${opt('closed', tx('⛔ Closed'))}</select>`;
+    /* CMP025 Choice: a segmented switch (Open · Away · Closed), 32 px on a wide screen and 44 px on a phone (the one tap rule) */
+    return ui.choice({
+      mount: chromeMount('02') /* where-used: out-of-scope the top bar is on every screen */,
+      label: 'Shop status',
+      value: sh,
+      cls: 'shopsel',
+      size: 'compact',
+      testid: 'shop-status',
+      items: [
+        { value: 'open', label: '🟢 Open' },
+        { value: 'away', label: '🌙 Away' },
+        { value: 'closed', label: '⛔ Closed' }
+      ],
+      onChange: setShop
+    });
   }
   return '';
 }
@@ -5011,7 +5028,7 @@ async function setDuty(d) {
  */
 function _shopSync(v) {
   const el = document.querySelector('.shopsel');
-  if (el) el.value = v;
+  if (el) ui.choiceSet(el, v);
 }
 
 async function setShop(s) {
@@ -10833,21 +10850,15 @@ function pendingNote(why) {
 }
 
 function helpQ(key, title) {
-  return (
-    '<button type="button" data-testid="help-q-' +
-    key +
-    '" onclick="showHelp(\'' +
-    key +
-    '\')"' +
-    ' title="' +
-    esc(title || 'Explain this') +
-    '" aria-label="' +
-    esc(title || 'Explain this') +
-    '"' +
-    ' style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:50%;' +
-    'width:18px;height:18px;line-height:1;font-size:11px;font-weight:700;cursor:pointer;padding:0;' +
-    'margin-inline-start:6px;vertical-align:middle">?</button>'
-  );
+  /* CMP016 Help: the standard "?" (44 px target, a name and a tooltip); one per help key, so the mount's key is the help key */
+  /* where-used: out-of-scope one help per key, drawn by a loop of screens */
+  return ui.action('help', {
+    mount: chromeMount('03'),
+    key: key,
+    object: title || 'this',
+    testid: 'help-q-' + key,
+    onPress: () => showHelp(key)
+  });
 }
 
 /* UX-137 CMP019: does this screen have a note? The screen's "?" (screen-id.js) is shown only when it does. */
@@ -22425,7 +22436,7 @@ function taskPanel() {
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
       ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
-      ${_btns}<button class="composebtn" style="${_isTrack ? '' : 'margin-inline-start:auto'}" onclick="toggleListHelp()">${UI.listHelp ? '✕ Close' : '❓ Help'}</button>
+      ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
    * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, about 24% of
