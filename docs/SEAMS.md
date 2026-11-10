@@ -108,7 +108,7 @@ of file each thing is; this says what already does the job.
 | 26 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 26 | `group` | `identity.js` | again in a different costume. |
 | 25 | `load` | `cap-assist.js` |  |
-| 25 | `view` | `country-ready.js` |  |
+| 26 | `view` | `country-ready.js` |  |
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 25 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 24 | `call` | `cap-assist.js` |  |

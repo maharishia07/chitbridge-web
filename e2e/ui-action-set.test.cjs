@@ -41,6 +41,10 @@ check(names.length === 20, 'twenty actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
 check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'twenty distinct CMP codes (twenty actions and the dialog)');
 const forced = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
+const unmatched = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'none', items: [{ value: 'a', label: 'Open' }, { value: 'b', label: 'Away' }] });
+check((unmatched.match(/tabindex="0"/g) || []).length === 1, 'a choice with no matching value still has one tab stop (the first segment)');
+check(/aria-label="Open"/.test(ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'a', items: [{ value: 'a', label: '🟢 Open' }, { value: 'b', label: 'Away' }] })), 'a glyph label keeps its word as the accessible name');
+check(/title="Explain"/.test(ui.action('help', { mount: 'TST001-U01', hint: 'Explain' })), 'a hint is the hover text of a component');
 names.forEach((name) => {
   const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));
   check(/^<(button|a) /.test(html) && (ui.components[name].link || html.includes('type="button"')) && html.includes('data-cbsid="' + ui.components[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button (a link for Home) with element code and mount');

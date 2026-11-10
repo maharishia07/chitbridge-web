@@ -28,7 +28,7 @@ var CBUi = (function () {
   var EFFECTS = ['none', 'preference', 'commit'];
   var ALLOWED_OPTIONS = [
     'mount', 'object', 'tone', 'hidden', 'disabled', 'busy', 'role', 'key', 'effect', 'confirm',
-    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href'
+    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href', 'hint'
   ];
   /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
      (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
@@ -55,6 +55,7 @@ var CBUi = (function () {
     '.cbui-choice{display:inline-flex;border:1px solid var(--line,#d8ccb0);border-radius:9px;overflow:hidden;background:var(--card,#fff)}' +
     '.cbui-choice button{border:0;background:transparent;color:var(--ink,#2a2418);font-family:inherit;font-weight:600;font-size:var(--fs-1,12px);padding:0 12px;cursor:pointer;white-space:nowrap}' +
     '.cbui-choice button[aria-checked="true"]{background:var(--blue,#1f5f5b);color:var(--on-accent,#fff)}' +
+    '@media(max-width:700px){.cbui-choice .cbui-w{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}' +
     '.cbui-choice button:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     '@media(max-width:700px){[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}}';
   function ensureStyle() {
@@ -238,7 +239,7 @@ var CBUi = (function () {
   function lookAttributes(component, options) {
     var tooltip = component.tooltip || displayOf(component, options) === 'icon';
     return [
-      ['title', tooltip ? accessibleName(component, options) : null],
+      ['title', options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
       ['data-size', options.size === 'compact' ? 'compact' : null],
       ['aria-haspopup', component.popup || null],
       ['aria-expanded', component.popup ? String(!!options.expanded) : null]
@@ -298,13 +299,21 @@ var CBUi = (function () {
   /* ── CMP025 CHOICE: a segmented choice (radio group) of 2 to 4 values. Each segment is a 44 px target (32 px compact on a wide screen only, the one size rule);
      arrows move the selection, a press calls onChange(value); choiceSet(group, value) repaints from outside (a refused change, a confirm that said no). ── */
   var CHOICES = {};
-  function choiceItem(options, item, selected, size) {
+  /** a label that starts with a glyph ("🟢 Open") is drawn as glyph + word: a phone shows the glyph alone (the word stays the accessible name) */
+  function segmentText(item) {
+    var label = words(item.label);
+    var parts = /^(\S+)\s+(\S.*)$/.exec(label);
+    if (!parts || /[A-Za-z\u00C0-\u024F\u0370-\u1FFF]/.test(parts[1])) return { html: escapeText(label), name: null };
+    return { html: '<span aria-hidden="true">' + escapeText(parts[1]) + '</span><span class="cbui-w"> ' + escapeText(parts[2]) + '</span>', name: parts[2] };
+  }
+  function choiceItem(options, item, selected, size, tabbable) {
+    var text = segmentText(item);
     var attrs = [
-      ['type', 'button'], ['role', 'radio'], ['aria-checked', String(selected)], ['tabindex', selected ? '0' : '-1'],
+      ['type', 'button'], ['role', 'radio'], ['aria-checked', String(selected)], ['tabindex', tabbable ? '0' : '-1'],
       ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-choice-value', item.value],
       ['data-size', size === 'compact' ? 'compact' : null], ['data-testid', options.testid ? options.testid + '-' + item.value : null]
     ];
-    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+    return '<button ' + attributeList(attrs.concat([['aria-label', text.name]])) + '>' + text.html + '</button>';
   }
   function checkChoice(options) {
     if (!MOUNT_CODE.test(options.mount || '')) refuse('choice: mount must be a screen mount code like ACC002-U01');
@@ -312,11 +321,16 @@ var CBUi = (function () {
     if (!options.label) refuse('choice: a label (the group\'s accessible name)');
     if (options.size && SIZES.indexOf(options.size) < 0) refuse('choice: size must be standard or compact');
   }
+  /** the one segment Tab reaches: the selected one, or the first when no value matches (the group must stay reachable) */
+  function tabbableItem(options, item) {
+    var matched = options.items.some(function (other) { return other.value === options.value; });
+    return matched ? item.value === options.value : item === options.items[0];
+  }
   /** the attributes of the group element */
   function choiceHead(options) {
     return attributeList([
       ['role', 'radiogroup'], ['class', 'cbui-choice' + (options.cls ? ' ' + options.cls : '')], ['data-cbsid', ACTION_SET.choice.element],
-      ['data-cbmount', options.mount], ['data-key', options.key || null], ['aria-label', words(options.label)], ['id', options.id || null], ['data-testid', options.testid || null]
+      ['data-cbmount', options.mount], ['data-key', options.key || null], ['aria-label', words(options.label)], ['title', options.hint ? words(options.hint) : null], ['id', options.id || null], ['data-testid', options.testid || null]
     ]);
   }
   /** ui.choice({ mount, key, label, value, items: [{ value, label }], onChange, size, id, testid, cls }) -> the group's HTML */
@@ -326,7 +340,7 @@ var CBUi = (function () {
     CHOICES[options.mount + '|' + (options.key || '')] = options;
     ensureStyle();
     var head = choiceHead(options);
-    return '<div ' + head + '>' + options.items.map(function (item) { return choiceItem(options, item, item.value === options.value, options.size); }).join('') + '</div>';
+    return '<div ' + head + '>' + options.items.map(function (item) { return choiceItem(options, item, item.value === options.value, options.size, tabbableItem(options, item)); }).join('') + '</div>';
   }
   /** repaint the group to a value (no onChange): used when a change was refused or confirmed away */
   function choiceSet(group, value) {
@@ -336,6 +350,7 @@ var CBUi = (function () {
       segment.setAttribute('aria-checked', String(on));
       segment.setAttribute('tabindex', on ? '0' : '-1');
     });
+    if (!group.querySelector('[aria-checked="true"]')) group.querySelector('[role="radio"]').setAttribute('tabindex', '0');
   }
   function choiceOf(segment) {
     var group = segment.closest('[role="radiogroup"]');
@@ -347,13 +362,26 @@ var CBUi = (function () {
     choiceSet(found.group, segment.getAttribute('data-choice-value'));
     if (typeof found.options.onChange === 'function') found.options.onChange(segment.getAttribute('data-choice-value'));
   }
+  function isRtl(group) {
+    var view = group.ownerDocument && group.ownerDocument.defaultView;
+    return !!view && view.getComputedStyle(group).direction === 'rtl';
+  }
+  /** where a key moves the selection: arrows step (left and right swap in a right-to-left page), Home and End jump; -1 is no move */
+  function targetIndex(key, index, count, rightToLeft) {
+    if (key === 'Home') return 0;
+    if (key === 'End') return count - 1;
+    var sideways = rightToLeft ? { ArrowRight: -1, ArrowLeft: 1 } : { ArrowRight: 1, ArrowLeft: -1 };
+    var step = sideways[key] || { ArrowDown: 1, ArrowUp: -1 }[key];
+    return step ? (index + step + count) % count : -1;
+  }
   /** arrow keys move the selection to the next segment (radio-group keyboard, WAI-ARIA APG) */
   function onChoiceKey(event) {
     var segment = event.target && event.target.closest && event.target.closest('[role="radio"][data-choice-value]');
-    var step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
-    if (!segment || !step) return;
-    var all = Array.prototype.slice.call(segment.closest('[role="radiogroup"]').querySelectorAll('[role="radio"]'));
-    var next = all[(all.indexOf(segment) + step + all.length) % all.length];
+    if (!segment) return;
+    var group = segment.closest('[role="radiogroup"]');
+    var all = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+    var next = all[targetIndex(event.key, all.indexOf(segment), all.length, isRtl(group))];
+    if (!next) return;
     event.preventDefault();
     next.focus();
     onChoiceClick(next);
