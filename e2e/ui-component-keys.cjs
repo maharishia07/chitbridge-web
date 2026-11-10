@@ -33,9 +33,9 @@ function loadLibrary(source) {
   vm.runInContext(source, sandbox);
   return sandbox.window.ui;
 }
-const textOf = (html) => html.slice(html.indexOf('>') + 1, html.lastIndexOf('</button>'));
+const textOf = (html) => html.slice(html.indexOf('>') + 1, html.lastIndexOf('</'));
 const ariaOf = (html) => (html.match(/aria-label="([^"]*)"/) || [])[1] || null;
-const OPTIONS_FOR = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
+const OPTIONS_FOR = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
 
 /** every failure of one copy of ui.js, as sentences */
 function keyFailures(source) {

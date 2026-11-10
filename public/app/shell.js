@@ -337,7 +337,8 @@
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
     '@container (max-width:359px){.cbsh-who b{display:none}}',
-    '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* a phone: ⌂ alone (aria-label keeps the word) */,
+    '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
+    '.cbsh-hdr .cbsh-who,.cbsh-hdr .cbsh-swb,.cbsh-hdr .cbsid,.cbsh-hdr .cbb-btn,.cbsh-hdr .cbav-btn,.cbsh-hdr .cbav-signin{min-height:44px;min-width:44px}' /* one level more specific: the bell's and the chip's own stylesheets load after this one */ /* a phone: ⌂ alone (aria-label keeps the word) */,
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
     '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
@@ -441,6 +442,12 @@
       '</span></span>'
     );
   }
+  /** ⌂ Home: the standard component CMP023 (ui.js), a real link; its size comes from the one tap rule (32 compact, 44 on a phone) */
+  function homeLink(frame) {
+    var screen = (root.CBScreenId && root.CBScreenId.current && root.CBScreenId.current()) || 'HOM001';
+    /* where-used: out-of-scope the shell is drawn on every screen, so its mount takes the screen's own code */
+    return root.ui.action('home', { mount: screen + '-U90', href: frame.homeHref, display: 'icon+label', size: 'compact', surface: 'shell', testid: 'shell-home' });
+  }
   /** the header: the bar (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar) and the shop's sheet */
   function headerHTML(frame) {
     return (
@@ -465,15 +472,7 @@
       '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
       /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's frame.homeHref is the shop's front */
       (frame.mode !== 'home'
-        ? '<a class="cbsh-tohome" href="' +
-          esc(frame.homeHref) +
-          '" data-testid="shell-home" aria-label="' +
-          esc(T(W.areas.home)) +
-          '"><span aria-hidden="true">' +
-          ICON.home +
-          '</span><span class="hw">' +
-          esc(T(W.areas.home)) +
-          '</span></a>'
+        ? homeLink(frame)
         : '') /* .cbsh-tohome, never .cbsh-home: that is Home's own slot (INT7b: the link's rule had laid Home's sections in a row) */ +
       '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
       '</div>' +

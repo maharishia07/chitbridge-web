@@ -92,11 +92,11 @@ of file each thing is; this says what already does the job.
 | 30 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 30 | `hold` | `orders.js` |  |
+| 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 29 | `sheet` | `cap-employees.js` |  |
 | 29 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 29 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 29 | `mine` | `crm.js` | the party must be on this shop's list (the same test the log uses) |
-| 28 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 28 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 28 | `money` | `cart.js` |  |
 | 28 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
@@ -108,7 +108,7 @@ of file each thing is; this says what already does the job.
 | 26 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 26 | `group` | `identity.js` | again in a different costume. |
 | 25 | `load` | `cap-assist.js` |  |
-| 25 | `view` | `country-ready.js` |  |
+| 26 | `view` | `country-ready.js` |  |
 | 25 | `guard` | `amend.js` | would disturb what has gone out. |
 | 25 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 24 | `call` | `cap-assist.js` |  |
@@ -142,7 +142,7 @@ of file each thing is; this says what already does the job.
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
-| 19 | `next` | `cap-stock.js` | the next level: |
+| 20 | `next` | `cap-stock.js` | the next level: |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `panel` | `sides.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
@@ -191,6 +191,8 @@ of file each thing is; this says what already does the job.
 | 15 | `heads` | `tax-lines.js` | The heads, summed. |
 | 15 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 14 | `cols` | `cap-catalogue.js` |  |
+| 14 | `group` | `cart.js` | A heading's control adds ONE of each — |
+| 14 | `link` | `chit-sheet.js` |  |
 | 14 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 14 | `confirm` | `lab-kit.js` | opts: |
 | 14 | `check` | `network-app.js` |  |
@@ -204,8 +206,6 @@ of file each thing is; this says what already does the job.
 | 14 | `sheet` | `stock-store.js` | the shop's whole shelf, for a report — |
 | 13 | `save` | `app.html` |  |
 | 13 | `units` | `cart.js` |  |
-| 13 | `group` | `cart.js` | A heading's control adds ONE of each — |
-| 13 | `link` | `chit-sheet.js` |  |
 | 13 | `pick` | `showcase-templates.js` | the template a shop uses: |
 | 13 | `dialog` | `ui.js` | modal(); the corner X is modal()'s own .mx. |
 | 13 | `actions` | `workflow.js` | actions(chit, me) — |

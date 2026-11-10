@@ -28,7 +28,7 @@ var CBUi = (function () {
   var EFFECTS = ['none', 'preference', 'commit'];
   var ALLOWED_OPTIONS = [
     'mount', 'object', 'tone', 'hidden', 'disabled', 'busy', 'role', 'key', 'effect', 'confirm',
-    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size'
+    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href', 'hint'
   ];
   /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
      (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
@@ -40,7 +40,7 @@ var CBUi = (function () {
   var ICON_SVG_DELETE = SVG_OPEN + '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
   var ICON = {
     save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: ICON_SVG_DELETE, edit: '✎',
-    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?'
+    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?', home: '⌂', assistant: '💬'
   };
   var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
   var DISPLAYS = ['icon', 'icon+label'];
@@ -50,6 +50,17 @@ var CBUi = (function () {
   var SIZE_CSS =
     '[data-cbname]{min-height:var(--act-h,44px);min-width:var(--act-h,44px)}' +
     '[data-cbname][data-size="compact"]{min-height:32px;min-width:32px}' +
+    /* CMP024 the Assistant pill and CMP025 the segmented choice: theme tokens only */
+    '.cbui-fab{border:0;border-radius:24px;padding:10px 16px;background:var(--blue,#1f5f5b);color:var(--on-accent,#fff);font-weight:700;cursor:pointer;box-shadow:0 4px 14px var(--sh-shadow,rgba(0,0,0,.18));font-size:var(--fs-3,15px)}' +
+    '.cbui-choice{display:inline-flex;border:1px solid var(--line,#d8ccb0);border-radius:9px;overflow:hidden;background:var(--card,#fff)}' +
+    '.cbui-choice button{border:0;background:transparent;color:var(--ink,#2a2418);font-family:inherit;font-weight:600;font-size:var(--fs-1,12px);padding:0 12px;cursor:pointer;white-space:nowrap}' +
+    '.cbui-choice button[aria-checked="true"]{background:var(--blue,#1f5f5b);color:var(--on-accent,#fff)}' +
+    '.cbui-choice{position:relative}.cbui-choice-btn,.cbui-choice-menu{display:none}' +
+    '.cbui-choice button[aria-selected="true"]{background:var(--blue,#1f5f5b);color:var(--on-accent,#fff)}' +
+    '@media(max-width:700px){.cbui-choice{overflow:visible}.cbui-choice [role="radio"]{display:none}.cbui-choice .cbui-choice-btn{display:inline-flex;align-items:center;gap:6px;padding:0 12px}' +
+    '.cbui-choice .cbui-choice-menu:not([hidden]){display:flex;flex-direction:column;position:absolute;inset-inline-end:0;top:calc(100% + 4px);min-width:100%;background:var(--card,#fff);border:1px solid var(--line,#d8ccb0);border-radius:9px;z-index:1000;box-shadow:0 6px 18px var(--sh-shadow,rgba(0,0,0,.18))}' +
+    '.cbui-choice-menu button{display:flex;align-items:center;justify-content:flex-start;text-align:start;padding:0 14px}}' +
+    '.cbui-choice button:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     '@media(max-width:700px){[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}}';
   function ensureStyle() {
     if (typeof document === 'undefined' || !document.head || !document.createElement || document.getElementById('cbui-css')) return;
@@ -65,7 +76,10 @@ var CBUi = (function () {
     /* a host that already styles its own button family keeps that look: the surface names the family, the component stays one */
     chip: { primary: 'optchip', quiet: 'optchip' },
     list: { primary: 'cbl-btn', quiet: 'cbl-btn' },
-    bar: { primary: 'cbsid-help', quiet: 'cbsid-help' }
+    bar: { primary: 'cbsid-help', quiet: 'cbsid-help' },
+    /* the shell header's own look (shell.js .cbsh-tohome) and the floating Assistant pill (.cbui-fab, above) */
+    shell: { primary: 'cbsh-tohome', quiet: 'cbsh-tohome' },
+    float: { primary: 'cbui-fab', quiet: 'cbui-fab' }
   };
   /**
    * The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight);
@@ -99,6 +113,11 @@ var CBUi = (function () {
     batch: { code: 'CMP026', element: 'CMP026-D01', label: 'Batch progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     batchtray: { code: 'CMP027', element: 'CMP027-D01', label: 'Batch tray', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     spinner: { code: 'CMP022', element: 'CMP022-D01', label: 'Spinner', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* Athi 10 Nov (wave 2): the three controls the shared shell and the workshop drew by hand. Home is a link (a real address, so it works in a new tab); the label sits in .hw so a phone can show the glyph alone while the aria-label keeps the word. */
+    home: { code: 'CMP023', element: 'CMP023-B01', label: 'Home', shown: 'Home', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', link: true, labelClass: 'hw' },
+    assistant: { code: 'CMP024', element: 'CMP024-B01', label: 'Assistant', shown: '💬 Assistant', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
+    /* CMP025: a segmented choice of 2 to 4 values, one selected (a radio group; a presence switch Open, Away, Closed). It is not a button: ui.choice draws it. */
+    choice: { code: 'CMP025', element: 'CMP025-D01', label: 'Choice', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
@@ -133,7 +152,7 @@ var CBUi = (function () {
   }
   /** the look properties: surface, size and display (icon alone only where the rule allows it) */
   function checkLook(name, component, options) {
-    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list or bar');
+    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, bar, shell or float');
     if (options.size && SIZES.indexOf(options.size) < 0) refuse(name + ': size must be standard or compact');
     if (options.display && DISPLAYS.indexOf(options.display) < 0) refuse(name + ': display must be icon or icon+label');
     var iconAlone = options.display === 'icon';
@@ -193,6 +212,7 @@ var CBUi = (function () {
   }
   function accessibleName(component, options) {
     if (options.object) return phrase(component.label + ' {object}', textKey(component, 'aria'), { object: words(options.object) });
+    if (component.labelClass) return words(component.label, textKey(component, 'label'));
     return displayOf(component, options) === 'icon' ? words(component.label, textKey(component, 'label')) : null;
   }
   /** one press handler per mount (+ key), found again by the single delegated listener below */
@@ -207,7 +227,8 @@ var CBUi = (function () {
       ['data-cbname', component.name],
       ['data-cbmount', options.mount],
       ['data-effect', effect === 'none' ? null : effect],
-      ['type', 'button'],
+      ['type', component.link ? null : 'button'],
+      ['href', component.link ? options.href : null],
       ['class', toneClass(options, component, surface) || null],
       ['style', options.hidden ? 'display:none' : null],
       ['id', options.id || null],
@@ -224,7 +245,7 @@ var CBUi = (function () {
   function lookAttributes(component, options) {
     var tooltip = component.tooltip || displayOf(component, options) === 'icon';
     return [
-      ['title', tooltip ? accessibleName(component, options) : null],
+      ['title', options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
       ['data-size', options.size === 'compact' ? 'compact' : null],
       ['aria-haspopup', component.popup || null],
       ['aria-expanded', component.popup ? String(!!options.expanded) : null]
@@ -249,7 +270,8 @@ var CBUi = (function () {
   /** icon and label: the one icon in front (hidden from screen readers, which read only the label), unless the text already carries it */
   function withIcon(component, text) {
     if (text.indexOf(ICON[component.name]) >= 0) return escapeText(text);
-    return '<span aria-hidden="true">' + iconHtml(component.name) + '</span> ' + escapeText(text);
+    var label = component.labelClass ? '<span class="' + component.labelClass + '">' + escapeText(text) + '</span>' : escapeText(text);
+    return '<span aria-hidden="true">' + iconHtml(component.name) + '</span>' + (component.labelClass ? '' : ' ') + label;
   }
   /** the button's HTML for a surface ('page' or 'dialog'); the one place the markup of an action is written */
   function render(name, options, surface) {
@@ -260,7 +282,14 @@ var CBUi = (function () {
     var effect = effectOf(name, component, options);
     registerPress(options);
     ensureStyle();
-    var html = '<button ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</button>';
+    return markup(component, options, surface, effect);
+  }
+  /** the one element of a component: a button, or an a for a link (which must carry its href) */
+  function markup(component, options, surface, effect) {
+    var name = component.name;
+    var tag = component.link ? 'a' : 'button';
+    if (component.link && !options.href) refuse(name + ': a link needs href');
+    var html = '<' + tag + ' ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</' + tag + '>';
     /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
     if (!shownText(component, options).trim()) refuse(name + ': no visible text');
     return html;
@@ -271,6 +300,171 @@ var CBUi = (function () {
   /** a footer button: the same component, drawn in the modal's own button classes */
   function dialogAction(name, options) {
     return render(name, options, 'dialog');
+  }
+
+  /* ── CMP025 CHOICE: a choice of 2 to 4 values, one selected; ONE component in two modes (Athi 10 Nov: icon and word always, no glyph alone).
+     Wide screen: segments (a radio group; 32 px compact, the one size rule). Phone width (700 px and under): ONE 44 px button showing the current value as
+     icon and word ("🟢 Open ▾") that opens the values as a listbox menu (arrows, Home, End, Enter, Esc; focus returns to the button).
+     A press calls onChange(value); choiceSet(group, value) repaints from outside (a refused change, a confirm that said no). ── */
+  var CHOICES = {};
+  var CHEVRON = '▾';
+  /** the attributes a segment and a menu option share */
+  function choiceAttrs(options, item, role, size) {
+    return [
+      ['type', 'button'], ['role', role], ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-choice-value', item.value],
+      ['data-size', size === 'compact' ? 'compact' : null], ['data-testid', options.testid ? options.testid + '-' + item.value + (role === 'option' ? '-option' : '') : null]
+    ];
+  }
+  function choiceItem(options, item, selected, size, tabbable) {
+    var attrs = choiceAttrs(options, item, 'radio', size).concat([['aria-checked', String(selected)], ['tabindex', tabbable ? '0' : '-1']]);
+    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+  }
+  function choiceOption(options, item, selected) {
+    var attrs = choiceAttrs(options, item, 'option', 'standard').concat([['aria-selected', String(selected)], ['tabindex', '-1']]);
+    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+  }
+  /** the phone mode's one button: the current value, icon and word, and a chevron */
+  function choiceTrigger(options) {
+    var current = options.items.filter(function (item) { return item.value === options.value; })[0] || options.items[0];
+    var attrs = [
+      ['type', 'button'], ['class', 'cbui-choice-btn'], ['data-choice-trigger', true], ['aria-haspopup', 'listbox'], ['aria-expanded', 'false'],
+      ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-size', 'compact']
+    ];
+    return '<button ' + attributeList(attrs) + '><span class="cbui-cur">' + escapeText(words(current.label)) + '</span> <span aria-hidden="true">' + CHEVRON + '</span></button>';
+  }
+  function choiceMenu(options) {
+    var items = options.items.map(function (item) { return choiceOption(options, item, item.value === options.value); }).join('');
+    return '<div class="cbui-choice-menu" role="listbox" aria-label="' + escapeText(words(options.label)) + '" hidden>' + items + '</div>';
+  }
+  /** the one segment Tab reaches: the selected one, or the first when no value matches (the group must stay reachable) */
+  function tabbableItem(options, item) {
+    var matched = options.items.some(function (other) { return other.value === options.value; });
+    return matched ? item.value === options.value : item === options.items[0];
+  }
+  function checkChoice(options) {
+    if (!MOUNT_CODE.test(options.mount || '')) refuse('choice: mount must be a screen mount code like ACC002-U01');
+    if (!options.items || options.items.length < 2 || options.items.length > 4) refuse('choice: 2 to 4 values');
+    if (!options.label) refuse('choice: a label (the group\'s accessible name)');
+    if (options.size && SIZES.indexOf(options.size) < 0) refuse('choice: size must be standard or compact');
+  }
+  /** the attributes of the group element */
+  function choiceHead(options) {
+    return attributeList([
+      ['role', 'radiogroup'], ['class', 'cbui-choice' + (options.cls ? ' ' + options.cls : '')], ['data-cbsid', ACTION_SET.choice.element],
+      ['data-cbmount', options.mount], ['data-key', options.key || null], ['aria-label', words(options.label)], ['title', options.hint ? words(options.hint) : null],
+      ['data-value', options.value], ['id', options.id || null], ['data-testid', options.testid || null]
+    ]);
+  }
+  /** ui.choice({ mount, key, label, value, items: [{ value, label }], onChange, size, id, testid, cls, hint }) -> the group's HTML */
+  function choice(options) {
+    options = options || {};
+    checkChoice(options);
+    CHOICES[options.mount + '|' + (options.key || '')] = options;
+    ensureStyle();
+    var segments = options.items.map(function (item) { return choiceItem(options, item, item.value === options.value, options.size, tabbableItem(options, item)); }).join('');
+    return '<div ' + choiceHead(options) + '>' + segments + choiceTrigger(options) + choiceMenu(options) + '</div>';
+  }
+  /** repaint the group to a value (no onChange): used when a change was refused or confirmed away */
+  function choiceSet(group, value) {
+    if (!group || !group.querySelectorAll) return;
+    group.setAttribute('data-value', String(value));
+    Array.prototype.forEach.call(group.querySelectorAll('[role="radio"]'), function (segment) {
+      var on = segment.getAttribute('data-choice-value') === String(value);
+      segment.setAttribute('aria-checked', String(on));
+      segment.setAttribute('tabindex', on ? '0' : '-1');
+      if (on) group.querySelector('.cbui-cur').textContent = segment.textContent;
+    });
+    Array.prototype.forEach.call(group.querySelectorAll('[role="option"]'), function (option) {
+      option.setAttribute('aria-selected', String(option.getAttribute('data-choice-value') === String(value)));
+    });
+    if (!group.querySelector('[aria-checked="true"]')) group.querySelector('[role="radio"]').setAttribute('tabindex', '0');
+  }
+  /** open or close the phone menu; opening puts focus on the chosen value, closing gives it back to the button */
+  function setChoiceMenu(group, open) {
+    var menu = group.querySelector('.cbui-choice-menu');
+    var trigger = group.querySelector('[data-choice-trigger]');
+    menu.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) (menu.querySelector('[aria-selected="true"]') || menu.querySelector('[role="option"]')).focus();
+    else if (group.contains(document.activeElement) || document.activeElement === document.body) trigger.focus();
+  }
+  function choiceOf(segment) {
+    var group = segment.closest('[data-choice-root]') || segment.closest('.cbui-choice');
+    return { group: group, options: group && CHOICES[group.getAttribute('data-cbmount') + '|' + (group.getAttribute('data-key') || '')] };
+  }
+  /** a press on a segment or a menu option: repaint, tell the page, close the menu */
+  function onChoiceClick(segment) {
+    var found = choiceOf(segment);
+    if (!found.options) return;
+    var value = segment.getAttribute('data-choice-value');
+    var changed = value !== found.group.getAttribute('data-value');
+    if (changed) choiceSet(found.group, value);
+    if (segment.getAttribute('role') === 'option') setChoiceMenu(found.group, false);
+    if (changed && typeof found.options.onChange === 'function') found.options.onChange(value);
+  }
+  /** a press on the phone button opens or closes its menu; a press anywhere else closes every open menu */
+  function onChoiceTrigger(event) {
+    var trigger = closestOf(event, '[data-choice-trigger]');
+    if (trigger && trigger.getAttribute('data-choice-trigger') === null) trigger = null;
+    Array.prototype.forEach.call(document.querySelectorAll('.cbui-choice-menu:not([hidden])'), function (menu) {
+      var group = menu.closest('.cbui-choice');
+      if (!trigger || group !== trigger.closest('.cbui-choice')) setChoiceMenu(group, false);
+    });
+    if (!trigger) return false;
+    var group = trigger.closest('.cbui-choice');
+    setChoiceMenu(group, group.querySelector('.cbui-choice-menu').hidden);
+    return true;
+  }
+  function isRtl(group) {
+    var view = group.ownerDocument && group.ownerDocument.defaultView;
+    return !!view && view.getComputedStyle(group).direction === 'rtl';
+  }
+  /** where a key moves the selection: arrows step (left and right swap in a right-to-left page), Home and End jump; -1 is no move */
+  function targetIndex(key, index, count, rightToLeft) {
+    if (key === 'Home') return 0;
+    if (key === 'End') return count - 1;
+    var sideways = rightToLeft ? { ArrowRight: -1, ArrowLeft: 1 } : { ArrowRight: 1, ArrowLeft: -1 };
+    var step = sideways[key] || { ArrowDown: 1, ArrowUp: -1 }[key];
+    return step ? (index + step + count) % count : -1;
+  }
+  /** keys on a segment: the selection follows the focus (radio-group keyboard, WAI-ARIA APG) */
+  function onSegmentKey(event, segment) {
+    var group = segment.closest('[role="radiogroup"]');
+    var all = Array.prototype.slice.call(group.querySelectorAll('[role="radio"]'));
+    var next = all[targetIndex(event.key, all.indexOf(segment), all.length, isRtl(group))];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+    onChoiceClick(next);
+  }
+  /** keys in the phone menu: arrows, Home and End move the focus, Esc and Tab close it (Enter and Space press the option itself) */
+  function onMenuKey(event, option) {
+    var group = option.closest('.cbui-choice');
+    var all = Array.prototype.slice.call(group.querySelectorAll('[role="option"]'));
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      if (event.key === 'Escape') event.preventDefault();
+      return setChoiceMenu(group, false);
+    }
+    var next = all[targetIndex(event.key === 'ArrowLeft' || event.key === 'ArrowRight' ? '' : event.key, all.indexOf(option), all.length, false)];
+    if (!next) return;
+    event.preventDefault();
+    next.focus();
+  }
+  /** ArrowDown or ArrowUp on the phone button opens its menu */
+  function onTriggerKey(event, trigger) {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    setChoiceMenu(trigger.closest('.cbui-choice'), true);
+  }
+  function onChoiceKey(event) {
+    var target = event.target && event.target.closest ? event.target : null;
+    if (!target) return;
+    var segment = target.closest('[role="radio"][data-choice-value]');
+    var option = target.closest('[role="option"][data-choice-value]');
+    var trigger = target.closest('[data-choice-trigger]');
+    if (segment) onSegmentKey(event, segment);
+    else if (option) onMenuKey(event, option);
+    else if (trigger) onTriggerKey(event, trigger);
   }
   /** runs the registered press through CBAction (busy, one press one write, and the confirm for a commit) */
   function press(button, options) {
@@ -289,8 +483,15 @@ var CBUi = (function () {
     var component = ACTION_SET[button.getAttribute('data-cbname')];
     return confirmation && component && component.danger ? Object.assign({}, confirmation, { danger: true }) : confirmation;
   }
+  /** the nearest element of the click that matches a selector, or null */
+  function closestOf(event, selector) {
+    return event.target && event.target.closest ? event.target.closest(selector) : null;
+  }
   function onDocumentClick(event) {
-    var button = event.target && event.target.closest && event.target.closest('[data-cbmount]');
+    var segment = closestOf(event, '[data-choice-value]');
+    if (segment && segment.getAttribute('data-choice-value') !== null) return onChoiceClick(segment);
+    if (onChoiceTrigger(event)) return;
+    var button = closestOf(event, '[data-cbmount]');
     if (!button || button.disabled) return;
     var options = HANDLERS[button.getAttribute('data-cbmount') + '|' + (button.getAttribute('data-key') || '')];
     if (options) press(button, options);
@@ -675,7 +876,8 @@ var CBUi = (function () {
   };
   var progress = { start: startProgress, batch: batchProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
-  var library = { action: action, dialog: dialog, progress: progress, components: ACTION_SET, textKey: textKey };
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
+  var library = { action: action, dialog: dialog, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

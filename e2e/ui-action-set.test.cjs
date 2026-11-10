@@ -26,7 +26,7 @@ const sandbox = {
   esc: (text) => String(text).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])),
   CBAction: { run: (button, fn, options) => { runs.push(options); return Promise.resolve(fn()); } },
   window: {},
-  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelector: (selector) => (panelOnScreen && /data-cbprogress/.test(selector) ? panelRoot : null) },
+  document: { addEventListener: (name, fn) => { listeners[name] = fn; }, querySelectorAll: () => [], querySelector: (selector) => (panelOnScreen && /data-cbprogress/.test(selector) ? panelRoot : null) },
   setTimeout, clearTimeout,
   modal: (html) => { opened.push(html); }, closeModal: () => { opened.push('closed'); },
 };
@@ -37,13 +37,19 @@ const ui = sandbox.ui;
 
 console.log('the set');
 const names = Object.keys(ui.components).filter((name) => name !== 'dialog' && !ui.components[name].nonButton);
-check(names.length === 18, 'eighteen actions: ' + names.join(' '));
+check(names.length === 20, 'twenty actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
-check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'eighteen distinct CMP codes (eighteen actions and the dialog)');
-const forced = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
+check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'twenty distinct CMP codes (twenty actions and the dialog)');
+const forced = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
+const unmatched = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'none', items: [{ value: 'a', label: 'Open' }, { value: 'b', label: 'Away' }] });
+check((unmatched.match(/tabindex="0"/g) || []).length === 1, 'a choice with no matching value still has one tab stop (the first segment)');
+const phone = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'b', items: [{ value: 'a', label: '🟢 Open' }, { value: 'b', label: '🌙 Away' }] });
+check(/data-choice-trigger[^>]*aria-haspopup="listbox"/.test(phone) && phone.includes('class="cbui-cur">🌙 Away</span>') && /role="listbox"[^>]*hidden/.test(phone), 'the phone mode is one button showing the current value as icon and word, opening a listbox');
+check(!/aria-label="Open"/.test(phone), 'no value is drawn as a glyph alone');
+check(/title="Explain"/.test(ui.action('help', { mount: 'TST001-U01', hint: 'Explain' })), 'a hint is the hover text of a component');
 names.forEach((name) => {
   const html = ui.action(name, Object.assign({ mount: 'TST001-U01' }, forced[name] || {}));
-  check(/^<button /.test(html) && html.includes('type="button"') && html.includes('data-cbsid="' + ui.components[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button with element code and mount');
+  check(/^<(button|a) /.test(html) && (ui.components[name].link || html.includes('type="button"')) && html.includes('data-cbsid="' + ui.components[name].code + '-B01"') && html.includes('data-cbmount="TST001-U01"'), name + ': one native button (a link for Home) with element code and mount');
 });
 
 console.log('born accessible (axe label-title-only / button-name cannot return through a component)');
