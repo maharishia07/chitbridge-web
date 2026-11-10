@@ -15,13 +15,14 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (63)
+## Capabilities (64)
 
 | file | loading · nav key | what it is |
 |---|---|---|
 | `cap-admin.js` | lazy · mis, profile, settings, assistreview | the "admin" capability (progressively loaded on demand) |
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
 | `cap-assist.js` | — |  |
+| `cap-attach.js` | — |  |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
 | `cap-catalogue.js` | eager | THE CATALOGUE'S PRIMITIVES, ONE COPY, and the catalogue as a small app (T3-CATALOGUE, 2026-10-14) |
@@ -146,4 +147,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*119 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*120 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
