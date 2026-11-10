@@ -458,10 +458,10 @@ const BKB_BRS_ITEMS = [
 ];
 /** the BRS as a CSV: its lines as the engine worked them, then each named reconciling item (amounts as plain decimals) */
 function bankBrsCsv(worked) {
-  const cur = bkCur();
-  const rows = [[tx('Bank reconciliation statement as at'), worked.asOf], [tx('Currency'), cur || '']].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor, cur)]));
+  const currencyCode = bkCur();
+  const rows = [[tx('Bank reconciliation statement as at'), worked.asOf], [tx('Currency'), currencyCode || '']].concat(worked.rows.map((x) => [tx(x.label), bkMinorText(x.minor, currencyCode)]));
   BKB_BRS_ITEMS.forEach(([title, key]) =>
-    (worked[key] || []).forEach((x) => rows.push([tx(title), x.date || '', x.name || '', x.ref || '', bkMinorText(x.amount_minor, cur)]))
+    (worked[key] || []).forEach((x) => rows.push([tx(title), x.date || '', x.name || '', x.ref || '', bkMinorText(x.amount_minor, currencyCode)]))
   );
   return rows.map((row) => row.map(bkCsvCell).join(',')).join('\r\n') + '\r\n';
 }
