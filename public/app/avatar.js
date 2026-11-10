@@ -115,8 +115,22 @@
   }
 
   /* ── what is saved ── */
+  /* FIXED LOOK (the UI standard page, public/ui-standard.html): a page whose <html> carries data-appearance-fixed takes its look from CBAvatar.applyWith(), never from
+     storage, and nothing here saves, pushes or reads cb_sess for it. OVERRIDE is null on every other page, so nothing changes there. */
+  var OVERRIDE = doc && doc.documentElement && typeof doc.documentElement.hasAttribute === 'function' && doc.documentElement.hasAttribute('data-appearance-fixed') ? {} : null;
   function pref(kind) {
+    if (OVERRIDE) return has(OVERRIDE, kind) ? OVERRIDE[kind] : DEFAULTS[kind];
     return lsGet(KEY[kind], DEFAULTS[kind]);
+  }
+  /** apply a look given as { theme, font, fs, weight, motion } without reading or writing storage (only on a fixed-look page) */
+  function applyWith(look) {
+    if (!OVERRIDE) return false;
+    Object.keys(look || {}).forEach(function (kind) {
+      OVERRIDE[kind] = look[kind];
+    });
+    BASE = null;
+    apply();
+    return true;
   }
   function get() {
     return {
@@ -535,6 +549,7 @@
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
+    if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
     pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
@@ -545,6 +560,14 @@
     } /* the person's own choice outranks a showing link */
     push(); /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
+  }
+  /** a pick on a fixed-look page (the UI standard page): the look is applied and the host told, but nothing is saved, held, pushed or reloaded */
+  function setFixed(kind, value) {
+    OVERRIDE[kind] = value;
+    BASE = null;
+    apply();
+    repaint();
+    if (M && M.o && typeof M.o.onLook === 'function') M.o.onLook(kind, value);
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
   function editionReload(force) {
@@ -1080,6 +1103,7 @@
    *   onProfile · onSettings · onSupport · onSignOut     a page that has the screen in place; otherwise a link into the app
    *   languages { list:{code:name}, current, onPick }    the app only: it has no other door to its language
    *   testid   the button's data-testid (default `avatar`)      signInHref · apiBase · token
+   *   onLook(kind, value)  a fixed-look page only (data-appearance-fixed): told after each pick, which is applied but never saved
    *   sync:false  no server at all (the counter offline)      pull:false  the host reads /me itself and calls hydrate()
    */
   function mount(el, o) {
@@ -1161,12 +1185,13 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener)
     root.addEventListener('online', function () {
-      if (Object.keys(pendGet()).length) push();
+      if (!OVERRIDE && Object.keys(pendGet()).length) push();
     });
 
   root.CBAvatar = {
     mount: mount,
     apply: apply,
+    applyWith: applyWith,
     hydrate: hydrate,
     set: set,
     get: get,

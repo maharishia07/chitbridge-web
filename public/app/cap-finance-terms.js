@@ -79,8 +79,9 @@ window.addEventListener('hashchange', function () {
 function ftNum(v) {
   return v == null ? '' : String(v);
 }
+/* the label is a for= label on the control `id` (axe label, WCAG 4.1.2); bold kept as the old <b> had it */
 function ftField(id, label, input) {
-  return '<div class="kv"><b style="flex:1 1 150px">' + esc(label) + '</b><span style="flex:1 1 150px">' + input + '</span></div>';
+  return '<div class="kv"><label for="' + id + '" style="flex:1 1 150px;font-weight:700">' + esc(label) + '</label><span style="flex:1 1 150px">' + input + '</span></div>';
 }
 function ftInput(id, v, ph, off) {
   return (

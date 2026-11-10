@@ -41,7 +41,7 @@
   .sec .btn{ margin-left:auto; }
   .line{ display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:var(--fs-2); padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
   .line label{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
-  input[type=number], input[type=text], input[type=date], select{ font:inherit; font-size:var(--fs-2); padding:3px 5px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); height:26px; }
+  input[type=number], input[type=text], input[type=date], select{ font:inherit; font-size:var(--fs-2); padding:3px 5px; border:1px solid var(--line); border-radius:5px; background:var(--card,#fff); color:var(--ink); height:26px; }
   input[type=number]{ text-align:right; }
   input[type=checkbox], input[type=radio]{ width:15px; height:15px; margin:0; accent-color:var(--blue); }
   table.grid{ width:100%; border-collapse:separate; border-spacing:0; font-size:var(--fs-2); background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
@@ -333,7 +333,7 @@ function setVal(what, i, field, v, nestedNum) {
 function provSelect(what, i, cur) {
   var opts = (window.CBConvert && CBConvert.PROVENANCE) || ['unknown'];
   return (
-    '<select onchange="setVal(\'' +
+    '<select aria-label="' + what + ' provenance" onchange="setVal(\'' +
     what +
     "'," +
     i +
@@ -348,7 +348,7 @@ function provSelect(what, i, cur) {
 }
 function txt(what, i, field, v, w) {
   return (
-    '<input type="text" value="' +
+    '<input type="text" aria-label="' + what + ' ' + field + '" value="' +
     esc(v == null ? '' : v) +
     '"' +
     (w ? ' style="width:' + w + '"' : '') +
@@ -363,7 +363,7 @@ function txt(what, i, field, v, w) {
 }
 function num(what, i, field, v, step) {
   return (
-    '<input type="number" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
+    '<input type="number" aria-label="' + what + ' ' + field + '" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
   );
 }
 function del(what, i) {
@@ -423,7 +423,7 @@ function paintInputs() {
           '<td>' +
           txt('prices', index, 'currency', item.currency, '58px') +
           '</td>' +
-          '<td><input type="date" value="' +
+          '<td><input type="date" aria-label="prices as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'prices\',' +
           index +
@@ -454,7 +454,7 @@ function paintInputs() {
           '<td class="r">' +
           num('rates', index, 'rate', item.rate) +
           '</td>' +
-          '<td><input type="date" value="' +
+          '<td><input type="date" aria-label="rates as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'rates\',' +
           index +

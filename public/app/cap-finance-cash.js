@@ -100,7 +100,7 @@ function fcPaintTop() {
   if (!el) return;
   var pill = function (n) {
     return (
-      '<button type="button" class="tab" role="tab" aria-pressed="' +
+      '<button type="button" class="tab" aria-pressed="' +
       (FC.days === n ? 'true' : 'false') +
       '" data-testid="fc-days-' +
       n +
@@ -112,7 +112,7 @@ function fcPaintTop() {
     );
   };
   el.innerHTML =
-    '<div class="tabs" role="tablist" aria-label="' +
+    '<div class="tabs" role="group" aria-label="' +
     esc(tx('How far ahead')) +
     '" style="margin:10px 20px 0">' +
     pill(7) +

@@ -69,5 +69,10 @@ ok(verdict.missing.length === 0, 'every standard cited in public/app and docs ('
 const withoutCsv = SCAN.judge(webScan.found, regKeys.filter((_, i) => R.S[i].id !== 'rfc4180'), allowKeys);
 ok(withoutCsv.missing.indexOf('RFC 4180') >= 0, 'the guard bites: take the RFC 4180 row away and its citation is reported as on neither list');
 
+/* 6  UX-137 (2026-11-08): the seven UI build standards are register rows, each with a product area and a status, so the UI standard page can link them */
+const UI_ROWS = ['wai-aria-1-2', 'wcag-2.5.8', 'iso-9241-110', 'iso-9241-161', 'html-living-standard', 'w3c-design-tokens', 'ui-identity-codes'];
+const missingUi = UI_ROWS.filter((id) => !R.S.some((r) => r.id === id && PAS.indexOf(r.pa) >= 0 && /^(live|part|plan)$/.test(r.s)));
+ok(missingUi.length === 0, 'the ' + UI_ROWS.length + ' UI build standards are on the register with an area and a status' + (missingUi.length ? ' — missing or incomplete: ' + missingUi.join(', ') : ''));
+
 console.log('\n' + pass + ' passed · ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
