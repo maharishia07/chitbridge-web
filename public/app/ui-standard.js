@@ -295,6 +295,22 @@ var CBUiStandard = (function () {
       });
     }, Promise.resolve());
   }
+  /* CMP026 batch progress: forty mock chits on a timer (no api), the 17th fails, so the failed count and the list show */
+  var DEMO_BATCH_TICK_MS = 120, DEMO_BATCH_FAIL_AT = 5;
+  /** one demo run: eight items open the centre panel, forty the corner tray (the limit is ui.progress.batch.panelMax); the 5th item fails so the count and the list show */
+  function demoBatch(total, mount) {
+    return function () {
+      var batch = ui.progress.batch({ mount: mount, label: 'Assigning chits', total: total, unit: 'assigned', delay: 0, cancel: function () {} });
+      function next(index) {
+        if (batch.cancelled()) return;
+        if (index > total) { batch.finish(); return; }
+        if (index === DEMO_BATCH_FAIL_AT) batch.failed([formatWords('Chit {n}', { n: index })], words('No reply from the demo'));
+        else batch.done();
+        setTimeout(function () { next(index + 1); }, DEMO_BATCH_TICK_MS);
+      }
+      next(1);
+    };
+  }
   function progressCell(caption, button) {
     return '<figure class="st"><div class="slot">' + button + '</div><figcaption>' + esc(words(caption)) + '</figcaption></figure>';
   }
@@ -308,10 +324,19 @@ var CBUiStandard = (function () {
       progressCell('Long: a panel with steps', ui.action('open', { mount: SCREEN + '-U118', object: 'import', testid: 'gal-progress-long', onPress: demoPanel })) +
       '</div></section>';
   }
+  function batchRow() {
+    var component = ui.components.batch;
+    return '<section class="crow" data-testid="gal-row-CMP026"><div class="cid"><span class="chip" data-testid="gal-code">CMP026</span><b>' + esc(words('Batch progress')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch progress</span> · parts <span class="mono">CMP021 ' + esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' +
+      progressCell('Try 8 items', ui.action('open', { mount: SCREEN + '-U119', object: 'batch', testid: 'gal-progress-batch-panel', onPress: demoBatch(8, SCREEN + '-D03-U01') })) +
+      progressCell('Try 40 items', ui.action('open', { mount: SCREEN + '-U120', object: 'batch tray', testid: 'gal-progress-batch-tray', onPress: demoBatch(40, SCREEN + '-D04-U01') })) +
+      '</div></section>';
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     rows.splice(1, 0, dialogRow());
     rows.push(progressRow());
+    rows.push(batchRow());
     return rows.join('');
   }
 
