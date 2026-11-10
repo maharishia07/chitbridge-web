@@ -40,9 +40,9 @@ var CBUi = (function () {
   var ICON_SVG_DELETE = SVG_OPEN + '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/></svg>';
   var ICON = {
     save: '✓', cancel: '✕', done: '✓', close: '✕', back: '‹', add: '+', remove: '−', reload: '↻', open: '↗', delete: ICON_SVG_DELETE, edit: '✎',
-    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?', home: '⌂', assistant: '💬'
+    search: ICON_SVG_SEARCH, clear: '✕', notnow: ICON_SVG_NOTNOW, help: '?', info: 'ⓘ', more: '⋯', screenhelp: '?', home: '⌂', assistant: '💬', menu: '☰', legend: '🔑', activity: '🔔'
   };
-  var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp'];
+  var ICON_ONLY = ['close', 'search', 'add', 'more', 'back', 'edit', 'help', 'screenhelp', 'menu'];
   var DISPLAYS = ['icon', 'icon+label'];
   /* TAP SIZE (Athi 10 Nov): a target under 24 px is never drawn. Standard is 44 px and is the default; compact is 32 px, for dense lists on a wide screen only;
      on a phone width a compact mount is lifted to 44 px; the 44 is a MINIMUM (a page that sets --act-h larger keeps it, and the UI standard page's deliberately small preset is still drawn small). One stylesheet, written here, so the size is changed in one place. */
@@ -79,7 +79,9 @@ var CBUi = (function () {
     bar: { primary: 'cbsid-help', quiet: 'cbsid-help' },
     /* the shell header's own look (shell.js .cbsh-tohome) and the floating Assistant pill (.cbui-fab, above) */
     shell: { primary: 'cbsh-tohome', quiet: 'cbsh-tohome' },
-    float: { primary: 'cbui-fab', quiet: 'cbui-fab' }
+    float: { primary: 'cbui-fab', quiet: 'cbui-fab' },
+    /* the main app's dark top bar (app.html .topbar): its own look is drawn there, the size is the one tap rule */
+    topbar: { primary: 'cbtb', quiet: 'cbtb' }
   };
   /**
    * The components. label is the English tx() key; shown is the visible text (icon or glyph where the width is tight);
@@ -118,6 +120,11 @@ var CBUi = (function () {
     assistant: { code: 'CMP024', element: 'CMP024-B01', label: 'Assistant', shown: '💬 Assistant', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary' },
     /* CMP025: a segmented choice of 2 to 4 values, one selected (a radio group; a presence switch Open, Away, Closed). It is not a button: ui.choice draws it. */
     choice: { code: 'CMP025', element: 'CMP025-D01', label: 'Choice', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* Athi 10 Nov (wave 2 step 1b): the three controls of the main app's top bar. Menu is the one icon-alone of the three (menu is in the closed icon-alone set);
+       Capabilities and Activity show icon and word, the word (.hw) leaves a phone and the aria-label keeps it. */
+    menu: { code: 'CMP028', element: 'CMP028-B01', label: 'Menu', shown: '☰', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
+    legend: { code: 'CMP029', element: 'CMP029-B01', label: 'Capabilities', shown: 'Capabilities', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
+    activity: { code: 'CMP030', element: 'CMP030-B01', label: 'Activity', shown: 'Activity', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
@@ -152,7 +159,7 @@ var CBUi = (function () {
   }
   /** the look properties: surface, size and display (icon alone only where the rule allows it) */
   function checkLook(name, component, options) {
-    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, bar, shell or float');
+    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, bar, shell, float or topbar');
     if (options.size && SIZES.indexOf(options.size) < 0) refuse(name + ': size must be standard or compact');
     if (options.display && DISPLAYS.indexOf(options.display) < 0) refuse(name + ': display must be icon or icon+label');
     var iconAlone = options.display === 'icon';

@@ -37,9 +37,9 @@ const ui = sandbox.ui;
 
 console.log('the set');
 const names = Object.keys(ui.components).filter((name) => name !== 'dialog' && !ui.components[name].nonButton);
-check(names.length === 20, 'twenty actions: ' + names.join(' '));
+check(names.length === 23, 'twenty-three actions: ' + names.join(' '));
 const codes = Object.values(ui.components).map((component) => component.code);
-check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'twenty distinct CMP codes (twenty actions and the dialog)');
+check(new Set(codes).size === codes.length && codes.every((code) => /^CMP\d{3}$/.test(code)), 'twenty-three distinct CMP codes (twenty-three actions and the dialog)');
 const forced = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
 const unmatched = ui.choice({ mount: 'TST001-U01', label: 'Status', value: 'none', items: [{ value: 'a', label: 'Open' }, { value: 'b', label: 'Away' }] });
 check((unmatched.match(/tabindex="0"/g) || []).length === 1, 'a choice with no matching value still has one tab stop (the first segment)');
