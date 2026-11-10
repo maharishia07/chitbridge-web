@@ -3,7 +3,7 @@
 /**
  * ui-standard.test.cjs — the UI standard page (public/ui-standard.html, screen UIS001), offline: no browser.
  * Cases: the page is public and mock-only (no api, session, shell, storage or fetch in the page or its script; a CSP that refuses every
- * connection); every component of the action set (CMP001..CMP010) has a row; the nine action labels are in all four packs; the page's own
+ * connection); every component of the action set (CMP001..CMP019, CMP020..CMP022) has a row; the nine action labels are in all four packs; the page's own
  * labels are in all four packs; the census rows name real components. The browser half (render, language switch, scroll) is e2e/walk-ui-standard.cjs.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * Run: node e2e/ui-standard.test.cjs
@@ -47,7 +47,7 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.map((row) => row.name).concat('dialog'));
+const used = new Set(model.ROWS.map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner')); /* CMP020..CMP022 are drawn by the progress row, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
 
@@ -68,10 +68,10 @@ const linked = register.split(/\n  \{\n/).map((block) => [/id: '([^']+)'/.exec(b
 check(linked.length >= 5 && ['wcag-1.4.3', 'wcag-1.4.11', 'wcag-2.4.7', 'ui-action-set'].every((id) => linked.indexOf(id) >= 0), 'rows that open this page (go: ui-standard): ' + linked.join(' '));
 check(standardsPage.indexOf("'ui-standard': '/ui-standard.html'") >= 0, "standards.html maps the go key 'ui-standard' to /ui-standard.html");
 console.log('where-used: every mount argument is a literal, or the call declares itself out of scope (docs ui-where-used.cjs reads the same rule)');
-/* the components-tab dialogRow is the 61st counter mount (10 rows x 6 states first); written as a literal it must stay UIS001-U61 */
+/* the components-tab dialogRow is the 61st counter mount (19 rows x 6 states first); written as a literal it must stay UIS001-U115 */
 const rowsBlock = /var ROWS = \[([\s\S]*?)\n  \];/.exec(page), rowCount = rowsBlock ? (rowsBlock[1].match(/\{ name: /g) || []).length : -1;
-check(/ui\.action\('open', \{ mount: SCREEN \+ '-U61', object: 'dialog'/.test(page), "dialogRow mount is the literal SCREEN + '-U61' (the code the counter gave it)");
-check(/var SCREEN = 'UIS001'/.test(page) && rowCount === 10, 'SCREEN is UIS001 and 10 rows x 6 states precede dialogRow, so U61 is unchanged (rows ' + rowCount + ')');
+check(/ui\.action\('open', \{ mount: SCREEN \+ '-U115', object: 'dialog'/.test(page), "dialogRow mount is the literal SCREEN + '-U115' (the code the counter gave it)");
+check(/var SCREEN = 'UIS001'/.test(page) && rowCount === 19, 'SCREEN is UIS001 and 19 rows x 6 states precede dialogRow, so U115 is unchanged (rows ' + rowCount + ')');
 const appDir = path.join(__dirname, '..', 'public', 'app'), literalMount = /^(?:'[^'\\]*'|"[^"\\]*"|SCREEN\s*\+\s*'[^'\\]*')$/;
 let callCount = 0;
 const blank = (source) => source.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/^[ \t]*\/\/.*$/gm, (m) => ' '.repeat(m.length)); /* comments blanked, line numbers kept */

@@ -10850,6 +10850,11 @@ function helpQ(key, title) {
   );
 }
 
+/* UX-137 CMP019: does this screen have a note? The screen's "?" (screen-id.js) is shown only when it does. */
+function hasHelp(key) {
+  return !!HELP_TEXT[key];
+}
+
 /* ⚠️ AN UNKNOWN KEY SAYS SO rather than opening an empty box — a "?" that explains nothing is worse than none. */
 function showHelp(key) {
   const h = HELP_TEXT[key];

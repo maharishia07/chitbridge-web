@@ -40,13 +40,22 @@ var CBUiStandard = (function () {
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
   var CENSUS = [
-    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Not now', 6], ['Dismiss', 2], ['close', 2]] },
+    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Dismiss', 2], ['close', 2]] },
     { name: 'cancel', before: [['Cancel', 89]] },
     { name: 'save', before: [['Save', 31], ['Save and continue', 1], ['Save & continue', 1]] },
     { name: 'done', before: [['Done', 15], ['Got it', 6], ['OK', 5]] },
     { name: 'back', before: [['‹ Back', 8], ['Back', 7], ['‹', 1], ['arrow', 1], ['arrow back', 1]] },
     { name: 'reload', before: [['Try again', 18], ['Retry', 3], ['Reload', 1]] },
-    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] }
+    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] },
+    { name: 'delete', before: [['Delete', 4]] },
+    { name: 'edit', before: [['Edit', 10], ['Change', 10], ['pencil Edit', 3], ['Edit arrow', 1]] },
+    { name: 'search', before: [['Search', 2]] },
+    { name: 'clear', before: [['clear', 9]] },
+    { name: 'notnow', before: [['Not now', 6]] },
+    { name: 'help', before: [['?', 3]] },
+    { name: 'info', before: [['info glyph', 1]] },
+    { name: 'more', before: [['more', 2], ['More', 1], ['ellipsis', 1]] },
+    { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
   /* a mock record states its own currency (N1: no page guesses India's): USD, a code no shop here is assumed to hold */
@@ -61,7 +70,16 @@ var CBUiStandard = (function () {
     { name: 'add', object: 'row', opts: {} },
     { name: 'remove', object: 'row', opts: {}, confirmKind: 'remove' },
     { name: 'reload', object: 'list', opts: {} },
-    { name: 'open', object: 'guide', opts: {} }
+    { name: 'open', object: 'guide', opts: {} },
+    { name: 'delete', object: 'supplier', opts: {}, confirmKind: 'delete' },
+    { name: 'edit', object: 'supplier', opts: {} },
+    { name: 'search', object: 'list', opts: {} },
+    { name: 'clear', object: 'search', opts: {} },
+    { name: 'notnow', object: 'tip', opts: {} },
+    { name: 'help', object: 'page', opts: {} },
+    { name: 'info', object: 'field', opts: {} },
+    { name: 'more', object: 'row', opts: {} },
+    { name: 'screenhelp', object: '', opts: {} }
   ];
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
@@ -170,6 +188,9 @@ var CBUiStandard = (function () {
     if (kind === 'remove') {
       return { title: words('Remove this supplier?'), body: '<p>' + esc(formatWords('Remove {name} from this list?', { name: MOCK.recipients[0] })) + '</p>', yes: words('Remove') };
     }
+    if (kind === 'delete') {
+      return { title: words('Delete this supplier?'), body: '<p>' + esc(formatWords('Delete {name} for good? This cannot be undone.', { name: MOCK.recipients[0] })) + '</p>', yes: words('Delete'), danger: true };
+    }
     var amount = fmtMoney(MOCK.amount, MOCK.currency) + ' (' + MOCK.currency + ')';
     return {
       title: words('Post this bill?'),
@@ -180,7 +201,7 @@ var CBUiStandard = (function () {
     };
   }
   /** what the toast says for each press: the result in words, in the chosen language; a remove also offers Undo in the same bar */
-  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', save: 'Settings saved' };
+  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', delete: 'Supplier deleted', save: 'Settings saved' };
   /**
    * CBAction.run says a bare "Done" when the press returns (ui.js passes it no sentence), so the result is said one tick later and replaces it.
    * ui.js should pass done / outcome through to CBAction.run; until then this is the page's own way to show the standard.
@@ -242,12 +263,51 @@ var CBUiStandard = (function () {
     var component = ui.components.dialog;
     return '<section class="crow" data-testid="gal-row-CMP002"><div class="cid"><span class="chip" data-testid="gal-code">CMP002</span><b>' + esc(words('Example dialog')) + '</b>' +
       '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">SHOW dialog</span></span></div>' +
-      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U61', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
+      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U115', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
+  }
+  /* CMP020 progress: the three levels, each a real button running a fake wait (no api). The times are short so the demo is quick to try. */
+  var DEMO_QUICK_MS = 150, DEMO_SLOW_MS = 2500, DEMO_STEP_MS = 800;
+  var DEMO_STEP_LINES = ['Reading the file', 'Checking each row', 'Saving the rows', 'Almost done'];
+  function wait(milliseconds) {
+    return new Promise(function (resolve) { setTimeout(resolve, milliseconds); });
+  }
+  /** levels 1 and 2: the press already runs through CBAction (busy, one press); the progress component adds the spinner and words after its delay */
+  function demoInline(milliseconds) {
+    return function (button) {
+      var busy = ui.progress.inline(button, words('Saving…'));
+      return wait(milliseconds).then(busy.stop);
+    };
+  }
+  /** level 3: a panel with "Step n of m" and a plain line; Cancel stops the fake import (safe: nothing was written) */
+  function demoPanel() {
+    var cancelled = false;
+    var importProgress = ui.progress.start({ mount: SCREEN + '-D02-U01', label: 'Importing your file', steps: DEMO_STEP_LINES.length, line: words(DEMO_STEP_LINES[0]), delay: 0, cancel: function () { cancelled = true; } });
+    DEMO_STEP_LINES.reduce(function (chain, line, index) {
+      return chain.then(function () { return wait(DEMO_STEP_MS); }).then(function () {
+        if (cancelled) return;
+        if (index === DEMO_STEP_LINES.length - 1) importProgress.done();
+        else importProgress.step(words(DEMO_STEP_LINES[index + 1]));
+      });
+    }, Promise.resolve());
+  }
+  function progressCell(caption, button) {
+    return '<figure class="st"><div class="slot">' + button + '</div><figcaption>' + esc(words(caption)) + '</figcaption></figure>';
+  }
+  function progressRow() {
+    var component = ui.components.progress;
+    return '<section class="crow" data-testid="gal-row-CMP020"><div class="cid"><span class="chip" data-testid="gal-code">CMP020</span><b>' + esc(words('Progress')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN progress</span> · parts <span class="mono">CMP021 ' +
+      esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP022 ' + esc(ui.components.spinner.label) + '</span></span></div><div class="states">' +
+      progressCell('Quick: nothing shows', ui.action('save', { mount: SCREEN + '-U116', object: 'reply', effect: 'preference', testid: 'gal-progress-quick', onPress: demoInline(DEMO_QUICK_MS) })) +
+      progressCell('Slow: the button goes busy', ui.action('save', { mount: SCREEN + '-U117', object: 'settings', effect: 'preference', testid: 'gal-progress-slow', onPress: demoInline(DEMO_SLOW_MS) })) +
+      progressCell('Long: a panel with steps', ui.action('open', { mount: SCREEN + '-U118', object: 'import', testid: 'gal-progress-long', onPress: demoPanel })) +
+      '</div></section>';
   }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     rows.splice(1, 0, dialogRow());
+    rows.push(progressRow());
     return rows.join('');
   }
 
@@ -436,7 +496,7 @@ var CBUiStandard = (function () {
       return '<section class="crow" data-testid="gal-before-' + entry.name + '"><div class="cid"><span class="chip">' + component.code + '</span><b>' + esc(words(component.label)) + '</b><span class="meta">' +
         entry.before.length + ' → 1</span></div><div class="ba"><div class="bcol"><h4>' + esc(words('Before')) + '</h4>' + old + '</div><div class="bcol"><h4>' + esc(words('After')) + '</h4>' +
         /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
-        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined }) + '</div></div></section>';
+        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined, confirm: component.effect === 'commit' ? reachConfirm(entry.name) : undefined }) + '</div></div></section>';
     }).join('');
   }
 
