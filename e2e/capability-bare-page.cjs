@@ -89,7 +89,7 @@ function blankPage(st) {
   };
   const store = {};
   const ctx = {
-    console: { log() {}, warn() {}, error() {}, info() {}, debug() {} }, setTimeout, clearTimeout, setInterval, clearInterval, setImmediate, URL, structuredClone,
+    console: { log() {}, warn() {}, error() {}, info() {}, debug() {} }, setTimeout, clearTimeout, setInterval, clearInterval, setImmediate, URL, structuredClone, crypto: require('crypto').webcrypto,
     fetch: st.fetchFn,
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
     navigator: { userAgent: 'node-stub', language: 'en' }, location: { href: 'http://stand-in/page', hash: '', pathname: '/page', origin: 'http://stand-in' },
@@ -155,9 +155,9 @@ const casesOf = (pg) => (pg.ctx.CBTEST && pg.ctx.CBTEST.cases) || [];
   ok('the verdict is case 2 as pass, with a client_ref', r0.case_key === 'CRM-002' && r0.status === 'pass' && typeof pb.client_ref === 'string' && pb.client_ref.length > 1, JSON.stringify({ k: r0.case_key, s: r0.status, ref: pb.client_ref }));
   ok('it reads back (the stand-in stored 1 row)', Object.keys(st.stored).length === 1);
 
-  await pg.ctx.testMark('CRM-002', 'pass');
+  await Promise.all([pg.ctx.testMark('CRM-002', 'pass'), pg.ctx.testMark('CRM-002', 'pass')]);
   const posts2 = st.seen.filter((r) => r.method === 'POST' && /\/api\/testing\/results$/.test(r.url));
-  ok('double-tap: a second identical verdict carries the SAME client_ref', posts2.length >= 2 && posts2[0].body.client_ref === posts2[1].body.client_ref, posts2.map((p) => p.body.client_ref).join(' vs '));
+  ok('double-tap: two taps while a send is in flight share ONE client_ref; a verdict after a settled reply gets a NEW one', posts2.length >= 3 && posts2[1].body.client_ref === posts2[2].body.client_ref && posts2[0].body.client_ref !== posts2[1].body.client_ref, posts2.map((p) => p.body.client_ref).join(' vs '));
 
   console.log('\n══ credentials only (SEC-29) ══');
   ok('every request carries Authorization: Bearer T', st.seen.length > 0 && st.seen.every((r) => r.headers.Authorization === 'Bearer T'), st.seen.length + ' requests');

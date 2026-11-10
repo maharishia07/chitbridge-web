@@ -38,10 +38,11 @@
     });
   }
 
-  /* the same body in the same attempt carries the same ref, so a double tap is one row */
+  /* core.js's rule (attemptOf/settleAttempt) in miniature: core.js is the whole app and cannot load on a bare page.
+     One attempt id per door+body, kept while a send runs or after a network error, deleted on ANY settled reply, so pass, fail, pass is three rows */
+  var attempts = {};
   function refOf(text) {
-    for (var index = 0, hash = 5381; index < text.length; index++) hash = (hash * 33 + text.charCodeAt(index)) | 0;
-    return 'a' + (hash >>> 0).toString(36);
+    return attempts[text] || (attempts[text] = crypto.randomUUID());
   }
 
   function callDoor(name, opts) {
@@ -59,17 +60,22 @@
       .join('&');
     var headers = { Authorization: 'Bearer ' + tag.token };
     var body;
+    var attempt;
     if (door.method !== 'GET') {
       var payload = Object.assign({}, opts.body);
-      if (door.method === 'POST' && !payload.client_ref) payload.client_ref = refOf(name + JSON.stringify(payload));
+      if (door.method === 'POST' && !payload.client_ref) { attempt = name + JSON.stringify(payload); payload.client_ref = refOf(attempt); }
       body = JSON.stringify(payload);
       headers['Content-Type'] = 'application/json';
     }
     return fetch((win.CB_API || '') + '/api/testing/' + path + (query ? '?' + query : ''), { method: door.method, headers: headers, body: body, credentials: 'omit' }).then(
       function (reply) {
-        if (reply.status === 401) throw new Error('Sign in again to record results');
+        if (reply.status === 401) {
+          delete attempts[attempt];
+          throw new Error('Sign in again to record results');
+        }
         return reply.json().then(function (json) {
-          if (!reply.ok) throw new Error(json.error || 'Failed');
+          if (!(reply.status === 409 && json && json.code === 'IDEMPOTENCY_IN_PROGRESS')) delete attempts[attempt];
+          if (!reply.ok) throw new Error(json.detail || json.title || json.error || 'Failed');
           return json && 'data' in json ? json.data : json;
         });
       }
@@ -87,5 +93,10 @@
 
   (win.CBList ? Promise.resolve() : loadScript('/app/list-ctl.js'))
     .then(function () { return win.ensureCap(capability); })
-    .then(function () { if (openers[capability]) openers[capability](); });
+    .then(function () { if (openers[capability]) openers[capability](); })
+    .catch(function () {
+      var note = document.createElement('p');
+      note.textContent = 'This panel could not open. Reload the page and try again.';
+      document.body.appendChild(note);
+    });
 })();
