@@ -3,7 +3,7 @@
 /**
  * ui-standard.test.cjs — the UI standard page (public/ui-standard.html, screen UIS001), offline: no browser.
  * Cases: the page is public and mock-only (no api, session, shell, storage or fetch in the page or its script; a CSP that refuses every
- * connection); every component of the action set (CMP001..CMP019, CMP020..CMP022) has a row; the nine action labels are in all four packs; the page's own
+ * connection); every component of the action set (CMP001..CMP019, CMP020..CMP027) has a row; the nine action labels are in all four packs; the page's own
  * labels are in all four packs; the census rows name real components. The browser half (render, language switch, scroll) is e2e/walk-ui-standard.cjs.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * Run: node e2e/ui-standard.test.cjs
@@ -49,9 +49,14 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner')); /* CMP020..CMP022 are drawn by the progress row, not by ui.action */
+const used = new Set(model.ROWS.map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'batch', 'batchtray')); /* CMP020..CMP027 are drawn by the progress row, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
+
+console.log('batch progress showcase (CMP026, CMP027)');
+check(/gal-progress-batch-panel/.test(page) && /gal-progress-batch-tray/.test(page) && /gal-row-CMP026/.test(page), 'a separate row with two buttons: Try 8 items (panel) and Try 40 items (tray)');
+['Try 8 items', 'Try 40 items', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
+['Batch progress', 'Batch tray'].forEach((key) => check(model.translatedIn(key).length === 4, 'component label "' + key + '" is in all four packs'));
 
 console.log('language');
 const actions = Object.keys(components).filter((name) => name !== 'dialog');

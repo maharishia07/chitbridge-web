@@ -3,7 +3,7 @@
  * (Save, Done, Cancel, Close, Back, Add, Remove, Reload, Open); a screen never hand-writes the markup, it MOUNTS one.
  * Improve a component here and every mount on every screen improves.
  *
- * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
+ * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
  * CALLED BY  a page script that draws a button: settings.html (cap-settings.js policy Save/Cancel, cap-print.js Save).
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
@@ -96,6 +96,8 @@ var CBUi = (function () {
     /* Athi 10 Nov: ONE progress component, three levels (see PROGRESS below). Its two parts are components too: the bar (CMP021) and the spinner (CMP022). None is a button. */
     progress: { code: 'CMP020', element: 'CMP020-D01', label: 'Progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     progressbar: { code: 'CMP021', element: 'CMP021-D01', label: 'Progress bar', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
+    batch: { code: 'CMP026', element: 'CMP026-D01', label: 'Batch progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
+    batchtray: { code: 'CMP027', element: 'CMP027-D01', label: 'Batch tray', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     spinner: { code: 'CMP022', element: 'CMP022-D01', label: 'Spinner', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
@@ -336,6 +338,11 @@ var CBUi = (function () {
     '.cbp-fill{display:block;height:100%;background:var(--accent);transition:width .2s}' +
     '.cbp-bar[data-indeterminate] .cbp-fill{width:40%;animation:cbp-slide 1.2s ease-in-out infinite alternate}' +
     '@keyframes cbp-slide{to{transform:translateX(150%)}}' +
+    '.cbp-blocks{display:flex;gap:3px;margin:12px 0}.cbp-blk{flex:1;height:12px;border-radius:2px;background:var(--blue-tint,var(--line));border:1px solid var(--blue-tint-line,var(--line))}' +
+    '.cbp-blk[data-s="done"]{background:var(--blue,var(--accent));border-color:var(--blue,var(--accent))}.cbp-blk[data-s="failed"]{background:var(--bad);border-color:var(--bad)}' +
+    '.cbp-fails{margin:8px 0 0;padding-inline-start:1.2em;font-size:.9em;color:var(--bad)}' +
+    '.cbp-tray{position:fixed;inset-block-end:calc(72px + var(--fab-lift,0px) + env(safe-area-inset-bottom,0px));inset-inline-end:16px;z-index:60;width:min(340px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--blue-tint-line,var(--line));border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 6px 24px var(--scrim)}' +
+    '.cbp-tray .cbp-title{margin:0;font-weight:700}.cbp-tray .cbp-tfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.cbp-tray summary{cursor:pointer}' +
     '.cbp-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
     '@media (prefers-reduced-motion:reduce){.cbp-spin,.cbp-fill{animation:none;transition:none}}';
   var panelCount = 0;
@@ -418,6 +425,7 @@ var CBUi = (function () {
     return phrase('{n} of {total}', textKey(ACTION_SET.progress, 'count'), { n: model.now, total: model.max });
   }
   function panelBody(model) {
+    if (model.batch) return batchBody(model);
     return '<div data-cbprogress="' + model.id + '" tabindex="-1"><div role="status" aria-live="polite"><p class="cbp-line">' + escapeText(model.line) + '</p><p class="cbp-count">' + escapeText(countText(model)) + '</p></div>' + barHtml(model) + '</div>';
   }
   function panelRoot(model) {
@@ -427,6 +435,7 @@ var CBUi = (function () {
   function paintPanel(model) {
     var root = panelRoot(model);
     if (!root) return;
+    if (model.batch) return paintBatch(model, root);
     root.querySelector('.cbp-line').textContent = model.line;
     root.querySelector('.cbp-count').textContent = countText(model);
     var bar = root.querySelector('[role="progressbar"]');
@@ -436,6 +445,7 @@ var CBUi = (function () {
     }
   }
   function openPanel(model, options) {
+    if (model.tray) return openTray(model, options);
     ensureProgressStyle();
     model.opener = typeof document !== 'undefined' ? document.activeElement : null;
     var cancelAction = typeof options.cancel === 'function' ? [{ name: 'cancel', options: { mount: options.mount, key: 'cancel', onPress: function () { model.finished = true; closeModal(); options.cancel(); } } }] : [];
@@ -445,6 +455,7 @@ var CBUi = (function () {
     model.opened = true;
   }
   function closePanel(model) {
+    if (model.tray) return closeTray(model);
     if (model.opened && panelRoot(model) && typeof closeModal === 'function') closeModal();
     if (model.opener && model.opener.isConnected && model.opener.focus) model.opener.focus();
   }
@@ -500,7 +511,169 @@ var CBUi = (function () {
       }
     };
   }
-  var progress = { start: startProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
+  /* ── CMP026 BATCH PROGRESS (Athi 10 Nov): a group action that takes long (assign forty chits). The CMP020 panel with a block bar: each block is total/blocks items,
+     blue = done, red = failed, pale = left; the words read "12 of 40 assigned · 28 left · 1 failed". The bar is a role=progressbar (valuenow = done + failed, valuemax = total)
+     and its words are the polite status line, repainted at most every BATCH_PAINT_MS so a screen reader is not flooded. */
+  var BATCH_BLOCKS = 20, BATCH_PAINT_MS = 500;
+  /* Athi 10 Nov: nobody waits on a locked screen. Up to BATCH_PANEL_MAX items the batch is the centre panel (a few seconds); above it, a corner tray (CMP027) that does not block the page,
+     and the work goes in steps of BATCH_STEP items (progress.batch.step), with Cancel between steps. The one place the limit lives. */
+  var BATCH_PANEL_MAX = 10, BATCH_STEP = 10;
+  /** how many of the blocks are blue, how many red (a failure always shows at least one block); the rest stay pale */
+  function blockCounts(model) {
+    var blocks = Math.min(BATCH_BLOCKS, model.max);
+    var failedBlocks = model.failed > 0 ? Math.max(1, Math.round((blocks * model.failed) / model.max)) : 0;
+    var doneBlocks = Math.round((blocks * model.done) / model.max);
+    if (model.done + model.failed >= model.max) doneBlocks = blocks - failedBlocks;
+    return { blocks: blocks, blue: Math.min(doneBlocks, blocks - failedBlocks), red: Math.min(failedBlocks, blocks) };
+  }
+  function blocksHtml(model) {
+    var counts = blockCounts(model), html = '';
+    for (var i = 0; i < counts.blocks; i += 1) html += '<span class="cbp-blk" data-s="' + (i < counts.blue ? 'done' : i < counts.blue + counts.red ? 'failed' : 'left') + '"></span>';
+    return html;
+  }
+  function batchWords(model) {
+    var values = { done: model.done, total: model.max, left: Math.max(0, model.max - model.done - model.failed), failed: model.failed, unit: model.unit };
+    if (model.ended) return model.failed ? phrase('{done} of {total} {unit} · {failed} failed', textKey(ACTION_SET.batch, 'summaryFailed'), values) : phrase('All {total} {unit}', textKey(ACTION_SET.batch, 'summary'), values);
+    return model.failed ? phrase('{done} of {total} {unit} · {left} left · {failed} failed', textKey(ACTION_SET.batch, 'countFailed'), values) : phrase('{done} of {total} {unit} · {left} left', textKey(ACTION_SET.batch, 'count'), values);
+  }
+  function batchBar(model) {
+    ensureProgressStyle();
+    return '<div class="cbp-blocks" role="progressbar" data-cbsid="' + ACTION_SET.batch.element + '" aria-label="' + escapeText(model.label) + '" aria-valuemin="0" aria-valuemax="' + model.max + '" aria-valuenow="' + (model.done + model.failed) + '" aria-valuetext="' + escapeText(batchWords(model)) + '">' + blocksHtml(model) + '</div>';
+  }
+  function failListHtml(model) {
+    if (!model.failList.length) return '';
+    var list = '<ul class="cbp-fails">' + model.failList.map(function (entry) { return '<li>' + escapeText(entry) + '</li>'; }).join('') + '</ul>';
+    /* in the tray the list is one tap away, folded under its count */
+    return model.tray ? '<details><summary>' + escapeText(phrase('Failed items ({failed})', textKey(ACTION_SET.batchtray, 'failedList'), { failed: model.failed })) + '</summary>' + list + '</details>' : list;
+  }
+  /** CMP027: the corner tray, the same blocks and words as the panel, a region of the page (not a dialog): the page stays usable underneath */
+  function trayBody(model) {
+    return '<div data-cbprogress="' + model.id + '" data-cbsid="' + ACTION_SET.batchtray.element + '" role="region" aria-label="' + escapeText(model.label) + '"><p class="cbp-title">' + escapeText(model.label) + '</p>' +
+      batchBar(model) + '<div role="status" aria-live="polite"><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div><div class="cbp-tfoot"></div></div>';
+  }
+  function trayFoot(root, html) {
+    var foot = root && root.querySelector('.cbp-tfoot');
+    if (foot) foot.innerHTML = html;
+  }
+  function openTray(model, options) {
+    ensureProgressStyle();
+    if (typeof document === 'undefined' || !document.body || !document.createElement) return;
+    var holder = document.createElement('div');
+    holder.className = 'cbp-tray';
+    holder.setAttribute('data-cbtray', model.id);
+    holder.innerHTML = trayBody(model);
+    document.body.appendChild(holder);
+    model.holder = holder;
+    model.opened = true;
+    if (typeof options.cancel === 'function') trayFoot(panelRoot(model), dialogAction('cancel', { mount: options.mount, key: 'cancel-' + model.id, onPress: function () { model.cancelNow(); } }));
+  }
+  function closeTray(model) {
+    if (model.holder && model.holder.remove) model.holder.remove();
+    model.holder = null;
+  }
+  function batchBody(model) {
+    if (model.tray) return trayBody(model);
+    return '<div data-cbprogress="' + model.id + '" tabindex="-1">' + batchBar(model) + '<div role="status" aria-live="polite"><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div></div>';
+  }
+  /** repaint the open batch panel: the words (the live region) at most every BATCH_PAINT_MS, the last state always lands (a trailing repaint); the end paints at once */
+  function paintBatch(model, root) {
+    var now = Date.now();
+    if (!model.ended && now - model.lastPaint < BATCH_PAINT_MS) {
+      if (!model.paintTimer) model.paintTimer = setTimeout(function () { model.paintTimer = null; model.lastPaint = 0; paintPanel(model); }, BATCH_PAINT_MS - (now - model.lastPaint));
+      return;
+    }
+    model.lastPaint = now;
+    var bar = root.querySelector('[role="progressbar"]');
+    if (bar) {
+      bar.innerHTML = blocksHtml(model);
+      bar.setAttribute('aria-valuenow', String(model.done + model.failed));
+      bar.setAttribute('aria-valuetext', batchWords(model));
+    }
+    root.querySelector('.cbp-count').textContent = batchWords(model);
+    var wrap = root.querySelector('.cbp-failwrap');
+    if (wrap && model.shownFails !== model.failList.length) { model.shownFails = model.failList.length; wrap.innerHTML = failListHtml(model); }
+  }
+  /**
+   * ui.progress.batch({ mount, total, label, unit, cancel, delay }) -> { done(n), failed(n | [names], reason), finish(), cancel() }.
+   * done(n) adds n finished items; failed adds n failed ones (a list of names gives the summary its list). finish() ends it: a short summary stays on the panel
+   * (with Done) when anything failed or the panel was open; a quiet batch that ended inside the delay shows nothing. cancel() works only when the caller gave a safe cancel().
+   * Callers wrap the work in try { ... } finally { batch.finish(); } so the leave-the-page guard never sticks after an error.
+   */
+  function batchProgress(options) {
+    options = options || {};
+    if (!MOUNT_CODE.test(options.mount || '')) refuse('progress: mount must be a screen mount code like ACC002-U01');
+    if (!(options.total > 0) || options.total % 1) refuse('progress: a batch needs a whole total above 0');
+    panelCount += 1;
+    var model = newBatchModel(options);
+    var openOptions = Object.assign({}, options, { cancel: typeof options.cancel === 'function' ? function () { model.cancelNow(); } : undefined });
+    var timer = setTimeout(function () { if (!model.finished) openPanel(model, openOptions); }, delayOf(options.delay));
+    var release = guardLeaving();
+    model.stopTimers = function () { clearTimeout(timer); clearTimeout(model.paintTimer); model.paintTimer = null; };
+    model.cancelNow = function () {
+      if (typeof options.cancel !== 'function' || model.ended) return false;
+      model.finished = true; model.ended = true; model.cancelled = true;
+      model.stopTimers(); release(); closePanel(model); options.cancel();
+      return true;
+    };
+    return {
+      done: function (count) { model.done += Math.max(0, Math.min(batchRoom(model), count == null ? 1 : count)); paintPanel(model); },
+      failed: function (items, reason) { recordFailed(model, items, reason); paintPanel(model); },
+      cancel: function () { return model.cancelNow(); },
+      cancelled: function () { return !!model.cancelled; },
+      tray: model.tray,
+      finish: function () { model.stopTimers(); release(); return finishBatch(model, options, openOptions); }
+    };
+  }
+  /** the state of one batch: the progress model plus the counts, the failed lines and where it is shown (tray above BATCH_PANEL_MAX items) */
+  function newBatchModel(options) {
+    var model = progressModel({ label: options.label, total: options.total });
+    model.tray = options.total > BATCH_PANEL_MAX;
+    model.batch = true; model.done = 0; model.failed = 0; model.failList = []; model.lastPaint = 0; model.paintTimer = null; model.ended = false;
+    model.unit = words(options.unit || 'done');
+    return model;
+  }
+  function batchRoom(model) {
+    return model.max - model.done - model.failed;
+  }
+  /** leaving the page while a batch runs asks first; the returned function takes the guard off (once) */
+  function guardLeaving() {
+    var live = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+    var guard = function (event) { event.preventDefault(); event.returnValue = ''; return ''; };
+    if (live) window.addEventListener('beforeunload', guard);
+    return function () { if (live) { live = false; window.removeEventListener('beforeunload', guard); } };
+  }
+  /** failed(3, 'why') counts three; failed(['Chit 4'], 'why') counts one and names it for the summary list */
+  function recordFailed(model, items, reason) {
+    var names = Array.isArray(items) ? items : null;
+    var count = Math.max(0, Math.min(batchRoom(model), names ? names.length : (items == null ? 1 : items)));
+    model.failed += count;
+    if (names) names.slice(0, count).forEach(function (name) { model.failList.push(reason ? name + ' — ' + reason : String(name)); });
+    else if (reason && count) model.failList.push(reason + (count > 1 ? ' (×' + count + ')' : ''));
+  }
+  /** the end: a summary stays on the panel or tray with Done; a quiet batch that ended inside the delay shows nothing, unless something failed */
+  function finishBatch(model, options, openOptions) {
+    model.finished = true; model.ended = true;
+    var summary = { done: model.done, failed: model.failed, left: batchRoom(model), total: model.max, text: batchWords(model) };
+    if (!model.opened && model.failed) openPanel(model, openOptions);
+    if (!model.opened) return summary;
+    var root = panelRoot(model);
+    if (root) paintBatch(model, root);
+    announce(summary.text);
+    var doneButton = dialogAction('done', { mount: options.mount, key: 'done-' + model.id, onPress: function () { closePanel(model); } });
+    if (model.tray) { trayFoot(root, doneButton); return summary; }
+    var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
+    if (foot) foot.innerHTML = doneButton;
+    return summary;
+  }
+  batchProgress.panelMax = BATCH_PANEL_MAX;
+  batchProgress.step = BATCH_STEP;
+  /** the items in steps of BATCH_STEP, for the caller to send one step at a time (a step is one call; Cancel is honoured between steps) */
+  batchProgress.steps = function (items) {
+    var out = [];
+    for (var i = 0; i < items.length; i += BATCH_STEP) out.push(items.slice(i, i + BATCH_STEP));
+    return out;
+  };
+  var progress = { start: startProgress, batch: batchProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
   var library = { action: action, dialog: dialog, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */

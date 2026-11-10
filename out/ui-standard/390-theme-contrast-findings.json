@@ -1,0 +1,1093 @@
+{
+ "failing": [],
+ "audit": [
+  {
+   "theme": "Cream",
+   "pairs": [
+    [
+     "Done label",
+     6.72,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     6.44,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     16.49,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     6.44,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     6.44,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     16.49,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     17.2,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Cool",
+   "pairs": [
+    [
+     "Done label",
+     5.73,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.29,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     15.88,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.29,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.29,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     15.88,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     17.2,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Contrast",
+   "pairs": [
+    [
+     "Done label",
+     5.73,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.73,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     17.06,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.73,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.73,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     17.06,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     17.06,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Sand",
+   "pairs": [
+    [
+     "Done label",
+     5.73,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     4.92,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     14.76,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     4.92,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     4.92,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     14.76,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     16.92,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Vibrant",
+   "pairs": [
+    [
+     "Done label",
+     5.82,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.67,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     16.76,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.67,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.67,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     16.76,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     17.2,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Flowery",
+   "pairs": [
+    [
+     "Done label",
+     5.89,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.4,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     13.05,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.4,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.4,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     13.05,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     13.96,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Dark",
+   "pairs": [
+    [
+     "Done label",
+     5.51,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.71,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     14.75,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.71,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.71,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     14.75,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     13.39,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Slate",
+   "pairs": [
+    [
+     "Done label",
+     5.28,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.68,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     15.44,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.68,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.68,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     15.44,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     13.99,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Azure",
+   "pairs": [
+    [
+     "Done label",
+     6.79,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     6.08,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     14,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     6.08,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     6.08,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     14,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     15.63,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Ruby",
+   "pairs": [
+    [
+     "Done label",
+     7.09,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     6.32,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     14.7,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     6.32,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     6.32,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     14.7,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     15.96,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "High Contrast",
+   "pairs": [
+    [
+     "Done label",
+     10.3,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     10.3,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     21,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     10.3,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     10.3,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     21,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     21,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "High Contrast Dark",
+   "pairs": [
+    [
+     "Done label",
+     10.98,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     10.98,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     21,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     10.98,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     10.98,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     21,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     21,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Colour Vision",
+   "pairs": [
+    [
+     "Done label",
+     7.26,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     6.83,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     17.4,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     6.83,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     6.83,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     17.4,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     18.5,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Calm",
+   "pairs": [
+    [
+     "Done label",
+     6.48,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     5.63,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     13.2,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     5.63,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     5.63,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     13.2,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     14.29,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Soft Paper",
+   "pairs": [
+    [
+     "Done label",
+     7.09,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     6.15,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     12.75,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     6.15,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     6.15,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     12.75,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     13.65,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  },
+  {
+   "theme": "Terminal",
+   "pairs": [
+    [
+     "Done label",
+     13.13,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Quiet label",
+     13.13,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Page text",
+     17.62,
+     4.5,
+     "1.4.3",
+     true
+    ],
+    [
+     "Done fill",
+     13.13,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Quiet edge",
+     13.13,
+     3,
+     "1.4.11",
+     true
+    ],
+    [
+     "Ring on page",
+     17.62,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring on card",
+     16.73,
+     3,
+     "2.4.7 · 1.4.11 · 2.4.13",
+     true
+    ],
+    [
+     "Ring width",
+     3,
+     2,
+     "2.4.13",
+     true
+    ],
+    [
+     "Ring gap",
+     2,
+     0,
+     "2.4.13",
+     true
+    ]
+   ]
+  }
+ ]
+}
