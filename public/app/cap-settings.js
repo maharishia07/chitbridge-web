@@ -254,10 +254,10 @@ var CBSettings = (function () {
   function bar(inner) {
     return '<div class="sx-bar">' + inner + '</div>';
   }
-  function btn(id, label, may, cls) {
+  function btn(id, label, may, cls, stampCode) {
     var why = grey(may);
     return (
-      '<span class="sx-act"><button type="button" class="act' +
+      '<span class="sx-act"><button data-cbsid="' + stampCode + '" type="button" class="act' +
       (cls ? ' ' + cls : '') +
       '" id="' +
       id +
@@ -309,7 +309,7 @@ var CBSettings = (function () {
       '<details data-testid="sx-ctr-adv" style="margin-top:18px"><summary style="cursor:pointer;opacity:.75">' +
         esc(T('Advanced')) +
         '</summary>' +
-        '<div style="margin:10px 0;display:flex;gap:10px;align-items:center"><button class="btn" type="button" id="sx_ctr_app" data-testid="sx-ctr-app">' +
+        '<div style="margin:10px 0;display:flex;gap:10px;align-items:center"><button data-cbsid="ACC002-B14" class="btn" type="button" id="sx_ctr_app" data-testid="sx-ctr-app">' +
         esc(T('Install the counter')) +
         '</button>' +
         '<span class="sx-why" title="' +
@@ -350,12 +350,12 @@ var CBSettings = (function () {
           esc(T('New counter')) +
           ' <span class="tag" data-testid="sx-ctr-optional">' +
           esc(T('Optional')) +
-          '</span></label><input class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' +
+          '</span></label><input data-cbsid="ACC002-I08" class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' +
           esc(T('Front desk')) +
           '" maxlength="40"' +
           (grey(manage()) ? ' disabled' : '') +
           '>' +
-          btn('sx_ctr_add', T('Add a counter'), manage()) +
+          btn('sx_ctr_add', T('Add a counter'), manage(), '', 'ACC002-B15') +
           '</span>'
       );
       var node = $('sx_ctr_add');
@@ -495,7 +495,7 @@ var CBSettings = (function () {
           esc(c.id) +
           '">' +
           esc(T('Name')) +
-          '</label><input class="inp" id="sx_ren_' +
+          '</label><input data-cbsid="ACC002-I09" class="inp" id="sx_ren_' +
           esc(c.id) +
           '" data-testid="sx-ctr-rename-' +
           esc(c.id) +
@@ -666,19 +666,19 @@ var CBSettings = (function () {
       $('sx_key_bar').innerHTML = bar(
         '<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' +
           esc(T('New key')) +
-          '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' +
+          '</label><input data-cbsid="ACC002-I10" class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' +
           esc(T('Which system')) +
           '" maxlength="80">' +
           '<label class="sx-lbl" for="sx_key_scope">' +
           esc(T('This key can')) +
-          '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' +
+          '</label><select data-cbsid="ACC002-S05" class="inp" id="sx_key_scope" data-testid="sx-key-scope">' +
           keyKinds()
             .map(function (kind) {
               return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>';
             })
             .join('') +
           '</select>' +
-          btn('sx_key_mint', T('Make a key')) +
+          btn('sx_key_mint', T('Make a key'), null, '', 'ACC002-B16') +
           '</span>'
       );
       $('sx_key_mint').onclick = function () {
@@ -848,9 +848,9 @@ var CBSettings = (function () {
     return GUIDES[connector.id] || (connector.docs ? base + connector.docs : '');
   }
   /** a row action drawn ON the row (CBList runs it by data-act/data-actrow, as it runs the opened row's buttons); greyed with the reason, never hidden */
-  function rowBtn(action, connector, label, reason) {
+  function rowBtn(action, connector, label, reason, stampCode) {
     return (
-      '<button type="button" class="cbl-btn" data-act="' +
+      '<button data-cbsid="' + stampCode + '" type="button" class="cbl-btn" data-act="' +
       action +
       '" data-actrow="' +
       esc(connector.id) +
@@ -878,9 +878,9 @@ var CBSettings = (function () {
       },
       cell: function (connector) {
         return (
-          rowBtn('kit', connector, T('Download'), grey(connector.may)) +
+          rowBtn('kit', connector, T('Download'), grey(connector.may), 'ACC002-B17') +
           ' ' +
-          rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet'))
+          rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet'), 'ACC002-B18')
         );
       }
     };
@@ -1327,6 +1327,8 @@ var CBSettings = (function () {
    * Cancel (or closing the row, which repaints it) puts the old value back. Nothing is written on blur or change. */
   /** a rule's value in the words the row shows: the enum's label, a named number, or the number with its unit */
   function policyShown(x) {
+    /* CTR-212: a flag the server says nobody answered reads "Not answered yet", never its default word ("Off") */
+    if (x.asked === false) return T('Not answered yet');
     var d = x.def,
       v = polShown(d, x.v);
     if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
@@ -1341,24 +1343,25 @@ var CBSettings = (function () {
       dis = grey(x.may) ? ' disabled' : '';
     if (d.type === 'enum')
       return (
-        '<select class="inp" id="' +
+        '<select data-cbsid="ACC002-S06" class="inp" id="' +
         id +
         '" data-testid="sx-pol-in-' +
         esc(d.key) +
         '" data-orig="' +
-        esc(String(x.v)) +
+        esc(x.asked === false ? '' : String(x.v)) +
         '"' +
         dis +
         ' aria-label="' +
         esc(T(d.label)) +
         '">' +
+        (x.asked === false ? '<option value="" disabled selected>' + esc(T('Not answered yet')) + '</option>' : '') +
         d.options
           .map(function (item) {
             return (
               '<option value="' +
               esc(item) +
               '"' +
-              (String(x.v) === String(item) ? ' selected' : '') +
+              (x.asked !== false && String(x.v) === String(item) ? ' selected' : '') +
               '>' +
               esc(T((d.labels && d.labels[item]) || item)) +
               '</option>'
@@ -1368,7 +1371,7 @@ var CBSettings = (function () {
         '</select>'
       );
     return (
-      '<span class="sx-num"><input class="inp" type="number" min="0" id="' +
+      '<span class="sx-num"><input data-cbsid="ACC002-I11" class="inp" type="number" min="0" id="' +
       id +
       '" data-testid="sx-pol-in-' +
       esc(d.key) +
@@ -1391,8 +1394,24 @@ var CBSettings = (function () {
     if (grey(row.may)) return '';
     var key = esc(row.key);
     return (
-      '<button type="button" class="act" style="display:none" id="sx_pol_save_' + key + '" data-testid="sx-pol-save-' + key + '" data-pol-act="save">' + esc(T('Save')) + '</button>' +
-      '<button type="button" class="act ghost" style="display:none" id="sx_pol_cancel_' + key + '" data-testid="sx-pol-cancel-' + key + '" data-pol-act="cancel">' + esc(T('Cancel')) + '</button>'
+      ui.action('save', {
+        mount: 'ACC002-U01',
+        object: 'policy value',
+        hidden: true,
+        effect: 'commit',
+        confirmedBy: 'page',
+        id: 'sx_pol_save_' + key,
+        testid: 'sx-pol-save-' + key,
+        data: { 'pol-act': 'save' }
+      }) +
+      ui.action('cancel', {
+        mount: 'ACC002-U02',
+        object: 'policy edit',
+        hidden: true,
+        id: 'sx_pol_cancel_' + key,
+        testid: 'sx-pol-cancel-' + key,
+        data: { 'pol-act': 'cancel' }
+      })
     );
   }
   /** the control's value against the one painted. Pure DOM: reads and writes nothing on the server. */
@@ -1521,7 +1540,7 @@ var CBSettings = (function () {
               : { ok: true });
           /* W11: the registration is set in ONE place — Country setup (PUT /governance/country-setup writes the flag); here it is read, with the door */
           if (item.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
-          return { key: item.key, def: item, v: v, may: m };
+          return { key: item.key, def: item, v: v, may: m, asked: (r.asked || {})[item.key] };
         });
     }
     var shown = policyShown,

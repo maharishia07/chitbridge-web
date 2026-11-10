@@ -41,7 +41,7 @@ add('Starters',    ['Vada', 'Bonda']);
   await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
   await p.waitForFunction(() => typeof window.catsRanked === 'function', null, { timeout: 30000 });
   await p.evaluate((items) => {
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: items, offers: [], at: new Date().toISOString() };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, items: items, offers: [], at: new Date().toISOString() };
     setMode('sell');
     ls.set('cb_till_bycat', '1');          /* show the keys grouped, which is where the order is read */
     paintChips(); paintQuick();

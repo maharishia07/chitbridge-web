@@ -55,7 +55,7 @@ function apiFront() {
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
     if ((u === '/api/entities/verify' || u === '/api/signin/verify')) return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/till/snapshot') return j(200, { books: true, at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
-      shop: { name: 'Shop X', bridge_id: 'CB-X', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'upi', label: 'UPI' }] },
+      shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'upi', label: 'UPI' }] },
       till: { suggested_id: 'C1', assigned_id: 'C1' }, items: ITEMS, customers: CUSTOMERS });
     if (u.indexOf('/api/till/engine/') === 0) {
       const f = path.join(ENG, u.split('/').pop().replace(/\.js$/, '') + '.js');

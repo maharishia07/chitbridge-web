@@ -37,7 +37,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(36) + '· ' + d 
   await p.evaluate((api) => {
     CloudHost.key = 'k'; CloudHost.api = api; HOST = CloudHost;
     WHO = { id: 'u1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
-    window.S = { shop: { name: 'Mayur Bhavan' }, at: new Date().toISOString(), items: [] };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan' }, at: new Date().toISOString(), items: [] };
     setMode('sell');
   }, base);
 

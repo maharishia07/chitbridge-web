@@ -284,17 +284,17 @@ function vaultCardHTML(vault, encrypted) {
       (vaultPlain() ? '' : '<div class="sec" style="margin:0">' + esc(VAULT_SECTION_TYPES[only] || only) + '</div>') +
       encBanner +
       body +
-      '<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select class="inp" id="v_addtype" hidden>' +
+      '<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap"><select data-cbsid="ACC002-S01" class="inp" id="v_addtype" hidden>' +
       addOpts +
       '</select>' +
       (shown.length
         ? ''
-        : '<button type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ ' +
+        : '<button data-cbsid="ACC002-B01" type="button" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ ' +
           esc(tx('add the business identity')) +
           '</button>') +
       '</div>' +
       '<div class="err" id="vault_err" style="margin-top:8px"></div>' +
-      '<button type="button" class="composebtn" style="margin-top:11px;display:none" data-testid="vault-save" onclick="saveVaultUI()">' +
+      '<button data-cbsid="ACC002-B02" type="button" class="composebtn" style="margin-top:11px;display:none" data-testid="vault-save" onclick="saveVaultUI()">' +
       esc(tx('Save')) +
       '</button></div>'
     ); /* WALK-REG 2026-10-16 R19: the rows save themselves (CBShop autosave); style display:none, a .composebtn class overrides [hidden] */
@@ -313,12 +313,12 @@ function vaultCardHTML(vault, encrypted) {
     encBanner +
     body +
     '<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap">' +
-    '<select class="inp" id="v_addtype" data-testid="vault-add-type" style="max-width:210px;margin:0" onchange="vaultPickType(this.value)">' +
+    '<select data-cbsid="ACC002-S02" class="inp" id="v_addtype" data-testid="vault-add-type" style="max-width:210px;margin:0" onchange="vaultPickType(this.value)">' +
     addOpts +
     '</select>' +
-    '<button class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ add section</button></div>' +
+    '<button data-cbsid="ACC002-B03" class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ add section</button></div>' +
     '<div class="err" id="vault_err" style="margin-top:8px"></div>' +
-    '<button class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' +
+    '<button data-cbsid="ACC002-B04" class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' +
     tx('Save vault') +
     '</button></div>'
   );
@@ -339,17 +339,17 @@ function vaultSectionHTML(sec, i) {
     '</span>' +
     /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
          glance and unusable at form time — "which account do I invoice against?" has no answer. */
-    '<input class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:var(--fs-2)" placeholder="label it — e.g. Export receipts" value="' +
+    '<input data-cbsid="ACC002-I01" class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:var(--fs-2)" placeholder="label it — e.g. Export receipts" value="' +
     esc(sec.label || '') +
     '" oninput="vaultSetSection(' +
     i +
     ',this.value)">' +
-    '<button type="button" title="Remove this section" onclick="vaultDelSection(' +
+    '<button data-cbsid="ACC002-B05" type="button" title="Remove this section" onclick="vaultDelSection(' +
     i +
     ')" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);color:var(--disp);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>' +
     '</div>' +
     rows +
-    '<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow(' +
+    '<button data-cbsid="ACC002-B06" class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow(' +
     i +
     ')">+ add detail</button></div>'
   );
@@ -366,7 +366,7 @@ function vaultNamePlaceholder(type) {
 function vaultRemoveButton(sectionIndex, rowIndex) {
   return vaultPlain()
     ? ''
-    : '<button type="button" title="Remove this detail" onclick="vaultDelRow(' +
+    : '<button data-cbsid="ACC002-B07" type="button" title="Remove this detail" onclick="vaultDelRow(' +
         sectionIndex +
         ',' +
         rowIndex +
@@ -433,7 +433,7 @@ function vaultRowHTML(r, i, j, type) {
       .join('');
     var keep = r.value && !known ? '<option value="' + esc(r.value) + '" selected>' + esc(r.value) + ' — not a standard code</option>' : '';
     val =
-      '<select class="inp" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
+      '<select data-cbsid="ACC002-S03" class="inp" aria-label="' + esc(tx('Value')) + '" style="flex:1 1 120px;min-width:105px;margin:0" onchange="vaultSetRow(' +
       i +
       ',' +
       j +
@@ -446,7 +446,7 @@ function vaultRowHTML(r, i, j, type) {
       '</select>';
   } else {
     val =
-      '<input class="inp" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
+      '<input data-cbsid="ACC002-I02" class="inp" aria-label="' + esc(tx('Value')) + '" style="flex:1 1 120px;min-width:105px;margin:0" value="' +
       esc(r.value || '') +
       '" placeholder="' +
       esc(hint) +
@@ -461,7 +461,7 @@ function vaultRowHTML(r, i, j, type) {
     /* ⚠️ BOTH FIELDS FLEX, AND NEITHER HAS A FIXED BASIS. The detail pane is ~350px at its narrowest and that is
        also the phone width; a 190px fixed name column pushed the remove button onto its own line, which reads as
        a stray control belonging to nothing. Let them shrink together and the row stays one row. */
-    '<input class="inp" list="vsug_' +
+    '<input data-cbsid="ACC002-I03" class="inp" list="vsug_' +
     esc(type) +
     '" style="flex:1 1 130px;min-width:110px;margin:0" placeholder="' +
     esc(vaultNamePlaceholder(type)) +
@@ -716,7 +716,7 @@ function vaultConflictHTML(words) {
   return (
     '<span data-testid="vault-conflict">' +
     esc(words) +
-    '</span> <button type="button" class="composebtn ghost" data-testid="vault-reload" onclick="loadVault()" style="margin-inline-start:8px;min-height:30px">' +
+    '</span> <button data-cbsid="ACC002-B08" type="button" class="composebtn ghost" data-testid="vault-reload" onclick="loadVault()" style="margin-inline-start:8px;min-height:30px">' +
     esc(tx('Reload')) +
     '</button>'
   );
@@ -783,18 +783,18 @@ function shopCc() {
 /** the three inputs (ids pf_gstn · pf_addr · pf_sup — saveProfile and SHOP_FIELDS read them by id) */
 function shopFieldsHTML(e, licLabel) {
   return (
-    '<label class="fl">' +
+    '<label class="fl" for="pf_gstn">' +
     esc(licLabel) +
     ' <span title="' +
     esc(tx('Your business registration')) +
     '" style="color:var(--grey);font-weight:400;cursor:help">ⓘ</span></label>' +
-    '<input class="inp" id="pf_gstn" value="' +
+    '<input data-cbsid="ACC002-I04" class="inp" id="pf_gstn" value="' +
     esc(e.gstn || '') +
     '">' +
-    '<label class="fl">' +
+    '<label class="fl" for="pf_addr">' +
     tx('Address') +
     '</label>' +
-    '<input class="inp" id="pf_addr" value="' +
+    '<input data-cbsid="ACC002-I05" class="inp" id="pf_addr" value="' +
     esc(e.address || '') +
     '">'
   );
@@ -858,7 +858,7 @@ var CBShop = (function () {
       '<div class="err" id="pf_err_profile" data-testid="shop-err" style="margin-top:8px"></div>' +
       (who
         ? '<p class="sub" data-testid="shop-ask-owner">' + esc0(tx('Only the owner can change these.')) + '</p>'
-        : '<button type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
+        : '<button data-cbsid="ACC002-B09" type="button" class="act" id="shop-save" data-testid="shop-save" style="margin-top:8px;display:none">' + esc0(tx('Save')) + '</button>')
     );
   }
   function paint() {

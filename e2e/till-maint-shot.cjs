@@ -54,7 +54,7 @@ const ITEMS = [
   await p.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBSearch, null, { timeout: 30000 });
 
   const out = await p.evaluate((items) => {
-    window.S = { shop: { name: 'Mayur Bhavan' }, items: items, offers: [], at: new Date().toISOString() };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan' }, items: items, offers: [], at: new Date().toISOString() };
     /* the groups the render names, so "Not on any key" has something to be true against */
     try {
       const o = tillOpt();
@@ -96,7 +96,7 @@ const ITEMS = [
   await ph.goto(base + '/till.html');
   await ph.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBSearch, null, { timeout: 30000 });
   const pout = await ph.evaluate((items) => {
-    window.S = { shop: { name: 'Mayur Bhavan' }, items: items, offers: [], at: new Date().toISOString() };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan' }, items: items, offers: [], at: new Date().toISOString() };
     CHANGED = { price: [], stock: [] };
     setMode('maintain');
     CARD_ID = 'i3';

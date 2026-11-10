@@ -36,8 +36,8 @@
 
   /* the four routes, ONE name each — the names app.html registers; a page without them gets them at mount (the attach-ui pattern) */
   /* built by row() so a second literal of the same route is not declared: these are app.html's four names, registered only when the page has not (e2e/ep-aliases.cjs) */
-  function row(m, p) {
-    return { m: m, p: p, ok: 'y' };
+  function row(method, path) {
+    return { m: method, p: path, ok: 'y' };
   }
   var BELL_EP = {
     eventsTicket: row('POST', '/api/events/ticket'),
@@ -50,8 +50,8 @@
     for (var k in BELL_EP) if (!EP[k]) EP[k] = BELL_EP[k];
     return true;
   }
-  function T(s) {
-    return typeof tx === 'function' ? tx(s) : s;
+  function T(words) {
+    return typeof tx === 'function' ? tx(words) : words;
   }
 
   var W = {
@@ -79,53 +79,54 @@
     dispute_resolved: ['✅', 'resolved a dispute on'],
     voided: ['🚫', 'voided']
   };
-  /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
-  function line(n) {
-    var k = KIND[n.action],
-      subj = n.manual_subject || n.auto_subject || T(W.chit),
-      s = '';
-    /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
-    if (n.created_at) {
+  /** the moment a feed row happened, as the reader's LOCAL time: CBLocale first, then the browser's own format, then the raw text */
+  function localMoment(createdAt) {
+    var shape = { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' };
+    try {
+      return root.CBLocale.datetime(createdAt, shape);
+    } catch (_) {
       try {
-        s = root.CBLocale.datetime(n.created_at, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-      } catch (_) {
-        try {
-          var date = new Date(n.created_at);
-          s = isNaN(date)
-            ? String(n.created_at).replace('T', ' ').slice(0, 16)
-            : date.toLocaleString(undefined, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-        } catch (_2) {
-          s = String(n.created_at).slice(0, 16);
-        }
+        var date = new Date(createdAt);
+        return isNaN(date) ? String(createdAt).replace('T', ' ').slice(0, 16) : date.toLocaleString(undefined, shape);
+      } catch (_2) {
+        return String(createdAt).slice(0, 16);
       }
     }
+  }
+  /** one row of the feed -> { i, mine, chit, who, say, subj, d, s, id } — plain text (painted through esc) */
+  function line(item) {
+    var kind = KIND[item.action],
+      subj = item.manual_subject || item.auto_subject || T(W.chit),
+      moment = '';
+    /* O3: the time is the reader's LOCAL time (the feed's created_at is UTC) - never the raw string */
+    if (item.created_at) moment = localMoment(item.created_at);
     /* O3: a NEW incoming order is not a "delivered" - it says what it is, who sent it and what it is worth */
-    if (n.purpose === 'order' && n.action === 'delivered' && n.direction === 'received') {
-      var amt = fmtMoney(n.total_value, n.currency_code, ''),
-        list = [n.order_channel === 'online' ? '🌐 ' + T('Online') : '', n.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
+    if (item.purpose === 'order' && item.action === 'delivered' && item.direction === 'received') {
+      var amt = fmtMoney(item.total_value, item.currency_code, ''),
+        list = [item.order_channel === 'online' ? '🌐 ' + T('Online') : '', item.order_fulfilment === 'delivery' ? T('Delivery') : ''].filter(Boolean).join(' · ');
       return {
         i: '🛍️',
-        mine: !!(n.assigned_to_me || n.dispute_for_me),
-        chit: n.chit_id || null,
+        mine: !!(item.assigned_to_me || item.dispute_for_me),
+        chit: item.chit_id || null,
         order: true,
-        who: n.action_by_display_name || '',
+        who: item.action_by_display_name || '',
         say: T('sent a new order'),
         subj: '',
         d: [amt, list].filter(Boolean).join(' · '),
-        s: s,
-        id: n.log_id || null
+        s: moment,
+        id: item.log_id || null
       };
     }
     return {
-      i: k ? k[0] : '•',
-      mine: !!(n.assigned_to_me || n.dispute_for_me),
-      chit: n.chit_id || null,
-      who: n.action_by_display_name || '',
-      say: k ? k[1] : String(n.action || 'updated').replace(/_/g, ' '),
+      i: kind ? kind[0] : '•',
+      mine: !!(item.assigned_to_me || item.dispute_for_me),
+      chit: item.chit_id || null,
+      who: item.action_by_display_name || '',
+      say: kind ? kind[1] : String(item.action || 'updated').replace(/_/g, ' '),
       subj: subj,
-      d: n.detail ? String(n.detail).slice(0, 90) : n.new_status || '',
-      s: s,
-      id: n.log_id || null
+      d: item.detail ? String(item.detail).slice(0, 90) : item.new_status || '',
+      s: moment,
+      id: item.log_id || null
     };
   }
 
@@ -159,14 +160,14 @@
    * without core.js (the Home shell, index.html) hands the shell's apiBase + token, the way CBAvatar is given them, and the call is a
    * plain fetch with the bearer that unwraps the same {ok,data,error} envelope.
    */
-  function call(o, name, opts) {
-    if (!o.apiBase && typeof api === 'function') return api(name, opts);
-    var e = BELL_EP[name],
-      tok = whoToken(o),
-      base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
+  function call(host, name, opts) {
+    if (!host.apiBase && typeof api === 'function') return api(name, opts);
+    var route = BELL_EP[name],
+      tok = whoToken(host),
+      base = host.apiBase || host.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
     return root
-      .fetch(base + e.p, {
-        method: e.m,
+      .fetch(base + route.p, {
+        method: route.m,
         cache: 'no-store',
         headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json' },
         body: opts && opts.body ? JSON.stringify(opts.body) : undefined
@@ -196,133 +197,143 @@
     });
   }
 
-  function whoToken(o) {
-    if (Object.prototype.hasOwnProperty.call(o, 'person') && !o.person) return null; // the host says nobody is signed in (a token may still be saved)
-    var tok = o.token || (typeof SESSION !== 'undefined' && SESSION && SESSION.token) || null;
+  function whoToken(host) {
+    if (Object.prototype.hasOwnProperty.call(host, 'person') && !host.person) return null; // the host says nobody is signed in (a token may still be saved)
+    var tok = host.token || (typeof SESSION !== 'undefined' && SESSION && SESSION.token) || null;
     var role = (typeof SESSION !== 'undefined' && SESSION && SESSION.role) || '';
     return tok && role !== 'customer' ? tok : null;
   }
 
-  function mount(el, o) {
+  /** the bell button with its count dot, as markup */
+  function bellButtonHtml(bell) {
+    var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
+    return (
+      '<button type="button" class="cbb-btn" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
+      (bell.open ? 'true' : 'false') +
+      '" aria-label="' +
+      esc(T(W.aria)) +
+      (bell.count ? ' (' + bell.count + ')' : '') +
+      '">🔔' +
+      dot +
+      '</button>'
+    );
+  }
+
+  /** one notification row, as markup */
+  function recordHtml(x) {
+    return (
+      '<button type="button" class="cbb-row" data-testid="bell-row"' +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
+      (x.order ? ' data-order="1"' : '') +
+      '><span aria-hidden="true">' +
+      x.i +
+      '</span><span style="min-width:0">' +
+      '<div class="cbb-t">' +
+      (x.who ? '<b>' + esc(x.who) + '</b> ' : '') +
+      esc(x.say) +
+      ' <b>' +
+      esc(x.subj) +
+      '</b></div>' +
+      (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') +
+      '<div class="cbb-s">' +
+      esc(x.s) +
+      '</div></span></button>'
+    );
+  }
+
+  /** the open panel: title, the rows (yours first) or the error / empty line, and the footer with Clear all */
+  function panelHtml(bell) {
+    var items = bell.rows.map(line),
+      mine = items.filter(function (x) {
+        return x.mine;
+      }),
+      rest = items.filter(function (x) {
+        return !x.mine;
+      });
+    var body = bell.err
+      ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
+      : items.length
+        ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(recordHtml).join('') : '') +
+          (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
+        : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
+    return (
+      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
+      esc(T(W.title)) +
+      '"><div class="cbb-hd">' +
+      esc(T(W.title)) +
+      '</div>' +
+      body +
+      '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
+      esc(bell.tone) +
+      '">' +
+      esc(bell.out) +
+      '</span>' +
+      '<button type="button" class="cbb-clear" data-testid="bell-clear"' +
+      (items.length ? '' : ' disabled') +
+      '>' +
+      esc(T(W.clear)) +
+      '</button></div></div>'
+    );
+  }
+
+  function mount(el, opts) {
     el = typeof el === 'string' ? doc.getElementById(el) : el;
     if (!el) return null;
-    o = o || {};
+    opts = opts || {};
     if (el.__cbbell) el.__cbbell.destroy();
     sweep();
     addCss();
     ensureEP();
-    var m = { rows: [], count: 0, open: false, es: null, up: false, backoff: 5000, timer: null, dead: false, err: false, out: '', tone: '' };
+    var bell = { rows: [], count: 0, open: false, es: null, up: false, backoff: 5000, timer: null, dead: false, err: false, out: '', tone: '' };
     if (!el.getAttribute('data-testid')) el.setAttribute('data-testid', 'bell');
     /* a host's own slot keeps its name (the shell's is shell-bell) */ if (!/\bcbb\b/.test(el.className))
       el.className = (el.className ? el.className + ' ' : '') + 'cbb';
 
     function paint() {
-      if (m.dead) return;
-      var dot = m.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (m.count > 99 ? '99+' : m.count) + '</span>' : '';
-      var html =
-        '<button type="button" class="cbb-btn" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
-        (m.open ? 'true' : 'false') +
-        '" aria-label="' +
-        esc(T(W.aria)) +
-        (m.count ? ' (' + m.count + ')' : '') +
-        '">🔔' +
-        dot +
-        '</button>';
-      if (m.open) {
-        var items = m.rows.map(line),
-          mine = items.filter(function (x) {
-            return x.mine;
-          }),
-          rest = items.filter(function (x) {
-            return !x.mine;
-          });
-        var record = function (x) {
-          return (
-            '<button type="button" class="cbb-row" data-testid="bell-row"' +
-            (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
-            (x.order ? ' data-order="1"' : '') +
-            '><span aria-hidden="true">' +
-            x.i +
-            '</span><span style="min-width:0">' +
-            '<div class="cbb-t">' +
-            (x.who ? '<b>' + esc(x.who) + '</b> ' : '') +
-            esc(x.say) +
-            ' <b>' +
-            esc(x.subj) +
-            '</b></div>' +
-            (x.d ? '<div class="cbb-d">' + esc(x.d) + '</div>' : '') +
-            '<div class="cbb-s">' +
-            esc(x.s) +
-            '</div></span></button>'
-          );
-        };
-        var body = m.err
-          ? '<div class="cbb-none" data-testid="bell-error">' + esc(T(W.readFail)) + '</div>'
-          : items.length
-            ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.forYou)) + '</div>' + mine.map(record).join('') : '') +
-              (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(record).join('') : '')
-            : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
-        html +=
-          '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
-          esc(T(W.title)) +
-          '"><div class="cbb-hd">' +
-          esc(T(W.title)) +
-          '</div>' +
-          body +
-          '<div class="cbb-ft"><span class="cbb-out" data-testid="bell-out" data-tone="' +
-          esc(m.tone) +
-          '">' +
-          esc(m.out) +
-          '</span>' +
-          '<button type="button" class="cbb-clear" data-testid="bell-clear"' +
-          (items.length ? '' : ' disabled') +
-          '>' +
-          esc(T(W.clear)) +
-          '</button></div></div>';
-      }
-      el.innerHTML = html;
+      if (bell.dead) return;
+      el.innerHTML = bellButtonHtml(bell) + (bell.open ? panelHtml(bell) : '');
     }
-    function setCount(n) {
-      n = Number(n) || 0;
-      if (n === m.count) return;
-      m.count = n;
+    function setCount(total) {
+      total = Number(total) || 0;
+      if (total === bell.count) return;
+      bell.count = total;
       try {
-        el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'bell', result: { count: n } } }));
-      } catch (_) {}
+        el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'bell', result: { count: total } } }));
+      } catch (_) { /* the repaint event is a courtesy to the host; its listener's fault must not stop the bell */ }
     }
     /** ONE read of the feed (never polled) */
     function read() {
-      if (m.dead || !whoToken(o)) return Promise.resolve();
-      return call(o, 'notifications')
+      if (bell.dead || !whoToken(opts)) return Promise.resolve();
+      return call(opts, 'notifications')
         .then(function (reply) {
-          if (m.dead) return;
-          m.err = false;
-          m.rows = (reply && reply.notifications) || [];
-          setCount(reply && reply.count != null ? reply.count : m.rows.length);
+          if (bell.dead) return;
+          bell.err = false;
+          bell.rows = (reply && reply.notifications) || [];
+          setCount(reply && reply.count != null ? reply.count : bell.rows.length);
           paint();
         })
         .catch(function () {
-          if (m.dead) return;
-          m.err = true;
+          if (bell.dead) return;
+          bell.err = true;
           paint();
         });
     }
     /* the stream: ticket -> EventSource; an arrival re-reads once; a drop re-tickets with backoff (a reconnect, not a poll) */
     function connect() {
-      if (m.dead || m.es || !root.EventSource || !whoToken(o)) return;
-      call(o, 'eventsTicket')
+      if (bell.dead || bell.es || !root.EventSource || !whoToken(opts)) return;
+      call(opts, 'eventsTicket')
         .then(function (reply) {
-          if (m.dead || m.es) return;
+          if (bell.dead || bell.es) return;
           if (!reply || !reply.ticket) {
             retry();
             return;
           }
-          var base = o.apiBase || o.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
+          var base = opts.apiBase || opts.base || (typeof CFG !== 'undefined' && CFG && CFG.API_BASE) || '';
           var node = new root.EventSource(base + '/api/events/stream?t=' + encodeURIComponent(reply.ticket));
-          m.es = node;
+          bell.es = node;
           node.addEventListener('hello', function () {
-            m.up = true;
-            m.backoff = 5000;
+            bell.up = true;
+            bell.backoff = 5000;
           });
           node.addEventListener('cb', function () {
             read();
@@ -330,34 +341,34 @@
           node.onerror = function () {
             try {
               node.close();
-            } catch (_) {}
-            m.es = null;
-            m.up = false;
+            } catch (_) { /* already closed by the browser: the retry below opens a fresh stream */ }
+            bell.es = null;
+            bell.up = false;
             retry();
           };
         })
         .catch(retry);
     }
     function retry() {
-      if (m.dead || !whoToken(o)) return;
-      clearTimeout(m.timer);
-      m.timer = setTimeout(connect, m.backoff);
-      m.backoff = Math.min(m.backoff * 2, 60000);
+      if (bell.dead || !whoToken(opts)) return;
+      clearTimeout(bell.timer);
+      bell.timer = setTimeout(connect, bell.backoff);
+      bell.backoff = Math.min(bell.backoff * 2, 60000);
     }
 
     function toggle() {
-      m.open = !m.open;
-      m.out = '';
-      m.tone = '';
+      bell.open = !bell.open;
+      bell.out = '';
+      bell.tone = '';
       paint();
       /* OPENING IS SEEING: looking moves the watermark, so the dot clears without a "mark all read" button */
-      if (m.open) {
-        call(o, 'notifSeen')
+      if (bell.open) {
+        call(opts, 'notifSeen')
           .then(function () {
             setCount(0);
             paint();
           })
-          .catch(function () {});
+          .catch(function () { /* a failed clear leaves the list as it was; the next read says the truth */ });
         read();
       }
     }
@@ -372,9 +383,9 @@
       var r = node.closest('[data-testid="bell-row"]');
       if (r && r.getAttribute('data-chit')) {
         var id = r.getAttribute('data-chit');
-        m.open = false;
+        bell.open = false;
         paint();
-        if (typeof o.onOpen === 'function') o.onOpen(id);
+        if (typeof opts.onOpen === 'function') opts.onOpen(id);
         else if (typeof root.openChitSheet === 'function') root.openChitSheet(id);
         else if (typeof root.openChit === 'function') root.openChit(id);
         /* O4: a page with no chit sheet (Home) sends the press to where the chit opens - never closes the list and does nothing.
@@ -393,21 +404,21 @@
       CBAction.run(
         btn,
         function () {
-          return call(o, 'notifDismiss', { body: { all: true } });
+          return call(opts, 'notifDismiss', { body: { all: true } });
         },
         {
           key: 'bell:clear',
           confirm: { title: T(W.ask), body: esc(T(W.askBody)), yes: T(W.clear) },
           outcome: function () {
-            m.rows = [];
-            m.out = T(W.cleared);
-            m.tone = 'ok';
+            bell.rows = [];
+            bell.out = T(W.cleared);
+            bell.tone = 'ok';
             setCount(0);
             paint();
           },
           onFail: function (w, e) {
-            m.out = e && e.code === 'NOTIF_DISMISS_NOT_MIGRATED' ? T(W.needs) : w;
-            m.tone = 'error';
+            bell.out = e && e.code === 'NOTIF_DISMISS_NOT_MIGRATED' ? T(W.needs) : w;
+            bell.tone = 'error';
             paint();
           }
         }
@@ -415,14 +426,14 @@
     }
     /* a click in a dialog (the Clear all confirm) is not a click away: the panel stays to show what the clear did */
     function onDoc(ev) {
-      if (m.open && !ev.__cbbIn && !el.contains(ev.target) && !(ev.target.closest && ev.target.closest('dialog'))) {
-        m.open = false;
+      if (bell.open && !ev.__cbbIn && !el.contains(ev.target) && !(ev.target.closest && ev.target.closest('dialog'))) {
+        bell.open = false;
         paint();
       }
     }
     function onKey(ev) {
-      if (m.open && ev.key === 'Escape') {
-        m.open = false;
+      if (bell.open && ev.key === 'Escape') {
+        bell.open = false;
         paint();
       }
     }
@@ -434,17 +445,17 @@
       el: el,
       refresh: read,
       count: function () {
-        return m.count;
+        return bell.count;
       },
       destroy: function () {
-        m.dead = true;
-        clearTimeout(m.timer);
-        if (m.es) {
+        bell.dead = true;
+        clearTimeout(bell.timer);
+        if (bell.es) {
           try {
-            m.es.close();
-          } catch (_) {}
+            bell.es.close();
+          } catch (_) { /* a stream that will not close is dropped with the bell anyway */ }
         }
-        m.es = null;
+        bell.es = null;
         el.removeEventListener('click', onClick);
         doc.removeEventListener('click', onDoc);
         doc.removeEventListener('keydown', onKey);
@@ -456,7 +467,7 @@
     };
     el.__cbbell = apiObj;
     LIVE.push(apiObj);
-    if (!whoToken(o)) {
+    if (!whoToken(opts)) {
       el.innerHTML = '';
       return apiObj;
     } // signed out / a customer: no bell, no stream

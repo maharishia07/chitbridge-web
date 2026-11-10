@@ -38,7 +38,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(38) + '· ' + d 
   await p.evaluate(() => {
     ls.set(tillGivenKey(), 'C1');
     WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString() };
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
                  items: [{ item_id: 'i1', name: 'Masala Dosa', price: 70, unit: 'plate' },
                          { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup' }] };
     setMode('sell');

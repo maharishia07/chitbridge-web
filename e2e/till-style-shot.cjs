@@ -33,7 +33,7 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
   await p.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBScreen, null, { timeout: 30000 });
   await p.evaluate(() => {
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: [], offers: [], at: new Date().toISOString() };
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, items: [], offers: [], at: new Date().toISOString() };
     setMode('sell');
   });
 

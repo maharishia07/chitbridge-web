@@ -83,7 +83,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (52)
+## Shared (56)
 
 | file | loading | what it is |
 |---|---|---|
@@ -115,6 +115,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
 | `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
+| `product-lab-rows.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
 | `rail-bell.js` | — | rail-bell.js — CBBell.mount: THE BELL, mountable in any header (R06, 2026-10-09) |
 | `rail-thread.js` | eager | rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09) |
@@ -132,14 +133,17 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-hi.js` | — |  |
 | `strings-qps.js` | — |  |
 | `strings-ta.js` | — |  |
+| `strings-ui-standard.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab-ui.js` | eager | THE SLAB PICKERS AND THE RATE CHIP, ONE COPY (F5 W1a, 2026-10-24; critic 3: "the slab UI already exists. Move it, do not build it") |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `their-bill.js` | — | their-bill.js — DOES THEIR BILL AGREE WITH WHAT WAS COUNTED? One rule, every host (FX-F10W2, QA-W1 F10) |
+| `ui-standard.js` | — |  |
+| `ui.js` | eager |  |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |
 | `workflow.js` | — | ADOPTED from chitbridge-engines v1.33.0 · workflow · sha256 f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b — DO NOT EDIT HERE. Chang |
 
 ---
 
-*115 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*119 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

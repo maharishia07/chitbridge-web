@@ -106,7 +106,7 @@ let reachedOut = 0;
   const beFloor = (who, tillId) => `(() => {
     ls.set(tillGivenKey(), ${JSON.stringify(tillId)});
     WHO = ${JSON.stringify(who)};
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(),
       items: [{ item_id: 'i1', name: 'Masala Dosa', price: 70, unit: 'plate', station: 'hot' },
               { item_id: 'i2', name: 'Filter Coffee', price: 25, unit: 'cup', station: 'cold' }] };
     tillOptSet({ purpose: 'order', floor: ${JSON.stringify(SHOP)} });

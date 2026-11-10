@@ -39,7 +39,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     if (u === '/api/entities/register' || u === '/api/signin/ask') return j(200, { message: 'sent', dev_otp: '123456' });
     if (u === '/api/entities/verify' || u === '/api/signin/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
-      shop: { name: 'Shop X', bridge_id: 'CB-X' }, till: { suggested_id: 'C1', assigned_id: 'C1' },
+      shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' }, till: { suggested_id: 'C1', assigned_id: 'C1' },
       items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     if (u.indexOf('/api/till/engine/') === 0) {
       const f = path.join(ENG, u.split('/').pop().replace(/\.js$/, '') + '.js');

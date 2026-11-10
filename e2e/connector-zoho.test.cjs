@@ -5,9 +5,10 @@
  * invoice carries customer_id · gst_treatment business_gst · gst_no · place_of_supply (two-letter) · the org's GST tax
  * group per line (Zoho splits CGST/SGST vs IGST itself); an offer is a discount on the line; a walk-in invoice books under
  * the Walk-in contact with gst_treatment consumer; Mark paid → a Customer Payment applied to that invoice, once.
+ * CARD      23-connectors-and-integrations/zoho-gofrugal-b2b-purchase
  */
 const { spawn } = require('child_process'); const path = require('path'); const os = require('os'); const fs = require('fs');
-const KIT = path.join(__dirname, '..', '..', 'chitbridge-api', 'tools', 'tally-connector');
+const KIT = path.join(process.env.CB_API_REPO ? path.resolve(process.env.CB_API_REPO) : path.join(__dirname, '..', '..', 'chitbridge-api'), 'tools', 'tally-connector');   /* CI checks the api out beside the web (CB_API_REPO) */
 const port = 9900 + Math.floor(Math.random() * 90);
 const fake = spawn(process.execPath, [path.join(KIT, 'fake-zoho.js'), String(port)], { stdio: 'ignore' });
 let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('PASS ' + m); } else { fail++; console.log('FAIL ' + m); } };

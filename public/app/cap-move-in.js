@@ -111,23 +111,23 @@ function miConnect(company) {
   if (!MIV.f) miFresh();
   MIV.conn = company && company.country ? { country: String(company.country).toUpperCase(), id: company.id || null } : null;
 }
-function miNeedsSide(k) {
-  return k === 'contacts' || k === 'open_bills';
+function miNeedsSide(kind) {
+  return kind === 'contacts' || kind === 'open_bills';
 }
-function miNeedsDate(k) {
-  return k === 'trial_balance' || k === 'open_bills';
+function miNeedsDate(kind) {
+  return kind === 'trial_balance' || kind === 'open_bills';
 }
 /** the body every move-in call carries: the file, which export, which system, the side, the move date */
 function miBody() {
-  var f = MIV.f,
-    b = { kind: f.kind, source: f.source };
-  if (f.xlsx) b.xlsx = f.xlsx;
-  else b.csv = f.csv || '';
-  if (miNeedsSide(f.kind)) b.side = f.kind === 'contacts' ? f.side : f.side === 'supplier' ? 'payable' : 'receivable';
-  if (miNeedsDate(f.kind) && f.as_at) b.as_at = f.as_at;
-  b.source_country = MIV.conn ? MIV.conn.country : f.country;
-  if (MIV.conn && MIV.conn.id) b.source_company = MIV.conn.id;
-  return b;
+  var form = MIV.f,
+    body = { kind: form.kind, source: form.source };
+  if (form.xlsx) body.xlsx = form.xlsx;
+  else body.csv = form.csv || '';
+  if (miNeedsSide(form.kind)) body.side = form.kind === 'contacts' ? form.side : form.side === 'supplier' ? 'payable' : 'receivable';
+  if (miNeedsDate(form.kind) && form.as_at) body.as_at = form.as_at;
+  body.source_country = MIV.conn ? MIV.conn.country : form.country;
+  if (MIV.conn && MIV.conn.id) body.source_company = MIV.conn.id;
+  return body;
 }
 /* the country row: a connection says its company's country; a file asks, set to the shop's own, with the reason in one line */
 function miCountryRow() {
@@ -139,7 +139,8 @@ function miCountryRow() {
     miSel('mi-country', 'country', opts, MIV.f.country) +
       '<div data-testid="mi-country-why" style="color:var(--grey);font-size:var(--fs-1);margin-top:4px">' +
       esc(shop ? txf('Only books from {c} — tax rules differ by country.', { c: miCountryName(shop) }) : tx('Tax rules differ by country.')) +
-      '</div>'
+      '</div>',
+    'mi-country'
   );
 }
 function miDecisions() {
@@ -175,8 +176,8 @@ function miView(body) {
     onStep: miOnStep,
     onSend: miImport,
     sendLabel: tx('Import'),
-    nextLabel: function (k) {
-      return k === 'file' ? tx('Read the file') + ' →' : k === 'columns' ? tx('Preview') + ' →' : null;
+    nextLabel: function (stepKey) {
+      return stepKey === 'file' ? tx('Read the file') + ' →' : stepKey === 'columns' ? tx('Preview') + ' →' : null;
     },
     sendTestid: 'mi-import',
     nextTestid: 'mi-next',
@@ -184,29 +185,32 @@ function miView(body) {
   });
   MIV.st.paint();
 }
-function miSel(id, k, opts, cur) {
+function miSel(id, field, opts, selected) {
   return (
     '<select class="inp" id="' +
     id +
     '" data-testid="' +
     id +
     '" onchange="miSet(\'' +
-    k +
+    field +
     '\', this.value)">' +
     opts
       .map(function (item) {
-        return '<option value="' + esc(item[0]) + '"' + (item[0] === cur ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
+        return '<option value="' + esc(item[0]) + '"' + (item[0] === selected ? ' selected' : '') + '>' + esc(tx(item[1])) + '</option>';
       })
       .join('') +
     '</select>'
   );
 }
-/* one labelled row; min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
-function miRow(label, html) {
+/* one labelled row (forId = the control's id: the visible label then names it for a screen reader, WCAG 4.1.2); min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
+function miRow(label, html, forId) {
   return (
-    '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><span style="color:var(--grey);font-size:var(--fs-1)">' +
+    '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><' +
+    (forId ? 'label for="' + forId + '"' : 'span') +
+    ' style="color:var(--grey);font-size:var(--fs-1)">' +
     esc(label) +
-    '</span><span style="min-width:0;overflow:hidden">' +
+    (forId ? '</label>' : '</span>') +
+    '<span style="min-width:0;overflow:hidden">' +
     html +
     '</span></div>'
   );
@@ -225,22 +229,24 @@ function miFileStepHTML(form) {
         ];
   return (
     '<div data-testid="mi-file-step" style="max-width:640px">' +
-    miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, form.source)) +
+    miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, form.source), 'mi-source') +
     miCountryRow() +
-    miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, form.kind)) +
-    (miNeedsSide(form.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, form.side)) : '') +
+    miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, form.kind), 'mi-kind') +
+    (miNeedsSide(form.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, form.side), 'mi-side') : '') +
     (miNeedsDate(form.kind)
       ? miRow(
           tx('As at'),
           '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' +
             esc(form.as_at) +
-            '" onchange="miSet(\'as_at\', this.value)" style="width:auto">'
+            '" onchange="miSet(\'as_at\', this.value)" style="width:auto">',
+          'mi-asat'
         )
       : '') +
     miRow(
       tx('File'),
       '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
-        (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : '')
+        (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : ''),
+      'mi-file'
     ) +
     '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' +
     esc(tx('Order: chart, contacts, items, then balances.')) +
@@ -249,96 +255,102 @@ function miFileStepHTML(form) {
     '</div>'
   );
 }
-function miRender(k) {
-  var f = MIV.f;
-  if (MIV.out) return miDoneHTML();
-  if (k === 'file') return miFileStepHTML(f);
-  if (k === 'columns') {
-    if (!MIV.pre)
-      return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Reading…') : MIV.err || tx('Read the file first')) + '</div>';
-    var p = MIV.pre,
-      fields = p.fields || [];
-    var opts = [['', tx('not read')]].concat(
-      fields.map(function (x) {
-        return [x.key, x.label + (x.required ? ' *' : '')];
-      })
-    );
-    var rows = (p.guess || [])
-      .map(function (item) {
-        var cur = MIV.dec[item.incoming] || '';
-        return (
-          '<tr data-testid="mi-col-' +
-          esc(item.incoming) +
-          '"><td style="padding:4px 8px 4px 0;word-break:break-word"><b>' +
-          esc(item.incoming) +
-          '</b></td>' +
-          '<td style="padding:4px 8px 4px 0"><select class="inp" style="width:100%;max-width:100%" data-testid="mi-pick-' +
-          esc(item.incoming) +
-          '" onchange="miPick(' +
-          JSON.stringify(item.incoming).replace(/"/g, '&quot;') +
-          ', this.value)">' +
-          opts
-            .map(function (entry) {
-              return '<option value="' + esc(entry[0]) + '"' + (entry[0] === cur ? ' selected' : '') + '>' + esc(entry[1]) + '</option>';
-            })
-            .join('') +
-          '</select></td>' +
-          '<td style="padding:4px 0;color:var(--grey);font-size:var(--fs-1);word-break:break-word">' +
-          esc(item.how === 'known' || item.how === 'exact' ? '' : (item.field ? tx('A guess — check it') + ' · ' : '') + (item.why || '')) +
-          '</td></tr>'
-        );
-      })
-      .join('');
-    return (
-      '<div data-testid="mi-columns-step">' +
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px" data-testid="mi-rows-total">' +
-      esc(txf('{n} rows in {f}', { n: p.rows_total, f: MIV.f.name })) +
-      '</div>' +
-      '<table style="border-collapse:collapse;width:100%;max-width:820px;table-layout:fixed"><thead><tr style="text-align:left;color:var(--grey);font-size:var(--fs-1)"><th>' +
-      esc(tx('In the file')) +
-      '</th><th>' +
-      esc(tx('Read as')) +
-      '</th><th></th></tr></thead><tbody>' +
-      rows +
-      '</tbody></table>' +
-      '</div>'
-    );
-  }
-  if (k === 'preview') {
-    if (MIV.refused) return miRefusedHTML();
-    if (!MIV.plan)
-      return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Checking…') : MIV.err || tx('Preview first')) + '</div>';
-    var pl = MIV.plan,
-      c = pl.counts || {};
-    var big = function (n, w, tid) {
+/** one big figure with its caption under it (the preview counts and the result counts share it) */
+function miBigNumber(count, caption, testId) {
+  return (
+    '<div style="min-width:110px"><div class="mono" data-testid="' +
+    testId +
+    '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' +
+    esc(String(count || 0)) +
+    '</div><div style="color:var(--grey);font-size:var(--fs-1)">' +
+    esc(caption) +
+    '</div></div>'
+  );
+}
+/** step 2 — the columns of the file, each with the field the server guessed, to confirm or change */
+function miColumnsStepHTML() {
+  if (!MIV.pre)
+    return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Reading…') : MIV.err || tx('Read the file first')) + '</div>';
+  var preflight = MIV.pre,
+    fields = preflight.fields || [];
+  var opts = [['', tx('not read')]].concat(
+    fields.map(function (x) {
+      return [x.key, x.label + (x.required ? ' *' : '')];
+    })
+  );
+  var rows = (preflight.guess || [])
+    .map(function (item) {
+      var chosen = MIV.dec[item.incoming] || '';
       return (
-        '<div style="min-width:110px"><div class="mono" data-testid="' +
-        tid +
-        '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' +
-        esc(String(n || 0)) +
-        '</div><div style="color:var(--grey);font-size:var(--fs-1)">' +
-        esc(w) +
-        '</div></div>'
+        '<tr data-testid="mi-col-' +
+        esc(item.incoming) +
+        '"><td style="padding:4px 8px 4px 0;word-break:break-word"><b>' +
+        esc(item.incoming) +
+        '</b></td>' +
+        '<td style="padding:4px 8px 4px 0"><select class="inp" style="width:100%;max-width:100%" data-testid="mi-pick-' +
+        esc(item.incoming) +
+        '" onchange="miPick(' +
+        JSON.stringify(item.incoming).replace(/"/g, '&quot;') +
+        ', this.value)">' +
+        opts
+          .map(function (entry) {
+            return '<option value="' + esc(entry[0]) + '"' + (entry[0] === chosen ? ' selected' : '') + '>' + esc(entry[1]) + '</option>';
+          })
+          .join('') +
+        '</select></td>' +
+        '<td style="padding:4px 0;color:var(--grey);font-size:var(--fs-1);word-break:break-word">' +
+        esc(item.how === 'known' || item.how === 'exact' ? '' : (item.field ? tx('A guess — check it') + ' · ' : '') + (item.why || '')) +
+        '</td></tr>'
       );
-    };
-    return (
-      '<div data-testid="mi-preview-step">' +
-      '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' +
-      big(c.add, tx('will add'), 'mi-n-add') +
-      big(c.merge, tx('will merge'), 'mi-n-merge') +
-      big(c.skip, tx('will skip'), 'mi-n-skip') +
-      (c.hold ? big(c.hold, tx('held'), 'mi-n-hold') : '') +
-      '</div>' +
-      (pl.refusal ? '<div data-testid="mi-refusal" style="color:var(--warn-2);font-weight:600;margin-bottom:8px">' + esc(pl.refusal) + '</div>' : '') +
-      (pl.notes || [])
-        .map(function (item) {
-          return '<div data-testid="mi-note" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:6px">' + esc(item) + '</div>';
-        })
-        .join('') +
-      '<div id="mi_rows" data-testid="mi-rows" style="min-height:240px"></div>' +
-      '</div>'
-    );
-  }
+    })
+    .join('');
+  return (
+    '<div data-testid="mi-columns-step">' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px" data-testid="mi-rows-total">' +
+    esc(txf('{n} rows in {f}', { n: preflight.rows_total, f: MIV.f.name })) +
+    '</div>' +
+    '<table style="border-collapse:collapse;width:100%;max-width:820px;table-layout:fixed"><thead><tr style="text-align:left;color:var(--grey);font-size:var(--fs-1)"><th>' +
+    esc(tx('In the file')) +
+    '</th><th>' +
+    esc(tx('Read as')) +
+    '</th><th></th></tr></thead><tbody>' +
+    rows +
+    '</tbody></table>' +
+    '</div>'
+  );
+}
+/** step 3 — what the import will do, counted: add · merge · skip · held, with the server's notes and the row list slot */
+function miPreviewStepHTML() {
+  if (MIV.refused) return miRefusedHTML();
+  if (!MIV.plan)
+    return '<div data-testid="mi-loading" style="color:var(--grey)">' + esc(MIV.busy ? tx('Checking…') : MIV.err || tx('Preview first')) + '</div>';
+  var plan = MIV.plan,
+    counts = plan.counts || {};
+  return (
+    '<div data-testid="mi-preview-step">' +
+    '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' +
+    miBigNumber(counts.add, tx('will add'), 'mi-n-add') +
+    miBigNumber(counts.merge, tx('will merge'), 'mi-n-merge') +
+    miBigNumber(counts.skip, tx('will skip'), 'mi-n-skip') +
+    (counts.hold ? miBigNumber(counts.hold, tx('held'), 'mi-n-hold') : '') +
+    '</div>' +
+    (plan.refusal ? '<div data-testid="mi-refusal" style="color:var(--warn-2);font-weight:600;margin-bottom:8px">' + esc(plan.refusal) + '</div>' : '') +
+    (plan.notes || [])
+      .map(function (item) {
+        return '<div data-testid="mi-note" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:6px">' + esc(item) + '</div>';
+      })
+      .join('') +
+    '<div id="mi_rows" data-testid="mi-rows" style="min-height:240px"></div>' +
+    '</div>'
+  );
+}
+/** the body of the step the wizard is on */
+function miRender(stepKey) {
+  var form = MIV.f;
+  if (MIV.out) return miDoneHTML();
+  if (stepKey === 'file') return miFileStepHTML(form);
+  if (stepKey === 'columns') return miColumnsStepHTML();
+  if (stepKey === 'preview') return miPreviewStepHTML();
   return '';
 }
 /** why Read the file is greyed, or null: no file, no country (a connection states its own) or no move date */
@@ -348,10 +360,10 @@ function miFileGuard(form) {
   if (miNeedsDate(form.kind) && !form.as_at) return tx('Pick the move date');
   return null;
 }
-function miGuard(k) {
+function miGuard(stepKey) {
   if (MIV.out) return null;
-  if (k === 'file') return miFileGuard(MIV.f);
-  if (k === 'columns') {
+  if (stepKey === 'file') return miFileGuard(MIV.f);
+  if (stepKey === 'columns') {
     if (!MIV.pre) return MIV.err || tx('Read the file first');
     var picked = miDecisions().map(function (item) {
       return item.field;
@@ -369,12 +381,12 @@ function miGuard(k) {
         })
       : null;
   }
-  if (k === 'preview') {
+  if (stepKey === 'preview') {
     if (MIV.refused) return miRefusedWhy(MIV.refused);
     if (!MIV.plan) return MIV.err || tx('Preview first');
     if (MIV.plan.refusal) return MIV.plan.refusal;
-    var c = MIV.plan.counts || {};
-    if (!(Number(c.add) + Number(c.merge))) return tx('Nothing to import — every row is skipped');
+    var counts = MIV.plan.counts || {};
+    if (!(Number(counts.add) + Number(counts.merge))) return tx('Nothing to import — every row is skipped');
     return null;
   }
   return null;
@@ -383,30 +395,30 @@ function miGuard(k) {
 function miFile(input) {
   var file = input && input.files && input.files[0];
   if (!file) return;
-  var f = MIV.f;
-  f.name = file.name;
-  f.csv = null;
-  f.xlsx = null;
+  var form = MIV.f;
+  form.name = file.name;
+  form.csv = null;
+  form.xlsx = null;
   MIV.pre = null;
   MIV.dec = {};
   MIV.plan = null;
   MIV.err = '';
-  var rd = new FileReader();
+  var reader = new FileReader();
   if (/\.xlsx$/i.test(file.name)) {
-    rd.onload = function () {
-      var b = new Uint8Array(rd.result),
-        s = '';
-      for (var index = 0; index < b.length; index++) s += String.fromCharCode(b[index]);
-      f.xlsx = btoa(s);
+    reader.onload = function () {
+      var bytes = new Uint8Array(reader.result),
+        binary = '';
+      for (var index = 0; index < bytes.length; index++) binary += String.fromCharCode(bytes[index]);
+      form.xlsx = btoa(binary);
       miRefresh();
     };
-    rd.readAsArrayBuffer(file);
+    reader.readAsArrayBuffer(file);
   } else {
-    rd.onload = function () {
-      f.csv = String(rd.result || '');
+    reader.onload = function () {
+      form.csv = String(reader.result || '');
       miRefresh();
     };
-    rd.readAsText(file);
+    reader.readAsText(file);
   }
 }
 function miRefresh() {
@@ -415,9 +427,9 @@ function miRefresh() {
     MIV.st.paintFoot();
   }
 }
-function miSet(k, v) {
-  MIV.f[k] = String(v || '');
-  if (k !== 'as_at') {
+function miSet(field, value) {
+  MIV.f[field] = String(value || '');
+  if (field !== 'as_at') {
     MIV.pre = null;
     MIV.dec = {};
     MIV.plan = null;
@@ -426,42 +438,42 @@ function miSet(k, v) {
   MIV.refused = null;
   miRefresh();
 }
-function miPick(h, v) {
-  MIV.dec[h] = v || '';
+function miPick(header, value) {
+  MIV.dec[header] = value || '';
   MIV.plan = null;
   if (MIV.st) MIV.st.paintFoot();
 }
 /* entering a step reads what it needs — once per file (a changed file or column empties the answer) */
-function miOnStep(k) {
-  if (k === 'columns' && !MIV.pre)
-    miRead('booksMoveInPreflight', miBody(), function (p) {
-      MIV.pre = p;
+function miOnStep(stepKey) {
+  if (stepKey === 'columns' && !MIV.pre)
+    miRead('booksMoveInPreflight', miBody(), function (preflight) {
+      MIV.pre = preflight;
       MIV.dec = {};
-      (p.guess || []).forEach(function (item) {
+      (preflight.guess || []).forEach(function (item) {
         if (item.field) MIV.dec[item.incoming] = item.field;
       });
     });
-  if (k === 'preview' && !MIV.plan)
-    miRead('booksMoveInPreview', Object.assign(miBody(), { decisions: miDecisions() }), function (p) {
-      MIV.plan = p;
+  if (stepKey === 'preview' && !MIV.plan)
+    miRead('booksMoveInPreview', Object.assign(miBody(), { decisions: miDecisions() }), function (plan) {
+      MIV.plan = plan;
       miPaintRows();
     });
 }
-function miRead(ep, body, then) {
-  var g = ++MIV.gen;
+function miRead(endpoint, body, then) {
+  var generation = ++MIV.gen;
   MIV.busy = true;
   MIV.err = '';
   miRefresh();
-  api(ep, { body: body }).then(
+  api(endpoint, { body: body }).then(
     function (reply) {
-      if (g !== MIV.gen) return;
+      if (generation !== MIV.gen) return;
       MIV.busy = false;
       then(reply || {});
       miRefresh();
-      if (ep === 'booksMoveInPreview') miPaintRows();
+      if (endpoint === 'booksMoveInPreview') miPaintRows();
     },
     function (e) {
-      if (g !== MIV.gen) return;
+      if (generation !== MIV.gen) return;
       MIV.busy = false;
       MIV.refused = miRefusal(e);
       MIV.err = MIV.refused ? '' : bkWhy(e, tx('Could not read the file'));
@@ -497,17 +509,107 @@ function miRefusedHTML() {
     '</div>'
   );
 }
+/** the preview list's columns: line · what · action chip · why */
+function miRowColumns() {
+  return [
+    {
+      key: 'line',
+      label: tx('Line'),
+      prio: 4,
+      sort: 'line',
+      num: true,
+      w: 80,
+      cell: function (row) {
+        return String(row.line);
+      }
+    },
+    {
+      key: 'what',
+      label: tx('What'),
+      prio: 1,
+      sort: 'what',
+      w: 260,
+      cell: function (row) {
+        return row.what || '';
+      }
+    },
+    {
+      key: 'action',
+      label: tx('Action'),
+      prio: 2,
+      sort: 'action',
+      w: 130,
+      html: true,
+      hfilter: 'action',
+      cell: function (row) {
+        return (
+          '<span class="step ' +
+          (MI_TONE[row.action] || '') +
+          '" data-testid="mi-act-' +
+          esc(row.line) +
+          '" data-action="' +
+          esc(row.action) +
+          '">' +
+          esc(tx(MI_ACTION[row.action] || row.action)) +
+          '</span>'
+        );
+      }
+    },
+    {
+      key: 'why',
+      label: tx('Why'),
+      prio: 3,
+      sort: 'why',
+      w: 420,
+      cell: function (row) {
+        return row.why || '';
+      }
+    }
+  ];
+}
+/** the preview list's one filter: by what the import will do with the row */
+function miRowFilters() {
+  return [
+    {
+      key: 'action',
+      label: tx('Action'),
+      all: tx('Every row'),
+      options: [
+        { v: 'add', label: tx('Will add') },
+        { v: 'merge', label: tx('Will merge') },
+        { v: 'skip', label: tx('Will skip') },
+        { v: 'hold', label: tx('Held') }
+      ],
+      match: function (row, value) {
+        return row.action === value;
+      }
+    }
+  ];
+}
+/** the preview list's two orders: file order and by action */
+function miRowSorts() {
+  return [
+    {
+      key: 'line',
+      label: tx('File order'),
+      cmp: function (left, right) {
+        return left.line - right.line;
+      }
+    },
+    {
+      key: 'action',
+      label: tx('Action'),
+      cmp: function (left, right) {
+        return String(left.action).localeCompare(String(right.action));
+      }
+    }
+  ];
+}
 /* the preview rows: CBList — line · what · will add / merge / skip · why (the server's sentence) */
 function miPaintRows() {
   var el = document.getElementById('mi_rows');
   if (!el || !MIV.plan) return;
   var rows = MIV.plan.rows || [];
-  var opts = [
-    { v: 'add', label: tx('Will add') },
-    { v: 'merge', label: tx('Will merge') },
-    { v: 'skip', label: tx('Will skip') },
-    { v: 'hold', label: tx('Held') }
-  ];
   CBList.reset('movein');
   CBList.mount(el, {
     key: 'movein',
@@ -515,96 +617,17 @@ function miPaintRows() {
     rows: function () {
       return rows;
     },
-    id: function (r) {
-      return r.line;
+    id: function (row) {
+      return row.line;
     },
-    rowTid: function (r) {
-      return 'mi-row-' + r.line;
+    rowTid: function (row) {
+      return 'mi-row-' + row.line;
     },
-    columns: [
-      {
-        key: 'line',
-        label: tx('Line'),
-        prio: 4,
-        sort: 'line',
-        num: true,
-        w: 80,
-        cell: function (r) {
-          return String(r.line);
-        }
-      },
-      {
-        key: 'what',
-        label: tx('What'),
-        prio: 1,
-        sort: 'what',
-        w: 260,
-        cell: function (r) {
-          return r.what || '';
-        }
-      },
-      {
-        key: 'action',
-        label: tx('Action'),
-        prio: 2,
-        sort: 'action',
-        w: 130,
-        html: true,
-        hfilter: 'action',
-        cell: function (r) {
-          return (
-            '<span class="step ' +
-            (MI_TONE[r.action] || '') +
-            '" data-testid="mi-act-' +
-            esc(r.line) +
-            '" data-action="' +
-            esc(r.action) +
-            '">' +
-            esc(tx(MI_ACTION[r.action] || r.action)) +
-            '</span>'
-          );
-        }
-      },
-      {
-        key: 'why',
-        label: tx('Why'),
-        prio: 3,
-        sort: 'why',
-        w: 420,
-        cell: function (r) {
-          return r.why || '';
-        }
-      }
-    ],
-    filters: [
-      {
-        key: 'action',
-        label: tx('Action'),
-        all: tx('Every row'),
-        options: opts,
-        match: function (r, v) {
-          return r.action === v;
-        }
-      }
-    ],
-    sorts: [
-      {
-        key: 'line',
-        label: tx('File order'),
-        cmp: function (a, b) {
-          return a.line - b.line;
-        }
-      },
-      {
-        key: 'action',
-        label: tx('Action'),
-        cmp: function (a, b) {
-          return String(a.action).localeCompare(String(b.action));
-        }
-      }
-    ],
-    search: function (r) {
-      return [r.what, r.why, r.action].join(' ');
+    columns: miRowColumns(),
+    filters: miRowFilters(),
+    sorts: miRowSorts(),
+    search: function (row) {
+      return [row.what, row.why, row.action].join(' ');
     },
     empty: { title: tx('No rows in the file') }
   });
@@ -621,8 +644,8 @@ function miImport() {
     {
       key: 'mi-import',
       busy: tx('Importing…'),
-      outcome: function (r) {
-        MIV.out = r || {};
+      outcome: function (row) {
+        MIV.out = row || {};
         toast(tx('Moved in.'));
         MIV.st.paint();
         miPaintSkipped();
@@ -635,41 +658,30 @@ function miImport() {
   );
 }
 function miDoneHTML() {
-  var o = MIV.out,
-    big = function (n, w, tid) {
-      return (
-        '<div style="min-width:110px"><div class="mono" data-testid="' +
-        tid +
-        '" style="font-size:var(--fs-5,28px);font-weight:800;line-height:1.1">' +
-        esc(String(n || 0)) +
-        '</div><div style="color:var(--grey);font-size:var(--fs-1)">' +
-        esc(w) +
-        '</div></div>'
-      );
-    };
-  var ent = o.entry || null,
-    cur = bkCur(),
+  var done = MIV.out;
+  var booked = done.entry || null,
+    currency = bkCur(),
     words = '';
-  if (ent && ent.entry_no)
+  if (booked && booked.entry_no)
     words =
-      txf('Entered as {no}.', { no: ent.entry_no }) +
-      (ent.suspense_minor ? ' ' + txf('{amt} held in Suspense until the rest arrives.', { amt: bkDrCr(ent.suspense_minor, cur) }) : '');
+      txf('Entered as {no}.', { no: booked.entry_no }) +
+      (booked.suspense_minor ? ' ' + txf('{amt} held in Suspense until the rest arrives.', { amt: bkDrCr(booked.suspense_minor, currency) }) : '');
   return (
     '<div data-testid="mi-done">' +
     '<div style="display:flex;gap:22px;flex-wrap:wrap;margin:4px 0 10px">' +
-    big(o.added, tx('added'), 'mi-done-add') +
-    big(o.merged, tx('merged'), 'mi-done-merge') +
-    big(o.skipped, tx('skipped'), 'mi-done-skip') +
-    (o.held ? big(o.held, tx('held'), 'mi-done-hold') : '') +
+    miBigNumber(done.added, tx('added'), 'mi-done-add') +
+    miBigNumber(done.merged, tx('merged'), 'mi-done-merge') +
+    miBigNumber(done.skipped, tx('skipped'), 'mi-done-skip') +
+    (done.held ? miBigNumber(done.held, tx('held'), 'mi-done-hold') : '') +
     '</div>' +
     (words ? '<div data-testid="mi-entry" style="margin-bottom:6px">' + esc(words) + '</div>' : '') +
-    (o.notes || [])
+    (done.notes || [])
       .map(function (item) {
         return '<div data-testid="mi-note" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:6px">' + esc(item) + '</div>';
       })
       .join('') +
     '<div class="supacts" style="margin:8px 0">' +
-    ((o.rows || []).length
+    ((done.rows || []).length
       ? '<button type="button" data-testid="mi-download" onclick="miDownload()">' + esc(tx('Download rows not moved in')) + '</button>'
       : '') +
     '<button type="button" data-testid="mi-again" onclick="miAgain()">' +
@@ -678,6 +690,55 @@ function miDoneHTML() {
     '<div id="mi_skipped" data-testid="mi-skipped" style="min-height:160px"></div>' +
     '</div>'
   );
+}
+/** the skipped-rows list's columns: line · what · held or skipped chip · why */
+function miSkippedColumns() {
+  return [
+    {
+      key: 'line',
+      label: tx('Line'),
+      prio: 3,
+      sort: 'line',
+      num: true,
+      w: 80,
+      cell: function (row) {
+        return String(row.line);
+      }
+    },
+    {
+      key: 'what',
+      label: tx('What'),
+      prio: 1,
+      sort: 'what',
+      w: 260,
+      cell: function (row) {
+        return row.what || '';
+      }
+    },
+    {
+      key: 'state',
+      label: tx('Action'),
+      prio: 2,
+      w: 110,
+      html: true,
+      cell: function (row) {
+        var held = !!row.code;
+        return (
+          '<span class="step ' + (held ? 'amber' : '') + '" data-testid="mi-state-' + esc(row.line) + '">' + esc(tx(held ? 'Held' : 'Skipped')) + '</span>'
+        );
+      }
+    },
+    {
+      key: 'why',
+      label: tx('Why'),
+      prio: 3,
+      sort: 'why',
+      w: 420,
+      cell: function (row) {
+        return row.why || '';
+      }
+    }
+  ];
 }
 function miPaintSkipped() {
   var el = document.getElementById('mi_skipped');
@@ -694,69 +755,24 @@ function miPaintSkipped() {
     rows: function () {
       return rows;
     },
-    id: function (r) {
-      return r.line;
+    id: function (row) {
+      return row.line;
     },
-    rowTid: function (r) {
-      return 'mi-skip-' + r.line;
+    rowTid: function (row) {
+      return 'mi-skip-' + row.line;
     },
-    columns: [
-      {
-        key: 'line',
-        label: tx('Line'),
-        prio: 3,
-        sort: 'line',
-        num: true,
-        w: 80,
-        cell: function (r) {
-          return String(r.line);
-        }
-      },
-      {
-        key: 'what',
-        label: tx('What'),
-        prio: 1,
-        sort: 'what',
-        w: 260,
-        cell: function (r) {
-          return r.what || '';
-        }
-      },
-      {
-        key: 'state',
-        label: tx('Action'),
-        prio: 2,
-        w: 110,
-        html: true,
-        cell: function (row) {
-          var held = !!row.code;
-          return (
-            '<span class="step ' + (held ? 'amber' : '') + '" data-testid="mi-state-' + esc(row.line) + '">' + esc(tx(held ? 'Held' : 'Skipped')) + '</span>'
-          );
-        }
-      },
-      {
-        key: 'why',
-        label: tx('Why'),
-        prio: 3,
-        sort: 'why',
-        w: 420,
-        cell: function (r) {
-          return r.why || '';
-        }
-      }
-    ],
+    columns: miSkippedColumns(),
     sorts: [
       {
         key: 'line',
         label: tx('File order'),
-        cmp: function (a, b) {
-          return a.line - b.line;
+        cmp: function (left, right) {
+          return left.line - right.line;
         }
       }
     ],
-    search: function (r) {
-      return [r.what, r.why].join(' ');
+    search: function (row) {
+      return [row.what, row.why].join(' ');
     },
     empty: { title: tx('Nothing was skipped') }
   });
@@ -764,14 +780,14 @@ function miPaintSkipped() {
 /* the skipped rows as a .csv (line · what · why) — the same three columns the server's skippedCsv writes */
 function miDownload() {
   var rows = (MIV.out && MIV.out.rows) || [],
-    q = function (v) {
-      return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    quoted = function (value) {
+      return '"' + String(value == null ? '' : value).replace(/"/g, '""') + '"';
     };
   var text =
     ['line,what,why']
       .concat(
         rows.map(function (item) {
-          return [item.line, item.what, item.why].map(q).join(',');
+          return [item.line, item.what, item.why].map(quoted).join(',');
         })
       )
       .join('\n') + '\n';
@@ -784,7 +800,10 @@ function miDownload() {
     try {
       URL.revokeObjectURL(node.href);
       node.remove();
-    } catch (_) {}
+    } catch (failure) {
+      // the file was already saved; only the temporary link stays, so say so and move on
+      if (typeof cblog === 'function') cblog('warn', 'move-in: the skipped-rows download link was not cleaned up — ' + ((failure && failure.message) || 'no answer'));
+    }
   }, 500);
 }
 function miAgain() {

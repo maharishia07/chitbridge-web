@@ -4,9 +4,10 @@
  * items → products with code (itemReferenceCode), price, MRP as list price, GST %; stock stamped from the same list;
  * an order → a Sales Order with our reference, their itemId per line, the offer as a discount %, the amount kept; a
  * line for something they do not stock is refused with the name; no profile/receipt/purchase (skipped with the reason).
+ * CARD      23-connectors-and-integrations/zoho-gofrugal-b2b-purchase
  */
 const { spawn } = require('child_process'); const path = require('path'); const os = require('os'); const fs = require('fs');
-const KIT = path.join(__dirname, '..', '..', 'chitbridge-api', 'tools', 'tally-connector');
+const KIT = path.join(process.env.CB_API_REPO ? path.resolve(process.env.CB_API_REPO) : path.join(__dirname, '..', '..', 'chitbridge-api'), 'tools', 'tally-connector');   /* CI checks the api out beside the web (CB_API_REPO) */
 const port = 8600 + Math.floor(Math.random() * 90);
 const fake = spawn(process.execPath, [path.join(KIT, 'fake-gofrugal.js'), String(port)], { stdio: 'ignore' });
 let pass = 0, fail = 0; const ok = (c, m) => { if (c) { pass++; console.log('PASS ' + m); } else { fail++; console.log('FAIL ' + m); } };

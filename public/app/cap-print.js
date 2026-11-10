@@ -236,7 +236,7 @@ var CBPrint = (function () {
     return (
       '<label class="tick" title="' +
       esc(tx('Print this line')) +
-      '"><input type="checkbox" data-pr-show="' +
+      '"><input data-cbsid="ACC002-I12" type="checkbox" data-pr-show="' +
       esc(tag) +
       '" data-testid="pr-show-' +
       esc(tag) +
@@ -255,7 +255,7 @@ var CBPrint = (function () {
   /** one ↑ / ↓ button that moves a line in the order (direction −1 or +1) */
   function moveButtonHTML(tag, direction, testId, label, arrow, isDisabled) {
     return (
-      '<button type="button" class="composebtn ghost" data-pr-move="' +
+      '<button data-cbsid="ACC002-B21" type="button" class="composebtn ghost" data-pr-move="' +
       esc(tag) +
       '" data-dir="' +
       direction +
@@ -286,7 +286,7 @@ var CBPrint = (function () {
       '"><label class="fl" style="margin:0;flex-basis:100%">' +
       esc(lineLabel(tag)) +
       '</label>' +
-      '<input class="inp" data-pr-line="' +
+      '<input data-cbsid="ACC002-I13" class="inp" data-pr-line="' +
       esc(tag) +
       '" data-testid="pr-in-' +
       esc(tag) +
@@ -361,7 +361,7 @@ var CBPrint = (function () {
     return (
       '<div class="pr-row"><label class="fl" style="margin:0;flex-basis:100%">' +
       esc(tx('Paper')) +
-      '</label><select class="inp" id="pr_paper" data-testid="pr-paper" style="max-width:220px">' +
+      '</label><select data-cbsid="ACC002-S07" class="inp" id="pr_paper" data-testid="pr-paper" style="max-width:220px">' +
       options +
       '</select></div>'
     );
@@ -377,9 +377,8 @@ var CBPrint = (function () {
       paperRowHTML() +
       '<div class="err" id="pr_err" data-testid="pr-err" style="margin-top:8px"></div>' +
       '<div class="pr-savebar" data-testid="pr-savebar" style="position:sticky;bottom:0;z-index:5;margin-top:8px;padding:8px 0;background:var(--bg,#fff)">' +
-      '<button type="button" class="act" id="pr-save" data-testid="pr-save">' +
-      esc(tx('Save')) +
-      '</button></div>' +
+      ui.action('save', { mount: 'ACC002-U03', object: 'print layout', effect: 'preference', id: 'pr-save', testid: 'pr-save' }) +
+      '</div>' +
       '<p class="sub"><a class="sx-link" href="/settings.html#/shop" data-testid="pr-shop-link">' +
       esc(tx('Your business')) +
       ' ›</a></p></div>'
@@ -392,10 +391,10 @@ var CBPrint = (function () {
       esc(tx('Sample bill')) +
       '</div>' +
       '<div style="display:flex;gap:8px;margin:0 0 8px">' +
-      '<button type="button" class="composebtn ghost" id="pr-preview-open" data-testid="pr-preview-open">' +
+      '<button data-cbsid="ACC002-B23" type="button" class="composebtn ghost" id="pr-preview-open" data-testid="pr-preview-open">' +
       esc(tx('Preview')) +
       '</button>' +
-      '<button type="button" class="composebtn ghost" id="pr-print" data-testid="pr-print">' +
+      '<button data-cbsid="ACC002-B24" type="button" class="composebtn ghost" id="pr-print" data-testid="pr-print">' +
       esc(tx('Print')) +
       '</button></div>' +
       '<iframe id="pr_frame" title="' +
