@@ -2935,7 +2935,7 @@ function catsetDetailHTML() {
     '</div><div class="ds">' +
     esc(s.q) +
     '</div></div>' +
-    '<div class="db" tabindex="0" role="region" aria-label="' + tx('Details') + '" id="catsetbody">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category setup details')) + '" id="catsetbody">' +
     catsetBody(k) +
     '</div>'
   );

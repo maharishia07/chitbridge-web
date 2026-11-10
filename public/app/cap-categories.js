@@ -893,7 +893,7 @@ function cbcatDetailHTML() {
       '<div class="ds">' +
       (editing ? tx('name · parent · note — products follow') : tx('goes on the shelf live')) +
       '</div></div>' +
-      '<div class="db" tabindex="0" role="region" aria-label="' + tx('Details') + '">' +
+      '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category details')) + '">' +
       (editing ? cbcatEditTabsHTML(f.id) : '') +
       (editing && (CBCAT_UI.etab || 'category') === 'products' ? cbcatProductTicksHTML(f.id) : '') +
       '<div data-testid="catg-eform"' +
@@ -963,7 +963,7 @@ function cbcatDetailHTML() {
        only off a selected row meant they were invisible on the screen someone lands on. */
     /* ⭐ 'Or make a new one' was prose pointing at a button elsewhere. It is the button now. */
     return (
-      '<div class="db" tabindex="0" role="region" aria-label="' + tx('Details') + '">' +
+      '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category details')) + '">' +
       emptyState('🏷️', tx('Pick a category'), tx('Categories sort your catalogue and give buyers a way to narrow it.'), {
         label: tx('+ New category'),
         onclick: 'cbcatNew()'
@@ -986,7 +986,7 @@ function cbcatDetailHTML() {
     '<div class="ds">' +
     (c.note ? esc(c.note) : n + ' product' + (n === 1 ? '' : 's')) +
     '</div></div>' +
-    '<div class="db" tabindex="0" role="region" aria-label="' + tx('Details') + '">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category details')) + '">' +
     (ret
       ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. ' +
         'Products that already cite it keep the citation.</div>'
