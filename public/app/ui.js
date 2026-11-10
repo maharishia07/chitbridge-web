@@ -403,6 +403,7 @@ var CBUi = (function () {
   /** a press on the phone button opens or closes its menu; a press anywhere else closes every open menu */
   function onChoiceTrigger(event) {
     var trigger = closestOf(event, '[data-choice-trigger]');
+    if (trigger && trigger.getAttribute('data-choice-trigger') === null) trigger = null;
     Array.prototype.forEach.call(document.querySelectorAll('.cbui-choice-menu:not([hidden])'), function (menu) {
       var group = menu.closest('.cbui-choice');
       if (!trigger || group !== trigger.closest('.cbui-choice')) setChoiceMenu(group, false);
