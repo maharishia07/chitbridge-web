@@ -37,7 +37,9 @@ check(/connect-src 'self';/.test(csp) && /default-src 'none'/.test(csp) && !/uns
 }
 check((pageHtml.match(/<script(?![^>]*\ssrc=)[^>]*>/g) || []).length === 1, 'exactly one inline script: the frame call');
 check(/<html[^>]*data-appearance-fixed/.test(html) && scripts.indexOf('/app/avatar.js') > 0 && scripts.indexOf('/engine/screen.js') > 0 && scripts.indexOf('/engine/screen.js') < scripts.indexOf('/app/avatar.js'), 'the avatar look is applied through avatar.js on a fixed-look page (no storage), after the theme library');
-check(!/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|cb_sess|cb_lang|document\.cookie|api\()/.test(page.replace(/the page's own[^\n]*/g, '')), 'the page script never fetches, stores or reads a session');
+const fetches = page.match(/\bfetch\(([^)]*)\)/g) || [];
+check(fetches.length === 1 && fetches[0] === "fetch('/app/ui-waves.json')", 'the one read is the static waves data file of this site: ' + fetches.join(' '));
+check(!/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|cb_sess|cb_lang|document\.cookie|api\()/.test(page.replace(/the page's own[^\n]*/g, '').replace(/window\.fetch\('\/app\/ui-waves\.json'\)/g, '')), 'the page script never fetches, stores or reads a session');
 check(!/https?:\/\/(?!fonts\.(googleapis|gstatic)\.com)/.test(pageHtml.replace(/http-equiv[^>]*>/, '')), 'no external address in the page');
 
 console.log('every component has a row');
@@ -61,6 +63,24 @@ chrome.forEach((key) => check(model.translatedIn(key).length === 4, 'page label 
 check(model.translatedIn('A label no pack has').length === 0 && model.coverageOf({ label: 'A label no pack has', code: 'CMP000' }).missing.length > 0, 'a label no pack could read is not shown as translated: the page fell back to the English text and the coverage note says so in words');
 check(model.LANGS.map((lang) => lang[0]).join() === 'en,ta,hi,ar,fr' && model.LANGS.filter((lang) => lang[2] === 'rtl').length === 1, 'five languages, one right-to-left (ar)');
 check(model.contrastRatio('rgb(0,0,0)', 'rgb(255,255,255)') > 20.9 && model.contrastRatio('rgb(22,105,63)', 'rgb(255,255,255)') >= 4.5, 'the contrast helper: black on white 21:1, the accent on white AA');
+console.log('waves: one row per wave, from public/app/ui-waves.json');
+{
+  const data = JSON.parse(read('app/ui-waves.json'));
+  const drawn = model.wavesHTML(data);
+  const rows = [...drawn.matchAll(/data-testid="gal-wave-([0-9][0-9a-z]*)"/g)].map((match) => match[1]);
+  check(rows.join() === data.waves.map((wave) => wave.id).join() && rows.join() === '0,1a,1b,2,3', 'one row per wave, in the order of the file: ' + rows.join(' '));
+  check((drawn.match(/role="progressbar"/g) || []).length === data.waves.length, 'each wave row carries a progress bar (CMP021)');
+  check(data.waves.every((wave) => ['done', 'in progress', 'landed, measuring', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress, landed measuring or next');
+  check(data.waves.every((wave) => wave.progress.value === null || (wave.progress.value >= 0 && wave.progress.value <= wave.progress.total)), 'no progress value is above its total');
+  const unmeasured = data.waves.reduce((sum, wave) => sum + wave.pairs.filter((pair) => pair.after === null).length + (wave.progress.value === null ? 1 : 0), 0);
+  check(unmeasured > 0 && (drawn.match(/>measuring</g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
+  check(drawn.indexOf('aria-valuemax="109" aria-valuenow="11"') > 0, 'Wave 0 draws 11 of 109 from the file, not from the page');
+  check(model.wavesHTML(null).indexOf('gal-waves-wait') > 0 && model.wavesHTML(null).indexOf('gal-wave-0') < 0, 'before the file arrives the section says measuring and draws no rows');
+  check(model.sections().some((section) => section.k === 'waves'), 'Waves is a section of the page');
+  const keys = ['Waves', 'Wave {id}', 'In progress', 'Landed, measuring', 'Next', 'measuring', 'Measured {date}', 'of {total}'];
+  data.waves.forEach((wave) => { keys.push(wave.title, wave.progress.label); wave.pairs.forEach((pair) => keys.push(pair.label)); });
+  keys.forEach((key) => check(model.translatedIn(key).length === 4, 'waves label "' + key + '" is in ta hi ar fr'));
+}
 console.log('the Standards page links here');
 const register = read('app/cap-standards.js'), standardsPage = read('standards.html');
 check(register.indexOf("['web', 'Web design']") >= 0, "the register has the Web design subject (STD_AREAS 'web')");
