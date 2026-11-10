@@ -3013,8 +3013,9 @@
     var count = 0;
     for (var index = 0; index < text.length; index++) count = (count * 31 + text.charCodeAt(index)) >>> 0;
     var hue = count % 360;
-    /* 40°–190° is the yellow→green stretch that reads bright at a given lightness; drop it so contrast holds. */
-    var light = hue > 40 && hue < 190 ? 34 : 44;
+    /* 20°–190° is the orange→yellow→green stretch that reads bright at a given lightness (white on hue 28–51 at 44% is
+       3.8–4.5:1, under AA); drop it so contrast holds for every hue. */
+    var light = hue > 20 && hue < 190 ? 34 : 44;
     return {
       bg: 'hsl(' + hue + ',38%,' + light + '%)',
       letter: (text.charAt(0) || '?').toUpperCase()
