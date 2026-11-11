@@ -123,6 +123,7 @@ jobs:
           node tests/offline-409.test.cjs
           node tests/repeat-supply-render.test.cjs
           node tests/rewards-pane.test.cjs
+          node tests/qa-131-bulk-status.test.cjs
           node tests/sheets-links.test.cjs
           node tests/showcase-templates.test.cjs
           node tests/stock-pane.test.cjs
