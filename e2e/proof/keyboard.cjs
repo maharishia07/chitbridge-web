@@ -4,7 +4,7 @@
 // MEASURE ONLY: every write to the app is aborted and counted (proof/guard.cjs). From the SIT driver PM/out/kbd-pages-1111.driver.cjs (docs 69f493e6), now parameterised by base URL and run on GitHub (proof.yml).
 //   node e2e/proof/keyboard.cjs [--base http://localhost:5173] [--api http://localhost:3000] [--widths 1366,390] [--only crm,till] [--out out/proof/keyboard.json]
 const fs = require('fs');
-const L = require('./lib.cjs'); const { readFailures } = require('./read-failures.cjs'); const { BASE, PAGES, VPS, sleep } = L;
+const L = require('./lib.cjs'); const { watchReads, readFailures } = require('./read-failures.cjs'); const { BASE, PAGES, VPS, sleep } = L;
 const argv = L.argv, arg = L.arg;
 const SHOTS = arg('shots', ''); if (SHOTS) fs.mkdirSync(SHOTS, { recursive: true });
 const OUT = arg('out', 'kbd-pages.json'), ONLY = arg('only', ''), MAXOPEN = +arg('maxopen', 40), MAXPOP = +arg('maxpop', 8), MAXTAB = +arg('maxtab', 90);
@@ -43,7 +43,7 @@ const initPage = (page) => page.evaluate(HELPERS).catch(() => {});
     const page = await ctx.newPage(); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
     const url = BASE + route.replace('{bridge}', encodeURIComponent(sess.bridgeId || ''));
     const R = { page: name, width: W, err: null, notes: [] };
-    const seen = []; page.on('response', (r) => { try { seen.push({ method: r.request().method(), status: r.status(), url: r.url() }); } catch (_) {} });
+    const seen = watchReads(page);
     const load = async () => { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }); await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {}); await sleep(1200); await initPage(page); };
     const press = async (k) => { await page.keyboard.press(k); await sleep(180); };
     try {
