@@ -53,7 +53,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  /* ── UX-137 IDENTITY ── every control below carries data-cbsid, the code of its component element in the one register (CMP032-CMP039 are this
+  /* ── UX-137 IDENTITY ── every control below carries data-cbsid, the code of its component element in the one register (CMP045-CMP039 are this
      unit's own; CMP009 Try again and CMP014 Clear are reused). The mount (data-cbmount) is the screen's code from the screen chip + U1nn; a
      page without the chip has no mount, the element keeps its code. Nothing is read from a page global: this is a DOM attribute, read at paint. */
   function mountAttribute(code) {
@@ -259,10 +259,16 @@
     '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
     '@container screen (max-width: 640px){.cbl .cbl-w{display:none}}',
     '@media (max-width:700px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
-    '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:28px;height:28px}',
+    '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
-    '.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
-    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}'
+    '.cbl .cbl-title{padding-block:4px 2px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
+    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
+    /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
+    '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
+    '@media (max-width:700px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
+    '.cbl input[data-selrow]::before,.cbl input[data-col]::before{content:"";width:22px;height:22px;box-sizing:border-box;border:2px solid var(--cl-muted);border-radius:5px;background:var(--cl-card);color:var(--cl-card);font-size:15px;line-height:18px;text-align:center;font-weight:700}',
+    '.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{content:"✓";background:var(--cl-blue);border-color:var(--cl-blue)}.cbl input[data-col]:disabled{opacity:.5}}',
+    '.cbl .cbl-viewpop{display:flex;flex-direction:column;gap:8px;align-items:stretch}.cbl .cbl-viewpop .cbl-seg{align-self:flex-start}.cbl .cbl-viewpop .cbl-ico{justify-content:flex-start}.cbl .cbl-viewpop .cbl-w{display:inline}'
   ].join('\n');
   function injectCss() {
     var d = root.document;
@@ -908,11 +914,11 @@
         .join('') +
       '</div>' +
       (nestedVal === 'custom'
-        ? '<div class="cbl-custom"><input data-cbsid="CMP032-I02"' + mountAttribute('CMP032') + ' data-cbl-from type="date" value="' +
+        ? '<div class="cbl-custom"><input data-cbsid="CMP045-I02"' + mountAttribute('CMP045') + ' data-cbl-from type="date" value="' +
           esc((p.custom && p.custom.from) || '') +
           '" aria-label="' +
           esc(T(I, 'From')) +
-          '"> → <input data-cbsid="CMP032-I02"' + mountAttribute('CMP032') + ' data-cbl-to type="date" value="' +
+          '"> → <input data-cbsid="CMP045-I02"' + mountAttribute('CMP045') + ' data-cbl-to type="date" value="' +
           esc((p.custom && p.custom.to) || '') +
           '" aria-label="' +
           esc(T(I, 'To')) +
@@ -997,13 +1003,39 @@
     );
   }
   /** the right-hand tools of the second row: expand all, grid / lines, columns, CSV, select mode (each a list component: CMP033 to CMP037) */
-  function viewToolsHTML(list, keyText, testIds, toolOptions) {
+  /** a phone (a pane of 640 px or less) */
+  function isNarrowList(list) {
+    list.narrow = list.el.clientWidth > 0 && list.el.clientWidth <= 640;
+    return list.narrow;
+  }
+  /** the one View button of a phone and its popover: Group by, Grid / Lines, Columns and CSV inside it (a list opener and its popover, CMP033); Columns opens its own sheet in its place */
+  function viewMenuHTML(list, keyText, inner) {
+    var open = list.pop === 'view' || list.pop === 'cols';
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn" data-cbl-pop="view" id="cbl-view-' +
+      keyText +
+      '" data-testid="cbl-view-menu-' +
+      keyText +
+      '" aria-haspopup="dialog" aria-expanded="' +
+      open +
+      '">' +
+      esc(T(list, 'View')) +
+      ' ▾</button>' +
+      (list.pop === 'view'
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' + esc(T(list, 'View')) + '" data-testid="cbl-view-pop-' + keyText + '"><div class="cbl-viewpop">' + inner + '</div></div>'
+        : '') +
+      (list.pop === 'cols' ? colsPop(list) : '') +
+      '</span>'
+    );
+  }
+  function viewToolsHTML(list, keyText, testIds, toolOptions, groupHtml) {
     var listOptions = list.o,
       runState = list.r,
       viewState = list.s,
       toolsHtml = '';
     if (hasNext(list)) toolsHtml += expandAllHTML(list, keyText, testIds);
-    toolsHtml += viewChoiceHTML(list, keyText);
+    var outer = toolsHtml;
+    toolsHtml = viewChoiceHTML(list, keyText);
     toolsHtml +=
       '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
       keyText +
@@ -1029,6 +1061,7 @@
         esc(T(list, 'Download CSV')) +
         '">⬇' +
         '<span class="cbl-w"> ' + esc(T(list, 'CSV')) + '</span></button>';
+    toolsHtml = groupHtml == null ? outer + toolsHtml : outer + viewMenuHTML(list, keyText, groupHtml + toolsHtml);
     if (listOptions.bulk && listOptions.bulk.length)
       toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
@@ -1041,6 +1074,73 @@
         esc(T(list, 'Select')) +
         '</button>';
     return toolsHtml;
+  }
+  /** the Group by choice (a select or a row of pressed toggles, CMP035 / CMP034); on a phone it goes into the View popover */
+  function groupToolsHTML(list, keyText) {
+    var listOptions = list.o,
+      groupHtml = '';
+    var groupOptions = listOptions.group,
+      groupNow = groupMode(list);
+    if (groupOptions && groupOptions.as === 'select' && (groupOptions.options || []).length > 1) {
+      groupHtml +=
+        '<label class="cbl-gsel" data-testid="cbl-group-' +
+        keyText +
+        '"' +
+        (groupOptions.tips && groupOptions.tips[groupNow] ? ' title="' + esc(T(list, groupOptions.tips[groupNow])) + '"' : '') +
+        '><span class="cbl-glab" data-testid="cbl-glab-' +
+        keyText +
+        '">' +
+        esc(T(list, 'Group')) +
+        '</span><select data-cbsid="CMP035-S01"' + mountAttribute('CMP035') + ' data-gsel id="cbl-gsel-' +
+        keyText +
+        '" data-testid="' +
+        esc(groupOptions.tid ? groupOptions.tid + '-group' : 'cbl-gsel-' + keyText) +
+        '" aria-label="' +
+        esc(T(list, 'Group by')) +
+        '">' +
+        groupOptions.options
+          .map(function (x) {
+            return (
+              '<option value="' +
+              esc(x[0]) +
+              '"' +
+              (groupNow === x[0] ? ' selected' : '') +
+              (groupOptions.tips && groupOptions.tips[x[0]] ? ' title="' + esc(T(list, groupOptions.tips[x[0]])) + '"' : '') +
+              '>' +
+              esc(T(list, x[1])) +
+              '</option>'
+            );
+          })
+          .join('') +
+        '</select></label>';
+    } else if (groupOptions && (groupOptions.options || []).length > 1)
+      groupHtml +=
+        '<span class="cbl-glab" data-testid="cbl-glab-' +
+        keyText +
+        '">' +
+        esc(T(list, 'Group by')) +
+        '</span><span class="cbl-seg" role="group" aria-label="' +
+        esc(T(list, 'Group by')) +
+        '" data-testid="cbl-group-' +
+        keyText +
+        '">' +
+        groupOptions.options
+          .map(function (x) {
+            return (
+              '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-group="' +
+              esc(x[0]) +
+              '"' +
+              (groupOptions.tid ? ' data-testid="' + esc(groupOptions.tid) + '-group-' + esc(x[0]) + '"' : '') +
+              ' aria-pressed="' +
+              (groupNow === x[0]) +
+              '">' +
+              esc(T(list, x[1])) +
+              '</button>'
+            );
+          })
+          .join('') +
+        '</span>';
+    return groupHtml;
   }
   function paintTools(list) {
     paintViews(list);
@@ -1066,7 +1166,7 @@
       h =
         tl.search === false
           ? ''
-          : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP032-I01"' + mountAttribute('CMP032') + ' data-cbl-q id="cbl-q-' +
+          : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP045-I01"' + mountAttribute('CMP045') + ' data-cbl-q id="cbl-q-' +
             k +
             '" data-testid="listctl-search-' +
             k +
@@ -1098,68 +1198,10 @@
         (list.pop === 'filt' ? filtPop(list, sorts) : '') +
         '</span>';
     }
-    var g = o.group,
-      gm = groupMode(list);
-    if (g && g.as === 'select' && (g.options || []).length > 1) {
-      h +=
-        '<label class="cbl-gsel" data-testid="cbl-group-' +
-        k +
-        '"' +
-        (g.tips && g.tips[gm] ? ' title="' + esc(T(list, g.tips[gm])) + '"' : '') +
-        '><span class="cbl-glab" data-testid="cbl-glab-' +
-        k +
-        '">' +
-        esc(T(list, 'Group')) +
-        '</span><select data-cbsid="CMP035-S01"' + mountAttribute('CMP035') + ' data-gsel id="cbl-gsel-' +
-        k +
-        '" data-testid="' +
-        esc(g.tid ? g.tid + '-group' : 'cbl-gsel-' + k) +
-        '" aria-label="' +
-        esc(T(list, 'Group by')) +
-        '">' +
-        g.options
-          .map(function (x) {
-            return (
-              '<option value="' +
-              esc(x[0]) +
-              '"' +
-              (gm === x[0] ? ' selected' : '') +
-              (g.tips && g.tips[x[0]] ? ' title="' + esc(T(list, g.tips[x[0]])) + '"' : '') +
-              '>' +
-              esc(T(list, x[1])) +
-              '</option>'
-            );
-          })
-          .join('') +
-        '</select></label>';
-    } else if (g && (g.options || []).length > 1)
-      h +=
-        '<span class="cbl-glab" data-testid="cbl-glab-' +
-        k +
-        '">' +
-        esc(T(list, 'Group by')) +
-        '</span><span class="cbl-seg" role="group" aria-label="' +
-        esc(T(list, 'Group by')) +
-        '" data-testid="cbl-group-' +
-        k +
-        '">' +
-        g.options
-          .map(function (x) {
-            return (
-              '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-group="' +
-              esc(x[0]) +
-              '"' +
-              (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') +
-              ' aria-pressed="' +
-              (gm === x[0]) +
-              '">' +
-              esc(T(list, x[1])) +
-              '</button>'
-            );
-          })
-          .join('') +
-        '</span>';
-    h += viewToolsHTML(list, k, tids, tl);
+    var narrow = isNarrowList(list),
+      groupHtml = groupToolsHTML(list, k);
+    if (!narrow) h += groupHtml;
+    h += viewToolsHTML(list, k, tids, tl, narrow ? groupHtml : null);
     if (tl.count !== false)
       h +=
         '<span class="cbl-count" id="cbl-count-' +
@@ -1495,7 +1537,7 @@
           : '<span class="cbl-mvsp"></span>') +
         '<label' +
         (c.key === top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
-        '><input data-cbsid="CMP032-I03"' + mountAttribute('CMP032') + ' type="checkbox" data-col="' +
+        '><input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-col="' +
         esc(c.key) +
         '" data-testid="cols-' +
         k +
@@ -1977,7 +2019,7 @@
       return safe(function () {
         return I.o.lead.cell(row);
       }, '');
-    return '<input data-cbsid="CMP032-I03"' + mountAttribute('CMP032') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
+    return '<input data-cbsid="CMP045-I03"' + mountAttribute('CMP045') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
   function lineHTML(I, it, cols, zb) {
     var row = it.row,
@@ -2272,7 +2314,7 @@
     paintTitle(list);
     paintTools(list);
     if (refocus) {
-      var node = list.el.querySelector('[data-cbl-pop="' + was + '"]');
+      var node = list.el.querySelector('[data-cbl-pop="' + was + '"]') || list.el.querySelector('[data-cbl-pop="view"]');
       if (node) node.focus();
     }
   }
@@ -2893,7 +2935,10 @@
         fit(item);
         setHdrH(item, item.el.querySelector('.cbl-list') || item.el);
         var n = item.el.clientWidth > 0 && item.el.clientWidth <= 640;
-        if (n !== item.narrow) paintTitle(item);
+        if (n !== item.narrow) {
+          paintTitle(item);
+          paintTools(item);
+        }
       });
     });
   }

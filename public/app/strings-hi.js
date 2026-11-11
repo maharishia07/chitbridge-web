@@ -750,7 +750,7 @@
     'CMP030.shown': 'गतिविधि',
     'CMP030.aria': 'गतिविधि {object}',
     'Activity': 'गतिविधि',
-    'CMP032.label': 'सूची क्षेत्र',
+    'CMP045.label': 'सूची क्षेत्र',
     'List field': 'सूची क्षेत्र',
     'CMP033.label': 'सूची खोलना',
     'List opener': 'सूची खोलना',

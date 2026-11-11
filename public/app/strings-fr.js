@@ -749,7 +749,7 @@
     'CMP030.shown': 'Activité',
     'CMP030.aria': 'Activité {object}',
     'Activity': 'Activité',
-    'CMP032.label': 'Champ de liste',
+    'CMP045.label': 'Champ de liste',
     'List field': 'Champ de liste',
     'CMP033.label': 'Ouverture de liste',
     'List opener': 'Ouverture de liste',
