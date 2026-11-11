@@ -41,7 +41,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npx playwright install --with-deps chromium
+      - run: sh ci-browser.sh
       - name: Say if the testers' code is missing
         env:
           CODE: ${{ secrets.E2E_TESTER_CODE }}
