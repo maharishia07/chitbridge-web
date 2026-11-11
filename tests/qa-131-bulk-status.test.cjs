@@ -16,12 +16,14 @@ function world(rows, apiImpl) {
   const ctx = {
     MODALS: { stat: { ids: rows.map((r) => r.id), to: 'act', use: 'resale' } }, closeModal() {}, chitPos: () => 0, showBusy() {}, hideBusy() {}, announce() {},
     tx: (s) => s, txn: (a) => a, txf: (s, v) => String(s).replace(/\{(\w+)\}/g, (m, k) => (v && k in v ? v[k] : m)), cap: (s) => s, toast: (m) => toasts.push(m),
-    MSG: { fail: (w, e) => e.message, statusSet: () => 'set' }, renderApp() {}, afterChitAction() {}, statusWordFor: (to, r) => ({ open: 'pending', act: r && r.billRx ? 'accepted' : 'in_progress', close: 'completed' }[to] || to),
+    MSG: { fail: (w, e) => e.message, statusSet: () => 'set' }, groupToast: () => 'group', chitNameOf: (x) => x,
+    /* the runner of app.html in miniature: one record at a time, a failure ends the run when stopOnFailure, the ones never reached are leftItems */
+    groupRun: async (items, kind, perId) => { const r = { done: [], failed: [], leftItems: [], cancelled: false }; for (let i = 0; i < items.length; i++) { try { await perId(items[i]); r.done.push(items[i]); } catch (e) { r.failed.push({ item: items[i], reason: e.message }); if (kind.stopOnFailure) { r.leftItems = items.slice(i + 1); break; } } } return r; }, renderApp() {}, afterChitAction() {}, statusWordFor: (to, r) => ({ open: 'pending', act: r && r.billRx ? 'accepted' : 'in_progress', close: 'completed' }[to] || to),
     UI: { rows, detail: null, selectMode: true, selected: new Set(rows.map((r) => r.id)) },
     api: async (key, o) => { calls.push({ key, id: o.params.id, body: o.body, idemKey: o.idemKey }); return apiImpl(o); }
   };
   vm.createContext(ctx);
-  for (const n of ['statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'confirmStatus']) vm.runInContext(fnSource(n), ctx);
+  for (const n of ['statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'tickUndone', 'confirmStatus']) vm.runInContext(fnSource(n), ctx);
   return { ctx, calls, toasts };
 }
 const mk = (id, st) => ({ id, state: 'open', _status: st, billRx: true });
@@ -43,7 +45,7 @@ const mk = (id, st) => ({ id, state: 'open', _status: st, billRx: true });
     assert.strictEqual([...w.ctx.UI.selected].sort().join(), 'b,c');
     assert.strictEqual(w.ctx.UI.rows[0]._status, 'accepted');
     assert.strictEqual(w.ctx.UI.rows[1]._status, 'pending', 'the refused record is not shown as moved');
-    assert.ok(/Moved 1 of 3, then it stopped/.test(w.toasts[0]) && /not done/.test(w.toasts[0]), w.toasts[0]);
+    assert.ok(/^Moved 1 of 3, then: This chit is accepted now/.test(w.toasts[0]), w.toasts[0]);
   });
   await t('a resume of the same job sends the SAME step key for the same record', async () => {
     let n = 0;
