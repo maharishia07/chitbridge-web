@@ -999,9 +999,9 @@ var CBUi = (function () {
     var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
     if (foot) foot.innerHTML = doneButton;
   }
-  /* which group actions can continue after a restart (Athi 11 Nov): they store every step on the device and send each with its own key. Status change and categorise stay bulk but run in the open tab only,
-     until their api lands (QA-131: one call per record with the from-status; QA-130: add or remove a category per product); the box then says "Keep this tab open". Keyed by the endpoint's name (core.js EP). */
-  var BATCH_RESUMABLE = { archive: true, restore: true, unarchive: true, purgeChit: true, delChit: true, assignBulk: true, prodStatusBulk: true, status: false, prodBulkUpdate: false };
+  /* which group actions can continue after a restart (Athi 11 Nov): they store every step on the device and send each with its own key. Status change stays bulk but runs in the open tab only,
+     until its api lands (QA-131: one call per record with the from-status); categorise (QA-130) continues now: add or remove a category per product, repeat-safe. The box then says "Keep this tab open". Keyed by the endpoint's name (core.js EP). */
+  var BATCH_RESUMABLE = { archive: true, restore: true, unarchive: true, purgeChit: true, delChit: true, assignBulk: true, prodStatusBulk: true, prodBulkCategories: true, status: false, prodBulkUpdate: false };
   batchProgress.resumable = function (action) {
     if (!Object.prototype.hasOwnProperty.call(BATCH_RESUMABLE, action)) refuse('progress: ' + action + ' has no resume setting (BATCH_RESUMABLE)');
     return BATCH_RESUMABLE[action];

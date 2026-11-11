@@ -528,7 +528,7 @@
         : '') +
       (frame.mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
       (frame.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
-      '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
+      '<main class="cbsh-main" data-testid="shell-main" data-tab="home" tabindex="0"><div class="cbsh-inner">' +
       (frame.sides
         ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>'
         : '') +
