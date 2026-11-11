@@ -194,7 +194,16 @@ W.run(REAL ? 'disputes-real' : 'disputes', async (w) => {
     await filter('status', ''); await filter('side', 'against');
     const q2 = lastQ(), cnt = await txt('[data-testid="disputes-count"]');
     await filter('side', ''); await filter('status', 'open');
-    return { ok: /status=resolved/.test(q) && n === 1 && word === 'Resolved' && /status=all/.test(q2) && /side=against/.test(q2) && /of 51/.test(cnt), saw: 'asked ' + q + ' -> ' + n + ' "' + word + '" · then ' + q2 + ' -> "' + cnt + '"' };
+    /* a popover closes on Escape and on a click outside it (WAI-ARIA APG); the walk leaves none open over the rows it clicks next (CI fonts put it over the row centre) */
+    const open1 = await page.locator('.cbl-pop').count();
+    await page.keyboard.press('Escape'); await settle(150);
+    const afterEsc = await page.locator('.cbl-pop').count();
+    await page.click('[data-testid="cbl-filters-disputes"]'); await settle(150);
+    const reopened = await page.locator('.cbl-pop').count();
+    await page.click('[data-testid="dp-bar"]'); await settle(150);
+    const afterOutside = await page.locator('.cbl-pop').count();
+    const popOk = open1 === 1 && afterEsc === 0 && reopened === 1 && afterOutside === 0;
+    return { ok: popOk && /status=resolved/.test(q) && n === 1 && word === 'Resolved' && /status=all/.test(q2) && /side=against/.test(q2) && /of 51/.test(cnt), saw: 'asked ' + q + ' -> ' + n + ' "' + word + '" · then ' + q2 + ' -> "' + cnt + '" · popover open/Esc/reopen/outside: ' + [open1, afterEsc, reopened, afterOutside].join('/') };
   });
   await w.step('D5', 'Click SO-7 (raised by me) -> the CHIT SHEET opens with its dispute section: Quality · Open · with Kumar Stores · the reason; Resolve open; the room is open with the dispute\'s own message', async () => {
     await openRow('d1');
