@@ -202,6 +202,21 @@ async function load(keepStep) {
   pickList((LIST && LIST.key) || DATA.pick || DATA.lists[0].key, keepStep);
 }
 
+/** CAT-124 C2: each list is a card of its own reference store — the card carries the store's name (store_name; null = the built-in list, nothing shown). */
+function storeTitle(item) {
+  return item.store_name ? ' title="' + esc(item.store_name) + '"' : '';
+}
+/** One list's tile: its name, its size, and (CAT-124) the reference store it comes from as the hover title. */
+function listPill(item) {
+  return (
+    '<button class="pill ' + (item.key === LIST.key ? 'on' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' + storeTitle(item) +
+    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b></button>'
+  );
+}
+/** The chosen list's store, named under the tiles (data-testid pl-store, the page's own element code scheme). */
+function storeNote() {
+  return LIST.store_name ? '<div class="row"><span class="note" data-testid="pl-store">From ' + esc(LIST.store_name) + '</span></div>' : '';
+}
 function pickList(k, keep) {
   LIST =
     DATA.lists.filter(function (item) {
@@ -383,24 +398,9 @@ function buildChoose() {
     });
   document.getElementById('stage').innerHTML =
     '<div class="row" id="lists" data-testid="pl-lists">' +
-    DATA.lists
-      .map(function (item) {
-        return (
-          '<button class="pill ' +
-          (item.key === LIST.key ? 'on' : '') +
-          '" data-testid="pl-list-' +
-          esc(item.key) +
-          '" onclick="pickList(\'' +
-          esc(item.key) +
-          '\')">' +
-          esc(item.label) +
-          ' <b>' +
-          item.count +
-          '</b></button>'
-        );
-      })
-      .join('') +
+    DATA.lists.map(listPill).join('') +
     '</div>' +
+    storeNote() +
     '<div class="row" id="langs" data-testid="pl-langs">' +
     (!tableFits()
       ? ''

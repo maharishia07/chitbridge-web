@@ -36,6 +36,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
         lists: Object.keys(BP.BLUEPRINTS).map((k) => {
           const bp = BP.blueprint(k);
           return { key: bp.key, label: bp.label, outcome: bp.outcome, pin: BP.pin(bp),
+                   store_id: 'store-' + k, store_name: 'Reference · ' + bp.label,
                    categories: bp.categories, units: bp.units, languages: BP.languagesOf(k),
                    count: bp.starter.length,
                    rows: bp.starter.map((x) => ({ name: x.name, unit: x.unit || bp.defaultUnit,
@@ -89,6 +90,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const lists = await p.$$eval('#lists .pill', (bs) => bs.map((x) => x.textContent.trim()));
   say('every product list is offered by name and size', lists.length === Object.keys(BP.BLUEPRINTS).length,
     lists.join(' · '));
+  say('each tile names its store (CAT-124 C2)', (await p.$$eval('#lists .pill', (bs) => bs.map((x) => x.title))).every((t) => /^Reference · /.test(t)), 'title on every tile');
+  say('the chosen list names its store under the tiles', /^From Reference · /.test(await p.$eval('[data-testid=pl-store]', (e) => e.textContent.trim())), 'pl-store');
   say('it opens on one of them, ticked', await p.$eval('#lists .pill.on', (e) => !!e), 'veg');
 
   const rows0 = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
