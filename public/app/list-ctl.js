@@ -263,6 +263,8 @@
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
     '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
     '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
+    /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
+    'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
     '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
     '@media (max-width:' + PHONE_MAX + 'px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
@@ -3005,5 +3007,21 @@
     return step(1);
   }
 
-  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every };
+  /** one button of the pager pair: Previous (glyph first) or Next (glyph last) with its register code */
+  function pagerButton(side, code, spec) {
+    var text = esc(spec.label);
+    return (
+      '<button type="button" data-cbsid="CMP037-' + code + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
+      (spec.off ? ' disabled' : '') + '>' + (side === 'prev' ? '‹ ' + text : text + ' ›') + '</button>'
+    );
+  }
+  /**
+   * The Previous / Next pair of a server-paged page (list command CMP037 B06 and B07): one drawing, so every pager gets the same tap box and codes.
+   * pair: { prev, next } each { label, tid, act (the click handler text), off (true greys it) }; the page keeps what each press does.
+   */
+  function pager(pair) {
+    return pagerButton('prev', 'B06', pair.prev) + pagerButton('next', 'B07', pair.next);
+  }
+
+  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset, every: every, pager: pager };
 })(typeof window !== 'undefined' ? window : this);

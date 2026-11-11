@@ -812,16 +812,11 @@ var CBCatalogueApp = (function () {
       '<div class="cat-pager" data-testid="cat-pager"><span>' +
       esc(T('{from}–{to} of {n}', { from: String(from), to: String(to), n: String(S.total) })) +
       '</span>' +
-      '<button type="button" class="act quiet" data-testid="cat-prev" onclick="CBCatalogueApp.page(-1)"' +
-      (S.offset === 0 ? ' disabled' : '') +
-      '>‹ ' +
-      esc(T('Previous')) +
-      '</button>' +
-      '<button type="button" class="act quiet" data-testid="cat-next" onclick="CBCatalogueApp.page(1)"' +
-      (to >= S.total ? ' disabled' : '') +
-      '>' +
-      esc(T('Next')) +
-      ' ›</button></div>'
+      CBList.pager({
+        prev: { label: T('Previous'), tid: 'cat-prev', act: 'CBCatalogueApp.page(-1)', off: S.offset === 0 },
+        next: { label: T('Next'), tid: 'cat-next', act: 'CBCatalogueApp.page(1)', off: to >= S.total }
+      }) +
+      '</div>'
     );
   }
   function cols() {
