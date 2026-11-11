@@ -245,7 +245,7 @@ const quiet = (p) => p.catch(() => {});
     check(batch.noteWords('keepopen') === "Keep this tab open. This action can't continue after a restart.", 'the keep-tab-open words');
     const src = html.slice(html.indexOf('async function prodCategoriseSend('), html.indexOf('\n}\n', html.indexOf('async function prodCategoriseSend(')));
     check(src.includes("keepTabOpenNote(step, 'prodBulkUpdate')") && html.includes("if (!ui.progress.batch.resumable(action)) batchJob.note('keepopen')"), 'categorise puts the words on its box');
-    check(/action: 'status'/.test(sourceOf('confirmStatus')), 'status change is the in-tab path (groupRun, action status)');
+    check(!sourceOf('confirmStatus').includes('groupJob'), 'status change stays on the in-tab path (groupRun); #527 makes it resumable');
   }
 
   console.log('every state, in the recorded words');
@@ -277,7 +277,7 @@ const quiet = (p) => p.catch(() => {});
 
   const core = read('app/core.js');
   console.log('core.js: the step names its own key');
-  check(/idemKey: givenKey/.test(core) && /String\(given\)\.length > 200/.test(core), 'api() takes opts.idemKey, a key over 200 characters is refused');
+  check(core.includes('idemKey: stepKey') && core.includes('if (stepKey) return stepKey'), 'api() takes opts.idemKey (the same hunk as #527)');
   check(/'prodStatusBulk'/.test(core.slice(core.indexOf('const OUTBOX_KEYS'), core.indexOf('const OUTBOX_KEYS') + 2500)), 'prodStatusBulk is an outbox name');
   check(/entity: cbMeId/.test(html), 'app.html configures the outbox with the signed-in entity (cbMeId)');
 

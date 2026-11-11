@@ -23445,7 +23445,7 @@ async function confirmStatus() {
   /* ⭐ the same stop rule as above, kept: the first failure ends the run (stopOnFailure), the rest stay "not done"; the progress now shows the count in the corner, the screen is not locked */
   const result = await groupRun(
     ids,
-    { action: 'status', mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
+    { mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
     async (id) => {
       const _row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
       /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
@@ -23558,10 +23558,10 @@ function chitNameOf(id) {
   return (row && row.code) || tx('Record');
 }
 /** runs perId(id) for every id, in steps of its speed class (quick 10), counting each as done or failed; kind = { mount, speed, verb, label, unit, stopOnFailure, action } → { done, failed, cancelled, left }.
- *  This is the IN-TAB path: nothing is stored, so the box says "Keep this tab open" (kind.action must be one ui.progress.batch.resumable knows; a resumable one belongs to groupJob). */
+ *  This is the IN-TAB path: nothing is stored, so the box says "Keep this tab open" (a kind.action that ui.progress.batch.resumable knows; a resumable one belongs to groupJob). */
 function groupRun(ids, kind, perId) {
   const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
-  if (ui.progress.batch.resumable(kind.action)) throw new Error('groupRun: ' + kind.action + ' can resume, send it through groupJob');
+  if (kind.action && ui.progress.batch.resumable(kind.action)) throw new Error('groupRun: ' + kind.action + ' can resume, send it through groupJob');
   options.onStart = (batchJob) => batchJob.note('keepopen');
   return ui.progress.batch.run(ids, options, async (chunk) => {
     const done = [];
