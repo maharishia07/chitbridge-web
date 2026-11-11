@@ -193,6 +193,44 @@ jobs:
           node e2e/connector-purchase.test.cjs
           node e2e/connector-zoho.test.cjs
 
+  till-copies:
+    # THE COPIES OF THE COUNTER SCREEN ARE JUDGED AT A PINNED API COMMIT (11 Nov 2026, root cause of the api reds on its vendor and parse guards).
+    # The master is in chitbridge-api; public/till.html, promo.html, till-sw.js, the manifest, engine/qr.js, engine/versions.json and app/their-bill.js
+    # are generated from it. vendor.lock.json names ONE merged api commit; this job vendors from THAT commit and fails if a copy differs (a hand-edited
+    # copy, or a forgotten re-vendor). The api moving on never reds this job; a master change on the api is a pin bump: node tools/vendor-pin.cjs bump <api checkout>.
+    # The api is public (no token); its own CI no longer reads this repo for these copies (api scripts/vendor-till.cjs --kit-only).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Which api commit is pinned?
+        id: pin
+        run: echo "sha=$(node -p "require('./vendor.lock.json').api.sha")" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: ${{ steps.pin.outputs.sha }}
+          path: .side/api-pin
+      - name: the api's qrcode-generator (the one third-party file the vendoring copies)
+        working-directory: .side/api-pin
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: every copy is the pinned api master (vendor-till.cjs --check --web-only)
+        env:
+          CB_WEB_DIR: ${{ github.workspace }}
+        run: node .side/api-pin/scripts/vendor-till.cjs --check --web-only
+      # NON-BLOCKING: api MAIN against the pin, so a pin left behind is visible (warning with its age; STALE after 7 days).
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: main
+          path: .side/api-main
+          fetch-depth: 0
+      - name: has the api changed a master since the pin? (warns, never fails)
+        run: node tools/vendor-pin.cjs drift .side/api-main
+
   twin-master-first:
     # ⭐ PLT-92 (9 Nov): a vendored copy (public/till.html, promo.html, app/their-bill.js ... the api's vendor-till COPIES list, read from api main, never copied)
     # may only change after its api master on api main holds the same bytes. Web #510 changed promo.html alone and every api PR went red.
