@@ -727,7 +727,15 @@ var CBUi = (function () {
   var BATCH_BLOCKS = 20, BATCH_PAINT_MS = 500;
   /* Athi 10 Nov: nobody waits on a locked screen. Up to BATCH_PANEL_MAX items the batch is the centre panel (a few seconds); above it, a corner tray (CMP027) that does not block the page,
      and the work goes in steps of BATCH_STEP items (progress.batch.step), with Cancel between steps. The one place the limit lives. */
-  var BATCH_PANEL_MAX = 10, BATCH_STEP = 10;
+  /* Athi 11 Nov: the step depends on the kind of action. quick (archive, restore, status) 10 per step; slow (sends, assigns, product updates) 5; tray (deletes, anything that posts to the books) always the corner tray, 5 per step.
+     A call site names its class (speed: 'quick' | 'slow' | 'tray'); no page holds a number. BATCH_PANEL_MAX and BATCH_STEP stay the quick values. */
+  var BATCH_SPEED = { quick: { step: 10, panelMax: 10 }, slow: { step: 5, panelMax: 5 }, tray: { step: 5, panelMax: 0 } };
+  var BATCH_PANEL_MAX = BATCH_SPEED.quick.panelMax, BATCH_STEP = BATCH_SPEED.quick.step;
+  function speedOf(options) {
+    var name = options && options.speed;
+    if (name != null && !Object.prototype.hasOwnProperty.call(BATCH_SPEED, name)) refuse('progress: speed is quick, slow or tray');
+    return BATCH_SPEED[name || 'quick'];
+  }
   /** how many of the blocks are blue, how many red (a failure always shows at least one block); the rest stay pale */
   function blockCounts(model) {
     var blocks = Math.min(BATCH_BLOCKS, model.max);
@@ -834,10 +842,10 @@ var CBUi = (function () {
       finish: function () { model.stopTimers(); release(); return finishBatch(model, options, openOptions); }
     };
   }
-  /** the state of one batch: the progress model plus the counts, the failed lines and where it is shown (tray above BATCH_PANEL_MAX items) */
+  /** the state of one batch: the progress model plus the counts, the failed lines and where it is shown (tray above the speed's panelMax) */
   function newBatchModel(options) {
     var model = progressModel({ label: options.label, total: options.total });
-    model.tray = options.total > BATCH_PANEL_MAX;
+    model.tray = options.total > speedOf(options).panelMax;
     model.batch = true; model.done = 0; model.failed = 0; model.failList = []; model.lastPaint = 0; model.paintTimer = null; model.ended = false;
     model.unit = words(options.unit || 'done');
     return model;
@@ -878,11 +886,46 @@ var CBUi = (function () {
   batchProgress.panelMax = BATCH_PANEL_MAX;
   batchProgress.step = BATCH_STEP;
   /** the items in steps of BATCH_STEP, for the caller to send one step at a time (a step is one call; Cancel is honoured between steps) */
-  batchProgress.steps = function (items) {
-    var out = [];
-    for (var i = 0; i < items.length; i += BATCH_STEP) out.push(items.slice(i, i + BATCH_STEP));
+  batchProgress.speeds = BATCH_SPEED;
+  batchProgress.steps = function (items, speed) {
+    var out = [], size = speedOf({ speed: speed }).step;
+    for (var i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
     return out;
   };
+  /**
+   * ui.progress.batch.run(items, options, sendStep) -> Promise of { done: [items], failed: [{ item, reason }], cancelled, stopped, left }.
+   * The one runner for a group action (Athi 11 Nov): the items go in steps of the speed class (quick 10, slow 5, tray 5), one sendStep(chunk) per step, the screen never locks, and Cancel is honoured between steps.
+   * sendStep resolves { done: [items], failed: [{ item, reason }], stop } (an item in neither list counts as failed, so nothing goes silent, unless stop is true: then the rest stay 'left'
+   * and the run ends, for an action that must not carry on after a failure); a throw fails the whole step and names its reason.
+   * options are the batch options (mount, label, unit, speed, delay) plus name(item) for the failed list and onStart(batchJob), which hands the caller the running batch (its cancel()). The caller confirms BEFORE calling this and repaints from the result.
+   */
+  batchProgress.run = async function (items, options, sendStep) {
+    var stopped = false;
+    var batchJob = batchProgress(Object.assign({}, options, { total: items.length, cancel: function () { stopped = true; } }));
+    var result = { done: [], failed: [], cancelled: false, stopped: false, left: 0 };
+    if (typeof options.onStart === 'function') options.onStart(batchJob);
+    try {
+      var steps = batchProgress.steps(items, options.speed);
+      for (var index = 0; index < steps.length && !stopped && !result.stopped; index += 1) await runStep(batchJob, steps[index], options, sendStep, result);
+    } finally {
+      result.cancelled = stopped;
+      result.left = items.length - result.done.length - result.failed.length;
+      batchJob.finish();
+    }
+    return result;
+  };
+  /** one step of the runner: send it, then count what the step answered (an unanswered item is failed, a throw fails the step) */
+  async function runStep(batchJob, chunk, options, sendStep, result) {
+    var answer;
+    try { answer = (await sendStep(chunk)) || {}; } catch (error) { answer = { done: [], failed: chunk.map(function (item) { return { item: item, reason: (error && error.message) || 'failed' }; }) }; }
+    var done = answer.done || [], failed = (answer.failed || []).slice();
+    result.stopped = !!answer.stop;
+    if (!answer.stop) chunk.forEach(function (item) { if (done.indexOf(item) < 0 && !failed.some(function (entry) { return entry.item === item; })) failed.push({ item: item, reason: 'no answer' }); });
+    result.done.push.apply(result.done, done);
+    result.failed.push.apply(result.failed, failed);
+    if (done.length) batchJob.done(done.length);
+    failed.forEach(function (entry) { batchJob.failed([(options.name ? options.name(entry.item) : String(entry.item))], entry.reason); });
+  }
   var progress = { start: startProgress, batch: batchProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
