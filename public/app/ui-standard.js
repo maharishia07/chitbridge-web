@@ -357,6 +357,20 @@ var CBUiStandard = (function () {
       progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
       '</div></section>';
   }
+  /** CMP032..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
+  var LIST_ROWS = [
+    ['listfield', 'CMP032-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
+    ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
+    ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column']
+  ];
+  function listRows() {
+    return LIST_ROWS.map(function (entry) {
+      var component = ui.components[entry[0]];
+      return '<section class="crow" data-testid="gal-row-' + component.code + '"><div class="cid"><span class="chip" data-testid="gal-code">' + component.code + '</span><b>' + esc(words(component.label)) + '</b>' +
+        '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + '</span></span></div>' +
+        '<div class="states"><figure class="st"><div class="slot"><span class="mono">' + esc(entry[1]) + '</span></div><figcaption>CBList (list-ctl.js)</figcaption></figure></div></section>';
+    }).join('');
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     var dialog = dialogRow();
@@ -366,6 +380,7 @@ var CBUiStandard = (function () {
     rows.push(choiceRow());
     rows.push(progressRow());
     rows.push(batchRow());
+    rows.push(listRows());
     return rows.join('');
   }
 
