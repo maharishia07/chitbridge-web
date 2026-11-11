@@ -30,7 +30,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   proof:
-    runs-on: ubuntu-latest
+    # pinned (11 Nov): the ubuntu-latest "resolute" image failed apt DNS at "Install the browser tools" twice (run 43035641272)
+    runs-on: ubuntu-24.04
     timeout-minutes: 150
     services:
       postgres:

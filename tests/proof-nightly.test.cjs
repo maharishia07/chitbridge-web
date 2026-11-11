@@ -10,6 +10,7 @@ check('it can still be run by hand', /workflow_dispatch:/.test(y));
 for (const k of ['web_ref', 'api_ref', 'packs', 'widths'])
   check('every use of inputs.' + k + ' has a fallback', !new RegExp('inputs\.' + k + ' \}\}').test(y));
 check('the nightly packs are a11y and keyboard', /inputs\.packs \|\| 'a11y,keyboard'/.test(y));
+check('the runner image is pinned (ubuntu-24.04)', /runs-on: ubuntu-24.04/.test(y));
 check('no secret is read (localhost stack only)', !/secrets\./.test(y));
 if (fails) { console.error(fails + ' failed'); process.exit(1); }
 console.log('proof-nightly: ok');
