@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<!-- OWNS  the Terms and privacy page: what you agree to when you register, and what we keep about you and why, in plain words. Opens signed out.
+     CALLED BY the register form's "I accept the terms" link (public/app/register-form.js).
+     FLOW  load → CBFrame.mount({ bar }) → two tabs (Terms · Privacy), the chosen one in a panel that scrolls on its own; #privacy opens the second.
+     CARD 18-identity-sign-in-and-access/terms
+     SEC-70 / CMP-4 (Athi 6 Nov 2026: link the register's "I accept the terms" to a plain-language terms and privacy page).
+     ⚠️ DRAFT WORDING — awaits Athi's approval before it is final. The facts come from docs/compliance/ROPA.md (what we keep, why, who else sees it);
+     no law is cited and no lawyer has read it. When the wording is approved, delete the .draft line below. -->
+<head>
+<meta charset="utf-8">
+<script src="/app/device-id.js"></script>
+<script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms and privacy</title>
+<style>
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--paper,#fbf6ec);color:var(--on-card,#2a2418);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:15px;line-height:1.5;overflow:hidden}
+#shell{flex:none}
+.wrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%;max-width:760px;margin:0 auto;padding:14px 16px 16px;box-sizing:border-box}
+.tabrow{flex:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tabs{display:flex;gap:6px}
+.tabs button{font:inherit;min-height:40px;padding:0 16px;border:1px solid var(--line,#e6dcc6);border-radius:9px;background:var(--card,#fffdf8);color:inherit;cursor:pointer}
+.tabs button[aria-pressed="true"]{border-color:var(--accent,#1f5f5b);font-weight:700}
+.draft{margin-inline-start:auto;font-size:12.5px;color:var(--grey,#5c5240)}
+.panel{flex:1;min-height:0;overflow:auto;padding:14px 18px;border:1px solid var(--line,#e6dcc6);border-radius:12px;background:var(--card,#fffdf8)}
+.panel[hidden]{display:none}
+h1{margin:0 0 6px;font-size:20px}
+h2{margin:14px 0 4px;font-size:15px}
+p,ul{margin:4px 0}
+ul{padding-inline-start:20px}
+li{margin:3px 0}
+.back{margin-top:14px;font-size:14px}
+a{color:var(--accent,#1f5f5b)}
+</style>
+</head>
+<body>
+<div id="shell" data-testid="terms-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): the header every page wears -->
+<main class="wrap">
+  <div class="tabrow">
+    <div class="tabs" role="group" aria-label="Terms and privacy">
+      <button type="button" id="tab-terms" data-testid="terms-tab-terms" aria-pressed="true">Terms of use</button>
+      <button type="button" id="tab-privacy" data-testid="terms-tab-privacy" aria-pressed="false">Privacy</button>
+    </div>
+    <span class="draft" data-testid="terms-draft">Draft wording, being confirmed.</span>   <!-- delete this line when the wording is approved -->
+  </div>
+
+  <section class="panel" id="p-terms" data-testid="terms-panel-terms" tabindex="0">
+    <h1>Terms of use</h1>
+    <p>These are the rules for using ChitBridge for your shop, in plain words.</p>
+    <h2>Your account</h2>
+    <ul>
+      <li>You tell us the truth about your shop and your country. The country decides your tax setup.</li>
+      <li>You keep your sign-in safe. What is done with it is done by you.</li>
+      <li>Tell us if a phone or PC is lost, and sign it out in Settings.</li>
+    </ul>
+    <h2>Your records</h2>
+    <ul>
+      <li>Your bills, chits and books are yours. We keep them for you and do not sell them.</li>
+      <li>You are responsible for what you enter and for the tax you file. We help you keep the records.</li>
+      <li>A sealed chit is not edited. A mistake is fixed by a new entry beside it.</li>
+    </ul>
+    <h2>Fair use</h2>
+    <ul>
+      <li>Use ChitBridge only for lawful trade. Do not try to reach another shop's records.</li>
+      <li>We may pause an account that puts others or the service at risk, and we say why.</li>
+    </ul>
+    <h2>The service</h2>
+    <ul>
+      <li>We work to keep it running, but it can have faults or stops. Keep your own copy of anything you must have.</li>
+      <li>When we change these terms, we show you the new ones before you go on.</li>
+    </ul>
+    <p class="back"><a href="#privacy" data-testid="terms-to-privacy">Read what we keep about you</a></p>
+  </section>
+
+  <section class="panel" id="p-privacy" data-testid="terms-panel-privacy" tabindex="0" hidden>
+    <h1>Privacy</h1>
+    <p>What we keep, why we keep it, and who else sees it.</p>
+    <h2>What we keep</h2>
+    <ul>
+      <li>Your name, phone, e-mail and sign-ins, to run your account and keep it safe.</li>
+      <li>Your shop's records: chits, bills, books, parties and notes, because that is the service you asked for.</li>
+      <li>For your staff, only what you enter for them. For your customers, only what you or they give.</li>
+      <li>Who agreed to be contacted, and when, so a message is sent only to people who said yes.</li>
+      <li>Technical logs (your address and browser), to keep the service safe.</li>
+    </ul>
+    <h2>How long</h2>
+    <ul>
+      <li>Your account and records stay while your shop is with us. You decide what to remove.</li>
+      <li>Some trade records must be kept for a set time by the tax rules of your country. We keep those until then.</li>
+    </ul>
+    <h2>Who else sees it</h2>
+    <ul>
+      <li>Our database and hosting providers, and the sender of your sign-in codes by e-mail or SMS.</li>
+      <li>The other party on a chit sees their own copy of it. Nobody else does.</li>
+      <li>WhatsApp, if you turn on order updates. The AI helpers, only for the text or picture you send them.</li>
+    </ul>
+    <h2>Where it is kept</h2>
+    <p>Today your data is kept in India. For a shop in another country, that means it is kept abroad.</p>
+    <h2>Your say</h2>
+    <ul>
+      <li>You can ask to see, fix or remove what we hold about you.</li>
+      <li>Ask your shop. It passes the request on to us, and we answer in the time your country allows.</li>
+    </ul>
+    <p class="back"><a href="#terms" data-testid="terms-to-terms">Back to the terms of use</a></p>
+  </section>
+</main>
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
+<script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
+<script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
+<script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
+<script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
+<script>
+(function () {
+  if (window.CBFrame)
+    CBFrame.mount({
+      app: 'terms',
+      bar: true,
+      signin: false,
+      host: document.getElementById('shell'),
+      homeHref: '/',
+      title: { icon: '§', name: 'Terms and privacy' }
+    });
+  function show(which) {
+    ['terms', 'privacy'].forEach(function (name) {
+      document.getElementById('p-' + name).hidden = name !== which;
+      document.getElementById('tab-' + name).setAttribute('aria-pressed', name === which ? 'true' : 'false');
+    });
+    document.getElementById('p-' + which).scrollTop = 0;
+  }
+  function fromHash() {
+    show(location.hash === '#privacy' ? 'privacy' : 'terms');
+  }
+  document.getElementById('tab-terms').onclick = function () {
+    location.hash = 'terms';
+  };
+  document.getElementById('tab-privacy').onclick = function () {
+    location.hash = 'privacy';
+  };
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>
