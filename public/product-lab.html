@@ -425,7 +425,7 @@ function buildChoose() {
     '</div>' +
     '<div class="row">' +
     '<input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select id="cat" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<select id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
