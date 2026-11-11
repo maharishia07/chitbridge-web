@@ -903,22 +903,14 @@ var CBUi = (function () {
     var openOptions = Object.assign({}, options, { cancel: typeof options.cancel === 'function' ? function () { model.cancelNow(); } : undefined });
     var timer = setTimeout(function () { if (!model.finished) openPanel(model, openOptions); }, delayOf(options.delay));
     /* a job the device keeps is safe to close (that is its point), so no leave-the-page question; a job that lives in this tab only keeps the question */
-    var release = options.durable ? function () {} : guardLeaving();
+    var guard = leaveGuard(!options.durable);
     var trayTimer = setTimeout(function () { model.toTray(); }, BATCH_TRAY_AFTER_MS);
     model.stopTimers = function () { clearTimeout(timer); clearTimeout(trayTimer); clearTimeout(model.paintTimer); model.paintTimer = null; if (runningPanel === model) runningPanel = null; };
-    /** the panel becomes the tray (the work goes on, the screen is free); before the panel has opened it only decides where it will open */
-    model.toTray = function () {
-      if (model.tray || model.ended) return false;
-      var wasOpen = model.opened;
-      if (wasOpen) closePanel(model);
-      model.tray = true;
-      if (wasOpen) { model.opened = false; openPanel(model, openOptions); }
-      return true;
-    };
+    model.toTray = function () { return moveToTray(model, openOptions); };
     model.cancelNow = function () {
       if (typeof options.cancel !== 'function' || model.ended) return false;
       model.finished = true; model.ended = true; model.cancelled = true;
-      model.stopTimers(); release(); closePanel(model); options.cancel();
+      model.stopTimers(); guard.release(); closePanel(model); options.cancel();
       return true;
     };
     return {
@@ -928,8 +920,10 @@ var CBUi = (function () {
       toTray: function () { return model.toTray(); },
       cancelled: function () { return !!model.cancelled; },
       note: function (kind, values) { setNote(model, kind, values); },
+      /* the device turned out not to keep the job after all: the leave-the-page question comes back */
+      keepOpen: function () { if (!model.ended) guard.hold(); },
       get tray() { return model.tray; },
-      finish: function () { model.stopTimers(); release(); return finishBatch(model, options, openOptions); }
+      finish: function () { model.stopTimers(); guard.release(); return finishBatch(model, options, openOptions); }
     };
   }
   /** the state of one batch: the progress model plus the counts, the failed lines and where it is shown (always in the tray for the tray class, else the panel until it moves) */
@@ -948,6 +942,23 @@ var CBUi = (function () {
   }
   function batchRoom(model) {
     return model.max - model.done - model.failed;
+  }
+  /** the panel becomes the tray (the work goes on, the screen is free); before the panel has opened it only decides where it will open */
+  function moveToTray(model, openOptions) {
+    if (model.tray || model.ended) return false;
+    var wasOpen = model.opened;
+    if (wasOpen) closePanel(model);
+    model.tray = true;
+    if (wasOpen) { model.opened = false; openPanel(model, openOptions); }
+    return true;
+  }
+  /** the leave-the-page question of one batch: held from the start (a job that lives in this tab only) or later (hold, when the device turns out not to keep it); release ends it */
+  function leaveGuard(heldAtStart) {
+    var release = heldAtStart ? guardLeaving() : null;
+    return {
+      hold: function () { if (!release) release = guardLeaving(); },
+      release: function () { if (release) release(); release = null; }
+    };
   }
   /** leaving the page while a batch runs asks first; the returned function takes the guard off (once) */
   function guardLeaving() {

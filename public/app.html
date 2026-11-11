@@ -23673,14 +23673,17 @@ async function bulkJobRun(meta, kind, steps, carried) {
     batchJob.note('saving');
     const kept = outbox ? outbox.enqueueJob(meta, steps) : false;
     batchJob.note(kept ? 'saved' : 'private');
+    if (!kept || !outbox.durable()) batchJob.keepOpen(); /* the device did not keep it after all: leaving the page asks again */
   };
+  let paused = false;
   BULK_ACTIVE.add(meta.id);
   try {
     return await ui.progress.batch.run([...stepOfItem.keys()], options, async (chunk) => {
       const answer = { done: [], failed: [] };
       for (const step of new Set(chunk.map((item) => stepOfItem.get(item)))) {
         const res = await bulkStepAnswer(step, kind, outbox, handle);
-        if (res.kind === 'stopped') return Object.assign(answer, { stop: true });
+        if (res.kind === 'stopped') paused = true; /* back-offs used up or the session ended: the rest waits for the next visit */
+        if (res.kind === 'stopped' || res.kind === 'gone') return Object.assign(answer, { stop: true }); /* gone: another tab took the step, so it is left, never counted done */
         const reply = res.kind === 'reject' ? null : bulkAnswerOf(step.ep, step.items, res.reply);
         if (reply) {
           answer.done.push(...reply.done);
@@ -23694,7 +23697,8 @@ async function bulkJobRun(meta, kind, steps, carried) {
     });
   } finally {
     BULK_ACTIVE.delete(meta.id);
-    if (outbox) outbox.closeJob(meta.id);
+    if (outbox && paused) outbox.pauseJob(meta.id);
+    else if (outbox) outbox.closeJob(meta.id);
   }
 }
 /** a group action that survives a restart: kind = { ep, mount, speed, verb, label, unit, name?, payload? } (ep is a BULK_ACTIONS name); → { done, failed, leftItems, cancelled, left } like groupRun */
@@ -23706,6 +23710,7 @@ function groupJob(ids, kind) {
 /** one saved job, continued: the steps left in the outbox go on in the tray, with what the last run already did counted */
 function bulkJobResume(saved) {
   const meta = saved.meta;
+  if (bulkOutbox()) bulkOutbox().pauseJob(meta.id, false);
   const steps = saved.steps.map((entry) => Object.assign({}, entry));
   const left = steps.reduce((total, step) => total + step.items.length, 0);
   const priorFailed = [];
@@ -23722,17 +23727,15 @@ function bulkJobResume(saved) {
     return result;
   });
 }
-/** a job older than the key window (48 h) asks first: the server has forgotten its first steps, so a replay would be a new run */
-function bulkAskOldJob(saved) {
-  const days = Math.max(2, Math.floor((Date.now() - saved.at) / 86400000));
-  confirmAsk(
-    tx('Continue an old job?'),
-    esc(txf('This job was saved {days} days ago, so the server may not remember its first steps and some could run twice. Cancel drops the rest of it.', { days })),
-    tx('Continue'),
-    () => bulkJobResume(saved),
-    false,
-    () => window.CBOffline.closeJob(saved.id)
-  );
+/** a job older than the key window (48 h) asks first (the server has forgotten its first steps, so a replay would be a new run); so does a job that stopped part-way (back-offs used up, session ended): Continue goes on, Cancel drops the rest */
+function bulkAskSavedJob(saved) {
+  const days = Math.floor((Date.now() - saved.at) / 86400000);
+  const old = Date.now() - saved.at > window.CBOffline.jobMaxAgeMs;
+  const left = saved.steps.reduce((total, step) => total + step.items.length, 0);
+  const question = old
+    ? txf('This job was saved {days} days ago, so the server may not remember its first steps and some could run twice. Cancel drops the rest of it.', { days: Math.max(2, days) })
+    : txf('This job stopped part-way: {left} not done. Continue it now? Cancel drops the rest of it.', { left });
+  confirmAsk(tx(old ? 'Continue an old job?' : 'Continue your saved job?'), esc(question), tx('Continue'), () => bulkJobResume(saved), false, () => window.CBOffline.closeJob(saved.id));
 }
 /** start-up and sign-in (SEC-140 inside the outbox: only THIS person's entries are listed): queued writes go on, and a saved job goes on in the tray */
 async function bulkResume() {
@@ -23746,7 +23749,7 @@ async function bulkResume() {
   for (const saved of outbox.jobs()) {
     if (BULK_ACTIVE.has(saved.id)) continue;
     if (!saved.steps.length) outbox.closeJob(saved.id);
-    else if (Date.now() - saved.at > outbox.jobMaxAgeMs) bulkAskOldJob(saved);
+    else if (saved.meta.paused || Date.now() - saved.at > outbox.jobMaxAgeMs) bulkAskSavedJob(saved);
     else bulkJobResume(saved);
   }
 }
@@ -30428,7 +30431,10 @@ route();
       token: function () {
         return SESSION && SESSION.token;
       },
-      entity: cbMeId /* SEC-140: every queued entry carries who queued it, and only that person's session replays it */,
+      /* SEC-140: every queued entry carries who queued it, and only that person's session replays it. Read from the token's own ids (the same for a co-assist before and after the profile loads), not from UI._me */
+      entity: function () {
+        return SESSION && (SESSION.actorId || SESSION.entityId);
+      },
       onChange: cbPill
     });
     /* not on the load right after a clean-up: the slate stays clean until the next visit */ if (!(typeof CLEAN_LOAD !== 'undefined' && CLEAN_LOAD))

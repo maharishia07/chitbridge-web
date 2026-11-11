@@ -23,18 +23,28 @@
     }
   })();
   var mem = {}; // fallback when localStorage is unavailable (private mode)
+  var readFailed = false;
   var lostToMemory = false; // a write fell back to memory: closing the tab loses it
+  // the device would not answer: read as empty, and the job then says it cannot keep itself
+  function deviceSilent() {
+    readFailed = true;
+    return null;
+  }
+  // memory first: a value that could not be written to the device lives only there, and it is newer than anything the device still holds under that key
   function get(k) {
+    if (k in mem) return mem[k];
     try {
-      return ls ? ls.getItem(k) : k in mem ? mem[k] : null;
+      return ls ? ls.getItem(k) : null;
     } catch (e) {
-      return mem[k] || null;
+      return deviceSilent();
     }
   }
   function set(k, v) {
     try {
-      if (ls) ls.setItem(k, v);
-      else mem[k] = v;
+      if (ls) {
+        ls.setItem(k, v);
+        delete mem[k];
+      } else mem[k] = v;
     } catch (e) {
       mem[k] = v;
       lostToMemory = true;
@@ -112,8 +122,9 @@
     set(LSK, JSON.stringify(q));
     paint();
   }
+  // what THIS person has waiting (another entity's entries are not shown as ours)
   function pending() {
-    return readQ().length;
+    return readQ().filter(mine).length;
   }
   // who is signed in: null = this page does not stamp (the counter), '' = not known yet, else the id
   function signedInId() {
@@ -122,7 +133,8 @@
   // an entry is replayable only by the entity that queued it (SEC-140: a different person signing in must never replay someone else's queue)
   function mine(entry) {
     var signedIn = signedInId();
-    return signedIn === null || (signedIn !== '' && entry.entity === signedIn);
+    if (signedIn === null) return !entry.entity; /* a page that does not stamp replays only what carries no entity (legacy) */
+    return signedIn !== '' && entry.entity === signedIn;
   }
   function enqueue(req) {
     var list = readQ();
@@ -198,9 +210,25 @@
       entry.tries = (entry.tries || 0) + 1;
     });
   }
+  // entries past the key window (48 h) are unsafe to replay: a plain entry (own or not) and another entity's job step are removed; this person's own old job stays so the tray can ask. Newer entries of another entity wait for that person; nothing goes at sign-out
+  function sweepOld() {
+    var limit = Date.now() - JOB_MAX_AGE_MS;
+    var list = readQ();
+    var keep = list.filter(function (entry) {
+      var old = (entry.queued_at || Date.now()) < limit;
+      return !(old && (!entry.job || !mine(entry)));
+    });
+    if (keep.length !== list.length) writeQ(keep);
+  }
+  // nothing is replayed while a flush runs, before the session is known or offline; the sweep of old entries runs whenever the session is known
+  function readyToFlush() {
+    if (flushing || signedInId() === '') return false;
+    sweepOld();
+    return online();
+  }
   // replay this entity's plain entries (a bulk-job step is driven by its job, never here); each answer is written at once, so a crash never resends a settled one and another entity's entries stay as they are
   function flush() {
-    if (flushing || !online() || signedInId() === '') return Promise.resolve({ sent: 0, pending: pending() });
+    if (!readyToFlush()) return Promise.resolve({ sent: 0, pending: pending() });
     flushing = true;
     var list = readQ().filter(function (entry) {
         return mine(entry) && !entry.job;
@@ -241,7 +269,7 @@
   var onlineWaiters = [];
   // false when this browser keeps nothing (private window): closing the tab loses the job
   function durable() {
-    return !!ls && !lostToMemory;
+    return !!ls && !lostToMemory && !readFailed;
   }
   // store every step before step 1: steps = [{ ep, params, body, method, path, items, okIf404 }], meta = { id, kind, label, unit, mount, speed, verb, total } → whether the device keeps them
   function enqueueJob(meta, steps) {
@@ -302,6 +330,14 @@
       })
     );
   }
+  // a stopped job (back-offs used up, session ended) keeps its steps for the next visit, flagged so the tray asks first; pausedFlag false clears it
+  function pauseJob(jobId, pausedFlag) {
+    var list = readQ();
+    list.forEach(function (entry) {
+      if (entry.job && entry.job.id === jobId) entry.job.paused = pausedFlag !== false;
+    });
+    writeQ(list);
+  }
   function whenOnline() {
     if (online()) return Promise.resolve();
     return new Promise(function (resolve) {
@@ -359,7 +395,19 @@
     });
     return { kind: 'reject', status: status, reason: reason, data: error && error.data };
   }
+  // the server did not apply the step (401, 429, no connection): the attempt does not count, so a later first real send that answers 404 is a failure, not a "done"
+  function notApplied(id, priorAttempts) {
+    patchEntry(id, function (x) {
+      x.attempts = priorAttempts;
+    });
+  }
+  // a 401, a 429 or no connection means the server did not apply the step
+  function notAppliedAnswer(error) {
+    var status = error && error.status;
+    return status === 401 || status === 429 || !online();
+  }
   function stepFailed(entry, error, priorAttempts, send, opts, round) {
+    if (notAppliedAnswer(error)) notApplied(entry.id, priorAttempts);
     var settled = settleFailure(entry, error, priorAttempts);
     if (settled) return settled;
     if (!online()) return { kind: 'offline' };
@@ -477,6 +525,7 @@
     jobs: jobs,
     sendStep: sendStep,
     closeJob: closeJob,
+    pauseJob: pauseJob,
     whenOnline: whenOnline,
     durable: durable,
     jobMaxAgeMs: JOB_MAX_AGE_MS,

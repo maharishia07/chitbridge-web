@@ -28,7 +28,7 @@ const ids = (n) => Array.from({ length: n }, (_, i) => 'c' + (i + 1));
 /* the device: one localStorage shared by every page; refuseWrites turns it into a private window */
 function makeStorage(refuseWrites) {
   const map = new Map();
-  return { map, getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => { if (refuseWrites && k !== '__cb') throw new Error('quota'); if (refuseWrites) throw new Error('private'); map.set(k, String(v)); }, removeItem: (k) => map.delete(k) };
+  return { map, getItem: (k) => (map.has(k) ? map.get(k) : null), setItem: (k, v) => { if (refuseWrites === 'quota' && k !== '__cb') throw new Error('quota'); if (refuseWrites === true) throw new Error('private'); map.set(k, String(v)); }, removeItem: (k) => map.delete(k) };
 }
 /* the server: holds each Idempotency-Key once and answers a replay with the first answer; counts every call per key */
 function makeServer() {
@@ -70,7 +70,8 @@ function makePage(storage, server, who, options) {
   vm.createContext(sandbox);
   vm.runInContext(read('cb-offline.js'), sandbox);
   vm.runInContext(read('app/ui.js'), sandbox);
-  sandbox.CBOffline.configure({ entity: () => who, sleep: (ms) => { (sandbox.waits = sandbox.waits || []).push(ms); return Promise.resolve(); } });
+  sandbox.listeners = listeners;
+  sandbox.CBOffline.configure({ entity: options.noStamp ? null : () => who, sleep: (ms) => { (sandbox.waits = sandbox.waits || []).push(ms); return Promise.resolve(); } });
     vm.runInContext(jobBlock, sandbox);
   ['chitNameOf', 'groupRun', 'groupToast', 'tickUndone', 'confirmStatus', 'prodCategoriseSend'].forEach((name) => { try { vm.runInContext(sourceOf(name), sandbox); } catch (e) { /* prodCategoriseSend is cut below */ } });
   sandbox.goOnline = (up) => { sandbox.navigator.onLine = up; if (up) (listeners.online || []).forEach((handler) => handler()); };
@@ -130,7 +131,7 @@ const quiet = (p) => p.catch(() => {});
     const left = JSON.parse(storage.getItem('cb.outbox.v1'));
     check(server.calls.length === before && fetched === 0, 'bob replayed nothing (no api call, no plain replay)');
     check(left.length === 4 + 2 && left.every((e) => e.id === 'legacy' || e.entity === 'alice'), 'all of alice\'s entries and the unstamped one are still there, untouched');
-    check(bob.CBOffline.jobs().length === 0 && bob.CBOffline.pending() === 6, 'bob sees no job of his own');
+    check(bob.CBOffline.jobs().length === 0 && bob.CBOffline.pending() === 0, 'bob sees no job of his own and nothing of alice\'s in his count');
     const alice2 = makePage(storage, server, 'alice');
     alice2.fetch = bob.fetch;
     await alice2.bulkResume();
@@ -248,6 +249,88 @@ const quiet = (p) => p.catch(() => {});
     check(!sourceOf('confirmStatus').includes('groupJob'), 'status change stays on the in-tab path (groupRun); #527 makes it resumable');
   }
 
+  console.log('review fixes: a write the device refuses is never counted done');
+  {
+    const storage = makeStorage('quota'), server = makeServer();
+    const page = makePage(storage, server, 'alice');
+    const result = await archive(page, 3);
+    check(page.CBOffline.durable() === false, 'the device refused the write, durable() says so');
+    check(server.calls.length === 3 && result.done.length === 3, 'all three steps were really sent (3 calls) before being counted done, kept in memory');
+    check(page.spoken.includes("This browser can't keep the job. Closing this tab loses it."), 'and the box says closing loses it');
+    check((page.listeners.beforeunload || []).length === 1, 'the leave-the-page question came back after the device refused (durable() re-read after prepare)');
+
+    const s2 = makeStorage(), v2 = makeServer();
+    const p2 = makePage(s2, v2, 'alice');
+    v2.script = (ep, o) => (o.params.id === 'c1' ? () => { const q = JSON.parse(s2.getItem('cb.outbox.v1')); s2.setItem('cb.outbox.v1', JSON.stringify(q.filter((e) => !/:1$/.test(e.id)))); return {}; } : null);
+    const two = await archive(p2, 3);
+    check(two.done.length === 1 && two.leftItems.length === 2 && two.failed.length === 0 && v2.calls.length === 1, 'another tab took step 2: it is left, not counted done (1 done, 2 left, 0 failed)');
+  }
+
+  console.log('review fixes: a page that does not stamp replays only what carries no entity');
+  {
+    const storage = makeStorage(), server = makeServer();
+    storage.setItem('cb.outbox.v1', JSON.stringify([{ id: 'stamped', method: 'POST', path: '/api/a', entity: 'alice', tries: 0, queued_at: Date.now() }, { id: 'legacy', method: 'POST', path: '/api/b', tries: 0, queued_at: Date.now() }]));
+    const page = makePage(storage, server, null, { noStamp: true });
+    const sent = [];
+    page.fetch = async (url) => { sent.push(url); return { status: 200, clone: () => ({ json: async () => ({}) }) }; };
+    await page.CBOffline.flush();
+    check(sent.length === 1 && sent[0].endsWith('/api/b'), 'only the unstamped legacy entry went');
+    check(JSON.parse(storage.getItem('cb.outbox.v1')).map((e) => e.id).join() === 'stamped', 'the stamped entry is still there');
+  }
+
+  console.log('review fixes: pending counts your own; entries past 48 h are swept (plain entries, others\' job steps), your own old job stays to ask');
+  {
+    const storage = makeStorage(), server = makeServer();
+    const old = Date.now() - 3 * 86400000, fresh = Date.now();
+    const job = (who, at) => ({ id: 'job:' + who + ':0', ep: 'archive', params: { id: 'x' }, items: ['x'], entity: who, queued_at: at, tries: 0, attempts: 0, job: { id: who, kind: 'archive', step: 0, of: 1, total: 1, at } });
+    storage.setItem('cb.outbox.v1', JSON.stringify([
+      { id: 'a-old', entity: 'alice', queued_at: old, method: 'POST', path: '/p' }, { id: 'b-old', entity: 'bob', queued_at: old, method: 'POST', path: '/p' },
+      { id: 'b-new', entity: 'bob', queued_at: fresh, method: 'POST', path: '/p' }, job('alice', old), job('bob', old)
+    ]));
+    const page = makePage(storage, server, 'alice');
+    page.fetch = async () => ({ status: 200, clone: () => ({ json: async () => ({}) }) });
+    check(page.CBOffline.pending() === 2, 'alice sees 2 of hers (not bob\'s)');
+    await page.CBOffline.flush();
+    const ids = JSON.parse(storage.getItem('cb.outbox.v1')).map((e) => e.id).sort().join();
+    check(ids === 'b-new,job:alice:0', 'swept: both old plain entries and bob\'s old job step; kept: bob\'s new entry (waits for bob) and alice\'s old job (the tray asks): ' + ids);
+  }
+
+  console.log('review fixes: a 429 is not an applied attempt; a stopped job keeps its steps and asks on the next visit');
+  {
+    const storage = makeStorage(), server = makeServer();
+    const page = makePage(storage, server, 'alice');
+    server.script = (ep, o) => (o.params.id === 'c2' ? () => Promise.reject(Object.assign(new Error('slow down'), { status: 429 })) : null);
+    const stopped = await archive(page, 4);
+    const kept = JSON.parse(storage.getItem('cb.outbox.v1') || '[]');
+    check(stopped.done.length === 1 && kept.length === 3 && kept.every((e) => e.job.paused === true), 'stopped: 1 done, the other 3 steps stay in the outbox, flagged paused');
+    check(kept[0].attempts === 0, 'the 429 attempts did not count (attempts back to 0), so a later first real send that answers 404 is a failure');
+    server.script = null;
+    const next = makePage(storage, server, 'alice');
+    await next.bulkResume();
+    await wait(30);
+    check(next.asks.length === 1 && /stopped part-way: 3 not done/.test(next.asks[0].body) && server.calls.length === 6, 'the next visit asks (3 not done) and sends nothing yet');
+    next.asks[0].onOk();
+    await wait(200);
+    check(server.calls.length === 9 && JSON.parse(storage.getItem('cb.outbox.v1') || '[]').length === 0, 'Continue finishes it, the outbox is empty');
+    const dropped = makePage(storage, server, 'alice');
+    dropped.CBOffline.enqueueJob({ id: 'zz', kind: 'archive', total: 1 }, [{ ep: 'archive', params: { id: 'q' }, items: ['q'], names: ['q'] }]);
+    dropped.CBOffline.pauseJob('zz');
+    const again = makePage(storage, server, 'alice');
+    await again.bulkResume();
+    again.asks[0].onCancel();
+    check(JSON.parse(storage.getItem('cb.outbox.v1') || '[]').length === 0, 'Cancel drops the rest');
+  }
+
+  console.log('review fixes: the outbox identity is the token\'s own id, the same before and after the profile loads (co-assist)');
+  {
+    const snippet = html.match(/entity: function \(\) \{\s*return (SESSION && \(SESSION\.actorId \|\| SESSION\.entityId\));\s*\}/);
+    check(!!snippet, 'app.html configures the outbox entity from SESSION.actorId || SESSION.entityId (not UI._me)');
+    const read = (session, me) => new Function('SESSION', 'UI', 'return ' + snippet[1])(session, { _me: me });
+    const coAssist = { actorId: 'actor-1', entityId: 'entity-1' };
+    check(read(coAssist, undefined) === 'actor-1' && read(coAssist, { identity_id: 'something-else' }) === 'actor-1', 'a co-assist reads actor-1 before and after UI._me loads');
+    check(read({ entityId: 'entity-1' }, undefined) === 'entity-1', 'an entity login reads its entity id');
+  }
+
   console.log('every state, in the recorded words');
   {
     const page = makePage(makeStorage(), makeServer(), 'alice');
@@ -279,7 +362,7 @@ const quiet = (p) => p.catch(() => {});
   console.log('core.js: the step names its own key');
   check(core.includes('idemKey: stepKey') && core.includes('if (stepKey) return stepKey'), 'api() takes opts.idemKey (the same hunk as #527)');
   check(/'prodStatusBulk'/.test(core.slice(core.indexOf('const OUTBOX_KEYS'), core.indexOf('const OUTBOX_KEYS') + 2500)), 'prodStatusBulk is an outbox name');
-  check(/entity: cbMeId/.test(html), 'app.html configures the outbox with the signed-in entity (cbMeId)');
+  check(html.includes('entity: function') && html.includes('SESSION.actorId || SESSION.entityId'), 'app.html configures the outbox with the signed-in entity');
 
   console.log(failures ? failures + ' FAILED' : 'all passed');
   process.exit(failures ? 1 : 0);

@@ -145,11 +145,11 @@ of file each thing is; this says what already does the job.
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `panel` | `sides.js` |  |
+| 19 | `later` | `signin-ui.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 18 | `step` | `cart.js` |  |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |
-| 18 | `later` | `signin-ui.js` |  |
 | 18 | `verify` | `bookpack.js` | manifest's own hash. |
 | 18 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
