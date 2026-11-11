@@ -100,10 +100,13 @@ const noScroll = (page) => page.evaluate(() => {
     check(idsOk, 'every component button carries its element code and its mount');
     const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^UIS001-B\d\d$/.test(node.getAttribute('data-cbsid'))));
     check(headIds, 'every page control carries UIS001-Bnn');
+    await goTab(page, 'waves');
+    await page.waitForSelector('[data-testid="gal-wave-0"]');
+    check((await page.$$('section[data-testid^="gal-wave-"]')).length === 5 && (await page.$$('[data-testid="gal-wave-progress"] [role="progressbar"]')).length === 5, label + ': the Waves section draws five rows, each with a progress bar, from ui-waves.json');
 
     for (const [theme, key] of [['light', 'cream'], ['dark', 'dark'], ['terminal', 'terminal']]) {
       await pick(page, 'theme', key);
-      for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before']) {
+      for (const tab of ['components', 'popups', 'icons', 'tokens', 'themes', 'before', 'waves']) {
         await goTab(page, tab);
         const scroll = await noScroll(page);
         check(scroll.page <= 0 && scroll.pageX <= 0 && scroll.panelX <= 0, label + ' ' + theme + ' ' + tab + ': page does not scroll, nothing scrolls sideways ' + JSON.stringify(scroll));
@@ -217,7 +220,11 @@ const noScroll = (page) => page.evaluate(() => {
     await goTab(page, 'themes');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
     await goTab(page, 'meets');
-    check((await page.$$('[data-testid="gal-meets-row"]')).length === 7, 'Meets the standard: seven rules, each with its source, its proof and its live result');
+    check((await page.$$('[data-testid="gal-meets-row"]')).length === 13, 'Meets the standard: thirteen rules (seven visual, six keyboard and focus), each with its source, its proof and its live result');
+    const live = await page.$$eval('[data-testid^="gal-meetlive-"]', (nodes) => nodes.map((node) => node.getAttribute('data-testid') + ':' + node.textContent));
+    live.forEach((line) => console.log('  LIVE keyboard row: ' + line));
+    check(live.length === 6 && !live.some((line) => /wait/.test(line)) && live.filter((line) => /^gal-meetlive-(pass|fail):(PASS|FAIL) /.test(line)).length === 5, 'the six keyboard rows: five measured chips (PASS or FAIL read from the page, never waiting) and one rule the walk checks');
+    check(/^gal-meetlive-fail:FAIL.*focus stayed/.test(live[0]) || /^gal-meetlive-pass:PASS/.test(live[0]), 'the popup-focus chip says what the focus did');
     check((await page.$$eval('[data-testid="gal-meets-row"] a[href^="https://"]', (nodes) => nodes.length)) >= 9, 'the sources are plain links');
     check((await page.$$('[data-testid="gal-meet-pass"]')).length >= 80 && (await page.$$('[data-testid="gal-meet-fail"]')).length === 0, 'the live results: every theme PASSES every rule');
     const ringChips = await page.$$eval('[data-testid="gal-meets-row"]:nth-of-type(2) [data-testid^="gal-meet-"]', (nodes) => nodes.map((node) => node.textContent));
@@ -295,7 +302,7 @@ const noScroll = (page) => page.evaluate(() => {
   await shellPage.goto(base + '/ui-standard.html');
   await shellPage.waitForSelector('[data-testid="gal-to-standards"]');
   check((await shellPage.textContent('[data-testid="gal-to-standards"]')).indexOf('Standards') >= 0 && (await shellPage.getAttribute('[data-testid="gal-to-standards"]', 'href')) === '/standards.html', 'the shell bar has "‹ Standards" back to the Standards page');
-  check((await shellPage.$$('[data-testid^="skel-nav-"]')).length === 7, 'the frame sidebar lists the seven sections');
+  check((await shellPage.$$('[data-testid^="skel-nav-"]')).length === 8, 'the frame sidebar lists the eight sections');
   const heights = await shellPage.$$eval('#hdr button, [data-testid^="skel-nav-"], .tohome', (nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
   check(heights.every((height) => height >= 44), 'every control in the bar, the list and the shell is at least 44 px high (' + Math.min(...heights) + ')');
   const codes = await shellPage.$$eval('[data-cbsid^="UIS001-B"]', (nodes) => nodes.map((node) => node.getAttribute('data-cbsid')));

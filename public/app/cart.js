@@ -2988,37 +2988,19 @@
   }
 
   /**
-   * ⭐⭐ THE LETTER TILE — Athi, 2026-08-15: *"can we create a box with different colors rendering with the first
-   * letter of the product"*.
+   * ⭐⭐ THE NEUTRAL TILE — UX-4 (Athi, 6 Nov 2026: a neutral icon instead of a letter).
    *
-   * This retires the compromise that came before it. The column used to be hidden until a catalogue had a real
-   * photograph, because the alternative was 52px of empty grey on every row for nothing. A coloured initial is
-   * not nothing: it gives a text-only list the visual rhythm that makes it scannable, it distinguishes
-   * "Tamarind" from "Toor Dal" at a glance, and it does it TODAY — the product has zero images and the schema
-   * for them is not built (see SPEC-object-storage.md).
-   *
-   * So the column is now always present, and a real photograph simply replaces the tile when one exists.
-   *
-   * ⚠️ THE COLOUR IS DERIVED, NOT RANDOM. Hue comes from a hash of the name, so a product is the same colour on
-   * every screen, every session, for every party — which is what makes it a recognition aid rather than
-   * decoration. Random-per-render would be actively worse than grey: it would teach the eye a pattern that is
-   * not true.
-   *
-   * ⚠️ SATURATION AND LIGHTNESS ARE FIXED so white text stays legible on every hue, and the yellow-green band
-   * (where a given lightness reads much brighter) is darkened. A tile whose letter cannot be read is a worse
-   * empty box than the empty box.
+   * An item with no photograph draws ONE quiet tile: the same box a photograph would fill, a plain tag glyph in
+   * a muted theme token. It says "no picture yet" and looks intended. It replaces the coloured first-letter tile
+   * (Athi, 15 Aug), whose hashed colours and letters read as a random pick on a shop window (walk 18 Oct, W22).
+   * The glyph is our own drawing (no third-party icon licence); theme tokens only, so it holds in Light and Dark.
+   * Per-category glyphs wait for the fixed icon set (UX-39); every category shows this one until then.
    */
-  function tileFor(name) {
-    var text = String(name == null ? '' : name).trim();
-    var count = 0;
-    for (var index = 0; index < text.length; index++) count = (count * 31 + text.charCodeAt(index)) >>> 0;
-    var hue = count % 360;
-    /* 40°–190° is the yellow→green stretch that reads bright at a given lightness; drop it so contrast holds. */
-    var light = hue > 40 && hue < 190 ? 34 : 44;
-    return {
-      bg: 'hsl(' + hue + ',38%,' + light + '%)',
-      letter: (text.charAt(0) || '?').toUpperCase()
-    };
+  var TILE_ICON =
+    '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    '<path d="M3 12.5V4h8.5L21 13.5 13.5 21 3 12.5z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>';
+  function tileHTML() {
+    return '<span class="cbcat-thumb cbcat-tile" aria-hidden="true">' + TILE_ICON + '</span>';
   }
 
   /**
@@ -3226,9 +3208,8 @@
       /* ⭐ COMPACT (the online shop, M64): no photograph → NO box at all. The row is name · price · control on one line and the grid has no thumb cell. */
       if (opts && opts.compact && (!m || !m.src)) return '';
       if (!m) {
-        /* No photograph — the derived letter tile, which is a real visual rather than a placeholder for one. */
-        var t = tileFor(name);
-        return '<span class="cbcat-thumb cbcat-tile" style="background:' + t.bg + '" aria-hidden="true">' + esc(t.letter) + '</span>';
+        /* No photograph — the neutral tile (UX-4). */
+        return tileHTML();
       }
       /**
        * ⭐ data-src, NOT src. The observer fills it when the row nears the viewport. `loading="lazy"` is set too
@@ -3241,17 +3222,12 @@
        * catalogue is copied between entities — so the row must degrade to something deliberate rather than to
        * nothing.
        */
-      var t = tileFor(name);
       return (
         '<span class="cbcat-thumb cbcat-skel">' +
         '<img data-src="' +
         esc(m.src) +
         '" alt="" loading="lazy" decoding="async"' +
-        ' onerror="CBCatUI.fellBack(this,\'' +
-        esc(t.bg) +
-        "','" +
-        esc(t.letter) +
-        '\')">' +
+        ' onerror="CBCatUI.fellBack(this)">' +
         (m.kind === 'video' ? '<span class="cbcat-play">▶</span>' : '') +
         '</span>'
       );
@@ -3470,7 +3446,7 @@
         stockChip =
           '<span class="cbcat-stock" data-testid="shop-stock" style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;white-space:nowrap;' +
           (_in ? 'background:#e8f5ec;color:#1d6b3a' : 'background:#fdecec;color:#a33') +
-          (_mins > 240 ? ';opacity:.7' : '') +
+          (_mins > 240 ? ';outline:1px dashed currentColor;outline-offset:-1px' : '') +
           '">' +
           (_in ? 'in stock ' + esc(String(_av.qty)) : 'out of stock') +
           ' · as of ' +
@@ -4331,18 +4307,17 @@
    * lazy list with no manual escape is a list with rows nobody can get to.
    */
   /**
-   * The image failed. Turn its box back into the letter tile rather than leaving a blank.
+   * The image failed. Turn its box back into the neutral tile rather than leaving a blank.
    *
    * ⚠️ The <img> is REMOVED, not hidden — a broken img left in the DOM keeps its alt box and its own failed
    * layout, and some browsers draw a placeholder glyph over the tile behind it.
    */
-  function fellBack(node, bg, letter) {
+  function fellBack(node) {
     var box = node && node.parentElement;
     if (!box) return;
     node.remove();
     box.className = 'cbcat-thumb cbcat-tile';
-    box.style.background = bg;
-    box.textContent = letter;
+    box.innerHTML = TILE_ICON;
   }
 
   function observeMore(rootEl) {
@@ -4461,14 +4436,9 @@
       '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:var(--warn-tint);',
       'border:1px solid var(--line,var(--line));overflow:hidden;position:relative;display:grid;place-items:center}',
       '.cbcat-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
-      /* The letter tile. White on a derived mid-tone hue — see tileFor for why the colour is a hash and not a
-         random pick, and why the yellow-green band is darkened. */
-      /* ⚠️ NORMAL WEIGHT, not 800 — Athi: "keep the letter normal, bold letter not looking ok". He is right: the
-         tile is a quiet recognition aid sitting beside the product NAME, and a heavy letter competes with the
-         name for the same glance. The colour already does the identifying work; the letter only has to confirm
-         it. */
-      '.cbcat-tile{color:#fff;font-weight:400;font-size:var(--fs-5);line-height:1;letter-spacing:.02em;',
-      'font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;user-select:none}',
+      /* The neutral tile (UX-4): a muted tag glyph on the quiet tint; tokens only, so Light and Dark both read. */
+      '.cbcat-tile{background:var(--neutral-tint,#EEF1F5);color:var(--grey-2,#5b6472);user-select:none}',
+      '.cbcat-tile svg{width:55%;height:55%;display:block}',
       '.cbcat-nomedia{font-size:var(--fs-4);opacity:.4}',
       '.cbcat-play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,46,61,.34);',
       'color:#fff;font-size:var(--fs-3)}',
@@ -4612,7 +4582,7 @@
     observe: observe,
     ensureCss: ensureCss,
     mediaOf: mediaOf,
-    tileFor: tileFor,
+    tileHTML: tileHTML,
     hintOf: hintOf,
     skeletonHTML: skeletonHTML,
     growWindow: growWindow,

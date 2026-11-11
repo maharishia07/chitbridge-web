@@ -115,7 +115,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   const c = { matched: await status(p, 'matched'), suggested: await status(p, 'suggested'), bankOnly: await status(p, 'bank-only'), missing: await status(p, 'missing') };
   ok(c.matched === 2 && c.suggested === 3 && c.bankOnly === 1 && c.missing === 1, 'matched 2 · suggested 3 · bank-only 1 · not on the statement 1 (' + JSON.stringify(c) + ')');
   ok(S.ledgerCalls.length === 1 && S.ledgerCalls[0] === '?from=2026-09-01&to=2026-09-25', 'the ledger is read once, for the statement\'s dates only (' + S.ledgerCalls[0] + ')');
-  ok(await p.locator('[data-testid="bank-count-matched"]').count() === 1 && /2/.test(await p.textContent('[data-testid="bank-count-matched"]')) && /4 lines need you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says the counts and "4 lines need you"');
+  ok(await p.locator('[data-testid="bank-group-matched"]').count() === 1 && /2/.test(await p.textContent('[data-testid="bank-group-matched"]')) && /4 lines need you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says the counts and "4 lines need you"');
   await p.screenshot({ path: path.join(SHOTS, 'bank-lines-laptop.png') });
 
   /* ── 2 · NO REQUEST CARRIES THE FILE ── */

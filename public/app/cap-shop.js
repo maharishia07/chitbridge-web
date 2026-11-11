@@ -372,6 +372,44 @@ function vaultRemoveButton(sectionIndex, rowIndex) {
         rowIndex +
         ')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>';
 }
+/** SET-34: a Copy button beside a row's value (a bank number, a tax id) — it copies what is in the box now, and says so on the button */
+function vaultCopyButton(sectionIndex, rowIndex) {
+  return (
+    '<button type="button" data-testid="vault-copy" title="' +
+    esc(tx('Copy this detail')) +
+    '" onclick="vaultCopyRow(' +
+    sectionIndex +
+    ',' +
+    rowIndex +
+    ',this)" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-height:28px;padding:0 8px;cursor:pointer">' +
+    esc(tx('Copy')) +
+    '</button>'
+  );
+}
+/** the buttons at the end of a row: Copy, then Remove */
+function vaultRowButtons(sectionIndex, rowIndex) {
+  return vaultCopyButton(sectionIndex, rowIndex) + vaultRemoveButton(sectionIndex, rowIndex);
+}
+/** copy a row's value to the clipboard and say so on its button (SET-34) */
+function vaultCopyRow(sectionIndex, rowIndex, node) {
+  var section = _vaultSecs()[sectionIndex],
+    row = section && section.rows && section.rows[rowIndex],
+    done = tx('Copied'),
+    keep = tx('Select it and copy');
+  if (!row || !row.value) return;
+  var said = function (words) {
+    node.textContent = words;
+  };
+  if (!(navigator.clipboard && navigator.clipboard.writeText)) return said(keep);
+  navigator.clipboard.writeText(String(row.value)).then(
+    function () {
+      said(done);
+    },
+    function () {
+      said(keep);
+    }
+  );
+}
 /* One row: the name the USER gives it, and the value. The tag rides along invisibly when the name is one we know. */
 function vaultRowHTML(r, i, j, type) {
   var tag = r.tag || '',
@@ -449,7 +487,7 @@ function vaultRowHTML(r, i, j, type) {
         (r.source && r.source !== 'profile' ? ' · ' + esc(r.source) : '') +
         '</span>'
       : '') +
-    vaultRemoveButton(i, j) +
+    vaultRowButtons(i, j) +
     '</div>'
   );
 }

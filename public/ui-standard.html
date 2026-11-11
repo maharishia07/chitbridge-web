@@ -23,7 +23,7 @@
 :root{
   --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6; --ink:#1D1B16; --muted:#5E594D; --line:#8A8374; --soft:#DDD6C6;
   --accent:#16693F; --accent-ink:#FFFFFF; --accent-text:#16693F; --focus-ring:var(--ink); --focus-halo:var(--page); --danger:#8E3517; --ok:#16693F; --bad:#B0401C;
-  --scrim:rgba(0,0,0,.45); --press-shadow:rgba(0,0,0,.35); --bad-tint:rgba(196,86,47,.18); --art-bg:#FFFFFF; --act-h:44px; --act-pad:20px; --act-radius:9px; --act-font:14px; --act-weight:700; --hdr-h:120px;
+  --scrim:rgba(0,0,0,.45); --press-shadow:rgba(0,0,0,.35); --bad-tint:rgba(196,86,47,.18); --blue:#3F66A6; --blue-tint:#eef3fb; --blue-tint-line:#cfe0f4; --art-bg:#FFFFFF; --act-h:44px; --act-pad:20px; --act-radius:9px; --act-font:14px; --act-weight:700; --hdr-h:120px;
 }
 /* the avatar's themes (engine APP_THEMES) set the app's tokens on <html>; the page's own names follow them. Cream sets none and keeps the values above. */
 :root[data-themed]{
@@ -109,6 +109,13 @@ button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid var(
 .tok{table-layout:fixed}.tok td,.tok th{overflow-wrap:anywhere}
 .meets-row{border-bottom:1px solid var(--soft);padding:8px 0}.meets-row h3{margin:0 0 4px}.meets-row p{margin:2px 0}.src a{color:var(--accent-text)}
 .res{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.res span{border:1px solid currentColor;border-radius:4px;padding:1px 6px;font-size:calc(11px*var(--k,1))}.res .pass{color:var(--ok)}.res .fail{color:var(--bad);font-weight:700}
+.wv-body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.wv-prog{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}.wv-prog .cbp-bar{grid-column:1/-1;grid-row:2}
+.wv-lab{font-size:calc(12px*var(--k,1));color:var(--muted);margin-inline-end:8px}
+.wv-num{font-variant-numeric:tabular-nums;font-weight:600;font-size:calc(13px*var(--k,1))}
+.wv-pair{margin:0;font-size:calc(14px*var(--k,1));unicode-bidi:plaintext}.wv-pair small{color:var(--muted)}
+.wv-status{border:1px solid currentColor;border-radius:6px;padding:2px 8px;font-size:calc(12px*var(--k,1));font-weight:700;color:var(--muted)}
+.wv-status[data-status="done"]{color:var(--ok)}.wv-status[data-status="in progress"],.wv-status[data-status="landed, measuring"]{color:var(--accent-text)}
 .country{margin-top:12px;border:2px dashed var(--line);border-radius:8px;padding:8px 12px}
 .themes th,.themes td{padding:3px 2px;font-size:calc(11px*var(--k,1))}.themes td{text-align:center}.themes td.fail{color:var(--bad);font-weight:700}.themes th{font-weight:600}.themes small{font-weight:400;color:var(--muted)}
 select{min-height:28px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;font:inherit;font-size:calc(12px*var(--k,1))}
@@ -122,7 +129,7 @@ select{min-height:28px;border:1px solid var(--line);background:var(--card);color
 .modal .mhd{padding:0 16px 8px}.modal .mhd .t{font-weight:700;font-size:calc(17px*var(--k,1))}
 .modal .mbody{padding:4px 16px 12px;max-height:54vh;overflow-y:auto}
 .modal .mfoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--soft)}
-.modal .mfoot button{flex:1 1 0;min-width:0;height:var(--act-h);border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--act-radius);font:inherit;font-size:calc(var(--act-font)*var(--k,1));font-weight:var(--act-weight);cursor:pointer}
+.modal .mfoot button{flex:1 1 0;min-width:0;min-height:var(--act-h);border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:var(--act-radius);font:inherit;font-size:calc(var(--act-font)*var(--k,1));font-weight:var(--act-weight);cursor:pointer}
 .modal .mfoot button.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .modal .mfoot button.danger{background:var(--danger);border-color:var(--danger);color:var(--card)}
 .modal .mxrow .act{height:var(--act-h);min-width:var(--act-h)}

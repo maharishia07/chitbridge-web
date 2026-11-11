@@ -196,6 +196,8 @@ W.run('returns', async (w) => {
     await AU.page.click('[data-testid="pr-open-1A-2200"]');
     await AU.page.waitForFunction(() => /#ledgers/.test(location.hash), null, { timeout: 8000 });
     await AU.page.waitForFunction(() => (document.querySelector('#lg_out') || {}).textContent && /GST collected/.test(document.querySelector('#lt_pane').textContent), null, { timeout: 10000 }).catch(() => {});
+    /* the pane can say 'GST collected' (the ledger list) before the ledger read is sent: wait for the READ itself, not for the words */
+    for (let waited = 0; waited < 10000 && !AU.S.calls.some((c) => /GET \/api\/books\/ledger\/2200/.test(c)); waited += 100) await AU.page.waitForTimeout(100);
     const led = AU.S.calls.filter((c) => /GET \/api\/books\/ledger\/2200/.test(c));
     const pane = await text(AU.page, '#lt_pane');
     const ok = led.length >= 1 && /from=2026-07-01/.test(led[led.length - 1]) && /to=2026-09-30/.test(led[led.length - 1]) && /GST collected/.test(pane) && AU.errs.length === 0;

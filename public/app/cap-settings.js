@@ -611,6 +611,35 @@ var CBSettings = (function () {
      * the raw key list is folded away as Advanced, never in the way */
     return []; /* Athi, 16 Oct: "if we are hiding the complexity, we don't need to specify it here" — sign-in, Download and pairing make the keys */
   }
+  /** put a text on the clipboard and say so on the button; a browser that refuses leaves the text on screen to select (SET-34) */
+  function copyText(text, node) {
+    var said = function (words) {
+      if (node) node.textContent = T(words);
+    };
+    if (!(navigator.clipboard && navigator.clipboard.writeText)) return said('Select it and copy');
+    navigator.clipboard.writeText(String(text || '')).then(
+      function () {
+        said('Copied');
+      },
+      function () {
+        said('Select it and copy');
+      }
+    );
+  }
+  /** the new key, shown once, with a Copy button (SET-34) */
+  function paintKeyOnce(key) {
+    $('sx_key_out').innerHTML =
+      '<b>' +
+      esc(T('Copy it now — it is shown once.')) +
+      '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
+      esc(key || '') +
+      '</div><button type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
+      esc(T('Copy')) +
+      '</button>';
+    $('sx_key_copy').onclick = function () {
+      copyText(key, this);
+    };
+  }
   function keysSection(after) {
     var kl = null;
     var keyRows = function () {
@@ -651,12 +680,7 @@ var CBSettings = (function () {
             failed: T('Could not make the key'),
             out: 'sx_key_out',
             outcome: function (r) {
-              $('sx_key_out').innerHTML =
-                '<b>' +
-                esc(T('Copy it now — it is shown once.')) +
-                '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
-                esc((r && r.key) || '') +
-                '</div>';
+              paintKeyOnce(r && r.key);
               readKeys();
             }
           }
@@ -1864,8 +1888,7 @@ var CBSettings = (function () {
     network: 'Network'
   };
   var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
-  /* WALK-REG R21/R43 (drift walk, 16 Oct): the trade-documents vault is export paperwork — kept for the workshop and forms, hidden on a local
-   * shop's Account until export is switched on (no opt-in flag yet; the host stays so the vault code keeps its target) */
+  /* SET-34 (Athi, 6 Nov 2026): the vault and the keys are shown on Account (they were hidden since WALK-REG R21/R43 and R52, 16 Oct); the vault rows have Copy buttons */
   /* WALK-REG 2026-10-16 R43: a web page does not name its device yet (only the counter does), so its sign-in is never in the list — say so, not a bare "0 devices" beside "signed in here" */
   function deviceListLegacyNote() {
     var sessions = H.data.ses;
@@ -1888,8 +1911,11 @@ var CBSettings = (function () {
       '<div id="sx_dev_bar"></div>',
       lineOut('sx_dev_out'),
       '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
-      '<div id="sx_keys_card" data-testid="sx-keys-card" hidden></div>',
-      '<div data-testid="sx-vault-wrap" hidden><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
+      keysHead(),
+      '<div id="sx_key_bar"></div>',
+      lineOut('sx_key_out'),
+      '<div class="sx-list" id="sx_key_list" data-testid="sx-key-list"></div>',
+      '<div data-testid="sx-vault-wrap"><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
       '<p class="sub"><a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div></div>'
     ]);
@@ -2292,38 +2318,8 @@ var CBSettings = (function () {
     paintDevBar();
     readSes().then(readDev);
 
-    /* keys for other systems: the ONE list lives under Connectors (keysSection; was Counters & keys until WALK-REG R31) — here the count from the same read, and the door; never a second list or minting */
-    function paintKeys() {
-      var d = H.data.keys || {},
-        keys = (d.r && d.r.keys) || [],
-        latest = keys.slice().sort(function (first, second) {
-          return _keySeenAt(second) - _keySeenAt(first);
-        })[0];
-      $('sx_keys_card').innerHTML =
-        '<div class="sx-card">' +
-        (d.state === 'loading'
-          ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
-          : d.state === 'error'
-            ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
-            : '<div class="sx-big" data-testid="sx-keys-count">' +
-              keys.length +
-              ' ' +
-              esc(T(keys.length === 1 ? 'key' : 'keys')) +
-              '</div>' +
-              '<p class="sub" data-testid="sx-keys-last">' +
-              esc(
-                latest && latest.seen && latest.seen.at
-                  ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at)
-                  : keys.length
-                    ? T('None has reached us yet.')
-                    : T('No keys yet')
-              ) +
-              '</p>') +
-        '<a class="sx-link" href="/settings.html#/connectors" data-testid="sx-keys-door">' +
-        esc(T('Make, see or revoke a key')) +
-        ' ›</a></div>';
-    }
-    load('keys', 'keysList', null, paintKeys);
+    /* SET-34 (Athi, 6 Nov 2026): the keys are SHOWN here, in the one list with Make a key, Copy and Revoke — no door to an empty Connectors page */
+    keysSection();
 
     /* the vault: the workshop's own card (cap-shop.js), every section type here — Your shop shows the identity rows only */
     UI._vaultOnly = '';

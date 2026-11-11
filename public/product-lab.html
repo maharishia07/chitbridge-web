@@ -106,6 +106,7 @@ tr.has .ul.got{opacity:1}
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->
@@ -424,7 +425,7 @@ function buildChoose() {
     '</div>' +
     '<div class="row">' +
     '<input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select id="cat" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<select id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
