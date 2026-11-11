@@ -7,9 +7,7 @@
 //      reconnect (queue-and-replay), carrying an Idempotency-Key so a replay can never double-apply (needs the
 //      server-side idempotency check — Phase 2; until then use submit() only for genuinely-offline captures).
 // Storage is localStorage (small, synchronous, survives reload/crash). Swap to IndexedDB later for large payloads.
-// OWNS the drafts and the outbox · CALLED BY every page that saves work (app.html, till.html, the small apps) through CBOffline.
-// BULK JOBS (QA-129 first cut): a group action stores every step here BEFORE step 1 (enqueueJob: one entry per step, its Idempotency-Key job:<jobId>:<step>), sends them one by one (sendStep: retry with back-off,
-//   a replayed 404 counts as done) and, after a restart, jobs() lists what is left for the tray to continue. Each entry is stamped with the signed-in entity (SEC-140): another person's entries are never replayed.
+// OWNS the drafts, the outbox and the saved steps of a bulk job (enqueueJob · sendStep · jobs, each entry stamped with its entity: SEC-140) · CALLED BY every page that saves work (app.html, till.html, the small apps) through CBOffline.
 // FLOW  submit(req) → online? send → classify (done · reject · retry) → retry/offline: enqueue → 'online' event → flush() replays      CARD 28-platform-and-operations/offline
 (function (root) {
   var LSK = 'cb.outbox.v1',
@@ -118,18 +116,18 @@
     return readQ().length;
   }
   // who is signed in: null = this page does not stamp (the counter), '' = not known yet, else the id
-  function me() {
+  function signedInId() {
     return typeof cfg.entity === 'function' ? String(cfg.entity() || '') : null;
   }
   // an entry is replayable only by the entity that queued it (SEC-140: a different person signing in must never replay someone else's queue)
   function mine(entry) {
-    var who = me();
-    return who === null || (who !== '' && entry.entity === who);
+    var signedIn = signedInId();
+    return signedIn === null || (signedIn !== '' && entry.entity === signedIn);
   }
   function enqueue(req) {
     var list = readQ();
     req.id = req.id || req.idem || uuid();
-    if (!req.entity && me()) req.entity = me();
+    if (!req.entity && signedInId()) req.entity = signedInId();
     if (
       list.some(function (x) {
         return x.id === req.id;
@@ -202,7 +200,7 @@
   }
   // replay this entity's plain entries (a bulk-job step is driven by its job, never here); each answer is written at once, so a crash never resends a settled one and another entity's entries stay as they are
   function flush() {
-    if (flushing || !online() || me() === '') return Promise.resolve({ sent: 0, pending: pending() });
+    if (flushing || !online() || signedInId() === '') return Promise.resolve({ sent: 0, pending: pending() });
     flushing = true;
     var list = readQ().filter(function (entry) {
         return mine(entry) && !entry.job;
@@ -249,7 +247,7 @@
   function enqueueJob(meta, steps) {
     var list = readQ(),
       at = Date.now(),
-      who = me();
+      signedIn = signedInId();
     steps.forEach(function (step, index) {
       var id = 'job:' + meta.id + ':' + index;
       var known = list.some(function (x) {
@@ -266,7 +264,7 @@
         items: step.items,
         names: step.names,
         okIf404: !!step.okIf404,
-        entity: who || undefined,
+        entity: signedIn || undefined,
         job: { id: meta.id, kind: meta.kind, step: index, of: steps.length, total: meta.total, label: meta.label, unit: meta.unit, mount: meta.mount, speed: meta.speed, verb: meta.verb, at: at },
         queued_at: at,
         tries: 0,
@@ -282,15 +280,15 @@
       order = [];
     readQ().forEach(function (entry) {
       if (!entry.job || !mine(entry)) return;
-      var job = byId[entry.job.id];
-      if (!job) {
-        job = byId[entry.job.id] = { id: entry.job.id, meta: entry.job, at: entry.job.at, steps: [], rejected: [] };
-        order.push(job);
+      var unfinished = byId[entry.job.id];
+      if (!unfinished) {
+        unfinished = byId[entry.job.id] = { id: entry.job.id, meta: entry.job, at: entry.job.at, steps: [], rejected: [] };
+        order.push(unfinished);
       }
-      (entry.rejected ? job.rejected : job.steps).push(entry);
+      (entry.rejected ? unfinished.rejected : unfinished.steps).push(entry);
     });
-    order.forEach(function (job) {
-      job.steps.sort(function (x, y) {
+    order.forEach(function (unfinished) {
+      unfinished.steps.sort(function (x, y) {
         return x.job.step - y.job.step;
       });
     });

@@ -16887,11 +16887,15 @@ async function prodAvailApply(status) {
   renderApp();
 }
 
+/** an action that cannot resume says so on its box (ui.progress.batch.resumable is the one list) */
+function keepTabOpenNote(batchJob, action) {
+  if (!ui.progress.batch.resumable(action)) batchJob.note('keepopen');
+}
 /** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
 async function prodCategoriseSend(payload) {
   if (!payload.length) return { ok: 0, failed: 0, why: '' };
   const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
-  if (!ui.progress.batch.resumable('prodBulkUpdate')) step.note('keepopen'); /* the whole selection is one all-or-nothing call: it cannot continue after a restart (QA-130) */
+  keepTabOpenNote(step, 'prodBulkUpdate'); /* the whole selection is one all-or-nothing call: it cannot continue after a restart (QA-130) */
   try {
     const out = await api('prodBulkUpdate', { body: { items: payload } });
     const ok = (out && out.updated) || 0;
@@ -23613,13 +23617,13 @@ function bulkStepsFor(ids, kind, nameOf) {
   return ids.map((id) => make([id], { id }, undefined));
 }
 /** what one answered step says about its records → { done, failed }: assignBulk lists the chits it skipped, prodStatusBulk the ids it missed, a per-record call is done once it answers */
-function bulkAnswerOf(ep, items, reply) {
-  if (ep === 'assignBulk') {
+function bulkAnswerOf(endpoint, items, reply) {
+  if (endpoint === 'assignBulk') {
     const skipped = (reply && reply.skipped) || [];
     const skippedIds = skipped.map((entry) => entry.chit_id);
     return { done: items.filter((id) => !skippedIds.includes(id)), failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' })) };
   }
-  if (ep === 'prodStatusBulk') {
+  if (endpoint === 'prodStatusBulk') {
     const missedIds = (reply && reply.missed) || [];
     return { done: items.filter((id) => !missedIds.includes(id)), failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' })) };
   }
@@ -23700,12 +23704,12 @@ function groupJob(ids, kind) {
   return bulkJobRun(meta, kind, bulkStepsFor(ids, kind, nameOf).map((step, index) => Object.assign(step, { id: 'job:' + meta.id + ':' + index })), {});
 }
 /** one saved job, continued: the steps left in the outbox go on in the tray, with what the last run already did counted */
-function bulkJobResume(job) {
-  const meta = job.meta;
-  const steps = job.steps.map((entry) => Object.assign({}, entry));
+function bulkJobResume(saved) {
+  const meta = saved.meta;
+  const steps = saved.steps.map((entry) => Object.assign({}, entry));
   const left = steps.reduce((total, step) => total + step.items.length, 0);
   const priorFailed = [];
-  job.rejected.forEach((entry) => entry.items.forEach((item, index) => priorFailed.push({ name: (entry.names || [])[index] || String(item), reason: entry.rejected.reason })));
+  saved.rejected.forEach((entry) => entry.items.forEach((item, index) => priorFailed.push({ name: (entry.names || [])[index] || String(item), reason: entry.rejected.reason })));
   const doneAtStart = Math.max(0, meta.total - left - priorFailed.length);
   const kind = { ep: meta.kind, mount: meta.mount, speed: meta.speed, verb: meta.verb, label: meta.label, unit: meta.unit };
   return bulkJobRun(meta, kind, steps, { resumed: true, doneAtStart, priorFailed }).then(async (result) => {
@@ -23719,15 +23723,15 @@ function bulkJobResume(job) {
   });
 }
 /** a job older than the key window (48 h) asks first: the server has forgotten its first steps, so a replay would be a new run */
-function bulkAskOldJob(job) {
-  const days = Math.max(2, Math.floor((Date.now() - job.at) / 86400000));
+function bulkAskOldJob(saved) {
+  const days = Math.max(2, Math.floor((Date.now() - saved.at) / 86400000));
   confirmAsk(
     tx('Continue an old job?'),
     esc(txf('This job was saved {days} days ago, so the server may not remember its first steps and some could run twice. Cancel drops the rest of it.', { days })),
     tx('Continue'),
-    () => bulkJobResume(job),
+    () => bulkJobResume(saved),
     false,
-    () => window.CBOffline.closeJob(job.id)
+    () => window.CBOffline.closeJob(saved.id)
   );
 }
 /** start-up and sign-in (SEC-140 inside the outbox: only THIS person's entries are listed): queued writes go on, and a saved job goes on in the tray */
@@ -23739,11 +23743,11 @@ async function bulkResume() {
   } catch (error) {
     cblog('warn', 'the outbox did not flush at start-up: ' + (error && error.message));
   }
-  for (const job of outbox.jobs()) {
-    if (BULK_ACTIVE.has(job.id)) continue;
-    if (!job.steps.length) outbox.closeJob(job.id);
-    else if (Date.now() - job.at > outbox.jobMaxAgeMs) bulkAskOldJob(job);
-    else bulkJobResume(job);
+  for (const saved of outbox.jobs()) {
+    if (BULK_ACTIVE.has(saved.id)) continue;
+    if (!saved.steps.length) outbox.closeJob(saved.id);
+    else if (Date.now() - saved.at > outbox.jobMaxAgeMs) bulkAskOldJob(saved);
+    else bulkJobResume(saved);
   }
 }
 async function afterGroup(result) {
