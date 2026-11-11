@@ -137,13 +137,13 @@ of file each thing is; this says what already does the job.
 | 21 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 20 | `card` | `cap-shop.js` |  |
 | 20 | `next` | `cap-stock.js` | the next level: |
-| 20 | `chip` | `screen-id.js` | var S = { app: |
 | 20 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 20 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
 | 20 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
+| 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `panel` | `sides.js` |  |
 | 19 | `later` | `signin-ui.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |

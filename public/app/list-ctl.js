@@ -129,7 +129,7 @@
     /* GROUP as one labelled dropdown ("Group ▾ None"): opts.group.as = 'select' */
     '.cbl .cbl-gsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;height:34px;padding:0 6px 0 10px;margin:0}',
     '.cbl .cbl-gsel .cbl-glab{margin:0;font-weight:600}',
-    '.cbl .cbl-gsel select{border:0;background:none;height:30px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
+    '.cbl .cbl-gsel select{border:0;background:none;height:32px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
     '.cbl .cbl-gsel:focus-within{border-color:var(--cl-blue)}',
     /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
@@ -264,7 +264,7 @@
     '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
     '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
     /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
-    '.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){.cbl-pgbtn{min-height:44px;min-width:44px}}',
+    'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
     '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
     '@media (max-width:' + PHONE_MAX + 'px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
@@ -811,7 +811,7 @@
       : I.o.head;
   }
   /** a phone folds the head's chips and notices into ONE chip when there are two or more, or when the one notice is a sentence (it would wrap to many lines inside the title: crm Chits, 34% of the window) */
-  var LONG_NOTICE_CHARS = 40;
+  var LONG_NOTICE_CHARS = 24;
   function foldsToOneChip(chips, notes) {
     if (chips.length + notes.length > 1) return true;
     return notes.length === 1 && String(notes[0].text || '').length > LONG_NOTICE_CHARS;
