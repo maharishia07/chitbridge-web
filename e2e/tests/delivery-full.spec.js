@@ -32,7 +32,7 @@ test.describe('DELIVERY — in full', () => {
         purpose: 'order', manual_subject: 'Full delivery ' + s,
         line_items: [{ particulars: 'Onion', quantity: 10, unit: 'kg', price: 40 },
                      { particulars: 'Potato', quantity: 5, unit: 'kg', price: 30 }],
-        recipients: myId ? [{ entity_id: myId, role: 'to' }] : [], send_to_self: true } });
+        recipients: myId ? [{ entity_id: myId, role: 'to' }] : [] } });
       const det = await api('chit', { params: { id: sent.chit_id } });
       const ls = det.live_set || [];
       return { chit_id: sent.chit_id, subject: 'Full delivery ' + s,

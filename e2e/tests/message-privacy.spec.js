@@ -52,7 +52,7 @@ test.describe('Message privacy · internal stays internal, across two entities',
     const sent = await api('/api/chits/send', { method: 'POST', token: A.token, body: {
       subject: uniq('privacy chit'),
       recipients: [{ entity_id: bId, role: 'to' }],
-      items: [{ name: 'Widget', quantity: 1, price: 10 }],
+      line_items: [{ name: 'Widget', quantity: 1, price: 10 }],
     } });
     expect([200, 201].includes(sent.status), `A must be able to send to B, got ${sent.status}: ${JSON.stringify(sent.json)}`).toBe(true);
     chitId = (sent.json && (sent.json.chit_id || (sent.json.chit && sent.json.chit.chit_id))) || null;
