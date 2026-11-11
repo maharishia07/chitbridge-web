@@ -61,6 +61,7 @@ var CBUi = (function () {
     '.cbui-choice .cbui-choice-menu:not([hidden]){display:flex;flex-direction:column;position:absolute;inset-inline-end:0;top:calc(100% + 4px);min-width:100%;background:var(--card,#fff);border:1px solid var(--line,#d8ccb0);border-radius:9px;z-index:1000;box-shadow:0 6px 18px var(--sh-shadow,rgba(0,0,0,.18))}' +
     '.cbui-choice-menu button{display:flex;align-items:center;justify-content:flex-start;text-align:start;padding:0 14px}}' +
     '.cbui-choice button:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
+    '@media(max-width:700px){dialog.sheet .mfoot button[data-cbname][data-size="compact"],.mfoot button[data-cbname][data-size="compact"]{min-height:max(44px,var(--act-h,44px))}}' +
     '@media(max-width:700px){[data-cbname][data-size="compact"],.cbav-btn{min-height:max(44px,var(--act-h,44px));min-width:max(44px,var(--act-h,44px))}' + /* the avatar (avatar.js) is a 34 px round button that is not a ui.action mount: it is lifted here, in the one rule */
     /* a phone: the status word gives way (ellipsis) before the bar scrolls, the group keeps its 44 px */
     '.cbui-choice{max-width:100%}.cbui-choice .cbui-choice-btn{min-width:44px;max-width:100%;padding:0 8px}.cbui-choice .cbui-cur{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}}';
@@ -131,7 +132,30 @@ var CBUi = (function () {
     /* CMP031: moves a running batch from the centre panel to the corner tray, so the screen is free (Athi 11 Nov); Ctrl+B does the same */
     background: { code: 'CMP031', element: 'CMP031-B01', label: 'Run in background', shown: 'Run in background', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw', shortcut: 'Control+B' },
     activity: { code: 'CMP030', element: 'CMP030-B01', label: 'Activity', shown: 'Activity', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
-    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
+    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' },
+    /* Athi 11 Nov (wave 2, customer side, step 1): the list control's own components. list-ctl.js (CBList) reads nothing from its page, so it cannot call
+       ui.action: it writes these elements itself with their register codes (data-cbsid), and CMP009 Try again / CMP014 Clear are its reused mounts. Registered here so the
+       code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP045 I01 search, I02 date, I03 tick; CMP033 B01 opener
+       (period, notices, Filters, Columns, header filter), D01 popover, M01 menu choice; CMP034 B01 pressed toggle; CMP035 S01 select; CMP036 K01 saved-view tab;
+       CMP037 B01 CSV, B02 reset columns, B03 select all shown, B04 bulk action, B05 show more, B06 pager Previous, B07 pager Next; CMP038 B01 row action; CMP039 B01 sort, B02 resize, B03 move column. */
+    listfield: { code: 'CMP045', element: 'CMP045-I01', elements: ['I01', 'I02', 'I03'], label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listopener: { code: 'CMP033', element: 'CMP033-B01', elements: ['B01', 'D01', 'M01'], label: 'List opener', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listtoggle: { code: 'CMP034', element: 'CMP034-B01', elements: ['B01'], label: 'List toggle', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listselect: { code: 'CMP035', element: 'CMP035-S01', elements: ['S01'], label: 'List select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listtab: { code: 'CMP036', element: 'CMP036-K01', elements: ['K01'], label: 'List tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listcommand: { code: 'CMP037', element: 'CMP037-B01', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07'], label: 'List command', verb: 'DOWNLOAD', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listrowaction: { code: 'CMP038', element: 'CMP038-B01', elements: ['B01'], label: 'List row action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listcolumn: { code: 'CMP039', element: 'CMP039-B01', elements: ['B01', 'B02', 'B03'], label: 'List column header', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* Athi 11 Nov (wave 2, customer side, step 2): the Books screens' own components (cap-books.js: accounts, crm, finance, tasks). It reuses CMP001 Save, CMP003 Cancel, CMP004 Done,
+       CMP005 Close, CMP006 Back, CMP007 Add, CMP009 Try again, CMP010 Open, CMP012 Edit, CMP014 Clear; these five are what had no component. Elements: CMP040 I01 text/number/money/search,
+       I02 date, I03 tick, T01 free text; CMP041 S01 select; CMP042 B01..B25 the books' commands (pay, record, remind, show, statement, fold list, lock, unlock, close for good, pack, opening
+       balances, cheque step, waiting-bill link, add supplier, accept / reject short, advance, reverse, GST note, resize pane, record discount, pay anyway), P01 row tools; CMP043 K01 tab, K02 ledger tree item;
+       CMP044 C01 day bills link, C02 chit link, C03 reversal link. cap-books.js writes them with their codes (data-cbsid); none is drawn by ui.action (nonButton). */
+    bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookselect: { code: 'CMP041', element: 'CMP041-S01', elements: ['S01'], label: 'Books select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookaction: { code: 'CMP042', element: 'CMP042-B01', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'B25', 'P01'], label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    booktab: { code: 'CMP043', element: 'CMP043-K01', elements: ['K01', 'K02'], label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
@@ -311,6 +335,16 @@ var CBUi = (function () {
     /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
     if (!shownText(component, options).trim()) refuse(name + ': no visible text');
     return html;
+  }
+  /**
+   * The tap rule for a control a screen still draws itself (a nonButton component: the books' commands): the attributes that put it under the one size rule
+   * (compact: 32 px on a desktop, 44 on a phone) and make sure that rule's stylesheet is in. It changes no look and no press; the screen keeps its own handler.
+   */
+  function tapAttributes(name) {
+    var component = ACTION_SET[name];
+    if (!component || !component.nonButton) refuse('tap: "' + name + '" is not a component a screen draws itself');
+    ensureStyle();
+    return ' data-cbname="' + component.name + '" data-size="compact"';
   }
   function action(name, options) {
     return render(name, options, (options && options.surface) || 'page');
@@ -1072,7 +1106,7 @@ var CBUi = (function () {
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onBatchKey);
-  var library = { action: action, dialog: dialog, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
+  var library = { action: action, tap: tapAttributes, dialog: dialog, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

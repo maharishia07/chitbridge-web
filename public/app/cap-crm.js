@@ -1619,13 +1619,14 @@ function crmFuWhat(f) {
       esc(tx('Delete')) +
       '</button>'
     : crmEdit()
-      ? '<button type="button" class="crm-mini" data-crm="fudone" data-id="' +
-        esc(f.followup_id) +
-        '" data-testid="crm-fu-done-' +
-        esc(f.followup_id) +
-        '">' +
-        esc(tx('Done')) +
-        '</button>' +
+      ? ui.action('done', {
+          mount: 'CRM003-U104',
+          object: 'follow-up',
+          surface: 'list',
+          size: 'compact',
+          testid: 'crm-fu-done-' + f.followup_id,
+          data: { crm: 'fudone', id: f.followup_id }
+        }) +
         (f.assignee_left
           ? ' <button type="button" class="crm-mini" data-crm="fuassign" data-id="' +
             esc(f.followup_id) +
