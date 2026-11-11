@@ -38,7 +38,7 @@ function makeServer() {
     server.calls.push({ ep, key, id: options && options.params && options.params.id });
     if (server.script) { const scripted = server.script(ep, options, server.calls.filter((c) => c.key === key).length); if (scripted) return scripted(); }
     if (key && server.answers.has(key)) return server.answers.get(key);
-    const reply = ep === 'assignBulk' ? { assigned: options.body.chit_ids.length, skipped: [] } : {};
+    const reply = ep === 'assignBulk' ? { assigned: options.body.chit_ids.length, skipped: [] } : ep === 'prodBulkCategories' ? { results: options.body.ids.map((id) => ({ id, result: id === 'c8' ? 'refused' : id === 'c4' ? 'unchanged' : 'done' })) } : {};
     if (key) server.answers.set(key, reply);
     return reply;
   };
@@ -73,12 +73,13 @@ function makePage(storage, server, who, options) {
   sandbox.listeners = listeners;
   sandbox.CBOffline.configure({ entity: options.noStamp ? null : () => who, sleep: (ms) => { (sandbox.waits = sandbox.waits || []).push(ms); return Promise.resolve(); } });
     vm.runInContext(jobBlock, sandbox);
-  ['chitNameOf', 'groupRun', 'groupToast', 'tickUndone', 'confirmStatus', 'prodCategoriseSend'].forEach((name) => { try { vm.runInContext(sourceOf(name), sandbox); } catch (e) { /* prodCategoriseSend is cut below */ } });
+  ['chitNameOf', 'groupRun', 'groupToast', 'tickUndone', 'confirmStatus', 'prodCategoriseApply'].forEach((name) => { try { vm.runInContext(sourceOf(name), sandbox); } catch (e) { /* a function this page does not carry */ } });
   sandbox.goOnline = (up) => { sandbox.navigator.onLine = up; if (up) (listeners.online || []).forEach((handler) => handler()); };
   return sandbox;
 }
 const archive = (page, n) => page.groupJob(ids(n), { ep: 'archive', mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' });
 const quiet = (p) => p.catch(() => {});
+const sourceOfApply = () => sourceOf('prodCategoriseApply');
 
 (async () => {
   console.log('a job of 25: the page dies after 12 steps, a fresh page finishes it');
@@ -232,11 +233,31 @@ const quiet = (p) => p.catch(() => {});
     check(result && result.done.length === 1 && result.failed.length === 1, 'tried before: 404 counts as done; never tried: 404 is a failure (1 done, 1 failed)');
   }
 
-  console.log('status change and categorise stay in the open tab and say so');
+  console.log('QA-130: a categorise job resumes after a reload; each step is add / remove, never the record');
+  {
+    const storage = makeStorage(), server = makeServer();
+    const first = makePage(storage, server, 'alice', { dieAfter: 1 });
+    first.UI.prods = ids(12).map((id) => ({ id, name: 'P' + id })); first.UI.prodPicked = new Set(ids(12)); first.UI._catgBulk = { ids: ids(12), add: new Set(['cat-fruit']), remove: new Set(['cat-old']) };
+    first.prodId = (x) => x.id; first.pData = (x) => x; first.renderApp = () => {};
+    quiet(first.prodCategoriseApply());
+    await wait(150);
+    const stored = JSON.parse(storage.getItem('cb.outbox.v1') || '[]');
+    check(stored.length === 2 && stored.every((e) => /^job:[0-9a-f]{32}:\d+$/.test(e.id)), 'the first page saved all 3 steps (12 ids on the slow class: 5, 5, 2), 1 answered, 2 left in the outbox');
+    check(JSON.stringify(Object.keys(stored[0].body).sort()) === '["add","ids","remove"]' && stored[0].body.add[0] === 'cat-fruit' && stored[0].body.remove[0] === 'cat-old' && !('item_data' in stored[0].body), 'each saved step is { ids, add, remove }: no record, so a late replay cannot overwrite a newer edit');
+    const second = makePage(storage, server, 'alice');
+    await second.bulkResume();
+    await wait(250);
+    const perKey = {};
+    server.calls.forEach((c) => { perKey[c.key] = (perKey[c.key] || 0) + 1; });
+    check(server.calls.every((c) => c.ep === 'prodBulkCategories') && Object.keys(perKey).length === 3 && Object.values(perKey).every((n) => n === 1), 'the reloaded page finished the other two steps: 3 keys, each called once, all prodBulkCategories');
+    check(second.toasts.some((t) => /^11 done · 1 failed/.test(t)), 'the resumed page counts 11 done and names the refused one as failed: ' + second.toasts.join(' | '));
+  }
+
+  console.log('status change stays in the open tab and says so');
   {
     const page = makePage(makeStorage(), makeServer(), 'alice');
     const batch = page.ui.progress.batch;
-    check(batch.resumable('status') === false && batch.resumable('prodBulkUpdate') === false && batch.resumable('archive') === true && batch.resumable('prodStatusBulk') === true, 'the resumable map: status and categorise no, archive and product status yes');
+    check(batch.resumable('status') === false && batch.resumable('prodBulkUpdate') === false && batch.resumable('prodBulkCategories') === true && batch.resumable('archive') === true && batch.resumable('prodStatusBulk') === true, 'the resumable map: status (and the old replace-write) no; archive, product status and categorise yes');
     let refused = '';
     try { batch.resumable('somethingNew'); } catch (e) { refused = e.message; }
     check(/no resume setting/.test(refused), 'an action with no setting is refused, so none is left unclassified');
@@ -244,8 +265,7 @@ const quiet = (p) => p.catch(() => {});
     try { page.groupRun(['c1'], { action: 'archive', mount: 'WRK001-U57', speed: 'quick', verb: 'x', label: 'x', unit: 'x' }, async () => {}); } catch (e) { wrong = e.message; }
     check(/can resume/.test(wrong), 'a resumable action is not run through the in-tab path');
     check(batch.noteWords('keepopen') === "Keep this tab open. This action can't continue after a restart.", 'the keep-tab-open words');
-    const src = html.slice(html.indexOf('async function prodCategoriseSend('), html.indexOf('\n}\n', html.indexOf('async function prodCategoriseSend(')));
-    check(src.includes("keepTabOpenNote(step, 'prodBulkUpdate')") && html.includes("if (!ui.progress.batch.resumable(action)) batchJob.note('keepopen')"), 'categorise puts the words on its box');
+    check(!html.includes('async function prodCategoriseSend(') && sourceOfApply().includes("ep: 'prodBulkCategories'"), 'categorise goes through groupJob (the replace-write step is gone)');
     check(!sourceOf('confirmStatus').includes('groupJob'), 'status change stays on the in-tab path (groupRun); #527 makes it resumable');
   }
 
@@ -383,6 +403,7 @@ const quiet = (p) => p.catch(() => {});
   console.log('core.js: the step names its own key');
   check(core.includes('idemKey: stepKey') && core.includes('if (stepKey) return stepKey'), 'api() takes opts.idemKey (the same hunk as #527)');
   check(/'prodStatusBulk'/.test(core.slice(core.indexOf('const OUTBOX_KEYS'), core.indexOf('const OUTBOX_KEYS') + 2500)), 'prodStatusBulk is an outbox name');
+  check(/'prodBulkCategories'/.test(core.slice(core.indexOf('const OUTBOX_KEYS'), core.indexOf('const OUTBOX_KEYS') + 2500)), 'prodBulkCategories is an outbox name (QA-130)');
   check(html.includes('entity: function') && html.includes('SESSION.actorId || SESSION.entityId'), 'app.html configures the outbox with the signed-in entity');
 
   console.log(failures ? failures + ' FAILED' : 'all passed');

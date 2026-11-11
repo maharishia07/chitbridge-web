@@ -12,7 +12,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawnSync, execFileSync } = require('child_process');
 
 const seamsPath = path.join(__dirname, '..', 'tools', 'seams.cjs');
 const seams = require(seamsPath);
@@ -87,6 +87,42 @@ check('--check refuses a file that lost its GENERATED header', () => {
 check('search words must all appear; the phrase does not have to', () => {
   assert.ok(seams.matchesWords(shared[0], ['shared', 'card']));
   assert.ok(!seams.matchesWords(shared[0], ['shared', 'invoice']));
+});
+
+/** a stand-in for the shared C:/dev folder: an api checkout whose origin/main has one function used twice and whose working copy is stale-different */
+function makeSharedDir() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seams-shared-'));
+  const api = path.join(dir, 'chitbridge-api');
+  fs.mkdirSync(path.join(api, 'lib'), { recursive: true });
+  fs.mkdirSync(path.join(api, 'docs'));
+  fs.writeFileSync(path.join(api, 'docs', 'SEAMS.md'), 'SENTINEL\n');
+  fs.writeFileSync(path.join(api, 'lib', 'a.js'), 'function apiOriginMainThing() { return 1; }\n');
+  fs.writeFileSync(path.join(api, 'lib', 'b.js'), 'apiOriginMainThing();\n');
+  const git = (args) => execFileSync('git', ['-C', api].concat(args), { stdio: 'ignore' });
+  git(['init', '-q']); git(['add', 'lib']);
+  git(['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'x']);
+  git(['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+  fs.writeFileSync(path.join(api, 'lib', 'a.js'), 'function staleWorkingCopyThing() { return 1; }\n');
+  return { dir, api };
+}
+
+check('--write writes only the docs/SEAMS.md of the repo it runs from, and reads the sibling from origin/main, not its working copy', () => {
+  const { dir, api } = makeSharedDir();
+  const before = fs.readdirSync(dir, { recursive: true }).filter((name) => !/(^|[\/]).git/.test(name)).map((name) => name + ':' + fs.statSync(path.join(dir, name)).mtimeMs).join('|');
+  const done = spawnSync(process.execPath, [seamsPath, '--write'], { cwd: root, encoding: 'utf8', env: Object.assign({}, process.env, { SEAMS_SHARED_DIR: dir }) });
+  assert.strictEqual(done.status, 0, done.stderr);
+  const written = fs.readFileSync(path.join(root, 'docs', 'SEAMS.md'), 'utf8');
+  assert.ok(written.includes('apiOriginMainThing') && !written.includes('staleWorkingCopyThing'), 'sibling must come from origin/main');
+  assert.strictEqual(fs.readFileSync(path.join(api, 'docs', 'SEAMS.md'), 'utf8'), 'SENTINEL\n');
+  assert.strictEqual(fs.readdirSync(dir, { recursive: true }).filter((name) => !/(^|[\/]).git/.test(name)).map((name) => name + ':' + fs.statSync(path.join(dir, name)).mtimeMs).join('|'), before, 'the shared folder changed');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+check('--write from a folder that is not a repo root refuses with one line and exit 1', () => {
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'seams-empty-'));
+  const done = runIn(empty, ['--write']);
+  assert.strictEqual(done.code, 1);
+  assert.strictEqual(done.out.trim().split('\n').length, 1);
+  fs.rmSync(empty, { recursive: true, force: true });
 });
 
 fs.rmSync(root, { recursive: true, force: true });
