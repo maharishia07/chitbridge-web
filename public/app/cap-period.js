@@ -1032,6 +1032,14 @@ function peGstPayableHTML(answer) {
     '</span></div>';
   return html;
 }
+/** ACC-336: the amounts a pay form may ask for, per head — still_to_pay_minor (after the payments named for the period) when the server sends it, else the set-off's payable_minor (an older server) */
+function peGstStillMinor(answer) {
+  return answer.still_to_pay_minor || answer.payable_minor || {};
+}
+/** ACC-336: the total still to pay: still_to_pay_total_minor when sent (reverse charge included), else pay_total_minor */
+function peGstStillTotal(answer) {
+  return typeof answer.still_to_pay_total_minor === 'number' ? answer.still_to_pay_total_minor : answer.pay_total_minor || 0;
+}
 /** the close's answer painted: credit used · reverse charge where owed · what is payable per head · what is carried (the pack's word) */
 function peGstSetOff(answer) {
   return '<div class="pe-card" data-testid="pg-setoff">' + peGstUsedHTML(answer) + peGstPayableHTML(answer) + '</div>';
@@ -1053,7 +1061,7 @@ function peGstPaintClose(answer, resId, outId) {
       esc(txf(answer.form ? 'Period closed · {no}' : 'Month closed · {no}', { no: answer.entry_no || '' })) +
       '</div>' +
       html;
-  if (answer.pay_total_minor > 0) html += peGstPayForm(answer);
+  if (peGstStillTotal(answer) > 0) html += peGstPayForm(answer);
   peEl(resId).innerHTML = html;
   peEl(outId).innerHTML = '';
 }
@@ -1098,7 +1106,8 @@ async function peGstCloseReturn(btn) {
 }
 /** the payment form: paid from · the pack's reference (its label and hint come from the server — never "challan" typed for another country) · an amount per head the close left payable */
 function peGstPayForm(r) {
-  const heads = peGstHeadsOf(r).filter((item) => (r.payable_minor || {})[item + '_minor']),
+  const toPay = peGstStillMinor(r), /* ACC-336: what is STILL to pay after the payments named for the period; an older server sends only payable_minor */
+    heads = peGstHeadsOf(r).filter((item) => toPay[item + '_minor']),
     list = peGstRcmHeadsOf(r).filter((item) => r.rcm_minor[item]);
   const label = r.ref_label || 'Challan number',
     hint = r.ref_hint || tx('The CPIN on the challan'); /* no ref words: an older server, which answered India alone */
@@ -1106,7 +1115,7 @@ function peGstPayForm(r) {
     '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">' +
     peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank')) +
     peField('pgp_ch', label, peInput('pgp_ch', '', hint)) +
-    heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(r.payable_minor[item + '_minor'])))).join('') +
+    heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(toPay[item + '_minor'])))).join('') +
     list.map((item) => peField('pgr_' + item, item.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + item, peText(r.rcm_minor[item])))).join('') +
     '</div><div class="supacts">' +
     peBtn('pg-pay', 'Pay', 'peGstPay(this)') +
