@@ -79,6 +79,8 @@ jobs:
         run: |
           node e2e/cx4-pack-words.cjs
           node e2e/field-ledger-guard.cjs
+          node e2e/proof/guard.test.cjs
+          node e2e/proof/remote-host.test.cjs
           node e2e/gov-zone-first.test.cjs
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
@@ -91,10 +93,14 @@ jobs:
           node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
           node e2e/shell-identity.test.cjs
+          node e2e/ui-codes.test.cjs
+          node e2e/ui-codes-tasks.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
+          node e2e/ui-codes-employees.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
+          node e2e/ui-codes-catalogue.test.cjs
           node e2e/bulk-resume.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs

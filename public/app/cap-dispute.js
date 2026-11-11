@@ -50,7 +50,7 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls) {
     ? open
         .map(function (item) {
           return (
-            '<button class="' +
+            '<button data-cbsid="TSK006-B01" class="' +
             className +
             '" data-testid="dispute-resolve-open" onclick="resolveDispute(\'' +
             chitId +
@@ -66,7 +66,7 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls) {
           );
         })
         .join('')
-    : '<button class="' +
+    : '<button data-cbsid="TSK006-B02" class="' +
       className +
       '" data-testid="dispute-resolve-open" onclick="resolveDispute(\'' +
       chitId +
@@ -125,7 +125,7 @@ function dispChipHtml() {
     on = (UI.adv || {}).dispute;
   if (!openCount && !on) return '';
   return (
-    '<button class="advbtn' +
+    '<button data-cbsid="TSK006-B03" class="advbtn' +
     (on ? ' on' : '') +
     '" style="color:var(--disp);border-color:#f0c9c6' +
     (on ? ';background:var(--danger-tint)' : '') +
@@ -152,7 +152,7 @@ function dispSearchRow(advanced) {
   return (
     '<div class="advrow"><label>' +
     tx('Dispute') +
-    '</label><label class="advchk"><input type="checkbox" id="adv_disp" ' +
+    '</label><label class="advchk"><input data-cbsid="TSK006-I01" type="checkbox" id="adv_disp" ' +
     (advanced.dispute ? 'checked' : '') +
     '> ⚠ Only open disputes</label></div>'
   );
@@ -231,7 +231,7 @@ function disputeBanner(chit) {
     proof +
     '</div>';
   var dropdown =
-    '<select aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
+    '<select data-cbsid="TSK006-S01" aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     '<option value="">— select a dispute to open —</option>' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
@@ -247,7 +247,7 @@ function disputeBanner(chit) {
 function disputeOverlay(chit, dispute, open, closed) {
   var proof = chit.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
   var dropdown =
-    '<select aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
+    '<select data-cbsid="TSK006-S02" aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
     '</select>';
@@ -258,14 +258,14 @@ function disputeOverlay(chit, dispute, open, closed) {
     esc(cap(dispute.category || '')) +
     '</span>' +
     proof +
-    '<button onclick="aiDisputeSummary(\'' +
+    '<button data-cbsid="TSK006-B04" onclick="aiDisputeSummary(\'' +
     chit.id +
     "','" +
     dispute.dispute_id +
     '\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-inline-start:auto;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">' +
     tx('✨ Summarize') +
     '</button>' +
-    '<button onclick="disputeClose()" style="margin-inline-start:8px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:var(--fs-2);color:var(--on-card)">' +
+    '<button data-cbsid="TSK006-B05" onclick="disputeClose()" style="margin-inline-start:8px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:var(--fs-2);color:var(--on-card)">' +
     tx('✕ Close') +
     '</button></div>' +
     '<div style="padding:15px 16px;overflow:auto;flex:1">' +
@@ -323,7 +323,7 @@ async function aiDisputeSummary(chitId, disputeId) {
       '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto;color:var(--on-card)">' +
       _aiMd(payload.draft) +
       '</div>' +
-      '<div style="margin-top:12px;text-align:end"><button onclick="closeModal()" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer;color:var(--on-card)">' +
+      '<div style="margin-top:12px;text-align:end"><button data-cbsid="TSK006-B06" onclick="closeModal()" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer;color:var(--on-card)">' +
       tx('Done') +
       '</button></div>';
     var node = document.getElementById('adbody');
@@ -388,7 +388,7 @@ function disputeRoomBox(chit, dispute) {
   var suggestBtn =
     readonly || typeof aiRun !== 'function'
       ? ''
-      : '<button onclick="aiResolutionSuggest(\'' +
+      : '<button data-cbsid="TSK006-B07" onclick="aiResolutionSuggest(\'' +
         chit.id +
         "','" +
         dispute.dispute_id +
@@ -450,8 +450,8 @@ function disputesScreen() {
   return (
     '<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:var(--fs-3);margin-bottom:3px;display:flex;align-items:center;gap:9px">' +
     tx('⚖️ Disputes') +
-    '<button onclick="openAssist(\'disputes\')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">' +
-    txf('Explore {q} to know more about this screen.', { q: '<b onclick="openAssist(\'disputes\')" style="cursor:pointer;color:var(--blue)">?</b>' }) +
+    '<button data-cbsid="TSK006-B08" onclick="openAssist(\'disputes\')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">' +
+    txf('Explore {q} to know more about this screen.', { q: '<b data-cbsid="TSK006-C01" onclick="openAssist(\'disputes\')" style="cursor:pointer;color:var(--blue)">?</b>' }) +
     '</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>'
   );
 }
@@ -710,7 +710,7 @@ async function quickDispute(idArg, opt) {
         parties
           .map(function (item) {
             return (
-              '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" class="dispparty" value="' +
+              '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:var(--fs-2);cursor:pointer"><input data-cbsid="TSK006-I02" type="checkbox" class="dispparty" value="' +
               item.entity_id +
               '"> ' +
               nm(item.display_name, 'party') +
@@ -727,7 +727,7 @@ async function quickDispute(idArg, opt) {
   modal(
     '<div class="mhd"><div class="t">' +
       tx('⚑ Raise dispute') +
-      '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
+      '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
       tx('Quality') +
       '</option><option value="quantity">' +
       tx('Quantity') +
@@ -741,13 +741,13 @@ async function quickDispute(idArg, opt) {
       tx('Other') +
       '</option></select>' +
       partyRows +
-      '<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.' +
+      '<textarea data-cbsid="TSK006-T01" id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.' +
       id +
       '\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.reason.' + id)) || '') +
-      '</textarea></div><div class="mfoot"><button onclick="closeModal()">' +
+      '</textarea></div><div class="mfoot"><button data-cbsid="TSK006-B09" onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' +
+      '</button><button data-cbsid="TSK006-B10" class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' +
       tx('Raise dispute') +
       '</button></div>'
   );
@@ -811,13 +811,13 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       withParty +
       '<label class="fl">' +
       tx('Resolution note (required)') +
-      '</label><textarea id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.' +
+      '</label><textarea data-cbsid="TSK006-T02" id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.' +
       disputeId +
       '\',this.value)" placeholder="How was this resolved…">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.resolve.' + disputeId)) || '') +
-      '</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">' +
+      '</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button data-cbsid="TSK006-B11" onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\'' +
+      '</button><button data-cbsid="TSK006-B12" class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\'' +
       chitId +
       "','" +
       disputeId +
@@ -922,8 +922,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         .join(', ') || T('everyone on the chit')
     );
   }
-  function actRow(id, label, verdict, extra, className) {
-    return root.CBTasks.actRow(id, label, verdict, extra, className);
+  function actRow(id, label, verdict, extra, className, stampCode) {
+    return root.CBTasks.actRow(id, label, verdict, extra, className, stampCode);
   }
   function failWords(e, what) {
     if (e && e.status === 403) return T('This sign-in cannot open disputes');
@@ -974,7 +974,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       '<div class="empty" data-testid="dp-fail"><div class="t">' +
       esc(words || failWords(e, 'the disputes')) +
       '</div>' +
-      '<button type="button" class="act" id="dp_retry" data-testid="dp-retry">' +
+      '<button data-cbsid="TSK006-B13" type="button" class="act" id="dp_retry" data-testid="dp-retry">' +
       esc(T('Try again')) +
       '</button></div>';
     $('dp_retry').onclick = function () {
@@ -1004,7 +1004,7 @@ async function submitResolve(chitId, disputeId, partyId) {
     if (node.total <= node.limit) return '';
     var pageCount = pages();
     return (
-      '<div class="tk-act dp-pager" data-testid="dp-pager"><button type="button" class="act quiet" data-dp-page="-1" data-testid="dp-prev"' +
+      '<div class="tk-act dp-pager" data-testid="dp-pager"><button data-cbsid="TSK006-B14" type="button" class="act quiet" data-dp-page="-1" data-testid="dp-prev"' +
       (node.page <= 1 ? ' disabled' : '') +
       '>‹ ' +
       esc(T('Back')) +
@@ -1018,7 +1018,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       ' ' +
       pageCount +
       '</span>' +
-      '<button type="button" class="act quiet" data-dp-page="1" data-testid="dp-next"' +
+      '<button data-cbsid="TSK006-B15" type="button" class="act quiet" data-dp-page="1" data-testid="dp-next"' +
       (node.page >= pageCount ? ' disabled' : '') +
       '>' +
       esc(T('Next')) +
@@ -1249,8 +1249,8 @@ async function submitResolve(chitId, disputeId, partyId) {
       '</div>' +
       (dispute.resolution_note ? '<div class="sub">✓ ' + esc(dispute.resolution_note) + '</div>' : '') +
       '<div class="tk-line-acts">' +
-      actRow('dp_res_' + idText, T('Resolve'), (dispute.actions && dispute.actions.resolve) || { ok: false, say: T('Resolve is not answered for this dispute') }) +
-      '<div class="tk-act"><button type="button" class="act quiet" id="dp_talk_' +
+      actRow('dp_res_' + idText, T('Resolve'), (dispute.actions && dispute.actions.resolve) || { ok: false, say: T('Resolve is not answered for this dispute') }, '', '', 'TSK006-B16') +
+      '<div class="tk-act"><button data-cbsid="TSK006-B17" type="button" class="act quiet" id="dp_talk_' +
       idText +
       '" data-testid="dp_talk_' +
       idText +
@@ -1275,7 +1275,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       '<div class="tk-panel" data-testid="dp-raise-form"><label class="sub" for="dp_cat">' +
       esc(T('What is wrong?')) +
       '</label>' +
-      '<select class="inp" id="dp_cat" data-testid="dp-cat">' +
+      '<select data-cbsid="TSK006-S04" class="inp" id="dp_cat" data-testid="dp-cat">' +
       Object.keys(KIND)
         .map(function (item) {
           return '<option value="' + item + '"' + (item === 'other' ? ' selected' : '') + '>' + esc(kindWord(item)) + '</option>';
@@ -1285,7 +1285,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       '<label class="sub" for="dp_reason">' +
       esc(T('Say what happened (at least 10 letters)')) +
       '</label>' +
-      '<textarea class="inp" id="dp_reason" data-testid="dp-reason" rows="3" maxlength="1000"></textarea>' +
+      '<textarea data-cbsid="TSK006-T03" class="inp" id="dp_reason" data-testid="dp-reason" rows="3" maxlength="1000"></textarea>' +
       (parties.length
         ? '<div class="sub">' +
           esc(T('Between which parties? None ticked = everyone on the chit.')) +
@@ -1293,7 +1293,7 @@ async function submitResolve(chitId, disputeId, partyId) {
           parties
             .map(function (item, index) {
               return (
-                '<label class="sub"><input type="checkbox" class="dp-party" value="' +
+                '<label class="sub"><input data-cbsid="TSK006-I03" type="checkbox" class="dp-party" value="' +
                 esc(item.entity_id) +
                 '" data-testid="dp-party-' +
                 index +
@@ -1304,7 +1304,7 @@ async function submitResolve(chitId, disputeId, partyId) {
             })
             .join('')
         : '') +
-      '<button type="button" class="act" id="dp_raise_go" data-testid="dp-raise-go">' +
+      '<button data-cbsid="TSK006-B18" type="button" class="act" id="dp_raise_go" data-testid="dp-raise-go">' +
       esc(T('Raise dispute')) +
       '</button></div>'
     );
@@ -1326,7 +1326,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       html +=
         '<div class="cs-mute" data-testid="dp-sheet-fail">' +
         esc(sheetState.err) +
-        ' <button type="button" class="act quiet" id="dp_sheet_retry">' +
+        ' <button data-cbsid="TSK006-B19" type="button" class="act quiet" id="dp_sheet_retry">' +
         esc(T('Try again')) +
         '</button></div>';
     else if (!sheetState.data) html += '<div class="cs-mute">' + esc(T('Reading…')) + '</div>';
@@ -1334,7 +1334,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       var list = sheetState.data.disputes || [];
       html += list.length ? list.map(disputeHTML).join('') : '<div class="sub" data-testid="dp-none">' + esc(T('No dispute on this chit.')) + '</div>';
       html +=
-        actRow('dp_raise', T('⚑ Raise a dispute'), (sheetState.data.actions && sheetState.data.actions.raise) || { ok: false, say: T('Raise is not answered for this chit') }) +
+        actRow('dp_raise', T('⚑ Raise a dispute'), (sheetState.data.actions && sheetState.data.actions.raise) || { ok: false, say: T('Raise is not answered for this chit') }, '', '', 'TSK006-B20') +
         (sheetState.raising ? raiseHTML() : '');
     }
     html += '<div id="dp_out" class="tk-out" role="status" data-testid="dp-out">' + esc(keep) + '</div>';
@@ -1441,7 +1441,7 @@ async function submitResolve(chitId, disputeId, partyId) {
       (nestedOpen.length > 1
         ? '<label class="sub" for="dp_rwho">' +
           esc(T('With whom?')) +
-          '</label><select class="inp" id="dp_rwho" data-testid="dp-rwho"><option value="">' +
+          '</label><select data-cbsid="TSK006-S05" class="inp" id="dp_rwho" data-testid="dp-rwho"><option value="">' +
           esc(T('Everyone still open')) +
           '</option>' +
           nestedOpen
@@ -1453,8 +1453,8 @@ async function submitResolve(chitId, disputeId, partyId) {
         : '') +
       '<label class="sub" for="dp_rnote">' +
       esc(T('How was it settled?')) +
-      '</label><textarea class="inp" id="dp_rnote" data-testid="dp-rnote" rows="2" maxlength="1000"></textarea>' +
-      '<button type="button" class="act" id="dp_rgo" data-testid="dp-rgo">' +
+      '</label><textarea data-cbsid="TSK006-T04" class="inp" id="dp_rnote" data-testid="dp-rnote" rows="2" maxlength="1000"></textarea>' +
+      '<button data-cbsid="TSK006-B21" type="button" class="act" id="dp_rgo" data-testid="dp-rgo">' +
       esc(T('Resolve')) +
       '</button></div>';
     $('dp_rnote').focus();
