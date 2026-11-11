@@ -223,7 +223,7 @@
     '.cbsh-swpop a:hover{background:var(--sh-panel)}.cbsh-swpop a[aria-current]{background:var(--sh-green-t);color:var(--sh-green-d)}',
     '.cbsh-swpop .i{width:18px;text-align:center}',
     /* sheet */
-    '.cbsh-sheet{border-top:1px solid var(--sh-hair);background:var(--sh-page);max-height:max(136px,calc(20vh - var(--sh-bar)));overflow:auto}',
+    '.cbsh-sheet{position:relative;border-top:1px solid var(--sh-hair);background:var(--sh-page);max-height:max(136px,calc(20vh - var(--sh-bar)));overflow:auto}',
     '.cbsh-sheet[hidden]{display:none}',
     '.cbsh-sin{display:grid;grid-template-columns:1fr 1.55fr 1fr;gap:26px;padding:8px 18px 9px;max-width:1240px;margin:0 auto}',
     '.cbsh-col h5{margin:0 0 3px;display:flex;align-items:baseline;gap:10px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
@@ -446,6 +446,11 @@
   function shellMount(component) {
     return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
   }
+  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
+  function shellChip(code, place) {
+    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
+  }
+  var CHIP_CORNER = 'position:absolute;inset-inline-end:10px;top:2px'; /* the sheet's chip sits in its corner: no row of its own, no scroll gained */
   /** the bar's own buttons are drawn before the screen is named: once it is, each coded one gets its mount */
   function stampMounts(node) {
     [].forEach.call(node.querySelectorAll('[data-cbsid]:not([data-cbmount])'), function (item) {
@@ -995,12 +1000,12 @@
           return '<div class="cbsh-col"><h5>' + esc(title) + (nestedWhy || '') + '</h5>' + body + '</div>';
         };
       if (S.headerState === 'loading') {
-        sheet.innerHTML = '<div class="cbsh-sin"><div class="cbsh-ln">' + W.loading + '</div></div>';
+        sheet.innerHTML = shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin"><div class="cbsh-ln">' + W.loading + '</div></div>';
         return;
       }
       if (!h) {
         sheet.innerHTML =
-          '<div class="cbsh-sin" data-testid="shell-sheet-empty">' +
+          shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin" data-testid="shell-sheet-empty">' +
           col(W.business, '<div class="cbsh-ln nm">' + esc(shopName()) + '</div>') +
           '<div class="cbsh-ln none">' +
           esc(W.notYet) +
@@ -1072,7 +1077,7 @@
           ? '<a class="cbsh-btn" data-cbsid="CMP010-B01"' + shellMount('CMP010') + ' data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>'
           : '');
       sheet.innerHTML =
-        '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
+        shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
     }
 
     function setOpen(v) {
@@ -1360,7 +1365,7 @@
         '</span><span class="chev" aria-hidden="true">▼</span>'; /* through the catalogue: an area is a word (walk-locale) */
       element.setAttribute('title', T(name));
       element.setAttribute('aria-label', W.switcher);
-      target.innerHTML = areasShown()
+      target.innerHTML = shellChip('POP116', 'align-self:flex-end;margin:2px 4px') + areasShown()
         .map(function (item) {
           return (
             '<a href="' +

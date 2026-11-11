@@ -18,7 +18,7 @@ const mutate = process.env.SHELL_ID_MUTATE || '';
 const read = (file) => {
   let text = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', file), 'utf8');
   if (mutate === 'remove') text = text.split('data-cbsid="CMP033-B01"').join('');
-  if (mutate === 'swap') text = text.split('CMP033-B01').join('CMPSWAP').split('CMP048-B01').join('CMP033-B01').split('CMPSWAP').join('CMP048-B01');
+  if (mutate === 'swap') text = text.split('POP113').join('POPSWAP').split('POP114').join('POP113').split('POPSWAP').join('POP114').split('CMP033-B01').join('CMPSWAP').split('CMP048-B01').join('CMP033-B01').split('CMPSWAP').join('CMP048-B01');
   return text;
 };
 let failures = 0;
@@ -104,6 +104,22 @@ const coded = avatarSource.split('data-cbsid="CMP052-B01"').length - 1;
 check(doors === 2 && coded === 2, 'avatar.js both Sign in doors wear CMP052-B01 (' + coded + ' of ' + doors + ')');
 known('CMP052-B01');
 
+console.log('the four popovers each name themselves with their literal POP code (the app.html popup-code chip)');
+const POPUPS = [['rail-bell.js', "bellChip('POP113'", 'POP113 bell panel'], ['avatar.js', "avatarChip('POP114'", 'POP114 avatar menu'], ['shell.js', "shellChip('POP115'", 'POP115 shop sheet'], ['shell.js', "shellChip('POP116'", 'POP116 area menu']];
+POPUPS.forEach((row) => {
+  const text = read(row[0]);
+  check(text.indexOf(row[1]) > 0, row[0] + ' stamps the ' + row[2] + ' (' + row[1] + ')');
+  known(row[1].match(/POP[0-9]+/)[0]);
+});
+check(read('shell.js').split("shellChip('POP115'").length - 1 === 3, 'the shop sheet wears its chip in all three states (loading, empty, full)');
+const chipSandbox = Object.assign({}, sandbox, { CBScreenId: undefined });
+vm.createContext(chipSandbox);
+chipSandbox.window = chipSandbox;
+vm.runInContext(read('screen-id.js'), chipSandbox, { filename: 'screen-id.js' });
+const chip = chipSandbox.CBScreenId.popupChip('POP114');
+check(chip.indexOf("data-testid=\"popup-code\"") > 0 && chip.indexOf(">POP114</span>") > 0, "the chip is the popup-code element and reads its literal code");
+sandbox.CBScreenId = chipSandbox.CBScreenId;
+check(sandbox.CBAvatar.menuHtml({ person: { name: 'A' }, items: ['signout'] }).indexOf('>POP114</span>') > 0, 'the avatar menu, drawn, shows POP114');
 console.log('the bell and its panel');
 sourceCarriesCodes('rail-bell.js');
 console.log('the bar, the area menu, the chips and the sheet');

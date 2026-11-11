@@ -728,6 +728,10 @@
   function avatarMount(component) {
     return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
   }
+  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
+  function avatarChip(code, place) {
+    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
+  }
   function menuHtml(o) {
     var P = o.person || {},
       items = o.items || ['profile', 'settings', 'support', 'signout'];
@@ -784,7 +788,7 @@
         '</div>';
     }
     return (
-      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
+      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
       '<div class="cbav-who"><span class="l">' +
       esc(letter(P)) +
       '</span><div><b>' +

@@ -479,6 +479,17 @@
     return r ? r.code : null;
   }
 
+  /** the popup-code chip (the app.html dialog chip's markup): a popover names itself with its POP code, a literal from the register; `place` is extra style */
+  function popupChip(code, place) {
+    return (
+      '<span data-testid="popup-code" style="font-family:ui-monospace,monospace;font-size:var(--fs-1,12px);background:var(--neutral-tint,rgba(128,128,128,.16));border-radius:5px;padding:1px 6px;user-select:all;white-space:nowrap;' +
+      (place || '') +
+      '">' +
+      root.esc(code) +
+      '</span>'
+    );
+  }
+
   /** the data-cbmount attribute of a coded control in the shell, the bell or a menu: this screen's code + U1nn (nn = the component number, as the list control writes it); none until a screen is named */
   function mountAttr(component) {
     var code = current();
@@ -560,6 +571,7 @@
     sheet: sheet,
     current: current,
     mountAttr: mountAttr,
+    popupChip: popupChip,
     DECLARED: DECLARED,
     rows: ROWS,
     byApp: BYAPP,

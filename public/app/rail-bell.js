@@ -209,6 +209,11 @@
     return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
   }
 
+  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
+  function bellChip(code, place) {
+    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
+  }
+
   /** the bell button with its count dot, as markup */
   function bellButtonHtml(bell) {
     var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
@@ -264,7 +269,7 @@
     return (
       '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
       esc(T(W.title)) +
-      '"><div class="cbb-hd">' +
+      '"><div class="cbb-hd">' + bellChip('POP113', 'margin-inline-end:8px') +
       esc(T(W.title)) +
       '</div>' +
       body +
