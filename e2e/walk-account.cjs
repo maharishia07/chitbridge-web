@@ -105,16 +105,15 @@ const walk = async (w) => {
       S.coassist = false;
       return { ok: why === DEV_WHY && err.indexOf(DEV_WHY) >= 0 && asked === 0, saw: '"' + why + '" · list says "' + err.slice(0, 70) + '" · devices asked ' + asked };
     });
-    await w.step('A5', 'API keys: WALK-REG 2026-10-16: removed by decision - no key count, last-heard line, door or list for a shop owner (the Account keys card stays hidden)', async () => {
+    await w.step('A5', 'SET-34 (6 Nov 2026): the keys SHOW on Account - the list, Make a key, no door to an empty Connectors page', async () => {
       await go('/settings.html#/account', '[data-testid="sx-ses-list"]');
-      const shownKeys = await page.locator('[data-testid="sx-keys-count"]:visible, [data-testid="sx-keys-last"]:visible, [data-testid="sx-keys-door"]:visible, [data-testid="sx-keys-card"]:visible').count();
-      const mint = await page.locator('[data-testid="sx-key-mint"]').count(), list = await page.locator('[data-testid="sx-key-list"]').count();
-      return { ok: shownKeys === 0 && mint === 0 && list === 0, saw: 'visible key elements ' + shownKeys + ' · mint buttons ' + mint + ' · lists ' + list };
+      const list = await page.locator('[data-testid="sx-key-list"]:visible').count(), mint = await page.locator('[data-testid="sx-key-mint"]:visible').count(), door = await page.locator('[data-testid="sx-keys-door"]').count();
+      return { ok: list === 1 && mint === 1 && door === 0, saw: 'visible key lists ' + list + ' - mint buttons ' + mint + ' - doors ' + door };
     });
-    /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved with the version — the bank row's change travels alone; the identity section is not re-sent */
-    await w.step('A6', 'WALK-REG 2026-10-16: removed by decision — the trade-documents vault is not on a local shop Account (it stays in the workshop)', async () => {
-      const hidden = await page.$eval('[data-testid="sx-vault-wrap"]', (n) => n.hidden).catch(() => false);
-      return { ok: hidden, saw: 'vault wrap hidden ' + hidden };
+    /* SET-WALK1 W25: Save sends a MERGE-PATCH of what moved with the version - the bank row's change travels alone; the identity section is not re-sent */
+    await w.step('A6', 'SET-34 (6 Nov 2026): the vault SHOWS on Account, each row with a Copy button', async () => {
+      const shown = await page.locator('[data-testid="sx-vault-wrap"]:visible').count(), copies = await page.locator('[data-testid="sx-vault"] [data-testid="vault-copy"]').count();
+      return { ok: shown === 1 && copies > 0, saw: 'vault visible ' + shown + ' - copy buttons ' + copies };
     });
     await w.step('A7', 'the sessions read fails -> "Could not read this" + Try again in the list, never "No listed sign-in"', async () => {
       S.sesFail = true; await go('/settings.html#/account', '[data-testid="cbl-error-set-sessions"]');
