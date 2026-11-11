@@ -357,6 +357,17 @@ var CBUiStandard = (function () {
       progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
       '</div></section>';
   }
+  /** CMP032 Batch job note: every state of a saved job in words, each its own standard text key (the batch bar itself is CMP026, the corner tray CMP027) */
+  function batchNoteRow() {
+    var component = ui.components.batchnote, batch = ui.progress.batch;
+    var sample = { done: 12, total: 40, left: 28, failed: 0, seconds: 15 };
+    var cells = batch.noteKinds.map(function (kind) {
+      var values = kind === 'doneAll' ? { done: 40 } : kind === 'doneFailed' ? { done: 38, failed: 2 } : kind === 'stopped' ? { done: 20, left: 20 } : sample;
+      return '<figure class="st"><div class="slot"><p class="note" data-testid="gal-note-' + kind + '">' + esc(batch.noteWords(kind, values)) + '</p></div><figcaption><span class="mono">' + component.code + '.' + kind + '</span></figcaption></figure>';
+    }).join('');
+    return '<section class="crow" data-testid="gal-row-CMP032"><div class="cid"><span class="chip" data-testid="gal-code">CMP032</span><b>' + esc(words('Batch job note')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch job note</span> · under <span class="mono">CMP026 ' + esc(ui.components.batch.label) + '</span> and <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' + cells + '</div></section>';
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     var dialog = dialogRow();
@@ -366,6 +377,7 @@ var CBUiStandard = (function () {
     rows.push(choiceRow());
     rows.push(progressRow());
     rows.push(batchRow());
+    rows.push(batchNoteRow());
     return rows.join('');
   }
 

@@ -8,6 +8,8 @@
 //      server-side idempotency check — Phase 2; until then use submit() only for genuinely-offline captures).
 // Storage is localStorage (small, synchronous, survives reload/crash). Swap to IndexedDB later for large payloads.
 // OWNS the drafts and the outbox · CALLED BY every page that saves work (app.html, till.html, the small apps) through CBOffline.
+// BULK JOBS (QA-129 first cut): a group action stores every step here BEFORE step 1 (enqueueJob: one entry per step, its Idempotency-Key job:<jobId>:<step>), sends them one by one (sendStep: retry with back-off,
+//   a replayed 404 counts as done) and, after a restart, jobs() lists what is left for the tray to continue. Each entry is stamped with the signed-in entity (SEC-140): another person's entries are never replayed.
 // FLOW  submit(req) → online? send → classify (done · reject · retry) → retry/offline: enqueue → 'online' event → flush() replays      CARD 28-platform-and-operations/offline
 (function (root) {
   var LSK = 'cb.outbox.v1',
@@ -23,6 +25,7 @@
     }
   })();
   var mem = {}; // fallback when localStorage is unavailable (private mode)
+  var lostToMemory = false; // a write fell back to memory: closing the tab loses it
   function get(k) {
     try {
       return ls ? ls.getItem(k) : k in mem ? mem[k] : null;
@@ -36,6 +39,7 @@
       else mem[k] = v;
     } catch (e) {
       mem[k] = v;
+      lostToMemory = true;
     }
   }
   function del(k) {
@@ -57,6 +61,12 @@
     apiBase: '',
     token: function () {
       return null;
+    },
+    entity: null, // () => the signed-in entity's id ('' until the session exists); unset on a page that does not stamp
+    sleep: function (ms) {
+      return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+      });
     },
     onChange: function () {}
   };
@@ -107,9 +117,19 @@
   function pending() {
     return readQ().length;
   }
+  // who is signed in: null = this page does not stamp (the counter), '' = not known yet, else the id
+  function me() {
+    return typeof cfg.entity === 'function' ? String(cfg.entity() || '') : null;
+  }
+  // an entry is replayable only by the entity that queued it (SEC-140: a different person signing in must never replay someone else's queue)
+  function mine(entry) {
+    var who = me();
+    return who === null || (who !== '' && entry.entity === who);
+  }
   function enqueue(req) {
     var list = readQ();
     req.id = req.id || req.idem || uuid();
+    if (!req.entity && me()) req.entity = me();
     if (
       list.some(function (x) {
         return x.id === req.id;
@@ -161,11 +181,32 @@
     });
   }
   var flushing = false;
+  function patchEntry(id, change) {
+    var list = readQ();
+    list.forEach(function (entry) {
+      if (entry.id === id) change(entry);
+    });
+    writeQ(list);
+  }
+  function removeEntry(id) {
+    writeQ(
+      readQ().filter(function (entry) {
+        return entry.id !== id;
+      })
+    );
+  }
+  function bumpTries(id) {
+    patchEntry(id, function (entry) {
+      entry.tries = (entry.tries || 0) + 1;
+    });
+  }
+  // replay this entity's plain entries (a bulk-job step is driven by its job, never here); each answer is written at once, so a crash never resends a settled one and another entity's entries stay as they are
   function flush() {
-    if (flushing || !online()) return Promise.resolve({ sent: 0, pending: pending() });
+    if (flushing || !online() || me() === '') return Promise.resolve({ sent: 0, pending: pending() });
     flushing = true;
-    var list = readQ(),
-      still = [],
+    var list = readQ().filter(function (entry) {
+        return mine(entry) && !entry.job;
+      }),
       rejected = [],
       sent = 0;
     return list
@@ -175,27 +216,156 @@
             .then(function (result) {
               if (result.kind === 'done') {
                 sent++;
+                removeEntry(req.id);
               } else if (result.kind === 'reject') {
-                req.tries++;
                 req.error = 'rejected ' + result.response.status;
                 rejected.push(req);
+                removeEntry(req.id);
               } else {
-                req.tries++;
-                still.push(req);
+                bumpTries(req.id);
               }
             })
             .catch(function () {
-              req.tries++;
-              still.push(req);
+              bumpTries(req.id);
             }); // network error → keep for next reconnect
         });
       }, Promise.resolve())
       .then(function () {
-        writeQ(still);
         flushing = false;
         if (rejected.length && cfg.onReject) cfg.onReject(rejected);
-        return { sent: sent, pending: still.length, rejected: rejected.length };
+        return { sent: sent, pending: pending(), rejected: rejected.length };
       });
+  }
+
+  // ── bulk jobs: the outbox as the one durable store of a group action ──
+  var JOB_MAX_AGE_MS = 48 * 3600 * 1000; // the server forgets a key after 48 h (middleware/idempotency.js), so an older job asks before it resumes
+  var JOB_BACKOFF_MS = [2000, 5000, 15000, 30000]; // then stop and name what is left
+  var onlineWaiters = [];
+  // false when this browser keeps nothing (private window): closing the tab loses the job
+  function durable() {
+    return !!ls && !lostToMemory;
+  }
+  // store every step before step 1: steps = [{ ep, params, body, method, path, items, okIf404 }], meta = { id, kind, label, unit, mount, speed, verb, total } → whether the device keeps them
+  function enqueueJob(meta, steps) {
+    var list = readQ(),
+      at = Date.now(),
+      who = me();
+    steps.forEach(function (step, index) {
+      var id = 'job:' + meta.id + ':' + index;
+      var known = list.some(function (x) {
+        return x.id === id;
+      });
+      if (known) return;
+      list.push({
+        id: id,
+        method: step.method || 'POST',
+        path: step.path,
+        body: step.body,
+        ep: step.ep,
+        params: step.params,
+        items: step.items,
+        names: step.names,
+        okIf404: !!step.okIf404,
+        entity: who || undefined,
+        job: { id: meta.id, kind: meta.kind, step: index, of: steps.length, total: meta.total, label: meta.label, unit: meta.unit, mount: meta.mount, speed: meta.speed, verb: meta.verb, at: at },
+        queued_at: at,
+        tries: 0,
+        attempts: 0
+      });
+    });
+    writeQ(list);
+    return durable();
+  }
+  // this entity's unfinished jobs: { id, meta, at, steps (not yet answered, in order), rejected (answered no) }
+  function jobs() {
+    var byId = {},
+      order = [];
+    readQ().forEach(function (entry) {
+      if (!entry.job || !mine(entry)) return;
+      var job = byId[entry.job.id];
+      if (!job) {
+        job = byId[entry.job.id] = { id: entry.job.id, meta: entry.job, at: entry.job.at, steps: [], rejected: [] };
+        order.push(job);
+      }
+      (entry.rejected ? job.rejected : job.steps).push(entry);
+    });
+    order.forEach(function (job) {
+      job.steps.sort(function (x, y) {
+        return x.job.step - y.job.step;
+      });
+    });
+    return order;
+  }
+  // the end of a run (finished, stopped or cancelled): nothing of the job stays in the outbox
+  function closeJob(jobId) {
+    writeQ(
+      readQ().filter(function (entry) {
+        return !(entry.job && entry.job.id === jobId);
+      })
+    );
+  }
+  function whenOnline() {
+    if (online()) return Promise.resolve();
+    return new Promise(function (resolve) {
+      onlineWaiters.push(resolve);
+    });
+  }
+  // a 5xx, a 429, a first try still running (409) or no answer at all is worth another go; any other answer is final
+  function worthRetry(error) {
+    var status = error && error.status;
+    if (!status) return true;
+    return status >= 500 || status === 429 || (status === 409 && !!error.data && error.data.code === 'IDEMPOTENCY_IN_PROGRESS');
+  }
+  // one step of a job: send(entry) resolves its answer or throws an Error with .status/.data (core.js api()).
+  // → { kind: done · reject · offline · stopped · gone, reply, already, status, reason }. opts.onWait(seconds, error) is told before each back-off wait.
+  // A replayed archive/restore/delete (okIf404) that answers 404 counts as done once an earlier attempt was made: the first may have applied and its answer been lost.
+  function sendStep(id, send, opts, round) {
+    opts = opts || {};
+    round = round || 0;
+    var entry = readQ().filter(function (x) {
+      return x.id === id;
+    })[0];
+    if (!entry) return Promise.resolve({ kind: 'gone' });
+    if (!online()) return Promise.resolve({ kind: 'offline' });
+    var priorAttempts = entry.attempts || 0;
+    patchEntry(id, function (x) {
+      x.attempts = priorAttempts + 1;
+    });
+    return Promise.resolve()
+      .then(function () {
+        return send(entry);
+      })
+      .then(
+        function (reply) {
+          if (reply && reply.queued) return { kind: 'offline' };
+          removeEntry(id);
+          return { kind: 'done', reply: reply, step: entry };
+        },
+        function (error) {
+          return stepFailed(entry, error, priorAttempts, send, opts, round);
+        }
+      );
+  }
+  function stepFailed(entry, error, priorAttempts, send, opts, round) {
+    var status = error && error.status;
+    if (status === 404 && entry.okIf404 && priorAttempts > 0) {
+      removeEntry(entry.id);
+      return { kind: 'done', already: true, step: entry };
+    }
+    var reason = (error && error.message) || 'failed';
+    if (status === 401) return { kind: 'stopped', status: status, reason: reason };
+    if (!worthRetry(error)) {
+      patchEntry(entry.id, function (x) {
+        x.rejected = { status: status, reason: reason };
+      });
+      return { kind: 'reject', status: status, reason: reason, data: error && error.data };
+    }
+    if (!online()) return { kind: 'offline' };
+    if (round >= JOB_BACKOFF_MS.length) return { kind: 'stopped', status: status, reason: reason };
+    if (opts.onWait) opts.onWait(JOB_BACKOFF_MS[round] / 1000, error);
+    return cfg.sleep(JOB_BACKOFF_MS[round]).then(function () {
+      return sendStep(entry.id, send, opts, round + 1);
+    });
   }
   // submit now if online (and return the live response so callers can use the server id); else capture to the outbox.
   function submit(req) {
@@ -232,6 +402,9 @@
   if (root.addEventListener) {
     root.addEventListener('online', function () {
       paint();
+      onlineWaiters.splice(0).forEach(function (wake) {
+        wake();
+      });
       flush();
     });
     root.addEventListener('offline', paint);
@@ -298,6 +471,14 @@
     submit: submit,
     enqueue: enqueue,
     flush: flush,
+    enqueueJob: enqueueJob,
+    jobs: jobs,
+    sendStep: sendStep,
+    closeJob: closeJob,
+    whenOnline: whenOnline,
+    durable: durable,
+    jobMaxAgeMs: JOB_MAX_AGE_MS,
+    backoffMs: JOB_BACKOFF_MS,
     pending: pending,
     registerSW: registerSW,
     _classify: classify,
