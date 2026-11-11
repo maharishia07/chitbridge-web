@@ -40,6 +40,7 @@ function packKeyboard() {
     const name = p.page + ' @' + p.width, bad = (p.popups || []).filter((x) => x.escCloses === false).length;
     const facts = 'tab stops ' + (p.tab ? p.tab.n : '?') + ', skip link ' + (p.skip ? 'yes' : 'no') + ', popups ' + (p.popups ? p.popups.length : 0) + ', writes blocked ' + p.writesBlocked;
     if (p.err) row('keyboard', name, 'error', p.err);
+    else if (p.dataNotLoaded && p.dataNotLoaded.length) row('keyboard', name, 'error', 'data not loaded, popups and rows not counted: ' + p.dataNotLoaded.slice(0, 3).join(', '));
     else if (p.keyboardTrap || bad) row('keyboard', name, 'fail', (p.keyboardTrap ? 'keyboard trap at ' + p.keyboardTrap + '; ' : '') + (bad ? bad + ' popup(s) Esc does not close; ' : '') + facts);
     else row('keyboard', name, 'pass', facts);
   }
