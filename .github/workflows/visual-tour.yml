@@ -56,7 +56,7 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Install the walk tools
         working-directory: e2e
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm ci && sh ci-browser.sh
       - name: Schema, the local stack, the seeded shops
         run: |
           (cd chitbridge-api && node tools/sim-load.cjs --schema-only --db "$SIM_DB")
