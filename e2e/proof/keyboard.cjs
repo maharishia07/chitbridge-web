@@ -39,6 +39,7 @@ const initPage = (page) => page.evaluate(HELPERS).catch(() => {});
     const ctx = await browser.newContext({ viewport: { width: W, height: H }, locale: 'en-IN', serviceWorkers: 'block' });
     await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', s); window.print = function () {}; } catch (_) {} }, shop.session);
     const counts = { writes: 0 }; await L.guardContext(ctx, counts);
+    await ctx.addInitScript(HELPERS); /* every new document (a key press that navigates) gets the helper again: crm @390 lost window.__K on real rows */
     const page = await ctx.newPage(); page.on('dialog', (d) => d.dismiss().catch(() => {})); page.on('download', (d) => d.cancel().catch(() => {})); ctx.on('page', (p) => { if (p !== page) p.close().catch(() => {}); });
     const url = BASE + route.replace('{bridge}', encodeURIComponent(sess.bridgeId || ''));
     const R = { page: name, width: W, err: null, notes: [] };

@@ -4,7 +4,7 @@
    ⚠️ LOCAL STACK ONLY unless --remote-ok <host> names the SIT box (QA proof on sit-au, 11 Nov): then base must be https://<that host>, the api is the same host, and sign-in is a
    SIT test user's tester code (--users ~/.cb-sit-users.json --server sit-au --as cbt-au-retail; the file is read, never printed). sit-in (the gate box) and production are refused by name. */
 const fs = require('fs'), path = require('path');
-const { guardDecision } = require('./guard.cjs');
+const { guardDecision, remoteHostDecision } = require('./guard.cjs');
 const RS = require('../lib/real-stack.cjs');
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : d; };
@@ -17,11 +17,11 @@ const VPS = WIDTHS.map((w) => [w, HEIGHT[w] || 800]);
 const PAGES = JSON.parse(fs.readFileSync(path.join(__dirname, 'pages.json'), 'utf8')).pages;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let fwdN = Math.floor(Math.random() * 40000);
-const REMOTE_OK = arg('remote-ok', ''), REFUSED = /(^|[.-])(129-225-85-65|chitbridge.com|railway.app|supabase.co)(.|$)/;
+const REMOTE_OK = arg('remote-ok', '').toLowerCase();
 const isLocal = (u) => ['localhost', '127.0.0.1', '::1'].includes(new URL(u).hostname);
 if (REMOTE_OK) {
-  const h = new URL(BASE).host;
-  if (h !== REMOTE_OK || REFUSED.test(h) || !BASE.startsWith('https://') || API !== BASE) { console.error('refused: --remote-ok ' + REMOTE_OK + ' needs --base https://' + REMOTE_OK + ' and --api equal to it, and never the gate box or production (' + BASE + ' · ' + API + ')'); process.exit(2); }
+  const d = remoteHostDecision(BASE, API, REMOTE_OK);
+  if (!d.ok) { console.error('refused: --remote-ok ' + REMOTE_OK + ': ' + d.why); process.exit(2); }
 } else if (!isLocal(BASE) || !isLocal(API)) { console.error('refused: the proof packs run against a LOCAL stack only (' + BASE + ' · ' + API + ')'); process.exit(2); }
 const HOSTS = [new URL(BASE).host, new URL(API).host];
 
@@ -31,6 +31,7 @@ async function ownShop() { if (REMOTE_OK) return remoteShop(); const s = await R
 async function remoteShop() {
   const all = JSON.parse(fs.readFileSync(arg('users', path.join(require('os').homedir(), '.cb-sit-users.json')), 'utf8')), srv = all.servers[arg('server', 'sit-au')], email = arg('as', 'cbt-au-retail') + '@test.chitbridge';
   if (!srv || !srv.sign_in || !srv.sign_in.tester_code_template) throw new Error('remote sign-in: no tester_code_template for that server in the users file');
+  if (!srv.host || new URL(srv.host).host.toLowerCase() !== new URL(API).host) throw new Error('remote sign-in: the users file host for that server is not the host being driven (the tester code is not sent to another host)');
   const tz = arg('tz', 'Australia/Sydney'), day = (o) => new Date(Date.now() + o * 864e5).toLocaleDateString('en-CA', { timeZone: tz }).replace(/-/g, '');
   const codes = [0, -1, 1].map((o) => srv.sign_in.tester_code_template.replace('{yyyymmdd}', day(o)).replace('{yymmdd}', day(o).slice(2)));
   const call = async (m, p, tok, body) => { const r = await fetch(API + p, { method: m, headers: Object.assign({ 'content-type': 'application/json', 'x-forwarded-for': '10.79.' + ((++fwdN >> 8) & 255) + '.' + (fwdN & 255) }, tok ? { authorization: 'Bearer ' + tok } : {}), body: body === undefined ? undefined : JSON.stringify(body) }); const t = await r.text(); let b; try { b = JSON.parse(t); } catch (_) { b = {}; } return { status: r.status, b }; };
