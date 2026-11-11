@@ -800,6 +800,7 @@
     'CMP032.seeWhich': 'देखें कौन से',
     'See which': 'देखें कौन से',
     'Batch job note': 'बैच काम का नोट',
+    'Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}': '2 दिन से पुराने ऑफ़लाइन सहेजे बदलाव भेजे नहीं गए और हटा दिए गए ({count}): {what}',
     'Continue': 'जारी रखें',
     'Continue an old job?': 'पुराना काम जारी रखें?',
     'Continue your saved job?': 'आपका सहेजा काम जारी रखें?',

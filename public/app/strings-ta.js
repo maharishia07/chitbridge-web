@@ -799,6 +799,7 @@
     'CMP032.seeWhich': 'எவை என்று பார்க்க',
     'See which': 'எவை என்று பார்க்க',
     'Batch job note': 'தொகுப்பு வேலை குறிப்பு',
+    'Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}': '2 நாட்களுக்கு மேல் முன் ஆஃப்லைனில் சேமித்த மாற்றங்கள் அனுப்பப்படவில்லை, நீக்கப்பட்டன ({count}): {what}',
     'Continue': 'தொடரவும்',
     'Continue an old job?': 'பழைய வேலையைத் தொடரவா?',
     'Continue your saved job?': 'சேமித்த வேலையைத் தொடரவா?',

@@ -214,11 +214,18 @@
   function sweepOld() {
     var limit = Date.now() - JOB_MAX_AGE_MS;
     var list = readQ();
+    var ownSwept = [],
+      others = 0;
     var keep = list.filter(function (entry) {
       var old = (entry.queued_at || Date.now()) < limit;
-      return !(old && (!entry.job || !mine(entry)));
+      var swept = old && (!entry.job || !mine(entry));
+      if (swept && mine(entry)) ownSwept.push(entry);
+      else if (swept) others++;
+      return !swept;
     });
-    if (keep.length !== list.length) writeQ(keep);
+    if (keep.length === list.length) return;
+    writeQ(keep);
+    if (cfg.onSwept) cfg.onSwept({ own: ownSwept, others: others }); // silence is the bug: the page says what was removed (ownSwept: the entries; others: a count only)
   }
   // nothing is replayed while a flush runs, before the session is known or offline; the sweep of old entries runs whenever the session is known
   function readyToFlush() {

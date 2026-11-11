@@ -295,6 +295,27 @@ const quiet = (p) => p.catch(() => {});
     check(ids === 'b-new,job:alice:0', 'swept: both old plain entries and bob\'s old job step; kept: bob\'s new entry (waits for bob) and alice\'s old job (the tray asks): ' + ids);
   }
 
+  console.log('review fixes: a sweep is never silent');
+  {
+    const storage = makeStorage(), server = makeServer();
+    const old = Date.now() - 3 * 86400000;
+    storage.setItem('cb.outbox.v1', JSON.stringify([
+      { id: 'o1', entity: 'alice', queued_at: old, method: 'PATCH', path: '/api/products/p1' }, { id: 'o2', entity: 'alice', queued_at: old, method: 'POST', path: '/api/suppliers' },
+      { id: 'b1', entity: 'bob', queued_at: old, method: 'POST', path: '/api/secret' }
+    ]));
+    const page = makePage(storage, server, 'alice');
+    const told = [];
+    page.CBOffline.configure({ onSwept: (swept) => told.push(swept) });
+    page.fetch = async () => ({ status: 200, clone: () => ({ json: async () => ({}) }) });
+    await page.CBOffline.flush();
+    check(told.length === 1 && told[0].own.length === 2 && told[0].others === 1 && !JSON.stringify(told[0]).includes('/api/secret'), 'the page is told: 2 of her own (named) and 1 of another sign-in (a count only, no details)');
+    check(JSON.parse(storage.getItem('cb.outbox.v1')).length === 0, 'and they are gone');
+    check(html.includes('onSwept: bulkSweptNotice') && /function bulkSweptNotice[\s\S]*toast\(txf\('Changes saved offline more than 2 days ago/.test(html), 'app.html shows it as a toast in words (a text key)');
+    let missing = '';
+    ['ar', 'fr', 'hi', 'ta'].forEach((lang) => { if (!read('app/strings-' + lang + '.js').includes('more than 2 days ago were not sent') && !read('app/strings-' + lang + '.js').includes("'Changes saved offline")) missing += lang + ' '; });
+    check(!missing, 'the key is in all four packs ' + missing);
+  }
+
   console.log('review fixes: a 429 is not an applied attempt; a stopped job keeps its steps and asks on the next visit');
   {
     const storage = makeStorage(), server = makeServer();

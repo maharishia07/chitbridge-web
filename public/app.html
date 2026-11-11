@@ -23737,6 +23737,13 @@ function bulkAskSavedJob(saved) {
     : txf('This job stopped part-way: {left} not done. Continue it now? Cancel drops the rest of it.', { left });
   confirmAsk(tx(old ? 'Continue an old job?' : 'Continue your saved job?'), esc(question), tx('Continue'), () => bulkJobResume(saved), false, () => window.CBOffline.closeJob(saved.id));
 }
+/** the outbox removed what was saved offline more than 2 days ago (the server no longer holds its key, so sending it could run it twice): this person's own are named in words, other people's only counted in the log */
+function bulkSweptNotice(swept) {
+  if (swept.others) cblog('info', 'outbox: ' + swept.others + ' old entries of another sign-in were removed');
+  if (!swept.own.length) return;
+  const what = swept.own.slice(0, 3).map((entry) => (entry.method || 'POST') + ' ' + (entry.path || '')).join(', ');
+  toast(txf('Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}', { count: swept.own.length, what }));
+}
 /** start-up and sign-in (SEC-140 inside the outbox: only THIS person's entries are listed): queued writes go on, and a saved job goes on in the tray */
 async function bulkResume() {
   const outbox = bulkOutbox();
@@ -30435,6 +30442,7 @@ route();
       entity: function () {
         return SESSION && (SESSION.actorId || SESSION.entityId);
       },
+      onSwept: bulkSweptNotice,
       onChange: cbPill
     });
     /* not on the load right after a clean-up: the slate stays clean until the next visit */ if (!(typeof CLEAN_LOAD !== 'undefined' && CLEAN_LOAD))

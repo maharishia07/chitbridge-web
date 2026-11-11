@@ -829,6 +829,7 @@
     'CMP032.seeWhich': 'اعرض أيها',
     'See which': 'اعرض أيها',
     'Batch job note': 'ملاحظة المهمة الجماعية',
+    'Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}': 'لم تُرسل التغييرات المحفوظة دون اتصال منذ أكثر من يومين وتمت إزالتها ({count}): {what}',
     'Continue': 'متابعة',
     'Continue an old job?': 'هل تتابع مهمة قديمة؟',
     'Continue your saved job?': 'هل تتابع مهمتك المحفوظة؟',

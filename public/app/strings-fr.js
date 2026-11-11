@@ -799,6 +799,7 @@
     'CMP032.seeWhich': 'Voir lesquels',
     'See which': 'Voir lesquels',
     'Batch job note': 'Note de la tâche groupée',
+    'Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}': 'Les modifications enregistrées hors ligne il y a plus de 2 jours n\'ont pas été envoyées et ont été supprimées ({count}) : {what}',
     'Continue': 'Continuer',
     'Continue an old job?': 'Continuer une ancienne tâche ?',
     'Continue your saved job?': 'Continuer votre tâche enregistrée ?',
