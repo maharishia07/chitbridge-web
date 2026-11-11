@@ -142,7 +142,17 @@ var CBUi = (function () {
     listtab: { code: 'CMP036', element: 'CMP036-K01', label: 'List tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listcommand: { code: 'CMP037', element: 'CMP037-B01', label: 'List command', verb: 'DOWNLOAD', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listrowaction: { code: 'CMP038', element: 'CMP038-B01', label: 'List row action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    listcolumn: { code: 'CMP039', element: 'CMP039-B01', label: 'List column header', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    listcolumn: { code: 'CMP039', element: 'CMP039-B01', label: 'List column header', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* Athi 11 Nov (wave 2, customer side, step 2): the Books screens' own components (cap-books.js: accounts, crm, finance, tasks). It reuses CMP001 Save, CMP003 Cancel, CMP004 Done,
+       CMP005 Close, CMP006 Back, CMP007 Add, CMP009 Try again, CMP010 Open, CMP012 Edit, CMP014 Clear; these five are what had no component. Elements: CMP040 I01 text/number/money/search,
+       I02 date, I03 tick, T01 free text; CMP041 S01 select; CMP042 B01..B23 the books' commands (pay, record, remind, show, statement, fold list, lock, unlock, close for good, pack, opening
+       balances, cheque step, waiting-bill link, add supplier, accept / reject short, advance, reverse, GST note, resize pane), P01 row tools; CMP043 K01 tab, K02 ledger tree item;
+       CMP044 C01 day bills link, C02 chit link, C03 reversal link. cap-books.js writes them with their codes (data-cbsid); none is drawn by ui.action (nonButton). */
+    bookfield: { code: 'CMP040', element: 'CMP040-I01', label: 'Books field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookselect: { code: 'CMP041', element: 'CMP041-S01', label: 'Books select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookaction: { code: 'CMP042', element: 'CMP042-B01', label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    booktab: { code: 'CMP043', element: 'CMP043-K01', label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    booklink: { code: 'CMP044', element: 'CMP044-C01', label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;

@@ -361,7 +361,9 @@ var CBUiStandard = (function () {
   var LIST_ROWS = [
     ['listfield', 'CMP032-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
     ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
-    ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column']
+    ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column'],
+    ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
+    ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal']
   ];
   function listRows() {
     return LIST_ROWS.map(function (entry) {
