@@ -37,7 +37,7 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(10) + '· ' + d + '  ' 
     await p.goto(base);
     await p.waitForFunction(() => typeof window.paintMenu === 'function', null, { timeout: 30000 });
     await p.evaluate(() => {
-      window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: [], offers: [], at: new Date().toISOString() };
+      window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, items: [], offers: [], at: new Date().toISOString() };
       setMode('sell');
     });
     await p.evaluate(() => toggleMenu());

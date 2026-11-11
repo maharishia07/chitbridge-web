@@ -49,7 +49,7 @@ for (let i = 0; i < 60; i++) ITEMS.push({ item_id: 'p' + i, name: 'Product numbe
     await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
     await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
     await p.evaluate(({ items, layout }) => {
-      window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: items, offers: [], at: new Date().toISOString() };
+      window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, items: items, offers: [], at: new Date().toISOString() };
       setMode('sell');
       screenSet({ layout: layout });
       /* ⚠️ THE SHAPE FOLLOWS THE LAYOUT, and only styleApply() does that — screenSet alone leaves the shape

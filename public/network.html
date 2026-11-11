@@ -19,7 +19,7 @@
      (?bridge=… still lands there). -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- the standard page skeleton (sidebar + main pane), drawn by CBFrame -->
 <style>
-:root{ --ink:#2a2418; --muted:#5c5240; --line:#e6dcc6; --line-3:#d8ccb0; --surface:#fffdf8; --ground:#fbf6ec; --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
+:root{ --ink:#2a2418; --muted:var(--grey-2,#5c5240); --line:#e6dcc6; --line-3:#d8ccb0; --surface:var(--card,#fffdf8); --ground:var(--paper,#fbf6ec); --hover:#f3ead7; --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --green-t:#E8F4ED; --green-b:#A9D3BC; --green-d:#0D4A2B; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205; --red-i:#8E3517;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses (SHELL-ONE: one face) */ --serif:'Source Serif 4',Georgia,serif; }
 *{box-sizing:border-box}
@@ -75,6 +75,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script src="/app/rail-bell.js"></script>
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the page's language, direction and formats — the pack the chip's name and the labels read (SCREEN-ID); one home since T2-ENGONCE -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header, and every sheet's own (SCREEN-ID) -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>
 <script src="/app/page-frame.js"></script>
 <script src="/app/list-ctl.js"></script>   <!-- CBList: the one list control -->

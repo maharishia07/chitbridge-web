@@ -115,8 +115,22 @@
   }
 
   /* ── what is saved ── */
+  /* FIXED LOOK (the UI standard page, public/ui-standard.html): a page whose <html> carries data-appearance-fixed takes its look from CBAvatar.applyWith(), never from
+     storage, and nothing here saves, pushes or reads cb_sess for it. OVERRIDE is null on every other page, so nothing changes there. */
+  var OVERRIDE = doc && doc.documentElement && typeof doc.documentElement.hasAttribute === 'function' && doc.documentElement.hasAttribute('data-appearance-fixed') ? {} : null;
   function pref(kind) {
+    if (OVERRIDE) return has(OVERRIDE, kind) ? OVERRIDE[kind] : DEFAULTS[kind];
     return lsGet(KEY[kind], DEFAULTS[kind]);
+  }
+  /** apply a look given as { theme, font, fs, weight, motion } without reading or writing storage (only on a fixed-look page) */
+  function applyWith(look) {
+    if (!OVERRIDE) return false;
+    Object.keys(look || {}).forEach(function (kind) {
+      OVERRIDE[kind] = look[kind];
+    });
+    BASE = null;
+    apply();
+    return true;
   }
   function get() {
     return {
@@ -535,6 +549,7 @@
 
   function set(kind, value) {
     if (!has(KEY, kind) || !valid(kind, value)) return;
+    if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
     pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
@@ -545,6 +560,14 @@
     } /* the person's own choice outranks a showing link */
     push(); /* every kind reaches the server since CU3 (font · weight were device-only) */
     repaint();
+  }
+  /** a pick on a fixed-look page (the UI standard page): the look is applied and the host told, but nothing is saved, held, pushed or reloaded */
+  function setFixed(kind, value) {
+    OVERRIDE[kind] = value;
+    BASE = null;
+    apply();
+    repaint();
+    if (M && M.o && typeof M.o.onLook === 'function') M.o.onLook(kind, value);
   }
   /** an edition decides what a page DRAWS, so a new one is a fresh draw — without the ?edition= that would win over the choice just made */
   function editionReload(force) {
@@ -636,7 +659,7 @@
   function swatches() {
     var p = pref('theme');
     var dev =
-      '<button type="button" data-testid="theme-device" data-av-theme="device" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="theme-device" data-av-theme="device" aria-pressed="' +
       (p === 'device') +
       '"><span class="dot"><i style="background:#FCFAF5"></i><i style="background:#15140F"></i></span>My device</button>';
     return (
@@ -646,7 +669,7 @@
           var t = THEMES[item],
             v = t.vars || {};
           return (
-            '<button type="button" data-testid="theme-' +
+            '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="theme-' +
             esc(item) +
             '" data-av-theme="' +
             esc(item) +
@@ -681,7 +704,7 @@
       choices
         .map(function (choice) {
           return (
-            '<button type="button" data-testid="' +
+            '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="' +
             kind +
             '-' +
             choice[0] +
@@ -701,6 +724,14 @@
     );
   }
 
+  /** the identity mount of a menu control (this screen's code + U1nn, the list control's rule); none until the page names its screen */
+  function avatarMount(component) {
+    return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
+  }
+  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
+  function avatarChip(code, place) {
+    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
+  }
   function menuHtml(o) {
     var P = o.person || {},
       items = o.items || ['profile', 'settings', 'support', 'signout'];
@@ -713,24 +744,24 @@
     if (has_('profile'))
       up.push(
         o.onProfile
-          ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
-          : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-profile" data-av="profile">Profile</button>'
+          : '<a data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>'
       );
     /* UX-96: the OWNER has Settings on every page — the workshop's own handler, else the Settings page (never a door into app.html, H34) */
     if (showSettings)
       up.push(
         o.onSettings
-          ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-          : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-settings" data-av="settings">Settings</button>'
+          : '<a data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>'
       );
     /* UX-96: Support only where there is somewhere to go (no support page yet → no item, no loop to Home) */
     if (has_('support') && (o.onSupport || o.supportHref))
       down.push(
         o.onSupport
-          ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-          : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="av-support" data-av="support">Support</button>'
+          : '<a data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
       );
-    if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
+    if (has_('signout')) down.push('<button type="button" data-cbsid="CMP033-M01"' + avatarMount('CMP033') + ' data-testid="nav-signout" data-av="signout">Sign out</button>');
 
     var fsNow = pref('fs'),
       w = pref('weight'),
@@ -742,7 +773,7 @@
         Object.keys(o.languages.list)
           .map(function (item) {
             return (
-              '<button type="button" data-testid="lang-' +
+              '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="lang-' +
               esc(item) +
               '" data-av-lang="' +
               esc(item) +
@@ -757,7 +788,7 @@
         '</div>';
     }
     return (
-      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
+      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
       '<div class="cbav-who"><span class="l">' +
       esc(letter(P)) +
       '</span><div><b>' +
@@ -777,7 +808,7 @@
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
       TEXT_SIZES.map(function (x, index) {
         return (
-          '<button type="button" data-testid="fs-' +
+          '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="fs-' +
           x[0] +
           '" data-av-fs="' +
           x[0] +
@@ -796,19 +827,19 @@
       }).join('') +
       '</div>' +
       '<div class="cbav-weights" role="group" aria-label="Text weight">' +
-      '<button type="button" data-testid="weight-normal" data-av-weight="normal" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="weight-normal" data-av-weight="normal" aria-pressed="' +
       (w === 'normal') +
       '" title="Normal" aria-label="Normal text" style="font-weight:400">A</button>' +
-      '<button type="button" data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
       (w === 'bold') +
       '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
-      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-testid="motion-switch" data-av-motion="1" aria-checked="' +
+      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="motion-switch" data-av-motion="1" aria-checked="' +
       (pref('motion') === 'reduce') +
       '" aria-label="Less motion"></button></div>' +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
-          '<button type="button" data-testid="font-' +
+          '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="font-' +
           x[0] +
           '" data-av-font="' +
           x[0] +
@@ -839,7 +870,7 @@
       l
         .map(function (x) {
           return (
-            '<button type="button" data-testid="edition-' +
+            '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="edition-' +
             esc(x.key) +
             '" data-av-edition="' +
             esc(x.key) +
@@ -881,13 +912,13 @@
          Without it the door is a link to the INDEX, the front door (Athi 2026-10-09: a customer never lands in the workshop's #/login). */
       el.innerHTML =
         typeof o.onSignIn === 'function'
-          ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
-          : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
+          ? '<span class="cbav"><button type="button" class="cbav-signin" data-cbsid="CMP052-B01"' + avatarMount('CMP052') + ' data-testid="signin-door" data-av="signin">Sign in</button></span>'
+          : '<span class="cbav"><a class="cbav-signin" data-cbsid="CMP052-B01"' + avatarMount('CMP052') + ' data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
       return;
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
     el.innerHTML =
-      '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-testid="' +
+      '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-cbsid="CMP048-B01"' + avatarMount('CMP048') + ' data-testid="' +
       esc(o.testid || 'avatar') +
       '" aria-haspopup="dialog" aria-expanded="' +
       openNow +
@@ -1080,6 +1111,7 @@
    *   onProfile · onSettings · onSupport · onSignOut     a page that has the screen in place; otherwise a link into the app
    *   languages { list:{code:name}, current, onPick }    the app only: it has no other door to its language
    *   testid   the button's data-testid (default `avatar`)      signInHref · apiBase · token
+   *   onLook(kind, value)  a fixed-look page only (data-appearance-fixed): told after each pick, which is applied but never saved
    *   sync:false  no server at all (the counter offline)      pull:false  the host reads /me itself and calls hydrate()
    */
   function mount(el, o) {
@@ -1161,12 +1193,13 @@
   /* FX-QA1: a choice made offline goes up when the connection comes back — not only on the next page's pull (the mark, F9, says what is still owed) */
   if (root.addEventListener)
     root.addEventListener('online', function () {
-      if (Object.keys(pendGet()).length) push();
+      if (!OVERRIDE && Object.keys(pendGet()).length) push();
     });
 
   root.CBAvatar = {
     mount: mount,
     apply: apply,
+    applyWith: applyWith,
     hydrate: hydrate,
     set: set,
     get: get,

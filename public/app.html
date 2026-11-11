@@ -484,6 +484,10 @@
   .topbar .who .shopsel{background:rgba(255,255,255,.05);color:#e8f0f5;border:1px solid rgba(255,255,255,.18);
     border-radius:9px;padding:6px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer;color-scheme:dark}
   .topbar .who .shopsel:hover{background:rgba(255,255,255,.10)}
+  /* CMP025 Choice in the dark top bar: the segments take the bar's ink, the chosen one the green */
+  .topbar .who .shopsel{padding:0;overflow:hidden;flex:0 0 auto}@media(max-width:700px){.topbar{gap:6px;padding-inline-start:10px;padding-inline-end:10px}.topbar .who{gap:4px}.topbar .who .shopsel{overflow:visible}.topbar .who .shopsel .cbui-choice-menu{background:var(--chrome);border-color:rgba(255,255,255,.18)}}
+  .topbar .who .shopsel button[aria-selected="true"]{background:var(--ok-solid,#1f7a4d);color:var(--on-accent,#fff)}.topbar .who .shopsel button{color:var(--on-dark,#e8f0f5);background:transparent}
+  .topbar .who .shopsel button[aria-checked="true"]{background:var(--ok-solid,#1f7a4d);color:var(--on-accent,#fff)}
   .topbar .who .shopsel:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
   .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:var(--fs-1);font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
@@ -492,7 +496,17 @@
   .shoptog button.on.closed{background:#9a4040;color:#fff}
   .topbar .b .bt{margin-inline-start:2px}
   .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 10px}
-  .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:var(--fs-5)}
+  /* ONE LOOK FOR THE TOP BAR'S COMPONENTS (CMP028 Menu, CMP023 Home, CMP029 Capabilities, CMP030 Activity). The SIZE is not here: it is the one tap rule in ui.js
+     ([data-cbname] 44, compact 32 and lifted to 44 on a phone; Athi 10 Nov). Measured at 390 before: Menu 32x29, Home 61x24, key and bell 34x34, avatar 34x34. */
+  .topbar .cbtb{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:0;background:none;color:inherit;font:inherit;line-height:1;padding:0 6px;cursor:pointer;text-decoration:none;position:relative}
+  .topbar .cbtb[data-cbname="menu"]{display:none;color:var(--chrome-on);font-size:var(--fs-5)}
+  .appwrap.m .topbar .cbtb[data-cbname="menu"]{display:inline-flex}
+  .topbar .cbtb[data-cbname="home"]{font-size:var(--fs-1);border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:0 9px}
+  .topbar .cbtb[data-cbname="legend"]{color:var(--chrome-ink);font-size:var(--fs-1)}
+  .topbar .cbtb[data-cbname="activity"]{color:var(--chrome-ink);font-size:var(--fs-1)}
+  .topbar .cbtb[data-cbname="legend"]>span:first-child,.topbar .cbtb[data-cbname="activity"]>span:first-child{font-size:var(--fs-4)}
+  .topbar .cbtb:focus-visible{outline:2px solid var(--chrome-on);outline-offset:-2px}
+  @media(max-width:700px){.topbar .cbtb .hw{display:none}}
 
   /* ⚠️ THE RAIL NEEDS THE INSETS TOO — I padded the topbar for viewport-fit=cover and stopped there, which is
      half a fix. In LANDSCAPE on a notched phone the cutout is on a SIDE, and the side it is on is where this
@@ -530,7 +544,6 @@
   .purpose.open{max-height:90px;padding:9px 16px;border-bottom:1px solid var(--line)}
   .purpose b{font-family:'Space Grotesk';color:var(--ink)}
   .purpose .x{margin-inline-start:auto;border:0;background:none;color:var(--grey);font-size:var(--fs-3);cursor:pointer}
-  .topbar .info{border:0;background:none;color:#9fb4bf;font-size:var(--fs-4);cursor:pointer;padding:2px 5px;line-height:1}
   /**
    * ⭐ TOOLBAR ICONS ARE A FINGERTIP TALL — measured, not guessed. They rendered ~30×20px, because `padding:2px`
    * on a 16px glyph is all the height there is. Three of the four smallest tap targets on the busiest screen were
@@ -544,9 +557,7 @@
    *
    * inline-flex + centring so the glyph stays optically centred as the box grows — padding alone would push it.
    */
-  .topbar .info,.topbar .bell,.topbar .msgc{min-width:34px;min-height:34px;display:inline-flex;align-items:center;justify-content:center;padding:0}
 
-  .topbar .info.on{color:var(--gold)}
 
   /**
    * ⚠️ THE LIST WIDTH IS CLAMPED SO THE DETAIL ALWAYS SURVIVES.
@@ -906,7 +917,6 @@
   .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-2);color:var(--grey-2);position:relative;cursor:pointer;user-select:none}
   .tool:hover{background:var(--paper);border-color:var(--on-bg)}
   .tool.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
-  .topbar .bell{position:relative;border:0;background:none;color:var(--chrome-ink);font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
   /**
    * ⚠️ ONE RULE FOR BOTH DOTS. This selector existed TWICE, byte-identical — once under `.bell`, once under
    * `.msgc` — so the unread-mail dot and the notification dot were two declarations of one thing, and darkening
@@ -915,7 +925,7 @@
    * needs attention", which is exactly what this dot means. Size 9px in a 15px disc — still small, but the count
    * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
    */
-  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;inset-inline-end:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .topbar .bdot{position:absolute;top:-2px;inset-inline-end:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:var(--fs-2)}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
   .filterpanel select{color:var(--on-card);font-size:var(--fs-2);padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
@@ -1100,7 +1110,6 @@
   .busybox{background:var(--card);border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:var(--fs-3);font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
   .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
   @keyframes bspin{to{transform:rotate(360deg)}}
-  .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-inline-start:4px}
@@ -1334,7 +1343,6 @@
   .divider .grip{width:3px;height:26px;border-radius:3px;background:var(--grey);opacity:.55}
   .appwrap.m .divider{cursor:row-resize}.appwrap.m .divider .grip{width:26px;height:3px}
   .appwrap.m .shell{grid-template-columns:1fr;position:relative;overflow:hidden}
-  .appwrap.m .topbar .ham{display:block}
   .appwrap.m .menu{position:absolute;top:52px;bottom:0;inset-inline-start:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
   .appwrap.m .menu.open{transform:translateX(0)}
   .appwrap.m .panel{grid-template-columns:1fr;grid-template-rows:1fr}
@@ -1640,6 +1648,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/ui.js"></script>   <!-- ui.action / ui.dialog: the standard action set (UX-137); cap-settings.js and cap-print.js (lazy, Settings) draw their buttons with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
 <script src="/app/cap-suppliers.js"></script>   <!-- supName · supKindOf · isUserId (MOVED, T3-OPS) — CB Operations › Suppliers reads the same; CBSuppliers is not mounted here -->
 <script src="/app/register-form.js"></script>   <!-- the register form (#/register) — shared with CB Settings › New shop; govCtx with it (cap-country reads it) -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
@@ -2009,6 +2018,8 @@ const EP = {
   prodStatusBulk: { m: 'POST', p: '/api/products/status/bulk', ok: 'y' }, // {ids:[…], status}
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate: { m: 'POST', p: '/api/products/bulk-update', ok: 'y' }, // {items:[{id,item_data}]}
+  /* ⭐ QA-130: add / remove a category per product — never the record; a repeat changes nothing, so a run can be resumed */
+  prodBulkCategories: { m: 'POST', p: '/api/products/categories/bulk', ok: 'y' }, // {ids:[…], add?:[categoryId], remove?:[categoryId]} → {results:[{id, result: done|unchanged|refused}]}
   prodStarters: { m: 'GET', p: '/api/products/starter-columns', ok: '✓' }, // the standard column set for a trade
   prodStarterAdopt: { m: 'POST', p: '/api/products/starter-columns', ok: '✓' }, // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -3310,7 +3321,7 @@ function mountAssist() {
      control no stylesheet can ever reposition. */
   const node = document.createElement('div');
   node.id = 'assistfab';
-  node.innerHTML = `<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">${tx('💬 Assistant')}</button>`;
+  node.innerHTML = ui.action('assistant', { mount: 'PNL001-U01', surface: 'float', hint: 'Ask the assistant', testid: 'assistant-open', onPress: () => openAssist() });
   document.body.appendChild(node);
   const h = document.createElement('div');
   h.id = 'assisthost';
@@ -4678,6 +4689,8 @@ function setSession(s) {
   try {
     mePrefetchStart();
   } catch (_) {}
+  /* a person signing in (not a refresh of the same token) picks up their own saved jobs; bulkResume is idempotent and skips other people's entries */
+  if (typeof bulkResume === 'function') setTimeout(bulkResume, 0);
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession() {
@@ -4938,6 +4951,17 @@ try {
     });
 } catch (_) {}
 // The logged-in actor's real id, from the JWT.
+/** the mount of a control the top bar draws on every screen: the screen's own code and a chrome number */
+function chromeMount(number) {
+  const code = typeof CBScreenId !== 'undefined' && CBScreenId.current && CBScreenId.current();
+  return (code || 'HOM001') + '-U' + number;
+}
+/** the bell: CMP030 Activity (the one tap rule sizes it); the unread dot is the one thing the component does not draw, so it is put in before the button closes */
+function topbarBell() {
+  const bell = ui.action('activity', { mount: chromeMount('08') /* where-used: out-of-scope the top bar is on every screen */, hint: 'Activity — refreshes every 20s (real push not built yet)', display: 'icon+label', size: 'compact', surface: 'topbar', id: 'bellbtn', testid: 'icon-notifications', onPress: () => openNotifications() });
+  const unreadDot = '<span class="bdot" id="belldot" style="' + (notifBadge() ? '' : 'display:none') + '">' + notifBadge() + '</span>';
+  return bell.replace(/<\/button>$/, unreadDot + '</button>');
+}
 function statusControl(role) {
   if (role === 'actor') {
     const d = SESSION.duty || 'duty';
@@ -4959,12 +4983,22 @@ function statusControl(role) {
    */
   if (role === 'entity') {
     const sh = SESSION.shop || 'open';
-    const opt = (v, l) => `<option value="${v}"${sh === v ? ' selected' : ''}>${l}</option>`;
-    return `<select class="shopsel" data-testid="shop-status" aria-label="${tx('Shop status')}"
-        title="${tx('Whether this shop is accepting orders')}" onchange="setShop(this.value)">
-      ${opt('open', tx('🟢 Open'))}
-      ${opt('away', tx('🌙 Away'))}
-      ${opt('closed', tx('⛔ Closed'))}</select>`;
+    /* CMP025 Choice: a segmented switch (Open · Away · Closed), 32 px on a wide screen and 44 px on a phone (the one tap rule) */
+    return ui.choice({
+      mount: chromeMount('02') /* where-used: out-of-scope the top bar is on every screen */,
+      label: 'Shop status',
+      value: sh,
+      cls: 'shopsel',
+      size: 'compact',
+      testid: 'shop-status',
+      hint: 'Whether this shop is accepting orders',
+      items: [
+        { value: 'open', label: '🟢 Open' },
+        { value: 'away', label: '🌙 Away' },
+        { value: 'closed', label: '⛔ Closed' }
+      ],
+      onChange: setShop
+    });
   }
   return '';
 }
@@ -5010,7 +5044,7 @@ async function setDuty(d) {
  */
 function _shopSync(v) {
   const el = document.querySelector('.shopsel');
-  if (el) el.value = v;
+  if (el) ui.choiceSet(el, v);
 }
 
 async function setShop(s) {
@@ -6464,10 +6498,10 @@ function _renderApp() {
     `
   <div class="appwrap ${UI.vp === 'mob' ? 'm' : ''}"><div class="shell">
     <div class="topbar">
-      <button class="ham" data-testid="nav-drawer" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
+      ${ui.action('menu', { mount: chromeMount('05') /* where-used: out-of-scope the top bar is on every screen */, display: 'icon', surface: 'topbar', testid: 'nav-drawer', onPress: () => { UI.drawer = !UI.drawer; renderApp(); } })}
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
-      <a data-testid="nav-home" href="/" title="${tx('The index — the whole shop on one page')}" style="color:inherit;opacity:.85;text-decoration:none;font-size:var(--fs-1);border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:4px 9px">⌂ ${tx('Home')}</a>
-      <button class="info" id="legendbtn" data-testid="icon-legend" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
+      ${ui.action('home', { mount: chromeMount('06') /* where-used: out-of-scope the top bar is on every screen */, href: '/', hint: 'The index — the whole shop on one page', display: 'icon+label', size: 'compact', surface: 'topbar', testid: 'nav-home' })}
+      ${ui.action('legend', { mount: chromeMount('07') /* where-used: out-of-scope the top bar is on every screen */, hint: 'What we serve — capabilities & features', display: 'icon+label', size: 'compact', surface: 'topbar', id: 'legendbtn', testid: 'icon-legend', onPress: () => openLegend() })}
       <!-- ⭐ 💬 DROPPED — Athi, 2026-08-15: *"if the message is duplicate, we can drop the icon … but messaging
            not required. If we have anything else like RAID, we can keep it as a RAID icon."*
            The message centre duplicated the Messages screen and did it worse: unreadCount() counts m.unread over
@@ -6483,7 +6517,7 @@ function _renderApp() {
            mechanism is startAutoRefresh()'s 20-second poll. So the bell is dimmed and says so on hover: an
            unfinished capability that LOOKS finished is worse than one that admits it, because nobody comes back
            to it. The dimming comes off when a real transport lands. -->
-      ${role !== 'customer' ? `<button class="bell" id="bellbtn" data-testid="icon-notifications" onclick="openNotifications()" title="Activity — refreshes every 20s (real push not built yet)" aria-label="Activity" style="opacity:.55">🔔<span class="bdot" id="belldot" style="${notifBadge() ? '' : 'display:none'}">${notifBadge()}</span></button>` : ''}
+      ${role !== 'customer' ? topbarBell() : ''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:end"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity || ''}</div></div>
         <!-- ⭐ THE AVATAR IS NOW A MENU. Profile and Settings were the two least-visited screens in the rail and
              were holding prime space in it; every app puts them behind the avatar, and the avatar was already
@@ -8349,7 +8383,7 @@ function ccStepItems() {
       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">From <b>${esc(UI._supplier.name)}</b>&rsquo;s catalogue</div>`
       : '') +
     `<div id="cc_catpick">${ccCatPickHTML()}</div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines = `<div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:end;font-weight:700;font-size:var(--fs-2);margin-top:6px"></div>`;
@@ -10832,21 +10866,21 @@ function pendingNote(why) {
 }
 
 function helpQ(key, title) {
-  return (
-    '<button type="button" data-testid="help-q-' +
-    key +
-    '" onclick="showHelp(\'' +
-    key +
-    '\')"' +
-    ' title="' +
-    esc(title || 'Explain this') +
-    '" aria-label="' +
-    esc(title || 'Explain this') +
-    '"' +
-    ' style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:50%;' +
-    'width:18px;height:18px;line-height:1;font-size:11px;font-weight:700;cursor:pointer;padding:0;' +
-    'margin-inline-start:6px;vertical-align:middle">?</button>'
-  );
+  /* CMP016 Help: the standard "?" (44 px target, a name and a tooltip); one per help key, so the mount's key is the help key */
+  /* where-used: out-of-scope one help per key, drawn by a loop of screens */
+  return ui.action('help', {
+    mount: chromeMount('03'),
+    key: key,
+    testid: 'help-q-' + key,
+    object: title || undefined,
+    hint: title || 'Explain this',
+    onPress: () => showHelp(key)
+  });
+}
+
+/* UX-137 CMP019: does this screen have a note? The screen's "?" (screen-id.js) is shown only when it does. */
+function hasHelp(key) {
+  return !!HELP_TEXT[key];
 }
 
 /* ⚠️ AN UNKNOWN KEY SAYS SO rather than opening an empty box — a "?" that explains nothing is worse than none. */
@@ -10979,7 +11013,7 @@ function supKindTabsHTML() {
       n = supKindCount(k);
     return (
       `<button class="${on ? 'on' : ''}" data-testid="${tid}" onclick="setSupKind('${k}')">${icon} ${tx(label)}` +
-      (n ? ` <span style="opacity:.7">${n}</span>` : '') +
+      (n ? ` <span style="font-weight:400">${n}</span>` : '') +
       `</button>`
     );
   };
@@ -11981,19 +12015,19 @@ function platformScreen() {
          control rather than more values in the kind list. */
     '<select ' +
     sel +
-    ' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">' +
+    ' id="pl_vis" data-testid="plat-visibility" aria-label="' + esc(tx('Catalogue visibility')) + '" onchange="loadPlatform()">' +
     opt('', tx('any catalogue'), ap.visibility) +
     (f.visibility || []).map((item) => opt(item, tx(item), ap.visibility)).join('') +
     '</select>' +
     '<select ' +
     sel +
-    ' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">' +
+    ' id="pl_vert" data-testid="plat-vertical" aria-label="' + esc(tx('Vertical')) + '" onchange="loadPlatform()">' +
     opt('', tx('any vertical'), ap.vertical) +
     (f.vertical || []).map((item) => opt(item, item, ap.vertical)).join('') +
     '</select>' +
     '<select ' +
     sel +
-    ' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">' +
+    ' id="pl_plan" data-testid="plat-plan" aria-label="' + esc(tx('Plan')) + '" onchange="loadPlatform()">' +
     opt('', tx('any plan'), ap.plan) +
     (f.plan || []).map((item) => opt(item, item, ap.plan)).join('') +
     '</select>' +
@@ -12007,7 +12041,7 @@ function platformScreen() {
      */
     '<select ' +
     sel +
-    ' id="pl_sort" data-testid="plat-sort" onchange="UI.platSort=null;loadPlatform()">' +
+    ' id="pl_sort" data-testid="plat-sort" aria-label="' + esc(tx('Sort order')) + '" onchange="UI.platSort=null;loadPlatform()">' +
     '<option value="">' +
     esc(tx('newest first')) +
     '</option>' +
@@ -12374,7 +12408,7 @@ function platDetailHTML() {
     /* ⭐ 'the right hand top level to show the MIS related to the selection' — above the tabs, so it is the
        first thing read and stays put whichever tab is open. */
     platEntityMisHTML(r) +
-    '<div class="db">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Entity details')) + '">' +
     platTabsHTML() +
     platTabBodyHTML(r, mono) +
     '</div>'
@@ -12639,6 +12673,8 @@ function platFirstFilterHTML(ap) {
       id +
       '" data-testid="' +
       testid +
+      '" aria-label="' +
+      esc(tx(opts[0][1])) +
       '" onchange="loadPlatform()">' +
       opts
         .map(function (item) {
@@ -12883,7 +12919,7 @@ function platPopBarHTML(ap) {
     '<span style="flex:1"></span>' +
     /* ⚠️ flex:none and an explicit width. `.inp` is width:100%, so in a 560px pane the select ate the row and
        pushed the + button onto a line of its own. */
-    '<select class="inp" id="pl_pop" data-testid="plat-population" onchange="platSetPopulation(this.value)" ' +
+    '<select class="inp" id="pl_pop" data-testid="plat-population" aria-label="' + esc(tx('Which entities')) + '" onchange="platSetPopulation(this.value)" ' +
     'style="flex:none;width:auto;min-width:118px;padding:4px 7px;font-size:var(--fs-1);' +
     'border-radius:var(--r-sm)">' +
     all
@@ -12955,7 +12991,7 @@ function platDeskHTML(cur, live) {
     '</span>' +
     '<select class="inp" data-testid="plat-desk" onchange="platSetDesk(this.value)" ' +
     'style="flex:none;width:auto;min-width:132px;padding:4px 7px;font-size:var(--fs-1);' +
-    'border-radius:var(--r-sm)" title="' +
+    'border-radius:var(--r-sm)" aria-label="' + esc(tx('Support desk')) + '" title="' +
     esc(tx('Who answers support raised by entities in this population')) +
     '">' +
     '<option value="">' +
@@ -13499,7 +13535,7 @@ function platSummaryHTML() {
       .join('');
   };
   return (
-    '<div class="db">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Platform summary')) + '">' +
     platGrp(tx('By type'), bars) +
     /* ⚠️ THESE COUNT ENTITIES ONLY — not the actors and shoppers in 'By type' above. Two denominators on
        one screen with no label is how a report gets quoted wrong. */
@@ -14217,7 +14253,7 @@ function custDetailHTML() {
     '</div><div class="ds">' +
     tx('🔒 locked under your shop · your CRM') +
     '</div></div>' +
-    '<div class="db">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Customer details')) + '">' +
     grp(
       'Identity &amp; contact',
       kv('Name', esc(c.display_name || '—')) +
@@ -15257,7 +15293,7 @@ async function supCatalogueFull(sid) {
     let msg = '';
     try {
       const j = await res.json();
-      msg = j.message || j.error || '';
+      msg = answerWords(j);
     } catch (_) {}
     throw new Error(msg || 'Could not read their catalogue (' + res.status + ')');
   }
@@ -15655,7 +15691,7 @@ function supDetailHTML() {
     return (
       `<div class="dh"><div class="dt">🧴 ${tx('Supplies')}</div>` +
       `<div class="ds">${tx('what the shop buys and uses — never on your storefront')}</div></div>` +
-      `<div class="db" id="sup_body">${typeof SUP !== 'undefined' && SUP && SUP.rows !== null ? '' : '<div class="loadwrap"><span class="spin"></span> ' + tx('loading') + '…</div>'}</div>`
+      `<div class="db" tabindex="0" role="region" aria-label="${esc(tx('Supplier details'))}" id="sup_body">${typeof SUP !== 'undefined' && SUP && SUP.rows !== null ? '' : '<div class="loadwrap"><span class="spin"></span> ' + tx('loading') + '…</div>'}</div>`
     );
   }
   if (!x) return emptyState('🏭', tx('Select a supplier'), tx('Pick one to see their profile and catalogue, then compose an order.'));
@@ -15689,7 +15725,7 @@ function supDetailHTML() {
     return (
       `<div class="dh"><button class="dback" onclick="backToList()">‹ ${tx('Suppliers')}</button><div class="dt">${me}</div>` +
       `<div class="ds">${tx('your own record — they are not on the network')}</div></div>` +
-      `<div class="db"><div class="supkvs" style="margin-bottom:10px">` +
+      `<div class="db" tabindex="0" role="region" aria-label="${esc(tx('Supplier details'))}"><div class="supkvs" style="margin-bottom:10px">` +
       `<div class="supkv"><b>${tx('ID')}</b><span class="mono">${esc(x.user_id || '—')}</span></div>` +
       `<div class="supkv"><b>${tx('Buying for')}</b><span>${kind === 'own_use' ? tx('things we use') : tx('things we sell')}</span></div>` +
       `</div>` +
@@ -15807,7 +15843,7 @@ function supDetailHTML() {
        Two buttons doing one job is how one testid ends up meaning two things. */
     bar = stepped ? `<div id="sup_foot" style="flex:1">${UI._supFlow.footHTML()}</div>` : '';
   }
-  return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
+  return `${head}<div class="db" tabindex="0" role="region" aria-label="${esc(tx('Supplier details'))}">${body}</div><div class="actbar">${bar}</div>`;
 }
 let _spSearchT = null;
 /* NET-39 · the Where picker: Here (default) · one installation we deal with · All. Shown only when there IS somewhere else. The server decides what is listed. */
@@ -16330,7 +16366,7 @@ function prodSorted(list) {
 }
 function prodSortSelect() {
   return (
-    '<select class="inp" data-testid="cat-sort" title="' +
+    '<select class="inp" data-testid="cat-sort" aria-label="' + esc(tx('Sort order')) + '" title="' +
     esc(tx('Sort order')) +
     '" style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="setProdSort(this.value)">' +
     Object.keys(PROD_SORTS)
@@ -16836,94 +16872,54 @@ async function prodAvailApply(status) {
   const ids = Array.from(UI.prodPicked || []);
   if (!ids.length) return;
   closeModal();
-  showBusy(txn('Updating {count} product…', 'Updating {count} products…', ids.length));
-  try {
-    const out = await api('prodStatusBulk', { body: { ids: ids, status: status } });
-    UI.prodPicked.clear();
-    UI.prodPick = false;
-    await loadCatalogue('fresh');
-    const missed = (out && out.missed && out.missed.length) || 0;
-    /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
-       nobody trusts bulk actions. */
-    toast(((out && out.updated) || 0) + ' set to ' + status + (missed ? ' · ' + missed + ' could not be found' : ' ✓'), missed ? true : false);
-  } catch (e) {
-    toast(MSG.fail('set availability', e));
-  } finally {
-    hideBusy();
-    renderApp();
-  }
+  /* ⭐ the same route and body, one call per step of the speed class; the server stamps each record the same way whatever the step */
+  const nameOf = (id) => {
+    const product = (UI.prods || []).find((x) => prodId(x) === id);
+    return (product && pData(product).name) || tx('Product');
+  };
+  const result = await groupJob(ids, { ep: 'prodStatusBulk', mount: 'CAT001-U51', speed: 'quick', verb: 'set availability', label: 'Updating products', unit: 'updated', name: nameOf, payload: { status } });
+  UI.prodPicked.clear();
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
+  await loadCatalogue('fresh');
+  /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
+     nobody trusts bulk actions. */
+  const missed = result.failed.length;
+  toast(result.done.length + ' set to ' + status + (missed ? ' · ' + missed + ' could not be saved' : result.left > 0 ? '' : ' ✓') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
+  renderApp();
 }
 
 /**
- * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
- * why it takes loads of time, are you going round trip for each product?"*
- *
- * He was right and this was the loop he meant. It ran `await api('prodEdit')` once per product, SEQUENTIALLY,
- * each waiting for the one before and each paying for its own schema lookup, currency lookup, validation,
- * BEGIN, set_config, UPDATE and COMMIT. Tick forty rows and that is forty round trips before the screen
- * returns — at the measured ~500ms floor, most of a minute.
- *
- * ⚠️ AND IT COUNTED FAILURES WITHOUT NAMING THEM. A rejected row left the category attached to 39 of 40 and the
- * toast said "39 updated" without saying which one did not move. The bulk route validates everything before
- * writing anything and reports the ids it could not find.
+ * ⭐⭐ ADD OR REMOVE A CATEGORY, PER PRODUCT — QA-130 (Athi, 11 Nov: a category is a classification, many per product, mostly set once).
+ * The step sends "add these / remove these" for its few products and NEVER the record (that was prodBulkUpdate's replace-write, which overwrote a newer
+ * edit of the same product and could not be repeated). The server answers each product done, unchanged (it already was so) or refused, and writes nothing
+ * for an unchanged one, so a step sent twice, or a run started again after a shutdown, changes nothing it should not: the action is safe to resume (groupJob saves it).
+ * ⚠️ ONE ROUND TRIP A STEP, NOT ONE PER PRODUCT (Athi, 2026-09-01: *"are you going round trip for each product?"*), and a refused product is named, never
+ * counted away in silence. A category that carries a tax rate is attached exactly as a single attach does (no rate gate is added or dropped here).
  */
 async function prodCategoriseApply() {
   const node = UI._catgBulk;
   if (!node) return;
   const err = document.getElementById('bulk_err');
   if (!node.add.size && !node.remove.size) {
-    if (err) err.textContent = 'Pick at least one category to attach or remove.';
+    if (err) err.textContent = tx('Pick a category');
     return;
   }
   closeModal();
-  showBusy(txn('Categorising {count} product…', 'Categorising {count} products…', node.ids.length));
-
-  /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
-  const payload = [];
-  let unknown = 0;
-  for (const id of node.ids) {
-    const p = (UI.prods || []).find((x) => prodId(x) === id);
-    if (!p) {
-      unknown++;
-      continue;
-    }
-    const d = Object.assign({}, pData(p));
-    const list = catgIdsOf(d).slice();
-    /* ⚠️ ATTACH IS ADDITIVE and removal is explicit — a bulk action that REPLACED the set would silently strip
-       memberships that were never on screen. Unchanged from the loop this replaces. */
-    node.add.forEach((item) => {
-      if (list.indexOf(item) < 0) list.push(item);
-    });
-    const next = list.filter((item) => !node.remove.has(item));
-    catgSetOn(d, next);
-    payload.push({ id: id, item_data: d });
-  }
-
-  let ok = 0,
-    failed = unknown,
-    why = '';
-  try {
-    if (payload.length) {
-      const out = await api('prodBulkUpdate', { body: { items: payload } });
-      ok = (out && out.updated) || 0;
-      failed += (out && out.missed && out.missed.length) || 0;
-    }
-  } catch (e) {
-    failed += payload.length;
-    const inv = e && e.invalid;
-    why = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
-  } finally {
-    hideBusy();
-  }
-
+  const nameOf = (id) => {
+    const product = (UI.prods || []).find((x) => prodId(x) === id);
+    return (product && pData(product).name) || tx('Product');
+  };
+  /* the steps are saved on this device before step 1 and each has its own key, so a shutdown or a reload continues the job (bulkResume) and no step runs twice */
+  const result = await groupJob(node.ids, { ep: 'prodBulkCategories', mount: 'CAT001-U52', speed: 'slow', verb: 'categorise', label: 'Categorising products', unit: 'updated', name: nameOf, payload: { add: Array.from(node.add), remove: Array.from(node.remove) } });
   UI.prodPicked.clear();
-  UI.prodPick = false;
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
   UI._catgBulk = null;
   await loadCatalogue('fresh');
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
-  /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
-     nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${why}` : ' ✓'), failed ? true : false);
+  /* ⚠️ Say what did not move: a bulk action that says "done" while three rows stayed put is the reason nobody trusts bulk actions. */
+  toast(result.done.length + ' ' + tx('updated') + (result.failed.length ? ' · ' + result.failed.length + ' ' + tx('could not be saved') : '') + (result.left > 0 ? ' · ' + result.left + ' ' + tx('not done') : ''));
   renderApp();
 }
 /**
@@ -17648,7 +17644,7 @@ function refFinishDetail(it) {
     (list ? '<div class="ds">' + list + '</div>' : '') +
     '</div>';
   var body =
-    '<div class="db">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Finish details')) + '">' +
     (photo ? '<div style="margin-bottom:12px;display:flex">' + photo + '</div>' : '') +
     (it.inspiration ? '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-bottom:10px">' + esc(it.inspiration) + '</div>' : '') +
     (chips ? '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">' + chips + '</div>' : '') +
@@ -17986,7 +17982,7 @@ async function exportCatalogueCSV(btn) {
       let msg = '';
       try {
         const j = await res.json();
-        msg = j.message || j.error || '';
+        msg = answerWords(j);
       } catch (_) {}
       throw new Error(msg || 'Export failed (' + res.status + ')');
     }
@@ -18760,11 +18756,14 @@ function prodOfferTaxFooterHTML(d, qty, off) {
   if (r.rate == null)
     return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('No tax slab resolves for this product — see Pricing & tax.')}</div>`;
   const price = cbAmount(d.price) || 0;
+  const myCountry = prodShopCountry();
+  if (!myCountry)
+    return `<div class="prodprev-tax" data-testid="prod-tax-nocountry" style="font-size:var(--fs-1);color:var(--warn-3);padding:6px 0 0">${esc(prodNoCountryWords())}</div>`;
   const S = prodSellerState() || '29';
   const one = (disc) =>
     CBTax.determine({
-      seller: { State: S, RegType: prodRegType() },
-      buyer: { Pos: S },
+      seller: { State: S, Country: myCountry, RegType: prodRegType() },
+      buyer: { Pos: S, Country: myCountry },
       lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }]
     }).ItemList[0];
   const it = one(off);
@@ -19638,12 +19637,12 @@ function prodOutcomeHTML(k, d) {
           });
           return grey(tx('checking the slab…'));
         }
-        if (r.rate == null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
+        if (prodTaxNote(r)) return `<span style="color:var(--warn-3)">${esc(prodTaxNote(r))}</span>`;
         const price = Number(pPrice(d)) || 0,
           st = prodSellerState() || '29';
         const it = CBTax.determine({
-          seller: { State: st, RegType: prodRegType() },
-          buyer: { Pos: st },
+          seller: { State: st, Country: prodShopCountry(), RegType: prodRegType() },
+          buyer: { Pos: st, Country: prodShopCountry() },
           lines: [{ name: pName(d), qty: 1, unit_price: price, rate: r.rate, cess_rate: r.cess || 0 }]
         }).ItemList[0];
         const dead = !!(r.unresolved && r.cited),
@@ -20949,7 +20948,7 @@ function prodInvoiceModel(d, pos) {
       hsn: (r.hsn && r.hsn[0]) || d.hsn || '',
       tax_scheme: scheme
     };
-    const seller = { State: S, RegType: prodRegType() };
+    const seller = { State: S, Country: myC, RegType: prodRegType() };
     if (!isGST) {
       delete seller.State;
       seller.Country = myC;
@@ -21394,6 +21393,14 @@ function cbPricingOptionsHTML(defs, selected) {
     )
     .join('');
 }
+/** ⭐ CAT-258: the list price a pricing structure is read against — undefined (not 0) for a product nobody priced */
+function pricingListOf(product) {
+  return cbHasPrice(pPrice(product)) ? cbAmount(pPrice(product)) : undefined;
+}
+/** ⭐ CAT-258: one price in the Pricing row — a band or unit with no price says so, never a free 0 */
+function pricingAmountHTML(amount) {
+  return amount == null ? esc(tx('no price set')) : esc(inr(amount));
+}
 function prodPricingHTML(d) {
   const grey = (nestedT) => '<span style="color:var(--grey)">' + nestedT + '</span>';
   if (typeof CBPricing === 'undefined') return grey(tx('Pricing module not loaded.'));
@@ -21405,7 +21412,7 @@ function prodPricingHTML(d) {
     const chosen = defs.find((x) => String(x.definition_id || x.id) === String(node.value)) || null;
     CBPricing.setOn(row, chosen);
   }
-  const list = cbAmount(pPrice(d));
+  const list = pricingListOf(d);
   const qty = UI._invQty && UI._invQty > 0 ? UI._invQty : 1;
   const u = CBPricing.unitPrice(row, qty, list);
   const pick = editing
@@ -21425,13 +21432,13 @@ function prodPricingHTML(d) {
       bands
         .map(
           (item) =>
-            `<tr class="cbm-row${u.tier && u.tier.qty === item.from ? ' cbm-tot' : ''}"><td class="cbm-l">${esc(item.to == null ? txf('{n} and above', { n: String(item.from) }) : item.from === item.to ? String(item.from) : item.from + '–' + item.to)} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${esc(inr(item.price))}</bdi></td></tr>`
+            `<tr class="cbm-row${u.tier && u.tier.qty === item.from ? ' cbm-tot' : ''}"><td class="cbm-l">${esc(item.to == null ? txf('{n} and above', { n: String(item.from) }) : item.from === item.to ? String(item.from) : item.from + '–' + item.to)} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${pricingAmountHTML(item.price)}</bdi></td></tr>`
         )
         .join('') +
       `</tbody></table>`
     : '';
   const at = row.pricing_kind
-    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n: String(qty), u: esc(pUnit(d)), p: '<b>' + esc(inr(u.amount)) + '</b>' })} ${grey(esc(u.why))}${u.violation ? `<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>` : ''}</div>`
+    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n: String(qty), u: esc(pUnit(d)), p: '<b>' + pricingAmountHTML(u.amount) + '</b>' })} ${grey(esc(u.why))}${u.violation ? `<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>` : ''}</div>`
     : '';
   return `<div style="padding-bottom:4px">${pick}</div>${table}${at}`;
 }
@@ -21523,6 +21530,20 @@ async function prodTaxLoad() {
 /* The entity's GST registration type (policy flag) — what the invoice may CHARGE; read by tax.js on every determination. */
 function prodRegType() {
   return String(((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).gst_registration || 'regular');
+}
+/** The shop's own country, from its settings (SESSION.country); '' when none is stated. The tax engines never guess one (CTRY-94). */
+function prodShopCountry() {
+  return String((typeof SESSION !== 'undefined' && SESSION && SESSION.country) || '').trim().toUpperCase();
+}
+/** The registered NO_COUNTRY words, from the regulation engine: what to say when the shop has no country yet. */
+function prodNoCountryWords() {
+  const noCountry = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
+  return (noCountry && noCountry.why) || 'Set the shop country first (Country setup).';
+}
+/** Why the slab pane cannot work a line out: the slab's own words, else the NO_COUNTRY words; '' when it can. */
+function prodTaxNote(resolved) {
+  if (resolved.rate == null) return CBTaxSlab.describe(resolved);
+  return prodShopCountry() ? '' : prodNoCountryWords();
 }
 function prodSellerState() {
   const g = String(UI._meGstn || '').trim();
@@ -21682,7 +21703,7 @@ function prodTaxPreviewHTML(d, r) {
     hsn: (r.hsn && r.hsn[0]) || d.hsn || '',
     tax_scheme: scheme
   };
-  const seller = isGST ? { State: S, RegType: prodRegType() } : { Country: myC, RegType: prodRegType() };
+  const seller = isGST ? { State: S, Country: myC, RegType: prodRegType() } : { Country: myC, RegType: prodRegType() };
   const one = (pos) => CBTax.determine({ seller, buyer: isGST ? { Pos: pos } : { Country: pos }, lines: [line] }).ItemList[0];
   const one0 = (pos) =>
     CBTax.determine({ seller, buyer: isGST ? { Pos: pos } : { Country: pos }, lines: [Object.assign({}, line, { discount: 0 })] })
@@ -21835,7 +21856,7 @@ function prodTaxPreviewHTML(d, r) {
 function prodDetailHTML() {
   if (UI.refSel != null && (UI.refCat || [])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]); // BRIDGE: rich finish showcase
   if (UI.prodMode === 'new') {
-    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
+    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
   }
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
   /* ⭐ THE PROSE SAID "or add a new one" AND MADE THEM GO FIND THE BUTTON. That is the one thing an empty
@@ -21892,7 +21913,7 @@ function prodDetailHTML() {
   if (prodLayout() === 'page' && typeof prodPricingLoad === 'function')
     setTimeout(prodPricingLoad, 0); /* the tax section is on the page — its reads start now, not on a click */
   if (prodLayout() === 'page') body = `<div class="ptab-list" data-testid="prod-sheet">${body}</div>`;
-  return `<div class="dstick">${head}${prodTabBar()}</div><div class="db">${body}</div><div class="actbar">${bar}</div>`;
+  return `<div class="dstick">${head}${prodTabBar()}</div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}">${body}</div><div class="actbar">${bar}</div>`;
 }
 /**
  * ⭐ THE CATEGORY IS READ HERE, WHICH IS WHY IT IS ONE FIELD AND NOT TWO. Both saves — add and edit — go through
@@ -22392,7 +22413,7 @@ function taskPanel() {
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
       ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
-      ${_btns}<button class="composebtn" style="${_isTrack ? '' : 'margin-inline-start:auto'}" onclick="toggleListHelp()">${UI.listHelp ? '✕ Close' : '❓ Help'}</button>
+      ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
    * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, about 24% of
@@ -23354,13 +23375,35 @@ function pickStatus(v) {
   const node = document.getElementById('mok');
   if (node) node.disabled = false;
 }
+/* ⭐ QA-131: the body of ONE record's status call. `from` = the status this screen saw (a bulk job only: the server refuses a record that moved since, it never moves it back);
+   `use` = what the goods are for, said with the acceptance it decides (it was a second call, PUT /use, that could not be repeated once accepted). */
+function statusStepBody(to, row, goodsUse, bulkJobId) {
+  const body = { status: statusWordFor(to, row) };
+  if (bulkJobId && row && row._status) body.from = row._status;
+  if (goodsUse && to === 'act' && row && row.billRx) body.use = goodsUse;
+  return body;
+}
+/** a bulk job's id: made once for a run of more than one record, kept on the modal so a resume re-sends the same step keys (one per job, record and step) */
+function bulkJobIdOf(modal, count) {
+  if (count > 1 && !modal.job) modal.job = Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  return modal.job;
+}
+/** one record moved: the row shows the new status, and it is no longer ticked */
+function markStatusMoved(id, to, word) {
+  const i = UI.rows.findIndex((x) => x.id === id);
+  if (i >= 0) {
+    UI.rows[i].state = to;
+    UI.rows[i]._status = word;
+  }
+  if (UI.detail && UI.detail.id === id) UI.detail.state = to;
+  UI.selected.delete(id);
+}
 async function confirmStatus() {
   const { ids, to, use } = MODALS.stat;
   if (!to) return;
   closeModal();
   const single = ids.length === 1 ? ids[0] : null;
   const pos = single ? chitPos(single) : null;
-  if (ids.length > 1) showBusy(txn('Moving {count} record to {status}…', 'Moving {count} records to {status}…', ids.length, { status: cap(to) }));
   /**
    * ⚠️⚠️ SAY WHICH ONE IT IS ON. Athi, 2026-08-23, closing 26 tasks: *"it takes a while — it has to showcase
    * what it is progressing, say 1 of 26 record kind of."* It showed one frozen sentence for the whole run, so
@@ -23373,47 +23416,41 @@ async function confirmStatus() {
    * ⭐ It still stops rather than churning through 26 failures: the second failure is almost never new
    * information, and 25 more attempts is a minute spent proving it.
    */
-  let _done = 0;
-  try {
-    for (const id of ids) {
-      if (ids.length > 1) showBusy(txf('{done} of {total} · moving to {status}…', { done: _done + 1, total: ids.length, status: cap(to) }));
+  const bulkJobId = bulkJobIdOf(MODALS.stat, ids.length); /* a resume that reuses the job re-sends the same step keys, even for one record left */
+  /* ⭐ the same stop rule as above, kept: the first failure ends the run (stopOnFailure), the rest stay "not done"; the progress now shows the count in the corner, the screen is not locked */
+  const result = await groupRun(
+    ids,
+    { mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
+    async (id) => {
       const _row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
-      /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
-      try {
-        if (use && to === 'act' && _row && _row.billRx) await api('billUse', { params: { id }, body: { use: use } });
-        const reply = await api('status', { params: { id }, body: { status: statusWordFor(to, _row) } });
-        if (reply && reply.warning) toast(reply.warning);
-        const i = UI.rows.findIndex((x) => x.id === id);
-        if (i >= 0) UI.rows[i].state = to;
-        if (UI.detail && UI.detail.id === id) UI.detail.state = to;
-        _done++;
-      } catch (e) {
-        toast(
-          _done
-            ? txf('Moved {done} of {total}, then: {why}', { done: _done, total: ids.length, why: MSG.fail('change status', e) })
-            : MSG.fail('change status', e)
-        );
-        if (_done) {
-          UI.selectMode = false;
-          UI.selected.clear();
-          renderApp();
-        } // the ones that moved must not look unmoved
-        return;
-      }
+      /* ⭐ QA-131: ONE call per record; the key is one per (job, record, step), so a resend of an accepted step is answered with its first answer and posts and tells once */
+      const body = statusStepBody(to, _row, use, bulkJobId);
+      const reply = await api('status', { params: { id }, body, idemKey: bulkJobId ? 'stat-' + bulkJobId + '-' + id + '-' + body.status : undefined });
+      if (reply && reply.warning) toast(reply.warning);
+      markStatusMoved(id, to, body.status);
     }
-    if (single) {
-      afterChitAction(single, pos);
-    } // same email-style cursor as advance
-    else {
-      UI.selectMode = false;
+  );
+  const _done = result.done.length;
+  if (result.failed.length || result.cancelled) {
+    const firstReason = result.failed.length ? result.failed[0].reason : '';
+    toast(_done ? txf('Moved {done} of {total}, then: {why}', { done: _done, total: ids.length, why: firstReason || tx('stopped') }) : firstReason || groupToast(result, ' moved'));
+    if (_done) {
       UI.selected.clear();
+      tickUndone(result); /* the one that failed and the ones not reached stay ticked, the select mode stays on */
       renderApp();
-    } // bulk: clear selection, full re-render
-    toast(MSG.statusSet(ids.length, to, single ? (UI.rows.find((x) => x.id === single) || UI.detail || {}).code : null));
-    announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}', ids.length, { status: cap(to) }));
-  } finally {
-    hideBusy();
+    } // the ones that moved must not look unmoved
+    return;
   }
+  if (single) {
+    afterChitAction(single, pos);
+  } // same email-style cursor as advance
+  else {
+    UI.selectMode = false;
+    UI.selected.clear();
+    renderApp();
+  } // bulk: clear selection, full re-render
+  toast(MSG.statusSet(ids.length, to, single ? (UI.rows.find((x) => x.id === single) || UI.detail || {}).code : null));
+  announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}', ids.length, { status: cap(to) }));
 }
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
 function pickChitStatus(id) {
@@ -23475,30 +23512,10 @@ async function archiveSelected() {
   const ids = (MODALS.arch || {}).ids || [];
   if (!ids.length) return;
   closeModal();
-  if (ids.length > 1) showBusy(txn('Archiving {count} record…', 'Archiving {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('archive', { params: { id } });
-        ok++;
-      } catch (e) {
-        toast(MSG.fail('archive', e));
-        break;
-      }
-    }
-    UI.selected.clear();
-    if (UI.sel && ids.includes(UI.sel)) {
-      UI.sel = null;
-      UI.detail = null;
-      UI.mdetail = false;
-    }
-    await loadList();
-    toast(ok + ' archived');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' archived');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupJob(ids, { ep: 'archive', mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' });
+  await afterGroup(result);
+  toast(groupToast(result, ' archived'));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' archived');
 }
 /* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
 function selectAllRows() {
@@ -23506,31 +23523,247 @@ function selectAllRows() {
   if (!UI.selectMode) UI.selectMode = true;
   renderApp();
 }
+/* ⭐ GROUP ACTIONS (Athi 11 Nov: "ok for group action"; 10 Nov: "never lock the screen"). A group action goes in steps of 10 through the ONE batch progress
+   (ui.progress.batch.run: up to 10 records the centre panel, above it the corner tray). The endpoint and the request for each record are unchanged; only the batching and the
+   progress are new. The confirm popup, where there was one, was answered BEFORE this runs. A failed record is counted and named, never silent; Cancel stops after the step. */
+function chitNameOf(id) {
+  const row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
+  return (row && row.code) || tx('Record');
+}
+/** runs perId(id) for every id, in steps of its speed class (quick 10), counting each as done or failed; kind = { mount, speed, verb, label, unit, stopOnFailure, action } → { done, failed, cancelled, left }.
+ *  This is the IN-TAB path: nothing is stored, so the box says "Keep this tab open" (a kind.action that ui.progress.batch.resumable knows; a resumable one belongs to groupJob). */
+function groupRun(ids, kind, perId) {
+  const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
+  if (kind.action && ui.progress.batch.resumable(kind.action)) throw new Error('groupRun: ' + kind.action + ' can resume, send it through groupJob');
+  options.onStart = (batchJob) => batchJob.note('keepopen');
+  return ui.progress.batch.run(ids, options, async (chunk) => {
+    const done = [];
+    const failed = [];
+    for (const id of chunk) {
+      try {
+        await perId(id);
+        done.push(id);
+      } catch (e) {
+        failed.push({ item: id, reason: MSG.fail(kind.verb, e) });
+        if (kind.stopOnFailure) return { done, failed, stop: true };
+      }
+    }
+    return { done, failed };
+  });
+}
+/** the records that failed AND the ones never tried (Cancel, a stop) stay ticked, so the person can run the rest again */
+function tickUndone(result, into) {
+  const set = into || UI.selected;
+  result.failed.forEach((entry) => set.add(entry.item));
+  result.leftItems.forEach((id) => set.add(id));
+}
+/** after a group action: the records that failed stay ticked, the one that is open closes only if it changed, and the list is read again */
+/* ⭐ SAVE AND RESUME (Athi 11 Nov: a bulk job survives a shutdown). A group action stores EVERY step on this device before step 1 (CBOffline.enqueueJob: the one outbox, no second store), each step
+   with its own Idempotency-Key job:<jobId>:<step> (api(..., { idemKey })), sends them one by one (CBOffline.sendStep: back-off 2, 5, 15, 30 s on a timeout, 503 or 429; a replayed 404 counts as done), and
+   on the next visit bulkResume() lists what is left and the tray carries on. The step list is the whole job: per-record actions send one record a step, the two chunk actions one chunk of the speed class.
+   Status change is NOT here (QA-131): it runs through groupRun in the open tab and says so. Categorise (QA-130) is a chunk action: add or remove a category per product, repeat-safe. */
+const BULK_ACTIONS = {
+  archive: { okIf404: true },
+  restore: { okIf404: true },
+  unarchive: { okIf404: true },
+  purgeChit: { okIf404: true },
+  delChit: { okIf404: true },
+  assignBulk: { chunk: true, bodyOf: (chunk, payload) => ({ chit_ids: chunk, target_actor_id: payload.actorId }) },
+  prodStatusBulk: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, status: payload.status }) },
+  prodBulkCategories: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, add: payload.add, remove: payload.remove }) }
+};
+const BULK_ACTIVE = new Set(); /* the jobs this page is driving now, so a second look never starts one twice */
+const bulkOutbox = () => (typeof window !== 'undefined' && window.CBOffline && window.CBOffline.enqueueJob ? window.CBOffline : null);
+function bulkJobId() {
+  const outbox = bulkOutbox();
+  return outbox ? outbox._uuid() : String(Date.now()) + Math.floor(Math.random() * 1e6);
+}
+/** the steps of a job, one request each: a per-record action one record a step, a chunk action one chunk of its speed class */
+function bulkStepsFor(ids, kind, nameOf) {
+  const action = BULK_ACTIONS[kind.ep];
+  if (!action) throw new Error('groupJob: ' + kind.ep + ' is not a saved-job action');
+  const route = typeof epOf === 'function' ? epOf(kind.ep) : null;
+  const make = (items, params, body) => ({
+    ep: kind.ep, method: route ? route.m : 'POST', path: route && typeof fill === 'function' ? fill(route.p, params || {}) : '', params, body,
+    items, names: items.map(nameOf), okIf404: !!action.okIf404
+  });
+  if (action.chunk) return ui.progress.batch.steps(ids, kind.speed).map((chunk) => make(chunk, undefined, action.bodyOf(chunk, kind.payload || {})));
+  return ids.map((id) => make([id], { id }, undefined));
+}
+/** what one answered step says about its records → { done, failed }: assignBulk lists the chits it skipped, prodStatusBulk the ids it missed, prodBulkCategories answers each product (done, unchanged or refused), a per-record call is done once it answers */
+function bulkAnswerOf(endpoint, items, reply) {
+  if (endpoint === 'assignBulk') {
+    const skipped = (reply && reply.skipped) || [];
+    const skippedIds = skipped.map((entry) => entry.chit_id);
+    return { done: items.filter((id) => !skippedIds.includes(id)), failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' })) };
+  }
+  if (endpoint === 'prodStatusBulk') {
+    const missedIds = (reply && reply.missed) || [];
+    return { done: items.filter((id) => !missedIds.includes(id)), failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' })) };
+  }
+  if (endpoint === 'prodBulkCategories') {
+    const lines = (reply && reply.results) || [];
+    const refused = lines.filter((line) => line.result === 'refused').map((line) => line.id);
+    return { done: items.filter((id) => !refused.includes(id)), failed: refused.map((id) => ({ item: id, reason: 'could not be found' })) };
+  }
+  return { done: items, failed: [] };
+}
+/** the one send of a step, used for the first run and for a resumed one: the same api() call with the step's own key */
+const bulkSend = (step) => api(step.ep, { params: step.params, body: step.body, idemKey: step.id });
+/** one step to the server → the runner's { done, failed, stop }: offline waits for the connection (and says so), a busy server says when it tries again, a step the server refuses fails its records */
+async function bulkStepAnswer(step, kind, outbox, batchJob) {
+  let spoke = false; /* the busy and offline words are said while they are true, then the saved line comes back (once, not after every step) */
+  const hooks = { onWait: (seconds) => { spoke = true; batchJob.note('busy', { seconds }); } };
+  for (;;) {
+    const res = outbox ? await outbox.sendStep(step.id, bulkSend, hooks) : await bulkSendDirect(step);
+    if (res.kind === 'offline') {
+      spoke = true;
+      batchJob.note('offline');
+      await outbox.whenOnline();
+    } else {
+      if (spoke) batchJob.note(outbox && outbox.durable() ? 'saved' : 'private');
+      return res;
+    }
+  }
+}
+/** no outbox in this page (a stand-in): the same call, once, no retry */
+async function bulkSendDirect(step) {
+  try {
+    return { kind: 'done', reply: await bulkSend(step) };
+  } catch (error) {
+    return { kind: 'reject', reason: (error && error.message) || 'failed' };
+  }
+}
+/** runs the steps of a job through the one batch progress; steps carry their own id (job:<id>:<n>) → the runner's result. carried = { resumed, doneAtStart, priorFailed } for a job continued after a restart */
+async function bulkJobRun(meta, kind, steps, carried) {
+  const outbox = bulkOutbox();
+  const stepOfItem = new Map();
+  steps.forEach((step) => step.items.forEach((item) => stepOfItem.set(item, step)));
+  const names = new Map();
+  steps.forEach((step) => step.items.forEach((item, index) => names.set(item, (step.names || [])[index] || String(item))));
+  let handle = { note() {} }; /* the running batch, for the notes a step says */
+  const options = {
+    mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: (item) => names.get(item) || String(item),
+    job: true, durable: !!(outbox && outbox.durable()), doneAtStart: carried.doneAtStart, priorFailed: carried.priorFailed
+  };
+  options.onStart = (batchJob) => { handle = batchJob; };
+  options.prepare = async (batchJob) => {
+    if (carried.resumed) return batchJob.note('resumed', { done: carried.doneAtStart || 0, total: meta.total });
+    batchJob.note('saving');
+    const kept = outbox ? outbox.enqueueJob(meta, steps) : false;
+    batchJob.note(kept ? 'saved' : 'private');
+    if (!kept || !outbox.durable()) batchJob.keepOpen(); /* the device did not keep it after all: leaving the page asks again */
+  };
+  let paused = false;
+  BULK_ACTIVE.add(meta.id);
+  try {
+    return await ui.progress.batch.run([...stepOfItem.keys()], options, async (chunk) => {
+      const answer = { done: [], failed: [] };
+      for (const step of new Set(chunk.map((item) => stepOfItem.get(item)))) {
+        const res = await bulkStepAnswer(step, kind, outbox, handle);
+        if (res.kind === 'stopped') paused = true; /* back-offs used up or the session ended: the rest waits for the next visit */
+        if (res.kind === 'stopped' || res.kind === 'gone') return Object.assign(answer, { stop: true }); /* gone: another tab took the step, so it is left, never counted done */
+        const reply = res.kind === 'reject' ? null : bulkAnswerOf(step.ep, step.items, res.reply);
+        if (reply) {
+          answer.done.push(...reply.done);
+          answer.failed.push(...reply.failed);
+        } else {
+          step.items.forEach((item) => answer.failed.push({ item, reason: MSG.fail(kind.verb, { message: res.reason }) }));
+          if (BULK_ACTIONS[step.ep].chunk) return Object.assign(answer, { stop: true }); /* a refused chunk has the same cause for every later one */
+        }
+      }
+      return answer;
+    });
+  } finally {
+    BULK_ACTIVE.delete(meta.id);
+    if (outbox && paused) outbox.pauseJob(meta.id);
+    else if (outbox) outbox.closeJob(meta.id);
+  }
+}
+/** a group action that survives a restart: kind = { ep, mount, speed, verb, label, unit, name?, payload? } (ep is a BULK_ACTIONS name); → { done, failed, leftItems, cancelled, left } like groupRun */
+function groupJob(ids, kind) {
+  const nameOf = kind.name || chitNameOf;
+  const meta = { id: bulkJobId(), kind: kind.ep, label: kind.label, unit: kind.unit, mount: kind.mount, speed: kind.speed, verb: kind.verb, total: ids.length };
+  return bulkJobRun(meta, kind, bulkStepsFor(ids, kind, nameOf).map((step, index) => Object.assign(step, { id: 'job:' + meta.id + ':' + index })), {});
+}
+/** one saved job, continued: the steps left in the outbox go on in the tray, with what the last run already did counted */
+function bulkJobResume(saved) {
+  const meta = saved.meta;
+  if (bulkOutbox()) bulkOutbox().pauseJob(meta.id, false);
+  const steps = saved.steps.map((entry) => Object.assign({}, entry));
+  const left = steps.reduce((total, step) => total + step.items.length, 0);
+  const priorFailed = [];
+  saved.rejected.forEach((entry) => entry.items.forEach((item, index) => priorFailed.push({ name: (entry.names || [])[index] || String(item), reason: entry.rejected.reason })));
+  const doneAtStart = Math.max(0, meta.total - left - priorFailed.length);
+  const kind = { ep: meta.kind, mount: meta.mount, speed: meta.speed, verb: meta.verb, label: meta.label, unit: meta.unit };
+  return bulkJobRun(meta, kind, steps, { resumed: true, doneAtStart, priorFailed }).then(async (result) => {
+    try {
+      await (meta.kind === 'prodStatusBulk' || meta.kind === 'prodBulkCategories' ? loadCatalogue('fresh') : loadList());
+    } catch (error) {
+      cblog('warn', 'the list did not refresh after a resumed job: ' + (error && error.message));
+    }
+    toast(txf('{done} done', { done: doneAtStart + result.done.length }) + (result.failed.length + priorFailed.length ? ' · ' + txf('{failed} failed', { failed: result.failed.length + priorFailed.length }) : '') + (result.left > 0 ? ' · ' + result.left + ' ' + tx('not done') : ''));
+    return result;
+  });
+}
+/** a job older than the key window (48 h) asks first (the server has forgotten its first steps, so a replay would be a new run); so does a job that stopped part-way (back-offs used up, session ended): Continue goes on, Cancel drops the rest */
+function bulkAskSavedJob(saved) {
+  const days = Math.floor((Date.now() - saved.at) / 86400000);
+  const old = Date.now() - saved.at > window.CBOffline.jobMaxAgeMs;
+  const left = saved.steps.reduce((total, step) => total + step.items.length, 0);
+  const question = old
+    ? txf('This job was saved {days} days ago, so the server may not remember its first steps and some could run twice. Cancel drops the rest of it.', { days: Math.max(2, days) })
+    : txf('This job stopped part-way: {left} not done. Continue it now? Cancel drops the rest of it.', { left });
+  confirmAsk(tx(old ? 'Continue an old job?' : 'Continue your saved job?'), esc(question), tx('Continue'), () => bulkJobResume(saved), false, () => window.CBOffline.closeJob(saved.id));
+}
+/** the outbox removed what was saved offline more than 2 days ago (the server no longer holds its key, so sending it could run it twice): this person's own are named in words, other people's only counted in the log */
+function bulkSweptNotice(swept) {
+  if (swept.others) cblog('info', 'outbox: ' + swept.others + ' old entries of another sign-in were removed');
+  if (!swept.own.length) return;
+  const what = swept.own.slice(0, 3).map((entry) => (entry.method || 'POST') + ' ' + (entry.path || '')).join(', ');
+  toast(txf('Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}', { count: swept.own.length, what }));
+}
+/** start-up and sign-in (SEC-140 inside the outbox: only THIS person's entries are listed): queued writes go on, and a saved job goes on in the tray */
+async function bulkResume() {
+  const outbox = bulkOutbox();
+  if (!outbox || !SESSION || !SESSION.token) return;
+  try {
+    await outbox.flush();
+  } catch (error) {
+    cblog('warn', 'the outbox did not flush at start-up: ' + (error && error.message));
+  }
+  for (const saved of outbox.jobs()) {
+    if (BULK_ACTIVE.has(saved.id)) continue;
+    if (!saved.steps.length) outbox.closeJob(saved.id);
+    else if (saved.meta.paused || Date.now() - saved.at > outbox.jobMaxAgeMs) bulkAskSavedJob(saved);
+    else bulkJobResume(saved);
+  }
+}
+async function afterGroup(result) {
+  UI.selected.clear();
+  tickUndone(result);
+  if (UI.sel && result.done.includes(UI.sel)) {
+    UI.sel = null;
+    UI.detail = null;
+    UI.mdetail = false;
+  }
+  await loadList();
+}
+/** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
+function groupToast(result, doneWords) {
+  const failed = result.failed.length;
+  return result.done.length + doneWords + (failed ? ' · ' + failed + ' failed' : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : '');
+}
 async function bulkRestore() {
   const ids = actionTargets();
   if (!ids.length) {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  if (ids.length > 1) showBusy(txn('Restoring {count} record…', 'Restoring {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('restore', { params: { id } });
-        ok++;
-      } catch (_) {}
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(MSG.restored ? MSG.restored(ok) : ok + ' restored');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' restored');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupJob(ids, { ep: 'restore', mount: 'WRK001-U52', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' });
+  await afterGroup(result);
+  toast(result.failed.length || result.cancelled ? groupToast(result, ' restored') : MSG.restored ? MSG.restored(result.done.length) : result.done.length + ' restored');
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' restored');
 }
 async function bulkUnarchive() {
   const ids = actionTargets();
@@ -23538,25 +23771,10 @@ async function bulkUnarchive() {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  if (ids.length > 1) showBusy(txn('Unarchiving {count} record…', 'Unarchiving {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('unarchive', { params: { id } });
-        ok++;
-      } catch (_) {}
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(ok + ' unarchived');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' unarchived');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupJob(ids, { ep: 'unarchive', mount: 'WRK001-U53', speed: 'quick', verb: 'unarchive', label: 'Unarchiving records', unit: 'unarchived' });
+  await afterGroup(result);
+  toast(groupToast(result, ' unarchived'));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' unarchived');
 }
 function bulkPurge() {
   const ids = actionTargets();
@@ -23579,60 +23797,36 @@ function bulkPurge() {
   );
 }
 async function _bulkPurge(ids) {
-  if (ids.length > 1) showBusy(txn('Deleting {count} record…', 'Deleting {count} records…', ids.length));
-  try {
-    let ok = 0,
-      blocked = 0;
-    for (const id of ids) {
-      try {
-        await api('purgeChit', { params: { id } });
-        ok++;
-      } catch (e) {
-        blocked++;
-      }
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(ok + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : ''));
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' deleted');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupJob(ids, { ep: 'purgeChit', mount: 'WRK001-U54', speed: 'tray', verb: 'delete', label: 'Deleting records', unit: 'deleted' });
+  await afterGroup(result);
+  const blocked = result.failed.length;
+  toast(result.done.length + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' deleted');
 }
 async function confirmDelete() {
   const ids = MODALS.del.ids;
   closeModal();
-  for (const id of ids) {
-    try {
-      await api('delChit', { params: { id } });
-    } catch (e) {
-      toast(MSG.fail('delete', e));
-      return;
-    }
-  }
-  UI.rows = UI.rows.filter((item) => !ids.includes(item.id));
-  if (UI.sel && ids.includes(UI.sel)) {
+  const result = await groupJob(ids, { ep: 'delChit', mount: 'WRK001-U55', speed: 'tray', verb: 'delete', label: 'Moving records to Trash', unit: 'moved' });
+  /* repaint what really moved: those rows leave the list, the ones that failed stay ticked */
+  UI.rows = UI.rows.filter((item) => !result.done.includes(item.id));
+  if (UI.sel && result.done.includes(UI.sel)) {
     UI.sel = null;
     UI.detail = null;
     UI.mdetail = false;
   }
   UI.selected.clear();
+  tickUndone(result);
   renderApp();
-  toast(MSG.trashed(ids.length), () => restoreChits(ids));
-  announce(ids.length + ' chit' + (ids.length > 1 ? 's' : '') + ' moved to trash');
+  /* Undo is for the rows that DID move, also after a partial or cancelled run (the sentence then says what did not move) */
+  const partial = result.failed.length > 0 || result.left > 0;
+  if (result.done.length) toast(partial ? groupToast(result, ' moved to Trash') : MSG.trashed(result.done.length), () => restoreChits(result.done));
+  else if (partial) toast(groupToast(result, ' moved to Trash'));
+  announce(result.done.length + ' chit' + (result.done.length === 1 ? '' : 's') + ' moved to trash');
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
 async function restoreChits(ids) {
-  let ok = 0;
-  for (const id of ids) {
-    try {
-      await api('restore', { params: { id } });
-      ok++;
-    } catch (_) {}
-  }
+  const result = await groupJob(ids, { ep: 'restore', mount: 'WRK001-U56', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' });
+  const ok = result.done.length;
   try {
     await loadList();
   } catch (_) {}
@@ -23653,13 +23847,13 @@ function clearFilter() {
 function filterPanel() {
   const list = UI.filter || {};
   return `<div class="filterpanel">
-    <div class="fp-row"><span>${tx('Kind')}</span><select onchange="setFilter('kind',this.value)">
+    <div class="fp-row"><span>${tx('Kind')}</span><select aria-label="${tx('Kind')}" onchange="setFilter('kind',this.value)">
       <option value=""${!list.kind ? ' selected' : ''}>${tx('All')}</option>
       <option value="order"${list.kind === 'order' ? ' selected' : ''}>${tx('Order')}</option>
       <option value="counter"${list.kind === 'counter' ? ' selected' : ''}>${tx('Counter')}</option>
       <option value="service"${list.kind === 'service' ? ' selected' : ''}>${tx('Service')}</option></select></div>
     <div class="fp-row"><label><input type="checkbox" ${list.disputeOnly ? 'checked' : ''} onchange="setFilter('disputeOnly',this.checked)"> ${tx('Disputed only')}</label></div>
-    <div class="fp-row"><span>${tx('Sort')}</span><select onchange="setFilter('sort',this.value)">
+    <div class="fp-row"><span>${tx('Sort')}</span><select aria-label="${tx('Sort')}" onchange="setFilter('sort',this.value)">
       <option value=""${!list.sort ? ' selected' : ''}>${tx('Default')}</option>
       <option value="priority"${list.sort === 'priority' ? ' selected' : ''}>${tx('Priority (queue)')}</option>
       <option value="amount"${list.sort === 'amount' ? ' selected' : ''}>Amount (high <span class=arw>→</span> low)</option>
@@ -24582,10 +24776,10 @@ function advPanel() {
   const a = UI.adv || {};
   return `<div class="advpanel" onclick="event.stopPropagation()">
     <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
-    <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min || ''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max || ''}"></div>
-    <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from || ''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to || ''}"></div>
-    <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus === 'open' ? 'selected' : ''}>${tx('Open')}</option><option value="act" ${a.fstatus === 'act' ? 'selected' : ''}>${tx('Act')}</option><option value="close" ${a.fstatus === 'close' ? 'selected' : ''}>${tx('Close')}</option></select></div>
-    <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri"><option value="">${tx('Any')}</option><option value="urgent" ${a.priority === 'urgent' ? 'selected' : ''}>${tx('Urgent')}</option><option value="high" ${a.priority === 'high' ? 'selected' : ''}>${tx('High')}</option><option value="normal" ${a.priority === 'normal' ? 'selected' : ''}>${tx('Normal')}</option></select></div>
+    <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" aria-label="${esc(tx('Amount min'))}" inputmode="numeric" placeholder="min" value="${a.amount_min || ''}"><span class="advdash">to</span><input class="advin" id="adv_amax" aria-label="${esc(tx('Amount max'))}" inputmode="numeric" placeholder="max" value="${a.amount_max || ''}"></div>
+    <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" aria-label="${esc(tx('Date from'))}" type="date" value="${a.date_from || ''}"><span class="advdash">to</span><input class="advin" id="adv_dto" aria-label="${esc(tx('Date to'))}" type="date" value="${a.date_to || ''}"></div>
+    <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status" aria-label="${tx('Status')}"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus === 'open' ? 'selected' : ''}>${tx('Open')}</option><option value="act" ${a.fstatus === 'act' ? 'selected' : ''}>${tx('Act')}</option><option value="close" ${a.fstatus === 'close' ? 'selected' : ''}>${tx('Close')}</option></select></div>
+    <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri" aria-label="${tx('Priority')}"><option value="">${tx('Any')}</option><option value="urgent" ${a.priority === 'urgent' ? 'selected' : ''}>${tx('Urgent')}</option><option value="high" ${a.priority === 'high' ? 'selected' : ''}>${tx('High')}</option><option value="normal" ${a.priority === 'normal' ? 'selected' : ''}>${tx('Normal')}</option></select></div>
     ${typeof dispSearchRow === 'function' ? dispSearchRow(a) : ''}
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`;
@@ -25344,7 +25538,7 @@ function sortPresetOptions() {
   return o;
 }
 function sortPresetSelect() {
-  return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">' + sortPresetOptions() + '</select>';
+  return '<select class="sortpreset" aria-label="' + esc(tx('Sort order')) + '" title="Sort order" onchange="setSortPreset(this.value)">' + sortPresetOptions() + '</select>';
 }
 // Status chip: interactive (advance status) on the Task/received side; STATIC on Order (sent) —
 // the orderer can't drive the receiver's workflow, so it's a read-only label there.
@@ -27024,7 +27218,7 @@ function detailInner() {
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
    ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
-   <div class="db">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
+   <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**
  * ⭐ THE THREAD, WHEN SOMEBODY ACTUALLY WANTS IT. Once per chit; the flag is on the record, so switching tabs
@@ -27239,11 +27433,11 @@ function counterOpen() {
       '<div class="mbody" data-testid="counter-door" style="display:grid;gap:14px">' +
       '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">' +
       '<div style="font-weight:800;font-size:var(--fs-4)">Use this device as the counter</div>' +
-      '<div style="color:var(--grey);margin:6px 0 12px">It opens in a new tab and works on a phone, a tablet or this screen. It keeps a copy of your shop, so it goes on billing when the internet does not.' +
+      '<details style="margin:6px 0 12px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('What this does') + '</summary><div style="color:var(--grey);margin-top:6px">It opens in a new tab and works on a phone, a tablet or this screen. It keeps a copy of your shop, so it goes on billing when the internet does not.' +
       (has
         ? ' This device already has a counter key for <b>' + esc(SESSION.entity || 'this shop') + '</b>.'
         : ' It will be set up for <b>' + esc(SESSION.entity || 'this shop') + '</b>.') +
-      '</div>' +
+      '</div></details>' +
       (strayKey
         ? '<div data-testid="counter-stray" style="border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">' +
           'This device was last a counter for a <b>different shop</b>. Opening it now makes it the counter for this shop. The other shop keeps its own bills and stock, and they are not touched.</div>'
@@ -27254,16 +27448,17 @@ function counterOpen() {
       '</div>' +
       '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">' +
       '<div style="font-weight:800;font-size:var(--fs-4)">Put it on the shop\'s PC</div>' +
-      '<div style="color:var(--grey);margin:6px 0 12px">Downloads a folder with your key already inside. Double-click <b>start.cmd</b> once; after that the counter is at http://127.0.0.1:7071 on that machine, it prints to a till printer, and it keeps itself up to date.</div>' +
+      '<details style="margin:6px 0 12px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('What this does') + '</summary><div style="color:var(--grey);margin-top:6px">Downloads a folder with your key already inside. Double-click <b>start.cmd</b> once; after that the counter is at http://127.0.0.1:7071 on that machine, it prints to a till printer, and it keeps itself up to date.</div></details>' +
       '<button class="composebtn" data-testid="counter-download" onclick="counterKit()">⬇ Download the desktop counter</button>' +
       '</div>' +
       '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">' +
       '<div style="font-weight:800;font-size:var(--fs-4)">Put it on a screen in the shop</div>' +
-      '<div style="color:var(--grey);margin:6px 0 12px">Your offers, your fresh stock and your prices, drawn as a sign that changes itself all day. The same picture saves for WhatsApp status, Instagram and Facebook — the caption comes written. Nothing to design.</div>' +
+      '<details style="margin:6px 0 12px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('What this does') + '</summary><div style="color:var(--grey);margin-top:6px">Your offers, your fresh stock and your prices, drawn as a sign that changes itself all day. The same picture saves for WhatsApp status, Instagram and Facebook — the caption comes written. Nothing to design.</div></details>' +
       '<button class="composebtn" data-testid="counter-screen" onclick="screenGo()">📺 Open the shop screen</button>' +
       '<button class="composebtn" data-testid="counter-pair" onclick="screenPair()" style="margin-top:8px;background:var(--paper);color:var(--ink);border:1px solid var(--line)">📡 Pair a TV or another device</button>' +
       '</div>' +
-      '<div style="color:var(--grey);font-size:var(--fs-1)">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell. It cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>' +
+      '<div data-testid="counter-key-security" style="color:var(--grey);font-size:var(--fs-1)">A counter key cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>' +
+      '<details><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('What a counter key can do') + '</summary><div style="color:var(--grey);font-size:var(--fs-1);margin-top:6px">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell.</div></details>' +
       '</div>'
   );
 }
@@ -28309,21 +28504,13 @@ async function pickAssignBulk(ids) {
 async function assignBulkChits(ids, actorId) {
   const a = (UI.actors || STORE.actors || []).find((x) => x.id === actorId);
   const who = a ? a.name : 'the co-assist';
-  showBusy(txn('Assigning {count} record to {who}…', 'Assigning {count} records to {who}…', ids.length, { who: who }));
   announce(txn('Moving {count} record to {who}', 'Moving {count} records to {who}', ids.length, { who: who }));
-  try {
-    const reply = await api('assignBulk', { body: { chit_ids: ids, target_actor_id: actorId } });
-    UI.selectMode = false;
-    UI.selected.clear();
-    await loadList();
-    renderApp();
-    const n = reply && reply.assigned != null ? reply.assigned : ids.length;
-    toast(MSG.bulkAssigned(n, a && a.name, (reply && reply.skipped && reply.skipped.length) || 0));
-  } catch (e) {
-    toast(MSG.fail('assign those', e));
-  } finally {
-    hideBusy();
-  }
+  /* ⭐ the same endpoint and body, one call per step of the speed class (the server commits each call whole, and its capacity gate reads the co-assist's load again for each) */
+  const result = await groupJob(ids, { ep: 'assignBulk', mount: 'WRK001-U58', speed: 'slow', verb: 'assign those', label: 'Assigning records', unit: 'assigned', payload: { actorId } });
+  UI.selectMode = result.failed.length > 0 || result.left > 0; /* the failed and not-done ticks stay visible */
+  await afterGroup(result);
+  renderApp();
+  toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
 }
 function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};
@@ -30230,11 +30417,20 @@ route();
       token: function () {
         return SESSION && SESSION.token;
       },
+      /* SEC-140: every queued entry carries who queued it, and only that person's session replays it. Read from the token's own ids (the same for a co-assist before and after the profile loads), not from UI._me */
+      entity: function () {
+        return SESSION && (SESSION.actorId || SESSION.entityId);
+      },
+      onSwept: bulkSweptNotice,
       onChange: cbPill
     });
     /* not on the load right after a clean-up: the slate stays clean until the next visit */ if (!(typeof CLEAN_LOAD !== 'undefined' && CLEAN_LOAD))
       CBOffline.registerSW('/cb-sw.js');
-  } catch (e) {}
+    /* start-up: once the session is here, what this person left half done goes on (queued writes, and a saved bulk job in the tray) */
+    setTimeout(bulkResume, 0);
+  } catch (e) {
+    cblog('warn', 'offline outbox did not start: ' + (e && e.message));
+  }
 })();
 </script>
 </body>

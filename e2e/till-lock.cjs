@@ -49,7 +49,7 @@ const PEOPLE = {
       const bearer = String(q.headers.authorization || '').replace('Bearer TOKEN-', '');
       const asPerson = !!PEOPLE[bearer] && !!q.headers['x-device-id'];
       if (!asPerson && q.headers['x-api-key'] !== 'KEY-X') return j(401, { message: 'key refused' });
-      return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { name: 'Shop X', bridge_id: 'CB-X' },
+      return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' },
         staff: [{ id: 'p-x', name: 'X Clerk' }, { id: 'p-w', name: 'W Clerk' }],
         items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     }

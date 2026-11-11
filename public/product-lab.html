@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
-<!-- OWNS  the Product lab: a product's variants, units and slabs tried on a bare page over the adopted engines.
+<!-- OWNS  the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf.
      CALLED BY the labs links on Home and the Catalogue.
      FLOW  load → CBFrame.lab (the Finance frame) → the engines run on the typed product → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/product-lab -->
@@ -8,9 +8,10 @@
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
+<script src="/engine/units.js"></script>   <!-- CBUnits: the GST unit codes (UQC) -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Price Lab · ChitBridge</title>
+<title>Product Lab · ChitBridge</title>
 <!--
   ⭐⭐⭐ PRODUCT LAB ([2026-09-27]) — Athi: *"in the product lab, showcase what are the product lists are
   available, there they can choose the synonym language as well... a spread sheet kind of with the checkbox,
@@ -35,7 +36,7 @@
 -->
 <style>
 :root{
-  --page:#F7F5F0; --card:#fff; --ink:#1D1B16; --dim:#5E594D; --line:#DDD6C6; --hair:#EFEAE0;
+  --page:var(--paper,#F7F5F0); --card:#fff; --ink:#1D1B16; --dim:var(--grey-2,#5E594D); --line:#DDD6C6; --hair:#EFEAE0;
   --ok:#16693F; --ok-t:#E8F4ED; --warn:#8E3517; --warn-t:#FBEAE3; --accent:#2F74C9;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
@@ -74,7 +75,8 @@ input[type=search]{flex:1;min-width:180px}
 input[type=number]{width:110px;text-align:end;font-variant-numeric:tabular-nums}
 table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px}
 th,td{padding:7px 10px;text-align:start;border-bottom:1px solid var(--hair);font-size:.92em;vertical-align:top}
-th{position:sticky;top:57px;background:var(--card);color:var(--dim);font-size:.78em;text-transform:uppercase;
+#tablewrap{max-height:calc(100dvh - 22rem);min-height:12rem;overflow:auto}   /* CAT-218: only the rows scroll, the page does not */
+th{position:sticky;top:0;background:var(--card);color:var(--dim);font-size:.78em;text-transform:uppercase;
   letter-spacing:.04em;z-index:2}
 tr.has td{opacity:.5}
 td.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -92,21 +94,28 @@ tr.has .whose{color:var(--ok)}
 .note{color:var(--dim);font-size:.88em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .card h3{margin:0 0 4px;font-size:.95em}
-@media (max-width:560px){ th:nth-child(6),td:nth-child(6){display:none} }
+tr.has .ul.got{opacity:1}
+.ul{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;padding:2px 0}
+.ul.got{opacity:.5}
+.uqc{font-size:.75em;color:var(--dim);border:1px solid var(--hair);border-radius:5px;padding:0 4px}
+.why{color:var(--dim);font-size:.88em}
+@media (max-width:560px){ th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none} .foot{padding:8px 12px} }
 </style>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
+<script src="/app/product-lab-rows.js"></script>   <!-- CBProductLabRows: one row per product, units as choices, the UQC, why Next is grey (CAT-218) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <link rel="stylesheet" href="/app/page-skeleton.css">   <!-- UX-90: the Finance frame (CBFrame.lab draws it) -->
 <link rel="stylesheet" href="/app/lab-kit.css">   <!-- UX-90: the labs' shared rules -->
 </head>
 <body>
-<script>if (window.CBFrame) CBFrame.lab({ app:'product-lab', name:'Price Lab', icon:'◈' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
+<script>if (window.CBFrame) CBFrame.lab({ app:'product-lab', name:'Product Lab', icon:'◈' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 <div class="tools"><span class="u" id="who">…</span></div>
 <div class="wrap">
   <div class="steps" id="steps"></div>
@@ -416,7 +425,7 @@ function buildChoose() {
     '</div>' +
     '<div class="row">' +
     '<input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select id="cat" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<select id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
@@ -476,63 +485,73 @@ function buildChoose() {
     '<p class="note">Choosing does not set a price or put anything on the shelf — that is the next step.</p>';
 }
 
+/** one unit of a product: its tick, the unit word, the GST unit code (when the engine holds one), the price and whose it is */
+function unitLine(product, entry) {
+  var row = { name: product.name, unit: entry.unit, price: entry.price },
+    got = have(row),
+    pr = priceOf(row);
+  return (
+    '<div class="ul ' +
+    (got ? 'got' : '') +
+    '" data-testid="pl-unit-line"><input type="checkbox" data-testid="pl-unit-tick" ' +
+    (PICKED[keyOf(row)] ? 'checked' : '') +
+    (got ? ' disabled' : '') +
+    ' data-name="' +
+    esc(product.name) +
+    '" data-unit="' +
+    esc(entry.unit) +
+    '" aria-label="' +
+    esc(product.name + ' by ' + entry.unit) +
+    '" onchange="pick(this.checked, this.dataset.name, this.dataset.unit)"> <b>' +
+    esc(entry.unit) +
+    '</b>' +
+    (entry.uqc ? ' <span class="uqc" data-testid="pl-uqc" title="GST unit code">' + esc(entry.uqc) + '</span>' : '') +
+    ' <span class="num">' +
+    fmtMoneyWhole(pr.n, DATA.currency || 'INR', '—') +
+    '</span>' +
+    (pr.whose ? ' <span class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</span>' : '') +
+    (got ? ' <span class="note">· you sell this</span>' : '') +
+    '</div>'
+  );
+}
+/**
+ * ⭐ ONE ROW PER PRODUCT, ITS UNITS AS CHOICES (CAT-218). The list still holds one row per name AND unit — that is what a tick and an
+ * adoption are keyed on — but the page shows "Tomato · kg · box" as ONE product, each unit its own tick with its own price.
+ * ⚠️ DATA ATTRIBUTES, NOT STRINGS IN THE HANDLER (found 2026-09-27: JSON.stringify's double quotes ended the attribute early and every
+ * tick threw). esc() is built for attribute values, so the identity goes THERE.
+ */
 function paintRows() {
-  var rows = shown(),
+  var products = CBProductLabRows.groupRows(shown()),
     out = [],
     lastCat = null;
-  rows.forEach(function (item) {
-    if (item.category !== lastCat) {
-      lastCat = item.category;
-      out.push('<tr class="catrow"><td colspan="6">' + esc(item.category || 'Everything else') + '</td></tr>');
+  products.forEach(function (product) {
+    if (product.category !== lastCat) {
+      lastCat = product.category;
+      out.push('<tr class="catrow"><td colspan="4">' + esc(product.category || 'Everything else') + '</td></tr>');
     }
-    var k = keyOf(item),
-      got = have(item),
-      pr = priceOf(item);
+    var allHad = product.units.every(function (entry) {
+      return have({ name: product.name, unit: entry.unit });
+    });
     out.push(
       '<tr class="' +
-        (got ? 'has' : '') +
-        '">' +
-        /**
-         * ⚠️⚠️⚠️ DATA ATTRIBUTES, NOT STRINGS INTERPOLATED INTO THE HANDLER. The first cut wrote
-         * onchange="pick(this.checked," + JSON.stringify(name) + "...)" — and JSON.stringify emits DOUBLE
-         * quotes, inside a double-quoted attribute, which ends the attribute early and leaves a broken
-         * handler. It threw "SyntaxError: Unexpected end of input" on every row and the tick did nothing.
-         * It went unnoticed because the harness ticks with the "Tick all shown" BUTTON, which calls the
-         * function directly — a control can be dead while the feature it drives looks tested.
-         * ⭐ esc() is built for attribute values, so putting the data THERE removes the quoting problem
-         * rather than escaping around it.
-         */
-        '<td><input type="checkbox" ' +
-        (PICKED[k] ? 'checked' : '') +
-        (got ? ' disabled' : '') +
-        ' data-name="' +
-        esc(item.name) +
-        '" data-unit="' +
-        esc(item.unit) +
-        '"' +
-        ' onchange="pick(this.checked, this.dataset.name, this.dataset.unit)"></td>' +
-        '<td>' +
-        esc(item.name) +
-        (got ? ' <span class="note">· you sell this</span>' : '') +
-        '</td>' +
-        '<td class="loc">' +
-        esc(localOf(item)) +
-        '</td>' +
-        '<td>' +
-        esc(item.unit) +
-        '</td>' +
-        '<td class="num">' +
-        fmtMoney(pr.n, DATA.currency || 'INR', '—') +
-        (pr.whose ? '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div>' : '') +
-        '</td>' +
-        '<td class="loc">' +
-        esc(item.category || '') +
+        (allHad ? 'has' : '') +
+        '"><td>' +
+        esc(product.name) +
+        '</td><td class="loc">' +
+        esc(localOf(product)) +
+        '</td><td>' +
+        product.units
+          .map(function (entry) {
+            return unitLine(product, entry);
+          })
+          .join('') +
+        '</td><td class="loc">' +
+        esc(product.category || '') +
         '</td></tr>'
     );
   });
-  document.getElementById('tablewrap').innerHTML = rows.length
-    ? '<table data-testid="pl-table"><thead><tr><th></th><th>Product</th><th>Local name</th><th>Unit</th>' +
-      '<th class="num">Price</th><th>Shelf</th></tr></thead><tbody>' +
+  document.getElementById('tablewrap').innerHTML = products.length
+    ? '<table data-testid="pl-table"><thead><tr><th>Product</th><th>Local name</th><th>Sold by · price</th><th>Shelf</th></tr></thead><tbody>' +
       out.join('') +
       '</tbody></table>'
     : '<p class="note">Nothing matches that.</p>';
@@ -589,6 +608,7 @@ function paintReview() {
           esc(p.name) +
           '</td><td>' +
           esc(p.unit) +
+          (CBProductLabRows.uqcOf(p.unit) ? ' <span class="uqc" data-testid="pl-review-uqc" title="GST unit code">' + esc(CBProductLabRows.uqcOf(p.unit)) + '</span>' : '') +
           '</td>' +
           '<td class="num"><input type="number" min="0" step="0.01" value="' +
           (p.price == null ? '' : p.price) +
@@ -622,10 +642,13 @@ function paintFoot() {
   document.getElementById('foot').innerHTML =
     STEP === 1
       ? '<span class="note" id="count">' +
-        (n ? n + ' product' + (n === 1 ? '' : 's') + ' chosen' : 'Tick what this shop sells. You can come back and add more later.') +
+        (n ? n + ' product' + (n === 1 ? '' : 's') + ' chosen' : 'Tick what this shop sells. Add more later.') +
         '</span>' +
-        '<button class="go" id="next" data-testid="pl-next" onclick="toReview()"' +
-        (n ? '' : ' disabled') +
+        '<span class="why" id="nextwhy" data-testid="pl-next-why" role="status">' +
+        esc(CBProductLabRows.nextWhy(n)) +
+        '</span>' +
+        '<button class="go" id="next" data-testid="pl-next" onclick="toReview()" aria-describedby="nextwhy"' +
+        (n ? '' : ' disabled title="' + esc(CBProductLabRows.nextWhy(n)) + '"') +
         '>' +
         (n ? 'Next — price ' + n + ' product' + (n === 1 ? '' : 's') : 'Next') +
         '</button>'
@@ -774,7 +797,7 @@ CBOnePerson.attach({
     };
   })(),
   label: function () {
-    return 'The Price Lab';
+    return 'The Product Lab';
   },
   onLeave: function (by) {
     location.replace('/?left=' + encodeURIComponent(by || ''));

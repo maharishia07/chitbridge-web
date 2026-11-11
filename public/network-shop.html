@@ -12,7 +12,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network shop — Chit &amp; Bridge</title>
 <style>
-  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --paper:#faf8f3; --card:#ffffff; --violet:#6a44a8; }   /* the theme names (a chosen theme writes them on <html>) */
+  :root{ --ink:#20303b; --grey:#5D636A; --line:#e7e3d8; --blue:#3F66A6; --paper:#faf8f3; --card:#ffffff; --violet:#6a44a8; }   /* the theme names (a chosen theme writes them on <html>) */
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); color:var(--ink); background:var(--paper); }   /* SYSTEM.md §2: one face on every page (SHELL-ONE) */
   .wrap{ max-width:900px; margin:0 auto; padding:20px 16px 60px; }
@@ -47,6 +47,7 @@
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script>

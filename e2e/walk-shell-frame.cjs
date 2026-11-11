@@ -53,7 +53,7 @@ function pages() {
   const seen = new Map();
   const add = (url, name) => { const file = url.split(/[?#]/)[0]; if (!seen.has(file)) seen.set(file, { url, name }); };
   add('/', 'Home');
-  manifest.entries.forEach((e) => { if (e.state === 'built' && e.route) add(e.route.replace('{bridge_id}', SHOP), e.name); });
+  manifest.entries.forEach((e) => { if (e.state === 'built' && e.route && !/^https?:\/\//.test(e.route) /* TEMPORARY Coverage card (UX-141): not a page of ours */) add(e.route.replace('{bridge_id}', SHOP), e.name); });
   add('/network-shop.html?bridge=' + SHOP, 'Network shop'); add('/store.html?net=' + SHOP, 'Store'); add('/embed.html?bridge=' + SHOP, 'Catalogue embed');
   add('/promo.html', 'Shop screen'); add('/country-lab.html', 'Country lab'); add('/conversion-lab.html', 'Conversion lab');
   seen.delete('/till.html');          /* VENDORED: the counter's bar is the api's round */

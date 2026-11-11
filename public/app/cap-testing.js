@@ -3427,7 +3427,7 @@ async function testShotView(id) {
       var msg = '';
       try {
         var j = await res.json();
-        msg = j.message || j.error || '';
+        msg = answerWords(j);
       } catch (_) {}
       throw new Error(msg || 'Could not fetch it (' + res.status + ')');
     }

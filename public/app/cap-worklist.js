@@ -513,7 +513,7 @@ function worklistScreen() {
     KEYS.map(function (x) {
       return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]);
     }).join('') +
-    '<input type="date" value="' +
+    '<input type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
     esc(WL.due || '') +
     '" onchange="wlDue(this.value)" ' +
     'style="margin-inline-start:auto;font-size:var(--fs-2);padding:3px 7px;border:1px solid var(--line);border-radius:9px">' +
@@ -1803,13 +1803,13 @@ function wlLineHTML(loading) {
          default, which is what pushed Save past the card edge — the row could not give way, so the button went
          over the side. With wrapping above and this here, the pair shrinks first and Save drops to its own line
          only when it genuinely cannot fit. */
-      '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:var(--fs-3);padding:9px 11px;border:1px solid var(--line);border-radius:9px">' +
+      '<select id="wl_who" data-testid="wl-who-sel" aria-label="' + esc(tx('Assigned to')) + '" style="flex:1 1 40%;min-width:0;font-size:var(--fs-3);padding:9px 11px;border:1px solid var(--line);border-radius:9px">' +
       opts +
       '</select>' +
       /* ⚠️ A DATE FIELD HAS A FLOOR, unlike the name beside it. Shrunk to 125px it rendered "11-08-202" — the
          YEAR cut off, which is the one part of a due date you cannot guess from context. min-width holds it at a
          readable size and the row wraps instead; a truncated date is worse than a second line. */
-      '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' +
+      '<input id="wl_due" data-testid="wl-due-inp" type="date" aria-label="' + esc(tx('Due date')) + '" value="' +
       esc(String(r.due_date || '').slice(0, 10)) +
       '" style="flex:1 1 145px;min-width:145px;font-size:var(--fs-3);padding:9px 8px;border:1px solid var(--line);border-radius:9px">' +
       wlBtn('Save', 'wl-line-save', 'wlLineSave()', true) +

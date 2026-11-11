@@ -858,6 +858,57 @@ async function catsetUnitsLoad() {
   }
   catsetPaintDetail();
 }
+/**
+ * ⭐ CTR-212 S0 · "CHECK PRICES AGAIN BEFORE EVERY BILL" — ASKED, NOT ASSUMED. policy_flags.recheck_prices through the ONE settings write (PATCH /entities/policy, policySet);
+ * the server says whether it was ANSWERED (GET /entities/policy `asked`), so an owner who never answered sees "Not answered yet", never "Off", and no button is pre-selected.
+ * Same setting as Settings › Policy (one flag, two doors). UI ids: catset-recheck (card) · catset-recheck-yes · catset-recheck-no · catset-recheck-state; mount path
+ * cap-catsetup › Pricing › catsetRecheckCard (the register rows go to SCREENS.json with the docs PR).
+ * CATSET_RECHECK: undefined = not read yet · null = not answered · 'on' | 'off'.
+ */
+var CATSET_RECHECK;
+async function catsetRecheckLoad() {
+  try {
+    var reply = await api('policyGet');
+    var answered = ((reply && reply.asked) || {}).recheck_prices === true;
+    CATSET_RECHECK = answered ? ((reply && reply.flags) || {}).recheck_prices : null;
+  } catch (e) {
+    if (typeof toast === 'function') toast('Could not read this rule — ' + ((e && e.message) || 'try again'));
+    CATSET_RECHECK = undefined;
+    return;
+  }
+  catsetPaintDetail();
+}
+/** the question card: two buttons, none chosen until the owner answers; what is saved is said beside them */
+function catsetRecheckCard() {
+  if (CATSET_RECHECK === undefined) catsetRecheckLoad();
+  var state = CATSET_RECHECK === 'on' ? tx('Yes, every bill') : CATSET_RECHECK === 'off' ? tx('No, only old parked bills') : tx('Not answered yet');
+  var pick = function (value, label) {
+    return '<button class="composebtn' + (CATSET_RECHECK === value ? ' pri' : '') + '" data-testid="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" data-ui-id="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" aria-pressed="' + (CATSET_RECHECK === value) + '" onclick="catsetRecheckSet(this,\'' + value + '\')">' + tx(label) + '</button>';
+  };
+  return catsetCard(
+    tx('Check prices before each bill'),
+    tx('Do your prices change often? Check them again before each bill.') + '<div class="sub" id="catset_recheck_out" data-testid="catset-recheck-state" data-ui-id="catset-recheck-state">' + state + '</div>',
+    pick('on', 'Yes') + pick('off', 'No')
+  );
+}
+function catsetRecheckSet(button, value) {
+  return CBAction.run(
+    button,
+    function () {
+      return api('policySet', { body: { recheck_prices: value } });
+    },
+    {
+      key: 'catset-recheck-save',
+      confirm: { title: value === 'on' ? tx('Check every bill?') : tx('Check old parked bills only?'), body: '', yes: tx('Save'), danger: false },
+      out: 'catset_recheck_out',
+      busy: tx('Saving…'),
+      outcome: function () {
+        CATSET_RECHECK = value;
+        catsetPaintDetail();
+      }
+    }
+  );
+}
 async function catsetUnitToggle(u, on) {
   var next = (_UNITSEL || []).filter(function (x) {
     return x !== u;
@@ -987,7 +1038,7 @@ function catsetBody(k) {
           'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below ' +
           'asks which.</div>' +
           '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the ' +
-          'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
+          'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
           'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
         '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">' + tx('📋 See the catalogues you can follow') + '</button>'
       ) + catsetCard('What you have adopted', catsetAdoptedHTML(), '')
@@ -1014,7 +1065,7 @@ function catsetBody(k) {
   }
   if (k === 'pricing') {
     return (
-      catsetCard(
+      catsetRecheckCard() + catsetCard(
         'How a price is arrived at, and where it came from',
         'A catalogue can declare more than one — a list price, a bulk tier, a regional price, a negotiated one. ' +
           'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.' +
@@ -2884,7 +2935,7 @@ function catsetDetailHTML() {
     '</div><div class="ds">' +
     esc(s.q) +
     '</div></div>' +
-    '<div class="db" id="catsetbody">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category setup details')) + '" id="catsetbody">' +
     catsetBody(k) +
     '</div>'
   );
@@ -2960,7 +3011,7 @@ function catalogueSetupHubScreen() {
        🧾 Spec, so an ordinary setup screen is unchanged. */
     '</div>' +
     specStandards('catalogue') +
-    '<div class="rows" id="catset_rows">' +
+    '<div class="rows" id="catset_rows" tabindex="0" role="region" aria-label="' + esc(tx('Catalogue setup')) + '">' +
     catsetRowsHTML() +
     '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';

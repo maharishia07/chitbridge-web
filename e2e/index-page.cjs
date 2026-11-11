@@ -55,7 +55,7 @@ const PLANTED = { version: 2,
     { id: 'finance', name: 'Finance', route: '/finance.html', icon: '◐', area: 'money', pillar: 'finance', state: 'built', what: 'Who owes you, who you owe.', facts: '/api/facts/finance' },
     { id: 'accounts', name: 'Accounts', route: '/accounts.html', icon: '¤', area: 'money', pillar: 'accounting', state: 'built', what: 'What the shop made, and what it owes.', facts: '/api/facts/accounts' },
     { id: 'crm', name: 'CRM', route: '/crm.html', icon: '◍', area: 'running', pillar: 'sales', state: 'built', what: 'Who buys, and how often.', facts: null },
-    { id: 'product-lab', name: 'Price Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
+    { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈', area: 'labs', pillar: 'labs', state: 'built', what: 'Cost, price, and what each one leaves you.', facts: null },
     { id: 'tax-lab', name: 'Tax Lab', route: null, icon: '§', area: 'labs', pillar: 'labs', state: 'coming' },
     { id: 'standards', name: 'Standards', route: '/standards.html', icon: '≡', area: 'setup', pillar: 'setup', state: 'built', what: 'What a chit must contain.', facts: null },
     { id: 'shop', name: 'Your business', route: null, icon: '⌂', area: 'setup', pillar: 'setup', state: 'workshop' }
@@ -93,7 +93,8 @@ async function run() {
   ok(/\/app\/shell\.js/.test(src) && /CBShell\.mount\(/.test(src) && /host:\s*null/.test(src), 'static · index.html mounts CBShell as Home (host null)');
   ok(!/\balert\s*\(/.test(src), 'static · no alert()');
   const man = JSON.parse(fs.readFileSync(path.join(PUB, 'app', 'manifest.json'), 'utf8'));
-  const exists = (r) => { const p = r.split(/[#?]/)[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
+  /* TEMPORARY external dev card (Coverage, UX-141): an absolute URL is not a utility page file */
+  const exists = (r) => { if (/^https?:\/\//.test(r)) return true; const p = r.split(/[#?]/)[0]; return p === '/' ? false : fs.existsSync(path.join(PUB, p)); };
   const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
   const badRest = man.entries.filter((e) => e.state !== 'built' && e.route).map((e) => e.id);
   ok(badBuilt.length === 0, 'manifest · every built entry routes to a utility page that exists, never app.html, never the index itself' + (badBuilt.length ? ' — not: ' + badBuilt.join(', ') : ''));
@@ -101,7 +102,7 @@ async function run() {
   ok(man.rail && 'route' in man.rail && 'facts' in man.rail && !/app\.html/.test(JSON.stringify(man)), 'manifest · the rail widget is declared (route · facts), and nothing names app.html');
   const eff = (e) => (e.works && e.state === 'workshop' ? 'built' : e.state);   /* the roadmap's reading of a row (manifest `works`) */
   const BUILT = man.entries.filter((e) => e.state === 'built'), REST = man.entries.filter((e) => e.state !== 'built');
-  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Price Lab', 'Offer Lab', 'Combo Lab']) {
+  for (const w of ['Catalogue', 'Accounts', 'Till', 'Standards', 'Suppliers', 'Assist', 'Connectors', 'Your business', 'Counters', 'CRM', 'Product Lab', 'Offer Lab', 'Combo Lab']) {
     ok(man.entries.some((e) => e.name === w), 'manifest · the old index\'s "' + w + '" is a manifest row');
   }
 
@@ -186,7 +187,7 @@ async function run() {
       ok(hrefsOk, '1366 · every built card links to its utility page');
       ok((await offList(pg)).length === 0, '1366 · zero app.html hrefs outside the avatar (the allow-list: CBAvatar\'s own doors)');
       const chips = await pg.$$eval('.cbsh-sc', (cs) => cs.map((c) => ({ id: c.dataset.testid, st: c.dataset.state, link: c.tagName === 'A' || !!c.querySelector('a'), via: c.dataset.via === '1', href: c.getAttribute('href'), tag: (c.querySelector('.tag') || {}).textContent })));
-      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Price Lab)');
+      ok(chips.length && chips.every((c) => (c.via ? /^\/[a-z-]+\.html$/.test(c.href || '') : !c.link) && (c.st === 'workshop' || c.st === 'coming' || c.st === 'works') && c.tag), '1366 · every chip is dashed, names its state, and is not a link (bar a workshop item that names its closest built page: Catalogue to Product Lab)');
       const before = pg.url(), pages = ctx.pages().length;
       await pg.click('[data-testid="shell-chip-delivery"]'); await pg.waitForTimeout(250);   /* delivery: still a coming chip (Stock became a built card in T3-OPS) */
       ok(pg.url() === before && ctx.pages().length === pages, '1366 · a workshop chip opens nothing');

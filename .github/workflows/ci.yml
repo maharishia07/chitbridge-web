@@ -84,8 +84,22 @@ jobs:
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
           node e2e/offer-live-confirm.test.cjs
+          node e2e/detail-chip-errwords.test.cjs
+          node e2e/pack-parity.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
+          node e2e/screen-help.test.cjs
+          node e2e/ui-action-set.test.cjs
+          node e2e/shell-identity.test.cjs
+          node e2e/ui-standard.test.cjs
+          node e2e/ui-batch-progress.test.cjs
+          node e2e/group-actions.test.cjs
+          node e2e/ui-batch-clock.test.cjs
+          node e2e/bulk-resume.test.cjs
+          node e2e/ui-component-keys.cjs
+          node e2e/embed-operations-strings.test.cjs
+          node e2e/tx-key.test.cjs
+          node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
           node tests/avatar-hydrate.test.cjs
@@ -94,7 +108,9 @@ jobs:
           node tests/cart-currency.test.cjs
           node tests/chit-pay-ask.test.cjs
           node tests/chit-sheet-captured.test.cjs
+          node tests/cur1-money-reader.test.cjs
           node tests/chit-sheet-lines.test.cjs
+          node tests/acc-191-chit-sheet-not-decided.test.cjs
           node tests/crm-groups-reach.test.cjs
           node tests/crm-leads-import.test.cjs
           node tests/crm-unbilled-list.test.cjs
@@ -107,6 +123,7 @@ jobs:
           node tests/offline-409.test.cjs
           node tests/repeat-supply-render.test.cjs
           node tests/rewards-pane.test.cjs
+          node tests/qa-131-bulk-status.test.cjs
           node tests/sheets-links.test.cjs
           node tests/showcase-templates.test.cjs
           node tests/stock-pane.test.cjs
@@ -229,16 +246,34 @@ jobs:
           node-version: "22"
       - name: npm audit (production dependencies, high and above)
         run: npm audit --omit=dev --audit-level=high
+      # 8 Nov 2026 (Athi): GitHub release downloads 504'd for hours and turned every scan red. The binary is now CACHED between runs,
+      # the download is RETRIED, and if GitHub releases are still down it is copied from the OFFICIAL image ghcr.io/gitleaks/gitleaks at the
+      # SAME version. The version is asserted either way; the scan itself is unchanged.
+      - name: gitleaks binary cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/gl-bin
+          key: gitleaks-8.24.3-linux-x64
       - name: gitleaks (whole working tree, no history)
         env:
           GITLEAKS_VERSION: "8.24.3"
         run: |
           set -e
-          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-          curl -sSfL -o "$RUNNER_TEMP/gl.tgz" "$base/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -sSfL -o "$RUNNER_TEMP/gl.sum" "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz\$" "$RUNNER_TEMP/gl.sum" | sed "s|  .*|  $RUNNER_TEMP/gl.tgz|" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP" gitleaks
+          bin="$RUNNER_TEMP/gl-bin/gitleaks"; mkdir -p "$RUNNER_TEMP/gl-bin"
+          if [ ! -x "$bin" ]; then
+            base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+            get() { curl -sSfL --retry 5 --retry-delay 15 --retry-all-errors -o "$1" "$2"; }
+            if get "$RUNNER_TEMP/gl.tgz" "$base/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" && get "$RUNNER_TEMP/gl.sum" "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"; then
+              grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz\$" "$RUNNER_TEMP/gl.sum" | sed "s|  .*|  $RUNNER_TEMP/gl.tgz|" | sha256sum -c -
+              tar -xzf "$RUNNER_TEMP/gl.tgz" -C "$RUNNER_TEMP/gl-bin" gitleaks
+            else
+              echo "::warning::GitHub release download failed; using the official image ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}"
+              img="ghcr.io/gitleaks/gitleaks:v${GITLEAKS_VERSION}"; docker pull -q "$img"
+              cid=$(docker create "$img"); docker cp "$cid:/usr/bin/gitleaks" "$bin"; docker rm "$cid" >/dev/null
+            fi
+          fi
+          ln -sf "$bin" "$RUNNER_TEMP/gitleaks"
+          "$RUNNER_TEMP/gitleaks" version | grep -q "${GITLEAKS_VERSION}" || { echo "gitleaks is not ${GITLEAKS_VERSION}"; exit 1; }
           "$RUNNER_TEMP/gitleaks" detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 2
       # 14 Oct: the commits of this push / PR through the FREE CLI (gitleaks-action@v2 demanded a paid licence whenever its owner lookup
       # failed — a flake that blocked green PRs). Same binary as the step above; same config.

@@ -43,7 +43,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   console.log('\n── it sells a bill');
   const sold = await p.evaluate(async (api) => {
     CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), offers: [],
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), offers: [],
       items: [{ item_id: 'a', name: 'Masala Dosa', price: 70, unit: 'plate', category: 'Tiffin' },
               { item_id: 'b', name: 'Filter Coffee', price: 30, unit: 'cup', category: 'Drinks' }] };
     window.ageAllow = async () => true;

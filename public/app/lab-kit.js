@@ -16,7 +16,7 @@
   'use strict';
   /* the labs, in menu order. Same routes as app/manifest.json's built labs (e2e/lab-frame.cjs checks they agree). */
   var LABS = [
-    { id: 'product-lab', name: 'Price Lab', route: '/product-lab.html', icon: '◈' },
+    { id: 'product-lab', name: 'Product Lab', route: '/product-lab.html', icon: '◈' },
     { id: 'offer-lab', name: 'Offer Lab', route: '/offer-lab-next.html', icon: '%' },
     { id: 'combo-lab', name: 'Combo Lab', route: '/offer-lab-next.html?mode=combo', icon: '▣' },
     { id: 'conversion-lab', name: 'Conversion Lab', route: '/conversion-lab.html', icon: '⇅' },

@@ -74,7 +74,7 @@ function label(mask, item, value) {
        which is correct behaviour and would have made every check below fail for the wrong reason. */
     CloudHost.key = 'test-key'; HOST = CloudHost;
     WHO = { id: 'w1', name: 'Bala', kind: 'coassist', since: new Date().toISOString(), float: 0 };
-    window.S = { shop: { name: 'Anand Vegetables', currency: 'INR' }, at: new Date().toISOString(),
+    window.S = { shop: { country: 'IN', name: 'Anand Vegetables', currency: 'INR' }, at: new Date().toISOString(),
       items: [{ item_id: 'v1', name: 'Tomato', code: '42', price: 40, unit: 'kg' },
               { item_id: 'v2', name: 'Onion',  code: '43', price: 30, unit: 'kg' },
               { item_id: 'p1', name: 'Soap',   barcode: '8901234567894', price: 25, unit: 'piece' }] };
@@ -247,7 +247,7 @@ function label(mask, item, value) {
     const label = mk(Number(row.barcode), 750);
     const mint = { item_id: 'v1', name: row.name, price: row.price, unit: row.unit,
                    code: 'V0001', barcode: row.barcode, category: row.category };
-    window.S = { shop: { pay: [] }, items: [mint] };
+    window.S = { shop: { country: 'IN', pay: [] }, items: [mint] };
     const withPlu = weighRead(label);
     delete window.S.items[0].barcode;                    /* ⚠️ the same shop before the PLU existed */
     const without = weighRead(label);

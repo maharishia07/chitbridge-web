@@ -158,7 +158,7 @@ function trHeadline() {
 /* ── the top: the two Reports views, the four tabs, the headline ── */
 function trTab(pair) {
   return (
-    '<button type="button" class="tab" role="tab" aria-pressed="' +
+    '<button type="button" class="tab" aria-pressed="' +
     (TR.period === pair[0] ? 'true' : 'false') +
     '" data-testid="tr-tab-' +
     pair[0] +
@@ -183,7 +183,7 @@ function trPaintTop() {
       : '';
   box.innerHTML =
     fmViews('trend') +
-    '<div class="tabs" role="tablist" aria-label="' +
+    '<div class="tabs" role="group" aria-label="' +
     esc(tx('Which periods')) +
     '">' +
     TR_TABS.map(trTab).join('') +

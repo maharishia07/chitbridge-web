@@ -254,10 +254,10 @@ var CBSettings = (function () {
   function bar(inner) {
     return '<div class="sx-bar">' + inner + '</div>';
   }
-  function btn(id, label, may, cls) {
+  function btn(id, label, may, cls, stampCode) {
     var why = grey(may);
     return (
-      '<span class="sx-act"><button type="button" class="act' +
+      '<span class="sx-act"><button data-cbsid="' + stampCode + '" type="button" class="act' +
       (cls ? ' ' + cls : '') +
       '" id="' +
       id +
@@ -309,7 +309,7 @@ var CBSettings = (function () {
       '<details data-testid="sx-ctr-adv" style="margin-top:18px"><summary style="cursor:pointer;opacity:.75">' +
         esc(T('Advanced')) +
         '</summary>' +
-        '<div style="margin:10px 0;display:flex;gap:10px;align-items:center"><button class="btn" type="button" id="sx_ctr_app" data-testid="sx-ctr-app">' +
+        '<div style="margin:10px 0;display:flex;gap:10px;align-items:center"><button data-cbsid="ACC002-B14" class="btn" type="button" id="sx_ctr_app" data-testid="sx-ctr-app">' +
         esc(T('Install the counter')) +
         '</button>' +
         '<span class="sx-why" title="' +
@@ -350,12 +350,12 @@ var CBSettings = (function () {
           esc(T('New counter')) +
           ' <span class="tag" data-testid="sx-ctr-optional">' +
           esc(T('Optional')) +
-          '</span></label><input class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' +
+          '</span></label><input data-cbsid="ACC002-I08" class="inp" id="sx_ctr_name" data-testid="sx-ctr-name" placeholder="' +
           esc(T('Front desk')) +
           '" maxlength="40"' +
           (grey(manage()) ? ' disabled' : '') +
           '>' +
-          btn('sx_ctr_add', T('Add a counter'), manage()) +
+          btn('sx_ctr_add', T('Add a counter'), manage(), '', 'ACC002-B15') +
           '</span>'
       );
       var node = $('sx_ctr_add');
@@ -495,7 +495,7 @@ var CBSettings = (function () {
           esc(c.id) +
           '">' +
           esc(T('Name')) +
-          '</label><input class="inp" id="sx_ren_' +
+          '</label><input data-cbsid="ACC002-I09" class="inp" id="sx_ren_' +
           esc(c.id) +
           '" data-testid="sx-ctr-rename-' +
           esc(c.id) +
@@ -624,6 +624,35 @@ var CBSettings = (function () {
      * the raw key list is folded away as Advanced, never in the way */
     return []; /* Athi, 16 Oct: "if we are hiding the complexity, we don't need to specify it here" — sign-in, Download and pairing make the keys */
   }
+  /** put a text on the clipboard and say so on the button; a browser that refuses leaves the text on screen to select (SET-34) */
+  function copyText(text, node) {
+    var said = function (words) {
+      if (node) node.textContent = T(words);
+    };
+    if (!(navigator.clipboard && navigator.clipboard.writeText)) return said('Select it and copy');
+    navigator.clipboard.writeText(String(text || '')).then(
+      function () {
+        said('Copied');
+      },
+      function () {
+        said('Select it and copy');
+      }
+    );
+  }
+  /** the new key, shown once, with a Copy button (SET-34) */
+  function paintKeyOnce(key) {
+    $('sx_key_out').innerHTML =
+      '<b>' +
+      esc(T('Copy it now — it is shown once.')) +
+      '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
+      esc(key || '') +
+      '</div><button type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
+      esc(T('Copy')) +
+      '</button>';
+    $('sx_key_copy').onclick = function () {
+      copyText(key, this);
+    };
+  }
   function keysSection(after) {
     var kl = null;
     var keyRows = function () {
@@ -637,19 +666,19 @@ var CBSettings = (function () {
       $('sx_key_bar').innerHTML = bar(
         '<span class="sx-add"><label class="sx-lbl" for="sx_key_name">' +
           esc(T('New key')) +
-          '</label><input class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' +
+          '</label><input data-cbsid="ACC002-I10" class="inp" id="sx_key_name" data-testid="sx-key-name" placeholder="' +
           esc(T('Which system')) +
           '" maxlength="80">' +
           '<label class="sx-lbl" for="sx_key_scope">' +
           esc(T('This key can')) +
-          '</label><select class="inp" id="sx_key_scope" data-testid="sx-key-scope">' +
+          '</label><select data-cbsid="ACC002-S05" class="inp" id="sx_key_scope" data-testid="sx-key-scope">' +
           keyKinds()
             .map(function (kind) {
               return '<option value="' + esc(kind[0]) + '">' + esc(T(kind[1])) + '</option>';
             })
             .join('') +
           '</select>' +
-          btn('sx_key_mint', T('Make a key')) +
+          btn('sx_key_mint', T('Make a key'), null, '', 'ACC002-B16') +
           '</span>'
       );
       $('sx_key_mint').onclick = function () {
@@ -664,12 +693,7 @@ var CBSettings = (function () {
             failed: T('Could not make the key'),
             out: 'sx_key_out',
             outcome: function (r) {
-              $('sx_key_out').innerHTML =
-                '<b>' +
-                esc(T('Copy it now — it is shown once.')) +
-                '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
-                esc((r && r.key) || '') +
-                '</div>';
+              paintKeyOnce(r && r.key);
               readKeys();
             }
           }
@@ -824,9 +848,9 @@ var CBSettings = (function () {
     return GUIDES[connector.id] || (connector.docs ? base + connector.docs : '');
   }
   /** a row action drawn ON the row (CBList runs it by data-act/data-actrow, as it runs the opened row's buttons); greyed with the reason, never hidden */
-  function rowBtn(action, connector, label, reason) {
+  function rowBtn(action, connector, label, reason, stampCode) {
     return (
-      '<button type="button" class="cbl-btn" data-act="' +
+      '<button data-cbsid="' + stampCode + '" type="button" class="cbl-btn" data-act="' +
       action +
       '" data-actrow="' +
       esc(connector.id) +
@@ -854,9 +878,9 @@ var CBSettings = (function () {
       },
       cell: function (connector) {
         return (
-          rowBtn('kit', connector, T('Download'), grey(connector.may)) +
+          rowBtn('kit', connector, T('Download'), grey(connector.may), 'ACC002-B17') +
           ' ' +
-          rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet'))
+          rowBtn('guide', connector, T('Guide'), guideOf(connector) ? '' : T('No guide yet'), 'ACC002-B18')
         );
       }
     };
@@ -1303,6 +1327,8 @@ var CBSettings = (function () {
    * Cancel (or closing the row, which repaints it) puts the old value back. Nothing is written on blur or change. */
   /** a rule's value in the words the row shows: the enum's label, a named number, or the number with its unit */
   function policyShown(x) {
+    /* CTR-212: a flag the server says nobody answered reads "Not answered yet", never its default word ("Off") */
+    if (x.asked === false) return T('Not answered yet');
     var d = x.def,
       v = polShown(d, x.v);
     if (d.type === 'enum') return T((d.labels && d.labels[x.v]) || String(x.v));
@@ -1317,24 +1343,25 @@ var CBSettings = (function () {
       dis = grey(x.may) ? ' disabled' : '';
     if (d.type === 'enum')
       return (
-        '<select class="inp" id="' +
+        '<select data-cbsid="ACC002-S06" class="inp" id="' +
         id +
         '" data-testid="sx-pol-in-' +
         esc(d.key) +
         '" data-orig="' +
-        esc(String(x.v)) +
+        esc(x.asked === false ? '' : String(x.v)) +
         '"' +
         dis +
         ' aria-label="' +
         esc(T(d.label)) +
         '">' +
+        (x.asked === false ? '<option value="" disabled selected>' + esc(T('Not answered yet')) + '</option>' : '') +
         d.options
           .map(function (item) {
             return (
               '<option value="' +
               esc(item) +
               '"' +
-              (String(x.v) === String(item) ? ' selected' : '') +
+              (x.asked !== false && String(x.v) === String(item) ? ' selected' : '') +
               '>' +
               esc(T((d.labels && d.labels[item]) || item)) +
               '</option>'
@@ -1344,7 +1371,7 @@ var CBSettings = (function () {
         '</select>'
       );
     return (
-      '<span class="sx-num"><input class="inp" type="number" min="0" id="' +
+      '<span class="sx-num"><input data-cbsid="ACC002-I11" class="inp" type="number" min="0" id="' +
       id +
       '" data-testid="sx-pol-in-' +
       esc(d.key) +
@@ -1367,8 +1394,24 @@ var CBSettings = (function () {
     if (grey(row.may)) return '';
     var key = esc(row.key);
     return (
-      '<button type="button" class="act" style="display:none" id="sx_pol_save_' + key + '" data-testid="sx-pol-save-' + key + '" data-pol-act="save">' + esc(T('Save')) + '</button>' +
-      '<button type="button" class="act ghost" style="display:none" id="sx_pol_cancel_' + key + '" data-testid="sx-pol-cancel-' + key + '" data-pol-act="cancel">' + esc(T('Cancel')) + '</button>'
+      ui.action('save', {
+        mount: 'ACC002-U01',
+        object: 'policy value',
+        hidden: true,
+        effect: 'commit',
+        confirmedBy: 'page',
+        id: 'sx_pol_save_' + key,
+        testid: 'sx-pol-save-' + key,
+        data: { 'pol-act': 'save' }
+      }) +
+      ui.action('cancel', {
+        mount: 'ACC002-U02',
+        object: 'policy edit',
+        hidden: true,
+        id: 'sx_pol_cancel_' + key,
+        testid: 'sx-pol-cancel-' + key,
+        data: { 'pol-act': 'cancel' }
+      })
     );
   }
   /** the control's value against the one painted. Pure DOM: reads and writes nothing on the server. */
@@ -1497,7 +1540,7 @@ var CBSettings = (function () {
               : { ok: true });
           /* W11: the registration is set in ONE place — Country setup (PUT /governance/country-setup writes the flag); here it is read, with the door */
           if (item.key === 'gst_registration') m = { ok: false, code: 'SET_IN_COUNTRY', why: T('Set under Country, with the registration number.') };
-          return { key: item.key, def: item, v: v, may: m };
+          return { key: item.key, def: item, v: v, may: m, asked: (r.asked || {})[item.key] };
         });
     }
     var shown = policyShown,
@@ -1858,8 +1901,7 @@ var CBSettings = (function () {
     network: 'Network'
   };
   var CURRENT_WHY = 'The device you are on — use Sign out in the menu.';
-  /* WALK-REG R21/R43 (drift walk, 16 Oct): the trade-documents vault is export paperwork — kept for the workshop and forms, hidden on a local
-   * shop's Account until export is switched on (no opt-in flag yet; the host stays so the vault code keeps its target) */
+  /* SET-34 (Athi, 6 Nov 2026): the vault and the keys are shown on Account (they were hidden since WALK-REG R21/R43 and R52, 16 Oct); the vault rows have Copy buttons */
   /* WALK-REG 2026-10-16 R43: a web page does not name its device yet (only the counter does), so its sign-in is never in the list — say so, not a bare "0 devices" beside "signed in here" */
   function deviceListLegacyNote() {
     var sessions = H.data.ses;
@@ -1882,8 +1924,11 @@ var CBSettings = (function () {
       '<div id="sx_dev_bar"></div>',
       lineOut('sx_dev_out'),
       '<div class="sx-list" id="sx_dev_list" data-testid="sx-dev-list"></div>',
-      '<div id="sx_keys_card" data-testid="sx-keys-card" hidden></div>',
-      '<div data-testid="sx-vault-wrap" hidden><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
+      keysHead(),
+      '<div id="sx_key_bar"></div>',
+      lineOut('sx_key_out'),
+      '<div class="sx-list" id="sx_key_list" data-testid="sx-key-list"></div>',
+      '<div data-testid="sx-vault-wrap"><h2 class="sx-h2">' + esc(T('Vault')) + '</h2>',
       '<p class="sub"><a class="sx-link" href="/authority-forms.html" data-testid="sx-vault-forms">' + esc(T('Forms for an authority')) + ' ›</a></p>',
       '<div id="vaulthost" data-testid="sx-vault"></div></div>'
     ]);
@@ -2286,38 +2331,8 @@ var CBSettings = (function () {
     paintDevBar();
     readSes().then(readDev);
 
-    /* keys for other systems: the ONE list lives under Connectors (keysSection; was Counters & keys until WALK-REG R31) — here the count from the same read, and the door; never a second list or minting */
-    function paintKeys() {
-      var d = H.data.keys || {},
-        keys = (d.r && d.r.keys) || [],
-        latest = keys.slice().sort(function (first, second) {
-          return _keySeenAt(second) - _keySeenAt(first);
-        })[0];
-      $('sx_keys_card').innerHTML =
-        '<div class="sx-card">' +
-        (d.state === 'loading'
-          ? '<div class="loadwrap"><span class="spin"></span> ' + esc(T('Reading your keys…')) + '</div>'
-          : d.state === 'error'
-            ? '<div class="err" data-testid="sx-keys-err">' + esc(listErr('keys').title) + '</div>'
-            : '<div class="sx-big" data-testid="sx-keys-count">' +
-              keys.length +
-              ' ' +
-              esc(T(keys.length === 1 ? 'key' : 'keys')) +
-              '</div>' +
-              '<p class="sub" data-testid="sx-keys-last">' +
-              esc(
-                latest && latest.seen && latest.seen.at
-                  ? T('Last heard') + ': ' + (latest.name || 'key') + ' · ' + _keyAgo(latest.seen.at)
-                  : keys.length
-                    ? T('None has reached us yet.')
-                    : T('No keys yet')
-              ) +
-              '</p>') +
-        '<a class="sx-link" href="/settings.html#/connectors" data-testid="sx-keys-door">' +
-        esc(T('Make, see or revoke a key')) +
-        ' ›</a></div>';
-    }
-    load('keys', 'keysList', null, paintKeys);
+    /* SET-34 (Athi, 6 Nov 2026): the keys are SHOWN here, in the one list with Make a key, Copy and Revoke — no door to an empty Connectors page */
+    keysSection();
 
     /* the vault: the workshop's own card (cap-shop.js), every section type here — Your shop shows the identity rows only */
     UI._vaultOnly = '';

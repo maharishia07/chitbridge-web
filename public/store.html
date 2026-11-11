@@ -12,7 +12,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Store</title>
 <style>
-  :root{ --ink:#1a2230; --muted:#5b6675; --line:#e6e9ee; --paper:#f6f7f9; --bg:var(--paper); --card:#fff; --accent:#2c5aa0; --accent-soft:#eaf1fb; --good:#2c7a43; }   /* the theme names (a chosen theme writes them on <html>); --accent is the store's own */
+  :root{ --ink:#1a2230; --muted:var(--grey-2,#5b6675); --line:#e6e9ee; --paper:#f6f7f9; --bg:var(--paper); --card:#fff; --accent:#2c5aa0; --accent-soft:#eaf1fb; --good:#2c7a43; }   /* the theme names (a chosen theme writes them on <html>); --accent is the store's own */
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);line-height:1.5}   /* SYSTEM.md §2: one face on every page (SHELL-ONE) */
   .tools{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);z-index:5}   /* the store's own search and categories; the header is the frame's (SHELL-ONE) */
@@ -65,6 +65,7 @@
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="/engine/locale.js"></script>

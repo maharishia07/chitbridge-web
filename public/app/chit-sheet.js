@@ -463,6 +463,15 @@
       '</b></div>'
     );
   }
+  /* ACC-191: the engine reads an undecided tax as null (supply unknown, a rate above 0, no head figure): say so, never a grid of dashes or 0.00 */
+  /** the GST block of a sheet: the not-decided sentence for an undecided tax, else the rate grid */
+  function gstBlockHTML(sheetModel) {
+    var money = sheetModel.money || {};
+    return money.supply === 'unknown' && money.tax === null ? gstUndecidedHTML() : gstHTML(sheetModel);
+  }
+  function gstUndecidedHTML() {
+    return '<div class="cs-sec">' + esc(T('GST')) + '</div>' + '<div class="cs-mute" data-testid="cs-gst-undecided">' + esc(T('GST not decided: the place of supply is not known')) + '</div>';
+  }
   function gstHTML(m) {
     var mo = m.money || {},
       by = mo.by_rate || null;
@@ -604,7 +613,7 @@
   /* the frozen money as the sheet prints it, for any other screen that shows an issued chit (the Task detail): GST rate-wise, round-off, total.
      m = { money: moneyFor(...), cur, bj } — the same painters the popup uses, never a second one. */
   function moneyBlockHTML(m, totalTestid) {
-    return gstHTML(m) + totalHTML(m, totalTestid);
+    return gstBlockHTML(m) + totalHTML(m, totalTestid);
   }
   var HOW = { cash: 'Cash', upi: 'UPI', card: 'Card', credit: 'On credit', cheque: 'Cheque', points: 'Points' };
   function tenderHTML(m) {
@@ -797,9 +806,9 @@
       node.querySelector('.cs-body').innerHTML = CS.err
         ? '<div class="cs-mute" data-testid="cs-err">' +
           esc(CS.err) +
-          '</div><button type="button" class="optchip" data-testid="cs-retry" onclick="CBSheet.retry()">' +
-          esc(T('Try again')) +
-          '</button>'
+          '</div>' +
+          /* UX-137: the standard Try again (CMP009), drawn in this sheet's chip look; the press is the same retry() */
+          ui.action('reload', { mount: 'TSK005-U01', surface: 'chip', testid: 'cs-retry', onPress: retry })
         : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>';
       node.querySelector('.cs-acts').innerHTML = '';
       return;
@@ -823,7 +832,7 @@
       pageNoteHTML() +
       orderHTML(m) +
       linesHTML(m) +
-      (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstHTML(m)) +
+      (m.purpose === 'order' && !m.counterBill && !(m.money && m.money.by_rate) ? '' : gstBlockHTML(m)) +
       totalHTML(m) +
       tenderHTML(m) +
       (m.agreement
