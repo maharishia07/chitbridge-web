@@ -17,7 +17,7 @@
     .split(',')
     .forEach(function (row) {
       var part = row.split(' ');
-      doors[part[0]] = { method: part[1], path: part[2] };
+      doors[part[0]] = { m: part[1], p: '/api/testing/' + part[2], ok: 'y' };
     });
   var openers = {
     testing: function () {
@@ -50,7 +50,7 @@
     if (!door) return Promise.reject(new Error(name));
     if (!tag.token) return Promise.reject(new Error('Sign in again to record results'));
     opts = opts || {};
-    var path = door.path.replace(/:(\w+)/g, function (_, key) {
+    var path = door.p.replace(/:(\w+)/g, function (_, key) {
       return encodeURIComponent((opts.params || {})[key]);
     });
     var query = Object.keys(opts.query || {})
@@ -61,13 +61,13 @@
     var headers = { Authorization: 'Bearer ' + tag.token };
     var body;
     var attempt;
-    if (door.method !== 'GET') {
+    if (door.m !== 'GET') {
       var payload = Object.assign({}, opts.body);
-      if (door.method === 'POST' && !payload.client_ref) { attempt = name + JSON.stringify(payload); payload.client_ref = refOf(attempt); }
+      if (door.m === 'POST' && !payload.client_ref) { attempt = name + JSON.stringify(payload); payload.client_ref = refOf(attempt); }
       body = JSON.stringify(payload);
       headers['Content-Type'] = 'application/json';
     }
-    return fetch((win.CB_API || '') + '/api/testing/' + path + (query ? '?' + query : ''), { method: door.method, headers: headers, body: body, credentials: 'omit' }).then(
+    return fetch((win.CB_API || '') + path + (query ? '?' + query : ''), { method: door.m, headers: headers, body: body, credentials: 'omit' }).then(
       function (reply) {
         if (reply.status === 401) {
           delete attempts[attempt];
@@ -83,6 +83,8 @@
   }
 
   if (typeof win.api !== 'function') win.api = callDoor;
+  /* a small app (crm.html) has its own api and EP but no test doors: lend them, keep its api and session */
+  else if (typeof EP === 'object') for (var door in doors) EP[door] = EP[door] || doors[door];
   if (typeof win.tx !== 'function') win.tx = function (words) { return words; };
   if (typeof win.esc !== 'function') {
     win.esc = function (value) {
