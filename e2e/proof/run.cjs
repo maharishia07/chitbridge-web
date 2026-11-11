@@ -16,13 +16,15 @@ fs.mkdirSync(OUT, { recursive: true });
 const rows = [];   // { pack, name, r: 'pass'|'fail'|'error', msg }
 const row = (pack, name, r, msg) => rows.push({ pack, name, r, msg: msg || '' });
 const pass = () => process.argv.includes('--only') ? ['--only', L.arg('only', '')] : [];
+// the stack flags go on to the packs unchanged (--base/--api/--remote-ok/--users/--server/--as/--tz: a SIT box run, see lib.cjs); the packs' own lib decides what is allowed
+const FWD = ['base', 'api', 'shop', 'remote-ok', 'users', 'server', 'as', 'tz'].flatMap((n) => (L.argv.includes('--' + n) ? ['--' + n, L.arg(n, '')] : []));
 
 function runNode(args, timeoutMin) {
   const r = spawnSync(process.execPath, args, { cwd: path.join(E2E, '..'), stdio: 'inherit', timeout: timeoutMin * 60000, env: process.env });
   return r.status === null ? -1 : r.status;
 }
 function packA11y() {
-  const out = path.join(OUT, 'a11y.json'), code = runNode([path.join(__dirname, 'a11y.cjs'), '--out', out, '--widths', L.WIDTHS.join(','), '--shots', path.join(OUT, 'shots'), ...pass()], 40);
+  const out = path.join(OUT, 'a11y.json'), code = runNode([path.join(__dirname, 'a11y.cjs'), '--out', out, '--widths', L.WIDTHS.join(','), '--shots', path.join(OUT, 'shots'), ...pass(), ...FWD], 40);
   if (!fs.existsSync(out)) return row('a11y', 'pack', 'error', 'no result file (exit ' + code + ')');
   for (const p of JSON.parse(fs.readFileSync(out, 'utf8')).pages) for (const [w, m] of Object.entries(p.vp)) {
     const name = p.page + ' @' + w;
@@ -32,7 +34,7 @@ function packA11y() {
   }
 }
 function packKeyboard() {
-  const out = path.join(OUT, 'keyboard.json'), code = runNode([path.join(__dirname, 'keyboard.cjs'), '--out', out, '--widths', L.WIDTHS.join(','), '--shots', path.join(OUT, 'shots'), ...pass()], 60);
+  const out = path.join(OUT, 'keyboard.json'), code = runNode([path.join(__dirname, 'keyboard.cjs'), '--out', out, '--widths', L.WIDTHS.join(','), '--shots', path.join(OUT, 'shots'), ...pass(), ...FWD], 60);
   if (!fs.existsSync(out)) return row('keyboard', 'pack', 'error', 'no result file (exit ' + code + ')');
   for (const p of JSON.parse(fs.readFileSync(out, 'utf8')).pages) {
     const name = p.page + ' @' + p.width, bad = (p.popups || []).filter((x) => x.escCloses === false).length;

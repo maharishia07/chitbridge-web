@@ -20,3 +20,7 @@ gh workflow run proof.yml -R maharishia07/chitbridge-web -f web_ref=<branch> -f 
 On a laptop with a local stack (`node e2e/lib/stack-local.cjs up`, shop loaded by api `tools/sim-load.cjs`):
 `node e2e/proof/run.cjs --packs a11y,keyboard --widths 1366,390 --out out/proof [--only crm,till] [--strict]`.
 A finding (serious/critical, a trap, Esc not closing) is a FAIL row in `summary.md` and `junit-proof.xml` and a `::warning`; the job turns red only when a pack could not run, a page errored or a walk failed (`--strict` makes findings red too).
+
+**On a SIT box (sit-au, the proofs box) against its own deployed stack** (QA, 11 Nov; same packs, same runner, read-only by the same write guard): add
+`--base https://staging.<ip>.sslip.io --api https://staging.<ip>.sslip.io --remote-ok staging.<ip>.sslip.io --server sit-au --as cbt-au-retail [--users ~/.cb-sit-users.json]`.
+Sign-in is a SIT test user's tester code (the users file is read, never printed). `lib.cjs` refuses sit-in (the gate box), production hosts and any host that is not the one named in `--remote-ok`.
