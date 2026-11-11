@@ -146,7 +146,7 @@
       '<div class="empty" data-testid="emp-fail"><div class="t">' +
       esc(T(refused ? 'This sign-in cannot open this' : adding ? "Couldn't open the form" : "Couldn't read your people")) +
       '</div>' +
-      '<button type="button" class="act" id="emp_retry" data-testid="emp-retry">' +
+      '<button data-cbsid="EMP001-B01" type="button" class="act" id="emp_retry" data-testid="emp-retry">' +
       esc(T('Try again')) +
       '</button></div>';
     $('emp_retry').onclick = function () {
@@ -155,13 +155,15 @@
   }
 
   /* ── an action drawn the one way: shown always; greyed with the server's sentence when it may not ── */
-  function actRow(id, icon, label, may, extra) {
+  function actRow(id, icon, label, may, extra, stampCode) {
     var ok = !may || may.ok !== false;
     return (
       '<div class="emp-act' +
       (ok ? '' : ' no') +
       '">' +
-      '<button type="button" class="act quiet" id="' +
+      '<button data-cbsid="' +
+      stampCode +
+      '" type="button" class="act quiet" id="' +
       id +
       '" data-testid="' +
       id +
@@ -333,7 +335,7 @@
       (E.counts.off ? ' · <b>' + E.counts.off + '</b> ' + esc(T('off')) : '') +
       '</span>' +
       '<span class="emp-add">' +
-      actRow('emp_add', '＋', T('Add a person'), add) +
+      actRow('emp_add', '＋', T('Add a person'), add, '', 'EMP001-B02') +
       '</span>' +
       /* CX6 (E1): payroll is SAID, not silent — the server's one line, shown while the shop's country pack lists payroll as out of scope */
       (E.payroll && E.payroll.said ? '<div class="sub" data-testid="emp-payroll" style="flex-basis:100%">' + esc(E.payroll.said) + '</div>' : '');
@@ -347,7 +349,7 @@
   /* ── the person sheet: four actions (Add is the list's) ── */
   function sheet(html) {
     var node = $('emp_sheet');
-    node.innerHTML = '<button type="button" class="mx" id="emp_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
+    node.innerHTML = '<button data-cbsid="EMP001-B03" type="button" class="mx" id="emp_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
     if (!node.open) {
       try {
         node.showModal();
@@ -383,24 +385,26 @@
         '</div>' +
         '<div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
         '<div class="emp-acts">' +
-        actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(node.access.label) + '</span>') +
+        actRow('emp_access', '🔑', T('What they can do'), m.access, '<span class="sub">' + esc(node.access.label) + '</span>', 'EMP001-B04') +
         actRow(
           'emp_email',
           '✉️',
           T('E-mail'),
           m.email || m.access,
-          '<span class="sub" data-testid="emp-email-now">' + esc(node.email || (node.has_email ? T('On file') : T('None yet'))) + '</span>'
+          '<span class="sub" data-testid="emp-email-now">' + esc(node.email || (node.has_email ? T('On file') : T('None yet'))) + '</span>',
+          'EMP001-B05'
         ) +
-        actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin, codeGivenNote(node.code_given)) +
+        actRow('emp_pin', '🔢', T('Reset code'), m.reset_pin, codeGivenNote(node.code_given), 'EMP001-B06') +
         '<div id="emp_code" data-testid="emp-code-slot"></div>' +
         actRow(
           'emp_switch',
           '⏻',
           m.switch.to === 'on' ? T('Switch on') : T('Switch off'),
           m.switch,
-          node.jobs && m.switch.to === 'off' ? '<span class="sub">' + esc(node.jobs + ' ' + T('open jobs go to the pool')) + '</span>' : ''
+          node.jobs && m.switch.to === 'off' ? '<span class="sub">' + esc(node.jobs + ' ' + T('open jobs go to the pool')) + '</span>' : '',
+          'EMP001-B07'
         ) +
-        actRow('emp_cover', '🤝', T('Who stands in'), m.cover, coverNote) +
+        actRow('emp_cover', '🤝', T('Who stands in'), m.cover, coverNote, 'EMP001-B08') +
         '</div><div id="emp_more"></div>'
     );
     var q = function (k) {
@@ -551,7 +555,7 @@
       .map(function (item, index) {
         var on = item.level === cur.level && item.whole_entity === cur.whole_entity && item.can_see_costs === cur.can_see_costs;
         return (
-          '<label class="emp-opt"><input type="radio" name="emp_lvl" value="' +
+          '<label class="emp-opt"><input data-cbsid="EMP001-I01" type="radio" name="emp_lvl" value="' +
           index +
           '"' +
           (on ? ' checked' : '') +
@@ -566,7 +570,7 @@
       })
       .join('');
     $('emp_more').innerHTML =
-      '<div class="emp-panel">' + cs + '<button type="button" class="act" id="emp_access_go" data-testid="emp-access-go">' + esc(T('Save')) + '</button></div>';
+      '<div class="emp-panel">' + cs + '<button data-cbsid="EMP001-B09" type="button" class="act" id="emp_access_go" data-testid="emp-access-go">' + esc(T('Save')) + '</button></div>';
     $('emp_access_go').onclick = function () {
       var node = root.document.querySelector('input[name="emp_lvl"]:checked');
       if (!node) return;
@@ -600,10 +604,10 @@
       '<div class="emp-panel"><label class="sub" for="emp_email_in">' +
       esc(T('Their e-mail. Codes are sent here, never shown.')) +
       '</label>' +
-      '<input class="inp" id="emp_email_in" data-testid="emp-email-in" type="email" autocomplete="off" value="' +
+      '<input data-cbsid="EMP001-I02" class="inp" id="emp_email_in" data-testid="emp-email-in" type="email" autocomplete="off" value="' +
       esc(p.email || '') +
       '">' +
-      '<button type="button" class="act" id="emp_email_go" data-testid="emp-email-go">' +
+      '<button data-cbsid="EMP001-B10" type="button" class="act" id="emp_email_go" data-testid="emp-email-go">' +
       esc(T('Save')) +
       '</button></div>';
     $('emp_email_go').onclick = function () {
@@ -640,10 +644,10 @@
       '<div class="emp-panel"><label class="sub" for="emp_cover_sel">' +
       esc(T('Who covers when they are away?')) +
       '</label>' +
-      '<select id="emp_cover_sel" class="inp" data-testid="emp-cover-sel">' +
+      '<select data-cbsid="EMP001-S01" id="emp_cover_sel" class="inp" data-testid="emp-cover-sel">' +
       opts +
       '</select>' +
-      '<button type="button" class="act" id="emp_cover_go" data-testid="emp-cover-go">' +
+      '<button data-cbsid="EMP001-B11" type="button" class="act" id="emp_cover_go" data-testid="emp-cover-go">' +
       esc(T('Save')) +
       '</button></div>';
     $('emp_cover_go').onclick = function () {
@@ -680,26 +684,26 @@
         '<div class="emp-form">' +
         '<label for="emp_n">' +
         esc(T('Name')) +
-        '</label><input class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">' +
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
-        '</label><input class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
+        '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
         '<div class="sub" id="emp_kn" data-testid="emp-add-keynote"></div>' +
         '<label for="emp_l">' +
         esc(T('What they can do')) +
-        '</label><select class="inp" id="emp_l" data-testid="emp-add-level">' +
+        '</label><select data-cbsid="EMP001-S02" class="inp" id="emp_l" data-testid="emp-add-level">' +
         cs +
         '</select>' +
         '<label for="emp_r">' +
         esc(T('Job')) +
-        '</label><input class="inp" id="emp_r" data-testid="emp-add-role" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I05" class="inp" id="emp_r" data-testid="emp-add-role" autocomplete="off">' +
         '<label for="emp_p">' +
         esc(T('Phone')) +
-        '</label><input class="inp" id="emp_p" data-testid="emp-add-phone" inputmode="tel" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I06" class="inp" id="emp_p" data-testid="emp-add-phone" inputmode="tel" autocomplete="off">' +
         '<label for="emp_e">' +
         esc(T('E-mail')) +
-        '</label><input class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
-        '<button type="button" class="act" id="emp_add_go" data-testid="emp-add-go">' +
+        '</label><input data-cbsid="EMP001-I07" class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
+        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go">' +
         esc(T('Add')) +
         '</button></div>'
     );
@@ -788,7 +792,7 @@
       '<h2 data-testid="emp-added">' + esc(T('Added')) + '</h2><div class="emp-sub"><b>' + esc(name) + '</b></div>' +
       '<div class="mono" data-testid="emp-added-id">' + esc(shortId((person && person.user_id) || (reply.actor && reply.actor.login_format))) + '</div>' +
       codePart +
-      '<button type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
+      '<button data-cbsid="EMP001-B13" type="button" class="act" id="emp_done" data-testid="emp-done">' + esc(T('Done')) + '</button>'
     );
   }
   function added(r) {
