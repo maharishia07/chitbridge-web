@@ -74,7 +74,6 @@ Register: `public/app/screen-id.js` (declared rows, merged into `CBSCREENS`) + `
 | SET009 | Print setup | Settings | /settings.html | what prints on the bill — the bill's signature, previewed live (SET-WALK1 W27) |
 | OPS001 | Stock | Operations | /operations.html | /operations.html#/stock · Operations › Stock |
 | OPS002 | Suppliers | Operations | /operations.html | /operations.html#/suppliers · Operations › Suppliers |
-| TRM001 | Terms and privacy | Terms and privacy | /terms.html | /terms.html · Terms and privacy › Terms and privacy |
 | EMP001 | People | Employees | /employees.html | /employees.html · Employees › People |
 | CTG001 | Items | Catalogue | /catalogue.html | /catalogue.html#/items · Catalogue › Items |
 | CTG002 | Categories | Catalogue | /catalogue.html | /catalogue.html#/categories · Catalogue › Categories |

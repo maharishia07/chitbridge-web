@@ -231,7 +231,7 @@ function disputeBanner(chit) {
     proof +
     '</div>';
   var dropdown =
-    '<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
+    '<select aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     '<option value="">— select a dispute to open —</option>' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
@@ -247,7 +247,7 @@ function disputeBanner(chit) {
 function disputeOverlay(chit, dispute, open, closed) {
   var proof = chit.proof === 'ok' ? '<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>' : '';
   var dropdown =
-    '<select onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
+    '<select aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
     '</select>';

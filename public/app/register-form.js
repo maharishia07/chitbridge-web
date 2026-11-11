@@ -225,9 +225,7 @@ function govPanel() {
     (REG.agreed ? ' checked' : '') +
     ' onchange="REG.agreed=this.checked;renderRegister()">' +
     '<span>' +
-    txf('These are right, and I accept the {terms}.', {
-      terms: '<a href="/terms.html" target="_blank" rel="noopener" data-testid="reg-terms-link">' + esc(tx('terms of use and privacy')) + '</a>'
-    }) +
+    esc(tx('These are right, and I accept the terms of use.')) +
     '</span></label>'
   );
 }

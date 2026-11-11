@@ -3,7 +3,7 @@
 /**
  * ui-standard.test.cjs — the UI standard page (public/ui-standard.html, screen UIS001), offline: no browser.
  * Cases: the page is public and mock-only (no api, session, shell, storage or fetch in the page or its script; a CSP that refuses every
- * connection); every component of the action set (CMP001..CMP010) has a row; the nine action labels are in all four packs; the page's own
+ * connection); every component of the action set (CMP001..CMP019, CMP020..CMP027) has a row; the nine action labels are in all four packs; the page's own
  * labels are in all four packs; the census rows name real components. The browser half (render, language switch, scroll) is e2e/walk-ui-standard.cjs.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * Run: node e2e/ui-standard.test.cjs
@@ -37,7 +37,9 @@ check(/connect-src 'self';/.test(csp) && /default-src 'none'/.test(csp) && !/uns
 }
 check((pageHtml.match(/<script(?![^>]*\ssrc=)[^>]*>/g) || []).length === 1, 'exactly one inline script: the frame call');
 check(/<html[^>]*data-appearance-fixed/.test(html) && scripts.indexOf('/app/avatar.js') > 0 && scripts.indexOf('/engine/screen.js') > 0 && scripts.indexOf('/engine/screen.js') < scripts.indexOf('/app/avatar.js'), 'the avatar look is applied through avatar.js on a fixed-look page (no storage), after the theme library');
-check(!/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|cb_sess|cb_lang|document\.cookie|api\()/.test(page.replace(/the page's own[^\n]*/g, '')), 'the page script never fetches, stores or reads a session');
+const fetches = page.match(/\bfetch\(([^)]*)\)/g) || [];
+check(fetches.length === 1 && fetches[0] === "fetch('/app/ui-waves.json')", 'the one read is the static waves data file of this site: ' + fetches.join(' '));
+check(!/\b(fetch|XMLHttpRequest|localStorage|sessionStorage|cb_sess|cb_lang|document\.cookie|api\()/.test(page.replace(/the page's own[^\n]*/g, '').replace(/window\.fetch\('\/app\/ui-waves\.json'\)/g, '')), 'the page script never fetches, stores or reads a session');
 check(!/https?:\/\/(?!fonts\.(googleapis|gstatic)\.com)/.test(pageHtml.replace(/http-equiv[^>]*>/, '')), 'no external address in the page');
 
 console.log('every component has a row');
@@ -47,9 +49,14 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.map((row) => row.name).concat('dialog'));
+const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray')); /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
+
+console.log('batch progress showcase (CMP026, CMP027)');
+check(/gal-progress-batch-panel/.test(page) && /gal-progress-batch-tray/.test(page) && /gal-row-CMP026/.test(page), 'a separate row with two buttons: Try 8 items (panel) and Try 40 items (tray)');
+['Try 8 items', 'Try 40 items', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
+['Batch progress', 'Batch tray'].forEach((key) => check(model.translatedIn(key).length === 4, 'component label "' + key + '" is in all four packs'));
 
 console.log('language');
 const actions = Object.keys(components).filter((name) => name !== 'dialog');
@@ -61,6 +68,25 @@ chrome.forEach((key) => check(model.translatedIn(key).length === 4, 'page label 
 check(model.translatedIn('A label no pack has').length === 0 && model.coverageOf({ label: 'A label no pack has', code: 'CMP000' }).missing.length > 0, 'a label no pack could read is not shown as translated: the page fell back to the English text and the coverage note says so in words');
 check(model.LANGS.map((lang) => lang[0]).join() === 'en,ta,hi,ar,fr' && model.LANGS.filter((lang) => lang[2] === 'rtl').length === 1, 'five languages, one right-to-left (ar)');
 check(model.contrastRatio('rgb(0,0,0)', 'rgb(255,255,255)') > 20.9 && model.contrastRatio('rgb(22,105,63)', 'rgb(255,255,255)') >= 4.5, 'the contrast helper: black on white 21:1, the accent on white AA');
+console.log('waves: one row per wave, from public/app/ui-waves.json');
+{
+  const data = JSON.parse(read('app/ui-waves.json'));
+  const drawn = model.wavesHTML(data);
+  const rows = [...drawn.matchAll(/data-testid="gal-wave-([0-9][0-9a-z]*)"/g)].map((match) => match[1]);
+  check(rows.join() === data.waves.map((wave) => wave.id).join() && rows.join() === '0,1a,1b,2,3', 'one row per wave, in the order of the file: ' + rows.join(' '));
+  check((drawn.match(/role="progressbar"/g) || []).length === data.waves.length, 'each wave row carries a progress bar (CMP021)');
+  check(data.waves.every((wave) => ['done', 'in progress', 'landed, measuring', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress, landed measuring or next');
+  check(data.waves.every((wave) => wave.progress.value === null || (wave.progress.value >= 0 && wave.progress.value <= wave.progress.total)), 'no progress value is above its total');
+  const unmeasured = data.waves.reduce((sum, wave) => sum + wave.pairs.filter((pair) => pair.after === null).length + (wave.progress.value === null ? 1 : 0), 0);
+  check(unmeasured > 0 && (drawn.match(/>measuring</g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
+  const wave0 = data.waves[0].progress;
+  check(drawn.indexOf('aria-valuemax="' + wave0.total + '" aria-valuenow="' + wave0.value + '"') > 0, 'Wave 0 draws ' + wave0.value + ' of ' + wave0.total + ' from the file, not from the page');
+  check(model.wavesHTML(null).indexOf('gal-waves-wait') > 0 && model.wavesHTML(null).indexOf('gal-wave-0') < 0, 'before the file arrives the section says measuring and draws no rows');
+  check(model.sections().some((section) => section.k === 'waves'), 'Waves is a section of the page');
+  const keys = ['Waves', 'Wave {id}', 'In progress', 'Landed, measuring', 'Next', 'measuring', 'Measured {date}', 'of {total}'];
+  data.waves.forEach((wave) => { keys.push(wave.title, wave.progress.label); wave.pairs.forEach((pair) => keys.push(pair.label)); });
+  keys.forEach((key) => check(model.translatedIn(key).length === 4, 'waves label "' + key + '" is in ta hi ar fr'));
+}
 console.log('the Standards page links here');
 const register = read('app/cap-standards.js'), standardsPage = read('standards.html');
 check(register.indexOf("['web', 'Web design']") >= 0, "the register has the Web design subject (STD_AREAS 'web')");
@@ -68,10 +94,10 @@ const linked = register.split(/\n  \{\n/).map((block) => [/id: '([^']+)'/.exec(b
 check(linked.length >= 5 && ['wcag-1.4.3', 'wcag-1.4.11', 'wcag-2.4.7', 'ui-action-set'].every((id) => linked.indexOf(id) >= 0), 'rows that open this page (go: ui-standard): ' + linked.join(' '));
 check(standardsPage.indexOf("'ui-standard': '/ui-standard.html'") >= 0, "standards.html maps the go key 'ui-standard' to /ui-standard.html");
 console.log('where-used: every mount argument is a literal, or the call declares itself out of scope (docs ui-where-used.cjs reads the same rule)');
-/* the components-tab dialogRow is the 61st counter mount (10 rows x 6 states first); written as a literal it must stay UIS001-U61 */
+/* the components-tab dialogRow is the 61st counter mount (19 rows x 6 states first); written as a literal it must stay UIS001-U115 */
 const rowsBlock = /var ROWS = \[([\s\S]*?)\n  \];/.exec(page), rowCount = rowsBlock ? (rowsBlock[1].match(/\{ name: /g) || []).length : -1;
-check(/ui\.action\('open', \{ mount: SCREEN \+ '-U61', object: 'dialog'/.test(page), "dialogRow mount is the literal SCREEN + '-U61' (the code the counter gave it)");
-check(/var SCREEN = 'UIS001'/.test(page) && rowCount === 10, 'SCREEN is UIS001 and 10 rows x 6 states precede dialogRow, so U61 is unchanged (rows ' + rowCount + ')');
+check(/ui\.action\('open', \{ mount: SCREEN \+ '-U115', object: 'dialog'/.test(page), "dialogRow mount is the literal SCREEN + '-U115' (the code the counter gave it)");
+check(/var SCREEN = 'UIS001'/.test(page) && rowCount === 19, 'SCREEN is UIS001 and 19 rows x 6 states precede dialogRow, so U115 is unchanged (rows ' + rowCount + ')');
 const appDir = path.join(__dirname, '..', 'public', 'app'), literalMount = /^(?:'[^'\\]*'|"[^"\\]*"|SCREEN\s*\+\s*'[^'\\]*')$/;
 let callCount = 0;
 const blank = (source) => source.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/^[ \t]*\/\/.*$/gm, (m) => ' '.repeat(m.length)); /* comments blanked, line numbers kept */
