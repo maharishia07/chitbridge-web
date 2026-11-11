@@ -73,7 +73,7 @@
       '<div class="empty" data-testid="ca-fail"><div class="t">' +
       esc(T("Couldn't read Assist's answers. Check the connection and try again.")) +
       '</div>' +
-      '<button type="button" class="act" id="ca_retry" data-testid="ca-retry">' +
+      '<button data-cbsid="TSK007-B01" type="button" class="act" id="ca_retry" data-testid="ca-retry">' +
       esc(T('Try again')) +
       '</button></div>';
     $('ca_retry').onclick = function () {
@@ -90,26 +90,26 @@
       '</div>' +
       '<label class="sub" for="ca_q">' +
       esc(T('Question')) +
-      '</label><input class="inp" id="ca_q" data-testid="ca-q" maxlength="400" autocomplete="off" value="' +
+      '</label><input data-cbsid="TSK007-I01" class="inp" id="ca_q" data-testid="ca-q" maxlength="400" autocomplete="off" value="' +
       esc(q.q || '') +
       '">' +
-      '<div class="tk-act"><button type="button" class="act quiet" id="ca_draft" data-testid="ca-draft">' +
+      '<div class="tk-act"><button data-cbsid="TSK007-B02" type="button" class="act quiet" id="ca_draft" data-testid="ca-draft">' +
       esc(T('✨ Draft an answer')) +
       '</button></div>' +
       '<label class="sub" for="ca_a">' +
       esc(T('Answer')) +
-      '</label><textarea class="inp" id="ca_a" data-testid="ca-a" rows="4" maxlength="4000">' +
+      '</label><textarea data-cbsid="TSK007-T01" class="inp" id="ca_a" data-testid="ca-a" rows="4" maxlength="4000">' +
       esc(q.a || '') +
       '</textarea>' +
       (A.drafted ? '<div class="sub" data-testid="ca-drafted">' + esc(T('Assist drafted this. Read it before you accept.')) + '</div>' : '') +
       '<label class="sub" for="ca_c">' +
       esc(T('Where it shows (screens, or * for everywhere)')) +
-      '</label><input class="inp" id="ca_c" data-testid="ca-c" autocomplete="off" value="' +
+      '</label><input data-cbsid="TSK007-I02" class="inp" id="ca_c" data-testid="ca-c" autocomplete="off" value="' +
       esc((q.context || ['*']).join(', ')) +
       '">' +
       '<div class="tk-steps">' +
-      root.CBTasks.actRow('ca_accept', T('Accept and publish'), A.may, '', '') +
-      '<div class="tk-act"><button type="button" class="act quiet" id="ca_reject" data-testid="ca-reject">' +
+      root.CBTasks.actRow('ca_accept', T('Accept and publish'), A.may, '', '', 'TSK007-B03') +
+      '<div class="tk-act"><button data-cbsid="TSK007-B04" type="button" class="act quiet" id="ca_reject" data-testid="ca-reject">' +
       esc(T('Reject')) +
       '</button></div></div>' +
       '<div id="ca_out" class="tk-out" role="status" data-testid="ca-out"></div>'
