@@ -110,7 +110,7 @@ var SHOP = {
   tax_id_word: 'GSTIN' /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
 var BILL = {
-  currency: 'INR' /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */,
+  currency: null /* the sample shop's money, told by the message — the slip writes it as the till does (fmtMoney · CBLocale.money); null = unknown, never rupees (CTRY-72) */,
   no: 'C1/26-27/0041',
   at: new Date(),
   till: 'Counter 1',
@@ -207,7 +207,7 @@ function onPreviewMessage(event) {
   var message = event.data;
   if (!message || !message.cb_preview) return;
   signature = message;
-  if (message.currency) BILL.currency = message.currency;
+  BILL.currency = message.currency || null; /* CTRY-72: a message with tax but no money leaves the money unknown, never the rupee */
   /* R47: a taxed sample line keeps its own rate when the pack's menu has it (India's 5 %), else takes the pack's standard rate (AU 10 %, AE 5 %) */
   var menu = message.tax && message.tax.rates ? message.tax.rates.map(Number) : null;
   if (message.tax && message.tax.rate)
@@ -267,7 +267,7 @@ function taxWords() {
 }
 /** CTRY-72: where the slip would have been, the words and the way to the fix - no number is worked out. A preview not yet told anything paints nothing. */
 function refusalHTML() {
-  var refusalWords = (signature && signature.refusal) || 'Open Print setup to see the sample bill.'; /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
+  var refusalWords = (signature && signature.refusal) || (signature ? 'No money is set for this shop.' : 'Open Print setup to see the sample bill.'); /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
   return (
     '<div class="c" data-testid="slip-no-country" style="padding:6mm 2mm"><div class="b">' +
     esc(refusalWords) +
@@ -286,7 +286,7 @@ function paintRefusal() {
 }
 /** the one door every repaint goes through: the slip when the shop has tax words, else the refusal (render() itself needs them) */
 function show() {
-  return taxWords() ? render() : paintRefusal();
+  return taxWords() && BILL.currency ? render() : paintRefusal();
 }
 function render() {
   var kind = document.getElementById('kind').value;

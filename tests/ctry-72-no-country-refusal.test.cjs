@@ -69,6 +69,9 @@ const run = (cx, src) => vm.runInContext(src, cx);
   ok(!/slip-no-country/.test(slip()) && /CGST/.test(slip()) && /TAX INVOICE/.test(slip()), 'IN shop: the tax invoice with CGST/SGST is painted (unchanged)');
   send({ tax: { word: 'GST', split: false, rate: 10, id_word: 'ABN' }, refusal: '', country: 'AU', currency: 'AUD' });
   ok(!/slip-no-country/.test(slip()) && /GST/.test(slip()) && !/CGST/.test(slip()) && /TAX INVOICE/.test(slip()), 'AU shop: one GST line, no CGST/SGST (unchanged)');
+  send({ tax: { word: 'GST', split: true, rate: 18, id_word: 'GSTIN' }, refusal: '', country: 'IN', currency: undefined });
+  ok(/slip-no-country/.test(slip()) && /No money is set/.test(slip()) && !/₹|INR|TAX INVOICE/.test(slip()), 'tax but no currency: the no-money words show, never rupees');
+  ok(!/currency:\s*'INR'/.test(stripComments(inline(html))), 'bill-print.html: the sample money does not start as INR');
   const lone = sandbox(); /* the page opened on its own (no ?preview=1, no message): the print test is gone, the sample needs a shop */
   lone.cx.location.search = '';
   for (const f of ['app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(lone.cx, read(f));
