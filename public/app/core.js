@@ -435,6 +435,7 @@ const OUTBOX_KEYS = new Set([
   'supPatch',
   'prodDel',
   'prodEdit',
+  'prodBulkCategories', // QA-130 a bulk job step: add or remove a category per product; each product answers done, unchanged or refused, so a repeat changes nothing
   'prodStatusBulk', // a bulk job step: sets a status and answers the ids it missed; a repeat only re-stamps who and when
   'folderRename',
   'folderDelete',
