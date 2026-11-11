@@ -3,7 +3,7 @@
 /**
  * group-actions.test.cjs — the group actions of app.html go through the one batch progress (ui.progress.batch.run), in steps of their speed class (Athi 11 Nov).
  *
- * Cases (a stand-in api, the real ui.js and the real app.html functions cut out by name): the three speed presets (quick 10 / slow 5 / tray 5, panel up to 10 / 5 / never);
+ * Cases (a stand-in api, the real ui.js and the real app.html functions cut out by name): the three speed classes (step quick 10 / slow 5 / tray 5; the tray class starts in the tray, the others in the panel and move to it after 2 s);
  * 25 ids on quick → 3 calls of at most 10 and the corner tray, with the done / left / failed counts; one failing step counted failed while the rest still go;
  * Cancel stops after the step and says how many were done; 8 ids → one call and the centre panel (prodAvailApply); 12 ids slow (assignBulkChits) → 3 calls of at most 5 and the tray;
  * bulkRestore (one call per record) counts a failed record and keeps it ticked; no screen lock (showBusy is never called).
@@ -16,7 +16,7 @@ const check = (condition, message) => { console.log((condition ? '  ok ' : '  FA
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let CALL_MS = 180; /* each stand-in call takes long enough for the 400 ms delay to pass on a long batch (the quick 8-id case sets it higher: one call must outlast the delay for the panel to open) */
 
-let tray = null, panelHtml = [], busyCalls = 0, toasts = [];
+let tray = null, panelHtml = [], busyCalls = 0, toasts = [], lastUndo = null;
 function fakeRoot(html) {
   const nodes = {};
   const part = (name) => nodes[name] || (nodes[name] = { attrs: {}, innerHTML: '', textContent: '', setAttribute(k, v) { this.attrs[k] = v; }, closest: () => null });
@@ -38,8 +38,8 @@ const sandbox = {
   modal: (html) => { panelHtml.push(html); root = fakeRoot(html); }, closeModal: () => { root = null; },
   addEventListener() {}, removeEventListener() {},
   MSG: { fail: (verb, e) => 'Could not ' + verb + ': ' + ((e && e.message) || e), bulkAssigned: (n, who, sk) => n + ' assigned' + (sk ? ' · ' + sk + ' skipped' : ''), restored: (n) => 'Restored ' + n },
-  STORE: { actors: [] }, UI: state, toast: (message) => toasts.push(message), announce() {}, showBusy: () => { busyCalls += 1; }, hideBusy() {},
-  loadList: async () => {}, loadCatalogue: async () => {}, renderApp() {}, actionTargets: () => state.targets,
+  STORE: { actors: [] }, UI: state, toast: (message, undo) => { toasts.push(message); lastUndo = undo || null; }, announce() {}, showBusy: () => { busyCalls += 1; }, hideBusy() {},
+  MODALS: { stat: null, del: null }, statusWordFor: (to) => to, chitPos: () => null, cap: (t) => t, afterChitAction() {}, loadList: async () => {}, loadCatalogue: async () => {}, renderApp() {}, actionTargets: () => state.targets,
   prodId: (p) => p.id, pData: (p) => p, UIprod: null,
   api: async (name, options) => {
     calls.push({ name, params: options && options.params, body: options && options.body });
@@ -58,27 +58,29 @@ function sourceOf(name) {
   if (start < 0) throw new Error('no function ' + name);
   return html.slice(start, html.indexOf('\n}\n', start) + 3);
 }
-['chitNameOf', 'groupRun', 'groupRunSteps', 'afterGroup', 'groupToast', 'bulkRestore', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
+['chitNameOf', 'groupRun', 'groupRunSteps', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
 const ui = sandbox.ui, batch = ui.progress.batch;
 const ids = (n) => Array.from({ length: n }, (_, i) => 'c' + (i + 1));
-const reset = () => { calls.length = 0; tray = null; root = null; panelHtml = []; toasts = []; failOn = null; state.selected = new Set(); state.rows = []; };
+const reset = () => { lastUndo = null; calls.length = 0; tray = null; root = null; panelHtml = []; toasts = []; failOn = null; state.selected = new Set(); state.rows = []; };
 const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body ? (c.body.chit_ids || c.body.ids).length : 1));
 
 (async () => {
   console.log('presets');
-  check(JSON.stringify(batch.speeds) === '{"quick":{"step":10,"panelMax":10},"slow":{"step":5,"panelMax":5},"tray":{"step":5,"panelMax":0}}', 'three named classes, the numbers live once in ui.js');
+  check(JSON.stringify(batch.speeds) === '{"quick":{"step":10,"alwaysTray":false},"slow":{"step":5,"alwaysTray":false},"tray":{"step":5,"alwaysTray":true}}', 'three named classes, the numbers live once in ui.js');
   check(JSON.stringify(batch.steps(ids(12), 'slow').map((c) => c.length)) === '[5,5,2]' && JSON.stringify(batch.steps(ids(25)).map((c) => c.length)) === '[10,10,5]', 'slow 12 → 5, 5, 2; quick 25 → 10, 10, 5');
   try { batch.steps(ids(3), 'fast'); check(false, 'an unknown class is refused'); } catch (error) { check(/quick, slow or tray/.test(error.message), 'an unknown class is refused'); }
   const where = (total, speed) => { const job = batch({ mount: 'TST004-D01-U01', total, speed, delay: 0 }); job.cancel(); job.finish(); return job.tray; };
-  check(where(10, 'quick') === false && where(11, 'quick') === true && where(5, 'slow') === false && where(6, 'slow') === true && where(1, 'tray') === true, 'panel up to 10 (quick) / 5 (slow) / never (tray): tray from 6 on slow, tray for 1 on tray');
+  check(where(40, 'quick') === false && where(40, 'slow') === false && where(1, 'tray') === true, 'the count no longer decides: quick and slow start in the panel, the tray class in the tray');
 
   console.log('the runner: 25 ids on quick');
   reset();
+  CALL_MS = 800; /* 3 steps take 2.4 s, so the panel moves to the tray on its own */
   const sent = [];
   const run = (n, options, send) => batch.run(ids(n), Object.assign({ mount: 'WRK001-U51', label: 'Working', unit: 'done' }, options), send);
   let result = await run(25, {}, async (chunk) => { sent.push(chunk.length); await wait(CALL_MS); return { done: chunk, failed: [] }; });
   check(JSON.stringify(sent) === '[10,10,5]' && result.done.length === 25 && result.failed.length === 0 && result.left === 0 && !result.cancelled, '25 ids → 3 calls of at most 10, all done');
-  check(tray !== null && /cbp-tray/.test(tray.className) && /role="region"/.test(tray.innerHTML), 'the corner tray shows (a region, not a locked dialog)');
+  check(panelHtml.length > 0 && tray !== null && /cbp-tray/.test(tray.className) && /role="region"/.test(tray.innerHTML), 'it started in the panel and moved to the corner tray after 2 s (a region, not a locked dialog)');
+  CALL_MS = 180;
   check(root && /All 25 done/.test(root.part('count').textContent), 'the end reads "All 25 done"');
 
   console.log('one failing step');
@@ -101,7 +103,7 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   console.log('slow and tray classes through the runner');
   reset(); sent.length = 0;
   result = await run(12, { speed: 'slow' }, async (chunk) => { sent.push(chunk.length); await wait(CALL_MS); return { done: chunk, failed: [] }; });
-  check(JSON.stringify(sent) === '[5,5,2]' && tray !== null, 'slow: 12 ids → 3 calls of at most 5, the tray');
+  check(JSON.stringify(sent) === '[5,5,2]', 'slow: 12 ids → 3 calls of at most 5');
   reset(); sent.length = 0;
   result = await run(3, { speed: 'tray' }, async (chunk) => { sent.push(chunk.length); await wait(CALL_MS * 3); return { done: chunk, failed: [] }; });
   check(sent.length === 1 && tray !== null && panelHtml.length === 0, 'tray: 3 ids → the tray, not the panel');
@@ -119,14 +121,14 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   state.prods = ids(25).map((id) => ({ id })); state.prodPicked = new Set(ids(25));
   failOn = async (name, options) => ({ updated: options.body.ids.length - (options.body.ids.includes('c13') ? 1 : 0), missed: options.body.ids.includes('c13') ? ['c13'] : [] });
   await sandbox.prodAvailApply('unavailable');
-  check(JSON.stringify(sizes('prodStatusBulk')) === '[10,10,5]' && tray !== null, '25 ids → 3 calls of at most 10, the tray');
+  check(JSON.stringify(sizes('prodStatusBulk')) === '[10,10,5]', '25 ids → 3 calls of at most 10');
   check(/24 set to unavailable · 1 could not be saved/.test(toasts[toasts.length - 1]) && state.prodPicked.has('c13') && state.prodPicked.size === 1, '24 done, 1 failed and left ticked, said in the toast');
 
   console.log('app.html: assignBulkChits, 12 ids (slow)');
   reset();
   failOn = async (name, options) => ({ assigned: options.body.chit_ids.length - (options.body.chit_ids.includes('c7') ? 1 : 0), skipped: options.body.chit_ids.includes('c7') ? [{ chit_id: 'c7', reason: 'at capacity (10)' }] : [] });
   await sandbox.assignBulkChits(ids(12), 'a1');
-  check(JSON.stringify(sizes('assignBulk')) === '[5,5,2]' && calls.every((c) => c.body.target_actor_id === 'a1') && tray !== null, '12 ids → 3 calls of at most 5, same body shape, the tray');
+  check(JSON.stringify(sizes('assignBulk')) === '[5,5,2]' && calls.every((c) => c.body.target_actor_id === 'a1'), '12 ids → 3 calls of at most 5, same body shape');
   check(/11 assigned · 1 skipped/.test(toasts[toasts.length - 1]) && state.selected.has('c7') && /at capacity/.test(root.part('fails').innerHTML), '11 assigned, the skipped one named with its reason and left ticked');
 
   console.log('app.html: bulkRestore, one call per record');
@@ -134,8 +136,36 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   state.targets = ids(25);
   failOn = async (name, options) => { if (options.params.id === 'c4') throw new Error('gone'); return {}; };
   await sandbox.bulkRestore();
-  check(calls.length === 25 && calls.every((c) => c.name === 'restore') && tray !== null, '25 ids → 25 restore calls (the same endpoint per record), the tray');
+  check(calls.length === 25 && calls.every((c) => c.name === 'restore') && tray !== null, '25 ids → 25 restore calls (the same endpoint per record), and the panel moved to the tray after 2 s');
   check(/24 restored · 1 failed/.test(toasts[toasts.length - 1]) && state.selected.has('c4') && state.selected.size === 1, '24 restored, c4 counted failed and still ticked');
+
+  console.log('app.html: assignBulkChits, a step that throws stops the run');
+  reset(); state.selectMode = false;
+  let assignCalls = 0;
+  failOn = async (name, options) => { assignCalls += 1; if (assignCalls === 2) throw new Error('Target co-assist not found'); return { assigned: options.body.chit_ids.length, skipped: [] }; };
+  await sandbox.assignBulkChits(ids(12), 'a1');
+  check(sizes('assignBulk').length === 2 && /5 assigned · 5 skipped/.test(toasts[toasts.length - 1]) && /2 not done/.test(toasts[toasts.length - 1]), 'step 2 throws: the run stops (2 calls, not 3), 5 assigned, 5 failed, 2 not done');
+  check(state.selectMode === true && state.selected.size === 5 && state.selected.has('c6'), 'the select mode stays on so the five failed ticks stay visible');
+
+  console.log('app.html: confirmStatus stops on the first failure');
+  reset();
+  sandbox.MODALS.stat = { ids: ids(12), to: 'act', use: null };
+  failOn = async (name, options) => { if (options.params.id === 'c3') throw new Error('refused'); return {}; };
+  await sandbox.confirmStatus();
+  check(calls.length === 3, 'ids c1..c3 are tried, then it stops (3 calls of 12)');
+  check(/Moved 2 of 12, then: Could not change status: refused/.test(toasts[toasts.length - 1]), 'the sentence says how far it got and why it stopped');
+
+  console.log('app.html: confirmDelete, a partial run');
+  reset();
+  state.rows = ids(5).map((id) => ({ id }));
+  sandbox.MODALS.del = { ids: ids(5) };
+  failOn = async (name, options) => { if (options.params.id === 'c2') throw new Error('locked'); return {}; };
+  await sandbox.confirmDelete();
+  check(state.rows.map((r) => r.id).join() === 'c2' && state.selected.has('c2') && state.selected.size === 1, 'the rows that moved leave the list; the failed one stays and stays ticked');
+  check(/4 moved to Trash · 1 failed/.test(toasts[toasts.length - 1]) && typeof lastUndo === 'function', 'the toast counts 4 moved, 1 failed, and offers Undo');
+  calls.length = 0;
+  await lastUndo();
+  check(calls.filter((c) => c.name === 'restore').map((c) => c.params.id).join() === 'c1,c3,c4,c5', 'Undo restores the four that moved and not the failed one');
 
   if (failures) { console.log(failures + ' FAILED'); process.exit(1); }
   console.log('all passed');

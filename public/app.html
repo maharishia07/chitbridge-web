@@ -16888,10 +16888,30 @@ async function prodAvailApply(status) {
   /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
      nobody trusts bulk actions. */
   const missed = result.failed.length;
-  toast(result.done.length + ' set to ' + status + (missed ? ' · ' + missed + ' could not be saved' : result.cancelled ? '' : ' ✓') + (result.cancelled ? ' · ' + result.left + ' not done' : ''), missed || result.cancelled ? true : false);
+  toast(result.done.length + ' set to ' + status + (missed ? ' · ' + missed + ' could not be saved' : result.left > 0 ? '' : ' ✓') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
   renderApp();
 }
 
+/** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
+async function prodCategoriseSend(payload) {
+  if (!payload.length) return { ok: 0, failed: 0, why: '' };
+  const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
+  try {
+    const out = await api('prodBulkUpdate', { body: { items: payload } });
+    const ok = (out && out.updated) || 0;
+    const missedCount = (out && out.missed && out.missed.length) || 0;
+    step.done(ok);
+    if (missedCount) step.failed(missedCount, tx('could not be found'));
+    return { ok: ok, failed: missedCount, reasonText: '' };
+  } catch (e) {
+    const inv = e && e.invalid;
+    const reasonText = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
+    step.failed(payload.length, reasonText.replace(/^ · /, ''));
+    return { ok: 0, failed: payload.length, reasonText: reasonText };
+  } finally {
+    step.finish();
+  }
+}
 /**
  * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
  * why it takes loads of time, are you going round trip for each product?"*
@@ -16914,7 +16934,6 @@ async function prodCategoriseApply() {
     return;
   }
   closeModal();
-  showBusy(txn('Categorising {count} product…', 'Categorising {count} products…', node.ids.length));
 
   /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
   const payload = [];
@@ -16937,22 +16956,10 @@ async function prodCategoriseApply() {
     payload.push({ id: id, item_data: d });
   }
 
-  let ok = 0,
-    failed = unknown,
-    why = '';
-  try {
-    if (payload.length) {
-      const out = await api('prodBulkUpdate', { body: { items: payload } });
-      ok = (out && out.updated) || 0;
-      failed += (out && out.missed && out.missed.length) || 0;
-    }
-  } catch (e) {
-    failed += payload.length;
-    const inv = e && e.invalid;
-    why = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
-  } finally {
-    hideBusy();
-  }
+  const sent = await prodCategoriseSend(payload);
+  const ok = sent.ok;
+  const failed = unknown + sent.failed;
+  const reasonText = sent.reasonText;
 
   UI.prodPicked.clear();
   UI.prodPick = false;
@@ -16961,7 +16968,7 @@ async function prodCategoriseApply() {
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
   /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
      nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${why}` : ' ✓'), failed ? true : false);
+  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'), failed ? true : false);
   renderApp();
 }
 /**
@@ -23534,7 +23541,7 @@ async function archiveSelected() {
   closeModal();
   const result = await groupRun(ids, { mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' }, (id) => api('archive', { params: { id } }));
   await afterGroup(result);
-  toast(groupToast(result, ' archived'), result.failed.length ? true : false);
+  toast(groupToast(result, ' archived'));
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' archived');
 }
 /* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
@@ -23571,12 +23578,13 @@ function groupRun(ids, kind, perId) {
 /** after a group action: the records that failed stay ticked, the one that is open closes only if it changed, and the list is read again */
 /** the same runner for an endpoint that takes a whole step: sendChunk(ids) resolves { done: [ids], failed: [{ item, reason }] }; a throw fails the step with the verb's sentence */
 function groupRunSteps(ids, kind, sendChunk) {
+  /* a step that THROWS (400 pull mode, co-assist off shift, 500) has the same cause for every later step, so the run stops and the rest read "not done"; a record the server skips inside a step is just counted failed */
   const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
   return ui.progress.batch.run(ids, options, async (chunk) => {
     try {
       return await sendChunk(chunk);
     } catch (e) {
-      return { done: [], failed: chunk.map((id) => ({ item: id, reason: MSG.fail(kind.verb, e) })) };
+      return { done: [], failed: chunk.map((id) => ({ item: id, reason: MSG.fail(kind.verb, e) })), stop: true };
     }
   });
 }
@@ -23593,7 +23601,7 @@ async function afterGroup(result) {
 /** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
 function groupToast(result, doneWords) {
   const failed = result.failed.length;
-  return result.done.length + doneWords + (failed ? ' · ' + failed + ' failed' : '') + (result.cancelled || result.stopped ? ' · ' + result.left + ' not done' : '');
+  return result.done.length + doneWords + (failed ? ' · ' + failed + ' failed' : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : '');
 }
 async function bulkRestore() {
   const ids = actionTargets();
@@ -23603,7 +23611,7 @@ async function bulkRestore() {
   }
   const result = await groupRun(ids, { mount: 'WRK001-U52', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' }, (id) => api('restore', { params: { id } }));
   await afterGroup(result);
-  toast(result.failed.length || result.cancelled ? groupToast(result, ' restored') : MSG.restored ? MSG.restored(result.done.length) : result.done.length + ' restored', result.failed.length ? true : false);
+  toast(result.failed.length || result.cancelled ? groupToast(result, ' restored') : MSG.restored ? MSG.restored(result.done.length) : result.done.length + ' restored');
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' restored');
 }
 async function bulkUnarchive() {
@@ -23614,7 +23622,7 @@ async function bulkUnarchive() {
   }
   const result = await groupRun(ids, { mount: 'WRK001-U53', speed: 'quick', verb: 'unarchive', label: 'Unarchiving records', unit: 'unarchived' }, (id) => api('unarchive', { params: { id } }));
   await afterGroup(result);
-  toast(groupToast(result, ' unarchived'), result.failed.length ? true : false);
+  toast(groupToast(result, ' unarchived'));
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' unarchived');
 }
 function bulkPurge() {
@@ -23641,7 +23649,7 @@ async function _bulkPurge(ids) {
   const result = await groupRun(ids, { mount: 'WRK001-U54', speed: 'tray', verb: 'delete', label: 'Deleting records', unit: 'deleted' }, (id) => api('purgeChit', { params: { id } }));
   await afterGroup(result);
   const blocked = result.failed.length;
-  toast(result.done.length + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : '') + (result.cancelled ? ' · ' + result.left + ' not done' : ''), blocked ? true : false);
+  toast(result.done.length + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' deleted');
 }
 async function confirmDelete() {
@@ -23658,8 +23666,10 @@ async function confirmDelete() {
   UI.selected.clear();
   result.failed.forEach((entry) => UI.selected.add(entry.item));
   renderApp();
-  if (result.failed.length || result.cancelled) toast(groupToast(result, ' moved to Trash'), true);
-  if (result.done.length && !(result.failed.length || result.cancelled)) toast(MSG.trashed(result.done.length), () => restoreChits(result.done));
+  /* Undo is for the rows that DID move, also after a partial or cancelled run (the sentence then says what did not move) */
+  const partial = result.failed.length > 0 || result.left > 0;
+  if (result.done.length) toast(partial ? groupToast(result, ' moved to Trash') : MSG.trashed(result.done.length), () => restoreChits(result.done));
+  else if (partial) toast(groupToast(result, ' moved to Trash'));
   announce(result.done.length + ' chit' + (result.done.length === 1 ? '' : 's') + ' moved to trash');
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
@@ -28354,10 +28364,10 @@ async function assignBulkChits(ids, actorId) {
       failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' }))
     };
   });
-  UI.selectMode = false;
+  UI.selectMode = result.failed.length > 0; /* the failed ticks stay visible */
   await afterGroup(result);
   renderApp();
-  toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.cancelled ? ' · ' + result.left + ' not done' : ''), result.failed.length ? true : false);
+  toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
 }
 function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};

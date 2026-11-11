@@ -94,7 +94,8 @@ var CBUiStandard = (function () {
     { name: 'assistant', object: '', opts: { surface: 'float' } },
     { name: 'menu', object: '', opts: { display: 'icon', surface: 'topbar' } },
     { name: 'legend', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
-    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } }
+    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
+    { name: 'background', object: '', opts: {} }
   ];
   var SHELL_ROWS_FIRST_MOUNT = 125;
   var TOKENS = [
@@ -312,7 +313,7 @@ var CBUiStandard = (function () {
   }
   /* CMP026 batch progress: forty mock chits on a timer (no api), the 17th fails, so the failed count and the list show */
   var DEMO_BATCH_TICK_MS = 120, DEMO_BATCH_FAIL_AT = 5;
-  /** one demo run: eight items open the centre panel, forty the corner tray (the limits are ui.progress.batch.speeds: quick panel up to 10, slow up to 5, tray class never); the 5th item fails so the count and the list show */
+  /** one demo run: eight items open the centre panel, forty the corner tray (every batch starts in the panel and moves to the tray after ui.progress.batch.trayAfterMs, or at once with Run in background; the tray class starts in the tray); the 5th item fails so the count and the list show */
   function demoBatch(total, mount, speed) {
     return function () {
       var batch = ui.progress.batch({ mount: mount, label: 'Assigning chits', total: total, unit: 'assigned', speed: speed, delay: 0, cancel: function () {} });
@@ -353,8 +354,7 @@ var CBUiStandard = (function () {
       '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch progress</span> · parts <span class="mono">CMP021 ' + esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' +
       progressCell('Try 8 items', ui.action('open', { mount: SCREEN + '-U119', object: 'batch', testid: 'gal-progress-batch-panel', onPress: demoBatch(8, SCREEN + '-D03-U01') })) +
       progressCell('Try 40 items', ui.action('open', { mount: SCREEN + '-U120', object: 'batch tray', testid: 'gal-progress-batch-tray', onPress: demoBatch(40, SCREEN + '-D04-U01') })) +
-      progressCell('Slow class: 8 items, tray from 6', ui.action('open', { mount: SCREEN + '-U150', object: 'slow batch', testid: 'gal-progress-batch-slow', onPress: demoBatch(8, SCREEN + '-D05-U01', 'slow') })) +
-      progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U151', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
+      progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
       '</div></section>';
   }
   function componentsPanel() {
