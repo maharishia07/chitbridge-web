@@ -94,7 +94,8 @@ var CBUiStandard = (function () {
     { name: 'assistant', object: '', opts: { surface: 'float' } },
     { name: 'menu', object: '', opts: { display: 'icon', surface: 'topbar' } },
     { name: 'legend', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
-    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } }
+    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
+    { name: 'background', object: '', opts: {} }
   ];
   var SHELL_ROWS_FIRST_MOUNT = 125;
   var TOKENS = [
@@ -312,10 +313,10 @@ var CBUiStandard = (function () {
   }
   /* CMP026 batch progress: forty mock chits on a timer (no api), the 17th fails, so the failed count and the list show */
   var DEMO_BATCH_TICK_MS = 120, DEMO_BATCH_FAIL_AT = 5;
-  /** one demo run: eight items open the centre panel, forty the corner tray (the limit is ui.progress.batch.panelMax); the 5th item fails so the count and the list show */
-  function demoBatch(total, mount) {
+  /** one demo run: eight items open the centre panel, forty the corner tray (every batch starts in the panel and moves to the tray after ui.progress.batch.trayAfterMs, or at once with Run in background; the tray class starts in the tray); the 5th item fails so the count and the list show */
+  function demoBatch(total, mount, speed) {
     return function () {
-      var batch = ui.progress.batch({ mount: mount, label: 'Assigning chits', total: total, unit: 'assigned', delay: 0, cancel: function () {} });
+      var batch = ui.progress.batch({ mount: mount, label: 'Assigning chits', total: total, unit: 'assigned', speed: speed, delay: 0, cancel: function () {} });
       function next(index) {
         if (batch.cancelled()) return;
         if (index > total) { batch.finish(); return; }
@@ -353,9 +354,10 @@ var CBUiStandard = (function () {
       '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch progress</span> · parts <span class="mono">CMP021 ' + esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' +
       progressCell('Try 8 items', ui.action('open', { mount: SCREEN + '-U119', object: 'batch', testid: 'gal-progress-batch-panel', onPress: demoBatch(8, SCREEN + '-D03-U01') })) +
       progressCell('Try 40 items', ui.action('open', { mount: SCREEN + '-U120', object: 'batch tray', testid: 'gal-progress-batch-tray', onPress: demoBatch(40, SCREEN + '-D04-U01') })) +
+      progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
       '</div></section>';
   }
-  /** CMP045..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
+  /** CMP045, CMP033..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
   var LIST_ROWS = [
     ['listfield', 'CMP045-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
     ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
@@ -369,6 +371,17 @@ var CBUiStandard = (function () {
         '<div class="states"><figure class="st"><div class="slot"><span class="mono">' + esc(entry[1]) + '</span></div><figcaption>CBList (list-ctl.js)</figcaption></figure></div></section>';
     }).join('');
   }
+  /** CMP032 Batch job note: every state of a saved job in words, each its own standard text key (the batch bar itself is CMP026, the corner tray CMP027) */
+  function batchNoteRow() {
+    var component = ui.components.batchnote, batch = ui.progress.batch;
+    var sample = { done: 12, total: 40, left: 28, failed: 0, seconds: 15 };
+    var cells = batch.noteKinds.map(function (kind) {
+      var values = kind === 'doneAll' ? { done: 40 } : kind === 'doneFailed' ? { done: 38, failed: 2 } : kind === 'stopped' ? { done: 20, left: 20 } : sample;
+      return '<figure class="st"><div class="slot"><p class="note" data-testid="gal-note-' + kind + '">' + esc(batch.noteWords(kind, values)) + '</p></div><figcaption><span class="mono">' + component.code + '.' + kind + '</span></figcaption></figure>';
+    }).join('');
+    return '<section class="crow" data-testid="gal-row-CMP032"><div class="cid"><span class="chip" data-testid="gal-code">CMP032</span><b>' + esc(words('Batch job note')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch job note</span> · under <span class="mono">CMP026 ' + esc(ui.components.batch.label) + '</span> and <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' + cells + '</div></section>';
+  }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
     var dialog = dialogRow();
@@ -379,6 +392,7 @@ var CBUiStandard = (function () {
     rows.push(progressRow());
     rows.push(batchRow());
     rows.push(listRows());
+    rows.push(batchNoteRow());
     return rows.join('');
   }
 

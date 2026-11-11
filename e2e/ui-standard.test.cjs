@@ -49,13 +49,14 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'listfield', 'listopener', 'listtoggle', 'listselect', 'listtab', 'listcommand', 'listrowaction', 'listcolumn')); /* CMP045..CMP039 are drawn by the list row (listRows), the list control writes the elements itself */ /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
+const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'listfield', 'listopener', 'listtoggle', 'listselect', 'listtab', 'listcommand', 'listrowaction', 'listcolumn', 'batchnote')); /* CMP045..CMP039 are drawn by the list row (listRows), the list control writes the elements itself */ /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
 
 console.log('batch progress showcase (CMP026, CMP027)');
 check(/gal-progress-batch-panel/.test(page) && /gal-progress-batch-tray/.test(page) && /gal-row-CMP026/.test(page), 'a separate row with two buttons: Try 8 items (panel) and Try 40 items (tray)');
-['Try 8 items', 'Try 40 items', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
+check(/gal-row-CMP032/.test(page) && /gal-note-/.test(page), 'CMP032 has its own row: every state of a saved job in words (gal-note-<state>)');
+['Try 8 items', 'Try 40 items', 'Tray class: 3 items, always the tray', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
 ['Batch progress', 'Batch tray'].forEach((key) => check(model.translatedIn(key).length === 4, 'component label "' + key + '" is in all four packs'));
 
 console.log('language');
