@@ -23375,6 +23375,29 @@ function pickStatus(v) {
   const node = document.getElementById('mok');
   if (node) node.disabled = false;
 }
+/* ⭐ QA-131: the body of ONE record's status call. `from` = the status this screen saw (a bulk job only: the server refuses a record that moved since, it never moves it back);
+   `use` = what the goods are for, said with the acceptance it decides (it was a second call, PUT /use, that could not be repeated once accepted). */
+function statusStepBody(to, row, goodsUse, bulkJobId) {
+  const body = { status: statusWordFor(to, row) };
+  if (bulkJobId && row && row._status) body.from = row._status;
+  if (goodsUse && to === 'act' && row && row.billRx) body.use = goodsUse;
+  return body;
+}
+/** a bulk job's id: made once for a run of more than one record, kept on the modal so a resume re-sends the same step keys (one per job, record and step) */
+function bulkJobIdOf(modal, count) {
+  if (count > 1 && !modal.job) modal.job = Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  return modal.job;
+}
+/** one record moved: the row shows the new status, and it is no longer ticked */
+function markStatusMoved(id, to, word) {
+  const i = UI.rows.findIndex((x) => x.id === id);
+  if (i >= 0) {
+    UI.rows[i].state = to;
+    UI.rows[i]._status = word;
+  }
+  if (UI.detail && UI.detail.id === id) UI.detail.state = to;
+  UI.selected.delete(id);
+}
 async function confirmStatus() {
   const { ids, to, use } = MODALS.stat;
   if (!to) return;
@@ -23393,19 +23416,18 @@ async function confirmStatus() {
    * ⭐ It still stops rather than churning through 26 failures: the second failure is almost never new
    * information, and 25 more attempts is a minute spent proving it.
    */
+  const bulkJobId = bulkJobIdOf(MODALS.stat, ids.length); /* a resume that reuses the job re-sends the same step keys, even for one record left */
   /* ⭐ the same stop rule as above, kept: the first failure ends the run (stopOnFailure), the rest stay "not done"; the progress now shows the count in the corner, the screen is not locked */
   const result = await groupRun(
     ids,
     { mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
     async (id) => {
       const _row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
-      /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
-      if (use && to === 'act' && _row && _row.billRx) await api('billUse', { params: { id }, body: { use: use } });
-      const reply = await api('status', { params: { id }, body: { status: statusWordFor(to, _row) } });
+      /* ⭐ QA-131: ONE call per record; the key is one per (job, record, step), so a resend of an accepted step is answered with its first answer and posts and tells once */
+      const body = statusStepBody(to, _row, use, bulkJobId);
+      const reply = await api('status', { params: { id }, body, idemKey: bulkJobId ? 'stat-' + bulkJobId + '-' + id + '-' + body.status : undefined });
       if (reply && reply.warning) toast(reply.warning);
-      const i = UI.rows.findIndex((x) => x.id === id);
-      if (i >= 0) UI.rows[i].state = to;
-      if (UI.detail && UI.detail.id === id) UI.detail.state = to;
+      markStatusMoved(id, to, body.status);
     }
   );
   const _done = result.done.length;
