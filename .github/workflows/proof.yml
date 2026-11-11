@@ -71,16 +71,12 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: pw-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
-      # three tries, 45 s apart: a runner that cannot resolve the apt mirrors for a minute no longer loses the night
+      # e2e/ci-browser.sh: two tries with the system packages, then the browser alone (the runner DNS fault of 11 Nov)
       - name: Install the browser tools
         working-directory: e2e
         run: |
           npm ci
-          for try in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=5 update -qq && npx playwright install --with-deps chromium && exit 0
-            echo "browser install failed (try $try of 3), waiting 45 s"; sleep 45
-          done
-          exit 1
+          sh ci-browser.sh
       - name: Fresh database, migrations and the simulated shop (api tools/sim-load.cjs --schema, one year)
         run: node chitbridge-api/tools/sim-load.cjs --db "$SIM_DB" --shop simstores --years 1 --schema
       - name: Start the api (3000) and the web (5173)
