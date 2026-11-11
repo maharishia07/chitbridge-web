@@ -21,7 +21,7 @@
      The page paints the register and counts it; it reads nothing from the API and computes nothing a shop's figure depends on.
      STD-COMPARE (15 Oct 2026): a second saved view, "Compared with" — the country comparison of book-keeping packages, data/compare.json mapped by
      stdCompareRows (cap-standards.js) — a CBList view with its OWN rows (list-ctl.js views[].rows), its own columns, the Applies-in filter as its country
-     filter (the shop's country from the avatar's one /me read, `cb:me`; else India) and a Package filter; a row opens its sources; a core-books row
+     filter (the shop's country from the avatar's one /me read, `cb:me`; none known = no country picked and a line says so, CTRY-72) and a Package filter; a row opens its sources; a core-books row
      offers "See it" → the parallel run (accounts.html#compare). #compared-with addresses it. Never a second list or page. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -192,7 +192,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   <div class="body">
     <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
     <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="brand"><div class="logo" aria-hidden="true">&#9776;</div><div class="brand-name">Standards</div></div><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
-    <main class="main" id="main"><div id="std_list" data-testid="std-list"></div></main>
+    <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
 <dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
@@ -305,7 +305,6 @@ function addCompare(json) {
   CMP_ROWS = stdCompareRows(json).map((row, index) => ({ ix: 'c' + index, r: row }));
 }
 const CMP_STATUS_ORDER = { ahead: 0, level: 1, behind: 2, 'n/a': 3 };
-const CMP_COUNTRY_FALLBACK = 'IN'; /* no shop country known (not signed in, or /me not landed yet): India, the first pack */
 const AREA = (r) => lab(STD_AREAS, r.a),
   PAREA = (r) => lab(STD_PRODUCT_AREAS, r.pa),
   KIND = (r) => lab(STD_KINDS, r.k),
@@ -1237,7 +1236,17 @@ function watch() {
 }
 
 /* T3-COMPAT · STD-COMPARE: the address says the tab — #works-with / #compared-with while that view is lit, so the link can be shared; any other view drops it */
+/* CTRY-72: the Compared with tab with no shop country says so where the country's rows would be, and where to fix it */
+function paintNoCountry() {
+  var host = $('std_nocountry');
+  if (!host) return;
+  var show = comparedOn() && !shopCountryKnown() && !nowFilt().country;
+  host.hidden = !show;
+  if (show && !host.firstChild)
+    host.innerHTML = 'Set your country first, and this tab opens on your country’s packages. <a href="/settings.html#/country" data-testid="std-nocountry-link">Country setup</a>';
+}
 function tabHash() {
+  paintNoCountry();
   var want = worksOn() ? '#works-with' : comparedOn() ? '#compared-with' : '';
   if (location.hash === want || (!want && !location.hash)) return;
   try {
@@ -1252,7 +1261,7 @@ function openWorks() {
   $('app').setAttribute('data-view', 'list');
   paintMatrix();
 }
-/* STD-COMPARE: the Compared with tab opens on the shop's country — the avatar's one /me read (CBAvatar.shopCountry, announced as `cb:me`) — else India.
+/* STD-COMPARE: the Compared with tab opens on the shop's country — the avatar's one /me read (CBAvatar.shopCountry, announced as `cb:me`) — else every country, and the line (std_nocountry) says to set it.
    COUNTRY_SET remembers what this page chose, so a country the person picked is never overwritten when /me lands later. */
 let COUNTRY_SET = '';
 function shopCountryKnown() {
@@ -1260,17 +1269,19 @@ function shopCountryKnown() {
   return country && CMP_ROWS.some((x) => x.r.c[0] === country) ? country : '';
 }
 function openCompared() {
-  COUNTRY_SET = shopCountryKnown() || CMP_COUNTRY_FALLBACK;
+  COUNTRY_SET = shopCountryKnown(); /* CTRY-72: no shop country known = no country picked for the person (every country's rows, and a line says so) - never India */
   clearSearch();
-  setFilters(Object.assign({ country: COUNTRY_SET }, COMPARED.filt));
+  setFilters(Object.assign(COUNTRY_SET ? { country: COUNTRY_SET } : {}, COMPARED.filt));
   $('app').setAttribute('data-view', 'list');
   paintMatrix();
+  paintNoCountry(); /* the observer's tabHash can run before the Compared with filter is set, so the line is painted here too */
 }
 document.addEventListener('cb:me', () => {
   var country = shopCountryKnown();
-  if (!country || !comparedOn() || nowFilt().country !== COUNTRY_SET || country === COUNTRY_SET) return;
+  if (!country || !comparedOn() || (nowFilt().country || '') !== COUNTRY_SET || country === COUNTRY_SET) return;
   COUNTRY_SET = country;
   setFilters(Object.assign({}, nowFilt(), { country: country }));
+  paintNoCountry();
 });
 window.addEventListener('hashchange', () => {
   if (location.hash === '#works-with' && !worksOn()) openWorks();

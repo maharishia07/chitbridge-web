@@ -518,26 +518,36 @@ var CBPrint = (function () {
       return tell();
     }
   }
-  /** the pack's standard rate for the sample lines: its own standard_rate, else the last of its rates, else 18 */
+  /** the pack's standard rate for the sample lines: its own standard_rate, else the last of its rates; null when the pack states none (CTRY-72: never 18) */
   function packRate(pack) {
     var taxRules = pack && pack.tax;
-    if (!taxRules) return 18;
-    return taxRules.standard_rate || (taxRules.rates && taxRules.rates[taxRules.rates.length - 1]) || 18;
+    if (!taxRules) return null;
+    return taxRules.standard_rate || (taxRules.rates && taxRules.rates[taxRules.rates.length - 1]) || null;
   }
   /** the tax words the renderer paints: the pack's scheme word, split by state or one line, its rate (and its rate menu, so a sample line
       keeps a rate the pack has — R47: India's 5 % stays 5 %, never the top slab), the id's word */
   function previewTax(pack) {
     var country = shopCountry(),
       rates = (pack && pack.tax && pack.tax.rates) || null;
+    /* CTRY-72: no country, no pack, or a pack with no scheme word or rate = no tax words at all; the renderer then says why (previewRefusal), it never paints GST 18 % */
+    if (!pack || !pack.tax || !pack.tax.scheme || packRate(pack) === null) return null;
     return {
-      word: (pack && pack.tax && pack.tax.scheme) || 'GST',
+      word: pack.tax.scheme,
       split: typeof packSplitsByState === 'function' ? packSplitsByState(country) : true,
       rate: packRate(pack),
       rates: rates ? Array.prototype.slice.call(rates) : null,
       id_word: taxIdWord(country)
     };
   }
-  /** the bill's currency for the sample: the shop's, else the pack's, else INR */
+  /** the one sentence the sample bill shows in place of its tax lines when the shop has no country or no pack: CBRegulation.status(country).why, else ''
+      (CTRY-72; the engine's own words, the same ones the books gate says). '' when the sample can be painted. */
+  function previewRefusal(pack) {
+    if (previewTax(pack)) return '';
+    var said = window.CBRegulation && CBRegulation.status ? CBRegulation.status(shopCountry() || null) : null;
+    /* a country WITH a pack that states no scheme word or rate has no "set your country" words: it says what is missing */
+    return (said && said.why) || 'This country’s pack states no tax rate yet, so no sample is worked out.';
+  }
+  /** the bill's currency for the sample: the shop's, else the pack's, else nothing (a sample with no money is refused by previewRefusal's caller, never rupees) */
   function previewCurrency(shop, pack) {
     return shop.currency_code || (pack && pack.currency);
   }
@@ -557,6 +567,7 @@ var CBPrint = (function () {
       kind: isTaxed ? 'tax' : 'cash',
       currency: previewCurrency(shop, pack),
       tax: previewTax(pack),
+      refusal: previewRefusal(pack),
       country: shopCountry(),
       tax_id: model.lines.tax_id || ''
     };
@@ -652,5 +663,25 @@ var CBPrint = (function () {
       }); /* W24 */
     return read();
   }
-  return { mount: mount, signatureOf: signatureOf, headLinesOf: headLinesOf, rowsOf: rowsOf, LINES: LINES, PAPERS: PAPERS, requiredLines: requiredLines };
+  /** the tax words and the refusal the sample bill would be told for this shop row ({ country }) - what message() sends, for the CTRY-72 test; the held shop is put back */
+  function previewFor(shopRow) {
+    var before = held.me;
+    held.me = shopRow;
+    try {
+      var pack = shopPack();
+      return { tax: previewTax(pack), refusal: previewRefusal(pack) };
+    } finally {
+      held.me = before;
+    }
+  }
+  return {
+    mount: mount,
+    previewFor: previewFor,
+    signatureOf: signatureOf,
+    headLinesOf: headLinesOf,
+    rowsOf: rowsOf,
+    LINES: LINES,
+    PAPERS: PAPERS,
+    requiredLines: requiredLines
+  };
 })();
