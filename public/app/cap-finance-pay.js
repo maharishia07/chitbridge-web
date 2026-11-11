@@ -191,7 +191,7 @@ function fpCols() {
       html: true,
       cell: function (p) {
         return (
-          '<button type="button" class="cbl-tbtn" data-testid="fp-pay-' +
+          '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fp-pay-' +
           esc(p.party_id) +
           '" onclick="event.stopPropagation();fpPay(\'' +
           esc(p.party_id) +

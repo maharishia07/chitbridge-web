@@ -2018,6 +2018,8 @@ const EP = {
   prodStatusBulk: { m: 'POST', p: '/api/products/status/bulk', ok: 'y' }, // {ids:[…], status}
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate: { m: 'POST', p: '/api/products/bulk-update', ok: 'y' }, // {items:[{id,item_data}]}
+  /* ⭐ QA-130: add / remove a category per product — never the record; a repeat changes nothing, so a run can be resumed */
+  prodBulkCategories: { m: 'POST', p: '/api/products/categories/bulk', ok: 'y' }, // {ids:[…], add?:[categoryId], remove?:[categoryId]} → {results:[{id, result: done|unchanged|refused}]}
   prodStarters: { m: 'GET', p: '/api/products/starter-columns', ok: '✓' }, // the standard column set for a trade
   prodStarterAdopt: { m: 'POST', p: '/api/products/starter-columns', ok: '✓' }, // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -16887,88 +16889,37 @@ async function prodAvailApply(status) {
   renderApp();
 }
 
-/** an action that cannot resume says so on its box (ui.progress.batch.resumable is the one list) */
-function keepTabOpenNote(batchJob, action) {
-  if (!ui.progress.batch.resumable(action)) batchJob.note('keepopen');
-}
-/** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
-async function prodCategoriseSend(payload) {
-  if (!payload.length) return { ok: 0, failed: 0, why: '' };
-  const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
-  keepTabOpenNote(step, 'prodBulkUpdate'); /* the whole selection is one all-or-nothing call: it cannot continue after a restart (QA-130) */
-  try {
-    const out = await api('prodBulkUpdate', { body: { items: payload } });
-    const ok = (out && out.updated) || 0;
-    const missedCount = (out && out.missed && out.missed.length) || 0;
-    step.done(ok);
-    if (missedCount) step.failed(missedCount, tx('could not be found'));
-    return { ok: ok, failed: missedCount, reasonText: '' };
-  } catch (e) {
-    const inv = e && e.invalid;
-    const reasonText = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
-    step.failed(payload.length, reasonText.replace(/^ · /, ''));
-    return { ok: 0, failed: payload.length, reasonText: reasonText };
-  } finally {
-    step.finish();
-  }
-}
 /**
- * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
- * why it takes loads of time, are you going round trip for each product?"*
- *
- * He was right and this was the loop he meant. It ran `await api('prodEdit')` once per product, SEQUENTIALLY,
- * each waiting for the one before and each paying for its own schema lookup, currency lookup, validation,
- * BEGIN, set_config, UPDATE and COMMIT. Tick forty rows and that is forty round trips before the screen
- * returns — at the measured ~500ms floor, most of a minute.
- *
- * ⚠️ AND IT COUNTED FAILURES WITHOUT NAMING THEM. A rejected row left the category attached to 39 of 40 and the
- * toast said "39 updated" without saying which one did not move. The bulk route validates everything before
- * writing anything and reports the ids it could not find.
+ * ⭐⭐ ADD OR REMOVE A CATEGORY, PER PRODUCT — QA-130 (Athi, 11 Nov: a category is a classification, many per product, mostly set once).
+ * The step sends "add these / remove these" for its few products and NEVER the record (that was prodBulkUpdate's replace-write, which overwrote a newer
+ * edit of the same product and could not be repeated). The server answers each product done, unchanged (it already was so) or refused, and writes nothing
+ * for an unchanged one, so a step sent twice, or a run started again after a shutdown, changes nothing it should not: the action is safe to resume (groupJob saves it).
+ * ⚠️ ONE ROUND TRIP A STEP, NOT ONE PER PRODUCT (Athi, 2026-09-01: *"are you going round trip for each product?"*), and a refused product is named, never
+ * counted away in silence. A category that carries a tax rate is attached exactly as a single attach does (no rate gate is added or dropped here).
  */
 async function prodCategoriseApply() {
   const node = UI._catgBulk;
   if (!node) return;
   const err = document.getElementById('bulk_err');
   if (!node.add.size && !node.remove.size) {
-    if (err) err.textContent = 'Pick at least one category to attach or remove.';
+    if (err) err.textContent = tx('Pick a category');
     return;
   }
   closeModal();
-
-  /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
-  const payload = [];
-  let unknown = 0;
-  for (const id of node.ids) {
-    const p = (UI.prods || []).find((x) => prodId(x) === id);
-    if (!p) {
-      unknown++;
-      continue;
-    }
-    const d = Object.assign({}, pData(p));
-    const list = catgIdsOf(d).slice();
-    /* ⚠️ ATTACH IS ADDITIVE and removal is explicit — a bulk action that REPLACED the set would silently strip
-       memberships that were never on screen. Unchanged from the loop this replaces. */
-    node.add.forEach((item) => {
-      if (list.indexOf(item) < 0) list.push(item);
-    });
-    const next = list.filter((item) => !node.remove.has(item));
-    catgSetOn(d, next);
-    payload.push({ id: id, item_data: d });
-  }
-
-  const sent = await prodCategoriseSend(payload);
-  const ok = sent.ok;
-  const failed = unknown + sent.failed;
-  const reasonText = sent.reasonText;
-
+  const nameOf = (id) => {
+    const product = (UI.prods || []).find((x) => prodId(x) === id);
+    return (product && pData(product).name) || tx('Product');
+  };
+  /* the steps are saved on this device before step 1 and each has its own key, so a shutdown or a reload continues the job (bulkResume) and no step runs twice */
+  const result = await groupJob(node.ids, { ep: 'prodBulkCategories', mount: 'CAT001-U52', speed: 'slow', verb: 'categorise', label: 'Categorising products', unit: 'updated', name: nameOf, payload: { add: Array.from(node.add), remove: Array.from(node.remove) } });
   UI.prodPicked.clear();
-  UI.prodPick = false;
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
   UI._catgBulk = null;
   await loadCatalogue('fresh');
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
-  /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
-     nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'));
+  /* ⚠️ Say what did not move: a bulk action that says "done" while three rows stayed put is the reason nobody trusts bulk actions. */
+  toast(result.done.length + ' ' + tx('updated') + (result.failed.length ? ' · ' + result.failed.length + ' ' + tx('could not be saved') : '') + (result.left > 0 ? ' · ' + result.left + ' ' + tx('not done') : ''));
   renderApp();
 }
 /**
@@ -23424,6 +23375,29 @@ function pickStatus(v) {
   const node = document.getElementById('mok');
   if (node) node.disabled = false;
 }
+/* ⭐ QA-131: the body of ONE record's status call. `from` = the status this screen saw (a bulk job only: the server refuses a record that moved since, it never moves it back);
+   `use` = what the goods are for, said with the acceptance it decides (it was a second call, PUT /use, that could not be repeated once accepted). */
+function statusStepBody(to, row, goodsUse, bulkJobId) {
+  const body = { status: statusWordFor(to, row) };
+  if (bulkJobId && row && row._status) body.from = row._status;
+  if (goodsUse && to === 'act' && row && row.billRx) body.use = goodsUse;
+  return body;
+}
+/** a bulk job's id: made once for a run of more than one record, kept on the modal so a resume re-sends the same step keys (one per job, record and step) */
+function bulkJobIdOf(modal, count) {
+  if (count > 1 && !modal.job) modal.job = Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  return modal.job;
+}
+/** one record moved: the row shows the new status, and it is no longer ticked */
+function markStatusMoved(id, to, word) {
+  const i = UI.rows.findIndex((x) => x.id === id);
+  if (i >= 0) {
+    UI.rows[i].state = to;
+    UI.rows[i]._status = word;
+  }
+  if (UI.detail && UI.detail.id === id) UI.detail.state = to;
+  UI.selected.delete(id);
+}
 async function confirmStatus() {
   const { ids, to, use } = MODALS.stat;
   if (!to) return;
@@ -23442,19 +23416,18 @@ async function confirmStatus() {
    * ⭐ It still stops rather than churning through 26 failures: the second failure is almost never new
    * information, and 25 more attempts is a minute spent proving it.
    */
+  const bulkJobId = bulkJobIdOf(MODALS.stat, ids.length); /* a resume that reuses the job re-sends the same step keys, even for one record left */
   /* ⭐ the same stop rule as above, kept: the first failure ends the run (stopOnFailure), the rest stay "not done"; the progress now shows the count in the corner, the screen is not locked */
   const result = await groupRun(
     ids,
     { mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
     async (id) => {
       const _row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
-      /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
-      if (use && to === 'act' && _row && _row.billRx) await api('billUse', { params: { id }, body: { use: use } });
-      const reply = await api('status', { params: { id }, body: { status: statusWordFor(to, _row) } });
+      /* ⭐ QA-131: ONE call per record; the key is one per (job, record, step), so a resend of an accepted step is answered with its first answer and posts and tells once */
+      const body = statusStepBody(to, _row, use, bulkJobId);
+      const reply = await api('status', { params: { id }, body, idemKey: bulkJobId ? 'stat-' + bulkJobId + '-' + id + '-' + body.status : undefined });
       if (reply && reply.warning) toast(reply.warning);
-      const i = UI.rows.findIndex((x) => x.id === id);
-      if (i >= 0) UI.rows[i].state = to;
-      if (UI.detail && UI.detail.id === id) UI.detail.state = to;
+      markStatusMoved(id, to, body.status);
     }
   );
   const _done = result.done.length;
@@ -23588,7 +23561,7 @@ function tickUndone(result, into) {
 /* ⭐ SAVE AND RESUME (Athi 11 Nov: a bulk job survives a shutdown). A group action stores EVERY step on this device before step 1 (CBOffline.enqueueJob: the one outbox, no second store), each step
    with its own Idempotency-Key job:<jobId>:<step> (api(..., { idemKey })), sends them one by one (CBOffline.sendStep: back-off 2, 5, 15, 30 s on a timeout, 503 or 429; a replayed 404 counts as done), and
    on the next visit bulkResume() lists what is left and the tray carries on. The step list is the whole job: per-record actions send one record a step, the two chunk actions one chunk of the speed class.
-   Status change and categorise are NOT here (QA-130, QA-131): they run through groupRun in the open tab and say so. */
+   Status change is NOT here (QA-131): it runs through groupRun in the open tab and says so. Categorise (QA-130) is a chunk action: add or remove a category per product, repeat-safe. */
 const BULK_ACTIONS = {
   archive: { okIf404: true },
   restore: { okIf404: true },
@@ -23596,7 +23569,8 @@ const BULK_ACTIONS = {
   purgeChit: { okIf404: true },
   delChit: { okIf404: true },
   assignBulk: { chunk: true, bodyOf: (chunk, payload) => ({ chit_ids: chunk, target_actor_id: payload.actorId }) },
-  prodStatusBulk: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, status: payload.status }) }
+  prodStatusBulk: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, status: payload.status }) },
+  prodBulkCategories: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, add: payload.add, remove: payload.remove }) }
 };
 const BULK_ACTIVE = new Set(); /* the jobs this page is driving now, so a second look never starts one twice */
 const bulkOutbox = () => (typeof window !== 'undefined' && window.CBOffline && window.CBOffline.enqueueJob ? window.CBOffline : null);
@@ -23616,7 +23590,7 @@ function bulkStepsFor(ids, kind, nameOf) {
   if (action.chunk) return ui.progress.batch.steps(ids, kind.speed).map((chunk) => make(chunk, undefined, action.bodyOf(chunk, kind.payload || {})));
   return ids.map((id) => make([id], { id }, undefined));
 }
-/** what one answered step says about its records → { done, failed }: assignBulk lists the chits it skipped, prodStatusBulk the ids it missed, a per-record call is done once it answers */
+/** what one answered step says about its records → { done, failed }: assignBulk lists the chits it skipped, prodStatusBulk the ids it missed, prodBulkCategories answers each product (done, unchanged or refused), a per-record call is done once it answers */
 function bulkAnswerOf(endpoint, items, reply) {
   if (endpoint === 'assignBulk') {
     const skipped = (reply && reply.skipped) || [];
@@ -23626,6 +23600,11 @@ function bulkAnswerOf(endpoint, items, reply) {
   if (endpoint === 'prodStatusBulk') {
     const missedIds = (reply && reply.missed) || [];
     return { done: items.filter((id) => !missedIds.includes(id)), failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' })) };
+  }
+  if (endpoint === 'prodBulkCategories') {
+    const lines = (reply && reply.results) || [];
+    const refused = lines.filter((line) => line.result === 'refused').map((line) => line.id);
+    return { done: items.filter((id) => !refused.includes(id)), failed: refused.map((id) => ({ item: id, reason: 'could not be found' })) };
   }
   return { done: items, failed: [] };
 }
@@ -23719,7 +23698,7 @@ function bulkJobResume(saved) {
   const kind = { ep: meta.kind, mount: meta.mount, speed: meta.speed, verb: meta.verb, label: meta.label, unit: meta.unit };
   return bulkJobRun(meta, kind, steps, { resumed: true, doneAtStart, priorFailed }).then(async (result) => {
     try {
-      await (meta.kind === 'prodStatusBulk' ? loadCatalogue('fresh') : loadList());
+      await (meta.kind === 'prodStatusBulk' || meta.kind === 'prodBulkCategories' ? loadCatalogue('fresh') : loadList());
     } catch (error) {
       cblog('warn', 'the list did not refresh after a resumed job: ' + (error && error.message));
     }
@@ -23769,6 +23748,7 @@ async function afterGroup(result) {
     UI.mdetail = false;
   }
   await loadList();
+  updateSelBar(); /* the bar counts UI.selected: 2 left ticked after 12 tried must not still read 12 */
 }
 /** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
 function groupToast(result, doneWords) {

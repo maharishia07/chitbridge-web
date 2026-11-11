@@ -22,7 +22,7 @@ const heads = (p) => p.$$eval('.cbl-hdr [role=columnheader]', (els) => els.map((
 (async () => {
   const S = await serve(process.env.CBL_ROOT || PUBLIC), b = await chromium.launch();
   const open = async (ctx, pre) => { const p = await ctx.newPage(); if (pre) await p.addInitScript(pre); await p.goto(S.url('/list-lab.html')); await p.waitForSelector('.cbl-row, .cbl-lrec'); return p; };
-  const tick = async (p, k) => { if (!await p.locator('[data-testid="cols-menu-' + K + '"]').count()) await p.click('[data-testid="cols-btn-' + K + '"]'); await p.click('[data-testid="cols-' + K + '-' + k + '"]'); };
+  const tick = async (p, k) => { if (!await p.locator('[data-testid="cols-menu-' + K + '"]').count()) { if (!await p.isVisible('[data-testid="cols-btn-' + K + '"]')) await p.click('[data-cbl-pop="view"]'); /* a phone: Columns sits in the View popover */ await p.click('[data-testid="cols-btn-' + K + '"]'); } await p.click('[data-testid="cols-' + K + '-' + k + '"]'); };
   const shut = async (p) => { if (await p.locator('[data-testid="cols-menu-' + K + '"]').count()) await p.keyboard.press('Escape'); };
 
   console.log('\n== list-columns: the chooser ==');
