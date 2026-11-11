@@ -43,7 +43,7 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Install the walk tools
         working-directory: e2e
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm ci && sh ci-browser.sh
       - name: Run shard ${{ matrix.shard }} of 6
         run: node e2e/run-shard.cjs ${{ matrix.shard }} 6
       - name: Keep the screenshots of a failed shard
@@ -79,6 +79,6 @@ jobs:
           cache-dependency-path: e2e/package-lock.json
       - name: Install the walk tools
         working-directory: e2e
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm ci && sh ci-browser.sh
       - name: The REPEAT list, 20 runs each
         run: node e2e/run-shard.cjs --repeat 20
