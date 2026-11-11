@@ -33,26 +33,32 @@ const measure = (page) => page.evaluate(() => {
   const S = await serve();
   const browser = await chromium.launch();
   try {
-    for (const [label, vw, vh, minH, minW, headMax] of [['phone 390', 390, 844, 44, 44, 38], ['laptop 1366', 1366, 768, 32, 24, 20]]) {
+    for (const [label, vw, vh, minH, minW, headMax] of [['phone 390', 390, 844, 44, 44, 30], ['laptop 1366', 1366, 768, 32, 24, 20]]) {
       for (const [sz, k] of SIZES) {
         if (vw === 1366 && sz !== 's' && sz !== 'xl') continue;
         const page = await browser.newPage({ viewport: { width: vw, height: vh } });
         await page.goto(S.url('/list-lab.html'));
         await page.waitForSelector('[data-plist]');
         await page.evaluate((kk) => { document.documentElement.style.setProperty('--k', String(kk)); }, k);
-        for (const list of ['daybook', 'dues']) {
+        for (const list of ['daybook', 'dues', 'big']) {
           await page.click('[data-plist="' + list + '"]'); await page.waitForTimeout(150);
           /* the head with Filters and Columns open, in turn, so their controls are measured too */
-          for (const pop of [null, '[data-cbl-pop="filt"]', '[data-cbl-pop="cols"]']) {
+          const pops = vw === 390 ? [null, '[data-cbl-pop="filt"]', '[data-cbl-pop="view"]'] : [null, '[data-cbl-pop="filt"]', '[data-cbl-pop="cols"]'];
+          /* the bulk list in select mode draws the row ticks, which must meet the tap rule too (a 44 px hit area on a phone) */
+          if (list === 'big') { const sel = await page.$('[data-cbl-selmode]'); if (sel) { await sel.click(); await page.waitForTimeout(100); } }
+          for (const pop of pops) {
             if (pop) { const b = await page.$(pop); if (!b) continue; await b.click(); await page.waitForTimeout(100); }
             const m = await measure(page);
             const tag = label + ' · ' + sz + ' · ' + list + (pop ? ' · ' + pop.replace(/.*pop="(\w+)".*/, '$1') + ' open' : '');
+            const tickMin = vw === 390 ? 44 : 24;
+            const smallTicks = m.controls.filter((c) => c.tick && (c.h < tickMin || c.w < tickMin));
             const small = m.controls.filter((c) => !c.tick && !c.handle && (c.h < minH || (c.tag === 'button' && c.cls.indexOf('cbl-seg') < 0 && /cbl-ico|cbl-mv|cbl-hf/.test(c.cls) && c.w < minW)));
             ok(small.length === 0, tag + ': every control draws >= ' + minH + ' px' + (small.length ? ' (small: ' + small.slice(0, 4).map((c) => c.name + ' ' + c.w + 'x' + c.h).join(', ') + ')' : ' (' + m.controls.length + ' measured)'));
+            ok(smallTicks.length === 0, tag + ': every tick box has a ' + tickMin + ' px hit area (' + m.controls.filter((c) => c.tick).length + ' measured)' + (smallTicks.length ? ' (small: ' + smallTicks.slice(0, 3).map((c) => c.w + 'x' + c.h).join(', ') + ')' : ''));
             ok(m.controls.every((c) => c.id), tag + ': every control carries its code' + (m.controls.some((c) => !c.id) ? ' (none: ' + m.controls.filter((c) => !c.id).slice(0, 3).map((c) => c.tag + ' ' + c.name).join(', ') + ')' : ''));
             ok(m.controls.every((c) => c.h >= 24 && (c.w >= 24 || c.tick || c.handle)), tag + ': nothing under 24 px is drawn');
             ok(m.sideways <= 0, tag + ': no sideways scroll (' + m.sideways + ')');
-            if (!pop) ok(Math.round((m.head / m.ih) * 100) <= headMax || (vw === 390 && (sz === 'l' || sz === 'xl')), tag + ': the head is ' + Math.round((m.head / m.ih) * 100) + '% of the window (<= ' + headMax + '%)');
+            if (!pop && list !== 'big') ok(Math.round((m.head / m.ih) * 100) <= headMax || (vw === 390 && (sz === 'l' || sz === 'xl')), tag + ': the head is ' + Math.round((m.head / m.ih) * 100) + '% of the window (<= ' + headMax + '%)');
             if (pop) await page.keyboard.press('Escape');
           }
         }

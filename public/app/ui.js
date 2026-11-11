@@ -130,10 +130,10 @@ var CBUi = (function () {
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' },
     /* Athi 11 Nov (wave 2, customer side, step 1): the list control's own components. list-ctl.js (CBList) reads nothing from its page, so it cannot call
        ui.action: it writes these elements itself with their register codes (data-cbsid), and CMP009 Try again / CMP014 Clear are its reused mounts. Registered here so the
-       code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP032 I01 search, I02 date, I03 tick; CMP033 B01 opener
+       code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP045 I01 search, I02 date, I03 tick; CMP033 B01 opener
        (period, notices, Filters, Columns, header filter), D01 popover, M01 menu choice; CMP034 B01 pressed toggle; CMP035 S01 select; CMP036 K01 saved-view tab;
        CMP037 B01 CSV, B02 reset columns, B03 select all shown, B04 bulk action, B05 show more; CMP038 B01 row action; CMP039 B01 sort, B02 resize, B03 move column. */
-    listfield: { code: 'CMP032', element: 'CMP032-I01', label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listfield: { code: 'CMP045', element: 'CMP045-I01', label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listopener: { code: 'CMP033', element: 'CMP033-B01', label: 'List opener', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listtoggle: { code: 'CMP034', element: 'CMP034-B01', label: 'List toggle', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listselect: { code: 'CMP035', element: 'CMP035-S01', label: 'List select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },

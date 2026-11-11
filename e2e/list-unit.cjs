@@ -9,7 +9,7 @@
  *   4  keyboard: ↑ ↓ move between rows · Enter opens · ← → open / close · Esc closes a popover and gives the focus back · ← → on a column edge resize by 8 px
  *   5  drag a column edge, reload: the width holds (and double-click resets)
  *   6  scroll 2,000 px: the column header, the tools row and the title row do not move; the PAGE does not scroll; group rows stick under the header
- *   7  the head is ≤ 20% of a 1366×768 window and ≤ 36% of 390×844 (was 30% until the 44 px tap rule of 10 Nov; Athi decides if the phone head is redesigned instead), on every list
+ *   7  the head is ≤ 20% of a 1366×768 window and ≤ 30% of 390×844 (44 px controls: Group, view, Columns and CSV fold into one View popover on a phone), on every list
  *   +  the four states (loading under a kept header · empty · no match + Clear · could not load + Try again), the ⚙ chooser, ▤ / ☰, ⇣ / ⇡,
  *      grouping, filters, lazy rows (the count is the true one), bulk, dark theme, ARIA
  * Screenshots: e2e/shots/cblist-{daybook,dues}-{laptop,phone}.png (the unit's own gallery) · cblist-lab-laptop.png
@@ -325,13 +325,15 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     for (const k of ['daybook', 'dues', 'big']) {
       await pick(m, k);
       const pct = await headPct(m);
-      ok(pct <= 36, 'phone 390×844 · ' + k + ': the head is ' + pct + '% of the window (≤ 36%)');
+      ok(pct <= 30, 'phone 390×844 · ' + k + ': the head is ' + pct + '% of the window (≤ 30%)');
+      /* a phone folds Group, Grid / Lines, Columns and CSV into one View popover: open it first (UX-137 wave 2) */
+      const viewClick = async (v) => { if (!(await m.isVisible('[data-view="' + v + '"]'))) { await m.click('[data-cbl-pop="view"]'); await m.waitForTimeout(60); } await m.click('[data-view="' + v + '"]'); };
       for (const v of ['grid', 'lines']) {
-        await m.click('[data-view="' + v + '"]'); await m.waitForTimeout(60);
+        await viewClick(v); await m.waitForTimeout(60);
         const w = await m.evaluate(() => ({ doc: document.documentElement.scrollWidth, list: document.querySelector('.cbl-list').scrollWidth, cw: document.querySelector('.cbl-list').clientWidth, vw: window.innerWidth }));
         ok(w.doc <= 390 && w.list <= w.cw + 1, '390 px · ' + k + ' · ' + v + ': no sideways scroll (page ' + w.doc + ', rows ' + w.list + '/' + w.cw + ')');
       }
-      await m.click('[data-view="grid"]');
+      await viewClick('grid'); await m.keyboard.press('Escape');
       if (k === 'daybook') {
         const card = await m.evaluate(() => { const r = document.querySelector('.cbl-row'); return { display: getComputedStyle(r).display, hdr: getComputedStyle(document.querySelector('.cbl-hdr')).display, labelled: r.querySelectorAll('.cbl-cell[data-l]:not([data-l=""])').length }; });
         ok(card.display === 'flex' && card.hdr === 'none' && card.labelled >= 1, 'phone: one card a row, labelled label : value, no header row (a container query, not the page width)');
@@ -368,7 +370,9 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     for (const k of ['daybook', 'dues', 'big']) {
       await pick(q, k);
       for (const view of ['grid', 'lines']) {
+        if (!(await q.isVisible('[data-testid="view-' + view + '-lab-' + k + '"]'))) await q.click('[data-cbl-pop="view"]'); /* a phone: the View popover holds it */
         await q.click('[data-testid="view-' + view + '-lab-' + k + '"]', { timeout: 3000 });
+        if (await q.isVisible('[data-cbl-pop="view"][aria-expanded="true"]')) await q.keyboard.press('Escape');
         await q.evaluate((key) => { window.__opened = []; const L = CBList.get(key);
           /* the page's own next level where it has one; a stand-in otherwise, so every list has a ▸ */
           L.refresh(Object.assign({ onOpen: function (r) { window.__opened.push(r); } }, document.querySelector('[data-caret]') ? {} : { next: function () { return '<div>next</div>'; } })); }, 'lab-' + k);

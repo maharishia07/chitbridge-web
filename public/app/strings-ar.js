@@ -774,7 +774,7 @@
     'CMP030.shown': 'النشاط',
     'CMP030.aria': 'النشاط {object}',
     'Activity': 'النشاط',
-    'CMP032.label': 'حقل القائمة',
+    'CMP045.label': 'حقل القائمة',
     'List field': 'حقل القائمة',
     'CMP033.label': 'فتح نافذة القائمة',
     'List opener': 'فتح نافذة القائمة',

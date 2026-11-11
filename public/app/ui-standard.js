@@ -355,9 +355,9 @@ var CBUiStandard = (function () {
       progressCell('Try 40 items', ui.action('open', { mount: SCREEN + '-U120', object: 'batch tray', testid: 'gal-progress-batch-tray', onPress: demoBatch(40, SCREEN + '-D04-U01') })) +
       '</div></section>';
   }
-  /** CMP032..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
+  /** CMP045..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
   var LIST_ROWS = [
-    ['listfield', 'CMP032-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
+    ['listfield', 'CMP045-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
     ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
     ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column']
   ];
