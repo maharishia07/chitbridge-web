@@ -544,7 +544,8 @@ var CBPrint = (function () {
   function previewRefusal(pack) {
     if (previewTax(pack)) return '';
     var said = window.CBRegulation && CBRegulation.status ? CBRegulation.status(shopCountry() || null) : null;
-    return (said && said.why) || 'Set the shop country first.';
+    /* a country WITH a pack that states no scheme word or rate has no "set your country" words: it says what is missing */
+    return (said && said.why) || 'This country’s pack states no tax rate yet, so no sample is worked out.';
   }
   /** the bill's currency for the sample: the shop's, else the pack's, else nothing (a sample with no money is refused by previewRefusal's caller, never rupees) */
   function previewCurrency(shop, pack) {
@@ -663,9 +664,9 @@ var CBPrint = (function () {
     return read();
   }
   /** the tax words and the refusal the sample bill would be told for this shop row ({ country }) - what message() sends, for the CTRY-72 test; the held shop is put back */
-  function previewFor(me) {
+  function previewFor(shopRow) {
     var before = held.me;
-    held.me = me;
+    held.me = shopRow;
     try {
       var pack = shopPack();
       return { tax: previewTax(pack), refusal: previewRefusal(pack) };

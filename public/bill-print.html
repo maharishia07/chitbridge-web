@@ -267,10 +267,10 @@ function taxWords() {
 }
 /** CTRY-72: where the slip would have been, the words and the way to the fix - no number is worked out. A preview not yet told anything paints nothing. */
 function refusalHTML() {
-  var why = (signature && signature.refusal) || 'Set the shop country first.';
+  var refusalWords = (signature && signature.refusal) || 'Open Print setup to see the sample bill.'; /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
   return (
     '<div class="c" data-testid="slip-no-country" style="padding:6mm 2mm"><div class="b">' +
-    esc(why) +
+    esc(refusalWords) +
     '</div><div class="small"><a href="/settings.html#/country" target="_top" data-testid="slip-country-link">Country setup</a></div></div>'
   );
 }
@@ -281,18 +281,16 @@ function when(date) {
   };
   return p(date.getDate()) + '/' + p(date.getMonth() + 1) + '/' + date.getFullYear() + '  ' + p(date.getHours()) + ':' + p(date.getMinutes());
 }
+function paintRefusal() {
+  document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
+}
 function render() {
-  if (!taxWords()) {
-    document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
-    return;
-  }
+  if (!taxWords()) return paintRefusal();
   var kind = document.getElementById('kind').value;
   var m = calc(kind);
   var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
   var showGstin = kind !== 'cash';
-  var paid = BILL.paid.reduce(function (total, item) {
-    return r2(total + item.amount);
-  }, 0);
+  var paid = BILL.paid.reduce(function (total, item) { return r2(total + item.amount); }, 0);
   var change = r2(paid - m.net);
 
   var head =

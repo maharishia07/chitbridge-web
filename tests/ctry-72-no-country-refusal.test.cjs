@@ -5,7 +5,7 @@
      bill-print.html   render()         : the slip paints no tax lines for a shop with no country, a link to Country setup instead
      product-lab.html  tableFits / paintNoMoney : no rupee suggestion and the api's one sentence for a shop with no money
      promo.html        money / live / paintNoMoney : no figure and the till snapshot's one sentence
-     shop.html, standards.html : no India default (source check: the literal is gone)
+     standards.html : no India default (source check: the literal is gone)
    Run: node tests/ctry-72-no-country-refusal.test.cjs */
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0;
@@ -68,6 +68,13 @@ const run = (cx, src) => vm.runInContext(src, cx);
   ok(!/slip-no-country/.test(slip()) && /CGST/.test(slip()) && /TAX INVOICE/.test(slip()), 'IN shop: the tax invoice with CGST/SGST is painted (unchanged)');
   send({ tax: { word: 'GST', split: false, rate: 10, id_word: 'ABN' }, refusal: '', country: 'AU', currency: 'AUD' });
   ok(!/slip-no-country/.test(slip()) && /GST/.test(slip()) && !/CGST/.test(slip()) && /TAX INVOICE/.test(slip()), 'AU shop: one GST line, no CGST/SGST (unchanged)');
+  const lone = sandbox(); /* the page opened on its own (no ?preview=1, no message): the print test is gone, the sample needs a shop */
+  lone.cx.location.search = '';
+  for (const f of ['app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(lone.cx, read(f));
+  lone.el('kind').value = 'tax';
+  lone.el('w').value = '80';
+  run(lone.cx, inline(html));
+  ok(/slip-no-country/.test(lone.el('slip').innerHTML) && !/GST|TAX INVOICE/.test(lone.el('slip').innerHTML), 'opened on its own: the slip says to open Print setup, no guessed tax');
   const code = stripComments(inline(html));
   ok(!/rate:\s*18/.test(code) && !/\|\|\s*'IN'/.test(code), 'bill-print.html names no 18 rate default and no IN default in code');
 }
@@ -120,10 +127,8 @@ const run = (cx, src) => vm.runInContext(src, cx);
   ok(!/\|\|\s*'INR'/.test(stripComments(code)), 'promo.html names no INR default in code');
 }
 
-/* ── 5 · shop.html and standards.html: the India default is gone ─────────────────────────────────── */
+/* ── 5 · standards.html: the India default is gone (shop.html's language/unit region is left as is: it needs the shop's country in the catalogue payload) ── */
 {
-  const shop = stripComments(inline(read('shop.html')));
-  ok(/var _REGION = '';/.test(shop) && !/_REGION = '?IN/.test(shop) && !/_REGIONS\[0\]\.region_code/.test(shop), 'shop.html: no region until one is picked (no India default, no first-layer guess)');
   const std = read('standards.html');
   ok(!/CMP_COUNTRY_FALLBACK/.test(std) && /std_nocountry/.test(std) && /#\/country/.test(std), 'standards.html: no India fallback; the no-country line links Country setup');
 }

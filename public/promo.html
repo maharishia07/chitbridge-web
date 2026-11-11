@@ -463,7 +463,7 @@ function money(n){
 /* CTRY-72: a shop with no stated money (no country) advertises no price; the banner above the stage says why (the till snapshot's shop.money_why, the ONE sentence) */
 function noMoneyWords(){
   if (!S || !S.shop || S.shop.currency) return '';
-  return (S.shop.money_why && S.shop.money_why.why) || 'Set your country first.';
+  return (S.shop.money_why && S.shop.money_why.why) || 'No money is set for this shop.';
 }
 function paintNoMoney(){
   var box = document.getElementById('nomoney'), words = noMoneyWords();

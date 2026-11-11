@@ -503,7 +503,7 @@ function cbHasPrice(v) {
   return v != null && v !== '' && (typeof v !== 'object' || typeof v.amount === 'number');
 }
 var _REGIONS = [];
-var _REGION = ''; /* CTRY-72: no region until one is picked (?globe=1) - words stay English and units litre, never India's layer by default */
+var _REGION = 'IN';
 var _CUR = { INR: '₹', MXN: 'Mex$', USD: '$', EUR: '€', CNY: '¥', JPY: '¥' };
 // NO FX TABLE. Deleted 2026-08-05, not deprecated — a rate table that exists will eventually be used.
 //
@@ -3140,6 +3140,13 @@ function shopFrame() {
     })
     .then(function (reply) {
       _REGIONS = (reply && reply.regions) || [];
+      if (
+        _REGIONS.length &&
+        !_REGIONS.find(function (x) {
+          return x.region_code === _REGION;
+        })
+      )
+        _REGION = _REGIONS[0].region_code;
     })
     .catch(function () {})
     .then(shopLoad);

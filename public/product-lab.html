@@ -248,8 +248,8 @@ function paintNoMoney() {
   var show = !!DATA && !DATA.currency;
   box.hidden = !show;
   if (!show) return;
-  var why = (DATA.money_why && DATA.money_why.why) || 'Set your country first.';
-  box.innerHTML = esc(why) + ' <a href="/settings.html#/country" data-testid="pl-country-link">Country setup</a>';
+  var moneyWords = (DATA.money_why && DATA.money_why.why) || ''; /* an api older than money_why says nothing but the link */
+  box.innerHTML = esc(moneyWords) + ' <a href="/settings.html#/country" data-testid="pl-country-link">Country setup</a>';
 }
 function suggestedOf(row) {
   return tableFits() ? row.price : null;
