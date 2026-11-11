@@ -744,6 +744,7 @@
     'CMP031.label': 'पृष्ठभूमि में चलाएँ',
     'CMP031.shown': 'पृष्ठभूमि में चलाएँ',
     'CMP031.aria': 'पृष्ठभूमि में चलाएँ {object}',
+    'Run in background (Ctrl+B)': 'पृष्ठभूमि में चलाएँ (Ctrl+B)',
     'Run in background': 'पृष्ठभूमि में चलाएँ',
     'CMP030.label': 'गतिविधि',
     'CMP030.shown': 'गतिविधि',

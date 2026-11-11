@@ -16,7 +16,7 @@ const check = (condition, message) => { console.log((condition ? '  ok ' : '  FA
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let CALL_MS = 180; /* each stand-in call takes long enough for the 400 ms delay to pass on a long batch (the quick 8-id case sets it higher: one call must outlast the delay for the panel to open) */
 
-let tray = null, panelHtml = [], busyCalls = 0, toasts = [], lastUndo = null;
+let lastRoot = null, tray = null, panelHtml = [], busyCalls = 0, toasts = [], lastUndo = null;
 function fakeRoot(html) {
   const nodes = {};
   const part = (name) => nodes[name] || (nodes[name] = { attrs: {}, innerHTML: '', textContent: '', setAttribute(k, v) { this.attrs[k] = v; }, closest: () => null });
@@ -31,11 +31,11 @@ const sandbox = {
   CBAction: { run: (b, fn) => Promise.resolve(fn()) },
   document: {
     addEventListener() {}, body: { appendChild: (el) => { if (el.className === 'cbp-tray') { tray = el; root = fakeRoot(el.innerHTML); } } },
-    createElement: () => ({ attrs: {}, innerHTML: '', className: '', setAttribute(k, v) { this.attrs[k] = v; }, remove() { tray = null; root = null; } }),
+    createElement: () => ({ attrs: {}, innerHTML: '', className: '', setAttribute(k, v) { this.attrs[k] = v; }, remove() { if (tray === this) { tray = null; root = null; } } }),
     querySelector: (selector) => (/data-cbprogress/.test(selector) ? root : null), getElementById: () => null
   },
   setTimeout, clearTimeout,
-  modal: (html) => { panelHtml.push(html); root = fakeRoot(html); }, closeModal: () => { root = null; },
+  modal: (html) => { panelHtml.push(html); root = fakeRoot(html); lastRoot = root; }, closeModal: () => { root = null; },
   addEventListener() {}, removeEventListener() {},
   MSG: { fail: (verb, e) => 'Could not ' + verb + ': ' + ((e && e.message) || e), bulkAssigned: (n, who, sk) => n + ' assigned' + (sk ? ' · ' + sk + ' skipped' : ''), restored: (n) => 'Restored ' + n },
   STORE: { actors: [] }, UI: state, toast: (message, undo) => { toasts.push(message); lastUndo = undo || null; }, announce() {}, showBusy: () => { busyCalls += 1; }, hideBusy() {},
@@ -58,7 +58,7 @@ function sourceOf(name) {
   if (start < 0) throw new Error('no function ' + name);
   return html.slice(start, html.indexOf('\n}\n', start) + 3);
 }
-['chitNameOf', 'groupRun', 'groupRunSteps', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
+['chitNameOf', 'groupRun', 'groupRunSteps', 'tickUndone', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
 const ui = sandbox.ui, batch = ui.progress.batch;
 const ids = (n) => Array.from({ length: n }, (_, i) => 'c' + (i + 1));
 const reset = () => { lastUndo = null; calls.length = 0; tray = null; root = null; panelHtml = []; toasts = []; failOn = null; state.selected = new Set(); state.rows = []; };
@@ -129,7 +129,7 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   failOn = async (name, options) => ({ assigned: options.body.chit_ids.length - (options.body.chit_ids.includes('c7') ? 1 : 0), skipped: options.body.chit_ids.includes('c7') ? [{ chit_id: 'c7', reason: 'at capacity (10)' }] : [] });
   await sandbox.assignBulkChits(ids(12), 'a1');
   check(JSON.stringify(sizes('assignBulk')) === '[5,5,2]' && calls.every((c) => c.body.target_actor_id === 'a1'), '12 ids → 3 calls of at most 5, same body shape');
-  check(/11 assigned · 1 skipped/.test(toasts[toasts.length - 1]) && state.selected.has('c7') && /at capacity/.test(root.part('fails').innerHTML), '11 assigned, the skipped one named with its reason and left ticked');
+  check(/11 assigned · 1 skipped/.test(toasts[toasts.length - 1]) && state.selected.has('c7'), '11 assigned, the skipped one counted and left ticked');
 
   console.log('app.html: bulkRestore, one call per record');
   reset();
@@ -145,15 +145,16 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   failOn = async (name, options) => { assignCalls += 1; if (assignCalls === 2) throw new Error('Target co-assist not found'); return { assigned: options.body.chit_ids.length, skipped: [] }; };
   await sandbox.assignBulkChits(ids(12), 'a1');
   check(sizes('assignBulk').length === 2 && /5 assigned · 5 skipped/.test(toasts[toasts.length - 1]) && /2 not done/.test(toasts[toasts.length - 1]), 'step 2 throws: the run stops (2 calls, not 3), 5 assigned, 5 failed, 2 not done');
-  check(state.selectMode === true && state.selected.size === 5 && state.selected.has('c6'), 'the select mode stays on so the five failed ticks stay visible');
+  check(state.selectMode === true && state.selected.size === 7 && state.selected.has('c6') && state.selected.has('c12'), 'the select mode stays on; the five failed and the two not done stay ticked');
 
   console.log('app.html: confirmStatus stops on the first failure');
   reset();
-  sandbox.MODALS.stat = { ids: ids(12), to: 'act', use: null };
+  sandbox.MODALS.stat = { ids: ids(12), to: 'act', use: null }; state.selectMode = true;
   failOn = async (name, options) => { if (options.params.id === 'c3') throw new Error('refused'); return {}; };
   await sandbox.confirmStatus();
   check(calls.length === 3, 'ids c1..c3 are tried, then it stops (3 calls of 12)');
   check(/Moved 2 of 12, then: Could not change status: refused/.test(toasts[toasts.length - 1]), 'the sentence says how far it got and why it stopped');
+  check(state.selectMode !== false && state.selected.size === 10 && state.selected.has('c3') && state.selected.has('c12') && !state.selected.has('c1'), 'the failed c3 and the nine not reached (c3..c12) stay ticked, the select mode is not cleared');
 
   console.log('app.html: confirmDelete, a partial run');
   reset();

@@ -29,7 +29,7 @@ const sandbox = {
   CBAction: { run: (b, fn) => Promise.resolve(fn()) },
   document: {
     addEventListener(name, handler) { (keyHandlers[name] = keyHandlers[name] || []).push(handler); }, body: { appendChild: (el) => { if (el.className !== 'cbp-tray') return; tray = el; root = fakeRoot(el.innerHTML, (n) => { if (n === 'count') textWrites++; }); } },
-    createElement: () => ({ attrs: {}, innerHTML: '', className: '', setAttribute(k, v) { this.attrs[k] = v; }, remove() { tray = null; root = null; } }),
+    createElement: () => ({ attrs: {}, innerHTML: '', className: '', setAttribute(k, v) { this.attrs[k] = v; }, remove() { if (tray === this) { tray = null; root = null; } } }),
     querySelector: (selector) => (/data-cbprogress/.test(selector) ? root : null), getElementById: () => null
   },
   setTimeout, clearTimeout,
@@ -55,7 +55,7 @@ const refuses = (fn, re) => { try { fn(); return false; } catch (error) { return
   let html = opened.join('');
   check(job.tray === false && /role="progressbar"/.test(html) && /aria-valuemax="8"/.test(html) && /aria-valuenow="0"/.test(html), 'a quick batch: the centre panel, the bar has valuemax = total');
   check((html.match(/class="cbp-blk"/g) || []).length === 8 && /0 of 8 assigned · 8 left/.test(html), 'one block per item when there are fewer than twenty, and the words');
-  check(/role="status" aria-live="polite"/.test(html) && /beforeunload/.test(guards.join()) && guards[0] === '+beforeunload', 'a polite status line; leaving the page asks first while it runs');
+  check(!/role="status"/.test(html) && /beforeunload/.test(guards.join()) && guards[0] === '+beforeunload', 'the moving count is not a live region (it is spoken at the start, each quarter and the end only); leaving the page asks first while it runs');
   job.done(3); job.failed(['Chit 4'], 'No reply');
   await wait(560);
   check(root.part('bar').attrs['aria-valuenow'] === '4' && root.part('count').textContent === '3 of 8 assigned · 4 left · 1 failed', 'valuenow = done + failed, and the words read "3 of 8 assigned · 4 left · 1 failed"');
@@ -86,6 +86,7 @@ const refuses = (fn, re) => { try { fn(); return false; } catch (error) { return
   let short = batch({ mount: 'TST004-D01-U08', label: 'Assigning', total: 3, unit: 'assigned', delay: 0 });
   await wait(30);
   check(short.tray === false && tray === null && /data-cbname="background"/.test(opened.join('')), '3 items: the panel with a Run in background button, no tray');
+  check(opened.join('').includes('aria-keyshortcuts="Control+B"') && opened.join('').includes('title="Run in background (Ctrl+B)"'), 'the button names its shortcut (aria-keyshortcuts) and says it in its title');
   short.done(3); short.finish();
   await wait(60);
   check(tray === null, '3 items finishing inside 2 s never show the tray');
@@ -108,6 +109,15 @@ const refuses = (fn, re) => { try { fn(); return false; } catch (error) { return
   (keyHandlers.keydown || []).forEach((handler) => handler({ ctrlKey: true, key: 'b', target: null, preventDefault: () => { prevented += 1; } }));
   check(keyed.tray === true && prevented === 1 && tray !== null, 'Ctrl+B does the same while a panel is open');
   keyed.done(10); keyed.finish();
+  tray = null; root = null; opened.length = 0;
+  const mac = batch({ mount: 'TST004-D01-U13', label: 'Assigning', total: 10, unit: 'assigned', delay: 0 });
+  await wait(30);
+  (keyHandlers.keydown || []).forEach((handler) => handler({ metaKey: true, key: 'b', target: null, preventDefault() {} }));
+  check(mac.tray === true, 'Cmd+B (metaKey) does the same on a Mac');
+  mac.done(10); mac.finish();
+  let idle = 0;
+  (keyHandlers.keydown || []).forEach((handler) => handler({ ctrlKey: true, key: 'b', target: null, preventDefault: () => { idle += 1; } }));
+  check(idle === 0, 'with no panel open the key is left alone (no preventDefault)');
   tray = null; root = null; opened.length = 0;
   const always = batch({ mount: 'TST004-D01-U12', label: 'Deleting', total: 3, speed: 'tray', unit: 'deleted', delay: 0 });
   await wait(30);

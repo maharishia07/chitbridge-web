@@ -773,6 +773,7 @@
     'CMP031.label': 'تشغيل في الخلفية',
     'CMP031.shown': 'تشغيل في الخلفية',
     'CMP031.aria': 'تشغيل في الخلفية {object}',
+    'Run in background (Ctrl+B)': 'تشغيل في الخلفية (Ctrl+B)',
     'Run in background': 'تشغيل في الخلفية',
     'CMP030.label': 'النشاط',
     'CMP030.shown': 'النشاط',

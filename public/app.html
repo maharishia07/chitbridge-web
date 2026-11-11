@@ -16882,8 +16882,8 @@ async function prodAvailApply(status) {
     };
   });
   UI.prodPicked.clear();
-  result.failed.forEach((entry) => UI.prodPicked.add(entry.item));
-  UI.prodPick = !!result.failed.length;
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
   await loadCatalogue('fresh');
   /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
      nobody trusts bulk actions. */
@@ -16968,7 +16968,7 @@ async function prodCategoriseApply() {
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
   /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
      nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'), failed ? true : false);
+  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'));
   renderApp();
 }
 /**
@@ -23462,8 +23462,8 @@ async function confirmStatus() {
     const firstReason = result.failed.length ? result.failed[0].reason : '';
     toast(_done ? txf('Moved {done} of {total}, then: {why}', { done: _done, total: ids.length, why: firstReason || tx('stopped') }) : firstReason || groupToast(result, ' moved'));
     if (_done) {
-      UI.selectMode = false;
       UI.selected.clear();
+      tickUndone(result); /* the one that failed and the ones not reached stay ticked, the select mode stays on */
       renderApp();
     } // the ones that moved must not look unmoved
     return;
@@ -23575,6 +23575,12 @@ function groupRun(ids, kind, perId) {
     return { done, failed };
   });
 }
+/** the records that failed AND the ones never tried (Cancel, a stop) stay ticked, so the person can run the rest again */
+function tickUndone(result, into) {
+  const set = into || UI.selected;
+  result.failed.forEach((entry) => set.add(entry.item));
+  result.leftItems.forEach((id) => set.add(id));
+}
 /** after a group action: the records that failed stay ticked, the one that is open closes only if it changed, and the list is read again */
 /** the same runner for an endpoint that takes a whole step: sendChunk(ids) resolves { done: [ids], failed: [{ item, reason }] }; a throw fails the step with the verb's sentence */
 function groupRunSteps(ids, kind, sendChunk) {
@@ -23590,7 +23596,7 @@ function groupRunSteps(ids, kind, sendChunk) {
 }
 async function afterGroup(result) {
   UI.selected.clear();
-  result.failed.forEach((entry) => UI.selected.add(entry.item));
+  tickUndone(result);
   if (UI.sel && result.done.includes(UI.sel)) {
     UI.sel = null;
     UI.detail = null;
@@ -23664,7 +23670,7 @@ async function confirmDelete() {
     UI.mdetail = false;
   }
   UI.selected.clear();
-  result.failed.forEach((entry) => UI.selected.add(entry.item));
+  tickUndone(result);
   renderApp();
   /* Undo is for the rows that DID move, also after a partial or cancelled run (the sentence then says what did not move) */
   const partial = result.failed.length > 0 || result.left > 0;
@@ -28364,7 +28370,7 @@ async function assignBulkChits(ids, actorId) {
       failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' }))
     };
   });
-  UI.selectMode = result.failed.length > 0; /* the failed ticks stay visible */
+  UI.selectMode = result.failed.length > 0 || result.left > 0; /* the failed and not-done ticks stay visible */
   await afterGroup(result);
   renderApp();
   toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));

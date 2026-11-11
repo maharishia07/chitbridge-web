@@ -127,7 +127,7 @@ var CBUi = (function () {
     menu: { code: 'CMP028', element: 'CMP028-B01', label: 'Menu', shown: '☰', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
     legend: { code: 'CMP029', element: 'CMP029-B01', label: 'Capabilities', shown: 'Capabilities', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
     /* CMP031: moves a running batch from the centre panel to the corner tray, so the screen is free (Athi 11 Nov); Ctrl+B does the same */
-    background: { code: 'CMP031', element: 'CMP031-B01', label: 'Run in background', shown: 'Run in background', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
+    background: { code: 'CMP031', element: 'CMP031-B01', label: 'Run in background', shown: 'Run in background', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw', shortcut: 'Control+B' },
     activity: { code: 'CMP030', element: 'CMP030-B01', label: 'Activity', shown: 'Activity', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
     more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
   };
@@ -249,8 +249,13 @@ var CBUi = (function () {
       ['aria-busy', options.busy ? 'true' : null]
     ]
       .concat(lookAttributes(component, options))
+      .concat(shortcutAttributes(component))
       .concat(gateAttributes(options.role))
       .concat(dataAttributes(options.data));
+  }
+  /** a component with a keyboard shortcut says so to assistive technology (Run in background: Control+B) */
+  function shortcutAttributes(component) {
+    return [['aria-keyshortcuts', component.shortcut || null]];
   }
   /** the tooltip of an icon alone, the compact size, and the menu a More opens */
   function lookAttributes(component, options) {
@@ -477,9 +482,9 @@ var CBUi = (function () {
     else if (option) onMenuKey(event, option);
     else if (trigger) onTriggerKey(event, trigger);
   }
-  /** Ctrl+B moves the open batch panel to the corner tray (the app's own key handler ignores every Ctrl key, so nothing clashes) */
+  /** Ctrl+B (Cmd+B on a Mac) moves the open batch panel to the corner tray; it is taken only while a panel is open (the app's own key handler ignores every Ctrl key, so nothing clashes) */
   function onBatchKey(event) {
-    if (!event.ctrlKey || event.altKey || event.shiftKey || String(event.key).toLowerCase() !== 'b') return;
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || String(event.key).toLowerCase() !== 'b') return;
     if (!runningPanel || runningPanel.tray || runningPanel.ended) return;
     if (event.preventDefault) event.preventDefault();
     runningPanel.toTray();
@@ -664,11 +669,12 @@ var CBUi = (function () {
     }
   }
   function openPanel(model, options) {
+    if (model.batch) announceQuarter(model);
     if (model.tray) return openTray(model, options);
     ensureProgressStyle();
     model.opener = typeof document !== 'undefined' ? document.activeElement : null;
     var cancelAction = typeof options.cancel === 'function' ? [{ name: 'cancel', options: { mount: options.mount, key: 'cancel', onPress: function () { model.finished = true; closeModal(); options.cancel(); } } }] : [];
-    if (model.batch) cancelAction.unshift({ name: 'background', options: { mount: options.mount, key: 'background-' + model.id, onPress: function () { model.toTray(); } } });
+    if (model.batch) cancelAction.unshift({ name: 'background', options: { mount: options.mount, key: 'background-' + model.id, hint: 'Run in background (Ctrl+B)', onPress: function () { model.toTray(); } } });
     if (model.batch) runningPanel = model;
     dialog({ mount: options.mount, title: model.label, body: panelBody(model), actions: cancelAction });
     var root = panelRoot(model);
@@ -741,7 +747,7 @@ var CBUi = (function () {
      BATCH_TRAY_AFTER_MS it moves to the corner tray (CMP027) by itself, and the panel's Run in background button (CMP031, Ctrl+B) moves it at once. The speed class sets the STEP (items per call):
      quick (archive, restore, status) 10; slow (assigns, sends, product updates) 5; tray (deletes, anything that posts to the books) 5 and alwaysTray: an irreversible job keeps its visible record
      from the start. A call site names its class (speed: 'quick' | 'slow' | 'tray'); no page holds a number. BATCH_STEP stays the quick step. */
-  var BATCH_TRAY_AFTER_MS = 2000;
+  var BATCH_TRAY_AFTER_MS = 2000, BATCH_AUTOCLOSE_MS = 1000; /* a clean finish closes itself a second later; a failure or a cancel keeps Done */
   var BATCH_SPEED = { quick: { step: 10, alwaysTray: false }, slow: { step: 5, alwaysTray: false }, tray: { step: 5, alwaysTray: true } };
   var BATCH_STEP = BATCH_SPEED.quick.step;
   var runningPanel = null; /* the batch whose centre panel is open now, for Ctrl+B */
@@ -781,7 +787,7 @@ var CBUi = (function () {
   /** CMP027: the corner tray, the same blocks and words as the panel, a region of the page (not a dialog): the page stays usable underneath */
   function trayBody(model) {
     return '<div data-cbprogress="' + model.id + '" data-cbsid="' + ACTION_SET.batchtray.element + '" role="region" aria-label="' + escapeText(model.label) + '"><p class="cbp-title">' + escapeText(model.label) + '</p>' +
-      batchBar(model) + '<div role="status" aria-live="polite"><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div><div class="cbp-tfoot"></div></div>';
+      batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div><div class="cbp-tfoot"></div></div>';
   }
   function trayFoot(root, html) {
     var foot = root && root.querySelector('.cbp-tfoot');
@@ -805,7 +811,7 @@ var CBUi = (function () {
   }
   function batchBody(model) {
     if (model.tray) return trayBody(model);
-    return '<div data-cbprogress="' + model.id + '" tabindex="-1">' + batchBar(model) + '<div role="status" aria-live="polite"><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div></div>';
+    return '<div data-cbprogress="' + model.id + '" tabindex="-1">' + batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div></div>';
   }
   /** repaint the open batch panel: the words (the live region) at most every BATCH_PAINT_MS, the last state always lands (a trailing repaint); the end paints at once */
   function paintBatch(model, root) {
@@ -815,6 +821,7 @@ var CBUi = (function () {
       return;
     }
     model.lastPaint = now;
+    announceQuarter(model);
     var bar = root.querySelector('[role="progressbar"]');
     if (bar) {
       bar.innerHTML = blocksHtml(model);
@@ -824,6 +831,13 @@ var CBUi = (function () {
     root.querySelector('.cbp-count').textContent = batchWords(model);
     var wrap = root.querySelector('.cbp-failwrap');
     if (wrap && model.shownFails !== model.failList.length) { model.shownFails = model.failList.length; wrap.innerHTML = failListHtml(model); }
+  }
+  /** the spoken progress: once at the start, at each quarter, and (in finishBatch) once at the end; the count on the screen moves silently */
+  function announceQuarter(model) {
+    var quarter = Math.floor((4 * (model.done + model.failed)) / model.max);
+    if (model.spoken && quarter <= model.quarter) return;
+    model.spoken = true; model.quarter = quarter;
+    announce(batchWords(model));
   }
   /**
    * ui.progress.batch({ mount, total, label, unit, cancel, delay }) -> { done(n), failed(n | [names], reason), finish(), cancel() }.
@@ -893,6 +907,10 @@ var CBUi = (function () {
     if (names) names.slice(0, count).forEach(function (name) { model.failList.push(reason ? name + ' — ' + reason : String(name)); });
     else if (reason && count) model.failList.push(reason + (count > 1 ? ' (×' + count + ')' : ''));
   }
+  /** a clean end: nothing failed, nothing left, not cancelled; it closes itself (a failure or a cancel keeps Done) */
+  function endedClean(model) {
+    return !model.failed && !batchRoom(model) && !model.cancelled;
+  }
   /** the end: a summary stays on the panel or tray with Done; a quiet batch that ended inside the delay shows nothing, unless something failed */
   function finishBatch(model, options, openOptions) {
     model.finished = true; model.ended = true;
@@ -902,13 +920,19 @@ var CBUi = (function () {
     var root = panelRoot(model);
     if (root) paintBatch(model, root);
     announce(summary.text);
-    var doneButton = dialogAction('done', { mount: options.mount, key: 'done-' + model.id, onPress: function () { closePanel(model); } });
-    if (model.tray) { trayFoot(root, doneButton); return summary; }
-    var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
-    if (foot) foot.innerHTML = doneButton;
+    if (endedClean(model)) { model.closeTimer = setTimeout(function () { closePanel(model); }, BATCH_AUTOCLOSE_MS); return summary; }
+    showDone(model, options, root);
     return summary;
   }
+  /** the Done button, in the tray's foot or the panel's */
+  function showDone(model, options, root) {
+    var doneButton = dialogAction('done', { mount: options.mount, key: 'done-' + model.id, onPress: function () { closePanel(model); } });
+    if (model.tray) return trayFoot(root, doneButton);
+    var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
+    if (foot) foot.innerHTML = doneButton;
+  }
   batchProgress.trayAfterMs = BATCH_TRAY_AFTER_MS;
+  batchProgress.autoCloseMs = BATCH_AUTOCLOSE_MS;
   batchProgress.step = BATCH_STEP;
   /** the items in steps of BATCH_STEP, for the caller to send one step at a time (a step is one call; Cancel is honoured between steps) */
   batchProgress.speeds = BATCH_SPEED;
@@ -918,7 +942,7 @@ var CBUi = (function () {
     return out;
   };
   /**
-   * ui.progress.batch.run(items, options, sendStep) -> Promise of { done: [items], failed: [{ item, reason }], cancelled, stopped, left }.
+   * ui.progress.batch.run(items, options, sendStep) -> Promise of { done: [items], failed: [{ item, reason }], leftItems: [items not tried], cancelled, stopped, left }.
    * The one runner for a group action (Athi 11 Nov): the items go in steps of the speed class (quick 10, slow 5, tray 5), one sendStep(chunk) per step, the screen never locks, and Cancel is honoured between steps.
    * sendStep resolves { done: [items], failed: [{ item, reason }], stop } (an item in neither list counts as failed, so nothing goes silent, unless stop is true: then the rest stay 'left'
    * and the run ends, for an action that must not carry on after a failure); a throw fails the whole step and names its reason.
@@ -927,25 +951,38 @@ var CBUi = (function () {
   batchProgress.run = async function (items, options, sendStep) {
     var stopped = false;
     var batchJob = batchProgress(Object.assign({}, options, { total: items.length, cancel: function () { stopped = true; } }));
-    var result = { done: [], failed: [], cancelled: false, stopped: false, left: 0 };
+    var result = { done: [], failed: [], leftItems: [], cancelled: false, stopped: false, left: 0 };
     if (typeof options.onStart === 'function') options.onStart(batchJob);
     try {
       var steps = batchProgress.steps(items, options.speed);
       for (var index = 0; index < steps.length && !stopped && !result.stopped; index += 1) await runStep(batchJob, steps[index], options, sendStep, result);
     } finally {
       result.cancelled = stopped;
-      result.left = items.length - result.done.length - result.failed.length;
+      result.leftItems = items.filter(function (item) { return result.done.indexOf(item) < 0 && !result.failed.some(function (entry) { return entry.item === item; }); });
+      result.left = result.leftItems.length;
       batchJob.finish();
     }
     return result;
   };
-  /** one step of the runner: send it, then count what the step answered (an unanswered item is failed, a throw fails the step) */
+  /** what one step answered; a throw fails the whole step and names its reason */
+  async function answerOf(chunk, sendStep) {
+    try {
+      return (await sendStep(chunk)) || {};
+    } catch (error) {
+      return { done: [], failed: chunk.map(function (item) { return { item: item, reason: (error && error.message) || 'failed' }; }) };
+    }
+  }
+  /** the items a step neither finished nor failed: failed as "no answer", so nothing goes silent */
+  function unansweredOf(chunk, done, failed) {
+    return chunk.filter(function (item) { return done.indexOf(item) < 0 && !failed.some(function (entry) { return entry.item === item; }); })
+      .map(function (item) { return { item: item, reason: 'no answer' }; });
+  }
+  /** one step of the runner: send it, then count what the step answered */
   async function runStep(batchJob, chunk, options, sendStep, result) {
-    var answer;
-    try { answer = (await sendStep(chunk)) || {}; } catch (error) { answer = { done: [], failed: chunk.map(function (item) { return { item: item, reason: (error && error.message) || 'failed' }; }) }; }
+    var answer = await answerOf(chunk, sendStep);
     var done = answer.done || [], failed = (answer.failed || []).slice();
     result.stopped = !!answer.stop;
-    if (!answer.stop) chunk.forEach(function (item) { if (done.indexOf(item) < 0 && !failed.some(function (entry) { return entry.item === item; })) failed.push({ item: item, reason: 'no answer' }); });
+    if (!answer.stop) failed = failed.concat(unansweredOf(chunk, done, failed));
     result.done.push.apply(result.done, done);
     result.failed.push.apply(result.failed, failed);
     if (done.length) batchJob.done(done.length);

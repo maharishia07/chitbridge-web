@@ -743,6 +743,7 @@
     'CMP031.label': 'பின்னணியில் இயக்கு',
     'CMP031.shown': 'பின்னணியில் இயக்கு',
     'CMP031.aria': 'பின்னணியில் இயக்கு {object}',
+    'Run in background (Ctrl+B)': 'பின்னணியில் இயக்கு (Ctrl+B)',
     'Run in background': 'பின்னணியில் இயக்கு',
     'CMP030.label': 'செயல்பாடு',
     'CMP030.shown': 'செயல்பாடு',

@@ -743,6 +743,7 @@
     'CMP031.label': 'Exécuter en arrière-plan',
     'CMP031.shown': 'Exécuter en arrière-plan',
     'CMP031.aria': 'Exécuter en arrière-plan {object}',
+    'Run in background (Ctrl+B)': 'Exécuter en arrière-plan (Ctrl+B)',
     'Run in background': 'Exécuter en arrière-plan',
     'CMP030.label': 'Activité',
     'CMP030.shown': 'Activité',
