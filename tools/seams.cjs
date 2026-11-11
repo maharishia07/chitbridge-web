@@ -16,11 +16,15 @@
  *
  *   node tools/seams.cjs                              the index, most-reused first
  *   node tools/seams.cjs catalogue                    everything whose name, purpose or file mentions every word
- *   node tools/seams.cjs --write                      refresh C:/dev/SEAMS.md AND docs/SEAMS.md in web, api, engines
+ *   node tools/seams.cjs --write                      refresh docs/SEAMS.md of the repo you run it from (or --repo X); never a sibling checkout
  *   node tools/seams.cjs --check --repo web|api|engines   exit 1 and print the stale lines of the docs/SEAMS.md in the current folder
  *
- * Roots default to the main checkouts; SEAMS_ROOT_<WEB|API|ENGINES> point at another checkout (a worktree).
+ * Roots: --check reads the checkout it runs in plus (override) SEAMS_ROOT_<WEB|API|ENGINES>. --write writes ONLY the docs/SEAMS.md of the repo it runs
+ * from; the other side is read from SEAMS_ROOT_<SIDE> if set, else from a temp `git archive origin/main` export of the shared C:/dev checkout
+ * (SEAMS_SHARED_DIR moves that folder), because the shared checkouts are commits behind and nobody may write into them.
  */
+const { execFileSync, spawnSync } = require('child_process');
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
@@ -37,6 +41,41 @@ const MIN_NAME_LENGTH = 4;
 /** the folder of one repo: the environment override, else the checkout we are checking from, else the main checkout */
 function repoRoot(side, checking) {
   return process.env['SEAMS_ROOT_' + side.toUpperCase()] || (side === checking ? process.cwd() : 'C:/dev/chitbridge-' + side);
+}
+
+/** the repo we run in: --repo, else guessed from its shape (web has public/app.html, api has routes/, engines has src/) */
+function sideOfFolder(folder, named) {
+  if (named) return named;
+  if (fs.existsSync(path.join(folder, 'public', 'app.html'))) return 'web';
+  if (fs.existsSync(path.join(folder, 'routes'))) return 'api';
+  return fs.existsSync(path.join(folder, 'src')) ? 'engines' : '';
+}
+
+/** a throw-away `git archive origin/main` export of one shared checkout (only the folders the scan reads) */
+function exportOriginMain(side) {
+  const shared = path.join(process.env.SEAMS_SHARED_DIR || 'C:/dev', 'chitbridge-' + side);
+  const into = fs.mkdtempSync(path.join(os.tmpdir(), 'seams-' + side + '-'));
+  const tarFile = path.join(into, 'export.tar');
+  const paths = side === 'web' ? ['public'] : ['lib', 'routes', 'middleware'];
+  try {
+    execFileSync('git', ['-C', shared, 'fetch', '-q', '--no-write-fetch-head', 'origin'], { stdio: 'ignore' });
+  } catch (error) {
+    console.log('  (could not fetch ' + side + ' origin; reading its last fetched origin/main)');
+  }
+  const present = paths.filter((folder) => {
+    const found = spawnSync('git', ['-C', shared, 'cat-file', '-e', 'origin/main:' + folder], { stdio: 'ignore' });
+    return found.status === 0;
+  });
+  if (present.length) {
+    execFileSync('git', ['-C', shared, 'archive', '--format=tar', '-o', tarFile, 'origin/main'].concat(present));
+    execFileSync('tar', ['-xf', 'export.tar'], { cwd: into }); // relative, because GNU tar reads C: as a host
+  }
+  return into;
+}
+
+/** the folder --write reads for one side: the override, else the repo we run in, else an origin/main export (never the shared working copy) */
+function writeRoot(side, here) {
+  return process.env['SEAMS_ROOT_' + side.toUpperCase()] || (side === here ? process.cwd() : exportOriginMain(side));
 }
 
 /** the web files that define or call functions: the shell page and every public/app script */
@@ -186,19 +225,13 @@ function indexMarkdown(rows, shared) {
   ].concat(shared.slice(0, INDEX_ROWS).map(rowText)).join('\n') + '\n';
 }
 
-/** write the same index into C:/dev and into each repo's docs folder (cloud sessions read docs/SEAMS.md in their own clone) */
+/** write the index into the docs folder of the repo we run in, and nowhere else (a stray write in a shared checkout is a hazard for every agent) */
 function writeIndex(rows, shared) {
-  const text = indexMarkdown(rows, shared);
-  const targets = ['C:/dev/SEAMS.md'].concat(['web', 'api', 'engines'].map((side) => repoRoot(side, '') + '/docs/SEAMS.md'));
-  for (const target of targets) {
-    if (!fs.existsSync(path.dirname(target))) {
-      console.log('  skipped (no folder): ' + target);
-      continue;
-    }
-    fs.writeFileSync(target, text);
-    console.log('  → ' + target + ' (' + shared.length + ' seams)');
-  }
-  console.log('');
+  const target = path.join(process.cwd(), 'docs', 'SEAMS.md');
+  if (!fs.existsSync(path.dirname(target))) return reportLine('seams --write: no docs folder in ' + process.cwd() + ' - run it from the root of web, api or engines');
+  fs.writeFileSync(target, indexMarkdown(rows, shared));
+  console.log('  → ' + target + ' (' + shared.length + ' seams); the other repos refresh from their own root');
+  return 0;
 }
 
 /* ── the drift check ──────────────────────────────────────────────────────────────────────────────────────── */
@@ -280,13 +313,15 @@ function parseArguments(argv) {
 function main(argv) {
   const options = parseArguments(argv);
   if (options.check) return runCheck(options.side);
-  const rows = scan(webFiles(repoRoot('web', '')), 'web').concat(scan(apiFiles(repoRoot('api', '')), 'api'));
+  const here = options.write ? sideOfFolder(process.cwd(), options.side) : '';
+  if (options.write && !here) return reportLine('seams --write: run it from the root of web, api or engines (or pass --repo X)');
+  const root = options.write ? writeRoot : repoRoot;
+  const rows = scan(webFiles(root('web', here)), 'web').concat(scan(apiFiles(root('api', here)), 'api'));
   const shared = rows.filter((row) => row.users.length >= 1).sort((first, second) => second.users.length - first.users.length);
   const once = rows.filter((row) => row.users.length === 0);
   if (options.needle) printSearch(options.needle, shared, once);
   else printIndex(shared, once);
-  if (options.write) writeIndex(rows, shared);
-  return 0;
+  return options.write ? writeIndex(rows, shared) : 0;
 }
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
