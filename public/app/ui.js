@@ -3,7 +3,7 @@
  * (Save, Done, Cancel, Close, Back, Add, Remove, Reload, Open); a screen never hand-writes the markup, it MOUNTS one.
  * Improve a component here and every mount on every screen improves.
  *
- * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
+ * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch; CMP032 batch job note: the state of a saved job in words, and how it ended) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
  * CALLED BY  a page script that draws a button: settings.html (cap-settings.js policy Save/Cancel, cap-print.js Save).
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
@@ -115,6 +115,8 @@ var CBUi = (function () {
     progress: { code: 'CMP020', element: 'CMP020-D01', label: 'Progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     progressbar: { code: 'CMP021', element: 'CMP021-D01', label: 'Progress bar', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
     batch: { code: 'CMP026', element: 'CMP026-D01', label: 'Batch progress', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'primary', nonButton: true },
+    /* CMP032: the line under the batch bar that says in words where a saved job stands (saving, saved, server busy, offline, continuing, keep this tab open) and how it ended (Athi 11 Nov); not a button */
+    batchnote: { code: 'CMP032', element: 'CMP032-D01', label: 'Batch job note', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     batchtray: { code: 'CMP027', element: 'CMP027-D01', label: 'Batch tray', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     spinner: { code: 'CMP022', element: 'CMP022-D01', label: 'Spinner', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     /* Athi 10 Nov (wave 2): the three controls the shared shell and the workshop drew by hand. Home is a link (a real address, so it works in a new tab); the label sits in .hw so a phone can show the glyph alone while the aria-label keeps the word. */
@@ -564,6 +566,7 @@ var CBUi = (function () {
     '@keyframes cbp-slide{to{transform:translateX(150%)}}' +
     '.cbp-blocks{display:flex;gap:3px;margin:12px 0}.cbp-blk{flex:1;height:12px;border-radius:2px;background:var(--blue-tint,var(--line));border:1px solid var(--blue-tint-line,var(--line))}' +
     '.cbp-blk[data-s="done"]{background:var(--blue,var(--accent));border-color:var(--blue,var(--accent))}.cbp-blk[data-s="failed"]{background:var(--bad);border-color:var(--bad)}' +
+    '.cbp-note{margin:4px 0 0;font-size:.9em;color:var(--ink-2,#4b5563)}.cbp-note:empty{display:none}' +
     '.cbp-fails{margin:8px 0 0;padding-inline-start:1.2em;font-size:.9em;color:var(--bad)}' +
     '.cbp-tray{position:fixed;inset-block-end:calc(72px + var(--fab-lift,0px) + env(safe-area-inset-bottom,0px));inset-inline-end:16px;z-index:60;width:min(340px,calc(100vw - 32px));padding:12px 14px;border:1px solid var(--blue-tint-line,var(--line));border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 6px 24px var(--scrim)}' +
     '.cbp-tray .cbp-title{margin:0;font-weight:700}.cbp-tray .cbp-tfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}.cbp-tray summary{cursor:pointer}' +
@@ -769,8 +772,35 @@ var CBUi = (function () {
     for (var i = 0; i < counts.blocks; i += 1) html += '<span class="cbp-blk" data-s="' + (i < counts.blue ? 'done' : i < counts.blue + counts.red ? 'failed' : 'left') + '"></span>';
     return html;
   }
+  /** CMP032: every state of a saved job in words (Athi 11 Nov); each a standard text key CMP032.<state>, all shown on the UI standard page */
+  var NOTE_WORDS = {
+    saving: 'Saving the job on this device…',
+    saved: 'Saved on this device. Safe to keep working or close.',
+    busy: 'Server busy, trying again in {seconds} s',
+    offline: 'Offline. Will continue when back online',
+    resumed: 'Continuing your job: {done} of {total} done',
+    keepopen: "Keep this tab open. This action can't continue after a restart.",
+    private: "This browser can't keep the job. Closing this tab loses it.",
+    doneAll: '{done} done',
+    doneFailed: '{done} done · {failed} failed',
+    stopped: 'Stopped: {done} done · {left} not done (still ticked)',
+    seeWhich: 'See which'
+  };
+  function noteWords(kind, values) {
+    if (!Object.prototype.hasOwnProperty.call(NOTE_WORDS, kind)) refuse('progress: no job state "' + kind + '"');
+    return phrase(NOTE_WORDS[kind], textKey(ACTION_SET.batchnote, kind), values || {});
+  }
+  /** a saved job reads "12 of 40 done · 28 left · 0 failed" while it runs, then "40 done", "38 done · 2 failed" or "Stopped: 20 done · 20 not done (still ticked)" */
+  function jobWords(model, values) {
+    if (model.ended) {
+      if (model.cancelled || values.left > 0) return noteWords('stopped', values);
+      return noteWords(model.failed ? 'doneFailed' : 'doneAll', values);
+    }
+    return phrase('{done} of {total} {unit} · {left} left · {failed} failed', textKey(ACTION_SET.batch, 'countFailed'), Object.assign({}, values, { unit: words('done') }));
+  }
   function batchWords(model) {
     var values = { done: model.done, total: model.max, left: Math.max(0, model.max - model.done - model.failed), failed: model.failed, unit: model.unit };
+    if (model.job) return jobWords(model, values);
     if (model.ended) return model.failed ? phrase('{done} of {total} {unit} · {failed} failed', textKey(ACTION_SET.batch, 'summaryFailed'), values) : phrase('All {total} {unit}', textKey(ACTION_SET.batch, 'summary'), values);
     return model.failed ? phrase('{done} of {total} {unit} · {left} left · {failed} failed', textKey(ACTION_SET.batch, 'countFailed'), values) : phrase('{done} of {total} {unit} · {left} left', textKey(ACTION_SET.batch, 'count'), values);
   }
@@ -782,12 +812,13 @@ var CBUi = (function () {
     if (!model.failList.length) return '';
     var list = '<ul class="cbp-fails">' + model.failList.map(function (entry) { return '<li>' + escapeText(entry) + '</li>'; }).join('') + '</ul>';
     /* in the tray the list is one tap away, folded under its count */
+    if (model.job) return '<details><summary>' + escapeText(noteWords('seeWhich')) + '</summary>' + list + '</details>';
     return model.tray ? '<details><summary>' + escapeText(phrase('Failed items ({failed})', textKey(ACTION_SET.batchtray, 'failedList'), { failed: model.failed })) + '</summary>' + list + '</details>' : list;
   }
   /** CMP027: the corner tray, the same blocks and words as the panel, a region of the page (not a dialog): the page stays usable underneath */
   function trayBody(model) {
     return '<div data-cbprogress="' + model.id + '" data-cbsid="' + ACTION_SET.batchtray.element + '" role="region" aria-label="' + escapeText(model.label) + '"><p class="cbp-title">' + escapeText(model.label) + '</p>' +
-      batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div><div class="cbp-tfoot"></div></div>';
+      batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p>' + noteHtml(model) + '</div><div class="cbp-failwrap">' + failListHtml(model) + '</div><div class="cbp-tfoot"></div></div>';
   }
   function trayFoot(root, html) {
     var foot = root && root.querySelector('.cbp-tfoot');
@@ -811,7 +842,22 @@ var CBUi = (function () {
   }
   function batchBody(model) {
     if (model.tray) return trayBody(model);
-    return '<div data-cbprogress="' + model.id + '" tabindex="-1">' + batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p></div><div class="cbp-failwrap">' + failListHtml(model) + '</div></div>';
+    return '<div data-cbprogress="' + model.id + '" tabindex="-1">' + batchBar(model) + '<div><p class="cbp-count">' + escapeText(batchWords(model)) + '</p>' + noteHtml(model) + '</div><div class="cbp-failwrap">' + failListHtml(model) + '</div></div>';
+  }
+  /** CMP032 in place: empty (and hidden) until the job has a state to say */
+  function noteText(model) {
+    return model.note ? noteWords(model.note.kind, model.note.values) : '';
+  }
+  function noteHtml(model) {
+    return '<p class="cbp-note" data-cbsid="' + ACTION_SET.batchnote.element + '">' + escapeText(noteText(model)) + '</p>';
+  }
+  /** say one state of the job now (outside the paint throttle); the screen reader hears it once */
+  function setNote(model, kind, values) {
+    if (model.ended) return;
+    model.note = { kind: kind, values: values };
+    var root = panelRoot(model), line = root && root.querySelector('.cbp-note');
+    if (line) line.textContent = noteText(model);
+    announce(noteText(model));
   }
   /** repaint the open batch panel: the words (the live region) at most every BATCH_PAINT_MS, the last state always lands (a trailing repaint); the end paints at once */
   function paintBatch(model, root) {
@@ -829,6 +875,8 @@ var CBUi = (function () {
       bar.setAttribute('aria-valuetext', batchWords(model));
     }
     root.querySelector('.cbp-count').textContent = batchWords(model);
+    var noteLine = root.querySelector('.cbp-note');
+    if (noteLine) noteLine.textContent = noteText(model);
     var wrap = root.querySelector('.cbp-failwrap');
     if (wrap && model.shownFails !== model.failList.length) { model.shownFails = model.failList.length; wrap.innerHTML = failListHtml(model); }
   }
@@ -851,24 +899,18 @@ var CBUi = (function () {
     if (!(options.total > 0) || options.total % 1) refuse('progress: a batch needs a whole total above 0');
     panelCount += 1;
     var model = newBatchModel(options);
+    startCounts(model, options);
     var openOptions = Object.assign({}, options, { cancel: typeof options.cancel === 'function' ? function () { model.cancelNow(); } : undefined });
     var timer = setTimeout(function () { if (!model.finished) openPanel(model, openOptions); }, delayOf(options.delay));
-    var release = guardLeaving();
+    /* a job the device keeps is safe to close (that is its point), so no leave-the-page question; a job that lives in this tab only keeps the question */
+    var guard = leaveGuard(!options.durable);
     var trayTimer = setTimeout(function () { model.toTray(); }, BATCH_TRAY_AFTER_MS);
     model.stopTimers = function () { clearTimeout(timer); clearTimeout(trayTimer); clearTimeout(model.paintTimer); model.paintTimer = null; if (runningPanel === model) runningPanel = null; };
-    /** the panel becomes the tray (the work goes on, the screen is free); before the panel has opened it only decides where it will open */
-    model.toTray = function () {
-      if (model.tray || model.ended) return false;
-      var wasOpen = model.opened;
-      if (wasOpen) closePanel(model);
-      model.tray = true;
-      if (wasOpen) { model.opened = false; openPanel(model, openOptions); }
-      return true;
-    };
+    model.toTray = function () { return moveToTray(model, openOptions); };
     model.cancelNow = function () {
       if (typeof options.cancel !== 'function' || model.ended) return false;
       model.finished = true; model.ended = true; model.cancelled = true;
-      model.stopTimers(); release(); closePanel(model); options.cancel();
+      model.stopTimers(); guard.release(); closePanel(model); options.cancel();
       return true;
     };
     return {
@@ -877,20 +919,46 @@ var CBUi = (function () {
       cancel: function () { return model.cancelNow(); },
       toTray: function () { return model.toTray(); },
       cancelled: function () { return !!model.cancelled; },
+      note: function (kind, values) { setNote(model, kind, values); },
+      /* the device turned out not to keep the job after all: the leave-the-page question comes back */
+      keepOpen: function () { if (!model.ended) guard.hold(); },
       get tray() { return model.tray; },
-      finish: function () { model.stopTimers(); release(); return finishBatch(model, options, openOptions); }
+      finish: function () { model.stopTimers(); guard.release(); return finishBatch(model, options, openOptions); }
     };
   }
   /** the state of one batch: the progress model plus the counts, the failed lines and where it is shown (always in the tray for the tray class, else the panel until it moves) */
   function newBatchModel(options) {
     var model = progressModel({ label: options.label, total: options.total });
     model.tray = speedOf(options).alwaysTray;
+    model.job = !!options.job; model.note = null;
     model.batch = true; model.done = 0; model.failed = 0; model.failList = []; model.lastPaint = 0; model.paintTimer = null; model.ended = false;
     model.unit = words(options.unit || 'done');
     return model;
   }
+  /** a job continued after a restart starts with what the last run already did: options.doneAtStart (a number) and options.priorFailed ([{ name, reason }]) */
+  function startCounts(model, options) {
+    model.done = Math.min(model.max, Math.max(0, options.doneAtStart || 0));
+    (options.priorFailed || []).forEach(function (entry) { recordFailed(model, [entry.name], entry.reason); });
+  }
   function batchRoom(model) {
     return model.max - model.done - model.failed;
+  }
+  /** the panel becomes the tray (the work goes on, the screen is free); before the panel has opened it only decides where it will open */
+  function moveToTray(model, openOptions) {
+    if (model.tray || model.ended) return false;
+    var wasOpen = model.opened;
+    if (wasOpen) closePanel(model);
+    model.tray = true;
+    if (wasOpen) { model.opened = false; openPanel(model, openOptions); }
+    return true;
+  }
+  /** the leave-the-page question of one batch: held from the start (a job that lives in this tab only) or later (hold, when the device turns out not to keep it); release ends it */
+  function leaveGuard(heldAtStart) {
+    var release = heldAtStart ? guardLeaving() : null;
+    return {
+      hold: function () { if (!release) release = guardLeaving(); },
+      release: function () { if (release) release(); release = null; }
+    };
   }
   /** leaving the page while a batch runs asks first; the returned function takes the guard off (once) */
   function guardLeaving() {
@@ -913,7 +981,7 @@ var CBUi = (function () {
   }
   /** the end: a summary stays on the panel or tray with Done; a quiet batch that ended inside the delay shows nothing, unless something failed */
   function finishBatch(model, options, openOptions) {
-    model.finished = true; model.ended = true;
+    model.finished = true; model.ended = true; model.note = null;
     var summary = { done: model.done, failed: model.failed, left: batchRoom(model), total: model.max, text: batchWords(model) };
     if (!model.opened && model.failed) openPanel(model, openOptions);
     if (!model.opened) return summary;
@@ -931,6 +999,15 @@ var CBUi = (function () {
     var modal = root && root.closest('.modal'), foot = modal && modal.querySelector('.mfoot');
     if (foot) foot.innerHTML = doneButton;
   }
+  /* which group actions can continue after a restart (Athi 11 Nov): they store every step on the device and send each with its own key. Status change and categorise stay bulk but run in the open tab only,
+     until their api lands (QA-131: one call per record with the from-status; QA-130: add or remove a category per product); the box then says "Keep this tab open". Keyed by the endpoint's name (core.js EP). */
+  var BATCH_RESUMABLE = { archive: true, restore: true, unarchive: true, purgeChit: true, delChit: true, assignBulk: true, prodStatusBulk: true, status: false, prodBulkUpdate: false };
+  batchProgress.resumable = function (action) {
+    if (!Object.prototype.hasOwnProperty.call(BATCH_RESUMABLE, action)) refuse('progress: ' + action + ' has no resume setting (BATCH_RESUMABLE)');
+    return BATCH_RESUMABLE[action];
+  };
+  batchProgress.noteWords = noteWords;
+  batchProgress.noteKinds = Object.keys(NOTE_WORDS);
   batchProgress.trayAfterMs = BATCH_TRAY_AFTER_MS;
   batchProgress.autoCloseMs = BATCH_AUTOCLOSE_MS;
   batchProgress.step = BATCH_STEP;
@@ -950,10 +1027,13 @@ var CBUi = (function () {
    */
   batchProgress.run = async function (items, options, sendStep) {
     var stopped = false;
-    var batchJob = batchProgress(Object.assign({}, options, { total: items.length, cancel: function () { stopped = true; } }));
+    var carried = (options.doneAtStart || 0) + (options.priorFailed || []).length;
+    var batchJob = batchProgress(Object.assign({}, options, { total: items.length + carried, cancel: function () { stopped = true; } }));
     var result = { done: [], failed: [], leftItems: [], cancelled: false, stopped: false, left: 0 };
     if (typeof options.onStart === 'function') options.onStart(batchJob);
     try {
+      /* a saved job is stored on the device BEFORE its first step: prepare(batchJob) does it and says so on the note */
+      if (typeof options.prepare === 'function') await options.prepare(batchJob);
       var steps = batchProgress.steps(items, options.speed);
       for (var index = 0; index < steps.length && !stopped && !result.stopped; index += 1) await runStep(batchJob, steps[index], options, sendStep, result);
     } finally {
