@@ -12,7 +12,8 @@ for (const k of ['web_ref', 'api_ref', 'packs', 'widths'])
 check('the nightly packs are a11y and keyboard', /inputs\.packs \|\| 'a11y,keyboard'/.test(y));
 check('the runner image is pinned (ubuntu-24.04)', /runs-on: ubuntu-24.04/.test(y));
 const sh = fs.readFileSync(path.join(__dirname, '..', 'e2e', 'ci-browser.sh'), 'utf8');
-check('the browser install retries with the system packages (2 tries)', /for try in 1 2;/.test(sh));
+check('the mirrors are looked up first, so apt never eats the job time when they do not resolve', /mirrors_resolve\(\) \{[\s\S]*getent hosts[\s\S]*if mirrors_resolve; then/.test(sh));
+check('the install with system packages is time-boxed (under the 25-minute walk limit)', /timeout 600 sh -c/.test(sh));
 check('then falls back to the browser alone (no apt) when the mirrors are unreachable', /\nnpx playwright install chromium\s*$/.test(sh));
 const wf = path.join(__dirname, '..', '.github', 'workflows');
 for (const f of fs.readdirSync(wf).filter(f => /\.ya?ml$/.test(f))) {
