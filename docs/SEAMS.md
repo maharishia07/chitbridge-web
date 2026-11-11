@@ -90,7 +90,7 @@ of file each thing is; this says what already does the job.
 | 31 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 31 | `note` | `dbwatch.js` |  |
 | 30 | `ensureCap` | `app.html` |  |
-| 30 | `order` | `cap-iddocs.js` | var LIST = null; |
+| 31 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 30 | `hold` | `orders.js` |  |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
@@ -196,7 +196,7 @@ of file each thing is; this says what already does the job.
 | 14 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 14 | `link` | `chit-sheet.js` |  |
 | 14 | `chips` | `country-profiles.js` | words as chips; null when there are none |
-| 14 | `confirm` | `lab-kit.js` | opts: |
+| 15 | `confirm` | `lab-kit.js` | opts: |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 14 | `refuse_` | `bookpack.js` | an Error with status 422 — |
