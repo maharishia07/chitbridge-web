@@ -151,7 +151,7 @@
       '</div><div class="brand-name label">' +
       esc(sk.name) +
       '</div></div>' +
-      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
+      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned" tabindex="0" role="region" aria-label="' + esc(sk.name) + '"></div>' : '') +
       '<nav class="nav" id="nav" aria-label="' +
       esc(sk.name) +
       '">' +

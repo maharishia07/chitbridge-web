@@ -144,6 +144,11 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
   var PRACTICE =
     null; /* { who, stage, people:[{key,label}], person:{ label, name, id, kind, mobile, email, userid, operator, cred, access_level, can_see_costs, hat } } */
   function practice() {
+    /* UX-87: only a server given on purpose (?api=, the practice stand-in) has practice people; this deploy's real api answers /__practice with a 404, so it is never asked */
+    if (!new URLSearchParams(location.search).get('api')) {
+      PRACTICE = null;
+      return Promise.resolve(null);
+    }
     return fetch(API + '/__practice?who=' + encodeURIComponent(sel.who) + '&stage=' + encodeURIComponent(sel.stage), { cache: 'no-store' })
       .then(function (reply) {
         return reply.ok ? reply.json() : null;
@@ -610,6 +615,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.lab: the Finance frame -->

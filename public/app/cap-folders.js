@@ -1290,9 +1290,8 @@ function _fldFolderName(id) {
    that is TRUE (the server reads ORDER BY sort, created_at and match.firstMatch stops at the first hit) but was
    invisible: a stack of identical cards gives the reader no way to tell WHICH rule wins when two overlap, which
    is the single question this list exists to answer. Numbering them makes the running order readable.
-   ⚠️ The order is not yet EDITABLE — see backlog 32. Showing it is still strictly better than hiding it: a user
-   who can see that rule 1 beats rule 3 can fix the conflict by rewriting a condition, which they cannot do while
-   the precedence is guesswork. */
+   The order is EDITABLE (DB-42): the ↑ ↓ buttons below call ruleMove(), which writes `sort` through folderRuleUpdate
+   (PATCH /folders/rules/:rule_id accepts it). Showing the number as well means the reader can say which rule wins. */
 function _ruleRow(r, i, n) {
   var terms = Object.keys(r.when || {})
     .map(function (item) {

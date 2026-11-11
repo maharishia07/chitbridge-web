@@ -6,7 +6,7 @@
  *            the page chrome (tabs, switches) and the repaint when a switch changes. It owns no component: it calls ui.action / ui.dialog.
  * CALLED BY  public/ui-standard.html (screen UIS001). Loaded AFTER helpers.js, accounts-shell.js (tx, CBAction, CBConfirm, toast),
  *            the string packs and ui.js.
- * READS      ui.components (CMP codes, labels, verbs), CBSTR (the packs), the CSS custom properties of the page (live), getComputedStyle.
+ * READS      public/app/ui-waves.json (the Waves section: one row per wave, the numbers updated in that one file), ui.components (CMP codes, labels, verbs), CBSTR (the packs), the CSS custom properties of the page (live), getComputedStyle.
  * WRITES     only this page's own DOM. It calls no api, reads no session or token, and stores nothing (no localStorage, no cookie).
  * CARD       29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
  * FLOW       load -> paint() -> a switch sets state -> paint() again (the same strings run through tx() again: no reload).
@@ -26,8 +26,8 @@ var CBUiStandard = (function () {
     small: { h: 20, pad: 6, radius: 3, font: 11, label: 'Too small' }
   };
   var SCREENS = { this: { label: 'This screen' }, desktop: { label: 'Desktop', w: 1366, h: 768 }, mobile: { label: 'Mobile', w: 390, h: 844 } };
-  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'meets', 'before'];
-  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', meets: 'Meets the standard', before: 'Before and after' };
+  var TABS = ['components', 'popups', 'icons', 'tokens', 'themes', 'meets', 'before', 'waves'];
+  var TAB_LABEL = { components: 'Components', popups: 'Popups', icons: 'Icons', tokens: 'Tokens', themes: 'Across themes', meets: 'Meets the standard', before: 'Before and after', waves: 'Waves' };
   /** the plain line each section opens with: what the standard is and why, in shopkeeper words */
   var TAB_LINE = {
     components: 'Every Save, Cancel or Done in the product is one and the same button, so it looks and works the same on every screen. The code beside it (like CMP001) is its name on a register, the way a bank screen has a code.',
@@ -36,17 +36,33 @@ var CBUiStandard = (function () {
     tokens: 'Colours, corners and sizes live in one place. Change a value and every button follows. The values below are read from this page as it is drawn, not typed in.',
     themes: 'The avatar offers 16 colour themes. Each row is a real theme applied through the avatar code, measured on the real buttons: a red figure is a pair below the accessibility minimum.',
     meets: 'Each rule of the standard in plain words, where it comes from, how this page proves it, and the live result in every one of the 16 themes.',
+    waves: 'The work comes in waves, each one making the next smaller. For each wave: what it gives you, how far it has got, and the number before and after. A number not measured yet says measuring.',
     before: 'Counted in our own screens: the same action was written many different ways. Now each one is a single component. Numbers are the count of places that spelled it that way.'
   };
   /** old hand-made spellings found in the census (PM/UX-137-ROLLOUT.md section 3a): [label, sites] */
   var CENSUS = [
-    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Not now', 6], ['Dismiss', 2], ['close', 2]] },
+    { name: 'close', before: [['Close', 72], ['x', 16], ['X', 14], ['Dismiss', 2], ['close', 2]] },
     { name: 'cancel', before: [['Cancel', 89]] },
     { name: 'save', before: [['Save', 31], ['Save and continue', 1], ['Save & continue', 1]] },
     { name: 'done', before: [['Done', 15], ['Got it', 6], ['OK', 5]] },
     { name: 'back', before: [['‹ Back', 8], ['Back', 7], ['‹', 1], ['arrow', 1], ['arrow back', 1]] },
     { name: 'reload', before: [['Try again', 18], ['Retry', 3], ['Reload', 1]] },
-    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] }
+    { name: 'add', before: [['Add', 12], ['+ New', 2], ['+ Add', 2], ['New', 1], ['+ Add a rule', 1], ['+ add section', 1], ['+ add detail', 1], ['add', 1]] },
+    { name: 'delete', before: [['Delete', 4]] },
+    { name: 'edit', before: [['Edit', 10], ['Change', 10], ['pencil Edit', 3], ['Edit arrow', 1]] },
+    { name: 'search', before: [['Search', 2]] },
+    { name: 'clear', before: [['clear', 9]] },
+    { name: 'notnow', before: [['Not now', 6]] },
+    { name: 'help', before: [['?', 3]] },
+    { name: 'info', before: [['info glyph', 1]] },
+    { name: 'more', before: [['more', 2], ['More', 1], ['ellipsis', 1]] },
+    { name: 'screenhelp', before: [['"?" beside a section title (helpQ, app.html), 18 px, no fixed place', 2]] },
+    { name: 'home', before: [['⌂ Home link drawn by hand in the shared shell, 26 px wide on a phone', 1]] },
+    { name: 'assistant', before: [['💬 Assistant pill drawn by hand with inline style, app.html', 1]] },
+    { name: 'menu', before: [['☰ drawer button in the main top bar, 32 x 29 px, no component code', 1]] },
+    { name: 'legend', before: [['key button in the main top bar, 34 px, no component code', 1]] },
+    { name: 'activity', before: [['bell button in the main top bar, 34 px, no component code', 1]] },
+    { name: 'choice', before: [['Open · Away · Closed as a plain select, 30 px high, app.html', 1]] }
   ];
   /** the component rows: which factory, the object the accessible name carries, and the options a real mount would give it */
   /* a mock record states its own currency (N1: no page guesses India's): USD, a code no shop here is assumed to hold */
@@ -61,8 +77,27 @@ var CBUiStandard = (function () {
     { name: 'add', object: 'row', opts: {} },
     { name: 'remove', object: 'row', opts: {}, confirmKind: 'remove' },
     { name: 'reload', object: 'list', opts: {} },
-    { name: 'open', object: 'guide', opts: {} }
+    { name: 'open', object: 'guide', opts: {} },
+    { name: 'delete', object: 'supplier', opts: {}, confirmKind: 'delete' },
+    { name: 'edit', object: 'supplier', opts: {} },
+    { name: 'search', object: 'list', opts: {} },
+    { name: 'clear', object: 'search', opts: {} },
+    { name: 'notnow', object: 'tip', opts: {} },
+    { name: 'help', object: 'page', opts: {} },
+    { name: 'info', object: 'field', opts: {} },
+    { name: 'more', object: 'row', opts: {} },
+    { name: 'screenhelp', object: '', opts: {} }
   ];
+  /* the components added after the dialog row's literal mount (U115) was fixed: drawn after it, from U120, so no mount is used twice */
+  var SHELL_ROWS = [
+    { name: 'home', object: '', opts: { href: '#', display: 'icon+label', size: 'compact', surface: 'shell' } },
+    { name: 'assistant', object: '', opts: { surface: 'float' } },
+    { name: 'menu', object: '', opts: { display: 'icon', surface: 'topbar' } },
+    { name: 'legend', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
+    { name: 'activity', object: '', opts: { display: 'icon+label', size: 'compact', surface: 'topbar' } },
+    { name: 'background', object: '', opts: {} }
+  ];
+  var SHELL_ROWS_FIRST_MOUNT = 125;
   var TOKENS = [
     ['--act-h', 'Button height'], ['--act-pad', 'Side padding'], ['--act-radius', 'Corner radius'], ['--act-font', 'Text size'],
     ['--act-weight', 'Text weight'], ['--accent', 'Fill of the main button'], ['--accent-ink', 'Text on that fill'],
@@ -90,9 +125,12 @@ var CBUiStandard = (function () {
     tokens: 'M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3c0-5-4-11-8-11z',
     themes: 'M12 3v18M3 12h18M5 5l14 14M19 5L5 19',
     meets: 'M5 12l4 4 10-10',
-    before: 'M4 5h7v14H4zM13 5h7v14h-7z'
+    before: 'M4 5h7v14H4zM13 5h7v14h-7z',
+    waves: 'M3 18c3 0 3-12 6-12s3 12 6 12 3-12 6-12'
   };
   var counters = { mount: 0, control: 0 };
+  /** the waves data (public/app/ui-waves.json), read once by loadWaves(); null until it arrives */
+  var wavesData = null;
 
   /* ── words: the page's own strings through tx(), the language held in the page (never in storage) ── */
   function words(text) {
@@ -170,6 +208,9 @@ var CBUiStandard = (function () {
     if (kind === 'remove') {
       return { title: words('Remove this supplier?'), body: '<p>' + esc(formatWords('Remove {name} from this list?', { name: MOCK.recipients[0] })) + '</p>', yes: words('Remove') };
     }
+    if (kind === 'delete') {
+      return { title: words('Delete this supplier?'), body: '<p>' + esc(formatWords('Delete {name} for good? This cannot be undone.', { name: MOCK.recipients[0] })) + '</p>', yes: words('Delete'), danger: true };
+    }
     var amount = fmtMoney(MOCK.amount, MOCK.currency) + ' (' + MOCK.currency + ')';
     return {
       title: words('Post this bill?'),
@@ -180,7 +221,7 @@ var CBUiStandard = (function () {
     };
   }
   /** what the toast says for each press: the result in words, in the chosen language; a remove also offers Undo in the same bar */
-  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', save: 'Settings saved' };
+  var RESULTS = { post: 'Bill posted', remove: 'Supplier removed', delete: 'Supplier deleted', save: 'Settings saved' };
   /**
    * CBAction.run says a bare "Done" when the press returns (ui.js passes it no sentence), so the result is said one tick later and replaces it.
    * ui.js should pass done / outcome through to CBAction.run; until then this is the page's own way to show the standard.
@@ -241,13 +282,102 @@ var CBUiStandard = (function () {
   function dialogRow() {
     var component = ui.components.dialog;
     return '<section class="crow" data-testid="gal-row-CMP002"><div class="cid"><span class="chip" data-testid="gal-code">CMP002</span><b>' + esc(words('Example dialog')) + '</b>' +
-      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">SHOW dialog</span></span></div>' +
-      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U61', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + ' dialog</span></span></div>' +
+      '<div class="states"><figure class="st"><div class="slot">' + ui.action('open', { mount: SCREEN + '-U115', object: 'dialog', onPress: openExampleDialog, testid: 'gal-open-dialog' }) +
       '</div><figcaption>ui.dialog()</figcaption></figure></div></section>';
+  }
+  /* CMP020 progress: the three levels, each a real button running a fake wait (no api). The times are short so the demo is quick to try. */
+  var DEMO_QUICK_MS = 150, DEMO_SLOW_MS = 2500, DEMO_STEP_MS = 800;
+  var DEMO_STEP_LINES = ['Reading the file', 'Checking each row', 'Saving the rows', 'Almost done'];
+  function wait(milliseconds) {
+    return new Promise(function (resolve) { setTimeout(resolve, milliseconds); });
+  }
+  /** levels 1 and 2: the press already runs through CBAction (busy, one press); the progress component adds the spinner and words after its delay */
+  function demoInline(milliseconds) {
+    return function (button) {
+      var busy = ui.progress.inline(button, words('Saving…'));
+      return wait(milliseconds).then(busy.stop);
+    };
+  }
+  /** level 3: a panel with "Step n of m" and a plain line; Cancel stops the fake import (safe: nothing was written) */
+  function demoPanel() {
+    var cancelled = false;
+    var importProgress = ui.progress.start({ mount: SCREEN + '-D02-U01', label: 'Importing your file', steps: DEMO_STEP_LINES.length, line: words(DEMO_STEP_LINES[0]), delay: 0, cancel: function () { cancelled = true; } });
+    DEMO_STEP_LINES.reduce(function (chain, line, index) {
+      return chain.then(function () { return wait(DEMO_STEP_MS); }).then(function () {
+        if (cancelled) return;
+        if (index === DEMO_STEP_LINES.length - 1) importProgress.done();
+        else importProgress.step(words(DEMO_STEP_LINES[index + 1]));
+      });
+    }, Promise.resolve());
+  }
+  /* CMP026 batch progress: forty mock chits on a timer (no api), the 17th fails, so the failed count and the list show */
+  var DEMO_BATCH_TICK_MS = 120, DEMO_BATCH_FAIL_AT = 5;
+  /** one demo run: eight items open the centre panel, forty the corner tray (every batch starts in the panel and moves to the tray after ui.progress.batch.trayAfterMs, or at once with Run in background; the tray class starts in the tray); the 5th item fails so the count and the list show */
+  function demoBatch(total, mount, speed) {
+    return function () {
+      var batch = ui.progress.batch({ mount: mount, label: 'Assigning chits', total: total, unit: 'assigned', speed: speed, delay: 0, cancel: function () {} });
+      function next(index) {
+        if (batch.cancelled()) return;
+        if (index > total) { batch.finish(); return; }
+        if (index === DEMO_BATCH_FAIL_AT) batch.failed([formatWords('Chit {n}', { n: index })], words('No reply from the demo'));
+        else batch.done();
+        setTimeout(function () { next(index + 1); }, DEMO_BATCH_TICK_MS);
+      }
+      next(1);
+    };
+  }
+  function progressCell(caption, button) {
+    return '<figure class="st"><div class="slot">' + button + '</div><figcaption>' + esc(words(caption)) + '</figcaption></figure>';
+  }
+  function progressRow() {
+    var component = ui.components.progress;
+    return '<section class="crow" data-testid="gal-row-CMP020"><div class="cid"><span class="chip" data-testid="gal-code">CMP020</span><b>' + esc(words('Progress')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN progress</span> · parts <span class="mono">CMP021 ' +
+      esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP022 ' + esc(ui.components.spinner.label) + '</span></span></div><div class="states">' +
+      progressCell('Quick: nothing shows', ui.action('save', { mount: SCREEN + '-U116', object: 'reply', effect: 'preference', testid: 'gal-progress-quick', onPress: demoInline(DEMO_QUICK_MS) })) +
+      progressCell('Slow: the button goes busy', ui.action('save', { mount: SCREEN + '-U117', object: 'settings', effect: 'preference', testid: 'gal-progress-slow', onPress: demoInline(DEMO_SLOW_MS) })) +
+      progressCell('Long: a panel with steps', ui.action('open', { mount: SCREEN + '-U118', object: 'import', testid: 'gal-progress-long', onPress: demoPanel })) +
+      '</div></section>';
+  }
+  /** CMP025 Choice: the segmented choice in its three values; a press moves the selection (no api, nothing is saved) */
+  function choiceRow() {
+    var component = ui.components.choice;
+    var group = ui.choice({ mount: SCREEN + '-U140', label: 'Shop status', value: 'open', size: 'compact', testid: 'gal-choice', items: [{ value: 'open', label: 'Open' }, { value: 'away', label: 'Away' }, { value: 'closed', label: 'Closed' }], onChange: function () {} });
+    return '<section class="crow" data-testid="gal-row-CMP025"><div class="cid"><span class="chip" data-testid="gal-code">CMP025</span><b>' + esc(words('Choice')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + ' choice</span></span></div>' +
+      '<div class="states"><figure class="st"><div class="slot">' + group + '</div><figcaption>ui.choice()</figcaption></figure></div></section>';
+  }
+  function batchRow() {
+    var component = ui.components.batch;
+    return '<section class="crow" data-testid="gal-row-CMP026"><div class="cid"><span class="chip" data-testid="gal-code">CMP026</span><b>' + esc(words('Batch progress')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch progress</span> · parts <span class="mono">CMP021 ' + esc(ui.components.progressbar.label) + '</span> <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' +
+      progressCell('Try 8 items', ui.action('open', { mount: SCREEN + '-U119', object: 'batch', testid: 'gal-progress-batch-panel', onPress: demoBatch(8, SCREEN + '-D03-U01') })) +
+      progressCell('Try 40 items', ui.action('open', { mount: SCREEN + '-U120', object: 'batch tray', testid: 'gal-progress-batch-tray', onPress: demoBatch(40, SCREEN + '-D04-U01') })) +
+      progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
+      '</div></section>';
+  }
+  /** CMP032 Batch job note: every state of a saved job in words, each its own standard text key (the batch bar itself is CMP026, the corner tray CMP027) */
+  function batchNoteRow() {
+    var component = ui.components.batchnote, batch = ui.progress.batch;
+    var sample = { done: 12, total: 40, left: 28, failed: 0, seconds: 15 };
+    var cells = batch.noteKinds.map(function (kind) {
+      var values = kind === 'doneAll' ? { done: 40 } : kind === 'doneFailed' ? { done: 38, failed: 2 } : kind === 'stopped' ? { done: 20, left: 20 } : sample;
+      return '<figure class="st"><div class="slot"><p class="note" data-testid="gal-note-' + kind + '">' + esc(batch.noteWords(kind, values)) + '</p></div><figcaption><span class="mono">' + component.code + '.' + kind + '</span></figcaption></figure>';
+    }).join('');
+    return '<section class="crow" data-testid="gal-row-CMP032"><div class="cid"><span class="chip" data-testid="gal-code">CMP032</span><b>' + esc(words('Batch job note')) + '</b>' +
+      '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">OPEN batch job note</span> · under <span class="mono">CMP026 ' + esc(ui.components.batch.label) + '</span> and <span class="mono">CMP027 ' + esc(ui.components.batchtray.label) + '</span></span></div><div class="states">' + cells + '</div></section>';
   }
   function componentsPanel() {
     var rows = ROWS.map(componentRow);
-    rows.splice(1, 0, dialogRow());
+    var dialog = dialogRow();
+    counters.mount = SHELL_ROWS_FIRST_MOUNT;
+    rows.splice(1, 0, dialog);
+    rows = rows.concat(SHELL_ROWS.map(componentRow));
+    rows.push(choiceRow());
+    rows.push(progressRow());
+    rows.push(batchRow());
+    rows.push(batchNoteRow());
     return rows.join('');
   }
 
@@ -426,7 +556,61 @@ var CBUiStandard = (function () {
       });
   }
 
+  /* ── waves: one row per wave from public/app/ui-waves.json, a progress bar (CMP021) and a before to after pair each ── */
+  var STATUS_WORDS = { done: 'Done', 'in progress': 'In progress', next: 'Next', 'landed, measuring': 'Landed, measuring' };
+  /** a whole number with thousands separators, the same in every language so the figures line up with the register */
+  function figure(value) {
+    return Number(value).toLocaleString('en-US');
+  }
+  /** a number not measured yet is null: say measuring, never a guess */
+  function figureOrMeasuring(value) {
+    return value === null || value === undefined ? words('measuring') : figure(value);
+  }
+  /** one wave's progress: the bar (value of total) and the line under it; a null value draws an empty bar and says measuring */
+  function waveProgress(progress) {
+    var known = progress.value !== null && progress.value !== undefined;
+    var bar = ui.progress.bar({ label: words(progress.label), now: known ? progress.value : 0, max: progress.total });
+    var line = known ? formatWords('{n} of {total}', { n: figure(progress.value), total: figure(progress.total) }) : words('measuring');
+    return '<div class="wv-prog" data-testid="gal-wave-progress"><span class="wv-lab">' + esc(words(progress.label)) + '</span>' + bar + '<span class="wv-num">' + esc(line) + '</span></div>';
+  }
+  /** a before to after pair: the label, then 67 → measuring; the optional total says out of how many */
+  function wavePair(pair) {
+    var total = pair.of ? ' <small>' + esc(formatWords('of {total}', { total: figure(pair.of) })) + '</small>' : '';
+    return '<p class="wv-pair" data-testid="gal-wave-pair"><span class="wv-lab">' + esc(words(pair.label)) + '</span><b>' + esc(figure(pair.before)) + '</b> → <b>' +
+      esc(figureOrMeasuring(pair.after)) + '</b>' + total + '</p>';
+  }
+  function waveRow(wave) {
+    var status = wave.status;
+    return '<section class="crow" data-testid="gal-wave-' + esc(wave.id) + '"><div class="cid"><span class="chip" data-testid="gal-code">' + esc(formatWords('Wave {id}', { id: wave.id })) + '</span>' +
+      '<b>' + esc(words(wave.title)) + '</b><span class="wv-status" data-status="' + esc(status) + '" data-testid="gal-wave-status">' + esc(words(STATUS_WORDS[status] || status)) + '</span>' +
+      '<span class="meta">' + esc(words(wave.offers)) + '</span></div><div class="wv-body">' + waveProgress(wave.progress) + wave.pairs.map(wavePair).join('') + '</div></section>';
+  }
+  /** the Waves section: one row per wave, in the order of the file */
+  function wavesHTML(data) {
+    if (!data || !data.waves) return '<p class="note" data-testid="gal-waves-wait">' + esc(words('measuring')) + '</p>';
+    return data.waves.map(waveRow).join('') + '<p class="note" data-testid="gal-waves-asof">' + esc(formatWords('Measured {date}', { date: data.measured })) + '</p>';
+  }
+  function wavesPanel() {
+    return wavesHTML(wavesData);
+  }
+  /** read the one data file the section draws from (a static file of this site), then draw again; a failed read leaves the section saying measuring */
+  function loadWaves() {
+    /* a static data file of this site: no api, no session; the page's CSP allows connect-src 'self' only */
+    window.fetch('/app/ui-waves.json').then(function (answer) { return answer.json(); }).then(function (data) {
+      wavesData = data;
+      paint();
+    }).catch(function (problem) {
+      if (typeof cblog === 'function') cblog('warn', 'ui-waves.json did not load: ' + problem);
+    });
+  }
+
   /* ── before and after ── */
+  /** the "after" of one census entry: its one component, drawn by its own factory (a link needs an address; the choice is not a button) */
+  function afterOf(entry, component) {
+    if (entry.name === 'choice') return ui.choice({ mount: mountCode(), key: 'before', label: 'Shop status', value: 'open', size: 'compact', items: [{ value: 'open', label: 'Open' }, { value: 'away', label: 'Away' }, { value: 'closed', label: 'Closed' }] });
+    /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
+    return ui.action(entry.name, { mount: mountCode(), href: component.link ? '#' : undefined, object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined, confirm: component.effect === 'commit' ? reachConfirm(entry.name) : undefined });
+  }
   function beforePanel() {
     return CENSUS.map(function (entry) {
       var component = ui.components[entry.name];
@@ -436,7 +620,7 @@ var CBUiStandard = (function () {
       return '<section class="crow" data-testid="gal-before-' + entry.name + '"><div class="cid"><span class="chip">' + component.code + '</span><b>' + esc(words(component.label)) + '</b><span class="meta">' +
         entry.before.length + ' → 1</span></div><div class="ba"><div class="bcol"><h4>' + esc(words('Before')) + '</h4>' + old + '</div><div class="bcol"><h4>' + esc(words('After')) + '</h4>' +
         /* where-used: out-of-scope loop: one call site, many instances; the mount comes from the counter */
-        ui.action(entry.name, { mount: mountCode(), object: entry.name === 'save' ? 'settings' : '', effect: entry.name === 'save' ? 'preference' : undefined }) + '</div></div></section>';
+        afterOf(entry, component) + '</div></div></section>';
     }).join('');
   }
 
@@ -636,8 +820,143 @@ var CBUiStandard = (function () {
     var rows = auditAll();
     var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.2 · SC 2.5.8 Target Size (Minimum)', WCAG_UNDERSTANDING + 'target-size-minimum.html']], custom: targetResult };
     var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', WCAG_UNDERSTANDING + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
-    return MEETS.concat([target, obscured]).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
+    return MEETS.concat([target, obscured], KEY_ROWS).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
       '<section class="country" data-testid="gal-country"><h3>Country rules (UK, EU, US, India, Australia, UAE)</h3><p class="note">Empty on purpose. A country research file will fill this section later; nothing about any country is stated here.</p></section>';
+  }
+
+  /* ── keyboard and focus rows: measured in the browser after the page is drawn (paintLive), never written as a result ── */
+  var NATIVE_FOCUS = 'button, a[href], input, select, textarea, summary';
+  /** a result placeholder; paintLive replaces it with the measured chip */
+  function liveHolder(key) {
+    return function () { return '<span data-live="' + key + '" data-testid="gal-meetlive-wait">' + esc(words('measuring')) + '</span>'; };
+  }
+  /** the controls on show: real buttons, links and boxes that are drawn, enabled, and not the dialog itself */
+  function liveControls() {
+    var found = [].slice.call(document.querySelectorAll('button, a[href], input:not([type="hidden"]), select, textarea, [role="button"]'));
+    return found.filter(function (node) {
+      return !node.closest('#modalhost') && !node.disabled && node.getAttribute('aria-disabled') !== 'true' && node.getClientRects().length > 0;
+    });
+  }
+  /** the words of the label tied to a control: aria-labelledby first, then a label element; empty when it has none */
+  function labelText(node) {
+    var ids = (node.getAttribute('aria-labelledby') || '').split(/s+/).filter(Boolean);
+    var spoken = ids.map(function (id) { var target = document.getElementById(id); return target ? target.textContent : ''; }).join(' ').trim();
+    if (spoken || !node.labels) return spoken;
+    return [].map.call(node.labels, function (label) { return label.textContent; }).join(' ').trim();
+  }
+  /** the words a control carries itself: aria-label, a button's value, its text, or the alt of a picture inside it */
+  function ownWords(node) {
+    var picture = node.querySelector('img[alt]');
+    var typed = /^(button|submit|reset)$/.test(node.type || '') ? String(node.value || '').trim() : '';
+    return (node.getAttribute('aria-label') || '').trim() || typed || (node.textContent || '').trim() || (picture ? picture.getAttribute('alt').trim() : '');
+  }
+  /** the name a screen reader says for a control: its label, else its own words; a title alone is not a name */
+  function nameOf(node) {
+    return labelText(node) || ownWords(node);
+  }
+  function keyboardFacts(nodes) {
+    return { total: nodes.length, out: nodes.filter(function (node) { return node.tabIndex < 0; }).length };
+  }
+  function nameFacts(nodes) {
+    var unnamed = nodes.filter(function (node) { return !nameOf(node); });
+    return { total: nodes.length, unnamed: unnamed.length, titleOnly: unnamed.filter(function (node) { return node.getAttribute('title'); }).length };
+  }
+  /** true when the box has more content than it shows and its overflow lets it scroll, down or sideways */
+  function rolls(node) {
+    var style = getComputedStyle(node), scrolls = /auto|scroll/;
+    if (scrolls.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) return true;
+    return scrolls.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
+  }
+  /** a box that scrolls: reachable when it takes focus itself or holds something that does; named when it says what it is */
+  function scrollFacts() {
+    var areas = [].slice.call(document.querySelectorAll('body *')).filter(function (node) { return node.getClientRects().length > 0 && rolls(node); });
+    var cannotReach = areas.filter(function (node) { return !(node.tabIndex >= 0 || node.querySelector(NATIVE_FOCUS)); });
+    var unnamed = areas.filter(function (node) { return !(node.getAttribute('aria-label') || node.getAttribute('aria-labelledby')); });
+    return { total: areas.length, cannotReach: cannotReach.length, unnamed: unnamed.length };
+  }
+  function pressKey(target, key, shift) {
+    var event = new KeyboardEvent('keydown', { key: key, shiftKey: !!shift, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  }
+  /** Tab at the last button and Shift+Tab at the first must both be taken by the dialog and keep focus inside it */
+  function tabStays(box) {
+    var inside = [].slice.call(box.querySelectorAll(NATIVE_FOCUS)).filter(function (node) { return !node.disabled && node.tabIndex >= 0; });
+    if (!inside.length) return false;
+    inside[inside.length - 1].focus();
+    var forward = pressKey(inside[inside.length - 1], 'Tab', false).defaultPrevented && box.contains(document.activeElement);
+    inside[0].focus();
+    return !!(forward && pressKey(inside[0], 'Tab', true).defaultPrevented && box.contains(document.activeElement));
+  }
+  /** opens the example dialog from a real button of this page and reads where focus goes, whether Tab stays, whether Esc closes, where focus lands; the host is put back as it was */
+  function dialogFacts() {
+    var host = document.getElementById('modalhost'), before = host.innerHTML, opener = probeNode('primary');
+    if (opener) opener.focus();
+    openExampleDialog();
+    var box = host.querySelector('.modal'), facts = { focusIn: !!box && box.contains(document.activeElement) };
+    facts.tabStays = !!box && tabStays(box);
+    pressKey(document.activeElement || document.body, 'Escape', false);
+    facts.escCloses = !host.querySelector('.mover');
+    facts.focusBack = backOnOpener(facts, opener);
+    host.innerHTML = before;
+    if (opener) opener.focus();
+    return facts;
+  }
+  /** true only when focus went in, Esc closed the popup, and focus is now on the button that opened it */
+  function backOnOpener(facts, opener) {
+    return !!opener && facts.focusIn && facts.escCloses && document.activeElement === opener;
+  }
+  function yesNo(flag) {
+    return flag ? 'yes' : 'no';
+  }
+  function keyVerdict(ok, detail) {
+    return { ok: ok, text: (ok ? 'PASS' : 'FAIL') + ' · ' + detail };
+  }
+  function judgeFocusIn(facts) {
+    return keyVerdict(facts.focusIn, 'focus ' + (facts.focusIn ? 'moved into the popup' : 'stayed on the page'));
+  }
+  function judgeTrap(facts) {
+    return keyVerdict(facts.tabStays && facts.escCloses && facts.focusBack, 'Tab stays ' + yesNo(facts.tabStays) + ' · Esc closes ' + yesNo(facts.escCloses) + ' · focus back ' + yesNo(facts.focusBack));
+  }
+  function judgeKeys(facts) {
+    return keyVerdict(facts.out === 0, facts.out + ' of ' + facts.total + ' cannot be reached by Tab');
+  }
+  function judgeNames(facts) {
+    return keyVerdict(facts.unnamed === 0, facts.unnamed + ' of ' + facts.total + ' have no name (' + facts.titleOnly + ' only a title)');
+  }
+  function judgeScroll(facts) {
+    return keyVerdict(facts.cannotReach === 0 && facts.unnamed === 0, facts.total + ' scrolling here · ' + facts.cannotReach + ' cannot be reached · ' + facts.unnamed + ' without a name');
+  }
+  /** the six keyboard rules of the Meets tab: the rule, what the page measures, where the standard says it, and the key paintLive fills */
+  var KEY_ROWS = [
+    { rule: 'A popup puts the cursor on its first field, or on the safe button when it asks you to confirm.', proof: 'The Example dialog is opened from a real button here and the page reads where the focus went.', live: 'dialog-focus',
+      sources: [['WAI-ARIA APG Dialog (Modal)', 'https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/'], ['WCAG 2.4.3 Focus Order', WCAG_UNDERSTANDING + 'focus-order.html']] },
+    { rule: 'Tab stays inside a popup, Esc closes it, and you land back on the button you pressed.', proof: 'The same dialog is sent Tab at its last button, Shift+Tab at its first, then Esc; the page reads where the focus is.', live: 'dialog-trap',
+      sources: [['WAI-ARIA APG Dialog (Modal)', 'https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/'], ['WCAG 2.1.2 No Keyboard Trap', WCAG_UNDERSTANDING + 'no-keyboard-trap.html']] },
+    { rule: 'Every button and box works from the keyboard alone.', proof: 'Every drawn, enabled control on this page is checked: Tab must reach it.', live: 'keys',
+      sources: [['WCAG 2.1.1 Keyboard', WCAG_UNDERSTANDING + 'keyboard.html']] },
+    { rule: 'Every button and box has a name, not only a hover tip.', proof: 'Every drawn control on this page is read for its name: a label, its words or aria-label. A title alone does not count.', live: 'names',
+      sources: [['WCAG 4.1.2 Name, Role, Value', WCAG_UNDERSTANDING + 'name-role-value.html'], ['WCAG 1.1.1 Non-text Content', WCAG_UNDERSTANDING + 'non-text-content.html']] },
+    { rule: 'A state is said in words or shown by a shape, never by fading alone.', proof: 'A rule, not a measure here: the walk looks for a state carried only by opacity on each screen.', live: null,
+      sources: [['WCAG 1.4.1 Use of Color', WCAG_UNDERSTANDING + 'use-of-color.html'], ['WCAG 1.4.11 Non-text Contrast', WCAG_UNDERSTANDING + 'non-text-contrast.html']] },
+    { rule: 'A list that scrolls can be reached with Tab and has a name.', proof: 'Every box on this page that scrolls is checked for Tab focus (itself or something inside) and a name.', live: 'scroll',
+      sources: [['WCAG 2.1.1 Keyboard', WCAG_UNDERSTANDING + 'keyboard.html'], ['axe scrollable-region-focusable', 'https://dequeuniversity.com/rules/axe/4.10/scrollable-region-focusable']] }
+  ].map(function (item) {
+    item.custom = item.live ? liveHolder(item.live) : function () { return '<span data-testid="gal-meetlive-walk">' + esc(words('checked by the walk, not on this page')) + '</span>'; };
+    return item;
+  });
+  /** fills each placeholder with its measured chip; only the Meets tab holds any, and no result is written before it is read */
+  function paintLive() {
+    var holders = [].slice.call(document.querySelectorAll('#content [data-live]'));
+    if (!holders.length) return;
+    var dialog = dialogFacts(), controls = liveControls();
+    var results = { 'dialog-focus': judgeFocusIn(dialog), 'dialog-trap': judgeTrap(dialog), keys: judgeKeys(keyboardFacts(controls)), names: judgeNames(nameFacts(controls)), scroll: judgeScroll(scrollFacts()) };
+    holders.forEach(function (node) {
+      var result = results[node.getAttribute('data-live')];
+      node.className = result.ok ? 'pass' : 'fail';
+      node.setAttribute('data-testid', 'gal-meetlive-' + (result.ok ? 'pass' : 'fail'));
+      node.textContent = result.text;
+    });
   }
 
   /* ── paint: the whole page again, from state ── */
@@ -658,7 +977,7 @@ var CBUiStandard = (function () {
     root.style.setProperty('--act-font', preset.font + 'px');
   }
   function panelHTML() {
-    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, meets: meetsPanel, before: beforePanel };
+    var panels = { components: componentsPanel, popups: popupsPanel, icons: iconsPanel, tokens: tokensPanel, themes: themesPanel, meets: meetsPanel, before: beforePanel, waves: wavesPanel };
     return '<p class="line" data-testid="gal-line">' + esc(words(TAB_LINE[state.tab])) + '</p>' + panels[state.tab]();
   }
   function paint() {
@@ -675,6 +994,7 @@ var CBUiStandard = (function () {
     paintFocus();
     paintType();
     paintOverlay();
+    paintLive();
     if (document.querySelector('#modalhost .mover')) openExampleDialog();
   }
   function onSwitch(event) {
@@ -756,7 +1076,8 @@ var CBUiStandard = (function () {
     window.modal = modal;
     window.closeModal = closeModal;
     paint();
+    loadWaves();
     whenFacesLoad();
   }
-  return { start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
+  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, SHELL_ROWS: SHELL_ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll, KEY_ROWS: KEY_ROWS, meetsRowHTML: meetsRowHTML, judge: { focusIn: judgeFocusIn, trap: judgeTrap, keys: judgeKeys, names: judgeNames, scroll: judgeScroll } };
 })();

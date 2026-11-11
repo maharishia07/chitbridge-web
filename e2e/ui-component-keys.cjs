@@ -33,15 +33,15 @@ function loadLibrary(source) {
   vm.runInContext(source, sandbox);
   return sandbox.window.ui;
 }
-const textOf = (html) => html.slice(html.indexOf('>') + 1, html.lastIndexOf('</button>'));
+const textOf = (html) => html.slice(html.indexOf('>') + 1, html.lastIndexOf('</'));
 const ariaOf = (html) => (html.match(/aria-label="([^"]*)"/) || [])[1] || null;
-const OPTIONS_FOR = { save: { effect: 'preference' }, remove: { confirmedBy: 'page' } };
+const OPTIONS_FOR = { home: { href: '/' }, save: { effect: 'preference' }, remove: { confirmedBy: 'page' }, delete: { confirmedBy: 'page' } };
 
 /** every failure of one copy of ui.js, as sentences */
 function keyFailures(source) {
   const failures = [];
   const library = loadLibrary(source);
-  Object.keys(library.components).filter((name) => name !== 'dialog').forEach((name) => {
+  Object.keys(library.components).filter((name) => name !== 'dialog' && !library.components[name].nonButton).forEach((name) => {
     const component = library.components[name];
     const plain = library.action(name, Object.assign({ mount: 'TST001-U01' }, OPTIONS_FOR[name] || {}));
     const named = library.action(name, Object.assign({ mount: 'TST001-U01', object: 'thing' }, OPTIONS_FOR[name] || {}));
@@ -59,7 +59,8 @@ function packFailures(library) {
     const component = library.components[name];
     keys.push(component.code + '.label');
     if (component.shown && /\w/.test(component.shown)) keys.push(component.code + '.shown');
-    if (name !== 'dialog') keys.push(component.code + '.aria');
+    if (name !== 'dialog' && !component.nonButton) keys.push(component.code + '.aria');
+    if (name === 'progress') ['working', 'step', 'count', 'finished', 'failed'].forEach((part) => keys.push(component.code + '.' + part));
   });
   LANGS.forEach((lang) => {
     const maps = { [lang]: {} };

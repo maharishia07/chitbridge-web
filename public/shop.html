@@ -81,6 +81,7 @@
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="app/accounts-shell.js"></script>   <!-- INT6a-LOCALE: the string door (CBSTR · cbLang · tx) — the shop had none, so no language pack could load here -->
@@ -1522,7 +1523,7 @@ function render(data) {
     var vizBadge = viz.enabled
       ? '<div style="margin:0 0 9px;font-size:11.5px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:6px 10px;display:inline-block">✨ ' +
         esc(viz.label || 'Scan your home') +
-        ' — see it on your wall <span style="color:#9aa3a7">· from ' +
+        ' — see it on your wall <span style="color:#5E594D">· from ' +
         esc(item.title || 'the brand') +
         '</span></div>'
       : '';
