@@ -6,6 +6,7 @@
      product-lab.html  tableFits / paintNoMoney : no rupee suggestion and the api's one sentence for a shop with no money
      promo.html        money / live / paintNoMoney : no figure and the till snapshot's one sentence
      standards.html : no India default (source check: the literal is gone)
+   a11y: the refusal block carries no colour of its own (the slip's AA contrast is unchanged).
    Run: node tests/ctry-72-no-country-refusal.test.cjs */
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0;

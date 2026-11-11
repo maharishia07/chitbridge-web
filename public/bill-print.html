@@ -82,7 +82,7 @@
     </select>
   </label>
   <label>Bill
-    <select id="kind" onchange="render()">
+    <select id="kind" onchange="show()">
       <option value="cash">Cash memo — unregistered shop</option>
       <option value="supply">Bill of supply — composition</option>
       <option value="tax">Tax invoice — registered</option>
@@ -284,8 +284,11 @@ function when(date) {
 function paintRefusal() {
   document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
 }
+/** the one door every repaint goes through: the slip when the shop has tax words, else the refusal (render() itself needs them) */
+function show() {
+  return taxWords() ? render() : paintRefusal();
+}
 function render() {
-  if (!taxWords()) return paintRefusal();
   var kind = document.getElementById('kind').value;
   var m = calc(kind);
   var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
@@ -453,7 +456,7 @@ function setW(w) {
       return e;
     })();
   node.textContent = page;
-  render();
+  show();
 }
 setW('80');
 </script>
