@@ -4687,6 +4687,8 @@ function setSession(s) {
   try {
     mePrefetchStart();
   } catch (_) {}
+  /* a person signing in (not a refresh of the same token) picks up their own saved jobs; bulkResume is idempotent and skips other people's entries */
+  if (typeof bulkResume === 'function') setTimeout(bulkResume, 0);
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession() {
@@ -16873,14 +16875,7 @@ async function prodAvailApply(status) {
     const product = (UI.prods || []).find((x) => prodId(x) === id);
     return (product && pData(product).name) || tx('Product');
   };
-  const result = await groupRunSteps(ids, { mount: 'CAT001-U51', speed: 'quick', verb: 'set availability', label: 'Updating products', unit: 'updated', name: nameOf }, async (chunk) => {
-    const out = await api('prodStatusBulk', { body: { ids: chunk, status: status } });
-    const missedIds = (out && out.missed) || [];
-    return {
-      done: chunk.filter((id) => !missedIds.includes(id)),
-      failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' }))
-    };
-  });
+  const result = await groupJob(ids, { ep: 'prodStatusBulk', mount: 'CAT001-U51', speed: 'quick', verb: 'set availability', label: 'Updating products', unit: 'updated', name: nameOf, payload: { status } });
   UI.prodPicked.clear();
   tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
   UI.prodPick = result.failed.length > 0 || result.left > 0;
@@ -16892,10 +16887,15 @@ async function prodAvailApply(status) {
   renderApp();
 }
 
+/** an action that cannot resume says so on its box (ui.progress.batch.resumable is the one list) */
+function keepTabOpenNote(batchJob, action) {
+  if (!ui.progress.batch.resumable(action)) batchJob.note('keepopen');
+}
 /** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
 async function prodCategoriseSend(payload) {
   if (!payload.length) return { ok: 0, failed: 0, why: '' };
   const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
+  keepTabOpenNote(step, 'prodBulkUpdate'); /* the whole selection is one all-or-nothing call: it cannot continue after a restart (QA-130) */
   try {
     const out = await api('prodBulkUpdate', { body: { items: payload } });
     const ok = (out && out.updated) || 0;
@@ -23561,7 +23561,7 @@ async function archiveSelected() {
   const ids = (MODALS.arch || {}).ids || [];
   if (!ids.length) return;
   closeModal();
-  const result = await groupRun(ids, { mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' }, (id) => api('archive', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'archive', mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' });
   await afterGroup(result);
   toast(groupToast(result, ' archived'));
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' archived');
@@ -23579,9 +23579,12 @@ function chitNameOf(id) {
   const row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
   return (row && row.code) || tx('Record');
 }
-/** runs perId(id) for every id, in steps of its speed class (quick 10), counting each as done or failed; kind = { mount, speed, verb, label, unit, stopOnFailure } → { done, failed, cancelled, left } */
+/** runs perId(id) for every id, in steps of its speed class (quick 10), counting each as done or failed; kind = { mount, speed, verb, label, unit, stopOnFailure, action } → { done, failed, cancelled, left }.
+ *  This is the IN-TAB path: nothing is stored, so the box says "Keep this tab open" (a kind.action that ui.progress.batch.resumable knows; a resumable one belongs to groupJob). */
 function groupRun(ids, kind, perId) {
   const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
+  if (kind.action && ui.progress.batch.resumable(kind.action)) throw new Error('groupRun: ' + kind.action + ' can resume, send it through groupJob');
+  options.onStart = (batchJob) => batchJob.note('keepopen');
   return ui.progress.batch.run(ids, options, async (chunk) => {
     const done = [];
     const failed = [];
@@ -23604,17 +23607,180 @@ function tickUndone(result, into) {
   result.leftItems.forEach((id) => set.add(id));
 }
 /** after a group action: the records that failed stay ticked, the one that is open closes only if it changed, and the list is read again */
-/** the same runner for an endpoint that takes a whole step: sendChunk(ids) resolves { done: [ids], failed: [{ item, reason }] }; a throw fails the step with the verb's sentence */
-function groupRunSteps(ids, kind, sendChunk) {
-  /* a step that THROWS (400 pull mode, co-assist off shift, 500) has the same cause for every later step, so the run stops and the rest read "not done"; a record the server skips inside a step is just counted failed */
-  const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
-  return ui.progress.batch.run(ids, options, async (chunk) => {
-    try {
-      return await sendChunk(chunk);
-    } catch (e) {
-      return { done: [], failed: chunk.map((id) => ({ item: id, reason: MSG.fail(kind.verb, e) })), stop: true };
-    }
+/* ⭐ SAVE AND RESUME (Athi 11 Nov: a bulk job survives a shutdown). A group action stores EVERY step on this device before step 1 (CBOffline.enqueueJob: the one outbox, no second store), each step
+   with its own Idempotency-Key job:<jobId>:<step> (api(..., { idemKey })), sends them one by one (CBOffline.sendStep: back-off 2, 5, 15, 30 s on a timeout, 503 or 429; a replayed 404 counts as done), and
+   on the next visit bulkResume() lists what is left and the tray carries on. The step list is the whole job: per-record actions send one record a step, the two chunk actions one chunk of the speed class.
+   Status change and categorise are NOT here (QA-130, QA-131): they run through groupRun in the open tab and say so. */
+const BULK_ACTIONS = {
+  archive: { okIf404: true },
+  restore: { okIf404: true },
+  unarchive: { okIf404: true },
+  purgeChit: { okIf404: true },
+  delChit: { okIf404: true },
+  assignBulk: { chunk: true, bodyOf: (chunk, payload) => ({ chit_ids: chunk, target_actor_id: payload.actorId }) },
+  prodStatusBulk: { chunk: true, bodyOf: (chunk, payload) => ({ ids: chunk, status: payload.status }) }
+};
+const BULK_ACTIVE = new Set(); /* the jobs this page is driving now, so a second look never starts one twice */
+const bulkOutbox = () => (typeof window !== 'undefined' && window.CBOffline && window.CBOffline.enqueueJob ? window.CBOffline : null);
+function bulkJobId() {
+  const outbox = bulkOutbox();
+  return outbox ? outbox._uuid() : String(Date.now()) + Math.floor(Math.random() * 1e6);
+}
+/** the steps of a job, one request each: a per-record action one record a step, a chunk action one chunk of its speed class */
+function bulkStepsFor(ids, kind, nameOf) {
+  const action = BULK_ACTIONS[kind.ep];
+  if (!action) throw new Error('groupJob: ' + kind.ep + ' is not a saved-job action');
+  const route = typeof epOf === 'function' ? epOf(kind.ep) : null;
+  const make = (items, params, body) => ({
+    ep: kind.ep, method: route ? route.m : 'POST', path: route && typeof fill === 'function' ? fill(route.p, params || {}) : '', params, body,
+    items, names: items.map(nameOf), okIf404: !!action.okIf404
   });
+  if (action.chunk) return ui.progress.batch.steps(ids, kind.speed).map((chunk) => make(chunk, undefined, action.bodyOf(chunk, kind.payload || {})));
+  return ids.map((id) => make([id], { id }, undefined));
+}
+/** what one answered step says about its records → { done, failed }: assignBulk lists the chits it skipped, prodStatusBulk the ids it missed, a per-record call is done once it answers */
+function bulkAnswerOf(endpoint, items, reply) {
+  if (endpoint === 'assignBulk') {
+    const skipped = (reply && reply.skipped) || [];
+    const skippedIds = skipped.map((entry) => entry.chit_id);
+    return { done: items.filter((id) => !skippedIds.includes(id)), failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' })) };
+  }
+  if (endpoint === 'prodStatusBulk') {
+    const missedIds = (reply && reply.missed) || [];
+    return { done: items.filter((id) => !missedIds.includes(id)), failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' })) };
+  }
+  return { done: items, failed: [] };
+}
+/** the one send of a step, used for the first run and for a resumed one: the same api() call with the step's own key */
+const bulkSend = (step) => api(step.ep, { params: step.params, body: step.body, idemKey: step.id });
+/** one step to the server → the runner's { done, failed, stop }: offline waits for the connection (and says so), a busy server says when it tries again, a step the server refuses fails its records */
+async function bulkStepAnswer(step, kind, outbox, batchJob) {
+  let spoke = false; /* the busy and offline words are said while they are true, then the saved line comes back (once, not after every step) */
+  const hooks = { onWait: (seconds) => { spoke = true; batchJob.note('busy', { seconds }); } };
+  for (;;) {
+    const res = outbox ? await outbox.sendStep(step.id, bulkSend, hooks) : await bulkSendDirect(step);
+    if (res.kind === 'offline') {
+      spoke = true;
+      batchJob.note('offline');
+      await outbox.whenOnline();
+    } else {
+      if (spoke) batchJob.note(outbox && outbox.durable() ? 'saved' : 'private');
+      return res;
+    }
+  }
+}
+/** no outbox in this page (a stand-in): the same call, once, no retry */
+async function bulkSendDirect(step) {
+  try {
+    return { kind: 'done', reply: await bulkSend(step) };
+  } catch (error) {
+    return { kind: 'reject', reason: (error && error.message) || 'failed' };
+  }
+}
+/** runs the steps of a job through the one batch progress; steps carry their own id (job:<id>:<n>) → the runner's result. carried = { resumed, doneAtStart, priorFailed } for a job continued after a restart */
+async function bulkJobRun(meta, kind, steps, carried) {
+  const outbox = bulkOutbox();
+  const stepOfItem = new Map();
+  steps.forEach((step) => step.items.forEach((item) => stepOfItem.set(item, step)));
+  const names = new Map();
+  steps.forEach((step) => step.items.forEach((item, index) => names.set(item, (step.names || [])[index] || String(item))));
+  let handle = { note() {} }; /* the running batch, for the notes a step says */
+  const options = {
+    mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: (item) => names.get(item) || String(item),
+    job: true, durable: !!(outbox && outbox.durable()), doneAtStart: carried.doneAtStart, priorFailed: carried.priorFailed
+  };
+  options.onStart = (batchJob) => { handle = batchJob; };
+  options.prepare = async (batchJob) => {
+    if (carried.resumed) return batchJob.note('resumed', { done: carried.doneAtStart || 0, total: meta.total });
+    batchJob.note('saving');
+    const kept = outbox ? outbox.enqueueJob(meta, steps) : false;
+    batchJob.note(kept ? 'saved' : 'private');
+    if (!kept || !outbox.durable()) batchJob.keepOpen(); /* the device did not keep it after all: leaving the page asks again */
+  };
+  let paused = false;
+  BULK_ACTIVE.add(meta.id);
+  try {
+    return await ui.progress.batch.run([...stepOfItem.keys()], options, async (chunk) => {
+      const answer = { done: [], failed: [] };
+      for (const step of new Set(chunk.map((item) => stepOfItem.get(item)))) {
+        const res = await bulkStepAnswer(step, kind, outbox, handle);
+        if (res.kind === 'stopped') paused = true; /* back-offs used up or the session ended: the rest waits for the next visit */
+        if (res.kind === 'stopped' || res.kind === 'gone') return Object.assign(answer, { stop: true }); /* gone: another tab took the step, so it is left, never counted done */
+        const reply = res.kind === 'reject' ? null : bulkAnswerOf(step.ep, step.items, res.reply);
+        if (reply) {
+          answer.done.push(...reply.done);
+          answer.failed.push(...reply.failed);
+        } else {
+          step.items.forEach((item) => answer.failed.push({ item, reason: MSG.fail(kind.verb, { message: res.reason }) }));
+          if (BULK_ACTIONS[step.ep].chunk) return Object.assign(answer, { stop: true }); /* a refused chunk has the same cause for every later one */
+        }
+      }
+      return answer;
+    });
+  } finally {
+    BULK_ACTIVE.delete(meta.id);
+    if (outbox && paused) outbox.pauseJob(meta.id);
+    else if (outbox) outbox.closeJob(meta.id);
+  }
+}
+/** a group action that survives a restart: kind = { ep, mount, speed, verb, label, unit, name?, payload? } (ep is a BULK_ACTIONS name); → { done, failed, leftItems, cancelled, left } like groupRun */
+function groupJob(ids, kind) {
+  const nameOf = kind.name || chitNameOf;
+  const meta = { id: bulkJobId(), kind: kind.ep, label: kind.label, unit: kind.unit, mount: kind.mount, speed: kind.speed, verb: kind.verb, total: ids.length };
+  return bulkJobRun(meta, kind, bulkStepsFor(ids, kind, nameOf).map((step, index) => Object.assign(step, { id: 'job:' + meta.id + ':' + index })), {});
+}
+/** one saved job, continued: the steps left in the outbox go on in the tray, with what the last run already did counted */
+function bulkJobResume(saved) {
+  const meta = saved.meta;
+  if (bulkOutbox()) bulkOutbox().pauseJob(meta.id, false);
+  const steps = saved.steps.map((entry) => Object.assign({}, entry));
+  const left = steps.reduce((total, step) => total + step.items.length, 0);
+  const priorFailed = [];
+  saved.rejected.forEach((entry) => entry.items.forEach((item, index) => priorFailed.push({ name: (entry.names || [])[index] || String(item), reason: entry.rejected.reason })));
+  const doneAtStart = Math.max(0, meta.total - left - priorFailed.length);
+  const kind = { ep: meta.kind, mount: meta.mount, speed: meta.speed, verb: meta.verb, label: meta.label, unit: meta.unit };
+  return bulkJobRun(meta, kind, steps, { resumed: true, doneAtStart, priorFailed }).then(async (result) => {
+    try {
+      await (meta.kind === 'prodStatusBulk' ? loadCatalogue('fresh') : loadList());
+    } catch (error) {
+      cblog('warn', 'the list did not refresh after a resumed job: ' + (error && error.message));
+    }
+    toast(txf('{done} done', { done: doneAtStart + result.done.length }) + (result.failed.length + priorFailed.length ? ' · ' + txf('{failed} failed', { failed: result.failed.length + priorFailed.length }) : '') + (result.left > 0 ? ' · ' + result.left + ' ' + tx('not done') : ''));
+    return result;
+  });
+}
+/** a job older than the key window (48 h) asks first (the server has forgotten its first steps, so a replay would be a new run); so does a job that stopped part-way (back-offs used up, session ended): Continue goes on, Cancel drops the rest */
+function bulkAskSavedJob(saved) {
+  const days = Math.floor((Date.now() - saved.at) / 86400000);
+  const old = Date.now() - saved.at > window.CBOffline.jobMaxAgeMs;
+  const left = saved.steps.reduce((total, step) => total + step.items.length, 0);
+  const question = old
+    ? txf('This job was saved {days} days ago, so the server may not remember its first steps and some could run twice. Cancel drops the rest of it.', { days: Math.max(2, days) })
+    : txf('This job stopped part-way: {left} not done. Continue it now? Cancel drops the rest of it.', { left });
+  confirmAsk(tx(old ? 'Continue an old job?' : 'Continue your saved job?'), esc(question), tx('Continue'), () => bulkJobResume(saved), false, () => window.CBOffline.closeJob(saved.id));
+}
+/** the outbox removed what was saved offline more than 2 days ago (the server no longer holds its key, so sending it could run it twice): this person's own are named in words, other people's only counted in the log */
+function bulkSweptNotice(swept) {
+  if (swept.others) cblog('info', 'outbox: ' + swept.others + ' old entries of another sign-in were removed');
+  if (!swept.own.length) return;
+  const what = swept.own.slice(0, 3).map((entry) => (entry.method || 'POST') + ' ' + (entry.path || '')).join(', ');
+  toast(txf('Changes saved offline more than 2 days ago were not sent and have been removed ({count}): {what}', { count: swept.own.length, what }));
+}
+/** start-up and sign-in (SEC-140 inside the outbox: only THIS person's entries are listed): queued writes go on, and a saved job goes on in the tray */
+async function bulkResume() {
+  const outbox = bulkOutbox();
+  if (!outbox || !SESSION || !SESSION.token) return;
+  try {
+    await outbox.flush();
+  } catch (error) {
+    cblog('warn', 'the outbox did not flush at start-up: ' + (error && error.message));
+  }
+  for (const saved of outbox.jobs()) {
+    if (BULK_ACTIVE.has(saved.id)) continue;
+    if (!saved.steps.length) outbox.closeJob(saved.id);
+    else if (saved.meta.paused || Date.now() - saved.at > outbox.jobMaxAgeMs) bulkAskSavedJob(saved);
+    else bulkJobResume(saved);
+  }
 }
 async function afterGroup(result) {
   UI.selected.clear();
@@ -23637,7 +23803,7 @@ async function bulkRestore() {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  const result = await groupRun(ids, { mount: 'WRK001-U52', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' }, (id) => api('restore', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'restore', mount: 'WRK001-U52', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' });
   await afterGroup(result);
   toast(result.failed.length || result.cancelled ? groupToast(result, ' restored') : MSG.restored ? MSG.restored(result.done.length) : result.done.length + ' restored');
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' restored');
@@ -23648,7 +23814,7 @@ async function bulkUnarchive() {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  const result = await groupRun(ids, { mount: 'WRK001-U53', speed: 'quick', verb: 'unarchive', label: 'Unarchiving records', unit: 'unarchived' }, (id) => api('unarchive', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'unarchive', mount: 'WRK001-U53', speed: 'quick', verb: 'unarchive', label: 'Unarchiving records', unit: 'unarchived' });
   await afterGroup(result);
   toast(groupToast(result, ' unarchived'));
   announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' unarchived');
@@ -23674,7 +23840,7 @@ function bulkPurge() {
   );
 }
 async function _bulkPurge(ids) {
-  const result = await groupRun(ids, { mount: 'WRK001-U54', speed: 'tray', verb: 'delete', label: 'Deleting records', unit: 'deleted' }, (id) => api('purgeChit', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'purgeChit', mount: 'WRK001-U54', speed: 'tray', verb: 'delete', label: 'Deleting records', unit: 'deleted' });
   await afterGroup(result);
   const blocked = result.failed.length;
   toast(result.done.length + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
@@ -23683,7 +23849,7 @@ async function _bulkPurge(ids) {
 async function confirmDelete() {
   const ids = MODALS.del.ids;
   closeModal();
-  const result = await groupRun(ids, { mount: 'WRK001-U55', speed: 'tray', verb: 'delete', label: 'Moving records to Trash', unit: 'moved' }, (id) => api('delChit', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'delChit', mount: 'WRK001-U55', speed: 'tray', verb: 'delete', label: 'Moving records to Trash', unit: 'moved' });
   /* repaint what really moved: those rows leave the list, the ones that failed stay ticked */
   UI.rows = UI.rows.filter((item) => !result.done.includes(item.id));
   if (UI.sel && result.done.includes(UI.sel)) {
@@ -23702,7 +23868,7 @@ async function confirmDelete() {
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
 async function restoreChits(ids) {
-  const result = await groupRun(ids, { mount: 'WRK001-U56', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' }, (id) => api('restore', { params: { id } }));
+  const result = await groupJob(ids, { ep: 'restore', mount: 'WRK001-U56', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' });
   const ok = result.done.length;
   try {
     await loadList();
@@ -28383,15 +28549,7 @@ async function assignBulkChits(ids, actorId) {
   const who = a ? a.name : 'the co-assist';
   announce(txn('Moving {count} record to {who}', 'Moving {count} records to {who}', ids.length, { who: who }));
   /* ⭐ the same endpoint and body, one call per step of the speed class (the server commits each call whole, and its capacity gate reads the co-assist's load again for each) */
-  const result = await groupRunSteps(ids, { mount: 'WRK001-U58', speed: 'slow', verb: 'assign those', label: 'Assigning records', unit: 'assigned' }, async (chunk) => {
-    const reply = await api('assignBulk', { body: { chit_ids: chunk, target_actor_id: actorId } });
-    const skipped = (reply && reply.skipped) || [];
-    const skippedIds = skipped.map((entry) => entry.chit_id);
-    return {
-      done: chunk.filter((id) => !skippedIds.includes(id)),
-      failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' }))
-    };
-  });
+  const result = await groupJob(ids, { ep: 'assignBulk', mount: 'WRK001-U58', speed: 'slow', verb: 'assign those', label: 'Assigning records', unit: 'assigned', payload: { actorId } });
   UI.selectMode = result.failed.length > 0 || result.left > 0; /* the failed and not-done ticks stay visible */
   await afterGroup(result);
   renderApp();
@@ -30302,11 +30460,20 @@ route();
       token: function () {
         return SESSION && SESSION.token;
       },
+      /* SEC-140: every queued entry carries who queued it, and only that person's session replays it. Read from the token's own ids (the same for a co-assist before and after the profile loads), not from UI._me */
+      entity: function () {
+        return SESSION && (SESSION.actorId || SESSION.entityId);
+      },
+      onSwept: bulkSweptNotice,
       onChange: cbPill
     });
     /* not on the load right after a clean-up: the slate stays clean until the next visit */ if (!(typeof CLEAN_LOAD !== 'undefined' && CLEAN_LOAD))
       CBOffline.registerSW('/cb-sw.js');
-  } catch (e) {}
+    /* start-up: once the session is here, what this person left half done goes on (queued writes, and a saved bulk job in the tray) */
+    setTimeout(bulkResume, 0);
+  } catch (e) {
+    cblog('warn', 'offline outbox did not start: ' + (e && e.message));
+  }
 })();
 </script>
 </body>

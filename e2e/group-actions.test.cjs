@@ -58,7 +58,11 @@ function sourceOf(name) {
   if (start < 0) throw new Error('no function ' + name);
   return html.slice(start, html.indexOf('\n}\n', start) + 3);
 }
-['chitNameOf', 'groupRun', 'groupRunSteps', 'tickUndone', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
+['chitNameOf', 'groupRun', 'tickUndone', 'afterGroup', 'groupToast', 'bulkRestore', 'restoreChits', 'confirmDelete', 'statusStepBody', 'bulkJobIdOf', 'markStatusMoved', 'confirmStatus', 'assignBulkChits', 'prodAvailApply'].forEach((name) => vm.runInContext(sourceOf(name), sandbox));
+/* the saved-job block (BULK_ACTIONS … bulkResume) is one run of consts and functions: cut from its marker to the end of bulkResume */
+const jobStart = html.indexOf('/* ⭐ SAVE AND RESUME');
+const jobEnd = html.indexOf('\n}\n', html.indexOf('async function bulkResume(')) + 3;
+vm.runInContext(html.slice(jobStart, jobEnd), sandbox);
 const ui = sandbox.ui, batch = ui.progress.batch;
 const ids = (n) => Array.from({ length: n }, (_, i) => 'c' + (i + 1));
 const reset = () => { lastUndo = null; calls.length = 0; tray = null; root = null; panelHtml = []; toasts = []; failOn = null; state.selected = new Set(); state.rows = []; };

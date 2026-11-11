@@ -435,6 +435,7 @@ const OUTBOX_KEYS = new Set([
   'supPatch',
   'prodDel',
   'prodEdit',
+  'prodStatusBulk', // a bulk job step: sets a status and answers the ids it missed; a repeat only re-stamps who and when
   'folderRename',
   'folderDelete',
   'folderMove',
