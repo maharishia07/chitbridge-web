@@ -2018,6 +2018,8 @@ const EP = {
   prodStatusBulk: { m: 'POST', p: '/api/products/status/bulk', ok: 'y' }, // {ids:[…], status}
   /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
   prodBulkUpdate: { m: 'POST', p: '/api/products/bulk-update', ok: 'y' }, // {items:[{id,item_data}]}
+  /* ⭐ QA-130: add / remove a category per product — never the record; a repeat changes nothing, so a run can be resumed */
+  prodBulkCategories: { m: 'POST', p: '/api/products/categories/bulk', ok: 'y' }, // {ids:[…], add?:[categoryId], remove?:[categoryId]} → {results:[{id, result: done|unchanged|refused}]}
   prodStarters: { m: 'GET', p: '/api/products/starter-columns', ok: '✓' }, // the standard column set for a trade
   prodStarterAdopt: { m: 'POST', p: '/api/products/starter-columns', ok: '✓' }, // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
@@ -16892,83 +16894,47 @@ async function prodAvailApply(status) {
   renderApp();
 }
 
-/** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
-async function prodCategoriseSend(payload) {
-  if (!payload.length) return { ok: 0, failed: 0, why: '' };
-  const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
-  try {
-    const out = await api('prodBulkUpdate', { body: { items: payload } });
-    const ok = (out && out.updated) || 0;
-    const missedCount = (out && out.missed && out.missed.length) || 0;
-    step.done(ok);
-    if (missedCount) step.failed(missedCount, tx('could not be found'));
-    return { ok: ok, failed: missedCount, reasonText: '' };
-  } catch (e) {
-    const inv = e && e.invalid;
-    const reasonText = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
-    step.failed(payload.length, reasonText.replace(/^ · /, ''));
-    return { ok: 0, failed: payload.length, reasonText: reasonText };
-  } finally {
-    step.finish();
-  }
-}
 /**
- * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
- * why it takes loads of time, are you going round trip for each product?"*
- *
- * He was right and this was the loop he meant. It ran `await api('prodEdit')` once per product, SEQUENTIALLY,
- * each waiting for the one before and each paying for its own schema lookup, currency lookup, validation,
- * BEGIN, set_config, UPDATE and COMMIT. Tick forty rows and that is forty round trips before the screen
- * returns — at the measured ~500ms floor, most of a minute.
- *
- * ⚠️ AND IT COUNTED FAILURES WITHOUT NAMING THEM. A rejected row left the category attached to 39 of 40 and the
- * toast said "39 updated" without saying which one did not move. The bulk route validates everything before
- * writing anything and reports the ids it could not find.
+ * ⭐⭐ ADD OR REMOVE A CATEGORY, PER PRODUCT — QA-130 (Athi, 11 Nov: a category is a classification, many per product, mostly set once).
+ * The step sends "add these / remove these" for its few products and NEVER the record (that was prodBulkUpdate's replace-write, which overwrote a newer
+ * edit of the same product and could not be repeated). The server answers each product done, unchanged (it already was so) or refused, and writes nothing
+ * for an unchanged one, so a step sent twice, or a run started again after a shutdown, changes nothing it should not: the action is safe to resume.
+ * ⚠️ ONE ROUND TRIP A STEP, NOT ONE PER PRODUCT (Athi, 2026-09-01: *"are you going round trip for each product?"*), and a refused product is named, never
+ * counted away in silence. A category that carries a tax rate is attached exactly as a single attach does (no rate gate is added or dropped here).
  */
 async function prodCategoriseApply() {
   const node = UI._catgBulk;
   if (!node) return;
   const err = document.getElementById('bulk_err');
   if (!node.add.size && !node.remove.size) {
-    if (err) err.textContent = 'Pick at least one category to attach or remove.';
+    if (err) err.textContent = tx('Pick at least one category to attach or remove.');
     return;
   }
   closeModal();
-
-  /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
-  const payload = [];
-  let unknown = 0;
-  for (const id of node.ids) {
-    const p = (UI.prods || []).find((x) => prodId(x) === id);
-    if (!p) {
-      unknown++;
-      continue;
-    }
-    const d = Object.assign({}, pData(p));
-    const list = catgIdsOf(d).slice();
-    /* ⚠️ ATTACH IS ADDITIVE and removal is explicit — a bulk action that REPLACED the set would silently strip
-       memberships that were never on screen. Unchanged from the loop this replaces. */
-    node.add.forEach((item) => {
-      if (list.indexOf(item) < 0) list.push(item);
-    });
-    const next = list.filter((item) => !node.remove.has(item));
-    catgSetOn(d, next);
-    payload.push({ id: id, item_data: d });
-  }
-
-  const sent = await prodCategoriseSend(payload);
-  const ok = sent.ok;
-  const failed = unknown + sent.failed;
-  const reasonText = sent.reasonText;
-
+  const nameOf = (id) => {
+    const product = (UI.prods || []).find((x) => prodId(x) === id);
+    return (product && pData(product).name) || tx('Product');
+  };
+  let alreadySo = 0;
+  const result = await groupRunSteps(node.ids, { mount: 'CAT001-U52', speed: 'slow', verb: 'categorise', label: 'Categorising products', unit: 'updated', name: nameOf }, async (chunk) => {
+    const out = await api('prodBulkCategories', { body: { ids: chunk, add: Array.from(node.add), remove: Array.from(node.remove) } });
+    const lines = (out && out.results) || [];
+    const refused = lines.filter((line) => line.result === 'refused');
+    alreadySo += lines.filter((line) => line.result === 'unchanged').length;
+    return {
+      done: lines.filter((line) => line.result !== 'refused').map((line) => line.id),
+      failed: refused.map((line) => ({ item: line.id, reason: tx('could not be found') }))
+    };
+  });
   UI.prodPicked.clear();
-  UI.prodPick = false;
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
   UI._catgBulk = null;
   await loadCatalogue('fresh');
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
-  /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
-     nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'));
+  /* ⚠️ Say what did not move: a bulk action that says "done" while three rows stayed put is the reason nobody trusts bulk actions. */
+  const changed = result.done.length - alreadySo;
+  toast(changed + ' ' + tx('updated') + (alreadySo ? ' · ' + alreadySo + ' ' + tx('already so') : '') + (result.failed.length ? ' · ' + result.failed.length + ' ' + tx('could not be saved') : '') + (result.left > 0 ? ' · ' + result.left + ' ' + tx('not done') : ''));
   renderApp();
 }
 /**
