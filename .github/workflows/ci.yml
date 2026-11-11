@@ -93,8 +93,8 @@ jobs:
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
           node e2e/group-actions.test.cjs
-          node e2e/qa130-categorise.test.cjs
           node e2e/ui-batch-clock.test.cjs
+          node e2e/bulk-resume.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs

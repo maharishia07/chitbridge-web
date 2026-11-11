@@ -435,6 +435,8 @@ const OUTBOX_KEYS = new Set([
   'supPatch',
   'prodDel',
   'prodEdit',
+  'prodBulkCategories', // QA-130 a bulk job step: add or remove a category per product; each product answers done, unchanged or refused, so a repeat changes nothing
+  'prodStatusBulk', // a bulk job step: sets a status and answers the ids it missed; a repeat only re-stamps who and when
   'folderRename',
   'folderDelete',
   'folderMove',
@@ -1274,7 +1276,8 @@ function api(key, opts) {
 }
 
 /* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
-function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt) {
+function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt, stepKey) {
+  if (stepKey) return stepKey; /* QA-131: a caller's own key (one per record step of a bulk job) wins, so a resend of a step is a replay */
   if (outboxSafe && CB) return CB._uuid();
   const fresh = () => (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId);
   if (endpoint.idem === 'attempt' && endpoint.m !== 'GET' && attempt) return _attempts[attempt] || (_attempts[attempt] = fresh());
@@ -1320,7 +1323,7 @@ function answerWords(body) {
   var answer = body || {};
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
-async function apiOnce(key, { params, query, body } = {}) {
+async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
   cblog('debug', ep.m + ' ' + key);
@@ -1358,7 +1361,7 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt);
+    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt, stepKey);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {

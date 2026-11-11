@@ -55,8 +55,8 @@ of file each thing is; this says what already does the job.
 | 43 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 43 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 42 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 42 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 42 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
-| 41 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 41 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 41 | `rules` | `docnumber.js` | the rule set for a country — |
 | 41 | `live` | `receivables.js` | the allocations that still count: |
@@ -84,6 +84,7 @@ of file each thing is; this says what already does the job.
 | 32 | `lines` | `cart.js` |  |
 | 32 | `refuse` | `books-pack.js` | const sha = (text) => |
 | 32 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
+| 31 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 31 | `sentence` | `one-person.js` |  |
 | 31 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 31 | `note` | `dbwatch.js` |  |
@@ -101,7 +102,6 @@ of file each thing is; this says what already does the job.
 | 28 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 28 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 28 | `owner` | `books.js` |  |
-| 27 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 27 | `opts` | `cap-stock.js` |  |
 | 27 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
@@ -144,11 +144,11 @@ of file each thing is; this says what already does the job.
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 19 | `chip` | `screen-id.js` | var S = { app: |
 | 19 | `panel` | `sides.js` |  |
+| 19 | `later` | `signin-ui.js` |  |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 18 | `step` | `cart.js` |  |
 | 18 | `today` | `kural.js` |  |
 | 18 | `more` | `lab-kit.js` | idKey: |
-| 18 | `later` | `signin-ui.js` |  |
 | 18 | `verify` | `bookpack.js` | manifest's own hash. |
 | 18 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
@@ -164,6 +164,8 @@ of file each thing is; this says what already does the job.
 | 17 | `label` | `screen-id.js` |  |
 | 17 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
+| 16 | `done` | `attach-ui.js` |  |
+| 16 | `close` | `avatar.js` |  |
 | 16 | `message` | `cap-print.js` | the one message: |
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
@@ -206,5 +208,3 @@ of file each thing is; this says what already does the job.
 | 14 | `sheet` | `stock-store.js` | the shop's whole shelf, for a report — |
 | 13 | `save` | `app.html` |  |
 | 13 | `units` | `cart.js` |  |
-| 13 | `pick` | `showcase-templates.js` | the template a shop uses: |
-| 13 | `dialog` | `ui.js` | modal(); the corner X is modal()'s own .mx. |
