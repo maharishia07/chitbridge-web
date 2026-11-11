@@ -75,7 +75,7 @@
         }
         return reply.json().then(function (json) {
           if (!(reply.status === 409 && json && json.code === 'IDEMPOTENCY_IN_PROGRESS')) delete attempts[attempt];
-          if (!reply.ok) throw new Error(json.detail || json.title || json.error || 'Failed');
+          if (!reply.ok) throw new Error(answerWords(json) || 'Failed');
           return json && 'data' in json ? json.data : json;
         });
       }

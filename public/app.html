@@ -15289,7 +15289,7 @@ async function supCatalogueFull(sid) {
     let msg = '';
     try {
       const j = await res.json();
-      msg = j.message || j.error || '';
+      msg = answerWords(j);
     } catch (_) {}
     throw new Error(msg || 'Could not read their catalogue (' + res.status + ')');
   }
@@ -18018,7 +18018,7 @@ async function exportCatalogueCSV(btn) {
       let msg = '';
       try {
         const j = await res.json();
-        msg = j.message || j.error || '';
+        msg = answerWords(j);
       } catch (_) {}
       throw new Error(msg || 'Export failed (' + res.status + ')');
     }
