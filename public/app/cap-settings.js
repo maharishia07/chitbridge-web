@@ -606,6 +606,19 @@ var CBSettings = (function () {
     readCtr();
   }
 
+  /* ═════ KEYS FOR OTHER SYSTEMS — what other systems (and each counter PC) sign in with. MOVED from Counters & keys to Connectors
+   *  (WALK-REG R29/R31, 16 Oct: keys belong with the connectors that use them); the ONE list, painted into the page's
+   *  #sx_key_bar · #sx_key_out · #sx_key_list. `after` runs after a revoke (a counter's key: the page re-reads what it shows). ═════ */
+  /** the Keys heading, with what a key is behind ⓘ (one place for the sentence; Connectors and Account both paint it) */
+  function keysHead() {
+    return (
+      '<h2 class="sx-h2">' +
+      esc(T('Keys for other systems')) +
+      ' <span class="sx-why" title="' +
+      esc(T('A key lets another system or a counter PC sign in as your shop.')) +
+      '" style="cursor:help;opacity:.7">ⓘ</span></h2>'
+    );
+  }
   function keysHTML() {
     /* WALK-REG (Athi, 16 Oct: 'we will hide key complexity ourselves and work through login credentials'): signing in + Download / pairing mint the key behind the scenes;
      * the raw key list is folded away as Advanced, never in the way */
