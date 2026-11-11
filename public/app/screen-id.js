@@ -153,6 +153,7 @@
           ['OPS002', 'suppliers', 'Suppliers']
         ]
       },
+      { app: 'terms', name: 'Terms and privacy', page: '/terms.html', rows: [['TRM001', 'terms', 'Terms and privacy']] } /* SEC-70: the signed-out page the register line opens */,
       { app: 'employees', name: 'Employees', page: '/employees.html', rows: [['EMP001', 'people', 'People']] },
       {
         app: 'catalogue',

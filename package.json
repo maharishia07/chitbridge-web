@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:syntax": "node scripts/check-syntax.js",
+    "check:terms": "node e2e/terms-page.test.cjs",
     "check:engines": "node ../chitbridge-engines/tools/adopt.cjs . --check",
     "check:pins": "node e2e/engines-pins-agree.cjs",
     "check:adoption": "node scripts/check-adoption.js",
