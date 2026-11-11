@@ -9,7 +9,7 @@
  *   4  keyboard: ↑ ↓ move between rows · Enter opens · ← → open / close · Esc closes a popover and gives the focus back · ← → on a column edge resize by 8 px
  *   5  drag a column edge, reload: the width holds (and double-click resets)
  *   6  scroll 2,000 px: the column header, the tools row and the title row do not move; the PAGE does not scroll; group rows stick under the header
- *   7  the head is ≤ 20% of a 1366×768 window and ≤ 30% of 390×844, on every list
+ *   7  the head is ≤ 20% of a 1366×768 window and ≤ 36% of 390×844 (was 30% until the 44 px tap rule of 10 Nov; Athi decides if the phone head is redesigned instead), on every list
  *   +  the four states (loading under a kept header · empty · no match + Clear · could not load + Try again), the ⚙ chooser, ▤ / ☰, ⇣ / ⇡,
  *      grouping, filters, lazy rows (the count is the true one), bulk, dark theme, ARIA
  * Screenshots: e2e/shots/cblist-{daybook,dues}-{laptop,phone}.png (the unit's own gallery) · cblist-lab-laptop.png
@@ -325,7 +325,7 @@ const THROWING_STORAGE = () => { const boom = function () { throw new Error('sto
     for (const k of ['daybook', 'dues', 'big']) {
       await pick(m, k);
       const pct = await headPct(m);
-      ok(pct <= 30, 'phone 390×844 · ' + k + ': the head is ' + pct + '% of the window (≤ 30%)');
+      ok(pct <= 36, 'phone 390×844 · ' + k + ': the head is ' + pct + '% of the window (≤ 36%)');
       for (const v of ['grid', 'lines']) {
         await m.click('[data-view="' + v + '"]'); await m.waitForTimeout(60);
         const w = await m.evaluate(() => ({ doc: document.documentElement.scrollWidth, list: document.querySelector('.cbl-list').scrollWidth, cw: document.querySelector('.cbl-list').clientWidth, vw: window.innerWidth }));

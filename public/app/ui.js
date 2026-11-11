@@ -127,7 +127,20 @@ var CBUi = (function () {
     menu: { code: 'CMP028', element: 'CMP028-B01', label: 'Menu', shown: '☰', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true },
     legend: { code: 'CMP029', element: 'CMP029-B01', label: 'Capabilities', shown: 'Capabilities', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
     activity: { code: 'CMP030', element: 'CMP030-B01', label: 'Activity', shown: 'Activity', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', labelClass: 'hw' },
-    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' }
+    more: { code: 'CMP018', element: 'CMP018-B01', label: 'More', shown: '⋯', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nameOnly: true, popup: 'menu' },
+    /* Athi 11 Nov (wave 2, customer side, step 1): the list control's own components. list-ctl.js (CBList) reads nothing from its page, so it cannot call
+       ui.action: it writes these elements itself with their register codes (data-cbsid), and CMP009 Try again / CMP014 Clear are its reused mounts. Registered here so the
+       code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP032 I01 search, I02 date, I03 tick; CMP033 B01 opener
+       (period, notices, Filters, Columns, header filter), D01 popover, M01 menu choice; CMP034 B01 pressed toggle; CMP035 S01 select; CMP036 K01 saved-view tab;
+       CMP037 B01 CSV, B02 reset columns, B03 select all shown, B04 bulk action, B05 show more; CMP038 B01 row action; CMP039 B01 sort, B02 resize, B03 move column. */
+    listfield: { code: 'CMP032', element: 'CMP032-I01', label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listopener: { code: 'CMP033', element: 'CMP033-B01', label: 'List opener', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listtoggle: { code: 'CMP034', element: 'CMP034-B01', label: 'List toggle', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listselect: { code: 'CMP035', element: 'CMP035-S01', label: 'List select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listtab: { code: 'CMP036', element: 'CMP036-K01', label: 'List tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listcommand: { code: 'CMP037', element: 'CMP037-B01', label: 'List command', verb: 'DOWNLOAD', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listrowaction: { code: 'CMP038', element: 'CMP038-B01', label: 'List row action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listcolumn: { code: 'CMP039', element: 'CMP039-B01', label: 'List column header', verb: 'MOVE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;

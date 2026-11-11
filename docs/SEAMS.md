@@ -93,11 +93,11 @@ of file each thing is; this says what already does the job.
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 30 | `hold` | `orders.js` |  |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
+| 29 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 29 | `sheet` | `cap-employees.js` |  |
 | 29 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 29 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 29 | `mine` | `crm.js` | the party must be on this shop's list (the same test the log uses) |
-| 28 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
 | 28 | `money` | `cart.js` |  |
 | 28 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 28 | `guess` | `move-in.js` | `table` (optional, PR1): |
@@ -207,5 +207,5 @@ of file each thing is; this says what already does the job.
 | 13 | `save` | `app.html` |  |
 | 13 | `units` | `cart.js` |  |
 | 13 | `pick` | `showcase-templates.js` | the template a shop uses: |
+| 13 | `choice` | `ui.js` | ui.choice({ mount, key, label, value, items: |
 | 13 | `dialog` | `ui.js` | modal(); the corner X is modal()'s own .mx. |
-| 13 | `actions` | `workflow.js` | actions(chit, me) — |

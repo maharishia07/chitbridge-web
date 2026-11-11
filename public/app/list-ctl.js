@@ -53,6 +53,14 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  /* ── UX-137 IDENTITY ── every control below carries data-cbsid, the code of its component element in the one register (CMP032-CMP039 are this
+     unit's own; CMP009 Try again and CMP014 Clear are reused). The mount (data-cbmount) is the screen's code from the screen chip + U1nn; a
+     page without the chip has no mount, the element keeps its code. Nothing is read from a page global: this is a DOM attribute, read at paint. */
+  function mountAttribute(code) {
+    var chip = root.document && root.document.querySelector && root.document.querySelector('[data-testid="screen-id"][data-cbsid]');
+    var screen = chip ? chip.getAttribute('data-cbsid') : '';
+    return /^[A-Z]{3}\d{3}$/.test(screen || '') ? ' data-cbmount="' + screen + '-U1' + String(code).slice(-2) + '"' : '';
+  }
   function plain(h) {
     return String(h == null ? '' : h)
       .replace(/<[^>]*>/g, '')
@@ -242,7 +250,19 @@
     '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
     '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
     '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
-    '}'
+    '}',
+    /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
+    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px;vertical-align:middle}.cbl .cbl-search input{align-self:stretch}',
+    '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
+    '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
+    '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
+    '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
+    '@container screen (max-width: 640px){.cbl .cbl-w{display:none}}',
+    '@media (max-width:700px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
+    '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:28px;height:28px}',
+    /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
+    '.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
+    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}'
   ].join('\n');
   function injectCss() {
     var d = root.document;
@@ -799,7 +819,7 @@
     if (h.period) {
       var p = h.period;
       out +=
-        '<span class="cbl-anchor"><button type="button" class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
+        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
         (list.pop === 'period') +
         '" data-testid="cbl-period-' +
         esc(list.key) +
@@ -816,7 +836,7 @@
       };
     var noteHTML = function (n, i) {
       return (
-        '<button type="button" class="cbl-chip ' +
+        '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
         esc(n.cls === 'bad' ? 'bad' : 'warn') +
         '" data-notice="' +
         i +
@@ -834,7 +854,7 @@
         return item.cls === 'bad';
       });
       out +=
-        '<span class="cbl-anchor"><button type="button" class="cbl-chip ' +
+        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
         (notes.length ? (bad ? 'bad' : 'warn') : '') +
         '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' +
         (list.pop === 'notes') +
@@ -844,7 +864,7 @@
         esc(T(list, notes.length ? '{n} notices' : '{n} details', { n: chips.length + notes.length })) +
         ' ▾</button>' +
         (list.pop === 'notes'
-          ? '<div class="cbl-pop left" role="dialog" aria-label="' +
+          ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
             esc(T(list, 'Notices')) +
             '" data-testid="cbl-notes-pop-' +
             esc(list.key) +
@@ -876,23 +896,23 @@
     var presets = p.presets || [],
       nestedVal = I.pv || p.value;
     return (
-      '<div class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
       esc(T(I, 'Period')) +
       '"><h4>' +
       esc(T(I, 'Period')) +
       '</h4><div class="cbl-preset">' +
       presets
         .map(function (x) {
-          return '<button type="button" data-period="' + esc(x[0]) + '" aria-pressed="' + (nestedVal === x[0]) + '">' + esc(x[1]) + '</button>';
+          return '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-period="' + esc(x[0]) + '" aria-pressed="' + (nestedVal === x[0]) + '">' + esc(x[1]) + '</button>';
         })
         .join('') +
       '</div>' +
       (nestedVal === 'custom'
-        ? '<div class="cbl-custom"><input data-cbl-from type="date" value="' +
+        ? '<div class="cbl-custom"><input data-cbsid="CMP032-I02"' + mountAttribute('CMP032') + ' data-cbl-from type="date" value="' +
           esc((p.custom && p.custom.from) || '') +
           '" aria-label="' +
           esc(T(I, 'From')) +
-          '"> → <input data-cbl-to type="date" value="' +
+          '"> → <input data-cbsid="CMP032-I02"' + mountAttribute('CMP032') + ' data-cbl-to type="date" value="' +
           esc((p.custom && p.custom.to) || '') +
           '" aria-label="' +
           esc(T(I, 'To')) +
@@ -929,6 +949,99 @@
       return typeof x === 'object' ? x : { v: x, label: x };
     });
   }
+  /** the Expand all / Collapse all toggle of a list that has a next level (a pressed toggle, CMP034) */
+  function expandAllHTML(list, keyText, testIds) {
+    var runState = list.r;
+    return (
+    '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn cbl-ico" data-cbl-exp data-testid="' +
+    esc(runState.allOpen ? testIds.collapse || 'cbl-expand-' + keyText : testIds.expand || 'cbl-expand-' + keyText) +
+    '" title="' +
+    esc(T(list, runState.allOpen ? 'Collapse all' : 'Expand all')) +
+    '" aria-label="' +
+    esc(T(list, runState.allOpen ? 'Collapse all' : 'Expand all')) +
+    '" aria-pressed="' +
+    !!runState.allOpen +
+    '">' +
+    (runState.allOpen ? '⇡' : '⇣') +
+    '<span class="cbl-w"> ' +
+    esc(T(list, runState.allOpen ? 'Collapse all' : 'Expand all')) +
+    '</span>' +
+    '</button>'
+    );
+  }
+  /** the Grid / Lines choice (two pressed toggles, CMP034): each draws its word beside the glyph, a phone keeps only the glyph and the aria-label */
+  function viewChoiceHTML(list, keyText) {
+    var viewState = list.s;
+    return (
+    '<span class="cbl-seg" role="group" aria-label="' +
+    esc(T(list, 'View')) +
+    '"><button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-view="grid" data-testid="view-grid-' +
+    keyText +
+    '" title="' +
+    esc(T(list, 'Grid: columns')) +
+    '" aria-label="' +
+    esc(T(list, 'Grid: columns')) +
+    '" aria-pressed="' +
+    (viewState.view === 'grid') +
+    '">▤' +
+    '<span class="cbl-w"> ' + esc(T(list, 'Grid')) + '</span></button><button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-view="lines" data-testid="view-lines-' +
+    keyText +
+    '" title="' +
+    esc(T(list, 'Lines: one line per record')) +
+    '" aria-label="' +
+    esc(T(list, 'Lines: one line per record')) +
+    '" aria-pressed="' +
+    (viewState.view === 'lines') +
+    '">☰' +
+    '<span class="cbl-w"> ' + esc(T(list, 'Lines')) + '</span></button></span>'
+    );
+  }
+  /** the right-hand tools of the second row: expand all, grid / lines, columns, CSV, select mode (each a list component: CMP033 to CMP037) */
+  function viewToolsHTML(list, keyText, testIds, toolOptions) {
+    var listOptions = list.o,
+      runState = list.r,
+      viewState = list.s,
+      toolsHtml = '';
+    if (hasNext(list)) toolsHtml += expandAllHTML(list, keyText, testIds);
+    toolsHtml += viewChoiceHTML(list, keyText);
+    toolsHtml +=
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
+      keyText +
+      '" data-testid="cols-btn-' +
+      keyText +
+      '" title="' +
+      esc(T(list, 'Choose columns')) +
+      '" aria-label="' +
+      esc(T(list, 'Choose columns')) +
+      '" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'cols') +
+      '">⚙' +
+      '<span class="cbl-w"> ' + esc(T(list, 'Columns')) + '</span></button>' +
+      (list.pop === 'cols' ? colsPop(list) : '') +
+      '</span>';
+    if (listOptions.csv !== false && toolOptions.csv !== false)
+      toolsHtml +=
+        '<button type="button" data-cbsid="CMP037-B01"' + mountAttribute('CMP037') + ' class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' +
+        esc(testIds.csv || 'cbl-csv-' + keyText) +
+        '" title="' +
+        esc(T(list, 'Download CSV')) +
+        '" aria-label="' +
+        esc(T(list, 'Download CSV')) +
+        '">⬇' +
+        '<span class="cbl-w"> ' + esc(T(list, 'CSV')) + '</span></button>';
+    if (listOptions.bulk && listOptions.bulk.length)
+      toolsHtml +=
+        '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
+        (runState.selMode ? ' on' : '') +
+        '" data-cbl-selmode data-testid="cbl-select-' +
+        keyText +
+        '" aria-pressed="' +
+        !!runState.selMode +
+        '">☑ ' +
+        esc(T(list, 'Select')) +
+        '</button>';
+    return toolsHtml;
+  }
   function paintTools(list) {
     paintViews(list);
     var box = $(list, ':scope > .cbl-tools');
@@ -953,7 +1066,7 @@
       h =
         tl.search === false
           ? ''
-          : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' +
+          : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbsid="CMP032-I01"' + mountAttribute('CMP032') + ' data-cbl-q id="cbl-q-' +
             k +
             '" data-testid="listctl-search-' +
             k +
@@ -969,7 +1082,7 @@
        filters gets the Filters ▾ too (a change goes to its pager, the unit still filters nothing itself); sorts alone show it only when the unit sorts (not remote) or the list opted in */
     if ((o.filters && o.filters.length) || ((!remote(list) || o.remote.filters === true) && sorts.length > 1)) {
       h +=
-        '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' +
+        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn' +
         (fn ? ' on' : '') +
         '" data-cbl-pop="filt" id="cbl-filt-' +
         k +
@@ -997,7 +1110,7 @@
         k +
         '">' +
         esc(T(list, 'Group')) +
-        '</span><select data-gsel id="cbl-gsel-' +
+        '</span><select data-cbsid="CMP035-S01"' + mountAttribute('CMP035') + ' data-gsel id="cbl-gsel-' +
         k +
         '" data-testid="' +
         esc(g.tid ? g.tid + '-group' : 'cbl-gsel-' + k) +
@@ -1033,7 +1146,7 @@
         g.options
           .map(function (x) {
             return (
-              '<button type="button" data-group="' +
+              '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-group="' +
               esc(x[0]) +
               '"' +
               (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') +
@@ -1046,73 +1159,7 @@
           })
           .join('') +
         '</span>';
-    if (hasNext(list))
-      h +=
-        '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-exp data-testid="' +
-        esc(R.allOpen ? tids.collapse || 'cbl-expand-' + k : tids.expand || 'cbl-expand-' + k) +
-        '" title="' +
-        esc(T(list, R.allOpen ? 'Collapse all' : 'Expand all')) +
-        '" aria-label="' +
-        esc(T(list, R.allOpen ? 'Collapse all' : 'Expand all')) +
-        '" aria-pressed="' +
-        !!R.allOpen +
-        '">' +
-        (R.allOpen ? '⇡' : '⇣') +
-        '</button>';
-    h +=
-      '<span class="cbl-seg" role="group" aria-label="' +
-      esc(T(list, 'View')) +
-      '"><button type="button" data-view="grid" data-testid="view-grid-' +
-      k +
-      '" title="' +
-      esc(T(list, 'Grid: columns')) +
-      '" aria-label="' +
-      esc(T(list, 'Grid: columns')) +
-      '" aria-pressed="' +
-      (s.view === 'grid') +
-      '">▤</button><button type="button" data-view="lines" data-testid="view-lines-' +
-      k +
-      '" title="' +
-      esc(T(list, 'Lines: one line per record')) +
-      '" aria-label="' +
-      esc(T(list, 'Lines: one line per record')) +
-      '" aria-pressed="' +
-      (s.view === 'lines') +
-      '">☰</button></span>';
-    h +=
-      '<span class="cbl-anchor"><button type="button" class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
-      k +
-      '" data-testid="cols-btn-' +
-      k +
-      '" title="' +
-      esc(T(list, 'Choose columns')) +
-      '" aria-label="' +
-      esc(T(list, 'Choose columns')) +
-      '" aria-haspopup="dialog" aria-expanded="' +
-      (list.pop === 'cols') +
-      '">⚙</button>' +
-      (list.pop === 'cols' ? colsPop(list) : '') +
-      '</span>';
-    if (o.csv !== false && tl.csv !== false)
-      h +=
-        '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' +
-        esc(tids.csv || 'cbl-csv-' + k) +
-        '" title="' +
-        esc(T(list, 'Download CSV')) +
-        '" aria-label="' +
-        esc(T(list, 'Download CSV')) +
-        '">⬇</button>';
-    if (o.bulk && o.bulk.length)
-      h +=
-        '<button type="button" class="cbl-tbtn' +
-        (R.selMode ? ' on' : '') +
-        '" data-cbl-selmode data-testid="cbl-select-' +
-        k +
-        '" aria-pressed="' +
-        !!R.selMode +
-        '">☑ ' +
-        esc(T(list, 'Select')) +
-        '</button>';
+    h += viewToolsHTML(list, k, tids, tl);
     if (tl.count !== false)
       h +=
         '<span class="cbl-count" id="cbl-count-' +
@@ -1127,13 +1174,13 @@
       h +=
         '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' +
         k +
-        '"><button type="button" class="cbl-btn" data-cbl-selall>' +
+        '"><button type="button" data-cbsid="CMP037-B03"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-selall>' +
         esc(T(list, 'Select all shown')) +
         '</button>' +
         o.bulk
           .map(function (item) {
             return (
-              '<button type="button" class="cbl-btn" data-bulk="' +
+              '<button type="button" data-cbsid="CMP037-B04"' + mountAttribute('CMP037') + ' class="cbl-btn" data-bulk="' +
               esc(item.id) +
               '"' +
               (n ? '' : ' disabled') +
@@ -1159,7 +1206,7 @@
             esc(item.label || item.key) +
             ': ' +
             esc(ov ? ov.label : R.filt[item.key]) +
-            '<button type="button" data-unfilt="' +
+            '<button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' data-unfilt="' +
             esc(item.key) +
             '" aria-label="' +
             esc(T(list, 'Remove {x} filter', { x: item.label || item.key })) +
@@ -1267,7 +1314,7 @@
           ).length,
           on = viewOn(I, item);
         return (
-          '<button type="button" role="tab" class="cbl-vtab" data-view-tab="' +
+          '<button type="button" data-cbsid="CMP036-K01"' + mountAttribute('CMP036') + ' role="tab" class="cbl-vtab" data-view-tab="' +
           esc(item.key) +
           '" aria-selected="' +
           on +
@@ -1296,7 +1343,7 @@
     var at = list.hfAt || { l: 8, t: 100 },
       cur = list.r.filt[fk] || '';
     return (
-      '<div class="cbl-pop hf" role="menu" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop hf" role="menu" aria-label="' +
       esc(f.label || fk) +
       '" data-testid="cbl-hf-pop-' +
       esc(fk) +
@@ -1305,7 +1352,7 @@
       'px;top:' +
       Math.round(at.t) +
       'px">' +
-      '<button type="button" role="menuitemradio" aria-checked="' +
+      '<button type="button" data-cbsid="CMP033-M01"' + mountAttribute('CMP033') + ' role="menuitemradio" aria-checked="' +
       !cur +
       '" data-hfv="" data-hfk="' +
       esc(fk) +
@@ -1315,7 +1362,7 @@
       fopts(f)
         .map(function (x) {
           return (
-            '<button type="button" role="menuitemradio" aria-checked="' +
+            '<button type="button" data-cbsid="CMP033-M01"' + mountAttribute('CMP033') + ' role="menuitemradio" aria-checked="' +
             (cur === x.v) +
             '" data-hfv="' +
             esc(x.v) +
@@ -1355,7 +1402,7 @@
       st = I.s.sort,
       cur = st ? st.key : (I.o.sorts || [])[0] && I.o.sorts[0].key;
     return (
-      '<div class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
       esc(T(I, 'Filters')) +
       '" data-testid="cbl-filters-pop-' +
       esc(I.key) +
@@ -1371,7 +1418,7 @@
             esc(item.key) +
             '">' +
             esc(item.label || item.key) +
-            '</span><select aria-labelledby="cbl-fl-' +
+            '</span><select data-cbsid="CMP035-S01"' + mountAttribute('CMP035') + ' aria-labelledby="cbl-fl-' +
             esc(I.key) +
             '-' +
             esc(item.key) +
@@ -1400,7 +1447,7 @@
           esc(I.key) +
           '">' +
           esc(T(I, 'Sort by')) +
-          '</span><select aria-labelledby="cbl-sl-' +
+          '</span><select data-cbsid="CMP035-S01"' + mountAttribute('CMP035') + ' aria-labelledby="cbl-sl-' +
           esc(I.key) +
           '" data-cbl-sort id="cbl-sort-' +
           esc(I.key) +
@@ -1414,7 +1461,7 @@
             .join('') +
           '</select></div>'
         : '') +
-      '<div class="cbl-acts"><button type="button" class="cbl-btn" data-cbl-clearf>' +
+      '<div class="cbl-acts"><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clearf>' +
       esc(T(I, 'Clear all')) +
       '</button></div></div>'
     );
@@ -1436,7 +1483,7 @@
       return (
         '<div class="cbl-colrow">' +
         (on
-          ? '<button type="button" class="cbl-mv" data-mv="' +
+          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
             esc(c.key) +
             '" data-d="-1"' +
             (i === 0 ? ' disabled' : '') +
@@ -1448,7 +1495,7 @@
           : '<span class="cbl-mvsp"></span>') +
         '<label' +
         (c.key === top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') +
-        '><input type="checkbox" data-col="' +
+        '><input data-cbsid="CMP032-I03"' + mountAttribute('CMP032') + ' type="checkbox" data-col="' +
         esc(c.key) +
         '" data-testid="cols-' +
         k +
@@ -1464,7 +1511,7 @@
           : '') +
         '</label>' +
         (on
-          ? '<button type="button" class="cbl-mv" data-mv="' +
+          ? '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-mv="' +
             esc(c.key) +
             '" data-d="1"' +
             (i === shown.length - 1 ? ' disabled' : '') +
@@ -1478,7 +1525,7 @@
       );
     }
     return (
-      '<div class="cbl-pop" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" aria-label="' +
       esc(T(I, 'Choose columns')) +
       '" data-testid="cols-menu-' +
       k +
@@ -1500,7 +1547,7 @@
             })
             .join('')
         : '') +
-      '<div class="cbl-acts"><button type="button" class="cbl-btn" data-cbl-resetcols data-testid="cols-reset-' +
+      '<div class="cbl-acts"><button type="button" data-cbsid="CMP037-B02"' + mountAttribute('CMP037') + ' class="cbl-btn" data-cbl-resetcols data-testid="cols-reset-' +
       k +
       '">' +
       esc(T(I, 'Reset to the standard columns')) +
@@ -1580,7 +1627,7 @@
         esc(er.title || T(I, 'The list could not load.')) +
         '</div>' +
         esc(er.sub || T(I, 'Nothing was lost. Try again in a moment.')) +
-        '<br><button type="button" class="cbl-btn" data-cbl-retry>' +
+        '<br><button type="button" data-cbsid="CMP009-B01"' + mountAttribute('CMP009') + ' class="cbl-btn" data-cbl-retry>' +
         esc(T(I, 'Try again')) +
         '</button></div>';
       return;
@@ -1597,7 +1644,7 @@
           esc(T(I, 'Nothing matches.')) +
           '</div>' +
           esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
-          '<br><button type="button" class="cbl-btn" data-cbl-clear>' +
+          '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
           esc(T(I, 'Clear search and filters')) +
           '</button></div>';
       } else if (remote(I) && narrowed) {
@@ -1608,7 +1655,7 @@
           esc(T(I, 'Nothing matches.')) +
           '</div>' +
           esc(R.q ? '“' + R.q + '” ' + T(I, 'matches nothing here.') : T(I, 'These filters match nothing here.')) +
-          '<br><button type="button" class="cbl-btn" data-cbl-clear>' +
+          '<br><button type="button" data-cbsid="CMP014-B01"' + mountAttribute('CMP014') + ' class="cbl-btn" data-cbl-clear>' +
           esc(T(I, 'Clear search and filters')) +
           '</button></div>' +
           footHTML(I);
@@ -1673,7 +1720,7 @@
       end =
         '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' +
         esc(I.key) +
-        '"><button type="button" data-cbl-more>' +
+        '"><button type="button" data-cbsid="CMP037-B05"' + mountAttribute('CMP037') + ' data-cbl-more>' +
         esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) +
         '</button> <span>' +
         drawn +
@@ -1751,6 +1798,40 @@
     box.style.setProperty('--cl-hdr-h', (node ? node.offsetHeight : 0) + 'px');
   }
 
+  /** the small filter menu button behind a column heading (a list opener, CMP033); none when the column has no filter or the list is server-paged */
+  function headerFilterHTML(list, item, plainHead) {
+    if (!item.hfilter || remote(list)) return '';
+    return (
+      '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-hf' +
+      (list.r.filt[item.hfilter] ? ' on' : '') +
+      '"' +
+      (plainHead ? ' disabled tabindex="-1"' : ' data-hf="' + esc(item.hfilter) + '"') +
+      ' data-testid="cbl-hf-' +
+      esc(item.hfilter) +
+      '" aria-haspopup="menu" aria-expanded="' +
+      (list.pop === 'hf:' + item.hfilter) +
+      '" aria-label="' +
+      esc(T(list, 'Filter {x}', { x: item.label || item.key })) +
+      '" title="' +
+      esc(T(list, 'Filter {x}', { x: item.label || item.key })) +
+      '">' +
+      (list.r.filt[item.hfilter] ? '●' : '▾') +
+      '</button>'
+    );
+  }
+  /** the column resize handle (CMP039-B02); the loading header has none */
+  function headerResizeHTML(list, item, plainHead) {
+    if (plainHead) return '';
+    return (
+      '<button type="button" data-cbsid="CMP039-B02"' + mountAttribute('CMP039') + ' class="cbl-rz colrz" data-rz="' +
+      esc(item.key) +
+      '" aria-label="' +
+      esc(T(list, 'Resize {x} column (arrow keys)', { x: item.label || item.key })) +
+      '" title="' +
+      esc(T(list, 'Drag to resize · double-click resets')) +
+      '"></button>'
+    );
+  }
   function headerHTML(list, cols, tpl, plainHead) {
     var st = curSort(list);
     var lead = leadOn(list) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(list, 'Select')) + '"></div>' : '';
@@ -1773,7 +1854,7 @@
             (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
-              ? '<button type="button" class="sort"' +
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 label +
@@ -1781,32 +1862,8 @@
                 (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') +
                 '</span></button>'
               : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
-            (item.hfilter && !remote(list)
-              ? '<button type="button" class="cbl-hf' +
-                (list.r.filt[item.hfilter] ? ' on' : '') +
-                '"' +
-                (plainHead ? ' disabled tabindex="-1"' : ' data-hf="' + esc(item.hfilter) + '"') +
-                ' data-testid="cbl-hf-' +
-                esc(item.hfilter) +
-                '" aria-haspopup="menu" aria-expanded="' +
-                (list.pop === 'hf:' + item.hfilter) +
-                '" aria-label="' +
-                esc(T(list, 'Filter {x}', { x: item.label || item.key })) +
-                '" title="' +
-                esc(T(list, 'Filter {x}', { x: item.label || item.key })) +
-                '">' +
-                (list.r.filt[item.hfilter] ? '●' : '▾') +
-                '</button>'
-              : '') +
-            (plainHead
-              ? ''
-              : '<button type="button" class="cbl-rz colrz" data-rz="' +
-                esc(item.key) +
-                '" aria-label="' +
-                esc(T(list, 'Resize {x} column (arrow keys)', { x: item.label || item.key })) +
-                '" title="' +
-                esc(T(list, 'Drag to resize · double-click resets')) +
-                '"></button>') +
+            headerFilterHTML(list, item, plainHead) +
+            headerResizeHTML(list, item, plainHead) +
             '</div>'
           );
         })
@@ -1879,7 +1936,7 @@
             : '') +
           '>' +
           (index === 0 && nx
-            ? '<span class="cbl-tw" data-caret role="button" aria-label="' +
+            ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' +
               esc(T(I, open ? 'Collapse' : 'Expand')) +
               '" aria-expanded="' +
               !!open +
@@ -1920,7 +1977,7 @@
       return safe(function () {
         return I.o.lead.cell(row);
       }, '');
-    return '<input type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
+    return '<input data-cbsid="CMP032-I03"' + mountAttribute('CMP032') + ' type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
   }
   function lineHTML(I, it, cols, zb) {
     var row = it.row,
@@ -1987,7 +2044,7 @@
       '><div class="cbl-lline" role="gridcell">' +
       lead +
       (nx
-        ? '<span class="cbl-tw" data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>'
+        ? '<span class="cbl-tw" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>'
         : '') +
       '<span class="cbl-lflow">' +
       flow +
@@ -2062,7 +2119,7 @@
                 .map(function (item, index) {
                   var why = whys[index];
                   var btn =
-                    '<button type="button" class="cbl-btn" data-act="' +
+                    '<button type="button" data-cbsid="CMP038-B01"' + mountAttribute('CMP038') + ' class="cbl-btn" data-act="' +
                     esc(item.id) +
                     '" data-actrow="' +
                     esc(id) +
