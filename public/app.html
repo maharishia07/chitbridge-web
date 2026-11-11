@@ -23791,6 +23791,7 @@ async function afterGroup(result) {
     UI.mdetail = false;
   }
   await loadList();
+  updateSelBar(); /* the bar counts UI.selected: 2 left ticked after 12 tried must not still read 12 */
 }
 /** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
 function groupToast(result, doneWords) {
