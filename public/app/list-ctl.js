@@ -129,7 +129,7 @@
     /* GROUP as one labelled dropdown ("Group ▾ None"): opts.group.as = 'select' */
     '.cbl .cbl-gsel{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;height:34px;padding:0 6px 0 10px;margin:0}',
     '.cbl .cbl-gsel .cbl-glab{margin:0;font-weight:600}',
-    '.cbl .cbl-gsel select{border:0;background:none;height:30px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
+    '.cbl .cbl-gsel select{border:0;background:none;height:32px;padding:0 2px;font-size:calc(13.5px * var(--k,1));font-weight:600;color:var(--cl-ink);cursor:pointer;max-width:170px}',
     '.cbl .cbl-gsel:focus-within{border-color:var(--cl-blue)}',
     /* SAVED VIEWS as tabs above the tools row: one tap sets the list's own filters (no second filter engine) */
     '.cbl .cbl-views{display:flex;align-items:center;gap:6px;padding:2px 20px 6px;background:var(--cl-page);overflow-x:auto;scrollbar-width:none}',
@@ -808,6 +808,18 @@
         }, null)
       : I.o.head;
   }
+  /** a phone folds the head's chips and notices into ONE chip when there are two or more, or when the one notice is a sentence (it would wrap to many lines inside the title: crm Chits, 34% of the window) */
+  var LONG_NOTICE_CHARS = 24;
+  function foldsToOneChip(chips, notes) {
+    if (chips.length + notes.length > 1) return true;
+    return notes.length === 1 && String(notes[0].text || '').length > LONG_NOTICE_CHARS;
+  }
+  /** the folded chip's words: a count for several, the plain word for a single notice */
+  function foldedLabel(list, chips, notes) {
+    var total = chips.length + notes.length;
+    if (total === 1) return T(list, notes.length ? 'Notices' : 'Details');
+    return T(list, notes.length ? '{n} notices' : '{n} details', { n: total });
+  }
   function paintTitle(list) {
     var h = head(list),
       box = $(list, ':scope > .cbl-title');
@@ -856,7 +868,7 @@
     };
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
     list.narrow = isPhone();
-    if (list.narrow && chips.length + notes.length > 1) {
+    if (list.narrow && foldsToOneChip(chips, notes)) {
       var bad = notes.some(function (item) {
         return item.cls === 'bad';
       });
@@ -868,7 +880,7 @@
         '" data-testid="cbl-notes-' +
         esc(list.key) +
         '">' +
-        esc(T(list, notes.length ? '{n} notices' : '{n} details', { n: chips.length + notes.length })) +
+        esc(foldedLabel(list, chips, notes)) +
         ' ▾</button>' +
         (list.pop === 'notes'
           ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
