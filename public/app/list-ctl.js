@@ -53,6 +53,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+  var PHONE_MAX = 700; /* px: the standard's phone width (ui.js SIZE_CSS); the 44 px tap rule and the View popover both start here */
   /* ── UX-137 IDENTITY ── every control below carries data-cbsid, the code of its component element in the one register (CMP045-CMP039 are this
      unit's own; CMP009 Try again and CMP014 Clear are reused). The mount (data-cbmount) is the screen's code from the screen chip + U1nn; a
      page without the chip has no mount, the element keeps its code. Nothing is read from a page global: this is a DOM attribute, read at paint. */
@@ -257,17 +258,17 @@
     '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
     '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
     '.cbl .cbl-search,.cbl .cbl-gsel{min-height:34px}.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:32px}.cbl input[type="checkbox"]{width:24px;height:24px}',
-    '@container screen (max-width: 640px){.cbl .cbl-w{display:none}}',
-    '@media (max-width:700px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
+    '@media (max-width:' + PHONE_MAX + 'px){.cbl .cbl-w{display:none}.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button,.cbl .cbl-search,.cbl .cbl-gsel,.cbl .cbl-pop select,.cbl .cbl-custom input{min-height:44px}',
     '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
-    '.cbl .cbl-title{padding-block:4px 2px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
+    '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
     '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
     '.cbl input[data-selrow],.cbl input[data-col]{flex:none}',
-    '@media (max-width:700px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
+    '@media (max-width:' + PHONE_MAX + 'px){.cbl input[data-selrow],.cbl input[data-col]{-webkit-appearance:none;appearance:none;width:44px;height:44px;margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}',
     '.cbl input[data-selrow]::before,.cbl input[data-col]::before{content:"";width:22px;height:22px;box-sizing:border-box;border:2px solid var(--cl-muted);border-radius:5px;background:var(--cl-card);color:var(--cl-card);font-size:15px;line-height:18px;text-align:center;font-weight:700}',
     '.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{content:"✓";background:var(--cl-blue);border-color:var(--cl-blue)}.cbl input[data-col]:disabled{opacity:.5}}',
+    '@media (forced-colors: active){.cbl input[data-selrow]::before,.cbl input[data-col]::before{forced-color-adjust:none;background:Canvas;color:Canvas;border-color:ButtonText}.cbl input[data-selrow]:checked::before,.cbl input[data-col]:checked::before{background:Highlight;color:HighlightText;border-color:Highlight}}',
     '.cbl .cbl-viewpop{display:flex;flex-direction:column;gap:8px;align-items:stretch}.cbl .cbl-viewpop .cbl-seg{align-self:flex-start}.cbl .cbl-viewpop .cbl-ico{justify-content:flex-start}.cbl .cbl-viewpop .cbl-w{display:inline}'
   ].join('\n');
   function injectCss() {
@@ -854,7 +855,7 @@
       );
     };
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
-    list.narrow = list.el.clientWidth > 0 && list.el.clientWidth <= 640;
+    list.narrow = isPhone();
     if (list.narrow && chips.length + notes.length > 1) {
       var bad = notes.some(function (item) {
         return item.cls === 'bad';
@@ -1003,9 +1004,12 @@
     );
   }
   /** the right-hand tools of the second row: expand all, grid / lines, columns, CSV, select mode (each a list component: CMP033 to CMP037) */
-  /** a phone (a pane of 640 px or less) */
+  /** a phone: the standard's one breakpoint (ui.js SIZE_CSS, 700 px), the same number the CSS below is written with */
+  function isPhone() {
+    return root.matchMedia ? root.matchMedia('(max-width: ' + PHONE_MAX + 'px)').matches : root.innerWidth <= PHONE_MAX;
+  }
   function isNarrowList(list) {
-    list.narrow = list.el.clientWidth > 0 && list.el.clientWidth <= 640;
+    list.narrow = isPhone();
     return list.narrow;
   }
   /** the one View button of a phone and its popover: Group by, Grid / Lines, Columns and CSV inside it (a list opener and its popover, CMP033); Columns opens its own sheet in its place */
@@ -1033,8 +1037,7 @@
       runState = list.r,
       viewState = list.s,
       toolsHtml = '';
-    if (hasNext(list)) toolsHtml += expandAllHTML(list, keyText, testIds);
-    var outer = toolsHtml;
+    var expand = hasNext(list) ? expandAllHTML(list, keyText, testIds) : '';
     toolsHtml = viewChoiceHTML(list, keyText);
     toolsHtml +=
       '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' +
@@ -1061,7 +1064,7 @@
         esc(T(list, 'Download CSV')) +
         '">⬇' +
         '<span class="cbl-w"> ' + esc(T(list, 'CSV')) + '</span></button>';
-    toolsHtml = groupHtml == null ? outer + toolsHtml : outer + viewMenuHTML(list, keyText, groupHtml + toolsHtml);
+    toolsHtml = groupHtml == null ? expand + toolsHtml : viewMenuHTML(list, keyText, groupHtml + expand + toolsHtml);
     if (listOptions.bulk && listOptions.bulk.length)
       toolsHtml +=
         '<button type="button" data-cbsid="CMP034-B01"' + mountAttribute('CMP034') + ' class="cbl-tbtn' +
@@ -2934,7 +2937,7 @@
       INST.forEach(function (item) {
         fit(item);
         setHdrH(item, item.el.querySelector('.cbl-list') || item.el);
-        var n = item.el.clientWidth > 0 && item.el.clientWidth <= 640;
+        var n = isPhone();
         if (n !== item.narrow) {
           paintTitle(item);
           paintTools(item);

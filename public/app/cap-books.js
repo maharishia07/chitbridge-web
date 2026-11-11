@@ -1250,7 +1250,7 @@ function payDiscHTML(f) {
     '<span data-testid="pay_disc_words">' +
     esc(f.words) +
     '</span>' +
-    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + ' type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
+    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button data-cbsid="CMP042-B24"' + bkMountAttribute('CMP042') + ' type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
     (rec.ok ? '' : ' disabled aria-disabled="true"') +
     '>' +
     esc(tx('Record discount')) +
@@ -1484,7 +1484,7 @@ function payPaint() {
         (asAdvance
           ? ' ' + esc(txf(PAY.kind === 'supplier' ? 'Pay {amt} again as an advance?' : 'Receive {amt} again as an advance?', { amt: bkMoney(PAY.amount) }))
           : '') +
-        '</div><div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + ' class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
+        '</div><div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="CMP042-B25"' + bkMountAttribute('CMP042') + ' class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
         esc(
           asAdvance
             ? PAY.kind === 'supplier'
