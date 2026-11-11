@@ -74,5 +74,22 @@ FILES.forEach(([file, table, swaps]) => {
     ok(bad !== null && failuresOf(bad, known, table).length > 0, 'self-test: ' + file + ' with ' + from + ' changed to ' + to + ' FAILS the guard');
   });
 });
+/* W2 closing: the tap rule for a control a screen draws itself (ui.tap) and the shared pager pair (CBList.pager, CMP037 B06 and B07) */
+{
+  const sandbox = { window: {}, document: undefined };
+  sandbox.window = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(read('public/app/ui.js'), sandbox);
+  const tapped = sandbox.window.ui.tap('bookaction');
+  ok(/data-cbname="bookaction"/.test(tapped) && /data-size="compact"/.test(tapped), 'ui.tap(bookaction) puts a drawn-by-hand control under the compact tap rule (32 px, 44 on a phone)');
+  let refused = false;
+  try { sandbox.window.ui.tap('save'); } catch (e) { refused = true; }
+  ok(refused, 'ui.tap refuses a component ui.action draws itself');
+  ok(known.has('CMP037-B06') && known.has('CMP037-B07'), 'the pager codes CMP037-B06 and B07 are in the closed set');
+  const listSource = read('public/app/list-ctl.js');
+  ok(listSource.indexOf("pagerButton('prev', 'B06'") >= 0 && listSource.indexOf("pagerButton('next', 'B07'") >= 0, 'CBList.pager stamps Previous B06 and Next B07');
+  const catalogue = read('public/app/cap-catalogue.js');
+  ok(catalogue.indexOf('CBList.pager(') >= 0 && catalogue.indexOf('data-testid="cat-prev"') < 0, 'the catalogue pager is drawn by CBList.pager, not by hand');
+}
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

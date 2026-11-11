@@ -1607,6 +1607,12 @@ function crmFuDue(f) {
 function crmFuSrc(f) {
   return { manual: tx('Manual'), dues: tx('Dues'), interaction: tx('From a call') }[f.source] || '';
 }
+/** the mount code of a ui.action drawn on the Follow-ups screen: this screen's code + U1nn (nn = the component number, the rule the list control writes); the Follow-ups code until a screen chip is up */
+function crmFuMount(component) {
+  var chip = document.querySelector('[data-testid="screen-id"][data-cbsid]');
+  var screen = chip ? chip.getAttribute('data-cbsid') : '';
+  return (/^[A-Z]{3}\d{3}$/.test(screen || '') ? screen : 'CRM003') + '-U1' + String(component).slice(-2);
+}
 function crmFuWhat(f) {
   var acts = f.party_removed
     ? '<span class="sub">' +
@@ -1619,13 +1625,14 @@ function crmFuWhat(f) {
       esc(tx('Delete')) +
       '</button>'
     : crmEdit()
-      ? '<button type="button" class="crm-mini" data-crm="fudone" data-id="' +
-        esc(f.followup_id) +
-        '" data-testid="crm-fu-done-' +
-        esc(f.followup_id) +
-        '">' +
-        esc(tx('Done')) +
-        '</button>' +
+      ? ui.action('done', {
+          mount: crmFuMount('CMP004'),
+          object: 'follow-up',
+          surface: 'list',
+          size: 'compact',
+          testid: 'crm-fu-done-' + f.followup_id,
+          data: { crm: 'fudone', id: f.followup_id }
+        }) +
         (f.assignee_left
           ? ' <button type="button" class="crm-mini" data-crm="fuassign" data-id="' +
             esc(f.followup_id) +

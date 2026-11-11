@@ -58,6 +58,10 @@ if (typeof EP !== 'undefined') {
  */
 /* UX-137 IDENTITY: each control below carries data-cbsid, the code of its component element in the one register (CMP001/3/4/5/6/7/9/10/12/14 reused,
    CMP040..CMP044 the books' own). The mount is the screen's code (from the screen chip) + U1nn, nn = the component number; none on a page without the chip. */
+/* the tap rule for a control the books still draw themselves (ui.js tap: 32 px on a desktop, 44 on a phone); none where ui.js is not loaded */
+function bkTapAttribute() {
+  return typeof ui !== 'undefined' && ui && typeof ui.tap === 'function' ? ui.tap('bookaction') : '';
+}
 function bkMountAttribute(component) {
   var chip = document.querySelector('[data-testid="screen-id"][data-cbsid]');
   var screen = chip ? chip.getAttribute('data-cbsid') : '';
@@ -1188,10 +1192,10 @@ function payOpen(kind, partyId, pre) {
       '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
       '</div><div class="mfoot" id="pay_foot"><button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
+      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
       tx('Record') +
       '</button>' +
-      (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') +
+      (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') +
       '</div>'
   );
   payPaint();
@@ -1250,12 +1254,12 @@ function payDiscHTML(f) {
     '<span data-testid="pay_disc_words">' +
     esc(f.words) +
     '</span>' +
-    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button data-cbsid="CMP042-B24"' + bkMountAttribute('CMP042') + ' type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
+    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button data-cbsid="CMP042-B24"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
     (rec.ok ? '' : ' disabled aria-disabled="true"') +
     '>' +
     esc(tx('Record discount')) +
     '</button>' +
-    '<button data-cbsid="CMP042-B22"' + bkMountAttribute('CMP042') + ' type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' +
+    '<button data-cbsid="CMP042-B22"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' +
     esc(tx('GST credit note')) +
     '</button></span>' +
     (rec.ok ? '' : '<span class="hint" data-testid="pay_disc_why_not">' + esc(rec.say || '') + '</span>') +
@@ -1484,7 +1488,7 @@ function payPaint() {
         (asAdvance
           ? ' ' + esc(txf(PAY.kind === 'supplier' ? 'Pay {amt} again as an advance?' : 'Receive {amt} again as an advance?', { amt: bkMoney(PAY.amount) }))
           : '') +
-        '</div><div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="CMP042-B25"' + bkMountAttribute('CMP042') + ' class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
+        '</div><div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="CMP042-B25"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
         esc(
           asAdvance
             ? PAY.kind === 'supplier'
