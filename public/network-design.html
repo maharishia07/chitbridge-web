@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', labPaint);
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/lab-kit.js"></script>   <!-- CBLabKit: the Labs switcher's list + the shared lab rules (UX-90) -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
@@ -249,7 +250,7 @@ document.addEventListener('DOMContentLoaded', labPaint);
   <div class="right">
     <div id="chipbar"></div>
     <div id="steps"></div>
-    <div class="rbody" id="rbody"></div>
+    <div class="rbody" id="rbody" tabindex="0" role="region" aria-label="Network design"></div>
     <div class="rfoot" id="rfoot"></div>
   </div>
 </div>

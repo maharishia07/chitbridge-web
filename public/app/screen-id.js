@@ -218,7 +218,7 @@
         rows: [['EMB001', null, 'Catalogue embed', '/embed.html?bridge=<shop> · inside another site']]
       },
       { app: 'promo', name: 'Shop screen', page: '/promo.html', rows: [['PRM001', null, 'Shop screen', '/promo.html#key=… · the till › Shop screen']] },
-      { app: 'product-lab', name: 'Price Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Price Lab']] },
+      { app: 'product-lab', name: 'Product Lab', page: '/product-lab.html', rows: [['PLB001', null, 'Product Lab', '/product-lab.html · Home › Labs · its controls: pl-unit-line, pl-unit-tick, pl-uqc, pl-review-uqc, pl-next-why']] },
       {
         app: 'offer-lab',
         name: 'Offer Lab',
@@ -237,7 +237,22 @@
       { app: 'network-lab', name: 'Network Lab', page: '/network-design.html', rows: [['NLB001', null, 'Network Lab', '/network-design.html · Home › Labs']] },
       { app: 'list-lab', name: 'List Lab', page: '/list-lab.html', rows: [['LLB001', null, 'List Lab', "/list-lab.html · app/list-ctl.js on a bare page, the list standard's pass mark"]] },
       { app: 'signin-lab', name: 'Sign-in Lab', page: '/signin-lab.html', rows: [['SLB001', null, 'Sign-in Lab', '/signin-lab.html · the one sign-in window on a bare page']] },
-      { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] }
+      { app: 'shell-lab', name: 'Shell Lab', page: '/shell-lab.html', rows: [['SHL001', null, 'Shell Lab', '/shell-lab.html · the shell on a bare page']] },
+      {
+        app: 'ui-standard',
+        name: 'UI standard',
+        page: '/ui-standard.html',
+        hash: true,
+        rows: [
+          ['UIS001', 'components', 'Components', '/ui-standard.html · Standards › Web design'],
+          ['UIS002', 'popups', 'Popups'],
+          ['UIS003', 'icons', 'Icons'],
+          ['UIS004', 'tokens', 'Tokens'],
+          ['UIS005', 'themes', 'Across themes'],
+          ['UIS006', 'meets', 'Meets the standard'],
+          ['UIS007', 'before', 'Before and after']
+        ]
+      }
     ],
     /* SHELL-ONE: DESIGN REFERENCES — pages kept as the drawing a build was checked against, or a tool's own board. NOT customer navigation: no
        Home card, no link from a framed page; they wear no frame and carry no code. A page here that gains a customer door moves UP into apps. */
@@ -354,6 +369,10 @@
     '.cbsid:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:2px}' +
     '.cbsid .cbsid-c{font-family:var(--mono,ui-monospace,monospace);letter-spacing:.02em}.cbsid:empty{display:none}' +
     '@media(max-width:700px){.cbsid .cbsid-n,.cbsid .cbsid-d{display:none}}' +
+    /* CMP019 the screen's "?": a 44 px target (WCAG 2.2 2.5.8 asks 24), the glyph small inside it, at the chip's place on every screen */
+    '.cbsid-help{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:44px;min-height:44px;padding:0;border:0;border-radius:999px;' +
+    'background:transparent;color:var(--ink,#2a2418);font:700 calc(16px*var(--k,1))/1 var(--sans,system-ui,sans-serif);cursor:pointer}' +
+    '.cbsid-help:hover{background:var(--hover,var(--panel,#f3ead7))}.cbsid-help:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:-2px}' +
     'html:not([data-ids]) .cbsid{display:none}' /* UX-1: a shop never sees the codes; a tester switches them on */;
   var IDS_KEY = 'cb_ids';
   /** UX-1: are screen codes shown? Only for a tester: ?ids=1 switches them on in this browser, ?ids=0 off (nothing else reads the codes but a bug report) */
@@ -419,7 +438,27 @@
     paint();
     return node;
   }
+  /* ── CMP019, the screen's "?" ── one button, in the chip's container, so it sits in the same place on every screen. It is drawn by the standard action
+     set (ui.js) and shown only while HELP_TEXT (app.html, hasHelp) holds a note for this screen's code; with none it stays display:none, so adding
+     help later is adding a note and nothing else. A page that does not load ui.js has no notes and no button. */
+  var helpButton = { el: null };
+  function pressHelp() {
+    var code = current();
+    if (code && typeof root.showHelp === 'function') root.showHelp(code);
+  }
+  function paintHelp() {
+    var code = current();
+    var known = !!code && typeof root.hasHelp === 'function' && root.hasHelp(code);
+    if (!helpButton.el && known && root.ui && S.el && S.el.parentNode) {
+      var wrap = root.document.createElement('span');
+      wrap.innerHTML = root.ui.action('screenhelp', { mount: 'SHL001-U01', testid: 'screen-help', hidden: true, onPress: pressHelp });
+      helpButton.el = wrap.firstChild;
+      S.el.parentNode.appendChild(helpButton.el);
+    }
+    if (helpButton.el) helpButton.el.style.display = known ? '' : 'none';
+  }
   function paint() {
+    paintHelp();
     if (!S.el) return;
     var r = S.app ? row(S.app, S.key) : null;
     S.el.innerHTML = inner(r);
@@ -429,6 +468,7 @@
       S.el.title = label(r);
     } else S.el.removeAttribute('data-cbsid');
   }
+  if (root.addEventListener) root.addEventListener('load', paintHelp);
   function here(app, key) {
     S.app = app;
     S.key = key == null ? null : String(key);
@@ -437,6 +477,23 @@
   function current() {
     var r = S.app ? row(S.app, S.key) : null;
     return r ? r.code : null;
+  }
+
+  /** the popup-code chip (the app.html dialog chip's markup): a popover names itself with its POP code, a literal from the register; `place` is extra style */
+  function popupChip(code, place) {
+    return (
+      '<span data-testid="popup-code" style="font-family:ui-monospace,monospace;font-size:var(--fs-1,12px);background:var(--neutral-tint,rgba(128,128,128,.16));border-radius:5px;padding:1px 6px;user-select:all;white-space:nowrap;' +
+      (place || '') +
+      '">' +
+      root.esc(code) +
+      '</span>'
+    );
+  }
+
+  /** the data-cbmount attribute of a coded control in the shell, the bell or a menu: this screen's code + U1nn (nn = the component number, as the list control writes it); none until a screen is named */
+  function mountAttr(component) {
+    var code = current();
+    return /^[A-Z]{3}[0-9]{3}$/.test(code || '') ? ' data-cbmount="' + code + '-U1' + String(component).slice(-2) + '"' : '';
   }
 
   /* a tap copies the code; the chip says so for a moment. A browser that refuses the clipboard: the code stays on screen to read. */
@@ -513,6 +570,8 @@
     row: row,
     sheet: sheet,
     current: current,
+    mountAttr: mountAttr,
+    popupChip: popupChip,
     DECLARED: DECLARED,
     rows: ROWS,
     byApp: BYAPP,

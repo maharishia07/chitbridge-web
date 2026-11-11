@@ -57,7 +57,7 @@ if (!bad) {
     (ch.match(/>[^<]+<\/button>/g) || []).join(' '));
   say('…a task\'s picker does not', ctx.billUseChoiceHTML([trow]) === '' && ctx.billUseChoiceHTML([row, trow]) === '', 'empty');
   const src2 = fnSource('confirmStatus') || '';
-  say('…and the choice is sent (PUT /use) BEFORE the acceptance it decides', /api\("billUse"[\s\S]*api\("status"/.test(src2) && /"\/api\/chits\/:id\/use"/.test(src), 'order in confirmStatus');
+  say('…and the choice rides the SAME call as the acceptance it decides (QA-131: one call per record, with from and a step key)', !/api\("billUse"/.test(src2) && /statusStepBody\(/.test(src2) && /idemKey: /.test(src2) && /body\.use = goodsUse/.test(fnSource('statusStepBody') || '') && /body\.from = row\._status/.test(fnSource('statusStepBody') || ''), 'one call in confirmStatus');
 }
 console.log('\n' + (bad ? '✗ ' + bad + ' FAILED' : '✓ all passed') + '\n');
 process.exit(bad ? 1 : 0);

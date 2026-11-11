@@ -327,8 +327,8 @@ function bkTermVal(f, v, c) {
   }
   return String(v);
 }
-/** the change events the server lists (newest first): date · what · from → to */
-function bkTermEvents(list, c, tid) {
+/** the change events the server lists (newest first): date · what · from → to; `extra(x, index)` may add html to a row (FIN-46: the Terms tab's Undo) */
+function bkTermEvents(list, c, tid, extra) {
   if (!list || !list.length) return '<div class="hint" data-testid="' + tid + '-none">' + esc(tx('No changes yet')) + '</div>';
   return list
     .map(function (x, index) {
@@ -346,7 +346,9 @@ function bkTermEvents(list, c, tid) {
         esc(bkTermVal(f, x.old, c)) +
         ' → ' +
         esc(bkTermVal(f, x.new, c)) +
-        '</span></div>'
+        '</span>' +
+        (extra ? extra(x, index) : '') +
+        '</div>'
       );
     })
     .join('');
@@ -1815,7 +1817,7 @@ function ledgerScreen() {
     divider +
     '<div class="detail" id="detailpane"><div id="bk_back"><button class="supback" data-testid="bk-back" onclick="bkBack()">‹ ' +
     tx('Ledger') +
-    '</button></div><div class="db" id="bk_body" data-testid="bk-body">' +
+    '</button></div><div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Ledger details')) + '" id="bk_body" data-testid="bk-body">' +
     tx('Reading…') +
     '</div></div></div>'
   );
@@ -1882,11 +1884,15 @@ function bkRangeHTML(id, again) {
   return (
     '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap"><input type="date" class="inp" id="' +
     id +
-    '_from" value="' +
+    '_from" aria-label="' +
+    esc(tx('From')) +
+    '" value="' +
     r.from +
     '"><span>→</span><input type="date" class="inp" id="' +
     id +
-    '_to" value="' +
+    '_to" aria-label="' +
+    esc(tx('To')) +
+    '" value="' +
     r.to +
     '"><button onclick="' +
     again +
@@ -2153,17 +2159,32 @@ function bkDvGroupOf(date, mode) {
   }
   return { key: dayKey, label: bkDvFmt(dayKey, { weekday: 'short', day: '2-digit', month: 'short' }) };
 }
+/** one CSV cell: a cell that starts like a formula is quoted as text (a plain number, negative too, stays a number), a cell with a comma, quote or line break is wrapped (the one reader: Day book and the bank's BRS) */
+function bkCsvCell(v) {
+  var text = String(v == null ? '' : v);
+  if (/^[=+\-@]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text)) text = "'" + text;
+  return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+}
+/** hand a CSV text to the person as a file (BOM first so a spreadsheet reads the rupee sign) — the one saver */
+function bkSaveCsv(name, text) {
+  var blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8' });
+  var node = document.createElement('a');
+  node.href = URL.createObjectURL(blob);
+  node.download = name;
+  document.body.appendChild(node);
+  node.click();
+  node.remove();
+  setTimeout(function () {
+    URL.revokeObjectURL(node.href);
+  }, 2000);
+}
 /** the shown rows as a CSV — client-side, one line per row; a cell that starts like a formula is quoted as text */
 function bkDvCsv(list, c) {
   var pow = Math.pow(10, bkDec(c)),
     amt = function (m) {
       return (Number(m || 0) / pow).toFixed(bkDec(c));
     };
-  var cell = function (v) {
-    var text = String(v == null ? '' : v);
-    if (/^[=+\-@]/.test(text)) text = "'" + text;
-    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
-  };
+  var cell = bkCsvCell;
   var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'dr', 'cr', 'gist']];
   list.forEach(function (e) {
     var s = e.source || {},
@@ -2204,16 +2225,7 @@ function bkDvCsv(list, c) {
 function bkDvDownload(rows) {
   var d = BK.dv;
   if (!d) return;
-  var blob = new Blob(['﻿' + bkDvCsv(rows, d.r.currency)], { type: 'text/csv;charset=utf-8' });
-  var node = document.createElement('a');
-  node.href = URL.createObjectURL(blob);
-  node.download = 'day-book-' + d.range.from + '-' + d.range.to + '.csv';
-  document.body.appendChild(node);
-  node.click();
-  node.remove();
-  setTimeout(function () {
-    URL.revokeObjectURL(node.href);
-  }, 2000);
+  bkSaveCsv('day-book-' + d.range.from + '-' + d.range.to + '.csv', bkDvCsv(rows, d.r.currency));
 }
 /** what the search looks in: the entry, its bill, its party (by name AND by number — "P0007"), its lines, and its amounts the way they are read */
 function bkDvText(e, c) {
@@ -4333,7 +4345,7 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button onclick="bkTab(\'tb\')">' +
       tx('Show') +
@@ -4436,7 +4448,7 @@ async function bkBS(body) {
     var c = reply && reply.currency;
     var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="bs_asof" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
       '"><button onclick="bkTab(\'bs\')">' +
       tx('Show') +
@@ -5023,6 +5035,8 @@ function bkFyPicker(id, tid, sty) {
     id +
     '" data-testid="' +
     tid +
+    '" aria-label="' +
+    esc(tx('Financial year')) +
     '" onchange="bkFyPick(this.value)" style="' +
     (sty || 'flex:1 1 110px;min-width:0') +
     '">' +
@@ -5308,7 +5322,7 @@ function bkPackCtlPaint() {
   el.innerHTML =
     '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' +
     bkFyPicker('pk_fy', 'pk_fy') +
-    '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
+    '<select class="inp" id="pk_p" data-testid="pk_p" aria-label="' + esc(tx('Month')) + '" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
     '><option value="">' +
     esc(tx('Month')) +
     '</option><option value="year">' +
@@ -6376,7 +6390,7 @@ async function bkAccounts(body) {
     body.innerHTML =
       '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="ac_name" data-testid="ac_name" placeholder="' +
       esc(tx('New ledger name')) +
-      '"><select class="inp" id="ac_parent" data-testid="ac_parent">' +
+      '"><select class="inp" id="ac_parent" data-testid="ac_parent" aria-label="' + esc(tx('Parent group')) + '">' +
       groups
         .map(function (item) {
           return '<option value="' + esc(item.code) + '">' + esc(item.code + ' · ' + item.name) + '</option>';

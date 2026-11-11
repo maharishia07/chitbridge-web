@@ -139,7 +139,8 @@ function miCountryRow() {
     miSel('mi-country', 'country', opts, MIV.f.country) +
       '<div data-testid="mi-country-why" style="color:var(--grey);font-size:var(--fs-1);margin-top:4px">' +
       esc(shop ? txf('Only books from {c} — tax rules differ by country.', { c: miCountryName(shop) }) : tx('Tax rules differ by country.')) +
-      '</div>'
+      '</div>',
+    'mi-country'
   );
 }
 function miDecisions() {
@@ -201,12 +202,15 @@ function miSel(id, field, opts, selected) {
     '</select>'
   );
 }
-/* one labelled row; min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
-function miRow(label, html) {
+/* one labelled row (forId = the control's id: the visible label then names it for a screen reader, WCAG 4.1.2); min-width:0 on the cell so a native file input or a long name never pushes the page sideways at 390 px */
+function miRow(label, html, forId) {
   return (
-    '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><span style="color:var(--grey);font-size:var(--fs-1)">' +
+    '<div style="display:grid;grid-template-columns:minmax(80px,150px) minmax(0,1fr);gap:8px;align-items:center;margin:6px 0"><' +
+    (forId ? 'label for="' + forId + '"' : 'span') +
+    ' style="color:var(--grey);font-size:var(--fs-1)">' +
     esc(label) +
-    '</span><span style="min-width:0;overflow:hidden">' +
+    (forId ? '</label>' : '</span>') +
+    '<span style="min-width:0;overflow:hidden">' +
     html +
     '</span></div>'
   );
@@ -225,22 +229,24 @@ function miFileStepHTML(form) {
         ];
   return (
     '<div data-testid="mi-file-step" style="max-width:640px">' +
-    miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, form.source)) +
+    miRow(tx('From'), miSel('mi-source', 'source', MI_SOURCES, form.source), 'mi-source') +
     miCountryRow() +
-    miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, form.kind)) +
-    (miNeedsSide(form.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, form.side)) : '') +
+    miRow(tx('Which export'), miSel('mi-kind', 'kind', MI_KINDS, form.kind), 'mi-kind') +
+    (miNeedsSide(form.kind) ? miRow(tx('Which list'), miSel('mi-side', 'side', sides, form.side), 'mi-side') : '') +
     (miNeedsDate(form.kind)
       ? miRow(
           tx('As at'),
           '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' +
             esc(form.as_at) +
-            '" onchange="miSet(\'as_at\', this.value)" style="width:auto">'
+            '" onchange="miSet(\'as_at\', this.value)" style="width:auto">',
+          'mi-asat'
         )
       : '') +
     miRow(
       tx('File'),
       '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
-        (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : '')
+        (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : ''),
+      'mi-file'
     ) +
     '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:8px">' +
     esc(tx('Order: chart, contacts, items, then balances.')) +

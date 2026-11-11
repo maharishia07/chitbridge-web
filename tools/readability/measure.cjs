@@ -10,7 +10,8 @@
  *
  * SCOPE (MAINT-1 rule): own code only. Excluded: files headed "ADOPTED from chitbridge-engines" (vendored engine copies),
  * web public/till.html (vendored from the api master) and every other byte copy that chitbridge-api/scripts/vendor-till.cjs writes
- * (headed "GENERATED — DO NOT EDIT": till-sw.js, promo.html, app/their-bill.js), qr.js, any vendor/ folder, *.min.*, node_modules, tests, e2e, fixtures.
+ * (headed "GENERATED — DO NOT EDIT": till-sw.js, promo.html, app/their-bill.js), pure translation packs (public/app/strings-<lang>.js: top-level wrappers holding only the four pack statements,
+ * no other function, only string → string properties — data, held by pack-parity; a pack with a helper function is judged), qr.js, any vendor/ folder, *.min.*, node_modules, tests, e2e, fixtures.
  * Static only: a name is "used" when an Identifier of that spelling appears in the same file (scope-blind; said in the report).
  */
 'use strict';
@@ -64,6 +65,105 @@ function walkDir(dir, out) {
   }
 }
 
+/* a translation pack: public/app/strings-<lang>.js (DATA, key → text; its quality is held by the pack-parity check, not by readability) */
+const DATA_PACK_NAME = /^public\/app\/strings-[a-z]{2,3}\.js$/;
+
+/** the function of a top-level `(function () {…})();` statement, else null */
+function topLevelWrapper(statement) {
+  const call = statement.type === 'ExpressionStatement' && statement.expression;
+  return call && call.type === 'CallExpression' && call.callee.type === 'FunctionExpression' && call.arguments.length === 0 ? call.callee : null;
+}
+
+/** the parse of a pack, or an empty program when it does not parse (a file that does not parse is judged as code, never exempted) */
+function parsePack(text) {
+  try {
+    return parse(text, []);
+  } catch (error) {
+    return { type: 'Program', body: [], parseError: error.message };
+  }
+}
+
+/** a property that is not a plain string → string pair (a number, a call, a computed key…) */
+function isImpureProperty(node) {
+  const value = node.value;
+  return node.computed || value.type !== 'Literal' || typeof value.value !== 'string';
+}
+
+/** the children of an AST node, flattened */
+function childNodes(node) {
+  const out = [];
+  for (const key of Object.keys(node)) {
+    const child = node[key];
+    if (Array.isArray(child)) out.push(...child.filter((item) => item && typeof item.type === 'string'));
+    else if (child && typeof child.type === 'string') out.push(child);
+  }
+  return out;
+}
+
+/** count, over the whole tree: functions that are not a top-level wrapper, object literals, and non-string properties */
+function tallyPack(node, wrappers, seen) {
+  if (FUNCTION_TYPES.has(node.type) && !wrappers.has(node)) seen.functions++;
+  if (node.type === 'ObjectExpression') seen.objects++;
+  if (node.type === 'Property' && isImpureProperty(node)) seen.impure++;
+  for (const child of childNodes(node)) tallyPack(child, wrappers, seen);
+  return seen;
+}
+
+/** an AST without positions, as text: two statements with the same shape give the same string */
+function shapeOf(node) {
+  return JSON.stringify(node, (key, value) => (key === 'start' || key === 'end' || key === 'loc' || key === 'raw' ? undefined : value));
+}
+
+/** the shapes of the four statements every real pack uses besides its pack object: the CBSTR guard, the language bag, the copy loop, the repaint */
+function packStatementShapes(lang, bagName) {
+  const snippets = [
+    "if (typeof CBSTR === 'undefined') return;",
+    'var ' + bagName + ' = CBSTR.' + lang + ' || (CBSTR.' + lang + ' = {});',
+    'for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ' + bagName + '[k] = pack[k];',
+    "try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}"
+  ];
+  return new Set(snippets.map((code) => shapeOf(parse(code, []).body[0])));
+}
+
+/** the pack object itself: `var pack = { … };` (its properties are checked by tallyPack) */
+function isPackVariable(statement) {
+  const declared = statement.type === 'VariableDeclaration' && statement.declarations;
+  return Boolean(declared) && declared.length === 1 && declared[0].id.name === 'pack' && declared[0].init && declared[0].init.type === 'ObjectExpression';
+}
+
+/** the name a wrapper gives its language bag (`var fr = CBSTR.fr || …`, or `var m = …`): its first `var` that is not the pack */
+function bagNameOf(wrapper) {
+  const declaration = wrapper.body.body.find((statement) => statement.type === 'VariableDeclaration' && !isPackVariable(statement));
+  return declaration ? declaration.declarations[0].id.name : '_bag';
+}
+
+/** does every statement of every wrapper have one of the pack shapes? Anything else (a call, eval, fetch, an if on location…) is code */
+function onlyPackStatements(wrapperNodes, lang) {
+  return wrapperNodes.every((wrapper) => {
+    const shapes = packStatementShapes(lang, bagNameOf(wrapper));
+    return wrapper.body.body.every((statement) => isPackVariable(statement) || shapes.has(shapeOf(statement)));
+  });
+}
+
+/** is this text a PURE data pack: top-level wrappers holding only the four pack statements, each holding only the pack statements, no other function,
+ *  and every object-literal property a string → string pair?
+ *  Anything else (a helper function, any other statement, a non-string value, no object literal) is code and is judged. */
+function isDataPack(relPath, text) {
+  if (text == null || !DATA_PACK_NAME.test(relPath)) return false;
+  const tree = parsePack(text);
+  const wrapperNodes = tree.body.map(topLevelWrapper);
+  if (wrapperNodes.some((wrapper) => !wrapper)) return false; // a top-level statement that is not a wrapper
+  const lang = /strings-([a-z]+)\.js$/.exec(relPath)[1];
+  const seen = tallyPack(tree, new Set(wrapperNodes), { functions: 0, objects: 0, impure: 0 });
+  return seen.objects > 0 && seen.impure === 0 && seen.functions === 0 && onlyPackStatements(wrapperNodes, lang);
+}
+
+/** text that is not own code: an adopted / generated copy (judged at its master) or a pure translation pack (data) */
+function isNotOwnText(relPath, text) {
+  if (text != null && ADOPTED_HEAD.test(text.slice(0, HEAD_BYTES))) return true;
+  return isDataPack(relPath, text);
+}
+
 /** is this repo-relative path own code (in scope, not vendored)? — the one rule collect() and the guard share */
 function inScope(repo, relPath, text) {
   const top = relPath.split('/')[0];
@@ -77,8 +177,7 @@ function inScope(repo, relPath, text) {
   )
     return false;
   if (repo === 'web' && relPath === VENDORED_TILL) return false;
-  if (text != null && ADOPTED_HEAD.test(text.slice(0, HEAD_BYTES))) return false;
-  return true;
+  return !isNotOwnText(relPath, text);
 }
 
 /** the own-code files of one repo: [{ abs, rel }] plus what was skipped and why */
@@ -651,4 +750,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };
+module.exports = { isDataPack, SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };

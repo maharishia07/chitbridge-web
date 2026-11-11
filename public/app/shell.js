@@ -223,7 +223,7 @@
     '.cbsh-swpop a:hover{background:var(--sh-panel)}.cbsh-swpop a[aria-current]{background:var(--sh-green-t);color:var(--sh-green-d)}',
     '.cbsh-swpop .i{width:18px;text-align:center}',
     /* sheet */
-    '.cbsh-sheet{border-top:1px solid var(--sh-hair);background:var(--sh-page);max-height:max(136px,calc(20vh - var(--sh-bar)));overflow:auto}',
+    '.cbsh-sheet{position:relative;border-top:1px solid var(--sh-hair);background:var(--sh-page);max-height:max(136px,calc(20vh - var(--sh-bar)));overflow:auto}',
     '.cbsh-sheet[hidden]{display:none}',
     '.cbsh-sin{display:grid;grid-template-columns:1fr 1.55fr 1fr;gap:26px;padding:8px 18px 9px;max-width:1240px;margin:0 auto}',
     '.cbsh-col h5{margin:0 0 3px;display:flex;align-items:baseline;gap:10px;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--sh-muted);font-weight:700}',
@@ -238,7 +238,7 @@
     '.cbsh-lrow .nm{font-weight:600}.cbsh-lrow .no{font-family:var(--f-num,"IBM Plex Mono",monospace);font-size:11.5px;color:var(--sh-muted);margin-left:8px;font-weight:400}',
     '.cbsh-lrow .st{font-family:var(--f-num,"IBM Plex Mono",monospace);font-weight:700;font-size:12.5px;text-align:right;color:var(--sh-muted)}',
     '.cbsh-lrow .st.soon{color:var(--sh-amber-i)}.cbsh-lrow .st.gone{color:var(--sh-red-i)}.cbsh-lrow .st.due{color:var(--sh-blue-i)}.cbsh-lrow .st.ok{color:var(--sh-green-d)}',
-    '.cbsh-rn{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;border-radius:7px;border:1px solid var(--sh-line);background:var(--sh-card);font-size:12px;font-weight:700}',
+    '.cbsh-rn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 10px;border-radius:7px;border:1px solid var(--sh-line);background:var(--sh-card);font-size:12px;font-weight:700}',
     '.cbsh-rn.soon{background:var(--sh-amber-t);border-color:var(--sh-amber-b);color:var(--sh-amber-i)}',
     '.cbsh-rn.due{background:var(--sh-green);border-color:var(--sh-green);color:var(--sh-on)}',
     '.cbsh-rn.gone{background:var(--sh-red-t);border-color:var(--sh-red-b);color:var(--sh-red-i)}',
@@ -246,7 +246,7 @@
     '.cbsh-chk{display:flex;align-items:center;gap:7px;font-size:13px;min-height:22px}',
     '.cbsh-chk .m{width:15px;height:15px;border-radius:5px;display:grid;place-items:center;font-size:10px;font-weight:800;flex:0 0 auto}',
     '.cbsh-chk.y .m{background:var(--sh-green);color:var(--sh-on)}.cbsh-chk.n .m{background:var(--sh-panel);border:1px solid var(--sh-line)}.cbsh-chk.n{color:var(--sh-muted)}',
-    '.cbsh-btn{display:inline-flex;align-items:center;height:27px;padding:0 12px;border-radius:8px;border:1px solid var(--sh-green);background:var(--sh-green);color:var(--sh-on);font-size:12.5px;font-weight:700;margin-top:7px}',
+    '.cbsh-btn{display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--sh-green);background:var(--sh-green);color:var(--sh-on);font-size:12.5px;font-weight:700;margin-top:7px}',
     '.cbsh-scrim{display:none}',
     /* working area */
     '.cbsh-work{flex:1 1 auto;min-height:0;display:flex}',
@@ -337,7 +337,8 @@
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
     '@container (max-width:359px){.cbsh-who b{display:none}}',
-    '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* a phone: ⌂ alone (aria-label keeps the word) */,
+    '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
+    '.cbsh-hdr .cbsh-who,.cbsh-hdr .cbsh-swb,.cbsh-hdr .cbsid,.cbsh-hdr .cbb-btn,.cbsh-hdr .cbav-btn,.cbsh-hdr .cbav-signin{min-height:44px;min-width:44px}' /* one level more specific: the bell's and the chip's own stylesheets load after this one */ /* a phone: ⌂ alone (aria-label keeps the word) */,
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
     /* a phone, signed in: the shop's name is the bar's name — the page's title would cut it (area pitfall: "the shared top bar cuts the shop name at 390 px"); signed out the title shows */
     '.cbsh-bar:has(.cbsh-who) .cbsh-title{display:none}',
@@ -345,7 +346,7 @@
     '.cbsh-sheet{position:absolute;left:0;right:0;top:var(--sh-bar);max-height:calc(100dvh - var(--sh-bar) - 70px);box-shadow:0 14px 28px var(--sh-shadow);border-bottom:1px solid var(--sh-line)}',
     '.cbsh-hdr.open .cbsh-scrim{display:block;position:fixed;inset:var(--sh-bar) 0 0 0;background:var(--sh-scrim);z-index:-1}',
     '.cbsh-sin{grid-template-columns:1fr;gap:16px;padding:14px 14px 16px}.cbsh-sin .cbsh-col:nth-child(3){grid-column:auto}.cbsh-ln.none{grid-column:auto}',
-    '.cbsh-lrow{grid-template-columns:1fr auto auto;gap:8px;min-height:36px}.cbsh-lrow .no{display:none}.cbsh-rn{height:30px;padding:0 12px}',
+    '.cbsh-lrow{grid-template-columns:1fr auto auto;gap:8px;min-height:36px}.cbsh-lrow .no{display:none}.cbsh-rn{height:44px;padding:0 12px}.cbsh-btn{height:44px}',
     '.cbsh-work{flex-direction:column-reverse}',
     '.cbsh-nav{flex:0 0 auto;flex-direction:row;justify-content:space-around;gap:0;border-right:0;border-top:1px solid var(--sh-line);padding:5px 4px calc(5px + env(safe-area-inset-bottom,0px));background:var(--sh-card)}',
     '.cbsh-nv{flex:1;width:auto;padding:6px 0 4px;border-radius:9px}.cbsh-nv .i{font-size:19px}.cbsh-nv .t{font-size:10.5px}',
@@ -441,6 +442,28 @@
       '</span></span>'
     );
   }
+  /** the identity mount of a bar control (this screen's code + U1nn, the list control's rule); none until the page names its screen */
+  function shellMount(component) {
+    return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr(component) : '';
+  }
+  /** the popup-code chip of this popover (a literal POP code, the one the register holds for it); nothing on a page without screen-id.js */
+  function shellChip(code, place) {
+    return root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(code, place) : '';
+  }
+  var CHIP_CORNER = 'position:absolute;inset-inline-end:10px;top:2px'; /* the sheet's chip sits in its corner: no row of its own, no scroll gained */
+  /** the bar's own buttons are drawn before the screen is named: once it is, each coded one gets its mount */
+  function stampMounts(node) {
+    [].forEach.call(node.querySelectorAll('[data-cbsid]:not([data-cbmount])'), function (item) {
+      var mount = shellMount(item.getAttribute('data-cbsid').slice(0, 6)).match(/"([^"]+)"/);
+      if (mount) item.setAttribute('data-cbmount', mount[1]);
+    });
+  }
+  /** ⌂ Home: the standard component CMP023 (ui.js), a real link; its size comes from the one tap rule (32 compact, 44 on a phone) */
+  function homeLink(frame) {
+    var screen = (root.CBScreenId && root.CBScreenId.current && root.CBScreenId.current()) || 'HOM001';
+    /* where-used: out-of-scope the shell is drawn on every screen, so its mount takes the screen's own code */
+    return root.ui.action('home', { mount: screen + '-U90', href: frame.homeHref, display: 'icon+label', size: 'compact', surface: 'shell', testid: 'shell-home' });
+  }
   /** the header: the bar (mark · shop · switcher or title · chip · edition · licence · bell · ⌂ Home · avatar) and the shop's sheet */
   function headerHTML(frame) {
     return (
@@ -448,12 +471,12 @@
       '<div class="cbsh-bar" data-testid="shell-bar">' +
       '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
       (frame.person
-        ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' +
+        ? '<button type="button" class="cbsh-who" data-cbsid="CMP033-B01" data-testid="shell-shop" aria-expanded="false" aria-controls="' +
           frame.sheetId +
           '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>'
         : '') +
       (frame.mode === 'app'
-        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>'
+        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-cbsid="CMP033-B01" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>'
         : '') +
       titleHTML(frame) +
       '<span class="cbsh-grow"></span>' +
@@ -465,15 +488,7 @@
       '<span class="cbsh-bell" data-testid="shell-bell" data-slot="bell"></span>' +
       /* SHELL-ONE: ⌂ Home on every page but Home itself — the storefront's frame.homeHref is the shop's front */
       (frame.mode !== 'home'
-        ? '<a class="cbsh-tohome" href="' +
-          esc(frame.homeHref) +
-          '" data-testid="shell-home" aria-label="' +
-          esc(T(W.areas.home)) +
-          '"><span aria-hidden="true">' +
-          ICON.home +
-          '</span><span class="hw">' +
-          esc(T(W.areas.home)) +
-          '</span></a>'
+        ? homeLink(frame)
         : '') /* .cbsh-tohome, never .cbsh-home: that is Home's own slot (INT7b: the link's rule had laid Home's sections in a row) */ +
       '<span class="cbsh-av" data-testid="shell-avatar"></span>' +
       '</div>' +
@@ -513,7 +528,7 @@
         : '') +
       (frame.mode === 'home' ? '<div class="cbsh-pfoot" data-testid="shell-pfoot"></div>' : '') +
       (frame.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
-      '<main class="cbsh-main" data-testid="shell-main" data-tab="home"><div class="cbsh-inner">' +
+      '<main class="cbsh-main" data-testid="shell-main" data-tab="home" tabindex="0"><div class="cbsh-inner">' +
       (frame.sides
         ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>'
         : '') +
@@ -531,14 +546,14 @@
   function editionChipsHTML(edition) {
     if (!edition) return '';
     return (
-      '<button type="button" class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' +
+      '<button type="button" class="cbsh-chip due" data-cbsid="CMP033-B01"' + shellMount('CMP033') + ' data-testid="shell-edition-chip" data-edition="' +
       esc(edition.key) +
       '" title="' +
       esc(W.editionOpen || 'Change what this shows') +
       '">' +
       esc(edition.chip) +
       '</button>' +
-      '<button type="button" class="cbsh-chip due" data-testid="shell-edition-off" aria-label="' +
+      '<button type="button" class="cbsh-chip due" data-cbsid="CMP014-B01"' + shellMount('CMP014') + ' data-testid="shell-edition-off" aria-label="' +
       esc(W.editionOff || 'Show everything') +
       '" title="' +
       esc(W.editionOff || 'Show everything') +
@@ -930,7 +945,7 @@
     /* SCREEN-ID: the app's screen code in the bar — the one chip (CBScreenId); a frame with sections names the section (page-frame.js setActive) */
     if ((mode !== 'bar' || appId) && root.CBScreenId) {
       root.CBScreenId.here(appId || 'home');
-      $('.cbsh-sid').appendChild(root.CBScreenId.chip());
+      $('.cbsh-sid').appendChild(root.CBScreenId.chip()), stampMounts(node); /* the chip names the screen: now the bar's coded buttons get their mount */
     }
 
     /* ── the bar ── */
@@ -946,7 +961,7 @@
       element.innerHTML = w
         ? '<button type="button" class="cbsh-chip ' +
           w.band +
-          '" data-testid="shell-licence-chip" data-band="' +
+          '" data-cbsid="CMP033-B01"' + shellMount('CMP033') + ' data-testid="shell-licence-chip" data-band="' +
           w.band +
           '">' +
           (w.band === 'due' ? '●' : '⚠') +
@@ -985,12 +1000,12 @@
           return '<div class="cbsh-col"><h5>' + esc(title) + (nestedWhy || '') + '</h5>' + body + '</div>';
         };
       if (S.headerState === 'loading') {
-        sheet.innerHTML = '<div class="cbsh-sin"><div class="cbsh-ln">' + W.loading + '</div></div>';
+        sheet.innerHTML = shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin"><div class="cbsh-ln">' + W.loading + '</div></div>';
         return;
       }
       if (!h) {
         sheet.innerHTML =
-          '<div class="cbsh-sin" data-testid="shell-sheet-empty">' +
+          shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin" data-testid="shell-sheet-empty">' +
           col(W.business, '<div class="cbsh-ln nm">' + esc(shopName()) + '</div>') +
           '<div class="cbsh-ln none">' +
           esc(W.notYet) +
@@ -1017,7 +1032,7 @@
             btn =
               '<a class="cbsh-rn ' +
               item.band +
-              '" data-testid="shell-renew" href="' +
+              '" data-cbsid="CMP010-B01"' + shellMount('CMP010') + ' data-testid="shell-renew" href="' +
               esc(item.renew_url) +
               '">' +
               esc(item.band === 'gone' ? W.again : W.renew) +
@@ -1059,10 +1074,10 @@
           .join('') +
         '</div>' +
         (checks.length && got < checks.length
-          ? '<a class="cbsh-btn" data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>'
+          ? '<a class="cbsh-btn" data-cbsid="CMP010-B01"' + shellMount('CMP010') + ' data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>'
           : '');
       sheet.innerHTML =
-        '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
+        shellChip('POP115', CHIP_CORNER) + '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
     }
 
     function setOpen(v) {
@@ -1350,12 +1365,12 @@
         '</span><span class="chev" aria-hidden="true">▼</span>'; /* through the catalogue: an area is a word (walk-locale) */
       element.setAttribute('title', T(name));
       element.setAttribute('aria-label', W.switcher);
-      target.innerHTML = areasShown()
+      target.innerHTML = shellChip('POP116', 'align-self:flex-end;margin:2px 4px') + areasShown()
         .map(function (item) {
           return (
             '<a href="' +
             esc(homeHref + (item === 'home' ? '' : '#' + item)) +
-            '" data-testid="shell-switch-' +
+            '" data-cbsid="CMP033-M01"' + shellMount('CMP033') + ' data-testid="shell-switch-' +
             item +
             '"' +
             (item === cur ? ' aria-current="true"' : '') +

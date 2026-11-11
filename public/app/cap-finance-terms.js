@@ -21,7 +21,9 @@ var FT = {
   parties: [],
   pstate: 'loading',
   api: null,
-  cur: null
+  cur: null,
+  inherited: {} /* FIN-46: what each form falls back to (the shop's terms under a party's sheet), for the preview */,
+  base: {} /* FIN-46: each form's values as loaded, so "nothing changed yet" is known */
 }; /* CX0: the shop's currency is the ledger's (bkCur → SESSION.currency, set by the dues answer), never typed */
 var FT_EP = {
   /* booksTerms (the read) and crmParties live in accounts-shell.js CB_PARTY_EP — CRM reads them too; one name, one place */
@@ -79,8 +81,9 @@ window.addEventListener('hashchange', function () {
 function ftNum(v) {
   return v == null ? '' : String(v);
 }
+/* the label is a for= label on the control `id` (axe label, WCAG 4.1.2); bold kept as the old <b> had it */
 function ftField(id, label, input) {
-  return '<div class="kv"><b style="flex:1 1 150px">' + esc(label) + '</b><span style="flex:1 1 150px">' + input + '</span></div>';
+  return '<div class="kv"><label for="' + id + '" style="flex:1 1 150px;font-weight:700">' + esc(label) + '</label><span style="flex:1 1 150px">' + input + '</span></div>';
 }
 function ftInput(id, v, ph, off) {
   return (
@@ -97,46 +100,295 @@ function ftInput(id, v, ph, off) {
     '>'
   );
 }
-/** own: this level's values ({credit_days, credit_limit_minor, interest, early}); dflt: what falls back (placeholders); off: greyed */
-function ftForm(p, own, dflt, off) {
-  own = own || {};
-  dflt = dflt || {};
-  var i = own.interest || {},
-    e = own.early || {},
-    di = dflt.interest || {},
-    de = dflt.early || {};
+/* ── FIN-46 · the four questions, a live "What this means", the rules each with a fix button, a save bar with its reason ──
+ * No new field: the same eight inputs the server already takes (credit days · limit · interest on / rate / grace · early % / days), grouped as the four
+ * things a shopkeeper decides. The preview and the rules read the FORM's values, with the inherited default under each blank; they count days, never money
+ * (the limit is painted by bkMoney). The server stays the judge: the rules mirror its sentences so the person fixes before pressing Save.
+ * `prefix` is the form's id prefix: 'fts' the shop card, 'ftp' a party's sheet. */
+
+/** the four headings in the customer's and the supplier's own words; one table, the form paints the side it is for */
+var FT_QUESTIONS = {
+  customer: ['When do they pay?', 'How much can they owe?', 'If they pay late', 'If they pay early'],
+  supplier: ['When do you pay them?', 'How much can you owe them?', 'If you pay late', 'If you pay early']
+};
+function ftGroup(title, rows) {
+  return '<h3 style="margin:14px 0 2px;font-size:14px">' + esc(tx(title)) + '</h3>' + rows;
+}
+/** the form: four grouped questions, then "What this means" and the rules. ownTerms: this level's values; inherited: what falls back; greyed: may not edit; side: customer | supplier */
+function ftForm(prefix, ownTerms, inherited, greyed, side) {
+  ownTerms = ownTerms || {};
+  inherited = inherited || {};
+  FT.inherited[prefix] = inherited;
+  var heading = FT_QUESTIONS[side || 'customer'];
   return (
-    ftField(p + '_days', tx('Credit days'), ftInput(p + '_days', own.credit_days, dflt.credit_days, off)) +
+    ftGroup(heading[0], ftField(prefix + '_days', tx('Credit days'), ftInput(prefix + '_days', ownTerms.credit_days, inherited.credit_days, greyed))) +
+    ftGroup(heading[1], ftLimitRow(prefix, ownTerms, inherited, greyed)) +
+    ftGroup(heading[2], ftLateRows(prefix, ownTerms.interest || {}, inherited.interest || {}, greyed)) +
+    ftGroup(heading[3], ftEarlyRows(prefix, ownTerms.early || {}, inherited.early || {}, greyed)) +
+    '<h3 style="margin:14px 0 2px;font-size:14px">' +
+    esc(tx('What this means')) +
+    '</h3><div id="' +
+    prefix +
+    '_prev" data-testid="' +
+    prefix +
+    '-prev"></div><div id="' +
+    prefix +
+    '_rules" data-testid="' +
+    prefix +
+    '-rules"></div>'
+  );
+}
+/** the credit limit row: the money unit (M36), the inherited limit as its placeholder */
+function ftLimitRow(prefix, ownTerms, inherited, greyed) {
+  return ftField(
+    prefix + '_limit',
+    tx('Credit limit'),
+    bkMoneyInput({
+      id: prefix + '_limit',
+      minor: ownTerms.credit_limit_minor,
+      cur: bkCur(FT.cur),
+      ph: inherited.credit_limit_minor != null ? bkMoney(inherited.credit_limit_minor, bkCur(FT.cur)) : tx('No limit'),
+      extra: greyed ? 'disabled' : ''
+    })
+  );
+}
+/** the "if they pay late" rows: the interest switch, its yearly rate and the grace days */
+function ftLateRows(prefix, interest, inheritedInterest, greyed) {
+  return (
     ftField(
-      p + '_limit',
-      tx('Credit limit'),
-      bkMoneyInput({
-        id: p + '_limit',
-        minor: own.credit_limit_minor,
-        cur: bkCur(FT.cur),
-        ph: dflt.credit_limit_minor != null ? bkMoney(dflt.credit_limit_minor, bkCur(FT.cur)) : tx('No limit'),
-        extra: off ? 'disabled' : ''
-      })
-    ) +
-    ftField(
-      p + '_ion',
+      prefix + '_ion',
       tx('Interest on overdue'),
       '<input type="checkbox" id="' +
-        p +
+        prefix +
         '_ion" data-testid="' +
-        p +
+        prefix +
         '_ion"' +
-        (i.on ? ' checked' : '') +
-        (off ? ' disabled' : '') +
+        (interest.on ? ' checked' : '') +
+        (greyed ? ' disabled' : '') +
         '> <span class="hint">' +
         esc(tx('Shown, never charged')) +
         '</span>'
     ) +
-    ftField(p + '_rate', tx('Rate % a year'), ftInput(p + '_rate', i.rate_pct, di.rate_pct, off)) +
-    ftField(p + '_grace', tx('Grace days'), ftInput(p + '_grace', i.grace_days, di.grace_days, off)) +
-    ftField(p + '_epct', tx('Early-pay discount %'), ftInput(p + '_epct', e.pct, de.pct, off)) +
-    ftField(p + '_edays', tx('Pay within days'), ftInput(p + '_edays', e.within_days, de.within_days, off))
+    ftField(prefix + '_rate', tx('Rate % a year'), ftInput(prefix + '_rate', interest.rate_pct, inheritedInterest.rate_pct, greyed)) +
+    ftField(prefix + '_grace', tx('Grace days'), ftInput(prefix + '_grace', interest.grace_days, inheritedInterest.grace_days, greyed))
   );
+}
+/** the "if they pay early" rows: the discount percent and the days it holds for */
+function ftEarlyRows(prefix, early, inheritedEarly, greyed) {
+  return (
+    ftField(prefix + '_epct', tx('Early-pay discount %'), ftInput(prefix + '_epct', early.pct, inheritedEarly.pct, greyed)) +
+    ftField(prefix + '_edays', tx('Pay within days'), ftInput(prefix + '_edays', early.within_days, inheritedEarly.within_days, greyed))
+  );
+}
+
+/** the form's values with the inherited default under every blank: what these terms will MEAN. { bad } when a box holds a non-number */
+function ftEffective(prefix) {
+  var read = ftRead(prefix);
+  if (read.bad) return { bad: read.bad };
+  var body = read.body,
+    inherited = FT.inherited[prefix] || {},
+    inheritedInterest = inherited.interest || {},
+    inheritedEarly = inherited.early || {},
+    ownInterest = body.interest || {},
+    ownEarly = body.early || {},
+    pick = function (own, fallback) {
+      return own != null ? own : fallback != null ? fallback : null;
+    };
+  return {
+    days: pick(body.credit_days, inherited.credit_days),
+    limit: pick(body.credit_limit_minor, inherited.credit_limit_minor),
+    on: body.interest ? !!ownInterest.on : !!inheritedInterest.on,
+    rate: pick(ownInterest.rate_pct, inheritedInterest.rate_pct),
+    grace: pick(ownInterest.grace_days, inheritedInterest.grace_days) || 0,
+    pct: pick(ownEarly.pct, inheritedEarly.pct),
+    within: pick(ownEarly.within_days, inheritedEarly.within_days)
+  };
+}
+/** the sentences of "What this means": due · discount until · late after · interest shown · limit — days counted, no money worked out */
+function ftSentences(effective, currency) {
+  var lines = [];
+  lines.push(
+    effective.days == null
+      ? tx('No credit days are set, so a bill has no due date.')
+      : effective.days === 0
+        ? tx('Due the day the bill is made.')
+        : txf('Due {n} days after the bill date.', { n: effective.days })
+  );
+  if (effective.pct > 0 && effective.within > 0) lines.push(txf('{pct}% off if paid within {n} days of the bill.', { pct: effective.pct, n: effective.within }));
+  if (effective.days != null) lines.push(txf('Preview: counted as late after day {n}.', { n: effective.days + effective.grace }));
+  lines.push(
+    effective.on && effective.rate > 0
+      ? txf('Interest of {rate}% a year is shown from then, a day at a time. It is shown, never charged.', { rate: effective.rate })
+      : tx('No interest is shown on late bills.')
+  );
+  lines.push(effective.limit != null ? txf('Owes up to {amt} before you are warned.', { amt: bkMoney(effective.limit, currency) }) : tx('No credit limit.'));
+  return lines;
+}
+/** a whole number of days from 0 to 3650 (or not set) */
+function ftWholeDays(days) {
+  return days == null || (Math.floor(days) === days && days >= 0 && days <= 3650);
+}
+/** the number rules: whole credit days, a limit, a rate from 0 to 100, whole grace days — { field, text, fix } each */
+function ftRulesNumbers(effective, prefix) {
+  var broken = [];
+  if (!ftWholeDays(effective.days)) broken.push({ field: prefix + '_days', text: tx('Credit days must be a whole number from 0 to 3650.'), fix: tx('Fix credit days') });
+  if (effective.limit != null && effective.limit < 0) broken.push({ field: prefix + '_limit', text: tx('The credit limit cannot be below 0.'), fix: tx('Fix the limit') });
+  if (effective.rate != null && (effective.rate < 0 || effective.rate > 100))
+    broken.push({ field: prefix + '_rate', text: tx('The rate must be from 0 to 100.'), fix: tx('Fix the rate') });
+  if (!ftWholeDays(effective.grace)) broken.push({ field: prefix + '_grace', text: tx('Grace days must be a whole number from 0 to 3650.'), fix: tx('Fix grace days') });
+  return broken;
+}
+/** the pairing rules: interest needs a rate · a discount is 0 to 100 and needs its days · its days end before the due date */
+function ftRulesPairs(effective, prefix) {
+  var broken = [];
+  if (effective.on && !(effective.rate > 0)) broken.push({ field: prefix + '_rate', text: tx('Interest needs a rate above 0.'), fix: tx('Add a rate') });
+  if (effective.pct > 100) broken.push({ field: prefix + '_epct', text: tx('The early-pay discount must be from 0 to 100.'), fix: tx('Fix the discount') });
+  if (effective.pct > 0 && !(effective.within > 0)) broken.push({ field: prefix + '_edays', text: tx('Early-pay needs the number of days.'), fix: tx('Add the days') });
+  if (effective.within > 0 && effective.days != null && effective.within > effective.days)
+    broken.push({ field: prefix + '_edays', text: tx('The early-pay days run past the due date.'), fix: tx('Shorten the days') });
+  return broken;
+}
+/** every rule the form breaks, each with the field its fix button takes the person to */
+function ftRules(effective, prefix) {
+  if (effective.bad) return [{ field: prefix + '_days', text: effective.bad, fix: tx('Fix it') }];
+  return ftRulesNumbers(effective, prefix).concat(ftRulesPairs(effective, prefix));
+}
+/** a rule's fix button: the field it names is focused and selected */
+function ftFix(fieldId) {
+  var field = document.getElementById(fieldId);
+  if (!field) return;
+  field.focus();
+  if (field.select) field.select();
+}
+/** the broken rules as rows, each a sentence and its fix button */
+function ftRulesHtml(rules, prefix) {
+  return rules
+    .map(function (rule, index) {
+      return (
+        '<div class="kv" data-testid="' +
+        prefix +
+        '-rule-' +
+        index +
+        '"><span class="hint" style="color:var(--red-i)">⚠ ' +
+        esc(rule.text) +
+        '</span><button type="button" class="act" data-testid="' +
+        prefix +
+        '-fix-' +
+        index +
+        '" onclick="ftFix(\'' +
+        esc(rule.field) +
+        '\')">' +
+        esc(rule.fix) +
+        '</button></div>'
+      );
+    })
+    .join('');
+}
+/** the save bar's reason: why Save is greyed, said in words — '' when it may go, null when the person may not set terms at all */
+function ftWhyNot(prefix, rules, greyed) {
+  if (greyed) return null;
+  if (rules.length) return txn('Fix {count} thing first.', 'Fix {count} things first.', rules.length);
+  return FT.base[prefix] === JSON.stringify(ftRead(prefix).body) ? tx('Nothing changed yet.') : '';
+}
+/** repaint the preview, the rules and the save bar from the form as it stands (every keystroke) */
+function ftRefresh(prefix) {
+  var effective = ftEffective(prefix),
+    rules = ftRules(effective, prefix),
+    preview = document.getElementById(prefix + '_prev'),
+    rulesBox = document.getElementById(prefix + '_rules');
+  if (preview)
+    preview.innerHTML = effective.bad
+      ? ''
+      : ftSentences(effective, bkCur(FT.cur))
+          .map(function (line) {
+            return '<div class="kv"><span>' + esc(line) + '</span></div>';
+          })
+          .join('');
+  if (rulesBox) rulesBox.innerHTML = ftRulesHtml(rules, prefix);
+  ftSaveBarState(prefix, rules);
+}
+/** the save button and its line: greyed with a stated reason, or ready */
+function ftSaveBarState(prefix, rules) {
+  var shop = prefix === 'fts',
+    saveButton = document.querySelector('[data-testid="' + (shop ? 'ft-save' : 'ftp-save') + '"]'),
+    reason = ftWhyNot(prefix, rules, saveButton ? saveButton.dataset.off === '1' : true);
+  if (!saveButton || reason === null) return;
+  saveButton.disabled = reason !== '';
+  ftSay(shop ? 'ft_why' : 'ftp_why', reason);
+}
+/** the form is on the page: remember what it held (so "changed" is known), listen once, paint the first preview */
+function ftWire(prefix, root) {
+  FT.base[prefix] = JSON.stringify(ftRead(prefix).body);
+  if (!root.dataset.wired) {
+    root.dataset.wired = '1';
+    ['input', 'change'].forEach(function (name) {
+      root.addEventListener(name, function () {
+        ftRefresh(prefix);
+      });
+    });
+  }
+  ftRefresh(prefix);
+}
+
+/* ── the Changes list: Undo puts the newest change back (a new change, so it is in the list too) ── */
+var FT_UNDOABLE = { credit_days: 1, credit_limit_minor: 1, interest: 1, early: 1 };
+/** the stored old value → what the server takes back (a number, or the interest / early object; null clears) */
+function ftUndoVal(field, oldValue) {
+  if (oldValue == null || oldValue === '') return null;
+  if (field === 'interest' || field === 'early') return typeof oldValue === 'string' ? JSON.parse(oldValue) : oldValue;
+  return Number(oldValue);
+}
+/** the extra html for one change row: Undo on the newest change only, greyed when the person may not set terms */
+function ftUndoFor(list, greyed, partyId) {
+  var newest = (list || []).reduce(function (best, change, index) {
+    return best < 0 || String(change.at) > String((list[best] || {}).at) ? index : best;
+  }, -1);
+  return function (change, index) {
+    var field = String(change.field || '').replace(/^(customer|supplier)\./, '');
+    if (index !== newest || !FT_UNDOABLE[field]) return '';
+    var old = change.old == null ? '' : typeof change.old === 'object' ? JSON.stringify(change.old) : String(change.old);
+    return ' <button type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
+  };
+}
+/** the standard confirm for a money setting (CBAction asks in the page's own dialog; Cancel sends nothing) */
+function ftMoneyConfirm(title, body, yes) {
+  return { title: title, body: esc(body), yes: yes, danger: false };
+}
+/** Undo: send the newest change's old value back as a new change, then read the terms again */
+function ftUndo(btn) {
+  var undo = { field: btn.dataset.field, old: btn.dataset.old, partyId: btn.dataset.party || null };
+  if (!undo.field) return;
+  var body = undo.partyId ? { party_id: undo.partyId, side: 'customer' } : {},
+    lineId = undo.partyId ? 'ftp_why' : 'ft_why';
+  try {
+    body[undo.field] = ftUndoVal(undo.field, undo.old);
+  } catch (_) {
+    return ftSay(lineId, tx('That change cannot be undone here.'));
+  }
+  return CBAction.run(
+    btn,
+    function () {
+      return api('booksTermsSet', { body: body });
+    },
+    {
+      key: 'ft-undo',
+      confirm: ftMoneyConfirm(tx('Undo this change?'), tx('The earlier terms are put back as a new change. It shows in the Changes list.'), tx('Undo')),
+      out: lineId,
+      failed: tx('Could not undo'),
+      done: '✓ ' + tx('Undone'),
+      outcome: function () {
+        ftLoad(true).then(function () {
+          if (undo.partyId) ftOpen(undo.partyId);
+          ftSay(lineId, '✓ ' + tx('Undone'));
+        });
+      }
+    }
+  );
+}
+/** put a sentence on a status line, if the line is on the page */
+function ftSay(lineId, text) {
+  var line = document.getElementById(lineId);
+  if (line) line.textContent = text;
 }
 function ftText(id) {
   var el = document.getElementById(id);
@@ -304,25 +556,31 @@ function ftShopPaint() {
     '" style="cursor:help;opacity:.7;font-size:.7em">ⓘ</span></h2>' +
     (why ? '<div class="hint" data-testid="ft-why" style="opacity:.85">' + esc(tx(why)) + '</div>' : '') +
     ftForm('fts', t.default, null, off) +
-    '<div style="display:flex;gap:10px;align-items:center"><button type="button" class="act" data-testid="ft-save" hidden style="display:none"' +
-    (off ? ' disabled' : '') +
-    ' onclick="ftSaveShop(this)">' +
-    esc(tx('Save')) +
-    '</button><span id="ft_why" data-testid="ft-out" class="hint"></span></div>' +
+    ftSaveBar('ft-save', 'ft_why', 'ft-out', 'ftSaveShop(this)', off) +
     '<h3 style="margin:14px 0 4px;font-size:14px">' +
     esc(tx('Changes')) +
     '</h3>' +
-    bkTermEvents(t.events, bkCur(FT.cur), 'ft-event');
-  /* autosave: a changed field saves the shop terms through the same ftSaveShop (the hidden button is its action handle) */
-  if (!off && !el.dataset.auto) {
-    el.dataset.auto = '1';
-    el.addEventListener('change', function (changeEvent) {
-      if (changeEvent.target && /^fts_/.test(changeEvent.target.id || '')) {
-        var saveButton = el.querySelector('[data-testid="ft-save"]');
-        if (saveButton) ftSaveShop(saveButton);
-      }
-    });
-  }
+    bkTermEvents(t.events, bkCur(FT.cur), 'ft-event', ftUndoFor(t.events, off, null));
+  /* FIN-46: Save is a visible bar that says why it is greyed (the autosave on change is gone: settings are Save, not autosave) */
+  ftWire('fts', el);
+}
+/** the save bar: the button (greyed while nothing changed, a rule is broken or the person may not set terms) and the line that says why */
+function ftSaveBar(testId, whyId, outTestId, onclick, greyed) {
+  return (
+    '<div style="display:flex;gap:10px;align-items:center;margin-top:10px"><button type="button" class="act" data-testid="' +
+    testId +
+    '" data-off="' +
+    (greyed ? '1' : '0') +
+    '" disabled onclick="' +
+    onclick +
+    '">' +
+    esc(tx('Save')) +
+    '</button><span id="' +
+    whyId +
+    '" data-testid="' +
+    outTestId +
+    '" class="hint"></span></div>'
+  );
 }
 async function ftLoad(quiet) {
   var g = ++FT.gen;
@@ -386,11 +644,14 @@ function ftSaveShop(btn) {
     },
     {
       key: 'ft-save',
+      confirm: ftMoneyConfirm(tx('Save these terms?'), tx('Credit, interest and discount terms apply to new bills from now on. Each change shows in the Changes list.'), tx('Save terms')),
       out: 'ft_why',
       failed: tx('Could not save terms'),
       done: '✓ ' + tx('Saved'),
       outcome: function () {
-        ftLoad(true);
+        ftLoad(true).then(function () {
+          ftSay('ft_why', '✓ ' + tx('Saved')); /* the repaint wiped the button's line: say it again on the new bar */
+        });
       }
     }
   );
@@ -431,7 +692,7 @@ async function ftOpen(pid) {
     '<h3 style="margin:12px 0 4px;font-size:14px">' +
     esc(tx('Changes')) +
     '</h3>' +
-    bkTermEvents(r.events, bkCur(FT.cur), 'ft-event');
+    bkTermEvents(r.events, bkCur(FT.cur), 'ft-event', ftUndoFor(r.events, off, pid));
   var foot = document.querySelector('#fin_sheet .mfoot');
   if (foot) foot.remove();
   body.insertAdjacentHTML(
@@ -439,14 +700,15 @@ async function ftOpen(pid) {
     '<div class="mfoot"><span id="ftp_why" data-testid="ftp-out" class="hint"></span><button type="button" onclick="closeModal()">' +
       esc(tx('Close')) +
       '</button>' +
-      '<button type="button" class="act" data-testid="ftp-save"' +
-      (off ? ' disabled' : '') +
-      ' onclick="ftSaveParty(\'' +
+      '<button type="button" class="act" data-testid="ftp-save" data-off="' +
+      (off ? '1' : '0') +
+      '" disabled onclick="ftSaveParty(\'' +
       esc(pid) +
       '\',this)">' +
       esc(tx('Save')) +
       '</button></div>'
   );
+  ftWire('ftp', body);
 }
 function ftSaveParty(pid, btn) {
   var r = ftRead('ftp'),
@@ -463,6 +725,7 @@ function ftSaveParty(pid, btn) {
     },
     {
       key: 'ftp-save:' + pid,
+      confirm: ftMoneyConfirm(tx('Save these terms?'), tx('Credit, interest and discount terms apply to new bills from now on. Each change shows in the Changes list.'), tx('Save terms')),
       out: 'ftp_why',
       failed: tx('Could not save terms'),
       done: tx('Saved'),

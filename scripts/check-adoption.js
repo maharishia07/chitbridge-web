@@ -1,12 +1,19 @@
-// check-adoption.js — the SPEC-adoption-generalize regression: an adopted catalogue must render for ANY vertical.
-//
-// The bar (from the spec's rollout gate): a veg/meat store's adopted catalogue renders with ZERO paint artifacts and
-// correct per-product units, while PAINT renders exactly as before. Cases 1–3 are asserted here; cases 4 (no
-// double-create) and 5 (manage link) are UI flows and live in e2e/tests/catalogue-wizard.spec.js.
-//
-// It pulls the REAL renderers out of public/app.html (no copies to drift) and runs them in a vm with just esc + UI,
-// so this stays a pure function-contract test — no browser, no server, no DB.
-// Run:  node scripts/check-adoption.js
+/**
+ * check-adoption.js — the SPEC-adoption-generalize regression: an adopted catalogue must render for ANY vertical.
+ *
+ * The bar (from the spec's rollout gate): a veg/meat store's adopted catalogue renders with ZERO paint artifacts and
+ * correct per-product units, while PAINT renders exactly as before. Cases 1–3 are asserted here; cases 4 (no
+ * double-create) and 5 (manage link) are UI flows and live in e2e/tests/catalogue-wizard.spec.js.
+ *
+ * It pulls the REAL renderers out of public/app.html (no copies to drift) and runs them in a vm with just esc + UI,
+ * so this stays a pure function-contract test — no browser, no server, no DB.
+ * Run:  node scripts/check-adoption.js
+ * OWNS      the proof that an adopted catalogue renders for ANY vertical (veg, meat, paint) with zero paint artifacts and each product's own unit.
+ * CALLED BY package.json check:adoption · .github/workflows/ci.yml (web job). No browser, no server: the real renderers lifted out of public/app.html and public/app/helpers.js into a vm.
+ * FLOW      app.html renderers + helpers.js fmtMoney (with the money readers it calls) -> vm context -> five cases + three back-compat reads -> pass/fail count
+ * CARD      06-catalogue-pim/items
+ * UNIT      06/Catalogue items (adopted catalogue render)
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
@@ -60,7 +67,8 @@ for (const fn of NEEDED) {
  */
 const helpers = fs.readFileSync(path.join(root, 'public', 'app', 'helpers.js'), 'utf8');
 /* T2-WEBPRIMS: esc is lifted too (it was a stub copy in ctx below), and fmtMoney spans lines now — a one-line body or up to its closing brace */
-for (const fn of ['fmtMoney', 'esc']) {
+/* CUR-1 slice 5: fmtMoney now reads through moneyValueFor and moneyRead (and its three helpers), so they are lifted with it */
+for (const fn of ['fmtMoney', 'moneyValueFor', 'moneyRead', 'moneyReadMajor', 'moneyReadMinor', 'isoCodeOf', 'bareAmount', 'esc']) {
   const m = new RegExp('^function ' + fn + '\\b(?:.*\\}\\s*$|[\\s\\S]*?\\n\\})', 'm').exec(helpers);
   if (!m) {
     console.log('SETUP FAIL — could not lift ' + fn + '() out of app/helpers.js');

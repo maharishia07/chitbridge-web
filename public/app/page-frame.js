@@ -151,7 +151,7 @@
       '</div><div class="brand-name label">' +
       esc(sk.name) +
       '</div></div>' +
-      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
+      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned" tabindex="0" role="region" aria-label="' + esc(sk.name) + '"></div>' : '') +
       '<nav class="nav" id="nav" aria-label="' +
       esc(sk.name) +
       '">' +
@@ -285,6 +285,7 @@
   }
   /* UX-90: every lab wears the Finance frame - the standard skeleton (sidebar + main pane), the left menu is THIS lab's own choices (W16; the other labs are the shell's top switcher, fed by manifest.json), one background.
      CBFrame.lab({ app: 'conversion-lab', name: 'Conversion Lab', icon: '⇅', sections?, active?, onSection?, work?, kural?, pinned?, phone? }).
+     avatar: extra CBAvatar options for the page that must own its person, look or language (the UI standard page: a preview person, its own language list); left out, the frame's avatar is the session's.
      sections: { group: 'Heading', fold: true, count: 3, open: false } makes a heading that folds the entries under it (open by default; count is drawn beside it).
      pinned: true draws a shelf above the menu (UX-117, the lab's own things come first; framed.skeleton.pinned is the element the lab fills: its own things, grouped by status, with CBLabKit.more).
      phone: { items: [{ k, label }], active, onPick(k) } (a lab with a pinned shelf): at 760 and below the left panel is not drawn, a switch above the middle takes its place;
@@ -311,6 +312,7 @@
       signin: false,
       kural: opts.kural,
       title: { icon: opts.icon, name: opts.name },
+      avatar: opts.avatar,
       work: opts.work,
       skeleton: {
         name: opts.name,

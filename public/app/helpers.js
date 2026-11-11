@@ -110,6 +110,10 @@ function payModeOpts() {
   return payHasUpi() ? '<option value="upi">UPI</option>' : '';
 }
 
+/** CUR-1 slice 5: a row's amount cell as { amount, currency }: a money value adds under ITS OWN currency (never dropped as NaN), a bare cell has none */
+function moneyCellRead(cell) {
+  return cell !== null && typeof cell === 'object' ? moneyRead(cell) : { amount: Number(cell || 0), currency: null };
+}
 /**
  * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS. Athi, 2026-08-21: *"we have a couple of places
  * sum is there; what I want is a single group sum, gold standard."*
@@ -130,9 +134,10 @@ function payModeOpts() {
 function cbSumByCurrency(rows, amtKey, curKey) {
   var by = {};
   (rows || []).forEach(function (item) {
-    var v = Number((item || {})[amtKey || 'amt'] || 0);
+    var cell = moneyCellRead((item || {})[amtKey || 'amt']);
+    var v = cell.amount;
     if (!v) return;
-    var c = (item || {})[curKey || 'currency'] || moneyCode() || '';
+    var c = cell.currency || (item || {})[curKey || 'currency'] || moneyCode() || '';
     by[c] = (by[c] || 0) + v;
   });
   /* ⚠️ ORDERED BIGGEST FIRST, so the figure a reader is most likely to want is the one they read first. */
@@ -257,9 +262,50 @@ function moneyCode(code) {
   var shop = typeof myCur === 'function' ? myCur() : null;
   return shop ? String(shop).toUpperCase() : null;
 }
+/**
+ * CUR-1 slice 5: THE ONE WEB READER OF A MONEY SLOT, tolerant of every shape the api will send while slices 6 and 7 move it.
+ * Reads `{ amount_minor, currency }` (the new wire shape, plan 0.4), `{ amount, currency }`, `{ amount }`, a bare number and a numeric string.
+ * Returns null for ABSENT (price on request is a state, never 0), else `{ amount, currency, amount_minor?, assumed?, unreadable? }`:
+ *  - `amount` is the MAJOR number a formatter paints (minor / 10^exponent, the exponent from the vendored CBMoney.decimals), null when unreadable;
+ *  - `currency` is the value's OWN code. It is NEVER taken from the shop or the session. With none, `opts.assume` (the caller names where it
+ *    came from: the chit header's currency_code) fills it and the result carries `assumed: true`; with neither it stays null (never INR, never the shop's);
+ *  - `unreadable` names what is wrong ('amount' | 'currency') so a screen shows a dash, not a false 0.00.
+ * Reads only: the Money type itself (strict make/read, the ISO 4217 list) is engines slice 1, and this adopts it when it lands.
+ */
+function moneyRead(value, opts) {
+  if (value == null || value === '') return null;
+  if (Array.isArray(value)) return { amount: null, currency: null, unreadable: 'amount' };
+  var boxed = typeof value === 'object' ? value : {};
+  var ownCode = isoCodeOf(boxed.currency);
+  if (boxed.amount_minor != null) return moneyReadMinor(String(boxed.amount_minor).trim(), ownCode);
+  return moneyReadMajor(value, ownCode, isoCodeOf(opts && opts.assume));
+}
+/** the major-amount half of moneyRead: a number, a numeric string or { amount }; the header's code is only ever ASSUMED, and says so */
+function moneyReadMajor(value, ownCode, headerCode) {
+  var major = typeof CBMoney !== 'undefined' && CBMoney.priceOf ? CBMoney.priceOf(value) : Number(typeof value === 'object' ? value.amount : value);
+  var assumed = ownCode ? '' : headerCode;
+  var shown = ownCode || assumed || null;
+  if (major === null || !isFinite(major)) return { amount: null, currency: shown, unreadable: 'amount' };
+  return assumed ? { amount: major, currency: shown, assumed: true } : { amount: major, currency: shown };
+}
+/** a 3-letter ISO code in capitals, or '' - the one shape test of a currency code on this page */
+function isoCodeOf(code) {
+  var upper = String(code == null ? '' : code).trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(upper) ? upper : '';
+}
+/** the `amount_minor` half of moneyRead: a safe integer (bigint arrives as a string, never a fraction) and ITS OWN code, which gives the exponent; never assumed */
+function moneyReadMinor(minorText, ownCode) {
+  var minor = /^[+-]?[0-9]+$/.test(minorText) ? Number(minorText) : NaN;
+  if (!Number.isSafeInteger(minor)) return { amount: null, currency: ownCode || null, unreadable: 'amount' };
+  if (!ownCode) return { amount: null, currency: null, unreadable: 'currency' };
+  var digits = typeof CBMoney !== 'undefined' && CBMoney.decimals ? CBMoney.decimals(ownCode) : NaN;
+  if (!Number.isInteger(digits)) return { amount: null, currency: ownCode, unreadable: 'amount' };
+  return { amount: minor / Math.pow(10, digits), amount_minor: minor, currency: ownCode };
+}
 /** an amount with no currency: two decimals, plain grouping, no symbol (N1: an unstated shop is not India's) */
 function bareAmount(amount) {
-  var figure = typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose ? CBMoney.amountOfLoose(amount) : Number(amount);
+  var seen = amount !== null && typeof amount === 'object' ? moneyRead(amount) : null;
+  var figure = seen ? (seen.amount === null ? NaN : seen.amount) : typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose ? CBMoney.amountOfLoose(amount) : Number(amount);
   return (isFinite(figure) ? figure : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 /**
@@ -319,7 +365,18 @@ function shopDateTime(ts, opts) {
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
+/** CUR-1 slice 5: a money VALUE (an object) carries its own currency, which outranks the caller's code; returns { amount, code }, or { text } (a dash or the caller's empty word) when it cannot be read */
+function moneyValueFor(value, code, empty) {
+  var seen = value !== null && typeof value === 'object' && !Array.isArray(value) ? moneyRead(value, { assume: code }) : null;
+  if (!seen) return { amount: value, code: code };
+  if (seen.amount === null) return { text: empty === undefined ? '—' : empty };
+  return { amount: seen.amount, code: seen.currency && !seen.assumed ? seen.currency : code };
+}
 function fmtMoney(amount, code, empty) {
+  var painted = moneyValueFor(amount, code, empty);
+  if (painted.text !== undefined) return painted.text;
+  amount = painted.amount;
+  code = painted.code;
   if (empty !== undefined && (amount == null || amount === '' || (typeof amount !== 'object' && !isFinite(Number(amount))))) return empty;
   var given = String(code == null ? '' : code).trim(),
     shown = given ? code : moneyCode();
@@ -331,6 +388,14 @@ function fmtMoney(amount, code, empty) {
   } catch (e) {
     return shown + ' ' + n.toFixed(2);
   } /* a code Intl does not know: the code and the figure, never a guessed symbol */
+}
+/** fmtMoneyWhole(amount, code, empty) → fmtMoney, but a whole figure drops its .00 (₹40, not ₹40.00); 12.5 keeps its paise. For a price LIST, never a bill or a ledger. */
+function fmtMoneyWhole(amount, code, empty) {
+  var text = fmtMoney(amount, code, empty);
+  var seen = amount !== null && typeof amount === 'object' ? moneyRead(amount) : null;
+  if (seen) amount = seen.amount;
+  var whole = amount !== null && amount !== '' && isFinite(Number(amount)) && Number(amount) % 1 === 0;
+  return whole && typeof text === 'string' ? text.replace(/[.,]00(?=\D*$)/, '') : text;
 }
 /* ⭐ T2-WEBPRIMS: THE TWELVE MONTH WORDS in the reader's language (CBLocale's own date words) — 'short' Jan… · 'long' January…. Three files typed
    their own English Jan…Dec; a list built here follows the reader. Index 0 = January; a fiscal year rotates it at the caller. */

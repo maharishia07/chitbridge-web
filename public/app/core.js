@@ -435,6 +435,8 @@ const OUTBOX_KEYS = new Set([
   'supPatch',
   'prodDel',
   'prodEdit',
+  'prodBulkCategories', // QA-130 a bulk job step: add or remove a category per product; each product answers done, unchanged or refused, so a repeat changes nothing
+  'prodStatusBulk', // a bulk job step: sets a status and answers the ids it missed; a repeat only re-stamps who and when
   'folderRename',
   'folderDelete',
   'folderMove',
@@ -1274,7 +1276,8 @@ function api(key, opts) {
 }
 
 /* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
-function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt) {
+function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt, stepKey) {
+  if (stepKey) return stepKey; /* QA-131: a caller's own key (one per record step of a bulk job) wins, so a resend of a step is a replay */
   if (outboxSafe && CB) return CB._uuid();
   const fresh = () => (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId);
   if (endpoint.idem === 'attempt' && endpoint.m !== 'GET' && attempt) return _attempts[attempt] || (_attempts[attempt] = fresh());
@@ -1307,7 +1310,20 @@ async function settleAttempt(endpoint, attempt, res) {
   delete _attempts[attempt];
   return res;
 }
-async function apiOnce(key, { params, query, body } = {}) {
+/* errWords(v) → plain words from whatever an answer carries in a message slot: a string as is; an object (RFC 9457 problem, or {code,message}) by its detail, message, title, error; else ''.
+   Never String(object): that is how a screen came to say "[object Object]" (SIT crawl 11 Nov, Work > Intake). */
+function errWords(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value !== 'object') return String(value);
+  return errWords(value.detail) || errWords(value.message) || errWords(value.title) || errWords(value.error) || '';
+}
+/* answerWords(body) → the words of an error answer's body, through errWords; '' when it has none (the caller then says its own sentence) */
+function answerWords(body) {
+  var answer = body || {};
+  return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
+}
+async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
   cblog('debug', ep.m + ' ' + key);
@@ -1345,7 +1361,7 @@ async function apiOnce(key, { params, query, body } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt);
+    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt, stepKey);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
@@ -1431,7 +1447,7 @@ async function apiOnce(key, { params, query, body } = {}) {
           msg = j.details
             .map(function (item) {
               var text = item && item.field ? String(item.field).replace(/_/g, ' ') : '';
-              var m = (item && item.message) || '';
+              var m = errWords(item && item.message);
               /* "Invalid value" is express-validator's default and says nothing; name the field at least. */
               if (/^invalid value$/i.test(m)) m = 'is not valid';
               return text ? text.charAt(0).toUpperCase() + text.slice(1) + ': ' + m : m;
@@ -1439,7 +1455,7 @@ async function apiOnce(key, { params, query, body } = {}) {
             .filter(Boolean)
             .join('  ·  ');
         }
-        if (!msg) msg = j.message || j.error || '';
+        if (!msg) msg = answerWords(j);
       } catch (_) {}
       if (j && j.offline) {
         throw new Error(

@@ -1,4 +1,4 @@
-/* ADOPTED BUNDLE from chitbridge-engines · pack-kit v1.65.0 + reg-in v1.81.0 + reg-au v1.82.0 + reg-ae v1.65.0 + reg-sg v1.65.0 + reg-my v1.65.0 + reg-us v1.65.0 + reg-jp v1.65.0 + regulation v1.82.0 + country v1.69.0 + tax-packs v1.81.0 + tax-slab v1.72.0 + tax v1.80.0 — DO NOT EDIT HERE. Each part below is a release, unchanged. */
+/* ADOPTED BUNDLE from chitbridge-engines · pack-kit v1.65.0 + reg-in v1.85.0 + reg-au v1.82.0 + reg-ae v1.65.0 + reg-sg v1.65.0 + reg-my v1.65.0 + reg-us v1.65.0 + reg-jp v1.65.0 + regulation v1.85.0 + country v1.69.0 + tax-packs v1.81.0 + tax-slab v1.72.0 + tax v1.84.0 — DO NOT EDIT HERE. Each part below is a release, unchanged. */
 /* ADOPTED from chitbridge-engines v1.65.0 · pack-kit · sha256 265fed3faa84578d00043d07aef4eab0176827cff617dc583ea1e160a9147f37 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · pack-kit. Edited ONLY in chitbridge-engines/src/pack-kit.js; every platform adopts a released version of it. */
 (function (root) {
@@ -57,7 +57,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
 if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-/* ADOPTED from chitbridge-engines v1.81.0 · reg-in · sha256 3ca3af7aa0286cc5dd2d39cf5806df924619c854471aec6fa9cc005504dd9636 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.85.0 · reg-in · sha256 729eab807590349e3643d8312b477a454b285e7a6294dc6bb0b27856e339c64f — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · reg-in. Edited ONLY in chitbridge-engines/src/reg-in.js; every platform adopts a released version of it. */
 (function (root) {
   'use strict';
@@ -388,6 +388,11 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
     { role: 'card', code: '1520', name: 'Card settlements', group: 'bank_accounts' },
     { role: 'prepaid_expenses', code: '1810', name: 'Prepaid expenses', group: 'current_assets' },
     { role: 'accrued_income', code: '1820', name: 'Income accrued but not received', group: 'current_assets' },
+    /* v1.85.0 (ACC-336 slice 0) - tax paid in advance: a cash payment above the period's net tax, held per head in its own asset (never input credit). Codes, roles and names MUST equal api migrations/b850_advance_account_backfill.sql. */
+    { role: 'tax_advance_cgst', code: '1830', name: 'CGST paid in advance', group: 'current_assets' },
+    { role: 'tax_advance_sgst', code: '1831', name: 'SGST paid in advance', group: 'current_assets' },
+    { role: 'tax_advance_igst', code: '1832', name: 'IGST paid in advance', group: 'current_assets' },
+    { role: 'tax_advance_cess', code: '1833', name: 'Cess paid in advance', group: 'current_assets' },
     { role: 'supplier_advance', code: '1700', name: 'Advances to suppliers', group: 'loans_advances_asset' },
     { role: 'creditors', code: '2100', name: 'Suppliers (Sundry Creditors)', group: 'sundry_creditors' },
     { role: 'secured_loan', code: '2000', name: 'Secured loans (term loans)', group: 'secured_loans' },
@@ -1002,10 +1007,10 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
    */
   const TAX_HEADS = ['cgst', 'sgst', 'igst', 'cess'];
   const TAX_LEDGERS = {
-    cgst: { output: 'output_cgst', input: 'input_cgst', rcm: 'rcm_cgst' },
-    sgst: { output: 'output_sgst', input: 'input_sgst', rcm: 'rcm_sgst' },
-    igst: { output: 'output_igst', input: 'input_igst', rcm: 'rcm_igst' },
-    cess: { output: 'output_cess', input: 'input_cess', rcm: null }
+    cgst: { output: 'output_cgst', input: 'input_cgst', rcm: 'rcm_cgst', advance: 'tax_advance_cgst' },
+    sgst: { output: 'output_sgst', input: 'input_sgst', rcm: 'rcm_sgst', advance: 'tax_advance_sgst' },
+    igst: { output: 'output_igst', input: 'input_igst', rcm: 'rcm_igst', advance: 'tax_advance_igst' },
+    cess: { output: 'output_cess', input: 'input_cess', rcm: null, advance: 'tax_advance_cess' }
   };
 
   /**
@@ -1056,7 +1061,9 @@ if (root && typeof root.window !== 'undefined') root.window.CBPackKit = EXPORTS;
     /* v1.48.0 (W2-BOOKS): the words a statutory tax PAYMENT is recorded under — the reference the authority gave (India: the challan's CPIN, GST portal
      → PMT-06) and the narration the entry carries. ONE word per country, read by the platform's close & pay (never "challan" typed for another pack). */
     paymentRef: { label: 'Challan number', ask: 'Which challan? Give its number (the CPIN).', hint: 'The CPIN on the challan', narration: 'GST challan' },
-    setOffNarration: 'GST set-off'
+    setOffNarration: 'GST set-off',
+    /* v1.85.0 (ACC-336 s0) - the authority's own term for the balance a cash payment leaves with it: a TEXT KEY, never typed in code. Source read 9 Nov 2026: GST portal tutorial 'View the Cash balance' (major heads IGST, CGST, SGST/UTGST, CESS). PROPOSED; cb-ux-locale places it on screens, Athi approves. */
+    taxAdvance: { label: 'Cash Balance as on date', source: 'https://tutorial.gst.gov.in/userguide/ledgers/View_the_Cash_balance.htm', status: 'confirmed' }
   };
 
   /** records — Companies Act 2013 s.128(5): books of account kept in good order for not less than EIGHT financial years immediately preceding; CGST Act 2017 s.36:
@@ -5017,7 +5024,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
 if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-/* ADOPTED from chitbridge-engines v1.82.0 · regulation · sha256 98e57fc8d50a5860a81899ab4e7b5e568dd54f91cf9a3fe6ce904e2c18263f8d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.85.0 · regulation · sha256 b6151bb7bdb6ce63aa4acba86e0d03e6b34c93fadb3b842f01d083171e4006fe — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · regulation. Edited ONLY in chitbridge-engines/src/regulation.js; every platform adopts a released version of it.
  * CALLED BY src/accounts-packs.js, src/tax-packs.js, src/tax.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
@@ -5203,6 +5210,21 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
     return v;
   }
 
+  /** the tax-head ledgers a pack names that its chart lacks: output / input / rcm are required (input and rcm may be null), v1.85.0 (ACC-336 s0) advance is OPTIONAL (a pack without it = excess shown, no entry) but, when present, must name a chart role */
+  function taxLedgersMissing_(taxLedgers, roles, missing) {
+    if (!taxLedgers || typeof taxLedgers !== 'object') return;
+    Object.keys(taxLedgers).forEach(function (item) {
+      var t = taxLedgers[item] || {};
+      ['output', 'input', 'rcm'].forEach(function (k) {
+        /* rcm may be null: the head has no reverse-charge ledger, and the core refuses it by name */
+        if ((k === 'rcm' || k === 'input') && t[k] === null)
+          return; /* A1/A2 (v1.58.0): input null = the tax gives NO input credit (single-stage: SST, US sales tax) — tax paid on a purchase is part of its cost */
+        if (!t[k] || !roles[t[k]]) missing.push('taxLedgers.' + item + '.' + k + ' naming a ledger role in the chart');
+      });
+      if (t.advance !== undefined && (!t.advance || !roles[t.advance])) missing.push('taxLedgers.' + item + '.advance naming a ledger role in the chart');
+    });
+  }
+
   /** validate(pack) → the REQUIRED members it lacks or has the wrong type for, each as 'member (type)' — [] when the pack is whole */
   function validate(pack) {
     if (pack === null || typeof pack !== 'object')
@@ -5262,16 +5284,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
       REQUIRED_ROLES.forEach(function (item) {
         if (!roles[item]) missing.push('a ledger with role ' + item);
       });
-      if (pack.taxLedgers && typeof pack.taxLedgers === 'object')
-        Object.keys(pack.taxLedgers).forEach(function (item) {
-          var t = pack.taxLedgers[item] || {};
-          ['output', 'input', 'rcm'].forEach(function (k) {
-            /* rcm may be null: the head has no reverse-charge ledger, and the core refuses it by name */
-            if ((k === 'rcm' || k === 'input') && t[k] === null)
-              return; /* A1/A2 (v1.58.0): input null = the tax gives NO input credit (single-stage: SST, US sales tax) — tax paid on a purchase is part of its cost */
-            if (!t[k] || !roles[t[k]]) missing.push('taxLedgers.' + item + '.' + k + ' naming a ledger role in the chart');
-          });
-        });
+      taxLedgersMissing_(pack.taxLedgers, roles, missing);
     }
     return missing;
   }
@@ -6767,7 +6780,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
   if (root && typeof root.window !== 'undefined') root.window.CBTaxSlab = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-/* ADOPTED from chitbridge-engines v1.80.0 · tax · sha256 e9bc81b455c28ca15578cfd54bbca1e14f7fbd0506f66468fb7b7b2c501c2b19 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.84.0 · tax · sha256 6ead193bd596b85a6dc18b1349085fdbf16f242879f41af9a5d230bd7c33d246 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · tax. Edited ONLY in chitbridge-engines/src/tax.js; every platform adopts a released version of it.
  * OWNS      what a rate becomes between two addresses — the INV-01 invoice (determine), its read-out in the header's names (moneyOf), and the money bridge.
  * CALLED BY the counter (billMoney), the api (lib/tax-lines, lib/tax-copy), invoice.js (moneyOf), the web cart — via the adopted tag.
@@ -6888,13 +6901,22 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
       c = Math.round(Number((Math.abs(x) * f).toPrecision(15))) / f;
     return x < 0 && c !== 0 ? -c : c;
   }
+  /** the currency a pack names (the regulation pack's own), or null — the ONE place the seller's currency is read (decimals and the bridge's heads both ask here) */
+  function packCurrency_(pack) {
+    /* v1.64.1: nothing here throws — packFor answers null; no catch to stay silent */
+    var R = typeof CBRegulation !== 'undefined' && CBRegulation.packFor ? CBRegulation : typeof require === 'function' ? require('./regulation') : null;
+    var reg = R && pack && pack.country ? R.packFor(pack.country) : null;
+    return reg && reg.currency ? String(reg.currency) : null;
+  }
+  /** an ISO 4217 code (three capitals) or null — a malformed code never reaches Intl (which throws on one) */
+  function isoOf_(code) {
+    return typeof code === 'string' && /^[A-Z]{3}$/.test(code) ? code : null;
+  }
   /** the decimals of a pack's currency (the regulation pack names it; money.decimals reads ISO 4217) — 2 when either is not loaded */
   function decimalsOfPack_(pack) {
-    /* v1.64.1: nothing here throws — packFor answers null, decimals reads Intl; no catch to stay silent */
-    var R = typeof CBRegulation !== 'undefined' && CBRegulation.packFor ? CBRegulation : typeof require === 'function' ? require('./regulation') : null;
     var M = typeof CBMoney !== 'undefined' && CBMoney.decimals ? CBMoney : typeof require === 'function' ? require('./money') : null;
-    var reg = R && pack && pack.country ? R.packFor(pack.country) : null;
-    return reg && reg.currency && M && M.decimals ? M.decimals(reg.currency) : 2;
+    var code = isoOf_(packCurrency_(pack));
+    return code && M && M.decimals ? M.decimals(code) : 2;
   }
   const num = (v) => {
     const n = Number(v);
@@ -7237,8 +7259,42 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
     const where = fail.line === undefined ? fail.step : fail.step + ' (line ' + (fail.line + 1) + ')';
     return 'Does not add up at ' + where + ': ' + (fail.unexplained_minor / Math.pow(10, LINE_DP_)).toFixed(LINE_DP_) + ' unexplained.';
   }
-  /** the bridge over an invoice's own ItemList and ValDtls (see the block above) → { ok, decimals, steps, lines, step?, line?, unexplained_minor?, words? } */
-  function bridgeOf_(ItemList, figures, offers) {
+  const HEAD_MEMBERS_ = [
+    ['CgstVal', 'CgstAmt'],
+    ['SgstVal', 'SgstAmt'],
+    ['IgstVal', 'IgstAmt'],
+    ['CesVal', 'CesAmt'],
+    ['TaxVal', 'TaxAmt']
+  ];
+  /**
+   * ⭐ v1.84.0 (CTR-214): the engine's OTHER copy of every tax head, for the api's mismatch check — NOT a second calculation: integer minor sums of the
+   * ItemList lines' own head amounts, a different path from bySlab → r2 → ValDtls / _cb.slabs. One `total` row and one `slab` row per rate (rate-ascending),
+   * ALL FIVE members on every row, zeros included, so the api walks the engine's own keys and holds no head map; each row names its currency (CUR-1).
+   * → undefined (no heads, the bridge is otherwise whole) when the currency is unknown or malformed, or two rows would stand for one rate
+   * (a rate written two ways, "5" and "5.0"): the api reads an absent `heads` as a bill from an engine before v1.84.0 and refuses it where it must. Never throws.
+   */
+  function headsOf_(ItemList, currency) {
+    if (!isoOf_(currency)) return undefined;
+    const members = () => HEAD_MEMBERS_.reduce((o, pair) => Object.assign(o, { [pair[0]]: 0 }), {});
+    const totalRow = { level: 'total', currency, minor: members() };
+    const bySlab = {};
+    for (const item of ItemList) {
+      const rate = Number(item.GstRt);
+      if (!Number.isFinite(rate)) return undefined;
+      const row = bySlab[String(item.GstRt)] || (bySlab[String(item.GstRt)] = { level: 'slab', rate, base_minor: 0, currency, minor: members() });
+      row.base_minor += minor_(item.AssAmt);
+      HEAD_MEMBERS_.forEach((pair) => {
+        const m = minor_(item[pair[1]]);
+        row.minor[pair[0]] += m;
+        totalRow.minor[pair[0]] += m;
+      });
+    }
+    const rows = Object.keys(bySlab).map((k) => bySlab[k]);
+    if (new Set(rows.map((r) => r.rate)).size !== rows.length) return undefined;
+    return [totalRow].concat(rows.sort((a, b) => a.rate - b.rate));
+  }
+  /** the bridge over an invoice's own ItemList and ValDtls (see the block above) → { ok, decimals, steps, lines, heads?, step?, line?, unexplained_minor?, words? } */
+  function bridgeOf_(ItemList, figures, offers, currency) {
     const lines = ItemList.map(bridgeLine_);
     const sum = (key) => lines.reduce((total, row) => total + row[key], 0);
     const gross = sum('gross_minor'),
@@ -7262,7 +7318,8 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
       stepRow_('total', ties.total)
     ]);
     const fail = lineBreak_(lines) || totalBreak_(ties);
-    const out = { ok: !fail, decimals: LINE_DP_, steps, lines };
+    const heads = headsOf_(ItemList, currency);
+    const out = Object.assign({ ok: !fail, decimals: LINE_DP_, steps, lines }, heads ? { heads } : {});
     return fail ? Object.assign(out, fail, { words: bridgeWords_(fail) }) : out;
   }
 
@@ -7583,7 +7640,7 @@ if (root && typeof root.window !== 'undefined') root.window.CBRegJP = EXPORTS;
         amount_payable: AmountPayable,
         reverse_charge: reverseCharge,
         price_includes_tax: priceIncludesTax,
-        bridge: bridgeOf_(ItemList, { AssVal, CgstVal, SgstVal, IgstVal, CesVal, TaxVal, RndOffAmt, TotInvVal }, inp.offers) /* v1.74.0: ok, or the first step that does not add up and by how much — the sale stops on ok: false */,
+        bridge: bridgeOf_(ItemList, { AssVal, CgstVal, SgstVal, IgstVal, CesVal, TaxVal, RndOffAmt, TotInvVal }, inp.offers, packCurrency_(pack)) /* v1.74.0: ok, or the first step that does not add up and by how much — the sale stops on ok: false */,
         ...(rcmLines.length ? { rcm: rcmLines } : {}),
         ...(kindLines.length ? { kinds: kindLines } : {}) /* v1.34.0: the supply kind each line named (GST-free · input-taxed · taxable), with why */,
         notes

@@ -806,9 +806,9 @@
       node.querySelector('.cs-body').innerHTML = CS.err
         ? '<div class="cs-mute" data-testid="cs-err">' +
           esc(CS.err) +
-          '</div><button type="button" class="optchip" data-testid="cs-retry" onclick="CBSheet.retry()">' +
-          esc(T('Try again')) +
-          '</button>'
+          '</div>' +
+          /* UX-137: the standard Try again (CMP009), drawn in this sheet's chip look; the press is the same retry() */
+          ui.action('reload', { mount: 'TSK005-U01', surface: 'chip', testid: 'cs-retry', onPress: retry })
         : '<div class="cs-mute">' + esc(T('Reading…')) + '</div>';
       node.querySelector('.cs-acts').innerHTML = '';
       return;

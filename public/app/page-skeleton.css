@@ -61,3 +61,9 @@ html.cbsk[data-themed] .side .nav-btn{color:var(--ink-2,var(--ink,#3d3527))}
   .cbsk .app[data-tab="yours"] .main > .side-pinned{display:block}
   .cbsk .app[data-tab="yours"] .main > #screen{display:none}
 }
+
+/* ⭐ FOCUS RING (UX-137, 8 Nov): ONE rule for every theme. The ring is the theme's body ink, separated from the control by a 2px gap in the surface colour, so it is judged against
+   the surface only (WCAG 2.4.7, 1.4.11, 2.4.13; technique C40). Both tokens come from the tokens every theme already sets (--ink, --paper): no engine change. See public/ui-standard.html. */
+.cbsk{--focus-ring:var(--ink,CanvasText);--focus-halo:var(--paper,Canvas)}
+.cbsk .act:focus-visible{outline:3px solid var(--focus-ring);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-halo)}
+@media (forced-colors:active){.cbsk .act:focus-visible{outline-color:Highlight;box-shadow:none}}

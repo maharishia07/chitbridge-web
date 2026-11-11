@@ -272,7 +272,7 @@ function fmPaintTop() {
   if (!el) return;
   var pill = function (p, words) {
     return (
-      '<button type="button" class="tab" role="tab" aria-pressed="' +
+      '<button type="button" class="tab" aria-pressed="' +
       (FM.period === p ? 'true' : 'false') +
       '" data-testid="fm-period-' +
       p +
@@ -287,7 +287,7 @@ function fmPaintTop() {
     FM.state === 'ready' && FM.asOf ? '<span class="sub" data-testid="fm-asof" style="margin-inline-start:12px">' + esc(misReadAt(FM.asOf)) + '</span>' : '';
   el.innerHTML =
     fmViews('measures') +
-    '<div class="tabs" role="tablist" aria-label="' +
+    '<div class="tabs" role="group" aria-label="' +
     esc(tx('Which window')) +
     '" style="margin:10px 20px 0;display:flex;align-items:center;flex-wrap:wrap">' +
     pill('7', txn('{count} day', '{count} days', 7)) +
@@ -305,7 +305,7 @@ function fmViews(current) {
       '" data-testid="fm-view-' +
       view +
       '"' +
-      (current === view ? ' aria-current="page" aria-pressed="true"' : ' aria-pressed="false"') +
+      (current === view ? ' aria-current="page"' : '') +
       '>' +
       esc(tx(words)) +
       '</a>'

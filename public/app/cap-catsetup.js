@@ -1038,7 +1038,7 @@ function catsetBody(k) {
           'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below ' +
           'asks which.</div>' +
           '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the ' +
-          'counter’s Price Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
+          'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
           'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
         '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">' + tx('📋 See the catalogues you can follow') + '</button>'
       ) + catsetCard('What you have adopted', catsetAdoptedHTML(), '')
@@ -2935,7 +2935,7 @@ function catsetDetailHTML() {
     '</div><div class="ds">' +
     esc(s.q) +
     '</div></div>' +
-    '<div class="db" id="catsetbody">' +
+    '<div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Category setup details')) + '" id="catsetbody">' +
     catsetBody(k) +
     '</div>'
   );
@@ -3011,7 +3011,7 @@ function catalogueSetupHubScreen() {
        🧾 Spec, so an ordinary setup screen is unchanged. */
     '</div>' +
     specStandards('catalogue') +
-    '<div class="rows" id="catset_rows">' +
+    '<div class="rows" id="catset_rows" tabindex="0" role="region" aria-label="' + esc(tx('Catalogue setup')) + '">' +
     catsetRowsHTML() +
     '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
