@@ -208,7 +208,7 @@
   function bellButtonHtml(bell) {
     var dot = bell.count > 0 ? '<span class="cbb-dot" data-testid="bell-dot" aria-hidden="true">' + (bell.count > 99 ? '99+' : bell.count) + '</span>' : '';
     return (
-      '<button type="button" class="cbb-btn" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
+      '<button type="button" class="cbb-btn" data-cbsid="CMP030-B01" data-cbname="activity" data-testid="bell-btn" aria-haspopup="true" aria-expanded="' +
       (bell.open ? 'true' : 'false') +
       '" aria-label="' +
       esc(T(W.aria)) +
@@ -222,7 +222,7 @@
   /** one notification row, as markup */
   function recordHtml(x) {
     return (
-      '<button type="button" class="cbb-row" data-testid="bell-row"' +
+      '<button type="button" class="cbb-row" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="bell-row"' +
       (x.chit ? ' data-chit="' + esc(x.chit) + '"' : ' disabled') +
       (x.order ? ' data-order="1"' : '') +
       '><span aria-hidden="true">' +
@@ -268,7 +268,7 @@
       '">' +
       esc(bell.out) +
       '</span>' +
-      '<button type="button" class="cbb-clear" data-testid="bell-clear"' +
+      '<button type="button" class="cbb-clear" data-cbsid="CMP014-B01" data-cbname="clear" data-testid="bell-clear"' +
       (items.length ? '' : ' disabled') +
       '>' +
       esc(T(W.clear)) +

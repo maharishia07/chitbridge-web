@@ -455,12 +455,12 @@
       '<div class="cbsh-bar" data-testid="shell-bar">' +
       '<span class="cbsh-mark" aria-hidden="true" data-testid="shell-mark">▣</span>' +
       (frame.person
-        ? '<button type="button" class="cbsh-who" data-testid="shell-shop" aria-expanded="false" aria-controls="' +
+        ? '<button type="button" class="cbsh-who" data-cbsid="CMP046-B01" data-cbname="shopmenu" data-testid="shell-shop" aria-expanded="false" aria-controls="' +
           frame.sheetId +
           '"><b data-testid="shop-name"></b><span class="chev" aria-hidden="true">▼</span></button>'
         : '') +
       (frame.mode === 'app'
-        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>'
+        ? '<div class="cbsh-sw"><button type="button" class="cbsh-swb" data-cbsid="CMP047-B01" data-cbname="areamenu" data-testid="shell-switcher" aria-haspopup="true" aria-expanded="false"></button><div class="cbsh-swpop" data-testid="shell-switcher-menu" hidden></div></div>'
         : '') +
       titleHTML(frame) +
       '<span class="cbsh-grow"></span>' +
@@ -530,14 +530,14 @@
   function editionChipsHTML(edition) {
     if (!edition) return '';
     return (
-      '<button type="button" class="cbsh-chip due" data-testid="shell-edition-chip" data-edition="' +
+      '<button type="button" class="cbsh-chip due" data-cbsid="CMP051-B01" data-cbname="statuschip" data-testid="shell-edition-chip" data-edition="' +
       esc(edition.key) +
       '" title="' +
       esc(W.editionOpen || 'Change what this shows') +
       '">' +
       esc(edition.chip) +
       '</button>' +
-      '<button type="button" class="cbsh-chip due" data-testid="shell-edition-off" aria-label="' +
+      '<button type="button" class="cbsh-chip due" data-cbsid="CMP051-B01" data-cbname="statuschip" data-testid="shell-edition-off" aria-label="' +
       esc(W.editionOff || 'Show everything') +
       '" title="' +
       esc(W.editionOff || 'Show everything') +
@@ -945,7 +945,7 @@
       element.innerHTML = w
         ? '<button type="button" class="cbsh-chip ' +
           w.band +
-          '" data-testid="shell-licence-chip" data-band="' +
+          '" data-cbsid="CMP051-B01" data-cbname="statuschip" data-testid="shell-licence-chip" data-band="' +
           w.band +
           '">' +
           (w.band === 'due' ? '●' : '⚠') +
@@ -1016,7 +1016,7 @@
             btn =
               '<a class="cbsh-rn ' +
               item.band +
-              '" data-testid="shell-renew" href="' +
+              '" data-cbsid="CMP010-B01" data-cbname="open" data-testid="shell-renew" href="' +
               esc(item.renew_url) +
               '">' +
               esc(item.band === 'gone' ? W.again : W.renew) +
@@ -1058,7 +1058,7 @@
           .join('') +
         '</div>' +
         (checks.length && got < checks.length
-          ? '<a class="cbsh-btn" data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>'
+          ? '<a class="cbsh-btn" data-cbsid="CMP010-B01" data-cbname="open" data-testid="shell-finish" href="' + esc(tr.fix_url || '/know-your-business.html') + '">' + esc(W.finish) + '</a>'
           : '');
       sheet.innerHTML =
         '<div class="cbsh-sin" data-testid="shell-sheet-full">' + col(W.business, biz) + col(W.licences, rows, why) + col(W.trade, chk) + '</div>';
@@ -1354,7 +1354,7 @@
           return (
             '<a href="' +
             esc(homeHref + (item === 'home' ? '' : '#' + item)) +
-            '" data-testid="shell-switch-' +
+            '" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="shell-switch-' +
             item +
             '"' +
             (item === cur ? ' aria-current="true"' : '') +

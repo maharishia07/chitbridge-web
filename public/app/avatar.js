@@ -659,7 +659,7 @@
   function swatches() {
     var p = pref('theme');
     var dev =
-      '<button type="button" data-testid="theme-device" data-av-theme="device" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="theme-device" data-av-theme="device" aria-pressed="' +
       (p === 'device') +
       '"><span class="dot"><i style="background:#FCFAF5"></i><i style="background:#15140F"></i></span>My device</button>';
     return (
@@ -669,7 +669,7 @@
           var t = THEMES[item],
             v = t.vars || {};
           return (
-            '<button type="button" data-testid="theme-' +
+            '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="theme-' +
             esc(item) +
             '" data-av-theme="' +
             esc(item) +
@@ -704,7 +704,7 @@
       choices
         .map(function (choice) {
           return (
-            '<button type="button" data-testid="' +
+            '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="' +
             kind +
             '-' +
             choice[0] +
@@ -736,24 +736,24 @@
     if (has_('profile'))
       up.push(
         o.onProfile
-          ? '<button type="button" data-testid="nav-profile" data-av="profile">Profile</button>'
-          : '<a data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="nav-profile" data-av="profile">Profile</button>'
+          : '<a data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="nav-profile" data-av="profile" href="' + esc(o.profileHref || PROFILE_HREF) + '">Profile<span aria-hidden="true">↗</span></a>'
       );
     /* UX-96: the OWNER has Settings on every page — the workshop's own handler, else the Settings page (never a door into app.html, H34) */
     if (showSettings)
       up.push(
         o.onSettings
-          ? '<button type="button" data-testid="nav-settings" data-av="settings">Settings</button>'
-          : '<a data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="nav-settings" data-av="settings">Settings</button>'
+          : '<a data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="nav-settings" data-av="settings" href="' + esc(o.settingsHref || SETTINGS_HREF) + '">Settings<span aria-hidden="true">↗</span></a>'
       );
     /* UX-96: Support only where there is somewhere to go (no support page yet → no item, no loop to Home) */
     if (has_('support') && (o.onSupport || o.supportHref))
       down.push(
         o.onSupport
-          ? '<button type="button" data-testid="av-support" data-av="support">Support</button>'
-          : '<a data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
+          ? '<button type="button" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="av-support" data-av="support">Support</button>'
+          : '<a data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="av-support" data-av="support" href="' + esc(o.supportHref) + '">Support<span aria-hidden="true">↗</span></a>'
       );
-    if (has_('signout')) down.push('<button type="button" data-testid="nav-signout" data-av="signout">Sign out</button>');
+    if (has_('signout')) down.push('<button type="button" data-cbsid="CMP049-B01" data-cbname="menuitem" data-testid="nav-signout" data-av="signout">Sign out</button>');
 
     var fsNow = pref('fs'),
       w = pref('weight'),
@@ -765,7 +765,7 @@
         Object.keys(o.languages.list)
           .map(function (item) {
             return (
-              '<button type="button" data-testid="lang-' +
+              '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="lang-' +
               esc(item) +
               '" data-av-lang="' +
               esc(item) +
@@ -800,7 +800,7 @@
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
       TEXT_SIZES.map(function (x, index) {
         return (
-          '<button type="button" data-testid="fs-' +
+          '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="fs-' +
           x[0] +
           '" data-av-fs="' +
           x[0] +
@@ -819,19 +819,19 @@
       }).join('') +
       '</div>' +
       '<div class="cbav-weights" role="group" aria-label="Text weight">' +
-      '<button type="button" data-testid="weight-normal" data-av-weight="normal" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="weight-normal" data-av-weight="normal" aria-pressed="' +
       (w === 'normal') +
       '" title="Normal" aria-label="Normal text" style="font-weight:400">A</button>' +
-      '<button type="button" data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
+      '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
       (w === 'bold') +
       '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
-      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-testid="motion-switch" data-av-motion="1" aria-checked="' +
+      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP050-B01" data-cbname="option" data-testid="motion-switch" data-av-motion="1" aria-checked="' +
       (pref('motion') === 'reduce') +
       '" aria-label="Less motion"></button></div>' +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
-          '<button type="button" data-testid="font-' +
+          '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="font-' +
           x[0] +
           '" data-av-font="' +
           x[0] +
@@ -862,7 +862,7 @@
       l
         .map(function (x) {
           return (
-            '<button type="button" data-testid="edition-' +
+            '<button type="button" data-cbsid="CMP050-B01" data-cbname="option" data-testid="edition-' +
             esc(x.key) +
             '" data-av-edition="' +
             esc(x.key) +
@@ -904,13 +904,13 @@
          Without it the door is a link to the INDEX, the front door (Athi 2026-10-09: a customer never lands in the workshop's #/login). */
       el.innerHTML =
         typeof o.onSignIn === 'function'
-          ? '<span class="cbav"><button type="button" class="cbav-signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
-          : '<span class="cbav"><a class="cbav-signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
+          ? '<span class="cbav"><button type="button" class="cbav-signin" data-cbsid="CMP052-B01" data-cbname="signin" data-testid="signin-door" data-av="signin">Sign in</button></span>'
+          : '<span class="cbav"><a class="cbav-signin" data-cbsid="CMP052-B01" data-cbname="signin" data-testid="signin-door" href="' + esc(o.signInHref || '/') + '">Sign in</a></span>';
       return;
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
     el.innerHTML =
-      '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-testid="' +
+      '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-cbsid="CMP048-B01" data-cbname="accountmenu" data-testid="' +
       esc(o.testid || 'avatar') +
       '" aria-haspopup="dialog" aria-expanded="' +
       openNow +
