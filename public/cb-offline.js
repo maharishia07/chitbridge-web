@@ -344,22 +344,26 @@
         }
       );
   }
-  function stepFailed(entry, error, priorAttempts, send, opts, round) {
+  // an answer that ends the step now: done (a replayed 404), stopped (the session ended) or rejected (a refusal that will not change); null = worth another go
+  function settleFailure(entry, error, priorAttempts) {
     var status = error && error.status;
+    var reason = (error && error.message) || 'failed';
     if (status === 404 && entry.okIf404 && priorAttempts > 0) {
       removeEntry(entry.id);
       return { kind: 'done', already: true, step: entry };
     }
-    var reason = (error && error.message) || 'failed';
     if (status === 401) return { kind: 'stopped', status: status, reason: reason };
-    if (!worthRetry(error)) {
-      patchEntry(entry.id, function (x) {
-        x.rejected = { status: status, reason: reason };
-      });
-      return { kind: 'reject', status: status, reason: reason, data: error && error.data };
-    }
+    if (worthRetry(error)) return null;
+    patchEntry(entry.id, function (x) {
+      x.rejected = { status: status, reason: reason };
+    });
+    return { kind: 'reject', status: status, reason: reason, data: error && error.data };
+  }
+  function stepFailed(entry, error, priorAttempts, send, opts, round) {
+    var settled = settleFailure(entry, error, priorAttempts);
+    if (settled) return settled;
     if (!online()) return { kind: 'offline' };
-    if (round >= JOB_BACKOFF_MS.length) return { kind: 'stopped', status: status, reason: reason };
+    if (round >= JOB_BACKOFF_MS.length) return { kind: 'stopped', status: error && error.status, reason: (error && error.message) || 'failed' };
     if (opts.onWait) opts.onWait(JOB_BACKOFF_MS[round] / 1000, error);
     return cfg.sleep(JOB_BACKOFF_MS[round]).then(function () {
       return sendStep(entry.id, send, opts, round + 1);

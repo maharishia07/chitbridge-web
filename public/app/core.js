@@ -1274,13 +1274,20 @@ function api(key, opts) {
   return reply;
 }
 
+/* a bulk job names its own key (job:<jobId>:<step>), so a step sent again after a restart is the SAME call to the server; the gate ignores a key over 200 characters, so a longer one is refused here */
+function givenIdemKey(endpoint, given) {
+  if (endpoint.m === 'GET') return null;
+  if (String(given).length > 200) throw new Error('The Idempotency-Key is over 200 characters.');
+  return String(given);
+}
+
+/* the key a write goes out with: the one the caller named (a bulk job step), else the outbox's own or an EP row's */
+function cbWriteKey(given, endpoint, outboxSafe, CB, requestId, attempt) {
+  return given ? givenIdemKey(endpoint, given) : cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt);
+}
+
 /* the Idempotency-Key of a write: the outbox's own, or - for an EP row with idem:true (a proposal write) - a fresh one WITHOUT joining the offline outbox (a money promise is never queued); null for a read */
-function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt, given) {
-  /* a bulk job names its own key (job:<jobId>:<step>), so a step sent again after a restart is the SAME call to the server; the gate ignores a key over 200 characters, so a longer one is refused here */
-  if (given && endpoint.m !== 'GET') {
-    if (String(given).length > 200) throw new Error('The Idempotency-Key is over 200 characters.');
-    return String(given);
-  }
+function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt) {
   if (outboxSafe && CB) return CB._uuid();
   const fresh = () => (CB && CB._uuid ? CB._uuid() : Date.now() + '-' + requestId);
   if (endpoint.idem === 'attempt' && endpoint.m !== 'GET' && attempt) return _attempts[attempt] || (_attempts[attempt] = fresh());
@@ -1351,7 +1358,7 @@ async function apiOnce(key, { params, query, body, idemKey: givenKey } = {}) {
   try {
     const CB = typeof window !== 'undefined' ? window.CBOffline : null;
     const outboxSafe = ep.m !== 'GET' && OUTBOX_KEYS.has(key);
-    const attempt = attemptOf(key, params, body), idemKey = cbIdemKey(ep, outboxSafe, CB, _rid, attempt, givenKey);
+    const attempt = attemptOf(key, params, body), idemKey = cbWriteKey(givenKey, ep, outboxSafe, CB, _rid, attempt);
     let pathQ = fill(ep.p, params);
     let url = CFG.API_BASE + pathQ;
     if (query) {
