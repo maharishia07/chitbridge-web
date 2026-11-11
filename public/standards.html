@@ -192,7 +192,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
   <div class="body">
     <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
     <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="brand"><div class="logo" aria-hidden="true">&#9776;</div><div class="brand-name">Standards</div></div><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
-    <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-cmp-nocountry" hidden></p><div id="std_list" data-testid="std-list"></div></main>
+    <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
 <dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
@@ -1243,7 +1243,7 @@ function paintNoCountry() {
   var show = comparedOn() && !shopCountryKnown() && !nowFilt().country;
   host.hidden = !show;
   if (show && !host.firstChild)
-    host.innerHTML = 'Set your country first, and this tab opens on your country’s packages. <a href="/settings.html#/country" data-testid="std-cmp-country-link">Country setup</a>';
+    host.innerHTML = 'Set your country first, and this tab opens on your country’s packages. <a href="/settings.html#/country" data-testid="std-nocountry-link">Country setup</a>';
 }
 function tabHash() {
   paintNoCountry();
@@ -1274,6 +1274,7 @@ function openCompared() {
   setFilters(Object.assign(COUNTRY_SET ? { country: COUNTRY_SET } : {}, COMPARED.filt));
   $('app').setAttribute('data-view', 'list');
   paintMatrix();
+  paintNoCountry(); /* the observer's tabHash can run before the Compared with filter is set, so the line is painted here too */
 }
 document.addEventListener('cb:me', () => {
   var country = shopCountryKnown();
