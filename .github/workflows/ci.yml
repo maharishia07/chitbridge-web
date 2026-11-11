@@ -114,6 +114,7 @@ jobs:
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
+          node tests/country-literals.test.cjs
           node tests/proof-nightly.test.cjs
           node tests/chit-pay-ask.test.cjs
           node tests/chit-sheet-captured.test.cjs
