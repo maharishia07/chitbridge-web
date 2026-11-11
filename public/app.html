@@ -16868,24 +16868,50 @@ async function prodAvailApply(status) {
   const ids = Array.from(UI.prodPicked || []);
   if (!ids.length) return;
   closeModal();
-  showBusy(txn('Updating {count} product…', 'Updating {count} products…', ids.length));
-  try {
-    const out = await api('prodStatusBulk', { body: { ids: ids, status: status } });
-    UI.prodPicked.clear();
-    UI.prodPick = false;
-    await loadCatalogue('fresh');
-    const missed = (out && out.missed && out.missed.length) || 0;
-    /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
-       nobody trusts bulk actions. */
-    toast(((out && out.updated) || 0) + ' set to ' + status + (missed ? ' · ' + missed + ' could not be found' : ' ✓'), missed ? true : false);
-  } catch (e) {
-    toast(MSG.fail('set availability', e));
-  } finally {
-    hideBusy();
-    renderApp();
-  }
+  /* ⭐ the same route and body, one call per step of the speed class; the server stamps each record the same way whatever the step */
+  const nameOf = (id) => {
+    const product = (UI.prods || []).find((x) => prodId(x) === id);
+    return (product && pData(product).name) || tx('Product');
+  };
+  const result = await groupRunSteps(ids, { mount: 'CAT001-U51', speed: 'quick', verb: 'set availability', label: 'Updating products', unit: 'updated', name: nameOf }, async (chunk) => {
+    const out = await api('prodStatusBulk', { body: { ids: chunk, status: status } });
+    const missedIds = (out && out.missed) || [];
+    return {
+      done: chunk.filter((id) => !missedIds.includes(id)),
+      failed: missedIds.map((id) => ({ item: id, reason: 'could not be found' }))
+    };
+  });
+  UI.prodPicked.clear();
+  tickUndone({ failed: result.failed, leftItems: result.leftItems }, UI.prodPicked);
+  UI.prodPick = result.failed.length > 0 || result.left > 0;
+  await loadCatalogue('fresh');
+  /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
+     nobody trusts bulk actions. */
+  const missed = result.failed.length;
+  toast(result.done.length + ' set to ' + status + (missed ? ' · ' + missed + ' could not be saved' : result.left > 0 ? '' : ' ✓') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
+  renderApp();
 }
 
+/** the ONE prodBulkUpdate call (the server validates the lot and writes all or nothing), shown as one step of the batch progress: no overlay, the screen stays usable → { ok, failed, reasonText } */
+async function prodCategoriseSend(payload) {
+  if (!payload.length) return { ok: 0, failed: 0, why: '' };
+  const step = ui.progress.batch({ mount: 'CAT001-U52', speed: 'slow', total: payload.length, label: tx('Categorising products'), unit: tx('updated') });
+  try {
+    const out = await api('prodBulkUpdate', { body: { items: payload } });
+    const ok = (out && out.updated) || 0;
+    const missedCount = (out && out.missed && out.missed.length) || 0;
+    step.done(ok);
+    if (missedCount) step.failed(missedCount, tx('could not be found'));
+    return { ok: ok, failed: missedCount, reasonText: '' };
+  } catch (e) {
+    const inv = e && e.invalid;
+    const reasonText = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
+    step.failed(payload.length, reasonText.replace(/^ · /, ''));
+    return { ok: 0, failed: payload.length, reasonText: reasonText };
+  } finally {
+    step.finish();
+  }
+}
 /**
  * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
  * why it takes loads of time, are you going round trip for each product?"*
@@ -16908,7 +16934,6 @@ async function prodCategoriseApply() {
     return;
   }
   closeModal();
-  showBusy(txn('Categorising {count} product…', 'Categorising {count} products…', node.ids.length));
 
   /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
   const payload = [];
@@ -16931,22 +16956,10 @@ async function prodCategoriseApply() {
     payload.push({ id: id, item_data: d });
   }
 
-  let ok = 0,
-    failed = unknown,
-    why = '';
-  try {
-    if (payload.length) {
-      const out = await api('prodBulkUpdate', { body: { items: payload } });
-      ok = (out && out.updated) || 0;
-      failed += (out && out.missed && out.missed.length) || 0;
-    }
-  } catch (e) {
-    failed += payload.length;
-    const inv = e && e.invalid;
-    why = inv && inv.length ? ' · first refused: ' + (inv[0].message || '') : e && e.message ? ' · ' + e.message : '';
-  } finally {
-    hideBusy();
-  }
+  const sent = await prodCategoriseSend(payload);
+  const ok = sent.ok;
+  const failed = unknown + sent.failed;
+  const reasonText = sent.reasonText;
 
   UI.prodPicked.clear();
   UI.prodPick = false;
@@ -16955,7 +16968,7 @@ async function prodCategoriseApply() {
   if (typeof cbcatLoad === 'function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
   /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
      nobody trusts bulk actions. */
-  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${why}` : ' ✓'), failed ? true : false);
+  toast(ok + ' updated' + (failed ? ` · ${failed} could not be saved${reasonText}` : ' ✓'));
   renderApp();
 }
 /**
@@ -23417,7 +23430,6 @@ async function confirmStatus() {
   closeModal();
   const single = ids.length === 1 ? ids[0] : null;
   const pos = single ? chitPos(single) : null;
-  if (ids.length > 1) showBusy(txn('Moving {count} record to {status}…', 'Moving {count} records to {status}…', ids.length, { status: cap(to) }));
   /**
    * ⚠️⚠️ SAY WHICH ONE IT IS ON. Athi, 2026-08-23, closing 26 tasks: *"it takes a while — it has to showcase
    * what it is progressing, say 1 of 26 record kind of."* It showed one frozen sentence for the whole run, so
@@ -23430,47 +23442,42 @@ async function confirmStatus() {
    * ⭐ It still stops rather than churning through 26 failures: the second failure is almost never new
    * information, and 25 more attempts is a minute spent proving it.
    */
-  let _done = 0;
-  try {
-    for (const id of ids) {
-      if (ids.length > 1) showBusy(txf('{done} of {total} · moving to {status}…', { done: _done + 1, total: ids.length, status: cap(to) }));
+  /* ⭐ the same stop rule as above, kept: the first failure ends the run (stopOnFailure), the rest stay "not done"; the progress now shows the count in the corner, the screen is not locked */
+  const result = await groupRun(
+    ids,
+    { mount: 'WRK001-U57', speed: 'quick', verb: 'change status', label: 'Moving records', unit: 'moved', stopOnFailure: true },
+    async (id) => {
       const _row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
       /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
-      try {
-        if (use && to === 'act' && _row && _row.billRx) await api('billUse', { params: { id }, body: { use: use } });
-        const reply = await api('status', { params: { id }, body: { status: statusWordFor(to, _row) } });
-        if (reply && reply.warning) toast(reply.warning);
-        const i = UI.rows.findIndex((x) => x.id === id);
-        if (i >= 0) UI.rows[i].state = to;
-        if (UI.detail && UI.detail.id === id) UI.detail.state = to;
-        _done++;
-      } catch (e) {
-        toast(
-          _done
-            ? txf('Moved {done} of {total}, then: {why}', { done: _done, total: ids.length, why: MSG.fail('change status', e) })
-            : MSG.fail('change status', e)
-        );
-        if (_done) {
-          UI.selectMode = false;
-          UI.selected.clear();
-          renderApp();
-        } // the ones that moved must not look unmoved
-        return;
-      }
+      if (use && to === 'act' && _row && _row.billRx) await api('billUse', { params: { id }, body: { use: use } });
+      const reply = await api('status', { params: { id }, body: { status: statusWordFor(to, _row) } });
+      if (reply && reply.warning) toast(reply.warning);
+      const i = UI.rows.findIndex((x) => x.id === id);
+      if (i >= 0) UI.rows[i].state = to;
+      if (UI.detail && UI.detail.id === id) UI.detail.state = to;
     }
-    if (single) {
-      afterChitAction(single, pos);
-    } // same email-style cursor as advance
-    else {
-      UI.selectMode = false;
+  );
+  const _done = result.done.length;
+  if (result.failed.length || result.cancelled) {
+    const firstReason = result.failed.length ? result.failed[0].reason : '';
+    toast(_done ? txf('Moved {done} of {total}, then: {why}', { done: _done, total: ids.length, why: firstReason || tx('stopped') }) : firstReason || groupToast(result, ' moved'));
+    if (_done) {
       UI.selected.clear();
+      tickUndone(result); /* the one that failed and the ones not reached stay ticked, the select mode stays on */
       renderApp();
-    } // bulk: clear selection, full re-render
-    toast(MSG.statusSet(ids.length, to, single ? (UI.rows.find((x) => x.id === single) || UI.detail || {}).code : null));
-    announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}', ids.length, { status: cap(to) }));
-  } finally {
-    hideBusy();
+    } // the ones that moved must not look unmoved
+    return;
   }
+  if (single) {
+    afterChitAction(single, pos);
+  } // same email-style cursor as advance
+  else {
+    UI.selectMode = false;
+    UI.selected.clear();
+    renderApp();
+  } // bulk: clear selection, full re-render
+  toast(MSG.statusSet(ids.length, to, single ? (UI.rows.find((x) => x.id === single) || UI.detail || {}).code : null));
+  announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}', ids.length, { status: cap(to) }));
 }
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
 function pickChitStatus(id) {
@@ -23532,30 +23539,10 @@ async function archiveSelected() {
   const ids = (MODALS.arch || {}).ids || [];
   if (!ids.length) return;
   closeModal();
-  if (ids.length > 1) showBusy(txn('Archiving {count} record…', 'Archiving {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('archive', { params: { id } });
-        ok++;
-      } catch (e) {
-        toast(MSG.fail('archive', e));
-        break;
-      }
-    }
-    UI.selected.clear();
-    if (UI.sel && ids.includes(UI.sel)) {
-      UI.sel = null;
-      UI.detail = null;
-      UI.mdetail = false;
-    }
-    await loadList();
-    toast(ok + ' archived');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' archived');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupRun(ids, { mount: 'WRK001-U51', speed: 'quick', verb: 'archive', label: 'Archiving records', unit: 'archived' }, (id) => api('archive', { params: { id } }));
+  await afterGroup(result);
+  toast(groupToast(result, ' archived'));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' archived');
 }
 /* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
 function selectAllRows() {
@@ -23563,31 +23550,75 @@ function selectAllRows() {
   if (!UI.selectMode) UI.selectMode = true;
   renderApp();
 }
+/* ⭐ GROUP ACTIONS (Athi 11 Nov: "ok for group action"; 10 Nov: "never lock the screen"). A group action goes in steps of 10 through the ONE batch progress
+   (ui.progress.batch.run: up to 10 records the centre panel, above it the corner tray). The endpoint and the request for each record are unchanged; only the batching and the
+   progress are new. The confirm popup, where there was one, was answered BEFORE this runs. A failed record is counted and named, never silent; Cancel stops after the step. */
+function chitNameOf(id) {
+  const row = UI.rows.find((x) => x.id === id) || (UI.detail && UI.detail.id === id ? UI.detail : null);
+  return (row && row.code) || tx('Record');
+}
+/** runs perId(id) for every id, in steps of its speed class (quick 10), counting each as done or failed; kind = { mount, speed, verb, label, unit, stopOnFailure } → { done, failed, cancelled, left } */
+function groupRun(ids, kind, perId) {
+  const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
+  return ui.progress.batch.run(ids, options, async (chunk) => {
+    const done = [];
+    const failed = [];
+    for (const id of chunk) {
+      try {
+        await perId(id);
+        done.push(id);
+      } catch (e) {
+        failed.push({ item: id, reason: MSG.fail(kind.verb, e) });
+        if (kind.stopOnFailure) return { done, failed, stop: true };
+      }
+    }
+    return { done, failed };
+  });
+}
+/** the records that failed AND the ones never tried (Cancel, a stop) stay ticked, so the person can run the rest again */
+function tickUndone(result, into) {
+  const set = into || UI.selected;
+  result.failed.forEach((entry) => set.add(entry.item));
+  result.leftItems.forEach((id) => set.add(id));
+}
+/** after a group action: the records that failed stay ticked, the one that is open closes only if it changed, and the list is read again */
+/** the same runner for an endpoint that takes a whole step: sendChunk(ids) resolves { done: [ids], failed: [{ item, reason }] }; a throw fails the step with the verb's sentence */
+function groupRunSteps(ids, kind, sendChunk) {
+  /* a step that THROWS (400 pull mode, co-assist off shift, 500) has the same cause for every later step, so the run stops and the rest read "not done"; a record the server skips inside a step is just counted failed */
+  const options = { mount: kind.mount, speed: kind.speed, label: tx(kind.label), unit: tx(kind.unit), name: kind.name || chitNameOf };
+  return ui.progress.batch.run(ids, options, async (chunk) => {
+    try {
+      return await sendChunk(chunk);
+    } catch (e) {
+      return { done: [], failed: chunk.map((id) => ({ item: id, reason: MSG.fail(kind.verb, e) })), stop: true };
+    }
+  });
+}
+async function afterGroup(result) {
+  UI.selected.clear();
+  tickUndone(result);
+  if (UI.sel && result.done.includes(UI.sel)) {
+    UI.sel = null;
+    UI.detail = null;
+    UI.mdetail = false;
+  }
+  await loadList();
+}
+/** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
+function groupToast(result, doneWords) {
+  const failed = result.failed.length;
+  return result.done.length + doneWords + (failed ? ' · ' + failed + ' failed' : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : '');
+}
 async function bulkRestore() {
   const ids = actionTargets();
   if (!ids.length) {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  if (ids.length > 1) showBusy(txn('Restoring {count} record…', 'Restoring {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('restore', { params: { id } });
-        ok++;
-      } catch (_) {}
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(MSG.restored ? MSG.restored(ok) : ok + ' restored');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' restored');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupRun(ids, { mount: 'WRK001-U52', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' }, (id) => api('restore', { params: { id } }));
+  await afterGroup(result);
+  toast(result.failed.length || result.cancelled ? groupToast(result, ' restored') : MSG.restored ? MSG.restored(result.done.length) : result.done.length + ' restored');
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' restored');
 }
 async function bulkUnarchive() {
   const ids = actionTargets();
@@ -23595,25 +23626,10 @@ async function bulkUnarchive() {
     toast('Tick some records first (☑), or open one.');
     return;
   }
-  if (ids.length > 1) showBusy(txn('Unarchiving {count} record…', 'Unarchiving {count} records…', ids.length));
-  try {
-    let ok = 0;
-    for (const id of ids) {
-      try {
-        await api('unarchive', { params: { id } });
-        ok++;
-      } catch (_) {}
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(ok + ' unarchived');
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' unarchived');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupRun(ids, { mount: 'WRK001-U53', speed: 'quick', verb: 'unarchive', label: 'Unarchiving records', unit: 'unarchived' }, (id) => api('unarchive', { params: { id } }));
+  await afterGroup(result);
+  toast(groupToast(result, ' unarchived'));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' unarchived');
 }
 function bulkPurge() {
   const ids = actionTargets();
@@ -23636,60 +23652,36 @@ function bulkPurge() {
   );
 }
 async function _bulkPurge(ids) {
-  if (ids.length > 1) showBusy(txn('Deleting {count} record…', 'Deleting {count} records…', ids.length));
-  try {
-    let ok = 0,
-      blocked = 0;
-    for (const id of ids) {
-      try {
-        await api('purgeChit', { params: { id } });
-        ok++;
-      } catch (e) {
-        blocked++;
-      }
-    }
-    UI.selected.clear();
-    UI.sel = null;
-    UI.detail = null;
-    UI.mdetail = false;
-    await loadList();
-    toast(ok + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : ''));
-    announce(ok + ' record' + (ok === 1 ? '' : 's') + ' deleted');
-  } finally {
-    hideBusy();
-  }
+  const result = await groupRun(ids, { mount: 'WRK001-U54', speed: 'tray', verb: 'delete', label: 'Deleting records', unit: 'deleted' }, (id) => api('purgeChit', { params: { id } }));
+  await afterGroup(result);
+  const blocked = result.failed.length;
+  toast(result.done.length + ' deleted' + (blocked ? ` · ${blocked} kept (sent/received — not removable)` : '') + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
+  announce(result.done.length + ' record' + (result.done.length === 1 ? '' : 's') + ' deleted');
 }
 async function confirmDelete() {
   const ids = MODALS.del.ids;
   closeModal();
-  for (const id of ids) {
-    try {
-      await api('delChit', { params: { id } });
-    } catch (e) {
-      toast(MSG.fail('delete', e));
-      return;
-    }
-  }
-  UI.rows = UI.rows.filter((item) => !ids.includes(item.id));
-  if (UI.sel && ids.includes(UI.sel)) {
+  const result = await groupRun(ids, { mount: 'WRK001-U55', speed: 'tray', verb: 'delete', label: 'Moving records to Trash', unit: 'moved' }, (id) => api('delChit', { params: { id } }));
+  /* repaint what really moved: those rows leave the list, the ones that failed stay ticked */
+  UI.rows = UI.rows.filter((item) => !result.done.includes(item.id));
+  if (UI.sel && result.done.includes(UI.sel)) {
     UI.sel = null;
     UI.detail = null;
     UI.mdetail = false;
   }
   UI.selected.clear();
+  tickUndone(result);
   renderApp();
-  toast(MSG.trashed(ids.length), () => restoreChits(ids));
-  announce(ids.length + ' chit' + (ids.length > 1 ? 's' : '') + ' moved to trash');
+  /* Undo is for the rows that DID move, also after a partial or cancelled run (the sentence then says what did not move) */
+  const partial = result.failed.length > 0 || result.left > 0;
+  if (result.done.length) toast(partial ? groupToast(result, ' moved to Trash') : MSG.trashed(result.done.length), () => restoreChits(result.done));
+  else if (partial) toast(groupToast(result, ' moved to Trash'));
+  announce(result.done.length + ' chit' + (result.done.length === 1 ? '' : 's') + ' moved to trash');
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
 async function restoreChits(ids) {
-  let ok = 0;
-  for (const id of ids) {
-    try {
-      await api('restore', { params: { id } });
-      ok++;
-    } catch (_) {}
-  }
+  const result = await groupRun(ids, { mount: 'WRK001-U56', speed: 'quick', verb: 'restore', label: 'Restoring records', unit: 'restored' }, (id) => api('restore', { params: { id } }));
+  const ok = result.done.length;
   try {
     await loadList();
   } catch (_) {}
@@ -28367,21 +28359,21 @@ async function pickAssignBulk(ids) {
 async function assignBulkChits(ids, actorId) {
   const a = (UI.actors || STORE.actors || []).find((x) => x.id === actorId);
   const who = a ? a.name : 'the co-assist';
-  showBusy(txn('Assigning {count} record to {who}…', 'Assigning {count} records to {who}…', ids.length, { who: who }));
   announce(txn('Moving {count} record to {who}', 'Moving {count} records to {who}', ids.length, { who: who }));
-  try {
-    const reply = await api('assignBulk', { body: { chit_ids: ids, target_actor_id: actorId } });
-    UI.selectMode = false;
-    UI.selected.clear();
-    await loadList();
-    renderApp();
-    const n = reply && reply.assigned != null ? reply.assigned : ids.length;
-    toast(MSG.bulkAssigned(n, a && a.name, (reply && reply.skipped && reply.skipped.length) || 0));
-  } catch (e) {
-    toast(MSG.fail('assign those', e));
-  } finally {
-    hideBusy();
-  }
+  /* ⭐ the same endpoint and body, one call per step of the speed class (the server commits each call whole, and its capacity gate reads the co-assist's load again for each) */
+  const result = await groupRunSteps(ids, { mount: 'WRK001-U58', speed: 'slow', verb: 'assign those', label: 'Assigning records', unit: 'assigned' }, async (chunk) => {
+    const reply = await api('assignBulk', { body: { chit_ids: chunk, target_actor_id: actorId } });
+    const skipped = (reply && reply.skipped) || [];
+    const skippedIds = skipped.map((entry) => entry.chit_id);
+    return {
+      done: chunk.filter((id) => !skippedIds.includes(id)),
+      failed: skipped.map((entry) => ({ item: entry.chit_id, reason: entry.reason || 'skipped' }))
+    };
+  });
+  UI.selectMode = result.failed.length > 0 || result.left > 0; /* the failed and not-done ticks stay visible */
+  await afterGroup(result);
+  renderApp();
+  toast(MSG.bulkAssigned(result.done.length, a && a.name, result.failed.length) + (result.left > 0 ? ' · ' + result.left + ' not done' : ''));
 }
 function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};

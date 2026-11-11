@@ -55,7 +55,7 @@ check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry
 
 console.log('batch progress showcase (CMP026, CMP027)');
 check(/gal-progress-batch-panel/.test(page) && /gal-progress-batch-tray/.test(page) && /gal-row-CMP026/.test(page), 'a separate row with two buttons: Try 8 items (panel) and Try 40 items (tray)');
-['Try 8 items', 'Try 40 items', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
+['Try 8 items', 'Try 40 items', 'Tray class: 3 items, always the tray', 'Assigning chits', 'assigned', 'Chit {n}', 'No reply from the demo'].forEach((key) => check(model.translatedIn(key).length === 4, 'batch demo text "' + key + '" is in all four packs'));
 ['Batch progress', 'Batch tray'].forEach((key) => check(model.translatedIn(key).length === 4, 'component label "' + key + '" is in all four packs'));
 
 console.log('language');
