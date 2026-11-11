@@ -3446,7 +3446,7 @@
         stockChip =
           '<span class="cbcat-stock" data-testid="shop-stock" style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;white-space:nowrap;' +
           (_in ? 'background:#e8f5ec;color:#1d6b3a' : 'background:#fdecec;color:#a33') +
-          (_mins > 240 ? ';opacity:.7' : '') +
+          (_mins > 240 ? ';outline:1px dashed currentColor;outline-offset:-1px' : '') +
           '">' +
           (_in ? 'in stock ' + esc(String(_av.qty)) : 'out of stock') +
           ' · as of ' +
