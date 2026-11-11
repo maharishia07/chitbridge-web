@@ -193,11 +193,11 @@ var PREVIEW = /[?&]preview=1/.test(location.search),
 if (PREVIEW) document.documentElement.setAttribute('data-preview', '1');
 /** the settings page's one message: keep the signature, then repaint the same slip with it (currency, the pack's rate, the kind, the paper) */
 /** the sample bill's number — composed by the ONE composer the till uses (CBDoc.compose), by the shop's country: India's Apr–Mar year (26-27); a country
- *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country is the Indian sample shop. */
+ *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country paints no slip (CTRY-72). */
 function billNo() {
   try {
     if (window.CBDoc && typeof CBDoc.compose === 'function')
-      return CBDoc.compose({ country: (signature && signature.country) || 'IN', prefix: 'C1', seq: 41, at: BILL.at });
+      return CBDoc.compose({ country: signature ? signature.country : '', prefix: 'C1', seq: 41, at: BILL.at });
   } catch (failure) {
     if (window.cbQuiet) window.cbQuiet('bill-print:billNo', failure);
   }
@@ -261,9 +261,18 @@ function stateLine() {
     name = code && CBProfileMap.STATE_NAMES[code];
   return name ? '<div class="c small" data-testid="slip-state">State: ' + esc(name) + ' (' + esc(code) + ')</div>' : '';
 }
-/** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
+/** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); null when the shop has no country or pack (CTRY-72: never India's GST 18 %) */
 function taxWords() {
-  return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word };
+  return (signature && signature.tax) || null;
+}
+/** CTRY-72: where the slip would have been, the words and the way to the fix - no number is worked out. A preview not yet told anything paints nothing. */
+function refusalHTML() {
+  var why = (signature && signature.refusal) || 'Set the shop country first.';
+  return (
+    '<div class="c" data-testid="slip-no-country" style="padding:6mm 2mm"><div class="b">' +
+    esc(why) +
+    '</div><div class="small"><a href="/settings.html#/country" target="_top" data-testid="slip-country-link">Country setup</a></div></div>'
+  );
 }
 /* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
 function when(date) {
@@ -273,6 +282,10 @@ function when(date) {
   return p(date.getDate()) + '/' + p(date.getMonth() + 1) + '/' + date.getFullYear() + '  ' + p(date.getHours()) + ':' + p(date.getMinutes());
 }
 function render() {
+  if (!taxWords()) {
+    document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
+    return;
+  }
   var kind = document.getElementById('kind').value;
   var m = calc(kind);
   var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
