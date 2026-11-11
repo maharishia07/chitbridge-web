@@ -220,7 +220,11 @@ const noScroll = (page) => page.evaluate(() => {
     await goTab(page, 'themes');
     await page.screenshot({ path: path.join(OUT, label + '-light-en-themes.png') });
     await goTab(page, 'meets');
-    check((await page.$$('[data-testid="gal-meets-row"]')).length === 7, 'Meets the standard: seven rules, each with its source, its proof and its live result');
+    check((await page.$$('[data-testid="gal-meets-row"]')).length === 13, 'Meets the standard: thirteen rules (seven visual, six keyboard and focus), each with its source, its proof and its live result');
+    const live = await page.$$eval('[data-testid^="gal-meetlive-"]', (nodes) => nodes.map((node) => node.getAttribute('data-testid') + ':' + node.textContent));
+    live.forEach((line) => console.log('  LIVE keyboard row: ' + line));
+    check(live.length === 6 && !live.some((line) => /wait/.test(line)) && live.filter((line) => /^gal-meetlive-(pass|fail):(PASS|FAIL) /.test(line)).length === 5, 'the six keyboard rows: five measured chips (PASS or FAIL read from the page, never waiting) and one rule the walk checks');
+    check(/^gal-meetlive-fail:FAIL.*focus stayed/.test(live[0]) || /^gal-meetlive-pass:PASS/.test(live[0]), 'the popup-focus chip says what the focus did');
     check((await page.$$eval('[data-testid="gal-meets-row"] a[href^="https://"]', (nodes) => nodes.length)) >= 9, 'the sources are plain links');
     check((await page.$$('[data-testid="gal-meet-pass"]')).length >= 80 && (await page.$$('[data-testid="gal-meet-fail"]')).length === 0, 'the live results: every theme PASSES every rule');
     const ringChips = await page.$$eval('[data-testid="gal-meets-row"]:nth-of-type(2) [data-testid^="gal-meet-"]', (nodes) => nodes.map((node) => node.textContent));
