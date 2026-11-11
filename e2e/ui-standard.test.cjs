@@ -78,6 +78,10 @@ console.log('waves: one row per wave, from public/app/ui-waves.json');
   check((drawn.match(/role="progressbar"/g) || []).length === data.waves.length, 'each wave row carries a progress bar (CMP021)');
   check(data.waves.every((wave) => ['done', 'in progress', 'landed, measuring', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress, landed measuring or next');
   check(data.waves.every((wave) => wave.progress.value === null || (wave.progress.value >= 0 && wave.progress.value <= wave.progress.total)), 'no progress value is above its total');
+  // 11 Nov (web #551): a number on this page is a measure with its source, never a hope
+  check(data.waves.every((wave) => wave.pairs.every((pair) => pair.after === null || pair.of == null || (pair.after >= 0 && pair.after <= pair.of))), 'no after value is above its of');
+  check(data.waves.filter((wave) => wave.status === 'done').every((wave) => wave.progress.value !== null), 'a wave marked done has a measured progress number');
+  check(/\b20\d\d\b/.test(data.measured || '') && /\b[0-9a-f]{7,40}\b/.test(data.measured || ''), 'the measured line names a date and the commit it was measured on');
   const unmeasured = data.waves.reduce((sum, wave) => sum + wave.pairs.filter((pair) => pair.after === null).length + (wave.progress.value === null ? 1 : 0), 0);
   check(unmeasured > 0 && (drawn.match(/>measuring</g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
   const wave0 = data.waves[0].progress;
