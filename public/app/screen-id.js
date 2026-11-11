@@ -479,6 +479,12 @@
     return r ? r.code : null;
   }
 
+  /** the data-cbmount attribute of a coded control in the shell, the bell or a menu: this screen's code + U1nn (nn = the component number, as the list control writes it); none until a screen is named */
+  function mountAttr(component) {
+    var code = current();
+    return /^[A-Z]{3}[0-9]{3}$/.test(code || '') ? ' data-cbmount="' + code + '-U1' + String(component).slice(-2) + '"' : '';
+  }
+
   /* a tap copies the code; the chip says so for a moment. A browser that refuses the clipboard: the code stays on screen to read. */
   function copied(node, ok) {
     var n = node.querySelector('.cbsid-c');
@@ -553,6 +559,7 @@
     row: row,
     sheet: sheet,
     current: current,
+    mountAttr: mountAttr,
     DECLARED: DECLARED,
     rows: ROWS,
     byApp: BYAPP,
