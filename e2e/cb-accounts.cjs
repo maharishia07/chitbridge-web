@@ -246,8 +246,9 @@ async function route(S, r) {
     await nav(p, 'daybook'); await p.waitForSelector('[data-testid="cols-btn-daybook"]', { timeout: 8000 });
     await p.click('[data-testid="cols-btn-daybook"]'); await p.waitForSelector('[data-testid="cols-menu-daybook"]', { timeout: 5000 });
     const cm = await p.evaluate(() => { const m = document.querySelector('[data-testid="cols-menu-daybook"]'), cs = getComputedStyle(m), r = m.getBoundingClientRect(),
+    /* UX-137 tap rule (10 Nov): a desktop arrow is 32 px (was 24; the limit was 26) */
       b = m.querySelector('.cbl-mv'); return { pos: cs.position, z: cs.zIndex, w: r.width, h: r.height, vh: innerHeight, mv: b ? b.getBoundingClientRect().width : 0 }; });
-    ok(cm.pos === 'absolute' && cm.w > 150 && cm.w < 420 && cm.h <= cm.vh * 0.62 + 2 && cm.mv > 0 && cm.mv <= 26,
+    ok(cm.pos === 'absolute' && cm.w > 150 && cm.w < 420 && cm.h <= cm.vh * 0.62 + 2 && cm.mv > 0 && cm.mv <= 34,
       'Accounts › Day book › ⚙ columns opens as a floating panel (position ' + cm.pos + ', ' + Math.round(cm.w) + '×' + Math.round(cm.h) + ', arrow ' + Math.round(cm.mv) + 'px)');
     await p.locator('[data-testid="cols-menu-daybook"]').screenshot({ path: path.join(__dirname, 'shots', 'cb-accounts-cols-open.png') }).catch(() => {});
     await p.click('[data-testid="cols-btn-daybook"]');

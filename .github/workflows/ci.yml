@@ -99,6 +99,8 @@ jobs:
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs
+          node e2e/till-names.test.cjs
+          node e2e/toast-live-host.test.cjs
           node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
@@ -190,6 +192,32 @@ jobs:
           node e2e/connector-gofrugal.test.cjs
           node e2e/connector-purchase.test.cjs
           node e2e/connector-zoho.test.cjs
+
+  twin-master-first:
+    # ⭐ PLT-92 (9 Nov): a vendored copy (public/till.html, promo.html, app/their-bill.js ... the api's vendor-till COPIES list, read from api main, never copied)
+    # may only change after its api master on api main holds the same bytes. Web #510 changed promo.html alone and every api PR went red.
+    name: twin-master-first (a vendored copy follows its api master)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: main
+          path: .side/api-main
+      - name: The check bites on a changed promo.html and passes on a clean copy (self-test)
+        run: node e2e/twin-master-first.cjs --self-test
+      - name: No copy this PR changed is ahead of the api master on api main
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node e2e/twin-master-first.cjs --api .side/api-main --base "$PR_BASE"
 
   seams-drift:
     # DOC-68 (docs truth): docs/SEAMS.md is GENERATED (node C:/dev/seams.cjs --write), so a drift check fails the build the way MODULES.md does.

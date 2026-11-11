@@ -323,7 +323,7 @@ function finCols() {
         var id = esc(p.party_id);
         return (
           '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
-          '<button type="button" class="cbl-tbtn" data-testid="fin-receive-' +
+          '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-receive-' +
           id +
           "\" onclick=\"event.stopPropagation();payOpen('customer','" +
           id +
@@ -332,7 +332,7 @@ function finCols() {
           ')">' +
           esc(tx('Receive')) +
           '</button>' +
-          '<button type="button" class="cbl-tbtn" data-testid="fin-remind-' +
+          '<button type="button" data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-remind-' +
           id +
           '" onclick="event.stopPropagation();bkRemind(\'' +
           id +
