@@ -16907,7 +16907,7 @@ async function prodCategoriseApply() {
   if (!node) return;
   const err = document.getElementById('bulk_err');
   if (!node.add.size && !node.remove.size) {
-    if (err) err.textContent = tx('Pick at least one category to attach or remove.');
+    if (err) err.textContent = tx('Pick a category');
     return;
   }
   closeModal();

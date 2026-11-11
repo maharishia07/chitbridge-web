@@ -78,7 +78,7 @@ const serverAnswer = (name, options) => ({ results: options.body.ids.map((id) =>
   console.log('nothing picked');
   reset(3, [], []);
   await sandbox.prodCategoriseApply();
-  check(calls.length === 0 && /Pick at least one category/.test(sandbox.__err.textContent), 'no call; the sentence is shown in the dialog');
+  check(calls.length === 0 && /Pick a category/.test(sandbox.__err.textContent), 'no call; the sentence is shown in the dialog');
 
   console.log(failures ? '\n' + failures + ' FAILED' : '\nall passed');
   process.exit(failures ? 1 : 0);
