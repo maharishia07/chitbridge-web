@@ -38,24 +38,28 @@ const REQUIRED = {
 };
 
 /** the kind of a file, from its repo and path alone (never typed, never guessed beyond this table) */
-function kindOf(repo, rel) {
-  if (TEST_FILE.test(rel) && /^(tests|e2e)\//.test(rel)) return 'test';
-  if (/\.html$/.test(rel)) return 'page';
-  if (/^(scripts|tools)\//.test(rel)) return 'tool';
-  if (repo === 'api' && /^routes\//.test(rel)) return 'route-file';
+function kindOf(repo, relPath) {
+  if (TEST_FILE.test(relPath) && /^(tests|e2e)\//.test(relPath)) return 'test';
+  if (/\.html$/.test(relPath)) return 'page';
+  if (/^(scripts|tools)\//.test(relPath)) return 'tool';
+  return kindInRepo(repo, relPath);
+}
+
+/** the kind of a source file once tests, pages and tools are ruled out */
+function kindInRepo(repo, relPath) {
   if (repo === 'engines') return 'engine';
-  if (repo === 'web' && /^public\//.test(rel)) return 'component';
-  if (repo === 'api' && /^public\//.test(rel)) return 'component';
+  if (repo === 'api' && /^routes\//.test(relPath)) return 'route-file';
+  if (/^public\//.test(relPath)) return 'component';
   return 'module';
 }
 
 /** what the first 60 lines say: { title: bool, fields: { LABEL: value } } */
-function readFields(text, rel) {
+function readFields(text, relPath) {
   const found = { title: false, fields: {} };
   const lines = text.split(/\r?\n/).slice(0, HEAD_LINES);
   for (const line of lines) {
     const title = TITLE_LINE.exec(line);
-    if (title && !found.title && path.basename(rel) === path.basename(title[1])) found.title = true;
+    if (title && !found.title && path.basename(relPath) === path.basename(title[1])) found.title = true;
     const field = FIELD_LINE.exec(line);
     if (field && !(field[1] in found.fields)) found.fields[field[1]] = field[2];
   }
