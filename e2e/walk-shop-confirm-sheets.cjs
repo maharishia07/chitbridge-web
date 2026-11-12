@@ -7,6 +7,10 @@
  *   K1  a sheet opens with the focus INSIDE it, and Tab (and Shift+Tab) never leaves it
  *   K2  Escape closes the sheet and the focus goes back to the control that opened it (Report a problem, My orders)
  *   K3  the order sheet is a dialog for a screen reader (role, modal, a name) and its x has a name
+ *   F1  a finish (qty 3), an offer (qty 2) and a form each ask first: the finish and the offer show the quantity and the TOTAL from the one money engine,
+ *       the form shows its details and no money; 0 posts until the yes, at 1366x768 and 390x844
+ *   F2  typing: a redraw that takes the box away puts the focus back on the box with the same id; a node added inside the sheet never steals the focus
+ *   F3  two sheets open (Report a problem over the order): one Escape closes only the top one, a second closes the other
  *   B1  Know your business at 390x844: the credential-name placeholder is shown whole (not cut), no sideways scroll
  * It must FAIL on main: there Place order posts at once, Escape does nothing on a sheet, Tab walks out behind it, the placeholder is cut.
  *   NODE_PATH=<dir with playwright> node e2e/walk-shop-confirm-sheets.cjs
@@ -23,6 +27,14 @@ const view = { available: true, visibility: 'public', categories: [],
   items: [{ item_id: 'i1', item_data: { name: 'Basmati rice 5 kg', unit: 'bag', price: 640 } }] };
 const SHOTS = process.env.WALK_SHOTS || 'e2e/shots';
 
+/** a shop with ONE finish ordered the way the case says: a priced finish, a negotiable one (the buyer's offer) or a form (no money) */
+function finishView(kind) {
+  const oi = { preset: kind === 'form' ? 'form' : 'cart', pipeline: kind === 'form' ? 'payload' : 'commerce', showsPrice: kind !== 'form', negotiable: kind === 'offer',
+    schema: kind === 'form' ? { required: ['note'], properties: { note: { type: 'string' } } } : null, documents: null };
+  const item = { name: 'Sky blue emulsion', unit: 'litre', commercials: { price: 500, unit: 'litre' }, order_input: oi, combinations: [{ name: 'Sky', colours: [{ name: 'Blue', hex: '#6fa8dc' }] }] };
+  return Object.assign({}, view, { shop: Object.assign({}, view.shop, { bridge_id: SHOP + kind, order_input: oi, order_method: kind === 'form' ? 'form' : 'cart' }),
+    items: [], finishes: [{ title: 'Paints', source: 'SRC1', items: [item] }] });
+}
 /** the keys: Tab count until the focus is back where it started proves a trap; returns where each press landed */
 async function tabLoop(page, presses, key) {
   const where = [];
@@ -125,6 +137,82 @@ W.run('shop-confirm-sheets', async (w) => {
       if (!(inside && trapped && closed && back)) return { ok: false, saw: out.join(' · ') };
     }
     return { ok: true, saw: out.join(' · ') };
+  });
+
+  /* F1 · F2 · F3 · a finish, an offer, a form */
+  for (const kind of ['finish', 'offer', 'form']) {
+    await page.route('**/api/catalogue/' + SHOP + kind + '*', (r) => {
+      const u = r.request().url();
+      if (/\/order\/start/.test(u)) return r.fulfill(J({ message: 'Code sent', channel: 'phone' }));
+      if (/\/order\/confirm/.test(u)) { posts.push(r.request().postDataJSON()); return r.fulfill(J({ message: 'Placed', chit_id: 'abcdef12-0000-4000-8000-000000000000', token: 'tok', summary: {} })); }
+      if (/support\/preview/.test(u)) return r.fulfill(J({ to: 'the shop', can_send: true }));
+      return r.fulfill(J(finishView(kind)));
+    });
+  }
+  /** open the kind's order sheet by keys, fill what it asks, reach the code step */
+  const toCodeStep = async (kind) => {
+    await page.goto(w.base + '/shop.html?s=' + SHOP + kind + '&api=' + encodeURIComponent(w.base));
+    await page.waitForSelector('[data-testid="shop-order-0"]', { timeout: 15000 });
+    await page.locator('[data-testid="shop-order-0"]').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid="shop-contact"]');
+    if (kind === 'finish') await page.fill('[data-testid="shop-qty"]', '3');
+    if (kind === 'offer') { await page.fill('[data-testid="shop-qty"]', '2'); await page.fill('[data-testid="shop-offer"]', '400'); }
+    if (kind === 'form') await page.fill('[data-testid="shop-f-note"]', 'Please call me');
+    await page.fill('[data-testid="shop-contact"]', '9876543210');
+    await page.locator('[data-testid="shop-send-code"]').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-testid="shop-otp"]');
+  };
+  const WANT = { finish: [/Sky blue emulsion/, /3/, /1,?500/], offer: [/Sky blue emulsion/, /2/, /800/], form: [/Sky blue emulsion/, /your details/] };
+  await w.step('F1', 'a finish (qty 3), an offer (qty 2) and a form each ask first, with quantity and total from the one money engine; 0 posts until the yes', async () => {
+    const out = [];
+    for (const [vp, tag] of [[{ width: 1366, height: 768 }, '1366'], [{ width: 390, height: 844 }, '390']]) {
+      await page.setViewportSize(vp);
+      for (const kind of ['finish', 'offer', 'form']) {
+        const before = posts.length;
+        await toCodeStep(kind);
+        await page.fill('[data-testid="shop-otp"]', '123456');
+        await page.locator('[data-testid="shop-place-order"]').focus();
+        await page.keyboard.press('Enter');
+        await page.waitForSelector('[data-testid="confirm"]', { timeout: 5000 });
+        const text = await page.evaluate(() => document.querySelector('[data-testid="confirm"]').innerText);
+        const money = await page.evaluate(() => !!document.querySelector('[data-testid="confirm"] [data-testid="shop-confirm-total"]'));
+        await page.screenshot({ path: SHOTS + '/shop-confirm-' + kind + '-' + tag + '.png' }).catch(() => null);
+        const good = WANT[kind].every((re) => re.test(text)) && (kind === 'form' ? !money : money) && posts.length === before;
+        out.push(tag + ' ' + kind + ': ' + (good ? 'ok' : 'BAD "' + text.replace(/\s+/g, ' ').slice(0, 140) + '"'));
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(250);
+      }
+    }
+    return { ok: out.every((x) => /ok$/.test(x)) && posts.length === 1, saw: out.join(' · ') + ' · posts ' + posts.length };
+  });
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await w.step('F2', 'typing: a redraw that takes the box away puts the focus back on the same box; a node added inside the sheet never steals the focus', async () => {
+    await toCodeStep('finish');
+    await page.locator('[data-testid="shop-otp"]').focus();
+    await page.keyboard.type('12');
+    await page.evaluate(() => { const note = document.createElement('i'); note.id = 'walk_note'; document.querySelector('[role="dialog"]').appendChild(note); });
+    await page.waitForTimeout(150);
+    const kept = await page.evaluate(() => document.activeElement && document.activeElement.id);
+    await page.evaluate(() => orderRender());
+    await page.waitForTimeout(250);
+    const back = await page.evaluate(() => document.activeElement && document.activeElement.id);
+    await page.keyboard.type('34');
+    const typed = await page.evaluate(() => document.activeElement && document.activeElement.value);
+    return { ok: kept === 'o_otp' && back === 'o_otp' && typed === '34', saw: 'after an added node focus on ' + kept + ' · after the redraw on ' + back + ' · typing went into the box: "' + typed + '"' };
+  });
+  await w.step('F3', 'Report a problem over the order sheet: one Escape closes only the top sheet, the second closes the other', async () => {
+    await page.evaluate(() => supOpen());
+    await page.waitForSelector('#suphost [role="dialog"]');
+    const two = await page.locator('[role="dialog"]').count();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+    const afterOne = await page.evaluate(() => ({ sup: !!document.querySelector('#suphost [role="dialog"]'), ord: !!document.querySelector('#ohost [role="dialog"]') }));
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(250);
+    const afterTwo = await page.evaluate(() => ({ sup: !!document.querySelector('#suphost [role="dialog"]'), ord: !!document.querySelector('#ohost [role="dialog"]') }));
+    return { ok: two === 2 && !afterOne.sup && afterOne.ord && !afterTwo.ord, saw: two + ' sheets open · after one Escape ' + JSON.stringify(afterOne) + ' · after two ' + JSON.stringify(afterTwo) };
   });
 
   /* B1 · Know your business at 390 */

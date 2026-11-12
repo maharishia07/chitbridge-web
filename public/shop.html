@@ -2804,19 +2804,27 @@ function orderPromiseLines() {
   var price = itemPrice(finish);
   return ['<li>' + esc(finish.name) + (_ord.combo ? ' · ' + esc(_ord.combo) : '') + ' × ' + esc(String(_ord.qty)) + (price && price.u ? ' ' + esc(price.u) : '') + '</li>'];
 }
-/** the money of the question, from the same engine as the review step: the basket's total, a finish's price, or the buyer's own offer */
+/** the lines the money engine prices for the question: the basket, or the one finish (its listed price, or the buyer's own offer) at the typed quantity; none when nothing is priced */
+function orderPromiseMoneyLines() {
+  if (_isCart()) return _reviewLines();
+  var finish = _FIN[_ord.idx].it;
+  var price = itemPrice(finish);
+  var offered = _isNegotiable() ? parseFloat(_ord.offer) : NaN;
+  if (_isPayload() || (!price && isNaN(offered))) return [];
+  var line = _lineOf(finish, Number(_ord.qty) || 1);
+  line.unitPrice = isNaN(offered) ? price.v : offered;
+  return [line];
+}
+/** the money of the question, from the ONE engine the review step reads (shopBasketMath): a basket, a finish or an offer, always quantity and total; '' when nothing is priced, null when the engine fails (then nothing is asked and nothing is sent) */
 function orderPromiseMoney() {
-  if (_isCart()) {
-    try {
-      return shopMoneyRowsHTML(shopBasketMath(_reviewLines()), { totalTestid: 'shop-confirm-total' });
-    } catch (e) {
-      return '<div data-testid="shop-confirm-total"><b>Total ' + esc(_cartGrand()) + '</b></div>';
-    }
+  var lines = orderPromiseMoneyLines();
+  if (!lines.length) return '';
+  try {
+    return shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid: 'shop-confirm-total' });
+  } catch (e) {
+    if (typeof cbQuiet === 'function') cbQuiet('shop: the order question could not work out the total, nothing was sent', e);
+    return null;
   }
-  if (_isPayload()) return '';
-  if (_isNegotiable()) return '<div data-testid="shop-confirm-total"><b>Your offer ' + esc(cbFmt(parseFloat(_ord.offer))) + '</b></div>';
-  var price = itemPrice(_FIN[_ord.idx].it);
-  return price ? '<div data-testid="shop-confirm-total"><b>' + esc(cbFmt(price.v)) + (price.u ? ' / ' + esc(price.u) : '') + '</b></div>' : '';
 }
 /** the question's button says what it will do: send an offer, submit a form, or place the order */
 function orderPromiseLabel() {
@@ -2828,12 +2836,17 @@ function orderPromiseLabel() {
 function orderAsk(body) {
   var shop = (_SHOPDATA && _SHOPDATA.shop && _SHOPDATA.shop.display_name) || 'the shop';
   var contact = _ord.contact || '';
+  var money = orderPromiseMoney();
+  if (money === null) {
+    orderRender(null, 'We could not work out your total, so nothing was sent. Please try again.');
+    return;
+  }
   CBConfirm(
     'Place this order?',
     '<div data-testid="shop-confirm-body">' +
       '<div>This sends your order to <b>' + esc(shop) + '</b>:</div>' +
       '<ul style="margin:6px 0;padding-inline-start:18px">' + orderPromiseLines().join('') + '</ul>' +
-      orderPromiseMoney() +
+      money +
       '<div style="margin-top:8px">The shop will reach you on <b>' + esc(contact) + '</b>. Nothing is charged here.</div></div>',
     orderPromiseLabel(),
     function () {

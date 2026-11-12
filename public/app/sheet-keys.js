@@ -80,12 +80,21 @@
       close();
     } else if (event.key === 'Tab') trapTab(event, panel);
   }
-  /** a draw left the focus on the page behind the sheet (or nowhere): bring it back into the sheet */
-  function keepFocusInside(host, panel) {
-    var active = document.activeElement;
-    if (active && active !== document.body && host.contains(active)) return;
-    if (confirmIsOpen()) return;
-    (reachable(panel)[0] || panel).focus();
+  /** the sheets that are open, bottom to top: a key belongs to the top one only (Escape closes one sheet, not two) */
+  var openSheets = [];
+  /** a draw replaced the box the person was typing in: put the focus back on the box with the same id (caret at its end) */
+  function sameBox(panel) {
+    var id = lastFocus && lastFocus.id;
+    var box = id ? panel.querySelector('[id="' + String(id).replace(/"/g, '') + '"]') : null;
+    if (!box) return null;
+    box.focus();
+    if (typeof box.selectionStart === 'number') box.setSelectionRange(box.value.length, box.value.length);
+    return box;
+  }
+  /** focus has LEFT the panel (a draw replaced what had it, or it sits behind): bring it back; focus still inside is never touched, so typing is not interrupted */
+  function keepFocusInside(panel) {
+    if (panel.contains(document.activeElement) || confirmIsOpen()) return;
+    if (!sameBox(panel)) (reachable(panel)[0] || panel).focus();
   }
   /** watch one host: see the file header */
   function watch(host, options) {
@@ -93,11 +102,13 @@
     /** the host's content went from empty to a sheet: remember who opened it */
     function opened() {
       state.open = true;
+      openSheets.push(state);
       state.opener = lastFocus && !host.contains(lastFocus) ? lastFocus : null;
     }
     /** the sheet went away: the focus goes back to its opener, when that control is still on the page */
     function closed() {
       state.open = false;
+      openSheets.splice(openSheets.indexOf(state), 1);
       if (state.opener && state.opener.isConnected && state.opener.focus) state.opener.focus();
       state.opener = null;
     }
@@ -106,10 +117,10 @@
       if (!panel) return state.open ? closed() : undefined;
       if (!state.open) opened();
       describe(panel, options.label);
-      keepFocusInside(host, panel);
+      if (openSheets[openSheets.length - 1] === state) keepFocusInside(panel);
     }
     function onKey(event) {
-      var panel = state.open ? panelOf(host) : null;
+      var panel = state.open && openSheets[openSheets.length - 1] === state ? panelOf(host) : null;
       if (panel) answerKey(event, panel, options.close);
     }
     var observer = new MutationObserver(onChange);
