@@ -487,7 +487,7 @@ function testGuide(force) {
 
   var verdict = function (name, fg, bg, body) {
     return (
-      '<div style="border-inline-start:3px solid ' +
+      '<div style="color:var(--on-card);border-inline-start:3px solid ' +
       fg +
       ';background:var(--card);' +
       'border:1px solid var(--line);border-inline-start-width:3px;border-radius:9px;padding:9px 12px;' +

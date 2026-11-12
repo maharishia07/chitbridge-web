@@ -5466,7 +5466,7 @@ function themePaletteHTML() {
       '<div style="background:var(--paper);color:var(--on-bg);padding:6px">' +
       '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:5px;padding:5px 6px">' +
       '<div style="display:flex;align-items:center;gap:4px">' +
-      '<span style="width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto"></span>' +
+      '<span style="color:var(--on-accent);width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto"></span>' +
       '<span style="height:4px;border-radius:2px;background:var(--ink);opacity:.7;flex:1"></span></div>' +
       '<div style="display:flex;gap:3px;margin-top:5px">' +
       '<span style="font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px">Aa</span>' +
@@ -5529,9 +5529,9 @@ function themePaletteHTML() {
       (on ? 'var(--blue)' : 'var(--line)') +
       '">' +
       /* the swatch: page, card, rule and one accent — enough to judge the theme from */
-      '<span style="flex:0 0 auto;width:30px;height:30px;border-radius:6px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
-      '<span style="width:16px;height:16px;border-radius:3px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
-      '<span style="width:8px;height:2px;border-radius:1px;background:var(--blue)"></span></span></span>' +
+      '<span style="color:var(--on-bg);flex:0 0 auto;width:30px;height:30px;border-radius:6px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
+      '<span style="color:var(--on-card);width:16px;height:16px;border-radius:3px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
+      '<span style="color:var(--on-accent);width:8px;height:2px;border-radius:1px;background:var(--blue)"></span></span></span>' +
       '<span style="min-width:0;flex:1">' +
       '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
       '<b style="font-size:var(--fs-2);color:var(--on-card)">' +
@@ -7604,7 +7604,7 @@ function selfBillFoot() {
   if (el) {
     el.innerHTML =
       /* ONE LINE, ONE SOURCE: the cart prints its own money block (a self-bill sees its own offers and rates) — CBCart.reviewHTML */
-      '<div style="border:1px solid var(--line);border-radius:9px;background:var(--paper)">' +
+      '<div style="color:var(--on-bg);border:1px solid var(--line);border-radius:9px;background:var(--paper)">' +
       (c ? c.reviewHTML({ totalTestid: 'sb-total', taxTestid: 'sb-tax' }) : '') +
       '</div>' +
       '<div style="margin-top:9px"><input class="inp" data-testid="sb-subject" value="' +
@@ -13558,7 +13558,7 @@ function platSummaryHTML() {
       ? '<div class="sec">' +
         tx('Not in this report') +
         '</div>' +
-        '<div style="border:1px solid var(--warn-tint);background:var(--warn-tint);border-radius:var(--r-lg);padding:11px 13px;font-size:var(--fs-1);line-height:1.55">' +
+        '<div style="color:var(--warn-3);border:1px solid var(--warn-tint);background:var(--warn-tint);border-radius:var(--r-lg);padding:11px 13px;font-size:var(--fs-1);line-height:1.55">' +
         '<b style="color:var(--warn-2)">' +
         tx('Catalogue size, chit volume and governance stamps are absent, not nil.') +
         '</b>' +
@@ -26087,7 +26087,7 @@ function ctpBanner(chit) {
   if (!unconfirmed) return '';
   var where = chitWhere(chit) || chitOtherParty(chit) || tx('the other side');
   return (
-    '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
+    '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="color:var(--warn-3);margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
     esc(unconfirmed.failed ? unconfirmed.words || tx('Not delivered — we could not reach them') : txf('Waiting for {where} — not delivered yet', { where: where })) +
     (unconfirmed.count > 1 ? ' · ' + esc(txf('{n} changes', { n: unconfirmed.count })) : '') +
     '</div>'
@@ -27440,7 +27440,7 @@ function counterOpen() {
         : ' It will be set up for <b>' + esc(SESSION.entity || 'this shop') + '</b>.') +
       '</div></details>' +
       (strayKey
-        ? '<div data-testid="counter-stray" style="border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">' +
+        ? '<div data-testid="counter-stray" style="color:var(--on-card);border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">' +
           'This device was last a counter for a <b>different shop</b>. Opening it now makes it the counter for this shop. The other shop keeps its own bills and stock, and they are not touched.</div>'
         : '') +
       '<button class="composebtn" data-testid="counter-open-here" onclick="counterGo()">' +
