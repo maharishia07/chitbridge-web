@@ -489,6 +489,8 @@ async function peDepRun(btn) {
 /* ═══ 3 · ACCRUALS & RECURRING ═════════════════════════════════════════════════════════════════════════════════════════
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
+/** the sentence a reader who is not the owner sees where the Close card would be (ACC-229): one wording, two places */
+const PE_OWNER_ONLY_CLOSES = 'Only the owner closes and pays GST';
 const PE_FREQ = [
   ['monthly', 'Every month'],
   ['quarterly', 'Every 3 months'],
@@ -916,10 +918,8 @@ async function peAccrRev(a) {
    POST /gst/close { fy, period } → { utilised: [{ from, against, amount_minor }], payable_minor{cgst_minor…}, rcm_minor?, cash_minor?, carried_minor, pay_total_minor, entry_no }
    POST /gst/pay { fy, period, amounts, rcm, bank, challan_no } — a slip of the finger is caught by the server against what is owed. */
 async function peGstView(body) {
-  if (!peOwner()) {
-    body.innerHTML = peNoOwner('Only the owner closes and pays GST');
-    return;
-  }
+  /* ACC-229: the server decides who READS the return (the owner or the shop's auditor; any other login is refused in words, shown below). Closing and paying stay the owner's:
+     a reader who is not the owner sees the return and the sentence, never the Close card or the close form. */
   /* BAS1: the shop's OWN return first — an AU shop sees its BAS, an AE shop its VAT return (the pack's words). India (422 RETURN_FROM_RAIL), or a server
      without the route yet, keeps the GST close & pay below as the whole page. */
   let ret = null;
@@ -934,6 +934,10 @@ async function peGstView(body) {
     peReturnWord(ret);
     body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>';
     peReturnPaint(ret);
+    return;
+  }
+  if (!peOwner()) {
+    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(PE_OWNER_ONLY_CLOSES);
     return;
   }
   let L;
@@ -1349,8 +1353,12 @@ function peReturnPaint(r) {
       '</div>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
       '</div>';
-  host.innerHTML = h + peReturnCloseCard(r);
+  host.innerHTML = h + peReturnCloseSection(r);
   peReturnList(r);
+}
+/** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
+function peReturnCloseSection(r) {
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
