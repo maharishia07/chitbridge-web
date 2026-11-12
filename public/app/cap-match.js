@@ -14,6 +14,8 @@
  * never read what the shop pays its suppliers).
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * FLOW      GET /api/till/match ──▶ matchLoad ──▶ matchDetail (lines · Difference cell) ──▶ matchDispute (draft) ──▶ POST /api/chits/:chit_id/disputes
+ * CARD 03-disputes-service-and-register/three-way-match
  */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
