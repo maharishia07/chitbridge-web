@@ -205,7 +205,7 @@ function crmGroupsBar() {
   var blocked = crmGroupsMay('group');
   var btn = blocked
     ? crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), blocked)
-    : '<button type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
+    : '<button data-cbsid="CRM008-B01" type="button" class="act sm" data-testid="crm-grp-add" data-crm="grpnew">+ ' + esc(tx('New group')) + '</button>';
   if (GROUPS.loaded && !GROUPS.migrated) btn = crmViewOnlyBtn('crm-grp-add', '+ ' + tx('New group'), tx('Groups are not switched on for your shop yet.'));
   crmBar('<strong>' + esc(crmAppName()) + '</strong>', btn, true);
 }
@@ -466,14 +466,14 @@ function crmGroupOpen(name) {
       '</div></div><div class="mbody" data-testid="crm-grp-sheet">' +
       '<label>' +
       esc(tx('Name')) +
-      '<input class="inp" id="crm_grp_name" data-testid="crm-grp-name" maxlength="40" autocomplete="off" value="' +
+      '<input data-cbsid="CRM008-I01" class="inp" id="crm_grp_name" data-testid="crm-grp-name" maxlength="40" autocomplete="off" value="' +
       esc(name || '') +
       '"' +
       (name ? ' readonly' : '') +
       '></label>' +
       '<label>' +
       esc(tx('Find a customer')) +
-      '<input class="inp" id="crm_grp_q" data-testid="crm-grp-q" placeholder="' +
+      '<input data-cbsid="CRM008-I02" class="inp" id="crm_grp_q" data-testid="crm-grp-q" placeholder="' +
       esc(tx('Name, ID, phone')) +
       '" autocomplete="off" oninput="crmGroupPick(this.value)"></label>' +
       '<div id="crm_grp_list" class="grp-list" data-testid="crm-grp-list"></div>' +
@@ -514,7 +514,7 @@ function crmGroupPick(query) {
           return (
             '<label class="grp-row" data-testid="crm-grp-cand-' +
             esc(crmKey(item)) +
-            '"><input type="checkbox" data-crm="grptick" data-k="' +
+            '"><input data-cbsid="CRM008-I03" type="checkbox" data-crm="grptick" data-k="' +
             esc(item.party_id) +
             '"' +
             (GSHEET.on[item.party_id] ? ' checked' : '') +
@@ -631,7 +631,7 @@ function crmSendOpen(group, prefill) {
       '</span></div>' +
       '<label>' +
       esc(tx('Message')) +
-      '<textarea class="inp" id="crm_send_text" data-testid="crm-send-text" rows="4" maxlength="1000">' +
+      '<textarea data-cbsid="CRM008-T01" class="inp" id="crm_send_text" data-testid="crm-send-text" rows="4" maxlength="1000">' +
       esc((prefill && prefill.text) || '') +
       '</textarea></label>' +
       '<div id="crm_send_who" class="hint" role="status" data-testid="crm-send-who">' +
@@ -640,10 +640,10 @@ function crmSendOpen(group, prefill) {
       '<div id="crm_send_out" data-testid="crm-send-out"></div></div>' +
       '<div class="mfoot"><button data-cbsid="CMP005" type="button" onclick="closeModal()">' +
       esc(tx('Close')) +
-      '</button><button type="button" data-crm="sendcheck" data-testid="crm-send-check">' +
+      '</button><button data-cbsid="CRM008-B02" type="button" data-crm="sendcheck" data-testid="crm-send-check">' +
       esc(tx('Who may be sent?')) +
       '</button>' +
-      '<button type="button" class="pri" data-crm="sendgo" data-testid="crm-send-go" disabled title="' +
+      '<button data-cbsid="CRM008-B03" type="button" class="pri" data-crm="sendgo" data-testid="crm-send-go" disabled title="' +
       esc(tx('Check first')) +
       '">' +
       esc(tx('Send')) +
@@ -812,15 +812,15 @@ function crmShowcase(frame) {
     '</b><span class="mono" data-testid="crm-sc-url">' +
     esc(crmShopUrl()) +
     '</span></div>' +
-    '<div class="supacts"><button type="button" class="act sm quiet" data-crm="sccopy" data-testid="crm-sc-copy">' +
+    '<div class="supacts"><button data-cbsid="CRM008-B04" type="button" class="act sm quiet" data-crm="sccopy" data-testid="crm-sc-copy">' +
     esc(tx('Copy link')) +
     '</button>' +
-    '<button type="button" class="act sm quiet" data-crm="scgroup" data-testid="crm-sc-group">' +
+    '<button data-cbsid="CRM008-B05" type="button" class="act sm quiet" data-crm="scgroup" data-testid="crm-sc-group">' +
     esc(tx('Share with a group')) +
     '</button></div>' +
     '<label style="display:block;margin-top:12px;font-size:13.5px;font-weight:600">' +
     esc(tx('Share with a party')) +
-    '<input class="inp" id="crm_sc_q" data-testid="crm-sc-q" placeholder="' +
+    '<input data-cbsid="CRM008-I04" class="inp" id="crm_sc_q" data-testid="crm-sc-q" placeholder="' +
     esc(tx('Name, ID, phone')) +
     '" autocomplete="off" oninput="crmSharePick(this.value)"></label>' +
     '<div id="crm_sc_res" data-testid="crm-sc-res"></div><div id="crm_sc_party" data-testid="crm-sc-party"></div></div></div>';
@@ -906,7 +906,7 @@ function crmSharePick(query) {
     list
       .map(function (item) {
         return (
-          '<button type="button" class="result" style="text-align:left;background:var(--surface);width:100%;margin-top:6px" data-crm="scparty" data-k="' +
+          '<button data-cbsid="CRM008-B06" type="button" class="result" style="text-align:left;background:var(--surface);width:100%;margin-top:6px" data-crm="scparty" data-k="' +
           esc(item.party_id) +
           '" data-testid="crm-sc-pick-' +
           esc(crmKey(item)) +
@@ -974,7 +974,7 @@ function crmSharePaint() {
     '<div class="supacts" style="margin-top:8px">' +
     (blockedWhy
       ? crmViewOnlyBtn('crm-sc-share', tx('Share on WhatsApp'), blockedWhy)
-      : '<button type="button" class="act sm" data-crm="scshare" data-testid="crm-sc-share">' + esc(tx('Share on WhatsApp')) + '</button>') +
+      : '<button data-cbsid="CRM008-B07" type="button" class="act sm" data-crm="scshare" data-testid="crm-sc-share">' + esc(tx('Share on WhatsApp')) + '</button>') +
     '</div>';
 }
 /** the share: the shop's own phone sends it (wa.me, the device), and the out message is LOGGED through the gated route — the server decides again */
@@ -1030,7 +1030,7 @@ function crmShareGroup() {
       rows
         .map(function (item) {
           return (
-            '<button type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="scgrouppick" data-k="' +
+            '<button data-cbsid="CRM008-B08" type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="scgrouppick" data-k="' +
             esc(item.key) +
             '" data-testid="crm-sc-grp-' +
             crmGroupTid(item) +
