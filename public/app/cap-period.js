@@ -1351,8 +1351,12 @@ function peReturnPaint(r) {
       '</div>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
       '</div>';
-  host.innerHTML = h + (peOwner() ? peReturnCloseCard(r) : peNoOwner('Only the owner closes and pays GST'));
+  host.innerHTML = h + peReturnCloseSection(r);
   peReturnList(r);
+}
+/** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
+function peReturnCloseSection(r) {
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner('Only the owner closes and pays GST');
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
