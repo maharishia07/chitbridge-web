@@ -4,7 +4,7 @@
  * p2-small-2.test.cjs — two small UX fixes (2026-11-12, batch 2).
  *
  * UX-142: store.html uses the ONE shared toast (accounts-shell.js), not a copy with its own words, place and colours.
- * UX-101 (part): the Offer/Combo Lab sheet may not be wider than a 390 px phone (min-width 460 px made it spill sideways).
+ * UX-101 (hardening only, the phone rule at offer-lab-next.html W33 already set min-width:0): the sheet floor is min(460px,100%).
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/accounts-shell
  * Run: node e2e/p2-small-2.test.cjs
  */
@@ -24,6 +24,7 @@ ok('UX-142 store.html has no .toast style or #toast div of its own', !/\.toast\s
 ok('UX-142 the shared shell does define toast()', declared(shell).has('toast'));
 const clash = [...declared(inline)].filter((n) => declared(shell).has(n));
 ok('UX-142 no top-level name is declared by both (a clash would stop the page): ' + (clash.join(',') || 'none'), clash.length === 0);
+ok('UX-142 the shared toast is lifted above the cart bar (body #toast bottom:74px)', /body #toast\s*\{[^}]*bottom:\s*74px/.test(store));
 
 const sheetRule = pub('offer-lab-next.html').match(/\.sheet\{[^}]*\}/);
 ok('UX-101 the lab sheet rule is found', !!sheetRule);
