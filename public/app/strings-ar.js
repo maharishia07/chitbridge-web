@@ -1003,3 +1003,12 @@
     if (typeof renderApp === 'function') renderApp();
   } catch (_) {}
 })();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ar || (CBSTR.ar = {});
+  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر';
+  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر';
+  m['Open bill {n}'] = 'فتح الفاتورة {n}';
+})();

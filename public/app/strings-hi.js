@@ -900,3 +900,12 @@
     if (typeof renderApp === 'function') renderApp();
   } catch (_) {}
 })();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.hi || (CBSTR.hi = {});
+  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} बिल पढ़ा नहीं जा सका और इस महीने से बाहर रखा गया है';
+  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} बिल पढ़े नहीं जा सके और इस महीने से बाहर रखे गए हैं';
+  m['Open bill {n}'] = 'बिल {n} खोलें';
+})();
