@@ -465,7 +465,8 @@ async function route(S, r) {
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
 
     /* expand one → its journal's Dr/Cr lines (the ledger you are in is bold), then the facts no visible column shows; its bill number opens the sheet */
-    await p.click('[data-testid="stmt-row-0"] [role="button"]');
+    /* newest first: row 0 is Chola Auto Care (entry 000012), row 1 is Ravi Stores (000011, k1) */
+    await p.click('[data-testid="stmt-row-1"] [role="button"]');
     await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const next = (await p.textContent('[data-testid="db-lines-JV/2026-27/000011"]')).replace(/\s+/g, ' ');
     ok(/Customers \(Sundry Debtors\)/.test(next) && /Sales @12%/.test(next) && /Output CGST 6%/.test(next) && /Output SGST 6%/.test(next), 'the next level is the journal\'s lines, each with its rate as the line carries it ("Sales @12%", "Output CGST 6%")');
@@ -488,7 +489,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="cols-ledger-party-party"]').count() === 0 && await p.locator('[data-testid="cols-ledger-party-what"]').count() === 1, 'a party\'s ledger offers no Party column, not even in the gear');
     await p.click('[data-testid="cols-btn-ledger-party"]');
     ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
-    await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+    await p.click('[data-testid="stmt-row-1"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
     ok(!/Ravi Stores/.test(own.t) && /Output CGST/.test(own.t), 'inside the opened entry the party is not repeated either');
     ok(own.nsw <= own.ncw + 1 && own.lsw <= own.lcw + 1, 'the opened detail and the list never scroll sideways (' + own.nsw + '/' + own.ncw + ', ' + own.lsw + '/' + own.lcw + ')');
