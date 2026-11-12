@@ -146,6 +146,20 @@ function matchCard(o) {
   );
 }
 
+/**
+ * CTR-248 (api #1194, OPS-87): goods counted in a unit other than the ordered one sit beside the total, never summed into it, so
+ * ordered 10 box / received 0 is NOT "short 10". One segment per other unit; no conversion is guessed, a person settles it.
+ * Returns '' for an ordinary line, so the caller falls through to short / excess.
+ */
+function matchOtherUnits(item) {
+  if (!item.counted_in_another_unit || !Array.isArray(item.other_units) || !item.other_units.length) return '';
+  return item.other_units
+    .map(function (part) {
+      return txf('counted in another unit: {unit} mine {mine} / theirs {theirs}', { unit: part.unit, mine: part.mine, theirs: part.theirs });
+    })
+    .join(' · ');
+}
+
 function matchDetail(o, money) {
   var rows = o.lines
     .map(function (item) {
@@ -168,7 +182,13 @@ function matchDetail(o, money) {
         ';font-weight:' +
         (bad ? '700' : '400') +
         '">' +
-        (bad ? (item.difference < 0 ? txf('short {n}', { n: String(-item.difference) }) : txf('excess {n}', { n: String(item.difference) })) : tx('agrees')) +
+        (matchOtherUnits(item)
+          ? esc(matchOtherUnits(item))
+          : bad
+            ? item.difference < 0
+              ? txf('short {n}', { n: String(-item.difference) })
+              : txf('excess {n}', { n: String(item.difference) })
+            : tx('agrees')) +
         (item.reason ? ' · ' + esc(item.reason) : '') +
         '</td></tr>'
       );
@@ -278,7 +298,11 @@ function matchDispute(chit_id) {
         item.unit +
         ', received ' +
         item.received +
-        (item.difference < 0 ? ' (short ' + -item.difference + ')' : ' (excess ' + item.difference + ')') +
+        (matchOtherUnits(item)
+          ? ' (' + matchOtherUnits(item) + ')'
+          : item.difference < 0
+            ? ' (short ' + -item.difference + ')'
+            : ' (excess ' + item.difference + ')') +
         (item.reason ? ' — ' + item.reason : '')
       );
     })
