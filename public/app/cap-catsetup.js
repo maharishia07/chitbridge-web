@@ -212,7 +212,7 @@ function catsetDefListHTML(kind, one) {
           '\')">' +
           (d.status === 'live' ? tx('Back to draft') : tx('Make live')) +
           '</span>' +
-          '<span class="da" onclick="catsetDefEdit(\'' +
+          '<span data-cbsid="CMP012" class="da" onclick="catsetDefEdit(\'' +
           kind +
           "','" +
           esc(d.id) +
@@ -1329,7 +1329,7 @@ async function catcolPick() {
       tx('One per line or separated by commas — they all take the type on the right. Nothing guesses it from the name.') +
       '</div></div>' +
       '</div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' +
@@ -2385,7 +2385,7 @@ function catsetPlanPaint() {
       '" onchange="CATSET_PLAN[' +
       index +
       '].to=this.value">' +
-      '<button class="composebtn" title="' +
+      '<button data-cbsid="CMP008" class="composebtn" title="' +
       esc(tx('Remove')) +
       '" onclick="CATSET_PLAN.splice(' +
       index +
@@ -2420,7 +2420,7 @@ function catsetPlanPaint() {
       '<div id="plan_err" class="err" style="margin-top:6px"></div></div>' +
       '<div class="mfoot"><button class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' +
       tx('Create all as live') +
-      '</button><button onclick="closeModal()">' +
+      '</button><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
       '</button></div>',
     true
@@ -2820,7 +2820,7 @@ function catsetTaxHTML() {
 function catsetTaxActsHTML_(verdict, changed) {
   var sentence = !verdict.ok && CATSET_MAY !== null ? '<div data-testid="catset-tax-why" style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(verdict.why) + '</div>' : '';
   return (
-    '<div class="catset-ca" style="padding:8px 0 0"><button class="composebtn pri" data-testid="catset-tax-save" onclick="catsetTaxSave(this)"' +
+    '<div class="catset-ca" style="padding:8px 0 0"><button data-cbsid="CMP001" class="composebtn pri" data-testid="catset-tax-save" onclick="catsetTaxSave(this)"' +
     (verdict.ok && changed ? '' : ' disabled') +
     '>' +
     tx('Save') +

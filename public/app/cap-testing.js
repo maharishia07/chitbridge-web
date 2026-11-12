@@ -1150,7 +1150,7 @@ function testPaint() {
     '">\u2013</button>' +
     /* ⚠️ CLOSES THE PANEL, NOT THE MODE. Closing the lab used to turn test mode off, so the Test chips
        vanished from every screen because somebody put the board away. */
-    '<button title="Close the lab" onclick="testPanelClose()" style="' +
+    '<button data-cbsid="CMP005" title="Close the lab" onclick="testPanelClose()" style="' +
     ico +
     '">\u2715</button>' +
     '</div>' +
@@ -2133,7 +2133,7 @@ function testReqFormHTML() {
     '<button onclick="testReqSend()" style="' +
     base +
     'font-weight:700">Raise</button>' +
-    '<button onclick="testReqForm(0)" style="' +
+    '<button data-cbsid="CMP003" onclick="testReqForm(0)" style="' +
     base +
     '">Cancel</button>' +
     '</div></div>'
@@ -2406,7 +2406,7 @@ function testAsk(question, hint, okLabel) {
         '<button class="pri" data-testid="ask-ok" onclick="testAskOk()">' +
         (okLabel || 'Save') +
         '</button> ' +
-        '<button class="btn" data-testid="ask-cancel" onclick="testAskCancel()">Cancel</button>' +
+        '<button data-cbsid="CMP003" class="btn" data-testid="ask-cancel" onclick="testAskCancel()">Cancel</button>' +
         '</div>'
     );
     setTimeout(function () {
@@ -2594,7 +2594,7 @@ function testIncFormHTML() {
     '<button onclick="testIncSend()" style="' +
     btn +
     '">Record</button>' +
-    '<button onclick="testIncForm(false)" style="' +
+    '<button data-cbsid="CMP003" onclick="testIncForm(false)" style="' +
     btn +
     '">Cancel</button>' +
     '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">Recorded against ' +
@@ -4336,7 +4336,7 @@ function testTechHTML() {
           ';text-align:end">' +
           /* ⚠️ THE PAYOFF OF THE WHOLE FLOW WAS THE FAINTEST CONTROL ON SCREEN: a --card button with a
              --line border, on a --card row — 1.15:1 in light. Every table action takes TEST_BTN_SMALL. */
-          '<button onclick="testTechUse(' +
+          '<button data-cbsid="CMP007" onclick="testTechUse(' +
           index +
           ')" ' +
           'title="Fill the Create form with this case, ready to save" ' +
@@ -4629,7 +4629,7 @@ function testCaseFormHTML() {
         esc(CBTEST.ctlNow.label) +
         '</b>' +
         '<span style="flex:1 1 auto"></span>' +
-        '<button onclick="testCtlPick(\'' +
+        '<button data-cbsid="CMP014" onclick="testCtlPick(\'' +
         testJs(CBTEST.ctlNow.code) +
         "','')\" style=\"" +
         btn +
@@ -4688,7 +4688,7 @@ function testCaseFormHTML() {
         '\')" style="' +
         btn +
         ';padding:1px 7px">view</button>' +
-        '<button onclick="testShotDrop()" style="' +
+        '<button data-cbsid="CMP008" onclick="testShotDrop()" style="' +
         btn +
         ';padding:1px 7px">remove</button></span>'
       : '') +
@@ -4722,7 +4722,7 @@ function testCaseFormHTML() {
         '✓ Create and mark passed</button>'
       : '') +
     '<span style="flex:1 1 auto"></span>' +
-    '<button onclick="testCaseCancel()" style="' +
+    '<button data-cbsid="CMP003" onclick="testCaseCancel()" style="' +
     btn +
     '">Cancel</button>' +
     '</div>' +
@@ -5652,7 +5652,7 @@ function testCaseListHTML(code) {
             '<span style="font-size:var(--fs-1);font-weight:700;color:' +
             col +
             '">PASS</span>' +
-            '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\'' +
+            '<button data-cbsid="CMP010" class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\'' +
             esc(item.case_key) +
             '\')">Open</button>' +
             '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\'' +
@@ -8485,7 +8485,7 @@ function screenCasesPaint() {
       testReadAt() +
       '</span>' +
       testRefreshBtn(ico) +
-      '<button title="Close" onclick="screenCasesClose()" style="' +
+      '<button data-cbsid="CMP005" title="Close" onclick="screenCasesClose()" style="' +
       ico +
       '">\u2715</button>' +
       '</div>' +
@@ -10146,7 +10146,7 @@ function testSetupHTML() {
     '">\u24d8 Guide</button>' +
     '</div>';
 
-  h += '<div style="margin-top:16px">' + '<button onclick="testSetupToggle()" style="' + TEST_BTN_PRIMARY + '">Done</button></div>';
+  h += '<div style="margin-top:16px">' + '<button data-cbsid="CMP004" onclick="testSetupToggle()" style="' + TEST_BTN_PRIMARY + '">Done</button></div>';
   return h + '</div>';
 }
 
@@ -11001,7 +11001,7 @@ function testAddHTML() {
        document in the repository, so it is not in the printed script either */
     '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)" ' +
     'title="Goes on the board now. For the printed script, also add it to TEST-CASES-V2.js">Add the case</button>' +
-    '<button class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>' +
+    '<button data-cbsid="CMP003" class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>' +
     '</div></div>'
   );
 }

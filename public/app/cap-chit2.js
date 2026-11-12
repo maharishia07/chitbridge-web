@@ -706,7 +706,7 @@ function c2RepricePaint() {
     return modal(
       '<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--disp);font-size:var(--fs-2)">' +
         esc(p.error) +
-        '</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
+        '</div><button data-cbsid="CMP005" class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
         tx('Close') +
         '</button>'
     );
@@ -717,7 +717,7 @@ function c2RepricePaint() {
         '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">' +
         txf('You have no catalogue yet, so there are no prices to pull. Add items under {cat}', { cat: '<b>' + tx('Catalogue') + '</b>' }) +
         ' and this will fill them in.</div>' +
-        '<button class="btn" style="width:100%" onclick="closeModal()">' +
+        '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
         '</button>'
     );
@@ -799,7 +799,7 @@ function c2RepricePaint() {
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">Nothing is written until you confirm. Each change is recorded as an amendment — the old price stays struck through.</div>' +
       body +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
-      '<button class="btn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       (will.length ? '<button class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '') +
@@ -1428,7 +1428,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     '</span>' +
     /* ⚠️ Say that the row goes somewhere. The row has carried `cursor:pointer` all along, which only tells
          you once the mouse is already on it — and tells a phone nothing at all. */
-    '<a class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
+    '<a data-cbsid="CMP010" class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
     ' title="' +
     esc(tx('Open this line — history, delivery, cost, who and when')) +
     '"' +
@@ -1508,7 +1508,7 @@ function c2AssignOpen(line_id) {
         '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">' +
         txf('No co-assists yet — add someone under {where} and they will appear here.', { where: '<b>' + tx('Co-assists') + '</b>' }) +
         '</div>' +
-        '<button class="btn" style="width:100%" onclick="closeModal()">' +
+        '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
         '</button>'
     );
@@ -1565,7 +1565,7 @@ function c2AssignOpen(line_id) {
           ) +
           '</div>'
         : '') +
-      '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;gap:8px"><button data-cbsid="CMP003" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="btn pri" data-testid="c2-assign-do" style="flex:1" onclick="c2Assign(\'' +
@@ -1876,7 +1876,7 @@ function c2PickBarHTML() {
     '<button class="btn pri" data-testid="c2-assign-many" onclick="c2AssignMany()" style="padding:6px 14px">' +
     esc(tx('Assign together')) +
     '</button>' +
-    '<button onclick="c2PickClear()" style="border:1px solid var(--line);background:var(--card);' +
+    '<button data-cbsid="CMP014" onclick="c2PickClear()" style="border:1px solid var(--line);background:var(--card);' +
     'color:var(--on-card);border-radius:8px;padding:6px 11px;font-size:var(--fs-2);cursor:pointer">' +
     esc(tx('Clear')) +
     '</button></div>'
@@ -2153,7 +2153,7 @@ function chit2Screen() {
     '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)">' +
     '<div style="flex:none">' + // ← the frozen part
     '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">' +
-    '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
+    '<span data-cbsid="CMP006" onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
     /* ⭐ CLASSED `dt` SO THE SCREEN CODE CAN FIND IT. Athi, 2026-09-12: *"if i open design 2, the name does
        not appear"* — this header is design 2's own markup and shares nothing with the classic detail, so the
        stamper had nothing to hook onto. One class, and the same stamper works here as everywhere else

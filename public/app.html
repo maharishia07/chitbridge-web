@@ -2458,7 +2458,7 @@ function openBlueprint(id) {
   if (typeof modal !== 'function') return;
   modal(
     blueprintCardHTML(id) +
-      '<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;margin-top:14px"><button data-cbsid="CMP005" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     false
@@ -3429,7 +3429,7 @@ function renderAssist(ans) {
     ? `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:var(--fs-1);color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`
     : '';
   node.innerHTML = `<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-cbsid="CMP005" data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre ? 'Tell me your business and I will be honest about whether this fits.' : 'Describe what you are trying to do.'}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans || ''}</div>
@@ -3768,7 +3768,7 @@ function renderMsgConsole() {
     `<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter === k ? 'var(--accent)' : 'var(--card)'};color:${_logFilter === k ? 'var(--on-accent)' : 'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML = `<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
-    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button data-cbsid="CMP014" onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map((e) => `<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level] || 'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join('') : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
@@ -7490,7 +7490,7 @@ function selfBillOpen() {
       '</div>' +
       '<div id="sb_foot" style="margin-top:12px"></div>' +
       '</div>' +
-      '<div class="mfoot"><button data-testid="sb-cancel" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" data-testid="sb-cancel" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="pri" id="sb_go" data-testid="sb-record" onclick="selfBillSend(this)"></button></div>',
@@ -8383,7 +8383,7 @@ function ccStepItems() {
       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">From <b>${esc(UI._supplier.name)}</b>&rsquo;s catalogue</div>`
       : '') +
     `<div id="cc_catpick">${ccCatPickHTML()}</div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button data-cbsid="CMP007" class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines = `<div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:end;font-weight:700;font-size:var(--fs-2);margin-top:6px"></div>`;
@@ -8406,7 +8406,7 @@ function ccStepTo() {
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">${tx('CC')}</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
-       <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
+       <button data-cbsid="CMP007" class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
      </div>
      <div id="cc_sugg" class="ccsugg"></div>
      <button class="composebtn" style="margin-top:6px" data-testid="chit-add-self" onclick="ccAddSelf()">+ Self (own record)</button>
@@ -8727,7 +8727,7 @@ function ccRenderRcpts() {
             if (UI._supplier) {
               return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:var(--fs-2);font-weight:600;color:var(--blue)">🏭 ${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · ' + esc(item.bridge) + '</span>' : ''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`;
             }
-            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
+            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span data-cbsid="CMP008" onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
           })
           .join('')
       : `<div style="font-size:var(--fs-2);color:var(--grey)">No recipients yet — add To / CC / For above.</div>`;
@@ -9111,7 +9111,7 @@ function ccRenderItems() {
     ? CC.items
         .map(
           (item, index) =>
-            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
+            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button data-cbsid="CMP008" class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
         )
         .join('')
     : `<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
@@ -9127,7 +9127,7 @@ function ccItemChips(i) {
         attIcon(cbAttachType(item.type, item.name)) +
         ' ' +
         esc(item.name.length > 20 ? item.name.slice(0, 20) + '…' : item.name) +
-        ' <span onclick="ccDelItemFile(' +
+        ' <span data-cbsid="CMP008" onclick="ccDelItemFile(' +
         i +
         ',' +
         index +
@@ -9637,7 +9637,7 @@ function ccRenderFiles() {
             attIcon(cbAttachType(item.type, item.name)) +
             ' ' +
             esc(item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name) +
-            ' <span onclick="ccDelFile(' +
+            ' <span data-cbsid="CMP008" onclick="ccDelFile(' +
             index +
             ')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'
           );
@@ -9799,7 +9799,7 @@ function addActorModal() {
        }
      )}</div>
      <div class="err" id="ac_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
 }
 async function submitActor() {
   const name = val('ac_name'),
@@ -9860,13 +9860,13 @@ function actorInviteModal(head, name, login, otp, r) {
        }
      )}</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
 }
 // In-app confirm (replaces browser confirm()). bodyHtml is raw HTML — esc() dynamic parts in the caller.
 function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${bodyHtml}</div></div>
-   <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">${tx('Cancel')}</button><button class="${danger ? 'danger' : 'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel || 'Confirm')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" data-testid="confirm-cancel" onclick="closeModal()">${tx('Cancel')}</button><button class="${danger ? 'danger' : 'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel || 'Confirm')}</button></div>`);
   UI._modalDismiss = onCancel || null; // fires on Cancel, Escape or the backdrop — see closeModal
   const node = document.getElementById('_cfmok');
   if (node)
@@ -10089,7 +10089,7 @@ function supportOpen() {
         })
         .join('') +
       '</div>' +
-      '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" data-testid="support-cancel" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button></div>'
   );
@@ -10280,7 +10280,7 @@ function supportForm(id) {
       '</div>' +
       '</div>' +
       /* ⭐ BACK, not Cancel, on a form reached from the hub — the way out of a wrong box is the other boxes. */
-      '<div class="mfoot"><button data-testid="support-back" onclick="supportOpen()">' +
+      '<div class="mfoot"><button data-cbsid="CMP006" data-testid="support-back" onclick="supportOpen()">' +
       esc(tx('Back')) +
       '</button><button class="pri" data-testid="support-send" onclick="supportSend()">' +
       esc(tx(b.send)) +
@@ -10494,7 +10494,7 @@ function promptAsk(title, opts, onOk, extra) {
             maxlength="${Number(opts.maxlength) || 120}" autocomplete="off">
      ${hint ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>` : ''}
    </div>
-   <div class="mfoot"><button data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel ? `<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>` : ''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel ? `<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>` : ''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
   UI._modalDismiss = extra.onCancel || null; // Cancel, Escape or the backdrop — see closeModal
   const node = document.getElementById('_pmpt'),
     b = document.getElementById('_pmptok');
@@ -10551,7 +10551,7 @@ function actorCleanupModal(action, name, parts) {
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${esc(name || 'They')} can no longer sign in.${action === 'deactivate' ? ' Reactivate any time to restore access — note the bindings below are <b>not</b> auto-restored.' : ''}</div>
      <div style="${_CARD};margin-top:9px"><div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:700;margin-bottom:4px">Bindings cleaned</div>${rows}</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
   if (typeof announce === 'function')
     announce((name || 'Co-assist') + ' ' + (action === 'remove' ? 'removed' : 'deactivated') + (parts && parts.length ? '. ' + parts.join('. ') : '.'));
 }
@@ -10897,7 +10897,7 @@ function showHelp(key) {
       '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink)">' +
       h.b +
       '</div></div>' +
-      '<div class="mfoot"><button class="pri" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" class="pri" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>'
   );
@@ -10962,7 +10962,7 @@ function suppliersScreen() {
       ${
         UI.supFind || UI.supReq
           ? ''
-          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" onfocus="supWhereLoad()" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
+          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" onfocus="supWhereLoad()" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button data-cbsid="CMP007" class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
       <div id="sp_where_box">${supWhereHTML()}</div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
@@ -11279,7 +11279,7 @@ function supInfoCardHTML(x) {
     "','" +
     String(supName(x)).replace(/[\\']/g, '') +
     '\')">Passport <span class=arw>→</span></button>' +
-    '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
+    '<button data-cbsid="CMP008" data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
     x.supplier_list_id +
     '\')" style="margin-inline-start:auto;color:var(--disp)">' +
     tx('Remove') +
@@ -14360,7 +14360,7 @@ function custNamedGroupsHTML(c) {
     tx('+ new group') +
     '" style="width:130px;padding:3px 6px" onkeydown="if(event.key===\'Enter\')custAddNamedGroup(\'' +
     esc(c.customer_list_id) +
-    '\')"><button class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
+    '\')"><button data-cbsid="CMP007" class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
     esc(c.customer_list_id) +
     '\')">' +
     tx('Add') +
@@ -15110,9 +15110,9 @@ function supEdit(id) {
       (x.preferred ? 'Preferred' : 'Not preferred') +
       '</button></div>' +
       '<div class="err" id="sp_ederr" style="margin-top:8px"></div></div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\'' +
+      '</button><button data-cbsid="CMP001" class="pri" data-testid="sup-save" onclick="saveSupplier(\'' +
       id +
       '\')">' +
       tx('Save') +
@@ -15522,7 +15522,7 @@ async function ppAcceptFoot(handle, label) {
     : '';
   node.innerHTML =
     was +
-    '<button onclick="closeModal()">' +
+    '<button data-cbsid="CMP005" onclick="closeModal()">' +
     tx('Close') +
     '</button>' +
     '<button class="pri" data-testid="sup-accept" onclick="ppAccept(' +
@@ -15552,7 +15552,7 @@ async function viewSupplierPassport(bridge, name) {
       esc(who) +
       ' — trade readiness</div><div class="mbody" id="pp_body">' +
       '<div class="loadwrap"><span class="spin"></span> reading their passport…</div></div>' +
-      '<div class="mfoot" id="pp_foot"><button onclick="closeModal()">' +
+      '<div class="mfoot" id="pp_foot"><button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -16448,7 +16448,7 @@ function prodPickBarHTML() {
     <button data-testid="cat-availability" ${n ? '' : 'disabled'} onclick="prodAvailAsk()" style="margin-inline-start:auto">📦 Availability</button>
     <button class="pri" data-testid="cat-categorise" ${n ? '' : 'disabled'} onclick="prodCategoriseAsk()">🏷️ Categorise</button>
     <button data-testid="cat-offer" ${n ? '' : 'disabled'} onclick="prodOfferAsk()">🏷️ Offer</button>
-    <button onclick="prodPickMode(false)">${tx('Done')}</button>
+    <button data-cbsid="CMP004" onclick="prodPickMode(false)">${tx('Done')}</button>
   </div>`;
 }
 /**
@@ -16491,7 +16491,7 @@ async function prodOfferAsk() {
       '<div style="font-size:var(--fs-2);color:var(--grey)">' +
       tx('reading your offers…') +
       '</div></div></div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -16785,7 +16785,7 @@ function prodCategoriseAsk() {
     <div class="s">attaching adds a category — it never removes the others</div></div>
    <div class="mbody"><div class="bulklist">${rows}</div>
      <div class="err" id="bulk_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button>
+   <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button>
      <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">${tx('Apply')}</button></div>`);
 }
 function prodBulkToggle(id, which, btn) {
@@ -16862,7 +16862,7 @@ function prodAvailAsk() {
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px;line-height:1.5">' +
       tx('Retired and redundant are set one item at a time — each needs its own reason, or what replaced it.') +
       '</div>' +
-      '<div style="margin-top:12px"><button class="btn ghost" style="width:100%" onclick="closeModal()">' +
+      '<div style="margin-top:12px"><button data-cbsid="CMP003" class="btn ghost" style="width:100%" onclick="closeModal()">' +
       tx('Cancel') +
       '</button></div>'
   );
@@ -18051,7 +18051,7 @@ function checkCatalogueFile() {
       '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">' +
       tx('Import') +
       '</button>' +
-      '<button onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -18092,7 +18092,7 @@ async function declareVariants() {
       modal(
         '<div class="mhd">' +
           tx('🔗 Variants') +
-          '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">' +
+          '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('OK') +
           '</button></div>'
       );
@@ -18140,7 +18140,7 @@ async function declareVariants() {
           })
           .join('') +
         '</div><div id="v_out" style="margin-top:11px"></div>' +
-        '</div><div class="mfoot"><button onclick="closeModal()">' +
+        '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
         tx('Cancel') +
         '</button><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">' +
         tx('Save grouping') +
@@ -18224,7 +18224,7 @@ async function startFromStandardSet() {
         '<div id="cf_vout" style="margin-top:10px"></div>' +
         '</div><div class="mfoot"><button class="pri" data-testid="cat-starter-adopt" onclick="_cfAdoptSet(this)">' +
         tx('Add these columns') +
-        '</button><button onclick="closeModal()">' +
+        '</button><button data-cbsid="CMP005" onclick="closeModal()">' +
         tx('Close') +
         '</button></div>'
     );
@@ -19272,7 +19272,7 @@ async function prodAllFields(id) {
       body +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
-      '<button class="btn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button>' +
       '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
@@ -19320,7 +19320,7 @@ function prodStatusPick(id) {
       opt('unavailable', 'Not available (for now)', 'still matches, so the order records what they asked for — flagged as unable to ship') +
       opt('retired', 'Retired', 'no longer sold. New orders stop resolving to it; old chits are untouched') +
       opt('redundant', 'Redundant', 'replaced by another item — needs to say which') +
-      '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>'
   );
@@ -20059,7 +20059,7 @@ function prodModifiersTab(d, edit) {
             `<div style="display:flex;gap:6px;align-items:center" data-testid="prod-mod-opt-${gi}-${index}">` +
             `<input class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
             `<input class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
-            `<button class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
+            `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
         )
         .join('') +
       `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
@@ -20381,7 +20381,7 @@ function prodMediaTab(d, edit) {
         : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`) +
     `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name || '')}">${esc(x.name || '')}</div>` +
     (edit
-      ? `<button class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
+      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
       : '') +
     `</div>`;
   return (
@@ -20709,7 +20709,7 @@ function prodIdentifiersTab(d, edit) {
       return (
         `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
-          ? `<button class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
+          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
         '</div>'
       );
@@ -21106,7 +21106,7 @@ function prodRowsPick() {
           `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${item[0]}" data-testid="prod-row-tick-${item[0]}" ${on(item[0]) ? 'checked' : ''} ${PROD_ROWS_FIXED.indexOf(item[0]) >= 0 ? 'disabled' : ''}> ${tx(item[1])}</label>`
       ).join('') +
       `</div>` +
-      `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`
+      `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button data-cbsid="CMP003" class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="CMP001" class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`
   );
 }
 async function prodRowsSave() {
@@ -21856,7 +21856,7 @@ function prodTaxPreviewHTML(d, r) {
 function prodDetailHTML() {
   if (UI.refSel != null && (UI.refCat || [])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]); // BRIDGE: rich finish showcase
   if (UI.prodMode === 'new') {
-    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
+    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button data-cbsid="CMP003" onclick="backToList()">${tx('Cancel')}</button></div>`;
   }
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
   /* ⭐ THE PROSE SAID "or add a new one" AND MADE THEM GO FIND THE BUTTON. That is the one thing an empty
@@ -21894,7 +21894,7 @@ function prodDetailHTML() {
       prodRowsVisible()
         .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, true)))
         .join('') + `<div class="err" id="ct_err" style="margin-top:8px"></div>`;
-    bar = `<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
   } else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
@@ -21903,7 +21903,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
+    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
@@ -22081,7 +22081,7 @@ function prodScheduledHTML(id) {
     rows
       .map(
         (item) =>
-          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
+          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
       )
       .join('') +
     `</div>`
@@ -22412,7 +22412,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -22556,7 +22556,7 @@ function chitMarkPaid(id, amount) {
     <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc(typeof CBLocale !== 'undefined' && CBLocale.symbol && moneyCode() ? CBLocale.symbol(moneyCode()) : '')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount || ''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
-    <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
+    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 /** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
 function readPayForm() {
@@ -22634,7 +22634,7 @@ async function chitShowQr(id, amount) {
   }
   if (!upi) {
     modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
     );
     return;
   }
@@ -22658,7 +22658,7 @@ async function chitShowQr(id, amount) {
     }
   } catch (_) {}
   modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
   );
 }
 function toggleListHelp() {
@@ -23263,7 +23263,7 @@ function modal(html, wide, opt) {
   if (!node) return;
   UI._composeModal = false;
   node.style.display = '';
-  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
+  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
   modalStamp(node);
 }
@@ -23366,7 +23366,7 @@ function quickStatus() {
           }) || (UI.detail && UI.detail.id === item ? UI.detail : null)
         );
       })
-    )}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`
+    )}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`
   );
 }
 function pickStatus(v) {
@@ -23464,7 +23464,7 @@ function pickChitStatus(id) {
     )
     .join('');
   modal(
-    `<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code || 'this chit')} — any direction</div></div><div class="mbody">${opts}${billUseChoiceHTML([c])}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`
+    `<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code || 'this chit')} — any direction</div></div><div class="mbody">${opts}${billUseChoiceHTML([c])}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`
   );
 }
 function quickAssign() {
@@ -23499,13 +23499,13 @@ function quickDelete() {
           them2: sent.length > 1 ? tx('them') : tx('it'),
           them3: sent.length > 1 ? tx('them') : tx('it')
         }
-      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`
+      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`
     );
     return;
   }
   MODALS.del = { ids: drafts };
   modal(
-    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`
+    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`
   );
 }
 async function archiveSelected() {
@@ -23859,7 +23859,7 @@ function filterPanel() {
       <option value="priority"${list.sort === 'priority' ? ' selected' : ''}>${tx('Priority (queue)')}</option>
       <option value="amount"${list.sort === 'amount' ? ' selected' : ''}>Amount (high <span class=arw>→</span> low)</option>
       <option value="code"${list.sort === 'code' ? ' selected' : ''}>${tx('Code')}</option></select></div>
-    <div class="fp-foot"><button onclick="clearFilter()">${tx('Clear')}</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
+    <div class="fp-foot"><button data-cbsid="CMP014" onclick="clearFilter()">${tx('Clear')}</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
 let _notifs = [];
@@ -24070,7 +24070,7 @@ async function openNotifications(repaint) {
           'onclick="notifClearSelected()">Clear ' +
           (nsel || '') +
           '</button>' +
-          '<button data-testid="notif-pick-off" onclick="notifPick(false)">' +
+          '<button data-cbsid="CMP004" data-testid="notif-pick-off" onclick="notifPick(false)">' +
           tx('Done') +
           '</button>'
         : '<button data-testid="notif-pick-on" onclick="notifPick(true)">' +
@@ -24776,13 +24776,13 @@ function delAdv(k) {
 function advPanel() {
   const a = UI.adv || {};
   return `<div class="advpanel" onclick="event.stopPropagation()">
-    <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
+    <button data-cbsid="CMP005" class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
     <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" aria-label="${esc(tx('Amount min'))}" inputmode="numeric" placeholder="min" value="${a.amount_min || ''}"><span class="advdash">to</span><input class="advin" id="adv_amax" aria-label="${esc(tx('Amount max'))}" inputmode="numeric" placeholder="max" value="${a.amount_max || ''}"></div>
     <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" aria-label="${esc(tx('Date from'))}" type="date" value="${a.date_from || ''}"><span class="advdash">to</span><input class="advin" id="adv_dto" aria-label="${esc(tx('Date to'))}" type="date" value="${a.date_to || ''}"></div>
     <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status" aria-label="${tx('Status')}"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus === 'open' ? 'selected' : ''}>${tx('Open')}</option><option value="act" ${a.fstatus === 'act' ? 'selected' : ''}>${tx('Act')}</option><option value="close" ${a.fstatus === 'close' ? 'selected' : ''}>${tx('Close')}</option></select></div>
     <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri" aria-label="${tx('Priority')}"><option value="">${tx('Any')}</option><option value="urgent" ${a.priority === 'urgent' ? 'selected' : ''}>${tx('Urgent')}</option><option value="high" ${a.priority === 'high' ? 'selected' : ''}>${tx('High')}</option><option value="normal" ${a.priority === 'normal' ? 'selected' : ''}>${tx('Normal')}</option></select></div>
     ${typeof dispSearchRow === 'function' ? dispSearchRow(a) : ''}
-    <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
+    <div class="advfoot"><button data-cbsid="CMP014" class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`;
 }
 /* PERF1: the Task / Order list in its default order (newest first) asks for the page AFTER the last one it holds (`next`, keyset) — never OFFSET past
@@ -25612,7 +25612,7 @@ function todo(k) {
 function selBar() {
   const ids = UI.selected;
   const all = `<button onclick="selectAllRows()">${tx('☑ All')}</button>`;
-  const clr = `<button onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
+  const clr = `<button data-cbsid="CMP014" onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
   if (UI.folder === 'trash') {
     return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">${tx('↩ Restore')}</button><button onclick="bulkPurge()">${tx('🗑 Delete forever')}</button>${clr}</span></div>`;
   }
@@ -26748,7 +26748,7 @@ async function askAiOrder() {
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="' +
       bs +
-      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="' +
+      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -26878,7 +26878,7 @@ async function _aiOrderDoc(skill, label) {
       '<button onclick="_aiOrderDocPdf()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--purple);background:var(--card);color:var(--purple)">⬇ PDF</button>' +
-      '<button onclick="closeModal()" style="' +
+      '<button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -26995,7 +26995,7 @@ async function aiRun(skill, ctx, opts) {
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="' +
       bs +
-      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="' +
+      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -27249,7 +27249,7 @@ function answerPublish(id) {
       '</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>' +
       '<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma) or * for everywhere</span></label><input class="inp" id="ap_c" value="*">' +
       '<div class="err" id="ap_err"></div>' +
-      '<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">' +
+      '<div style="display:flex;gap:8px;margin-top:11px"><button data-cbsid="CMP003" class="composebtn" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\'' +
       id +
@@ -28429,7 +28429,7 @@ async function pickAssign(id) {
   const reasonbox = `<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote = c.custPri ? `<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>` : '';
   modal(
-    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
+    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
   );
 }
 function pickActor(aid) {
@@ -28499,7 +28499,7 @@ async function pickAssignBulk(ids) {
     })
     .join('');
   modal(
-    `<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length > 1 ? 's' : ''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`
+    `<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length > 1 ? 's' : ''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`
   );
 }
 async function assignBulkChits(ids, actorId) {
@@ -28517,7 +28517,7 @@ function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};
   MODALS.repri = { id, pri: c.pri || 'normal', reason: '' };
   modal(
-    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${item}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
+    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${item}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
   );
 }
 function pickRepri(p) {
@@ -30342,7 +30342,7 @@ function paintLB() {
   const i = Math.min(UI.lb, atts.length - 1),
     a = atts[i];
   host.innerHTML = `<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span data-cbsid="CMP005" class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a, 'lb')}</div>
     <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_, index) => `<span class="${index === i ? 'on' : ''}"></span>`).join('')}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;
