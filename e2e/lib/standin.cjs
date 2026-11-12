@@ -275,7 +275,8 @@ async function route(S, r) {
   if (p === '/api/books/accounts') return J(r, 200, { accounts: [{ code: '1300', name: 'Customers (Sundry Debtors)', is_group: false }, { code: '1400', name: 'Cash', is_group: false }, { code: '4000', name: 'Sales', is_group: false }].map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
   if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([]));
   if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
-  if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
+  if (p === '/api/books/cheques') return J(r, 200, books.cheques());
+  if (p === '/api/books/returns') return J(r, 200, { form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: "Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month's GST here.", rail: '/api/tax/gstr' });   /* an INR shop: the contract's `GET /api/books/returns #rail` example (status 200), as the api sends it */
   if (p === '/api/books/daybook') return J(r, 200, books.daybook((S.noClose ? [] : [{ entry_id: 'e1', entry_no: 'JV/1', posting_date: TODAY, event_type: 'walkin_day', narration: 'Walk-in sales',
     source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]).map(books.entry)));
   if (p === '/api/books/pl') return J(r, 200, books.pl([], []));
