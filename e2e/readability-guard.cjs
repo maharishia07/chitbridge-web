@@ -43,8 +43,11 @@ function complexFunction(name, branches) {
 }
 const NESTED = `// deepOne: five levels of nesting (fixture)\nfunction deepOne(rows) {\n  let total = 0;\n  for (const row of rows) {\n    if (row) {\n      for (const cell of row) {\n        if (cell) {\n          while (total < 100) { total += cell; }\n        }\n      }\n    }\n  }\n  return total;\n}\n`;
 
+/* a name is judged by the function around it (DECISIONS 2026-11-12, Google JS 6.1): the cryptic fixtures sit in a 13-line function so the scope test lets nothing off */
+const PAD = '  rows.length;\n'.repeat(10);
+
 const BASE = {
-  'public/app/rename.js': HEADER('rename') + 'function paintTotals(rows) {\n  var ct = rows.length;\n  return ct;\n}\n',
+  'public/app/rename.js': HEADER('rename') + 'function paintTotals(rows) {\n  var ct = rows.length;\n' + PAD + '  return ct;\n}\n',
   'public/app/cryptic.js': HEADER('cryptic') + 'function countRows(rows) {\n  return rows.length;\n}\n',
   'public/app/long.js': HEADER('long') + longFunction('legacyStays', 85) + longFunction('legacyGrows', 85) + longFunction('crossesLimit', 79) + 'function shortOne(total) {\n  return total + 1;\n}\n',
   'public/app/complex.js': HEADER('complex') + 'function plainOne(total) {\n  return total;\n}\n',
@@ -52,7 +55,7 @@ const BASE = {
   'public/app/catch.js': HEADER('catch') + 'function readSafely(reader) {\n  return reader();\n}\n',
   'public/app/header.js': HEADER('header') + 'function paintHeader(rows) {\n  return rows.length;\n}\n',
   'public/app/nocard.js': HEADER('nocard') + 'function paintNoCard(rows) {\n  return rows.length;\n}\n',
-  'public/app/untouched.js': HEADER('untouched') + 'function neverTouched(rows) {\n  var q = rows.length;\n  return q;\n}\n',
+  'public/app/untouched.js': HEADER('untouched') + 'function neverTouched(rows) {\n  var q = rows.length;\n' + PAD + '  return q;\n}\n',
   'public/app/notest.js': HEADER('notest') + 'function paintNoTest(rows) {\n  return rows.length;\n}\n',
   'public/app/minimums.js': HEADER('minimums') + 'function paintMinimums(rows) {\n  return rows.length;\n}\n',
   'public/app/worse.js': HEADER('worse') + 'function paintWorse(rows) {\n  return rows.length;\n}\n',
@@ -62,8 +65,8 @@ const BASE = {
   'docs/notes.md': '# notes\n'
 };
 const HEAD = {
-  'public/app/rename.js': HEADER('rename') + 'function paintTotals(rows) {\n  var counter = rows.length;\n  return counter;\n}\n',
-  'public/app/cryptic.js': HEADER('cryptic') + 'function countRows(rows) {\n  const q = rows.length;\n  return q;\n}\n',
+  'public/app/rename.js': HEADER('rename') + 'function paintTotals(rows) {\n  var counter = rows.length;\n' + PAD + '  return counter;\n}\n',
+  'public/app/cryptic.js': HEADER('cryptic') + 'function countRows(rows) {\n  const q = rows.length;\n' + PAD + '  return q;\n}\n',
   'public/app/long.js': HEADER('long') + longFunction('legacyStays', 85).replace('total += 3;', 'total += 30;') + longFunction('legacyGrows', 86) + longFunction('crossesLimit', 81) + longFunction('freshLong', 90) + 'function shortOne(total) {\n  return total + 1;\n}\n',
   'public/app/complex.js': HEADER('complex') + 'function plainOne(total) {\n  return total;\n}\n' + complexFunction('branchy', 16),
   'public/app/nested.js': HEADER('nested') + 'function flatOne(total) {\n  return total;\n}\n' + NESTED,
@@ -196,7 +199,7 @@ ok(/\[TRACE_TOOL, '--repo', repo,/.test(fs.readFileSync(path.join(ROOT, 'tools/r
 
 console.log('\n6 · the modules behind the tool, one unit each');
 const measure = require('../tools/readability/measure.cjs');
-const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'function readShop(shop) {\n  var q = shop.id;\n  try { return q; } catch (_) {}\n}\n' + complexFunction('manyBranches', 4));
+const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'function readShop(shop) {\n  var q = shop.id;\n' + PAD + '  try { return q; } catch (_) {}\n}\n' + complexFunction('manyBranches', 4));
 ok(facts.functions.length === 2 && facts.functions[0].name === 'readShop' && facts.functions[1].complexity === 5, 'measure: two functions, manyBranches has complexity 5 (' + facts.functions.map((fn) => fn.name + ' c' + fn.complexity).join(', ') + ')');
 ok(facts.cryptic.length === 1 && facts.cryptic[0].name === 'q' && facts.emptyCatches.length === 1 && facts.header.card === 'qa/fixture-unit', 'measure: one cryptic name, one empty catch, the CARD line read');
 ok(measure.inScope('web', 'public/app/x.js') && !measure.inScope('web', 'public/till.html') && !measure.inScope('web', 'e2e/x.cjs') && !measure.inScope('api', 'lib/money.js', '/* ADOPTED from chitbridge-engines v1 · money */'), 'measure: scope — own code in, the vendored till / a test / an adopted copy out');
@@ -237,6 +240,19 @@ const baselineReport = require('../tools/readability/baseline.cjs');
 const metrics = baselineReport.metrics('web', tmp, 5);
 ok(metrics.files === 15 && metrics.R3.over_80 === 4 && metrics.R1.cryptic_declarations >= 2, 'baseline: R1–R6 over the fixture (15 files, 4 functions over 80 lines)');
 
+console.log('\n6b · the naming rule: Google JS 6.1 scope test (DECISIONS 2026-11-12)');
+const crypticIn = (code) => measure.factsFromText('public/app/naming.js', HEADER('naming') + code).cryptic.map((declaration) => declaration.name);
+const inTwelve = (decl) => 'function twelveLines(rows) {\n  ' + decl + '\n' + '  rows.length;\n'.repeat(9) + '}\n';
+ok(crypticIn(inTwelve('const r = rows.length;')).join() === 'r', '`r` in a 12-line function is flagged');
+ok(crypticIn('const threeLines = (rows) => {\n  const r = rows.length;\n  return r;\n};\n').length === 0, '`r` in a 3-line arrow is not flagged');
+ok(crypticIn('const oneLine = (rows) => rows.map((r) => r.id);\n').length === 0, 'an arrow parameter in a one-line callback is not flagged');
+ok(crypticIn(inTwelve('let i = 0; let j = 0; let k = 0;')).length === 0, '`i` `j` `k` in a 12-line function are not flagged (counters, any scope)');
+ok(crypticIn(inTwelve('const rw = rows.length;')).join() === 'rw', '`rw`, a letter-dropping abbreviation in a long scope, is flagged');
+ok(crypticIn('function tenLines(rows) {\n  const rw = rows.length;\n' + '  rows.length;\n'.repeat(7) + '}\n').length === 0, 'a function of exactly 10 lines is still inside the short-name scope');
+ok(crypticIn('function elevenLines(rows) {\n  const rw = rows.length;\n' + '  rows.length;\n'.repeat(8) + '}\n').join() === 'rw', 'a function of 11 lines is outside it');
+ok(crypticIn('const r = 1;\n').join() === 'r', '`r` at module level is flagged (no scope to shelter in)');
+ok(crypticIn(inTwelve('try { rows.length; } catch (e) { rows.length; } const id = rows.length; const x = id; const y = x;')).length === 0, 'e, x, y and the conventional word id stay allowed in a long scope');
+
 console.log('\n7 · pr-checklist (tools/pr-checklist.cjs): the body must carry the five lines with numbers; bots and docs-only skip');
 const checklist = require('../tools/pr-checklist.cjs');
 const filledBody = lateResult.markdown.replace(/`<doc>`/g, 'n/a').replace('`<word>` → reused/widened `<name>` (or "nothing exists")', '`readability` → widened `tools/readability.cjs`');
@@ -273,7 +289,7 @@ function moveScenario(baseFiles, headFiles, extra, slack) {
   return { verdict, rows0, rows1, dir };
 }
 const sumOf = (rows) => Object.values(rows).filter((row) => typeof row === 'object').reduce((total, row) => total + row.score, 0);
-const CRYPTIC_FN = '// listTotals: adds the rows up (fixture)\nfunction listTotals(rows) {\n  var q = 0;\n  for (const row of rows) q += row;\n  return q;\n}\n';
+const CRYPTIC_FN = '// listTotals: adds the rows up (fixture)\nfunction listTotals(rows) {\n  var q = 0;\n' + PAD + '  for (const row of rows) q += row;\n  return q;\n}\n';
 const SRC0 = HEADER('src') + CRYPTIC_FN + 'function keepOne(rows) {\n  return rows.length;\n}\n';
 const SRC1 = HEADER('src') + 'function keepOne(rows) {\n  return rows.length;\n}\n';
 const DST0 = HEADER('dst') + 'function keepTwo(rows) {\n  return rows.length;\n}\n';
