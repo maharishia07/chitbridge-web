@@ -517,7 +517,7 @@ function worklistScreen() {
     esc(WL.due || '') +
     '" onchange="wlDue(this.value)" ' +
     'style="margin-inline-start:auto;font-size:var(--fs-2);padding:3px 7px;border:1px solid var(--line);border-radius:9px">' +
-    (WL.due ? '<span onclick="wlDue(\'\')" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue);padding:4px">clear</span>' : '') +
+    (WL.due ? '<span data-cbsid="CMP014" onclick="wlDue(\'\')" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue);padding:4px">clear</span>' : '') +
     '</div>' +
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
     '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">' +
@@ -1887,7 +1887,7 @@ function wlLineHTML(loading) {
     asked +
     body +
     '</div>' +
-    '<div class="mfoot"><button onclick="wlCardClose()">' +
+    '<div class="mfoot"><button data-cbsid="CMP005" onclick="wlCardClose()">' +
     tx('Close') +
     '</button>' +
     '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' +

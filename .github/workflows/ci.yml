@@ -87,6 +87,7 @@ jobs:
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
           node e2e/offer-live-confirm.test.cjs
+          node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
           node e2e/rail-truth.cjs
@@ -96,6 +97,8 @@ jobs:
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-std-actions.test.cjs
+          node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
           node e2e/ui-codes-employees.test.cjs

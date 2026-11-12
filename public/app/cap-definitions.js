@@ -1615,7 +1615,7 @@ function cbDefFormHTML() {
     '<div class="err" id="cbdef_err"></div>' +
     '</div>' +
     '<div class="mfoot">' +
-    '<button onclick="closeModal()">' +
+    '<button data-cbsid="CMP003" onclick="closeModal()">' +
     tx('Cancel') +
     '</button>' +
     '<button class="pri" data-testid="cbdef-save" onclick="cbDefSave()">' +
@@ -2074,7 +2074,7 @@ async function cbDefTakeoverAsk(id, why) {
       '\')">' +
       tx('Retire and hand over') +
       '</button>' +
-      '<button onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
       '</button></div>',
     false
@@ -2356,7 +2356,7 @@ function cbDefMineHTML() {
             esc(item.current_version) +
             '</span>' +
             '<span class="cbdef-acts">' +
-            '<span onclick="cbDefEdit(\'' +
+            '<span data-cbsid="CMP012" onclick="cbDefEdit(\'' +
             esc(item.definition_id) +
             '\')">' +
             tx('Edit') +

@@ -1611,7 +1611,7 @@ function crmFuWhat(f) {
   var acts = f.party_removed
     ? '<span class="sub">' +
       esc(tx('No longer your party')) +
-      '</span> <button type="button" class="crm-mini" data-crm="fudel" data-id="' +
+      '</span> <button data-cbsid="CMP011" type="button" class="crm-mini" data-crm="fudel" data-id="' +
       esc(f.followup_id) +
       '" data-testid="crm-fu-del-' +
       esc(f.followup_id) +
@@ -2070,7 +2070,7 @@ function crmAddOpen(q) {
       esc(tx('Both')) +
       '</button></div></div>' +
       '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button></div>'
   );
@@ -2134,7 +2134,7 @@ function crmAddResults() {
       ' ' +
       crmRailChip(item) +
       '</span>' +
-      '<button type="button" class="act sm ghost" data-crm="addopen" data-k="' +
+      '<button data-cbsid="CMP010" type="button" class="act sm ghost" data-crm="addopen" data-k="' +
       esc(crmKey(item)) +
       '">' +
       esc(tx('Open')) +
@@ -2151,7 +2151,7 @@ function crmAddResults() {
       '</span><span class="hint">' +
       (e.city ? ' · ' + esc(e.city) : '') +
       '</span></span>' +
-      '<button type="button" class="act sm" data-crm="addfound" data-i="' +
+      '<button data-cbsid="CMP007" type="button" class="act sm" data-crm="addfound" data-i="' +
       index +
       '" data-testid="crm-add-this">' +
       esc(tx('Add')) +
@@ -2266,9 +2266,9 @@ function crmFuAddOpen(partyKey, then, prefill) {
         .join('') +
       '</select></label>' +
       '<div id="crm_fu_msg" class="hint" role="status"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="fusave" data-testid="crm-fu-save">' +
+      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="fusave" data-testid="crm-fu-save">' +
       esc(tx('Save')) +
       '</button></div>'
   );
