@@ -58,7 +58,7 @@ of file each thing is; this says what already does the job.
 | 43 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 43 | `rules` | `docnumber.js` | the rule set for a country — |
 | 42 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
-| 42 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 46 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 41 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 41 | `live` | `receivables.js` | the allocations that still count: |
 | 40 | `facts` | `bill-steps.js` | MY state_log — |
