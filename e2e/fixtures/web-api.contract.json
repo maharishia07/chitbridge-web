@@ -2143,6 +2143,38 @@
     "[].items[].posted_on",
     "[].items[].recurring_id",
     "[].items[].ref"
+   ],
+   "note": "RAIL-146o: for a cost-blind reader an item's owed_minor (the GST still to pay: output tax less input credit) and the amount_minor of a supplier-payment advice (direction 'out') are null with cost_hidden:true on that item; every other row and item stands. A client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
+   "cost_blind_example": [
+    {
+     "kind": "bills_to_accept",
+     "count": 1,
+     "words": "1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.",
+     "action": {
+      "label": "Open the bills",
+      "screen": "waiting",
+      "call": "GET /api/books/health"
+     },
+     "items": [
+      {
+       "id": 1,
+       "chit_id": null,
+       "ref": "chit:bill1",
+       "fiscal_year": "2026-27",
+       "period": 6,
+       "month": "2026-09",
+       "fy": "2026-27",
+       "due": "2026-11-20",
+       "overdue": false,
+       "owed_minor": null,
+       "recurring_id": "66666666-6666-4666-8666-000000000001",
+       "name": "Early rent",
+       "auto": false,
+       "posted_on": "2026-09-30",
+       "cost_hidden": true
+      }
+     ]
+    }
    ]
   },
   "GET /api/books/trial-balance": {
