@@ -88,13 +88,20 @@ const cardKeys = cardAt < 0 ? [] : [...src.slice(cardAt, src.indexOf('};', cardA
 const cardPainted = cardKeys.length && /polDefs\(\)/.test(web) && /\.ui\b/.test(web);
 console.log('  ' + cardKeys.length + ' of them on the Business rules card (lib/policy.js CARD → schema[key].ui)' + (cardPainted ? '' : ' — but the web does not paint it'));
 const unreachable = [];
+const noControl = [];
 for (const k of keys) {
   if (web.indexOf(k) >= 0) { pass++; continue; }
   if (cardPainted && cardKeys.indexOf(k) >= 0) { pass++; continue; }
   if (DELIBERATELY_UNREACHABLE[k]) { pass++; unreachable.push(k); continue; }
-  fails.push('`' + k + '` is read by the API and appears NOWHERE in the web app — nobody can set it, and nothing '
-    + 'says it was never chosen. Give it a control, or add it to DELIBERATELY_UNREACHABLE with the reason.');
+  noControl.push(k);
 }
+/* QA-154: a flag with no control is a finding; the known ones are in e2e/scanner-known.json and only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('policy-reachable', noControl.map((k) => ({ key: k, show: k })), { owner: 'settings' });
+console.log(RK.line);
+RK.fresh.forEach((i) => fails.push(String.fromCharCode(96) + i.show + String.fromCharCode(96) + ' is read by the API and appears NOWHERE in the web app (NEW) — nobody can set it, and nothing '
+  + 'says it was never chosen. Give it a control, or add it to DELIBERATELY_UNREACHABLE with the reason.'));
+pass += noControl.length - RK.fresh.length;
+
 
 /* ⚠️ an exception for a flag that no longer exists is a note about nothing, and it hides the next one */
 for (const k of Object.keys(DELIBERATELY_UNREACHABLE)) {

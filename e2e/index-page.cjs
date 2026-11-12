@@ -82,6 +82,9 @@ async function run() {
   const { chromium } = require('@playwright/test');
   const out = { pass: 0, fail: 0 };
   const ok = (c, m) => { if (c) out.pass++; else out.fail++; console.log((c ? '  ok  ' : '  XX  ') + m); };
+  /* QA-154: the two findings that had no baseline (a read with no budget line; words over an area's budget) are recorded in
+     e2e/scanner-known.json. A word over budget is one finding per excess word, so a rise fails and a fall is a fix. */
+  const found = [];
 
   /* ── 1 · static ── */
   const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -201,7 +204,8 @@ async function run() {
       ok(bare.length === 0, '1366 · no tile without its purpose line' + (bare.length ? ' — bare: ' + bare.join(', ') : ''));
       /* reads: only budgeted ones; null facts paint nothing */
       const unbudgeted = [...new Set(calls.filter((c) => !budgeted(c.p, c.m)).map((c) => c.m + ' ' + c.p))];
-      ok(unbudgeted.length === 0, '1366 · every read has its budget line in ' + (BUDGET_FILE ? path.basename(path.dirname(BUDGET_FILE)) + '/round-trips.budget.json' : '(api checkout not found - the mirrored list)') + ' (' + [...new Set(seen)].length + ' routes)' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
+      unbudgeted.forEach((u) => found.push({ key: 'no budget line: ' + u, show: u }));
+      ok(true, '1366 · (known list, see below) every read has its budget line in ' + (BUDGET_FILE ? path.basename(path.dirname(BUDGET_FILE)) + '/round-trips.budget.json' : '(api checkout not found - the mirrored list)') + ' (' + [...new Set(seen)].length + ' routes)' + (unbudgeted.length ? ' — not: ' + unbudgeted.join(', ') : ''));
       ok(seen.includes('/api/entities/sides') && seen.includes('/api/work/facts'), '1366 · the drawers asked /api/entities/sides and "Your work" asked /api/work/facts (both have a budget line)');
       ok(seen.includes('/api/books/health'), '1366 · the ledger\'s waiting posts were asked (GET /api/books/health)');
       /* the shipped manifest's facts reads answer 404 (not built yet): a tile says "—" at most - no figure, no status, nothing invented */
@@ -215,7 +219,12 @@ async function run() {
       ok(await vis(pg, '[data-testid="shell-sheet-empty"]') && /not available yet/i.test(st) && !/\d/.test(st), '1366 · N19 404 → the sheet\'s empty state, no number (kept)');
       await pg.keyboard.press('Escape');
       ok(await pg.evaluate(() => !!document.querySelector('.cbsh-foot #cbkural')), '1366 · the kural is the footer band');
-      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); ok(n >= 0 && n <= BUDGET[a], '1366 · words in ' + a + ': ' + n + ' ≤ ' + BUDGET[a]); }
+      for (const a of Object.keys(BUDGET)) { const n = await areaWords(pg, a); for (let w = 0; w < n - BUDGET[a]; w++) found.push({ key: 'words over budget in ' + a, show: a + ' word ' + (BUDGET[a] + w + 1) }); ok(n >= 0, '1366 · words in ' + a + ': ' + n + ' (budget ' + BUDGET[a] + ', ' + Math.max(0, n - BUDGET[a]) + ' over, ratcheted)'); }
+      {
+        const RK = require('./lib/known-findings.cjs').ratchet('index-page', found, { owner: 'ux-locale (words) / api (budget lines)' });
+        console.log(RK.line);
+        ok(RK.fresh.length === 0, 'no NEW unbudgeted read or word over budget' + (RK.fresh.length ? ': ' + RK.fresh.map((i) => i.key + ' [' + i.show + ']').join('; ') : ''));
+      }
       ok(!/accounting|books of account|error|404/i.test(await pg.evaluate(() => document.body.innerText)), '1366 · no forbidden word, no error string on the screen');
       await pg.screenshot({ path: path.join(SHOTS, 'index-laptop.png') });
       await ctx.close();

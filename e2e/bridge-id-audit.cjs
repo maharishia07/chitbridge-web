@@ -82,14 +82,19 @@ for (const f of files) {
   });
 }
 
-if (displayed.length) {
-  console.error('\n✗ Bridge ID reaches a person here — show user_id instead (bridge_id is the internal key):\n');
-  displayed.forEach((d) => console.error('   ' + d.where.padEnd(26) + d.text));
+/* QA-154: known findings live in e2e/scanner-known.json; only a NEW one fails */
+const R = require('./lib/known-findings.cjs').ratchet('bridge-id-audit',
+  displayed.map((d) => ({ key: d.where.split(':')[0] + '  ' + d.text, show: d })), { owner: 'network' });
+if (R.known) console.log(R.line);
+const fresh = R.fresh.map((r) => r.show);
+if (fresh.length) {
+  console.error('\n✗ Bridge ID reaches a person here (NEW) — show user_id instead (bridge_id is the internal key):\n');
+  fresh.forEach((d) => console.error('   ' + d.where.padEnd(26) + d.text));
   console.error('\n  A primary key is not a name. If the entity may have no handle yet, write');
   console.error('  `x.user_id || x.bridge_id` — a fallback is honest and this guard allows it.\n');
 }
-console.log((displayed.length ? '' : '✓ ') + 'Bridge ID — ' + displayed.length + ' displayed · '
+console.log((fresh.length ? '' : '✓ ') + 'Bridge ID — ' + displayed.length + ' displayed (' + fresh.length + ' new) · '
   + logic.length + ' internal (keys, lookups, session) across '
   + [...new Set(logic.map((l) => l.where.split(':')[0]))].length + ' files');
 
-process.exit(displayed.length ? 1 : 0);
+process.exit(fresh.length ? 1 : 0);

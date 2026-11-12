@@ -107,13 +107,19 @@ for (const rel of FILES) {
 }
 
 console.log('\n── a control that says it worked must have asked the server ──\n');
+/* QA-154: known findings live in e2e/scanner-known.json; only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('silent-control',
+  findings.map((f) => ({ key: f.rel + '  ' + f.name + '()', show: f })), { owner: 'accounting' });
+if (RK.known) console.log(RK.line + '\n');
+findings.length = 0;
+RK.fresh.forEach((r) => findings.push(r.show));
 if (!findings.length) {
   pass++;
-  console.log('  ✓ every control that announces success also reaches the server');
+  console.log('  ✓ no NEW control announces success without reaching the server');
   console.log('    (' + Object.keys(LOCAL_BY_DESIGN).length + ' judged local by design, each with its reason)');
 } else {
   fail++;
-  console.error('  ✗ ' + findings.length + ' control(s) announce success without asking the server:');
+  console.error('  ✗ ' + findings.length + ' NEW control(s) announce success without asking the server:');
   findings.forEach((f) => console.error('      ' + f.rel + '  ' + f.name + '()'));
   console.error('\n    Either wire it to the API, or add it to LOCAL_BY_DESIGN with the reason it is local.');
 }

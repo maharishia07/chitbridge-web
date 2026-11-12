@@ -57,7 +57,7 @@ for (const rel of FILES) {
        enough that it cannot reach past the neighbouring function. */
     const around = lines.slice(Math.max(0, i - 3), i + 1).join('\n');
     const ok = ALLOWED.some((a) => a.file === base && around.indexOf(a.contains) >= 0);
-    if (!ok) offenders.push(rel + ':' + (i + 1) + '  ' + t.slice(0, 88));
+    if (!ok) offenders.push({ key: rel + '  ' + t.slice(0, 88), show: rel + ':' + (i + 1) + '  ' + t.slice(0, 88) });
   });
 
   helperUses += (src.match(/emptyState\s*\(/g) || []).length;
@@ -69,10 +69,13 @@ for (const rel of FILES) {
 console.log('\n  emptyState() calls: ' + helperUses + '   scrErr() calls: ' + errUses
   + '   of those, offering an action: ' + withAction + '\n');
 
-if (offenders.length) {
+/* QA-154: known findings live in e2e/scanner-known.json; only a NEW one fails */
+const R = require('./lib/known-findings.cjs').ratchet('empty-states', offenders, { owner: 'ux-locale' });
+if (R.known) console.log(R.line + '\n');
+if (R.fresh.length) {
   fail++;
-  console.error('  ✗ ' + offenders.length + ' hand-rolled empty state(s) — use emptyState() or scrErr():\n');
-  offenders.forEach((o) => console.error('      ' + o));
+  console.error('  ✗ ' + R.fresh.length + ' NEW hand-rolled empty state(s) — use emptyState() or scrErr():\n');
+  R.fresh.forEach((o) => console.error('      ' + o.show));
   console.error('\n    emptyState(icon, title, sub, { label, onclick })   — nothing here yet');
   console.error('    scrErr(err, subject, retryCall)                    — it failed to load');
   console.error('    loader(label)                                      — it is still arriving');

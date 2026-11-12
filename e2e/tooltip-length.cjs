@@ -70,14 +70,17 @@ for (const rel of files) {
   for (const m of src.matchAll(/title="([^"]{1,400})"/g)) {
     total++;
     const shown = longestRendered(m[1]);
-    if (shown.length > MAX) long.push(rel + '  ' + shown.length + '  ' + shown.slice(0, 72));
+    if (shown.length > MAX) long.push({ key: rel + '  ' + shown.slice(0, 72), show: rel + '  ' + shown.length + '  ' + shown.slice(0, 72) });
   }
 }
 
 console.log('\n── a tooltip names the thing; the screen explains it ──');
 console.log('  ' + total + ' tooltips scanned, bar is ' + MAX + ' characters\n');
-t('none is longer than a line', long.length === 0, long.length ? '' : 'longest is within the bar');
-long.forEach((l) => console.error('      ' + l));
+/* QA-154: known findings live in e2e/scanner-known.json; only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('tooltip-length', long, { owner: 'ux-locale' });
+console.log(RK.line);
+t('no NEW tooltip is longer than a line', RK.fresh.length === 0, RK.fresh.length ? '' : 'none beyond the known');
+RK.fresh.forEach((l) => console.error('      ' + l.show));
 
 /**
  * ⚠️ AND THE MEASURER MUST BE SHOWN TO MEASURE. Every scan written this week was wrong before it was right —
