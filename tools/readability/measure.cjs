@@ -753,6 +753,8 @@ function factsFromText(relPath, text) {
       isFirstChunk = false;
     }
   }
+  /* MNT-51: a page with no inline script (or none that parsed) has no chunk to read, but its <!-- --> header sits in the page text itself */
+  if (!facts.header && /\.html$/.test(relPath)) facts.header = readHeader({ body: [] }, [], relPath, text);
   if (!facts.header) facts.header = { file: relPath, has: false, lines: 0, owns: false, callers: false, flow: false, card: null, loc: 0 };
   facts.cryptic = facts.declarations.filter(isCryptic);
   return facts;

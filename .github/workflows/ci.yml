@@ -93,6 +93,7 @@ jobs:
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
           node e2e/cart-keys-words.test.cjs
+          node e2e/match-money.test.cjs
           node e2e/text-budget-json.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
