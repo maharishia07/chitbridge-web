@@ -203,6 +203,10 @@ function bkMoney(minor, c) {
     return n.toFixed(bkDec(c));
   }
 }
+/** RAIL-146o: the books' report reads answer cost_hidden:true with every figure null for a co-assist without can_see_costs. null is NOT zero: it is said "Hidden" (bkMoney(null) would print 0.00) */
+function bkHid(minor, c) {
+  return minor === null || minor === undefined ? tx('Hidden') : bkMoney(minor, c);
+}
 /** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
 function bkDrCr(v, c) {
   v = Number(v || 0);
@@ -2086,6 +2090,12 @@ function bkDvKind(e) {
   return k === 'bill' ? 'Sales' : 'Other';
 }
 /** the same-ledger lines merged, credit side first (Sales · GST · Debtors); GST = the 2200–2212 lines together */
+/** RAIL-146o: an entry whose money the server hid (null dr/cr on a line, cost_hidden on the answer) */
+function bkDvHidden(e) {
+  return ((e && e.lines) || []).some(function (item) {
+    return item.dr_minor === null || item.cr_minor === null;
+  });
+}
 function bkDvGist(e) {
   var m = {},
     order = [];
@@ -2096,6 +2106,7 @@ function bkDvGist(e) {
       m[key] = { name: gst ? 'GST' : item.name, amt: 0, cr: 0 };
       order.push(key);
     }
+    if (item.dr_minor === null || item.cr_minor === null) m[key].hidden = true; /* RAIL-146o: a line the server hid */
     m[key].amt += Number(item.dr_minor || 0) + Number(item.cr_minor || 0);
     m[key].cr += Number(item.cr_minor || 0) - Number(item.dr_minor || 0);
   });
@@ -2113,6 +2124,7 @@ function bkDvGist(e) {
     );
 }
 function bkDvTotal(e) {
+  if (bkDvHidden(e)) return null;
   return ((e && e.lines) || []).reduce(function (total, item) {
     return total + Number(item.dr_minor || 0);
   }, 0);
@@ -2211,11 +2223,11 @@ function bkDvCsv(list, c) {
       bkDvTenders(e).join(' · '),
       s.counter || '',
       s.by || '',
-      '#' + amt(bkDvTotal(e)),
-      '#' + amt(cr),
+      bkDvTotal(e) === null ? tx('Hidden') : '#' + amt(bkDvTotal(e)),
+      bkDvTotal(e) === null ? tx('Hidden') : '#' + amt(cr),
       bkDvGist(e)
         .map(function (x) {
-          return x.name + ' ' + amt(x.amt);
+          return x.name + ' ' + (x.hidden ? tx('Hidden') : amt(x.amt));
         })
         .join('; ')
     ]);
@@ -2247,9 +2259,9 @@ function bkDvText(e, c) {
       (e.lines || []).map(function (item) {
         return [item.name, item.party_name, bkPartyLabel(item.party_id, item.party_name)].join(' ');
       }),
-      [(tot / pow).toFixed(bkDec(c)), String(Math.floor(tot / pow)), bkMoney(tot, c)],
+      tot === null ? [] : [(tot / pow).toFixed(bkDec(c)), String(Math.floor(tot / pow)), bkMoney(tot, c)],
       bkDvGist(e).map(function (x) {
-        return (x.amt / pow).toFixed(bkDec(c));
+        return x.hidden ? '' : (x.amt / pow).toFixed(bkDec(c));
       })
     )
     .join(' ');
@@ -2258,8 +2270,10 @@ function bkDvText(e, c) {
 function bkDvGroupSummary(entries, c) {
   var dr = 0,
     cr = 0,
-    sales = 0;
+    sales = 0,
+    hid = false;
   entries.forEach(function (e) {
+    if (bkDvHidden(e)) hid = true;
     (e.lines || []).forEach(function (item) {
       dr += Number(item.dr_minor || 0);
       cr += Number(item.cr_minor || 0);
@@ -2270,7 +2284,7 @@ function bkDvGroupSummary(entries, c) {
       });
   });
   var list = bkDaySales(entries, null).tenders;
-  var parts = [txn('{count} entry', '{count} entries', entries.length), tx('Dr') + ' ' + bkMoney(dr, c), tx('Cr') + ' ' + bkMoney(cr, c)];
+  var parts = [txn('{count} entry', '{count} entries', entries.length), tx('Dr') + ' ' + (hid ? bkHid(null) : bkMoney(dr, c)), tx('Cr') + ' ' + (hid ? bkHid(null) : bkMoney(cr, c))];
   if (sales) parts.push(tx('Sales') + ' ' + bkMoney(sales, c));
   list.forEach(function (x) {
     parts.push(tx(x.how) + ' ' + bkMoney(x.amount_minor, c));
@@ -2381,7 +2395,7 @@ function bkDvCols(c) {
       w: 130,
       html: true,
       cell: function (e) {
-        return '<b data-testid="db-total-' + no(e) + '">' + esc(bkMoney(bkDvTotal(e), c)) + '</b>';
+        return '<b data-testid="db-total-' + no(e) + '">' + esc(bkHid(bkDvTotal(e), c)) + '</b>';
       }
     }
   ];
@@ -2452,14 +2466,14 @@ function bkDvReversed(id, r) {
 function bkDvGistHTML(e, c) {
   return bkDvGist(e)
     .map(function (x) {
-      return esc(x.name) + ' ' + esc(bkMoney(x.amt, c));
+      return esc(x.name) + ' ' + esc(x.hidden ? bkHid(null) : bkMoney(x.amt, c));
     })
     .join(' · ');
 }
 function bkDvGistText(e, c) {
   return bkDvGist(e)
     .map(function (x) {
-      return x.name + ' ' + bkMoney(x.amt, c);
+      return x.name + ' ' + (x.hidden ? bkHid(null) : bkMoney(x.amt, c));
     })
     .join(' · ');
 }
@@ -2493,8 +2507,8 @@ function bkDvNext(e, c, lines, noParty, mine) {
               esc(item.name) +
               rate(item) +
               (item.party_name && !noParty ? ' · ' + esc(bkPartyLabel(item.party_id, item.party_name)) : ''),
-            item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '',
-            item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : ''
+            item.dr_minor === null ? esc(bkHid(null)) : item.dr_minor ? esc(bkMoney(item.dr_minor, c)) : '',
+            item.cr_minor === null ? esc(bkHid(null)) : item.cr_minor ? esc(bkMoney(item.cr_minor, c)) : ''
           ],
           [110, 110]
         );
@@ -4347,13 +4361,14 @@ async function bkTB(body) {
           '</td><td>' +
           bkLedgerLink(x.code, x.name, 'tb') +
           '</td><td class="num">' +
-          (x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') +
+          (x.dr_minor === null ? esc(bkHid(null)) : x.dr_minor ? esc(bkMoney(x.dr_minor, c)) : '') +
           '</td><td class="num">' +
-          (x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') +
+          (x.cr_minor === null ? esc(bkHid(null)) : x.cr_minor ? esc(bkMoney(x.cr_minor, c)) : '') +
           '</td></tr>'
         );
       })
       .join('');
+    var hidden = !!(reply && reply.cost_hidden) || reply.total_dr_minor === null || reply.total_cr_minor === null; /* RAIL-146o: hidden is not balanced and not unbalanced */
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
@@ -4362,9 +4377,9 @@ async function bkTB(body) {
       tx('Show') +
       '</button>' +
       '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' +
-      (ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') +
+      (hidden ? 'color:var(--grey)' : ok ? 'color:var(--ok-2);border-color:var(--ok-2)' : 'color:var(--warn-2);border-color:var(--warn-2)') +
       '">' +
-      (ok ? tx('✓ balances') : tx('⚠ does not balance')) +
+      (hidden ? tx('Hidden') : ok ? tx('✓ balances') : tx('⚠ does not balance')) +
       '</span></div>' +
       bkTable(
         [{ t: tx('Code') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }],
@@ -4372,9 +4387,9 @@ async function bkTB(body) {
         '<tr><td></td><td><b>' +
           tx('Total') +
           '</b></td><td class="num" data-testid="tb-dr"><b>' +
-          esc(bkMoney(reply.total_dr_minor, c)) +
+          esc(bkHid(reply.total_dr_minor, c)) +
           '</b></td><td class="num" data-testid="tb-cr"><b>' +
-          esc(bkMoney(reply.total_cr_minor, c)) +
+          esc(bkHid(reply.total_cr_minor, c)) +
           '</b></td></tr>'
       );
   } catch (e) {
@@ -4411,6 +4426,7 @@ function bkLedgerLink(code, name, tid) {
 }
 /* one side of the balance sheet or P&L: its title, rows and total */
 function bkSideHTML(title, rows, c, total) {
+  /* total: undefined = no total row (the caller names none); null = the server hid it (RAIL-146o) */
   return (
     '<div class="sec">' +
     title +
@@ -4423,12 +4439,12 @@ function bkSideHTML(title, rows, c, total) {
             '<tr><td>' +
             (x.code ? esc(x.code + ' · ') + bkLedgerLink(x.code, x.name, 'st') : esc(x.name)) +
             '</td><td class="num">' +
-            esc(bkMoney(x.amount_minor, c)) +
+            esc(bkHid(x.amount_minor, c)) +
             '</td></tr>'
           );
         })
         .join(''),
-      total != null ? '<tr><td><b>' + tx('Total') + '</b></td><td class="num"><b>' + esc(bkMoney(total, c)) + '</b></td></tr>' : ''
+      total !== undefined && total !== false ? '<tr><td><b>' + tx('Total') + '</b></td><td class="num"><b>' + esc(bkHid(total, c)) + '</b></td></tr>' : ''
     )
   );
 }
@@ -4443,9 +4459,9 @@ async function bkPL(body) {
       bkSideHTML(tx('Income'), reply.income, c) +
       bkSideHTML(tx('Expenses'), reply.expense, c) +
       '<div style="padding:9px 0;font-size:var(--fs-3)" data-testid="pl-profit"><b>' +
-      (Number(reply.profit_minor) >= 0 ? tx('Profit') : tx('Loss')) +
+      (reply.profit_minor === null ? tx('Profit or loss') : Number(reply.profit_minor) >= 0 ? tx('Profit') : tx('Loss')) +
       ' ' +
-      esc(bkMoney(Math.abs(reply.profit_minor || 0), c)) +
+      esc(reply.profit_minor === null ? bkHid(null) : bkMoney(Math.abs(reply.profit_minor || 0), c)) +
       '</b></div>';
   } catch (e) {
     body.innerHTML = bkErr(e);
@@ -4457,6 +4473,7 @@ async function bkBS(body) {
   try {
     var reply = await api('booksBS', { query: { asOf: asOf } });
     var c = reply && reply.currency;
+    var hidden = !!(reply && reply.cost_hidden) || reply.total_assets_minor === null || reply.total_liab_equity_minor === null; /* RAIL-146o */
     var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
     body.innerHTML =
       '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
@@ -4465,9 +4482,9 @@ async function bkBS(body) {
       tx('Show') +
       '</button>' +
       '<span class="optchip" data-testid="bs-balanced" style="margin-inline-start:auto;' +
-      (ok ? 'color:var(--ok-2)' : 'color:var(--warn-2)') +
+      (hidden ? 'color:var(--grey)' : ok ? 'color:var(--ok-2)' : 'color:var(--warn-2)') +
       '">' +
-      (ok ? tx('✓ balances') : tx('⚠ does not balance')) +
+      (hidden ? tx('Hidden') : ok ? tx('✓ balances') : tx('⚠ does not balance')) +
       '</span></div>' +
       bkSideHTML(tx('Assets'), reply.assets, c, reply.total_assets_minor) +
       bkSideHTML(tx('Liabilities'), reply.liabilities, c) +

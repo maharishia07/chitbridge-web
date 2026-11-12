@@ -609,7 +609,114 @@
    },
    "optional": [
     "schedule_iii.equity_and_liabilities.heads[].ledgers[].role"
-   ]
+   ],
+   "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
+   "cost_blind_example": {
+    "currency": "INR",
+    "asOf": "2027-03-31",
+    "assets": [
+     {
+      "code": "1300",
+      "name": "Customers (Sundry Debtors)",
+      "amount_minor": null,
+      "line": "Trade receivables"
+     }
+    ],
+    "liabilities": [
+     {
+      "code": "2100",
+      "name": "Suppliers (Sundry Creditors)",
+      "amount_minor": null,
+      "line": "Trade payables"
+     }
+    ],
+    "equity": [
+     {
+      "code": null,
+      "name": "Profit for the year to date",
+      "amount_minor": null,
+      "line": "Reserves and surplus"
+     }
+    ],
+    "total_assets_minor": null,
+    "total_liab_equity_minor": null,
+    "profit_to_date_minor": null,
+    "balanced": true,
+    "by_line": {
+     "assets": [
+      {
+       "line": "trade_receivables",
+       "label": "Trade receivables",
+       "side": "assets",
+       "amount_minor": null,
+       "accounts": [
+        {
+         "code": "1300",
+         "role": "debtors",
+         "name": "Customers (Sundry Debtors)",
+         "amount_minor": null
+        }
+       ]
+      }
+     ],
+     "liabilities": [
+      {
+       "line": "trade_payables",
+       "label": "Trade payables",
+       "side": "liabilities",
+       "amount_minor": null,
+       "accounts": [
+        {
+         "code": "2100",
+         "role": "creditors",
+         "name": "Suppliers (Sundry Creditors)",
+         "amount_minor": null
+        }
+       ]
+      }
+     ]
+    },
+    "schedule_iii": {
+     "equity_and_liabilities": {
+      "heads": [
+       {
+        "line": "reserves_surplus",
+        "label": "Reserves and surplus",
+        "total_minor": null,
+        "ledgers": [
+         {
+          "code": "2100",
+          "name": "Net loss",
+          "amount_minor": null,
+          "role": "profit_to_date"
+         }
+        ]
+       }
+      ],
+      "total_minor": null
+     },
+     "assets": {
+      "heads": [
+       {
+        "line": "trade_receivables",
+        "label": "Trade receivables",
+        "total_minor": null,
+        "ledgers": [
+         {
+          "code": "1300",
+          "name": "Customers (Sundry Debtors)",
+          "amount_minor": null
+         }
+        ]
+       }
+      ],
+      "total_minor": null
+     },
+     "balanced": true,
+     "difference_minor": null
+    },
+    "cost_hidden": true
+   }
   },
   "GET /api/books/cashflow": {
    "status": 200,
@@ -1019,7 +1126,55 @@
    },
    "optional": [
     "entries[].source_chit_id"
-   ]
+   ],
+   "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
+   "cost_blind_example": {
+    "currency": "INR",
+    "from": "2026-09-01",
+    "to": "2026-10-31",
+    "entries": [
+     {
+      "entry_id": "00000000-0000-4000-8000-000000000115",
+      "entry_no": "SV/2026-27/000001",
+      "posting_date": "2026-09-05",
+      "doc_date": "2026-09-05",
+      "event_type": "sale_bill",
+      "narration": "Sale",
+      "source_chit_id": "c0000000-0000-4000-8000-00000000000a",
+      "reverses_entry_id": "00000000-0000-4000-8000-000000000118",
+      "reversed_by": "MJ/2026-27/000003",
+      "reversed_by_id": "00000000-0000-4000-8000-000000000119",
+      "source": {
+       "chit_id": null,
+       "ref": null,
+       "kind": "bill",
+       "counter": null,
+       "by": null,
+       "count": null,
+       "bills": null,
+       "how": null,
+       "how_ref": null,
+       "split": null,
+       "doc_at": null,
+       "recorded_at": "2026-09-29T10:00:03.000Z"
+      },
+      "lines": [
+       {
+        "code": "1300",
+        "name": "Customers (Sundry Debtors)",
+        "party_id": "22222222-2222-4222-8222-222222222222",
+        "party_name": "Ravi",
+        "dr_minor": null,
+        "cr_minor": null,
+        "counter": null,
+        "rate": 18
+       }
+      ]
+     }
+    ],
+    "count": 5,
+    "cost_hidden": true
+   }
   },
   "GET /api/books/dues": {
    "status": 200,
@@ -1718,7 +1873,67 @@
      ]
     }
    },
-   "optional": []
+   "optional": [],
+   "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
+   "cost_blind_example": {
+    "currency": "INR",
+    "from": "2026-04-01",
+    "to": "2027-03-31",
+    "income": [
+     {
+      "code": "4000",
+      "name": "Sales",
+      "amount_minor": null,
+      "line": "Revenue from operations"
+     }
+    ],
+    "expense": [
+     {
+      "code": "5000",
+      "name": "Purchases",
+      "amount_minor": null,
+      "line": "Purchases of stock-in-trade"
+     }
+    ],
+    "total_income_minor": null,
+    "total_expense_minor": null,
+    "profit_minor": null,
+    "by_line": {
+     "income": [
+      {
+       "line": "revenue_operations",
+       "label": "Revenue from operations",
+       "side": "income",
+       "amount_minor": null,
+       "accounts": [
+        {
+         "code": "4000",
+         "role": "sales",
+         "name": "Sales",
+         "amount_minor": null
+        }
+       ]
+      }
+     ],
+     "expense": [
+      {
+       "line": "purchases_stock",
+       "label": "Purchases of stock-in-trade",
+       "side": "expense",
+       "amount_minor": null,
+       "accounts": [
+        {
+         "code": "5000",
+         "role": "purchases",
+         "name": "Purchases",
+         "amount_minor": null
+        }
+       ]
+      }
+     ]
+    },
+    "cost_hidden": true
+   }
   },
   "GET /api/books/recurring": {
    "status": 200,
@@ -1948,7 +2163,25 @@
     "total_cr_minor": 297000,
     "balanced": true
    },
-   "optional": []
+   "optional": [],
+   "note": "RAIL-146o: a cost-blind reader gets the same shape with every *_minor null and cost_hidden:true (a daybook keeps its sales entries); a client branches on cost_hidden and never prints null as 0 (see cost_blind_example)",
+   "cost_blind_example": {
+    "currency": "INR",
+    "asOf": "2027-03-31",
+    "rows": [
+     {
+      "code": "1300",
+      "name": "Customers (Sundry Debtors)",
+      "group": "sundry_debtors",
+      "dr_minor": null,
+      "cr_minor": null
+     }
+    ],
+    "total_dr_minor": null,
+    "total_cr_minor": null,
+    "balanced": true,
+    "cost_hidden": true
+   }
   },
   "GET /api/books/year/:fy/status": {
    "status": 200,
