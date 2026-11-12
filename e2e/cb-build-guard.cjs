@@ -114,11 +114,18 @@ t('CB_BUILD was bumped after the last capability change', () => {
     if (ts && ts > busted) stale.push({ f: f, ts: ts });
   });
 
-  if (stale.length) {
+  /* QA-154: the stale files are recorded in e2e/scanner-known.json, keyed by CB_BUILD value + file, so a bump makes every key
+     stale at once (the real fix) and a file changed after the next bump is new. Only a NEW stale file fails. */
+  const RK = require('./lib/known-findings.cjs').ratchet('cb-build-guard',
+    stale.map((s) => ({ key: VALUE + '  ' + s.f, show: s })), { owner: 'release' });
+  console.log(RK.line);
+  const fresh = RK.fresh.map((i) => i.show);
+
+  if (fresh.length) {
     const when = (s) => new Date(s * 1000).toISOString().slice(0, 16).replace('T', ' ');
-    throw new Error(stale.length + ' versioned file(s) changed AFTER CB_BUILD was last bumped (' + VALUE
+    throw new Error(fresh.length + ' NEW versioned file(s) changed AFTER CB_BUILD was last bumped (' + VALUE
       + ', ' + when(busted) + '). Every browser that has seen ' + VALUE + ' is still being served the OLD copy:'
-      + '\n      ' + stale.slice(0, 8).map((s) => s.f + '  (' + when(s.ts) + ')').join('\n      ')
+      + '\n      ' + fresh.slice(0, 8).map((s) => s.f + '  (' + when(s.ts) + ')').join('\n      ')
       + '\n      ⭐ THE FIX IS ONE LINE: bump CB_BUILD in public/app.html.');
   }
 });

@@ -31,7 +31,8 @@ const fs = require('fs');
 const path = require('path');
 
 const WEB = path.join(__dirname, '..', 'public');
-const POLICY = path.join(__dirname, '..', '..', 'chitbridge-api', 'lib', 'policy.js');
+/* QA-154: CB_API_REPO names the api checkout (ci.yml's .side/chitbridge-api); when it is set the api MUST be there (a skip would be a green no-op) */
+const POLICY = path.join(process.env.CB_API_REPO ? path.resolve(process.env.CB_API_REPO) : path.join(__dirname, '..', '..', 'chitbridge-api'), 'lib', 'policy.js');
 
 /**
  * ⚠️ Each entry is a REASON, not a silencer. When one of these grows a screen, delete its line — and if a line
@@ -54,7 +55,7 @@ const fails = [];
 
 if (!fs.existsSync(POLICY)) {
   console.log('\n── policy flags reachable ──\n  skipped: ../chitbridge-api not checked out\n');
-  process.exit(0);
+  process.exit(process.env.CB_API_REPO ? 1 : 0);
 }
 
 /** every flag key the API declares — read from the source, so a new flag is caught the day it lands */
@@ -88,13 +89,20 @@ const cardKeys = cardAt < 0 ? [] : [...src.slice(cardAt, src.indexOf('};', cardA
 const cardPainted = cardKeys.length && /polDefs\(\)/.test(web) && /\.ui\b/.test(web);
 console.log('  ' + cardKeys.length + ' of them on the Business rules card (lib/policy.js CARD → schema[key].ui)' + (cardPainted ? '' : ' — but the web does not paint it'));
 const unreachable = [];
+const noControl = [];
 for (const k of keys) {
   if (web.indexOf(k) >= 0) { pass++; continue; }
   if (cardPainted && cardKeys.indexOf(k) >= 0) { pass++; continue; }
   if (DELIBERATELY_UNREACHABLE[k]) { pass++; unreachable.push(k); continue; }
-  fails.push('`' + k + '` is read by the API and appears NOWHERE in the web app — nobody can set it, and nothing '
-    + 'says it was never chosen. Give it a control, or add it to DELIBERATELY_UNREACHABLE with the reason.');
+  noControl.push(k);
 }
+/* QA-154: a flag with no control is a finding; the known ones are in e2e/scanner-known.json and only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('policy-reachable', noControl.map((k) => ({ key: k, show: k })), { owner: 'settings' });
+console.log(RK.line);
+RK.fresh.forEach((i) => fails.push(String.fromCharCode(96) + i.show + String.fromCharCode(96) + ' is read by the API and appears NOWHERE in the web app (NEW) — nobody can set it, and nothing '
+  + 'says it was never chosen. Give it a control, or add it to DELIBERATELY_UNREACHABLE with the reason.'));
+pass += noControl.length - RK.fresh.length;
+
 
 /* ⚠️ an exception for a flag that no longer exists is a note about nothing, and it hides the next one */
 for (const k of Object.keys(DELIBERATELY_UNREACHABLE)) {

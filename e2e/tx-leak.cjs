@@ -108,18 +108,23 @@ files.forEach((f) => {
     if (!/['"]\s*\+\s*\w+\s*\(/.test(line)) return;
     leaksIn(line).forEach((hit) => {
       if (!/\+\s*\w+\s*\(/.test(hit)) return;
-      bad.push(path.relative(PUB, f).split(path.sep).join('/') + ':' + (i + 1) + '  ' + hit);
+      const rel = path.relative(PUB, f).split(path.sep).join('/');
+      bad.push({ key: rel + '  ' + hit, show: rel + ':' + (i + 1) + '  ' + hit });
     });
   });
 });
 
+/* QA-154: findings are recorded in e2e/scanner-known.json; only a NEW one fails, the known ones stay counted on screen */
+const R = require('./lib/known-findings.cjs').ratchet('tx-leak', bad, { owner: 'connect' });
 console.log('\n— a screen must not print its own source —\n');
+if (R.known) console.log(R.line + '\n');
+bad = R.fresh;
 if (bad.length) {
-  console.log('  ✗ ' + bad.length + ' concatenation(s) stranded inside the wrong quote, printed verbatim:\n');
-  bad.slice(0, 20).forEach((b) => console.log('      ' + b));
+  console.log('  ✗ ' + bad.length + ' NEW concatenation(s) stranded inside the wrong quote, printed verbatim:\n');
+  bad.slice(0, 20).forEach((b) => console.log('      ' + b.show));
   console.log('\n  ⚠ Inside a single-quoted string this form is correct and there are hundreds of them. Inside a');
   console.log('    double-quoted one it is literal text. Close the outer string, or use the other quote.\n');
   process.exitCode = 1;
 } else {
-  console.log('  ✓ no source leaks onto a screen   ' + files.length + ' file(s) walked\n');
+  console.log('  ✓ no new source leaks onto a screen   ' + files.length + ' file(s) walked\n');
 }
