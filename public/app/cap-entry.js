@@ -106,7 +106,7 @@ function enDlg() {
   node.id = 'entrysheet';
   node.setAttribute('aria-label', tx('New entry'));
   node.innerHTML =
-    '<div class="en-top"><span data-testid="en-title"></span><button type="button" data-testid="en-close" aria-label="' +
+    '<div class="en-top"><span data-testid="en-title"></span><button data-cbsid="CMP005" type="button" data-testid="en-close" aria-label="' +
     esc(tx('Close')) +
     '" onclick="enClose()">✕</button></div><div class="en-dots" id="en_dots"></div><div class="en-body" id="en_body"></div><div class="en-acts" id="en_acts"></div>';
   node.addEventListener('close', function () {
@@ -682,7 +682,7 @@ function enLinesHTML() {
           (item.side === 'cr' ? ' selected' : '') +
           '>Cr</option></select>' +
           bkMoneyInput({ id: 'en-line-amt-' + index, text: item.amt == null ? '' : String(item.amt), on: 'enLine(' + index + ",'amt',this.value)" }) +
-          '<button type="button" class="en-btn" style="padding:0" aria-label="' +
+          '<button data-cbsid="CMP008" type="button" class="en-btn" style="padding:0" aria-label="' +
           esc(tx('Remove')) +
           '" data-testid="en-line-del-' +
           index +
@@ -757,7 +757,7 @@ function enItemLinesHTML() {
           cell(index, 'qty', 'type="text" inputmode="decimal" autocomplete="off"') +
           cell(index, 'unit_price', 'type="text" inputmode="decimal" autocomplete="off"') +
           cell(index, 'gst_rate', 'type="text" inputmode="decimal" autocomplete="off"') +
-          '<button type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-item-del-' + index + '" onclick="enItemDel(' + index + ')"' + (EN.items.length <= 1 ? ' disabled' : '') + '>✕</button></div>'
+          '<button data-cbsid="CMP008" type="button" class="en-btn" style="padding:0" aria-label="' + esc(tx('Remove')) + '" data-testid="en-item-del-' + index + '" onclick="enItemDel(' + index + ')"' + (EN.items.length <= 1 ? ' disabled' : '') + '>✕</button></div>'
         );
       })
       .join('') +

@@ -212,7 +212,7 @@ function catsetDefListHTML(kind, one) {
           '\')">' +
           (d.status === 'live' ? tx('Back to draft') : tx('Make live')) +
           '</span>' +
-          '<span class="da" onclick="catsetDefEdit(\'' +
+          '<span data-cbsid="CMP012" class="da" onclick="catsetDefEdit(\'' +
           kind +
           "','" +
           esc(d.id) +
@@ -2385,7 +2385,7 @@ function catsetPlanPaint() {
       '" onchange="CATSET_PLAN[' +
       index +
       '].to=this.value">' +
-      '<button class="composebtn" title="' +
+      '<button data-cbsid="CMP008" class="composebtn" title="' +
       esc(tx('Remove')) +
       '" onclick="CATSET_PLAN.splice(' +
       index +

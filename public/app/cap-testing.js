@@ -1150,7 +1150,7 @@ function testPaint() {
     '">\u2013</button>' +
     /* ⚠️ CLOSES THE PANEL, NOT THE MODE. Closing the lab used to turn test mode off, so the Test chips
        vanished from every screen because somebody put the board away. */
-    '<button title="Close the lab" onclick="testPanelClose()" style="' +
+    '<button data-cbsid="CMP005" title="Close the lab" onclick="testPanelClose()" style="' +
     ico +
     '">\u2715</button>' +
     '</div>' +
@@ -8485,7 +8485,7 @@ function screenCasesPaint() {
       testReadAt() +
       '</span>' +
       testRefreshBtn(ico) +
-      '<button title="Close" onclick="screenCasesClose()" style="' +
+      '<button data-cbsid="CMP005" title="Close" onclick="screenCasesClose()" style="' +
       ico +
       '">\u2715</button>' +
       '</div>' +

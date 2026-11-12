@@ -1257,7 +1257,7 @@ var CBCatalogueApp = (function () {
       d = p ? pData(p) : {};
     if (S.sel && !p)
       return (
-        '<button type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
+        '<button data-cbsid="CMP005" type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
         esc(T('Close')) +
         '">✕</button><h2>' +
         esc(T('Item')) +
@@ -1266,7 +1266,7 @@ var CBCatalogueApp = (function () {
         '</p>'
       );
     var head =
-      '<button type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
+      '<button data-cbsid="CMP005" type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
       esc(T('Close')) +
       '">✕</button>' +
       '<h2 data-testid="cat-sheet-title">' +
@@ -1668,7 +1668,7 @@ var CBCatalogueApp = (function () {
       })
       .join('');
     node.innerHTML =
-      '<button type="button" class="mx" data-testid="catg-sheet-close" aria-label="' +
+      '<button data-cbsid="CMP005" type="button" class="mx" data-testid="catg-sheet-close" aria-label="' +
       esc(T('Close')) +
       '">✕</button><h2 data-testid="catg-sheet-title">' +
       esc(c ? T('Rename “{n}”', { n: c.name }) : T('New category')) +

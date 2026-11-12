@@ -1428,7 +1428,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     '</span>' +
     /* ⚠️ Say that the row goes somewhere. The row has carried `cursor:pointer` all along, which only tells
          you once the mouse is already on it — and tells a phone nothing at all. */
-    '<a class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
+    '<a data-cbsid="CMP010" class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
     ' title="' +
     esc(tx('Open this line — history, delivery, cost, who and when')) +
     '"' +
@@ -2153,7 +2153,7 @@ function chit2Screen() {
     '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)">' +
     '<div style="flex:none">' + // ← the frozen part
     '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">' +
-    '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
+    '<span data-cbsid="CMP006" onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
     /* ⭐ CLASSED `dt` SO THE SCREEN CODE CAN FIND IT. Athi, 2026-09-12: *"if i open design 2, the name does
        not appear"* — this header is design 2's own markup and shares nothing with the classic detail, so the
        stamper had nothing to hook onto. One class, and the same stamper works here as everywhere else

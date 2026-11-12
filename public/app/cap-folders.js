@@ -216,7 +216,7 @@ function _folderView() {
     '\')">' +
     tx('Rename') +
     '</span>' +
-    '<span style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-inline-start:14px" onclick="deleteFolder(\'' +
+    '<span data-cbsid="CMP011" style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-inline-start:14px" onclick="deleteFolder(\'' +
     UI.folderSel +
     '\')">' +
     tx('Delete') +
@@ -1322,7 +1322,7 @@ function _ruleRow(r, i, n) {
     '\',this.checked)"><span style="font-weight:700;font-size:var(--fs-2)">' +
     esc(r.name || 'Rule') +
     '</span></label>' +
-    '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' +
+    '<span data-cbsid="CMP011" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' +
     esc(r.rule_id) +
     '\')">' +
     tx('Delete') +
