@@ -397,7 +397,7 @@ async function crmRecordOpen(route) {
       html =
         '<div class="empty" data-testid="crm-rec-error"><div class="t">' +
         esc(tx("Couldn't open this party.")) +
-        '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
+        '</div><button data-cbsid="CMP009" type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
         esc(tx('Try again')) +
         '</button></div>';
     if (w) w.outerHTML = html;
@@ -1508,9 +1508,9 @@ function crmLogOpen(p) {
         .join('') +
       '</div></div>' +
       '<div id="crm_log_msg" class="hint" role="status"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="logsave" data-testid="crm-log-save">' +
+      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="logsave" data-testid="crm-log-save">' +
       esc(tx('Save')) +
       '</button></div>'
   );

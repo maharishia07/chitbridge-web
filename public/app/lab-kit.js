@@ -158,7 +158,7 @@
       function (body) {
         body.innerHTML =
           '<div class="lk-confirm-text" data-testid="lk-confirm-text">' + bodyHtml + '</div>' +
-          '<div class="lk-confirm-acts"><button type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
+          '<div class="lk-confirm-acts"><button data-cbsid="CMP003" type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
           '<button type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
         body.querySelector('[data-testid="lk-confirm-cancel"]').onclick = function () { shown.close(); };
         body.querySelector('[data-testid="lk-confirm-ok"]').onclick = function () { shown.close(); onOk(); };

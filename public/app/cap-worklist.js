@@ -1887,7 +1887,7 @@ function wlLineHTML(loading) {
     asked +
     body +
     '</div>' +
-    '<div class="mfoot"><button onclick="wlCardClose()">' +
+    '<div class="mfoot"><button data-cbsid="CMP005" onclick="wlCardClose()">' +
     tx('Close') +
     '</button>' +
     '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' +

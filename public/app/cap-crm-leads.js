@@ -289,9 +289,9 @@ function crmLeadAddOpen() {
         .join('') +
       '</select></label>' +
       '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="leadsave" data-testid="crm-lead-save">' +
+      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="leadsave" data-testid="crm-lead-save">' +
       esc(tx('Save')) +
       '</button></div>'
   );
@@ -372,7 +372,7 @@ function crmStageOpen(party, rec) {
         .join('') +
       '</div>' +
       '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button></div>'
   );
@@ -925,6 +925,6 @@ function crmImportDone(result) {
     '<div id="crm_imp_skipped"></div>';
   if (skipped.length) crmImportList(document.getElementById('crm_imp_skipped'), 'crm-import-skipped', skipped, false);
   var foot = document.getElementById('crm_imp_foot');
-  if (foot) foot.innerHTML = '<button type="button" class="pri" data-testid="crm-import-done" onclick="closeModal()">' + esc(tx('Done')) + '</button>';
+  if (foot) foot.innerHTML = '<button data-cbsid="CMP004" type="button" class="pri" data-testid="crm-import-done" onclick="closeModal()">' + esc(tx('Done')) + '</button>';
   toast(crmPlural(Number(result.added) + Number(result.merged), 'lead imported', 'leads imported'));
 }
