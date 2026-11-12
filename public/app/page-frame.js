@@ -1,6 +1,12 @@
 /**
+ * public/app/page-frame.js — CBFrame: the frame every page wears (the header, the side menu, the phone's section tabs)
+ * ID        OWN005 (the frame's own controls; the header's are CMP codes in shell.js)
+ * KIND      component
+ * OWNER     cb-ux-locale
+ * OWNS      the standard page skeleton: the side menu and its entries, the folding group heads, the Collapse button, the phone's section tabs
  * CALLED BY accounts · crm · finance · know-your-business · settings · the labs and the storefront pages (CBFrame.mount, SHELL-ONE: every page wears the one frame).
- * CARD 29-qa-test-tooling-ux-locale-and-design-system/page-frame
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/page-frame
+ * RISK      plain
  * page-frame.js — CBFrame: the frame an older single-purpose page (Know your business, Documents) wears so it is part of the application.
  *
  * Athi's black-box, 2026-10-09 (H23/H24): those two pages asked for an e-mail and a code AGAIN while the owner was signed in, and had no header,
@@ -44,7 +50,7 @@
     var slug = slugOf(item.group);
     if (!item.fold) return '<div class="nav-group label" data-testid="skel-group-' + esc(slug) + '">' + esc(item.group) + '</div>';
     return (
-      '<button type="button" class="nav-group nav-fold label" data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
+      '<button type="button" class="nav-group nav-fold label" data-cbsid="OWN005-B02" data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
       '" aria-controls="navg-' + esc(slug) + '"' + (item.count != null ? ' data-count="' + esc(String(item.count)) + '"' : '') + '>' + esc(item.group) + '</button>'
     );
   }
@@ -53,7 +59,7 @@
     if (item.group) return groupHead(item);
     var mark = item.glyph ? '<span class="lab-ico" aria-hidden="true">' + esc(item.glyph) + '</span>' : drawIcon(item.icon);
     return (
-      '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
+      '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-cbsid="OWN005-B01" data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
       (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(item.label) + '">' + mark + '<span class="label">' + esc(item.label) + '</span></button>'
     );
   }
@@ -92,7 +98,7 @@
       phone.items
         .map(function (item) {
           return (
-            '<button type="button" role="tab" class="lab-switch-btn" data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '">' +
+            '<button type="button" role="tab" class="lab-switch-btn" data-cbsid="OWN005-K01" data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '">' +
             esc(item.label) + '</button>'
           );
         })
@@ -157,7 +163,7 @@
       '">' +
       navHTML(sk.sections || [], sk.active, svg) +
       '</nav>' +
-      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
+      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" data-cbsid="OWN005-B03" aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
       '<main class="main" data-testid="skel-main"><div id="shell"></div>' + (sk.phone ? switchHTML(sk.phone) : '') + '<div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
