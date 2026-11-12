@@ -92,9 +92,9 @@ const walk = async (w) => {
   await w.step('O-1', 'ORD-1: an open order no bill names says "Not billed yet" (neutral); an issued bill with no figures keeps the red error', async () => {
     await open(1366, 768);
     const got = await w.page.evaluate(() => {
-      const html = (c) => frozenMoneyHTML(Object.assign({ issued_at: new Date().toISOString(), currency: 'INR' }, c), 'w', 't');
+      const html = (c) => frozenMoneyHTML(Object.assign({ issued_at: issuedAt, currency: 'INR' }, c), 'w', 't');
       return { open: html({ order_billed: false }), billed: html({ order_billed: true }), plain: html({}) };
-    });
+    }, W.nowIso());
     const neutral = /data-testid="chit-money-unbilled"/.test(got.open) && /Not billed yet/.test(got.open) && !/class="err"/.test(got.open);
     const stillRed = /chit-money-error/.test(got.billed) && /chit-money-error/.test(got.plain);
     return { ok: neutral && stillRed, saw: JSON.stringify({ neutral, stillRed }) };
