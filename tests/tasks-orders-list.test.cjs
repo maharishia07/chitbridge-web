@@ -3,6 +3,7 @@
    through the registry name workList, and hands CBList its rows, columns, filters and orders; the list's cells say the stage word with its
    marks, who holds it and how many lines are open; a greyed action carries the server's sentence (actRow); a host page that throws in its
    callback no longer goes silent (the failure is said in the log). Pins the behaviour the readability pass must not change.
+   CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
    Run: node tests/tasks-orders-list.test.cjs */
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 let n = 0; const ok = (c, m) => { assert(c, m); n++; console.log('  ok  ' + m); };

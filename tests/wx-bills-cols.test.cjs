@@ -1,5 +1,6 @@
 'use strict';
 /* WX-O2C (2026-10-13): Unpaid bills shows the Bill no and the Date by default. CBList's default is the top three by prio (list-ctl.js
+   CARD 29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
    defaultCols), which hid the number a shopkeeper reads a bill by — at 1366 px, beside ~350 px of empty row. Run: node tests/wx-bills-cols.test.cjs */
 const fs = require('fs'), assert = require('assert');
 const html = fs.readFileSync(__dirname + '/../public/accounts.html', 'utf8');
