@@ -84,7 +84,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (57)
+## Shared (58)
 
 | file | loading | what it is |
 |---|---|---|
@@ -149,4 +149,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*121 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*122 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

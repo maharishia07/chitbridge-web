@@ -51,6 +51,7 @@ of file each thing is; this says what already does the job.
 | 50 | `view` | `books-payables.js` | group: |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 46 | `read` | `cap-print.js` |  |
+| 46 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 45 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 45 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 45 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
@@ -58,7 +59,6 @@ of file each thing is; this says what already does the job.
 | 44 | `rules` | `docnumber.js` | the rule set for a country — |
 | 43 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 42 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
-| 42 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 42 | `facts` | `bill-steps.js` | MY state_log — |
 | 42 | `live` | `receivables.js` | the allocations that still count: |
 | 41 | `gate` | `country-setup.js` | gate(h, entity): |
