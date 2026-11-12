@@ -212,7 +212,7 @@ function catsetDefListHTML(kind, one) {
           '\')">' +
           (d.status === 'live' ? tx('Back to draft') : tx('Make live')) +
           '</span>' +
-          '<span class="da" onclick="catsetDefEdit(\'' +
+          '<span data-cbsid="CMP012" class="da" onclick="catsetDefEdit(\'' +
           kind +
           "','" +
           esc(d.id) +
@@ -1121,9 +1121,9 @@ function catsetBody(k) {
         '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab-next.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the same engine as the shop" style="text-decoration:none;margin-right:6px">🧪 ' +
           tx('Offer lab') +
           '</a>' +
-          /* ⭐ [Labs split, 2026-09-26] its own page now, its own link beside Offer lab's — see combo-lab.html's
+          /* ⭐ [Labs split, 2026-09-26] its own link beside Offer lab's, straight to the Combo Lab mode (UX-97: no redirect hop) — see combo-lab.html's
          own header comment for why. */
-          '<a class="composebtn" data-testid="catset-combo-lab" href="combo-lab.html" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' +
+          '<a class="composebtn" data-testid="catset-combo-lab" href="offer-lab-next.html?mode=combo" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' +
           tx('Combo lab') +
           '</a>' +
           '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>'
@@ -2385,7 +2385,7 @@ function catsetPlanPaint() {
       '" onchange="CATSET_PLAN[' +
       index +
       '].to=this.value">' +
-      '<button class="composebtn" title="' +
+      '<button data-cbsid="CMP008" class="composebtn" title="' +
       esc(tx('Remove')) +
       '" onclick="CATSET_PLAN.splice(' +
       index +

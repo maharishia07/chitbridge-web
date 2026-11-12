@@ -2356,7 +2356,7 @@ function cbDefMineHTML() {
             esc(item.current_version) +
             '</span>' +
             '<span class="cbdef-acts">' +
-            '<span onclick="cbDefEdit(\'' +
+            '<span data-cbsid="CMP012" onclick="cbDefEdit(\'' +
             esc(item.definition_id) +
             '\')">' +
             tx('Edit') +

@@ -548,7 +548,7 @@ const confirmAsk = CBConfirm;
 /* a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (as crm.html), so cap-books.js's Pay and Remind open here unchanged */
 function modal(html) {
   const node = document.getElementById('acc_sheet');
-  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  node.innerHTML = '<button data-cbsid="CMP005" class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
   if (!node.open) {
     try {
       node.showModal();
