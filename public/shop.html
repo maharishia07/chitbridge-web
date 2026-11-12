@@ -203,7 +203,7 @@ function _schemaFields(schema, vals) {
       var inp;
       if (Array.isArray(p.enum) && p.enum.length) {
         inp =
-          '<select id="f_' +
+          '<select data-cbsid="SHP001-S01" id="f_' +
           esc(item) +
           '" data-testid="shop-f-' +
           esc(item) +
@@ -218,7 +218,7 @@ function _schemaFields(schema, vals) {
           '</select>';
       } else if (p.type === 'boolean') {
         inp =
-          '<div style="margin:3px 0 11px"><input type="checkbox" id="f_' +
+          '<div style="margin:3px 0 11px"><input data-cbsid="SHP001-I01" type="checkbox" id="f_' +
           esc(item) +
           '" data-testid="shop-f-' +
           esc(item) +
@@ -226,10 +226,10 @@ function _schemaFields(schema, vals) {
           (v ? ' checked' : '') +
           '></div>';
       } else if (p.maxLength && p.maxLength > 200) {
-        inp = '<textarea id="f_' + esc(item) + '" data-testid="shop-f-' + esc(item) + '" rows="4" ' + fld + '>' + esc(v) + '</textarea>';
+        inp = '<textarea data-cbsid="SHP001-T01" id="f_' + esc(item) + '" data-testid="shop-f-' + esc(item) + '" rows="4" ' + fld + '>' + esc(v) + '</textarea>';
       } else {
         inp =
-          '<input id="f_' +
+          '<input data-cbsid="SHP001-I02" id="f_' +
           esc(item) +
           '" data-testid="shop-f-' +
           esc(item) +
@@ -267,7 +267,7 @@ function _docBlock() {
         esc(item.name) +
         '</span><span style="color:#8a949c">' +
         esc(mb(item.size)) +
-        '</span><button onclick="_docRemove(' +
+        '</span><button data-cbsid="SHP001-B01" onclick="_docRemove(' +
         index +
         ')" style="border:0;background:none;color:#b4453f;cursor:pointer;font-size:15px">×</button></div>'
       );
@@ -285,7 +285,7 @@ function _docBlock() {
       ? '<div style="font-size:11px;color:#8a949c">Maximum ' + d.max + ' reached.</div>'
       : '<label style="display:block;border:1.5px dashed #cfc3e8;border-radius:10px;padding:12px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600;font-size:12.5px">📎 Attach ' +
         esc(d.label.toLowerCase()) +
-        '<input type="file" data-testid="shop-doc" accept="' +
+        '<input data-cbsid="SHP001-I03" type="file" data-testid="shop-doc" accept="' +
         esc(d.accept.join(',')) +
         '" onchange="_docPick(event)" style="display:none"></label>' +
         '<div style="font-size:10.5px;color:#9aa3a7;margin-top:4px">' +
@@ -696,7 +696,7 @@ function regionBar() {
     .map(function (item) {
       var on = item.region_code === _REGION;
       return (
-        '<button onclick="setRegion(\'' +
+        '<button data-cbsid="SHP001-B02" onclick="setRegion(\'' +
         item.region_code +
         '\')" style="border:' +
         (on ? '2px solid #3F66A6' : '1px solid #e7e3d8') +
@@ -811,7 +811,7 @@ function finishCard(it, cur, idx, vizEnabled) {
     })() +
     '<div style="margin-top:10px">' +
     (vizEnabled && idx != null
-      ? '<button data-testid="shop-viz-' +
+      ? '<button data-cbsid="SHP001-B03" data-testid="shop-viz-' +
         idx +
         '" onclick="vizOpen(' +
         idx +
@@ -822,7 +822,7 @@ function finishCard(it, cur, idx, vizEnabled) {
     // 'text' = a listing: no order path at all. 'qty' has no price to show but IS orderable, so it must not be gated on price.
     // a priced line is only REQUIRED on the commerce path — a form or enquiry has no price by design.
     (idx != null && (price != null || !_showsPrice())
-      ? '<button data-testid="shop-order-' +
+      ? '<button data-cbsid="SHP001-B04" data-testid="shop-order-' +
         idx +
         '" onclick="orderOpen(' +
         idx +
@@ -963,7 +963,7 @@ function productListHtml(data, cur) {
   setTimeout(shopDockSync, 0);
   return (
     '<div class="shopband" id="shop_band" data-testid="shop-band">' +
-    '<input id="p_search" data-testid="shop-search" type="search" aria-label="Search products" placeholder="Search products…" value="' +
+    '<input data-cbsid="SHP001-I04" id="p_search" data-testid="shop-search" type="search" aria-label="Search products" placeholder="Search products…" value="' +
     esc((_CART.state() || {}).q || '') +
     '" oninput="shopPickSearch(this.value)">' +
     shopCatBtnHtml() +
@@ -1075,14 +1075,14 @@ function shopCatBtnHtml() {
   var list = _shopSecs();
   if (!list.length) return '';
   return (
-    '<button type="button" class="catbtn" id="cat_btn" data-testid="shop-cat-btn" aria-haspopup="true" aria-expanded="false" aria-label="Categories" title="Categories" data-ic="categories" onclick="shopCatToggle()"><span aria-hidden="true">🗂</span> <b class="icn">' +
+    '<button data-cbsid="SHP001-B05" type="button" class="catbtn" id="cat_btn" data-testid="shop-cat-btn" aria-haspopup="true" aria-expanded="false" aria-label="Categories" title="Categories" data-ic="categories" onclick="shopCatToggle()"><span aria-hidden="true">🗂</span> <b class="icn">' +
     list.length +
     '</b> ▾</button>' +
     '<div class="catpanel" id="cat_panel" data-testid="shop-cat-bar" role="menu" hidden oncontextmenu="return false">' +
     list
       .map(function (item) {
         return (
-          '<button type="button" role="menuitem" class="catpick" data-testid="shop-cat-jump" data-sec="' +
+          '<button data-cbsid="SHP001-B06" type="button" role="menuitem" class="catpick" data-testid="shop-cat-jump" data-sec="' +
           esc(item.id) +
           '" onclick="shopCatPick(this.dataset.sec)"><span>' +
           esc(item.label) +
@@ -1631,7 +1631,7 @@ function renderLoginGate(shop) {
       ? "Use the phone or email you ordered with. We'll send a code."
       : "This shop asks customers to sign in first. Enter your phone or email — we'll text/email a one-time code.") +
     '</div>' +
-    '<input id="lg_contact" placeholder="9876543210 or you@email.com" ' +
+    '<input data-cbsid="SHP001-I05" id="lg_contact" placeholder="9876543210 or you@email.com" ' +
     (otpStep ? 'disabled' : '') +
     ' value="' +
     esc(_lg.contact || '') +
@@ -1639,7 +1639,7 @@ function renderLoginGate(shop) {
     fld +
     '>' +
     (otpStep
-      ? '<input id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="' +
+      ? '<input data-cbsid="SHP001-I06" id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="' +
         esc(_lg.otp || '') +
         '" ' +
         fld +
@@ -1648,14 +1648,14 @@ function renderLoginGate(shop) {
     (_lg.err ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(_lg.err) + '</div>' : '') +
     (_lg.msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(_lg.msg) + '</div>' : '') +
     (_lg.busy
-      ? '<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
-      : '<button onclick="' +
+      ? '<button data-cbsid="SHP001-B07" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
+      : '<button data-cbsid="SHP001-B08" onclick="' +
         (otpStep ? 'sfLoginVerify' : 'sfLoginStart') +
         '()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">' +
         (otpStep ? (forOrders ? 'See my orders' : 'View shop') : 'Send code') +
         '</button>') +
     (forOrders
-      ? '<div style="text-align:center;margin-top:10px"><a href="#" data-testid="shop-login-back" onclick="_lg={};render(_SHOPDATA);return false" style="color:var(--accent,#3F66A6);font-size:12.5px">Back to the shop</a></div>'
+      ? '<div style="text-align:center;margin-top:10px"><a data-cbsid="SHP001-C01" href="#" data-testid="shop-login-back" onclick="_lg={};render(_SHOPDATA);return false" style="color:var(--accent,#3F66A6);font-size:12.5px">Back to the shop</a></div>'
       : '') +
     '</div>';
 }
@@ -1793,12 +1793,12 @@ function supLinkHtml() {
   return (
     '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:var(--grey-3,#6a707a)">' +
     'Something wrong with an order? ' +
-    '<a href="#" data-testid="shop-support" onclick="supOpen();return false" ' +
+    '<a data-cbsid="SHP001-C02" href="#" data-testid="shop-support" onclick="supOpen();return false" ' +
     'style="color:var(--accent);font-weight:600">Report a problem to ' +
     esc(s.display_name || 'the shop') +
     '</a>' +
     /* SH-MY1: a returning shopper's door to their orders — signed in already (_MYTOK) it opens them, else the sign-in gate asks first */
-    ' · <a href="#" data-testid="shop-my-orders-link" onclick="shopMyOrdersOpen();return false" style="color:var(--accent);font-weight:600">' +
+    ' · <a data-cbsid="SHP001-C03" href="#" data-testid="shop-my-orders-link" onclick="shopMyOrdersOpen();return false" style="color:var(--accent);font-weight:600">' +
     tx('My orders') +
     '</a></div>'
   );
@@ -1900,7 +1900,7 @@ function supRender() {
        with wording invented here that the shop has never seen. */
     body =
       '<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin-bottom:4px">What went wrong?</label>' +
-      '<textarea id="sup_what" data-testid="shop-support-what" rows="4" ' +
+      '<textarea data-cbsid="SHP001-T02" id="sup_what" data-testid="shop-support-what" rows="4" ' +
       'placeholder="What you ordered, and what happened instead" oninput="supSet(&#39;what&#39;,this.value)" ' +
       fld +
       '>' +
@@ -1912,7 +1912,7 @@ function supRender() {
             .map(function (item) {
               return (
                 '<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:13px">' +
-                '<input type="radio" name="sup_sev" value="' +
+                '<input data-cbsid="SHP001-I07" type="radio" name="sup_sev" value="' +
                 esc(item[0]) +
                 '"' +
                 (item[0] === _sup.sev ? ' checked' : '') +
@@ -1929,7 +1929,7 @@ function supRender() {
             .join('')
         : '') +
       '<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin:11px 0 4px">Your phone or email</label>' +
-      '<input id="sup_contact" data-testid="shop-support-contact" placeholder="so the shop can reply" ' +
+      '<input data-cbsid="SHP001-I08" id="sup_contact" data-testid="shop-support-contact" placeholder="so the shop can reply" ' +
       'value="' +
       esc(_sup.contact || '') +
       '" oninput="supSet(&#39;contact&#39;,this.value)" ' +
@@ -1940,7 +1940,7 @@ function supRender() {
       '<div style="font-size:13px;color:var(--grey-3,#6a707a);margin-bottom:8px">We sent a 6-digit code to ' +
       esc(_sup.contact) +
       '.</div>' +
-      '<input id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" ' +
+      '<input data-cbsid="SHP001-I09" id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" ' +
       'placeholder="6-digit code" value="' +
       esc(_sup.otp || '') +
       '" oninput="supSet(&#39;otp&#39;,this.value)" ' +
@@ -1949,30 +1949,30 @@ function supRender() {
   }
   var act =
     _sup.step === 'say'
-      ? '<button data-testid="shop-support-code" onclick="supSendCode()"' +
+      ? '<button data-cbsid="SHP001-B09" data-testid="shop-support-code" onclick="supSendCode()"' +
         (_sup.dead ? ' disabled' : '') +
         ' style="width:100%;border:0;border-radius:10px;padding:12px;background:' +
         (_sup.dead ? '#c9ccd1' : 'var(--accent)') +
         ';color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:' +
         (_sup.dead ? 'not-allowed' : 'pointer') +
         '">Send me a code</button>'
-      : '<button data-testid="shop-support-send" onclick="supSubmit()" style="width:100%;border:0;border-radius:10px;' +
+      : '<button data-cbsid="SHP001-B10" data-testid="shop-support-send" onclick="supSubmit()" style="width:100%;border:0;border-radius:10px;' +
         'padding:12px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
 
   supHost().innerHTML =
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;' +
+    '<div data-cbsid="SHP001-C04" style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;' +
     'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">' +
     '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:18px;max-height:92vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
     '<b class="sg" style="font-size:16px;flex:1">📣 Report a problem</b>' +
-    '<button onclick="supClose()" aria-label="Close" title="Close" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '<button data-cbsid="SHP001-B11" onclick="supClose()" aria-label="Close" title="Close" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     supNoteHtml() +
     (_sup.err && !_sup.dead ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(_sup.err) + '</div>' : '') +
     (_sup.msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(_sup.msg) + '</div>' : '') +
     body +
     '<div style="margin-top:14px">' +
     (_sup.busy
-      ? '<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;' +
+      ? '<button data-cbsid="SHP001-B12" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;' +
         'font-weight:700;font-size:14px">⏳ Sending…</button>'
       : act) +
     '</div>' +
@@ -2075,7 +2075,7 @@ function supSubmit() {
          spinner over the receipt. */
       _sup = null;
       supHost().innerHTML =
-        '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;' +
+        '<div data-cbsid="SHP001-C05" style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;' +
         'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">' +
         '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:22px;text-align:center">' +
         '<div style="font-size:34px;line-height:1">✓</div>' +
@@ -2085,7 +2085,7 @@ function supSubmit() {
         '<div style="font-size:13px;color:var(--grey-3,#6a707a);line-height:1.5">It is in their work queue. They can reply on ' +
         esc(sent) +
         '.</div>' +
-        '<button data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;' +
+        '<button data-cbsid="SHP001-B13" data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;' +
         'border-radius:10px;padding:12px;background:var(--accent);color:var(--on-accent,#fff);font-weight:700;font-size:14px;cursor:pointer">Done</button>' +
         '</div></div>';
     })
@@ -2292,7 +2292,7 @@ function _cartTabsHtml() {
   var tab = function (v, label, ic) {
     var on = m === v;
     return (
-      '<button type="button" data-ic="mode-' +
+      '<button data-cbsid="SHP001-B14" type="button" data-ic="mode-' +
       v +
       '" aria-label="' +
       label +
@@ -2334,7 +2334,7 @@ function _cartModeFieldsHtml() {
     '' +
     (m === 'delivery'
       ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Delivery address</label>' +
-        '<input id="o_loc" data-testid="shop-area" placeholder="' +
+        '<input data-cbsid="SHP001-I10" id="o_loc" data-testid="shop-area" placeholder="' +
         esc(_addrExample()) +
         '" value="' +
         esc(_ord.loc || '') +
@@ -2351,20 +2351,20 @@ function _cartModeFieldsHtml() {
         '<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">' +
         when +
         ' date <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input id="o_date" type="date" data-testid="shop-date" value="' +
+        '<input data-cbsid="SHP001-I11" id="o_date" type="date" data-testid="shop-date" value="' +
         esc(_ord.date || '') +
         '" oninput="_cartSet(&#39;date&#39;,this.value)" ' +
         fld +
         '></div>' +
         '<div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">Time <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input id="o_time" type="time" data-testid="shop-time" value="' +
+        '<input data-cbsid="SHP001-I12" id="o_time" type="time" data-testid="shop-time" value="' +
         esc(_ord.time || '') +
         '" oninput="_cartSet(&#39;time&#39;,this.value)" ' +
         fld +
         '></div></div>' +
         '<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>' +
         '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Remark <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="' +
+        '<input data-cbsid="SHP001-I13" id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="' +
         esc(_ord.remark || '') +
         '" oninput="_cartSet(&#39;remark&#39;,this.value)" ' +
         fld +
@@ -2390,7 +2390,7 @@ function _cartStepReview() {
       nestedT +
       (step == null
         ? ''
-        : '<span style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go(' +
+        : '<span data-cbsid="SHP001-C06" style="margin-inline-start:auto;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go(' +
           step +
           ')">Change</span>') +
       '</div>'
@@ -2452,13 +2452,13 @@ function _cartStepWho() {
     _cartStepReview() +
     '<div class="meta" style="margin:14px 0 8px">Last step — so the shop can reach you about this order.</div>' +
     '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name <span style="color:#9aa3a7">· optional</span></label>' +
-    '<input id="o_name" data-testid="shop-name" placeholder="optional" value="' +
+    '<input data-cbsid="SHP001-I14" id="o_name" data-testid="shop-name" placeholder="optional" value="' +
     esc(_ord.name || '') +
     '" oninput="_cartSet(&#39;name&#39;,this.value)" ' +
     fld +
     '>' +
     '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label>' +
-    '<input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
+    '<input data-cbsid="SHP001-I15" id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
     (otpStep ? 'disabled' : '') +
     ' value="' +
     esc(_ord.contact || '') +
@@ -2466,7 +2466,7 @@ function _cartStepWho() {
     fld +
     '>' +
     (otpStep
-      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
+      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input data-cbsid="SHP001-I16" id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
         esc(_ord.otp || '') +
         '" oninput="_cartSet(&#39;otp&#39;,this.value)" ' +
         fld +
@@ -2497,15 +2497,15 @@ function _cartPanelHtml() {
   /* ⚠️ --cbst-accent: the shared rail takes THIS shop's colour. A blue rail on a red shop is the same mistake as
      sharing a stylesheet instead of sharing the rules. */
   return (
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">' +
+    '<div data-cbsid="SHP001-C07" style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">' +
     '<div style="--cbst-accent:var(--accent);--cbst-soft:var(--blue-tint-bg);background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 20px;max-height:92vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 ' +
     esc(shop.display_name || 'Your order') +
     '</b>' +
-    '<button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '<button data-cbsid="SHP001-B15" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     '<div id="oc_rail"></div><div id="oc_body"></div>' +
     (_ord.busy
-      ? '<div style="margin-top:12px"><button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
+      ? '<div style="margin-top:12px"><button data-cbsid="SHP001-B16" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
       : '<div id="oc_foot" style="margin-top:14px"></div>') +
     '</div></div>'
   );
@@ -2547,13 +2547,13 @@ function orderRender(msg, err) {
   var otpStep = _ord.step === 'otp';
   var fld = 'style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var h =
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">' +
+    '<div data-cbsid="SHP001-C08" style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()">' +
     '<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(_isPayload() ? _submitLabel() : 'Order') +
     ' · ' +
     esc(it.name) +
-    '</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '</b><button data-cbsid="SHP001-B17" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     (function () {
       var p = itemPrice(it),
         bits = [];
@@ -2571,7 +2571,7 @@ function orderRender(msg, err) {
       ? _docBlock() + _readBanner() + _schemaFields(_cur().schema, _ord.payload)
       : '' +
         (comboOpts
-          ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Colour combination</label><select id="o_combo" data-testid="shop-combo" ' +
+          ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Colour combination</label><select data-cbsid="SHP001-S02" id="o_combo" data-testid="shop-combo" ' +
             fld +
             '>' +
             comboOpts +
@@ -2583,7 +2583,7 @@ function orderRender(msg, err) {
           return p && p.u ? ' (' + esc(p.u) + ')' : '';
         })() +
         (minL ? ' <span style="color:#9aa3a7">· min ' + minL + ' L (set by the brand)</span>' : '') +
-        '</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="' +
+        '</label><input data-cbsid="SHP001-I17" id="o_qty" data-testid="shop-qty" inputmode="decimal" value="' +
         esc(_ord.qty || String(minL || 1)) +
         '" ' +
         fld +
@@ -2602,7 +2602,7 @@ function orderRender(msg, err) {
                   ? ' <span style="color:#9aa3a7">· seller’s range ' + esc(_bandText(b, cur)) + '</span>'
                   : ' <span style="color:#9aa3a7">· name your price</span>') +
                 '</label>' +
-                '<input id="o_offer" data-testid="shop-offer" inputmode="decimal" placeholder="' +
+                '<input data-cbsid="SHP001-I18" id="o_offer" data-testid="shop-offer" inputmode="decimal" placeholder="' +
                 (b && b.min != null ? esc(String(b.min)) : 'your price') +
                 '" value="' +
                 esc(_ord.offer || '') +
@@ -2613,19 +2613,19 @@ function orderRender(msg, err) {
               );
             })()
           : '')) +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="' +
+    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name</label><input data-cbsid="SHP001-I19" id="o_name" data-testid="shop-name" placeholder="optional" value="' +
     esc(_ord.name || '') +
     '" ' +
     fld +
     '>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="' +
+    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input data-cbsid="SHP001-I20" id="o_loc" data-testid="shop-area" placeholder="' +
     esc(_areaExample()) +
     '" value="' +
     esc(_ord.loc || '') +
     '" ' +
     fld +
     '>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
+    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label><input data-cbsid="SHP001-I21" id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
     (otpStep ? 'disabled' : '') +
     ' value="' +
     esc(_ord.contact || '') +
@@ -2633,7 +2633,7 @@ function orderRender(msg, err) {
     fld +
     '>' +
     (otpStep
-      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
+      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input data-cbsid="SHP001-I22" id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
         esc(_ord.otp || '') +
         '" ' +
         fld +
@@ -2642,10 +2642,10 @@ function orderRender(msg, err) {
     (err ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(err) + '</div>' : '') +
     (msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(msg) + '</div>' : '') +
     (_ord.busy
-      ? '<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
+      ? '<button data-cbsid="SHP001-B18" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
       : otpStep
-        ? '<button data-testid="shop-place-order" onclick="orderConfirm()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Place order</button>'
-        : '<button data-testid="shop-send-code" onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>') +
+        ? '<button data-cbsid="SHP001-B19" data-testid="shop-place-order" onclick="orderConfirm()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Place order</button>'
+        : '<button data-cbsid="SHP001-B20" data-testid="shop-send-code" onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>') +
     '</div></div>';
   ohost().innerHTML = h;
 }
@@ -2787,7 +2787,7 @@ function orderConfirm() {
 var _MYTOK = null; /* the shopper's session from the order that was just placed — memory only, never stored */
 function shopSheet(inner) {
   return (
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">' +
+    '<div data-cbsid="SHP001-C09" style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(CBSteps.backdropTap(event,this))orderClose()"><div style="background:var(--card,#fff);width:100%;max-width:400px;border-radius:16px;padding:22px;max-height:92vh;overflow:auto">' +
     inner +
     '</div></div>'
   );
@@ -2809,7 +2809,7 @@ function shopStatusWord(s) {
 /* T3-P3-CONSENT: the shopper's privacy sheet (app/shop-privacy.js) — drawn only while the order's session is held, beside My orders */
 function _PRIV_BTN() {
   return _MYTOK
-    ? '<button type="button" data-testid="shop-privacy" onclick="shopPrivacy()" style="flex:1;border:1px solid var(--line,#e7e3d8);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--ink-2,#3a4048);font-weight:700;cursor:pointer">Privacy</button>'
+    ? '<button data-cbsid="SHP001-B21" type="button" data-testid="shop-privacy" onclick="shopPrivacy()" style="flex:1;border:1px solid var(--line,#e7e3d8);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--ink-2,#3a4048);font-weight:700;cursor:pointer">Privacy</button>'
     : '';
 }
 function shopPrivacy() {
@@ -2817,7 +2817,7 @@ function shopPrivacy() {
   CBShopPrivacy.open({ api: API, token: _MYTOK, host: ohost(), sheet: shopSheet, done: _DONE_BTN });
 }
 var _DONE_BTN =
-  '<button type="button" onclick="orderClose()" style="flex:1;border:0;border-radius:10px;padding:11px 18px;background:var(--accent,#3F66A6);color:var(--card,#fff);font-weight:700;cursor:pointer">Done</button>';
+  '<button data-cbsid="SHP001-B22" type="button" onclick="orderClose()" style="flex:1;border:0;border-radius:10px;padding:11px 18px;background:var(--accent,#3F66A6);color:var(--card,#fff);font-weight:700;cursor:pointer">Done</button>';
 /* "My orders" — the shopper's own orders and where each stands, read with the session the order just gave them (the route is /my-orders; no new route, no account to build) */
 /* SH-MY1: the door from the page — a returning shopper signs in through the same gate (/order/start + /login/verify), then the list opens */
 function shopMyOrdersOpen() {
@@ -2900,7 +2900,7 @@ function shopMyOrdersPaint(head) {
             .join('') +
           (o.err ? '<div style="color:var(--disp,#b4453f);font-size:13px">' + esc(o.err) + '</div>' : '') +
           (left > 0
-            ? '<button type="button" data-testid="shop-orders-more" ' +
+            ? '<button data-cbsid="SHP001-B23" type="button" data-testid="shop-orders-more" ' +
               (o.busy ? 'disabled ' : '') +
               'onclick="shopMyOrders(true)" style="width:100%;margin-top:8px;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:9px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">' +
               (o.busy ? 'Loading…' : esc('Show more (' + left + ')')) +
@@ -2982,7 +2982,7 @@ function _orderPost(body) {
           '<div style="display:flex;gap:8px;margin-top:16px">' +
           _PRIV_BTN() +
           (_MYTOK
-            ? '<button type="button" data-testid="shop-my-orders" onclick="shopMyOrders()" style="flex:1;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">My orders</button>'
+            ? '<button data-cbsid="SHP001-B24" type="button" data-testid="shop-my-orders" onclick="shopMyOrders()" style="flex:1;border:1px solid var(--accent,#3F66A6);border-radius:10px;padding:11px 14px;background:var(--card,#fff);color:var(--accent,#3F66A6);font-weight:700;cursor:pointer">My orders</button>'
             : '') +
           _DONE_BTN +
           '</div>'
@@ -3047,7 +3047,7 @@ function vizRender() {
         })
         .join('');
       return (
-        '<button onclick="vizPick(' +
+        '<button data-cbsid="SHP001-B25" onclick="vizPick(' +
         index +
         ')" style="border:' +
         (on ? '2px solid #6a44a8' : '1px solid #e7e3d8') +
@@ -3060,18 +3060,18 @@ function vizRender() {
     })
     .join('');
   var upload =
-    '<label style="display:block;border:2px dashed #cfc3e8;border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600">📷 Upload a photo of your room<input type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label>';
+    '<label style="display:block;border:2px dashed #cfc3e8;border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600">📷 Upload a photo of your room<input data-cbsid="SHP001-I23" type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label>';
   vizhost().innerHTML =
-    '<div style="position:fixed;inset:0;background:rgba(15,22,32,.6);z-index:950;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)vizClose()">' +
+    '<div data-cbsid="SHP001-C10" style="position:fixed;inset:0;background:rgba(15,22,32,.6);z-index:950;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)vizClose()">' +
     '<div style="background:#fff;width:100%;max-width:560px;border-radius:16px;padding:16px 16px 20px;max-height:94vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(it.name) +
-    ' on your wall</b><button onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ' on your wall</b><button data-cbsid="SHP001-B26" onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>' +
     (_VIZ.img
       ? '<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">' +
         chips +
-        '</div><div style="display:flex;gap:8px;margin-top:8px"><button onclick="vizToOrder()" style="flex:1;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Order this combination →</button><label style="border:1px solid #e7e3d8;border-radius:10px;padding:12px;cursor:pointer;font-size:13px">Change photo<input type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label></div>'
+        '</div><div style="display:flex;gap:8px;margin-top:8px"><button data-cbsid="SHP001-B27" onclick="vizToOrder()" style="flex:1;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Order this combination →</button><label style="border:1px solid #e7e3d8;border-radius:10px;padding:12px;cursor:pointer;font-size:13px">Change photo<input data-cbsid="SHP001-I24" type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label></div>'
       : upload) +
     '</div></div>';
   if (_VIZ.img) vizDraw(_VIZ.combo);

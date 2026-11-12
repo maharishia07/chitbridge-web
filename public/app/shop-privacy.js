@@ -152,8 +152,8 @@
     var offers = ORDER.map(function (item) {
       var v = (may[item] || {}).marketing || { code: 'NO_CONSENT' };
       var b = v.may
-        ? btn('No', 'data-priv="consent" data-ch="' + item + '" data-v="0"', 'shop-priv-no-' + item, whyC)
-        : btn('Yes', 'data-priv="consent" data-ch="' + item + '" data-v="1"', 'shop-priv-yes-' + item, whyC);
+        ? btn('No', 'data-cbsid="SHP001-B28" data-priv="consent" data-ch="' + item + '" data-v="0"', 'shop-priv-no-' + item, whyC)
+        : btn('Yes', 'data-cbsid="SHP001-B29" data-priv="consent" data-ch="' + item + '" data-v="1"', 'shop-priv-yes-' + item, whyC);
       return (
         '<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;border-top:1px dashed var(--line,#e7e3d8)" data-testid="shop-priv-ch-' +
         item +
@@ -174,7 +174,7 @@
       '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
       kinds
         .map(function (item) {
-          return btn(KIND[item], 'data-priv="request" data-kind="' + item + '"', 'shop-priv-ask-' + item, whyR);
+          return btn(KIND[item], 'data-cbsid="SHP001-B30" data-priv="request" data-kind="' + item + '"', 'shop-priv-ask-' + item, whyR);
         })
         .join('') +
       '</div>' +
