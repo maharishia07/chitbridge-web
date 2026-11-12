@@ -183,11 +183,13 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
   if (!touched.length) { console.log('      no versioned file differs from origin/main: nothing to bump'); return; }
   const mainValue = cbBuild(git(['show', 'origin/main:public/app.html']));
   const baseValue = cbBuild(git(['show', base + ':public/app.html']));
-  if (VALUE !== mainValue && VALUE !== baseValue) return;
-  throw new Error(touched.length + ' versioned file(s) differ from main and CB_BUILD (' + VALUE + ') is the same as '
-    + (VALUE === mainValue ? 'main\'s' : 'the merge-base\'s') + ':'
-    + '\n      ' + touched.slice(0, 8).join('\n      ')
-    + '\n      ⭐ THE FIX IS ONE LINE: bump CB_BUILD in public/app.html in this PR.');
+  if (VALUE === mainValue || VALUE === baseValue) {
+    throw new Error(touched.length + ' versioned file(s) differ from main and CB_BUILD (' + VALUE + ') is the same as '
+      + (VALUE === mainValue ? 'main\'s' : 'the merge-base\'s') + ':'
+      + '\n      ' + touched.slice(0, 8).join('\n      ')
+      + '\n      ⭐ THE FIX IS ONE LINE: bump CB_BUILD in public/app.html in this PR.');
+  }
+  console.log('      ' + touched.length + ' versioned file(s) differ from origin/main and CB_BUILD ' + VALUE + ' is bumped');
 });
 
 console.log('\n  ' + FILES.length + ' versioned file(s) · CB_BUILD ' + VALUE
