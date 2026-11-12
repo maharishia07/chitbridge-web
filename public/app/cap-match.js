@@ -108,8 +108,8 @@ function matchScreen() {
     '</select></div>';
 
   if (MATCH.busy && !MATCH.rows)
-    return '<div class="panel">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
-  if (MATCH.error) return '<div class="panel">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
+    return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
+  if (MATCH.error) return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
 
   var body = shown.length
     ? shown.map(matchCard).join('')
@@ -119,7 +119,7 @@ function matchScreen() {
         : esc(tx('No purchase orders yet. Send an order to a supplier, then receive the goods at the counter — this screen fills itself.'))) +
       '</div>';
 
-  return '<div class="panel" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
+  return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
 }
 
 function matchCard(o) {
@@ -127,7 +127,9 @@ function matchCard(o) {
   var open = MATCH.open === o.chit_id;
   return (
     '<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden" data-testid="match-order">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="MATCH.open=' +
+    '<div role="button" tabindex="0" aria-expanded="' +
+    (open ? 'true' : 'false') +
+    '" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" onclick="MATCH.open=' +
     (open ? 'null' : "'" + esc(o.chit_id) + "'") +
     ';renderApp()">' +
     '<span style="font-weight:800;flex:1">' +
@@ -144,7 +146,8 @@ function matchCard(o) {
     '<span style="opacity:.5">' +
     (open ? '▾' : '▸') +
     '</span></div>' +
-    (open ? matchDetail(o, money) : '')
+    (open ? matchDetail(o) : '') +
+    '</div>'
   );
 }
 
@@ -193,7 +196,7 @@ function matchDiffCell(item) {
   );
 }
 
-function matchDetail(o, money) {
+function matchDetail(o) {
   var rows = o.lines
     .map(function (item) {
       return (
