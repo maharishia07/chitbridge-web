@@ -180,7 +180,7 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
   }
   const changed = git(['diff', '--name-only', base, '--']).split('\n').map((l) => l.trim()).filter(Boolean);
   const touched = FILES.filter((f) => changed.indexOf(f) > -1);
-  if (!touched.length) return;
+  if (!touched.length) { console.log('      no versioned file differs from origin/main: nothing to bump'); return; }
   const mainValue = cbBuild(git(['show', 'origin/main:public/app.html']));
   const baseValue = cbBuild(git(['show', base + ':public/app.html']));
   if (VALUE !== mainValue && VALUE !== baseValue) return;
