@@ -3,8 +3,12 @@
  * edge of its own viewBox, or emits NaN into a width, looks like a blank card and says nothing about why.
  */
 const fs = require('fs');
-const src = fs.readFileSync('C:/dev/chitbridge-web/public/testing.html', 'utf8');
-const script = src.match(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/)[1];
+const src = fs.readFileSync(require('path').join(__dirname, '..', 'public', 'testing.html'), 'utf8');
+/* the page has more than one inline script (K-SEC PR A put a tiny device one first): take the one that holds the renderers */
+const script = (src.match(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/g) || [])
+  .map((b) => b.replace(/^<script[^>]*>/, '').replace(/<\/script>$/, ''))
+  .find((b) => b.includes('function chartLegend('));
+if (!script) throw new Error('no inline script holds chartLegend');
 
 /* pull just the renderers, with the one helper they need */
 const pick = (name) => {

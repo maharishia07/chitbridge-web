@@ -98,20 +98,27 @@ jobs:
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-accounts.test.cjs
+          node e2e/ui-codes-crm.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
           node e2e/ui-codes-employees.test.cjs
+          node e2e/ui-codes-app-catalogue.test.cjs
+          node e2e/ui-codes-app-platform.test.cjs
+          node e2e/retired-routes-absent.test.cjs
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
+          node e2e/ui-codes-shop.test.cjs
           node e2e/ui-codes-intake.test.cjs
           node e2e/intake-page-checks.test.cjs
           node e2e/ui-codes-authority-forms.test.cjs
           node e2e/bulk-resume.test.cjs
           node e2e/ui-codes-utility-pages.test.cjs
+          node e2e/ui-codes-cart-design.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs

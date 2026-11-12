@@ -1797,8 +1797,6 @@ const EP = {
   msgCount: { m: 'GET', p: '/api/folders/messages?count=1', ok: 'y' },
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist: { m: 'POST', p: '/api/assist', ok: '?' }, // backend proxies to the model (no-oversell prompt + library grounding)
-  assistGap: { m: 'POST', p: '/api/assist/gap', ok: 'y' }, // capture an unanswered question as a draft (learning feedback)
-  assistGaps: { m: 'GET', p: '/api/assist/gaps', ok: 'y' }, // review queue — captured gaps awaiting an answer
   assistResolve: { m: 'POST', p: '/api/assist/resolve', ok: 'y' }, // approve (with answer) / reject a gap
   assistStandards: { m: 'GET', p: '/api/assist/standards', ok: 'y' }, // compliance conform-check: standards available to check against
   assistConform: { m: 'POST', p: '/api/assist/conform', ok: 'y' }, // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
@@ -1931,8 +1929,6 @@ const EP = {
   getSettings: { m: 'GET', p: '/api/actors/settings', ok: '✓' },
   saveSettings: { m: 'PUT', p: '/api/actors/settings', ok: '✓' },
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
-  connList: { m: 'GET', p: '/api/connections/list', ok: '✓' },
-  connPending: { m: 'GET', p: '/api/connections/pending', ok: '✓' },
   connRequest: { m: 'POST', p: '/api/connections/request', ok: '✓' }, // {to_entity_id}
   connRespond: { m: 'PUT', p: '/api/connections/:id/respond', ok: '✓' }, // {action:accept|reject}
   supCatalogue: { m: 'GET', p: '/api/relationships/suppliers/:sid/catalogue', ok: '✓' },
@@ -11985,7 +11981,7 @@ function platformScreen() {
     '<div id="pl_stats" style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3)">' +
     platStatsHTML() +
     '</div>' +
-    '<input class="inp" id="pl_q" data-testid="plat-search" placeholder="' +
+    '<input data-cbsid="BUS013-I01" class="inp" id="pl_q" data-testid="plat-search" placeholder="' +
     tx('Search name, handle or bridge id') +
     '" value="' +
     esc(ap.q || '') +
@@ -12013,19 +12009,19 @@ function platformScreen() {
          computed from the ltree, not stored, so the server names the values in controls.positions. */
     /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
          control rather than more values in the kind list. */
-    '<select ' +
+    '<select data-cbsid="BUS013-S01" ' +
     sel +
     ' id="pl_vis" data-testid="plat-visibility" aria-label="' + esc(tx('Catalogue visibility')) + '" onchange="loadPlatform()">' +
     opt('', tx('any catalogue'), ap.visibility) +
     (f.visibility || []).map((item) => opt(item, tx(item), ap.visibility)).join('') +
     '</select>' +
-    '<select ' +
+    '<select data-cbsid="BUS013-S02" ' +
     sel +
     ' id="pl_vert" data-testid="plat-vertical" aria-label="' + esc(tx('Vertical')) + '" onchange="loadPlatform()">' +
     opt('', tx('any vertical'), ap.vertical) +
     (f.vertical || []).map((item) => opt(item, item, ap.vertical)).join('') +
     '</select>' +
-    '<select ' +
+    '<select data-cbsid="BUS013-S03" ' +
     sel +
     ' id="pl_plan" data-testid="plat-plan" aria-label="' + esc(tx('Plan')) + '" onchange="loadPlatform()">' +
     opt('', tx('any plan'), ap.plan) +
@@ -12039,7 +12035,7 @@ function platformScreen() {
      * and it has been half-built since. Found by e2e/list-controls.cjs on its first run, which is the entire
      * argument for that file. [[feedback-silence-is-the-bug]]
      */
-    '<select ' +
+    '<select data-cbsid="BUS013-S04" ' +
     sel +
     ' id="pl_sort" data-testid="plat-sort" aria-label="' + esc(tx('Sort order')) + '" onchange="UI.platSort=null;loadPlatform()">' +
     '<option value="">' +
@@ -16217,17 +16213,17 @@ async function composeFromSupplier(id) {
 function catalogueScreen() {
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
-      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ || '')}" oninput="UI.prodQ=this.value;if(UI.prodTruncated)prodSearchServer();paintProdList()"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button data-cbsid="CAT001-B01" onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <button data-cbsid="CAT001-B02" class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
+      <div class="srch" style="margin-top:8px">🔍 <input data-cbsid="CAT001-I01" data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ || '')}" oninput="UI.prodQ=this.value;if(UI.prodTruncated)prodSearchServer();paintProdList()"></div>
       <div id="ct_strips">${prodCatgStripHTML()}${prodAvailChipsHTML()}</div>
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodCountLabel()}</span>
         ${prodSortSelect()}
-        <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
+        <button data-cbsid="CAT001-B03" data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick ? 'var(--blue)' : 'var(--paper)'};color:${UI.prodPick ? 'var(--on-accent)' : 'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer">☑ Select</button>
-        <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
+        <button data-cbsid="CAT001-B04" data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
           style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
     </div>
