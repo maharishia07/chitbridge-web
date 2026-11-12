@@ -146,13 +146,18 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     window.__hold = await new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onupgradeneeded = function(){ rq.transaction.abort(); }; rq.onsuccess = function(){ res(rq.result); }; });   /* another tab holds the store open */
     await closeCounter(true);
     await new Promise((r) => setTimeout(r, 200));
+    await queueTally(); paintStatus(); await openBills();   /* a refresh after "Not yet": what does the counter show? */
+    var look = { bar: document.getElementById('queuenote').innerText, fixBtn: !!document.querySelector('#queuenote [data-testid="till-queue-fix"]'), pill: document.getElementById('daypill').textContent, bills: document.getElementById('billsbody').innerText, reload: !!document.querySelector('[data-testid="till-frozen-reload"]'), queued: STATE.queued, frozenFlag: QUEUED.frozen };
+    document.getElementById('billsdlg').close();
     var billSaid = '', billNo = null;
     try { var made = await HOST.bill({ lines: [{ name: 'Tea', qty: 1, price: 10 }], total: 10, kind: 'cash' }); billNo = made && made.bill && made.bill.no; } catch (e) { billSaid = String((e && e.message) || e); }   /* a sale at the counter while the clear is blocked */
     window.__hold.close();   /* the other tab closes: the late delete runs, the parked row is put back */
     for (var k = 0; k < 50 && JSON.stringify(await eval(reader)(name)) !== '["OP/77"]'; k++) await new Promise((r) => setTimeout(r, 100));
-    return { said: said, asked: asked, billSaid: billSaid, billNo: billNo, after: await eval(reader)(name), note: !!ls.get('cb_kept_parked', '') };
+    return { look: look, said: said, asked: asked, billSaid: billSaid, billNo: billNo, after: await eval(reader)(name), note: !!ls.get('cb_kept_parked', '') };
   }, [rawQueue]);
   say('a store held open by another tab: the clear stops with words, and offers "Reload this counter"', /Close the other counter tab/.test(blocked.said.join('|')) && blocked.asked.indexOf('Reload this counter') >= 0, blocked.asked.join(',') + ' · ' + blocked.said.join('|').slice(0, 100));
+  say('after "Not yet" the status bar says FROZEN with a Reload button (not "all sent", not 0)', /Frozen — close the other counter tab, then reload this counter/.test(blocked.look.bar) && blocked.look.fixBtn && !/everything has reached|waiting to reach/.test(blocked.look.bar), JSON.stringify(blocked.look.bar).slice(0, 110));
+  say('...the day pill says frozen instead of 0.00, the Bills list says frozen with Reload (not an empty day), the QUEUED flag is set', /frozen/.test(blocked.look.pill) && /Reload this counter/.test(blocked.look.bills) && blocked.look.reload && blocked.look.frozenFlag === true, blocked.look.pill + ' · ' + JSON.stringify(blocked.look.bills).slice(0, 60));
   say('a bill attempted after the block is REFUSED with words (nothing numbered, nothing written)', /Reload this counter/.test(blocked.billSaid) && !blocked.billNo, blocked.billSaid.slice(0, 120));
   say('...and when the other tab lets go the late delete still restores the parked change, and the refused bill left no trace in the queue', JSON.stringify(blocked.after) === '["OP/77"]' && blocked.note, JSON.stringify(blocked.after) + ' note=' + blocked.note);
   await cp.reload(); await cp.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
