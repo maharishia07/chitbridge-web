@@ -32,7 +32,8 @@ const t = (name, cond, extra) => {
 };
 
 /* ── isolate loadList: from its declaration to the next top-level function ────────────────────────────── */
-const start = src.indexOf('async function loadList(silent){');
+/* app.html is formatted now (spaces, one statement per line), so every pattern below tolerates whitespace */
+const start = src.search(/async function loadList\(silent\)\s*\{/);
 t('loadList is where it was', start > 0);
 const rest = src.slice(start + 10);
 const end = start + 10 + (rest.search(/\n(?:async )?function [A-Za-z_]/) >>> 0);
@@ -56,9 +57,13 @@ console.log('\n── every paint after an await asks first ──');
  * ⚠️ THE DETAIL-PANE WRITE IS THE DESTRUCTIVE ONE — it is the line that removed #setbody. The `#rows` writes
  * are merely wrong (one track's rows in another's list); this one deletes another screen's container.
  */
-const dpWrite = /const dp=document\.getElementById\("detailpane"\)/.test(fn);
+/* the header comment above also names the write, so look at the code with block comments taken out */
+const code = fn.replace(/\/\*[\s\S]*?\*\//g, '');
+const dpWriteAt = code.search(/\.innerHTML\s*=\s*renderDetail\(\)/);
+const dpWrite = dpWriteAt > 0 && /getElementById\(['"]detailpane['"]\)/.test(code.slice(Math.max(0, dpWriteAt - 120), dpWriteAt)); /* the write itself, not the pre-await skeleton above */
 t('the detail-pane write is still here to be guarded', dpWrite);
-const guardBeforeDp = fn.indexOf('if(_left()) return;') < fn.indexOf('getElementById("detailpane"); if(dp)');
+const guardAtFirst = code.search(/if\s*\(\s*_left\(\)\s*\)\s*return;/);
+const guardBeforeDp = guardAtFirst > 0 && guardAtFirst < dpWriteAt;
 t('  …and a guard returns before it', guardBeforeDp);
 
 /* every paintRowsOnly() that follows an await must be preceded by the check on its own line */
@@ -88,7 +93,7 @@ t('  …and none of them paints unasked', unguarded.length === 0, unguarded.leng
  */
 console.log('\n── and the failure path is no exception ──');
 t('a failed load does not paint over the screen you moved to',
-  /catch\(e\)\{[^}]*if\(!silent\s*&&\s*!_left\(\)\)/.test(fn));
+  /catch\s*\(e\)\s*\{[^}]*if\s*\(\s*!silent\s*&&\s*!_left\(\)\s*\)/.test(fn));
 
 /**
  * ⚠️ UI.loading MUST STILL BE CLEARED. The flag describes THIS load; leaving it true because the reader
@@ -96,8 +101,8 @@ t('a failed load does not paint over the screen you moved to',
  * The guard has to sit AFTER the flag is cleared, and that is easy to get wrong when moving it around later.
  */
 console.log('\n── leaving does not strand the loading flag ──');
-const clearAt = fn.indexOf('UI.loading=false;');
-const guardAt = fn.indexOf('if(_left()) return;');
+const clearAt = fn.search(/UI\.loading\s*=\s*false;/);
+const guardAt = fn.search(/if\s*\(\s*_left\(\)\s*\)\s*return;/);
 t('the flag is cleared before the guard returns', clearAt > 0 && clearAt < guardAt,
   'clear@' + clearAt + ' guard@' + guardAt);
 
