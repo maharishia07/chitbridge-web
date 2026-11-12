@@ -46,10 +46,10 @@ say('the same walker reads the app\'s definitions shape', JSON.stringify(appWalk
 
 /* wiring — both storefront offer paths go through it, and core.js has no second copy of the walk */
 const shop = fs.readFileSync(path.join(PUB, 'shop.html'), 'utf8');
-say('shop.html\'s basket lines (_lineOf) carry the parents', /function _lineOf[\s\S]{0,400}categories:_catgUp\(/.test(shop));
-say('shop.html\'s network offers (finishDeal) carry the parents', /function finishDeal[\s\S]{0,700}categories:_catgUp\(/.test(shop));
+say('shop.html\'s basket lines (_lineOf) carry the parents', /function _lineOf[\s\S]{0,400}categories:\s*_catgUp\(/.test(shop));
+say('shop.html\'s network offers (finishDeal) carry the parents', /function finishDeal[\s\S]{0,700}categories:\s*_catgUp\(/.test(shop));
 const core = fs.readFileSync(path.join(PUB, 'app', 'core.js'), 'utf8');
-say('core.js walks through cbCatgAncestors, with no loop of its own', /return cbCatgAncestors\(out, cats,/.test(core) && !/by\[id\]\.rules\.parent, hops = 0/.test(core));
+say('core.js walks through cbCatgAncestors, with no loop of its own', /return cbCatgAncestors\(\s*out,\s*cats,/.test(core) && !/by\[id\]\.rules\.parent, hops = 0/.test(core));
 
 console.log(bad ? '\n✗ ' + bad + ' failed\n' : '\n✓ all good\n');
 process.exit(bad ? 1 : 0);
