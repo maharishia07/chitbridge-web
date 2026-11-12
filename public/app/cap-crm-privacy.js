@@ -203,7 +203,7 @@ async function crmConsentOpen(p) {
     hist.innerHTML =
       '<div class="hint" data-testid="crm-consent-hist-err">' +
       esc(e && e.status === 503 ? tx('Consent records start after an update. Nothing is lost.') : tx("Couldn't read the consent history.")) +
-      ' <button type="button" class="crm-mini" data-crm="consentretry">' +
+      ' <button data-cbsid="CMP009" type="button" class="crm-mini" data-crm="consentretry">' +
       esc(tx('Try again')) +
       '</button></div>';
     return;
@@ -608,7 +608,7 @@ function crmPrivReqOpen(pre) {
       esc(tx('The answer date follows the shop’s country’s law.')) +
       '</div>' +
       '<div id="crm_prv_msg" class="hint" role="status" data-testid="crm-prv-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button><button type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
       esc(tx('Log')) +
@@ -684,7 +684,7 @@ function crmPrivAnswerOpen(id) {
       esc(tx('What was done, or why not')) +
       '<textarea class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>' +
       '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button><button type="button" class="pri" data-crm="prvanswersave" data-id="' +
       esc(id) +

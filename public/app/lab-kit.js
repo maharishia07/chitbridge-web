@@ -128,7 +128,7 @@
     back.className = 'lk-pop-back';
     back.innerHTML =
       '<div class="lk-pop' + (extraClass ? ' ' + extraClass : '') + '" role="dialog" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
-      '</b><button type="button" class="lk-pop-x" aria-label="Close" data-testid="lk-pop-close">×</button></header><div class="lk-pop-body"></div></div>';
+      '</b><button data-cbsid="CMP005" type="button" class="lk-pop-x" aria-label="Close" data-testid="lk-pop-close">×</button></header><div class="lk-pop-body"></div></div>';
     function close() {
       root.document.removeEventListener('keydown', onKey);
       back.remove();
@@ -158,7 +158,7 @@
       function (body) {
         body.innerHTML =
           '<div class="lk-confirm-text" data-testid="lk-confirm-text">' + bodyHtml + '</div>' +
-          '<div class="lk-confirm-acts"><button type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
+          '<div class="lk-confirm-acts"><button data-cbsid="CMP003" type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
           '<button type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
         body.querySelector('[data-testid="lk-confirm-cancel"]').onclick = function () { shown.close(); };
         body.querySelector('[data-testid="lk-confirm-ok"]').onclick = function () { shown.close(); onOk(); };

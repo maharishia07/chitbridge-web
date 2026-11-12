@@ -777,7 +777,7 @@
       '</h2><div class="hint">' +
       safe(subtitle || '') +
       '</div></div>' +
-      '<button class="btn x" type="button" data-chart-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>' +
+      '<button data-cbsid="CMP005" class="btn x" type="button" data-chart-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>' +
       body +
       '</div>'
     );
@@ -1133,7 +1133,7 @@
       '</h2><div class="hint">' +
       items.length +
       ' items</div></div>' +
-      '<button class="btn x" type="button" data-more-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>' +
+      '<button data-cbsid="CMP005" class="btn x" type="button" data-more-close="1" style="margin-left:auto" aria-label="Close">✕</button></div>' +
       '<ol class="cp-morelist">' +
       items
         .map(function (item) {

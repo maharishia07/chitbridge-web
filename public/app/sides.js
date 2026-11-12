@@ -243,7 +243,7 @@
         esc(left ? W.lean : W.use) +
         '</h3><span class="cbsd-cnt" data-testid="sides-count">' +
         n +
-        '</span><button type="button" class="cbsd-x" data-act="close" aria-label="' +
+        '</span><button data-cbsid="CMP005" type="button" class="cbsd-x" data-act="close" aria-label="' +
         esc(W.close) +
         '" data-testid="sides-close">✕</button></div><div class="cbsd-sub">' +
         esc(left ? W.subL : W.subR) +

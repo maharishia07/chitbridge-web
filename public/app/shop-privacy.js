@@ -117,7 +117,7 @@
       head('Your privacy') +
         '<div class="meta" data-testid="shop-priv-err" style="color:var(--disp,#b4453f)">' +
         esc(msg) +
-        '</div><div style="display:flex;gap:8px;margin-top:14px"><button type="button" onclick="CBShopPrivacy.reload()" style="' +
+        '</div><div style="display:flex;gap:8px;margin-top:14px"><button data-cbsid="CMP009" type="button" onclick="CBShopPrivacy.reload()" style="' +
         BTN +
         ';flex:1">Try again</button>' +
         o.done +
