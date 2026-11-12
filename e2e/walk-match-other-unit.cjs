@@ -29,16 +29,16 @@ const WORDS = 'short 6 · counted in another unit: dozen mine 2 / theirs 2';
 const ORDERS = {
   orders: [
     { chit_id: 'po1', party: 'Sri Ganesh Provisions', at: '2026-11-02T08:00:00Z', subject: 'Weekly order', verdict: 'differs',
-      ordered_total: 1200, received_total: 1000, invoiced_total: 1150, invoiced_from: 'their paper bill SG-1022', money_gap: -150,
+      ordered_total: 1200, received_total: 1000, invoiced_total: 1150, invoiced_from: 'their paper bill SG-1022', received_with_tax: 1000, money_gap: -150, money_code: 'apart',
       lines: [
-        { name: 'Eggs', ordered: 10, unit: 'box', received: 4, difference: -6, reason: null, counted_in_another_unit: true, other_units: [{ unit: 'dozen', mine: 2, theirs: 2 }] },
-        { name: 'Oil', ordered: 10, unit: 'L', received: 7, difference: -3, reason: 'one can leaked', counted_in_another_unit: false, other_units: [] },
-        { name: 'Rice', ordered: 20, unit: 'kg', received: 20, difference: 0, reason: null, counted_in_another_unit: false, other_units: [] }
+        { name: 'Eggs', ordered: 10, unit: 'box', received: 4, difference: -6, state: 'short', reason: null, counted_in_another_unit: true, other_units: [{ unit: 'dozen', mine: 2, theirs: 2 }] },
+        { name: 'Oil', ordered: 10, unit: 'L', received: 7, difference: -3, state: 'short', reason: 'one can leaked', counted_in_another_unit: false, other_units: [] },
+        { name: 'Rice', ordered: 20, unit: 'kg', received: 20, difference: 0, state: 'agreed', reason: null, counted_in_another_unit: false, other_units: [] }
       ],
       receipts: [{ no: 'G/C1/26-27/0002', their_bill_no: 'SG-1022' }] },
     { chit_id: 'po2', party: 'Kumar Traders', at: '2026-11-03T08:00:00Z', subject: 'Salt', verdict: 'agreed',
-      ordered_total: 300, received_total: 300, invoiced_total: 300, invoiced_from: null, money_gap: 0,
-      lines: [{ name: 'Salt', ordered: 30, unit: 'kg', received: 30, difference: 0, reason: null, counted_in_another_unit: false, other_units: [] }], receipts: [] }
+      ordered_total: 300, received_total: 300, invoiced_total: 300, invoiced_from: null, received_with_tax: 300, money_gap: 0, money_code: 'agrees',
+      lines: [{ name: 'Salt', ordered: 30, unit: 'kg', received: 30, difference: 0, state: 'agreed', reason: null, counted_in_another_unit: false, other_units: [] }], receipts: [] }
   ]
 };
 
@@ -70,10 +70,10 @@ W.run('match-other-unit', async (w) => {
     await page.waitForTimeout(500);
   };
 
-  await w.step('M1', 'Match -> "Does not agree" lists the order with its verdict; opened, it shows the three figures, the money gap and the lines', async () => {
+  await w.step('M1', 'Match -> "Does not agree" lists the order with its verdict; opened, it shows the three figures and the lines; the money note waits while lines are short (OPS-83)', async () => {
     await openMatch('po1');
     const t = await text('[data-testid="match-screen"]'), orders = await page.locator('[data-testid="match-order"]').count(), lines = await page.locator('[data-testid="match-line"]').count();
-    return { ok: orders === 1 && /Sri Ganesh Provisions/.test(t) && /Does not agree/.test(t) && lines === 3 && /They billed .*150.* more than you counted/.test(t) && /their paper bill SG-1022/.test(t), saw: orders + ' order · ' + lines + ' lines · "' + t.slice(0, 150) + '"' };
+    return { ok: orders === 1 && /Sri Ganesh Provisions/.test(t) && /Does not agree/.test(t) && lines === 3 && /1,?200/.test(t) && /1,?150/.test(t) && !(await page.locator('[data-testid="match-gap"]').count()) && /their paper bill SG-1022/.test(t), saw: orders + ' order · ' + lines + ' lines · "' + t.slice(0, 150) + '"' };
   });
   await w.step('M1b', 'The page fetched and ran the capability: ' + UNDER_TEST.join(' · '), async () => {
     const ran = await page.evaluate(() => typeof matchScreen === 'function' && typeof matchDiffCell === 'function');

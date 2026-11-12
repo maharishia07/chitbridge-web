@@ -22,7 +22,7 @@ const ctx = {
   myCur: () => 'INR', fmtMoney: (n, _c, empty) => (n == null ? empty : '₹' + Number(n).toFixed(2)), inr: (n) => '₹' + Number(n).toFixed(2)
 };
 vm.createContext(ctx);
-for (const n of ['matchFig', 'matchReceivedFig', 'matchGapNote', 'matchDetail']) {
+for (const n of ['matchFig', 'matchReceivedFig', 'matchGapNote', 'matchOtherUnits', 'matchDiffWords', 'matchDiffCell', 'matchDetail']) {
   const s = fnSource(n);
   if (!s) { say('cap-match.js defines ' + n + '()', false, 'not found'); continue; }
   vm.runInContext(s + '\nthis.' + n + ' = ' + n + ';', ctx);
