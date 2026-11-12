@@ -25,7 +25,8 @@
   .pri{ background:var(--blue); color:var(--paper,#fff); } .gh{ background:var(--card,#fff); color:var(--ink); border:1px solid var(--line); }
   .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tabs{ display:flex; gap:4px; margin:6px 0 12px; flex-wrap:wrap; }
-  .tab{ font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:9px; cursor:pointer; background:var(--neutral-tint,#eef1f6); color:var(--grey); border:1px solid transparent; }
+  .tab{ font-family:inherit; font-size:12.5px; font-weight:700; padding:8px 13px; border-radius:9px; cursor:pointer; background:var(--neutral-tint,#eef1f6); color:var(--grey); border:1px solid transparent; }
+  .tab:focus-visible,.pri:focus-visible,.gh:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
   .tab.on{ background:var(--card,#fff); color:var(--blue); border-color:var(--blue); }
   .sec{ font-size:11px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--grey); margin:14px 2px 8px; }
   .cred{ display:flex; align-items:center; gap:9px; padding:9px 0; border-top:1px solid var(--line); }
@@ -123,16 +124,30 @@ function loginView() {
   CBFrame.ended();
 }
 function shell() {
+  var hadFocus = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('tab');
   el('app').innerHTML =
-    '<div class="tabs">' +
+    '<div class="tabs" role="tablist" aria-label="Know your business" onkeydown="tabKey(event)">' +
     ['yourself|Yourself', 'position|Position', 'risk|Risk', 'field|Field']
       .map(function (item) {
         var k = item.split('|')[0],
           l = item.split('|')[1];
-        return '<div data-cbsid="KYB001-C01" class="tab' + (TAB === k ? ' on' : '') + '" onclick="go(\'' + k + '\')">' + l + '</div>';
+        return '<button type="button" role="tab" id="kyb_tab_' + k + '" aria-selected="' + (TAB === k) + '" tabindex="' + (TAB === k ? 0 : -1) + '" data-cbsid="KYB001-C01" class="tab' + (TAB === k ? ' on' : '') + '" onclick="go(\'' + k + '\')">' + l + '</button>';
       })
       .join('') +
-    '</div><div id="body"><div class="card"><div class="empty">Loading…</div></div></div>';
+    '</div><div id="body" role="tabpanel" aria-labelledby="kyb_tab_' + TAB + '"><div class="card"><div class="empty">Loading…</div></div></div>';
+  if (hadFocus) el('kyb_tab_' + TAB).focus(); /* the tabs are drawn again: the keyboard keeps its place */
+}
+/** the tab strip by keyboard: arrows move to the next or previous tab (and wrap), Home and End to the first and last; Enter and Space are the button's own */
+function tabKey(event) {
+  var at = TAB_NAMES.indexOf(TAB),
+    to = -1;
+  if (event.key === 'ArrowRight') to = (at + 1) % TAB_NAMES.length;
+  else if (event.key === 'ArrowLeft') to = (at + TAB_NAMES.length - 1) % TAB_NAMES.length;
+  else if (event.key === 'Home') to = 0;
+  else if (event.key === 'End') to = TAB_NAMES.length - 1;
+  if (to < 0) return;
+  event.preventDefault();
+  go(TAB_NAMES[to]);
 }
 var TAB_NAMES = ['yourself', 'position', 'risk', 'field'];
 function hashName() {

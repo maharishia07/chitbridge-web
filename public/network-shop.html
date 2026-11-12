@@ -22,9 +22,10 @@
   .netname{ font-weight:800; font-size:21px; }
   .meta{ font-size:12px; color:var(--grey); }
   .srch{ display:flex; align-items:center; gap:8px; border:1px solid var(--line); background:var(--card,#fff); border-radius:11px; padding:9px 12px; margin:16px 0 6px; }
-  .srch input{ flex:1; border:0; outline:0; font-size:15px; background:transparent; color:var(--ink); }
+  .srch input{ flex:1; min-width:0; width:100%; text-overflow:ellipsis; border:0; outline:0; font-size:15px; background:transparent; color:var(--ink); }
   .chips{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px; }
-  .chip{ font-size:12px; border:1px solid var(--line); background:var(--card,#fff); border-radius:20px; padding:5px 12px; cursor:pointer; color:var(--ink); }
+  .chip{ font:inherit; font-size:12px; min-height:32px; border:1px solid var(--line); background:var(--card,#fff); border-radius:20px; padding:5px 12px; cursor:pointer; color:var(--ink); }
+  .chip:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
   .chip.on{ background:var(--ink); color:var(--paper,#fff); border-color:var(--ink); }
   .dept{ margin-top:22px; }
   .depthd{ display:flex; align-items:baseline; gap:9px; padding-bottom:7px; border-bottom:2px solid var(--violet); }
@@ -109,24 +110,24 @@ function render() {
     (DATA.currencies && DATA.currencies.length > 1 ? ' · prices in ' + DATA.currencies.map(esc).join(', ') : '') +
     '</div></div></div>';
 
-  var search = '<div class="srch">🔍 <input data-cbsid="NSH001-I01" id="q" placeholder="Search everything — a product, a category, a department" value="' + esc(Q) + '"></div>';
+  var search = '<div class="srch">🔍 <input data-cbsid="NSH001-I01" id="q" placeholder="Search a product or department" aria-label="Search a product, a category or a department" value="' + esc(Q) + '"></div>';
 
   // Department filter. A shopper narrows by WHOSE it is before anything else — it is the coarsest and most
   // meaningful cut, and it is the one thing a departmental store already trains people to do.
   var chips =
-    '<div class="chips"><span data-cbsid="NSH001-C01" class="chip' +
+    '<div class="chips" role="group" aria-label="Departments"><button type="button" data-cbsid="NSH001-C01" aria-pressed="' + !DEPT + '" class="chip' +
     (DEPT ? '' : ' on') +
-    '" onclick="pick(null)">All</span>' +
+    '" onclick="pick(null)">All</button>' +
     (DATA.departments || [])
       .map(function (item) {
         return (
-          '<span data-cbsid="NSH001-C02" class="chip' +
+          '<button type="button" data-cbsid="NSH001-C02" aria-pressed="' + (DEPT === item.bridge_id) + '" class="chip' +
           (DEPT === item.bridge_id ? ' on' : '') +
           '" onclick="pick(\'' +
           esc(String(item.bridge_id).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
           '\')">' +
           esc(item.name) +
-          '</span>'
+          '</button>'
         );
       })
       .join('') +
@@ -203,8 +204,11 @@ function render() {
   }
 }
 function pick(b) {
+  var hadFocus = document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('chip');
   DEPT = b;
   render();
+  var chosen = hadFocus && document.querySelector('.chip[aria-pressed="true"]');
+  if (chosen) chosen.focus(); /* the page is drawn again: the keyboard keeps its place on the chip it chose */
 }
 
 function load() {
