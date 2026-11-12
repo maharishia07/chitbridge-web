@@ -18930,10 +18930,10 @@ function prodEditFormCore(d) {
     ctField('name', 'Name', d.name || '') +
     `<div style="display:flex;gap:10px"><div style="flex:1">` +
     ctField('unit', 'Unit', d.unit || '', 'placeholder="piece / kg / tonne"') +
-    `</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price) ? cbAmount(d.price) : ''}"></div></div></div>` +
+    `</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input data-cbsid="CAT005-I01" class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price) ? cbAmount(d.price) : ''}"></div></div></div>` +
     ctField('code', packHasHsn() ? 'Code / HSN' : 'Code', pCode(d)) +
     ctHighlightField(d) +
-    `<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>` +
+    `<label class="fl">${tx('Description')}</label><textarea data-cbsid="CAT005-T01" class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>` +
     '<div id="ct_declared_host">' +
     ctDeclaredFields(d) +
     '</div>' +
@@ -18948,7 +18948,7 @@ function prodEditFormCore(d) {
 function prodEffectiveField() {
   return (
     `<label class="fl" style="margin-top:10px">${tx('Effective from')} <span style="color:var(--grey);font-weight:400">${tx('(leave empty for now)')}</span></label>` +
-    `<input class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">` +
+    `<input data-cbsid="CAT005-I02" class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">` +
     `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A future moment parks only what you changed; the product stays as it is until then.')}</div>`
   );
 }
@@ -19275,7 +19275,7 @@ async function prodAllFields(id) {
       '<button class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button>' +
-      '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
+      '<button data-cbsid="CAT005-B01" class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
       id +
       '\')">' +
       tx('Set status') +
@@ -19298,7 +19298,7 @@ function prodStatusPick(id) {
   const opt = function (v, label, why) {
     const on = (d.status || 'available') === v;
     return (
-      '<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;' +
+      '<button data-cbsid="CAT005-B02" class="btn" style="width:100%;margin-bottom:7px;text-align:start;' +
       (on ? 'border-color:var(--blue);font-weight:700' : '') +
       '" onclick="prodSetStatus(\'' +
       id +
@@ -19421,13 +19421,13 @@ function prodAvailBlock(d, id) {
     <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--card);color:var(--on-card)">
       ${state}
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-        <input id="av_qty" placeholder="how many" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
-        <select id="av_src" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
+        <input data-cbsid="CAT005-I03" id="av_qty" placeholder="how many" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
+        <select data-cbsid="CAT005-S01" id="av_src" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
           <option value="manual">counted by hand</option>
           <option value="erp">from the ERP</option>
           <option value="iot">from a sensor</option>
         </select>
-        <button class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
+        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
       </div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">Stamped with the time you report
         it. A connector can write this far more often than a person — the number is only as good as its date.</div>
@@ -19527,12 +19527,12 @@ function prodTabBar() {
   return (
     `<div class="dtabs" data-testid="prod-tabs" data-layout="${page ? 'page' : 'tabs'}">` +
     PROD_TABS.map(function (item) {
-      return `<button type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${item[0]}')">${tx(item[1])}</button>`;
+      return `<button data-cbsid="CAT005-B04" type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${item[0]}')">${tx(item[1])}</button>`;
     }).join('') +
     (prodLayout() === 'page'
-      ? `<button type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>`
+      ? `<button data-cbsid="CAT005-B05" type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>`
       : '') +
-    `<button type="button" data-testid="prod-layout-toggle" title="${esc(page ? tx('Show one section at a time') : tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page ? 'tabs' : 'page'}')">${page ? '▤ ' + tx('Tabs') : '☰ ' + tx('Page')}</button>` +
+    `<button data-cbsid="CAT005-B06" type="button" data-testid="prod-layout-toggle" title="${esc(page ? tx('Show one section at a time') : tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page ? 'tabs' : 'page'}')">${page ? '▤ ' + tx('Tabs') : '☰ ' + tx('Page')}</button>` +
     `</div>`
   );
 }
@@ -19822,7 +19822,7 @@ function prodSectionHTML(k, d, id, editing) {
       return editing
         ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
         : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}` +
-            `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
+            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
             `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
     case 'categories':
       return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
@@ -20044,12 +20044,12 @@ function prodModifiersTab(d, edit) {
     return (
       `<div class="kv" data-testid="prod-mod-${gi}" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">` +
       `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">` +
-      `<input class="inp" data-testid="prod-mod-name-${gi}" value="${esc(g.name)}" placeholder="${esc(tx('Group name — Spice level, Size…'))}" style="flex:1;min-width:160px" onchange="prodModSetGroup(${gi},{name:this.value})">` +
-      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" data-testid="prod-mod-required-${gi}" ${g.required ? 'checked' : ''} onchange="prodModSetGroup(${gi},{required:this.checked})">${tx('Required')}</label>` +
-      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)">${tx('Pick up to')} <input type="number" min="1" data-testid="prod-mod-max-${gi}" value="${g.max}" style="width:52px" onchange="prodModSetGroup(${gi},{max:this.value})"></label>` +
-      `<button class="composebtn" data-testid="prod-mod-up-${gi}" ${gi === 0 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},-1)" title="${esc(tx('Move up'))}">↑</button>` +
-      `<button class="composebtn" data-testid="prod-mod-down-${gi}" ${gi === groups.length - 1 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},1)" title="${esc(tx('Move down'))}">↓</button>` +
-      `<button class="composebtn" data-testid="prod-mod-remove-${gi}" onclick="prodModRemoveGroup(${gi})">✕ ${tx('Remove group')}</button>` +
+      `<input data-cbsid="CAT005-I04" class="inp" data-testid="prod-mod-name-${gi}" value="${esc(g.name)}" placeholder="${esc(tx('Group name — Spice level, Size…'))}" style="flex:1;min-width:160px" onchange="prodModSetGroup(${gi},{name:this.value})">` +
+      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)"><input data-cbsid="CAT005-I05" type="checkbox" data-testid="prod-mod-required-${gi}" ${g.required ? 'checked' : ''} onchange="prodModSetGroup(${gi},{required:this.checked})">${tx('Required')}</label>` +
+      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)">${tx('Pick up to')} <input data-cbsid="CAT005-I06" type="number" min="1" data-testid="prod-mod-max-${gi}" value="${g.max}" style="width:52px" onchange="prodModSetGroup(${gi},{max:this.value})"></label>` +
+      `<button data-cbsid="CAT005-B08" class="composebtn" data-testid="prod-mod-up-${gi}" ${gi === 0 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},-1)" title="${esc(tx('Move up'))}">↑</button>` +
+      `<button data-cbsid="CAT005-B09" class="composebtn" data-testid="prod-mod-down-${gi}" ${gi === groups.length - 1 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},1)" title="${esc(tx('Move down'))}">↓</button>` +
+      `<button data-cbsid="CMP008" data-cbmount="CAT005-U108" class="composebtn" data-testid="prod-mod-remove-${gi}" onclick="prodModRemoveGroup(${gi})">✕ ${tx('Remove group')}</button>` +
       `</div>` +
       (gerr.length ? `<div style="color:var(--warn-3);font-size:var(--fs-1);margin-top:4px">${gerr.map((item) => esc(tx(item))).join(' · ')}</div>` : '') +
       `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">` +
@@ -20057,12 +20057,12 @@ function prodModifiersTab(d, edit) {
         .map(
           (item, index) =>
             `<div style="display:flex;gap:6px;align-items:center" data-testid="prod-mod-opt-${gi}-${index}">` +
-            `<input class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
-            `<input class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
+            `<input data-cbsid="CAT005-I07" class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
+            `<input data-cbsid="CAT005-I08" class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
             `<button class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
         )
         .join('') +
-      `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
+      `<button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
       `</div></div>`
     );
   };
@@ -20105,7 +20105,7 @@ function prodModifiersTab(d, edit) {
                      real variant of this class (the file's own comment above warns exactly against inventing
                      one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
                   return (
-                    `<button type="button" class="composebtn${on ? '' : ' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">` +
+                    `<button data-cbsid="CAT005-B10" type="button" class="composebtn${on ? '' : ' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">` +
                     `${on ? '✓ ' : ''}${esc(entry.name)}${entry.price ? ' +' + esc(fmtMoney(entry.price, moneyCode())) : ''}</button>`
                   );
                 })
@@ -20121,13 +20121,13 @@ function prodModifiersTab(d, edit) {
             ? `<span style="color:var(--warn-3)">● ${esc(txf('Still needs: {g}', { g: missing.join(', ') }))}</span>`
             : `<b>${esc(tx('Ready to add') + (words ? ' — ' : ''))}</b>${words ? esc(words) : ''}`;
         })()}</div>` +
-        `<button class="composebtn" data-testid="prod-mod-preview-reset" onclick="prodModPreviewReset()">${tx('Reset preview')}</button>` +
+        `<button data-cbsid="CAT005-B11" class="composebtn" data-testid="prod-mod-preview-reset" onclick="prodModPreviewReset()">${tx('Reset preview')}</button>` +
         `</div>`);
   return (
     `<div class="sec">${tx('Modifiers')}</div>` +
     `<div style="padding:0 12px 8px;font-size:var(--fs-1);color:var(--grey)">${tx('Let a buyer choose from a set before it goes on the bill — a spice level, a size, an extra. Saved as you go, one change at a time.')}</div>` +
     `<div style="padding:0 12px">${groups.map(groupHTML).join('')}</div>` +
-    `<div style="padding:0 12px 8px"><button class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>` +
+    `<div style="padding:0 12px 8px"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>` +
     previewHTML
   );
 }
@@ -20201,7 +20201,7 @@ function prodSynonymsTab(d, edit) {
     return (
       `<div class="sec">${tx('Synonyms')}</div>` +
       `<div style="padding:0 12px"><label class="fl">${tx('Other names this product answers to')}</label>` +
-      `<textarea class="inp" id="ct_synonyms" data-testid="cat-field-synonyms" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);background:var(--paper);color:var(--on-bg)" placeholder="${esc(tx('one per line — e.g. ponni, boiled rice, புழுங்கல் அரிசி'))}">${esc(list.join('\n'))}</textarea>` +
+      `<textarea data-cbsid="CAT005-T02" class="inp" id="ct_synonyms" data-testid="cat-field-synonyms" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);background:var(--paper);color:var(--on-bg)" placeholder="${esc(tx('one per line — e.g. ponni, boiled rice, புழுங்கல் அரிசி'))}">${esc(list.join('\n'))}</textarea>` +
       `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A buyer typing any of these in your storefront or in Compose finds this product.')}</div></div>`
     );
   return (
@@ -20277,7 +20277,7 @@ function prodOrderModelTab(d, edit) {
       `<div style="padding:0 12px"><label class="fl">${tx('How a quantity is counted')}</label>` +
       (defs === null
         ? `<div style="color:var(--grey)">${tx('reading…')}</div>`
-        : `<select class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face && UI._face.shop && UI._face.shop.order) || { model: 'count' }))} —</option>` +
+        : `<select data-cbsid="CAT005-S02" class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face && UI._face.shop && UI._face.shop.order) || { model: 'count' }))} —</option>` +
           live
             .map((x) => {
               const id = String(x.definition_id || x.id);
@@ -20296,10 +20296,10 @@ function prodOrderModelTab(d, edit) {
         return (
           `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)"><label class="fl">${tx('Or set on this product')}</label>` +
           `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">` +
-          `<select class="inp" id="ct_order_kind" data-testid="cat-field-order-kind" onchange="paintProdOrderPreview('')"><option value="">— ${esc(tx('none — use the choice above'))} —</option>${kinds.map((item) => `<option value="${esc(item[0])}"${own.model === item[0] ? ' selected' : ''}>${esc(item[1])}</option>`).join('')}</select>` +
-          `<input class="inp" id="ct_order_step" data-testid="cat-field-order-step" inputmode="decimal" placeholder="${esc(tx('step'))}" value="${own.step != null ? esc(String(own.step)) : ''}" oninput="paintProdOrderPreview('')">` +
-          `<input class="inp" id="ct_order_min" data-testid="cat-field-order-min" inputmode="decimal" placeholder="${esc(tx('min'))}" value="${own.min != null ? esc(String(own.min)) : ''}" oninput="paintProdOrderPreview('')">` +
-          `<input class="inp" id="ct_order_max" data-testid="cat-field-order-max" inputmode="decimal" placeholder="${esc(tx('max'))}" value="${own.max != null ? esc(String(own.max)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<select data-cbsid="CAT005-S03" class="inp" id="ct_order_kind" data-testid="cat-field-order-kind" onchange="paintProdOrderPreview('')"><option value="">— ${esc(tx('none — use the choice above'))} —</option>${kinds.map((item) => `<option value="${esc(item[0])}"${own.model === item[0] ? ' selected' : ''}>${esc(item[1])}</option>`).join('')}</select>` +
+          `<input data-cbsid="CAT005-I09" class="inp" id="ct_order_step" data-testid="cat-field-order-step" inputmode="decimal" placeholder="${esc(tx('step'))}" value="${own.step != null ? esc(String(own.step)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<input data-cbsid="CAT005-I10" class="inp" id="ct_order_min" data-testid="cat-field-order-min" inputmode="decimal" placeholder="${esc(tx('min'))}" value="${own.min != null ? esc(String(own.min)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<input data-cbsid="CAT005-I11" class="inp" id="ct_order_max" data-testid="cat-field-order-max" inputmode="decimal" placeholder="${esc(tx('max'))}" value="${own.max != null ? esc(String(own.max)) : ''}" oninput="paintProdOrderPreview('')">` +
           `</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A pack multiple: step 6 sells 6, 12, 18. A range: min and max. Leave blank for the choice above.')}</div></div>`
         );
       })() +
@@ -20365,9 +20365,9 @@ function prodMediaTab(d, edit) {
         ? `<div style="padding:0 12px">${gal}</div>`
         : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No pictures or videos yet.'))}</div>`) +
       (edit
-        ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>` +
-          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
+          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>`
         : '')
     );
@@ -20390,7 +20390,7 @@ function prodMediaTab(d, edit) {
       ? `<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px">${list.map(tile).join('')}</div>`
       : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(d.image ? tx('One picture, by link — upload here to keep it with the product.') : tx('No pictures or videos yet.'))}</div>`) +
     (edit
-      ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
         `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures or videos, up to 8 MB each. The first picture is the cover the storefront shows. Saved at once — not with this form.')}</div></div>`
       : '')
   );
@@ -20491,13 +20491,13 @@ function prodExposureHTML(d) {
         label,
         why
       ]) => /* CX4 (C2): the HSN switch only under a pack with India's HSN rule */ `<label data-testid="prod-expose-${k}" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);cursor:pointer">
-      <input type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${k}', this.checked)">
+      <input data-cbsid="CAT005-I15" type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${k}', this.checked)">
       <span style="flex:1"><b style="font-size:var(--fs-2)">${esc(tx(label))}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(tx(why))}</span></span>
       <span style="font-size:var(--fs-1);color:var(--grey)">${k in own ? esc(tx('this item')) : esc(tx('default'))}</span></label>`
     )
     .join('');
   return `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">${esc(tx("What a customer sees of this item on the storefront, in a buyer's Suppliers screen and through the API. Price and unit always show."))}</div>${rows}
-    <div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('Defaults for every item: Settings › Storefront.'))} <span data-testid="prod-expose-reset" onclick="prodExposureReset()" style="color:var(--blue);cursor:pointer;font-weight:700">${esc(tx('Use the defaults for this item'))}</span></div>`;
+    <div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('Defaults for every item: Settings › Storefront.'))} <span data-cbsid="CAT005-C01" data-testid="prod-expose-reset" onclick="prodExposureReset()" style="color:var(--blue);cursor:pointer;font-weight:700">${esc(tx('Use the defaults for this item'))}</span></div>`;
 }
 async function prodExposureSet(k, on) {
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
@@ -20613,7 +20613,7 @@ function prodStorefrontTab(d) {
     `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" id="prodShopFrame" data-src="${esc(one)}" title="${esc(tx('Storefront'))}" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff;display:none"></iframe>` +
     `<div id="prodShopHold" style="width:390px;max-width:100%;height:520px;border:1px dashed var(--line);border-radius:18px;background:var(--paper,#faf8f3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:0 22px">` +
     `<div style="font-size:var(--fs-1);color:var(--grey-2);line-height:1.5">${esc(tx('The preview opens this product in the real shop page \u2014 a second app, so it is not loaded until you ask.'))}</div>` +
-    `<button class="btn" onclick="prodShopPreview()" data-testid="prod-storefront-show" style="display:inline-block;width:auto">${esc(tx('Show the phone preview'))}</button>` +
+    `<button data-cbsid="CAT005-B12" class="btn" onclick="prodShopPreview()" data-testid="prod-storefront-show" style="display:inline-block;width:auto">${esc(tx('Show the phone preview'))}</button>` +
     `</div></div>` +
     `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`
   );
@@ -20631,7 +20631,7 @@ function prodBomTab(d) {
     return `<div class="sec">${tx('Consists of')}</div><div data-testid="prod-bom-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('Nothing declared. A product that is made of other products declares them on its node in Network — the components then draw down when this line is sold.')}</div>`;
   return (
     `<div class="sec">${tx('Consists of')}</div>` +
-    `<div style="padding:6px 12px;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><span style="color:var(--grey)">${tx('For')}</span><input class="inp" data-testid="prod-bom-qty" type="number" min="1" value="${esc(qty)}" style="width:80px" oninput="UI._bomQty=this.value;prodBomRepaint(this.closest('.ptab')||document)"><span style="color:var(--grey)">${esc(pUnit(d))}</span></div>` +
+    `<div style="padding:6px 12px;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><span style="color:var(--grey)">${tx('For')}</span><input data-cbsid="CAT005-I16" class="inp" data-testid="prod-bom-qty" type="number" min="1" value="${esc(qty)}" style="width:80px" oninput="UI._bomQty=this.value;prodBomRepaint(this.closest('.ptab')||document)"><span style="color:var(--grey)">${esc(pUnit(d))}</span></div>` +
     `<table data-testid="prod-bom" style="width:100%;border-collapse:collapse;font-size:var(--fs-2);font-variant-numeric:tabular-nums"><thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 12px">${tx('Component')}</th><th style="text-align:end;padding:4px 12px">${tx('Per unit')}</th><th style="text-align:end;padding:4px 12px">${txf('For {n}', { n: String(qty) })}</th></tr></thead><tbody>` +
     rows
       .map(
@@ -20720,11 +20720,11 @@ function prodIdentifiersTab(d, edit) {
     : `<div data-testid="prod-xref" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx("No identifiers yet — set a code on Details, or add another system's id below."))}</div>`;
   const add = edit
     ? `<div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <select class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
-      <input class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
-      <input class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
-      <select class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
-      <button class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
+      <select data-cbsid="CAT005-S04" class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
+      <input data-cbsid="CAT005-I17" class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
+      <input data-cbsid="CAT005-I18" class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
+      <select data-cbsid="CAT005-S05" class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
+      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
       <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting any of these ids lands on this product.')}</div>`
     : '';
   return `<div class="sec">${tx('Identifiers')}</div>` + table + add + prodBarcodeTab(d);
@@ -21042,7 +21042,7 @@ function prodInvoiceTab(d) {
     : [[txf('{s} {r}%', { s: m.scheme, r: String(it.GstRt || 0) }), it.IgstAmt || it.CgstAmt || 0]];
   const cess = Number(it.CesAmt || 0);
   const sw = (k, label) =>
-    `<button class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
+    `<button data-cbsid="CAT005-B13" class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
   const today = CBLocale.date(new Date());
   const gross = Number(m.line.unit_price || 0) * Number(m.om.qty || 1);
   const rows = [[tx('Gross'), gross]]
@@ -21055,7 +21055,7 @@ function prodInvoiceTab(d) {
   const noteRows = prodInvoiceNotesHTML(m);
   return (
     `<div class="sec">${tx('Invoice')}</div>` +
-    `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST ? tx('Same state') : tx('Domestic'))}${sw('other', m.isGST ? tx('Other state') : tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>` +
+    `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST ? tx('Same state') : tx('Domestic'))}${sw('other', m.isGST ? tx('Other state') : tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input data-cbsid="CAT005-I19" type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>` +
     `<div data-testid="prod-invoice" style="margin:6px 12px;background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;max-width:720px;box-shadow:0 1px 3px rgba(0,0,0,.06)">` +
     `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div data-testid="prod-invoice-supplier"><div style="font-size:16px;font-weight:800">${esc(m.seller.name || tx('Your business'))}</div>${m.seller.trade ? '<div style="color:#666">' + esc(tx('trading as') + ' ' + m.seller.trade) + '</div>' : ''}${m.seller.gstn ? '<div>GSTIN ' + esc(m.seller.gstn) + (m.seller.pan ? ' · PAN ' + esc(m.seller.pan) : '') + '</div>' : ''}${m.seller.address ? '<div style="color:#666">' + esc(m.seller.address) + '</div>' : ''}${m.seller.state ? '<div style="color:#666">' + esc(m.seller.state) + (m.seller.country ? ', ' + esc(m.seller.country) : '') + '</div>' : ''}${m.seller.phone || m.seller.email ? '<div style="color:#666">' + esc([m.seller.phone, m.seller.email].filter(Boolean).join(' · ')) + '</div>' : ''}</div>` +
     `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos === 'other' ? (m.isGST ? tx('other state') : tx('abroad')) : m.isGST ? tx('state ') + m.seller.state : tx('domestic'))}</div></div></div>` +
@@ -21103,7 +21103,7 @@ function prodRowsPick() {
       `<div data-testid="prod-rows-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">` +
       PROD_TABS.map(
         (item) =>
-          `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${item[0]}" data-testid="prod-row-tick-${item[0]}" ${on(item[0]) ? 'checked' : ''} ${PROD_ROWS_FIXED.indexOf(item[0]) >= 0 ? 'disabled' : ''}> ${tx(item[1])}</label>`
+          `<label style="display:flex;gap:8px;align-items:center"><input data-cbsid="CAT005-I20" type="checkbox" data-row="${item[0]}" data-testid="prod-row-tick-${item[0]}" ${on(item[0]) ? 'checked' : ''} ${PROD_ROWS_FIXED.indexOf(item[0]) >= 0 ? 'disabled' : ''}> ${tx(item[1])}</label>`
       ).join('') +
       `</div>` +
       `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`
@@ -21270,7 +21270,7 @@ function prodBarcodeTab(d) {
     `<div class="sec">${tx('Barcode')}</div>` +
     `<div data-testid="prod-barcode" data-code="${esc(code)}" style="padding:10px 12px;overflow-x:auto;background:#fff;color:#000;border-radius:9px;margin:0 12px;max-width:100%">${r.svg}</div>` +
     `<div style="padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2)">` +
-    `<button class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
+    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
     `<span style="color:var(--grey)">${tx('Code 128 · internal · a GS1 barcode needs an assigned prefix.')}</span></div>`
   );
 }
@@ -21417,13 +21417,13 @@ function prodPricingHTML(d) {
   const u = CBPricing.unitPrice(row, qty, list);
   const pick = editing
     ? defs.length
-      ? `<select class="inp" id="ct_pricing_def" data-testid="prod-pricing-def" onchange="prodPricingRepaint()"><option value="">— ${esc(tx('list price only'))} —</option>${cbPricingOptionsHTML(defs, row.pricing_def)}</select>`
+      ? `<select data-cbsid="CAT005-S06" class="inp" id="ct_pricing_def" data-testid="prod-pricing-def" onchange="prodPricingRepaint()"><option value="">— ${esc(tx('list price only'))} —</option>${cbPricingOptionsHTML(defs, row.pricing_def)}</select>`
       : `<div style="color:var(--grey)">${tx('No pricing structure yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('pricing')">${tx('Catalogue setup › Pricing')}</span></div>`
     : row.pricing_kind
       ? `<div data-testid="prod-pricing-resolved"><b>${esc(CBPricing.describe(row))}</b></div>`
       : `<div data-testid="prod-pricing-resolved"><b>${esc(tx('List price'))}</b> ${grey(esc(tx('— no structure cited')))}</div>` +
         (defs.length
-          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
+          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
           : '');
   /* the outcome: the bands at this product's list price, and the unit price at the sample quantity */
   const bands = CBPricing.bands(row, list);
@@ -21573,7 +21573,7 @@ function prodTaxHTML(d) {
 
   const pick = editing
     ? slabs.length
-      ? `<select class="inp" id="ct_tax_slab" data-testid="prod-tax-slab" onchange="prodTaxRepaint()">` +
+      ? `<select data-cbsid="CAT005-S08" class="inp" id="ct_tax_slab" data-testid="prod-tax-slab" onchange="prodTaxRepaint()">` +
         `<option value="">— ${esc(tx('inherit'))} —</option>` +
         /* ⚠️⚠️ SELECTED FROM `row`, NOT FROM THE SAVED PRODUCT. The repaint below REPLACES this select, so
              marking the saved value as selected would snap the dropdown back to the old slab the instant you
@@ -21603,8 +21603,8 @@ function prodTaxAttachHTML(d, r, slabs) {
     return `<div data-testid="prod-tax-attach" style="margin-top:6px;color:var(--grey)">${tx('No live slab to attach.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`;
   return (
     `<div data-testid="prod-tax-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">` +
-    `<select class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
-    `<button class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
+    `<select data-cbsid="CAT005-S09" class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
+    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
   );
 }
 async function prodTaxAttach(id) {
@@ -21856,7 +21856,7 @@ function prodTaxPreviewHTML(d, r) {
 function prodDetailHTML() {
   if (UI.refSel != null && (UI.refCat || [])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]); // BRIDGE: rich finish showcase
   if (UI.prodMode === 'new') {
-    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
+    return `<div class="dh"><button data-cbsid="CMP006" data-cbmount="CAT005-U106" class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
   }
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
   /* ⭐ THE PROSE SAID "or add a new one" AND MADE THEM GO FIND THE BUTTON. That is the one thing an empty
@@ -21864,14 +21864,14 @@ function prodDetailHTML() {
   if (!p) return emptyState('🗂️', tx('Select a product'), tx('Pick one to view or edit.'), { label: tx('+ New product'), onclick: 'newProduct()' });
   const d = pData(p),
     id = prodId(p);
-  const back = `<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
+  const back = `<button data-cbsid="CMP006" data-cbmount="CAT005-U106" class="dback" onclick="backToList()">‹ Catalogue</button>`;
   /* ⚠️ THIS SAID `background:var(--ink)`. `--ink` is the BODY TEXT colour — near-black on a light theme, which is
      why a dark segment looked right — but in dark it inverts to near-WHITE, so the selected segment became a white
      box with white (`--on-accent`) letters: 1.21:1, the "letter inside the box is not visible at all" Athi
      photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg = (m, l) =>
-    `<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
+    `<button data-cbsid="CAT005-B17" onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const head = `<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price">${(() => {
     /* the same price column as the lists (Athi, 2026-09-06: the header said ₹101 while the list said ₹90.90) */ try {
       const x = prodDeals(d, prodId(p));
@@ -21903,7 +21903,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
+    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
