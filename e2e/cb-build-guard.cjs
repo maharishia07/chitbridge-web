@@ -89,7 +89,7 @@ function bustedAt() {
   const src = fs.readFileSync(path.join(PUB, 'app.html'), 'utf8').split('\n');
   const ln = src.findIndex((l) => /const\s+CB_BUILD\s*=/.test(l)) + 1;
   if (!ln) return 0;
-  const out = git(['log', '-1', '--format=%ct', '-L', ln + ',' + ln + ':public/app.html']);
+  const out = git(['log', '-1', '--format=%ct', '-L', ln + ',' + (ln + 1) + ':public/app.html']);
   const first = String(out).split('\n')[0].trim();
   return /^\d+$/.test(first) ? Number(first) : 0;
 }
