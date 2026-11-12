@@ -940,7 +940,7 @@ function offCard() {
 }
 function failedCard() {
   card(
-    `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
+    `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button data-cbsid="CMP009" type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
     true
   );
   $('retry').onclick = () => start();

@@ -538,7 +538,7 @@ function ftShopPaint() {
       esc(tx('Shop terms')) +
       '</h2><p data-testid="ft-error">' +
       esc(tx('Could not read terms. Try again.')) +
-      '</p><button type="button" class="act" data-testid="ft-retry" onclick="ftLoad()">' +
+      '</p><button data-cbsid="CMP009" type="button" class="act" data-testid="ft-retry" onclick="ftLoad()">' +
       esc(tx('Try again')) +
       '</button>';
     return;
@@ -567,7 +567,7 @@ function ftShopPaint() {
 /** the save bar: the button (greyed while nothing changed, a rule is broken or the person may not set terms) and the line that says why */
 function ftSaveBar(testId, whyId, outTestId, onclick, greyed) {
   return (
-    '<div style="display:flex;gap:10px;align-items:center;margin-top:10px"><button type="button" class="act" data-testid="' +
+    '<div style="display:flex;gap:10px;align-items:center;margin-top:10px"><button data-cbsid="CMP001" type="button" class="act" data-testid="' +
     testId +
     '" data-off="' +
     (greyed ? '1' : '0') +
@@ -697,10 +697,10 @@ async function ftOpen(pid) {
   if (foot) foot.remove();
   body.insertAdjacentHTML(
     'afterend',
-    '<div class="mfoot"><span id="ftp_why" data-testid="ftp-out" class="hint"></span><button type="button" onclick="closeModal()">' +
+    '<div class="mfoot"><span id="ftp_why" data-testid="ftp-out" class="hint"></span><button data-cbsid="CMP005" type="button" onclick="closeModal()">' +
       esc(tx('Close')) +
       '</button>' +
-      '<button type="button" class="act" data-testid="ftp-save" data-off="' +
+      '<button data-cbsid="CMP001" type="button" class="act" data-testid="ftp-save" data-off="' +
       (off ? '1' : '0') +
       '" disabled onclick="ftSaveParty(\'' +
       esc(pid) +

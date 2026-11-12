@@ -1430,7 +1430,7 @@ function _folderRulesPane() {
       '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">' +
       tx('Save rule') +
       '</button>' +
-      '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);cursor:pointer;color:var(--grey)">' +
+      '<button data-cbsid="CMP003" onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);cursor:pointer;color:var(--grey)">' +
       tx('Cancel') +
       '</button></div>';
 

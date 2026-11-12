@@ -318,7 +318,7 @@ async function downloadCatalogueTemplate(btn) {
           tx('📄 Catalogue template') +
           '</div><div class="mbody">' +
           body +
-          '</div><div class="mfoot"><button class="pri" onclick="closeModal()">' +
+          '</div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('Got it') +
           '</button></div>'
       );
