@@ -108,6 +108,9 @@ jobs:
           node e2e/ui-batch-clock.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
           node e2e/ui-codes-shop.test.cjs
+          node e2e/ui-codes-intake.test.cjs
+          node e2e/intake-page-checks.test.cjs
+          node e2e/ui-codes-authority-forms.test.cjs
           node e2e/bulk-resume.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
