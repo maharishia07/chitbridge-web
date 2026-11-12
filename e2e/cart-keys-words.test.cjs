@@ -13,7 +13,7 @@ const cart = fs.readFileSync(path.join(app, 'cart.js'), 'utf8'), fin = fs.readFi
 const KEYS = ['Open the cart', 'Clear the cart', 'Remove from the cart'];
 KEYS.forEach((k) => {
   ok(!new RegExp('aria-label="' + k + '"').test(cart), 'cart.js has no English literal aria-label "' + k + '"');
-  ok(cart.indexOf("say('" + k + "')") >= 0, 'cart.js names "' + k + '" through say() (tx)');
+  ok(cart.indexOf("translated('" + k + "')") >= 0, 'cart.js names "' + k + '" through translated() (tx)');
 });
 ['hi', 'ta', 'fr', 'ar'].forEach((l) => {
   const B = {}; B[l] = {};

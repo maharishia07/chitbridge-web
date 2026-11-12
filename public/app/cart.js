@@ -75,12 +75,12 @@
   /* the span-with-onclick controls (bar, clear, add all, remove) are marked for the one Enter/Space rule, app/kbd-press.js (CMP053); every page that loads this file loads that first */
   var KBD_PRESS = ' role="button" tabindex="0"';
   /** a word for a screen reader through the translation path (accounts-shell tx), English where a page has none */
-  function say(english) {
+  function translated(english) {
     return typeof tx === 'function' ? tx(english) : english;
   }
   /** the cart bar's open control: pressable only while there is something to open */
   function barPress(on) {
-    return on ? KBD_PRESS + ' aria-label="' + esc(say('Open the cart')) + '"' : '';
+    return on ? KBD_PRESS + ' aria-label="' + esc(translated('Open the cart')) + '"' : '';
   }
   /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md): CBMoney (engine/money.js) in a page,
      lib/money.js in node. Looked up PER CALL, because on the shop screen an engine can load before money.js does.
@@ -1376,7 +1376,7 @@
         ? '<span class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
           esc(ns) +
           '\')"' +
-          ' title="' + esc(say('Clear the cart')) + '" aria-label="' + esc(say('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
+          ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
         : '') +
       '</div>' +
       (on && T.partial ? '<div class="cbcart-partial">Some lines have no price — the total covers only the priced ones.</div>' : '')
@@ -1722,7 +1722,7 @@
                 (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * item.qty)) + '</span>' : '') +
                 '</div></span>' +
                 stepperHTML(ns, item.item_id, item.qty) +
-                '<span data-cbsid="CMP008"' + KBD_PRESS + ' aria-label="' + esc(say('Remove from the cart')) + '" onclick="CBCart.setQty(\'' +
+                '<span data-cbsid="CMP008"' + KBD_PRESS + ' aria-label="' + esc(translated('Remove from the cart')) + '" onclick="CBCart.setQty(\'' +
                 esc(ns) +
                 "','" +
                 esc(item.item_id) +
