@@ -76,7 +76,6 @@ jobs:
           npm run check:eps
           npm run check:undeclared
           npm run check:barereturn
-      # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       # QA-153 (13 Nov): 41 offline guards that passed on main and that no CI job ran (packs only, or nothing). No browser, no sibling repo.
       - name: Offline guards no CI job ran (QA-153)
         run: |
@@ -121,6 +120,7 @@ jobs:
           node e2e/standards-one-list.cjs
           node e2e/theme-literals.cjs
           node e2e/shop-switch.cjs
+      # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |
           node e2e/cx4-pack-words.cjs
