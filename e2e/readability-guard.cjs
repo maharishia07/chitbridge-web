@@ -328,6 +328,15 @@ const movedBody = exact.verdict.stdout.slice(exact.verdict.stdout.indexOf('## §
 ok(/- moved: 1 function/.test(movedBody) && checklist.problems(movedBody).length === 0, 'the §6 checklist with the moved line still passes pr-checklist');
 for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmSync(scenario.dir, { recursive: true, force: true });
 
+// ── 7 · the header-template grammar (tools/readability/headers.cjs, PM/HEADER-TEMPLATE.md): a full header passes, each missing field is named, a test needs CARD or UNIT
+const headerKit = require('../tools/readability/headers.cjs');
+const FULL = '/* public/app/x.js — shows x.\n   KIND      component\n   OWNER     cb-ux-locale\n   ID        CMP001\n   OWNS      x\n   CALLED BY y\n   CARD      07-x/x\n   RISK      plain\n*/\n';
+ok(headerKit.stateOf('component', headerKit.readFields(FULL, 'public/app/x.js')).state === 'full', 'header template: a header with every required field is full');
+ok(headerKit.stateOf('component', headerKit.readFields(FULL.replace(/ +RISK +plain\n/, ''), 'public/app/x.js')).lacks.join() === 'RISK', 'header template: a header without RISK is partial and names RISK');
+ok(headerKit.stateOf('module', headerKit.readFields('const a = 1;\n', 'lib/a.js')).state === 'none', 'header template: no comment at all is none');
+ok(headerKit.stateOf('test', headerKit.readFields('// tests/a.test.cjs — a.\n// KIND test\n// OWNER cb-qa\n// UNIT 08/Rewards\n', 'tests/a.test.cjs')).state === 'full', 'header template: a test with UNIT instead of CARD is full (test-evidence grammar kept)');
+ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: a label with a colon is not a field (one grammar)');
+
 fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
 process.exit(bad ? 1 : 0);
