@@ -260,7 +260,7 @@ function finCols() {
       html: true,
       cell: function (p) {
         var ag = finAgeTail(p);
-        var ageSpan = ag ? '<span data-b="age" title="' + esc(tx('Days past the due date')) + '" style="color:var(--grey)">' + (p.oldest_due ? '· ' : '') + esc(ag) + '</span>' : '';
+        var ageSpan = ag ? '<span data-b="age" title="' + esc(tx('Days past the due date')) + '" style="color:var(--grey);white-space:nowrap">' + (p.oldest_due ? '· ' : '') + esc(ag) + '</span>' : '';
         // no overdue bill but money owed later still says so ("Not due yet"), never a bare dash (FIN-72, walk F15)
         if (!p.oldest_due) return ageSpan || dash;
         return '<span data-b="due">' + esc(bkDate(p.oldest_due)) + '</span> ' + ageSpan;
