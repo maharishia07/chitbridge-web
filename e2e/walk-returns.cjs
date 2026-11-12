@@ -23,7 +23,8 @@ const W = require('./lib/walk.cjs');
 const C = require('./lib/contract.cjs');
 const books = require('./lib/books-api.cjs');
 const J = C.json;
-const SESS = (name) => JSON.parse(W.session(name, name));
+const SESS = (name, role) => Object.assign(JSON.parse(W.session(name, name)), role ? { role } : {});   /* role 'actor' = a signed-in staff login (the shop's auditor), not the owner */
+const DENY = "Only the owner or the shop's auditor may read the returns.";
 
 /* ── the stand-in's answers, in the server's shape (lib/books-period.taxReturn) ── */
 const AU_PERIODS = [
@@ -115,6 +116,7 @@ async function stub(ctx, kind, S) {
       return J(r, 200, { payment_ref: b.payment_ref, paid_minor: b.amounts && b.amounts.gst_minor ? { gst: b.amounts.gst_minor } : { vat: (b.amounts || {}).vat_minor || 0 }, ok: true, entry_id: '00000000-0000-4000-8000-000000000131', entry_no: kind === 'AU' ? 'MJ/2026-27/000012' : 'MJ/2026/000012', posting_date: '2026-10-15', doc_date: '2026-10-15', moved: false, lines: 2, items: 0, note: null });
     }
     if (p === '/api/books/returns') {
+      if (S.deny) return J(r, 403, { code: 'BOOKS_RETURN_READ_NOT_ALLOWED', error: DENY, message: DENY });   /* ACC-229: any other login, refused in words */
       if (kind === 'IN') return J(r, 200, IN_RAIL);   /* TOUR-FIX1: the API answers (200 form:null) — the 422 the page swallowed is gone */
       if (kind === 'AU') return J(r, 200, bas(u.searchParams.get('simpler') !== '0', u.searchParams.get('period')));
       return J(r, 200, u.searchParams.get('stagger') ? vat201(u.searchParams.get('emirate'), u.searchParams.get('period')) : vatNeeds());
@@ -122,14 +124,14 @@ async function stub(ctx, kind, S) {
     return J(r, 404, { error: 'not found' });
   });
 }
-async function open(w, kind, name, tz, vp, hash, theme) {
+async function open(w, kind, name, tz, vp, hash, theme, role, deny) {
   const ctx = await w.browser.newContext({ viewport: vp || { width: 1280, height: 860 }, locale: 'en', timezoneId: tz, serviceWorkers: 'block' });
   if (theme) await ctx.addInitScript((t) => { try { localStorage.setItem('cb_theme', t); } catch (_) {} }, theme);
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
   try { await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: w.base }); } catch (_) {}
-  const S = { calls: [], name };
+  const S = { calls: [], name, deny: !!deny };
   await stub(ctx, kind, S);
-  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, SESS(name));
+  await ctx.addInitScript((s) => { try { localStorage.setItem('cb_sess', JSON.stringify(s)); } catch (_) {} }, SESS(name, role));
   const page = await ctx.newPage();
   const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
   await page.goto(w.base + '/accounts.html#' + (hash || 'gstclose'));
@@ -234,6 +236,23 @@ W.run('returns', async (w) => {
       saw: used + ' · rcm ' + rcm + ' · ' + total + ' · ref: ' + refLabel + ' · May–Jul -> "' + why.slice(0, 80) + '…" forms=' + forms + (AE.errs.length ? ' · ERRORS ' + AE.errs.join(' | ') : '') };
   });
   await AE.ctx.close();
+
+  /* R9 · ACC-229: the shop's auditor (a staff login, not the owner) READS the BAS; Close is not offered, the sentence is. Any other login is refused in the server's words. */
+  const AUD = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', null, 'gstclose', null, 'actor');
+  await w.step('R9', 'ACC-229: the auditor opens Tax close -> sees the BAS boxes (G1 1A 1B 9) and the To pay line, and NO Close button (the owner-only sentence instead); (the owner Close is R1b)', async () => {
+    await AUD.page.waitForSelector('[data-testid="pr-box-1A"]', { timeout: 15000 });
+    const a1 = await text(AUD.page, '[data-testid="pr-amt-1A"]'), close = await count(AUD.page, '[data-testid="pr-close"]'), card = await count(AUD.page, '[data-testid="pr-close-card"]');
+    const why = await text(AUD.page, '[data-testid="pe-readonly"]');
+    return { ok: /950[.]00/.test(a1) && close === 0 && card === 0 && /Only the owner closes and pays GST/.test(why) && AUD.errs.length === 0, saw: '1A ' + a1 + ' · close buttons ' + close + ' · close card ' + card + ' · sentence "' + why + '"' };
+  });
+  await AUD.ctx.close();
+  const DN = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', null, 'gstclose', null, 'actor', true);
+  await w.step('R9b', 'ACC-229: a login the server refuses (403 BOOKS_RETURN_READ_NOT_ALLOWED) sees the sentence the server gives, no boxes, no Close', async () => {
+    await DN.page.waitForSelector('.pe-bad', { timeout: 15000 });
+    const bad = await text(DN.page, '.pe-bad');
+    return { ok: /may read the returns/.test(bad) && (await count(DN.page, '[data-testid^="pr-box-"]')) === 0 && (await count(DN.page, '[data-testid="pr-close"]')) === 0 && DN.errs.length === 0, saw: '"' + bad + '"' };
+  });
+  await DN.ctx.close();
 
   /* R6 · a phone */
   const P = await open(w, 'AU', 'Bondi Grocer', 'Australia/Sydney', { width: 390, height: 844 });

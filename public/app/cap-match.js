@@ -14,6 +14,8 @@
  * never read what the shop pays its suppliers).
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * FLOW      GET /api/till/match ──▶ matchLoad ──▶ matchDetail (lines · Difference cell) ──▶ matchDispute (draft) ──▶ POST /api/chits/:chit_id/disputes
+ * CARD 03-disputes-service-and-register/three-way-match
  */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -106,8 +108,8 @@ function matchScreen() {
     '</select></div>';
 
   if (MATCH.busy && !MATCH.rows)
-    return '<div class="panel">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
-  if (MATCH.error) return '<div class="panel">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
+    return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
+  if (MATCH.error) return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
 
   var body = shown.length
     ? shown.map(matchCard).join('')
@@ -117,7 +119,7 @@ function matchScreen() {
         : esc(tx('No purchase orders yet. Send an order to a supplier, then receive the goods at the counter — this screen fills itself.'))) +
       '</div>';
 
-  return '<div class="panel" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
+  return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
 }
 
 function matchCard(o) {
@@ -125,7 +127,9 @@ function matchCard(o) {
   var open = MATCH.open === o.chit_id;
   return (
     '<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden" data-testid="match-order">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="MATCH.open=' +
+    '<div role="button" tabindex="0" aria-expanded="' +
+    (open ? 'true' : 'false') +
+    '" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" onclick="MATCH.open=' +
     (open ? 'null' : "'" + esc(o.chit_id) + "'") +
     ';renderApp()">' +
     '<span style="font-weight:800;flex:1">' +
@@ -142,14 +146,59 @@ function matchCard(o) {
     '<span style="opacity:.5">' +
     (open ? '▾' : '▸') +
     '</span></div>' +
-    (open ? matchDetail(o, money) : '')
+    (open ? matchDetail(o) : '') +
+    '</div>'
   );
 }
 
-function matchDetail(o, money) {
+/**
+ * CTR-248 (api #1194, OPS-87): goods counted in a unit other than the ordered one sit beside the total, never summed into it, so
+ * the cell says both (short 6 · counted in another unit ...) and never hides one behind the other. One segment per other unit; no conversion is guessed, a person settles it.
+ * Returns '' for an ordinary line, so the caller falls through to short / excess.
+ */
+function matchOtherUnits(item) {
+  if (!item.counted_in_another_unit || !Array.isArray(item.other_units) || !item.other_units.length) return '';
+  return item.other_units
+    .map(function (part) {
+      var seen = function (n) {
+        return n == null ? '—' : n;
+      };
+      return txf('counted in another unit: {unit} mine {mine} / theirs {theirs}', { unit: part.unit, mine: seen(part.mine), theirs: seen(part.theirs) });
+    })
+    .join(' · ');
+}
+
+/**
+ * The words of a line's Difference: the shortfall or excess in the ORDERED unit, then the other-unit counts (the api flags
+ * counted_in_another_unit whenever other_units is non-empty, so 10 box ordered / 4 box + 2 dozen received says both). '' = agrees.
+ */
+function matchDiffWords(item) {
+  var parts = [];
+  if (item.difference < 0) parts.push(txf('short {n}', { n: String(-item.difference) }));
+  else if (item.difference > 0) parts.push(txf('excess {n}', { n: String(item.difference) }));
+  var other = matchOtherUnits(item);
+  if (other) parts.push(other);
+  return parts.join(' · ');
+}
+
+/** the Difference cell of one line: the words, warn-coloured when there are any, else "agrees" in ok-colour; the door's reason after */
+function matchDiffCell(item) {
+  var words = matchDiffWords(item);
+  return (
+    '<td style="padding:6px 8px;color:' +
+    (words ? 'var(--warn)' : 'var(--ok)') +
+    ';font-weight:' +
+    (words ? '700' : '400') +
+    '">' +
+    (words ? esc(words) : tx('agrees')) +
+    (item.reason ? ' · ' + esc(item.reason) : '') +
+    '</td>'
+  );
+}
+
+function matchDetail(o) {
   var rows = o.lines
     .map(function (item) {
-      var bad = item.difference !== 0;
       return (
         '<tr data-testid="match-line">' +
         '<td style="padding:6px 8px">' +
@@ -163,14 +212,8 @@ function matchDetail(o, money) {
         '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' +
         item.received +
         '</td>' +
-        '<td style="padding:6px 8px;color:' +
-        (bad ? 'var(--warn)' : 'var(--ok)') +
-        ';font-weight:' +
-        (bad ? '700' : '400') +
-        '">' +
-        (bad ? (item.difference < 0 ? txf('short {n}', { n: String(-item.difference) }) : txf('excess {n}', { n: String(item.difference) })) : tx('agrees')) +
-        (item.reason ? ' · ' + esc(item.reason) : '') +
-        '</td></tr>'
+        matchDiffCell(item) +
+        '</tr>'
       );
     })
     .join('');
@@ -266,7 +309,7 @@ function matchDispute(chit_id) {
   })[0];
   if (!o) return;
   var list = o.lines.filter(function (item) {
-    return item.difference !== 0;
+    return matchDiffWords(item) !== '';
   });
   var draft = list
     .map(function (item) {
@@ -278,7 +321,9 @@ function matchDispute(chit_id) {
         item.unit +
         ', received ' +
         item.received +
-        (item.difference < 0 ? ' (short ' + -item.difference + ')' : ' (excess ' + item.difference + ')') +
+        ' (' +
+        matchDiffWords(item) +
+        ')' +
         (item.reason ? ' — ' + item.reason : '')
       );
     })
