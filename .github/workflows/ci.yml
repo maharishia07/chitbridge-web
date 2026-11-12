@@ -128,7 +128,6 @@ jobs:
           node e2e/cb-build-guard.cjs
           node e2e/empty-states.cjs
           node e2e/list-standard.cjs
-          node e2e/policy-reachable.cjs
           node e2e/silent-control.cjs
           node e2e/token-check.cjs
           node e2e/tooltip-length.cjs
@@ -286,6 +285,10 @@ jobs:
           node e2e/connector-gofrugal.test.cjs
           node e2e/connector-purchase.test.cjs
           node e2e/connector-zoho.test.cjs
+      - name: Every policy flag the API reads can be set by somebody (policy-reachable, QA-154 baseline; CB_API_REPO set, so a missing api FAILS)
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: node e2e/policy-reachable.cjs
 
   till-copies:
     # THE COPIES OF THE COUNTER SCREEN ARE JUDGED AT A PINNED API COMMIT (11 Nov 2026, root cause of the api reds on its vendor and parse guards).

@@ -31,7 +31,8 @@ const fs = require('fs');
 const path = require('path');
 
 const WEB = path.join(__dirname, '..', 'public');
-const POLICY = path.join(__dirname, '..', '..', 'chitbridge-api', 'lib', 'policy.js');
+/* QA-154: CB_API_REPO names the api checkout (ci.yml's .side/chitbridge-api); when it is set the api MUST be there (a skip would be a green no-op) */
+const POLICY = path.join(process.env.CB_API_REPO ? path.resolve(process.env.CB_API_REPO) : path.join(__dirname, '..', '..', 'chitbridge-api'), 'lib', 'policy.js');
 
 /**
  * ⚠️ Each entry is a REASON, not a silencer. When one of these grows a screen, delete its line — and if a line
@@ -54,7 +55,7 @@ const fails = [];
 
 if (!fs.existsSync(POLICY)) {
   console.log('\n── policy flags reachable ──\n  skipped: ../chitbridge-api not checked out\n');
-  process.exit(0);
+  process.exit(process.env.CB_API_REPO ? 1 : 0);
 }
 
 /** every flag key the API declares — read from the source, so a new flag is caught the day it lands */

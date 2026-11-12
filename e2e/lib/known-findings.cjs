@@ -13,6 +13,7 @@
  *
  * KEY       a finding's key is stable text WITHOUT its line number (file + the offending text), so a blank line added above it
  *           does not turn a known finding into a new one. Two findings with one key count twice.
+ * STALE     a baseline entry no longer found FAILS until --write lowers it (so a fixed finding cannot return under its old key unseen).
  * WRITE     `node e2e/<scanner>.cjs --write` records today's findings. It REFUSES to write a count above the recorded one,
  *           and a new key is "new" even when another went away. Only a first record for a scanner may be written from nothing.
  */
@@ -58,6 +59,12 @@ function ratchet(name, items, opts) {
     fs.writeFileSync(FILE, JSON.stringify(sorted, null, 1) + '\n');
     console.log('  baseline written: ' + name + ' ' + items.length + ' finding(s)');
     process.exit(0);
+  }
+  /* a known entry that is no longer found must fail until --write lowers the baseline (the list only shrinks, and a fixed finding that
+     comes back under the same key must not be forgiven by a stale row). Set in an exit hook so every scanner keeps its own exit path. */
+  if (fixed) {
+    console.error('  ✗ ' + fixed + ' baseline entr' + (fixed === 1 ? 'y' : 'ies') + ' of [' + name + '] no longer found: lower it with  node e2e/' + path.basename(process.argv[1]) + ' --write');
+    process.on('exit', () => { process.exitCode = 1; });
   }
   return { fresh, known, fixed, countRise, line, baseline: row.count };
 }
