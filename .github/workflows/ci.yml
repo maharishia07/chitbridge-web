@@ -114,6 +114,7 @@ jobs:
           node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
+          node e2e/p2-small-3.test.cjs
           node tests/avatar-hydrate.test.cjs
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
