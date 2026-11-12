@@ -9,7 +9,6 @@
  *           fetch error. Run against the page's own script in a vm context with a stubbed document and fetch: no browser.
  * CALLED BY by hand and the QA gate: node e2e/intake-page-checks.test.cjs
  * FLOW      UX-137 step 3 (utility page intake.html); with e2e/ui-codes-intake.test.cjs it is the readability minimums of that page.
- * CARD      22-channels-capture-and-messaging/intake-screen
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'intake.html'), 'utf8').split('\r\n').join('\n');
