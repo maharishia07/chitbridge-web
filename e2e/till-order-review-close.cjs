@@ -57,7 +57,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(40) + '· ' + d 
   console.log('\n── the round button appears without turning on "send a KOT" ' + '─'.repeat(2));
   await p.fill('[data-testid="till-order-new"]', '7');
   await p.click('[data-testid="till-order-go"]');
-  await p.waitForTimeout(150);
+  /* wait for the bar to paint (a slow runner is not a 150 ms one): the round button and "=" are drawn by the same repaint */
+  await p.waitForSelector('[data-testid="till-kot"][aria-label]', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="till-order-bring"]', { timeout: 10000 });
   const bar = await p.evaluate(() => ({
     kotText: ((document.querySelector('[data-testid="till-kot"]') || {}).getAttribute && document.querySelector('[data-testid="till-kot"]').getAttribute('aria-label')) || '',   // I1: the word is the aria-label now
     kotOn: kotOn(),
