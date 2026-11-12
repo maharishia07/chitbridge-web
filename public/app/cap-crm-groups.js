@@ -478,9 +478,9 @@ function crmGroupOpen(name) {
       '" autocomplete="off" oninput="crmGroupPick(this.value)"></label>' +
       '<div id="crm_grp_list" class="grp-list" data-testid="crm-grp-list"></div>' +
       '<div id="crm_grp_msg" class="hint" role="status" data-testid="crm-grp-msg"></div></div>' +
-      '<div class="mfoot"><span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="grpsave" data-testid="crm-grp-save">' +
+      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="grpsave" data-testid="crm-grp-save">' +
       esc(tx('Save')) +
       '</button></div>'
   );
@@ -638,7 +638,7 @@ function crmSendOpen(group, prefill) {
       esc(tx('Check who may be sent first; nothing goes out until you press Send.')) +
       '</div>' +
       '<div id="crm_send_out" data-testid="crm-send-out"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" type="button" onclick="closeModal()">' +
       esc(tx('Close')) +
       '</button><button type="button" data-crm="sendcheck" data-testid="crm-send-check">' +
       esc(tx('Who may be sent?')) +
@@ -1044,7 +1044,7 @@ function crmShareGroup() {
           );
         })
         .join('') +
-      '</div><div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '</div><div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button></div>'
   );
