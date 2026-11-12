@@ -42,8 +42,12 @@ if (/identity_type|hat ===|role ===|isOwner|parent_entity_id/.test(na)) bad('net
 const door = man.entries.filter((e) => e.id === 'network')[0], nl = man.entries.filter((e) => e.id === 'network-lab')[0];
 if (!door || door.route !== '/network.html' || door.state !== 'built') bad('the Network door must open /network.html as built');
 if (!nl || nl.route !== '/network-design.html' || nl.area !== 'labs' || nl.state !== 'built') bad('the Network Lab must be on the Labs row, built');
-/* a CALL to build, not the words in the header comment that name it */
-if (!/sample:\s*true/.test(lab) || !/\/api\/network-design\/validate/.test(lab) || /fetch\([^)]*\/api\/network-design\/build|method:\s*'PUT'/.test(lab)) bad('the lab may only post sample:true to validate — never build or save');
+/* comments are not calls: strip HTML, block and line comments (a line comment starts at // not after a colon) before looking for a call to build or a PUT */
+const code = (t) => t.replace(/<!--[^]*?-->/g, '').replace(/\/\*[^]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+const callsBuild = (t) => /fetch\([^)]*\/api\/network-design\/build|method:\s*'PUT'/.test(code(t));
+if (!/sample:\s*true/.test(code(lab)) || !/\/api\/network-design\/validate/.test(code(lab)) || callsBuild(lab)) bad('the lab may only post sample:true to validate - never build or save');
+if (callsBuild('<!-- POST /api/network-design/build -->\n/* fetch(a + "/api/network-design/build") */\n// method: \'PUT\'')) bad('self-test: a comment that names build is not a call');
+if (!callsBuild("fetch(api + '/api/network-design/build', {method: 'POST'})") || !callsBuild("x({ method: 'PUT' })")) bad('self-test: a real call to build or a PUT is caught');
 else ok('door built · Network Lab on the Labs row · the lab posts nothing real');
 
 console.log(fail ? '\nnetwork-guard: ' + fail + ' FAILED' : '\nnetwork-guard: all passed');
