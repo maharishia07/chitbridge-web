@@ -758,7 +758,7 @@ function crmBar(crumb, action, overlay) {
 /** the page action a login may not take is SHOWN, greyed, with the server's sentence — never hidden (rule: show the action, the server decides; FX-L2C) */
 function crmViewOnlyBtn(tid, label, why) {
   return (
-    '<button type="button" class="act sm ghost" disabled aria-disabled="true" title="' +
+    '<button data-cbsid="CRM001-B03" type="button" class="act sm ghost" disabled aria-disabled="true" title="' +
     esc(why) +
     '" data-testid="' +
     tid +
@@ -773,12 +773,12 @@ function crmViewOnlyBtn(tid, label, why) {
 }
 function crmAddBtn() {
   return crmEdit()
-    ? '<button type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>'
+    ? '<button data-cbsid="CRM001-B04" type="button" class="act sm" data-testid="crm-add" data-crm="add">+ ' + esc(tx('Add party')) + '</button>'
     : crmViewOnlyBtn('crm-add', '+ ' + tx('Add party'), crmViewWhy());
 }
 function crmAddFuBtn() {
   return crmEdit()
-    ? '<button type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>'
+    ? '<button data-cbsid="CRM001-B05" type="button" class="act sm" data-testid="crm-fu-add" data-crm="fuadd">+ ' + esc(tx('Add follow-up')) + '</button>'
     : crmViewOnlyBtn('crm-fu-add', '+ ' + tx('Add follow-up'), crmViewWhy());
 } /* never hidden — greyed with the reason */
 function crmGo(hash, replace) {
@@ -1290,7 +1290,7 @@ function crmMiniChitRows(list, key) {
   else
     (list || []).forEach(function (e, index) {
       rows.push(
-        '<div class="mc-c"' +
+        '<div data-cbsid="CRM001-B06" class="mc-c"' +
           (e.chit_id ? ' role="button" tabindex="0" data-crm="minichit" data-id="' + esc(e.chit_id) + '"' : '') +
           ' data-testid="crm-mini-chit-' +
           esc(key) +
@@ -1628,7 +1628,7 @@ function crmFuWhat(f) {
           data: { crm: 'fudone', id: f.followup_id }
         }) +
         (f.assignee_left
-          ? ' <button type="button" class="crm-mini" data-crm="fuassign" data-id="' +
+          ? ' <button data-cbsid="CRM001-B07" type="button" class="crm-mini" data-crm="fuassign" data-id="' +
             esc(f.followup_id) +
             '" data-testid="crm-fu-assign-' +
             esc(f.followup_id) +
@@ -2053,7 +2053,7 @@ function crmAddOpen(q) {
       '</p>' +
       '<label>' +
       esc(tx('Who?')) +
-      '<input class="inp" id="crm_addq" data-testid="crm-addq" value="' +
+      '<input data-cbsid="CRM001-I01" class="inp" id="crm_addq" data-testid="crm-addq" value="' +
       esc(ADD.q) +
       '" placeholder="' +
       esc(tx('Name, User ID, phone or e-mail')) +
@@ -2062,11 +2062,11 @@ function crmAddOpen(q) {
       esc(tx('As')) +
       '</span><div class="seg2" role="group" aria-label="' +
       esc(tx('Role')) +
-      '"><button type="button" data-crm="addrole" data-v="customer" aria-pressed="true" data-testid="crm-add-role-customer">' +
+      '"><button data-cbsid="CRM001-B08" type="button" data-crm="addrole" data-v="customer" aria-pressed="true" data-testid="crm-add-role-customer">' +
       esc(tx('Customer')) +
-      '</button><button type="button" data-crm="addrole" data-v="supplier" aria-pressed="false" data-testid="crm-add-role-supplier">' +
+      '</button><button data-cbsid="CRM001-B09" type="button" data-crm="addrole" data-v="supplier" aria-pressed="false" data-testid="crm-add-role-supplier">' +
       esc(tx('Supplier')) +
-      '</button><button type="button" data-crm="addrole" data-v="both" aria-pressed="false" data-testid="crm-add-role-both">' +
+      '</button><button data-cbsid="CRM001-B10" type="button" data-crm="addrole" data-v="both" aria-pressed="false" data-testid="crm-add-role-both">' +
       esc(tx('Both')) +
       '</button></div></div>' +
       '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div></div>' +
@@ -2173,7 +2173,7 @@ function crmAddResults() {
       '</b><br><span class="hint">' +
       esc(tx('Bills are yours only until they join.')) +
       '</span></span>' +
-      '<button type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go">' +
+      '<button data-cbsid="CRM001-B11" type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go">' +
       esc(tx('Add as local')) +
       '</button></div>';
   box.innerHTML = h;
@@ -2219,7 +2219,7 @@ function crmFuAddOpen(partyKey, then, prefill) {
       '</div></div><div class="mbody" data-testid="crm-fu-sheet">' +
       '<label>' +
       esc(tx('Party')) +
-      '<input class="inp" id="crm_fu_pq" data-testid="crm-fu-pq" placeholder="' +
+      '<input data-cbsid="CRM001-I02" class="inp" id="crm_fu_pq" data-testid="crm-fu-pq" placeholder="' +
       esc(tx('Name or party no')) +
       '" autocomplete="off" value="' +
       esc(p ? p.display_name : '') +
@@ -2227,14 +2227,14 @@ function crmFuAddOpen(partyKey, then, prefill) {
       '<div id="crm_fu_pres" style="display:flex;flex-direction:column;gap:6px"></div>' +
       '<label>' +
       esc(tx('What')) +
-      '<input class="inp" id="crm_fu_what" data-testid="crm-fu-what" placeholder="' +
+      '<input data-cbsid="CRM001-I03" class="inp" id="crm_fu_what" data-testid="crm-fu-what" placeholder="' +
       esc(tx('Call back about…')) +
       '" value="' +
       esc((prefill && prefill.what) || '') +
       '"></label>' +
       '<label>' +
       esc(tx('When')) +
-      '<input class="inp" id="crm_fu_due" data-testid="crm-fu-due" type="date"></label>' +
+      '<input data-cbsid="CRM001-I04" class="inp" id="crm_fu_due" data-testid="crm-fu-due" type="date"></label>' +
       '<div class="supacts">' +
       [
         ['today', 'Today'],
@@ -2243,7 +2243,7 @@ function crmFuAddOpen(partyKey, then, prefill) {
       ]
         .map(function (x) {
           return (
-            '<button type="button" class="crm-mini" data-crm="fupreset" data-v="' +
+            '<button data-cbsid="CRM001-B12" type="button" class="crm-mini" data-crm="fupreset" data-v="' +
             x[0] +
             '" data-testid="crm-fu-preset-' +
             x[0] +
@@ -2256,7 +2256,7 @@ function crmFuAddOpen(partyKey, then, prefill) {
       '</div>' +
       '<label>' +
       esc(tx('Who')) +
-      '<select class="inp" id="crm_fu_who" data-testid="crm-fu-who"><option value="">' +
+      '<select data-cbsid="CRM001-S01" class="inp" id="crm_fu_who" data-testid="crm-fu-who"><option value="">' +
       esc(tx('Me')) +
       '</option>' +
       (CRM.coAssists || [])
@@ -2305,7 +2305,7 @@ function crmFuPicker(q) {
     list
       .map(function (item) {
         return (
-          '<button type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="fupick" data-k="' +
+          '<button data-cbsid="CRM001-B13" type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="fupick" data-k="' +
           esc(item.party_id) +
           '" data-testid="crm-fu-pick-' +
           esc(crmKey(item)) +
