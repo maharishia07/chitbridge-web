@@ -7,7 +7,7 @@
  *           carry a data-cbsid on every control, keep the tap rule, fit with no scroll, work from the keyboard, pass axe and read AA in both themes
  * CALLED BY run-shard (walk-*); by hand: NODE_PATH=$PWD/e2e/node_modules node e2e/walk-shell-wave2.cjs
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/page-frame
- * FLOW      sign in a fixture shop → open accounts · tasks · settings → at 1366 and 390, Cream and Dark → count controls, boxes, focus, axe, contrast
+ * FLOW      sign in a fixture shop → open accounts · tasks · settings → at 1366 and 390, Cream and Dark → count controls, boxes, focus, axe, contrast → Home: tabs, cards, side openers, More rows
  *
  * IT BITES: on main the side menu entries, the Collapse button and the group heads wear no code (a count by testid shows controls with no data-cbsid),
  * so the identity paths FAIL there; with the stamps they pass. A control in the shell zone is a visible button, link, input or tab inside the header,
@@ -38,14 +38,14 @@ function liveCodes() {
 }
 const LIVE = liveCodes();
 
-/** every visible control in the shell zone: its test id, code and box (runs in the page) */
+/** every visible control in a zone: its test id, code and box (runs in the page) */
 const SCAN = (zone) => {
   const sel = 'button, a[href], a[role=button], input:not([type=hidden]), select, textarea, [role=tab], [role=menuitem], [role=switch]';
   const out = [];
   document.querySelectorAll(sel).forEach((el) => {
     const r = el.getBoundingClientRect(), st = getComputedStyle(el);
     if (!(r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none') || !el.closest(zone)) return;
-    out.push({ id: el.getAttribute('data-testid') || el.id || el.className || el.tagName, code: el.getAttribute('data-cbsid'), w: Math.round(r.width), h: Math.round(r.height) });
+    out.push({ id: el.getAttribute('data-testid') || el.id || el.className || el.tagName, code: el.getAttribute('data-cbsid'), mount: el.getAttribute('data-cbmount'), w: Math.round(r.width), h: Math.round(r.height) });
   });
   return out;
 };
@@ -80,6 +80,8 @@ const walk = async (w) => {
         ok: rows.length > 5 && !bare.length && !badForm.length && !dead.length,
         saw: (rows.length - bare.length) + ' of ' + rows.length + ' identified' + (bare.length ? '; none on ' + bare.slice(0, 4).map((x) => x.id).join(', ') : '') + (dead.length ? '; not in the register: ' + dead.slice(0, 3).map((x) => x.code).join(', ') : '')
       }));
+      const noMount = rows.filter((row) => /^CMP054/.test(row.code || '') && !row.mount);
+      await w.step('MOUNT-' + pname + '-' + vname, pname + ' at ' + vname + ': the frame own controls name their mount', async () => ({ ok: !noMount.length, saw: noMount.slice(0, 3).map((x) => x.id).join(', ') || 'every CMP054 control has a mount' }));
       const small = rows.filter((row) => row.w < TAP_MIN || row.h < TAP_MIN), phone = vname === '390' ? rows.filter((row) => row.h < TAP_PHONE || row.w < TAP_PHONE) : [];
       await w.step('TAP-' + pname + '-' + vname, pname + ' at ' + vname + ': every control is at least 24 px' + (vname === '390' ? ' and 44 px on the phone' : ''), async () => ({
         ok: !small.length && !phone.length, saw: small.concat(phone).slice(0, 4).map((x) => x.id + ' ' + x.w + 'x' + x.h).join(', ') || rows.length + ' boxes measured'
@@ -101,6 +103,22 @@ const walk = async (w) => {
         }));
       }
     }
+  }
+
+  /* HOME (HOM001): the area tabs, the cards, the side openers at 1366; the More tab and its rows on a phone. Every control wears a live code of its own kind. */
+  const HOME_ZONE = '.cbsh-hdr, .cbsh-work';
+  const homeSteps = [['1366', { width: 1366, height: 768 }, ['HOM001-K01', 'HOM001-B01', 'HOM001-B03', 'HOM001-B04'], null], ['390', { width: 390, height: 844 }, ['HOM001-K01', 'HOM001-B02'], '[data-testid="shell-nav-more"]']];
+  for (const [vname, view, want, opener] of homeSteps) {
+    await open('/index.html', view, 'cream');
+    if (opener) { await page.click(opener); await page.waitForTimeout(400); }
+    const rows = await page.evaluate(SCAN, HOME_ZONE);
+    const seen = new Set(rows.map((row) => row.code));
+    const bare = rows.filter((row) => !row.code), dead = LIVE ? rows.filter((row) => row.code && !LIVE.has(row.code)) : [];
+    const lacking = want.filter((code) => !seen.has(code));
+    await w.step('HOME-' + vname, 'Home at ' + vname + ': every control wears a live code and ' + want.join(', ') + ' are all in use', async () => ({
+      ok: rows.length > 5 && !bare.length && !dead.length && !lacking.length,
+      saw: (rows.length - bare.length) + ' of ' + rows.length + ' identified' + (bare.length ? '; none on ' + bare.slice(0, 4).map((x) => x.id).join(', ') : '') + (lacking.length ? '; not drawn with: ' + lacking.join(', ') : '') + (dead.length ? '; not in the register: ' + dead.slice(0, 3).map((x) => x.code).join(', ') : '')
+    }));
   }
 
   /* the keyboard pass, wide, on tasks: the side menu is reached by Tab, Enter folds the menu, Enter and Escape work the three header menus */

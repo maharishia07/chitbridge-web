@@ -130,10 +130,10 @@ check(/\.cbsh-rn\{[^}]*height:32px/.test(shellText) && /\.cbsh-btn\{[^}]*height:
 check(shellText.indexOf('.cbsh-rn{height:44px;padding:0 12px}.cbsh-btn{height:44px}') > 0, 'Renew and Finish are 44 px on a phone');
 console.log('the side frame and Home draw their own controls with their own codes (OWN005, HOM001)');
 const FRAME_WANT = [
-  ['page-frame.js', /<button type="button" class="nav-btn[^>]*data-cbsid="OWN005-B01"[^>]*data-sec=/, 'a side-menu entry wears OWN005-B01'],
-  ['page-frame.js', /class="nav-group nav-fold label" data-cbsid="OWN005-B02"/, 'a folding group head wears OWN005-B02'],
-  ['page-frame.js', /id="toggleNav" data-cbsid="OWN005-B03"/, 'the Collapse button wears OWN005-B03'],
-  ['page-frame.js', /role="tab" class="lab-switch-btn" data-cbsid="OWN005-K01"/, 'a phone section tab wears OWN005-K01'],
+  ["page-frame.js", "data-cbsid=\"CMP054-B01\"' + frameMount() + ' data-sec=", "a side-menu entry wears CMP054-B01 and its mount"],
+  ["page-frame.js", "nav-fold label\" data-cbsid=\"CMP054-B02\"' + frameMount() + ' data-testid", "a folding group head wears CMP054-B02 and its mount"],
+  ["page-frame.js", "id=\"toggleNav\" data-cbsid=\"CMP054-B03\"' + frameMount() + ' aria-label", "the Collapse button wears CMP054-B03 and its mount"],
+  ["page-frame.js", "lab-switch-btn\" data-cbsid=\"CMP054-K01\"' + frameMount() + ' data-tab", "a phone section tab wears CMP054-K01 and its mount"],
   ['shell.js', /class="cbsh-nv" data-cbsid="HOM001-K01" data-go="' \+/, 'an area tab of Home wears HOM001-K01'],
   ['shell.js', /class="cbsh-nv" data-cbsid="HOM001-K01" data-go="more"/, 'the More tab of Home wears HOM001-K01'],
   ['shell.js', /class="cbsh-box" data-cbsid="HOM001-B01" href=/, 'a card of Home wears HOM001-B01'],
@@ -142,10 +142,10 @@ const FRAME_WANT = [
   ['shell.js', /data-cbsid="HOM001-B04" data-slot="btnR"/, 'the right side opener wears HOM001-B04']
 ];
 FRAME_WANT.forEach((row) => {
-  check(row[1].test(read(row[0])), row[0] + ' ' + row[2]);
-  known(((row[2].match(/(OWN005|HOM001)-[A-Z][0-9]{2}/) || [])[0]));
+  check(typeof row[1] === 'string' ? read(row[0]).indexOf(row[1]) >= 0 : row[1].test(read(row[0])), row[0] + ' ' + row[2]);
+  known(((row[2].match(/(CMP054|HOM001)-[A-Z][0-9]{2}/) || [])[0]));
 });
-check((read('page-frame.js').match(/<button type="button"/g) || []).length === (read('page-frame.js').match(/<button type="button"[^>]*data-cbsid="OWN005/g) || []).length, 'page-frame.js: no button is drawn without a code');
+check((read('page-frame.js').match(/<button type="button"/g) || []).length === (read('page-frame.js').match(/<button type="button"[^>]*data-cbsid="CMP054/g) || []).length, 'page-frame.js: no button is drawn without a code');
 if (pending.size) console.log('  note codes not in the register copy yet (rows pending in docs): ' + [...pending].sort().join(' '));
 if (!REG) console.log('  note no register copy on this machine: codes were not checked for being live');
 

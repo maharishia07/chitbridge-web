@@ -1,11 +1,11 @@
-/* public/app/rail-bell.js — CBBell: the bell, mountable in any header (R06, 2026-10-09)
+/* public/app/rail-bell.js — CBBell: the bell, mountable in any header
  * ID        CMP030 (the bell button; its rows are CMP038, its Clear CMP014)
- * KIND      component
  * OWNER     cb-ux-locale
  * OWNS      the bell's dot and list: one read on mount, one per arrival, the clear and the seen mark
  * CALLED BY every page header, through app/shell.js (CBBell.mount into the bar slot)
  * CARD      01-rail-core-the-chit/rail-bell
  * RISK      personal-data
+ * FLOW      POST /api/events/ticket -> SSE stream -> the dot and the list -> amounts through fmtMoney in the notice's currency
  *
  * rail-bell.js — CBBell.mount: THE BELL, mountable in any header.
  *
@@ -34,10 +34,6 @@
  *
  * Reuse: api/EP (core.js) · CBAction (accounts-shell.js: the clear is a write) · CBLocale · the Activity wording of app.html's mapNotif.
  * ZERO app.html globals: no UI, paintDetail, modal. The app and the counter keep their own bell until R10 / M62 swap them for this.
- */
-/* OWNS CBBell.mount: the bell, mountable in any header
- * CALLED BY every page header that mounts the bell (accounts, crm, finance, network, tasks, ...)
- * FLOW POST /api/events/ticket -> SSE stream -> the dot and the list -> amounts through fmtMoney in the notice's currency
  */
 (function (root) {
   'use strict';
