@@ -79,6 +79,8 @@
   .grp > .h .amt{ margin-left:auto; font-weight:800; }
   .nofuel{ background:var(--bad-tint); border-bottom:1px solid #eccbc9; color:var(--bad); padding:8px 18px; font-size:var(--fs-2); }
   .scroll{ overflow-x:auto; }
+  /* UX-101 phone: the Lines grid (6 columns of fixed-width inputs) shares its width so no field is cut; the wider price/rate/per-line tables keep their own scroll */
+  @media (max-width: 560px){ table[data-testid=lab-lines]{ table-layout:fixed; } table[data-testid=lab-lines] th{ padding:5px 3px; letter-spacing:0; } table[data-testid=lab-lines] td{ padding:4px 3px; overflow-wrap:anywhere; } table[data-testid=lab-lines] input[type=text], table[data-testid=lab-lines] input[type=number], table[data-testid=lab-lines] select{ width:100% !important; min-width:0 !important; max-width:100%; padding-inline:4px; } table[data-testid=lab-lines] th:last-child, table[data-testid=lab-lines] td:last-child{ width:40px; } }
   @media (max-width: 880px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line); } }
 </style>
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
