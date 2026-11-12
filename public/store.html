@@ -131,6 +131,7 @@ function renderCart() {
   bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button type="button" data-cbsid="STR001-B01" onclick="placeOrder()">Place order</button>';
 }
 /* MONEY PROMISE = DELIBERATE CONFIRM (UX-5): Place order opens the library's one confirm (CBConfirm) saying WHAT is promised (the lines, the total) and TO WHOM (this store); the name and e-mail are form fields in it, not prompt() boxes. Nothing is sent until Place order is pressed in it. */
+/** the lines the buyer is about to order, as a list: quantity, name, line total */
 function orderLinesHtml(list) {
   return (
     '<ul>' +
@@ -142,13 +143,14 @@ function orderLinesHtml(list) {
     '</ul>'
   );
 }
+/** the buyer pressed Place order: ask first (lines, total, store, name, e-mail); only the confirm sends */
 function placeOrder() {
   var list = cartItems();
   if (!list.length) return;
   var total = list.reduce(function (sum, item) {
     return sum + (item.price || 0) * item.qty;
   }, 0);
-  var who = { name: '', email: '' };
+  var buyer = { name: '', email: '' };
   CBConfirm(
     'Place this order?',
     '<div>This sends an order to the store <b>' + esc(NET) + '</b>.</div><div class="po-ask">' + orderLinesHtml(list) + '<div><b>Total ' + esc(rs(total)) + '</b></div>' +
@@ -156,26 +158,27 @@ function placeOrder() {
       '<label for="po_email">Your email (optional)</label><input id="po_email" data-testid="po-email" type="email" autocomplete="email"></div>',
     'Place order',
     function () {
-      sendOrder(list, who);
+      sendOrder(list, buyer);
     }
   );
   ['po_name', 'po_email'].forEach(function (id) {
     var box = document.getElementById(id);
     if (!box) return;
     box.addEventListener('input', function () {
-      who[id === 'po_name' ? 'name' : 'email'] = box.value;
+      buyer[id === 'po_name' ? 'name' : 'email'] = box.value;
     });
     box.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') e.preventDefault(); /* Enter in a box never answers the question: only the Place order button does */
     });
   });
 }
-function sendOrder(list, who) {
+/** the buyer said yes: post the order to the network store and say the outcome in the toast */
+function sendOrder(list, buyer) {
   var body = {
     items: list.map(function (item) {
       return { product_id: item.product_id, qty: item.qty };
     }),
-    customer: { name: (who.name || '').trim() || 'Customer', email: (who.email || '').trim() }
+    customer: { name: (buyer.name || '').trim() || 'Customer', email: (buyer.email || '').trim() }
   };
   fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET) + '/order', {
     method: 'POST',
