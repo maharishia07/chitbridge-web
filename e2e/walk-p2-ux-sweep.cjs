@@ -84,7 +84,7 @@ const walk = async (w) => {
   await w.step('S-src', 'PPL-32 / ORD-1: the Co-assists sort box carries aria-label, the coming-soon filter is not dimmed by opacity, the Order tab hands order_billed on', async () => {
     const workforce = read('app/cap-workforce.js'), chit2 = read('app/cap-chit2.js');
     const sortNamed = /data-testid="coassist-sort" aria-label="/.test(workforce);
-    const dimmed = /comingSoon \? ';opacity/.test(workforce);
+    const dimmed = workforce.includes("comingSoon ? ';opacity") || !workforce.includes('aria-disabled="true"');
     const carried = /frozenMoneyHTML\(\s*\{[^}]*order_billed: d\.order_billed/.test(chit2);
     return { ok: sortNamed && !dimmed && carried, saw: JSON.stringify({ sortNamed, dimmed, carried }) };
   });
