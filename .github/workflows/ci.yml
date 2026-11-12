@@ -110,6 +110,7 @@ jobs:
           node e2e/tx-key.test.cjs
           node e2e/till-names.test.cjs
           node e2e/toast-live-host.test.cjs
+          node e2e/p2-small-2.test.cjs
           node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
