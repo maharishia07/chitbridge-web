@@ -777,6 +777,7 @@
 </style>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the header chips (role=button) -->
 <script src="/app/list-ctl.js"></script>   <!-- CBList.every: the board's lists page (T2-PAGING) and the board sums the whole set -->
 </head>
 <body>
@@ -2028,10 +2029,7 @@ function tally() {
       '" onclick="chipTo(\'' +
       state +
       '\')"' +
-      ' title="Show these on the Cases tab" role="button" tabindex="0"' +
-      " onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();chipTo('" +
-      state +
-      '\')}">' +
+      ' title="Show these on the Cases tab" role="button" tabindex="0">' +
       '<b>' +
       n +
       '</b> ' +

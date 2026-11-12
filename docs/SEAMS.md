@@ -173,6 +173,7 @@ of file each thing is; this says what already does the job.
 | 16 | `done` | `attach-ui.js` |  |
 | 16 | `message` | `cap-print.js` | the one message: |
 | 16 | `frame` | `cap-settings.js` |  |
+| 16 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 16 | `fmtMoney` | `helpers.js` |  |
 | 16 | `confirm` | `lab-kit.js` | opts: |
 | 16 | `resolve` | `page.js` |  |
@@ -187,7 +188,7 @@ of file each thing is; this says what already does the job.
 | 15 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
 | 15 | `bkMoney` | `cap-books.js` |  |
 | 15 | `bkDate` | `cap-books.js` |  |
-| 15 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
+| 15 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 15 | `offers` | `network-app.js` |  |
 | 15 | `post` | `books-manual.js` | POST /events — |
 | 15 | `setting` | `books-store.js` | const missingToNull = (value) => (value == null ? null : |
@@ -198,7 +199,6 @@ of file each thing is; this says what already does the job.
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 14 | `link` | `chit-sheet.js` |  |
-| 14 | `chips` | `country-profiles.js` | words as chips; null when there are none |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 14 | `refuse_` | `bookpack.js` | an Error with status 422 — |

@@ -122,6 +122,8 @@ jobs:
           node e2e/ui-codes-authority-forms.test.cjs
           node e2e/bulk-resume.test.cjs
           node e2e/ui-codes-utility-pages.test.cjs
+          node e2e/modal-focus-return.test.cjs
+          node e2e/step-press.test.cjs
           node e2e/ui-codes-network-design.test.cjs
           node e2e/ui-codes-testing.test.cjs
           node e2e/ui-codes-cart-design.test.cjs
