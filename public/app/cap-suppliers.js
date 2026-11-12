@@ -336,7 +336,7 @@ var CBSuppliers = (function () {
     }
     var listKind = S.kind;
     node.innerHTML =
-      '<button type="button" class="mx" aria-label="' +
+      '<button data-cbsid="CMP005" type="button" class="mx" aria-label="' +
       esc(t('Close')) +
       '" data-x>✕</button><h2>' +
       esc(t('Add a supplier')) +

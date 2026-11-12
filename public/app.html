@@ -3429,7 +3429,7 @@ function renderAssist(ans) {
     ? `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:var(--fs-1);color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`
     : '';
   node.innerHTML = `<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-cbsid="CMP005" data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre ? 'Tell me your business and I will be honest about whether this fits.' : 'Describe what you are trying to do.'}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans || ''}</div>
@@ -8727,7 +8727,7 @@ function ccRenderRcpts() {
             if (UI._supplier) {
               return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:var(--fs-2);font-weight:600;color:var(--blue)">🏭 ${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · ' + esc(item.bridge) + '</span>' : ''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`;
             }
-            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
+            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span data-cbsid="CMP008" onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
           })
           .join('')
       : `<div style="font-size:var(--fs-2);color:var(--grey)">No recipients yet — add To / CC / For above.</div>`;
@@ -9111,7 +9111,7 @@ function ccRenderItems() {
     ? CC.items
         .map(
           (item, index) =>
-            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
+            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button data-cbsid="CMP008" class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
         )
         .join('')
     : `<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
@@ -9127,7 +9127,7 @@ function ccItemChips(i) {
         attIcon(cbAttachType(item.type, item.name)) +
         ' ' +
         esc(item.name.length > 20 ? item.name.slice(0, 20) + '…' : item.name) +
-        ' <span onclick="ccDelItemFile(' +
+        ' <span data-cbsid="CMP008" onclick="ccDelItemFile(' +
         i +
         ',' +
         index +
@@ -9637,7 +9637,7 @@ function ccRenderFiles() {
             attIcon(cbAttachType(item.type, item.name)) +
             ' ' +
             esc(item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name) +
-            ' <span onclick="ccDelFile(' +
+            ' <span data-cbsid="CMP008" onclick="ccDelFile(' +
             index +
             ')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'
           );
@@ -20059,7 +20059,7 @@ function prodModifiersTab(d, edit) {
             `<div style="display:flex;gap:6px;align-items:center" data-testid="prod-mod-opt-${gi}-${index}">` +
             `<input class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
             `<input class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
-            `<button class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
+            `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
         )
         .join('') +
       `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
@@ -20381,7 +20381,7 @@ function prodMediaTab(d, edit) {
         : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`) +
     `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name || '')}">${esc(x.name || '')}</div>` +
     (edit
-      ? `<button class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
+      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
       : '') +
     `</div>`;
   return (
@@ -20709,7 +20709,7 @@ function prodIdentifiersTab(d, edit) {
       return (
         `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
-          ? `<button class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
+          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
         '</div>'
       );
@@ -22412,7 +22412,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -23263,7 +23263,7 @@ function modal(html, wide, opt) {
   if (!node) return;
   UI._composeModal = false;
   node.style.display = '';
-  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
+  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
   modalStamp(node);
 }
@@ -24776,7 +24776,7 @@ function delAdv(k) {
 function advPanel() {
   const a = UI.adv || {};
   return `<div class="advpanel" onclick="event.stopPropagation()">
-    <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
+    <button data-cbsid="CMP005" class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
     <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" aria-label="${esc(tx('Amount min'))}" inputmode="numeric" placeholder="min" value="${a.amount_min || ''}"><span class="advdash">to</span><input class="advin" id="adv_amax" aria-label="${esc(tx('Amount max'))}" inputmode="numeric" placeholder="max" value="${a.amount_max || ''}"></div>
     <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" aria-label="${esc(tx('Date from'))}" type="date" value="${a.date_from || ''}"><span class="advdash">to</span><input class="advin" id="adv_dto" aria-label="${esc(tx('Date to'))}" type="date" value="${a.date_to || ''}"></div>
     <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status" aria-label="${tx('Status')}"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus === 'open' ? 'selected' : ''}>${tx('Open')}</option><option value="act" ${a.fstatus === 'act' ? 'selected' : ''}>${tx('Act')}</option><option value="close" ${a.fstatus === 'close' ? 'selected' : ''}>${tx('Close')}</option></select></div>
@@ -30342,7 +30342,7 @@ function paintLB() {
   const i = Math.min(UI.lb, atts.length - 1),
     a = atts[i];
   host.innerHTML = `<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span data-cbsid="CMP005" class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a, 'lb')}</div>
     <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_, index) => `<span class="${index === i ? 'on' : ''}"></span>`).join('')}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;
