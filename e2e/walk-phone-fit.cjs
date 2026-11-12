@@ -1,10 +1,10 @@
-/* p2-small-3.test.cjs — UX-101 remainder: phone fit, measured at 390x844 and 1366x768 (2026-11-12)
+/* walk-phone-fit.cjs — UX-101 remainder: phone fit, measured at 390x844 and 1366x768 (2026-11-12)
  *   Home (signed out)  : the phone bar is FIVE tabs, each >= 44 px tall and wide (the old "7 tabs ~55 px" finding is gone since HOME-PHONE-BAR)
  *   network-design     : the 300 px list used to push the design pane off a phone; list now stacks, nothing past the right edge
  *   conversion-lab     : the Lines grid fits (no sideways scroll); the price / rate tables keep their own scroll by design
  *   list-lab           : the prototype strip wraps on a phone, every switch is on screen
  *   keyboard-only      : Tab reaches the first field of each fixed screen, and that field is inside the viewport
- * Run: node e2e/p2-small-3.test.cjs   (own port; /api answers 401, nothing real is touched)  */
+ * Run: node e2e/walk-phone-fit.cjs   (own port; /api answers 401, nothing real is touched)  */
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
