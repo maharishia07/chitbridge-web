@@ -46,7 +46,7 @@ var LAB = [
 function labPaint() {
   document.getElementById('labRows').innerHTML = LAB.map(function (item, index) {
     return (
-      '<div class="row"><input class="nm" value="' +
+      '<div class="row"><input data-cbsid="NLB001-I01" class="nm" value="' +
       esc(item.name) +
       '" placeholder="Name" oninput="LAB[' +
       index +
@@ -55,14 +55,14 @@ function labPaint() {
       '">' +
       (item.owned
         ? '<span class="s" style="font-size:12px;color:var(--grey)">your store</span>'
-        : '<input value="' +
+        : '<input data-cbsid="NLB001-I02" value="' +
           esc(item.ref) +
           '" placeholder="their handle, e.g. ravi.timbers" oninput="LAB[' +
           index +
           '].ref=this.value" data-testid="lab-ref-' +
           index +
           '">') +
-      '<button type="button" onclick="LAB.splice(' +
+      '<button data-cbsid="NLB001-B01" type="button" onclick="LAB.splice(' +
       index +
       ',1);labPaint()" aria-label="Remove">✕</button></div>'
     );
@@ -237,16 +237,16 @@ document.addEventListener('DOMContentLoaded', labPaint);
 <div class="lab" id="lab" data-testid="lab">
   <div class="s" style="font-size:12.5px;color:var(--grey)">Sample data — nothing is saved or made. Sketch a network, then see what would break.</div>
   <div id="labRows"></div>
-  <div class="row"><button type="button" onclick="labAdd(true)" data-testid="lab-add-own">＋ Store of yours</button>
-    <button type="button" onclick="labAdd(false)" data-testid="lab-add-partner">＋ Partner</button>
-    <button type="button" class="pri" id="labGo" onclick="labCheck()" data-testid="lab-check">See what it would create</button></div>
+  <div class="row"><button data-cbsid="NLB001-B02" type="button" onclick="labAdd(true)" data-testid="lab-add-own">＋ Store of yours</button>
+    <button data-cbsid="NLB001-B03" type="button" onclick="labAdd(false)" data-testid="lab-add-partner">＋ Partner</button>
+    <button data-cbsid="NLB001-B04" type="button" class="pri" id="labGo" onclick="labCheck()" data-testid="lab-check">See what it would create</button></div>
   <div id="labOut" data-testid="lab-out"></div>
 </div>
 <div class="wrap">
   <div class="left">
     <div class="lh"><div class="t">🔗 Network</div>
       <div class="s">alpha-timers · 4 stores you can see</div>
-      <input class="lsrch" placeholder="Search stores…" oninput="netSearch(this.value)"></div>
+      <input data-cbsid="NLB001-I03" class="lsrch" placeholder="Search stores…" oninput="netSearch(this.value)"></div>
     <div class="llist" id="stList"></div>
   </div>
   <div class="right">
@@ -256,8 +256,8 @@ document.addEventListener('DOMContentLoaded', labPaint);
     <div class="rfoot" id="rfoot"></div>
   </div>
 </div>
-<div class="ov" id="ov" onclick="if(event.target===this)closeOv()"><div class="ovc" id="ovc"></div></div>
-<div class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('net')"><div class="ovc" id="cartovc"></div></div>
+<div data-cbsid="NLB001-C01" class="ov" id="ov" onclick="if(event.target===this)closeOv()"><div class="ovc" id="ovc"></div></div>
+<div data-cbsid="NLB001-C02" class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('net')"><div class="ovc" id="cartovc"></div></div>
 
 <script>
 /* The network, in the operator's own arrangement (sort_order), then by name. Distances are from ME. */
@@ -377,7 +377,7 @@ function paintList() {
     ? list
         .map(function (item) {
           return (
-            '<div class="st0' +
+            '<div data-cbsid="NLB001-C03" class="st0' +
             (S.st && S.st.id === item.id ? ' on' : '') +
             '" onclick="pick(\'' +
             item.id +
@@ -400,7 +400,7 @@ function paintList() {
 function chipHTML() {
   if (!S.st) return '';
   return (
-    '<div class="chipbar"><div class="chip" onclick="openOv()"><b>' +
+    '<div class="chipbar"><div data-cbsid="NLB001-C04" class="chip" onclick="openOv()"><b>' +
     esc(S.st.name) +
     '</b>' +
     '<span class="id">' +
@@ -422,7 +422,7 @@ function stepsHTML() {
     '<div class="steps">' +
     STEPS.map(function (item, index) {
       var cls = index === S.step ? 'stp0 now' : index < S.step ? 'stp0 done' : 'stp0';
-      return '<div class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
+      return '<div data-cbsid="NLB001-C05" class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
     }).join('') +
     '</div>'
   );
@@ -433,7 +433,7 @@ function stepItems() {
     '<div id="cartbar">' +
     CBCart.barHTML('net') +
     '</div>' +
-    '<input class="srch" placeholder="Search this store’s catalogue…" value="' +
+    '<input data-cbsid="NLB001-I04" class="srch" placeholder="Search this store’s catalogue…" value="' +
     esc((CBCart.state('net') || {}).q || '') +
     '"' +
     ' oninput="CBCart.search(\'net\',this.value)">' +
@@ -447,13 +447,13 @@ function stepDetails() {
     '<div class="sec">Your request to ' +
     esc(S.st.name) +
     '</div>' +
-    '<div class="two"><div><label class="fl">Needed by</label><input class="inp" type="date" value="' +
+    '<div class="two"><div><label class="fl">Needed by</label><input data-cbsid="NLB001-I05" class="inp" type="date" value="' +
     esc(S.by) +
     '" oninput="S.by=this.value"></div>' +
-    '<div><label class="fl">Deliver to</label><input class="inp" value="' +
+    '<div><label class="fl">Deliver to</label><input data-cbsid="NLB001-I06" class="inp" value="' +
     esc(S.addr) +
     '" placeholder="site / address" oninput="S.addr=this.value"></div></div>' +
-    '<label class="fl">Note</label><input class="inp" value="' +
+    '<label class="fl">Note</label><input data-cbsid="NLB001-I07" class="inp" value="' +
     esc(S.note) +
     '" placeholder="instructions" oninput="S.note=this.value">' +
     /* Same rail as any other chit — nothing separate is invented for "internal" movement, or it stops being
@@ -475,7 +475,7 @@ function stepReview() {
     '</span></div></div>' +
     '<div class="rev"><div class="h">Items · ' +
     list.length +
-    '<span class="e" onclick="go(0)">Change</span></div>' +
+    '<span data-cbsid="NLB001-C06" class="e" onclick="go(0)">Change</span></div>' +
     list
       .map(function (item) {
         return (
@@ -505,7 +505,7 @@ function stepReview() {
     (T.amount ? CBCart.fmt('net', T.amount) + (T.partial ? '+' : '') : '—') +
     '</span></div></div>' +
     (T.offered ? '<div class="note">This contains an OFFER — your price, not theirs.</div>' : '') +
-    '<div class="rev"><div class="h">Details<span class="e" onclick="go(1)">Change</span></div>' +
+    '<div class="rev"><div class="h">Details<span data-cbsid="NLB001-C07" class="e" onclick="go(1)">Change</span></div>' +
     '<div class="r"><span class="k">Needed by</span><span>' +
     (S.by ? esc(S.by) : '—') +
     '</span></div>' +
@@ -525,7 +525,7 @@ function ovHTML() {
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">' +
     esc(s.name) +
     '</b>' +
-    '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>' +
+    '<button data-cbsid="NLB001-B05" onclick="closeOv()" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>' +
     (s.id === ME ? '<div class="note">⚠ This is your own store.</div>' : '') +
     '<div class="kv"><b>User ID</b><span style="font-family:ui-monospace,Menlo,monospace">' +
     esc(s.bid) +
@@ -554,9 +554,9 @@ function paintFoot() {
   var last = S.step === STEPS.length - 1,
     why = blockedBecause();
   document.getElementById('rfoot').innerHTML =
-    (S.step ? '<button onclick="go(' + (S.step - 1) + ')"><span class=arw>←</span> Back</button>' : '<button onclick="openOv()">Store details</button>') +
-    '<button>Save draft</button>' +
-    '<button class="pri"' +
+    (S.step ? '<button data-cbsid="NLB001-B06" onclick="go(' + (S.step - 1) + ')"><span class=arw>←</span> Back</button>' : '<button data-cbsid="NLB001-B07" onclick="openOv()">Store details</button>') +
+    '<button data-cbsid="NLB001-B08">Save draft</button>' +
+    '<button data-cbsid="NLB001-B09" class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +
     ' onclick="' +
     (last ? "alert('Sample only: nothing was sent.')" : 'go(' + (S.step + 1) + ')') +

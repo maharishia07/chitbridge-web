@@ -100,7 +100,7 @@ function fcPaintTop() {
   if (!el) return;
   var pill = function (n) {
     return (
-      '<button type="button" class="tab" aria-pressed="' +
+      '<button data-cbsid="FIN003-B01" type="button" class="tab" aria-pressed="' +
       (FC.days === n ? 'true' : 'false') +
       '" data-testid="fc-days-' +
       n +
