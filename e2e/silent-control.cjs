@@ -69,6 +69,14 @@ const LOCAL_BY_DESIGN = {
   testDiagClear:  'clears the in-memory CBCALLS ring and this device’s visit log — same case as clearMsgLog',
 };
 
+/**
+ * ⭐ ONE DETECTOR, used by the scan AND the self-test below (ACC-345: the self-test used to re-type its own copy).
+ * A function reaches the server when it calls api( / fetch( / CBPrefs / .push(, OR hands `{ api: api }` to a delegate
+ * call (e.g. CBLedger.call({ api: api }, on), which does host.api('booksEnable')). The handoff must sit inside a call:
+ * a bare `api: api` in an object literal that is never called proves nothing.
+ */
+const CALLS_API = /\bapi\s*\(|CBPrefs|\.push\s*\(|fetch\s*\(|\w+\.\w+\s*\([^)]*\{\s*api\s*:\s*api\s*\}/;
+
 let pass = 0, fail = 0;
 const findings = [];
 
@@ -97,7 +105,7 @@ for (const rel of FILES) {
     const refusalOnly = /toast\s*\(\s*["'][^"']*(first|required|cannot|must|no |not )/i.test(code)
       && (code.match(/\btoast\s*\(/g) || []).length === 1;
     const announces = /\btoast\s*\(/.test(code) && !refusalOnly;
-    const callsApi = /\bapi\s*\(|CBPrefs|\.push\s*\(|fetch\s*\(/.test(code);
+    const callsApi = CALLS_API.test(code);
 
     if (announces && persists && !callsApi) {
       if (LOCAL_BY_DESIGN[mk.name]) return;
@@ -129,9 +137,15 @@ const SPECIMEN = "function setShop(s){SESSION.shop=s;\n"
 const sCode = SPECIMEN;
 const caught = /\btoast\s*\(/.test(sCode)
   && /\bSESSION\.\w+\s*=/.test(sCode)
-  && !/\bapi\s*\(|fetch\s*\(/.test(sCode);
+  && !CALLS_API.test(sCode);
 if (caught) { pass++; console.log('  ✓ the original setShop() is reported'); }
 else { fail++; console.error('  ✗ the planted setShop() was NOT reported — this scan proves nothing'); }
+
+/* the delegate handoff is accepted; a bare object literal naming api is not */
+const HANDOFF = "function sw(on){ CBLedger.call({ api: api }, on); SESSION.booksOn = on; toast('done'); }";
+const BARE = "function sw(on){ var h = { api: api }; SESSION.booksOn = on; toast('done'); }";
+if (CALLS_API.test(HANDOFF) && !CALLS_API.test(BARE)) { pass++; console.log('  ✓ a { api: api } handoff to a delegate counts; a bare literal does not'); }
+else { fail++; console.error('  ✗ the delegate-handoff rule is wrong'); }
 
 console.log('\n  ══ ' + pass + ' passed · ' + fail + ' failed ══\n');
 process.exit(fail ? 1 : 0);
