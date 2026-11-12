@@ -1373,7 +1373,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     e.line_id +
     '" onclick="openLineCard(C2.id,\'' +
     e.line_id +
-    '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;' +
+    '\')" style="color:var(--on-card);padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;' +
     (_ticked ? 'background:var(--blue-tint)' : '') +
     '">' +
     /* ⭐  so the phone can wrap it: the description takes the first line, and the status, money and
@@ -1846,7 +1846,7 @@ function c2PickBarHTML() {
      one, and the honest answer is also the instruction. */
   if (!(UI.actors || []).length) {
     return (
-      '<div style="padding:9px 16px;background:var(--blue-tint);border-bottom:1px solid var(--line);' +
+      '<div style="color:var(--on-card);padding:9px 16px;background:var(--blue-tint);border-bottom:1px solid var(--line);' +
       'font-size:var(--fs-2)">' +
       esc(txf('{n} selected', { n: n })) +
       ' — ' +
@@ -1864,7 +1864,7 @@ function c2PickBarHTML() {
       })
       .join('');
   return (
-    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;' +
+    '<div style="color:var(--on-card);display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;' +
     'background:var(--blue-tint);border-bottom:1px solid var(--line)">' +
     '<b style="font-size:var(--fs-2)">' +
     esc(txf('{n} selected', { n: n })) +
