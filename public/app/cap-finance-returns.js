@@ -86,7 +86,7 @@ function frPaint() {
         '</h2><p>' +
         esc(tx('Nothing was lost.')) +
         '</p>' +
-        '<button type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' +
+        '<button data-cbsid="CMP009" type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' +
         esc(tx('Try again')) +
         '</button>',
       'fr-error'

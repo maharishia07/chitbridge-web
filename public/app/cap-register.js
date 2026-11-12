@@ -521,7 +521,7 @@ function rgTr(e) {
       ? '<span style="color:var(--grey)">' + esc(rgEnding(e.disposition)) + '</span>'
       : e.ending === 'closed_by_order'
         ? '<span style="color:var(--warn-2)">' + tx('with the order') + '</span>'
-        : '<button class="rg-act" data-testid="raida-edit" onclick="rgEditAsk(&quot;' +
+        : '<button data-cbsid="CMP012" class="rg-act" data-testid="raida-edit" onclick="rgEditAsk(&quot;' +
           e.raida_id +
           '&quot;)">' +
           tx('Edit') +
@@ -773,7 +773,7 @@ function rgAddPanel(opt) {
     '<button class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' +
     tx('Record it') +
     '</button>' +
-    (opt.bare ? '' : '<button class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>') +
+    (opt.bare ? '' : '<button data-cbsid="CMP003" class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>') +
     '</div></div>'
   );
 }
@@ -1214,7 +1214,7 @@ function rgEditPaint(id) {
     '&quot;)">' +
     tx('Save change') +
     '</button>' +
-    '<button class="btn ghost" onclick="rgEditAsk(&quot;' +
+    '<button data-cbsid="CMP003" class="btn ghost" onclick="rgEditAsk(&quot;' +
     id +
     '&quot;)">' +
     tx('Cancel') +
@@ -1313,7 +1313,7 @@ function rgClosePaint(id) {
     '&quot;)">' +
     tx('End it') +
     '</button>' +
-    '<button class="btn ghost" onclick="rgCloseAsk(&quot;' +
+    '<button data-cbsid="CMP003" class="btn ghost" onclick="rgCloseAsk(&quot;' +
     id +
     '&quot;)">' +
     tx('Cancel') +

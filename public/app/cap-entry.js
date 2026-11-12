@@ -262,14 +262,14 @@ function enPaint() {
       '<div class="en-warn" data-testid="en-denied">' +
       esc(tx('Only the owner and co-assists the owner has allowed can add entries. You can read everything.')) +
       '</div>';
-    acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>';
+    acts.innerHTML = '<button data-cbsid="CMP005" class="en-btn" onclick="enClose()">' + esc(tx('Close')) + '</button>';
     return;
   }
   if (EN.err) {
     body.innerHTML =
       '<div class="en-bad" data-testid="en-err">' +
       esc(EN.err) +
-      '<button type="button" data-testid="en-retry" onclick="enOpen()">' +
+      '<button data-cbsid="CMP009" type="button" data-testid="en-retry" onclick="enOpen()">' +
       esc(tx('Try again')) +
       '</button></div>';
     acts.innerHTML = '';
@@ -284,7 +284,7 @@ function enPaint() {
   var h = '<h3 data-testid="en-step-' + EN.step + '">' + esc(tx(enStepWord(EN.step))) + '</h3>';
   if (EN.step === 1) {
     body.innerHTML = h + enGridHTML();
-    acts.innerHTML = '<button class="en-btn" onclick="enClose()">' + esc(tx('Cancel')) + '</button>';
+    acts.innerHTML = '<button data-cbsid="CMP003" class="en-btn" onclick="enClose()">' + esc(tx('Cancel')) + '</button>';
     return;
   }
   if (EN.step === 4) {
@@ -303,7 +303,7 @@ function enActs() {
     esc(tx('Back')) +
     '</button>' +
     (last
-      ? '<button class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
+      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
       : '<button class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
         (enStepReady(EN.step) ? '' : ' disabled') +
         '>' +
@@ -1096,7 +1096,7 @@ function enPaintSaved(body, acts) {
     '\',true)">↩ ' +
     esc(tx('Reverse this entry')) +
     '</button>' +
-    '<button class="en-btn pri" data-testid="en-done" onclick="enClose()">' +
+    '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' +
     esc(tx('Done')) +
     '</button>';
 }

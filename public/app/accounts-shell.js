@@ -778,7 +778,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     bodyHtml +
     '</div>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' +
-    '<button type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
+    '<button data-cbsid="CMP003" type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
     esc(tx('Cancel')) +
     '</button>' +
     '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' +
