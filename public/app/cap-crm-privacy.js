@@ -65,7 +65,7 @@ function crmConsentWhyNot(cp) {
 }
 function crmConsentBtn(ch, pu, allowed, label, why, tid) {
   return (
-    '<button type="button" class="act sm' +
+    '<button data-cbsid="CRM010-B01" type="button" class="act sm' +
     (allowed && pu === 'marketing' ? '' : ' ghost') +
     '" data-crm="consent" data-ch="' +
     ch +
@@ -139,7 +139,7 @@ function crmConsentHTML(p, rec) {
       ? '<div class="hint" data-testid="crm-consent-notyet">' + esc(tx('Consent records start after an update. Nothing is lost.')) + '</div>'
       : '';
   var reqBtn = crmEdit()
-    ? '<button type="button" class="act sm ghost" data-crm="privreq" data-testid="crm-consent-request">' + esc(tx('Privacy request')) + '</button>'
+    ? '<button data-cbsid="CRM010-B02" type="button" class="act sm ghost" data-crm="privreq" data-testid="crm-consent-request">' + esc(tx('Privacy request')) + '</button>'
     : crmViewOnlyBtn('crm-consent-request', tx('Privacy request'), crmViewWhy());
   var body =
     head +
@@ -359,7 +359,7 @@ function crmPrivacy(frame, params) {
   crmBar(
     '<a href="#/parties" data-testid="crm-back">‹ ' + esc(tx('Parties')) + '</a>',
     crmEdit()
-      ? '<button type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>'
+      ? '<button data-cbsid="CRM010-B03" type="button" class="act sm" data-crm="prvadd" data-testid="crm-prv-add">+ ' + esc(tx('Log a request')) + '</button>'
       : crmViewOnlyBtn('crm-prv-add', '+ ' + tx('Log a request'), crmViewWhy()),
     true
   );
@@ -527,14 +527,14 @@ function crmPrivFoot() {
     '<span data-testid="crm-prv-page">' +
     esc(txf('Page {p} of {n}', { p: PRV.page, n: pages })) +
     '</span> ' +
-    '<button type="button" class="crm-mini" data-crm="prvpage" data-v="' +
+    '<button data-cbsid="CRM010-B04" type="button" class="crm-mini" data-crm="prvpage" data-v="' +
     (PRV.page - 1) +
     '"' +
     (PRV.page <= 1 ? ' disabled' : '') +
     ' data-testid="crm-prv-prev">‹ ' +
     esc(tx('Previous')) +
     '</button> ' +
-    '<button type="button" class="crm-mini" data-crm="prvpage" data-v="' +
+    '<button data-cbsid="CRM010-B05" type="button" class="crm-mini" data-crm="prvpage" data-v="' +
     (PRV.page + 1) +
     '"' +
     (PRV.page >= pages ? ' disabled' : '') +
@@ -586,19 +586,19 @@ function crmPrivReqOpen(pre) {
       '</div></div><div class="mbody" data-testid="crm-prv-sheet">' +
       '<label>' +
       esc(tx('Who asked?')) +
-      '<input class="inp" id="crm_prv_who" data-testid="crm-prv-who" value="' +
+      '<input data-cbsid="CRM010-I01" class="inp" id="crm_prv_who" data-testid="crm-prv-who" value="' +
       esc(pre.who || '') +
       '" placeholder="' +
       esc(tx('Name, phone or e-mail')) +
       '"></label>' +
       '<label>' +
       esc(tx('Asked for')) +
-      '<select class="inp" id="crm_prv_kind" data-testid="crm-prv-kind">' +
+      '<select data-cbsid="CRM010-S01" class="inp" id="crm_prv_kind" data-testid="crm-prv-kind">' +
       kinds +
       '</select></label>' +
       '<label>' +
       esc(tx('Received on')) +
-      '<input class="inp" id="crm_prv_when" data-testid="crm-prv-when" type="date" value="' +
+      '<input data-cbsid="CRM010-I02" class="inp" id="crm_prv_when" data-testid="crm-prv-when" type="date" value="' +
       esc(crmLocalISO(new Date())) +
       '" style="width:auto"></label>' +
       '<input type="hidden" id="crm_prv_party" value="' +
@@ -610,7 +610,7 @@ function crmPrivReqOpen(pre) {
       '<div id="crm_prv_msg" class="hint" role="status" data-testid="crm-prv-msg"></div></div>' +
       '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
+      '</button><button data-cbsid="CRM010-B06" type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
       esc(tx('Log')) +
       '</button></div>'
   );
@@ -673,7 +673,7 @@ function crmPrivAnswerOpen(id) {
         : '') +
       '<label>' +
       esc(tx('Outcome')) +
-      '<select class="inp" id="crm_prv_out" data-testid="crm-prv-out">' +
+      '<select data-cbsid="CRM010-S02" class="inp" id="crm_prv_out" data-testid="crm-prv-out">' +
       Object.keys(CRM_REQ_OUT)
         .map(function (item) {
           return '<option value="' + item + '">' + esc(tx(CRM_REQ_OUT[item])) + '</option>';
@@ -682,11 +682,11 @@ function crmPrivAnswerOpen(id) {
       '</select></label>' +
       '<label>' +
       esc(tx('What was done, or why not')) +
-      '<textarea class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>' +
+      '<textarea data-cbsid="CRM010-T01" class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>' +
       '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div></div>' +
       '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="prvanswersave" data-id="' +
+      '</button><button data-cbsid="CRM010-B07" type="button" class="pri" data-crm="prvanswersave" data-id="' +
       esc(id) +
       '" data-testid="crm-prv-answer-save">' +
       esc(tx('Answer')) +

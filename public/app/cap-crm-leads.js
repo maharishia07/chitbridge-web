@@ -159,7 +159,7 @@ function crmLeadAddBtn() {
   if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), crmViewWhy()); /* shown, greyed, with the server's sentence (FX-L2C) */
   var blocked = LEADS.loaded && !LEADS.ready;
   return (
-    '<button type="button" class="act sm' +
+    '<button data-cbsid="CRM004-B01" type="button" class="act sm' +
     (blocked ? ' ghost' : '') +
     '" data-testid="crm-lead-add" data-crm="leadadd"' +
     (blocked ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -275,13 +275,13 @@ function crmLeadAddOpen() {
       '</div></div><div class="mbody" data-testid="crm-lead-sheet">' +
       '<label>' +
       esc(tx('Name')) +
-      '<input class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>' +
+      '<input data-cbsid="CRM004-I01" class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>' +
       '<label>' +
       esc(tx('Phone')) +
-      '<input class="inp" id="crm_lead_phone" data-testid="crm-lead-phone" type="tel" autocomplete="off"></label>' +
+      '<input data-cbsid="CRM004-I02" class="inp" id="crm_lead_phone" data-testid="crm-lead-phone" type="tel" autocomplete="off"></label>' +
       '<label>' +
       esc(tx('Stage')) +
-      '<select class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' +
+      '<select data-cbsid="CRM004-S01" class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' +
       ['lead', 'demo', 'trial']
         .map(function (item) {
           return '<option value="' + item + '">' + esc(tx(CRM_STAGE[item])) + '</option>';
@@ -338,7 +338,7 @@ function crmStageBtn(party) {
   var verdict = party.lead.may || { ok: true },
     refused = verdict.ok === false;
   return (
-    '<button type="button" class="act quiet' +
+    '<button data-cbsid="CRM004-B02" type="button" class="act quiet' +
     (refused ? ' ghost' : '') +
     '" data-crm="rstage" data-testid="crm-act-stage"' +
     (refused ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -360,7 +360,7 @@ function crmStageOpen(party, rec) {
       (lead.moves || [])
         .map(function (item) {
           return (
-            '<button type="button" class="act ghost" data-crm="stagego" data-v="' +
+            '<button data-cbsid="CRM004-B03" type="button" class="act ghost" data-crm="stagego" data-v="' +
             esc(item) +
             '" data-testid="crm-stage-' +
             esc(item) +
@@ -568,7 +568,7 @@ function crmLeadImportBtn() {
     ); /* shown, greyed, with the server's sentence — never hidden (the show-action rule, FX-L2C) */
   var blocked = LEADS.loaded && !LEADS.ready;
   return (
-    '<button type="button" class="act sm' +
+    '<button data-cbsid="CRM004-B04" type="button" class="act sm' +
     (blocked ? ' ghost' : '') +
     '" data-testid="crm-lead-import" data-crm="leadimport"' +
     (blocked ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -628,7 +628,7 @@ function crmImportStep(stepKey) {
     return (
       '<label>' +
       esc(tx('CSV file')) +
-      '<input class="inp" type="file" accept=".csv,text/csv" data-testid="crm-import-file" onchange="crmImportPick(this)"></label>' +
+      '<input data-cbsid="CRM004-I03" class="inp" type="file" accept=".csv,text/csv" data-testid="crm-import-file" onchange="crmImportPick(this)"></label>' +
       '<div class="hint" role="status" data-testid="crm-import-filemsg">' +
       (LIMP.name
         ? esc(LIMP.name) + ' · ' + esc(crmPlural(rowCount, 'row', 'rows')) + (rowCount > 500 ? ' · ' + esc(tx(LIMP_CAP)) : '')
@@ -644,7 +644,7 @@ function crmImportStep(stepKey) {
         '<label>' +
         esc(tx(item[1])) +
         (key === 'name' ? ' *' : '') +
-        '<select class="inp" data-testid="crm-import-map-' +
+        '<select data-cbsid="CRM004-S02" class="inp" data-testid="crm-import-map-' +
         key +
         '" onchange="crmImportMap(\'' +
         key +
