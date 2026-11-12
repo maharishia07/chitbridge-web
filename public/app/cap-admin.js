@@ -8727,7 +8727,7 @@ function businessSettingsHTML(s) {
      its list behaves differently without being offered a switch that is not theirs to throw. */
   var netNote =
     me.catalogue_visibility === 'network'
-      ? '<div style="padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">' +
+      ? '<div style="color:var(--on-card);padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">' +
         '<b>' +
         tx('Your group decides this one.') +
         '</b> ' +
@@ -9009,7 +9009,7 @@ function workRoutingHTML() {
   if (d.error) {
     /* ⚠️ said plainly, with the remedy. "Could not load" on its own sends somebody to ask me. */
     return (
-      '<div style="background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);' +
+      '<div style="color:var(--warn-3);background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);' +
       'padding:9px 11px;font-size:var(--fs-1);line-height:1.5"><b>' +
       esc(tx('Not set up yet')) +
       '</b><div>' +
