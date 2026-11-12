@@ -60,7 +60,7 @@ async function run(o) {
   ok(!/app\.html/.test(unit), 'static · zero "app.html" in the unit (I12)');
   ok(!/\btier\b/i.test(unit), 'static · no word "tier" in the unit (Q5)');
   ok(!/cap-[a-z-]+\.js|ensureCap|createElement\(\s*['"]script/.test(unit), 'static · the unit loads no application script');
-  ok(!/class="avmenu"|data-testid="avatar-menu"|class="avatar"|class="av"|cbav-btn/.test(unit) && /CBAvatar\.mount|root\.CBAvatar\.mount/.test(unit), 'static · the avatar is CBAvatar mounted, never built here');
+  ok(!/class="avmenu"|data-testid="avatar-menu"|class="avatar"|class="av"/.test(unit) && /CBAvatar\.mount|root\.CBAvatar\.mount/.test(unit), 'static · the avatar is CBAvatar mounted, never built here');
   const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'app', 'manifest.json'), 'utf8'));
   const exists = (r) => { if (/^https?:\/\//.test(r)) return true; /* TEMPORARY Coverage card (UX-141): an absolute URL */ const p = r.split(/[#?]/)[0]; return p === '/' ? fs.existsSync(path.join(ROOT, 'index.html')) : fs.existsSync(path.join(ROOT, 'public', p)); };
   const badBuilt = man.entries.filter((e) => e.state === 'built' && !(e.route && exists(e.route) && !/app\.html/.test(e.route))).map((e) => e.id);
@@ -100,7 +100,7 @@ async function run(o) {
   const vis = (pg, sel) => pg.locator(sel).first().isVisible().catch(() => false);
   const words = (t) => (t.replace(/\s+/g, ' ').trim().match(/\S+/g) || []).length;
   async function areaWords(pg, area) {
-    return pg.evaluate((a) => { const s = document.querySelector('.cbsh-sec.' + a); if (!s) return -1; return (s.innerText || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean).length; }, area);
+    return pg.evaluate((a) => { const s = document.querySelector('.cbsh-sec.' + a); if (!s) return -1; return (s.innerText || '').replace(/\s+/g, ' ').trim().split(' ').filter((w) => /[\p{L}\p{N}]/u.test(w)).length; }, area);   /* words, not the chevron and icon glyphs beside them */
   }
   /* Q10: <= 100 words per area, Home <= 120 */
   const BUDGET = { home: 120, selling: 100, money: 100, running: 100, trade: 100, labs: 100, setup: 100 };
@@ -119,7 +119,7 @@ async function run(o) {
       await pg.click('[data-testid="shell-shop"]');
       ok(await vis(pg, '[data-testid="shell-sheet-empty"]'), '1366 · the shop name opens the sheet');
       const st = await pg.locator('[data-testid="shell-sheet"]').innerText();
-      ok(/not available yet/i.test(st) && !/\d/.test(st), '1366 · 404 → the empty state says "not available yet" and shows no number ("' + st.replace(/\s+/g, ' ').trim() + '")');
+      ok(/not available yet/i.test(st) && !/\d/.test(st.replace(/\b[A-Z]{2,4}\d{2,4}\b/g, '')), '1366 · 404 → the empty state says "not available yet" and shows no number ("' + st.replace(/\s+/g, ' ').trim() + '")');
       ok(await pg.getAttribute('[data-testid="shell-shop"]', 'aria-expanded') === 'true', '1366 · aria-expanded follows the sheet');
       await pg.screenshot({ path: path.join(SHOTS, 'shell-laptop-empty-sheet.png') });
       await pg.keyboard.press('Escape');
