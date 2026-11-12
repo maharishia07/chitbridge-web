@@ -71,7 +71,7 @@ t('an older api (no keys) or an empty list paints no such line', () => {
   assert(!render({ dropped: [] }).includes('mis-tax-dropped'));
 });
 t('the count sentence follows the language pack; the api reason stays as sent', () => {
-  box.CBSTR.fr['{count} bill could not be read and is left out of this month\u0005one'] = '{count} facture illisible, exclue de ce mois';
+  vm.runInContext(read('app/strings-fr.js'), box); /* the REAL pack, so a mistyped key fails here */
   lang = 'fr';
   const h = render({ dropped: ['a'], dropped_why: ['English from the api.'] });
   lang = 'en';

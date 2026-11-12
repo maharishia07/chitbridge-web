@@ -904,7 +904,13 @@
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var m = CBSTR.fr || (CBSTR.fr = {});
-  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} facture illisible, exclue de ce mois';
-  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} factures illisibles, exclues de ce mois';
-  m['Open bill {n}'] = 'Ouvrir la facture {n}';
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} facture illisible, exclue de ce mois',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} factures illisibles, exclues de ce mois',
+    'Open bill {n}': 'Ouvrir la facture {n}'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

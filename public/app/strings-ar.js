@@ -1008,7 +1008,13 @@
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var m = CBSTR.ar || (CBSTR.ar = {});
-  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر';
-  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر';
-  m['Open bill {n}'] = 'فتح الفاتورة {n}';
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر',
+    'Open bill {n}': 'فتح الفاتورة {n}'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

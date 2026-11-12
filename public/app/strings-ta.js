@@ -904,7 +904,13 @@
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var m = CBSTR.ta || (CBSTR.ta = {});
-  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} பில்லைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டது';
-  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} பில்களைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டன';
-  m['Open bill {n}'] = 'பில் {n} ஐத் திற';
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} பில்லைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டது',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} பில்களைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டன',
+    'Open bill {n}': 'பில் {n} ஐத் திற'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();

@@ -905,7 +905,13 @@
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var m = CBSTR.hi || (CBSTR.hi = {});
-  m['{count} bill could not be read and is left out of this month\u0005one'] = '{count} बिल पढ़ा नहीं जा सका और इस महीने से बाहर रखा गया है';
-  m['{count} bill could not be read and is left out of this month\u0005other'] = '{count} बिल पढ़े नहीं जा सके और इस महीने से बाहर रखे गए हैं';
-  m['Open bill {n}'] = 'बिल {n} खोलें';
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} बिल पढ़ा नहीं जा सका और इस महीने से बाहर रखा गया है',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} बिल पढ़े नहीं जा सके और इस महीने से बाहर रखे गए हैं',
+    'Open bill {n}': 'बिल {n} खोलें'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
 })();
