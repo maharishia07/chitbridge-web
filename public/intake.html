@@ -92,9 +92,9 @@ async function api(m, p, body) {
 // ── login (email → OTP) ──
 function loginView(msg) {
   el('app').innerHTML =
-    '<div class="card"><label>Business email</label><input id="lg_email" placeholder="you@company.com">' +
-    '<div id="otpwrap" style="display:none"><label>OTP</label><input id="lg_otp" autocomplete="one-time-code" placeholder="6-digit code"></div>' +
-    '<div class="row" style="margin-top:10px"><button class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>' +
+    '<div class="card"><label>Business email</label><input data-cbsid="WRK003-I01" id="lg_email" placeholder="you@company.com">' +
+    '<div id="otpwrap" style="display:none"><label>OTP</label><input data-cbsid="WRK003-I02" id="lg_otp" autocomplete="one-time-code" placeholder="6-digit code"></div>' +
+    '<div class="row" style="margin-top:10px"><button data-cbsid="WRK003-B01" class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>' +
     (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
     '</div>';
 }
@@ -136,10 +136,10 @@ async function load() {
   var mig = reply.j && reply.j.note ? '<div class="note" style="margin-bottom:8px">⚠ ' + esc(reply.j.note) + ' — run migration b104 to enable.</div>' : '';
   var sim =
     '<div class="card"><b style="font-size:13px">Simulate an inbound message</b> <span class="note">(stands in for a WhatsApp/email arriving)</span>' +
-    '<div class="row" style="margin-top:6px"><select id="s_ch" data-testid="cap-channel" style="width:130px" onchange="saveIntake()"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>' +
-    '<input id="s_from" data-testid="cap-from" placeholder="from (phone / email)" style="flex:1;min-width:140px" oninput="saveIntake()"></div>' +
-    '<label>Message</label><textarea id="s_text" data-testid="cap-text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to Chennai next week" oninput="saveIntake()"></textarea>' +
-    '<div class="row" style="margin-top:8px"><button class="pri" data-testid="cap-simulate" onclick="simulate()">Add to inbox</button><span id="s_err" class="err"></span></div></div>';
+    '<div class="row" style="margin-top:6px"><select data-cbsid="WRK003-S01" id="s_ch" data-testid="cap-channel" style="width:130px" onchange="saveIntake()"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>' +
+    '<input data-cbsid="WRK003-I03" id="s_from" data-testid="cap-from" placeholder="from (phone / email)" style="flex:1;min-width:140px" oninput="saveIntake()"></div>' +
+    '<label>Message</label><textarea data-cbsid="WRK003-T01" id="s_text" data-testid="cap-text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to Chennai next week" oninput="saveIntake()"></textarea>' +
+    '<div class="row" style="margin-top:8px"><button data-cbsid="WRK003-B02" class="pri" data-testid="cap-simulate" onclick="simulate()">Add to inbox</button><span id="s_err" class="err"></span></div></div>';
   var list = caps.length ? caps.map(capCard).join('') : '<div class="card"><div class="empty">No pending captures. Simulate one above.</div></div>';
   el('app').innerHTML = mig + sim + '<div id="caps">' + list + '</div>';
   restoreIntake();
@@ -157,10 +157,10 @@ function capCard(c) {
     '<div class="msg">' +
     esc(c.raw_text) +
     '</div>' +
-    '<div class="row"><button class="pur" data-testid="cap-structure" onclick="structure(\'' +
+    '<div class="row"><button data-cbsid="WRK003-B03" class="pur" data-testid="cap-structure" onclick="structure(\'' +
     c.id +
     '\')">✨ Structure with AI</button>' +
-    '<button class="gh" onclick="dismiss(\'' +
+    '<button data-cbsid="WRK003-B04" class="gh" onclick="dismiss(\'' +
     c.id +
     '\')">Dismiss</button></div>' +
     '<div id="draft_' +
@@ -195,7 +195,7 @@ function draftHtml(s) {
     ')</span></div>' +
     (items || '<div class="note">No line items detected.</div>') +
     (s.notes ? '<div class="note" style="margin-top:5px">' + esc(s.notes) + '</div>' : '') +
-    '<div class="row" style="margin-top:9px"><button class="pri" data-testid="cap-create-chit" onclick="createChit(this)" data-s=\'' +
+    '<div class="row" style="margin-top:9px"><button data-cbsid="WRK003-B05" class="pri" data-testid="cap-create-chit" onclick="createChit(this)" data-s=\'' +
     esc(encodeURIComponent(JSON.stringify(s))) +
     '\'>✓ Create chit on the rail</button><span class="err cerr"></span></div></div>'
   );
