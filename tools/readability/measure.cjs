@@ -528,6 +528,9 @@ const CODEISH_LINE = /[;{}]\s*$|^\s*(var|let|const|if|for|return)\b/;
 const HEADER_MAX_LINE = 80;
 const HEADER_MAX_COMMENTS = 12;
 const HTML_HEAD_BYTES = 6000;
+const OWNS_WORDS = /\b(owns?|ownership|what it does|purpose|responsib|one place for)\b/i;
+const CALLERS_WORDS = /(called (by|from)|callers?\b|used (by|from)|consumed by|who calls|required by|loaded by|imported by)/i;
+const FLOW_WORDS = /(\bflow\b|initiali[sz]|init order|load order|startup|sequence|mermaid|──>|-->|──▶|─▶|→)/i;
 const CARD_LINE = /\bCARD\s+([\w.-]+\/[\w.-]+)/;
 
 /** comment blocks: adjacent `//` lines join; a trailing `code; // note` never joins a block */
@@ -588,16 +591,16 @@ function readHeader(syntaxTree, comments, relPath, text) {
     const htmlComment = /<!--([\s\S]*?)-->/.exec(text.slice(0, HTML_HEAD_BYTES));
     if (htmlComment) header = htmlComment[1] + '\n' + header;
   }
-  const found = parseFields(header, relPath);
-  const card = CARD_LINE.exec('CARD ' + (found.fields.CARD || ''));
+  const card = CARD_LINE.exec(header);
   return {
     file: relPath,
     has: header.trim().length > 0,
-    lines: header.split(String.fromCharCode(10)).length,
-    owns: 'OWNS' in found.fields,
-    callers: 'CALLED BY' in found.fields,
-    flow: 'FLOW' in found.fields,
+    lines: header.split('\n').length,
+    owns: OWNS_WORDS.test(header),
+    callers: CALLERS_WORDS.test(header),
+    flow: FLOW_WORDS.test(header),
     card: card ? card[1] : null,
+    template: parseFields(header, relPath),
     loc: body.length ? body[body.length - 1].loc.end.line : 0
   };
 }

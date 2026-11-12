@@ -16,6 +16,8 @@ const measure = require('./measure.cjs');
 const grammar = require('./header-grammar.cjs');
 
 const HEAD_LINES = 60;
+/** the ONE copy of the switch-over date (Athi 12 Nov: warn for a week): from this day a NEW file without the template fails; before it, it warns. Old files are never judged by it */
+const TEMPLATE_STRICT_FROM = '2026-11-19';
 const TEST_FILE = /\.test\.(?:c?js|mjs)$|\.spec\.js$|^e2e\/[^/]+\.cjs$/;
 const TEST_DIRS = { web: ['tests', 'e2e'], api: ['tests'], engines: ['tests'] };
 const SKIP_DIR = /^(node_modules|vendor|\.git|fixtures?|out|dist|docs|migrations|seed|data)$/;
@@ -159,4 +161,4 @@ function line(repo, kind, row) {
   return `| ${repo} | ${kind} | ${cells} | ${top} |`;
 }
 
-module.exports = { REQUIRED, kindOf, readFields, missing, findings, stateOf, census, table };
+module.exports = { TEMPLATE_STRICT_FROM, REQUIRED, kindOf, readFields, missing, findings, stateOf, census, table };

@@ -126,7 +126,7 @@ function runChanged() {
     failed: result.failed,
     moved: result.moved.length,
     findings: result.findings,
-    files: result.files.map((file) => ({ file: file.file, numbers: file.numbers, score: file.score })),
+    files: result.files.map((file) => ({ file: file.file, status: file.status, numbers: file.numbers, score: file.score })),
     markdown: guard.markdown(result)
   });
   const warnings = result.warnings ? ' (' + result.warnings + ' warning(s))' : '';

@@ -340,6 +340,23 @@ ok(headerKit.findings('component', typedKind).kindWrong === 1 && headerKit.findi
 ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === 'y' && headerKit.readFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: "OWNS:" is a field; prose "owns the thing" is not');
 ok(headerKit.readFields('/* lib/a.js — x\n   ID of the party\n*/', 'lib/a.js').fields.ID === undefined, 'header template: prose starting with ID is not an ID');
 
+console.log('\n8 · the header template: a warning for a NEW file until the switch-over date, never a score change, never judges an old file');
+fs.writeFileSync(path.join(tmp, 'public/app/brand-new.js'), HEADER('brand-new') + 'module.exports = 1;' + String.fromCharCode(10));
+git(tmp, ['add', '-A']);
+const earlyRun = run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', '2026-10-16', '--json', out]);
+const earlyResult = JSON.parse(fs.readFileSync(out, 'utf8'));
+const templateWarns = earlyResult.findings.filter((finding) => finding.rule === 'header-template');
+const modifiedFiles = earlyResult.files.filter((file) => file.status === 'modified').map((file) => file.file);
+ok(templateWarns.length === 1 && templateWarns[0].level === 'warn' && templateWarns[0].text.includes('public/app/brand-new.js'), 'a new file without the template WARNS (before ' + headerKit.TEMPLATE_STRICT_FROM + '), and only the new file does');
+ok(modifiedFiles.length > 0 && !modifiedFiles.some((file) => templateWarns.some((finding) => finding.text.includes(file))), 'a touched OLD file gets no template finding at all');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', headerKit.TEMPLATE_STRICT_FROM, '--json', out]);
+const afterSwitch = JSON.parse(fs.readFileSync(out, 'utf8'));
+ok(afterSwitch.findings.filter((finding) => finding.rule === 'header-template' && finding.level === 'fail').length === 1, 'from the switch-over date the new file without the template FAILS (and no old file is judged)');
+const legacyPath = path.join(tmp, 'public/app/legacy-words.js');
+fs.writeFileSync(legacyPath, '/* legacy-words.js — purpose: a fixture. Called by the test. Flow: read → paint.\n * CARD qa/legacy-words\n */\nmodule.exports = 1;\n');
+const legacyFacts = require('../tools/readability/measure.cjs').fileFacts({ abs: legacyPath, rel: 'public/app/legacy-words.js' });
+ok(require('../tools/readability/ratchet.cjs').headerComplete(legacyFacts.header) && !legacyFacts.header.template.fields.OWNS, 'the R4 words rule still scores a prose header as complete (score unchanged vs main) while the template reader says OWNS is missing');
+
 fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
 process.exit(bad ? 1 : 0);
