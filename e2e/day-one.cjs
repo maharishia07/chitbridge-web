@@ -77,7 +77,7 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
 
   /* the shop as the snapshot would describe it — one shop, one counter, nothing on the shelf */
   const SHOP = (items) => ({
-    shop: { name: 'Mayur Bhavan', currency: 'INR', handle: 'mayurbhavan',
+    shop: { name: 'Mayur Bhavan', currency: 'INR', country: 'IN', handle: 'mayurbhavan',
             pay: [{ id: 'cash', label: 'Cash' }, { id: 'upi', label: 'UPI' }] },
     at: new Date().toISOString(), items: items || [], offers: [], slabs: [], categories: [],
   });

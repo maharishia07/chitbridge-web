@@ -92,7 +92,7 @@ async function signIn(r, opts) {
   await r.tap('[data-testid="signin-go"]');
   await r.p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-pin"], [data-testid="signin-choice"], [data-testid="signin-why"]', { timeout: 10000 });
   r.shots.push(await r.shot('2-asked'));
-  if (opts.choose) {
+  if (false) {   /* SEC-143: the chooser comes AFTER the secret, see below */
     const n = await r.p.locator('[data-testid="signin-choice"]').count();
     r.choices = n;
     const i = await r.p.evaluate((want) => Array.from(document.querySelectorAll('[data-testid="signin-choice"]')).findIndex((b) => b.textContent.includes(want)), opts.choose);
@@ -114,6 +114,13 @@ async function signIn(r, opts) {
   const cred = opts.cred || (await r.p.evaluate(() => { const c = window.__lab.practice().person.cred; return c.pin || c.code; }));
   await r.tap('[data-testid="' + (pinBox ? 'signin-pin' : 'signin-code') + '"]'); await r.p.keyboard.type(cred);
   await r.tap('[data-testid="signin-verify"]');
+  if (opts.choose) {   /* SEC-143 (web 4de4de9f): one PIN-or-code box; a shared contact's account choice is shown AFTER a correct secret */
+    await r.p.waitForSelector('[data-testid="signin-choice"]', { timeout: 10000 });
+    r.choices = await r.p.locator('[data-testid="signin-choice"]').count();
+    const i = await r.p.evaluate((want) => Array.from(document.querySelectorAll('[data-testid="signin-choice"]')).findIndex((b) => b.textContent.includes(want)), opts.choose);
+    await r.tap('[data-testid="signin-choice"] >> nth=' + Math.max(0, i));
+    r.shots.push(await r.shot('2b-chosen'));
+  }
   await r.p.waitForSelector('[data-testid="signin-pin1"], [data-testid="signin-in"], [data-testid="signin-why"]', { timeout: 10000 });
   r.shots.push(await r.shot('3-verified'));
   if (await r.p.locator('[data-testid="signin-pin1"]').count()) {
@@ -166,7 +173,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' owner: every built app opens; every rail action is allowed (editor)', (o.apps || []).length && o.apps.every((a) => /:true$/.test(a)) && (o.actions || []).length === 8 && o.actions.every((a) => /:true$/.test(a)) && o.level === 'editor', 'apps=' + (o.apps || []).join(' ') + ' actions=' + (o.actions || []).length);
     say(D + ' planned roles are marked, never offered as working', (o.planned || []).length === 3 && o.planned.every((t) => /planned role — not built/.test(t)), JSON.stringify(o.planned));
     say(D + ' what only the server decides says so (hat-gate)', /decided by the server/.test(o.hatgate || ''), o.hatgate);
-    say(D + ' session life and device are said (not named → 7 days, unlisted)', /7 days/.test(o.life || '') && /not named/.test(o.device || ''), o.life + ' · ' + o.device);
+    say(D + ' session life and device are said (7 days; the page names its device, listed — K-SEC PR A)', /7 days/.test(o.life || '') && /listed/.test(o.device || ''), o.life + ' · ' + o.device);
 
     const om = await lab(b, WEB, dev, 'who=owner&by=mobile&dev=till', async (r) => { await signIn(r); });
     errs.push(...om.errs);
@@ -178,7 +185,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' employee without costs: Accounts and owner-only apps are refused, the till opens', (e1.apps || []).includes('till:true') && (e1.apps || []).includes('accounts:false') && (e1.apps || []).includes('storefront:false') && /\bno\b/.test(e1.costs || ''), (e1.apps || []).join(' '));
     const e2 = await lab(b, WEB, dev, 'who=employee&by=mobile&stage=returning', async (r) => { await signIn(r, { wrongFirst: true }); });
     errs.push(...e2.errs);
-    say(D + ' employee returning: the PIN box (4 digits) by mobile; a wrong PIN is a sentence; the right one signs in', e2.needed === 'pin' && /Incorrect PIN|did not match/.test(e2.wrongWhy || '') && e2.storedId === 'bala@mayuri123.br' && /PIN/.test(e2.method || ''), 'needed=' + e2.needed + ' wrong="' + e2.wrongWhy + '" ' + (e2.err || ''));
+    say(D + ' employee returning: the PIN box (4 digits) by mobile; a wrong PIN is a sentence; the right one signs in', (e2.needed === 'pin' || e2.needed === 'code') && /Incorrect PIN|did not match/.test(e2.wrongWhy || '') && e2.storedId === 'bala@mayuri123.br' && /PIN/.test(e2.method || ''), 'needed=' + e2.needed + ' wrong="' + e2.wrongWhy + '" ' + (e2.err || ''));
 
     const c = await lab(b, WEB, dev, 'who=customer&by=email', async (r) => { await signIn(r); });
     errs.push(...c.errs);
@@ -186,7 +193,7 @@ const fits = (p) => p.evaluate(() => {
 
     const s = await lab(b, WEB, dev, 'who=shared&by=mobile&stage=returning', async (r) => { await signIn(r, { choose: 'Alpha Timers' }); });
     errs.push(...s.errs);
-    say(D + ' ⭐ one mobile, two people: the chooser (2); choosing the employee re-asks with the STORED id and the PIN signs in at Alpha Timers', s.choices === 2 && s.calls[1] && s.calls[1].body.id === 'athi@alpha-timers.br' && s.storedId === 'athi@alpha-timers.br', 'choices=' + s.choices + ' reask=' + JSON.stringify(s.calls[1] && s.calls[1].body) + ' ' + (s.err || s.why || ''));
+    say(D + ' ⭐ one mobile, two people: the chooser (2); choosing the employee re-verifies with the STORED id (SEC-143: the chooser follows the secret) and the PIN signs in at Alpha Timers', s.choices === 2 && (s.calls || []).filter((x) => x.path === '/api/signin/verify').length === 2 && s.calls[2] && s.calls[2].body.id === 'athi@alpha-timers.br' && s.storedId === 'athi@alpha-timers.br', 'choices=' + s.choices + ' reask=' + JSON.stringify(s.calls[2] && s.calls[2].body) + ' ' + (s.err || s.why || ''));
 
     const sp = await lab(b, WEB, dev, 'who=owner&by=email', async (r) => {
       await signIn(r, { wrongFirst: true });

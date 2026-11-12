@@ -71,7 +71,7 @@ function standIn() {
                   kind: 'person', jti, device_id, surface, iat, exp: sessions[jti].exp }) + '.sig';
     return { jti, token };
   };
-  const snap = (till) => ({ at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A', currency: 'INR' },
+  const snap = (till) => ({ at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A', currency: 'INR', country: 'IN' },
     staff: [], items: [TEA], offers: [], till });
   const srv = http.createServer(async (q, r) => {
     let raw = ''; for await (const c of q) raw += c;
@@ -198,7 +198,11 @@ async function settle(api, want, ms) {
 }
 /** the real dialog, as a person: user id → Send me a code → 123456 → Sign in */
 async function signIn(p, who) {
-  if (!(await p.locator('#usigndlg[open]').count())) await p.tap('[data-testid="till-who"]');
+  if (!(await p.locator('#usigndlg[open]').count())) {
+    /* M112: on a phone the who pill is hidden; who lives in the ☰ menu (hubWhoRow) */
+    if (await p.locator('[data-testid="till-who"]').isVisible()) await p.tap('[data-testid="till-who"]');
+    else { await p.tap('[data-testid="till-menu"]'); await p.tap('[data-testid="till-hub-who-act"]'); }
+  }
   await p.waitForSelector('#usigndlg[open] [data-testid="signin-id"]', { timeout: 10000 });
   await p.fill('[data-testid="signin-id"]', who);
   await p.tap('[data-testid="signin-go"]');

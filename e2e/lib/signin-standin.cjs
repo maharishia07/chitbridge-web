@@ -69,14 +69,13 @@ function start(port) {
     const J = (status, b) => ({ status, body: b });
     if (path === '/api/signin/ask') {
       if (!ps.length) return J(400, { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' });
-      if (ps.length > 1 && !ps.every((x) => x === ps[0])) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', message: 'That contact is on more than one account. Choose one.', choices: choicesOf(ps) });
-      if (p.kind === 'actor' && p.pin) return J(200, { message: 'Enter your PIN.', use_pin: true, user_id: p.id, kind: 'actor', need: 'pin', id: p.id });
-      p.issued = p.code; p.sent = (p.sent || 0) + 1;
-      if (p.operator) return J(200, { message: 'This store signs in with the code its network operator issued.', handle: p.id, operator_issued: true, kind: 'entity', need: 'code', id: p.id });
-      return J(200, { message: p.kind === 'customer' ? (/@/.test(id) ? 'Code sent to your email' : 'Code sent to your phone') : 'Verification code sent to your email', kind: p.kind, need: 'code', id: p.id });
+      /* SEC-143 (api routes/signin.js ASK_ANSWER): ONE answer for everyone; the account choice (409) comes only after a correct secret, on verify */
+      if (ps.length === 1 && !(p.kind === 'actor' && p.pin)) { p.issued = p.code; p.sent = (p.sent || 0) + 1; }
+      if (ps.length > 1) ps.forEach((x) => { if (!(x.kind === 'actor' && x.pin)) x.issued = x.code; });
+      return J(200, { message: 'If that sign-in exists, enter your PIN or the code we sent.', need: 'pin_or_code' });
     }
     if (path === '/api/signin/verify') {
-      if (ps.length > 1) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', choices: choicesOf(ps) });
+      if (ps.length > 1 && ps.some((x) => (x.kind === 'actor' && x.pin ? body.pin === x.pin : !!x.issued && body.otp === x.issued))) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', message: 'That contact is on more than one account. Choose one.', choices: choicesOf(ps) });
       if (!p) return J(400, { error: 'Verification failed', code: 'NO_ACCOUNT', message: 'That User ID is not recognised.' });
       if (p.locked) return J(400, { error: 'Verification failed', message: 'Too many wrong attempts. Ask your admin to reset your PIN.' });
       if (p.kind === 'actor' && p.pin) { if (body.pin !== p.pin) return J(400, { error: 'Verification failed', message: 'Incorrect PIN. 4 attempts remaining.' }); p.method = 'pin'; }
