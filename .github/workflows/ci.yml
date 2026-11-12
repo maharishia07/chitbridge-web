@@ -108,6 +108,7 @@ jobs:
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
+          node e2e/ui-codes-shop.test.cjs
           node e2e/ui-codes-intake.test.cjs
           node e2e/intake-page-checks.test.cjs
           node e2e/ui-codes-authority-forms.test.cjs
