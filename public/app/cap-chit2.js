@@ -1373,7 +1373,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     e.line_id +
     '" onclick="openLineCard(C2.id,\'' +
     e.line_id +
-    '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;' +
+    '\')" style="color:var(--on-card);padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;' +
     (_ticked ? 'background:var(--blue-tint)' : '') +
     '">' +
     /* ⭐  so the phone can wrap it: the description takes the first line, and the status, money and
@@ -1428,7 +1428,7 @@ function c2WorkRow(e, asg, prog, ctx) {
     '</span>' +
     /* ⚠️ Say that the row goes somewhere. The row has carried `cursor:pointer` all along, which only tells
          you once the mouse is already on it — and tells a phone nothing at all. */
-    '<a class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
+    '<a data-cbsid="CMP010" class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"' +
     ' title="' +
     esc(tx('Open this line — history, delivery, cost, who and when')) +
     '"' +
@@ -1846,7 +1846,7 @@ function c2PickBarHTML() {
      one, and the honest answer is also the instruction. */
   if (!(UI.actors || []).length) {
     return (
-      '<div style="padding:9px 16px;background:var(--blue-tint);border-bottom:1px solid var(--line);' +
+      '<div style="color:var(--on-card);padding:9px 16px;background:var(--blue-tint);border-bottom:1px solid var(--line);' +
       'font-size:var(--fs-2)">' +
       esc(txf('{n} selected', { n: n })) +
       ' — ' +
@@ -1864,7 +1864,7 @@ function c2PickBarHTML() {
       })
       .join('');
   return (
-    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;' +
+    '<div style="color:var(--on-card);display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;' +
     'background:var(--blue-tint);border-bottom:1px solid var(--line)">' +
     '<b style="font-size:var(--fs-2)">' +
     esc(txf('{n} selected', { n: n })) +
@@ -2153,7 +2153,7 @@ function chit2Screen() {
     '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)">' +
     '<div style="flex:none">' + // ← the frozen part
     '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">' +
-    '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
+    '<span data-cbsid="CMP006" onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>' +
     /* ⭐ CLASSED `dt` SO THE SCREEN CODE CAN FIND IT. Athi, 2026-09-12: *"if i open design 2, the name does
        not appear"* — this header is design 2's own markup and shares nothing with the classic detail, so the
        stamper had nothing to hook onto. One class, and the same stamper works here as everywhere else
