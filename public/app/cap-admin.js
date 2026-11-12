@@ -339,6 +339,43 @@ async function loadTaxLedger() {
     if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>';
   }
 }
+/**
+ * The bills the ledger could not read, said in words. api #1180 sends `dropped` (chit ids) and `dropped_why` (fixed English sentences);
+ * an older api sends neither, so read them only if present. Reuses the .miswarn notice; each bill opens with the standard Open (CMP010),
+ * named "bill 1, 2 ..." because the answer carries ids only and an id is never shown to a person (cbIsRawId).
+ * The count sentence is translated here (txn); the api's reason stays as the api wrote it, on the detail line.
+ */
+function taxDroppedHTML(ledger) {
+  const ids = Array.isArray(ledger.dropped) ? ledger.dropped : [];
+  if (!ids.length) return '';
+  const reason = errWords([].concat(ledger.dropped_why || []).join(' '));
+  const head = txn(
+    '{count} bill could not be read and is left out of this month',
+    '{count} bills could not be read and are left out of this month',
+    ids.length
+  );
+  const links = ids
+    .map(function (id, at) {
+      return (
+        '<button data-cbsid="CMP010" class="lineopen" data-testid="mis-tax-dropped-open-' +
+        at +
+        '" style="background:none;border:0;padding:0 8px 0 0;font:inherit" onclick="openChit(\'' +
+        esc(id) +
+        '\')">' +
+        esc(txf('Open bill {n}', { n: at + 1 })) +
+        '</button>'
+      );
+    })
+    .join('');
+  return (
+    '<div class="miswarn" role="status" data-testid="mis-tax-dropped">' +
+    esc(head) +
+    (reason ? '<div data-testid="mis-tax-dropped-why">' + esc(reason) + '</div>' : '') +
+    '<div>' +
+    links +
+    '</div></div>'
+  );
+}
 function misTax() {
   /* ⭐ CX0: this band is India's GST (CGST · SGST · IGST, GSTR-1 / 3B from the rail). Another country's shop is told where its own return is. */
   if (typeof SESSION !== 'undefined' && SESSION && SESSION.country && String(SESSION.country).toUpperCase() !== 'IN')
@@ -452,7 +489,7 @@ function misTax() {
     '</bdi>' +
     (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') +
     '</div>' +
-    '<div class="misnote">CGST ' +
+    taxDroppedHTML(L) + '<div class="misnote">CGST ' +
     inr(L.net.cgst) +
     ' · SGST ' +
     inr(L.net.sgst) +
