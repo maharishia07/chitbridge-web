@@ -76,6 +76,50 @@ jobs:
           npm run check:eps
           npm run check:undeclared
           npm run check:barereturn
+      # QA-153 (13 Nov): 41 offline guards that passed on main and that no CI job ran (packs only, or nothing). No browser, no sibling repo.
+      - name: Offline guards no CI job ran (QA-153)
+        run: |
+          node e2e/a11y-slice2.test.cjs
+          node e2e/acc336-advance-rows.test.cjs
+          node e2e/app-syntax.cjs
+          node e2e/attach-gate.cjs
+          node e2e/attempt-key.test.cjs
+          node e2e/barcode-check.cjs
+          node e2e/bill-row.cjs
+          node e2e/capability-bare-page.cjs
+          node e2e/cart-api.cjs
+          node e2e/cart-page-needs.cjs
+          node e2e/chart-smoke.cjs
+          node e2e/currency-distinct.cjs
+          node e2e/defs-batch.test.cjs
+          node e2e/developer-words.cjs
+          node e2e/double-fire.cjs
+          node e2e/employees-guard.cjs
+          node e2e/group-sum.cjs
+          node e2e/guard-static.test.cjs
+          node e2e/helper-scope.cjs
+          node e2e/html-syntax.cjs
+          node e2e/legend-complete.cjs
+          node e2e/network-guard.cjs
+          node e2e/offer-nudge-gap.cjs
+          node e2e/offers-combined.test.cjs
+          node e2e/offers-kinds.test.cjs
+          node e2e/offers-promise.test.cjs
+          node e2e/offline-poll.cjs
+          node e2e/one-cart.cjs
+          node e2e/one-price-reader.cjs
+          node e2e/panel-reachable.cjs
+          node e2e/pe-gst-still.test.cjs
+          node e2e/prefetch.cjs
+          node e2e/prim-homes.cjs
+          node e2e/rail-thread-guard.cjs
+          node e2e/raw-id-words.cjs
+          node e2e/register-off.cjs
+          node e2e/skeleton-guard.cjs
+          node e2e/stacking.cjs
+          node e2e/standards-one-list.cjs
+          node e2e/theme-literals.cjs
+          node e2e/shop-switch.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |
