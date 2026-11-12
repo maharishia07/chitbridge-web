@@ -1888,7 +1888,7 @@ const EP = {
   supplyList: { m: 'GET', p: '/api/supplies', ok: 'y' },
   supplyAdd: { m: 'POST', p: '/api/supplies', ok: '✓' },
   supplyBuy: { m: 'POST', p: '/api/supplies/purchase', ok: '✓', idem: 'attempt' },
-  supplyUse: { m: 'POST', p: '/api/supplies/:id/issue', ok: '✓' },
+  supplyUse: { m: 'POST', p: '/api/supplies/:id/issue', ok: '✓', idem: 'attempt' },
   /* ⭐ ADOPT — a supplier delivery becoming YOUR catalogue. Read offers; accept only what is named. */
   adoptRead: { m: 'GET', p: '/api/adopt/:id', ok: 'y' },
   adoptAccept: { m: 'POST', p: '/api/adopt/:id', ok: '✓' },
