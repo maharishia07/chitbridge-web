@@ -30,7 +30,7 @@ const WIDE = { width: 1366, height: 860 }, PHONE = { width: 390, height: 800 };
 /* ── the three shops and what each must see ── */
 const SHOPS = [
   { cc: 'AU', name: 'Aussie Store', currency: 'AUD', taxId: '51824753556', expect: { taxWord: 'ABN', filings: 'BAS · Name your ABN', impact: 'Your ABN',
-    checks: ['Address proven', 'Phone verified', 'ABN'], symbol: 'A$', regLabel: 'GST registration', regNow: 'GST registered', kinds: ['regular', 'unregistered'],
+    checks: ['Address proven', 'Phone verified', 'ABN', 'ACN on file', 'GST registration'], symbol: 'A$', regLabel: 'GST registration', regNow: 'GST registered', kinds: ['regular', 'unregistered'],
     labels: { regular: 'GST registered', unregistered: 'Not registered' }, keep: /5 years/ } },
   { cc: 'AE', name: 'Gulf Store', currency: 'AED', taxId: '100123456700003', expect: { taxWord: 'TRN', filings: 'VAT return · Name your TRN', impact: 'Your TRN',
     checks: ['Address proven', 'Phone verified', 'TRN', 'Trade licence'], symbol: 'AED', regLabel: 'VAT registration', regNow: 'VAT registered', kinds: ['regular', 'unregistered'],
@@ -46,7 +46,7 @@ let api = null;
 try { api = { sides: require(path.join(API, 'lib', 'sides')), header: require(path.join(API, 'lib', 'entity-header')), policy: require(path.join(API, 'lib', 'policy')) }; }
 catch (e) { console.log('NOTE: the api checkout is not beside this one (' + String(e && e.message).split('\n')[0].slice(0, 90) + ') — the stand-in answers with the shapes typed from the api tests'); }
 
-const CHECK_KEYS = { 'Address proven': 'address', 'Phone verified': 'phone', 'PAN on file': 'pan', 'Trade licence': 'trade_licence' };
+const CHECK_KEYS = { 'Address proven': 'address', 'Phone verified': 'phone', 'PAN on file': 'pan', 'Trade licence': 'trade_licence', 'ACN on file': 'acn', 'GST registration': 'gst_registration' };
 function typedAnswers(shop) {
   const X = shop.expect;
   const checks = X.checks.map((label) => ({ key: CHECK_KEYS[label] || 'tax_id', label, done: false }));
