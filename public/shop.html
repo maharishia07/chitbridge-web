@@ -21,6 +21,13 @@
     --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --cbpick-gap:8px; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); }   /* the app's type token — one cart, one face */
+  /* UX-136 fit (2026-11-12): the page never scrolls — the bar stays put and ONLY the shop's own pane (#main) scrolls, at 1366×768 and 390×844 */
+  html,body{ height:100%; }
+  body{ display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; }
+  #shell{ flex:none; }
+  .fitmain{ flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; }
+  /* UX-136 tap size: the phone's finger is 44 px (WCAG 2.5.8 asks 24) — the search box, the Categories button and the cart's add buttons (the cart draws them inline, so !important) */
+  @media (max-width:600px){ .shopband input,.catbtn{ min-height:44px; } [data-testid="shop-my-orders-link"],[data-testid="shop-support"]{ display:inline-flex; align-items:center; min-height:44px; padding:0 4px; } #app [data-testid="cart-add"]{ min-width:44px !important; min-height:44px !important; } }
   .wrap{ max-width:860px; margin:0 auto; padding:8px 14px 110px; }
   .sg{ font-family:var(--f-display,'Bricolage Grotesque',sans-serif); }   /* SYSTEM.md §2: the display face (SHELL-ONE) */
   .hd{ display:flex; align-items:center; gap:10px; padding:4px 0 6px; margin-bottom:0; }
@@ -70,7 +77,7 @@
 </head>
 <body>
 <div id="shell" data-testid="shop-shell"></div>   <!-- THE ONE FRAME (SHELL-ONE): the bar — ⌂ Home is THIS shop's front -->
-<div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
+<main class="fitmain" id="main" data-testid="shop-main"><div class="wrap" id="app"><div class="msg">Loading shop…</div></div></main>
 <script src="cb-offline.js"></script>
 <script src="engine/offers.js"></script>
 <script src="engine/pricing.js"></script>
@@ -954,7 +961,7 @@ function productListHtml(data, cur) {
   setTimeout(shopDockSync, 0);
   return (
     '<div class="shopband" id="shop_band" data-testid="shop-band">' +
-    '<input id="p_search" data-testid="shop-search" type="search" placeholder="Search products…" value="' +
+    '<input id="p_search" data-testid="shop-search" type="search" aria-label="Search products" placeholder="Search products…" value="' +
     esc((_CART.state() || {}).q || '') +
     '" oninput="shopPickSearch(this.value)">' +
     shopCatBtnHtml() +
@@ -1443,11 +1450,21 @@ function scWire(c) {
     if (element.dataset.sc === 'share' || element.dataset.sc === 'copy') {
       var u = c.shop.url || location.href;
       if (element.dataset.sc === 'share' && navigator.share) {
-        navigator.share({ title: c.shop.name, url: u }).catch(function () {});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(u).then(function () {
-          element.title = 'Link copied';
+        navigator.share({ title: c.shop.name, url: u }).catch(function (e) {
+          if (e && e.name !== 'AbortError') shopSay(tx('Could not share. Copy the link instead.')); /* UX-142: the person always sees the outcome; closing the sheet is not a failure */
         });
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(u).then(
+          function () {
+            element.title = tx('Link copied');
+            shopSay(tx('Link copied'));
+          },
+          function () {
+            shopSay(tx('Could not copy the link.'));
+          }
+        );
+      } else {
+        shopSay(tx('Could not copy the link.'));
       }
     }
   });
@@ -3109,6 +3126,10 @@ function vizToOrder() {
 }
 /* SHELL-ONE: the one frame, the bar only — ⌂ Home is THIS shop's front (the page without its ?item), the avatar's door is Home's sign-in; the shop's
    own name stays in its brand row below (rule 3: one string once), so the bar names the page */
+/** UX-142: the one shared toast (accounts-shell) says what a share or copy did — the shop drew no message of its own, so a press looked like nothing */
+function shopSay(message) {
+  if (typeof toast === 'function') toast(message);
+}
 function shopFrontHref() {
   var query = new URLSearchParams(location.search);
   query.delete('item');
