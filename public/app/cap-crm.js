@@ -267,6 +267,11 @@ var CRM_SEG = { new: 'New customer', regular: 'Regular', inactive: 'Inactive', h
 function crmSegChip(p) {
   return p.segment && !crmIsLead(p) ? '<span class="tag seg">' + esc(tx(CRM_SEG[p.segment] || p.segment)) + '</span>' : '';
 }
+/** CRM-2: the cell for a party owing nothing: a customer the server counts no bill for (customer.txn_count 0) who is not a supplier (a supplier's bills are not in that count) has nothing to settle, so "Nothing yet", else "Settled" */
+function crmNothingDueCell(party, testAttr) {
+  var never = party.customer && !party.supplier && Number(party.txn_count) === 0;
+  return '<span class="due ' + (never ? 'sub' : 'settled') + '"' + testAttr + '>' + esc(tx(never ? 'Nothing yet' : 'Settled')) + '</span>';
+}
 /** ⭐ A DUE IS SAID THE WAY A SHOPKEEPER SAYS IT: "₹12,450 you'll get" (green) / "₹4,816 you'll give" (red) — a symbol AND a word AND a colour, never the colour alone.
  *  The figure is the server's stored balance (+ they owe you), painted by bkMoney; the sign only picks the word. */
 function crmDueCell(p) {
@@ -283,7 +288,7 @@ function crmDueCell(p) {
       : '';
   var tid = ' data-testid="party-due-' + esc(p.party_id) + '"',
     oldest = p.oldest_due ? ' · ' + tx('oldest due') + ' ' + bkDate(p.oldest_due) : '';
-  if (!b) return '<span class="due settled"' + tid + '>' + esc(tx('Settled')) + '</span>';
+  if (!b) return crmNothingDueCell(p, tid);
   return b > 0
     ? '<span class="due get"' +
         tid +

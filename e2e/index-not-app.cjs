@@ -1,4 +1,5 @@
 /* index-not-app (IX0, 2026-10-13): static — no browser. NO CUSTOMER PATH LANDS IN THE WORKSHOP (app.html).
+ * CARD  19-onboarding-and-shop-setup/home-and-doors
    Customers go Home (index.html) → the small apps (the manifest's routes: till · accounts · finance · crm · tasks · employees · network ·
    shop · the labs …). This reads Home, every page the manifest routes to, and the scripts EACH of those pages actually loads, strips the
    comments, and fails on any door into app.html (`app.html`, `#/app`, `#/welcome`, `#/country`) that is not on the ALLOW list below.

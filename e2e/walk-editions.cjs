@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * CARD  29-qa-test-tooling-ux-locale-and-design-system/editions
  * e2e/walk-editions.cjs - EDITIONS OF HOME, WALKED (round AX1, 2026-10-13): the full app vs the auditor's showing.
  * Black box, signed in as the FIXTURE shop; the site served from this checkout, the API a stand-in answering inside the page (nothing is written anywhere).
  *   E1  full: every area in the menu, every card a door that opens (no app.html)
