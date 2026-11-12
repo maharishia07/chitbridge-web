@@ -49,7 +49,7 @@
 <div class="tools">
   <div class="srow">
     <span class="sub" id="netlabel"></span>
-    <div class="search"><input id="q" type="search" placeholder="Search products…" autocomplete="off"></div>
+    <div class="search"><input data-cbsid="STR001-I01" id="q" type="search" placeholder="Search products…" autocomplete="off"></div>
   </div>
   <div class="cats" id="cats"></div>
 </div>
@@ -123,7 +123,7 @@ function renderCart() {
     return;
   }
   bar.className = 'cartbar show';
-  bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button onclick="placeOrder()">Place order</button>';
+  bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button data-cbsid="STR001-B01" onclick="placeOrder()">Place order</button>';
 }
 function placeOrder() {
   var name = prompt('Your name:', '');
@@ -169,9 +169,9 @@ function visible() {
 }
 function renderCats() {
   var el = document.getElementById('cats');
-  var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
+  var chips = ['<span data-cbsid="STR001-C01" class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
   STATE.categories.forEach(function (item) {
-    chips.push('<span class="chip ' + (STATE.cat === item ? 'on' : '') + '" data-cat="' + esc(item) + '">' + esc(item) + '</span>');
+    chips.push('<span data-cbsid="STR001-C02" class="chip ' + (STATE.cat === item ? 'on' : '') + '" data-cat="' + esc(item) + '">' + esc(item) + '</span>');
   });
   el.innerHTML = chips.join('');
 }
@@ -197,7 +197,7 @@ function renderBody() {
           '<div class="pr">' +
           (item.price != null ? rs(item.price) : '') +
           '</div>' +
-          '<button onclick="addToCart(\'' +
+          '<button data-cbsid="STR001-B02" onclick="addToCart(\'' +
           item.product_id +
           '\')">Add</button></div>'
         );
