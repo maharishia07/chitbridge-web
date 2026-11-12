@@ -1,11 +1,11 @@
 /* tools/readability/headers.cjs — the HEADER TEMPLATE conformance census (read-only): which files carry the full template, a part, or none.
  *
- * OWNS      the field grammar (FIELD_LINE), the kind of a file by its path (kindOf), the required fields per kind (REQUIRED), and the census
- *           table; it judges nothing and writes nothing. The template itself is PM/HEADER-TEMPLATE.md (docs repo); this is its reader.
+ * OWNS      the kind of a file by its path (kindOf), the required fields per kind (REQUIRED), the findings a typed header can carry
+ *           (a typed KIND that disagrees with the path, a typed derived field, an OWNER that is not a cb-* agent) and the census table.
+ *           It judges nothing and writes nothing. The grammar is header-grammar.cjs (the one reader); the template is PM/HEADER-TEMPLATE.md.
  * CALLED BY tools/readability.cjs (--headers); e2e/readability-guard.cjs (the grammar fixtures).
  * FLOW      collect (measure.collect + test files) ──▶ readFields(first 60 lines) ──▶ kindOf(path) ──▶ missing(kind, found) ──▶ tally ──▶ table
  * CARD      qa/readability-guard
- * KIND      tool
  * OWNER     cb-maintainability
  * RISK      plain
  */
@@ -13,28 +13,26 @@
 const fs = require('fs');
 const path = require('path');
 const measure = require('./measure.cjs');
+const grammar = require('./header-grammar.cjs');
 
 const HEAD_LINES = 60;
-const FIELDS = ['ID', 'KIND', 'OWNER', 'OWNS', 'CALLED BY', 'CARD', 'FLOW', 'RISK', 'TEST LEVEL', 'RELEASE', 'COUNTRY', 'GATED BY', 'STAMP', 'UNIT'];
-/** one field per line: comment decoration, the label, whitespace, a non-empty value (a continuation line is not read: only line 1 of a value counts) */
-const FIELD_LINE = new RegExp('^[\\s/*#!<>-]*(' + FIELDS.join('|') + ')\\s+(\\S.*?)\\s*(?:-->|\\*/)?\\s*$');
-/** the title line: `<path ending in the file name> — <one-line note>` */
-const TITLE_LINE = /^[\s/*#!<>-]*(\S+\.(?:c?js|mjs|html))\s+[—–-]\s+(\S.*?)\s*(?:-->|\*\/)?\s*$/;
 const TEST_FILE = /\.test\.(?:c?js|mjs)$|\.spec\.js$|^e2e\/[^/]+\.cjs$/;
 const TEST_DIRS = { web: ['tests', 'e2e'], api: ['tests'], engines: ['tests'] };
 const SKIP_DIR = /^(node_modules|vendor|\.git|fixtures?|out|dist|docs|migrations|seed|data)$/;
 const KINDS = ['module', 'route-file', 'page', 'component', 'engine', 'test', 'tool'];
-/** fields every file of the kind MUST carry (title is always required; test needs CARD or UNIT) */
-const COMMON = ['KIND', 'OWNER', 'CARD'];
-const ENTRY = COMMON.concat(['OWNS', 'CALLED BY', 'RISK']);
+const OWNER_VALUE = /^cb-[a-z0-9-]+$/;
+/** typed but DERIVED fields: a header must not carry them (Athi, DECISIONS bde673b8: the header holds static information only) */
+const DERIVED_LABELS = ['KIND', 'TEST LEVEL', 'BOUNDARY'];
+/** STATIC fields every file of the kind MUST carry (the title line always; a test needs CARD or UNIT). FLOW is REQUIRED for new files (Athi 12 Nov, decided). CALLED BY is not required: it is derived from the graph */
+const STATIC = ['OWNER', 'OWNS', 'CARD', 'FLOW'];
 const REQUIRED = {
-  module: ENTRY,
-  'route-file': ENTRY,
-  engine: ENTRY.concat(['RELEASE']),
-  page: ENTRY.concat(['ID']),
-  component: ENTRY.concat(['ID']),
-  tool: COMMON.concat(['OWNS', 'CALLED BY']),
-  test: ['KIND', 'OWNER']
+  module: STATIC.concat(['RISK']),
+  'route-file': STATIC.concat(['RISK']),
+  engine: STATIC.concat(['RISK']),
+  page: STATIC.concat(['RISK', 'ID']),
+  component: STATIC.concat(['RISK', 'ID']),
+  tool: STATIC,
+  test: ['OWNER']
 };
 
 /** the kind of a file, from its repo and path alone (never typed, never guessed beyond this table) */
@@ -53,17 +51,9 @@ function kindInRepo(repo, relPath) {
   return 'module';
 }
 
-/** what the first 60 lines say: { title: bool, fields: { LABEL: value } } */
+/** what the first 60 lines say: { title: bool, fields: { LABEL: value } } (the one reader: header-grammar.cjs) */
 function readFields(text, relPath) {
-  const found = { title: false, fields: {} };
-  const lines = text.split(/\r?\n/).slice(0, HEAD_LINES);
-  for (const line of lines) {
-    const title = TITLE_LINE.exec(line);
-    if (title && !found.title && path.basename(relPath) === path.basename(title[1])) found.title = true;
-    const field = FIELD_LINE.exec(line);
-    if (field && !(field[1] in found.fields)) found.fields[field[1]] = field[2];
-  }
-  return found;
+  return grammar.parseFields(text.split(grammar.LINE_BREAK).slice(0, HEAD_LINES).join('\n'), relPath);
 }
 
 /** the REQUIRED fields (and the title) a file lacks, in template order */
@@ -72,6 +62,16 @@ function missing(kind, found) {
   if (kind === 'test' && !('CARD' in found.fields) && !('UNIT' in found.fields)) lacks.push('CARD|UNIT');
   if (!found.title) lacks.unshift('title');
   return lacks;
+}
+
+/** findings a typed header can carry: { kindWrong, derivedTyped, ownerBad } as 0/1 */
+function findings(kind, found) {
+  const typedKind = found.fields.KIND;
+  return {
+    kindWrong: typedKind && typedKind.split(/\s+/)[0] !== kind ? 1 : 0,
+    derivedTyped: DERIVED_LABELS.some((label) => label in found.fields) ? 1 : 0,
+    ownerBad: 'OWNER' in found.fields && !OWNER_VALUE.test(found.fields.OWNER) ? 1 : 0
+  };
 }
 
 /** the three states: full (nothing missing) · none (no title and no field line at all) · partial */
@@ -88,25 +88,29 @@ function collectTests(repo, root) {
   const walk = (dir) => {
     for (const entry of fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }) : []) {
       const full = path.join(dir, entry.name);
+      const relPath = path.relative(root, full).replace(/\\/g, '/');
       if (entry.isDirectory()) {
         if (!SKIP_DIR.test(entry.name)) walk(full);
-      } else if (TEST_FILE.test(path.relative(root, full).replace(/\\/g, '/'))) out.push({ abs: full, rel: path.relative(root, full).replace(/\\/g, '/') });
+      } else if (TEST_FILE.test(relPath)) out.push({ abs: full, rel: relPath });
     }
   };
   (TEST_DIRS[repo] || []).forEach((folder) => walk(path.join(root, folder)));
   return out;
 }
 
+const COUNTERS = ['files', 'full', 'partial', 'none', 'legacy3', 'risk', 'testLevel', 'kindWrong', 'derivedTyped', 'ownerBad'];
 /** one blank row of the tally */
-const blank = () => ({ files: 0, full: 0, partial: 0, none: 0, core3: 0, risk: 0, testLevel: 0, lacks: {} });
+const blank = () => Object.assign({ lacks: {} }, ...COUNTERS.map((name) => ({ [name]: 0 })));
 
-/** add one file to a row */
+/** add one file to a row; legacy3 = the three things today's guard asks (OWNS, CALLED BY, FLOW) */
 function tally(row, kind, found, judged) {
   row.files++;
   row[judged.state]++;
-  if (found.title && 'OWNS' in found.fields && 'CALLED BY' in found.fields && ('CARD' in found.fields)) row.core3++;
+  if ('OWNS' in found.fields && 'CALLED BY' in found.fields && 'FLOW' in found.fields) row.legacy3++;
   if ('RISK' in found.fields) row.risk++;
   if ('TEST LEVEL' in found.fields) row.testLevel++;
+  const flags = findings(kind, found);
+  Object.keys(flags).forEach((name) => (row[name] += flags[name]));
   judged.lacks.forEach((label) => (row.lacks[label] = (row.lacks[label] || 0) + 1));
 }
 
@@ -128,16 +132,18 @@ function census(roots) {
 
 /** the census as a markdown table (one row per repo and kind, then a total per repo) */
 function table(result) {
-  const head = '| repo | kind | in scope | full | partial | none | title+OWNS+CALLED BY+CARD | RISK | TEST LEVEL | most-missing fields |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---|';
+  const head =
+    '| repo | kind | in scope | full | partial | none | OWNS+CALLED BY+FLOW (today) | RISK | TEST LEVEL typed | KIND typed wrong | KIND/LEVEL/BOUNDARY typed | OWNER not cb-* | most-missing fields |\n' +
+    '|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|';
   const rows = [];
   for (const repo of Object.keys(result)) {
     const total = blank();
     for (const kind of KINDS.filter((name) => result[repo][name])) {
       const row = result[repo][kind];
       rows.push(line(repo, kind, row));
-      Object.keys(total).filter((key) => key !== 'lacks').forEach((key) => (total[key] += row[key]));
+      COUNTERS.forEach((name) => (total[name] += row[name]));
     }
-    rows.push(line(repo, '**all**', total).replace(/^\| (\S+) \| \*\*all\*\*/, '| **$1** | **all**'));
+    rows.push(line('**' + repo + '**', '**all**', total));
   }
   return head + '\n' + rows.join('\n');
 }
@@ -149,7 +155,8 @@ function line(repo, kind, row) {
     .slice(0, 3)
     .map((pair) => pair[0] + ' ' + pair[1])
     .join(' · ');
-  return `| ${repo} | ${kind} | ${row.files} | ${row.full} | ${row.partial} | ${row.none} | ${row.core3} | ${row.risk} | ${row.testLevel} | ${top} |`;
+  const cells = COUNTERS.map((name) => row[name]).join(' | ');
+  return `| ${repo} | ${kind} | ${cells} | ${top} |`;
 }
 
-module.exports = { FIELD_LINE, TITLE_LINE, REQUIRED, kindOf, readFields, missing, stateOf, census, table };
+module.exports = { REQUIRED, kindOf, readFields, missing, findings, stateOf, census, table };

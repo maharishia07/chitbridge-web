@@ -30,8 +30,8 @@ const run = (args, cwd) => spawnSync(process.execPath, args, { encoding: 'utf8',
 const git = (cwd, args) => { const r = spawnSync('git', ['-C', cwd].concat(args), { encoding: 'utf8' }); if (r.status !== 0) throw new Error('git ' + args.join(' ') + ': ' + r.stderr); return r.stdout.trim(); };
 
 /* ── the fixture texts ─────────────────────────────────────────────────────────────────────────────────────────── */
-const HEADER = (name) => `/* public/app/${name}.js — a fixture module.\n * OWNS the ${name} numbers. CALLED BY the test. FLOW read → paint. CARD qa/fixture-${name}\n */\n`;
-const NO_CARD_HEADER = '/* a fixture module. OWNS nothing much. CALLED BY the test. FLOW read → paint. */\n';
+const HEADER = (name) => `/* public/app/${name}.js — a fixture module.\n * OWNS      the ${name} numbers.\n * CALLED BY the test.\n * FLOW      read → paint.\n * CARD      qa/fixture-${name}\n */\n`;
+const NO_CARD_HEADER = '/* a fixture module.\n * OWNS      nothing much.\n * CALLED BY the test.\n * FLOW      read → paint.\n */\n';
 /** a function of exactly `lines` lines (header line + body + closing brace), complexity 1 */
 function longFunction(name, lines) {
   const body = []; for (let i = 0; i < lines - 2; i++) body.push('  total += ' + (i + 1) + ';');
@@ -330,12 +330,15 @@ for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmS
 
 // ── 7 · the header-template grammar (tools/readability/headers.cjs, PM/HEADER-TEMPLATE.md): a full header passes, each missing field is named, a test needs CARD or UNIT
 const headerKit = require('../tools/readability/headers.cjs');
-const FULL = '/* public/app/x.js — shows x.\n   KIND      component\n   OWNER     cb-ux-locale\n   ID        CMP001\n   OWNS      x\n   CALLED BY y\n   CARD      07-x/x\n   RISK      plain\n*/\n';
+const FULL = ['/* public/app/x.js — shows x.', '   OWNER     cb-ux-locale', '   ID        CMP001', '   OWNS      x', '   FLOW      read -> paint', '   CARD      07-x/x', '   RISK      plain', '*/', ''].join(String.fromCharCode(10));
 ok(headerKit.stateOf('component', headerKit.readFields(FULL, 'public/app/x.js')).state === 'full', 'header template: a header with every required field is full');
 ok(headerKit.stateOf('component', headerKit.readFields(FULL.replace(/ +RISK +plain\n/, ''), 'public/app/x.js')).lacks.join() === 'RISK', 'header template: a header without RISK is partial and names RISK');
 ok(headerKit.stateOf('module', headerKit.readFields('const a = 1;\n', 'lib/a.js')).state === 'none', 'header template: no comment at all is none');
-ok(headerKit.stateOf('test', headerKit.readFields('// tests/a.test.cjs — a.\n// KIND test\n// OWNER cb-qa\n// UNIT 08/Rewards\n', 'tests/a.test.cjs')).state === 'full', 'header template: a test with UNIT instead of CARD is full (test-evidence grammar kept)');
-ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: a label with a colon is not a field (one grammar)');
+ok(headerKit.stateOf('test', headerKit.readFields(['// tests/a.test.cjs — a.', '// OWNER cb-qa', '// UNIT 08/Rewards'].join(String.fromCharCode(10)), 'tests/a.test.cjs')).state === 'full', 'header template: a test with OWNER and UNIT instead of CARD is full (test-evidence grammar kept)');
+const typedKind = headerKit.readFields(FULL.replace('   OWNER', '   KIND      module' + String.fromCharCode(10) + '   OWNER'), 'public/app/x.js');
+ok(headerKit.findings('component', typedKind).kindWrong === 1 && headerKit.findings('component', typedKind).derivedTyped === 1, 'header template: a typed KIND that disagrees with the path is a finding, and any typed KIND is a derived-field finding');
+ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === 'y' && headerKit.readFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: "OWNS:" is a field; prose "owns the thing" is not');
+ok(headerKit.readFields('/* lib/a.js — x\n   ID of the party\n*/', 'lib/a.js').fields.ID === undefined, 'header template: prose starting with ID is not an ID');
 
 fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
