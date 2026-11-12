@@ -1720,6 +1720,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — the Ledger's statement rows and the Pay outcome mount it -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
@@ -6532,7 +6533,7 @@ function _renderApp() {
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
-  avatarMount(role, isEntityUser); /* the avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
+  avatarMount(role, isEntityUser); UI._modalOpener = null; /* the rebuilt #modalhost is empty, so a remembered opener is stale (rememberModalOpener). The avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
   /**
    * ⚠️ BOTH STAMPS RUN HERE, AND THE DETAIL ONE ALSO RUNS AFTER THE PANE PAINTS. An observer over the whole app
@@ -23254,9 +23255,22 @@ function modalStamp(host) {
   } catch (_) {}
 }
 
+/* the control that had focus when a dialog opened, kept so closing it (button, Escape or backdrop) gives the keyboard back there; a second dialog opened over the first keeps the first's opener */
+function rememberModalOpener(host) {
+  if (host.innerHTML) return;
+  const active = document.activeElement;
+  UI._modalOpener = active && active !== document.body && !host.contains(active) ? active : null;
+}
+/* give focus back to the remembered opener if it is still on the page; a repainted opener has nothing to return to */
+function restoreModalOpener() {
+  const opener = UI._modalOpener;
+  UI._modalOpener = null;
+  if (opener && document.body.contains(opener) && typeof opener.focus === 'function') opener.focus();
+}
 function modal(html, wide, opt) {
   const node = document.getElementById('modalhost');
   if (!node) return;
+  rememberModalOpener(node);
   UI._composeModal = false;
   node.style.display = '';
   node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
@@ -23321,6 +23335,7 @@ function closeModal() {
   ccCartRelease();
   const p = document.getElementById('composepill');
   if (p) p.remove();
+  restoreModalOpener();
   /**
    * ⚠️ A DISMISS HOOK, BECAUSE THERE ARE THREE WAYS OUT AND ONLY ONE IS A BUTTON. Cancel, Escape and the backdrop
    * all land here; wiring cleanup to the Cancel button alone leaves the other two leaking. confirmAsk/promptAsk

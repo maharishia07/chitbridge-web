@@ -84,7 +84,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (57)
+## Shared (58)
 
 | file | loading | what it is |
 |---|---|---|
@@ -106,6 +106,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
+| `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
 | `list-ctl.js` | eager |  |
@@ -148,4 +149,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*121 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*122 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

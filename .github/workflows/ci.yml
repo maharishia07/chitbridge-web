@@ -92,6 +92,7 @@ jobs:
           node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
+          node e2e/cart-keys-words.test.cjs
           node e2e/text-budget-json.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
@@ -122,6 +123,8 @@ jobs:
           node e2e/ui-codes-authority-forms.test.cjs
           node e2e/bulk-resume.test.cjs
           node e2e/ui-codes-utility-pages.test.cjs
+          node e2e/modal-focus-return.test.cjs
+          node e2e/step-press.test.cjs
           node e2e/ui-codes-network-design.test.cjs
           node e2e/ui-codes-testing.test.cjs
           node e2e/ui-codes-cart-design.test.cjs
