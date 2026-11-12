@@ -169,7 +169,12 @@ async function route(S, r) {
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/accounts' && m === 'POST') { const a = { code: '6011', name: body.name, parent_code: body.parent_code, is_group: false }; S.accounts.push(a); S.addedAccount = body; return J(r, 200, { account: a }); }
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: x[1], currency: 'INR', opening_minor: 0, lines: [], closing_minor: 0 });
-    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, books.periods([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => books.periodRow(FYNOW, n, S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open'))));
+    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, books.periods([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => {
+      const row = books.periodRow(FYNOW, n, S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open');
+      /* M157: the server says which month may open again (a soft-locked one, with a reason); the Reason box is drawn only while one may — a closed-for-good month never */
+      if (row.status === 'soft_locked') row.reopen = { may: true, why: null };
+      return row;
+    })));
     if ((x = p.match(/^\/api\/books\/periods\/([^/]+)\/(\d+)\/(lock|unlock)$/))) {
       if (x[3] === 'unlock' && !String(body.reason || '').trim()) return J(r, 422, { error: 'A reason is needed' });
       S.locked[+x[2]] = x[3] === 'lock'; S.hard = S.hard || {}; S.hard[+x[2]] = x[3] === 'lock' && !!body.hard; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
@@ -215,6 +220,11 @@ async function route(S, r) {
     if (dup && !body.confirm_duplicate) return J(r, 409, { code: 'DUPLICATE_PARTY', error: 'Another party already has this tax id.' });
     return J(r, 200, { ok: true });
   }
+  /* the two system folders the Bills view reads (GET /api/folders → _foldersFrom → UI.sysFolders; each folder's chits): without them Bills says "No bills folders" and has no Received tab */
+  if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: [
+    { folder_id: 'f-b2100', parent_id: null, name: 'Bills · Received', code: 'B-2100', kind: 'view', system: true, scope: null, side: 'received', count: 0, total: 0 },
+    { folder_id: 'f-b1300', parent_id: null, name: 'Bills · Issued', code: 'B-1300', kind: 'view', system: true, scope: null, side: 'issued', count: 0, total: 0 }] });
+  if (/^\/api\/folders\/[^/]+\/chits$/.test(p) && m === 'GET') return J(r, 200, { chits: [] });
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }

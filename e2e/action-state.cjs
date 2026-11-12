@@ -123,9 +123,7 @@ const SESSION = () => {
     ok(await p.locator('[data-testid="lk-lock-' + nxt + '"]').isEnabled(), 'B · after a failure the button is pressable again');
 
     /* ── C · Close for good (IRREVERSIBLE): asks first; Cancel sends nothing; a double press asks ONCE; Yes sends ONCE ── */
-    /* M157: the Reason box is for OPENING a month again, so it is drawn only while the server says some month may reopen (reopen.may) — this stand-in says none may,
-       so there is no box and the foot says what Close for good does; closing itself never asks for a reason. */
-    ok(await p.locator('[data-testid="lk_why"]').count() === 0 && /Close for good: the month never opens again/.test(await p.textContent('#lk_foot')), 'C · no Reason box while no month may reopen — the foot says Close for good never opens again');
+    await p.fill('[data-testid="lk_why"]', 'year-end audit signed');   /* closing needs a reason, said before anything is asked */
     const h0 = count(/\/lock$/);
     await p.click('[data-testid="lk-hard-' + mo + '"]');
     await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 5000 }).catch(() => {});
