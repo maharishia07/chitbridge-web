@@ -83,7 +83,7 @@ W.run('x-o2c', async (w) => {
     const sent = await body(p);
     const code = await p.locator('[data-testid="shop-otp"]').inputValue().catch(() => ''); if (!code) await p.fill('[data-testid="shop-otp"]', R.OTP_CUSTOMER);
     await p.locator('[data-testid="shop-otp"]').dispatchEvent('input').catch(() => {}); await settle(p, 200);
-    await p.click('[data-testid="shop-cart-submit"]'); await p.waitForSelector('[data-testid="shop-receipt-no"]', { timeout: 20000 }).catch(() => {});
+    await p.click('[data-testid="shop-cart-submit"]'); await p.click('[data-testid="confirm-ok"]'); await p.waitForSelector('[data-testid="shop-receipt-no"]', { timeout: 20000 }).catch(() => {});
     return sent;
   };
   const shopUrl = (extra) => base + '/shop.html?s=' + OWNER + (api ? '&api=' + encodeURIComponent(api) : '') + (extra || '');

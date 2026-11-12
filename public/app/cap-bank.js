@@ -196,7 +196,7 @@ async function bankView(body) {
     peField(
       'bk_file',
       'Statement file (CSV or JSON)',
-      '<input class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">'
+      '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">'
     ) +
     '</div><div class="pe-note" data-testid="bank-private">🔒 ' +
     bkbE(tx('The file is read on this device and is never uploaded.')) +
@@ -412,7 +412,7 @@ function bankPaint() {
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" data-testid="bank-tab-' +
+          '<button data-cbsid="BKS014-B01" type="button" class="pe-tab" data-testid="bank-tab-' +
           item[0] +
           '" aria-pressed="' +
           (BKB.tab === item[0]) +
@@ -445,7 +445,7 @@ function bankFinish() {
     part('Statement', bkDrCr(worked.bank_balance_minor), 'bank-finish-statement') +
     part('Books', bkDrCr(worked.book_balance_minor), 'bank-finish-books') +
     part('Difference', bkMoney(Math.abs(worked.difference_minor)), 'bank-finish-diff') +
-    '<button type="button" class="act" data-testid="bank-brs-download" onclick="bankBrsDownload()">' +
+    '<button data-cbsid="BKS014-B02" type="button" class="act" data-testid="bank-brs-download" onclick="bankBrsDownload()">' +
     bkbE(tx('Download the reconciliation')) +
     '</button></div>'
   );
@@ -700,13 +700,13 @@ function bankNote(r) {
       '<div class="pe-note">' +
       bkbE(bkDate(r.date) + ' · ' + tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor)) +
       '</div>' +
-      '<textarea class="inp" id="bk_note" data-testid="bank-note-text" rows="3" style="width:100%" maxlength="500"></textarea>' +
+      '<textarea data-cbsid="BKS014-T01" class="inp" id="bk_note" data-testid="bank-note-text" rows="3" style="width:100%" maxlength="500"></textarea>' +
       '<div class="pe-note">' +
       bkbE(tx('Kept on this device. A note never stops you accepting.')) +
       '</div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="BKS014-B03" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-testid="bank-note-save" onclick="bankNoteSave(\'' +
+      '</button><button data-cbsid="BKS014-B04" type="button" class="pri" data-testid="bank-note-save" onclick="bankNoteSave(\'' +
       bkbE(r.id) +
       '\')">' +
       bkbE(tx('Save note')) +
@@ -745,9 +745,9 @@ function bankAsk(r) {
       '<div class="pe-note">' +
       bkbE(tx('Only the date, the amount and the reference are sent. Their payment advice settles it in both books.')) +
       '</div><div id="bk_askout" class="pe-slot"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="BKS014-B05" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-testid="bank-ask-send" onclick="bankAskSend(this)">' +
+      '</button><button data-cbsid="BKS014-B06" type="button" class="pri" data-testid="bank-ask-send" onclick="bankAskSend(this)">' +
       bkbE(tx('Send')) +
       '</button></div>'
   );
@@ -841,7 +841,7 @@ function bankNext(r) {
             'Told by',
             bkbE((item.party && item.party.name) || tx('A party')) +
               (item.words ? ' · ' + bkbE(item.words) : '') +
-              ' <button type="button" class="cbl-btn" data-testid="bank-open-chit-' +
+              ' <button data-cbsid="BKS014-B07" type="button" class="cbl-btn" data-testid="bank-open-chit-' +
               bkbE(item.chit_id) +
               '" onclick="openChitSheet(\'' +
               bkbE(item.chit_id) +
