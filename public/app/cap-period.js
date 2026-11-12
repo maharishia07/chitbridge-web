@@ -489,6 +489,8 @@ async function peDepRun(btn) {
 /* ═══ 3 · ACCRUALS & RECURRING ═════════════════════════════════════════════════════════════════════════════════════════
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
+/** the sentence a reader who is not the owner sees where the Close card would be (ACC-229): one wording, two places */
+const PE_OWNER_ONLY_CLOSES = 'Only the owner closes and pays GST';
 const PE_FREQ = [
   ['monthly', 'Every month'],
   ['quarterly', 'Every 3 months'],
@@ -935,7 +937,7 @@ async function peGstView(body) {
     return;
   }
   if (!peOwner()) {
-    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner('Only the owner closes and pays GST');
+    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(PE_OWNER_ONLY_CLOSES);
     return;
   }
   let L;
@@ -1356,7 +1358,7 @@ function peReturnPaint(r) {
 }
 /** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
 function peReturnCloseSection(r) {
-  return peOwner() ? peReturnCloseCard(r) : peNoOwner('Only the owner closes and pays GST');
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
