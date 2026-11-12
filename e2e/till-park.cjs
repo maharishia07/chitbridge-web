@@ -120,6 +120,34 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
   say('bulk +10% in JPY writes whole yen (999 -> 1099, 105 -> 116)', JSON.stringify(jpy.written) === '[1099,116]', JSON.stringify(jpy.written));
   say('a typed 66.5 in JPY is refused in the api\'s sentence, nothing written', jpy.written.length === 2 && /at most 0 decimal places in JPY/.test(jpy.finer), jpy.finer);
 
+  console.log('\n── a clear of the store keeps a refused change: close the counter, wipe this device ' + '─'.repeat(2));
+  const parkedRow = { no: 'OP/77', at: new Date().toISOString(), says: 'Basmati rice 1kg — price 10 → 10.999', tillPost: { path: '/api/till/price', body: { item_id: 'it-1', price: 10.999 } }, _why: 'w', _status: 400, _parked: { at: 1, status: 400 } };
+  /* a fresh browser profile: the shared page above holds other stores and sent-bill rows that would (rightly) stop a close */
+  const cp = await (await b.newContext({ viewport: { width: 1366, height: 768 } })).newPage();
+  await cp.goto(base + '/till.html'); await cp.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
+  await cp.evaluate((api) => { CloudHost.key = 'demo-key-2'; CloudHost.api = api; HOST = CloudHost; ls.set(tillGivenKey(), 'C1'); DB.reopen(); }, base);
+  const closed = await cp.evaluate(async (row) => {
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [] }, at: new Date().toISOString(), offers: [], items: [] };
+    await DB.put('queue', row); await DB.put('bills', { no: 'C1/50', at: new Date().toISOString(), lines: [], total: 0, _sent: { at: 1 } });
+    window.sure = async () => true; window.becomeShop = function(){}; window._askOpen = async function(){}; window.busyShow = window.busyAt = window.busyDone = function(){};
+    var said = []; window.say = function(m){ said.push(m); };
+    var name = tillStore();   /* the shop's own store, read raw by the name the clear used (the key is gone after a close) */
+    await closeCounter(true);
+    DB.reopen();
+    var read = (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); } var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; });
+    return { name: name, queue: await read(name), said: said };
+  }, parkedRow);
+  say('closing the counter keeps the parked change and clears the bills', JSON.stringify(closed.queue) === '["OP/77"]', JSON.stringify(closed).slice(0, 400));
+  const store = await cp.evaluate(async (row) => { DB.reopen(); await DB.put('queue', row); return tillStore(); }, parkedRow);   /* the close left the page unpaired: seed the parked row again in the store it now reads */
+  const afterWipe = (async () => {
+    await cp.waitForEvent('load', { timeout: 20000 });
+    return cp.evaluate(async (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); }
+      var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; }), store);
+  })();
+  await cp.evaluate(async () => { window.sure = async () => true; wipeDevice(); });
+  const wiped = await afterWipe;
+  say('wiping the device keeps the parked change (the same store, the same shop stamp)', JSON.stringify(wiped) === '["OP/77"]', JSON.stringify(wiped));
+
   say('no page errors', errs.length === 0, errs.join(' | ') || 'none');
   await b.close(); srv.close();
   console.log('\n' + (bad ? bad + ' FAILED' : 'all passed'));
