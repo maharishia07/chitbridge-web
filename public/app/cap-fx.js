@@ -13,6 +13,8 @@
  * Better than Xero / QuickBooks (a rate feed you cannot see the source of, revaluation as a report you re-run) because every entry NAMES the rate it used
  * (typed, imported or official, and its day), a missing rate is a named wait — never a silent guess — and the revaluation is two sealed entries that come back.
  
+ * OWNS      foreign-currency rates: the Rates screen (typed or imported day rates, the revaluation button) and Month lock's foreign-balances line
+ * CARD      16-finance/cb-finance
  * CALLED BY public/accounts.html, public/app/cap-books.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
@@ -66,7 +68,7 @@ function fxPaint() {
   var dis = may.may ? '' : ' disabled title="' + esc(may.why || '') + '"';
   bar.innerHTML =
     '<div class="supacts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
-    '<button type="button" data-testid="fx-add" onclick="fxAddOpen()"' +
+    '<button data-cbsid="BKS025-B01" type="button" data-testid="fx-add" onclick="fxAddOpen()"' +
     dis +
     '>' +
     esc(tx('Add rate')) +
@@ -75,7 +77,7 @@ function fxPaint() {
     (may.may ? '' : ';opacity:.6;pointer-events:none') +
     '">' +
     esc(tx('Import CSV')) +
-    '<input type="file" accept=".csv,text/csv" data-testid="fx-import" onchange="fxImport(this)" style="display:none"' +
+    '<input data-cbsid="BKS025-I01" type="file" accept=".csv,text/csv" data-testid="fx-import" onchange="fxImport(this)" style="display:none"' +
     (may.may ? '' : ' disabled') +
     '></label></div>' +
     (!may.may && may.why ? '<div data-testid="fx-why" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px">' + esc(may.why) + '</div>' : '') +
@@ -208,15 +210,15 @@ function fxAddOpen() {
   var today = bkToday();
   node.innerHTML =
     '<div data-testid="fx-form" style="max-width:420px;margin-bottom:10px">' +
-    miRow(tx('Day'), '<input class="inp" type="date" id="fx_date" data-testid="fx-date" value="' + esc(today) + '" style="width:auto;max-width:100%">') +
-    miRow(tx('Currency'), '<input class="inp" id="fx_cur" data-testid="fx-cur" maxlength="3" placeholder="USD" style="width:6em;text-transform:uppercase">') +
+    miRow(tx('Day'), '<input data-cbsid="BKS025-I02" class="inp" type="date" id="fx_date" data-testid="fx-date" value="' + esc(today) + '" style="width:auto;max-width:100%">') +
+    miRow(tx('Currency'), '<input data-cbsid="BKS025-I03" class="inp" id="fx_cur" data-testid="fx-cur" maxlength="3" placeholder="USD" style="width:6em;text-transform:uppercase">') +
     miRow(
       txf('Rate in {c}', { c: (FXV.r && FXV.r.currency) || '' }),
-      '<input class="inp" id="fx_rate" data-testid="fx-rate" inputmode="decimal" placeholder="83.25" style="width:9em">'
+      '<input data-cbsid="BKS025-I04" class="inp" id="fx_rate" data-testid="fx-rate" inputmode="decimal" placeholder="83.25" style="width:9em">'
     ) +
     miRow(
       tx('Source'),
-      '<select class="inp" id="fx_src" data-testid="fx-src" style="min-width:0;max-width:100%"><option value="manual">' +
+      '<select data-cbsid="BKS025-S01" class="inp" id="fx_src" data-testid="fx-src" style="min-width:0;max-width:100%"><option value="manual">' +
         esc(tx('Typed')) +
         '</option><option value="official">' +
         esc(tx('Official')) +
@@ -224,13 +226,13 @@ function fxAddOpen() {
     ) +
     miRow(
       tx('Reference'),
-      '<input class="inp" id="fx_ref" data-testid="fx-ref" maxlength="120" placeholder="' + esc(tx('Where it came from')) + '" style="width:100%">'
+      '<input data-cbsid="BKS025-I05" class="inp" id="fx_ref" data-testid="fx-ref" maxlength="120" placeholder="' + esc(tx('Where it came from')) + '" style="width:100%">'
     ) +
     '<div id="fx_ferr" data-testid="fx-form-err" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
-    '<div style="display:flex;gap:8px;margin-top:6px"><button type="button" class="supact-pri" data-testid="fx-save" onclick="fxAddSave(this)">' +
+    '<div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="BKS025-B02" type="button" class="supact-pri" data-testid="fx-save" onclick="fxAddSave(this)">' +
     esc(tx('Save rate')) +
     '</button>' +
-    '<button type="button" data-testid="fx-cancel" onclick="fxAddCancel()">' +
+    '<button data-cbsid="BKS025-B03" type="button" data-testid="fx-cancel" onclick="fxAddCancel()">' +
     esc(tx('Cancel')) +
     '</button></div></div>';
 }
@@ -363,7 +365,7 @@ function fxLockPaint(host, r) {
     (!may.may && may.why && !r.posted ? '<div data-testid="lk-fx-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(may.why) + '</div>' : '') +
     (r.posted
       ? ''
-      : '<button type="button" data-testid="lk-fx-revalue" style="margin-top:6px"' +
+      : '<button data-cbsid="BKS025-B04" type="button" data-testid="lk-fx-revalue" style="margin-top:6px"' +
         (may.may ? ' onclick="fxRevalue(this)"' : ' disabled title="' + esc(may.why || '') + '"') +
         '>' +
         esc(tx('Revalue')) +
