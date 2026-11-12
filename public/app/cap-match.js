@@ -13,6 +13,8 @@
  * Backend: GET /api/till/match (routes/till.js — deliberately outside the till key scope: a counter records what it sees and must
  * never read what the shop pays its suppliers).
  
+ * FLOW      matchScreen → matchLoad (GET /api/till/match) → matchCard → matchDetail (matchReceivedFig · matchGapNote) → matchDispute
+ * CARD      12-suppliers-and-procurement/purchase-order-and-goods-receipt
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 if (typeof EP !== 'undefined') {
@@ -240,11 +242,11 @@ function matchDetail(o, money) {
  * the api's received_with_tax (the receipts' carried taxable + tax, read through lib/their-bill). Only a receipt older than that carries no such figure;
  * then the pre-tax count stands, and says so, and the api gives no gap to compare it with.
  */
-function matchReceivedFig(o) {
-  var taxed = o.received_with_tax != null;
+function matchReceivedFig(order) {
+  var taxed = order.received_with_tax != null;
   return matchFig(
     tx('Received'),
-    fmtMoney(taxed ? o.received_with_tax : o.received_total, myCur(), '—'),
+    fmtMoney(taxed ? order.received_with_tax : order.received_total, myCur(), '—'),
     taxed ? tx('what your own door counted, tax in') : tx('what your own door counted, before tax')
   );
 }
@@ -253,10 +255,10 @@ function matchReceivedFig(o) {
  * the money note under the three figures, worded from the api's money_code (never from the sign alone): another currency is said, never compared; a round-off is calm,
  * not a warning; a gap is named only once every line has closed (while goods are still short, the gap is the goods' news, not the bill's). '' when there is nothing to say.
  */
-function matchGapNote(o) {
-  var gap = o.money_gap,
-    code = o.money_code,
-    closed = o.lines.every(function (item) {
+function matchGapNote(order) {
+  var gap = order.money_gap,
+    code = order.money_code,
+    closed = order.lines.every(function (item) {
       return item.state === 'agreed';
     });
   var words =
