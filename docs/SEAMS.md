@@ -112,7 +112,7 @@ of file each thing is; this says what already does the job.
 | 26 | `view` | `country-ready.js` |  |
 | 26 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 26 | `group` | `identity.js` | again in a different costume. |
-| 25 | `load` | `cap-assist.js` |  |
+| 26 | `load` | `cap-assist.js` |  |
 | 25 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 24 | `call` | `cap-assist.js` |  |
 | 24 | `shown` | `country-compare.js` | one side's value for the line: |

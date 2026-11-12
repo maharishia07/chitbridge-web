@@ -178,6 +178,12 @@
     if (s) call(s, 'onDraft');
   }
 
+  /* the attributes of a rail step a person may go back to: a click, and for the keyboard a button role, a tab stop and Enter or Space (the step is a div, so it needs all three) */
+  function stepPress(flowKey, index) {
+    var goCall = 'CBSteps.go(\'' + esc(flowKey) + "'," + index + ')';
+    return ' onclick="' + goCall + '" style="cursor:pointer" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + goCall + '}"';
+  }
+
   /* ── the rail ────────────────────────────────────────────────────────────────────────────────────────────── */
   /**
    * ONE rail shape, with the numbered badge the compose mock drew. The other three mocks showed a bare "✓ Items";
@@ -203,7 +209,7 @@
             '" data-testid="step-' +
             esc(item.k || index) +
             '"' +
-            (clickable ? ' onclick="CBSteps.go(\'' + esc(ns) + "'," + index + ')" style="cursor:pointer"' : '') +
+            (clickable ? stepPress(ns, index) : '') +
             '><span class="n">' +
             (done ? '✓' : index + 1) +
             '</span>' +

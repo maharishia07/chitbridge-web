@@ -23254,9 +23254,22 @@ function modalStamp(host) {
   } catch (_) {}
 }
 
+/* the control that had focus when a dialog opened, kept so closing it (button, Escape or backdrop) gives the keyboard back there; a second dialog opened over the first keeps the first's opener */
+function rememberModalOpener(host) {
+  if (host.innerHTML) return;
+  const active = document.activeElement;
+  UI._modalOpener = active && active !== document.body && !host.contains(active) ? active : null;
+}
+/* give focus back to the remembered opener if it is still on the page; a repainted opener has nothing to return to */
+function restoreModalOpener() {
+  const opener = UI._modalOpener;
+  UI._modalOpener = null;
+  if (opener && document.body.contains(opener) && typeof opener.focus === 'function') opener.focus();
+}
 function modal(html, wide, opt) {
   const node = document.getElementById('modalhost');
   if (!node) return;
+  rememberModalOpener(node);
   UI._composeModal = false;
   node.style.display = '';
   node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
@@ -23321,6 +23334,7 @@ function closeModal() {
   ccCartRelease();
   const p = document.getElementById('composepill');
   if (p) p.remove();
+  restoreModalOpener();
   /**
    * ⚠️ A DISMISS HOOK, BECAUSE THERE ARE THREE WAYS OUT AND ONLY ONE IS A BUTTON. Cancel, Escape and the backdrop
    * all land here; wiring cleanup to the Cancel button alone leaves the other two leaking. confirmAsk/promptAsk
