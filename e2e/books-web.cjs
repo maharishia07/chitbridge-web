@@ -81,8 +81,9 @@ const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');
 const J = C.json;
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
 const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
-/* "today" the way the page computes it (bkToday: toISOString) — the strip reads the range's last day */
-const TODAY = new Date().toISOString().slice(0, 10);
+/* "today" the way the page computes it: bkToday reads the browser's LOCAL date, and the walk's browser runs in Asia/Kolkata (newContext below) —
+   not the UTC date, which is a day behind from 18:30 to midnight UTC and left the strip with no entries for "today" (the strip reads the range's last day) */
+const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -315,14 +316,14 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(await p.locator('[data-testid="cols-menu-customers"] input[type=checkbox]').count() === 7 && await p.locator('[data-testid="cols-customers-name"]').isDisabled() && await p.locator('[data-testid="cols-customers-name"]').isChecked(), 'the chooser lists ALL seven columns; the top-priority one (Name) is ticked and cannot be unticked');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-columns-open.png') });
   await p.click('[data-testid="cols-customers-gstin"]');
-  ok(await p.locator('#tbl_customers .lhead .lhcell').count() === 4 && /GSTIN/.test(await p.textContent('#tbl_customers .lhead')), 'ticking GSTIN shows it at once (a 4th column)');
+  ok(await p.locator('#tbl_customers .lhead .lhcell').count() === 4 && /Tax number/.test(await p.textContent('#tbl_customers .lhead')), 'ticking the tax-id column shows it at once (a 4th column; CX0: the pack\'s word, "Tax number" with no country pack loaded)');
   ok(/cblist\.customers/.test(await p.evaluate(() => Object.keys(localStorage).join())) && JSON.parse(await p.evaluate(() => localStorage.getItem('cblist.customers'))).cols.indexOf('gstin') >= 0, 'the choice is remembered for this list (cblist.customers)');
   await p.click('[data-testid="cols-customers-gstin"]');
   for (const k of ['cbid', 'oldest', 'credit', 'gstin']) await p.click('[data-testid="cols-customers-' + k + '"]');
   await p.click('[data-testid="cols-btn-customers"]');
   /* the rest of this section reads every column, so they are all ticked now */
   const crmHeads = await p.$$eval('#tbl_customers .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
-  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'Network ID', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
+  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'Network ID', 'Oldest due', 'Credit terms', 'Tax number']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
   const crmRow = async (id) => (await p.$$eval('[data-testid="cust-row-' + id + '"] .lcell', (els) => els.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
   const r1 = await crmRow('c1'), r2 = await crmRow('c2');
   for (const r of [r1, r2]) r[0] = r[0].replace(/^▸\s*/, '');   /* the unit draws the row's caret in its first cell */
