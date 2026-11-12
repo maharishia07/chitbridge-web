@@ -42,7 +42,7 @@ global.getComputedStyle = () => ({ position: 'relative' });
 global.window = { innerWidth: 1400, innerHeight: 900 };
 
 /* ⚠️ \r?\n — app.html is checked out with Windows line endings here, and a bare \n never matched the closing brace */
-const fnSrc = src.match(/function makeMovable\(panel, opts\)\{[\s\S]*?\r?\n\}\r?\n/)[0];
+const fnSrc = src.match(/function makeMovable\(panel, opts\) ?\{[\s\S]*?\r?\n\}\r?\n/)[0];
 const makeMovable = new Function(fnSrc + '; return makeMovable;')();
 
 /* ── 1 · no A buttons are built any more ─────────────────────────────────────────────────────────────── */
@@ -87,7 +87,7 @@ t('a second call adds nothing', p4.children.length === n1, n1 + ' -> ' + p4.chil
 
 /* ── 4b · a touch viewport gets NO grip and NO resize corner ─────────────────────────────────────────── */
 console.log('\n-- ⚠️⚠️ not on a phone: makeMovable binds mousedown only --');
-const mvSrc = src.match(/function mvModal\(host, wide, opt\)\{[\s\S]*?\n\}/)[0];
+const mvSrc = src.match(/function mvModal\(host, wide, opt\) ?\{[\s\S]*?\n\}/)[0];
 const mkMvModal = new Function('makeMovable', 'UI', 'window', mvSrc + '; return mvModal;');
 function runMv(vw, vp){
   let asked = null;
@@ -107,7 +107,7 @@ const code = l => l.replace(/^\s*\*.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
 t('makeMovable has no setFs', !/function setFs/.test(fnSrc));
 t('the Legend has no lbFont', !/function lbFont/.test(code(legend)));
 t('the Legend body has no zoom', !/zoom:/.test(code(legend)));
-t('modal() passes options to mvModal', /mvModal\(h, wide, opt\)/.test(src));
+t('modal() passes options to mvModal', /mvModal\(\w+, wide, opt\)/.test(src));
 t('the matrix no longer opts out of movable',
   !/setAttribute\('data-movable','1'\)/.test(code(fs.readFileSync(require('path').join(__dirname,'..','public','app','cap-readiness.js'),'utf8'))));
 

@@ -15,13 +15,14 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { makeDocument } = require('./lib/dom-stub.cjs');
 
 const fields = {};
 const mk = (id, v) => (fields[id] = { value: v, disabled: false });
 
 const sandbox = {
   console,
-  document: { getElementById: (id) => fields[id] || null, createElement: () => ({ style: {} }), head: { appendChild(){} } },
+  document: makeDocument({ getElementById: (id) => fields[id] || null, createElement: () => ({ style: {} }) }),
   UI: { _iamOpen: {} }, SESSION: { actorId: null },
   val: (id) => (fields[id] ? String(fields[id].value).trim() : ''),
   tx: (s) => s, esc: (s) => String(s), toast(){}, modal(){}, closeModal(){},

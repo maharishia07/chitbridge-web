@@ -39,7 +39,9 @@ for (let i = 1; i <= 10; i++) {
 }
 const N = { week: 52, month: 12, quarter: 8, year: 7 };
 const answerFor = (period) => ({ period, n: N[period], currency: CURRENCY, fy_start_month: FY_START,
-  slots: R.series(period, N[period], SUMMARIES, { fyStart: FY_START, currency: CURRENCY, now: NOW.getTime() }) });
+  slots: R.series(period, N[period], SUMMARIES, { fyStart: FY_START, currency: CURRENCY, now: NOW.getTime() }),
+  /* lib/till-summary.js: where the sales came from, and the words when the books could not be read - this stand-in serves the counters' day summaries only (wording as in the contract's example) */
+  sales_from: 'summaries', sales_note: 'The books are not switched on for this shop, so these sales are the counter day summaries only.' });
 
 W.run('reports-trend', async (w) => {
   const { page, ctx, base } = w;

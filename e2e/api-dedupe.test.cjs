@@ -22,6 +22,10 @@ const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'core.js
 const i = src.indexOf('var _apiInflight = {};');
 const j = src.indexOf('async function apiOnce(');
 if (i < 0 || j < 0) throw new Error('dedupe block not found in core.js');
+/* api() looks its row up with epOf(), which sits earlier in core.js beside CB_PREFS_EP: lifted too, never stubbed, so the real lookup runs */
+const ei = src.indexOf('var CB_PREFS_EP = {');
+const ej = src.indexOf('var CBPrefs = (function');
+if (ei < 0 || ej < ei) throw new Error('epOf block not found in core.js');
 
 let calls = 0;
 const sandbox = {
@@ -30,7 +34,7 @@ const sandbox = {
   apiOnce: () => { calls++; return new Promise((r) => setTimeout(() => r({ products: [{ id: 'p1', name: 'x' }] }), 20)); },
 };
 vm.createContext(sandbox);
-vm.runInContext(src.slice(i, j) + '\nthis.api = api;', sandbox);
+vm.runInContext(src.slice(ei, ej) + src.slice(i, j) + '\nthis.api = api;', sandbox);
 
 let bad = 0;
 const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++; };
