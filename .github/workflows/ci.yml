@@ -100,6 +100,7 @@ jobs:
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-crm.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
