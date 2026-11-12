@@ -30,7 +30,7 @@ const path = require('path');
 
 const W = path.join(__dirname, '..', 'public');
 const FILES = ['app.html'].concat(
-  fs.readdirSync(path.join(W, 'app')).filter((f) => f.endsWith('.js')).map((f) => path.join('app', f)));
+  fs.readdirSync(path.join(W, 'app')).filter((f) => f.endsWith('.js')).map((f) => path.posix.join('app', f)));
 
 /**
  * ⭐ JUDGED LOCAL, WITH THE REASON. Each of these genuinely belongs to this browser: a preference about how

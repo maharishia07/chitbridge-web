@@ -143,11 +143,9 @@
   ]
  },
  "silent-control": {
-  "count": 1,
+  "count": 0,
   "owner": "accounting",
-  "keys": [
-   "app\\cap-admin.js  bizLedgerSwitch()"
-  ]
+  "keys": []
  },
  "token-check": {
   "count": 11,
@@ -170,8 +168,8 @@
   "count": 2,
   "owner": "ux-locale",
   "keys": [
-   "app\\cap-catsetup.js  What changes when the shop\\'s country changes — every row read from the ",
-   "app\\cap-testing.js  A published clause or a named requirement. If it changes, ' +\n      'rec"
+   "app/cap-catsetup.js  What changes when the shop\\'s country changes — every row read from the ",
+   "app/cap-testing.js  A published clause or a named requirement. If it changes, ' +\n      'rec"
   ]
  },
  "tx-leak": {

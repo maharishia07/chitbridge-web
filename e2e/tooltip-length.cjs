@@ -22,7 +22,7 @@ const path = require('path');
 
 const W = path.join(__dirname, '..', 'public');
 const files = ['app.html'].concat(
-  fs.readdirSync(path.join(W, 'app')).filter((f) => f.endsWith('.js')).map((f) => path.join('app', f)));
+  fs.readdirSync(path.join(W, 'app')).filter((f) => f.endsWith('.js')).map((f) => path.posix.join('app', f)));
 
 /** ⭐ The bar: one comfortable line of hover text. */
 const MAX = 80;
