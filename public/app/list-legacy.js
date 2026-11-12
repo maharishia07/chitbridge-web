@@ -1,3 +1,11 @@
+/* public/app/list-legacy.js — the legacy list names (listCtl search, filter, sort, count; lazyWrap) kept until the lists move onto CBList
+ * OWNER     cb-ux-locale
+ * OWNS      the card-list helpers listCtl* and lazyWrap for lists not yet on CBList (not the column lists)
+ * FLOW      list rows -> listCtlRowsHTML / lazyWrap -> card list with search and sort
+ * CALLED BY public/app.html:1662 and public/accounts.html:323 (script tags)
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/functions/small-app-shell-page-frame-cblist-list-controls.md
+ * RISK      plain
+ */
 /**
  * ── list-legacy.js — THE THIN LEGACY NAMES, kept ONLY while their callers move to CBList (public/app/list-ctl.js) ───────
  *
