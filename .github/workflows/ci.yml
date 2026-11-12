@@ -90,6 +90,7 @@ jobs:
           node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
+          node e2e/text-budget-json.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/screen-help.test.cjs
@@ -111,6 +112,7 @@ jobs:
           node e2e/tx-key.test.cjs
           node e2e/till-names.test.cjs
           node e2e/toast-live-host.test.cjs
+          node e2e/p2-small-2.test.cjs
           node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs

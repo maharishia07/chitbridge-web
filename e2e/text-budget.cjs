@@ -1,6 +1,11 @@
 /**
  * text-budget.cjs — how much of this product is a LABEL, and how much is an EXPLANATION?
  *
+ * USAGE  node e2e/text-budget.cjs                 the console report (unchanged)
+ *        node e2e/text-budget.cjs --json <out>    the same report, and per-file rows written to <out>:
+ *                                                 { generated, files: [{ file, strings, labels, long_labels, explanations, words, over_budget }] }
+ *        Both come from ONE pass: the buckets below are counted once, and the JSON is a per-file filter over them.
+ *
  * Athi, 2026-08-19: *"this product is not supposed to have a lot of text inside. It should be simple like a
  * mailbox, no explanation whatsoever… without giving explanation how should people be able to understand how to
  * operate. That is where the challenge is going to be."*
@@ -16,6 +21,11 @@
  */
 const fs = require('fs');
 const path = require('path');
+
+/* --json <out>: parsed up front so a bad call fails before the walk reads the whole source tree. */
+const jsonFlag = process.argv.indexOf('--json');
+const jsonOut = jsonFlag >= 0 ? process.argv[jsonFlag + 1] : null;
+if (jsonFlag >= 0 && !jsonOut) { console.error('usage: text-budget.cjs --json <out>'); process.exit(2); }
 
 /**
  * ⚠️⚠️ THE CATALOGUE IS THE WRONG INPUT AND THE FIRST RUN OF THIS TOOL PROVED IT. strings.catalogue.json holds
@@ -139,3 +149,28 @@ console.log('\n  WHERE THE EXPLANATIONS LIVE\n');
 Object.entries(byFile).sort((a, b) => b[1] - a[1]).slice(0, 10)
   .forEach(([f, n]) => console.log('   ' + String(n).padStart(4) + '  ' + f));
 console.log('');
+
+/* --json: per-file rows from the SAME buckets above. No second walk and no second classify call.
+ * over_budget: the guard has no per-file threshold (this tool only prints totals), so it is LONG LABEL + MAILBOX
+ * explanations for that file — the two piles the trim list acts on. Change it here when a real threshold exists. */
+if (jsonOut) {
+  const rows = {};
+  const row = (f) => rows[f] || (rows[f] = { file: f, strings: 0, labels: 0, long_labels: 0, explanations: 0, words: 0, mailbox: 0 });
+  const FIELD = { LABEL: 'labels', 'LONG LABEL': 'long_labels', EXPLANATION: 'explanations' };
+  for (const k of Object.keys(bucket)) {
+    for (const e of bucket[k]) {
+      const r = row(e.source.split(':')[0]);
+      r.strings++;
+      r.words += e.msgid.trim().split(/\s+/).length;
+      r[FIELD[k]]++;
+    }
+  }
+  for (const e of mailboxProse) row(e.source.split(':')[0]).mailbox++;
+  const files = Object.values(rows)
+    .sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0))
+    .map((r) => ({
+      file: r.file, strings: r.strings, labels: r.labels, long_labels: r.long_labels,
+      explanations: r.explanations, words: r.words, over_budget: r.long_labels + r.mailbox,
+    }));
+  fs.writeFileSync(jsonOut, JSON.stringify({ generated: new Date().toISOString(), files }, null, 2) + '\n');
+}
