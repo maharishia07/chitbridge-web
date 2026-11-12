@@ -13,6 +13,8 @@
  * Backend: GET /api/till/match (routes/till.js — deliberately outside the till key scope: a counter records what it sees and must
  * never read what the shop pays its suppliers).
  
+ * FLOW      matchScreen → matchLoad (GET /api/till/match) → matchCard → matchDetail (matchReceivedFig · matchGapNote) → matchDispute
+ * CARD      12-suppliers-and-procurement/purchase-order-and-goods-receipt
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  * FLOW      GET /api/till/match ──▶ matchLoad ──▶ matchDetail (lines · Difference cell) ──▶ matchDispute (draft) ──▶ POST /api/chits/:chit_id/disputes
  * CARD 03-disputes-service-and-register/three-way-match
@@ -222,19 +224,14 @@ function matchDetail(o) {
    * ⭐ THE THREE FIGURES, AND WHERE EACH CAME FROM. "Invoiced" is either a chit they sent or the total somebody keyed off their paper
    * bill at the door — and the screen SAYS WHICH, because a figure whose source is unknown is not evidence.
    */
-  var gap = o.money_gap;
   return (
     '<div style="border-top:1px solid var(--line);padding:12px 14px">' +
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">' +
     matchFig(tx('Ordered'), fmtMoney(o.ordered_total, myCur(), '—'), tx('what you asked for')) +
-    matchFig(tx('Received'), fmtMoney(o.received_total, myCur(), '—'), tx('what your own door counted')) +
+    matchReceivedFig(o) +
     matchFig(tx('Invoiced'), fmtMoney(o.invoiced_total, myCur(), '—'), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet')) +
     '</div>' +
-    (gap != null && gap !== 0
-      ? '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;color:var(--warn);font-weight:700" data-testid="match-gap">' +
-        (gap > 0 ? txf('You counted {v} more than they billed.', { v: inr(gap) }) : txf('They billed {v} more than you counted.', { v: inr(-gap) })) +
-        '</div>'
-      : '') +
+    matchGapNote(o) +
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">' +
     '<thead><tr style="color:var(--grey);text-align:left">' +
     '<th style="padding:4px 8px">' +
@@ -283,6 +280,50 @@ function matchDetail(o) {
   );
 }
 
+/**
+ * ⭐ "RECEIVED" IN THE SAME TERMS AS "INVOICED" (OPS-83). A bill's total is what they CHARGE, tax in, so beside it the door's count is painted tax in too:
+ * the api's received_with_tax (the receipts' carried taxable + tax, read through lib/their-bill). Only a receipt older than that carries no such figure;
+ * then the pre-tax count stands, and says so, and the api gives no gap to compare it with.
+ */
+function matchReceivedFig(order) {
+  var taxed = order.received_with_tax != null;
+  return matchFig(
+    tx('Received'),
+    fmtMoney(taxed ? order.received_with_tax : order.received_total, myCur(), '—'),
+    taxed ? tx('what your own door counted, tax in') : tx('what your own door counted, before tax')
+  );
+}
+
+/**
+ * the money note under the three figures, worded from the api's money_code (never from the sign alone): another currency is said, never compared; a round-off is calm,
+ * not a warning; a gap is named only once every line has closed (while goods are still short, the gap is the goods' news, not the bill's). '' when there is nothing to say.
+ */
+function matchGapNote(order) {
+  var gap = order.money_gap,
+    code = order.money_code,
+    closed = order.lines.every(function (item) {
+      return item.state === 'agreed';
+    });
+  var words =
+    code === 'currency_mismatch'
+      ? tx('Their bill is in another currency, so it is not compared.')
+      : !closed || gap == null || gap === 0
+      ? ''
+      : code === 'round_off'
+      ? txf('Their bill is {v} off: their round-off.', { v: inr(Math.abs(gap)) })
+      : gap > 0
+      ? txf('You counted {v} more than they billed.', { v: inr(gap) })
+      : txf('They billed {v} more than you counted.', { v: inr(-gap) });
+  if (!words) return '';
+  return (
+    '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;font-weight:700;color:' +
+    (code === 'round_off' ? 'var(--grey)' : 'var(--warn)') +
+    '" data-testid="match-gap">' +
+    words +
+    '</div>'
+  );
+}
+
 function matchFig(label, value, note) {
   return (
     '<div style="border:1px solid var(--line);border-radius:10px;padding:10px">' +
@@ -328,7 +369,7 @@ function matchDispute(chit_id) {
       );
     })
     .join('\n');
-  if (o.money_gap)
+  if (o.money_gap && o.money_code !== 'round_off')
     draft += '\n' + (o.money_gap > 0 ? 'We counted ' + inr(o.money_gap) + ' more than billed.' : 'Billed ' + inr(-o.money_gap) + ' more than we counted.');
 
   modal(

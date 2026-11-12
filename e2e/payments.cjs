@@ -42,7 +42,7 @@ const OWNER = { token: claims({ identity_id: 'ent-M', identity_type: 'entity' })
 
 /* the words a balance may be written in, and what a minus in front of a figure looks like */
 const WORDS = /^(you owe|they owe you|settled)\b/i;
-const CRMWORDS = /^(↑ ₹[\d,.]+ you'll give|↓ ₹[\d,.]+ you'll get|settled)\b/i;   /* CB CRM says a due the shopkeeper's way (2026-10-09): a symbol AND a word AND a colour */
+const CRMWORDS = /^(↑ ₹[\d,.]+ you'll give|↓ ₹[\d,.]+ you'll get|settled|nothing yet)\b/i;   /* CB CRM says a due the shopkeeper's way (2026-10-09): a symbol AND a word AND a colour */
 const MINUS = /(^|[\s(>])[-−]\s?(₹|\d)/;
 
 function standIn() {
@@ -115,7 +115,7 @@ async function payRoute(S, r, p, m) {
 }
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(); let x;
-  S.calls.push(m + ' ' + p);
+  S.calls.push(m + ' ' + p + (p === '/api/books/daybook' ? u.search : ''));   /* PERF1: a by-id Day book read is told apart from a whole-range one */
   if (S.pay && /^\/api\/books\/payments/.test(p)) { if (await payRoute(S, r, p, m)) return; }
   /* M30 · E5: the chit rail — the advice is a chit the page sends with the server's body; a failing rail answers 500 (then the page says "Send again") */
   if (p === '/api/chits/send' && m === 'POST') {
@@ -183,15 +183,15 @@ async function route(S, r) {
   {
     const S = standIn(), { ctx, p } = await open('/crm.html', S);
     await p.waitForSelector('[data-testid^="party-due-"]', { timeout: 15000 });
-    const chips = await p.$$eval('[data-testid^="party-due-"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const chips = await p.$$eval('[data-testid^="party-due-"]:not([data-testid^="party-due-late-"])', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(chips.length >= 3, 'crm.html: the list shows dues chips (' + chips.length + ')');
-    ok(chips.every((t) => CRMWORDS.test(t)), 'E9 crm.html list: every dues figure is said the shopkeeper way — "you will get" / "you will give" / "settled" (' + chips.slice(0, 3).join(' | ') + ')');
+    ok(chips.every((t) => CRMWORDS.test(t)), 'E9 crm.html list: every dues figure is said the shopkeeper way — "you will get" / "you will give" / "settled" (' + chips.filter((t) => !CRMWORDS.test(t)).join(' | ') + ')');
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html list: no minus sign in front of a figure');
     await p.click('[data-testid="crm-row-P-0001"]');
     await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 });
     await p.waitForTimeout(500);
     ok(!MINUS.test(await bodyText(p)), 'E9 crm.html record: no minus sign in front of a figure');
-    const hdr = await p.$$eval('.rchips [data-testid^="party-due-"]', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const hdr = await p.$$eval('.rchips [data-testid^="party-due-"]:not([data-testid^="party-due-late-"])', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     ok(hdr.length === 1 && /^[↑↓]?\s*₹\s?481\.65 you'll give/.test(hdr[0]), 'E9 crm.html record: the header figure says 481.65 "you will give" for the server\'s -48165 (' + hdr.join('|') + ')');
     try { await p.click('[data-testid="crm-sec-ledger"]', { timeout: 2000 }); } catch (_) {}
     await p.waitForTimeout(600);
@@ -463,7 +463,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="stmt-0-rev"]', { timeout: 8000 });
     ok(S.reverses && S.reverses.length === 1 && S.reverses[0].id === 'e-pay1' && S.reverses[0].body.reason === 'Paid twice' && !!S.reverses[0].body.client_ref, 'E4 ONE POST /api/books/entries/e-pay1/reverse with the reason typed (' + JSON.stringify(S.reverses) + ')');
     ok(await text(p, 'stmt-0-rev') === 'reversed by MJ/2026-27/000001 — Paid twice', 'E4 the row repaints locally: "reversed by MJ/2026-27/000001 — Paid twice" (' + (await text(p, 'stmt-0-rev')) + ')');
-    ok(!S.calls.some((c) => /\/api\/books\/daybook/.test(c)) && !S.calls.some((c) => /\/statement$/.test(c)), 'E4 Reverse never opened the Day book and never re-read the statement: the row was repainted from the answer (' + S.calls.join(', ') + ')');
+    ok(!S.calls.some((c) => /\/api\/books\/daybook(?!\?[^ ]*\bentries=)/.test(c)) && !S.calls.some((c) => /\/statement$/.test(c)), 'E4 Reverse never read the Day book range (PERF1: only the opened line entry, by id) and never re-read the statement: the row was repainted from the answer (' + S.calls.join(', ') + ')');
     const toastText = await p.evaluate(() => (document.getElementById('toast') || {}).textContent || '');
     ok(/Reopened 1 bill \(KT-0007\)/.test(toastText), 'E4 the outcome words name the bills reopened (' + toastText.trim() + ')');
     await p.click('[data-testid="stmt-row-0"]'); await p.waitForTimeout(200); await p.click('[data-testid="stmt-row-0"]'); await p.waitForTimeout(300);
@@ -481,7 +481,7 @@ async function route(S, r) {
     ok((S.adv.reads || 0) === 0 && S.calls.filter((c) => /\/advice$/.test(c)).length === 0, 'E5 the outcome panel mounts CBAdvice from the record\'s own advice block — no second read');
     ok(await text(p, 'adv-send') === '✉ Send advice' && !(await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await p.locator('[data-testid="adv-share"]').count() === 1 && (await p.getAttribute('[data-testid="adv-share"]', 'class') || '').split(' ').includes('off'),
       'E5 on rail: Send advice is live, Share is shown greyed (every action shown; the server\'s may decides) (' + (await text(p, 'adv-send')) + ')');
-    ok(/is on the network — send the advice instead\./.test(await p.getAttribute('[data-testid="adv-share"]', 'title') || ''), 'E5 the greyed Share carries the server\'s sentence as its title');
+    ok(/is on ChitBridge — send the advice instead\./.test(await p.getAttribute('[data-testid="adv-share"]', 'title') || ''), 'E5 the greyed Share carries the server\'s sentence as its title');
     await p.click('[data-testid="adv-send"]');
     await p.waitForFunction(() => /✓/.test((document.querySelector('[data-testid="adv-out"]') || {}).textContent || ''), null, { timeout: 8000 });
     const sent = S.adv.sends[0] || {}, bj = sent.business_json || {}, pa = bj.payment_advice || {};
@@ -554,8 +554,8 @@ async function route(S, r) {
     const { ctx, p } = await openPay('/crm.html', S);
     await popup(p); await type(p, '2000');
     await p.click('[data-testid="pay_record"]'); await yesPay(p); await p.waitForSelector('[data-testid="pay_advice"] [data-testid="adv-copy"]', { timeout: 8000 });
-    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on the network — share the advice instead.',
-      'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on the network — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
+    ok((await p.getAttribute('[data-testid="adv-send"]', 'class') || '').split(' ').includes('off') && await text(p, 'adv-why-send') === 'Agro Mills is not on ChitBridge — share the advice instead.',
+      'E7 off rail: Send advice is shown greyed with the sentence "Agro Mills is not on ChitBridge — share the advice instead." (' + (await text(p, 'adv-why-send')) + ')');
     const words = adviceOf(S, 'pay1').words, wa = await p.getAttribute('[data-testid="adv-wa"]', 'href'), mail = await p.getAttribute('[data-testid="adv-mail"]', 'href');
     ok(wa === 'https://wa.me/?text=' + encodeURIComponent(words) && /^mailto:\?subject=/.test(mail) && mail.indexOf(encodeURIComponent(words)) > 0, 'E7 Share = WhatsApp (wa.me) and E-mail (mailto:) hrefs carry the words (' + words + ')');
     await p.click('[data-testid="adv-send"]', { force: true }); await p.waitForTimeout(200);

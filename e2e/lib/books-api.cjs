@@ -30,7 +30,7 @@ const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
 /** one row of GET /api/books/periods */
-const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
+const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', entries: 0, sales_minor: 0, lock: { may: true, why: '' }, reopen: { may: false, why: null }, lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
 const periods = (rows) => ({ periods: rows || [] });
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
@@ -58,16 +58,18 @@ const todoRow = (x) => Object.assign({ items: [] }, x, { action: Object.assign({
 /** GET /api/books/events: every event carries preview/post/ledger_group, every field `required` */
 const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
   events: (a.events || []).map((e) => Object.assign({ preview: true, post: 'POST /events', ledger_group: null, words: e.kind, icon: 'pen', band: 'adjust' }, e, e.fields ? { fields: e.fields.map((f) => Object.assign({ required: false }, f)) } : {})),
-  picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [] }, a.picks) });
+  picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [], debit_reason: [] }, a.picks) });
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
 const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
 /** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
 const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null, reversed_by: null, reversed_by_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+/** GET /api/books/returns for a country whose return is not made from these books (India: GSTR-1 / 3B come from the bills, via the rail) - the contract's `GET /api/books/returns #rail` answer, every key */
+const returnsRail = (o) => Object.assign({ form: null, pack: 'IN', code: 'RETURN_FROM_RAIL', why: "Your GSTR-1 and GSTR-3B are made from your bills, not from these books. Close and pay the month's GST here.", rail: '/api/tax/gstr' }, o || {});
 /** the period answer of POST /periods/:fy/:p/lock|unlock */
 const lockAnswer = (fy, period, status) => ({ ok: true, period: { fiscal_year: fy, period, status } });
-Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook });
+Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook, returnsRail });
 
 /* ── the reads of the books ── */
 /** one post waiting for the owner (lib/books-hooks waitingRow) */

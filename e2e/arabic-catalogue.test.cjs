@@ -21,7 +21,14 @@ const all = blocks.join('\n;\n');
 const from = all.indexOf('var CBI18N');
 const to = all.indexOf('function menuBtn');
 if (from < 0 || to < 0) { console.log('could not locate the string layer'); process.exit(1); }
-const layer = all.slice(from, to);
+/* the string layer is now in two homes: the named-key rail t() + the Arabic pack literal stay in app.html (CBI18N..menuBtn),
+   while cbLang · CBSTR · tx · txf · txn · bidiWrap moved to app/accounts-shell.js ("the string door" .. "a failure's words"):
+   both are lifted from real source and joined, never stubbed. */
+const SHELL = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'accounts-shell.js'), 'utf8');
+const sf = SHELL.indexOf('/* ── the string door ── */');
+const st = SHELL.indexOf("/* ── a failure's words, and the toast ── */");
+if (sf < 0 || st < sf) { console.log('could not locate the string door in accounts-shell.js'); process.exit(1); }
+const layer = SHELL.slice(sf, st) + '\n;\n' + all.slice(from, to);
 
 /**
  * ⚠️ STUB THE SEAM THAT ACTUALLY DECIDES, NOT THE ONE THAT LOOKS LIKE IT DOES. cbLang() is defined INSIDE this
