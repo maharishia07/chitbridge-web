@@ -461,10 +461,13 @@ console.log('\n11 · surfaces that name no text colour (inline styles)');
         if (/(^|[;'"`\s])color\s*:/.test(st)) continue;   /* a colour set inside a ternary fragment ('color:..' after a quote) is still a colour */
         n++;
       }
-      if (n > (DEBT_FILES[name] || 0)) bad[name] = n;
+      const allowed = DEBT_FILES[name] || 0;
+      if (n > allowed) bad[name] = n;
+      else if (n < allowed) bad[name + ' (below its allowance of ' + allowed + ': lower DEBT_FILES)'] = n;
+      else if (allowed) warn(name + ': ' + n + ' inline surface(s) still inherit their text colour (named debt)');
     });
-  const total = Object.values(bad).reduce((a, b) => a + b, 0);
-  if (total) fail(total + ' inline surfaces inherit their text colour (UX-28: was a warning at 18, now a failure above the named debt) — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  const total = Object.keys(bad).length;   /* files over or under their allowance (a below-allowance entry counts even at 0 surfaces) */
+  if (total) fail(total + ' files with inline surfaces that inherit their text colour, or fewer than their DEBT_FILES allowance (UX-28) — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
   else pass('every painted surface names its own text');
 }
 
