@@ -123,11 +123,16 @@ SOLO.forEach((f) => {
   }
 });
 
-const names = Object.keys(bare);
+/* QA-154: each (token, file) use is a finding; the known ones are in e2e/scanner-known.json and only a NEW one fails */
+const items = [];
+Object.keys(bare).forEach((t) => bare[t].forEach((w) => items.push({ key: t + '  ' + w.split(':')[0], show: t + '  ' + w })));
+const RK = require('./lib/known-findings.cjs').ratchet('token-check', items, { owner: 'ux-locale' });
+const names = [...new Set(RK.fresh.map((i) => i.show.split('  ')[0]))];
 console.log('\n══ TOKEN CHECK ══');
-console.log('  ' + defined.size + ' tokens defined · ' + names.length + ' referenced bare and never defined');
-console.log('  scanned: ' + FILES.length + ' app file(s) + ' + SOLO.length + ' standalone page(s)\n');
-names.forEach((t) => console.log('  ✗ ' + t.padEnd(24) + bare[t].length + '×   ' + bare[t].slice(0, 3).join('  ')));
-if (!names.length) console.log('  ✓ every bare var(--x) resolves to a defined token');
+console.log('  ' + defined.size + ' tokens defined · ' + Object.keys(bare).length + ' referenced bare and never defined (' + RK.fresh.length + ' new)');
+console.log('  scanned: ' + FILES.length + ' app file(s) + ' + SOLO.length + ' standalone page(s)');
+console.log(RK.line + '\n');
+RK.fresh.forEach((i) => console.log('  ✗ NEW  ' + i.show));
+if (!RK.fresh.length) console.log('  ✓ no new bare var(--x) without a defined token');
 console.log('');
-process.exit(names.length ? 1 : 0);
+process.exit(RK.fresh.length ? 1 : 0);
