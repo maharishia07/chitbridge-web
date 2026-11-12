@@ -87,7 +87,7 @@ function ftField(id, label, input) {
 }
 function ftInput(id, v, ph, off) {
   return (
-    '<input class="inp" id="' +
+    '<input data-cbsid="FIN004-I01" class="inp" id="' +
     id +
     '" data-testid="' +
     id +
@@ -158,7 +158,7 @@ function ftLateRows(prefix, interest, inheritedInterest, greyed) {
     ftField(
       prefix + '_ion',
       tx('Interest on overdue'),
-      '<input type="checkbox" id="' +
+      '<input data-cbsid="FIN004-I02" type="checkbox" id="' +
         prefix +
         '_ion" data-testid="' +
         prefix +
@@ -271,7 +271,7 @@ function ftRulesHtml(rules, prefix) {
         index +
         '"><span class="hint" style="color:var(--red-i)">⚠ ' +
         esc(rule.text) +
-        '</span><button type="button" class="act" data-testid="' +
+        '</span><button data-cbsid="FIN004-B01" type="button" class="act" data-testid="' +
         prefix +
         '-fix-' +
         index +
@@ -347,7 +347,7 @@ function ftUndoFor(list, greyed, partyId) {
     var field = String(change.field || '').replace(/^(customer|supplier)\./, '');
     if (index !== newest || !FT_UNDOABLE[field]) return '';
     var old = change.old == null ? '' : typeof change.old === 'object' ? JSON.stringify(change.old) : String(change.old);
-    return ' <button type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
+    return ' <button data-cbsid="FIN004-B02" type="button" class="act" data-testid="ft-undo" data-field="' + esc(field) + '" data-old="' + esc(old) + '" data-party="' + esc(partyId || '') + '"' + (greyed ? ' disabled' : '') + ' onclick="ftUndo(this)">' + esc(tx('Undo')) + '</button>';
   };
 }
 /** the standard confirm for a money setting (CBAction asks in the page's own dialog; Cancel sends nothing) */

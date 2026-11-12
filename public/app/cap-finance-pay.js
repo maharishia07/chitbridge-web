@@ -259,10 +259,10 @@ function fpBillActs(party, item) {
     ref = esc(item.ref);
   return (
     '<div class="fp-acts" data-b="acts" style="display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 6px">' +
-    '<button type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" onclick="event.stopPropagation();fpHold(\'' + pid + "','" + ref + '\',this)">' +
+    '<button data-cbsid="FIN002-B01" type="button" class="cbl-tbtn" data-testid="fp-hold-' + ref + '" onclick="event.stopPropagation();fpHold(\'' + pid + "','" + ref + '\',this)">' +
     esc(tx('Hold this bill')) +
     '</button>' +
-    '<button type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" onclick="event.stopPropagation();fpNoteDiff(\'' + pid + "','" + ref + '\')">' +
+    '<button data-cbsid="FIN002-B02" type="button" class="cbl-tbtn" data-testid="fp-note-' + ref + '" onclick="event.stopPropagation();fpNoteDiff(\'' + pid + "','" + ref + '\')">' +
     esc(tx('Note a difference')) +
     '</button></div>'
   );
@@ -298,7 +298,7 @@ function fpHeldRow(pid, item, lineHTML) {
       '<span class="due give">' + esc(bkMoney(item.open_minor, FP.cur)) + '</span>'
     ]) +
     lineHTML('held', tx(FP_HELD_WORD)) +
-    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" onclick="event.stopPropagation();fpRelease(\'' + pid + "','" + ref + '\',this)">' +
+    '<div class="fp-acts" data-b="acts" style="padding:2px 0 6px"><button data-cbsid="FIN002-B03" type="button" class="cbl-tbtn" data-testid="fp-release-' + ref + '" onclick="event.stopPropagation();fpRelease(\'' + pid + "','" + ref + '\',this)">' +
     esc(tx('Release')) +
     '</button></div>'
   );
@@ -362,7 +362,7 @@ function fpHold(pid, ref, btn) {
           esc(tx('It leaves what you owe and the cash view until you release it.')) +
           '<label class="fl" for="fp_hold_note" style="display:block;margin-top:8px">' +
           esc(tx('Why? (optional)')) +
-          '</label><input class="inp" id="fp_hold_note" data-testid="fp-hold-note" maxlength="300" autocomplete="off" oninput="FP.note=this.value">',
+          '</label><input data-cbsid="FIN002-I01" class="inp" id="fp_hold_note" data-testid="fp-hold-note" maxlength="300" autocomplete="off" oninput="FP.note=this.value">',
         yes: tx('Hold this bill'),
         danger: false
       },
