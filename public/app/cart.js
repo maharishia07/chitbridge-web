@@ -74,6 +74,10 @@
   'use strict';
   /* the span-with-onclick controls (bar, clear, add all, remove) are marked for the one Enter/Space rule, app/kbd-press.js (CMP053); every page that loads this file loads that first */
   var KBD_PRESS = ' role="button" tabindex="0"';
+  /** the cart bar's open control: pressable only while there is something to open */
+  function barPress(on) {
+    return on ? KBD_PRESS + ' aria-label="Open the cart"' : '';
+  }
   /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md): CBMoney (engine/money.js) in a page,
      lib/money.js in node. Looked up PER CALL, because on the shop screen an engine can load before money.js does.
      ⚠️⚠️ NO FALLBACK COPY (retired 2026-09-28, the loader step): every page that loads this file loads
@@ -1358,7 +1362,7 @@
       ';background:' +
       (on ? a : 'var(--neutral-tint)') +
       '">' +
-      '<span class="cbcart-bag"' + (on ? KBD_PRESS + ' aria-label="Open the cart"' : '') + '>🛒' +
+      '<span class="cbcart-bag"' + barPress(on) + '>🛒' +
       (on ? '<span data-testid="cart-count-' + esc(ns) + '" class="cbcart-n" style="color:' + a + '">' + u + '</span>' : '') +
       '</span>' +
       /* ⚠️ The summary HIDES on a narrow screen (see .cbcart-sum), never the badge. The count is the fact you cannot
@@ -2120,8 +2124,7 @@
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
            as a misalignment even to someone who could not name what is wrong. */
         'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}' +
-        '.cbcart-bar.on{cursor:pointer;color:#fff}' +
-        '.cbcart-bag[role=button]:focus-visible,.cbcart-x:focus-visible,.cbcart-grp[role=button]:focus-visible,[data-cbsid="CMP008"]:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}' +
+        '.cbcart-bar.on{cursor:pointer;color:#fff}' + '.cbcart-bag[role=button]:focus-visible,.cbcart-x:focus-visible,.cbcart-grp[role=button]:focus-visible,[data-cbsid="CMP008"]:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}' +
         '.cbcart-bag{position:relative;font-size:17px;line-height:1}' +
         '.cbcart-n{position:absolute;top:-7px;inset-inline-end:-9px;background:var(--card);border-radius:9px;min-width:17px;' +
         /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must
