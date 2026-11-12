@@ -1458,6 +1458,8 @@ img.attImg{object-fit:cover;display:block}
 .colcog:hover{text-decoration:underline}
 .listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
 .listend button{margin-inline-end:8px}
+/* the list unit's `.cbl button{color:inherit}` (list-ctl.js, id-strength) turned the Load more button's white ink grey on blue, 1.44:1 */
+.cbl:not(#_) .listend .composebtn{color:var(--on-accent)}
 .mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}
 .mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
 .mv-btn:disabled{opacity:.35;cursor:default}
@@ -11311,7 +11313,7 @@ function supOwnRowHTML() {
   return `<div class="row${on}" data-testid="sup-row-own" onclick="selectSupplier('own')">
     <span style="width:18px;text-align:center">🏠</span>
     <div class="main2"><div class="l1"><span class="code">${esc(tx('Our own stock'))}</span>
-      <span class="optchip" style="background:var(--ok-tint,var(--card));color:var(--ok-3);border-color:var(--ok-3)">${esc(tx('ours'))}</span></div>
+      <span class="optchip on" style="border-color:var(--ok-2)">${esc(tx('ours'))}</span></div>
     <div class="l2">${esc(n ? txf('{n} items in your catalogue', { n: n }) : tx('your catalogue is empty'))}</div></div></div>`;
 }
 /** what the Suppliers rail says when the shop has NO supplier of this kind (a search that matches nothing is the unit's own state) */
@@ -25800,6 +25802,8 @@ function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   if (!FM) {
     /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
     if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
+    /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
+    if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
     const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
     if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
     const older =

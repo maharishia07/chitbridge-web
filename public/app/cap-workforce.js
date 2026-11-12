@@ -1,4 +1,6 @@
 /* app/cap-workforce.js — the CO-ASSIST (workforce) capability: FUNCTIONALITY only.
+ * OWNS  the Co-assists screen (list, filters, sort, detail, create/invite/PIN/cover/shift/deactivate) and the actor-type registry
+ * CARD 17-people-employees-hr-and-payroll/people-list-with-may-why
  * Injected by ensureCap('workforce') on first open of the Co-assists screen; classic script, shared global scope.
  * Screen + render + actions (create/invite/PIN/cover/shift/deactivate) + loadCoassists. NO help content
  * (co-assist help lives in app/cap-help.js, lazy). References eager Core/helpers globals at runtime:
@@ -404,7 +406,7 @@ function coassistsScreen() {
             var reg = (window.ACTOR_TYPES || {})[item] || {};
             var on = (UI.acTypeF || 'all') === item;
             var lbl = item === 'all' ? 'All' : (reg.icon ? reg.icon + ' ' : '') + (reg.label || item).split(/[ \/]/)[0];
-            return `<button onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';opacity:.55' : ''}">${lbl}</button>`;
+            return `<button onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-style:italic;font-weight:400' : ''}">${lbl}</button>`;
           })
           .join('')}</span>
         <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span>${acSortSelect()}</div>
@@ -991,7 +993,9 @@ function acSortKey() {
 }
 function acSortSelect() {
   return (
-    '<select class="inp" data-testid="coassist-sort" title="' +
+    '<select class="inp" data-testid="coassist-sort" aria-label="' +
+    esc(tx('Sort order')) +
+    '" title="' +
     esc(tx('Sort order')) +
     '" style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="setAcSort(this.value)">' +
     Object.keys(AC_SORTS)
