@@ -16,6 +16,7 @@
 const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
+const { makeDocument } = require('./lib/dom-stub.cjs');
 
 const W = path.join(__dirname, '..', 'public');
 const MAX = 6;   /* ⚠️ Six is where a group stops being scannable. Not a measured constant — a stated one. */
@@ -24,11 +25,7 @@ const store = {};
 const sb = {
   console, Intl,
   localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } },
-  document: { getElementById: () => null,
-    documentElement: { style: { setProperty(){}, removeProperty(){} }, setAttribute(){}, removeAttribute(){}, classList: { add(){}, remove(){} } },
-    body: { classList: { add(){}, remove(){} }, setAttribute(){} },
-    createElement: () => ({ style: {}, setAttribute(){}, appendChild(){} }), head: { appendChild(){} },
-    querySelector: () => null, querySelectorAll: () => [] },
+  document: makeDocument(),
   setTimeout: () => 0, clearTimeout(){}, fetch: async () => ({ ok: false }),
   navigator: { language: 'en-IN', languages: ['en-IN'] }, location: { origin: '', host: 'h', search: '' },
 };
