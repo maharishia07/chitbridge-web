@@ -39,6 +39,7 @@ async function shopCheckout(page, o) {
   await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(otp);
   const confirmed = page.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
   await page.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
+  await page.locator('[data-testid="confirm-ok"]').click({ timeout: 10000 }); /* UX-6: Place order asks first; the yes sends */
   return confirmed;
 }
 module.exports = { shopCheckout };
