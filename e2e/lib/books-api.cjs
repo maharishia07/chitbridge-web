@@ -30,7 +30,7 @@ const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
 /** one row of GET /api/books/periods */
-const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
+const periodRow = (fy, period, status) => ({ entity_id: 'ent-M', status: status || 'open', fiscal_year: fy, period, start_date: '2026-04-01', end_date: '2026-04-30', entries: 0, sales_minor: 0, lock: { may: true, why: '' }, reopen: { may: false, why: null }, lock_trail: [] });   /* lock_trail: api #910 ACC-240 sends the lock, unlock and relock trail on every month */
 /** GET /api/books/periods */
 const periods = (rows) => ({ periods: rows || [] });
 module.exports = { ENGINES, health, csStatus, statement, dues, dueRow, periods, periodRow };
@@ -58,7 +58,7 @@ const todoRow = (x) => Object.assign({ items: [] }, x, { action: Object.assign({
 /** GET /api/books/events: every event carries preview/post/ledger_group, every field `required` */
 const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { dr: 'Dr the receiver', cr: 'Cr the giver' }, real: { dr: 'Dr what comes in', cr: 'Cr what goes out' }, nominal: { dr: 'Dr expenses and losses', cr: 'Cr incomes and gains' } } }, a, {
   events: (a.events || []).map((e) => Object.assign({ preview: true, post: 'POST /events', ledger_group: null, words: e.kind, icon: 'pen', band: 'adjust' }, e, e.fields ? { fields: e.fields.map((f) => Object.assign({ required: false }, f)) } : {})),
-  picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [] }, a.picks) });
+  picks: Object.assign({ mode: [], expense_class: [], income_class: [], blocked_credit: [], debit_reason: [] }, a.picks) });
 /** the refusal body of a 4xx the page shows: { error, message } and a code when the API gives one */
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
