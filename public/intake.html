@@ -12,7 +12,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chit &amp; Bridge — Intake inbox</title>
 <style>
-  :root{ --ink:#1b2431; --grey:#6a7686; --line:#e5e8ee; --bg:#f5f6f9; --card:#fff; --blue:#3F66A6; --ok:#2f7a45; --purple:#6d5bd0; }
+  :root{ --ink:#1b2431; --grey:#5D636A; --line:#e5e8ee; --bg:#f5f6f9; --card:#fff; --blue:#3F66A6; --ok:#2f7a45; --purple:#6d5bd0; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); }
   .wrap{ max-width:760px; margin:0 auto; padding:16px; }
@@ -37,7 +37,7 @@
   .ok{ color:var(--ok); }
   .badge{ font-size:9.5px; font-weight:800; color:var(--ok); }
   .netpill{ position:fixed; top:10px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
-  .netpill.off{ background:#fdf6e9; color:#b4832a; border-color:#e8d9b8; }
+  .netpill.off{ background:#fdf6e9; color:#7f5f1b; border-color:#e8d9b8; }
 </style>
 </head>
 <body>
@@ -78,10 +78,17 @@ function restoreIntake() {
 function el(id) {
   return document.getElementById(id);
 }
+var NET_WORDS = 'Could not reach the network. Check your connection and try again.';
+// one request to the api: a network failure comes back as status 0 with the words to show, never as a thrown error
 async function api(m, p, body) {
   var h = { 'Content-Type': 'application/json' };
   if (TOK) h.Authorization = 'Bearer ' + TOK;
-  var reply = await fetch(API + p, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });
+  var reply;
+  try {
+    reply = await fetch(API + p, { method: m, headers: h, body: body ? JSON.stringify(body) : undefined });
+  } catch (e) {
+    return { status: 0, j: { message: NET_WORDS } };
+  }
   var j = null;
   try {
     j = await reply.json();
@@ -107,7 +114,8 @@ async function doLogin() {
       el('app').querySelector('.err') && 0;
       return;
     }
-    await api('POST', '/api/entities/register', { email: email });
+    var regReply = await api('POST', '/api/entities/register', { email: email });
+    if (regReply.status === 0) return loginView(regReply.j.message);
     _stage = 'otp';
     el('otpwrap').style.display = '';
     el('lg_btn').textContent = 'Verify & open inbox';
@@ -131,6 +139,10 @@ async function load() {
   if (reply.status === 401) {
     TOK = null;
     return loginView('Session expired');
+  }
+  if (reply.status === 0) {
+    el('app').innerHTML = '<div class="card"><div class="err">' + esc(reply.j.message) + '</div></div>';
+    return;
   }
   var caps = (reply.j && reply.j.captures) || [];
   var mig = reply.j && reply.j.note ? '<div class="note" style="margin-bottom:8px">⚠ ' + esc(reply.j.note) + ' — run migration b104 to enable.</div>' : '';
