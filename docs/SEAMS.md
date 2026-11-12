@@ -170,7 +170,7 @@ of file each thing is; this says what already does the job.
 | 16 | `message` | `cap-print.js` | the one message: |
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
-| 16 | `head` | `list-ctl.js` |  |
+| 17 | `head` | `list-ctl.js` |  |
 | 16 | `resolve` | `page.js` |  |
 | 16 | `verdict` | `rail-thread.js` |  |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
