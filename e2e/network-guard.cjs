@@ -22,7 +22,7 @@ if (!/CAP_WITH\s*=\s*\{\s*network:\s*\['network-member'\]/.test(app)) bad('app.h
 
 /* the frame */
 ['/engine/screen.js', '/app/avatar.js', '/app/page-frame.js', '/app/shell.js', '/app/list-ctl.js', '/app/kural.js', '/app/network-app.js'].forEach((s) => { if (page.indexOf('src="' + s + '"') < 0) bad('network.html must load ' + s); });
-if (!/CBFrame\.mount\(\{ app: 'network', kural: 'network'/.test(page)) bad('network.html must mount CBFrame with the kural band');
+if (!/CBFrame\.mount\(\{\s*app: 'network',\s*kural: 'network'/.test(page)) bad('network.html must mount CBFrame with the kural band');
 if (!kur.kurals.some((k) => k.route === 'network')) bad('kurals.json needs a network route for the band');
 if (!/network-shop\.html/.test(page) || !/get\('bridge'\)/.test(page)) bad('?bridge= must still land on the public shopfront (network-shop.html)');
 if (!fs.existsSync(path.join(root, 'public/network-shop.html'))) bad('network-shop.html is missing');
@@ -42,7 +42,8 @@ if (/identity_type|hat ===|role ===|isOwner|parent_entity_id/.test(na)) bad('net
 const door = man.entries.filter((e) => e.id === 'network')[0], nl = man.entries.filter((e) => e.id === 'network-lab')[0];
 if (!door || door.route !== '/network.html' || door.state !== 'built') bad('the Network door must open /network.html as built');
 if (!nl || nl.route !== '/network-design.html' || nl.area !== 'labs' || nl.state !== 'built') bad('the Network Lab must be on the Labs row, built');
-if (!/sample:true/.test(lab) || !/\/api\/network-design\/validate/.test(lab) || /\/api\/network-design\/build|method:'PUT'/.test(lab)) bad('the lab may only post sample:true to validate — never build or save');
+/* a CALL to build, not the words in the header comment that name it */
+if (!/sample:\s*true/.test(lab) || !/\/api\/network-design\/validate/.test(lab) || /fetch\([^)]*\/api\/network-design\/build|method:\s*'PUT'/.test(lab)) bad('the lab may only post sample:true to validate — never build or save');
 else ok('door built · Network Lab on the Labs row · the lab posts nothing real');
 
 console.log(fail ? '\nnetwork-guard: ' + fail + ' FAILED' : '\nnetwork-guard: all passed');
