@@ -149,15 +149,25 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     await queueTally(); paintStatus(); await openBills();   /* a refresh after "Not yet": what does the counter show? */
     var look = { bar: document.getElementById('queuenote').innerText, fixBtn: !!document.querySelector('#queuenote [data-testid="till-queue-fix"]'), pill: document.getElementById('daypill').textContent, bills: document.getElementById('billsbody').innerText, reload: !!document.querySelector('[data-testid="till-frozen-reload"]'), queued: STATE.queued, frozenFlag: QUEUED.frozen };
     document.getElementById('billsdlg').close();
+    /* frozen: press Close and Wipe — neither may call the shop, touch the note, or clear anything; both say the frozen words */
+    var posts = []; var realPost = HOST.tillPost; HOST.tillPost = function(path){ posts.push(path); return realPost.apply(this, arguments); };
+    var noteBefore = ls.get('cb_kept_parked', ''), askedBefore = asked.length;
+    await closeCounter(true); await closeCounter(); await wipeDevice(); await coldStart(true);
+    HOST.tillPost = realPost;
+    var stopped = { posts: posts, noteSame: ls.get('cb_kept_parked', '') === noteBefore && !!noteBefore, asked: asked.length - askedBefore, words: said.filter(function(m){ return /This counter is frozen, so/.test(m); }).length, note: JSON.parse(noteBefore).rows.length };
+    await openStuck(); stopped.stuck = /Reload this counter/.test(document.getElementById('billsbody').innerText); document.getElementById('billsdlg').close();
+    var stateRejected = ''; try { await HOST.state(); } catch (e) { stateRejected = e.code || 'x'; }
     var billSaid = '', billNo = null;
     try { var made = await HOST.bill({ lines: [{ name: 'Tea', qty: 1, price: 10 }], total: 10, kind: 'cash' }); billNo = made && made.bill && made.bill.no; } catch (e) { billSaid = String((e && e.message) || e); }   /* a sale at the counter while the clear is blocked */
     window.__hold.close();   /* the other tab closes: the late delete runs, the parked row is put back */
     for (var k = 0; k < 50 && JSON.stringify(await eval(reader)(name)) !== '["OP/77"]'; k++) await new Promise((r) => setTimeout(r, 100));
-    return { look: look, said: said, asked: asked, billSaid: billSaid, billNo: billNo, after: await eval(reader)(name), note: !!ls.get('cb_kept_parked', '') };
+    return { look: look, stopped: stopped, said: said, asked: asked, billSaid: billSaid, billNo: billNo, after: await eval(reader)(name), note: !!ls.get('cb_kept_parked', '') };
   }, [rawQueue]);
   say('a store held open by another tab: the clear stops with words, and offers "Reload this counter"', /Close the other counter tab/.test(blocked.said.join('|')) && blocked.asked.indexOf('Reload this counter') >= 0, blocked.asked.join(',') + ' · ' + blocked.said.join('|').slice(0, 100));
   say('after "Not yet" the status bar says FROZEN with a Reload button (not "all sent", not 0)', /Frozen — close the other counter tab, then reload this counter/.test(blocked.look.bar) && blocked.look.fixBtn && !/everything has reached|waiting to reach/.test(blocked.look.bar), JSON.stringify(blocked.look.bar).slice(0, 110));
   say('...the day pill says frozen instead of 0.00, the Bills list says frozen with Reload (not an empty day), the QUEUED flag is set', /frozen/.test(blocked.look.pill) && /Reload this counter/.test(blocked.look.bills) && blocked.look.reload && blocked.look.frozenFlag === true, blocked.look.pill + ' · ' + JSON.stringify(blocked.look.bills).slice(0, 60));
+  say('frozen + Close / Wipe / Repair: no call to the shop, the kept-rows note untouched, the frozen words shown with the Reload offer each time', blocked.stopped.posts.indexOf('/api/till/close') < 0 && blocked.stopped.noteSame && blocked.stopped.words === 4 && blocked.stopped.asked === 4 && blocked.stopped.note === 1, JSON.stringify(blocked.stopped));
+  say('...and the 🩺 panel still opens (its unreadable queue is the frozen notice, not an empty list)', blocked.stopped.stuck === true, String(blocked.stopped.stuck));
   say('a bill attempted after the block is REFUSED with words (nothing numbered, nothing written)', /Reload this counter/.test(blocked.billSaid) && !blocked.billNo, blocked.billSaid.slice(0, 120));
   say('...and when the other tab lets go the late delete still restores the parked change, and the refused bill left no trace in the queue', JSON.stringify(blocked.after) === '["OP/77"]' && blocked.note, JSON.stringify(blocked.after) + ' note=' + blocked.note);
   await cp.reload(); await cp.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
