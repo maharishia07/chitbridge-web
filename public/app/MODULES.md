@@ -110,7 +110,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
 | `list-ctl.js` | eager |  |
-| `list-legacy.js` | eager |  |
+| `list-legacy.js` | eager | public/app/list-legacy.js — the legacy list names (listCtl search, filter, sort, count; lazyWrap) kept until the lists move onto CBList |
 | `network-app.js` | — |  |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
