@@ -154,8 +154,8 @@ function placeOrder() {
   CBConfirm(
     'Place this order?',
     '<div>This sends an order to the store <b>' + esc(NET) + '</b>.</div><div class="po-ask">' + orderLinesHtml(list) + '<div><b>Total ' + esc(rs(total)) + '</b></div>' +
-      '<label for="po_name">Your name</label><input id="po_name" data-testid="po-name" autocomplete="name" placeholder="Customer">' +
-      '<label for="po_email">Your email (optional)</label><input id="po_email" data-testid="po-email" type="email" autocomplete="email"></div>',
+      '<label for="po_name">Your name</label><input data-cbsid="STR001-I02" id="po_name" data-testid="po-name" autocomplete="name" placeholder="Customer">' +
+      '<label for="po_email">Your email (optional)</label><input data-cbsid="STR001-I03" id="po_email" data-testid="po-email" type="email" autocomplete="email"></div>',
     'Place order',
     function () {
       sendOrder(list, buyer);
