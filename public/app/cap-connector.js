@@ -320,7 +320,7 @@ function piCockpit(x) {
           '</b>' +
           (item.user_id || item.bridge_id
             ? ' <code style="background:var(--card);border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:var(--fs-1);color:var(--grey)">' +
-              esc(item.user_id || item.bridge_id) +
+              esc(item.bridge_id) +
               '</code>'
             : '') +
           (det ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px">' + esc(det) + '</div>' : '') +

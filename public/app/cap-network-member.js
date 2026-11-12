@@ -6,8 +6,6 @@
  * cap-network.js (lines deleted there in the same change — one definition of each function); loaded with it by ensureCap('network')
  * (app.html CAP_WITH) in the shared global scope, so the call sites in networkScreen() are unchanged.
  
- * OWNS the member's read-only network view, the availability search and the browse-and-request flow · FLOW  network screen → search or browse a store → compose a request
- * CARD 04-network/network-app-member-view
  * CALLED BY public/app/cap-network.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 /**
@@ -324,7 +322,7 @@ function _netAvailBody() {
           "','" +
           esc(String(r.name).replace(/'/g, '')) +
           "','" +
-          esc(_netShownId(r)) +
+          esc(r.bridge_id || '') +
           "'," +
           (r.price === null || r.price === undefined ? 'null' : Number(r.price)) +
           ')" style="padding:5px 12px;font-size:var(--fs-2)">' +
@@ -914,7 +912,7 @@ function _netBrowseBody() {
         "','" +
         esc(String(item.name).replace(/'/g, '')) +
         "','" +
-        esc(_netShownId(item)) +
+        esc(item.bridge_id || '') +
         '\')"' +
         ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">' +
         '<b style="font-size:var(--fs-3)">' +
@@ -981,9 +979,4 @@ function _netAvailScreen() {
     '</div>' +
     '</div>'
   );
-}
-
-/** Id shown for a store row: the person's user_id, the internal key only while there is none. */
-function _netShownId(row) {
-  return row.user_id || row.bridge_id || '';
 }
