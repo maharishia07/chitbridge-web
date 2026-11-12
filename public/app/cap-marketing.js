@@ -199,7 +199,7 @@ async function mktSentLoad() {
 }
 /** one pager button (the unit's `foot`): the page it goes to, disabled at the ends */
 function mktPageBtn(label, to, disabled, testId) {
-  return '<button type="button" class="crm-mini" data-crm="mktpage" data-v="' + to + '"' + (disabled ? ' disabled' : '') + ' data-testid="' + testId + '">' + esc(label) + '</button> ';
+  return '<button data-cbsid="MKT003-B01" type="button" class="crm-mini" data-crm="mktpage" data-v="' + to + '"' + (disabled ? ' disabled' : '') + ' data-testid="' + testId + '">' + esc(label) + '</button> ';
 }
 /** the pager under the rows: the server's total · page · limit, two buttons */
 function mktSentFoot() {
@@ -394,7 +394,7 @@ function mktWinbackHTML() {
   var reason = crmGroupsWhyNot(row, 'send'),
     button = reason
       ? crmViewOnlyBtn('mkt-winback-send', tx('Send offer'), reason)
-      : '<button type="button" class="act sm" data-crm="mktwinback" data-testid="mkt-winback-send">' + esc(tx('Send offer')) + '</button>';
+      : '<button data-cbsid="MKT003-B02" type="button" class="act sm" data-crm="mktwinback" data-testid="mkt-winback-send">' + esc(tx('Send offer')) + '</button>';
   return (
     '<div class="mkt-card" data-testid="mkt-winback"><span><b data-testid="mkt-winback-n">' + esc(crmPlural(row.count, 'customer', 'customers')) + '</b> ' +
     esc(tx(row.count === 1 ? 'has' : 'have') + ' ' + (row.rule || '')) + '</span> ' + button + '</div>'
