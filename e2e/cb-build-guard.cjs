@@ -172,7 +172,12 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
    */
   const main = git(['rev-parse', '--verify', '-q', 'origin/main']);
   const base = main ? git(['merge-base', 'HEAD', 'origin/main']) : '';
-  if (!base) { console.log('      (no origin/main to compare with, skipped)'); return; }
+  if (!base) {
+    // CI always has origin/main (fetch-depth 0): a missing one there means the check did not run, which must not look green
+    if (process.env.CI === 'true') throw new Error('CI=true and there is no origin/main to compare with, so the ancestry check cannot run. Fetch it (fetch-depth: 0).');
+    console.log('      (no origin/main to compare with, skipped)');
+    return;
+  }
   const changed = git(['diff', '--name-only', base, '--']).split('\n').map((l) => l.trim()).filter(Boolean);
   const touched = FILES.filter((f) => changed.indexOf(f) > -1);
   if (!touched.length) return;

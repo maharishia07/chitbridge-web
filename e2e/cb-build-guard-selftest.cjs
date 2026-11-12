@@ -45,8 +45,9 @@ function mk() {
 }
 
 /** the guard's verdict in the scratch repo: exit code */
-function verdict(dir) {
-  const r = spawnSync(process.execPath, [GUARD], { encoding: 'utf8', env: Object.assign({}, process.env, { CB_BUILD_GUARD_ROOT: dir }) });
+function verdict(dir, ci) {
+  const env = Object.assign({}, process.env, { CB_BUILD_GUARD_ROOT: dir, CI: ci ? 'true' : '' });
+  const r = spawnSync(process.execPath, [GUARD], { encoding: 'utf8', env: env });
   return { code: r.status, out: r.stdout + r.stderr };
 }
 
@@ -89,5 +90,11 @@ function pointMainAt(s, ref) { s.run(['update-ref', 'refs/remotes/origin/main', 
   expect('4. no cap-*.js change', verdict(s.dir), false);
 }
 
-console.log('\n  ' + (bad ? bad + ' case(s) wrong' : 'all 4 cases come out as stated'));
+{ // 5. no origin/main: red in CI, skipped (green) on a laptop
+  const s = mk();
+  expect('5a. CI=true and no origin/main to compare with', verdict(s.dir, true), true);
+  expect('5b. a local run with no origin/main', verdict(s.dir, false), false);
+}
+
+console.log('\n  ' + (bad ? bad + ' case(s) wrong' : 'all 6 cases come out as stated'));
 process.exit(bad ? 1 : 0);
