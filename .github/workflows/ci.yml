@@ -89,6 +89,7 @@ jobs:
           node e2e/offer-live-confirm.test.cjs
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
+          node e2e/text-budget-json.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/screen-help.test.cjs
