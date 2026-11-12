@@ -133,6 +133,13 @@ for (const f of files) {
    * bound to ANYTHING would not. Binding a number and then calling it is a different bug, and not this one's.
    */
   for (const m of src.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=/g)) defined.add(m[1]);
+  /* ⭐ ASSIGNED NAMES (QA undecided-2, 13 Nov). A name given its function by plain assignment —
+     "var a = 1, isoDate = function (x) {…}" (cap-books.js:2165), "selectedIf = function" in a var list
+     (cap-repeat.js:410), "frameResay = function" (shell.js:1402), "isDue = (t) => …" (cap-period.js:601) — and a
+     NAMED function expression "(function fromUrl() {…})()" (edition.js:49) are bound too. The old rules saw only
+     column-zero "function x(" and "var x =", so every call to them was reported as a ReferenceError. */
+  for (const m of src.matchAll(/(?:^|[\s,;(])([A-Za-z_$][\w$]*)\s*=\s*(?:async\s+)?(?:function\b|\([^()]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)/gm)) defined.add(m[1]);
+  for (const m of src.matchAll(/\bfunction\s+([A-Za-z_$][\w$]*)\s*\(/g)) defined.add(m[1]);
   /* destructured bindings — `const { slabOf, resolve } = CBTax.slab;` defines both of those names */
   for (const m of src.matchAll(/\b(?:var|let|const)\s*\{([^}]{1,400})\}\s*=/g)) {
     for (const p of m[1].split(',')) {
@@ -152,6 +159,7 @@ for (const f of files) {
 
   /**
    * A bare call: not preceded by a dot (that is a method), not a keyword, and NOT INSIDE A STRING.
+   * A ^ before the name is a regex literal (/^cb_nav(@|$)/), not a call (QA undecided-2, 13 Nov).
    *
    * ⚠️ THE STRING CHECK IS THE ONE THAT MATTERS. cap-legend.js documents the backend in prose —
    * "withEntity() sets app.current_entity" — and without this the guard reported the DOCUMENTATION of a
@@ -160,7 +168,7 @@ for (const f of files) {
    * writes a sentence.
    */
   src.split(/\r?\n/).forEach((line) => {
-    for (const m of line.matchAll(/(^|[^.\w$'"`])([a-z_$][\w$]{3,})\s*\(/g)) {
+    for (const m of line.matchAll(/(^|[^.\w$'"`^])([a-z_$][\w$]{3,})\s*\(/g)) {
       const n = m[2];
       if (BUILTIN.has(n) || called.has(n) || CSS_OR_BROWSER.has(n.toLowerCase())) continue;
       const before = line.slice(0, m.index);
