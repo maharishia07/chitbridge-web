@@ -38,6 +38,7 @@ test('[PAY-01] a UPI QR on the order; the seller marks the chit paid through the
       const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || require('../fixtures').signinCode('customer'));
       const confirmed = shop.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
+      await shop.locator('[data-testid="confirm-ok"]').click({ timeout: 10000 }); /* UX-6: Place order asks first; the yes sends */
       const cj = await (await confirmed).json().catch(() => ({})); chitId = cj.chit_id; expect(chitId).toBeTruthy();
       await expect(shop.getByTestId('shop-upi')).toBeVisible({ timeout: 20000 });
       await expect(shop.getByTestId('shop-upi-qr')).toBeVisible();
