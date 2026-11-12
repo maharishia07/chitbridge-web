@@ -1,8 +1,8 @@
 /**
  * tests/match-other-unit.test.cjs - CTR-248 (web twin of api #1194, OPS-87): the three-way match screen, public/app/cap-match.js, with no browser.
  *
- * OWNS      the proof that a line the api marks counted_in_another_unit (ordered 10 box, received 0 in box, 2 dozen counted) reads
- *           "counted in another unit: dozen mine 2 / theirs 0" in the Difference cell AND in the dispute draft - never "short 10" -
+ * OWNS      the proof that a line the api marks counted_in_another_unit (ordered 10 box, received 0, 2 dozen counted) reads
+ *           "counted in another unit: dozen mine 2 / theirs 0" in the Difference cell AND in the dispute draft, after any shortfall or excess in the ordered unit ("short 6 · counted ..."), and a line with difference 0 is still warned and in the draft,
  *           with one segment per other_units entry joined " · ", and that an ordinary short / excess line still reads short / excess.
  * CALLED BY package.json check script · .github/workflows/ci.yml (web job). The real cap-match.js in node, stubs for the page helpers.
  * FLOW      GET /api/till/match line -> matchDetail (table row) / matchDispute (draft in the modal)
@@ -49,20 +49,72 @@ const other = {
   ]
 };
 const plain = { line_id: 'b', name: 'Oil', unit: 'L', ordered: 10, received: 7, difference: -3, reason: 'broken', state: 'short' };
-const order = { chit_id: 'c1', party: 'Acme', verdict: 'differs', lines: [other, plain], receipts: [], ordered_total: 1, invoiced_total: 1 };
+const mixed = {
+  line_id: 'm',
+  name: 'Milk',
+  unit: 'box',
+  ordered: 10,
+  received: 4,
+  difference: -6,
+  reason: null,
+  state: 'short',
+  counted_in_another_unit: true,
+  other_units: [{ unit: 'dozen', mine: 2, theirs: 2 }]
+};
+const same = {
+  line_id: 's',
+  name: 'Rice',
+  unit: 'bag',
+  ordered: 5,
+  received: 5,
+  difference: 0,
+  reason: null,
+  state: 'agreed',
+  counted_in_another_unit: true,
+  other_units: [{ unit: 'kg', mine: 3, theirs: 4 }]
+};
+const bare = {
+  line_id: 'u',
+  name: 'Tea',
+  unit: 'box',
+  ordered: 1,
+  received: 1,
+  difference: 0,
+  reason: null,
+  state: 'agreed',
+  counted_in_another_unit: true,
+  other_units: [{ unit: 'tin' }]
+};
+const order = { chit_id: 'c1', party: 'Acme', verdict: 'differs', lines: [other, plain, mixed, same, bare], receipts: [], ordered_total: 1, invoiced_total: 1 };
 
 const html = matchDetail(order, null);
 const rows = html.split('data-testid="match-line"').slice(1);
-assert.strictEqual(rows.length, 2, 'two lines drawn');
+assert.strictEqual(rows.length, 5, 'five lines drawn');
 const seg = 'counted in another unit: dozen mine 2 / theirs 0 · counted in another unit: piece mine 5 / theirs 3';
 assert(rows[0].includes(seg), 'other-unit line: one segment per unit, joined');
-assert(!/short 10|excess/.test(rows[0]), 'other-unit line is not "short 10"');
-assert(rows[1].includes('short 3') && rows[1].includes('broken'), 'a plain short line still reads short 3 with its reason');
+assert(rows[0].includes('short 10 · ' + seg.slice(0, 20)), 'received 0 in the ordered unit: the shortfall is still told, then the other-unit words');
+assert(
+  rows[1].includes('short 3') && rows[1].includes('broken') && !rows[1].includes('another unit'),
+  'a plain short line still reads short 3 with its reason'
+);
+assert(rows[2].includes('short 6 · counted in another unit: dozen mine 2 / theirs 2'), 'hidden shortfall: short 6 AND the other-unit words');
+assert(
+  rows[3].includes('counted in another unit: kg mine 3 / theirs 4') && !rows[3].includes('agrees') && rows[3].includes('var(--warn)'),
+  'difference 0 but another unit: warned, not "agrees"'
+);
+assert(rows[4].includes('mine — / theirs —') && !/undefined|NaN/.test(rows[4]), 'missing mine/theirs: dashes, never undefined');
 
 MATCH.rows = [order];
 matchDispute('c1');
 const draft = modalHtml.replace(/&amp;/g, '&');
-assert(draft.includes('Eggs: ordered 10 box, received 0 (' + seg + ')'), 'dispute draft carries the other-unit words');
-assert(!/short 10/.test(draft), 'dispute draft does not say short 10');
+assert(draft.includes('Eggs: ordered 10 box, received 0 (short 10 · ' + seg.slice(0, 20)), 'dispute draft carries the other-unit words');
+assert(
+  draft.includes('Milk: ordered 10 box, received 4 (short 6 · counted in another unit: dozen mine 2 / theirs 2)'),
+  'dispute draft: hidden shortfall and other unit'
+);
+assert(
+  draft.includes('Rice: ordered 5 bag, received 5 (counted in another unit: kg mine 3 / theirs 4)'),
+  'dispute draft keeps an other-unit line whose ordered-unit difference is 0'
+);
 assert(draft.includes('Oil: ordered 10 L, received 7 (short 3) — broken'), 'dispute draft: plain line unchanged');
-console.log('ok match-other-unit: 6 checks');
+console.log('ok match-other-unit: 10 checks');

@@ -150,22 +150,52 @@ function matchCard(o) {
 
 /**
  * CTR-248 (api #1194, OPS-87): goods counted in a unit other than the ordered one sit beside the total, never summed into it, so
- * ordered 10 box / received 0 is NOT "short 10". One segment per other unit; no conversion is guessed, a person settles it.
+ * the cell says both (short 6 · counted in another unit ...) and never hides one behind the other. One segment per other unit; no conversion is guessed, a person settles it.
  * Returns '' for an ordinary line, so the caller falls through to short / excess.
  */
 function matchOtherUnits(item) {
   if (!item.counted_in_another_unit || !Array.isArray(item.other_units) || !item.other_units.length) return '';
   return item.other_units
     .map(function (part) {
-      return txf('counted in another unit: {unit} mine {mine} / theirs {theirs}', { unit: part.unit, mine: part.mine, theirs: part.theirs });
+      var seen = function (n) {
+        return n == null ? '—' : n;
+      };
+      return txf('counted in another unit: {unit} mine {mine} / theirs {theirs}', { unit: part.unit, mine: seen(part.mine), theirs: seen(part.theirs) });
     })
     .join(' · ');
+}
+
+/**
+ * The words of a line's Difference: the shortfall or excess in the ORDERED unit, then the other-unit counts (the api flags
+ * counted_in_another_unit whenever other_units is non-empty, so 10 box ordered / 4 box + 2 dozen received says both). '' = agrees.
+ */
+function matchDiffWords(item) {
+  var parts = [];
+  if (item.difference < 0) parts.push(txf('short {n}', { n: String(-item.difference) }));
+  else if (item.difference > 0) parts.push(txf('excess {n}', { n: String(item.difference) }));
+  var other = matchOtherUnits(item);
+  if (other) parts.push(other);
+  return parts.join(' · ');
+}
+
+/** the Difference cell of one line: the words, warn-coloured when there are any, else "agrees" in ok-colour; the door's reason after */
+function matchDiffCell(item) {
+  var words = matchDiffWords(item);
+  return (
+    '<td style="padding:6px 8px;color:' +
+    (words ? 'var(--warn)' : 'var(--ok)') +
+    ';font-weight:' +
+    (words ? '700' : '400') +
+    '">' +
+    (words ? esc(words) : tx('agrees')) +
+    (item.reason ? ' · ' + esc(item.reason) : '') +
+    '</td>'
+  );
 }
 
 function matchDetail(o, money) {
   var rows = o.lines
     .map(function (item) {
-      var bad = item.difference !== 0;
       return (
         '<tr data-testid="match-line">' +
         '<td style="padding:6px 8px">' +
@@ -179,20 +209,8 @@ function matchDetail(o, money) {
         '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' +
         item.received +
         '</td>' +
-        '<td style="padding:6px 8px;color:' +
-        (bad ? 'var(--warn)' : 'var(--ok)') +
-        ';font-weight:' +
-        (bad ? '700' : '400') +
-        '">' +
-        (matchOtherUnits(item)
-          ? esc(matchOtherUnits(item))
-          : bad
-            ? item.difference < 0
-              ? txf('short {n}', { n: String(-item.difference) })
-              : txf('excess {n}', { n: String(item.difference) })
-            : tx('agrees')) +
-        (item.reason ? ' · ' + esc(item.reason) : '') +
-        '</td></tr>'
+        matchDiffCell(item) +
+        '</tr>'
       );
     })
     .join('');
@@ -288,7 +306,7 @@ function matchDispute(chit_id) {
   })[0];
   if (!o) return;
   var list = o.lines.filter(function (item) {
-    return item.difference !== 0;
+    return matchDiffWords(item) !== '';
   });
   var draft = list
     .map(function (item) {
@@ -300,11 +318,9 @@ function matchDispute(chit_id) {
         item.unit +
         ', received ' +
         item.received +
-        (matchOtherUnits(item)
-          ? ' (' + matchOtherUnits(item) + ')'
-          : item.difference < 0
-            ? ' (short ' + -item.difference + ')'
-            : ' (excess ' + item.difference + ')') +
+        ' (' +
+        matchDiffWords(item) +
+        ')' +
         (item.reason ? ' — ' + item.reason : '')
       );
     })
