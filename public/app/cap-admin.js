@@ -343,15 +343,15 @@ async function loadTaxLedger() {
  * The bills the ledger could not read, said in words. api #1180 sends `dropped` (chit ids) and `dropped_why` (fixed sentences);
  * an older api sends neither, so read them only if present. Reuses the .miswarn notice; each bill opens with the standard Open (CMP010).
  */
-function taxDroppedHTML(L) {
-  const ids = Array.isArray(L.dropped) ? L.dropped : [];
+function taxDroppedHTML(ledger) {
+  const ids = Array.isArray(ledger.dropped) ? ledger.dropped : [];
   if (!ids.length) return '';
-  const why = [].concat(L.dropped_why || []).join(' ');
+  const reason = [].concat(ledger.dropped_why || []).join(' ');
   const head =
     ids.length +
     ' ' +
     tx(ids.length === 1 ? 'bill could not be read and is left out of this month' : 'bills could not be read and are left out of this month') +
-    (why ? ': ' + why : '');
+    (reason ? ': ' + reason : '');
   const links = ids
     .map(function (id, at) {
       return (
@@ -482,8 +482,7 @@ function misTax() {
     '</bdi>' +
     (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') +
     '</div>' +
-    taxDroppedHTML(L) +
-    '<div class="misnote">CGST ' +
+    taxDroppedHTML(L) + '<div class="misnote">CGST ' +
     inr(L.net.cgst) +
     ' · SGST ' +
     inr(L.net.sgst) +
