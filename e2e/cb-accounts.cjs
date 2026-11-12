@@ -38,14 +38,16 @@ const VIEWS = [
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['compare', 'Parallel run', '[data-testid="cmp"]'],   /* PR1 (e2e/walk-compare.cjs walks it) */
   ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
   /* A1 (Athi, 2026-10-03 · T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Waiting is not a menu item (a failed posting is a To do item) */
-  ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
-  ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
+  /* ACC-175: Dues (both sides together) has its own button, first in Outstandings; the bills item is named "Unpaid bills" */
+  ['dues', 'Dues', '[data-testid="dues-list"]'], ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
+  ['bills', 'Unpaid bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
+  ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
@@ -232,7 +234,7 @@ async function route(S, r) {
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
     ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
