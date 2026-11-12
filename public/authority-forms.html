@@ -147,7 +147,7 @@ function orderSelect(id, cur, none) {
         return item.chit_id === cur;
       });
   return (
-    '<select id="' +
+    '<select data-cbsid="DOC001-S01" id="' +
     id +
     '" data-testid="' +
     id +
@@ -236,7 +236,7 @@ function render() {
     '<div class="card noprint"><div class="note" style="margin-bottom:7px;font-weight:700">Pick a form</div>' +
     FORMS.map(function (item) {
       return (
-        '<div class="formcard' +
+        '<div data-cbsid="DOC001-C01" class="formcard' +
         (SEL === item.key ? ' on' : '') +
         '" onclick="pick(\'' +
         item.key +
@@ -314,7 +314,7 @@ function drawForm() {
         srcChip(item.source) +
         rungChip(item.rung) +
         '</div>' +
-        '<input class="' +
+        '<input data-cbsid="DOC001-I01" class="' +
         (missing ? 'miss' : '') +
         '" data-fid="' +
         esc(item.id) +
@@ -347,10 +347,10 @@ function drawForm() {
     banner +
     rows +
     prov +
-    '<div class="row" style="margin-top:12px"><button class="ok" id="issueBtn" ' +
+    '<div class="row" style="margin-top:12px"><button data-cbsid="DOC001-B01" class="ok" id="issueBtn" ' +
     (d.ready ? '' : 'disabled') +
     ' onclick="issue()">Issue &amp; freeze</button>' +
-    '<button class="gh" onclick="resolve()">Re-fill</button></div>' +
+    '<button data-cbsid="DOC001-B02" class="gh" onclick="resolve()">Re-fill</button></div>' +
     '<div class="note" style="margin-top:8px">' +
     esc(d.note || '') +
     '</div><div id="issueErr" class="err"></div></div>';
@@ -422,16 +422,16 @@ function drawDoc(inst) {
     '<div class="card noprint"><div class="banner ready">✓ Issued &amp; frozen' +
     (inst.signed_at ? ' &amp; signed' : '') +
     '.</div><div class="row">' +
-    (inst.signed_at ? '' : '<button class="pri" onclick="sign(\'' + inst.form_id + '\')">Sign (authorised signatory)</button>') +
-    '<button class="gh" onclick="window.print()">Print / Save PDF</button>' +
-    '<button class="gh" onclick="pick(\'' +
+    (inst.signed_at ? '' : '<button data-cbsid="DOC001-B03" class="pri" onclick="sign(\'' + inst.form_id + '\')">Sign (authorised signatory)</button>') +
+    '<button data-cbsid="DOC001-B04" class="gh" onclick="window.print()">Print / Save PDF</button>' +
+    '<button data-cbsid="DOC001-B05" class="gh" onclick="pick(\'' +
     SEL +
     '\')">New form</button></div><div id="signErr" class="err"></div>' +
     '<label style="margin-top:12px">Transfer on the rail — file onto a chit (per-copy)</label>' +
     '<div class="row"><div style="flex:1;min-width:150px">' +
     orderSelect('attach_chit', CTX, 'Pick the order to file it on') +
     '</div>' +
-    '<button class="ok" onclick="attach(\'' +
+    '<button data-cbsid="DOC001-B06" class="ok" onclick="attach(\'' +
     inst.form_id +
     '\')">File on rail</button></div>' +
     '<div id="attachMsg" style="margin-top:6px"></div>' +
