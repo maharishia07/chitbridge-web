@@ -178,10 +178,9 @@
     if (s) call(s, 'onDraft');
   }
 
-  /* the attributes of a rail step a person may go back to: a click, and for the keyboard a button role, a tab stop and Enter or Space (the step is a div, so it needs all three) */
+  /* the attributes of a rail step a person may go back to: the click, and a button role with a tab stop; Enter and Space are pressed by app/kbd-press.js (every page that loads this file loads that one first) */
   function stepPress(flowKey, index) {
-    var goCall = 'CBSteps.go(\'' + esc(flowKey) + "'," + index + ')';
-    return ' onclick="' + goCall + '" style="cursor:pointer" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();' + goCall + '}"';
+    return ' onclick="CBSteps.go(\'' + esc(flowKey) + "'," + index + ')" style="cursor:pointer" role="button" tabindex="0"';
   }
 
   /* ── the rail ────────────────────────────────────────────────────────────────────────────────────────────── */

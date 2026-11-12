@@ -106,7 +106,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `edition.js` | — |  |
 | `embed-host.js` | — |  |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
-| `kbd-press.js` | — | ONE keyboard rule for a control that is not a native button: Enter or Space presses it |
+| `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
 | `list-ctl.js` | eager |  |

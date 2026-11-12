@@ -24,7 +24,7 @@ const rail = Steps.railHTML(flow.ns);
 const stepTag = (key) => (rail.match(new RegExp('<div class="cbst[^"]*" data-testid="step-' + key + '"[^>]*>')) || [''])[0];
 const done = stepTag('items');
 check(/role="button"/.test(done) && /tabindex="0"/.test(done), 'a finished step is a tab stop with a button role');
-check(/onkeydown="if\(event\.key==='Enter'\|\|event\.key===' '\)/.test(done) && done.lastIndexOf("CBSteps.go('" + flow.ns + "',0)") > done.indexOf('onkeydown'), 'Enter or Space on it goes to the same step the click goes to');
+check(done.indexOf('onkeydown') < 0, 'the rail carries no inline key handler of its own: Enter and Space come from kbd-press.js (one press rule)');
 check(/onclick="CBSteps\.go\('[^']+',0\)"/.test(done), 'the click handler is unchanged');
 check(!/tabindex|role=/.test(stepTag('details')), 'the current step is not a tab stop');
 check(!/tabindex/.test(stepTag('review')), 'a step you cannot reach yet is not a tab stop');
@@ -35,7 +35,7 @@ ctx.window = ctx; vm.createContext(ctx);
 vm.runInContext(read('kbd-press.js'), ctx);
 const KP = ctx.CBKbdPress;
 const fake = (tag, attrs) => { const el = { tagName: tag, clicks: 0, click() { this.clicks++; }, getAttribute(n) { return attrs[n] === undefined ? null : attrs[n]; }, hasAttribute(n) { return attrs[n] !== undefined; } }; return el; };
-const press = (el, key) => { let prevented = false; KP.onKey({ key, target: el, preventDefault() { prevented = true; } }); return prevented; };
+const press = (el, key, extra) => { const ev = Object.assign({ key, target: el, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } }, extra || {}); KP.onKey(ev); return ev.defaultPrevented; };
 const span = fake('SPAN', { role: 'button', tabindex: '0' });
 check(press(span, 'Enter') && span.clicks === 1, 'Enter presses a role=button span');
 check(press(span, ' ') && span.clicks === 2, 'Space presses it too, and does not scroll the page (default prevented)');
@@ -44,5 +44,28 @@ const nativeBtn = fake('BUTTON', { role: 'button', tabindex: '0' });
 check(!press(nativeBtn, 'Enter') && nativeBtn.clicks === 0, 'a native button is left to the browser (no double press)');
 const plain = fake('SPAN', {});
 check(!press(plain, 'Enter') && plain.clicks === 0, 'a span that was not marked is not pressed');
+/* the guards */
+const held = fake('SPAN', { role: 'button', tabindex: '0' });
+press(held, 'Enter', { repeat: true });
+check(held.clicks === 0, 'a held key (event.repeat) does not press again');
+press(held, 'Enter', { defaultPrevented: true });
+check(held.clicks === 0, 'a key the page already handled (defaultPrevented) is not pressed');
+press(held, 'Enter', { ctrlKey: true }); press(held, ' ', { metaKey: true }); press(held, 'Enter', { altKey: true });
+check(held.clicks === 0, 'Ctrl, Meta and Alt chords are left to the browser');
+/* two handlers see one physical key press: kbd-press and a second listener, in either order: one press */
+const twice = fake('SPAN', { role: 'button', tabindex: '0' });
+const sameEvent = { key: 'Enter', target: twice, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+KP.onKey(sameEvent); KP.onKey(sameEvent);
+check(twice.clicks === 1, 'two listeners seeing the same event press once, not twice');
+
+/* every page that draws the real rail loads the press rule first; the test board's chip no longer carries an inline copy */
+const pub = path.join(__dirname, '..', 'public');
+['accounts.html', 'app.html', 'crm.html', 'finance.html', 'shop.html'].forEach((page) => {
+  const html = fs.readFileSync(path.join(pub, page), 'utf8');
+  const kp = html.indexOf('app/kbd-press.js'), sf = html.indexOf('app/step-flow.js');
+  check(kp > 0 && kp < sf, page + ' loads kbd-press.js before step-flow.js');
+});
+const board = fs.readFileSync(path.join(pub, 'testing.html'), 'utf8');
+check(board.indexOf('app/kbd-press.js') > 0 && board.indexOf("onkeydown=\"if(event.key==='Enter'") < 0, 'testing.html loads kbd-press.js and its chip has no inline Enter/Space copy');
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);

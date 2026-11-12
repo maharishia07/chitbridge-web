@@ -71,5 +71,18 @@ check(p.doc.activeElement === p.body, 'opened with nothing focused: nothing is f
 
 /* 6 · the real Escape path still ends in closeModal */
 check(/function cbKeysEscape[\s\S]*?closeModal\(\)/.test(src), 'cbKeysEscape closes through closeModal (so Escape returns focus too)');
+/* 7 · renderApp rebuilds the shell with an empty #modalhost: the remembered opener is stale and must go with the dialog */
+const at = src.indexOf('\nfunction _renderApp() {');
+const renderBody = at < 0 ? '' : src.slice(at, src.indexOf('\nfunction ', at + 10));
+const resetsOpener = renderBody.indexOf('UI._modalOpener = null') > 0;
+check(resetsOpener, '_renderApp (the shell rebuild that every renderApp ends in) clears the remembered opener when it rebuilds #modalhost');
+p = page(); opener = p.make('Old opener'); const later = p.make('Where focus is now'); opener.focus();
+run(p, (c) => {
+  c.modal('<p>x</p>');
+  p.host.innerHTML = ''; /* renderApp wipes the dialog without closeModal */
+  if (resetsOpener) c.UI._modalOpener = null; /* and, in the real code, forgets the opener on the same line */
+  later.focus(); c.closeModal();
+});
+check(p.doc.activeElement === later, 'a later closeModal does not pull focus back to a stale opener');
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);

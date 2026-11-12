@@ -1720,6 +1720,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — the Ledger's statement rows and the Pay outcome mount it -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
@@ -6532,7 +6533,7 @@ function _renderApp() {
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
-  avatarMount(role, isEntityUser); /* the avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
+  avatarMount(role, isEntityUser); UI._modalOpener = null; /* the rebuilt #modalhost is empty, so a remembered opener is stale (rememberModalOpener). The avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
   /**
    * ⚠️ BOTH STAMPS RUN HERE, AND THE DETAIL ONE ALSO RUNS AFTER THE PANE PAINTS. An observer over the whole app
