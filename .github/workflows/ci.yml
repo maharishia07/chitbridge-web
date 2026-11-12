@@ -131,6 +131,15 @@ jobs:
           node e2e/silent-control.cjs
           node e2e/token-check.cjs
           node e2e/tooltip-length.cjs
+          # QA-153 red fixes (13 Nov): vm-sandbox checks re-pointed at the code they lift (shared e2e/lib/dom-stub.cjs for the four with a document); offline, no sibling repo
+          node e2e/locale-map.cjs
+          node e2e/prof-dirty.cjs
+          node e2e/profile-groups.cjs
+          node e2e/render-smoke.cjs
+          node e2e/api-dedupe.test.cjs
+          node e2e/arabic-catalogue.test.cjs
+          node e2e/docnumber-continuity.cjs
+          node e2e/movable-panels.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |

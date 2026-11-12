@@ -4,11 +4,11 @@
  * thing a fresh-install test cannot see.
  */
 const fs = require('fs');
-const src = fs.readFileSync('C:/dev/chitbridge-api/tools/tally-connector/till.html', 'utf8');
+const src = fs.readFileSync(require('path').join(__dirname, '..', 'public', 'till.html'), 'utf8');
 
 /* the engine, as the page loads it */
 global.window = {};
-require('C:/dev/chitbridge-web/public/engine/docnumber.js');
+require(require('path').join(__dirname, '..', 'public', 'engine', 'docnumber.js'));
 
 /* pull just nextNumber + its two helpers */
 const grab = (name) => {
@@ -34,7 +34,13 @@ const fn = [
   'function shopLs(k){ return k; }',
   (src.match(/^var TILLOPT = [^\n]*;$/m) || ["var TILLOPT = null, TILLOPT_AT = '';"])[0],
   grab('tillOptDefaults'), grab('tillOpt'), grab('tillScheme'), grab('schemeTakesEffect'), grab('docTagOf'), grab('docKindOf'),
-  src.slice(src.indexOf('async function nextNumber(kind){'), src.indexOf('\n}', src.indexOf('async function nextNumber(kind){')) + 2),
+  /* the number-taker as the page has it now: nextNumber -> underSeriesLock -> takeNumber, with the series helpers (seriesFor, rollSeries,
+     parkRuns, switchPrefix, resumeFromCloud, numberText ...) - one contiguous block of till.html, from LAST_SERIES to just before
+     DOC_TAGS, lifted whole, so the code that runs here is the code the counter runs */
+  src.slice(src.indexOf('var LAST_SERIES = null;'), src.indexOf('var DOC_TAGS = {')),
+  /* the only new stand-ins, none of them numbering: who is billing (a keyed counter, as these cases are: tillId reads cb_till_id),
+     the name of the cross-tab lock (a bare Node has no navigator.locks) and the page's swallowed-error log */
+  'function personOn(){ return false; }', 'function tillStore(){ return "test"; }', 'function cbQuiet(){}',
   'return nextNumber;',
 ].join('\n');
 

@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { makeDocument } = require('./lib/dom-stub.cjs');
 
 const ROOT = path.join(__dirname, '..', 'public');
 
@@ -25,7 +26,7 @@ const el = () => ({ value: '', checked: false, disabled: false, innerHTML: '', s
                     remove(){}, appendChild(){}, addEventListener(){} });
 const sandbox = {
   console,
-  document: { getElementById: () => null, createElement: el, head: el(), body: el(), querySelector: () => null },
+  document: makeDocument({ createElement: el, head: el(), body: el() }),
   window: {}, localStorage: { getItem: () => null, setItem(){}, removeItem(){} },
   location: { origin: 'http://localhost:5173', host: 'localhost:5173', hostname: 'localhost' },
   setTimeout: () => 0, fetch: async () => ({ ok: false, json: async () => ({}) }),
@@ -78,6 +79,8 @@ try {
   for (const f of ['helpers.js', 'cap-shop.js', 'cap-settings.js']) vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', f), 'utf8'), ctx, { filename: f });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-iddocs.js'), 'utf8'), ctx, { filename: 'cap-iddocs.js' });
+  /* "What you sell" moved from the profile block to the Country step (cap-country.js csuSuppliesRow) */
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cap-country.js'), 'utf8'), ctx, { filename: 'cap-country.js' });
 } catch (e) {
   console.error('✗ a capability failed to LOAD: ' + e.message);
   process.exit(1);
@@ -108,9 +111,12 @@ try {
  * the same reason, as scripts/check-adoption.js.
  */
 const APP_HTML = fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8');
-for (const fn of ['supName', 'supCartHTML']) {
-  const m = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^const |^\\/\\*\\*)', 'm').exec(APP_HTML);
-  if (!m) { console.error('✗ could not lift ' + fn + '() out of app.html'); process.exit(1); }
+/* supName moved from app.html to cap-suppliers.js: still lifted from real source, never stubbed */
+const SUP_JS = fs.readFileSync(path.join(ROOT, 'app', 'cap-suppliers.js'), 'utf8');
+for (const fn of ['supName', 'supEmptyAllWords', 'supCartHTML']) {
+  const re = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^const |^\\/\\*\\*)', 'm');
+  const m = re.exec(APP_HTML) || re.exec(SUP_JS);
+  if (!m) { console.error('✗ could not lift ' + fn + '() out of app.html or cap-suppliers.js'); process.exit(1); }
   try { vm.runInContext(m[0], ctx, { filename: 'app.html:' + fn }); }
   catch (e) { console.error('✗ lifting ' + fn + ' failed: ' + e.message); process.exit(1); }
 }
@@ -220,8 +226,8 @@ const CASES = [
   ['regional — flag follows the entity, not the reader', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'AE', currency_code:'AED' }); if (h.indexOf(String.fromCodePoint(127462,127466)) < 0) throw new Error('UAE flag missing'); if (h.indexOf(String.fromCodePoint(127470,127475)) >= 0) throw new Error("reader's IN flag leaked onto an AE entity"); return h; }],
   /* ⚠️ GOODS is the DEFAULT and must stay so — every existing entity behaves as a seller of goods today, and
      a migration must not silently re-classify a live business. */
-  ['business — supplies defaults to goods',  () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X' }); if (h.indexOf('value="goods" selected') < 0) throw new Error('goods is not the default'); return h; }],
-  ['business — supplies both is offered',    () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X', supplies:'both' }); if (h.indexOf('value="both" selected') < 0) throw new Error('both not selectable'); return h; }],
+  ['business — supplies defaults to goods',  () => { vm.runInContext('CSU.me = {}; CSU.p = null;', ctx); ctx.csuPrefill(); const h = ctx.csuSuppliesRow(ctx.CSU.edit); if (h.indexOf('value="goods" selected') < 0) throw new Error('goods is not the default'); return h; }],
+  ['business — supplies both is offered',    () => { const h = ctx.csuSuppliesRow({ supplies:'both' }); if (h.indexOf('value="both" selected') < 0) throw new Error('both not selectable'); return h; }],
   ['regional — theme and text size, with the percentage', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'IN', currency_code:'INR' }); if (h.indexOf('115%') < 0) throw new Error('the percentage is the useful part and it is missing'); if (h.indexOf('Cream') < 0) throw new Error('theme missing'); if (h.indexOf('Theme and text size') < 0) throw new Error('no link to the screen that SETS them'); return h; }],
   /**
    * ⚠️ A ZONE ALIAS IS NOT A DIFFERENT ZONE. Asia/Calcutta === Asia/Kolkata. The note that explains a shifted
