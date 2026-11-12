@@ -109,7 +109,7 @@ function ruleNewCryptic(file, head, base, addedLines) {
     findings.push({
       level: 'fail',
       rule: 'cryptic-name',
-      text: `new cryptic name \`${name}\` (${before[name] || 0} → ${after[name]} declarations): ${where} — say what it holds (§6 Pass 2, ≥ 4 characters)`
+      text: `new cryptic name \`${name}\` (${before[name] || 0} → ${after[name]} declarations): ${where} — say what it holds (§6 Pass 2: ≥ 4 characters, or short only in a scope of 10 lines or fewer)`
     });
   }
   return findings;
