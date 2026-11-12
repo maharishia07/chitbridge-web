@@ -1,4 +1,5 @@
 // message-privacy.spec.js — AN INTERNAL NOTE MUST NEVER REACH THE COUNTERPARTY.
+// CARD  01-rail-core-the-chit/thread-messages-on-a-chit
 //
 // ⚠️ WHY THIS EXISTS: messages.spec.js carried this as `test.skip('… needs a 2nd entity')` — a written-down
 // intention where the proof should be. It is the single most consequential claim the messaging layer makes:

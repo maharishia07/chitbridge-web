@@ -1,4 +1,5 @@
 /**
+ * CARD  29-qa-test-tooling-ux-locale-and-design-system/themes-contrast-accessibility
  * a11y-contrast.cjs — measure every theme against the level it CLAIMS.
  *
  * ⚠️⚠️ WHY THIS EXISTS. The accessibility themes make a PROMISE in the user interface: a card that says
