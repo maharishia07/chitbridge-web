@@ -233,7 +233,7 @@ function finCols() {
       label: tx('Party'),
       prio: 1,
       sort: 'name',
-      w: 230,
+      w: 220,
       html: true,
       cell: function (p) {
         return esc(bkPartyLabel(p.party_id, p.name));
@@ -245,7 +245,7 @@ function finCols() {
       prio: 2,
       sort: 'due',
       num: true,
-      w: 150,
+      w: 140,
       html: true,
       cell: function (p) {
         return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>' + finEarlyHTML(p);
@@ -256,7 +256,7 @@ function finCols() {
       label: tx('Age'),
       prio: 3,
       sort: 'oldest',
-      w: 200,
+      w: 150,
       html: true,
       cell: function (p) {
         var ag = finAgeTail(p);
@@ -272,7 +272,7 @@ function finCols() {
       prio: 4,
       sort: 'limit',
       num: true,
-      w: 170,
+      w: 140,
       html: true,
       cell: function (p) {
         /* FIN-R1: the server's code says where the limit came from (party · shop) — null = no limit set anywhere, said in words */
@@ -291,7 +291,7 @@ function finCols() {
       prio: 5,
       sort: 'interest',
       num: true,
-      w: 150,
+      w: 140,
       html: true,
       cell: function (p) {
         /* FIN-R1: interest follows the customer's Terms; interest_state (on · off · not_set) is the server's code — never a guessed rate */
@@ -306,7 +306,7 @@ function finCols() {
       key: 'last',
       label: tx('Last reminded'),
       prio: 6,
-      w: 130,
+      w: 120,
       html: true,
       cell: function (p) {
         return p.last_remind ? esc(bkDate(p.last_remind)) : dash;
@@ -317,7 +317,7 @@ function finCols() {
       label: ' ',
       prio: 1,
       pin: 'end',
-      w: 170,
+      w: 130,
       html: true,
       cell: function (p) {
         var id = esc(p.party_id);
