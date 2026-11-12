@@ -32,7 +32,7 @@ const RAVI = { token: tok({ identity_id: 'act-1', identity_type: 'actor', parent
 const EVENTS = { events: [
   { kind: 'expense', words: 'Pay expense', icon: 'receipt', band: 'paid', preview: true, fields: [{ key: 'class', kind: 'pick', pick: 'expense_class', required: true }, { key: 'amount', kind: 'amount' }, { key: 'paid_from', kind: 'pick', pick: 'mode' }, { key: 'date', kind: 'date' }, { key: 'narration', kind: 'text' }] },
   { kind: 'journal', words: 'Write a journal', fields: [{ key: 'lines', kind: 'lines' }] }],
-  picks: { mode: ['cash', 'bank', 'upi', 'card'], expense_class: [{ role: 'rent', code: '6010', name: 'Rent' }, { role: 'electricity', code: '6020', name: 'Electricity' }], income_class: [{ role: 'interest_received', code: '4210', name: 'Interest received' }] } };
+  picks: { mode: ['cash', 'bank', 'upi', 'card'], expense_class: [{ role: 'rent', code: '6010', name: 'Rent' }, { role: 'electricity', code: '6020', name: 'Electricity' }], income_class: [{ role: 'interest_received', code: '4210', name: 'Interest received' }], debit_reason: ['rate'] } };
 
 function stand(over) {
   const S = Object.assign({ calls: [], bodies: [], offHost: [], todo: [], stockRefuse: false, depRefuse: false, assetRefuse: false, gstRefuse: false, gst503: false, yearReady: false, yearHas: false, recRefuse: false }, over || {});
@@ -49,7 +49,7 @@ function stand(over) {
 }
 const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from: 'igst', against: 'igst', amount_minor: 1000000 }, { from: 'igst', against: 'cgst', amount_minor: 500000 }, { from: 'cgst', against: 'cgst', amount_minor: 300000 }],
   payable_minor: { cgst_minor: 0, sgst_minor: 420000, igst_minor: 0, cess_minor: 0 }, carried_minor: { cgst_minor: 0, sgst_minor: 0, igst_minor: 250000, cess_minor: 0 }, rcm_minor: { cgst: 90000, sgst: 90000, igst: 0 },
-  cash_minor: { cgst: 90000, sgst: 510000, igst: 0 }, pay_total_minor: 600000, ok: true, entry_id: 'e21', entry_no: 'JV/26-27/0021', posting_date: '2026-09-30', doc_date: '2026-09-30', moved: false, lines: 4, items: 0, note: null };
+  cash_minor: { cgst: 90000, sgst: 510000, igst: 0 }, pay_total_minor: 600000, owed_before_payments_minor: { cgst_minor: 0, sgst_minor: 420000, igst_minor: 0, cess_minor: 0 }, owed_before_payments_total_minor: 600000, paid_before_close_minor: {}, still_to_pay_minor: { cgst_minor: 0, sgst_minor: 420000, igst_minor: 0, cess_minor: 0 }, still_to_pay_total_minor: 600000, excess_paid_minor: { cgst_minor: 0, sgst_minor: 0, igst_minor: 0, cess_minor: 0 }, ok: true, entry_id: 'e21', entry_no: 'JV/26-27/0021', posting_date: '2026-09-30', doc_date: '2026-09-30', moved: false, lines: 4, items: 0, note: null };
 
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -79,7 +79,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       if (p === '/api/books/events') return J(r, 200, books.eventsAnswer(EVENTS));
       if (p === '/api/books/ledger/stock') return J(r, 200, books.ledger('1200', 'Stock-in-hand', S.stock, { closing_minor: 9700000 }));
       if (p === '/api/books/closing-stock' && m === 'POST') {
-        if (S.stockRefuse) return J(r, 409, books.refusal('August 2026 is locked — no entry can go into it.', 'PERIOD_LOCKED'));
+        if (S.stockRefuse) return J(r, 409, Object.assign(books.refusal('August 2026 is locked — no entry can go into it.', 'PERIOD_LOCKED'), { type: 'https://chitbridge.com/problems/period_locked', title: 'Month locked', status: 409, hint: 'Use a date in an open month, or ask the owner to unlock it.', detail: 'August 2026 is locked — no entry can go into it.', request_id: null }));   /* the api's RFC 9457 problem answer (contract: POST /api/books/closing-stock #409) */
         S.stock.push({ date: body.date, what: 'Closing stock ' + body.date, ref: 'MJ/26-27/0009', dr_minor: 100, cr_minor: 0, running_minor: 9800100 }); return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0009', entry_id: 'e9', book_minor: 9700000 }));
       }
       if (p === '/api/books/assets' && m === 'GET') return J(r, 200, { currency: 'INR', asOf: TODAY, assets: S.assets.map(books.assetRow), total_wdv_minor: 4050000,
@@ -108,7 +108,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
         if (S.gstRefuse) return J(r, 409, { error: 'Month 6 of ' + body.fy + ' ends on 2026-09-30 — close it once it has ended.' });
         return J(r, 200, GST_CLOSED);
       }
-      if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, books.posted({ entry_no: 'JV/26-27/0024', challan_no: body.challan_no, paid_minor: { cgst: 0, sgst: 420000 } })); }
+      if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, books.posted({ entry_no: 'JV/26-27/0024', challan_no: body.challan_no, payment_ref: body.challan_no, paid_minor: { cgst: 0, sgst: 420000 } })); }
       let ym = /^\/api\/books\/year\/([^/]+)\/status$/.exec(p);
       if (ym) return J(r, 200, S.yearReady ? { fiscal_year: ym[1], closed: !!S.yearHas, can_close: !S.yearHas, refusals: [], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' }
         : { fiscal_year: ym[1], closed: false, can_close: false, months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: i < 10 ? 'soft_locked' : 'open' })), next: '2026-27',
@@ -117,6 +117,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], next: '2026-27', locked: 13, opening: { rows: 40, retained_minor: 0, profit_minor: 0, balanced: true } }); }
       if (p === '/api/books/daybook') return J(r, 200, books.daybook([]));
       if (p === '/api/books/dues') return J(r, 200, books.dues([]));
+      if (p === '/api/books/cheques') return J(r, 200, books.cheques({ asOf: TODAY }));   /* the contract's answer, not the catch-all {} below */
       /* BAS1: an Indian shop's return is the GSTR, read from the rail — the GST screen asks once and paints the close & pay form on this answer */
       if (p === '/api/books/returns') return J(r, 422, { code: 'RETURN_FROM_RAIL', error: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.', message: 'India\'s GSTR-1 and GSTR-3B are read from the frozen invoices on the rail (GET /api/tax/gstr), not from the ledgers.' });
       if (p.startsWith('/api/books')) return J(r, 200, {});
