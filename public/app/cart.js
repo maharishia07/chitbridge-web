@@ -1681,7 +1681,7 @@
       '<b style="font-size:var(--fs-4);flex:1">🛒 ' +
       esc(opt(ns, 'cartTitle', 'Your cart')) +
       '</b>' +
-      '<button onclick="CBCart.close(\'' +
+      '<button data-cbsid="CMP005" onclick="CBCart.close(\'' +
       esc(ns) +
       '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>' +
       '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">' +
@@ -1712,7 +1712,7 @@
                 (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * item.qty)) + '</span>' : '') +
                 '</div></span>' +
                 stepperHTML(ns, item.item_id, item.qty) +
-                '<span onclick="CBCart.setQty(\'' +
+                '<span data-cbsid="CMP008" onclick="CBCart.setQty(\'' +
                 esc(ns) +
                 "','" +
                 esc(item.item_id) +

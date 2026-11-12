@@ -256,9 +256,9 @@ function crmCallPick(c, o) {
       esc(tx('Pick a day')) +
       '<input class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>' +
       '<div id="crm_call_msg" class="hint" role="status" data-testid="crm-call-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="callday" data-testid="crm-call-day-save">' +
+      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="callday" data-testid="crm-call-day-save">' +
       esc(tx('Save')) +
       '</button></div>'
   );
