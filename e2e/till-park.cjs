@@ -1,0 +1,127 @@
+/* till-park.cjs — A QUEUED CHANGE THE SHOP REFUSES FOR GOOD IS PARKED, SHOWN IN WORDS, AND FIXED OR DROPPED BY A PERSON (till-park, 12 Nov)
+ *
+ * Twin of api M9 (#1168 PRICE_DECIMALS, #1170 OFFER_CLASH): offline, "change it here anyway" queues a price; when the line returns the shop
+ * answers 400 PRICE_DECIMALS. Before: the drain retried it every few minutes for ever. Now: it is parked ONCE, kept with the shop's own
+ * sentence, and the owner sees it under "Needs fixing" in the why-is-a-bill-stuck panel with Fix (open the item) and Drop (owner PIN).
+ * A bill (sale) row answered 5xx still retries on the ladder. Also: a JPY shop's bulk +10% rounds to whole yen; a finer typed price is refused.
+ *
+ * Drives the real page with the real IndexedDB queue and a stand-in shop on the wire. Keyboard-only pass on the panel (Tab to Fix, Enter).
+ * Shots (when SHOTS=<dir> is set): the panel at 1366x768 and 390x844.
+ * Run: node e2e/till-park.cjs        (SHOTS=<dir> node e2e/till-park.cjs  for the screenshots)
+ */
+'use strict';
+const { chromium } = require('@playwright/test');
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..', 'public');
+const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
+            '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
+const SENTENCE = 'Price can have at most 2 decimal places in INR (not 10.999). Round it and send it again.';
+let bad = 0;
+const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
+
+(async () => {
+  const wire = { price: 0, bill: 0, billStatus: 500 };
+  const srv = http.createServer((q, r) => {
+    const url = q.url.split('?')[0];
+    if (url === '/api/till/price') { wire.price++; r.writeHead(400, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ code: 'PRICE_DECIMALS', message: SENTENCE })); }
+    if (url === '/api/chits/send') { wire.bill++; r.writeHead(wire.billStatus, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ code: 'X', message: 'the shop is busy' })); }
+    if (url.startsWith('/api/')) { r.writeHead(200, { 'content-type': 'application/json' }); return r.end('{"ok":true}'); }
+    const f = path.join(ROOT, decodeURIComponent(url).replace(/^\/+/, '') || 'index.html');
+    if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+    r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' });
+    fs.createReadStream(f).pipe(r);
+  });
+  await new Promise((r) => srv.listen(0, r));
+  const base = 'http://127.0.0.1:' + srv.address().port;
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 1366, height: 768 } });
+  const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
+  await p.goto(base + '/till.html');
+  await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
+
+  await p.evaluate(async (api) => {
+    CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost;
+    ls.set(tillGivenKey(), 'C1');
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), offers: [],
+                 items: [{ item_id: 'it-1', name: 'Basmati rice 1kg', price: 10, status: 'available' }] };
+    window.sure = async () => true;
+    window.ownerPinAsk = async () => ({ by: { id: 'o', name: 'Owner' } });
+    window.refreshNow = function(){};
+    await DB.put('queue', { no: 'OP/1', at: new Date().toISOString(), priority: 1, says: 'Basmati rice 1kg — price ₹10.00 → ₹10.999',
+                            tillPost: { path: '/api/till/price', body: { item_id: 'it-1', price: 10.999 } } });
+    await DB.put('queue', { no: 'C1/1', at: new Date().toISOString(), lines: [{ name: 'Tea', qty: 1, price: 10 }], total: 10, kind: 'cash' });
+  }, base);
+
+  console.log('\n── the refusal parks the change once; the bill keeps trying ' + '─'.repeat(5));
+  const tried = await p.evaluate(async () => {
+    await HOST.drain({ force: true }); await HOST.drain({ force: true }); await HOST.drain({ force: true });
+    var q = await DB.all('queue'); var byNo = {}; q.forEach(function(r){ byNo[r.no] = r; });
+    return { parked: byNo['OP/1'] && byNo['OP/1']._parked, why: byNo['OP/1'] && byNo['OP/1']._why, billParked: !!(byNo['C1/1'] && byNo['C1/1']._parked), billWait: byNo['C1/1'] && byNo['C1/1']._nextAt > Date.now(),
+             counts: { q: STATE.queued, parked: QUEUED.parked } };
+  });
+  say('the price row is parked, with the shop\'s sentence', !!tried.parked && tried.why === SENTENCE, tried.why);
+  say('the shop was asked about that price exactly once in three drains', wire.price === 1, String(wire.price));
+  say('the bill (5xx) is NOT parked and waits on the ladder', !tried.billParked && tried.billWait, 'parked=' + tried.billParked);
+  say('only the bill is "waiting to reach the shop"; the change is counted apart', tried.counts.q === 1 && tried.counts.parked === 1, JSON.stringify(tried.counts));
+
+  console.log('\n── the panel says it in words, and a keyboard can fix or drop it ' + '─'.repeat(2));
+  await p.evaluate(() => { window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [] }, at: new Date().toISOString(), offers: [], items: [{ item_id: 'it-1', name: 'Basmati rice 1kg', price: 10, status: 'available' }] }; return openStuck(); });   /* a background read of the stand-in shop may have replaced S */
+  await p.waitForSelector('[data-testid="till-parked-head"]');
+  const panel = await p.evaluate(() => document.getElementById('billsbody').innerText);
+  say('"Needs fixing" names the item and the shop\'s own sentence', /Needs fixing/.test(panel) && /Basmati rice/.test(panel) && panel.indexOf('at most 2 decimal places') >= 0, 'found');
+  say('Fix and Drop are there, stamped from the register', await p.evaluate(() => !!document.querySelector('[data-testid="till-parked-fix-OP/1"][data-cbsid="CMP010"]') && !!document.querySelector('[data-testid="till-parked-drop-OP/1"][data-cbsid="CMP011"]')), 'CMP010 · CMP011');
+  const shotDir = process.env.SHOTS;
+  if (shotDir) { fs.mkdirSync(shotDir, { recursive: true }); await p.screenshot({ path: path.join(shotDir, 'till-park-1366x768.png') }); }
+  if (shotDir) {
+    const phone = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+    await phone.goto(base + '/till.html'); await phone.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
+    await phone.evaluate(async (api) => {
+      CloudHost.key = 'demo-key'; CloudHost.api = api; HOST = CloudHost; ls.set(tillGivenKey(), 'C1');
+      window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }] }, at: new Date().toISOString(), offers: [], items: [{ item_id: 'it-1', name: 'Basmati rice 1kg', price: 10, status: 'available' }] };
+      await DB.put('queue', { no: 'OP/1', at: new Date().toISOString(), says: 'Basmati rice 1kg — price ₹10.00 → ₹10.999', tillPost: { path: '/api/till/price', body: { item_id: 'it-1', price: 10.999 } }, _why: 'x', _parked: { at: 1, status: 400 } });
+      await queueTally(); await openStuck();
+    }, base);
+    await phone.waitForSelector('[data-testid="till-parked-head"]');
+    await phone.screenshot({ path: path.join(shotDir, 'till-park-390x844.png') });
+    const overflow = await phone.evaluate(() => { var d = document.getElementById('billsdlg'); return d.scrollWidth > d.clientWidth + 1; });
+    say('390px: the panel has no sideways scroll', !overflow, String(overflow));
+  }
+  // keyboard only: focus the dialog's first control, Tab until Fix has focus, then Enter
+  await p.keyboard.press('Tab');
+  let reached = '';
+  for (let k = 0; k < 40 && reached !== 'till-parked-fix-OP/1'; k++) { reached = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || ''); if (reached !== 'till-parked-fix-OP/1') await p.keyboard.press('Tab'); }
+  say('Tab reaches Fix inside the panel', reached === 'till-parked-fix-OP/1', reached);
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => !document.getElementById('billsdlg').open, null, { timeout: 5000 });
+  const opened = await p.evaluate(() => ({ mode: MODE, card: CARD_ID }));
+  say('Enter on Fix closes the panel and opens that item in Maintain', opened.mode === 'maintain' && opened.card === 'it-1', JSON.stringify(opened));
+
+  console.log('\n── Drop is deliberate and the owner\'s ' + '─'.repeat(20));
+  await p.evaluate(() => openStuck());
+  await p.waitForSelector('[data-testid="till-parked-drop-OP/1"]');
+  await p.focus('[data-testid="till-parked-drop-OP/1"]'); await p.keyboard.press('Enter');
+  await p.waitForFunction(async () => !(await DB.all('queue')).some((r) => r.no === 'OP/1'), null, { timeout: 5000 });
+  say('Drop (after the confirm and the owner PIN) removes the change from the queue', true, 'gone');
+  say('the bill is still queued', await p.evaluate(async () => (await DB.all('queue')).some((r) => r.no === 'C1/1')), 'kept');
+
+  console.log('\n── the price grain: a JPY shop ' + '─'.repeat(27));
+  const jpy = await p.evaluate(async () => {
+    S.shop.currency = 'JPY'; S.items = [{ item_id: 'a', name: 'A', price: 999 }, { item_id: 'b', name: 'B', price: 105 }];
+    var out = { written: [], toasts: [] };
+    window.ask = async () => '+10%'; window.priceWrite = async (i, v) => { out.written.push(v); return { ok: true }; }; window.pickedItems = function(){ return S.items; };
+    var keep = window.toastLine; window.toastLine = function(t){ out.toasts.push(t); };
+    await pickedPrice();
+    window.ask = async () => '66.5'; await pickedPrice();
+    window.toastLine = keep;
+    out.finer = priceFinerWords(10.5);
+    return out;
+  });
+  say('bulk +10% in JPY writes whole yen (999 -> 1099, 105 -> 116)', JSON.stringify(jpy.written) === '[1099,116]', JSON.stringify(jpy.written));
+  say('a typed 66.5 in JPY is refused in the api\'s sentence, nothing written', jpy.written.length === 2 && /at most 0 decimal places in JPY/.test(jpy.finer), jpy.finer);
+
+  say('no page errors', errs.length === 0, errs.join(' | ') || 'none');
+  await b.close(); srv.close();
+  console.log('\n' + (bad ? bad + ' FAILED' : 'all passed'));
+  process.exit(bad ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });
