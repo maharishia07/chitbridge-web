@@ -90,7 +90,7 @@ function peBad(id, e, fallback) {
     (w.calm ? '⏳ ' : '⚠ ') +
     esc(w.text) +
     '</span>' +
-    (w.fix ? '<button type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
+    (w.fix ? '<button data-cbsid="BKS016-B01" type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
     '</div>';
 }
 function peOk(id, html) {
@@ -103,7 +103,7 @@ function peNote(tid, text) {
 const peNoOwner = (what) => peNote('pe-readonly', what);
 const peField = (id, label, inner) => '<label class="pe-f"><span>' + esc(tx(label)) + '</span>' + inner + '</label>';
 const peInput = (id, val, ph, type, extra) =>
-  '<input class="inp" id="' +
+  '<input data-cbsid="BKS016-I01" class="inp" id="' +
   id +
   '" data-testid="' +
   id +
@@ -117,7 +117,7 @@ const peInput = (id, val, ph, type, extra) =>
   '>';
 const peAmt = (id, val, ph) => bkMoneyInput({ id: id, text: val || '', ph: ph == null ? undefined : ph }); /* the one money input (cap-books bkMoneyInput) */
 const peSel = (id, opts, cur, extra) =>
-  '<select class="inp" id="' +
+  '<select data-cbsid="BKS016-S01" class="inp" id="' +
   id +
   '" data-testid="' +
   id +
@@ -135,7 +135,7 @@ const peMODES = [
   ['card', 'Card']
 ];
 const peBtn = (tid, label, fn, cls) =>
-  '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
+  '<button data-cbsid="BKS016-B02" type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
 function peText(minor) {
   return bkMinorText(minor);
@@ -440,7 +440,7 @@ async function peDepForm() {
         ' onchange="peDepLabel()"'
       )
     ) +
-    '</div><div class="supacts"><button type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
+    '</div><div class="supacts"><button data-cbsid="BKS016-B03" type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
     peBtn('pdp-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
     '</div><div id="pdp_out" class="pe-slot"></div></div>';
   peDepLabel();
@@ -513,7 +513,7 @@ async function peAccrualsView(body) {
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" data-testid="pr-tab-' +
+          '<button data-cbsid="BKS016-B04" type="button" class="pe-tab" data-testid="pr-tab-' +
           item[0] +
           '" aria-pressed="' +
           (PE.tab === item[0]) +
@@ -1366,7 +1366,7 @@ function peReturnCloseCard(r) {
     '</div>' +
     '<div class="supacts">' +
     (greyWhy
-      ? '<button type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
+      ? '<button data-cbsid="BKS016-B05" type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
         esc(greyWhy) +
         '">' +
         esc(txf('Close {period}', { period: period.label })) +
@@ -1432,7 +1432,7 @@ function peReturnList(r) {
       (b.accounts || [])
         .map(
           (item) =>
-            '<button type="button" class="optchip" data-testid="pr-open-' +
+            '<button data-cbsid="BKS016-B06" type="button" class="optchip" data-testid="pr-open-' +
             esc(b.code) +
             '-' +
             esc(item.code) +
@@ -1587,7 +1587,7 @@ async function peYearStatus() {
       esc(notLocked ? txf('{n} of 12 months are not locked yet', { n: notLocked }) : tx('Every month is locked')) +
       '</span>' +
       (notLocked
-        ? '<button type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>'
+        ? '<button data-cbsid="BKS016-B07" type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>'
         : '') +
       '</div>';
     h += refs
@@ -1599,7 +1599,7 @@ async function peYearStatus() {
           '"><span>✗</span><span>' +
           esc(x.why) +
           '</span>' +
-          (f ? '<button type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
+          (f ? '<button data-cbsid="BKS016-B08" type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
           '</div>'
         );
       })
@@ -1610,7 +1610,7 @@ async function peYearStatus() {
   if (!st.closed && peOwner())
     h +=
       '<div class="supacts">' +
-      '<button type="button" class="supact-pri" data-testid="py-close"' +
+      '<button data-cbsid="BKS016-B09" type="button" class="supact-pri" data-testid="py-close"' +
       (st.can_close ? '' : ' disabled') +
       ' onclick="peYearClose(this)">' +
       esc(tx('Close the year')) +

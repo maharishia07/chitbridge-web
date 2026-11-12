@@ -272,7 +272,7 @@ function fmPaintTop() {
   if (!el) return;
   var pill = function (p, words) {
     return (
-      '<button type="button" class="tab" aria-pressed="' +
+      '<button data-cbsid="FIN008-B02" type="button" class="tab" aria-pressed="' +
       (FM.period === p ? 'true' : 'false') +
       '" data-testid="fm-period-' +
       p +

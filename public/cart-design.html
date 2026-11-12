@@ -95,14 +95,14 @@
 
 <div class="shell">
   <div class="hd">
-    <div class="t"><span>✉️</span><span>Compose — author a chit</span><button class="x" title="close (mock)">×</button></div>
+    <div class="t"><span>✉️</span><span>Compose — author a chit</span><button data-cbsid="OWN004-B01" class="x" title="close (mock)">×</button></div>
     <div class="s" id="hSub"></div>
   </div>
   <div class="rail" id="rail"></div>
   <div class="body" id="body"></div>
   <div class="foot" id="foot"></div>
 </div>
-<div class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('cc')"><div class="ovc" id="cartovc"></div></div>
+<div data-cbsid="OWN004-C01" class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('cc')"><div class="ovc" id="cartovc"></div></div>
 
 <script>
 /* MY OWN catalogue — compose orders from what I sell, or from nothing at all. */
@@ -212,7 +212,7 @@ function railHTML() {
   return STEPS.map(function (item, index) {
     var cls = index === S.step ? 'st now' : index < S.step ? 'st done' : 'st';
     return (
-      '<div class="' +
+      '<div data-cbsid="OWN004-C02" class="' +
       cls +
       '"' +
       (index < S.step ? ' onclick="go(' + index + ')" role="button" tabindex="0"' : '') +
@@ -229,7 +229,7 @@ function stepItems() {
     '<div id="cartbar">' +
     CBCart.barHTML('cc') +
     '</div>' +
-    '<input class="srch" placeholder="Search your catalogue…" value="' +
+    '<input data-cbsid="OWN004-I01" class="srch" placeholder="Search your catalogue…" value="' +
     esc((CBCart.state('cc') || {}).q || '') +
     '"' +
     ' oninput="CBCart.search(\'cc\',this.value)">' +
@@ -238,22 +238,22 @@ function stepItems() {
     '</div>' +
     /* ⚠️ ON THIS STEP, not a step of its own — these are ways of ADDING A LINE, so they belong with the other way. */
     '<div class="sec">Not in your catalogue?</div>' +
-    '<div class="two"><input class="inp" id="cn" placeholder="Type an item name" style="flex:2">' +
-    '<input class="inp" id="cq" value="1" style="max-width:64px">' +
-    '<input class="inp" id="cp" placeholder="Price" style="max-width:92px">' +
-    '<button class="rb" onclick="addTyped()">+</button></div>' +
-    '<div class="two" style="margin-top:9px"><input class="inp" placeholder="✨ Or describe the order in words — AI fills the lines">' +
-    '<button class="rb" style="flex:none">✨</button></div>'
+    '<div class="two"><input data-cbsid="OWN004-I02" class="inp" id="cn" placeholder="Type an item name" style="flex:2">' +
+    '<input data-cbsid="OWN004-I03" class="inp" id="cq" value="1" style="max-width:64px">' +
+    '<input data-cbsid="OWN004-I04" class="inp" id="cp" placeholder="Price" style="max-width:92px">' +
+    '<button data-cbsid="OWN004-B02" class="rb" onclick="addTyped()">+</button></div>' +
+    '<div class="two" style="margin-top:9px"><input data-cbsid="OWN004-I05" class="inp" placeholder="✨ Or describe the order in words — AI fills the lines">' +
+    '<button data-cbsid="OWN004-B03" class="rb" style="flex:none">✨</button></div>'
   );
 }
 function stepTo() {
   return (
     '<div class="sec">Recipients</div>' +
-    '<div class="two"><select class="inp" id="torole" style="max-width:96px"><option>To</option><option>CC</option><option>For</option></select>' +
-    '<input class="inp" id="tov" placeholder="Type a name or User ID">' +
-    '<button class="rb" onclick="addTo(document.getElementById(\'torole\').value)">+</button></div>' +
+    '<div class="two"><select data-cbsid="OWN004-S01" class="inp" id="torole" style="max-width:96px"><option>To</option><option>CC</option><option>For</option></select>' +
+    '<input data-cbsid="OWN004-I06" class="inp" id="tov" placeholder="Type a name or User ID">' +
+    '<button data-cbsid="OWN004-B04" class="rb" onclick="addTo(document.getElementById(\'torole\').value)">+</button></div>' +
     /* A self-addressed chit is a real chit — one copy in Order, one in Task, same thread. */
-    '<div style="margin-top:9px"><button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addSelf()">+ Self (own record)</button></div>' +
+    '<div style="margin-top:9px"><button data-cbsid="OWN004-B05" class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addSelf()">+ Self (own record)</button></div>' +
     '<div style="margin-top:12px">' +
     (S.to.length
       ? S.to
@@ -263,7 +263,7 @@ function stepTo() {
               esc(item.role) +
               '</span>' +
               esc(item.name) +
-              '<span class="rm" role="button" tabindex="0" aria-label="Remove recipient" onclick="rmTo(' +
+              '<span data-cbsid="OWN004-C03" class="rm" role="button" tabindex="0" aria-label="Remove recipient" onclick="rmTo(' +
               index +
               ')">×</span></span>'
             );
@@ -272,39 +272,39 @@ function stepTo() {
       : '<div class="empty">No recipients yet — a chit with none is a draft.</div>') +
     '</div>' +
     '<div class="note">To acts on it · CC is informed · For = on behalf of.</div>' +
-    '<div class="sec">Send as</div><select class="inp"><option>North · entity</option></select>' +
+    '<div class="sec">Send as</div><select data-cbsid="OWN004-S02" class="inp"><option>North · entity</option></select>' +
     '<label class="fl">External priority · informed, locked once sent</label>' +
-    '<select class="inp"><option>Normal</option><option>High</option></select>'
+    '<select data-cbsid="OWN004-S03" class="inp"><option>Normal</option><option>High</option></select>'
   );
 }
 function stepDetails() {
   return (
     '<div class="sec">Chit fields · from your Order schema</div>' +
     '<label class="fl">Subject *</label>' +
-    '<input class="inp" value="' +
+    '<input data-cbsid="OWN004-I07" class="inp" value="' +
     esc(S.subject) +
     '" placeholder="e.g. order summary" oninput="S.subject=this.value;paintFoot()">' +
     '<div class="two"><div><label class="fl">Delivery by</label>' +
-    '<input class="inp" type="date" value="' +
+    '<input data-cbsid="OWN004-I08" class="inp" type="date" value="' +
     esc(S.by) +
     '" oninput="S.by=this.value"></div>' +
     '<div><label class="fl">Deliver to</label>' +
-    '<input class="inp" value="' +
+    '<input data-cbsid="OWN004-I09" class="inp" value="' +
     esc(S.addr) +
     '" placeholder="address / site" oninput="S.addr=this.value"></div></div>' +
     '<label class="fl">Note</label>' +
-    '<input class="inp" value="' +
+    '<input data-cbsid="OWN004-I10" class="inp" value="' +
     esc(S.note) +
     '" placeholder="instructions" oninput="S.note=this.value">' +
     /* ── ATTACHMENTS. The tab I flagged as homeless on 2026-08-08 — it lands HERE, with the other things that
        describe the chit, rather than becoming a fifth step nobody needs for most chits. ── */
     '<div class="sec">Attachments</div>' +
-    '<button class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addFile()">+ Attach a file</button>' +
+    '<button data-cbsid="OWN004-B06" class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addFile()">+ Attach a file</button>' +
     '<div style="margin-top:9px">' +
     (S.files.length
       ? S.files
           .map(function (item, index) {
-            return '<span class="chip">📎 ' + esc(item) + '<span class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
+            return '<span data-cbsid="OWN004-C04" class="chip">📎 ' + esc(item) + '<span class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
           })
           .join('')
       : '<div style="font-size:12px;color:var(--grey)">Nothing attached — optional.</div>') +
@@ -317,7 +317,7 @@ function stepReview() {
   return (
     '<div class="rev"><div class="h">Lines · ' +
     list.length +
-    '<span class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
+    '<span data-cbsid="OWN004-C05" class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
     list
       .map(function (item) {
         return (
@@ -338,7 +338,7 @@ function stepReview() {
     (T.amount ? CBCart.fmt('cc', T.amount) + (T.partial ? '+' : '') : '—') +
     '</span></div></div>' +
     (T.partial ? '<div class="note">Some lines have no price — the total covers only the priced ones.</div>' : '') +
-    '<div class="rev"><div class="h">To<span class="e" role="button" tabindex="0" aria-label="Change the recipients" onclick="go(1)">Change</span></div>' +
+    '<div data-cbsid="OWN004-C06" class="rev"><div class="h">To<span class="e" role="button" tabindex="0" aria-label="Change the recipients" onclick="go(1)">Change</span></div>' +
     '<div class="r">' +
     (S.to.length
       ? S.to
@@ -348,7 +348,7 @@ function stepReview() {
           .join(' · ')
       : '<span style="color:#b4453f">nobody yet</span>') +
     '</div></div>' +
-    '<div class="rev"><div class="h">Details<span class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(2)">Change</span></div>' +
+    '<div data-cbsid="OWN004-C07" class="rev"><div class="h">Details<span class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(2)">Change</span></div>' +
     '<div class="r"><span class="k">Subject</span><span>' +
     (S.subject ? esc(S.subject) : '<span style="color:#b4453f">required</span>') +
     '</span></div>' +
@@ -382,15 +382,15 @@ function paintFoot() {
   var last = S.step === STEPS.length - 1,
     why = blockedBecause();
   document.getElementById('foot').innerHTML =
-    '<button onclick="' +
+    '<button data-cbsid="OWN004-B07" onclick="' +
     (S.step ? 'go(' + (S.step - 1) + ')' : '') +
     '"' +
     (S.step ? '' : ' disabled') +
     '>' +
     (S.step ? '<span class=arw>←</span> Back' : 'Cancel') +
     '</button>' +
-    '<button>Save draft</button>' +
-    '<button class="pri"' +
+    '<button data-cbsid="OWN004-B08">Save draft</button>' +
+    '<button data-cbsid="OWN004-B09" class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +
     ' onclick="' +
     (last ? "alert('(mock) chit sent')" : 'go(' + (S.step + 1) + ')') +

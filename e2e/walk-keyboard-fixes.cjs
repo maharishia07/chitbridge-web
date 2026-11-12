@@ -104,7 +104,7 @@ const unreachable = (page) => page.evaluate(() => Array.from(document.querySelec
       console.log('\n-- ' + w + 'x' + h + ' (3b) the other labs close marks use the token, and the token reaches 4.5:1');
       for (const name of ['network-design', 'supplier-design', 'storefront-design']) {
         await page.goto(s.url('/' + name + '.html')); await page.waitForTimeout(400);
-        const mark = await page.evaluate(() => { const own = document.documentElement.outerHTML.match(/<button onclick="closeOv\(\)" style="[^"]*"/g) || []; return { n: own.length, hex: own.filter((t) => /color:#[0-9a-f]{3,6}/i.test(t)).length, grey: getComputedStyle(document.documentElement).getPropertyValue('--grey').trim() }; });
+        const mark = await page.evaluate(() => { const own = document.documentElement.outerHTML.match(/<button (?:data-cbsid="[^"]*" )?onclick="closeOv\(\)" style="[^"]*"/g) || []; return { n: own.length, hex: own.filter((t) => /color:#[0-9a-f]{3,6}/i.test(t)).length, grey: getComputedStyle(document.documentElement).getPropertyValue('--grey').trim() }; });
         ok(mark.n > 0 && mark.hex === 0, name + ': ' + mark.n + ' close mark(s), ' + mark.hex + ' with a hex colour');
         const lumG = (c) => { const v = [1, 3, 5].map((i) => parseInt(c.substr(i, 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4))); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
         ok(/^#[0-9a-f]{6}$/i.test(mark.grey) && 1.05 / (lumG(mark.grey) + 0.05) >= 4.5, name + ': --grey ' + mark.grey + ' on white = ' + (1.05 / (lumG(mark.grey) + 0.05)).toFixed(2) + ':1');

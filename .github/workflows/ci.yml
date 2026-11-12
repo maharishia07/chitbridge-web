@@ -99,11 +99,17 @@ jobs:
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-offer-lab.test.cjs
+          node e2e/ui-codes-finance.test.cjs
+          node e2e/ui-codes-accounts.test.cjs
+          node e2e/ui-codes-crm.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
           node e2e/ui-codes-employees.test.cjs
+          node e2e/ui-codes-app-catalogue.test.cjs
+          node e2e/ui-codes-app-platform.test.cjs
           node e2e/retired-routes-absent.test.cjs
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
@@ -117,6 +123,9 @@ jobs:
           node e2e/ui-codes-utility-pages.test.cjs
           node e2e/modal-focus-return.test.cjs
           node e2e/step-press.test.cjs
+          node e2e/ui-codes-network-design.test.cjs
+          node e2e/ui-codes-testing.test.cjs
+          node e2e/ui-codes-cart-design.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs

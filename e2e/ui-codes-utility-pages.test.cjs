@@ -18,7 +18,7 @@ const KIND = { button: 'B', input: 'I', select: 'S', textarea: 'T', span: 'C', d
 /** page -> screen code, and the attribute text each control is found by -> the code its tag must wear */
 const PAGES = {
   'know-your-business.html': { screen: 'KYB001', want: [['onclick="go(', 'KYB001-C01'], ['id="nc_title"', 'KYB001-I01'], ['onclick="addCred()"', 'KYB001-B01'], ['onclick="runField()"', 'KYB001-B02']] },
-  'store.html': { screen: 'STR001', want: [['id="q"', 'STR001-I01'], ['onclick="placeOrder()"', 'STR001-B01'], ['onclick="addToCart(', 'STR001-B02'], ['data-cat=""', 'STR001-C01'], ["data-cat=\"' + esc", 'STR001-C02']] },
+  'store.html': { screen: 'STR001', want: [['id="q"', 'STR001-I01'], ['onclick="placeOrder()"', 'STR001-B01'], ['onclick="addToCart(', 'STR001-B02'], ['data-cat=""', 'STR001-C01'], ["data-cat=\"' + esc", 'STR001-C02'], ['id="po_name"', 'STR001-I02'], ['id="po_email"', 'STR001-I03']] },
   'network-shop.html': { screen: 'NSH001', want: [['id="q"', 'NSH001-I01'], ['onclick="pick(null)"', 'NSH001-C01'], ['onclick="pick(\\\'', 'NSH001-C02']] }
 };
 let failures = 0;
@@ -43,7 +43,8 @@ for (const page of Object.keys(PAGES)) {
   check(codes.length === want.length, page + ' has ' + want.length + ' tagged elements, found ' + codes.length);
   check(new Set(codes).size === codes.length, 'no code is on two tags');
   check(codes.every((c) => c.indexOf(screen + '-') === 0), 'every code is under ' + screen);
-  const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7));
+  const kindOf = (t) => (/class="(chip|tab)[ ']/.test(t[2]) ? 'C' : KIND[t[1]]);   /* a tab or a chip drawn as a real button (UX-5) is still the register's chip row */
+  const wrong = tags.filter((t) => kindOf(t) !== t[3].charAt(7));
   check(wrong.length === 0, 'every code letter is its tag kind' + (wrong.length ? ' (' + wrong.map((t) => t[3]).join(',') + ')' : ''));
   for (const [needle, code] of want) {
     const tag = tags.filter((t) => t[2].indexOf(needle) >= 0)[0];
