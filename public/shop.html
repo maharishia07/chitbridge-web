@@ -101,6 +101,7 @@
 <script src="app/cart.js"></script>
 <script src="app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="app/step-flow.js"></script>
+<script src="app/sheet-keys.js"></script>   <!-- CBSheetKeys: Escape closes a sheet, Tab stays in it, focus returns to the opener (UX-6) -->
 <script src="app/workflow.js"></script>   <!-- WX-O2C: the order's stage for "My orders" (CBWorkflow.stageOf) — the one answer the seller's Task list uses -->
 <script src="app/showcase-templates.js"></script>   <!-- the shop's chosen showcase template (S2) -->
 <script>
@@ -1811,6 +1812,7 @@ function supHost() {
     node = document.createElement('div');
     node.id = 'suphost';
     document.body.appendChild(node);
+    if (window.CBSheetKeys) CBSheetKeys.watch(node, { close: supClose, label: 'Report a problem' });
   }
   return node;
 }
@@ -2105,6 +2107,7 @@ function ohost() {
     node = document.createElement('div');
     node.id = 'ohost';
     document.body.appendChild(node);
+    if (window.CBSheetKeys) CBSheetKeys.watch(node, { close: orderClose, label: 'Your order' });
   }
   return node;
 }
@@ -2196,6 +2199,23 @@ function _cartLineTotal(i) {
   var L = _ord.lines[i];
   var p = Number(L.price) || 0;
   return p ? cbFmt(p * L.qty) : '—';
+}
+/** the basket's lines as the money engine wants them (offers, tax, tiered price): the review step and the Place order question read this ONE list */
+function _reviewLines() {
+  var byId = {};
+  ((_SHOPDATA && _SHOPDATA.items) || []).forEach(function (item) {
+    byId[String(item.item_id)] = item;
+  });
+  return (_ord.lines || []).map(function (item) {
+    var product = byId[String(item.item_id)] || { item_id: item.item_id, item_data: { name: item.name } };
+    var basketLine = _lineOf(product, Number(item.qty) || 1);
+    var listedPrice = Number(item.price) || 0;
+    basketLine.unitPrice =
+      typeof CBPricing !== 'undefined' && (product.item_data || product).pricing_kind
+        ? CBPricing.unitPrice(product.item_data || product, Number(item.qty) || 1, listedPrice).amount
+        : listedPrice;
+    return basketLine;
+  });
 }
 function _cartGrand() {
   var s = 0,
@@ -2407,23 +2427,9 @@ function _cartStepReview() {
     (function () {
       /* the same money the basket showed — offers, GST per rate, total incl. tax — never the listed price alone */
       try {
-        var byId = {};
-        ((_SHOPDATA && _SHOPDATA.items) || []).forEach(function (item) {
-          byId[String(item.item_id)] = item;
-        });
-        var lines = (_ord.lines || []).map(function (item) {
-          var it = byId[String(item.item_id)] || { item_id: item.item_id, item_data: { name: item.name } };
-          var l = _lineOf(it, Number(item.qty) || 1);
-          var _lp = Number(item.price) || 0;
-          l.unitPrice =
-            typeof CBPricing !== 'undefined' && (it.item_data || it).pricing_kind
-              ? CBPricing.unitPrice(it.item_data || it, Number(item.qty) || 1, _lp).amount
-              : _lp;
-          return l;
-        });
         return (
           '<div style="margin-top:6px;padding:8px 10px;border:1px dashed var(--accent);border-radius:9px;font-size:13px">' +
-          shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid: 'shop-review-total' }) +
+          shopMoneyRowsHTML(shopBasketMath(_reviewLines()), { totalTestid: 'shop-review-total' }) +
           '</div>'
         );
       } catch (e) {
@@ -2503,7 +2509,7 @@ function _cartPanelHtml() {
     '<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 ' +
     esc(shop.display_name || 'Your order') +
     '</b>' +
-    '<button data-cbsid="SHP001-B15" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '<button data-cbsid="SHP001-B15" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     '<div id="oc_rail"></div><div id="oc_body"></div>' +
     (_ord.busy
       ? '<div style="margin-top:12px"><button data-cbsid="SHP001-B16" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
@@ -2554,7 +2560,7 @@ function orderRender(msg, err) {
     esc(_isPayload() ? _submitLabel() : 'Order') +
     ' · ' +
     esc(it.name) +
-    '</b><button data-cbsid="SHP001-B17" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '</b><button data-cbsid="SHP001-B17" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     (function () {
       var p = itemPrice(it),
         bits = [];
@@ -2716,7 +2722,7 @@ function orderConfirm() {
   // A cart is N product lines in ONE order. `kind:'product'` distinguishes them from a finish; the shape and the
   // endpoint are otherwise the same, so the shop reconciles one kind of order however it was placed.
   if (_isCart()) {
-    return _orderPost({
+    return orderAsk({
       identifier: _ord.contact,
       name: _ord.name,
       otp: otp,
@@ -2758,7 +2764,7 @@ function orderConfirm() {
       pline.documents = _docs.map(function (item) {
         return { name: item.name, mime: item.mime, data_base64: item.data_base64 };
       });
-    return _orderPost({ identifier: _ord.contact, name: _ord.name, otp: otp, location: _ord.loc || '', line_items: [pline] });
+    return orderAsk({ identifier: _ord.contact, name: _ord.name, otp: otp, location: _ord.loc || '', line_items: [pline] });
   }
   var line = { kind: 'finish', source: e.source, finish: it.name, combination: _ord.combo, quantity: qty };
   // the buyer's offer travels AS THE CHIT — the server never lets it become the price (CJ-07 stays server-authoritative).
@@ -2783,7 +2789,71 @@ function orderConfirm() {
     line.proposal = { price: off };
   }
   var body = { identifier: _ord.contact, name: _ord.name, otp: otp, location: _ord.loc || '', line_items: [line] };
-  return _orderPost(body);
+  return orderAsk(body);
+}
+/* MONEY PROMISE = DELIBERATE CONFIRM (UX-6): Place order opens the page-level CBConfirm saying WHAT is promised and TO WHOM (this shop, the lines,
+   the total, the contact). Nothing is posted until Place order is pressed in it; Escape, Cancel and a backdrop tap send nothing. */
+/** the lines of the question: one <li> per basket line, or the one finish / form that is being ordered */
+function orderPromiseLines() {
+  if (_isCart()) {
+    return (_ord.lines || []).map(function (item) {
+      return '<li>' + esc(String(item.qty)) + ' × ' + esc(item.name) + '</li>';
+    });
+  }
+  var finish = _FIN[_ord.idx].it;
+  if (_isPayload()) return ['<li>' + esc(finish.name) + ' · your details</li>'];
+  var price = itemPrice(finish);
+  return ['<li>' + esc(finish.name) + (_ord.combo ? ' · ' + esc(_ord.combo) : '') + ' × ' + esc(String(_ord.qty)) + (price && price.u ? ' ' + esc(price.u) : '') + '</li>'];
+}
+/** the lines the money engine prices for the question: the basket, or the one finish (its listed price, or the buyer's own offer) at the typed quantity; none when nothing is priced */
+function orderPromiseMoneyLines() {
+  if (_isCart()) return _reviewLines();
+  var finish = _FIN[_ord.idx].it;
+  var price = itemPrice(finish);
+  var offered = _isNegotiable() ? parseFloat(_ord.offer) : NaN;
+  if (_isPayload() || (!price && isNaN(offered))) return [];
+  var line = _lineOf(finish, Number(_ord.qty) || 1);
+  line.unitPrice = isNaN(offered) ? price.v : offered;
+  return [line];
+}
+/** the money of the question, from the ONE engine the review step reads (shopBasketMath): a basket, a finish or an offer, always quantity and total; '' when nothing is priced, null when the engine fails (then nothing is asked and nothing is sent) */
+function orderPromiseMoney() {
+  var lines = orderPromiseMoneyLines();
+  if (!lines.length) return '';
+  try {
+    return shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid: 'shop-confirm-total' });
+  } catch (e) {
+    if (typeof cbQuiet === 'function') cbQuiet('shop: the order question could not work out the total, nothing was sent', e);
+    return null;
+  }
+}
+/** the question's button says what it will do: send an offer, submit a form, or place the order */
+function orderPromiseLabel() {
+  if (_isCart()) return 'Place order';
+  if (_isPayload()) return _submitLabel();
+  return _isNegotiable() ? 'Send offer' : 'Place order';
+}
+/** every send passes here: ask first (shop, lines, total, contact), post only when the answer is yes */
+function orderAsk(body) {
+  var shop = (_SHOPDATA && _SHOPDATA.shop && _SHOPDATA.shop.display_name) || 'the shop';
+  var contact = _ord.contact || '';
+  var money = orderPromiseMoney();
+  if (money === null) {
+    orderRender(null, 'We could not work out your total, so nothing was sent. Please try again.');
+    return;
+  }
+  CBConfirm(
+    'Place this order?',
+    '<div data-testid="shop-confirm-body">' +
+      '<div>This sends your order to <b>' + esc(shop) + '</b>:</div>' +
+      '<ul style="margin:6px 0;padding-inline-start:18px">' + orderPromiseLines().join('') + '</ul>' +
+      money +
+      '<div style="margin-top:8px">The shop will reach you on <b>' + esc(contact) + '</b>. Nothing is charged here.</div></div>',
+    orderPromiseLabel(),
+    function () {
+      if (_ord) _orderPost(body);
+    }
+  );
 }
 var _MYTOK = null; /* the shopper's session from the order that was just placed — memory only, never stored */
 function shopSheet(inner) {
@@ -3016,6 +3086,7 @@ function vizhost() {
     node = document.createElement('div');
     node.id = 'vizhost';
     document.body.appendChild(node);
+    if (window.CBSheetKeys) CBSheetKeys.watch(node, { close: vizClose, label: 'Try it on your wall' });
   }
   return node;
 }
@@ -3067,7 +3138,7 @@ function vizRender() {
     '<div style="background:#fff;width:100%;max-width:560px;border-radius:16px;padding:16px 16px 20px;max-height:94vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(it.name) +
-    ' on your wall</b><button data-cbsid="SHP001-B26" onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ' on your wall</b><button data-cbsid="SHP001-B26" type="button" aria-label="Close" onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
     '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>' +
     (_VIZ.img
       ? '<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">' +

@@ -107,7 +107,7 @@ function finOff() {
     '<div class="card" data-testid="fin-off"><h2>' +
     esc(tx('Your ledger is off')) +
     '</h2>' +
-    '<button type="button" class="act" id="fin_on" data-testid="fin-turn-on"' +
+    '<button data-cbsid="FIN001-B03" type="button" class="act" id="fin_on" data-testid="fin-turn-on"' +
     (owner ? '' : ' disabled aria-disabled="true"') +
     '>' +
     esc(tx('Turn on')) +
@@ -322,7 +322,7 @@ function finCols() {
       cell: function (p) {
         var id = esc(p.party_id);
         return (
-          '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
+          '<span data-cbsid="FIN001-C01" style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fin-receive-' +
           id +
           "\" onclick=\"event.stopPropagation();payOpen('customer','" +
@@ -520,7 +520,7 @@ function finQueueSheet() {
             '</span></span>' +
             (x.done
               ? '<span class="tag green">✓ ' + esc(tx('Asked')) + '</span>'
-              : '<button type="button" class="act sm" data-testid="fin-queue-go-' +
+              : '<button data-cbsid="FIN001-B04" type="button" class="act sm" data-testid="fin-queue-go-' +
                 esc(x.id) +
                 '" onclick="finRemindOne(' +
                 index +
@@ -531,7 +531,7 @@ function finQueueSheet() {
           );
         })
         .join('') +
-      '</div><div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '</div><div class="mfoot"><button data-cbsid="FIN001-B05" type="button" onclick="closeModal()">' +
       esc(left ? tx('Close') : tx('Done')) +
       '</button></div>'
   );

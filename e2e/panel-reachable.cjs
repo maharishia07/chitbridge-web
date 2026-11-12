@@ -113,7 +113,7 @@ if (fs.existsSync(testing)) {
 ok('minimise shrinks the WIDTH too — collapsing only the height leaves the controls off-screen',
    mv.indexOf('panel.style.width = Math.min(260') >= 0);
 ok('Escape rescues the panel — an escape with no position cannot be pushed off the edge',
-   mv.indexOf("e.key !== 'Escape'") >= 0 && mv.indexOf('clampIntoView(); save();') >= 0);
+   mv.indexOf("e.key !== 'Escape'") >= 0 && mv.split(/\s+/).join(' ').indexOf('clampIntoView(); save();') >= 0); /* source may be reflowed over two lines: compare the words, not the layout */
 
 /**
  * ⭐⭐ EVERY PANEL, NOT ONE. Athi, 2026-09-12: *"it has to be applied everywhere."* The header drag was an

@@ -192,7 +192,7 @@ function crmCallScriptHTML(call) {
     '<div class="nx"><span class="tx"><span class="s">' +
     about +
     '</span></span><span class="btns">' +
-    '<button type="button" class="act sm ghost" data-crm="callnext" data-id="' +
+    '<button data-cbsid="CRM005-B01" type="button" class="act sm ghost" data-crm="callnext" data-id="' +
     esc(call.id) +
     '" data-testid="crm-call-next">' +
     esc(tx('Next')) +
@@ -241,7 +241,7 @@ function crmCallPick(c, o) {
       (o.presets || [])
         .map(function (item) {
           return (
-            '<button type="button" class="act ghost" data-crm="callafter" data-v="' +
+            '<button data-cbsid="CRM005-B02" type="button" class="act ghost" data-crm="callafter" data-v="' +
             esc(item) +
             '" data-testid="crm-call-after-' +
             esc(item) +
@@ -254,7 +254,7 @@ function crmCallPick(c, o) {
       '</div>' +
       '<label>' +
       esc(tx('Pick a day')) +
-      '<input class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>' +
+      '<input data-cbsid="CRM005-I01" class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>' +
       '<div id="crm_call_msg" class="hint" role="status" data-testid="crm-call-msg"></div></div>' +
       '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
