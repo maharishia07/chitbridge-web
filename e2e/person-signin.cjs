@@ -71,7 +71,7 @@ function standIn() {
                   kind: 'person', jti, device_id, surface, iat, exp: sessions[jti].exp }) + '.sig';
     return { jti, token };
   };
-  const snap = (till) => ({ at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A', currency: 'INR' },
+  const snap = (till) => ({ at: new Date().toISOString(), entity_id: 'ent-a', shop: { name: 'Athi Stores', bridge_id: 'CB-A', currency: 'INR', country: 'IN' },
     staff: [], items: [TEA], offers: [], till });
   const srv = http.createServer(async (q, r) => {
     let raw = ''; for await (const c of q) raw += c;
@@ -198,7 +198,11 @@ async function settle(api, want, ms) {
 }
 /** the real dialog, as a person: user id → Send me a code → 123456 → Sign in */
 async function signIn(p, who) {
-  if (!(await p.locator('#usigndlg[open]').count())) await p.tap('[data-testid="till-who"]');
+  if (!(await p.locator('#usigndlg[open]').count())) {
+    /* M112: on a phone the who pill is hidden; who lives in the ☰ menu (hubWhoRow) */
+    if (await p.locator('[data-testid="till-who"]').isVisible()) await p.tap('[data-testid="till-who"]');
+    else { await p.tap('[data-testid="till-menu"]'); await p.tap('[data-testid="till-hub-who-act"]'); }
+  }
   await p.waitForSelector('#usigndlg[open] [data-testid="signin-id"]', { timeout: 10000 });
   await p.fill('[data-testid="signin-id"]', who);
   await p.tap('[data-testid="signin-go"]');
@@ -273,6 +277,7 @@ const facts = (p) => p.evaluate(async () => ({
     if (await p.locator('[data-testid="till-flash-x"]').count()) await p.tap('[data-testid="till-flash-x"]');
     await p.evaluate(() => HOST.drain());
     const landed = await settle(api, 2);
+    await p.waitForFunction(async () => ((await DB.all('queue')) || []).length === 0, null, { timeout: 8000 }).catch(() => {});   /* the chits land before the queue rows are cleared: wait for the clear, a race otherwise */
     const k4 = await facts(p);
     say('⭐⭐⭐ and they still go — under the key, once each', landed === 2 && k4.queue === 0 && api.chits.every((c) => c.by === 'key' && /^C2\//.test(c.client_ref)), 'landed=' + landed + ' queue=' + k4.queue + ' refs=' + api.chits.map((c) => c.client_ref).join(','));
     const t0calls = api.calls.slice(callsBefore);
