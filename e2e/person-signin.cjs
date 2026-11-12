@@ -277,6 +277,7 @@ const facts = (p) => p.evaluate(async () => ({
     if (await p.locator('[data-testid="till-flash-x"]').count()) await p.tap('[data-testid="till-flash-x"]');
     await p.evaluate(() => HOST.drain());
     const landed = await settle(api, 2);
+    await p.waitForFunction(async () => ((await DB.all('queue')) || []).length === 0, null, { timeout: 8000 }).catch(() => {});   /* the chits land before the queue rows are cleared: wait for the clear, a race otherwise */
     const k4 = await facts(p);
     say('⭐⭐⭐ and they still go — under the key, once each', landed === 2 && k4.queue === 0 && api.chits.every((c) => c.by === 'key' && /^C2\//.test(c.client_ref)), 'landed=' + landed + ' queue=' + k4.queue + ' refs=' + api.chits.map((c) => c.client_ref).join(','));
     const t0calls = api.calls.slice(callsBefore);

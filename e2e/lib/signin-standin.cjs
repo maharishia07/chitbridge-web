@@ -67,8 +67,11 @@ function start(port) {
   function answer(path, body, headers) {
     const id = body.id || body.email || body.user_id, ps = whoIs(id), p = ps[0];
     const J = (status, b) => ({ status, body: b });
+    /* the ONE refusal the real api gives for an unknown account, a wrong PIN, a bad code and a locked account (lib/otp.js SIGNIN_REFUSED_SENTENCE, routes/signin.js SIGNIN_REFUSED, SEC-81) */
+    const SIGNIN_REFUSED_SENTENCE = "That sign-in didn't work. Check the details and try again.";
+    const refused = () => J(400, { error: 'Sign-in failed', code: 'SIGNIN_REFUSED', message: SIGNIN_REFUSED_SENTENCE });
     if (path === '/api/signin/ask') {
-      if (!ps.length) return J(400, { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' });
+      /* an unknown id gets the same 200 as a known one, and no code (routes/signin.js ASK_ANSWER) */
       /* SEC-143 (api routes/signin.js ASK_ANSWER): ONE answer for everyone; the account choice (409) comes only after a correct secret, on verify */
       if (ps.length === 1 && !(p.kind === 'actor' && p.pin)) { p.issued = p.code; p.sent = (p.sent || 0) + 1; }
       if (ps.length > 1) ps.forEach((x) => { if (!(x.kind === 'actor' && x.pin)) x.issued = x.code; });
@@ -76,10 +79,9 @@ function start(port) {
     }
     if (path === '/api/signin/verify') {
       if (ps.length > 1 && ps.some((x) => (x.kind === 'actor' && x.pin ? body.pin === x.pin : !!x.issued && body.otp === x.issued))) return J(409, { error: 'Which account?', code: 'CHOOSE_IDENTITY', message: 'That contact is on more than one account. Choose one.', choices: choicesOf(ps) });
-      if (!p) return J(400, { error: 'Verification failed', code: 'NO_ACCOUNT', message: 'That User ID is not recognised.' });
-      if (p.locked) return J(400, { error: 'Verification failed', message: 'Too many wrong attempts. Ask your admin to reset your PIN.' });
-      if (p.kind === 'actor' && p.pin) { if (body.pin !== p.pin) return J(400, { error: 'Verification failed', message: 'Incorrect PIN. 4 attempts remaining.' }); p.method = 'pin'; }
-      else { if (!p.issued || body.otp !== p.issued) return J(400, { error: 'Verification failed', message: 'Invalid or expired OTP' }); p.issued = null; p.method = 'code'; }
+      if (!p || p.locked) return refused();
+      if (p.kind === 'actor' && p.pin) { if (body.pin !== p.pin) return refused(); p.method = 'pin'; }
+      else { if (!p.issued || body.otp !== p.issued) return refused(); p.issued = null; p.method = 'code'; }
       if (p.removed) return J(403, { error: 'Forbidden', code: 'DEVICE_REVOKED', message: 'The shop removed this device. Ask the owner.' });
       const device = headers['x-device-id'] || null;
       const tok = tokenOf(p, device, body.surface); p.token = tok; p.device = device;

@@ -189,6 +189,13 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
              words: typeof countWords === 'function' ? countWords() : '' };
   });
   say('⭐⭐⭐ and the shop takes money on day one', /24/.test(sale.total), 'TOTAL ' + sale.total + ' (2 bunches at ₹12)');
+  /* the stand-in carries country IN; the same bill in a shop whose country is not stated must NOT be billed on a guess (till.html noCountryMoney, CTR-227) */
+  const noCountry = await p.evaluate(() => {
+    const was = window.S.shop.country; window.S.shop.country = '';
+    try { price(); const m = billMoney(); return { refused: m.noCountry === true, invoice: m.invoice, why: m.why || '' }; }
+    finally { window.S.shop.country = was; price(); }
+  });
+  say('⚠️⚠️ a shop whose country is not stated is refused, never billed on a guess', noCountry.refused && !noCountry.invoice && /country/i.test(noCountry.why), noCountry.why);
   say('counted in the unit it is sold in', /2 /.test(sale.words), '"' + sale.words + '"');
 
   /* ── 7 · THE STOREFRONT ────────────────────────────────────────────────────────────────────── */
