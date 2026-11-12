@@ -105,6 +105,7 @@ jobs:
           node e2e/ui-codes-employees.test.cjs
           node e2e/ui-codes-app-catalogue.test.cjs
           node e2e/ui-codes-app-platform.test.cjs
+          node e2e/retired-routes-absent.test.cjs
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs

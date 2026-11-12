@@ -1797,8 +1797,6 @@ const EP = {
   msgCount: { m: 'GET', p: '/api/folders/messages?count=1', ok: 'y' },
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist: { m: 'POST', p: '/api/assist', ok: '?' }, // backend proxies to the model (no-oversell prompt + library grounding)
-  assistGap: { m: 'POST', p: '/api/assist/gap', ok: 'y' }, // capture an unanswered question as a draft (learning feedback)
-  assistGaps: { m: 'GET', p: '/api/assist/gaps', ok: 'y' }, // review queue — captured gaps awaiting an answer
   assistResolve: { m: 'POST', p: '/api/assist/resolve', ok: 'y' }, // approve (with answer) / reject a gap
   assistStandards: { m: 'GET', p: '/api/assist/standards', ok: 'y' }, // compliance conform-check: standards available to check against
   assistConform: { m: 'POST', p: '/api/assist/conform', ok: 'y' }, // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
@@ -1931,8 +1929,6 @@ const EP = {
   getSettings: { m: 'GET', p: '/api/actors/settings', ok: '✓' },
   saveSettings: { m: 'PUT', p: '/api/actors/settings', ok: '✓' },
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
-  connList: { m: 'GET', p: '/api/connections/list', ok: '✓' },
-  connPending: { m: 'GET', p: '/api/connections/pending', ok: '✓' },
   connRequest: { m: 'POST', p: '/api/connections/request', ok: '✓' }, // {to_entity_id}
   connRespond: { m: 'PUT', p: '/api/connections/:id/respond', ok: '✓' }, // {action:accept|reject}
   supCatalogue: { m: 'GET', p: '/api/relationships/suppliers/:sid/catalogue', ok: '✓' },
