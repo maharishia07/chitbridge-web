@@ -213,7 +213,7 @@ button{cursor:pointer}
    min-width/min-height stop it collapsing onto its own header. */
 .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
   width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;
-  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:460px;min-height:340px}
+  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:min(460px,100%);min-height:340px}
 /* ⭐ [found live, 2026-09-26] "it is not movable, i should be able to drag anywhere as i want" — the header
    is the drag handle (dragSheetStart()); its own buttons keep a normal pointer cursor, see the rule below. */
 .shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap;
