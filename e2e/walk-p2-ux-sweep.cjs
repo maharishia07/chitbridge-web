@@ -91,7 +91,7 @@ const walk = async (w) => {
 
   await w.step('O-1', 'ORD-1: an open order no bill names says "Not billed yet" (neutral); an issued bill with no figures keeps the red error', async () => {
     await open(1366, 768);
-    const got = await w.page.evaluate(() => {
+    const got = await w.page.evaluate((issuedAt) => {
       const html = (c) => frozenMoneyHTML(Object.assign({ issued_at: issuedAt, currency: 'INR' }, c), 'w', 't');
       return { open: html({ order_billed: false }), billed: html({ order_billed: true }), plain: html({}) };
     }, W.nowIso());
