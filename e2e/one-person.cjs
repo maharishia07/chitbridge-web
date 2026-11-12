@@ -125,7 +125,7 @@ function route(S, r) {
   await t2.waitForTimeout(200);
   ok(await t2.locator('[data-testid="nav-home"]').count() === 0, '2 · a renderApp() from behind the screen paints no shop');
   await t2.waitForSelector('[data-testid="gate"]', { timeout: 5000 }).catch(() => {});
-  await t2.evaluate(() => { location.hash = '#/app/ledger'; });
+  await t2.evaluate(() => { location.hash = '#/app/messages'; }); /* the Ledger moved to accounts.html (app.html:4043), so a deep link to it leaves the page; messages stays in app.html */
   await t2.waitForTimeout(700);
   ok(await t2.locator('[data-testid="gate"]').count() === 1 && !(await opened(t2, 300)), '2 · renderApp() and a deep link from behind the screen open nothing');
   ok(await ls(t2, 'cb_nav@ent-B') === null, '2 · the deep link wrote nothing of B\'s either (route stopped before it)');
@@ -165,7 +165,7 @@ function route(S, r) {
   await t3.waitForFunction(() => /Mayuri123/.test((document.querySelector('[data-testid="till-paired"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
   const amber = await t3.evaluate(() => { const e = document.querySelector('[data-testid="till-paired"]'); return e ? { t: e.textContent.replace(/\s+/g, ' ').trim(), warn: e.classList.contains('warn'), fix: (e.querySelector('.fix') || {}).getAttribute && e.querySelector('.fix').getAttribute('href') } : {}; });
   ok(/Counter 1 · paired to Mayuri123, not this shop/.test(amber.t || '') && amber.warn, '4 · paired elsewhere → an amber row "' + amber.t + '"');
-  ok(amber.fix === '/till.html' && await t3.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', '4 · its button and the Till card open the counter, which offers the switch itself');
+  ok((amber.fix || '').indexOf('/till.html#shop=ent-B&as=Tally') === 0 && await t3.getAttribute('[data-testid="shell-card-till"]', 'href') === '/till.html', '4 · its button PAIRS the counter to this shop (SET-WALK1 W6: /till.html#shop=<ent>&as=<name>) and the Till card opens the counter');
   await t3.screenshot({ path: path.join(__dirname, 'shots', 'one-person-index-amber.png') }).catch(() => {});
   await t2.evaluate(() => ['cb_till_shop@abc1', 'cb_till_shopname@abc1', 'cb_till_key', 'cb_till_lastslot'].forEach((k) => localStorage.removeItem(k)));
   await t3.waitForFunction(() => !document.querySelector('[data-testid="till-paired"]'), null, { timeout: 5000 }).catch(() => {});
@@ -178,6 +178,11 @@ function route(S, r) {
   await t4.waitForTimeout(600);
   ok(await opened(t2, 500) && await t2.locator('[data-testid="signed-out-why"]').count() === 0, '5 · the owner\'s tab 2 is still signed in');
   ok(/Tally Test/.test(await t3.textContent('[data-testid="shop-name"]')) && await t3.locator('[data-testid="signed-out-why"]').count() === 0, '5 · the index still shows Tally Test');
+  /* RED (PRODUCT, P3): device-id.js (SEC-85) covers tab 2 with "You signed in as another shop in another tab" although Ravi is of the SAME shop.
+     Tab 2 took over by the clear-out in place (no reload, no api write yet), so its remembered shop is still A's and Ravi's cb_sess storage event reads B as another shop.
+     Fix belongs in device-id.js: follow the page's own cb_sess write. */
+  ok(!(await t2.evaluate(() => CBDevice.stopped())), '5 · same shop, second person: tab 2 is NOT covered with "signed in as another shop" (SEC-85 false stop)');
+  await t2.reload(); await opened(t2, 15000);   /* the cover's own advice, so the walk goes on */
 
   /* ── 6 · sign out in tab 2 → the others follow; a late read paints nothing ───────────────────────────────── */
   S.slowProducts = 1500;
@@ -186,7 +191,7 @@ function route(S, r) {
   await t4.waitForSelector('[data-testid="signed-out-why"]', { timeout: 8000 }).catch(() => {});
   ok(/Signed out — you signed out in another tab\./.test(await t4.textContent('[data-testid="signed-out-why"]').catch(() => '')), '6 · sign out in tab 2 → the co-assist\'s tab signs out and says why');
   await t3.waitForSelector('[data-testid="signin-door"]', { timeout: 8000 }).catch(() => {});
-  ok(await t3.locator('[data-testid="signin-door"]').count() === 1 && /signed out in another tab/.test(await t3.textContent('#alerts')), '6 · the index signs out too, with the one door in');
+  ok(await t3.locator('[data-testid="signin-door"]').count() === 1 && /signed out in another tab/.test(await t3.textContent('[data-slot="alerts"]')), '6 · the index signs out too, with the one door in');
   await t3.waitForTimeout(1800);
   ok(await t3.locator('.box .f').count() === 0, '6 · the read that landed after the sign-out painted nothing (' + await t3.locator('.box .f').count() + ' facts)');
   S.slowProducts = 0;
@@ -234,7 +239,7 @@ function route(S, r) {
     const c2 = new BroadcastChannel('cb-one-person'); window.__c = c; });
   const t6 = await tab('/');
   await t6.waitForSelector('[data-testid="close-first"]', { timeout: 10000 }).catch(() => {});
-  ok(/This browser still holds Alpha Timers: an app tab open\. Close it first\./.test(await t6.textContent('#alerts')), '9 · the index with A\'s app tab open → the close-first row');
+  ok(/This browser still holds Alpha Timers: an app tab open\. Close it first\./.test(await t6.textContent('[data-slot="alerts"]')), '9 · the index with A\'s app tab open → the close-first row');
   ok(await t6.locator('#f_cat .f').count() === 0, '9 · and no facts while it is there');
   ok(await t6.locator('[data-testid="till-paired"]').count() === 1, '9 · the Till tile still says what the counter is paired to');
   await t6.screenshot({ path: path.join(__dirname, 'shots', 'one-person-index-close.png') }).catch(() => {});
@@ -305,7 +310,7 @@ function route(S, r) {
       '10 · 3 unsent bills (2 + 1 fallback row) are SPARED, not refused: "' + (await b1.textContent('[data-testid="signed-out-why"]').catch(() => '')).trim() + '"');
     ok(/Signed out — this browser is being cleaned\./.test(await a1.textContent('[data-testid="signed-out-why"]').catch(() => '')), '10 · the other app tab signed out and says why');
     await lab.waitForURL(/cleaned=1/, { timeout: 5000 }).catch(() => {});
-    ok(/cleaned=1/.test(lab.url()) && /this browser is being cleaned/.test(await lab.textContent('#alerts').catch(() => '')), '10 · the Offer Lab tab left for the home page, which says so');
+    ok(/cleaned=1/.test(lab.url()) && /this browser is being cleaned/.test(await lab.textContent('[data-slot="alerts"]').catch(() => '')), '10 · the Offer Lab tab left for the home page, which says so');
     await b1.waitForTimeout(800);
     const left = await b1.evaluate(async () => ({
       ls: Object.keys(localStorage).filter((k) => /^cb/.test(k)).sort(), ss: Object.keys(sessionStorage).filter((k) => /^cb/.test(k)),
