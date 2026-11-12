@@ -37,10 +37,9 @@
   .msg .big{font-size:34px}
   .count{max-width:1000px;margin:0 auto;padding:4px 18px;font-size:12px;color:var(--muted)}
   footer{max-width:1000px;margin:0 auto;padding:20px 18px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line)}
-  .toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:#1a2230;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
-  .toast.show{opacity:1}
   .cartbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 18px;display:none;align-items:center;gap:14px;box-shadow:0 -2px 12px rgba(0,0,0,.06);z-index:15}
   .cartbar.show{display:flex}
+  body #toast{bottom:74px}   /* UX-142: the shared host sits at 20px; lift it above the cart bar (it loads its style after this one, so the selector must be stronger) */
   .cartbar .ct{font-weight:800;font-size:15px}
   .cartbar button{margin-inline-start:auto;padding:11px 22px;border:0;border-radius:10px;background:var(--good);color:#fff;font-weight:800;font-size:14px;cursor:pointer}
 </style>
@@ -58,13 +57,13 @@
 <main><div id="body"><div class="msg"><div class="big">⏳</div>Loading the store…</div></div></main>
 <footer id="foot"></footer>
 <div class="cartbar" id="cartbar"></div>
-<div class="toast" id="toast"></div>
 
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/accounts-shell.js"></script>   <!-- UX-142: toast() — the ONE shared toast (words, place, live region), not this page's own copy -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
@@ -91,14 +90,6 @@ function rs(v) {
     return (STATE.cur ? STATE.cur + ' ' : '') + v;
   }
 } /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
-function toast(m) {
-  var node = document.getElementById('toast');
-  node.textContent = m;
-  node.className = 'toast show';
-  setTimeout(function () {
-    node.className = 'toast';
-  }, 1800);
-}
 
 function addToCart(pid) {
   STATE.cart[pid] = (STATE.cart[pid] || 0) + 1;
