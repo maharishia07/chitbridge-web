@@ -139,6 +139,16 @@ console.log('\n2 · ⚠️ the refusals — never apply what was not earned');
   const bundle = [{ id: 'b1', kind: 'bundle_price', bundle_items: ['A', 'B'], bundle_price: 150, label: 'A+B' }];
   r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'A', qty: 1, unitPrice: 100 }, { key: '1', item_id: 'B', qty: 1, unitPrice: 80 }], offers: bundle, money });
   ok('M4a a declared bundle A 100.00 + B 80.00 for 150.00 prices as the bundle: 150.00', Math.abs(r.total - 150) < 0.01, r.total);
+  /* M4a critic round - tier, buy-x (either line order) and the opt-out, on the till's copy. Hand figures, INR. */
+  const tier = [{ id: 't1', kind: 'tier_price', tiers: [{ qty: 10, price: 80 }], label: '10+ at 80' }];
+  r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'a', qty: 5, unitPrice: 100 }, { key: '1', item_id: 'a', qty: 5, unitPrice: 100 }], offers: tier, money });
+  ok('M4a tier 10 at 80.00: a:5 + a:5 of ONE item = 10 x 80.00 = 800.00', Math.abs(r.total - 800) < 0.01, r.total);
+  const bogo = [{ id: 'g1', kind: 'buy_x_get_y', buy: 2, get: 1, label: 'buy 2 get 1' }];
+  const dear = { key: '0', item_id: 'a', qty: 1, unitPrice: 100 }, cheap = { key: '1', item_id: 'a', qty: 2, unitPrice: 80 };
+  const bogoBoth = [[dear, cheap], [cheap, dear]].map((lines) => CBOffers.evaluate({ lines, offers: bogo, money }).total);
+  ok('M4a buy 2 get 1: a:1 at 100.00 + a:2 at 80.00, the cheapest unit is free: 260.00 - 80.00 = 180.00 in BOTH line orders', bogoBoth.every((t) => Math.abs(t - 180) < 0.01), bogoBoth);
+  r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'a', qty: 3, unitPrice: 100 }, { key: '1', item_id: 'a', qty: 2, unitPrice: 100, excluded: ['m5'] }], offers: min5, money });
+  ok('M4a min_qty 5: a line opted out of the offer is not counted (3 only): total stays 500.00', Math.abs(r.total - 500) < 0.01, r.total);
 
   r = run([{ id: 'x8', kind: 'price_range', min: 200, max: 250,
              applies_to: { skus: ['OIL-5'] }, label: 'oil band' }]);
