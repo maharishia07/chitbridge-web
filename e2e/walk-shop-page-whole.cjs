@@ -110,8 +110,52 @@ W.run('shop-page-whole', async (w) => {
     await page.click('[data-sc="share"]');
     await page.waitForTimeout(300);
     const quiet = await page.evaluate(() => document.getElementById('toast').textContent);
-    return { ok: !!ok1 && /Link copied/.test(ok1.text) && ok1.live === 'status' && /Could not copy/.test(bad) && quiet === '',
-      saw: 'copied → "' + (ok1 && ok1.text) + '" · refused → "' + bad + '" · sheet closed → "' + quiet + '"' };
+    await page.evaluate(() => { document.getElementById('toast').innerHTML = ''; navigator.share = () => Promise.reject(Object.assign(new Error('x'), { name: 'NotAllowedError' })); });
+    await page.click('[data-sc="share"]');
+    await page.waitForTimeout(300);
+    const refusedShare = await page.evaluate(() => document.getElementById('toast').textContent);
+    return { ok: !!ok1 && /Link copied/.test(ok1.text) && ok1.live === 'status' && /Could not copy/.test(bad) && quiet === '' && /Could not share\. Copy the link instead/.test(refusedShare),
+      saw: 'copied → "' + (ok1 && ok1.text) + '" · refused → "' + bad + '" · sheet closed → "' + quiet + '" · share refused → "' + refusedShare + '"' };
+  });
+
+
+  for (const [width, height] of SIZES) {
+    await open(w, width, height);
+    await w.step('F8·' + width, 'a message never lands on the cart dock (item in the cart, toast showing) at ' + width + ' px', async () => {
+      await page.click('#p_list [data-testid="cart-add"]');
+      await page.waitForSelector('#shop_dock.on');
+      await page.evaluate(() => toast('Link copied'));
+      await page.waitForTimeout(250);
+      const m = await page.evaluate(() => {
+        const t = document.querySelector('#toast .toast').getBoundingClientRect(), d = document.getElementById('shop_dock').getBoundingClientRect();
+        return { toast: [Math.round(t.top), Math.round(t.bottom)], dock: [Math.round(d.top), Math.round(d.bottom)], hit: t.bottom > d.top && t.top < d.bottom };
+      });
+      await page.screenshot({ path: require('path').join(__dirname, 'shots', 'shop-whole-cart-toast-' + width + '.png') });
+      return { ok: !m.hit, saw: 'toast y' + m.toast.join('-') + ' · dock y' + m.dock.join('-') };
+    });
+  }
+
+  await open(w, 390, 844);
+  await w.step('F9', 'Back from an item page returns to the same place in the list', async () => {
+    await page.evaluate(() => { document.getElementById('main').scrollTop = 250; });
+    const before = await page.evaluate(() => document.getElementById('main').scrollTop);
+    await page.goto(w.base + '/shop.html?s=CBSIMFIT&api=' + encodeURIComponent(w.base) + '&item=i3');
+    await page.goBack();
+    await page.waitForSelector('#p_list [data-testid="cart-add"]');
+    await page.waitForTimeout(500);
+    const after = await page.evaluate(() => document.getElementById('main').scrollTop);
+    return { ok: before > 100 && Math.abs(after - before) < 4, saw: 'left at ' + before + ' px · back at ' + after + ' px' };
+  });
+  await w.step('F10', 'the Home button has an accessible name', async () => {
+    const n = await page.evaluate(() => { const b = document.querySelector('[data-testid="shell-home"]'); return b && (b.getAttribute('aria-label') || b.textContent.trim() || b.title); });
+    return { ok: !!n, saw: 'name "' + n + '"' };
+  });
+  await open(w, 1366, 768);
+  await w.step('F11', 'print: the page prints as long as the shop, not one screen high', async () => {
+    await page.emulateMedia({ media: 'print' });
+    const m = await page.evaluate(() => ({ body: document.body.scrollHeight, view: innerHeight, pane: document.getElementById('main').scrollHeight - document.getElementById('main').clientHeight }));
+    await page.emulateMedia({ media: 'screen' });
+    return { ok: m.body > m.view + 100 && m.pane <= 0, saw: 'printed height ' + m.body + ' vs screen ' + m.view + ' · pane hides ' + m.pane + ' px' };
   });
 
   await open(w, 1366, 768);

@@ -23,11 +23,13 @@
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); }   /* the app's type token — one cart, one face */
   /* UX-136 fit (2026-11-12): the page never scrolls — the bar stays put and ONLY the shop's own pane (#main) scrolls, at 1366×768 and 390×844 */
   html,body{ height:100%; }
-  body{ display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden; }
+  body{ display:flex; flex-direction:column; height:100vh; height:100dvh; }
   #shell{ flex:none; }
   .fitmain{ flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; }
   /* UX-136 tap size: the phone's finger is 44 px (WCAG 2.5.8 asks 24) — the search box, the Categories button and the cart's add buttons (the cart draws them inline, so !important) */
-  @media (max-width:600px){ .shopband input,.catbtn{ min-height:44px; } [data-testid="shop-my-orders-link"],[data-testid="shop-support"]{ display:inline-flex; align-items:center; min-height:44px; padding:0 4px; } #app [data-testid="cart-add"]{ min-width:44px !important; min-height:44px !important; } }
+  /* print: the pane is as tall as the shop, not as tall as the screen */
+  @media print{ html,body{ height:auto; } body{ display:block; } .fitmain{ overflow:visible; } .shopdock,#catback{ display:none !important; } }
+  @media (max-width:600px){ .shopband input,.catbtn{ min-height:44px; } [data-testid="shop-my-orders-link"],[data-testid="shop-support"]{ display:inline-flex; align-items:center; min-height:44px; padding:0 4px; } #app [data-testid="cart-add"]{ min-width:44px; min-height:44px; } }
   .wrap{ max-width:860px; margin:0 auto; padding:8px 14px 110px; }
   .sg{ font-family:var(--f-display,'Bricolage Grotesque',sans-serif); }   /* SYSTEM.md §2: the display face (SHELL-ONE) */
   .hd{ display:flex; align-items:center; gap:10px; padding:4px 0 6px; margin-bottom:0; }
@@ -1134,9 +1136,15 @@ function shopJump(id) {
 /* the basket dock shows only while there is something in it; the list above it never moves (M72) */
 function shopDockSync() {
   var node = el('shop_dock');
+  if (node && window.ResizeObserver && !node.dataset.watched) {
+    node.dataset.watched = '1';
+    new ResizeObserver(shopDockSync).observe(node); /* offers arrive after the first paint and make the dock taller */
+  }
   var n = _CART ? _CART.selected().length : 0;
   if (node) node.classList.toggle('on', n > 0);
   document.body.classList.toggle('hasdock', n > 0 && !!node);
+  /* the shared toast sits above the dock, never on it (the dock is as tall as its offers) */
+  document.documentElement.style.setProperty('--cb-toast-bottom', n > 0 && node ? node.offsetHeight + 12 + 'px' : '20px');
 }
 /* the shop's own PIN and town, for the address example (M71) — read from the address the shop printed, never a built-in city */
 function _shopPlace() {
@@ -3130,6 +3138,30 @@ function vizToOrder() {
 function shopSay(message) {
   if (typeof toast === 'function') toast(message);
 }
+/* Back from an item page returns to the same place in the list: only #main scrolls, so its position is kept per list address (sessionStorage; a refusal just means the top) */
+function shopScrollKey() {
+  return 'cb_shop_scroll:' + location.pathname + location.search;
+}
+function shopScrollSave() {
+  var pane = el('main');
+  if (!pane) return;
+  try {
+    sessionStorage.setItem(shopScrollKey(), String(pane.scrollTop));
+  } catch (e) {
+    if (typeof cblog === 'function') cblog('warn', 'shop scroll not kept: ' + e.message);
+  }
+}
+function shopScrollRestore() {
+  var pane = el('main'), top = 0;
+  try {
+    top = Number(sessionStorage.getItem(shopScrollKey())) || 0;
+    sessionStorage.removeItem(shopScrollKey());
+  } catch (e) {
+    top = 0; /* the list opens at the top, which is the honest fallback */
+  }
+  if (pane && top) pane.scrollTop = top;
+}
+if (window.addEventListener) window.addEventListener('pagehide', shopScrollSave); /* a test stand-in window has no listeners */
 function shopFrontHref() {
   var query = new URLSearchParams(location.search);
   query.delete('item');
@@ -3220,6 +3252,7 @@ function shopLoad() {
       else {
         _lg = {};
         render(res.j);
+        shopScrollRestore(); /* a Back from an item page lands where the list was left */
       }
     })
     .catch(function (e) {
