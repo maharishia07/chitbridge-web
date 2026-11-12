@@ -4,6 +4,7 @@
  * OWNS      the proof that a line the api marks counted_in_another_unit (ordered 10 box, received 0, 2 dozen counted) reads
  *           "counted in another unit: dozen mine 2 / theirs 0" in the Difference cell AND in the dispute draft, after any shortfall or excess in the ordered unit ("short 6 · counted ..."), and a line with difference 0 is still warned and in the draft,
  *           with one segment per other_units entry joined " · ", and that an ordinary short / excess line still reads short / excess.
+ *           A figure the api did not send (the screen could not read it) is said as a dash in words, never "undefined"; the other-unit words go through the string layer (a locale catalogue translates them).
  * CALLED BY package.json check script · .github/workflows/ci.yml (web job). The real cap-match.js in node, stubs for the page helpers.
  * FLOW      GET /api/till/match line -> matchDetail (table row) / matchDispute (draft in the modal)
  * CARD      03-disputes-service-and-register/three-way-match
@@ -23,7 +24,7 @@ const m = helpers.match(/function esc\([\s\S]*?\n\}\n/);
 assert(m, 'helpers.js has esc');
 (0, eval)(m[0] + ';globalThis.esc = esc;');
 globalThis.tx = (s) => s;
-globalThis.txf = (s, v) => s.replace(/\{(\w+)\}/g, (w, k) => (v && k in v ? String(v[k]) : w));
+globalThis.txf = (s, v) => globalThis.tx(s).replace(/\{(\w+)\}/g, (w, k) => (v && k in v ? String(v[k]) : w));
 globalThis.inr = (n) => String(n);
 globalThis.fmtMoney = (n) => String(n);
 globalThis.myCur = () => 'INR';
@@ -117,4 +118,14 @@ assert(
   'dispute draft keeps an other-unit line whose ordered-unit difference is 0'
 );
 assert(draft.includes('Oil: ordered 10 L, received 7 (short 3) — broken'), 'dispute draft: plain line unchanged');
-console.log('ok match-other-unit: 10 checks');
+/* the string layer: the words go through tx, so another locale's catalogue translates them (no English baked into the cell or the draft) */
+const KEY = 'counted in another unit: {unit} mine {mine} / theirs {theirs}';
+const keep = globalThis.tx;
+globalThis.tx = (e) => (e === KEY ? 'in anderer Einheit gezaehlt: {unit} meine {mine} / ihre {theirs}' : e);
+const german = matchDetail(order, null);
+globalThis.tx = keep;
+assert(
+  german.includes('in anderer Einheit gezaehlt: kg meine 3 / ihre 4') && !german.includes('counted in another unit'),
+  'the locale catalogue translates the other-unit words'
+);
+console.log('ok match-other-unit: 11 checks');
