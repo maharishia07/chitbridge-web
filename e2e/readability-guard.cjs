@@ -344,6 +344,23 @@ const movedBody = exact.verdict.stdout.slice(exact.verdict.stdout.indexOf('## §
 ok(/- moved: 1 function/.test(movedBody) && checklist.problems(movedBody).length === 0, 'the §6 checklist with the moved line still passes pr-checklist');
 for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmSync(scenario.dir, { recursive: true, force: true });
 
+/* ── MNT-51: an html page's header is read from the page itself, not from the first inline script ─────────────── */
+{
+  const measure = require(path.join(ROOT, 'tools/readability/measure.cjs'));
+  const HEAD = '<!-- public/x.html - a page. OWNS the x numbers. CALLED BY the router. FLOW read → paint. CARD qa/fixture-card -->\n';
+  const read = (text) => measure.factsFromText('public/x.html', text).header;
+  const noScript = read('<!doctype html><html><head>' + HEAD + '<title>x</title></head><body><p>hi</p></body></html>\n');
+  ok(noScript.has && noScript.owns && noScript.callers && noScript.flow && noScript.card === 'qa/fixture-card', 'MNT-51: a page with NO inline script still reads its <!-- --> header');
+  const laterScript = read('<!doctype html><html><head>' + HEAD + '</head><body><script src="/app/a.js"></script><script>var go = 1;</script></body></html>\n');
+  ok(laterScript.has && laterScript.card === 'qa/fixture-card', 'MNT-51: a page whose only inline script comes after the header still reads it');
+  const scriptOnly = read('<!doctype html><html><body><script>/* OWNS the y. CALLED BY z. FLOW a → b. CARD qa/js-card */\nvar go = 1;</script></body></html>\n');
+  ok(scriptOnly.has && scriptOnly.card === 'qa/js-card', 'MNT-51: a header comment at the top of the first inline script still counts');
+  const capTags = read('<!doctype html><html><head><title>x</title></head><body><script src="/app/cap-a.js"></script><script src="/app/cap-b.js"></script></body></html>\n');
+  ok(!capTags.has, 'MNT-51: /app/cap-*.js script tags in a page are not a header (no comment = no header)');
+  const capInCode = read('<!doctype html><html><body><script>var s = "<script src=\'/app/cap-a.js\'>"; go();</script></body></html>\n');
+  ok(!capInCode.has, 'MNT-51: /app/cap-*.js text inside page code is not a header line');
+}
+
 fs.rmSync(tmp, { recursive: true, force: true }); fs.rmSync(traceOut, { recursive: true, force: true });
 console.log(bad ? '\n✗ ' + bad + ' FAILED — the readability guard no longer judges what it claims to' : '\n✓ every §6 rule bites once, and passes once');
 process.exit(bad ? 1 : 0);
