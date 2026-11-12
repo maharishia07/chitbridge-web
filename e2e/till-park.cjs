@@ -20,9 +20,10 @@ let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
 
 (async () => {
-  const wire = { price: 0, bill: 0, billStatus: 500 };
+  const wire = { price: 0, bill: 0, billStatus: 500, close: 0 };
   const srv = http.createServer((q, r) => {
     const url = q.url.split('?')[0];
+    if (url === '/api/till/close') { wire.close++; r.writeHead(200, { 'content-type': 'application/json' }); return r.end('{"ok":true}'); }
     if (url === '/api/till/price') { wire.price++; r.writeHead(400, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ code: 'PRICE_DECIMALS', message: SENTENCE })); }
     if (url === '/api/chits/send') { wire.bill++; r.writeHead(wire.billStatus, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ code: 'X', message: 'the shop is busy' })); }
     if (url.startsWith('/api/')) { r.writeHead(200, { 'content-type': 'application/json' }); return r.end('{"ok":true}'); }
@@ -126,6 +127,29 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
   const cp = await (await b.newContext({ viewport: { width: 1366, height: 768 } })).newPage();
   await cp.goto(base + '/till.html'); await cp.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
   await cp.evaluate((api) => { CloudHost.key = 'demo-key-2'; CloudHost.api = api; HOST = CloudHost; ls.set(tillGivenKey(), 'C1'); DB.reopen(); }, base);
+  const rawQueue = "(name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onupgradeneeded = function(){ rq.transaction.abort(); }; rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); } var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; })";
+  const unreadable = await cp.evaluate(async ([row, reader]) => {
+    window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [] }, at: new Date().toISOString(), offers: [], items: [] };
+    await DB.put('queue', row);
+    window.sure = async () => true; window.becomeShop = function(){}; window._askOpen = async function(){}; window.busyShow = window.busyAt = window.busyDone = function(){};
+    var said = []; window.say = function(m){ said.push(m); };
+    var name = tillStore(), real = DB.allRaw; DB.allRaw = async function(){ if (/keepParked/.test(new Error().stack)) throw new Error('the database refused'); return real.apply(DB, arguments); };   /* only the parked-row read fails */
+    await closeCounter(true);
+    DB.allRaw = real;
+    return { said: said, queue: await eval(reader)(name) };
+  }, [parkedRow, rawQueue]);
+  say('an unreadable queue stops the close with words: nothing cleared, the shop not told', /could not read the changes the shop refused, so closing the counter was stopped/.test(unreadable.said.join('|')) && JSON.stringify(unreadable.queue) === '["OP/77"]' && wire.close === 0, JSON.stringify(unreadable).slice(0, 260) + ' close posts=' + wire.close);
+  const blocked = await cp.evaluate(async ([reader]) => {
+    var said = []; window.say = function(m){ said.push(m); };
+    var name = tillStore();
+    window.__hold = await new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onupgradeneeded = function(){ rq.transaction.abort(); }; rq.onsuccess = function(){ res(rq.result); }; });   /* another tab holds the store open */
+    await closeCounter(true);
+    window.__hold.close();
+    for (var k = 0; k < 50 && JSON.stringify(await eval(reader)(name)) !== '["OP/77"]'; k++) await new Promise((r) => setTimeout(r, 100));
+    return { said: said, after: await eval(reader)(name) };
+  }, [rawQueue]);
+  say('a store held open by another tab: the clear stops with words (close the other counter tab)', /Close the other counter tab/.test(blocked.said.join('|')), blocked.said.join('|').slice(0, 120));
+  say('...and when that tab lets go the late delete still restores the parked change', JSON.stringify(blocked.after) === '["OP/77"]', JSON.stringify(blocked.after));
   const closed = await cp.evaluate(async (row) => {
     window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', pay: [] }, at: new Date().toISOString(), offers: [], items: [] };
     await DB.put('queue', row); await DB.put('bills', { no: 'C1/50', at: new Date().toISOString(), lines: [], total: 0, _sent: { at: 1 } });
@@ -134,14 +158,14 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     var name = tillStore();   /* the shop's own store, read raw by the name the clear used (the key is gone after a close) */
     await closeCounter(true);
     DB.reopen();
-    var read = (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); } var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; });
+    var read = (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onupgradeneeded = function(){ rq.transaction.abort(); }; rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); } var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; });
     return { name: name, queue: await read(name), said: said };
   }, parkedRow);
   say('closing the counter keeps the parked change and clears the bills', JSON.stringify(closed.queue) === '["OP/77"]', JSON.stringify(closed).slice(0, 400));
   const store = await cp.evaluate(async (row) => { DB.reopen(); await DB.put('queue', row); return tillStore(); }, parkedRow);   /* the close left the page unpaired: seed the parked row again in the store it now reads */
   const afterWipe = (async () => {
     await cp.waitForEvent('load', { timeout: 20000 });
-    return cp.evaluate(async (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); }
+    return cp.evaluate(async (name) => new Promise((res) => { var rq = indexedDB.open(name, 1); rq.onupgradeneeded = function(){ rq.transaction.abort(); }; rq.onsuccess = function(){ var db = rq.result; if (!db.objectStoreNames.contains('queue')) { db.close(); return res(['no queue store']); }
       var g = db.transaction('queue', 'readonly').objectStore('queue').getAll(); g.onsuccess = function(){ db.close(); res(g.result.map((r) => r.no)); }; }; rq.onerror = function(){ res(['open failed']); }; }), store);
   })();
   await cp.evaluate(async () => { window.sure = async () => true; wipeDevice(); });
