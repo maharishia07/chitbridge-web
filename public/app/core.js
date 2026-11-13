@@ -1295,6 +1295,28 @@ const _attempts = {};
 function attemptOf(key, params, body) {
   return key + ':' + JSON.stringify(params || {}) + ':' + JSON.stringify(body == null ? null : body);
 }
+/**
+ * ⭐ OPS-89 · postDeliverLines(epKey, chitId, rows) — the ONE deliver-lines write: every row carries client_ref = <ref>:<position>, the key
+ * lib/deliverline.js replays a row by (it replays only when a ref is named, so a double tap or a retry used to record twice).
+ * The ref is the FIN-63 attempt for this chit + these rows (attemptOf, minted by cbIdemKey, held in _attempts): the SAME ref goes with every
+ * send of the same action, a network failure keeps it, an answer (a 2xx or a refusal other than 409) ends it, so the next press is a new delivery.
+ * A different chit, line or quantity is a different action. Callers: cap-chit2.js (deliver, take material), cap-tasks.js (tkDeliver).
+ * ⚠️ RESIDUAL GAP: _attempts lives in memory only, so a page reload between a lost answer and the retry mints a new ref and can still record
+ * twice; attemptOf does not persist (the same limit as the payment attempts). Persisting is a separate change to _attempts for every door.
+ */
+async function postDeliverLines(epKey, chitId, rows) {
+  const attempt = attemptOf('deliver-lines', { id: chitId }, rows);
+  const ref = cbIdemKey({ idem: 'attempt', m: 'POST' }, false, typeof window !== 'undefined' ? window.CBOffline : null, Math.random().toString(36).slice(2), attempt);
+  const stamped = rows.map((row, position) => Object.assign({}, row, { client_ref: ref + ':' + position }));
+  try {
+    const reply = await api(epKey, { params: { id: chitId }, body: { rows: stamped } });
+    delete _attempts[attempt];
+    return reply;
+  } catch (failure) {
+    if (failure && failure.status && failure.status !== 409) delete _attempts[attempt];
+    throw failure;
+  }
+}
 /** settleAttempt(endpoint, attempt, res) → res, unchanged; ends an idem:'attempt' attempt on a settled answer, keeps it while the first send runs */
 async function settleAttempt(endpoint, attempt, res) {
   if (endpoint.idem !== 'attempt' || !res) return res;
