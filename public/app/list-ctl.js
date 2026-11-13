@@ -248,7 +248,7 @@
     '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
     '}',
     '@container screen (max-width: 640px){',
-    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
+    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(20px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
     '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
     '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
     '}',
