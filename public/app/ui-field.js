@@ -227,10 +227,14 @@ var CBUiField = (function () {
     if (!options.error) return '';
     return '<div class="cbf-e" id="' + id + '-e"><span aria-hidden="true">⚠ </span>' + library().escape(options.error) + '</div>';
   }
+  /** the caller's English label through the catalogue (tx), so a visible label is a counted, translatable word and not hard-wired */
+  function labelText(options) {
+    return library().escape(library().words(String(options.label)));
+  }
   function labelHtml(options, id) {
     var esc = library().escape;
     var required = options.required ? '<span class="cbf-req">' + esc(words('Required', 'required')) + '</span>' : '';
-    return '<div class="cbf-row"><label class="cbf-l" for="' + id + '">' + esc(options.label) + '</label>' + required + '</div>';
+    return '<div class="cbf-row"><label class="cbf-l" for="' + id + '">' + labelText(options) + '</label>' + required + '</div>';
   }
   /** the part: ui.field({ mount, kind, label, ... }) -> HTML */
   function field(options) {
@@ -240,8 +244,8 @@ var CBUiField = (function () {
     if (options.onInput || options.onChange) HANDLERS[id] = { input: options.onInput, change: options.onChange };
     var tail = noteHtml(options, id, reason) + errorHtml(options, id);
     var control = controlHtml(options, id, reason);
-    if (shape.type === 'checkbox') return '<div class="cbf"><label class="cbf-c" for="' + id + '">' + control + '<span>' + library().escape(options.label) + '</span></label>' + tail + '</div>';
-    if (shape.type === 'file') return '<div class="cbf"><label class="cbf-fb" for="' + id + '"><span>' + library().escape(options.label) + '</span>' + control + '</label><div class="cbf-fn" id="' + id + '-n"></div>' + tail + '</div>';
+    if (shape.type === 'checkbox') return '<div class="cbf"><label class="cbf-c" for="' + id + '">' + control + '<span>' + labelText(options) + '</span></label>' + tail + '</div>';
+    if (shape.type === 'file') return '<div class="cbf"><label class="cbf-fb" for="' + id + '"><span>' + labelText(options) + '</span>' + control + '</label><div class="cbf-fn" id="' + id + '-n"></div>' + tail + '</div>';
     return '<div class="cbf">' + labelHtml(options, id) + control + tail + '</div>';
   }
 
