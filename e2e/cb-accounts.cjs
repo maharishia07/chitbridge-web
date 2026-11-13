@@ -747,6 +747,8 @@ async function route(S, r) {
     return (l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100; });
   /* the budget is judged on the ROUNDED percent (limits 20 / 30, unchanged); the spec also reports the unrounded one so the margin is visible */
   const rd = (v) => v == null ? null : Math.round(v), fx = (v) => v == null ? 'n/a' : v.toFixed(2);
+  /* where the head's pixels go: the page above the pane, then each part of the pane's head (so a head that grows can be traced to its row) */
+  const headParts = (p) => p.evaluate(() => { const o = document.querySelector('#lg_out'); if (!o) return ''; const t = o.getBoundingClientRect().top; return 'above ' + Math.round(t) + ' · ' + Array.from(o.children).filter((c) => c.offsetParent && !c.classList.contains('cbl-list')).map((c) => (c.className.split(' ')[0] || c.tagName) + ' ' + Math.round(c.offsetHeight)).join(' · ') + ' · col-header ' + Math.round((document.querySelector('#lg_out .cbl-hdr') || { offsetHeight: 0 }).offsetHeight); });
   const LSHOTS = process.env.LEDGERS_SHOTS;
   if (LSHOTS) fs.mkdirSync(LSHOTS, { recursive: true });
   for (const theme of ['cream', 'dark', 'terminal']) {
@@ -761,7 +763,7 @@ async function route(S, r) {
       await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
       ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
       await snap('01-tree-open');
-      const checks = {};
+      const checks = {}; let parts = '';
       /* 03 · a control account with parties (Suppliers) */
       await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
@@ -771,7 +773,7 @@ async function route(S, r) {
       /* 05 · a plain ledger (Rent) */
       await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');
       /* 06 · a party's ledger, and 07 · its first entry opened */
-      await pick('lg-acc-1300'); await pick('lg-party-c1'); checks.party = await headPct(p); await snap('06-party-ledger');
+      await pick('lg-acc-1300'); await pick('lg-party-c1'); checks.party = await headPct(p); parts = await headParts(p); await snap('06-party-ledger');
       await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 }); await p.waitForTimeout(250);
       const g = await p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'); return { th: document.documentElement.getAttribute('data-theme'), lsw: l.scrollWidth, lcw: l.clientWidth, nsw: n.scrollWidth, ncw: n.clientWidth, dsw: document.documentElement.scrollWidth, iw: innerWidth }; });
       ok(g.lsw <= g.lcw + 1 && g.nsw <= g.ncw + 1 && g.dsw <= g.iw, 'Ledgers ' + tag + ' in ' + theme + ' (' + g.th + '): the list and the opened entry fit, nothing scrolls sideways (' + g.lsw + '/' + g.lcw + ', ' + g.nsw + '/' + g.ncw + ')');
@@ -783,7 +785,7 @@ async function route(S, r) {
       /* 02 · the tree folded (laptop) / page two (phone) */
       if (!phone) { await p.click('[data-testid="lt-fold"]').catch(() => {}); await p.waitForTimeout(200); await snap('02-tree-folded'); await p.click('[data-testid="lt-unfold"]').catch(() => {}); } else await snap('02-tree-folded');
       const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null).map(rd));
-      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + rd(checks[k]) + '% (' + fx(checks[k]) + ')').join(' · ') + ')');
+      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + rd(checks[k]) + '% (' + fx(checks[k]) + ')').join(' · ') + ') [party head: ' + parts + ']');
       if (theme === 'cream' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-cream.png') });
       if (theme === 'dark' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-dark.png') });
       if (theme === 'cream' && phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-phone-cream.png') });
