@@ -6152,10 +6152,12 @@ function render() {
 applyBiz('hotel');
 /** the four ✕ corners are the library's Close (CMP005), drawn into their slots once, before the first paint (OLB001-U01..U04) */
 (function paintStaticActions() {
-  [['slotClosePrice', 'OLB001-U01', 'close-price-list', closePriceOverlay], ['slotCloseModLab', 'OLB001-U02', 'close-mod-lab', closeModLab],
-    ['slotCloseTillPreview', 'OLB001-U03', 'close-till-preview', closeComboTillPreview], ['slotCloseWork', 'OLB001-U04', 'close-work', closeWork]
+  [['slotClosePrice', 'OLB001-U01', 'close-price-list', 'closePriceOverlay'], ['slotCloseModLab', 'OLB001-U02', 'close-mod-lab', 'closeModLab'],
+    ['slotCloseTillPreview', 'OLB001-U03', 'close-till-preview', 'closeComboTillPreview'], ['slotCloseWork', 'OLB001-U04', 'close-work', 'closeWork']
   ].forEach(function (slot) {
-    document.getElementById(slot[0]).innerHTML = ui.action('close', { mount: slot[1], surface: 'dialog', testid: slot[2], onPress: slot[3] });
+    /* the handler is looked up by name at the press, as the old onclick="closeWork()" did (combo-mode.js declares its own closeModLab) */
+    var press = function () { window[slot[3]](); };
+    document.getElementById(slot[0]).innerHTML = ui.action('close', { mount: slot[1], surface: 'dialog', testid: slot[2], onPress: press });
   });
 })();
 render();

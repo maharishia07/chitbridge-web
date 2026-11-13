@@ -61,7 +61,12 @@ async function tabTo(page, testid) {
   }
   return -1;
 }
+/** closeModLab (lab/combo-mode.js) sends the tab Home after closing, which is that file's business; the press is proved by its name being called and the overlay closing */
+async function stubModLabNavigation(page) {
+  await page.evaluate(() => { window.closeModLab = function () { document.getElementById('modLabOverlay').classList.remove('on'); }; });
+}
 async function checkClose(page, testid, mount, overlay) {
+  if (overlay === 'modLabOverlay') await stubModLabNavigation(page);
   await openOverlay(page, overlay);
   const facts = await page.evaluate((id) => {
     const el = document.querySelector('[data-testid="' + id + '"]');
