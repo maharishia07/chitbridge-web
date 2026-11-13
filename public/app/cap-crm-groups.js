@@ -460,10 +460,12 @@ function crmGroupOpen(name) {
         GSHEET.on[item.party_id] = 1;
       }
     });
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(name ? txf('Members of {name}', { name: name }) : tx('New group')) +
-      '</div></div><div class="mbody" data-testid="crm-grp-sheet">' +
+  ui.dialog({
+    mount: 'CRM008-U201',
+    pop: 'POP098',
+    titleText: name ? txf('Members of {name}', { name: name }) : tx('New group'),
+    testid: 'crm-grp-sheet',
+    body:
       '<label>' +
       esc(tx('Name')) +
       '<input data-cbsid="CRM008-I01" class="inp" id="crm_grp_name" data-testid="crm-grp-name" maxlength="40" autocomplete="off" value="' +
@@ -477,13 +479,12 @@ function crmGroupOpen(name) {
       esc(tx('Name, ID, phone')) +
       '" autocomplete="off" oninput="crmGroupPick(this.value)"></label>' +
       '<div id="crm_grp_list" class="grp-list" data-testid="crm-grp-list"></div>' +
-      '<div id="crm_grp_msg" class="hint" role="status" data-testid="crm-grp-msg"></div></div>' +
-      '<div class="mfoot"><span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="grpsave" data-testid="crm-grp-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_grp_msg" class="hint" role="status" data-testid="crm-grp-msg"></div>',
+    footerHtml:
+      '<span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span>' +
+      ui.footerAction({ name: 'cancel', options: { mount: 'CRM008-U201' } }) +
+      ui.footerAction({ name: 'save', options: { mount: 'CRM008-U201', key: 'save', effect: 'preference', testid: 'crm-grp-save', data: { crm: 'grpsave' } } })
+  });
   crmGroupPick('');
   var node = document.getElementById(name ? 'crm_grp_q' : 'crm_grp_name');
   if (node) node.focus();
@@ -616,12 +617,13 @@ var SEND = { row: null, dry: null, done: null };
 /** open the Send-to-group sheet for a row; pre is an optional starting message */
 function crmSendOpen(group, prefill) {
   SEND = { row: group, dry: null, done: null };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(txf('Send to {name}', { name: group.name })) +
-      '</div><span class="sub">' +
-      esc(crmPlural(group.count, 'member', 'members')) +
-      '</span></div><div class="mbody" data-testid="crm-send-sheet">' +
+  ui.dialog({
+    mount: 'CRM008-U202',
+    pop: 'POP104',
+    titleText: txf('Send to {name}', { name: group.name }),
+    subText: crmPlural(group.count, 'member', 'members'),
+    testid: 'crm-send-sheet',
+    body:
       '<div class="kv"><b>' +
       esc(tx('Channel')) +
       '</b><span data-testid="crm-send-channel">' +
@@ -637,8 +639,9 @@ function crmSendOpen(group, prefill) {
       '<div id="crm_send_who" class="hint" role="status" data-testid="crm-send-who">' +
       esc(tx('Check who may be sent first; nothing goes out until you press Send.')) +
       '</div>' +
-      '<div id="crm_send_out" data-testid="crm-send-out"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP005" type="button" onclick="closeModal()">' +
+      '<div id="crm_send_out" data-testid="crm-send-out"></div>',
+    footerHtml:
+      '<button data-cbsid="CMP005" type="button" onclick="closeModal()">' +
       esc(tx('Close')) +
       '</button><button data-cbsid="CRM008-B02" type="button" data-crm="sendcheck" data-testid="crm-send-check">' +
       esc(tx('Who may be sent?')) +
@@ -647,8 +650,8 @@ function crmSendOpen(group, prefill) {
       esc(tx('Check first')) +
       '">' +
       esc(tx('Send')) +
-      '</button></div>'
-  );
+      '</button>'
+  });
   var node = document.getElementById('crm_send_text');
   if (node) node.focus();
 }
@@ -1023,11 +1026,12 @@ function crmShareGroup() {
     toast(tx('No groups yet. Make one under Groups.'));
     return;
   }
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Share with a group')) +
-      '</div></div><div class="mbody" data-testid="crm-sc-groups">' +
-      rows
+  ui.dialog({
+    mount: 'CRM008-U203',
+    pop: 'POP105',
+    title: 'Share with a group',
+    testid: 'crm-sc-groups',
+    body: rows
         .map(function (item) {
           return (
             '<button data-cbsid="CRM008-B08" type="button" class="result" style="text-align:left;background:var(--surface)" data-crm="scgrouppick" data-k="' +
@@ -1043,11 +1047,11 @@ function crmShareGroup() {
             '</span></span></button>'
           );
         })
-        .join('') +
-      '</div><div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button></div>'
-  );
+        .join(''),
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM008-U203' } }
+    ]
+  });
 }
 
 /* ═══ the clicks this module answers (cap-crm.js's one listener asks) ═══════════════════════════════════════════════ */
