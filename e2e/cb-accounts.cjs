@@ -38,18 +38,21 @@ const VIEWS = [
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['compare', 'Parallel run', '[data-testid="cmp"]'],   /* PR1 (e2e/walk-compare.cjs walks it) */
   ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
   /* A1 (Athi, 2026-10-03 · T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Waiting is not a menu item (a failed posting is a To do item) */
-  ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
-  ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
+  /* ACC-175: Dues (both sides together) has its own button, first in Outstandings; the bills item is named "Unpaid bills" */
+  ['dues', 'Dues', '[data-testid="dues-list"]'], ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
+  ['bills', 'Unpaid bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
+  ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
+  entry_id: 'e-' + date, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null,   /* PERF1 / M29: a ledger line names its entry and its reversal pair (the contract's keys; the journal's entry_id is the same 'e-' + date) */
   source: books.source({ kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by }) });
 const L1 = LINE('k1', '2026-09-05', 'C2/26-27/0016', 'c1', 300000, 0, 300000, 'bill', 'Mayur Bhavan');
 const L2 = LINE('k2', '2026-09-06', 'C2/26-27/0017', 'c2', 300000, 0, 600000, 'bill', 'Mayur Bhavan');
@@ -59,8 +62,9 @@ const CONTROL = {
   '1300': books.ledger('1300', 'Customers (Sundry Debtors)', [L1, L2], { closing_minor: 600000 }),
   '2100': books.ledger('2100', 'Suppliers (Sundry Creditors)', [P1, P2], { closing_minor: -250000 }),
 };
-/* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it */
-const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, reverses_entry_id: null, narration: 'Sale',
+/* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it.
+   PERF1: an opened ledger line reads its own entry by id (GET /daybook?entries=<entry_id>), so the entry's id must be the one the statement line names ('e-' + date, lib/books-api.cjs) */
+const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'e-' + d, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, reverses_entry_id: null, narration: 'Sale',
   source: books.source({ kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' }),
   lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0, counter: 'C2', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, rate: 12, dr_minor: 0, cr_minor: 267857, counter: 'C2' },
     { code: '2200', name: 'Output CGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16072, counter: 'C2' }, { code: '2201', name: 'Output SGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16071, counter: 'C2' }] }));
@@ -112,6 +116,8 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p + u.search);
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
+  if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: S.folders });
   let x;
   if ((x = p.match(/^\/api\/folders\/([^/]+)\/chits$/))) return J(r, 200, { chits: S.bills[x[1]] || [] });
@@ -128,7 +134,7 @@ async function route(S, r) {
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat(((S.extra && S.extra[x[1]]) || []).map((l) => Object.assign({ doc_date: l.date }, l))) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, books.ledger(x[1], 'Cash', [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }], { closing_minor: 1240000 }));
     if (p === '/api/books/daybook') return J(r, 200, books.daybook(JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales',
-      source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }])));
+      source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }]).map((e) => Object.assign({ reversed_by: null, reversed_by_id: null }, e))));   /* the contract's reversal pair, null = not reversed */
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
@@ -137,7 +143,7 @@ async function route(S, r) {
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
       { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
-    if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] });
+    if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
     if (p === '/api/books/packs') return J(r, 200, { packs: [] });
@@ -232,7 +238,7 @@ async function route(S, r) {
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
     ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
@@ -825,7 +831,9 @@ async function route(S, r) {
 
   /* ── 8 · THE LISTS ROUND: no layout jump, and the ledger stripes ─────────────────────────────────────────────────────────────── */
   for (const [w, h] of [[1366, 768], [390, 844]]) {
-    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook' });
+    /* SET-WALK1 W7: the Thirukkural band is the owner's choice and 'auto' draws it only where the shop reads Tamil, so with no pref there is no band and no room;
+       this round measures the room the band keeps, so the owner has chosen it on (cb_kural) */
+    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook', seed: 'try { localStorage.setItem("cb_kural", "on"); } catch (_) {}' });
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', document.querySelectorAll('#nav .nav-btn').length - 1), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
     await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);
