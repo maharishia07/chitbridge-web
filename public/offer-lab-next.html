@@ -6150,13 +6150,12 @@ function render() {
 applyBiz('hotel');
 /** the four ✕ corners are the library's Close (CMP005), drawn into their slots once, before the first paint (OLB001-U01..U04) */
 (function paintStaticActions() {
-  [['slotClosePrice', 'OLB001-U01', 'close-price-list', 'closePriceOverlay'], ['slotCloseModLab', 'OLB001-U02', 'close-mod-lab', 'closeModLab'],
-    ['slotCloseTillPreview', 'OLB001-U03', 'close-till-preview', 'closeComboTillPreview'], ['slotCloseWork', 'OLB001-U04', 'close-work', 'closeWork']
-  ].forEach(function (slot) {
-    /* the handler is looked up by name at the press, as the old onclick="closeWork()" did (combo-mode.js declares its own closeModLab) */
-    var press = function () { window[slot[3]](); };
-    document.getElementById(slot[0]).innerHTML = ui.action('close', { mount: slot[1], surface: 'dialog', testid: slot[2], onPress: press });
-  });
+  /* each press resolves the handler by name when it happens, as the old onclick="closeWork()" did (combo-mode.js declares its own closeModLab) */
+  var put = function (slot, html) { document.getElementById(slot).innerHTML = html; };
+  put('slotClosePrice', ui.action('close', { mount: 'OLB001-U01', surface: 'dialog', testid: 'close-price-list', onPress: function () { closePriceOverlay(); } }));
+  put('slotCloseModLab', ui.action('close', { mount: 'OLB001-U02', surface: 'dialog', testid: 'close-mod-lab', onPress: function () { closeModLab(); } }));
+  put('slotCloseTillPreview', ui.action('close', { mount: 'OLB001-U03', surface: 'dialog', testid: 'close-till-preview', onPress: function () { closeComboTillPreview(); } }));
+  put('slotCloseWork', ui.action('close', { mount: 'OLB001-U04', surface: 'dialog', testid: 'close-work', onPress: function () { closeWork(); } }));
 })();
 render();
 /* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
