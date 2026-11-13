@@ -68,6 +68,8 @@ html{scroll-padding-bottom:110px}   /* the fixed footer never covers a field scr
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 button{font:inherit;color:inherit;cursor:pointer}
 .pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--dim)}
+.pill.has-sub{border-radius:14px;text-align:left}
+.pill .sub{display:block;font-size:.75em;font-weight:400;color:var(--dim)}
 .pill.on{border-color:var(--ok);background:var(--ok-t);color:var(--ok);font-weight:700}
 input[type=search],input[type=number],select{font:inherit;color:inherit;padding:8px 10px;
   border:1px solid var(--line);border-radius:8px;background:var(--card);min-width:0}
@@ -204,20 +206,16 @@ async function load(keepStep) {
   pickList((LIST && LIST.key) || DATA.pick || DATA.lists[0].key, keepStep);
 }
 
-/** CAT-124 C2: each list is a card of its own reference store — the card carries the store's name (store_name; null = the built-in list, nothing shown). */
-function storeTitle(item) {
-  return item.store_name ? ' title="' + esc(item.store_name) + '"' : '';
+/** CAT-124 C2: each list is a card of its own reference store; the store's name (store_name; null = the built-in list, nothing shown) is a visible line inside the tile, so keyboard and touch users read it too. */
+function storeLine(item) {
+  return item.store_name ? '<span class="sub" data-testid="pl-store-' + esc(item.key) + '">' + esc(item.store_name) + '</span>' : '';
 }
-/** One list's tile: its name, its size, and (CAT-124) the reference store it comes from as the hover title. */
+/** One list's tile: its name, its size, and (CAT-124) the reference store it comes from, written under the name. */
 function listPill(item) {
   return (
-    '<button class="pill ' + (item.key === LIST.key ? 'on' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' + storeTitle(item) +
-    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b></button>'
+    '<button class="pill ' + (item.key === LIST.key ? 'on' : '') + (item.store_name ? ' has-sub' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' +
+    ' onclick="pickList('' + esc(item.key) + '')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
   );
-}
-/** The chosen list's store, named under the tiles (data-testid pl-store, the page's own element code scheme). */
-function storeNote() {
-  return LIST.store_name ? '<div class="row"><span class="note" data-testid="pl-store">From ' + esc(LIST.store_name) + '</span></div>' : '';
 }
 function pickList(k, keep) {
   LIST =
@@ -412,7 +410,6 @@ function buildChoose() {
     '<div class="row" id="lists" data-testid="pl-lists">' +
     DATA.lists.map(listPill).join('') +
     '</div>' +
-    storeNote() +
     '<div class="row" id="langs" data-testid="pl-langs">' +
     (!tableFits()
       ? ''
