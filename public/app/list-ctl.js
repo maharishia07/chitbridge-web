@@ -827,6 +827,68 @@
   function isTiny() {
     return root.matchMedia ? root.matchMedia('(max-width: ' + TINY_MAX + 'px)').matches : root.innerWidth <= TINY_MAX;
   }
+  /** the period chip, and its popover while open */
+  function periodChipHTML(list, p) {
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'period') +
+      '" data-testid="cbl-period-' +
+      esc(list.key) +
+      '">' +
+      esc(p.label || '') +
+      ' ▾</button>' +
+      (list.pop === 'period' ? periodPop(list, p) : '') +
+      '</span>'
+    );
+  }
+  function chipHTML(c) {
+    return '<span class="cbl-chip"' + (c.tid ? ' data-testid="' + esc(c.tid) + '"' : '') + '>' + esc(c.text) + '</span>';
+  }
+  function noteHTML(n, i) {
+    return (
+      '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
+      esc(n.cls === 'bad' ? 'bad' : 'warn') +
+      '" data-notice="' +
+      i +
+      '"' +
+      (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +
+      '>' +
+      esc(n.text) +
+      '</button>'
+    );
+  }
+  /** the ONE chip a phone folds the strip, the notices and (on a tiny phone) the period into, and its popover while open */
+  function foldedChipHTML(list, headSpec, foldPeriod) {
+    var chips = headSpec.chips || [],
+      notes = headSpec.notices || [],
+      bad = notes.some(function (item) {
+        return item.cls === 'bad';
+      });
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
+      (notes.length ? (bad ? 'bad' : 'warn') : '') +
+      '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'notes') +
+      '" data-testid="cbl-notes-' +
+      esc(list.key) +
+      '">' +
+      esc(foldPeriod ? T(list, '{n} details', { n: chips.length + notes.length + 1 }) : foldedLabel(list, chips, notes)) +
+      ' ▾</button>' +
+      (list.pop === 'notes'
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+          esc(T(list, 'Notices')) +
+          '" data-testid="cbl-notes-pop-' +
+          esc(list.key) +
+          '"><div class="cbl-notes">' +
+          chips.map(chipHTML).join('') +
+          notes.map(noteHTML).join('') +
+          '</div>' +
+          (foldPeriod ? periodInner(list, headSpec.period) : '') +
+          '</div>'
+        : '') +
+      '</span>'
+    );
+  }
   function paintTitle(list) {
     var h = head(list),
       box = $(list, ':scope > .cbl-title');
@@ -842,70 +904,14 @@
     }
     var out = '';
     if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    var foldPeriod = !!h.period && isPhone() && isTiny() && (h.chips || []).length + (h.notices || []).length > 0;
-    if (h.period && !foldPeriod) {
-      var p = h.period;
-      out +=
-        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
-        (list.pop === 'period') +
-        '" data-testid="cbl-period-' +
-        esc(list.key) +
-        '">' +
-        esc(p.label || '') +
-        ' ▾</button>' +
-        (list.pop === 'period' ? periodPop(list, p) : '') +
-        '</span>';
-    }
     var chips = h.chips || [],
       notes = h.notices || [],
-      chipHTML = function (c) {
-        return '<span class="cbl-chip"' + (c.tid ? ' data-testid="' + esc(c.tid) + '"' : '') + '>' + esc(c.text) + '</span>';
-      };
-    var noteHTML = function (n, i) {
-      return (
-        '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-        esc(n.cls === 'bad' ? 'bad' : 'warn') +
-        '" data-notice="' +
-        i +
-        '"' +
-        (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +
-        '>' +
-        esc(n.text) +
-        '</button>'
-      );
-    };
+      foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
+    if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
     list.narrow = isPhone();
-    if (list.narrow && (foldPeriod || foldsToOneChip(chips, notes))) {
-      var bad = notes.some(function (item) {
-        return item.cls === 'bad';
-      });
-      out +=
-        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-        (notes.length ? (bad ? 'bad' : 'warn') : '') +
-        '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' +
-        (list.pop === 'notes') +
-        '" data-testid="cbl-notes-' +
-        esc(list.key) +
-        '">' +
-        esc(foldPeriod ? T(list, '{n} details', { n: chips.length + notes.length + 1 }) : foldedLabel(list, chips, notes)) +
-        ' ▾</button>' +
-        (list.pop === 'notes'
-          ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
-            esc(T(list, 'Notices')) +
-            '" data-testid="cbl-notes-pop-' +
-            esc(list.key) +
-            '"><div class="cbl-notes">' +
-            chips.map(chipHTML).join('') +
-            notes.map(noteHTML).join('') +
-            '</div>' +
-            (foldPeriod ? periodInner(list, h.period) : '') +
-            '</div>'
-          : '') +
-        '</span>';
-    } else {
-      out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
-    }
+    if (list.narrow && (foldPeriod || foldsToOneChip(chips, notes))) out += foldedChipHTML(list, h, foldPeriod);
+    else out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)
       out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
