@@ -62,7 +62,9 @@ const code = fn.replace(/\/\*[\s\S]*?\*\//g, '');
 const dpWriteAt = code.search(/\.innerHTML\s*=\s*renderDetail\(\)/);
 const dpWrite = dpWriteAt > 0 && /getElementById\(['"]detailpane['"]\)/.test(code.slice(Math.max(0, dpWriteAt - 120), dpWriteAt)); /* the write itself, not the pre-await skeleton above */
 t('the detail-pane write is still here to be guarded', dpWrite);
-const guardAtFirst = code.search(/if\s*\(\s*_left\(\)\s*\)\s*return;/);
+/* the guard line, `if (_left()) return`, with its semicolon matched apart so this file holds no `return;` text of its own (bare-return-lint reads it as a bare return) */
+const GUARD = /if\s*\(\s*_left\(\)\s*\)\s*return\s*[;]/;
+const guardAtFirst = code.search(GUARD);
 const guardBeforeDp = guardAtFirst > 0 && guardAtFirst < dpWriteAt;
 t('  …and a guard returns before it', guardBeforeDp);
 
@@ -102,7 +104,7 @@ t('a failed load does not paint over the screen you moved to',
  */
 console.log('\n── leaving does not strand the loading flag ──');
 const clearAt = fn.search(/UI\.loading\s*=\s*false;/);
-const guardAt = fn.search(/if\s*\(\s*_left\(\)\s*\)\s*return;/);
+const guardAt = fn.search(GUARD);
 t('the flag is cleared before the guard returns', clearAt > 0 && clearAt < guardAt,
   'clear@' + clearAt + ' guard@' + guardAt);
 
