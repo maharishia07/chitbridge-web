@@ -2411,7 +2411,10 @@
     "unbilled": {
      "n": 0,
      "minor": 0,
-     "currency": null
+     "currency": null,
+     "by_currency": [],
+     "no_currency": 0,
+     "unpriced": 0
     },
     "contact_prefs": {
      "migrated": false,

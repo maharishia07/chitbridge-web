@@ -967,7 +967,7 @@ async function route(S, r) {
     }
     /* CRM-D7: the record paints the SERVER's unbilled figure - one per currency, nothing added in the browser (the timeline below holds INR 90 + 150 on purpose: summed it would say 240) */
     for (const [name, un, want, never] of [
-      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yets*₹90.00 + AUD 150.00 · not added together/, /240|₹150/],
+      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yets*₹90.00 + A$150.00 · not added together/, /240|₹150/],
       ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yets*₹90.00 · 1 without a currency/, /not added together|240/],
       ['one not priced', { n: 1, minor: null, currency: null, by_currency: [], no_currency: 0, unpriced: 1 }, /1 order not billed yet · 1 not priced yet/, /₹0|₹/],
       ['a cost-blind reader', { n: 2, minor: null, currency: 'INR', cost_hidden: true }, /2 orders not billed yet hidden/, /AUD|₹d/],
@@ -981,7 +981,7 @@ async function route(S, r) {
       S.live = { record, timeline };
       const { ctx, p } = await open(S, { hash: '#/party/P-0004' }); await recReady(p); await openAll(p); await p.waitForTimeout(400);
       const chip = await text(p, '.rchips'), cs = await text(p, '[data-testid="crm-sec-customer"]');
-      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the carried figure (' + chip + ' || ' + cs.slice(0, 110) + ')');
+      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the carried figure (' + chip + ' || ' + cs.slice(0, 300) + ')');
       ok(!never.test(chip.replace(/d{1,2} w{3}/g, '')) , 'CRM-D7 ' + name + ': nothing summed, no reader currency borrowed (' + chip + ')');
       await ctx.close();
     }
