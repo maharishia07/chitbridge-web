@@ -2621,6 +2621,10 @@ function testHereScreen() {
   }
 }
 
+/* the build this page runs, the one stamp every verdict and every incident carries (PM-8); null where app.html has not set it */
+function testBuild() {
+  return (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null;
+}
 async function testIncSend() {
   var what = (document.getElementById('incWhat') || {}).value || '';
   var node = (document.getElementById('incWho') || {}).value || '';
@@ -2639,7 +2643,7 @@ async function testIncSend() {
         happened_at: testWhenAt(),
         screen_code: testHereScreen(),
         popup_code: typeof modalCode === 'function' ? modalCode() : null,
-        build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null
+        build: testBuild()
       }
     });
     CBTEST.incForm = false;
@@ -5210,7 +5214,7 @@ async function testFromCase(key, kind, shot, seenIn, sev, when) {
           severity: ['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'].indexOf(String(sev)) >= 0 ? String(sev) : 'Sev-3',
           screen_code: code,
           case_key: key,
-          build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null
+          build: testBuild()
         }
       });
       if (typeof toast === 'function') toast('Failed, and an incident is raised');
@@ -10722,7 +10726,7 @@ function testEnv() {
               ? 'Linux'
               : 'OS not named';
     return {
-      build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
+      build: testBuild(),
       browser: br,
       os: os,
       viewport: (window.innerWidth || 0) + '×' + (window.innerHeight || 0),
@@ -10825,7 +10829,7 @@ async function testMark(key, status) {
         run_id: CBTEST.run.id,
         run_label: CBTEST.run.label || null,
         /* ⚠ the column has been there since b219 and nothing ever wrote to it */
-        build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
+        build: testBuild(),
         results: [
           {
             case_key: key,

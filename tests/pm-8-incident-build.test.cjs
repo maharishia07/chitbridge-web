@@ -24,3 +24,9 @@ if (readers.length && !defined) {
   process.exit(1);
 }
 console.log('  ok  PM-8: the incident build is defined where it is read');
+const sends = lines.filter((line) => /build:\s*testBuild\(\)/.test(line)).length;
+if (sends < 4) {
+  console.log('  XX  PM-8: expected the two incident sends and the two verdict sends to read testBuild(), found ' + sends);
+  process.exit(1);
+}
+console.log('  ok  PM-8: incidents and verdicts read the one build (testBuild, from CB_BUILD)');
