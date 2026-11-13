@@ -78,7 +78,9 @@ function tagAfter(name, code) {
   const src = files[name], plain = src.indexOf(literal(code, false)), esc = src.indexOf(literal(code, true)), at = plain >= 0 ? plain : esc;
   if (at < 0) return null;
   const rest = src.slice(at + 12), next = rest.search(/data-cbsid=/);
-  return rest.slice(0, next >= 0 ? Math.min(next, WINDOW) : WINDOW);
+  /* plus the same tag BEFORE the code, from its '<' (review #646: attribute order is free; product-lab's Shelf select carries the code after id + aria-label) */
+  const open = src.lastIndexOf('<', at), before = open >= 0 && at - open <= WINDOW ? src.slice(open, at) : '';
+  return before + rest.slice(0, next >= 0 ? Math.min(next, WINDOW) : WINDOW);
 }
 
 for (const [screen, def] of Object.entries(SCREENS)) {
