@@ -116,6 +116,8 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p + u.search);
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
+  if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: S.folders });
   let x;
   if ((x = p.match(/^\/api\/folders\/([^/]+)\/chits$/))) return J(r, 200, { chits: S.bills[x[1]] || [] });
@@ -142,8 +144,6 @@ async function route(S, r) {
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
       { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
     if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
-    /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
-    if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
     if (p === '/api/books/packs') return J(r, 200, { packs: [] });
