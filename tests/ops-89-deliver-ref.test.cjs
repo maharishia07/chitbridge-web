@@ -75,9 +75,13 @@ const lost = () => Object.assign(new Error('connection lost'), {}); /* no status
   await postDeliverLines('wlDeliver', 'chit-4', rows(1)).catch(() => {});
   await postDeliverLines('wlDeliver', 'chit-4', rows(1));
   assert.strictEqual(refOf(sent[9]), refOf(sent[8]), 'a 409 in progress keeps the ref');
+  failWith = Object.assign(new Error('gateway timeout'), { status: 504 });
+  await postDeliverLines('wlDeliver', 'chit-6', rows(1)).catch(() => {});
+  await postDeliverLines('wlDeliver', 'chit-6', rows(1));
+  assert.strictEqual(refOf(sent[11]), refOf(sent[10]), 'a 504 keeps the ref: the write may have committed');
 
   await postDeliverLines('c2DeliverLines', 'chit-5', [{ line_id: 'a', quantity: 1 }, { line_id: 'b', quantity: 1 }]);
-  const [ra, rb] = sent[10].body.rows.map((r) => r.client_ref);
+  const [ra, rb] = sent[12].body.rows.map((r) => r.client_ref);
   assert(ra.endsWith(':0') && rb.endsWith(':1') && ra.slice(0, -2) === rb.slice(0, -2), 'rows of one action share the ref, suffixed by position');
 
   /* tkDeliver (cap-tasks.js), the real function, goes through it */

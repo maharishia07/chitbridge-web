@@ -1313,7 +1313,8 @@ async function postDeliverLines(epKey, chitId, rows) {
     delete _attempts[attempt];
     return reply;
   } catch (failure) {
-    if (failure && failure.status && failure.status !== 409) delete _attempts[attempt];
+    /* 409 (in progress) and 5xx (a gateway timeout can follow a committed write) keep the ref; only a 4xx refusal ends the action */
+    if (failure && failure.status && failure.status !== 409 && failure.status < 500) delete _attempts[attempt];
     throw failure;
   }
 }
