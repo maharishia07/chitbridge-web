@@ -112,6 +112,7 @@ jobs:
           node e2e/pe-gst-still.test.cjs
           node e2e/prefetch.cjs
           node e2e/prim-homes.cjs
+          node e2e/quote-attempt-key.test.cjs
           node e2e/rail-thread-guard.cjs
           node e2e/raw-id-words.cjs
           node e2e/register-off.cjs

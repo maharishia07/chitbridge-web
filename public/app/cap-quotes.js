@@ -20,10 +20,10 @@
 
   var CB_QUOTE_EP = {
     quoteList: { m: 'GET', p: '/api/chits/:id/proposals', ok: 'y' }, // { proposals[], migrated } — my copy's rounds, newest last
-    quotePropose: { m: 'POST', p: '/api/chits/:id/proposals', ok: 'y', idem: true }, // the seller prices · anyone else asks
-    quoteAccept: { m: 'POST', p: '/api/chits/:id/proposals/:pid/accept', ok: 'y', idem: true },
-    quoteReject: { m: 'POST', p: '/api/chits/:id/proposals/:pid/reject', ok: 'y', idem: true },
-    quoteCounter: { m: 'POST', p: '/api/chits/:id/proposals/:pid/counter', ok: 'y', idem: true }
+    quotePropose: { m: 'POST', p: '/api/chits/:id/proposals', ok: 'y', idem: 'attempt' }, // the seller prices · anyone else asks
+    quoteAccept: { m: 'POST', p: '/api/chits/:id/proposals/:pid/accept', ok: 'y', idem: 'attempt' },
+    quoteReject: { m: 'POST', p: '/api/chits/:id/proposals/:pid/reject', ok: 'y', idem: 'attempt' },
+    quoteCounter: { m: 'POST', p: '/api/chits/:id/proposals/:pid/counter', ok: 'y', idem: 'attempt' }
   };
   root.CB_QUOTE_EP = CB_QUOTE_EP;
 
