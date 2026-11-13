@@ -2416,15 +2416,6 @@
      "differs": false
     },
     "name": "Chola",
-    "unbilled": {
-     "n": 0,
-     "minor": 0,
-     "currency": null,
-     "by_currency": [],
-     "no_currency": 0,
-     "unpriced": 0,
-     "cost_hidden": false
-    },
     "contact_prefs": {
      "migrated": false,
      "may": {
@@ -2527,6 +2518,15 @@
       "code": null,
       "why": null
      }
+    },
+    "unbilled": {
+     "n": 0,
+     "minor": 0,
+     "currency": null,
+     "by_currency": [],
+     "no_currency": 0,
+     "unpriced": 0,
+     "cost_hidden": false
     }
    },
    "optional": [
@@ -2536,6 +2536,7 @@
     "supplier",
     "terms.customer",
     "terms.supplier",
+    "unbilled",
     "unbilled.by_currency",
     "unbilled.cost_hidden",
     "unbilled.no_currency",
@@ -3327,6 +3328,7 @@
   },
   "GET /api/till/summary": {
    "status": 200,
+   "note": "Day view only: with period=day a row with live:true includes today's bills not yet filed (a counter filed mid-day keeps its filed figure plus the later bills); live_capped says more bills may exist than were folded. Week, month and year rows are filed days only and never include today.",
    "example": {
     "period": "month",
     "rows": [
@@ -3362,17 +3364,20 @@
         "at": null,
         "source": [
          "2026-10-01"
-        ]
+        ],
+        "live": false
        }
       ],
       "source": [
        "2026-10-01"
-      ]
+      ],
+      "live": false
      }
     ],
     "counters": [
      "C1"
-    ]
+    ],
+    "live_capped": false
    },
    "optional": [],
    "free": [

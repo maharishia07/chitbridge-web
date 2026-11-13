@@ -206,7 +206,16 @@ async function route(S, r) {
     ok(!/role=\\?["']columnheader|<thead|class=\\?["'][^"']*\blhead\b/.test(all), 'no column header is drawn by hand — every list is a CBList mount');
     ok((js.match(/CBList\.mount\(/g) || []).length >= 4, 'home, follow-ups and both timeline views are CBList mounts (' + (js.match(/CBList\.mount\(/g) || []).length + ')');
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    ok(!/balance_minor\s*[-+*\/]|\.reduce\s*\(|amount_minor\s*[-+*\/]|\bsum\s*\(|\.?minor\s*\+=|\+=[^;\n]*amount_minor/.test(code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '')), 'the page computes no money: balance_minor / amount_minor are only painted and ordered, never summed');
+    /* CRM-D7: the page computes no money. The scan covers both CRM files whole and the two places that SAY the unbilled money elsewhere (helpers.js cbUnbilled*, cap-finance.js finUnbilledWords);
+       cap-finance.js's dues total is a separate money item (no per-currency split yet) and is out of this guard. Each variant of a re-added sum below must trip the pattern. */
+    const NO_SUM = new RegExp([String.raw`balance_minor\s*[-+*\/]`, String.raw`\.reduce\s*\(`, String.raw`amount_minor\s*[-+*\/]`, String.raw`\bsum\s*\(`, String.raw`\+=[^;\n]*minor`, String.raw`minor\s*\+=`, String.raw`minor\s*\+\+`, String.raw`minor\s*=[^;\n]*\+[^;\n]*minor`, String.raw`\+\s*(?:Number\()?[\w.\[\]]*minor\b`].join('|'));
+    const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const fnOf = (file, name) => { const s = strip(fs.readFileSync(path.join(PUB, 'app', file), 'utf8')), at = s.indexOf('function ' + name + '('); return at < 0 ? '' : s.slice(at, s.indexOf('\n}\n', at) + 2); };
+    const moneyScan = code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '') + ['cbUnbilledNotes', 'cbUnbilledFigs', 'cbUnbilledTail'].map((n) => fnOf('helpers.js', n)).join('\n') + fnOf('cap-finance.js', 'finUnbilledWords');
+    ok(/function cbUnbilledTail\(/.test(moneyScan) && /function finUnbilledWords\(/.test(moneyScan), 'the money scan reaches the shared reader (helpers.js) and the Finance words');
+    ok(!NO_SUM.test(moneyScan), 'the page computes no money: balance_minor / amount_minor / minor are only painted and ordered, never summed (CRM files, helpers.js cbUnbilled*, finUnbilledWords)');
+    for (const v of ['t += r.minor;', 'x.minor = x.minor + r.minor;', 's = s + Number(r.amount_minor);', 'sum += r.unbilled_minor;', 'by[c].minor++;', 'un.minor += Number(e.amount_minor || 0);', 'un.minor += e.amount_minor;', 'rows.reduce(function (a, r) { return a + r.minor; }, 0);', 'var t = r.minor + q.minor;'])
+      ok(NO_SUM.test(v), 'the no-money guard trips on a re-added sum: ' + v);
   }
 
   /* ── 2 · HOME ───────────────────────────────────────────────────────────────────────────────────────────── */
