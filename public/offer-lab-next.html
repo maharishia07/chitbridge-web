@@ -213,7 +213,7 @@ button{cursor:pointer}
    min-width/min-height stop it collapsing onto its own header. */
 .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
   width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;
-  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:460px;min-height:340px}
+  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:min(460px,100%);min-height:340px}
 /* ⭐ [found live, 2026-09-26] "it is not movable, i should be able to drag anywhere as i want" — the header
    is the drag handle (dragSheetStart()); its own buttons keep a normal pointer cursor, see the rule below. */
 .shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap;
@@ -372,7 +372,7 @@ button{cursor:pointer}
      screen spot instead of full-width on the page. */
   .sheet{position:static!important;left:auto!important;top:auto!important;margin:0!important;
     width:100%;max-height:none;height:auto;box-shadow:none;border:0;resize:none;overflow:visible}
-  .no-print, .shft, .ovlx, #workPnl{display:none!important}
+  .no-print, .shft, .ovlx, [data-cbname="close"], #workPnl{display:none!important}
   .shbd{overflow:visible!important}
   .vtbl thead{position:static}
   .scroll{overflow:visible!important}
@@ -612,6 +612,10 @@ button{cursor:pointer}
  */
 .btn.back{background:var(--panel);border-color:var(--ghost);font-weight:700}
 .btn.back:hover{background:var(--line-soft)}
+/* the library's Close (CMP005) in the overlay's corner look: tokens only, the 44 px phone floor is the library's */
+[data-cbname="close"]{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:9px;font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto}
+[data-cbname="close"]:hover{background:var(--panel)}
+[data-cbname="close"]:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 /**
  * ⭐ [found live, 2026-09-26] "apply to is not looking prominant" — scopeRow()'s picker was a plain `.btn`,
  * identical to every other secondary button on the screen, even though it decides WHICH items the whole offer
@@ -862,13 +866,13 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <!-- UX-117: on a phone the four tools fold into ONE Tools button; wide, they stay in the row -->
-    <button type="button" class="chip toolmenu-btn" id="toolMenuBtn" data-testid="tool-menu" aria-expanded="false" aria-controls="toolMenuBody" onclick="toggleToolMenu()"><span class="g">⋯</span><span class="tx">Tools</span></button>
-    <span class="toolmenu-body" id="toolMenuBody" onclick="toggleToolMenu(false)">
-    <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g" id="priceTool">₹</span><span class="tx">Price list</span></button>
-    <button class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
-    <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
-    <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
-    <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
+    <button data-cbsid="OLB001-B01" type="button" class="chip toolmenu-btn" id="toolMenuBtn" data-testid="tool-menu" aria-expanded="false" aria-controls="toolMenuBody" onclick="toggleToolMenu()"><span class="g">⋯</span><span class="tx">Tools</span></button>
+    <span data-cbsid="OLB001-C01" class="toolmenu-body" id="toolMenuBody" onclick="toggleToolMenu(false)">
+    <button data-cbsid="OLB001-B02" class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g" id="priceTool">₹</span><span class="tx">Price list</span></button>
+    <button data-cbsid="OLB001-B03" class="chip tool" onclick="window.open('offer-lab-next.html?mode=combo','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
+    <button data-cbsid="OLB001-B04" class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
+    <input data-cbsid="OLB001-I01" type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
+    <button data-cbsid="OLB001-B05" class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
     </span>
   </div>
   <script>
@@ -896,7 +900,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <p class="hs" style="margin:-6px 0 12px">An estimate to explore trade-offs — not your final margin.</p>
 
   <div id="strip"></div>
-  <div id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
+  <div data-cbsid="OLB001-C02" id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
   <div class="lab-cols lab-body" id="labBody">   <!-- v2: the middle is the one offer being worked on; the right says what it promises; the saved offers are pinned in the frame's left panel -->
     <div class="lab-mid">
       <div class="screen" id="s0"></div>
@@ -917,10 +921,10 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="ovlTitle">Price list</h2>
-      <button class="ovlx" onclick="closePriceOverlay()" aria-label="Close" title="Close">✕</button>
+      <span id="slotClosePrice"></span>
     </div>
     <div class="ovltools">
-      <input type="text" id="ovlSearch" placeholder="Search products…" oninput="priceOvSearch(this.value)">
+      <input data-cbsid="OLB001-I02" type="text" id="ovlSearch" placeholder="Search products…" oninput="priceOvSearch(this.value)">
       <div class="ovlcats" id="ovlCats"></div>
     </div>
     <div class="ovlbody" id="ovlBody"></div>
@@ -938,7 +942,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="modLabTitle">Combos and modifiers</h2>
-      <button class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
+      <span id="slotCloseModLab"></span>
     </div>
     <!-- ⭐ [2026-09-27] two tabs, each carrying its own count (paintModLab() fills modLabTabs; see its own
          header comment). #modLabSearch stays a STATIC element, never replaced by innerHTML on repaint — only
@@ -946,7 +950,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
     <div class="tabs" id="modLabTabs"></div>
     <div class="ovltools">
       <div style="display:flex;gap:10px;align-items:center">
-        <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)" style="flex:1">
+        <input data-cbsid="OLB001-I03" type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)" style="flex:1">
         <span id="modLabBarExtra"></span>
       </div>
     </div>
@@ -961,28 +965,28 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel" style="max-width:520px">
     <div class="ovlhead">
       <h2 id="comboTillPreviewTitle">Preview</h2>
-      <button class="ovlx" onclick="closeComboTillPreview()" aria-label="Close" title="Close">✕</button>
+      <span id="slotCloseTillPreview"></span>
     </div>
     <div class="ovlbody" id="comboTillPreviewBody" style="padding:16px 20px"></div>
     <div class="ovlfoot" id="comboTillPreviewFoot"></div>
   </div>
 </div>
 <!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
-<div class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
+<div data-cbsid="OLB001-C03" class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
     <div class="shhd" onpointerdown="dragSheetStart(event)">
       <h3 id="workTitle"></h3>
       <span class="tag" id="workTag"></span>
       <div class="pnl" id="workPnl"></div>
-      <button class="ovlx" onclick="closeWork()" aria-label="Close" title="Close" style="margin-left:auto">✕</button>
+      <span id="slotCloseWork" style="margin-left:auto"></span>
     </div>
     <div id="workDemo"></div>
     <div class="shbd" id="workBody"></div>
     <div class="shft">
       <p class="promise" id="workPromise" data-testid="work-promise"></p>
-      <button class="btn pri" id="workSave" onclick="saveOffer()">Add to your offers</button>
-      <button class="btn" id="workFlip" onclick="closeWork()">Change it</button>
-      <button class="btn" onclick="window.print()" title="Print this offer — the editable controls stay off the page">🖨 Print</button>
+      <button data-cbsid="OLB001-B10" class="btn pri" id="workSave" onclick="saveOffer()">Add to your offers</button>
+      <button data-cbsid="OLB001-B11" class="btn" id="workFlip" onclick="closeWork()">Change it</button>
+      <button data-cbsid="OLB001-B12" class="btn" onclick="window.print()" title="Print this offer — the editable controls stay off the page">🖨 Print</button>
       <span class="grow"></span>
       <span class="why" id="workNote"></span>
     </div>
@@ -1827,7 +1831,7 @@ function percentTableHTML(list) {
           '</td>' +
           '<td data-l="Cost"><span class="costin"><span>' +
           moneySymbol() +
-          '</span><input type="number" min="0" value="' +
+          '</span><input data-cbsid="OLB001-I04" type="number" min="0" value="' +
           (item.p.cost == null ? '' : item.p.cost) +
           '" placeholder="?" onchange="setCost(\'' +
           item.p.id +
@@ -2006,7 +2010,7 @@ function workField(key, mkey, val, disabled) {
   return (
     '<span class="fld' +
     (disabled ? ' off' : '') +
-    '"><input type="text" inputmode="decimal" min="0" max="95" ' +
+    '"><input data-cbsid="OLB001-I05" type="text" inputmode="decimal" min="0" max="95" ' +
     (disabled ? 'disabled' : '') +
     ' value="' +
     esc(val == null ? '' : String(val)) +
@@ -2024,7 +2028,7 @@ function workQuick(key, vals, live) {
   return vals
     .map(function (item) {
       return (
-        '<button class="' +
+        '<button data-cbsid="OLB001-B13" class="' +
         (live && num(S[key]) === item ? 'on' : '') +
         '" ' +
         (live ? '' : 'disabled style="opacity:.35"') +
@@ -2085,7 +2089,7 @@ function workDemoHTML(tail) {
     '<span class="quick">' +
     workQuick('loyPct', [5, 10, 15], S.loyOn) +
     '</span>' +
-    '<button class="sw' +
+    '<button data-cbsid="OLB001-B14" class="sw' +
     (S.loyOn ? ' on' : '') +
     '" onclick="edit(\'loyOn\',' +
     !S.loyOn +
@@ -2138,7 +2142,7 @@ function paintWork() {
        (#workPnl) went unused once "On a bill" was removed; reused here for a single on/off toggle instead of
        adding new chrome. */
     node.style.display = '';
-    node.innerHTML = '<button class="' + (SHOW_MARKUP ? 'on' : '') + '" onclick="toggleMarkup()" title="How much of the cost you add on top to get the price">Markup (on cost)</button>';
+    node.innerHTML = '<button data-cbsid="OLB001-B15" class="' + (SHOW_MARKUP ? 'on' : '') + '" onclick="toggleMarkup()" title="How much of the cost you add on top to get the price">Markup (on cost)</button>';
     document.getElementById('workBody').innerHTML = percentTableHTML(rs);
     flip.textContent = 'Change it';
     flip.onclick = closeWork;
@@ -2385,7 +2389,7 @@ function paintPriceOvCats() {
   if (OVL.pickMode === 'cat') {
     el.innerHTML = cats
       .map(function (item) {
-        return '<button class="ovlchip" onclick="overlayPick(\'' + item.id + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
+        return '<button data-cbsid="OLB001-B16" class="ovlchip" onclick="overlayPick(\'' + item.id + '\')">' + esc(item.name) + ' (' + item.n + ')</button>';
       })
       .join('');
     return;
@@ -2394,7 +2398,7 @@ function paintPriceOvCats() {
     return item.cost == null;
   }).length;
   el.innerHTML =
-    '<button class="ovlchip' +
+    '<button data-cbsid="OLB001-B17" class="ovlchip' +
     (!OVL.cat ? ' on' : '') +
     '" onclick="priceOvCat(null)">All (' +
     P.length +
@@ -2402,7 +2406,7 @@ function paintPriceOvCats() {
     cats
       .map(function (item) {
         return (
-          '<button class="ovlchip' +
+          '<button data-cbsid="OLB001-B18" class="ovlchip' +
           (OVL.cat === item.id ? ' on' : '') +
           '" onclick="priceOvCat(\'' +
           item.id +
@@ -2417,7 +2421,7 @@ function paintPriceOvCats() {
     (OVL.pickMode === 'item' || OVL.pickMode === 'apply'
       ? '' /* pick modes still filter by category, never need this toggle */
       : '<span style="flex:1"></span>' +
-        '<button class="ovlchip' +
+        '<button data-cbsid="OLB001-B19" class="ovlchip' +
         (OVL.noCostOnly ? ' on' : '') +
         '" onclick="priceOvToggleNoCost()">Missing cost only (' +
         noCostN +
@@ -2457,7 +2461,7 @@ function paintPriceOvBody() {
         'display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Want the offer to follow the whole ' +
         esc(catName(OVL.cat)) +
         ' category automatically — including anything added to it later?</span>' +
-        '<button class="btn sm" onclick="overlayApplyWholeCategory(\'' +
+        '<button data-cbsid="OLB001-B20" class="btn sm" onclick="overlayApplyWholeCategory(\'' +
         OVL.cat +
         '\')">Use all of ' +
         esc(catName(OVL.cat)) +
@@ -2476,7 +2480,7 @@ function paintPriceOvBody() {
       (!list.length
         ? '<div class="hs" style="padding:24px">No products match' + (OVL.q ? ' "' + esc(OVL.q) + '"' : '') + '.</div>'
         : '<table class="ovltbl"><thead><tr><th style="width:30px">' +
-          '<span class="cbx' +
+          '<span data-cbsid="OLB001-C04" class="cbx' +
           (allOn ? ' on' : '') +
           '" onclick="overlayApplyToggleAll()" title="Select everything shown">' +
           (allOn ? '✓' : '') +
@@ -2519,7 +2523,7 @@ function paintPriceOvBody() {
         ' item' +
         (OVL.picked.length === 1 ? '' : 's') +
         ' checked</span>' +
-        '<button class="btn pri sm" onclick="overlayApplyDone()">Done</button></div>';
+        '<button data-cbsid="OLB001-B21" class="btn pri sm" onclick="overlayApplyDone()">Done</button></div>';
     return;
   }
   /* ⭐ 'item' mode: click a ROW to pick it — same search box, same category filter, same scrolling body the
@@ -2573,7 +2577,7 @@ function paintPriceOvBody() {
               ? '<span style="color:var(--muted)" title="Ask the owner for access">🔒</span>'
               : '<div class="inp"><span>' +
                 moneySymbol() +
-                '</span><input type="number" min="0" placeholder="—" value="' +
+                '</span><input data-cbsid="OLB001-I06" type="number" min="0" placeholder="—" value="' +
                 (item.cost == null ? '' : item.cost) +
                 '" onchange="setCost(\'' +
                 item.id +
@@ -2879,7 +2883,7 @@ function seg(k, opts, fn) {
     opts
       .map(function (item) {
         return (
-          '<button class="' +
+          '<button data-cbsid="OLB001-B22" class="' +
           (String(S[k]) === String(item[0]) ? 'on' : '') +
           '" onclick="' +
           (fn || 'edit') +
@@ -2916,7 +2920,7 @@ function selectOf(list, val, fn) {
     return String(item[0]) === String(val);
   })[0];
   return (
-    '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" ' +
+    '<button data-cbsid="OLB001-B23" type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" ' +
     'onclick="openPickOverlay(\'' +
     (fn === 'setCat' ? 'cat' : 'item') +
     "','" +
@@ -2973,7 +2977,7 @@ function s0LimitsHTML() {
   return (
     '<div class="two">' +
     '<div><span class="lbl">Margin threshold</span>' +
-    '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Margin threshold" value="' +
+    '<div class="inp"><input data-cbsid="OLB001-I07" type="text" inputmode="decimal" min="0" max="95" aria-label="Margin threshold" value="' +
     esc(S.margin == null ? '' : String(S.margin)) +
     '" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div>' +
     '<div class="now">Your catalogue is at <b>' +
@@ -2984,7 +2988,7 @@ function s0LimitsHTML() {
     '<div class="loyrow' +
     (S.custOn ? ' on' : '') +
     '">' +
-    '<button class="sw' +
+    '<button data-cbsid="OLB001-B24" class="sw' +
     (S.custOn ? ' on' : '') +
     '" onclick="edit(\'custOn\',' +
     !S.custOn +
@@ -2993,7 +2997,7 @@ function s0LimitsHTML() {
     (S.custOn ? 'true' : 'false') +
     '"></button>' +
     (S.custOn
-      ? '<span>up to</span><span class="sm"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus cap" ' +
+      ? '<span>up to</span><span class="sm"><input data-cbsid="OLB001-I08" type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus cap" ' +
         'value="' +
         esc(S.cap == null ? '' : String(S.cap)) +
         '" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></span>'
@@ -3023,7 +3027,7 @@ function s0FinePrintHTML() {
     '<span class="dot">·</span><span>' +
     COST_TXT[S.costSource] +
     '</span>' +
-    '<button onclick="toggleS0Open()">' +
+    '<button data-cbsid="OLB001-B25" onclick="toggleS0Open()">' +
     (S0_OPEN ? 'Close' : 'Change') +
     '</button>' +
     '</div>' +
@@ -3057,7 +3061,7 @@ function s0FinePrintHTML() {
     ]
       .map(function (item) {
         return (
-          '<button class="' +
+          '<button data-cbsid="OLB001-B26" class="' +
           (S.costSource === item[0] ? 'on' : '') +
           '" ' +
           (item[2] ? '' : 'disabled') +
@@ -3074,7 +3078,7 @@ function s0FinePrintHTML() {
     '<div class="sub">Cost is yours alone. No customer or link ever sees it.</div></div>' +
     (S.biz === 'mine' && savedLive() && COST_ACCESS.is_owner
       ? '<div class="sfld"><span class="lbl">Who else sees cost</span><div class="seg">' +
-        "<button onclick=\"window.open('/employees.html','cb_employees')\">Open Employees</button></div>" /* IX0: "Sees costs" is granted on the person's row in CB Employees (cap-employees.js can_see_costs), never in the workshop */ +
+        "<button data-cbsid=\"OLB001-B27\" onclick=\"window.open('/employees.html','cb_employees')\">Open Employees</button></div>" /* IX0: "Sees costs" is granted on the person's row in CB Employees (cap-employees.js can_see_costs), never in the workshop */ +
         '<div class="sub">Yours alone by default.</div></div>'
       : '') +
     '</div>' +
@@ -3106,7 +3110,7 @@ function renderS0() {
  * screen after Settings.
  */
 function backBtn(step) {
-  return '<button class="btn sm back" onclick="labStep(' + step + ')">← Back</button>';
+  return '<button data-cbsid="OLB001-B28" class="btn sm back" onclick="labStep(' + step + ')">← Back</button>';
 }
 /** the eight types in words, by group: the phone's picker (the left menu there is icons); the same GOALS the menu draws */
 function typesHTML() {
@@ -3118,7 +3122,7 @@ function typesHTML() {
       h += '<div class="grouphead">' + KINDS[item.kind] + '<i></i></div>';
     }
     h +=
-      '<button class="goal' + (TYPE_PICKED && S.goal === item.id ? ' on' : '') + '" data-testid="type-' + item.id + '" onclick="pickGoal(\'' + item.id + '\')"><span class="gi">' +
+      '<button data-cbsid="OLB001-B29" class="goal' + (TYPE_PICKED && S.goal === item.id ? ' on' : '') + '" data-testid="type-' + item.id + '" onclick="pickGoal(\'' + item.id + '\')"><span class="gi">' +
       inShopMoney(item.icon) + '</span><b>' + inShopMoney(item.n) + '</b><span class="ex">' + inShopMoney(item.ex) + '</span></button>';
   });
   return h + '</div></div>';
@@ -3186,7 +3190,7 @@ function costCell(p) {
     '<td class="hide" data-l="Cost"><span class="costIn"><span>' +
     moneySymbol() +
     '</span>' +
-    '<input type="number" min="0" value="' +
+    '<input data-cbsid="OLB001-I09" type="number" min="0" value="' +
     (p.cost == null ? '' : p.cost) +
     '" placeholder="?" ' +
     'onchange="setCost(\'' +
@@ -3254,7 +3258,7 @@ function scopeRow(catOnly) {
   var words = reachWords(),
     picker = catOnly
       ? selectOf(CATS.map(function (item) { return [item.id, item.name]; }), S.catId, 'setCat')
-      : '<button type="button" class="btn scope" data-testid="reach-pick" style="width:100%;justify-content:space-between;font-weight:700" onclick="openApplyPicker()"><span>' +
+      : '<button data-cbsid="OLB001-B30" type="button" class="btn scope" data-testid="reach-pick" style="width:100%;justify-content:space-between;font-weight:700" onclick="openApplyPicker()"><span>' +
         (words ? 'Change what it applies to' : 'Choose items or a category') + '</span><span style="color:var(--blue-i)">▾</span></button>';
   return (
     '<div class="reach' + (words ? ' set' : '') + '" data-testid="reach-card"><span class="ask">Who and what does this apply to?</span>' +
@@ -3309,7 +3313,7 @@ function loyBar() {
     '<div class="loy ' +
     (S.loyOn ? 'on' : '') +
     '">' +
-    '<button class="sw ' +
+    '<button data-cbsid="OLB001-B31" class="sw ' +
     (S.loyOn ? 'on' : '') +
     '" onclick="edit(\'loyOn\',' +
     !S.loyOn +
@@ -3322,7 +3326,7 @@ function loyBar() {
     h += '<span class="ls">off</span>';
   } else if (mode === 'pct') {
     h +=
-      '<div class="inp"><input type="text" inputmode="decimal" min="0" max="' +
+      '<div class="inp"><input data-cbsid="OLB001-I10" type="text" inputmode="decimal" min="0" max="' +
       num(S.cap) +
       '" step="0.5" value="' +
       esc(S.loyPct == null ? '' : String(S.loyPct)) +
@@ -3336,7 +3340,7 @@ function loyBar() {
     h += '<span class="ls">they start at the best step</span>';
   } else {
     h +=
-      '<div class="inp"><input type="text" inputmode="decimal" min="0" max="' +
+      '<div class="inp"><input data-cbsid="OLB001-I11" type="text" inputmode="decimal" min="0" max="' +
       num(S.cap) +
       '" step="0.5" value="' +
       esc(S.loyPct == null ? '' : String(S.loyPct)) +
@@ -3436,7 +3440,7 @@ function renderS2() {
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
     '<h2 class="h">' +
     g.n +
-    '</h2><button class="btn sm back only-narrow" data-testid="all-types" onclick="labAllTypes()">← All types</button>' +
+    '</h2><button data-cbsid="OLB001-B32" class="btn sm back only-narrow" data-testid="all-types" onclick="labAllTypes()">← All types</button>' +
     '</div><p class="hs">' +
     cfgLine() +
     '</p>' +
@@ -3445,7 +3449,7 @@ function renderS2() {
     '</div>' +
     (g.kind === 'line' ? '' : loyBar()) /* percent/amount/qty already placed their own loyalty control */ +
     '<div class="acts">' +
-    '<button class="btn pri" ' +
+    '<button data-cbsid="OLB001-B33" class="btn pri" ' +
     (why ? 'disabled' : '') +
     ' onclick="apply()">' +
     (S.applied ? 'Work it out again' : 'Work it out') +
@@ -3493,7 +3497,7 @@ function loyBoxHTML() {
     (S.loyOn ? ' on' : '') +
     '">' +
     '<div class="boxhd"><span class="t">Loyalty bonus</span>' +
-    '<button class="sw' +
+    '<button data-cbsid="OLB001-B34" class="sw' +
     (S.loyOn ? ' on' : '') +
     '" style="margin-left:auto" onclick="edit(\'loyOn\',' +
     !S.loyOn +
@@ -3502,7 +3506,7 @@ function loyBoxHTML() {
     (S.loyOn ? 'true' : 'false') +
     '"></button></div>' +
     (S.loyOn
-      ? '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus" value="' +
+      ? '<span class="numf"><input data-cbsid="OLB001-I12" type="text" inputmode="decimal" min="0" max="95" aria-label="Loyalty bonus" value="' +
         esc(S.loyPct == null ? '' : String(S.loyPct)) +
         '" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span class="u">%</span></span>'
       : '') +
@@ -3548,7 +3552,7 @@ function cfgPercent() {
        that's actually being typed. Reworded to describe the discount itself, matching "For selected
        customers only" right beside it. */
     '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>' +
-    '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" aria-label="Discount" value="' +
+    '<span class="numf"><input data-cbsid="OLB001-I13" type="text" inputmode="decimal" min="0" max="95" aria-label="Discount" value="' +
     esc(S.pctOff == null ? '' : String(S.pctOff)) +
     '" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>' +
     '<div class="hint">Applied to every customer.</div></div>' +
@@ -3567,7 +3571,7 @@ function cfgAmount() {
     '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>' +
     '<span class="numf"><span class="u">' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I14" type="text" inputmode="decimal" min="0" value="' +
     esc(S.rsOff == null ? '' : String(S.rsOff)) +
     '" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>' +
     '<div class="hint">A different percentage on each item.</div></div>' +
@@ -3588,7 +3592,7 @@ function cfgQty() {
 function freeShapeButtons() {
   var buttons = SHAPES.map(function (item) {
     return (
-      '<button class="shape ' + (S.freeShape === item.id ? 'on' : '') + '" onclick="setShape(\'' + item.id + '\')">' +
+      '<button data-cbsid="OLB001-B35" class="shape ' + (S.freeShape === item.id ? 'on' : '') + '" onclick="setShape(\'' + item.id + '\')">' +
       '<b>' + item.n + '</b><span>' + inShopMoney(item.ex) + '</span></button>'
     );
   });
@@ -3630,7 +3634,7 @@ var FREE_FIELDS = {
       '<div class="two" style="margin-top:12px">' +
       scopeRow(true) +
       '<div class="f"><span class="lbl">They buy</span>' +
-      '<div class="inp"><input type="text" inputmode="decimal" min="2" max="20" value="' +
+      '<div class="inp"><input data-cbsid="OLB001-I15" type="text" inputmode="decimal" min="2" max="20" value="' +
       esc(S.cheapN == null ? '' : String(S.cheapN)) +
       '" data-key="cheapN" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>' +
       '</div>' + '</div>'
@@ -3654,7 +3658,7 @@ function cfgBundle() {
     '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I16" type="text" inputmode="decimal" min="0" value="' +
     esc(S.bunPrice == null ? '' : String(S.bunPrice)) +
     '" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>'
   );
@@ -3665,13 +3669,13 @@ function cfgSpend() {
     '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I17" type="text" inputmode="decimal" min="0" value="' +
     esc(S.spendAt == null ? '' : String(S.spendAt)) +
     '" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>' +
     '<div class="f"><span class="lbl">Then give back</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I18" type="text" inputmode="decimal" min="0" value="' +
     esc(S.spendVal == null ? '' : String(S.spendVal)) +
     '" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>'
   );
@@ -3682,20 +3686,20 @@ function cfgShip() {
     '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I19" type="text" inputmode="decimal" min="0" value="' +
     esc(S.shipCost == null ? '' : String(S.shipCost)) +
     '" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>' +
     '<div class="hint">Your average, per drop.</div>' +
     '<div class="f"><span class="lbl">Free above</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I20" type="text" inputmode="decimal" min="0" value="' +
     esc(S.shipAt == null ? '' : String(S.shipAt)) +
     '" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>' +
     '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I21" type="text" inputmode="decimal" min="0" value="' +
     esc(S.shipCharge == null ? '' : String(S.shipCharge)) +
     '" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>' +
     '<div class="hint">Zero means free.</div></div>'
@@ -3707,13 +3711,13 @@ function cfgBand() {
     '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I22" type="text" inputmode="decimal" min="0" value="' +
     esc(S.bandLo == null ? '' : String(S.bandLo)) +
     '" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>' +
     '<div class="f"><span class="lbl">Largest</span>' +
     '<div class="inp"><span>' +
     moneySymbol() +
-    '</span><input type="text" inputmode="decimal" min="0" value="' +
+    '</span><input data-cbsid="OLB001-I23" type="text" inputmode="decimal" min="0" value="' +
     esc(S.bandHi == null ? '' : String(S.bandHi)) +
     '" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>'
   );
@@ -3999,12 +4003,12 @@ function outQty() {
     ts
       .map(function (item, index) {
         return (
-          '<span class="inp"><input type="number" min="1" value="' +
+          '<span class="inp"><input data-cbsid="OLB001-I24" type="number" min="1" value="' +
           item.qty +
           '" onchange="setTier(' +
           index +
           ',0,this.value)"><span>or more</span></span>' +
-          '<span class="inp" style="width:86px"><input type="number" min="0" max="95" value="' +
+          '<span class="inp" style="width:86px"><input data-cbsid="OLB001-I25" type="number" min="0" max="95" value="' +
           item.percent +
           '" onchange="setTier(' +
           index +
@@ -4012,8 +4016,8 @@ function outQty() {
         );
       })
       .join('') +
-    (ts.length < 3 ? '<button class="btn sm" onclick="addTier()">+ step</button>' : '') +
-    (ts.length > 1 ? '<button class="btn sm" onclick="delTier(' + (ts.length - 1) + ')">\u2212 step</button>' : '') +
+    (ts.length < 3 ? '<button data-cbsid="OLB001-B36" class="btn sm" onclick="addTier()">+ step</button>' : '') +
+    (ts.length > 1 ? '<button data-cbsid="OLB001-B37" class="btn sm" onclick="delTier(' + (ts.length - 1) + ')">\u2212 step</button>' : '') +
     '</div></div>';
   h +=
     '<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>' +
@@ -4022,17 +4026,17 @@ function outQty() {
       .map(function (item, index) {
         return (
           '<th class="slab"><div class="colwrap"><div class="chead">' +
-          '<span class="inp"><input type="number" min="1" value="' +
+          '<span class="inp"><input data-cbsid="OLB001-I26" type="number" min="1" value="' +
           item.qty +
           '" onchange="setTier(' +
           index +
           ',0,this.value)"><span>or more</span></span>' +
-          '<span class="inp"><input type="number" min="0" max="95" value="' +
+          '<span class="inp"><input data-cbsid="OLB001-I27" type="number" min="0" max="95" value="' +
           item.percent +
           '" onchange="setTier(' +
           index +
           ',1,this.value)"><span>%</span></span></div>' +
-          '<button class="colx" onclick="delTier(' +
+          '<button data-cbsid="OLB001-B38" class="colx" onclick="delTier(' +
           index +
           ')" ' +
           (ts.length <= 1 ? 'disabled' : '') +
@@ -4041,7 +4045,7 @@ function outQty() {
         );
       })
       .join('') +
-    (ts.length < 3 ? '<th><button class="colx" onclick="addTier()" title="add a step">+</button></th>' : '') +
+    (ts.length < 3 ? '<th><button data-cbsid="OLB001-B39" class="colx" onclick="addTier()" title="add a step">+</button></th>' : '') +
     '</tr></thead><tbody>' +
     list
       .map(function (item) {
@@ -4132,7 +4136,7 @@ function outGift() {
       '<span class="inp" style="width:104px;height:31px"><span>' +
         moneySymbol() +
         '</span>' +
-        '<input type="number" min="1" value="' +
+        '<input data-cbsid="OLB001-I28" type="number" min="1" value="' +
         item +
         '" onchange="setBill(' +
         index +
@@ -4232,7 +4236,7 @@ function outSame() {
   var heads = list.map(function (item, index) {
     return [
       '<span class="inp" style="width:104px;height:31px">' +
-        '<input type="number" min="1" value="' +
+        '<input data-cbsid="OLB001-I29" type="number" min="1" value="' +
         item +
         '" onchange="setCount(' +
         index +
@@ -4241,7 +4245,7 @@ function outSame() {
         'font-size:11.5px;font-weight:700;cursor:pointer;color:' +
         (index === chosen ? 'var(--green-d)' : 'var(--muted)') +
         '">' +
-        '<input type="radio" name="sameChosen" style="margin:0" ' +
+        '<input data-cbsid="OLB001-I30" type="radio" name="sameChosen" style="margin:0" ' +
         (index === chosen ? 'checked' : '') +
         ' onchange="chooseCount(' +
         index +
@@ -5625,7 +5629,7 @@ function savedPillsHTML(item) {
     savedPillHTML(item) +
     (moved ? '<span class="pill p-stale">' + moved + ' cost' + (moved > 1 ? 's' : '') + ' changed since</span>' : '') +
     (hits
-      ? '<span class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" onclick="toggleSaved(\'' + item.id + "','clash')\">" +
+      ? '<span data-cbsid="OLB001-B40" class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" onclick="toggleSaved(\'' + item.id + "','clash')\">" +
         (clashOpen ? '▾' : '▸') + ' overlaps ' + hits.length + ' other' + (hits.length > 1 ? 's' : '') + '</span>'
       : '') +
     '</div>' +
@@ -5650,10 +5654,10 @@ function savedLinksHTML(item) {
     historyOpen = !!SVOPEN[item.id + ':history'];
   return (
     (names && names.length
-      ? '<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\'' + item.id + '\')">' + names.length + ' item' + (names.length === 1 ? '' : 's') + ' linked ›</button>'
+      ? '<button data-cbsid="OLB001-B41" class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\'' + item.id + '\')">' + names.length + ' item' + (names.length === 1 ? '' : 's') + ' linked ›</button>'
       : '') +
     (item.remote
-      ? '<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\'' + item.id + '\')">' + (historyOpen ? '▾' : '▸') + ' History</button>' + (historyOpen ? historyHTML(item) : '')
+      ? '<button data-cbsid="OLB001-B42" class="btn sm" style="margin-top:7px" onclick="toggleHistory(\'' + item.id + '\')">' + (historyOpen ? '▾' : '▸') + ' History</button>' + (historyOpen ? historyHTML(item) : '')
       : '')
   );
 }
@@ -5711,7 +5715,7 @@ function cartItem(id) {
  */
 function cartLiveButton(item) {
   var words = item.status === 'live' ? (item.group ? 'Make live for everyone' : '') : item.status === 'draft' ? 'Make live' : ''; /* approved and paused have their one step (Go live · Resume) */
-  return words ? '<button class="btn sm pri" data-testid="cart-live" onclick="cartLive(\'' + item.id + '\')">' + words + '</button>' : '';
+  return words ? '<button data-cbsid="OLB001-B43" class="btn sm pri" data-testid="cart-live" onclick="cartLive(\'' + item.id + '\')">' + words + '</button>' : '';
 }
 /** the open offer, in the middle: its title and status, what it is linked to, and every action its status allows (the shelf's old row and the cart's, in one place) */
 function openOfferHTML(item) {
@@ -5724,11 +5728,11 @@ function openOfferHTML(item) {
     savedPillsHTML(item) + savedLinksHTML(item) +
     (CART_SAID ? '<div class="cartnote ok" role="status" data-testid="cart-said">' + esc(CART_SAID) + '</div>' : '') +
     '<div class="cartacts">' +
-    '<button class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
+    '<button data-cbsid="OLB001-B44" class="btn sm" data-testid="cart-edit" onclick="openSaved(\'' + item.id + '\')">Edit</button>' +
     savedStepButton(item) +
     cartLiveButton(item) +
-    '<button class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button>' +
-    '<button class="btn sm" data-testid="shelf-drop" onclick="askDrop(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>' +
+    '<button data-cbsid="OLB001-B45" class="btn sm" data-testid="cart-group" onclick="cartOpenGroup(\'' + item.id + '\')">Only for a group</button>' +
+    '<button data-cbsid="OLB001-B46" class="btn sm" data-testid="shelf-drop" onclick="askDrop(\'' + item.id + '\')">' + (savedLive() ? 'Retire' : 'Delete') + '</button></div>' +
     (CART_PICK === item.id ? cartPickerHTML(item) : '') +
     (note || live
       ? '<div class="cartnote ' + (note ? note.tone : 'ok') + '" role="status" data-testid="cart-note">' + esc(note ? note.text : item.group ? 'Live, only for ' + (item.groupName || groupNameOf(item.group)) + '.' : 'Live for everyone.') + '</div>'
@@ -5739,7 +5743,7 @@ function openOfferHTML(item) {
 /** the one next step its status allows (Approve · Go live · Pause · Resume), asked first like every commit */
 function savedStepButton(item) {
   var step = SHELF_STEP[item.status];
-  return step ? '<button class="btn sm' + (step[2] ? ' pri' : '') + '" data-testid="shelf-step" onclick="askStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '';
+  return step ? '<button data-cbsid="OLB001-B47" class="btn sm' + (step[2] ? ' pri' : '') + '" data-testid="shelf-step" onclick="askStatus(\'' + item.id + "','" + step[1] + "')\">" + step[0] + '</button>' : '';
 }
 /** the middle for a saved offer: it opens in the same place the form does (a row on the left, or "and N more", opened it) */
 function renderOpenOffer() {
@@ -5766,7 +5770,7 @@ function pinRowHTML(shown) {
   var item = cartItem(shown.id);
   if (!item) return '';
   return (
-    '<button type="button" class="pin-row' + (item.id === OPEN_ID && S.step === 3 ? ' on' : '') + '" data-testid="cart-row" data-id="' + esc(item.id) + '" data-status="' + esc(item.status) +
+    '<button data-cbsid="OLB001-B48" type="button" class="pin-row' + (item.id === OPEN_ID && S.step === 3 ? ' on' : '') + '" data-testid="cart-row" data-id="' + esc(item.id) + '" data-status="' + esc(item.status) +
     '" onclick="openOffer(\'' + item.id + '\')">' + savedTitleHTML(item, false) + '</button>'
   );
 }
@@ -5884,12 +5888,12 @@ function cartPickerHTML(item) {
     return '<option value="group:' + esc(name) + '">' + esc(name) + '</option>';
   });
   return (
-    '<div class="cartpick"><select aria-label="Which group" data-testid="cart-group-pick" id="cartGroupPick" onchange="cartGroupChosen(this)"><option value="" selected disabled>Choose a group…</option>' +
+    '<div class="cartpick"><select data-cbsid="OLB001-S01" aria-label="Which group" data-testid="cart-group-pick" id="cartGroupPick" onchange="cartGroupChosen(this)"><option value="" selected disabled>Choose a group…</option>' +
     SYSTEM_GROUPS.map(function (pair) {
       return '<option value="' + pair[0] + '">' + esc(pair[1]) + '</option>';
     }).join('') +
     (named.length ? '<optgroup label="Your groups">' + named.join('') + '</optgroup>' : '') +
-    '</select><button class="btn sm pri" data-testid="cart-group-apply" disabled onclick="cartApplyGroup(\'' + item.id + '\')">Make live for them</button></div>'
+    '</select><button data-cbsid="OLB001-B49" class="btn sm pri" data-testid="cart-group-apply" disabled onclick="cartApplyGroup(\'' + item.id + '\')">Make live for them</button></div>'
   );
 }
 /** a group was picked: the button that makes the offer live for them wakes up */
@@ -6108,7 +6112,7 @@ function render() {
   var sampleNote = document.getElementById('labSampleNote');
   if (S.biz !== 'mine') {
     sampleNote.hidden = false;
-    sampleNote.innerHTML = 'Sample data — nothing here reaches your shop.' + ' <button class="chip" onclick="labUseMine()">Use my catalogue</button>';
+    sampleNote.innerHTML = 'Sample data — nothing here reaches your shop.' + ' <button data-cbsid="OLB001-B50" class="chip" onclick="labUseMine()">Use my catalogue</button>';
   } else sampleNote.hidden = true;
 
   document.getElementById('strip').innerHTML =
@@ -6120,7 +6124,7 @@ function render() {
         (S.round === '0' ? 'exact' : S.round === '1' ? inShopMoney('whole ₹') : 'ends ' + (S.round === '5' ? '0 or 5' : '0')) +
         '<span>·</span>loyalty ' +
         (S.custOn ? 'up to <b>' + num(S.cap) + '%</b>' : 'off') +
-        '<button onclick="labStep(0)">Change</button></div>';
+        '<button data-cbsid="OLB001-B51" onclick="labStep(0)">Change</button></div>';
 
   if (S.step === 3 && !cartItem(OPEN_ID)) {
     OPEN_ID = null; /* retired or deleted: the landing */
@@ -6144,6 +6148,15 @@ function render() {
   if (node && node.classList.contains('on')) paintWork();
 }
 applyBiz('hotel');
+/** the four ✕ corners are the library's Close (CMP005), drawn into their slots once, before the first paint (OLB001-U01..U04) */
+(function paintStaticActions() {
+  /* each press resolves the handler by name when it happens, as the old onclick="closeWork()" did (combo-mode.js declares its own closeModLab) */
+  var put = function (slot, html) { document.getElementById(slot).innerHTML = html; };
+  put('slotClosePrice', ui.action('close', { mount: 'OLB001-U01', surface: 'dialog', testid: 'close-price-list', onPress: function () { closePriceOverlay(); } }));
+  put('slotCloseModLab', ui.action('close', { mount: 'OLB001-U02', surface: 'dialog', testid: 'close-mod-lab', onPress: function () { closeModLab(); } }));
+  put('slotCloseTillPreview', ui.action('close', { mount: 'OLB001-U03', surface: 'dialog', testid: 'close-till-preview', onPress: function () { closeComboTillPreview(); } }));
+  put('slotCloseWork', ui.action('close', { mount: 'OLB001-U04', surface: 'dialog', testid: 'close-work', onPress: function () { closeWork(); } }));
+})();
 render();
 /* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
 var LAB_MODE = new URLSearchParams(location.search).get('mode') === 'combo' ? 'combo' : 'offer';

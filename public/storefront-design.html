@@ -1,4 +1,8 @@
 <!doctype html>
+<!-- OWNS  the paper drawing of the Storefront order: four steps (items, delivery, review, who you are), mock only, no request leaves the page.
+     CALLED BY nothing live: a design reference the screen list names (screen-id.js references).
+     FLOW  load → the cart drawn from app/cart.js → a step shown → paintFoot
+     CARD 29-qa-test-tooling-ux-locale-and-design-system/design-system -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Storefront — design mock</title>
@@ -29,6 +33,7 @@
   phone, so it is the one designed for a phone.
 -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press a role=button span: the rail, Change links, remove marks -->
 <script src="app/catalogue-lines.js"></script>
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
 <script src="engine/money.js"></script>   <!-- ⭐ the one rounder, BEFORE cart.js — it has no copy of its own (2026-09-28) -->
@@ -193,7 +198,7 @@ function stepsHTML() {
     '<div class="steps">' +
     STEPS.map(function (item, index) {
       var cls = index === S.step ? 'stp0 now' : index < S.step ? 'stp0 done' : 'stp0';
-      return '<div class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
+      return '<div class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')" role="button" tabindex="0"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
     }).join('') +
     '</div>'
   );
@@ -244,7 +249,7 @@ function stepReview() {
   return (
     '<div class="rev"><div class="h">Your basket · ' +
     list.length +
-    '<span class="e" onclick="go(0)">Change</span></div>' +
+    '<span class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
     list
       .map(function (item) {
         return (
@@ -269,7 +274,7 @@ function stepReview() {
     '<div class="note">This is a <b>request</b>, not a bill. ' +
     esc(SHOP.name) +
     ' confirms the price and the date before anything is due. Nothing is charged here.</div>' +
-    '<div class="rev"><div class="h">Delivery<span class="e" onclick="go(1)">Change</span></div>' +
+    '<div class="rev"><div class="h">Delivery<span class="e" role="button" tabindex="0" aria-label="Change the delivery" onclick="go(1)">Change</span></div>' +
     '<div class="r"><span class="k">Address</span><span>' +
     (S.addr ? esc(S.addr) : '<span style="color:#b4453f">required</span>') +
     '</span></div>' +
@@ -326,7 +331,7 @@ function ovHTML() {
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">' +
     esc(SHOP.name) +
     '</b>' +
-    '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>' +
+    '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:var(--grey);cursor:pointer">×</button></div>' +
     '<div class="kv"><b>User ID</b><span style="font-family:ui-monospace,Menlo,monospace">' +
     esc(SHOP.bid) +
     '</span></div>' +

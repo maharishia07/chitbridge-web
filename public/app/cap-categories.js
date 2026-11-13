@@ -182,7 +182,7 @@ function cbcatCmp() {
 }
 function cbcatSortSelect() {
   return (
-    '<select class="inp" data-testid="catg-sort" aria-label="' + esc(tx('Sort order')) + '" title="' +
+    '<select data-cbsid="CTG002-S01" class="inp" data-testid="catg-sort" aria-label="' + esc(tx('Sort order')) + '" title="' +
     esc(tx('Sort order — always within each parent, so the tree survives')) +
     '"' +
     ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="cbcatSetSort(this.value)">' +
@@ -400,7 +400,7 @@ function cbcatSeedAsk() {
         /* ⭐ "See these" — Athi, 2026-09-02: *"there is no way of knowing what they are."* The button used to add
          all 26 sight unseen; it now opens the list, which is where the choosing happens. Same testid, because
          the specs address the SET, and which press it takes to finish is not what they are asserting. */
-        '<button type="button" class="badd" data-testid="catg-seed-' +
+        '<button data-cbsid="CTG002-B01" type="button" class="badd" data-testid="catg-seed-' +
         esc(item) +
         '"' +
         ' onclick="cbcatSeedPick(\'' +
@@ -425,7 +425,7 @@ function cbcatSeedAsk() {
       '<div class="bulklist">' +
       opts +
       '</div></div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CTG002-B02" onclick="closeModal()">' +
       tx('Cancel') +
       '</button></div>'
   );
@@ -484,7 +484,7 @@ function cbcatSeedPick(v) {
         '<label class="bulkrow" style="cursor:pointer' +
         (kid ? ';padding-inline-start:30px' : '') +
         '">' +
-        '<input type="checkbox" checked data-seedgid="' +
+        '<input data-cbsid="CTG002-I01" type="checkbox" checked data-seedgid="' +
         esc(item.gid) +
         '"' +
         ' data-testid="catg-seed-node-' +
@@ -539,12 +539,12 @@ function cbcatSeedPick(v) {
        two as the loudest things on a screen whose subject is the list below them. The same pill the set rows
        already use (`.bulkrow button`), so the modal has one button vocabulary rather than two. */
       '<div style="display:flex;gap:7px;align-items:center;margin-bottom:8px">' +
-      '<button type="button" data-testid="catg-seed-all" onclick="cbcatSeedAll(true)"' +
+      '<button data-cbsid="CTG002-B03" type="button" data-testid="catg-seed-all" onclick="cbcatSeedAll(true)"' +
       ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;' +
       'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
       tx('All') +
       '</button>' +
-      '<button type="button" data-testid="catg-seed-none" onclick="cbcatSeedAll(false)"' +
+      '<button data-cbsid="CTG002-B04" type="button" data-testid="catg-seed-none" onclick="cbcatSeedAll(false)"' +
       ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;' +
       'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
       tx('None') +
@@ -562,7 +562,7 @@ function cbcatSeedPick(v) {
       '<label class="fl">' +
       tx('Add your own as well') +
       '</label>' +
-      '<input class="inp" id="cbcat_seed_own" data-testid="catg-seed-own"' +
+      '<input data-cbsid="CTG002-I02" class="inp" id="cbcat_seed_own" data-testid="catg-seed-own"' +
       ' placeholder="' +
       esc(tx('one per line, or separated by commas')) +
       '">' +
@@ -570,10 +570,10 @@ function cbcatSeedPick(v) {
       tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.') +
       '</div></div>' +
       '</div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CTG002-B05" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>',
+      '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>',
     true
   );
   cbcatSeedCount();
@@ -844,7 +844,7 @@ function cbcatRowsHTML() {
     var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
     var ret = c.status === 'retired';
     return (
-      '<div class="row' +
+      '<div data-cbsid="CTG002-C01" class="row' +
       (c.id === CBCAT_UI.sel ? ' sel' : '') +
       '" data-testid="catg-row-' +
       esc(c.id) +
@@ -882,7 +882,7 @@ function cbcatDetailHTML() {
     var f = CBCAT_UI.form || { name: '', note: '' };
     var editing = !!f.id;
     return (
-      '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>' +
+      '<div class="dh"><button data-cbsid="CTG002-B07" class="dback" onclick="cbcatBack()">‹ Categories</button>' +
       /* ⭐ "EDIT", NOT "RENAME". Athi, 2026-09-03: *"You are bringing category organization (sits under) under
          rename … Is it renaming? so do we have a proper name for that?"* The form edits three facts — name, PARENT,
          note — and only one of them is a rename. Moving a category is a different act: every product under it
@@ -914,7 +914,7 @@ function cbcatDetailHTML() {
       '<label class="fl">' +
       tx('Name') +
       '</label>' +
-      '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' +
+      '<input data-cbsid="CTG002-I03" class="inp" id="cbcat_name" data-testid="catg-name" value="' +
       esc(f.name || '') +
       '"' +
       ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">' +
@@ -941,15 +941,15 @@ function cbcatDetailHTML() {
       '<label class="fl">' +
       tx('Note') +
       '</label>' +
-      '<input class="inp" value="' +
+      '<input data-cbsid="CTG002-I04" class="inp" value="' +
       esc(f.note || '') +
       '" placeholder="optional — what belongs here"' +
       ' oninput="cbcatField(\'note\',this.value)">' +
       '<div class="err" id="cbcat_err" style="margin-top:8px"></div>' +
       '</div>' +
-      '<div class="actbar"><button class="pri" data-testid="catg-save" onclick="cbcatSave()">' +
+      '<div class="actbar"><button data-cbsid="CTG002-B08" class="pri" data-testid="catg-save" onclick="cbcatSave()">' +
       (editing ? 'Save' : 'Create') +
-      '</button><button onclick="cbcatCancel()">' +
+      '</button><button data-cbsid="CTG002-B09" onclick="cbcatCancel()">' +
       tx('Cancel') +
       '</button></div>'
     );
@@ -978,7 +978,7 @@ function cbcatDetailHTML() {
     return catgIdsOf((item && (item.item_data || item)) || {}).indexOf(c.id) >= 0;
   });
   return (
-    '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>' +
+    '<div class="dh"><button data-cbsid="CTG002-B10" class="dback" onclick="cbcatBack()">‹ Categories</button>' +
     '<div class="dt">' +
     esc(c.name) +
     (ret ? ' <span class="cbcat-badge ret">retired</span>' : '') +
@@ -1055,7 +1055,7 @@ function cbcatDetailHTML() {
           ? '<div class="cbcat-prow" style="color:var(--grey)">' +
             (n - mine.length) +
             ' more in this category, not loaded on this screen — open ' +
-            '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+            '<span data-cbsid="CTG002-C02" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
             tx('Catalogue') +
             '</span> to search them.</div>'
           : '') +
@@ -1069,10 +1069,10 @@ function cbcatDetailHTML() {
           ' ' +
           (n === 1 ? 'is' : 'are') +
           ' filed here. None of them are loaded on this screen — open ' +
-          '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+          '<span data-cbsid="CTG002-C03" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
           '</span> to see them.</div>'
-        : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+        : '<div class="cbcat-none">Nothing here yet. Attach products from <span data-cbsid="CTG002-C04" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
           '</span> — tick them and press <b>' +
           tx('Categorise') +
@@ -1085,13 +1085,13 @@ function cbcatDetailHTML() {
     '</div>' +
     '<div class="actbar">' +
     (ret
-      ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
-      : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' +
+      ? '<button data-cbsid="CTG002-B11" class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
+      : '<button data-cbsid="CTG002-B12" class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' +
         esc(c.id) +
         '\')">' +
         tx('Edit') +
         '</button>' +
-        '<button data-testid="catg-retire" onclick="cbcatRetire(\'' +
+        '<button data-cbsid="CTG002-B13" data-testid="catg-retire" onclick="cbcatRetire(\'' +
         esc(c.id) +
         '\')">' +
         tx('Retire') +
@@ -1195,7 +1195,7 @@ function cbcatEditTabsHTML(cid) {
   }).length;
   var tab = function (key, label) {
     return (
-      '<button type="button" class="' +
+      '<button data-cbsid="CTG002-B14" type="button" class="' +
       (k === key ? 'on' : '') +
       '" data-testid="catg-etab-' +
       key +
@@ -1255,7 +1255,7 @@ function cbcatProductTicksHTML(cid) {
   var ctx = cbcatProdCtx(cid);
   return (
     '<div class="catlist" data-testid="catg-prod-pane" style="border:1px solid var(--line);border-radius:10px;overflow:hidden">' +
-    '<div style="padding:8px 10px;border-bottom:1px solid var(--line)"><input class="inp" data-testid="catg-prod-search" placeholder="' +
+    '<div style="padding:8px 10px;border-bottom:1px solid var(--line)"><input data-cbsid="CTG002-I05" class="inp" data-testid="catg-prod-search" placeholder="' +
     esc(tx('Search name, code, offer, tax')) +
     '" value="' +
     esc(CBCAT_UI.pq || '') +
@@ -1326,7 +1326,7 @@ function cbcatOfferTicksHTML(cid) {
       tx('Offers') +
       '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' +
       tx('None live. ') +
-      '<span onclick="goCatsetSec(\'offers\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+      '<span data-cbsid="CTG002-C05" onclick="goCatsetSec(\'offers\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
       tx('Author one') +
       '</span> ' +
       tx('in Catalogue setup, then attach it here.') +
@@ -1351,7 +1351,7 @@ function cbcatOfferTicksHTML(cid) {
               }) || ''
             : '';
         return (
-          '<button type="button" class="ctcatg' +
+          '<button data-cbsid="CTG002-B15" type="button" class="ctcatg' +
           (on ? ' on' : '') +
           '" data-testid="catg-offer-' +
           esc(item.id) +
@@ -1582,7 +1582,7 @@ function cbcatStatsHTML() {
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     (CBCAT_UI.counts && CBCAT_UI.counts.none
-      ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--warn-3);cursor:pointer">' +
+      ? '<button data-cbsid="CTG002-B16" data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--warn-3);cursor:pointer">' +
         CBCAT_UI.counts.none +
         ' uncategorised <span class=arw>→</span></button>'
       : '')
@@ -1684,7 +1684,7 @@ function cbcatParentPickHTML(f) {
   if (!opts.length)
     return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
   return (
-    '<select class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">' +
+    '<select data-cbsid="CTG002-S02" class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">' +
     '<option value="">— top level —</option>' +
     opts
       .map(function (item) {
@@ -1723,11 +1723,11 @@ function categoriesScreen() {
     tx('🏷️ Categories') +
     '</span>' +
     '</div>' +
-    '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>' +
-    '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">' +
+    '<button data-cbsid="CTG002-B17" class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>' +
+    '<button data-cbsid="CTG002-B18" class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">' +
     tx('📐 Start from a standard set') +
     '</button>' +
-    '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' +
+    '<div class="srch" style="margin-top:8px">🔍 <input data-cbsid="CTG002-I06" data-testid="catg-search" placeholder="Search categories" value="' +
     esc(CBCAT_UI.q || '') +
     '" oninput="cbcatSearch(this.value)"></div>' +
     /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is

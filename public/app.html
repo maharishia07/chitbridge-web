@@ -1458,6 +1458,8 @@ img.attImg{object-fit:cover;display:block}
 .colcog:hover{text-decoration:underline}
 .listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
 .listend button{margin-inline-end:8px}
+/* the list unit's `.cbl button{color:inherit}` (list-ctl.js, id-strength) turned the Load more button's white ink grey on blue, 1.44:1 */
+.cbl:not(#_) .listend .composebtn{color:var(--on-accent)}
 .mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}
 .mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
 .mv-btn:disabled{opacity:.35;cursor:default}
@@ -1720,6 +1722,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — the Ledger's statement rows and the Pay outcome mount it -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script>
@@ -1797,8 +1800,6 @@ const EP = {
   msgCount: { m: 'GET', p: '/api/folders/messages?count=1', ok: 'y' },
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist: { m: 'POST', p: '/api/assist', ok: '?' }, // backend proxies to the model (no-oversell prompt + library grounding)
-  assistGap: { m: 'POST', p: '/api/assist/gap', ok: 'y' }, // capture an unanswered question as a draft (learning feedback)
-  assistGaps: { m: 'GET', p: '/api/assist/gaps', ok: 'y' }, // review queue — captured gaps awaiting an answer
   assistResolve: { m: 'POST', p: '/api/assist/resolve', ok: 'y' }, // approve (with answer) / reject a gap
   assistStandards: { m: 'GET', p: '/api/assist/standards', ok: 'y' }, // compliance conform-check: standards available to check against
   assistConform: { m: 'POST', p: '/api/assist/conform', ok: 'y' }, // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
@@ -1890,7 +1891,7 @@ const EP = {
   supplyList: { m: 'GET', p: '/api/supplies', ok: 'y' },
   supplyAdd: { m: 'POST', p: '/api/supplies', ok: '✓' },
   supplyBuy: { m: 'POST', p: '/api/supplies/purchase', ok: '✓', idem: 'attempt' },
-  supplyUse: { m: 'POST', p: '/api/supplies/:id/issue', ok: '✓' },
+  supplyUse: { m: 'POST', p: '/api/supplies/:id/issue', ok: '✓', idem: 'attempt' },
   /* ⭐ ADOPT — a supplier delivery becoming YOUR catalogue. Read offers; accept only what is named. */
   adoptRead: { m: 'GET', p: '/api/adopt/:id', ok: 'y' },
   adoptAccept: { m: 'POST', p: '/api/adopt/:id', ok: '✓' },
@@ -1931,8 +1932,6 @@ const EP = {
   getSettings: { m: 'GET', p: '/api/actors/settings', ok: '✓' },
   saveSettings: { m: 'PUT', p: '/api/actors/settings', ok: '✓' },
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
-  connList: { m: 'GET', p: '/api/connections/list', ok: '✓' },
-  connPending: { m: 'GET', p: '/api/connections/pending', ok: '✓' },
   connRequest: { m: 'POST', p: '/api/connections/request', ok: '✓' }, // {to_entity_id}
   connRespond: { m: 'PUT', p: '/api/connections/:id/respond', ok: '✓' }, // {action:accept|reject}
   supCatalogue: { m: 'GET', p: '/api/relationships/suppliers/:sid/catalogue', ok: '✓' },
@@ -2458,7 +2457,7 @@ function openBlueprint(id) {
   if (typeof modal !== 'function') return;
   modal(
     blueprintCardHTML(id) +
-      '<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;margin-top:14px"><button data-cbsid="CMP005" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     false
@@ -3429,7 +3428,7 @@ function renderAssist(ans) {
     ? `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:var(--fs-1);color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`
     : '';
   node.innerHTML = `<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre ? 'fit check' : 'help'}</span><button data-cbsid="CMP005" data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre ? 'Tell me your business and I will be honest about whether this fits.' : 'Describe what you are trying to do.'}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans || ''}</div>
@@ -3768,7 +3767,7 @@ function renderMsgConsole() {
     `<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter === k ? 'var(--accent)' : 'var(--card)'};color:${_logFilter === k ? 'var(--on-accent)' : 'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML = `<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
-    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all', 'All')}${chip('info', 'Info')}${chip('warn', 'Warning')}${chip('error', 'Critical')}${chip('debug', 'Requests')}<button data-cbsid="CMP014" onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
     <div style="max-height:52vh;overflow:auto">${rows.length ? rows.map((e) => `<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level] || 'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join('') : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
@@ -5466,7 +5465,7 @@ function themePaletteHTML() {
       '<div style="background:var(--paper);color:var(--on-bg);padding:6px">' +
       '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:5px;padding:5px 6px">' +
       '<div style="display:flex;align-items:center;gap:4px">' +
-      '<span style="width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto"></span>' +
+      '<span style="color:var(--on-accent);width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto"></span>' +
       '<span style="height:4px;border-radius:2px;background:var(--ink);opacity:.7;flex:1"></span></div>' +
       '<div style="display:flex;gap:3px;margin-top:5px">' +
       '<span style="font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px">Aa</span>' +
@@ -5529,9 +5528,9 @@ function themePaletteHTML() {
       (on ? 'var(--blue)' : 'var(--line)') +
       '">' +
       /* the swatch: page, card, rule and one accent — enough to judge the theme from */
-      '<span style="flex:0 0 auto;width:30px;height:30px;border-radius:6px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
-      '<span style="width:16px;height:16px;border-radius:3px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
-      '<span style="width:8px;height:2px;border-radius:1px;background:var(--blue)"></span></span></span>' +
+      '<span style="color:var(--on-bg);flex:0 0 auto;width:30px;height:30px;border-radius:6px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
+      '<span style="color:var(--on-card);width:16px;height:16px;border-radius:3px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center">' +
+      '<span style="color:var(--on-accent);width:8px;height:2px;border-radius:1px;background:var(--blue)"></span></span></span>' +
       '<span style="min-width:0;flex:1">' +
       '<span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
       '<b style="font-size:var(--fs-2);color:var(--on-card)">' +
@@ -6099,7 +6098,7 @@ const CAP_GATED = { connectors: 'connector', disputes: 'dispute' };
  * a fix, and nothing in the build would have said so.
  */
 const CB_BUILD =
-  '2026-11-06a'; /* ⚠️ bumped 2026-11-06 (a: RAIL-90 register-off message in cap-worklist.js and every register caller in cap-register.js, one registerOffWords); 2026-10-25 (f: readability ratchet pass 2 - named steps out of grown functions in cap-admin.js and core.js (bizCurrent, cbIdemKey, cbPushRefreshScreen), no behaviour change; e: readability ratchet refactor, no behaviour change; d: critic F8-F12 — the chit sheet mounts CBQuotes, one chitIsQuote, one status word table, fmtMoney; c: the cross-installation confirm names the cart's money; b: cap-quotes.js reaches app.html's EP by name; a: crossing walk web round - app/cap-quotes.js born (RAIL-117 rounds), core.js idem:true, rail-thread.js, chit-sheet.js); 2026-10-24 (u: UX-102 KYB tabs have an address, UX-103 KYB line; t: UX-63 KYB and network design follow the theme; s: UX-98/99/100 developer words and workshop sentences out of customer screens; r: UX-1 screen codes only for a tester (?ids=1), UX-3 the +n badge says what it counts; q: UX-117 Offer Lab shelf above the kinds, phone tools in one menu; p: UX-116 sheet closes on a view change, kural plain band, money box sized to the amount; o: UX-118 - accounts-shell.js cbIsRawId (MOVED from cap-crm-record.js), cap-books.js bkBillNo, cap-bank.js, cap-crm-record.js crmWho: a raw id never stands where a bill number or a person belongs; n: UX-115 - accounts-shell.js: CBConfirm ignores a backdrop tap for its first 600 ms, so a double tap on Record leaves the question up; m: R106 - cap-books.js: a Waiting row whose bill is above the count offers Accept at the count (asks first, the counted ₹) and Reject; chit-sheet.js: the sheet's Accept names the counted figure, open(id, { act }); l: F2 finance - cap-finance*.js + cap-books.js read ONE due figure (due_minor, netOpen); k: CAT-212 - cap-catalogue.js: the item form paints no free box for a rate column (gst_rate, tax_slab, tax_slab_name, cess_rate), tax-slab-ui.js names them once; h: F5 W1b - cap-catalogue.js: the item form's category chips (ctCategoryChips MOVED from app.html), the category sheet's rate picker with a confirm, a 4/6/8-digit code saved to hsn, cbRateMay reads the server's may_set_rate; cap-catsetup.js: the catalogue default is a draft, Save asks first; tax-slab-ui.js: the exempt row's face; g: R112 - cap-employees.js: the owner sees a worker's first code once, for 30 minutes; f: F5 W1a - app/tax-slab-ui.js born (cbSlabOptionsHTML + cbcatSlabPickHTML MOVED there, the rate chip and the ask-once menu), cap-catalogue.js: the item sheet's GST row sets a rate through the one product writer, cap-categories.js reads the moved picker; e: R102b - cap-books.js: Record a payment asks first on every door (Pay, Receive, Bank rec), naming the party, the amount and the mode; d: R121b - cap-admin.js: the workshop's Business rules card is the same draft-and-Save as CB Settings › Policy, setPolFlag's write on change is gone; c: R102 - chit-sheet.js: accepting a bill asks first, naming the supplier, the bill and the amount; the history says "Accepted by <who>"; b: R121 - cap-settings.js: a policy row is a draft, Save asks first; a: R110 - cap-crm-groups.js: an offer send asks first, naming the words, the channel and how many); 2026-10-18 (m: MAINT2 — the Build preview strip shows only on a local host or for a person the server marks (dev_tools); cap-move-in.js shows the server's sentence for MOVE_IN_COUNTRY); 2026-10-15 (a: W2-SHOP — cap-mis.js misReadAt is the ONE MIS read stamp ("live · 10:32"); cap-admin.js's workshop MIS paints it too, so one-cart.cjs is green again); 2026-10-14 (f: T3-P2-CRM — cap-crm-groups.js final (the New-group button's own test id, the send outcome in three facts); e: T3-CATALOGUE — app/cap-catalogue.js born: the catalogue primitives MOVED out of app.html (CB_CATALOGUE_EP · cbAmount · prodId/pData · the declared columns · the import preflight painters, now taking a workbook), core.js holds CB_DEFS_EP, list-ctl.js shows Filters ▾ on a server-paged list; d: INT6b — T2-PAGING's list-ctl.js CBList.every + cap-testing.js paging, with T3 below; c: T3 — cap-dispute.js: the dispute room hands CBThread disputeByline; b: T3-DISPUTES-ASSIST — cap-dispute.js carries CBDispute (tasks.html › Disputes), cap-readiness.js loses aiDraft to accounts-shell.js CB_ASSIST_EP, chit-sheet.js gives a page's dispute capability a place; a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+  '2026-11-13c'; /* ⚠️ bumped 2026-11-13 (c: web popups 1 - the 12 CRM popups open through ui.dialog, cache-buster for cap-crm*.js and ui.js; b: CON-161 - cap-connector.js: the generated agent's HTTP error is joined from parts, it no longer prints its own source; a: REL-24 - the stamp had stayed at 2026-11-06a while 46 cap-*.js files changed on 11-07..11-12, so cached copies stayed; cache-buster only, no code change); 2026-11-06 (a: RAIL-90 register-off message in cap-worklist.js and every register caller in cap-register.js, one registerOffWords); 2026-10-25 (f: readability ratchet pass 2 - named steps out of grown functions in cap-admin.js and core.js (bizCurrent, cbIdemKey, cbPushRefreshScreen), no behaviour change; e: readability ratchet refactor, no behaviour change; d: critic F8-F12 — the chit sheet mounts CBQuotes, one chitIsQuote, one status word table, fmtMoney; c: the cross-installation confirm names the cart's money; b: cap-quotes.js reaches app.html's EP by name; a: crossing walk web round - app/cap-quotes.js born (RAIL-117 rounds), core.js idem:true, rail-thread.js, chit-sheet.js); 2026-10-24 (u: UX-102 KYB tabs have an address, UX-103 KYB line; t: UX-63 KYB and network design follow the theme; s: UX-98/99/100 developer words and workshop sentences out of customer screens; r: UX-1 screen codes only for a tester (?ids=1), UX-3 the +n badge says what it counts; q: UX-117 Offer Lab shelf above the kinds, phone tools in one menu; p: UX-116 sheet closes on a view change, kural plain band, money box sized to the amount; o: UX-118 - accounts-shell.js cbIsRawId (MOVED from cap-crm-record.js), cap-books.js bkBillNo, cap-bank.js, cap-crm-record.js crmWho: a raw id never stands where a bill number or a person belongs; n: UX-115 - accounts-shell.js: CBConfirm ignores a backdrop tap for its first 600 ms, so a double tap on Record leaves the question up; m: R106 - cap-books.js: a Waiting row whose bill is above the count offers Accept at the count (asks first, the counted ₹) and Reject; chit-sheet.js: the sheet's Accept names the counted figure, open(id, { act }); l: F2 finance - cap-finance*.js + cap-books.js read ONE due figure (due_minor, netOpen); k: CAT-212 - cap-catalogue.js: the item form paints no free box for a rate column (gst_rate, tax_slab, tax_slab_name, cess_rate), tax-slab-ui.js names them once; h: F5 W1b - cap-catalogue.js: the item form's category chips (ctCategoryChips MOVED from app.html), the category sheet's rate picker with a confirm, a 4/6/8-digit code saved to hsn, cbRateMay reads the server's may_set_rate; cap-catsetup.js: the catalogue default is a draft, Save asks first; tax-slab-ui.js: the exempt row's face; g: R112 - cap-employees.js: the owner sees a worker's first code once, for 30 minutes; f: F5 W1a - app/tax-slab-ui.js born (cbSlabOptionsHTML + cbcatSlabPickHTML MOVED there, the rate chip and the ask-once menu), cap-catalogue.js: the item sheet's GST row sets a rate through the one product writer, cap-categories.js reads the moved picker; e: R102b - cap-books.js: Record a payment asks first on every door (Pay, Receive, Bank rec), naming the party, the amount and the mode; d: R121b - cap-admin.js: the workshop's Business rules card is the same draft-and-Save as CB Settings › Policy, setPolFlag's write on change is gone; c: R102 - chit-sheet.js: accepting a bill asks first, naming the supplier, the bill and the amount; the history says "Accepted by <who>"; b: R121 - cap-settings.js: a policy row is a draft, Save asks first; a: R110 - cap-crm-groups.js: an offer send asks first, naming the words, the channel and how many); 2026-10-18 (m: MAINT2 — the Build preview strip shows only on a local host or for a person the server marks (dev_tools); cap-move-in.js shows the server's sentence for MOVE_IN_COUNTRY); 2026-10-15 (a: W2-SHOP — cap-mis.js misReadAt is the ONE MIS read stamp ("live · 10:32"); cap-admin.js's workshop MIS paints it too, so one-cart.cjs is green again); 2026-10-14 (f: T3-P2-CRM — cap-crm-groups.js final (the New-group button's own test id, the send outcome in three facts); e: T3-CATALOGUE — app/cap-catalogue.js born: the catalogue primitives MOVED out of app.html (CB_CATALOGUE_EP · cbAmount · prodId/pData · the declared columns · the import preflight painters, now taking a workbook), core.js holds CB_DEFS_EP, list-ctl.js shows Filters ▾ on a server-paged list; d: INT6b — T2-PAGING's list-ctl.js CBList.every + cap-testing.js paging, with T3 below; c: T3 — cap-dispute.js: the dispute room hands CBThread disputeByline; b: T3-DISPUTES-ASSIST — cap-dispute.js carries CBDispute (tasks.html › Disputes), cap-readiness.js loses aiDraft to accounts-shell.js CB_ASSIST_EP, chit-sheet.js gives a page's dispute capability a place; a: STD1 — cap-books.js reads each Waiting row's todo/name as data and /health's one count; chit-sheet.js takes the bill class, the books' wait and Accept's may/why from the chit read); 2026-10-13 (a: CX4 — cap-iddocs.js draws only the documents the server lists for the shop's country; helpers.js packHasHsn: the HSN words, switch and Rule 46 note only under India's pack; myCur reads the pack's money); 2026-10-08 (a: M25 + M36 — cap-books.js bkOwes (balances in words, never a minus) and bkMoneyInput (the ONE money input: symbol · decimals · minor units) used by cap-entry.js, cap-period.js, cap-bank.js; accounts.html + crm.html lose the width cap); 2026-10-07 (b: core.js SIBS keeps "project" (api #40) so check:envelope is green again; M64 — cap-books.js: Record a payment, Lock a month and Close for good go through CBAction (app/accounts-shell.js) — one press one write, Close for good asks first, the outcome said beside the control; bkOnce is now CBAction.once; a: N03 — cap-chit2.js shows the "made with X@v — page not installed" note; app/page.js + app/pages.json, the named, versioned detail pages); 2026-10-04 (a:public/till.html — Back never leaves the phone till: a popstate on the product sheet, Today's bills or maintenance closes that sheet instead of leaving the page, and a bill in hand asks "Leave the counter?" first (T66); the receipt carries Share (navigator.share, with WhatsApp/SMS/Copy where that is missing) and reopens afterwards as "Last bill C…  ›" on the bill area, which also now says "Paid — start the next bill" instead of staying blank (T67); Today's bills reads "8 pm – 9 pm · 2 bills · ₹460" and "Both bills reached the shop", never "(s)" (T69) — no cap-*.js touched, so this bump is the change log kept current, not a cache-buster); 2026-10-03 (p: standards.html + cap-standards.js + cap-admin.js + index.html — the Standards page (matrix · list · two sheets), the register widened with area · kind · applies-in · plain words · what is missing, 17 additions, Settings › Standards keeps what you follow and the door, the Standards door on the index page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) · earlier the same day (o: cap-books.js + accounts.html + kural.js + cap-crm.js — the Ledgers page rebuilt to the designer's handoff (two panes, CBList sized by its pane, one figures line, Dr/Cr everywhere, Reverse on an opened line) and the kural footer CBKural on every CB page; n: engines/versions.json re-vendored from the API (bank-recon 1.18.0); m: cap-crm.js + cap-crm-record.js + cap-entry.js - CB CRM reads the API's real list, record, timeline and follow-ups, Log sends the kinds the API takes, Remove and Add walk-in use the CRM's own routes, Reverse sends its reason; l: cap-crm-record.js + crm.html — the record and its timeline read the API's real shapes (a record that cannot be read ends in Try again, never a spinner), the Supplier chip reads in Dark; k: merge of main into this branch; j: Month & year end pages + Bank (cap-period.js, cap-bank.js; cap-entry.js takes a suggested entry; the Bank page tells the shop, not the engine's builders, when a bank format is unconfirmed); j: cap-crm.js + crm.html — CRM reads the API's roles object (the live list failed); a chosen theme reaches CB CRM's top bar and menu; i: the To do home + the Ledgers quick fixes, cap-books.js + cap-folders.js + accounts.html; g: merge of main into this branch; d: INTEGRATION of ＋ Entry on the Day book (cap-entry.js: previews one at a time, field labels, the server's real event and preview shapes; cap-books.js: ＋ Entry slot and Reverse) with the avatar menu fitting short windows (avatar.js); f: tax + tax-packs 1.20.0 adopted (RCM), the counter re-vendored; e: accounts.html + list-ctl.js — a chosen theme reaches CB Accounts' top bar and side menu; list cells break only words too long for the line; c: INTEGRATION of the three drafts #30 CBList + #32 CBAvatar + #31 CB CRM, tested together once, all harnesses green (crm.html mounts CBAvatar in its title row); CRM part, as shipped: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; b: CBAvatar — ONE avatar on every page, public/app/avatar.js, the frozen simple menu, themes from engines screen v1.15.0 (16, with Terminal), Bold text; app.html's THEMES / FONTS / TEXT_SIZES / FS_BASE and the appearance code MOVED into it; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -6536,7 +6535,7 @@ function _renderApp() {
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
-  avatarMount(role, isEntityUser); /* the avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
+  avatarMount(role, isEntityUser); UI._modalOpener = null; /* the rebuilt #modalhost is empty, so a remembered opener is stale (rememberModalOpener). The avatar is CBAvatar (public/app/avatar.js) — mounted again on every paint; its open state survives */
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
   /**
    * ⚠️ BOTH STAMPS RUN HERE, AND THE DETAIL ONE ALSO RUNS AFTER THE PANE PAINTS. An observer over the whole app
@@ -7490,7 +7489,7 @@ function selfBillOpen() {
       '</div>' +
       '<div id="sb_foot" style="margin-top:12px"></div>' +
       '</div>' +
-      '<div class="mfoot"><button data-testid="sb-cancel" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" data-testid="sb-cancel" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="pri" id="sb_go" data-testid="sb-record" onclick="selfBillSend(this)"></button></div>',
@@ -7604,7 +7603,7 @@ function selfBillFoot() {
   if (el) {
     el.innerHTML =
       /* ONE LINE, ONE SOURCE: the cart prints its own money block (a self-bill sees its own offers and rates) — CBCart.reviewHTML */
-      '<div style="border:1px solid var(--line);border-radius:9px;background:var(--paper)">' +
+      '<div style="color:var(--on-bg);border:1px solid var(--line);border-radius:9px;background:var(--paper)">' +
       (c ? c.reviewHTML({ totalTestid: 'sb-total', taxTestid: 'sb-tax' }) : '') +
       '</div>' +
       '<div style="margin-top:9px"><input class="inp" data-testid="sb-subject" value="' +
@@ -8383,7 +8382,7 @@ function ccStepItems() {
       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">From <b>${esc(UI._supplier.name)}</b>&rsquo;s catalogue</div>`
       : '') +
     `<div id="cc_catpick">${ccCatPickHTML()}</div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" aria-label="Qty" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button data-cbsid="CMP007" class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines = `<div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:end;font-weight:700;font-size:var(--fs-2);margin-top:6px"></div>`;
@@ -8406,7 +8405,7 @@ function ccStepTo() {
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">${tx('CC')}</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
-       <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
+       <button data-cbsid="CMP007" class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
      </div>
      <div id="cc_sugg" class="ccsugg"></div>
      <button class="composebtn" style="margin-top:6px" data-testid="chit-add-self" onclick="ccAddSelf()">+ Self (own record)</button>
@@ -8727,7 +8726,7 @@ function ccRenderRcpts() {
             if (UI._supplier) {
               return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:var(--fs-2);font-weight:600;color:var(--blue)">🏭 ${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · ' + esc(item.bridge) + '</span>' : ''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`;
             }
-            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
+            return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${index})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${item.role.toUpperCase()}</span>${esc(item.name)}${item.bridge ? '<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · ' + esc(item.bridge) + '</span>' : ''}${item.self ? '<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>' : ''}<span data-cbsid="CMP008" onclick="ccDelRcpt(${index})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`;
           })
           .join('')
       : `<div style="font-size:var(--fs-2);color:var(--grey)">No recipients yet — add To / CC / For above.</div>`;
@@ -9111,7 +9110,7 @@ function ccRenderItems() {
     ? CC.items
         .map(
           (item, index) =>
-            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
+            `<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(item.particulars)}${item._auto_offer ? ' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">' + esc(tx('free')) + (item._auto_label ? ' · ' + esc(item._auto_label) : '') + '</span>' : ''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${item.qty}" oninput="ccQty(${index},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(item.price)}</span><span id="cc_lt_${index}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(item))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${index},this.files);this.value=''"></label><button data-cbsid="CMP008" class="composebtn" onclick="ccDelItem(${index})">✕</button></div><div id="cc_itf_${index}" style="margin:1px 0 7px 0">${ccItemChips(index)}</div>`
         )
         .join('')
     : `<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
@@ -9127,7 +9126,7 @@ function ccItemChips(i) {
         attIcon(cbAttachType(item.type, item.name)) +
         ' ' +
         esc(item.name.length > 20 ? item.name.slice(0, 20) + '…' : item.name) +
-        ' <span onclick="ccDelItemFile(' +
+        ' <span data-cbsid="CMP008" onclick="ccDelItemFile(' +
         i +
         ',' +
         index +
@@ -9637,7 +9636,7 @@ function ccRenderFiles() {
             attIcon(cbAttachType(item.type, item.name)) +
             ' ' +
             esc(item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name) +
-            ' <span onclick="ccDelFile(' +
+            ' <span data-cbsid="CMP008" onclick="ccDelFile(' +
             index +
             ')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'
           );
@@ -9799,7 +9798,7 @@ function addActorModal() {
        }
      )}</div>
      <div class="err" id="ac_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
 }
 async function submitActor() {
   const name = val('ac_name'),
@@ -9860,13 +9859,13 @@ function actorInviteModal(head, name, login, otp, r) {
        }
      )}</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
 }
 // In-app confirm (replaces browser confirm()). bodyHtml is raw HTML — esc() dynamic parts in the caller.
 function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${bodyHtml}</div></div>
-   <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">${tx('Cancel')}</button><button class="${danger ? 'danger' : 'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel || 'Confirm')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" data-testid="confirm-cancel" onclick="closeModal()">${tx('Cancel')}</button><button class="${danger ? 'danger' : 'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel || 'Confirm')}</button></div>`);
   UI._modalDismiss = onCancel || null; // fires on Cancel, Escape or the backdrop — see closeModal
   const node = document.getElementById('_cfmok');
   if (node)
@@ -10089,7 +10088,7 @@ function supportOpen() {
         })
         .join('') +
       '</div>' +
-      '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" data-testid="support-cancel" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button></div>'
   );
@@ -10280,7 +10279,7 @@ function supportForm(id) {
       '</div>' +
       '</div>' +
       /* ⭐ BACK, not Cancel, on a form reached from the hub — the way out of a wrong box is the other boxes. */
-      '<div class="mfoot"><button data-testid="support-back" onclick="supportOpen()">' +
+      '<div class="mfoot"><button data-cbsid="CMP006" data-testid="support-back" onclick="supportOpen()">' +
       esc(tx('Back')) +
       '</button><button class="pri" data-testid="support-send" onclick="supportSend()">' +
       esc(tx(b.send)) +
@@ -10494,7 +10493,7 @@ function promptAsk(title, opts, onOk, extra) {
             maxlength="${Number(opts.maxlength) || 120}" autocomplete="off">
      ${hint ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>` : ''}
    </div>
-   <div class="mfoot"><button data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel ? `<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>` : ''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP003" data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel ? `<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>` : ''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
   UI._modalDismiss = extra.onCancel || null; // Cancel, Escape or the backdrop — see closeModal
   const node = document.getElementById('_pmpt'),
     b = document.getElementById('_pmptok');
@@ -10551,7 +10550,7 @@ function actorCleanupModal(action, name, parts) {
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${esc(name || 'They')} can no longer sign in.${action === 'deactivate' ? ' Reactivate any time to restore access — note the bindings below are <b>not</b> auto-restored.' : ''}</div>
      <div style="${_CARD};margin-top:9px"><div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:700;margin-bottom:4px">Bindings cleaned</div>${rows}</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
+   <div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
   if (typeof announce === 'function')
     announce((name || 'Co-assist') + ' ' + (action === 'remove' ? 'removed' : 'deactivated') + (parts && parts.length ? '. ' + parts.join('. ') : '.'));
 }
@@ -10897,7 +10896,7 @@ function showHelp(key) {
       '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink)">' +
       h.b +
       '</div></div>' +
-      '<div class="mfoot"><button class="pri" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" class="pri" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>'
   );
@@ -10962,7 +10961,7 @@ function suppliersScreen() {
       ${
         UI.supFind || UI.supReq
           ? ''
-          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" onfocus="supWhereLoad()" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
+          : `${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind() === 'own_use' ? tx('Add — shop name, or their User ID') : tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" onfocus="supWhereLoad()" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button data-cbsid="CMP007" class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
       <div id="sp_where_box">${supWhereHTML()}</div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
@@ -11279,7 +11278,7 @@ function supInfoCardHTML(x) {
     "','" +
     String(supName(x)).replace(/[\\']/g, '') +
     '\')">Passport <span class=arw>→</span></button>' +
-    '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
+    '<button data-cbsid="CMP008" data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\'' +
     x.supplier_list_id +
     '\')" style="margin-inline-start:auto;color:var(--disp)">' +
     tx('Remove') +
@@ -11314,7 +11313,7 @@ function supOwnRowHTML() {
   return `<div class="row${on}" data-testid="sup-row-own" onclick="selectSupplier('own')">
     <span style="width:18px;text-align:center">🏠</span>
     <div class="main2"><div class="l1"><span class="code">${esc(tx('Our own stock'))}</span>
-      <span class="optchip" style="background:var(--ok-tint,var(--card));color:var(--ok-3);border-color:var(--ok-3)">${esc(tx('ours'))}</span></div>
+      <span class="optchip on" style="border-color:var(--ok-2)">${esc(tx('ours'))}</span></div>
     <div class="l2">${esc(n ? txf('{n} items in your catalogue', { n: n }) : tx('your catalogue is empty'))}</div></div></div>`;
 }
 /** what the Suppliers rail says when the shop has NO supplier of this kind (a search that matches nothing is the unit's own state) */
@@ -11985,7 +11984,7 @@ function platformScreen() {
     '<div id="pl_stats" style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3)">' +
     platStatsHTML() +
     '</div>' +
-    '<input class="inp" id="pl_q" data-testid="plat-search" placeholder="' +
+    '<input data-cbsid="BUS013-I01" class="inp" id="pl_q" data-testid="plat-search" placeholder="' +
     tx('Search name, handle or bridge id') +
     '" value="' +
     esc(ap.q || '') +
@@ -12013,19 +12012,19 @@ function platformScreen() {
          computed from the ltree, not stored, so the server names the values in controls.positions. */
     /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
          control rather than more values in the kind list. */
-    '<select ' +
+    '<select data-cbsid="BUS013-S01" ' +
     sel +
     ' id="pl_vis" data-testid="plat-visibility" aria-label="' + esc(tx('Catalogue visibility')) + '" onchange="loadPlatform()">' +
     opt('', tx('any catalogue'), ap.visibility) +
     (f.visibility || []).map((item) => opt(item, tx(item), ap.visibility)).join('') +
     '</select>' +
-    '<select ' +
+    '<select data-cbsid="BUS013-S02" ' +
     sel +
     ' id="pl_vert" data-testid="plat-vertical" aria-label="' + esc(tx('Vertical')) + '" onchange="loadPlatform()">' +
     opt('', tx('any vertical'), ap.vertical) +
     (f.vertical || []).map((item) => opt(item, item, ap.vertical)).join('') +
     '</select>' +
-    '<select ' +
+    '<select data-cbsid="BUS013-S03" ' +
     sel +
     ' id="pl_plan" data-testid="plat-plan" aria-label="' + esc(tx('Plan')) + '" onchange="loadPlatform()">' +
     opt('', tx('any plan'), ap.plan) +
@@ -12039,7 +12038,7 @@ function platformScreen() {
      * and it has been half-built since. Found by e2e/list-controls.cjs on its first run, which is the entire
      * argument for that file. [[feedback-silence-is-the-bug]]
      */
-    '<select ' +
+    '<select data-cbsid="BUS013-S04" ' +
     sel +
     ' id="pl_sort" data-testid="plat-sort" aria-label="' + esc(tx('Sort order')) + '" onchange="UI.platSort=null;loadPlatform()">' +
     '<option value="">' +
@@ -13558,7 +13557,7 @@ function platSummaryHTML() {
       ? '<div class="sec">' +
         tx('Not in this report') +
         '</div>' +
-        '<div style="border:1px solid var(--warn-tint);background:var(--warn-tint);border-radius:var(--r-lg);padding:11px 13px;font-size:var(--fs-1);line-height:1.55">' +
+        '<div style="color:var(--warn-3);border:1px solid var(--warn-tint);background:var(--warn-tint);border-radius:var(--r-lg);padding:11px 13px;font-size:var(--fs-1);line-height:1.55">' +
         '<b style="color:var(--warn-2)">' +
         tx('Catalogue size, chit volume and governance stamps are absent, not nil.') +
         '</b>' +
@@ -14360,7 +14359,7 @@ function custNamedGroupsHTML(c) {
     tx('+ new group') +
     '" style="width:130px;padding:3px 6px" onkeydown="if(event.key===\'Enter\')custAddNamedGroup(\'' +
     esc(c.customer_list_id) +
-    '\')"><button class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
+    '\')"><button data-cbsid="CMP007" class="btn2" data-testid="cust-ngroup-add" onclick="custAddNamedGroup(\'' +
     esc(c.customer_list_id) +
     '\')">' +
     tx('Add') +
@@ -15110,9 +15109,9 @@ function supEdit(id) {
       (x.preferred ? 'Preferred' : 'Not preferred') +
       '</button></div>' +
       '<div class="err" id="sp_ederr" style="margin-top:8px"></div></div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\'' +
+      '</button><button data-cbsid="CMP001" class="pri" data-testid="sup-save" onclick="saveSupplier(\'' +
       id +
       '\')">' +
       tx('Save') +
@@ -15522,7 +15521,7 @@ async function ppAcceptFoot(handle, label) {
     : '';
   node.innerHTML =
     was +
-    '<button onclick="closeModal()">' +
+    '<button data-cbsid="CMP005" onclick="closeModal()">' +
     tx('Close') +
     '</button>' +
     '<button class="pri" data-testid="sup-accept" onclick="ppAccept(' +
@@ -15552,7 +15551,7 @@ async function viewSupplierPassport(bridge, name) {
       esc(who) +
       ' — trade readiness</div><div class="mbody" id="pp_body">' +
       '<div class="loadwrap"><span class="spin"></span> reading their passport…</div></div>' +
-      '<div class="mfoot" id="pp_foot"><button onclick="closeModal()">' +
+      '<div class="mfoot" id="pp_foot"><button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -16217,17 +16216,17 @@ async function composeFromSupplier(id) {
 function catalogueScreen() {
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
-      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ || '')}" oninput="UI.prodQ=this.value;if(UI.prodTruncated)prodSearchServer();paintProdList()"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button data-cbsid="CAT001-B01" onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <button data-cbsid="CAT001-B02" class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
+      <div class="srch" style="margin-top:8px">🔍 <input data-cbsid="CAT001-I01" data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ || '')}" oninput="UI.prodQ=this.value;if(UI.prodTruncated)prodSearchServer();paintProdList()"></div>
       <div id="ct_strips">${prodCatgStripHTML()}${prodAvailChipsHTML()}</div>
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodCountLabel()}</span>
         ${prodSortSelect()}
-        <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
+        <button data-cbsid="CAT001-B03" data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick ? 'var(--blue)' : 'var(--paper)'};color:${UI.prodPick ? 'var(--on-accent)' : 'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer">☑ Select</button>
-        <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
+        <button data-cbsid="CAT001-B04" data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
           style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
     </div>
@@ -16448,7 +16447,7 @@ function prodPickBarHTML() {
     <button data-testid="cat-availability" ${n ? '' : 'disabled'} onclick="prodAvailAsk()" style="margin-inline-start:auto">📦 Availability</button>
     <button class="pri" data-testid="cat-categorise" ${n ? '' : 'disabled'} onclick="prodCategoriseAsk()">🏷️ Categorise</button>
     <button data-testid="cat-offer" ${n ? '' : 'disabled'} onclick="prodOfferAsk()">🏷️ Offer</button>
-    <button onclick="prodPickMode(false)">${tx('Done')}</button>
+    <button data-cbsid="CMP004" onclick="prodPickMode(false)">${tx('Done')}</button>
   </div>`;
 }
 /**
@@ -16491,7 +16490,7 @@ async function prodOfferAsk() {
       '<div style="font-size:var(--fs-2);color:var(--grey)">' +
       tx('reading your offers…') +
       '</div></div></div>' +
-      '<div class="mfoot"><button onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -16785,7 +16784,7 @@ function prodCategoriseAsk() {
     <div class="s">attaching adds a category — it never removes the others</div></div>
    <div class="mbody"><div class="bulklist">${rows}</div>
      <div class="err" id="bulk_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button>
+   <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button>
      <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">${tx('Apply')}</button></div>`);
 }
 function prodBulkToggle(id, which, btn) {
@@ -16862,7 +16861,7 @@ function prodAvailAsk() {
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px;line-height:1.5">' +
       tx('Retired and redundant are set one item at a time — each needs its own reason, or what replaced it.') +
       '</div>' +
-      '<div style="margin-top:12px"><button class="btn ghost" style="width:100%" onclick="closeModal()">' +
+      '<div style="margin-top:12px"><button data-cbsid="CMP003" class="btn ghost" style="width:100%" onclick="closeModal()">' +
       tx('Cancel') +
       '</button></div>'
   );
@@ -18051,7 +18050,7 @@ function checkCatalogueFile() {
       '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">' +
       tx('Import') +
       '</button>' +
-      '<button onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
     true
@@ -18092,7 +18091,7 @@ async function declareVariants() {
       modal(
         '<div class="mhd">' +
           tx('🔗 Variants') +
-          '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">' +
+          '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('OK') +
           '</button></div>'
       );
@@ -18140,7 +18139,7 @@ async function declareVariants() {
           })
           .join('') +
         '</div><div id="v_out" style="margin-top:11px"></div>' +
-        '</div><div class="mfoot"><button onclick="closeModal()">' +
+        '</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
         tx('Cancel') +
         '</button><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">' +
         tx('Save grouping') +
@@ -18224,7 +18223,7 @@ async function startFromStandardSet() {
         '<div id="cf_vout" style="margin-top:10px"></div>' +
         '</div><div class="mfoot"><button class="pri" data-testid="cat-starter-adopt" onclick="_cfAdoptSet(this)">' +
         tx('Add these columns') +
-        '</button><button onclick="closeModal()">' +
+        '</button><button data-cbsid="CMP005" onclick="closeModal()">' +
         tx('Close') +
         '</button></div>'
     );
@@ -18930,10 +18929,10 @@ function prodEditFormCore(d) {
     ctField('name', 'Name', d.name || '') +
     `<div style="display:flex;gap:10px"><div style="flex:1">` +
     ctField('unit', 'Unit', d.unit || '', 'placeholder="piece / kg / tonne"') +
-    `</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price) ? cbAmount(d.price) : ''}"></div></div></div>` +
+    `</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input data-cbsid="CAT005-I01" class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price) ? cbAmount(d.price) : ''}"></div></div></div>` +
     ctField('code', packHasHsn() ? 'Code / HSN' : 'Code', pCode(d)) +
     ctHighlightField(d) +
-    `<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>` +
+    `<label class="fl">${tx('Description')}</label><textarea data-cbsid="CAT005-T01" class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>` +
     '<div id="ct_declared_host">' +
     ctDeclaredFields(d) +
     '</div>' +
@@ -18948,7 +18947,7 @@ function prodEditFormCore(d) {
 function prodEffectiveField() {
   return (
     `<label class="fl" style="margin-top:10px">${tx('Effective from')} <span style="color:var(--grey);font-weight:400">${tx('(leave empty for now)')}</span></label>` +
-    `<input class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">` +
+    `<input data-cbsid="CAT005-I02" class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">` +
     `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A future moment parks only what you changed; the product stays as it is until then.')}</div>`
   );
 }
@@ -19272,10 +19271,10 @@ async function prodAllFields(id) {
       body +
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
-      '<button class="btn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP005" class="btn" style="flex:1" onclick="closeModal()">' +
       tx('Close') +
       '</button>' +
-      '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
+      '<button data-cbsid="CAT005-B01" class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' +
       id +
       '\')">' +
       tx('Set status') +
@@ -19298,7 +19297,7 @@ function prodStatusPick(id) {
   const opt = function (v, label, why) {
     const on = (d.status || 'available') === v;
     return (
-      '<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;' +
+      '<button data-cbsid="CAT005-B02" class="btn" style="width:100%;margin-bottom:7px;text-align:start;' +
       (on ? 'border-color:var(--blue);font-weight:700' : '') +
       '" onclick="prodSetStatus(\'' +
       id +
@@ -19320,7 +19319,7 @@ function prodStatusPick(id) {
       opt('unavailable', 'Not available (for now)', 'still matches, so the order records what they asked for — flagged as unable to ship') +
       opt('retired', 'Retired', 'no longer sold. New orders stop resolving to it; old chits are untouched') +
       opt('redundant', 'Redundant', 'replaced by another item — needs to say which') +
-      '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>'
   );
@@ -19421,13 +19420,13 @@ function prodAvailBlock(d, id) {
     <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--card);color:var(--on-card)">
       ${state}
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-        <input id="av_qty" placeholder="how many" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
-        <select id="av_src" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
+        <input data-cbsid="CAT005-I03" id="av_qty" placeholder="how many" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
+        <select data-cbsid="CAT005-S01" id="av_src" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">
           <option value="manual">counted by hand</option>
           <option value="erp">from the ERP</option>
           <option value="iot">from a sensor</option>
         </select>
-        <button class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
+        <button data-cbsid="CAT005-B03" class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
       </div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">Stamped with the time you report
         it. A connector can write this far more often than a person — the number is only as good as its date.</div>
@@ -19527,12 +19526,12 @@ function prodTabBar() {
   return (
     `<div class="dtabs" data-testid="prod-tabs" data-layout="${page ? 'page' : 'tabs'}">` +
     PROD_TABS.map(function (item) {
-      return `<button type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${item[0]}')">${tx(item[1])}</button>`;
+      return `<button data-cbsid="CAT005-B04" type="button" data-testid="prod-tab-${item[0]}" class="${prodTab() === item[0] ? 'on' : ''}" onclick="setProdTab('${item[0]}')">${tx(item[1])}</button>`;
     }).join('') +
     (prodLayout() === 'page'
-      ? `<button type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>`
+      ? `<button data-cbsid="CAT005-B05" type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>`
       : '') +
-    `<button type="button" data-testid="prod-layout-toggle" title="${esc(page ? tx('Show one section at a time') : tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page ? 'tabs' : 'page'}')">${page ? '▤ ' + tx('Tabs') : '☰ ' + tx('Page')}</button>` +
+    `<button data-cbsid="CAT005-B06" type="button" data-testid="prod-layout-toggle" title="${esc(page ? tx('Show one section at a time') : tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page ? 'tabs' : 'page'}')">${page ? '▤ ' + tx('Tabs') : '☰ ' + tx('Page')}</button>` +
     `</div>`
   );
 }
@@ -19822,7 +19821,7 @@ function prodSectionHTML(k, d, id, editing) {
       return editing
         ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
         : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}` +
-            `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
+            `<div style="padding:9px 12px"><button data-cbsid="CAT005-B07" class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>` +
             `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
     case 'categories':
       return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
@@ -20044,12 +20043,12 @@ function prodModifiersTab(d, edit) {
     return (
       `<div class="kv" data-testid="prod-mod-${gi}" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">` +
       `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">` +
-      `<input class="inp" data-testid="prod-mod-name-${gi}" value="${esc(g.name)}" placeholder="${esc(tx('Group name — Spice level, Size…'))}" style="flex:1;min-width:160px" onchange="prodModSetGroup(${gi},{name:this.value})">` +
-      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" data-testid="prod-mod-required-${gi}" ${g.required ? 'checked' : ''} onchange="prodModSetGroup(${gi},{required:this.checked})">${tx('Required')}</label>` +
-      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)">${tx('Pick up to')} <input type="number" min="1" data-testid="prod-mod-max-${gi}" value="${g.max}" style="width:52px" onchange="prodModSetGroup(${gi},{max:this.value})"></label>` +
-      `<button class="composebtn" data-testid="prod-mod-up-${gi}" ${gi === 0 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},-1)" title="${esc(tx('Move up'))}">↑</button>` +
-      `<button class="composebtn" data-testid="prod-mod-down-${gi}" ${gi === groups.length - 1 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},1)" title="${esc(tx('Move down'))}">↓</button>` +
-      `<button class="composebtn" data-testid="prod-mod-remove-${gi}" onclick="prodModRemoveGroup(${gi})">✕ ${tx('Remove group')}</button>` +
+      `<input data-cbsid="CAT005-I04" class="inp" data-testid="prod-mod-name-${gi}" value="${esc(g.name)}" placeholder="${esc(tx('Group name — Spice level, Size…'))}" style="flex:1;min-width:160px" onchange="prodModSetGroup(${gi},{name:this.value})">` +
+      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)"><input data-cbsid="CAT005-I05" type="checkbox" data-testid="prod-mod-required-${gi}" ${g.required ? 'checked' : ''} onchange="prodModSetGroup(${gi},{required:this.checked})">${tx('Required')}</label>` +
+      `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)">${tx('Pick up to')} <input data-cbsid="CAT005-I06" type="number" min="1" data-testid="prod-mod-max-${gi}" value="${g.max}" style="width:52px" onchange="prodModSetGroup(${gi},{max:this.value})"></label>` +
+      `<button data-cbsid="CAT005-B08" class="composebtn" data-testid="prod-mod-up-${gi}" ${gi === 0 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},-1)" title="${esc(tx('Move up'))}">↑</button>` +
+      `<button data-cbsid="CAT005-B09" class="composebtn" data-testid="prod-mod-down-${gi}" ${gi === groups.length - 1 ? 'disabled' : ''} onclick="prodModMoveGroup(${gi},1)" title="${esc(tx('Move down'))}">↓</button>` +
+      `<button data-cbsid="CMP008" data-cbmount="CAT005-U108" class="composebtn" data-testid="prod-mod-remove-${gi}" onclick="prodModRemoveGroup(${gi})">✕ ${tx('Remove group')}</button>` +
       `</div>` +
       (gerr.length ? `<div style="color:var(--warn-3);font-size:var(--fs-1);margin-top:4px">${gerr.map((item) => esc(tx(item))).join(' · ')}</div>` : '') +
       `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">` +
@@ -20057,12 +20056,12 @@ function prodModifiersTab(d, edit) {
         .map(
           (item, index) =>
             `<div style="display:flex;gap:6px;align-items:center" data-testid="prod-mod-opt-${gi}-${index}">` +
-            `<input class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
-            `<input class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
-            `<button class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
+            `<input data-cbsid="CAT005-I07" class="inp" data-testid="prod-mod-opt-name-${gi}-${index}" value="${esc(item.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${index},{name:this.value})">` +
+            `<input data-cbsid="CAT005-I08" class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${index}" value="${item.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${index},{price:this.value})">` +
+            `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${index}" onclick="prodModRemoveOption(${gi},${index})">✕</button></div>`
         )
         .join('') +
-      `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
+      `<button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>` +
       `</div></div>`
     );
   };
@@ -20105,7 +20104,7 @@ function prodModifiersTab(d, edit) {
                      real variant of this class (the file's own comment above warns exactly against inventing
                      one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
                   return (
-                    `<button type="button" class="composebtn${on ? '' : ' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">` +
+                    `<button data-cbsid="CAT005-B10" type="button" class="composebtn${on ? '' : ' ghost'}" data-testid="prod-mod-preview-${index}-${oi}" onclick="prodModPreviewPick(${index},${oi})">` +
                     `${on ? '✓ ' : ''}${esc(entry.name)}${entry.price ? ' +' + esc(fmtMoney(entry.price, moneyCode())) : ''}</button>`
                   );
                 })
@@ -20121,13 +20120,13 @@ function prodModifiersTab(d, edit) {
             ? `<span style="color:var(--warn-3)">● ${esc(txf('Still needs: {g}', { g: missing.join(', ') }))}</span>`
             : `<b>${esc(tx('Ready to add') + (words ? ' — ' : ''))}</b>${words ? esc(words) : ''}`;
         })()}</div>` +
-        `<button class="composebtn" data-testid="prod-mod-preview-reset" onclick="prodModPreviewReset()">${tx('Reset preview')}</button>` +
+        `<button data-cbsid="CAT005-B11" class="composebtn" data-testid="prod-mod-preview-reset" onclick="prodModPreviewReset()">${tx('Reset preview')}</button>` +
         `</div>`);
   return (
     `<div class="sec">${tx('Modifiers')}</div>` +
     `<div style="padding:0 12px 8px;font-size:var(--fs-1);color:var(--grey)">${tx('Let a buyer choose from a set before it goes on the bill — a spice level, a size, an extra. Saved as you go, one change at a time.')}</div>` +
     `<div style="padding:0 12px">${groups.map(groupHTML).join('')}</div>` +
-    `<div style="padding:0 12px 8px"><button class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>` +
+    `<div style="padding:0 12px 8px"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>` +
     previewHTML
   );
 }
@@ -20201,7 +20200,7 @@ function prodSynonymsTab(d, edit) {
     return (
       `<div class="sec">${tx('Synonyms')}</div>` +
       `<div style="padding:0 12px"><label class="fl">${tx('Other names this product answers to')}</label>` +
-      `<textarea class="inp" id="ct_synonyms" data-testid="cat-field-synonyms" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);background:var(--paper);color:var(--on-bg)" placeholder="${esc(tx('one per line — e.g. ponni, boiled rice, புழுங்கல் அரிசி'))}">${esc(list.join('\n'))}</textarea>` +
+      `<textarea data-cbsid="CAT005-T02" class="inp" id="ct_synonyms" data-testid="cat-field-synonyms" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);background:var(--paper);color:var(--on-bg)" placeholder="${esc(tx('one per line — e.g. ponni, boiled rice, புழுங்கல் அரிசி'))}">${esc(list.join('\n'))}</textarea>` +
       `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A buyer typing any of these in your storefront or in Compose finds this product.')}</div></div>`
     );
   return (
@@ -20277,7 +20276,7 @@ function prodOrderModelTab(d, edit) {
       `<div style="padding:0 12px"><label class="fl">${tx('How a quantity is counted')}</label>` +
       (defs === null
         ? `<div style="color:var(--grey)">${tx('reading…')}</div>`
-        : `<select class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face && UI._face.shop && UI._face.shop.order) || { model: 'count' }))} —</option>` +
+        : `<select data-cbsid="CAT005-S02" class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face && UI._face.shop && UI._face.shop.order) || { model: 'count' }))} —</option>` +
           live
             .map((x) => {
               const id = String(x.definition_id || x.id);
@@ -20296,10 +20295,10 @@ function prodOrderModelTab(d, edit) {
         return (
           `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)"><label class="fl">${tx('Or set on this product')}</label>` +
           `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">` +
-          `<select class="inp" id="ct_order_kind" data-testid="cat-field-order-kind" onchange="paintProdOrderPreview('')"><option value="">— ${esc(tx('none — use the choice above'))} —</option>${kinds.map((item) => `<option value="${esc(item[0])}"${own.model === item[0] ? ' selected' : ''}>${esc(item[1])}</option>`).join('')}</select>` +
-          `<input class="inp" id="ct_order_step" data-testid="cat-field-order-step" inputmode="decimal" placeholder="${esc(tx('step'))}" value="${own.step != null ? esc(String(own.step)) : ''}" oninput="paintProdOrderPreview('')">` +
-          `<input class="inp" id="ct_order_min" data-testid="cat-field-order-min" inputmode="decimal" placeholder="${esc(tx('min'))}" value="${own.min != null ? esc(String(own.min)) : ''}" oninput="paintProdOrderPreview('')">` +
-          `<input class="inp" id="ct_order_max" data-testid="cat-field-order-max" inputmode="decimal" placeholder="${esc(tx('max'))}" value="${own.max != null ? esc(String(own.max)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<select data-cbsid="CAT005-S03" class="inp" id="ct_order_kind" data-testid="cat-field-order-kind" onchange="paintProdOrderPreview('')"><option value="">— ${esc(tx('none — use the choice above'))} —</option>${kinds.map((item) => `<option value="${esc(item[0])}"${own.model === item[0] ? ' selected' : ''}>${esc(item[1])}</option>`).join('')}</select>` +
+          `<input data-cbsid="CAT005-I09" class="inp" id="ct_order_step" data-testid="cat-field-order-step" inputmode="decimal" placeholder="${esc(tx('step'))}" value="${own.step != null ? esc(String(own.step)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<input data-cbsid="CAT005-I10" class="inp" id="ct_order_min" data-testid="cat-field-order-min" inputmode="decimal" placeholder="${esc(tx('min'))}" value="${own.min != null ? esc(String(own.min)) : ''}" oninput="paintProdOrderPreview('')">` +
+          `<input data-cbsid="CAT005-I11" class="inp" id="ct_order_max" data-testid="cat-field-order-max" inputmode="decimal" placeholder="${esc(tx('max'))}" value="${own.max != null ? esc(String(own.max)) : ''}" oninput="paintProdOrderPreview('')">` +
           `</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A pack multiple: step 6 sells 6, 12, 18. A range: min and max. Leave blank for the choice above.')}</div></div>`
         );
       })() +
@@ -20365,9 +20364,9 @@ function prodMediaTab(d, edit) {
         ? `<div style="padding:0 12px">${gal}</div>`
         : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No pictures or videos yet.'))}</div>`) +
       (edit
-        ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+        ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I12" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>` +
-          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
+          `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input data-cbsid="CAT005-I13" class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>` +
           `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>`
         : '')
     );
@@ -20381,7 +20380,7 @@ function prodMediaTab(d, edit) {
         : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`) +
     `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name || '')}">${esc(x.name || '')}</div>` +
     (edit
-      ? `<button class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
+      ? `<button data-cbsid="CMP008" class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>`
       : '') +
     `</div>`;
   return (
@@ -20390,7 +20389,7 @@ function prodMediaTab(d, edit) {
       ? `<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px">${list.map(tile).join('')}</div>`
       : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(d.image ? tx('One picture, by link — upload here to keep it with the product.') : tx('No pictures or videos yet.'))}</div>`) +
     (edit
-      ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
+      ? `<div style="padding:6px 12px"><input data-cbsid="CAT005-I14" type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">` +
         `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures or videos, up to 8 MB each. The first picture is the cover the storefront shows. Saved at once — not with this form.')}</div></div>`
       : '')
   );
@@ -20491,13 +20490,13 @@ function prodExposureHTML(d) {
         label,
         why
       ]) => /* CX4 (C2): the HSN switch only under a pack with India's HSN rule */ `<label data-testid="prod-expose-${k}" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);cursor:pointer">
-      <input type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${k}', this.checked)">
+      <input data-cbsid="CAT005-I15" type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k] ? 'checked' : ''} onchange="prodExposureSet('${k}', this.checked)">
       <span style="flex:1"><b style="font-size:var(--fs-2)">${esc(tx(label))}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(tx(why))}</span></span>
       <span style="font-size:var(--fs-1);color:var(--grey)">${k in own ? esc(tx('this item')) : esc(tx('default'))}</span></label>`
     )
     .join('');
   return `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">${esc(tx("What a customer sees of this item on the storefront, in a buyer's Suppliers screen and through the API. Price and unit always show."))}</div>${rows}
-    <div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('Defaults for every item: Settings › Storefront.'))} <span data-testid="prod-expose-reset" onclick="prodExposureReset()" style="color:var(--blue);cursor:pointer;font-weight:700">${esc(tx('Use the defaults for this item'))}</span></div>`;
+    <div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('Defaults for every item: Settings › Storefront.'))} <span data-cbsid="CAT005-C01" data-testid="prod-expose-reset" onclick="prodExposureReset()" style="color:var(--blue);cursor:pointer;font-weight:700">${esc(tx('Use the defaults for this item'))}</span></div>`;
 }
 async function prodExposureSet(k, on) {
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
@@ -20613,7 +20612,7 @@ function prodStorefrontTab(d) {
     `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" id="prodShopFrame" data-src="${esc(one)}" title="${esc(tx('Storefront'))}" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff;display:none"></iframe>` +
     `<div id="prodShopHold" style="width:390px;max-width:100%;height:520px;border:1px dashed var(--line);border-radius:18px;background:var(--paper,#faf8f3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:0 22px">` +
     `<div style="font-size:var(--fs-1);color:var(--grey-2);line-height:1.5">${esc(tx('The preview opens this product in the real shop page \u2014 a second app, so it is not loaded until you ask.'))}</div>` +
-    `<button class="btn" onclick="prodShopPreview()" data-testid="prod-storefront-show" style="display:inline-block;width:auto">${esc(tx('Show the phone preview'))}</button>` +
+    `<button data-cbsid="CAT005-B12" class="btn" onclick="prodShopPreview()" data-testid="prod-storefront-show" style="display:inline-block;width:auto">${esc(tx('Show the phone preview'))}</button>` +
     `</div></div>` +
     `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`
   );
@@ -20631,7 +20630,7 @@ function prodBomTab(d) {
     return `<div class="sec">${tx('Consists of')}</div><div data-testid="prod-bom-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('Nothing declared. A product that is made of other products declares them on its node in Network — the components then draw down when this line is sold.')}</div>`;
   return (
     `<div class="sec">${tx('Consists of')}</div>` +
-    `<div style="padding:6px 12px;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><span style="color:var(--grey)">${tx('For')}</span><input class="inp" data-testid="prod-bom-qty" type="number" min="1" value="${esc(qty)}" style="width:80px" oninput="UI._bomQty=this.value;prodBomRepaint(this.closest('.ptab')||document)"><span style="color:var(--grey)">${esc(pUnit(d))}</span></div>` +
+    `<div style="padding:6px 12px;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><span style="color:var(--grey)">${tx('For')}</span><input data-cbsid="CAT005-I16" class="inp" data-testid="prod-bom-qty" type="number" min="1" value="${esc(qty)}" style="width:80px" oninput="UI._bomQty=this.value;prodBomRepaint(this.closest('.ptab')||document)"><span style="color:var(--grey)">${esc(pUnit(d))}</span></div>` +
     `<table data-testid="prod-bom" style="width:100%;border-collapse:collapse;font-size:var(--fs-2);font-variant-numeric:tabular-nums"><thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 12px">${tx('Component')}</th><th style="text-align:end;padding:4px 12px">${tx('Per unit')}</th><th style="text-align:end;padding:4px 12px">${txf('For {n}', { n: String(qty) })}</th></tr></thead><tbody>` +
     rows
       .map(
@@ -20709,7 +20708,7 @@ function prodIdentifiersTab(d, edit) {
       return (
         `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role] || x.role)}">${esc(x.system || roleWord[x.role] || '')}</span><span class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source ? ' <span class="idsrc">· ' + esc(tx('from')) + ' ' + esc(x.source) + (x.at ? ' · ' + esc(fmtDateTime(x.at)) : '') + '</span>' : ''}</span>` +
         (edit && xi >= 0
-          ? `<button class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
+          ? `<button data-cbsid="CMP008" class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`
           : '') +
         '</div>'
       );
@@ -20720,11 +20719,11 @@ function prodIdentifiersTab(d, edit) {
     : `<div data-testid="prod-xref" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx("No identifiers yet — set a code on Details, or add another system's id below."))}</div>`;
   const add = edit
     ? `<div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <select class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
-      <input class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
-      <input class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
-      <select class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
-      <button class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
+      <select data-cbsid="CAT005-S04" class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
+      <input data-cbsid="CAT005-I17" class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
+      <input data-cbsid="CAT005-I18" class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
+      <select data-cbsid="CAT005-S05" class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
+      <button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
       <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting any of these ids lands on this product.')}</div>`
     : '';
   return `<div class="sec">${tx('Identifiers')}</div>` + table + add + prodBarcodeTab(d);
@@ -21042,7 +21041,7 @@ function prodInvoiceTab(d) {
     : [[txf('{s} {r}%', { s: m.scheme, r: String(it.GstRt || 0) }), it.IgstAmt || it.CgstAmt || 0]];
   const cess = Number(it.CesAmt || 0);
   const sw = (k, label) =>
-    `<button class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
+    `<button data-cbsid="CAT005-B13" class="composebtn${pos === k ? ' on' : ''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos === k ? 'font-weight:700;border-color:var(--blue)' : ''}">${esc(label)}</button>`;
   const today = CBLocale.date(new Date());
   const gross = Number(m.line.unit_price || 0) * Number(m.om.qty || 1);
   const rows = [[tx('Gross'), gross]]
@@ -21055,7 +21054,7 @@ function prodInvoiceTab(d) {
   const noteRows = prodInvoiceNotesHTML(m);
   return (
     `<div class="sec">${tx('Invoice')}</div>` +
-    `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST ? tx('Same state') : tx('Domestic'))}${sw('other', m.isGST ? tx('Other state') : tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>` +
+    `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST ? tx('Same state') : tx('Domestic'))}${sw('other', m.isGST ? tx('Other state') : tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input data-cbsid="CAT005-I19" type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>` +
     `<div data-testid="prod-invoice" style="margin:6px 12px;background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;max-width:720px;box-shadow:0 1px 3px rgba(0,0,0,.06)">` +
     `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div data-testid="prod-invoice-supplier"><div style="font-size:16px;font-weight:800">${esc(m.seller.name || tx('Your business'))}</div>${m.seller.trade ? '<div style="color:#666">' + esc(tx('trading as') + ' ' + m.seller.trade) + '</div>' : ''}${m.seller.gstn ? '<div>GSTIN ' + esc(m.seller.gstn) + (m.seller.pan ? ' · PAN ' + esc(m.seller.pan) : '') + '</div>' : ''}${m.seller.address ? '<div style="color:#666">' + esc(m.seller.address) + '</div>' : ''}${m.seller.state ? '<div style="color:#666">' + esc(m.seller.state) + (m.seller.country ? ', ' + esc(m.seller.country) : '') + '</div>' : ''}${m.seller.phone || m.seller.email ? '<div style="color:#666">' + esc([m.seller.phone, m.seller.email].filter(Boolean).join(' · ')) + '</div>' : ''}</div>` +
     `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos === 'other' ? (m.isGST ? tx('other state') : tx('abroad')) : m.isGST ? tx('state ') + m.seller.state : tx('domestic'))}</div></div></div>` +
@@ -21103,10 +21102,10 @@ function prodRowsPick() {
       `<div data-testid="prod-rows-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">` +
       PROD_TABS.map(
         (item) =>
-          `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${item[0]}" data-testid="prod-row-tick-${item[0]}" ${on(item[0]) ? 'checked' : ''} ${PROD_ROWS_FIXED.indexOf(item[0]) >= 0 ? 'disabled' : ''}> ${tx(item[1])}</label>`
+          `<label style="display:flex;gap:8px;align-items:center"><input data-cbsid="CAT005-I20" type="checkbox" data-row="${item[0]}" data-testid="prod-row-tick-${item[0]}" ${on(item[0]) ? 'checked' : ''} ${PROD_ROWS_FIXED.indexOf(item[0]) >= 0 ? 'disabled' : ''}> ${tx(item[1])}</label>`
       ).join('') +
       `</div>` +
-      `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`
+      `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button data-cbsid="CMP003" class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="CMP001" class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`
   );
 }
 async function prodRowsSave() {
@@ -21270,7 +21269,7 @@ function prodBarcodeTab(d) {
     `<div class="sec">${tx('Barcode')}</div>` +
     `<div data-testid="prod-barcode" data-code="${esc(code)}" style="padding:10px 12px;overflow-x:auto;background:#fff;color:#000;border-radius:9px;margin:0 12px;max-width:100%">${r.svg}</div>` +
     `<div style="padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2)">` +
-    `<button class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
+    `<button data-cbsid="CAT005-B14" class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>` +
     `<span style="color:var(--grey)">${tx('Code 128 · internal · a GS1 barcode needs an assigned prefix.')}</span></div>`
   );
 }
@@ -21417,13 +21416,13 @@ function prodPricingHTML(d) {
   const u = CBPricing.unitPrice(row, qty, list);
   const pick = editing
     ? defs.length
-      ? `<select class="inp" id="ct_pricing_def" data-testid="prod-pricing-def" onchange="prodPricingRepaint()"><option value="">— ${esc(tx('list price only'))} —</option>${cbPricingOptionsHTML(defs, row.pricing_def)}</select>`
+      ? `<select data-cbsid="CAT005-S06" class="inp" id="ct_pricing_def" data-testid="prod-pricing-def" onchange="prodPricingRepaint()"><option value="">— ${esc(tx('list price only'))} —</option>${cbPricingOptionsHTML(defs, row.pricing_def)}</select>`
       : `<div style="color:var(--grey)">${tx('No pricing structure yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('pricing')">${tx('Catalogue setup › Pricing')}</span></div>`
     : row.pricing_kind
       ? `<div data-testid="prod-pricing-resolved"><b>${esc(CBPricing.describe(row))}</b></div>`
       : `<div data-testid="prod-pricing-resolved"><b>${esc(tx('List price'))}</b> ${grey(esc(tx('— no structure cited')))}</div>` +
         (defs.length
-          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
+          ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select data-cbsid="CAT005-S07" class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs, '')}</select><button data-cbsid="CAT005-B15" class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel || '')}')">${tx('Attach this structure')}</button></div>`
           : '');
   /* the outcome: the bands at this product's list price, and the unit price at the sample quantity */
   const bands = CBPricing.bands(row, list);
@@ -21573,7 +21572,7 @@ function prodTaxHTML(d) {
 
   const pick = editing
     ? slabs.length
-      ? `<select class="inp" id="ct_tax_slab" data-testid="prod-tax-slab" onchange="prodTaxRepaint()">` +
+      ? `<select data-cbsid="CAT005-S08" class="inp" id="ct_tax_slab" data-testid="prod-tax-slab" onchange="prodTaxRepaint()">` +
         `<option value="">— ${esc(tx('inherit'))} —</option>` +
         /* ⚠️⚠️ SELECTED FROM `row`, NOT FROM THE SAVED PRODUCT. The repaint below REPLACES this select, so
              marking the saved value as selected would snap the dropdown back to the old slab the instant you
@@ -21603,8 +21602,8 @@ function prodTaxAttachHTML(d, r, slabs) {
     return `<div data-testid="prod-tax-attach" style="margin-top:6px;color:var(--grey)">${tx('No live slab to attach.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`;
   return (
     `<div data-testid="prod-tax-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">` +
-    `<select class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
-    `<button class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
+    `<select data-cbsid="CAT005-S09" class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>` +
+    `<button data-cbsid="CAT005-B16" class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel || '')}')">${tx('Attach this slab')}</button></div>`
   );
 }
 async function prodTaxAttach(id) {
@@ -21856,7 +21855,7 @@ function prodTaxPreviewHTML(d, r) {
 function prodDetailHTML() {
   if (UI.refSel != null && (UI.refCat || [])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]); // BRIDGE: rich finish showcase
   if (UI.prodMode === 'new') {
-    return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`;
+    return `<div class="dh"><button data-cbsid="CMP006" data-cbmount="CAT005-U106" class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db" tabindex="0" role="region" aria-label="${esc(tx('Product details'))}"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button data-cbsid="CMP007" data-cbmount="CAT005-U107" class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button data-cbsid="CMP003" onclick="backToList()">${tx('Cancel')}</button></div>`;
   }
   const p = (UI.prods || []).find((x) => prodId(x) === UI.prodSel);
   /* ⭐ THE PROSE SAID "or add a new one" AND MADE THEM GO FIND THE BUTTON. That is the one thing an empty
@@ -21864,14 +21863,14 @@ function prodDetailHTML() {
   if (!p) return emptyState('🗂️', tx('Select a product'), tx('Pick one to view or edit.'), { label: tx('+ New product'), onclick: 'newProduct()' });
   const d = pData(p),
     id = prodId(p);
-  const back = `<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
+  const back = `<button data-cbsid="CMP006" data-cbmount="CAT005-U106" class="dback" onclick="backToList()">‹ Catalogue</button>`;
   /* ⚠️ THIS SAID `background:var(--ink)`. `--ink` is the BODY TEXT colour — near-black on a light theme, which is
      why a dark segment looked right — but in dark it inverts to near-WHITE, so the selected segment became a white
      box with white (`--on-accent`) letters: 1.21:1, the "letter inside the box is not visible at all" Athi
      photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg = (m, l) =>
-    `<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
+    `<button data-cbsid="CAT005-B17" onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--accent)' : 'var(--card)'};color:${(UI.prodMode === 'edit' ? 'edit' : 'view') === m ? 'var(--on-accent)' : 'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const head = `<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price">${(() => {
     /* the same price column as the lists (Athi, 2026-09-06: the header said ₹101 while the list said ₹90.90) */ try {
       const x = prodDeals(d, prodId(p));
@@ -21894,7 +21893,7 @@ function prodDetailHTML() {
       prodRowsVisible()
         .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, true)))
         .join('') + `<div class="err" id="ct_err" style="margin-top:8px"></div>`;
-    bar = `<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`;
+    bar = `<button data-cbsid="CMP001" class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button data-cbsid="CMP003" onclick="setProdMode('view')">${tx('Cancel')}</button>`;
   } else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
@@ -21903,7 +21902,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
+    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
@@ -22081,7 +22080,7 @@ function prodScheduledHTML(id) {
     rows
       .map(
         (item) =>
-          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
+          `<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(item.effective_at))}</span><span>${kv(item.patch)}</span><button data-cbsid="CMP003" class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(item.schedule_id)}')">${tx('Cancel')}</button></div>`
       )
       .join('') +
     `</div>`
@@ -22412,7 +22411,7 @@ function taskPanel() {
             : `<span data-testid="crumb-track">${_tname}</span>`
         }
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */ ''}
-      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
+      ${_fsel ? `<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-cbsid="CMP011" data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>` : ''}
       ${_btns}<span style="${_isTrack ? '' : 'margin-inline-start:auto'}">${UI.listHelp ? ui.action('close', { mount: chromeMount('04') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp }) : ui.action('help', { mount: chromeMount('05') /* where-used: out-of-scope one per rail list */, key: 'listhelp', display: 'icon+label', size: 'compact', onPress: toggleListHelp })}</span>
     </div>${UI.listHelp ? `<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>` : ''}`;
   /**
@@ -22556,7 +22555,7 @@ function chitMarkPaid(id, amount) {
     <select class="inp" id="pay_method" data-testid="pay-method">${payModeOpts()}<option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
     <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc(typeof CBLocale !== 'undefined' && CBLocale.symbol && moneyCode() ? CBLocale.symbol(moneyCode()) : '')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount || ''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
-    <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
+    <div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 /** what the Mark-paid sheet holds now: the method (UPI where the pack has it, else cash), the reference typed, the amount as a number */
 function readPayForm() {
@@ -22634,7 +22633,7 @@ async function chitShowQr(id, amount) {
   }
   if (!upi) {
     modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
     );
     return;
   }
@@ -22658,7 +22657,7 @@ async function chitShowQr(id, amount) {
     }
   } catch (_) {}
   modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
   );
 }
 function toggleListHelp() {
@@ -23258,12 +23257,25 @@ function modalStamp(host) {
   } catch (_) {}
 }
 
+/* the control that had focus when a dialog opened, kept so closing it (button, Escape or backdrop) gives the keyboard back there; a second dialog opened over the first keeps the first's opener */
+function rememberModalOpener(host) {
+  if (host.innerHTML) return;
+  const active = document.activeElement;
+  UI._modalOpener = active && active !== document.body && !host.contains(active) ? active : null;
+}
+/* give focus back to the remembered opener if it is still on the page; a repainted opener has nothing to return to */
+function restoreModalOpener() {
+  const opener = UI._modalOpener;
+  UI._modalOpener = null;
+  if (opener && document.body.contains(opener) && typeof opener.focus === 'function') opener.focus();
+}
 function modal(html, wide, opt) {
   const node = document.getElementById('modalhost');
   if (!node) return;
+  rememberModalOpener(node);
   UI._composeModal = false;
   node.style.display = '';
-  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
+  node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
   modalStamp(node);
 }
@@ -23325,6 +23337,7 @@ function closeModal() {
   ccCartRelease();
   const p = document.getElementById('composepill');
   if (p) p.remove();
+  restoreModalOpener();
   /**
    * ⚠️ A DISMISS HOOK, BECAUSE THERE ARE THREE WAYS OUT AND ONLY ONE IS A BUTTON. Cancel, Escape and the backdrop
    * all land here; wiring cleanup to the Cancel button alone leaves the other two leaking. confirmAsk/promptAsk
@@ -23366,7 +23379,7 @@ function quickStatus() {
           }) || (UI.detail && UI.detail.id === item ? UI.detail : null)
         );
       })
-    )}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`
+    )}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`
   );
 }
 function pickStatus(v) {
@@ -23464,7 +23477,7 @@ function pickChitStatus(id) {
     )
     .join('');
   modal(
-    `<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code || 'this chit')} — any direction</div></div><div class="mbody">${opts}${billUseChoiceHTML([c])}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`
+    `<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code || 'this chit')} — any direction</div></div><div class="mbody">${opts}${billUseChoiceHTML([c])}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`
   );
 }
 function quickAssign() {
@@ -23499,13 +23512,13 @@ function quickDelete() {
           them2: sent.length > 1 ? tx('them') : tx('it'),
           them3: sent.length > 1 ? tx('them') : tx('it')
         }
-      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`
+      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`
     );
     return;
   }
   MODALS.del = { ids: drafts };
   modal(
-    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`
+    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`
   );
 }
 async function archiveSelected() {
@@ -23748,6 +23761,7 @@ async function afterGroup(result) {
     UI.mdetail = false;
   }
   await loadList();
+  updateSelBar(); /* the bar counts UI.selected: 2 left ticked after 12 tried must not still read 12 */
 }
 /** the one sentence after a group action: "12 archived", then what did not happen (failed, left because Cancel was pressed) */
 function groupToast(result, doneWords) {
@@ -23858,7 +23872,7 @@ function filterPanel() {
       <option value="priority"${list.sort === 'priority' ? ' selected' : ''}>${tx('Priority (queue)')}</option>
       <option value="amount"${list.sort === 'amount' ? ' selected' : ''}>Amount (high <span class=arw>→</span> low)</option>
       <option value="code"${list.sort === 'code' ? ' selected' : ''}>${tx('Code')}</option></select></div>
-    <div class="fp-foot"><button onclick="clearFilter()">${tx('Clear')}</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
+    <div class="fp-foot"><button data-cbsid="CMP014" onclick="clearFilter()">${tx('Clear')}</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
 let _notifs = [];
@@ -24069,7 +24083,7 @@ async function openNotifications(repaint) {
           'onclick="notifClearSelected()">Clear ' +
           (nsel || '') +
           '</button>' +
-          '<button data-testid="notif-pick-off" onclick="notifPick(false)">' +
+          '<button data-cbsid="CMP004" data-testid="notif-pick-off" onclick="notifPick(false)">' +
           tx('Done') +
           '</button>'
         : '<button data-testid="notif-pick-on" onclick="notifPick(true)">' +
@@ -24775,13 +24789,13 @@ function delAdv(k) {
 function advPanel() {
   const a = UI.adv || {};
   return `<div class="advpanel" onclick="event.stopPropagation()">
-    <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
+    <button data-cbsid="CMP005" class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
     <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" aria-label="${esc(tx('Amount min'))}" inputmode="numeric" placeholder="min" value="${a.amount_min || ''}"><span class="advdash">to</span><input class="advin" id="adv_amax" aria-label="${esc(tx('Amount max'))}" inputmode="numeric" placeholder="max" value="${a.amount_max || ''}"></div>
     <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" aria-label="${esc(tx('Date from'))}" type="date" value="${a.date_from || ''}"><span class="advdash">to</span><input class="advin" id="adv_dto" aria-label="${esc(tx('Date to'))}" type="date" value="${a.date_to || ''}"></div>
     <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status" aria-label="${tx('Status')}"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus === 'open' ? 'selected' : ''}>${tx('Open')}</option><option value="act" ${a.fstatus === 'act' ? 'selected' : ''}>${tx('Act')}</option><option value="close" ${a.fstatus === 'close' ? 'selected' : ''}>${tx('Close')}</option></select></div>
     <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri" aria-label="${tx('Priority')}"><option value="">${tx('Any')}</option><option value="urgent" ${a.priority === 'urgent' ? 'selected' : ''}>${tx('Urgent')}</option><option value="high" ${a.priority === 'high' ? 'selected' : ''}>${tx('High')}</option><option value="normal" ${a.priority === 'normal' ? 'selected' : ''}>${tx('Normal')}</option></select></div>
     ${typeof dispSearchRow === 'function' ? dispSearchRow(a) : ''}
-    <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
+    <div class="advfoot"><button data-cbsid="CMP014" class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`;
 }
 /* PERF1: the Task / Order list in its default order (newest first) asks for the page AFTER the last one it holds (`next`, keyset) — never OFFSET past
@@ -25611,7 +25625,7 @@ function todo(k) {
 function selBar() {
   const ids = UI.selected;
   const all = `<button onclick="selectAllRows()">${tx('☑ All')}</button>`;
-  const clr = `<button onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
+  const clr = `<button data-cbsid="CMP014" onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
   if (UI.folder === 'trash') {
     return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">${tx('↩ Restore')}</button><button onclick="bulkPurge()">${tx('🗑 Delete forever')}</button>${clr}</span></div>`;
   }
@@ -25788,6 +25802,8 @@ function frozenMoneyHTML(c, wrapTid, totalTid, bare) {
   if (!FM) {
     /* RAIL-146: no figures because the server took them off for a cost-blind co-assist — not a draft, not an error */
     if (c.cost_hidden) return `<div class="ir" data-testid="chit-money-hidden" style="margin:8px 12px 10px;color:var(--grey)">${tx('Amounts hidden')}</div>`;
+    /* ORD-1: an open ORDER no bill names yet (the server's order_billed:false, W36) has no figures by design: a calm sentence, never the red error */
+    if (c.order_billed === false) return `<div class="ir" data-testid="chit-money-unbilled" style="margin:8px 12px 10px;color:var(--grey)">${tx('Not billed yet')}</div>`;
     const isDraft = !!(c.isDraft || c.role === 'Draft' || UI.folder === 'drafts');
     if (isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
     const older =
@@ -26086,7 +26102,7 @@ function ctpBanner(chit) {
   if (!unconfirmed) return '';
   var where = chitWhere(chit) || chitOtherParty(chit) || tx('the other side');
   return (
-    '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
+    '<div class="banner" data-testid="chit-ctp-unconfirmed" data-tone="warn" role="status" style="color:var(--warn-3);margin:6px 0;padding:7px 10px;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;font-size:var(--fs-2)">⏳ ' +
     esc(unconfirmed.failed ? unconfirmed.words || tx('Not delivered — we could not reach them') : txf('Waiting for {where} — not delivered yet', { where: where })) +
     (unconfirmed.count > 1 ? ' · ' + esc(txf('{n} changes', { n: unconfirmed.count })) : '') +
     '</div>'
@@ -26747,7 +26763,7 @@ async function askAiOrder() {
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="' +
       bs +
-      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="' +
+      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -26877,7 +26893,7 @@ async function _aiOrderDoc(skill, label) {
       '<button onclick="_aiOrderDocPdf()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--purple);background:var(--card);color:var(--purple)">⬇ PDF</button>' +
-      '<button onclick="closeModal()" style="' +
+      '<button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -26994,7 +27010,7 @@ async function aiRun(skill, ctx, opts) {
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="' +
       bs +
-      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="' +
+      ';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' +
       tx('Done') +
@@ -27248,7 +27264,7 @@ function answerPublish(id) {
       '</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>' +
       '<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma) or * for everywhere</span></label><input class="inp" id="ap_c" value="*">' +
       '<div class="err" id="ap_err"></div>' +
-      '<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">' +
+      '<div style="display:flex;gap:8px;margin-top:11px"><button data-cbsid="CMP003" class="composebtn" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\'' +
       id +
@@ -27439,7 +27455,7 @@ function counterOpen() {
         : ' It will be set up for <b>' + esc(SESSION.entity || 'this shop') + '</b>.') +
       '</div></details>' +
       (strayKey
-        ? '<div data-testid="counter-stray" style="border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">' +
+        ? '<div data-testid="counter-stray" style="color:var(--on-card);border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">' +
           'This device was last a counter for a <b>different shop</b>. Opening it now makes it the counter for this shop. The other shop keeps its own bills and stock, and they are not touched.</div>'
         : '') +
       '<button class="composebtn" data-testid="counter-open-here" onclick="counterGo()">' +
@@ -28428,7 +28444,7 @@ async function pickAssign(id) {
   const reasonbox = `<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote = c.custPri ? `<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>` : '';
   modal(
-    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
+    `<div class="mhd"><div class="t">Assign ${esc(c.code || 'chit')}</div><div class="s">${esc(c.party || '')}${c.amt ? ' · ' + chitMoney(c.amt, c) : ''}</div></div><div class="mbody">${custnote}${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`
   );
 }
 function pickActor(aid) {
@@ -28498,7 +28514,7 @@ async function pickAssignBulk(ids) {
     })
     .join('');
   modal(
-    `<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length > 1 ? 's' : ''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`
+    `<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length > 1 ? 's' : ''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows || '<div style="padding:14px;color:var(--grey);font-size:var(--fs-2)">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`
   );
 }
 async function assignBulkChits(ids, actorId) {
@@ -28516,7 +28532,7 @@ function repriority(id) {
   const c = UI.detail || UI.rows.find((x) => x.id === id) || {};
   MODALS.repri = { id, pri: c.pri || 'normal', reason: '' };
   modal(
-    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${item}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
+    `<div class="mhd"><div class="t">Priority — ${c.code || 'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri ? '<div class="custreq">⚑ Customer flagged this as priority.</div>' : ''}<div class="prisel">${['urgent', 'normal', 'low'].map((item) => `<button class="pri-${item} ${MODALS.repri.pri === item ? 'on' : ''}" data-p="${item}" onclick="pickRepri('${item}')">${PRI[item].label}</button>`).join('')}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri === 'urgent' ? '— Urgent needs one' : '(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="repriok" ${MODALS.repri.pri === 'urgent' ? 'disabled' : ''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`
   );
 }
 function pickRepri(p) {
@@ -30341,7 +30357,7 @@ function paintLB() {
   const i = Math.min(UI.lb, atts.length - 1),
     a = atts[i];
   host.innerHTML = `<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i + 1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span data-cbsid="CMP005" class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a, 'lb')}</div>
     <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_, index) => `<span class="${index === i ? 'on' : ''}"></span>`).join('')}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;

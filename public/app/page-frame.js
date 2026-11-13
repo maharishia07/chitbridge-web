@@ -1,6 +1,12 @@
 /**
+ * public/app/page-frame.js — CBFrame: the frame every page wears (the header, the side menu, the phone's section tabs)
+ * ID        CMP054 (the frame's own controls; the header's are CMP codes in shell.js)
+ * OWNER     cb-ux-locale
+ * OWNS      the standard page skeleton: the side menu and its entries, the folding group heads, the Collapse button, the phone's section tabs
  * CALLED BY accounts · crm · finance · know-your-business · settings · the labs and the storefront pages (CBFrame.mount, SHELL-ONE: every page wears the one frame).
- * CARD 29-qa-test-tooling-ux-locale-and-design-system/page-frame
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/page-frame
+ * RISK      plain
+ * FLOW      mount → session() → skeleton()? → CBShell.mount(host, { host:{app|bar}, person, signin, avatar, title, homeHref, fit }) → work into the slot
  * page-frame.js — CBFrame: the frame an older single-purpose page (Know your business, Documents) wears so it is part of the application.
  *
  * Athi's black-box, 2026-10-09 (H23/H24): those two pages asked for an e-mail and a code AGAIN while the owner was signed in, and had no header,
@@ -35,6 +41,24 @@
   }
   /* the STANDARD PAGE SKELETON (decision 2026-10-09, "one frame style on every app page"): sidebar + main pane, styled by /app/page-skeleton.css.
      skeleton: { name, icon: <svg path d>, sections: [{ k, label, icon: <svg path d> | glyph: 'text' } | { group: 'heading' }], active: k, onSection: fn(k) } */
+  /** the mount of a frame control: this screen's code + U154 (the rule of every reused component); none on a page that does not load screen-id.js */
+  function frameMount() {
+    return root.CBScreenId && root.CBScreenId.mountAttr ? root.CBScreenId.mountAttr('CMP054') : '';
+  }
+  /** the screen is named after the controls are drawn (and changes with the section): give every frame control the mount of the screen on show */
+  function stampFrameMounts(scope) {
+    var mount = frameMount().match(/"([^"]+)"/);
+    if (!mount) return;
+    Array.prototype.forEach.call(scope.querySelectorAll('[data-cbsid^="CMP054"]'), function (element) {
+      element.setAttribute('data-cbmount', mount[1]);
+    });
+  }
+  /** the shell named the app; the skeleton names the section it opened on, and the frame's controls take that screen's mount */
+  function nameSection(skel, opts) {
+    if (!skel || !root.CBScreenId) return;
+    root.CBScreenId.here(opts.app, opts.skeleton.active);
+    stampFrameMounts(root.document);
+  }
   /** a heading's slug, the one word its test id and its fold's panel id carry */
   function slugOf(label) {
     return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -44,7 +68,7 @@
     var slug = slugOf(item.group);
     if (!item.fold) return '<div class="nav-group label" data-testid="skel-group-' + esc(slug) + '">' + esc(item.group) + '</div>';
     return (
-      '<button type="button" class="nav-group nav-fold label" data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
+      '<button type="button" class="nav-group nav-fold label" data-cbsid="CMP054-B02"' + frameMount() + ' data-testid="skel-group-' + esc(slug) + '" aria-expanded="' + (item.open === false ? 'false' : 'true') +
       '" aria-controls="navg-' + esc(slug) + '"' + (item.count != null ? ' data-count="' + esc(String(item.count)) + '"' : '') + '>' + esc(item.group) + '</button>'
     );
   }
@@ -53,7 +77,7 @@
     if (item.group) return groupHead(item);
     var mark = item.glyph ? '<span class="lab-ico" aria-hidden="true">' + esc(item.glyph) + '</span>' : drawIcon(item.icon);
     return (
-      '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
+      '<button type="button" class="nav-btn' + (item.glyph ? ' nav-wrap' : '') + (item.k === active ? ' active' : '') + '" data-cbsid="CMP054-B01"' + frameMount() + ' data-sec="' + esc(item.k) + '" data-testid="skel-nav-' + esc(item.k) + '"' +
       (item.k === active ? ' aria-current="page"' : '') + ' aria-label="' + esc(item.label) + '">' + mark + '<span class="label">' + esc(item.label) + '</span></button>'
     );
   }
@@ -92,7 +116,7 @@
       phone.items
         .map(function (item) {
           return (
-            '<button type="button" role="tab" class="lab-switch-btn" data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '">' +
+            '<button type="button" role="tab" class="lab-switch-btn" data-cbsid="CMP054-K01"' + frameMount() + ' data-tab="' + esc(item.k) + '" data-testid="lab-switch-' + esc(item.k) + '" aria-selected="' + String(item.k === phone.active) + '">' +
             esc(item.label) + '</button>'
           );
         })
@@ -151,13 +175,13 @@
       '</div><div class="brand-name label">' +
       esc(sk.name) +
       '</div></div>' +
-      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned"></div>' : '') +
+      (sk.pinned ? '<div class="side-pinned" id="sidePinned" data-testid="skel-pinned" tabindex="0" role="region" aria-label="' + esc(sk.name) + '"></div>' : '') +
       '<nav class="nav" id="nav" aria-label="' +
       esc(sk.name) +
       '">' +
       navHTML(sk.sections || [], sk.active, svg) +
       '</nav>' +
-      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">' +
+      '<div class="side-foot"><button type="button" class="nav-btn" id="toggleNav" data-cbsid="CMP054-B03"' + frameMount() + ' aria-label="Collapse sidebar" aria-expanded="true">' +
       svg('M15 6l-6 6 6 6', 'nav-chev') +
       '<span class="label">Collapse</span></button></div></aside>' +
       '<main class="main" data-testid="skel-main"><div id="shell"></div>' + (sk.phone ? switchHTML(sk.phone) : '') + '<div class="screen flush" id="screen" data-testid="skel-screen"></div></main>';
@@ -191,6 +215,7 @@
         element.classList.toggle('active', element.getAttribute('data-sec') === k);
       });
       if (root.CBScreenId) root.CBScreenId.here(appId, k);
+      stampFrameMounts(app);
     }
     Array.prototype.forEach.call(app.querySelectorAll('.nav-btn[data-sec]'), function (element) {
       element.onclick = function () {
@@ -266,8 +291,7 @@
       host = headerHost(doc, opts, skel);
     var open = opts.signin !== false;
     var shell = root.CBShell.mount(host, shellOptions(opts, sess, skel, host, open));
-    if (skel && root.CBScreenId)
-      root.CBScreenId.here(opts.app, opts.skeleton.active); /* the shell named the app; the skeleton names the section it opened on */
+    nameSection(skel, opts);
     if (skel && opts.kural && root.CBKural) {
       root.CBKural.mount();
       root.CBKural.set(opts.kural);

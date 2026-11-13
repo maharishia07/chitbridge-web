@@ -6,7 +6,7 @@
  *
  * What lives here, and why it is not in app.html any more:
  *   · tx / txf / cbLang / CBSTR — the English-is-the-key string door (cap-books.js speaks through it)
- *   · friendlyErr, toast         — a failure's words, and the one-line toast (host element: <div id="toast">)
+ *   · friendlyErr, toast         — a failure's words, and the one-line toast (host: the page's <div id="toast"> or one it makes; a live region)
  *   · CB_BOOKS_EP                — the Ledger's boot endpoints (health · status · enable · setting · dues · statement);
  *                                  app.html adds them to its EP, accounts.html to its own. cap-books.js adds the rest.
  *   · CBAction                   — the action-state helper: busy · confirm for irreversible writes · outcome (M64)
@@ -367,10 +367,36 @@ function friendlyErr(e) {
   return m || 'something went wrong';
 }
 
+/** the look of a host the page did not draw itself; a page with a bottom dock sets --cb-toast-bottom to clear it (shop.html) (same tokens and sizes as the pages that carry their own #toast rules) */
+const TOAST_HOST_CSS =
+  '#toast{position:fixed;left:50%;bottom:var(--cb-toast-bottom,20px);transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}' +
+  '#toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}' +
+  '#toast .toast.err{background:var(--red-i,#8e3517)}#toast .toast.warn{background:var(--amber-i,#7a5205)}' +
+  '#toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}';
+/**
+ * The toast's host: the page's own <div id="toast"> or, when the page has none (shop, know-your-business, authority-forms),
+ * one made here at the end of the body, so a failed save is never silent. It is a polite live region (role=status) so a screen
+ * reader announces every message; an error is stated as role=alert, aria-live=assertive.
+ */
+function toastHost(isError) {
+  let node = document.getElementById('toast');
+  if (!node) {
+    node = document.createElement('div');
+    node.id = 'toast';
+    const hostStyle = document.createElement('style');
+    hostStyle.textContent = TOAST_HOST_CSS;
+    document.body.appendChild(hostStyle);
+    document.body.appendChild(node);
+  }
+  node.setAttribute('role', isError ? 'alert' : 'status');
+  node.setAttribute('aria-live', isError ? 'assertive' : 'polite');
+  node.setAttribute('aria-atomic', 'true');
+  return node;
+}
 function toast(msg, undo) {
-  if (typeof cblog === 'function') cblog(toastLevel(msg), msg);
-  const node = document.getElementById('toast');
   const _lvl = toastLevel(msg);
+  if (typeof cblog === 'function') cblog(_lvl, msg);
+  const node = toastHost(_lvl === 'error');
   node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
@@ -752,7 +778,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     bodyHtml +
     '</div>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' +
-    '<button type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
+    '<button data-cbsid="CMP003" type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
     esc(tx('Cancel')) +
     '</button>' +
     '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' +

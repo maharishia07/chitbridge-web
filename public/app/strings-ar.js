@@ -634,6 +634,9 @@
     'Settings › Standards': 'الإعدادات › المعايير',
     'Shared · minted once': 'مشترك · مُصدَر مرة واحدة',
     'Show everything': 'إظهار كل شيء',
+    'Open the cart': 'فتح السلة',
+    'Clear the cart': 'إفراغ السلة',
+    'Remove from the cart': 'إزالة من السلة',
     'Shown — in this order': 'المعروض — بهذا الترتيب',
     'Sits under': 'يقع تحت',
     'Soft Paper': 'ورق ناعم',
@@ -783,6 +786,32 @@
     'CMP030.shown': 'النشاط',
     'CMP030.aria': 'النشاط {object}',
     'Activity': 'النشاط',
+    'CMP045.label': 'حقل القائمة',
+    'List field': 'حقل القائمة',
+    'CMP033.label': 'فتح نافذة القائمة',
+    'List opener': 'فتح نافذة القائمة',
+    'CMP034.label': 'مفتاح القائمة',
+    'List toggle': 'مفتاح القائمة',
+    'CMP035.label': 'اختيار القائمة',
+    'List select': 'اختيار القائمة',
+    'CMP036.label': 'تبويب القائمة',
+    'List tab': 'تبويب القائمة',
+    'CMP037.label': 'أمر القائمة',
+    'List command': 'أمر القائمة',
+    'CMP038.label': 'إجراء صف القائمة',
+    'List row action': 'إجراء صف القائمة',
+    'CMP039.label': 'رأس عمود القائمة',
+    'List column header': 'رأس عمود القائمة',
+    'CMP040.label': 'حقل الدفاتر',
+    'Books field': 'حقل الدفاتر',
+    'CMP041.label': 'اختيار الدفاتر',
+    'Books select': 'اختيار الدفاتر',
+    'CMP042.label': 'إجراء الدفاتر',
+    'Books action': 'إجراء الدفاتر',
+    'CMP043.label': 'تبويب الدفاتر',
+    'Books tab': 'تبويب الدفاتر',
+    'CMP044.label': 'رابط الدفاتر',
+    'Books link': 'رابط الدفاتر',
     'Choice': 'اختيار',
     'Spinner': 'مؤشر الانتظار',
     'CMP020.working': 'جارٍ العمل…',
@@ -971,6 +1000,21 @@
     'No chits here — try another tab.': 'لا سندات هنا — جرّب تبويبًا آخر.',
     'Search chits, party, item': 'ابحث في السندات والأطراف والأصناف',
     'Search my orders': 'ابحث في طلباتي'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ar || (CBSTR.ar = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} فاتورة تعذرت قراءتها وتم استبعادها من هذا الشهر',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} فواتير تعذرت قراءتها وتم استبعادها من هذا الشهر',
+    'Open bill {n}': 'فتح الفاتورة {n}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

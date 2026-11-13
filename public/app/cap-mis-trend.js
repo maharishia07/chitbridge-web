@@ -158,7 +158,7 @@ function trHeadline() {
 /* ── the top: the two Reports views, the four tabs, the headline ── */
 function trTab(pair) {
   return (
-    '<button type="button" class="tab" aria-pressed="' +
+    '<button data-cbsid="FIN008-B01" type="button" class="tab" aria-pressed="' +
     (TR.period === pair[0] ? 'true' : 'false') +
     '" data-testid="tr-tab-' +
     pair[0] +

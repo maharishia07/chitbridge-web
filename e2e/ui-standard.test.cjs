@@ -49,7 +49,7 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'batchnote')); /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
+const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'listfield', 'listopener', 'listtoggle', 'listselect', 'listtab', 'listcommand', 'listrowaction', 'listcolumn', 'batchnote', 'bookfield', 'bookselect', 'bookaction', 'booktab', 'booklink')); /* CMP045..CMP039 are drawn by the list row (listRows), the list control writes the elements itself */ /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
 
@@ -78,6 +78,10 @@ console.log('waves: one row per wave, from public/app/ui-waves.json');
   check((drawn.match(/role="progressbar"/g) || []).length === data.waves.length, 'each wave row carries a progress bar (CMP021)');
   check(data.waves.every((wave) => ['done', 'in progress', 'landed, measuring', 'next'].indexOf(wave.status) >= 0), 'every status is done, in progress, landed measuring or next');
   check(data.waves.every((wave) => wave.progress.value === null || (wave.progress.value >= 0 && wave.progress.value <= wave.progress.total)), 'no progress value is above its total');
+  // 11 Nov (web #551): a number on this page is a measure with its source, never a hope
+  check(data.waves.every((wave) => wave.pairs.every((pair) => pair.after === null || pair.of == null || (pair.after >= 0 && pair.after <= pair.of))), 'no after value is above its of');
+  check(data.waves.filter((wave) => wave.status === 'done').every((wave) => wave.progress.value !== null), 'a wave marked done has a measured progress number');
+  check(/\b20\d\d\b/.test(data.measured || '') && /\b[0-9a-f]{7,40}\b/.test(data.measured || ''), 'the measured line names a date and the commit it was measured on');
   const unmeasured = data.waves.reduce((sum, wave) => sum + wave.pairs.filter((pair) => pair.after === null).length + (wave.progress.value === null ? 1 : 0), 0);
   check(unmeasured > 0 && (drawn.match(/>measuring</g) || []).length === unmeasured, 'each number not measured yet (null) says measuring, and nothing else does: ' + unmeasured);
   const wave0 = data.waves[0].progress;
@@ -87,6 +91,22 @@ console.log('waves: one row per wave, from public/app/ui-waves.json');
   const keys = ['Waves', 'Wave {id}', 'In progress', 'Landed, measuring', 'Next', 'measuring', 'Measured {date}', 'of {total}'];
   data.waves.forEach((wave) => { keys.push(wave.title, wave.progress.label); wave.pairs.forEach((pair) => keys.push(pair.label)); });
   keys.forEach((key) => check(model.translatedIn(key).length === 4, 'waves label "' + key + '" is in ta hi ar fr'));
+}
+console.log('Meets the standard: the six keyboard and focus rules (live probes, never a written result)');
+{
+  const rows = model.KEY_ROWS;
+  check(rows.length === 6 && rows.every((row) => row.sources.length >= 1 && row.sources.every((link) => /^https:[/][/]/.test(link[1]))), 'six rules, each with its source links');
+  const drawn = rows.map((row) => model.meetsRowHTML(row, []));
+  check(drawn.every((html) => html.indexOf('gal-meets-row') > 0), 'each rule draws through the one meetsRowHTML');
+  check(drawn.filter((html) => /data-live="/.test(html)).length === 5 && drawn.filter((html) => /gal-meetlive-walk/.test(html)).length === 1, 'five rules wait for a measure; the opacity rule says the walk checks it');
+  check(!/data-live="[^"]*"[^>]*class="pass"|PASS/.test(drawn.join('')), 'no row is drawn with a result: the result comes from paintLive after the page is read');
+  const fail = { focusIn: false, tabStays: false, escCloses: true, focusBack: false }, good = { focusIn: true, tabStays: true, escCloses: true, focusBack: true };
+  check(!model.judge.focusIn(fail).ok && model.judge.focusIn(good).ok && /^FAIL/.test(model.judge.focusIn(fail).text) && /^PASS/.test(model.judge.focusIn(good).text), 'focus into the popup: the verdict follows what was read');
+  check(!model.judge.trap(fail).ok && !model.judge.trap({ focusIn: true, tabStays: true, escCloses: true, focusBack: false }).ok && model.judge.trap(good).ok && /Esc closes yes/.test(model.judge.trap(fail).text) && /Tab stays no/.test(model.judge.trap(fail).text), 'Tab, Esc and focus back: one miss fails the row and the chip names which');
+  check(model.judge.keys({ total: 45, out: 0 }).ok && !model.judge.keys({ total: 45, out: 2 }).ok && /2 of 45/.test(model.judge.keys({ total: 45, out: 2 }).text), 'every control by keyboard: counts the controls Tab cannot reach');
+  check(model.judge.names({ total: 9, unnamed: 0, titleOnly: 0 }).ok && !model.judge.names({ total: 9, unnamed: 3, titleOnly: 2 }).ok && /2 only a title/.test(model.judge.names({ total: 9, unnamed: 3, titleOnly: 2 }).text), 'every control named: a title alone is counted as no name');
+  check(model.judge.scroll({ total: 0, cannotReach: 0, unnamed: 0 }).ok && !model.judge.scroll({ total: 2, cannotReach: 0, unnamed: 1 }).ok && !model.judge.scroll({ total: 2, cannotReach: 1, unnamed: 0 }).ok, 'scrolling areas: unreachable or unnamed fails');
+  check(/function paintLive[^]*?judgeFocusIn[(]dialog[)]/.test(page) && /paintOverlay[(][)];[^p]*paintLive[(][)];/.test(page), 'paint() calls paintLive after the page is drawn');
 }
 console.log('the Standards page links here');
 const register = read('app/cap-standards.js'), standardsPage = read('standards.html');

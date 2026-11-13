@@ -118,6 +118,7 @@ tr.has .ul.got{opacity:1}
 <script>if (window.CBFrame) CBFrame.lab({ app:'product-lab', name:'Product Lab', icon:'◈' });   /* UX-90: the Finance frame, the Labs switcher in the left menu */</script>
 <div class="tools"><span class="u" id="who">…</span></div>
 <div class="wrap">
+  <div id="nomoney" class="note" role="status" data-testid="pl-no-country" style="margin:8px 0" hidden></div>
   <div class="steps" id="steps"></div>
   <div id="say"></div>
   <div id="stage"></div>
@@ -189,7 +190,8 @@ async function load(keepStep) {
     return;
   }
 
-  document.getElementById('who').textContent = DATA.have + ' products in your catalogue today · prices in ' + (DATA.currency || 'INR');
+  document.getElementById('who').textContent = DATA.have + ' products in your catalogue today' + (DATA.currency ? ' · prices in ' + DATA.currency : '');
+  paintNoMoney();
   DATA._have = {};
   DATA._mine = {};
   (DATA.mine || []).forEach(function (item) {
@@ -252,7 +254,17 @@ function have(r) {
    languages (Tamil, Hindi…) belong to the same table: no list exists for another country, so that control is hidden there. */
 var TABLE_CURRENCY = 'INR';
 function tableFits() {
-  return !DATA || !DATA.currency || DATA.currency === TABLE_CURRENCY;
+  return !DATA || DATA.currency === TABLE_CURRENCY; /* CTRY-72: a shop with no money (no country) gets no rupee suggestion either - it is told why (paintNoMoney) */
+}
+/** CTRY-72: a shop with no stated money sees the api's one sentence (money_why.why) and the way to fix it, where the prices would be. */
+function paintNoMoney() {
+  var box = document.getElementById('nomoney');
+  if (!box) return;
+  var show = !!DATA && !DATA.currency;
+  box.hidden = !show;
+  if (!show) return;
+  var moneyWords = (DATA.money_why && DATA.money_why.why) || ''; /* an api older than money_why says nothing but the link */
+  box.innerHTML = esc(moneyWords) + ' <a href="/settings.html#/country" data-testid="pl-country-link">Country setup</a>';
 }
 function suggestedOf(row) {
   return tableFits() ? row.price : null;
@@ -425,7 +437,7 @@ function buildChoose() {
     '</div>' +
     '<div class="row">' +
     '<input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select id="cat" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<select id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
@@ -507,7 +519,7 @@ function unitLine(product, entry) {
     '</b>' +
     (entry.uqc ? ' <span class="uqc" data-testid="pl-uqc" title="GST unit code">' + esc(entry.uqc) + '</span>' : '') +
     ' <span class="num">' +
-    fmtMoneyWhole(pr.n, DATA.currency || 'INR', '—') +
+    (DATA.currency ? fmtMoneyWhole(pr.n, DATA.currency, '—') : '—') +
     '</span>' +
     (pr.whose ? ' <span class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</span>' : '') +
     (got ? ' <span class="note">· you sell this</span>' : '') +

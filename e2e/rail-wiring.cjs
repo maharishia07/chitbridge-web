@@ -99,9 +99,9 @@ async function route(S, r) {
     await p.waitForSelector('#chitsheet [data-testid="rt-empty"], #chitsheet [data-testid="rt-count"]', { timeout: 8000 });
     await p.fill('#chitsheet [data-testid="msg-body"]', 'Friday is fine');
     await p.click('#chitsheet [data-testid="msg-send"]');
-    await p.waitForFunction(() => /Sent/.test((document.querySelector('#chitsheet [data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    await p.waitForFunction(() => /Note added/.test((document.querySelector('#chitsheet [data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.posts.length === 1 && S.posts[0].id === 'ch-431', 'A1 · Send posts ONE message on ch-431 (' + S.posts.length + ')');
-    ok(/Sent/.test(await text(p, '#chitsheet [data-testid="rt-out"]')), 'A1 · the outcome is said under the button: "' + (await text(p, '#chitsheet [data-testid="rt-out"]')) + '"');
+    ok(/Note added — team only/.test(await text(p, '#chitsheet [data-testid="rt-out"]')) && S.posts[0] && S.posts[0].body.thread_type === 'internal', 'A1 · the outcome is said under the button: "' + (await text(p, '#chitsheet [data-testid="rt-out"]')) + '"');
     await p.waitForSelector('#chitsheet [data-testid="rt-row"]', { timeout: 8000 }).catch(() => {});
     ok(/Friday is fine/.test(await text(p, '#chitsheet [data-testid="rt-list"]')), 'A1 · the message is listed in the thread');
     /* attach: the picker opens from the button; an empty file is refused by the one gate (no POST); a real one lands */
@@ -113,7 +113,7 @@ async function route(S, r) {
     ok(/Attached/.test(await p.evaluate(() => document.body.innerText)), 'A2 · "Attached" is said on screen');
     await p.keyboard.press('Escape');
     /* the bell is in the header already (R06) */
-    ok(await p.locator('[data-testid="bell"]').count() === 1, 'A · the bell is in the crm header');
+    ok(await p.locator('[data-testid="shell-bell"] [data-testid="bell-btn"]').count() === 1, 'A · the bell is in the crm header');
     await ctx.close();
   }
   {
@@ -143,9 +143,9 @@ async function route(S, r) {
     ok(await p.locator('#chitsheet [data-testid="cb-attach-btn"]').count() === 1 && await p.locator('#chitsheet [data-testid="rt-composer"]').count() === 1, 'B · the bill\'s sheet on Accounts carries Attach a file + the thread composer');
     await p.fill('#chitsheet [data-testid="msg-body"]', 'Please send the GST copy');
     await p.click('#chitsheet [data-testid="msg-send"]');
-    await p.waitForFunction(() => /Sent/.test((document.querySelector('#chitsheet [data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.posts.length === 1 && S.posts[0].id === 'ch1' && /Sent/.test(await text(p, '#chitsheet [data-testid="rt-out"]')), 'B · Send posts ONE message on the bill\'s chit and says so');
-    ok(await p.locator('[data-testid="bell"]').count() === 1, 'B · the bell is in the accounts header');
+    await p.waitForFunction(() => /Note added/.test((document.querySelector('#chitsheet [data-testid="rt-out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(S.posts.length === 1 && S.posts[0].id === 'ch1' && S.posts[0].body.thread_type === 'internal' && /Note added — team only/.test(await text(p, '#chitsheet [data-testid="rt-out"]')), 'B · Send posts ONE message on the bill\'s chit and says so');
+    ok(await p.locator('[data-testid="shell-bell"] [data-testid="bell-btn"]').count() === 1, 'B · the bell is in the accounts header');
     await ctx.close();
   }
 

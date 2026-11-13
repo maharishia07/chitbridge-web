@@ -159,7 +159,7 @@ function crmLeadAddBtn() {
   if (!crmEdit()) return crmViewOnlyBtn('crm-lead-add', '+ ' + tx('Add lead'), crmViewWhy()); /* shown, greyed, with the server's sentence (FX-L2C) */
   var blocked = LEADS.loaded && !LEADS.ready;
   return (
-    '<button type="button" class="act sm' +
+    '<button data-cbsid="CRM004-B01" type="button" class="act sm' +
     (blocked ? ' ghost' : '') +
     '" data-testid="crm-lead-add" data-crm="leadadd"' +
     (blocked ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -269,32 +269,33 @@ function crmLeadAddOpen() {
     toast(tx(CRM_LEADS_WAIT));
     return;
   }
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Add lead')) +
-      '</div></div><div class="mbody" data-testid="crm-lead-sheet">' +
+  ui.dialog({
+    mount: 'CRM004-U201',
+    pop: 'POP100',
+    title: 'Add lead',
+    testid: 'crm-lead-sheet',
+    body:
       '<label>' +
       esc(tx('Name')) +
-      '<input class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>' +
+      '<input data-cbsid="CRM004-I01" class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>' +
       '<label>' +
       esc(tx('Phone')) +
-      '<input class="inp" id="crm_lead_phone" data-testid="crm-lead-phone" type="tel" autocomplete="off"></label>' +
+      '<input data-cbsid="CRM004-I02" class="inp" id="crm_lead_phone" data-testid="crm-lead-phone" type="tel" autocomplete="off"></label>' +
       '<label>' +
       esc(tx('Stage')) +
-      '<select class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' +
+      '<select data-cbsid="CRM004-S01" class="inp" id="crm_lead_stage" data-testid="crm-lead-stage">' +
       ['lead', 'demo', 'trial']
         .map(function (item) {
           return '<option value="' + item + '">' + esc(tx(CRM_STAGE[item])) + '</option>';
         })
         .join('') +
       '</select></label>' +
-      '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="leadsave" data-testid="crm-lead-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM004-U201' } },
+      { name: 'save', options: { mount: 'CRM004-U201', key: 'save', effect: 'preference', testid: 'crm-lead-save', data: { crm: 'leadsave' } } }
+    ]
+  });
   var node = document.getElementById('crm_lead_name');
   if (node) node.focus();
 }
@@ -338,7 +339,7 @@ function crmStageBtn(party) {
   var verdict = party.lead.may || { ok: true },
     refused = verdict.ok === false;
   return (
-    '<button type="button" class="act quiet' +
+    '<button data-cbsid="CRM004-B02" type="button" class="act quiet' +
     (refused ? ' ghost' : '') +
     '" data-crm="rstage" data-testid="crm-act-stage"' +
     (refused ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -352,15 +353,17 @@ function crmStageBtn(party) {
 function crmStageOpen(party, rec) {
   var lead = (rec && rec.lead) || party.lead;
   if (!lead) return;
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Move to…')) +
-      '</div></div><div class="mbody" data-testid="crm-stage-sheet">' +
+  ui.dialog({
+    mount: 'CRM004-U202',
+    pop: 'POP106',
+    title: 'Move to…',
+    testid: 'crm-stage-sheet',
+    body:
       '<div class="supacts">' +
       (lead.moves || [])
         .map(function (item) {
           return (
-            '<button type="button" class="act ghost" data-crm="stagego" data-v="' +
+            '<button data-cbsid="CRM004-B03" type="button" class="act ghost" data-crm="stagego" data-v="' +
             esc(item) +
             '" data-testid="crm-stage-' +
             esc(item) +
@@ -371,11 +374,11 @@ function crmStageOpen(party, rec) {
         })
         .join('') +
       '</div>' +
-      '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button></div>'
-  );
+      '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM004-U202' } }
+    ]
+  });
 }
 /** move the open party to a stage through CBAction, then repaint the record */
 function crmStageGo(stage, btn) {
@@ -568,7 +571,7 @@ function crmLeadImportBtn() {
     ); /* shown, greyed, with the server's sentence — never hidden (the show-action rule, FX-L2C) */
   var blocked = LEADS.loaded && !LEADS.ready;
   return (
-    '<button type="button" class="act sm' +
+    '<button data-cbsid="CRM004-B04" type="button" class="act sm' +
     (blocked ? ' ghost' : '') +
     '" data-testid="crm-lead-import" data-crm="leadimport"' +
     (blocked ? ' disabled title="' + esc(tx(CRM_LEADS_WAIT)) + '"' : '') +
@@ -584,13 +587,16 @@ function crmImportOpen() {
     return;
   }
   LIMP = { name: '', rows: [], head: [], map: {}, plan: null, planErr: null, flow: null, prev: null, gen: 0 };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Import leads')) +
-      '</div><div class="sub" id="crm_imp_sub"></div></div>' +
-      '<div class="mbody" data-testid="crm-import-sheet"><div id="crm_imp_rail"></div><div id="crm_imp_body"></div></div>' +
-      '<div class="mfoot" id="crm_imp_foot"></div>'
-  );
+  ui.dialog({
+    mount: 'CRM004-U203',
+    pop: 'POP099',
+    title: 'Import leads',
+    subId: 'crm_imp_sub',
+    footId: 'crm_imp_foot',
+    testid: 'crm-import-sheet',
+    body: '<div id="crm_imp_rail"></div><div id="crm_imp_body"></div>',
+    footerHtml: ''
+  });
   LIMP.flow = CBSteps.create({
     steps: [
       { k: 'file', n: tx('File'), t: tx('A .csv with a header row') },
@@ -628,7 +634,7 @@ function crmImportStep(stepKey) {
     return (
       '<label>' +
       esc(tx('CSV file')) +
-      '<input class="inp" type="file" accept=".csv,text/csv" data-testid="crm-import-file" onchange="crmImportPick(this)"></label>' +
+      '<input data-cbsid="CRM004-I03" class="inp" type="file" accept=".csv,text/csv" data-testid="crm-import-file" onchange="crmImportPick(this)"></label>' +
       '<div class="hint" role="status" data-testid="crm-import-filemsg">' +
       (LIMP.name
         ? esc(LIMP.name) + ' · ' + esc(crmPlural(rowCount, 'row', 'rows')) + (rowCount > 500 ? ' · ' + esc(tx(LIMP_CAP)) : '')
@@ -644,7 +650,7 @@ function crmImportStep(stepKey) {
         '<label>' +
         esc(tx(item[1])) +
         (key === 'name' ? ' *' : '') +
-        '<select class="inp" data-testid="crm-import-map-' +
+        '<select data-cbsid="CRM004-S02" class="inp" data-testid="crm-import-map-' +
         key +
         '" onchange="crmImportMap(\'' +
         key +
@@ -925,6 +931,6 @@ function crmImportDone(result) {
     '<div id="crm_imp_skipped"></div>';
   if (skipped.length) crmImportList(document.getElementById('crm_imp_skipped'), 'crm-import-skipped', skipped, false);
   var foot = document.getElementById('crm_imp_foot');
-  if (foot) foot.innerHTML = '<button type="button" class="pri" data-testid="crm-import-done" onclick="closeModal()">' + esc(tx('Done')) + '</button>';
+  if (foot) foot.innerHTML = '<button data-cbsid="CMP004" type="button" class="pri" data-testid="crm-import-done" onclick="closeModal()">' + esc(tx('Done')) + '</button>';
   toast(crmPlural(Number(result.added) + Number(result.merged), 'lead imported', 'leads imported'));
 }

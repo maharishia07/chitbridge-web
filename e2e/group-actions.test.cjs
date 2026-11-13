@@ -26,6 +26,7 @@ let root = null;
 const calls = [];
 let failOn = null; /* (name, body, params) => throws or answers */
 const state = { rows: [], selected: new Set(), sel: null, detail: null, mdetail: false, prods: [], prodPicked: new Set() };
+let barText = ''; /* what the selection bar would read: updateSelBar draws it from UI.selected and the loaded rows */
 const sandbox = {
   console, tx: (t) => t, txn: (one, other, n) => (n === 1 ? one : other).replace('{count}', n), txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => (v && k in v ? v[k] : m)), esc: (t) => String(t),
   CBAction: { run: (b, fn) => Promise.resolve(fn()) },
@@ -39,7 +40,7 @@ const sandbox = {
   addEventListener() {}, removeEventListener() {},
   MSG: { fail: (verb, e) => 'Could not ' + verb + ': ' + ((e && e.message) || e), bulkAssigned: (n, who, sk) => n + ' assigned' + (sk ? ' · ' + sk + ' skipped' : ''), restored: (n) => 'Restored ' + n },
   STORE: { actors: [] }, UI: state, toast: (message, undo) => { toasts.push(message); lastUndo = undo || null; }, announce() {}, showBusy: () => { busyCalls += 1; }, hideBusy() {},
-  MODALS: { stat: null, del: null }, statusWordFor: (to) => to, chitPos: () => null, cap: (t) => t, afterChitAction() {}, loadList: async () => {}, loadCatalogue: async () => {}, renderApp() {}, actionTargets: () => state.targets,
+  MODALS: { stat: null, del: null }, statusWordFor: (to) => to, chitPos: () => null, cap: (t) => t, afterChitAction() {}, loadList: async () => {}, updateSelBar: () => { const ticked = state.rows.filter((r) => state.selected.has(r.id)); barText = state.selected.size + ' selected · A$' + (ticked.reduce((sum, r) => sum + (r.amt || 0), 0) / 100).toFixed(2); }, loadCatalogue: async () => {}, renderApp() {}, actionTargets: () => state.targets,
   prodId: (p) => p.id, pData: (p) => p, UIprod: null,
   api: async (name, options) => {
     calls.push({ name, params: options && options.params, body: options && options.body });
@@ -138,10 +139,13 @@ const sizes = (name) => calls.filter((c) => c.name === name).map((c) => (c.body 
   console.log('app.html: bulkRestore, one call per record');
   reset();
   state.targets = ids(25);
+  state.rows = ids(25).map((id) => ({ id, amt: 500 }));
+  barText = '25 selected · A$125.00'; /* what the bar read before the run */
   failOn = async (name, options) => { if (options.params.id === 'c4') throw new Error('gone'); return {}; };
   await sandbox.bulkRestore();
   check(calls.length === 25 && calls.every((c) => c.name === 'restore') && tray !== null, '25 ids → 25 restore calls (the same endpoint per record), and the panel moved to the tray after 2 s');
   check(/24 restored · 1 failed/.test(toasts[toasts.length - 1]) && state.selected.has('c4') && state.selected.size === 1, '24 restored, c4 counted failed and still ticked');
+  check(barText === '1 selected · A$5.00', 'the selection bar is repainted after the run: 1 selected and its amount, not the 25 tried (' + barText + ')');
 
   console.log('app.html: assignBulkChits, a step that throws stops the run');
   reset(); state.selectMode = false;

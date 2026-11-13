@@ -239,7 +239,7 @@
       '<div class="empty" data-testid="tk-fail"><div class="t">' +
       esc(T(refused ? 'This sign-in cannot open this' : "Couldn't read your orders")) +
       '</div>' +
-      '<button type="button" class="act" id="tk_retry" data-testid="tk-retry">' +
+      '<button data-cbsid="TSK003-B01" type="button" class="act" id="tk_retry" data-testid="tk-retry">' +
       esc(T('Try again')) +
       '</button></div>';
     $('tk_retry').onclick = function () {
@@ -248,13 +248,15 @@
   }
 
   /* ── an action drawn the one way: shown always; greyed with the server's sentence when it may not (as cap-employees) ── */
-  function actRow(id, label, verdict, extra, className) {
+  function actRow(id, label, verdict, extra, className, stampCode) {
     var ok = !verdict || verdict.ok !== false;
     return (
       '<div class="tk-act' +
       (ok ? '' : ' no') +
       '">' +
-      '<button type="button" class="act ' +
+      '<button data-cbsid="' +
+      stampCode +
+      '" type="button" class="act ' +
       (className || 'quiet') +
       '" id="' +
       id +
@@ -531,7 +533,7 @@
     var pick = '';
     if (board.o.embed) {
       pick =
-        '<select class="inp tk-pick" id="tk_view" data-testid="tk-view" aria-label="' +
+        '<select data-cbsid="TSK003-S01" class="inp tk-pick" id="tk_view" data-testid="tk-view" aria-label="' +
         esc(T('Folder')) +
         '">' +
         VIEWS.map(function (item) {
@@ -542,7 +544,7 @@
     }
     /* ＋ New (TOUR-FIX1): a task, started HERE in this page's own sheet — never the workshop (index-not-app). An order to a supplier waits for the
        compose route outside app.html (docs/design/tasks-orders/REQUIREMENT.md §＋ New). */
-    var fresh = board.o.embed ? '' : '<button type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
+    var fresh = board.o.embed ? '' : '<button data-cbsid="TSK003-B02" type="button" class="act quiet" id="tk_new" data-testid="tk-new">' + esc(T('＋ New')) + '</button>';
     node.innerHTML = '<span class="tk-count" data-testid="tk-count">' + count + '</span>' + pick + fresh;
     var viewSelect = $('tk_view');
     if (viewSelect)
@@ -564,7 +566,7 @@
   function sheet(html) {
     var node = $('tk_sheet');
     if (!node) return;
-    node.innerHTML = '<button type="button" class="mx" id="tk_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
+    node.innerHTML = '<button data-cbsid="TSK003-B03" type="button" class="mx" id="tk_x" aria-label="' + esc(T('Close')) + '" title="' + esc(T('Close')) + '">✕</button>' + html;
     if (!node.open) {
       try {
         node.showModal();
@@ -616,7 +618,7 @@
             '</h2><div class="empty" data-testid="tk-sheet-fail"><div class="t">' +
             esc(T("Couldn't read this one")) +
             '</div>' +
-            '<button type="button" class="act" id="tk_sheet_retry">' +
+            '<button data-cbsid="TSK003-B04" type="button" class="act" id="tk_sheet_retry">' +
             esc(T('Try again')) +
             '</button></div>'
         );
@@ -654,7 +656,7 @@
   function billRow(chit) {
     if (chit.kind !== 'order_in') return '';
     var verdict = chit.billed ? { ok: false, say: T('Already billed') } : chit.stage === 'closed' ? { ok: false, say: T('This order is closed') } : { ok: true };
-    return actRow('tk_do_bill', T('Bill it'), verdict, board.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', verdict.ok ? '' : 'quiet');
+    return actRow('tk_do_bill', T('Bill it'), verdict, board.o.embed ? '' : '<span class="why">' + esc(T('on the till')) + '</span>', verdict.ok ? '' : 'quiet', 'TSK003-B05');
   }
   function tkBill(chit) {
     if (board.o.embed) {
@@ -708,9 +710,9 @@
       (line.settings && line.settings.task ? ' · ' + esc(line.settings.task) : '') +
       '</div>' +
       '<div class="tk-line-acts">' +
-      actRow('tk_la_' + lineId, T('Assign'), line.actions && line.actions.assign_line) +
-      actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line) +
-      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }) +
+      actRow('tk_la_' + lineId, T('Assign'), line.actions && line.actions.assign_line, '', '', 'TSK003-B06') +
+      actRow('tk_ld_' + lineId, T(done ? 'Reopen' : 'Done'), line.actions && line.actions.assign_line, '', '', 'TSK003-B07') +
+      actRow('tk_lv_' + lineId, T('Deliver'), line.remaining > 0 ? line.actions && line.actions.deliver_line : { ok: false, say: T('Nothing left to deliver') }, '', '', 'TSK003-B08') +
       '</div><div id="tk_lmore_' +
       lineId +
       '"></div></div>'
@@ -725,7 +727,7 @@
       chit.stuck_why = node.stuck_why || null;
     } /* the rail's stuck mark rides the list row; the sheet paints it */
     var steps = STEPS.map(function (item) {
-      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet');
+      return actRow('tk_do_' + item, stepLabel(item, chit), acts[item], '', item === 'accept' || item === 'complete' ? '' : 'quiet', 'TSK003-B09');
     });
     steps.splice(1, 0, billRow(chit)); /* Accept → Bill it → Delivered, the brief's order */
     steps = steps.join('');
@@ -754,7 +756,7 @@
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Who has it')) +
         '</div>' +
-        actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(assigneeName) + '</span>') +
+        actRow('tk_assign', T('Assign'), acts.assign_task, '<span class="sub" data-testid="tk-who">' + esc(assigneeName) + '</span>', '', 'TSK003-B10') +
         '<div id="tk_amore"></div></div>' +
         '<div class="tk-block"><div class="tk-h">' +
         esc(T('Lines')) +
@@ -872,8 +874,8 @@
         '<div class="tk-panel"><label class="sub" for="tk_reason">' +
         esc(T(action === 'reject' ? 'Why is it refused?' : 'Lines are still open — why close it?')) +
         '</label>' +
-        '<input class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">' +
-        '<button type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' +
+        '<input data-cbsid="TSK003-I01" class="inp" id="tk_reason" data-testid="tk-reason" maxlength="500" autocomplete="off">' +
+        '<button data-cbsid="TSK003-B11" type="button" class="act" id="tk_reason_go" data-testid="tk-reason-go">' +
         esc(stepLabel(action, chit)) +
         '</button></div>';
       $('tk_reason').focus();
@@ -957,12 +959,12 @@
         '<div class="tk-panel"><label class="sub" for="tk_who_sel">' +
         esc(T('Who does this?')) +
         '</label>' +
-        '<select id="tk_who_sel" class="inp" data-testid="' +
+        '<select data-cbsid="TSK003-S02" id="tk_who_sel" class="inp" data-testid="' +
         testId +
         '">' +
         opts +
         '</select>' +
-        '<button type="button" class="act" id="tk_who_go" data-testid="' +
+        '<button data-cbsid="TSK003-B12" type="button" class="act" id="tk_who_go" data-testid="' +
         testId +
         '-go">' +
         esc(T('Save')) +
@@ -1030,10 +1032,10 @@
       ' <span class="mono">' +
       esc(line.unit || '') +
       '</span></label>' +
-      '<input class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
+      '<input data-cbsid="TSK003-I02" class="inp mono" id="tk_dq" data-testid="tk-deliver-qty" inputmode="decimal" value="' +
       esc(line.remaining) +
       '" autocomplete="off">' +
-      '<button type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
+      '<button data-cbsid="TSK003-B13" type="button" class="act" id="tk_dq_go" data-testid="tk-deliver-go">' +
       esc(T('Record')) +
       '</button></div>';
     $('tk_dq').focus();
@@ -1078,8 +1080,8 @@
         '<div class="tk-panel"><label class="sub" for="tk_new_what">' +
         esc(T('What needs doing?')) +
         '</label>' +
-        '<input class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">' +
-        '<button type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' +
+        '<input data-cbsid="TSK003-I03" class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">' +
+        '<button data-cbsid="TSK003-B14" type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' +
         esc(T('Add task')) +
         '</button></div>' +
         '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out"></div>'

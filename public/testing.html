@@ -777,6 +777,7 @@
 </style>
 <script src="/engine/screen.js"></script>
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the header chips (role=button) -->
 <script src="/app/list-ctl.js"></script>   <!-- CBList.every: the board's lists page (T2-PAGING) and the board sums the whole set -->
 </head>
 <body>
@@ -814,24 +815,24 @@
          of 29119-3's document types it corresponds to, so a reader can look ours up in theirs rather than
          learning our words. ⚠️ Only where it genuinely corresponds: the Summary is OURS, because 29119-3's
          Test Status Report is written DURING execution against a plan and we have no plan. -->
-    <button id="t_cases" class="on" onclick="setView('cases')"
+    <button data-cbsid="OWN003-B01" id="t_cases" class="on" onclick="setView('cases')"
       title="What should be true. Every case, in the order somebody would walk the product. This tab cannot
 tell you whether any of it ran. — Test Case Specification (ISO/IEC/IEEE 29119-3)">Cases</button>
-    <button id="t_sum" onclick="setView('summary')"
+    <button data-cbsid="OWN003-B02" id="t_sum" onclick="setView('summary')"
       title="What has been run, and how far along. Done means a result exists — not that it passed. — ours,
 not a named document of the standard">Summary</button>
-    <button id="t_rep" onclick="setView('report')"
+    <button data-cbsid="OWN003-B03" id="t_rep" onclick="setView('report')"
       title="The same numbers as a document you could hand somebody. Counts are measured; the judgements
 carry a question, never a generated answer. — Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
-    <button id="t_rel" onclick="setView('reliability')"
+    <button data-cbsid="OWN003-B04" id="t_rel" onclick="setView('reliability')"
       title="Whether a test can be believed. Not pass or fail — how often each one changed its answer.">Reliability</button>
-    <button id="t_try" onclick="setView('try')"
+    <button data-cbsid="OWN003-B05" id="t_try" onclick="setView('try')"
       title="The engines themselves, on your own input, with no server in between to blame. Nothing here is
 recorded.">Try it</button>
     <!-- ⭐ b292: read the Summary and the Report for ONE project. "All" is the whole board, as before. -->
     <span id="pview" style="display:none;margin-inline-start:12px"><label for="f_pview">Project</label>
-      <select id="f_pview" onchange="setProjectView(this.value)" data-testid="project-filter"><option value="">All</option></select></span>
-    <span class="tsize"><button onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
+      <select data-cbsid="OWN003-S01" id="f_pview" onchange="setProjectView(this.value)" data-testid="project-filter"><option value="">All</option></select></span>
+    <span class="tsize"><button data-cbsid="OWN003-B06" onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button data-cbsid="OWN003-B07" onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
   </div>
 </div>
 </div><!-- /.frozen -->
@@ -879,16 +880,16 @@ recorded.">Try it</button>
     money.test.js under performance and returned eighty-nine security files.
   -->
   <label for="f_type">Kind</label>
-  <select id="f_type" onchange="paint()"></select>
+  <select data-cbsid="OWN003-S02" id="f_type" onchange="paint()"></select>
 
   <!--
     ⭐⭐ AND THE SECOND IS WHERE IT REACHES — api · middleware · engine · web · database · connector. Read from
     what a file requires, reads off disk and calls over HTTP, so it is measured rather than filed by hand.
   -->
   <label for="f_area">Reaches</label>
-  <select id="f_area" onchange="paint()"></select>
+  <select data-cbsid="OWN003-S03" id="f_area" onchange="paint()"></select>
 
-  <input type="search" id="f_q" placeholder="Search a path, a module, a claim…" oninput="paint()">
+  <input data-cbsid="OWN003-I01" type="search" id="f_q" placeholder="Search a path, a module, a claim…" oninput="paint()">
 
   <!--
     ── ⚠️⚠️ A FILTER YOU CANNOT SEE IS A BOARD THAT IS LYING ─────────────────────────────────────────────────
@@ -917,7 +918,7 @@ recorded.">Try it</button>
     ⭐ So it is always here, always in the same place. The COUNT beside it still appears only when something is
     filtered — that is information, and information about nothing is the noise I was worried about.
   -->
-  <button class="btn" id="f_clear" onclick="clearFilters()"
+  <button data-cbsid="OWN003-B08" class="btn" id="f_clear" onclick="clearFilters()"
     title="Clear every filter — kind, reaches, search, and the one the header chips set">Clear filters</button>
   <span id="f_state_show" class="fclear" hidden></span>
 
@@ -947,7 +948,7 @@ recorded.">Try it</button>
 -->
 <div class="bar pivotbar">
   <label for="p_rows">Rows</label>
-  <select id="p_rows" onchange="paint()">
+  <select data-cbsid="OWN003-S04" id="p_rows" onchange="paint()">
     <option value="area" selected>Area</option>
     <option value="kind">Kind</option>
     <option value="reaches">Reaches</option>
@@ -956,7 +957,7 @@ recorded.">Try it</button>
     <option value="status">Status</option>
   </select>
   <label for="p_cols">Columns</label>
-  <select id="p_cols" onchange="paint()">
+  <select data-cbsid="OWN003-S05" id="p_cols" onchange="paint()">
     <option value="area">Area</option>
     <option value="kind">Kind</option>
     <option value="reaches">Reaches</option>
@@ -981,7 +982,7 @@ recorded.">Try it</button>
     ⭐ So each option now says what it means in the option itself, and the internal ones say whose they are.
   -->
   <label for="f_kind">This run is</label>
-  <select id="f_kind" onchange="saveRun()">
+  <select data-cbsid="OWN003-S06" id="f_kind" onchange="saveRun()">
     <option value="manual" title="A person working through cases on this screen.">Someone testing by hand</option>
     <option value="unit" title="An automated suite reporting itself — what the Post a run button records.">An automated run</option>
     <option value="regression" title="Everything, re-run to check nothing that worked has stopped working.">A full regression</option>
@@ -990,18 +991,18 @@ recorded.">Try it</button>
     <option value="t2" title="Claude's own ladder: every spec for that surface, ~7 min, run on leaving a panel.">T2 · Claude, one surface</option>
     <option value="t3" title="Claude's own ladder: everything, ~55 min. Athi decides when.">T3 · Claude, everything</option>
   </select>
-  <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
+  <input data-cbsid="OWN003-I02" type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
   <!-- ⭐ b292 · Athi, 2026-10-07: "it has to run against a project … so we can group against a sprint or project."
        Every result tapped or posted from here carries it. Kept on this device, like the tester. -->
   <label for="f_proj">Project</label>
-  <input type="text" id="f_proj" placeholder="e.g. 2026-10 Stage 1" maxlength="80" oninput="saveProj()" style="max-width:170px"
+  <input data-cbsid="OWN003-I03" type="text" id="f_proj" placeholder="e.g. 2026-10 Stage 1" maxlength="80" oninput="saveProj()" style="max-width:170px"
     title="The sprint or project these results belong to">
   <label for="f_who">Tester</label>
   <!-- ⚠️ THE ENTITY NAME IS NOT AN ANSWER TO "who tested this". The server always records the identity off
        the token, which cannot be typed in and is the evidence; this is who was at the keyboard, which only
        matters — and only differs — when one login is shared. Kept on this device. -->
-  <input type="text" id="f_who" placeholder="who is at the keyboard" oninput="saveWho()" style="max-width:150px">
-  <button class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
+  <input data-cbsid="OWN003-I04" type="text" id="f_who" placeholder="who is at the keyboard" oninput="saveWho()" style="max-width:150px">
+  <button data-cbsid="OWN003-B09" class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
   <span style="flex:1"></span>
   <!--
     ⭐⭐⭐ THE LOADER LIVES HERE NOW, AND IT HAS TO.
@@ -1012,13 +1013,13 @@ recorded.">Try it</button>
     ⭐ An upsert that cannot be re-run is not an upsert. A control whose description says "press it again"
     belongs where a person can.
   -->
-  <button class="btn pri" onclick="seed()"
+  <button data-cbsid="OWN003-B10" class="btn pri" onclick="seed()"
     title="Load the documented cases — an upsert. Safe to press again: it refreshes the wording and adds anything new, and leaves every result exactly where it is.">Load cases</button>
   <!-- ⭐ Gherkin: the spec clause and its cases as ONE text. The Feature description IS the clause, so a
        file that goes into the repository carries both arms of the V and neither can be edited alone. -->
-  <button class="btn" onclick="exportFeature()" title="Download the cases as a .feature file">Export .feature</button>
-  <button class="btn" onclick="document.getElementById('f_file').click()" title="Load a .feature file — the Feature description becomes the spec clause">Import .feature</button>
-  <input type="file" id="f_file" accept=".feature,.txt" style="display:none" onchange="importFeature(this)">
+  <button data-cbsid="OWN003-B11" class="btn" onclick="exportFeature()" title="Download the cases as a .feature file">Export .feature</button>
+  <button data-cbsid="OWN003-B12" class="btn" onclick="document.getElementById('f_file').click()" title="Load a .feature file — the Feature description becomes the spec clause">Import .feature</button>
+  <input data-cbsid="OWN003-I05" type="file" id="f_file" accept=".feature,.txt" style="display:none" onchange="importFeature(this)">
   <!--
     ⭐⭐⭐ EVIDENCE, WITHOUT A TERMINAL. Athi, 2026-09-11: *"see how the evidence can be included."*
 
@@ -1029,9 +1030,9 @@ recorded.">Try it</button>
 
     ⭐ So: drop the XML the suite already writes. Same endpoint, same ledger, same rows a person taps Pass into.
   -->
-  <button class="btn pri" onclick="document.getElementById('f_res').click()"
+  <button data-cbsid="OWN003-B13" class="btn pri" onclick="document.getElementById('f_res').click()"
     title="Post a run — drop the JUnit XML any suite writes (node C:\dev\suite.cjs --junit test-results/suite.xml)">Post a run</button>
-  <input type="file" id="f_res" accept=".xml" multiple style="display:none" onchange="importResults(this)">
+  <input data-cbsid="OWN003-I06" type="file" id="f_res" accept=".xml" multiple style="display:none" onchange="importResults(this)">
 </div>
 
 <!--
@@ -1289,7 +1290,7 @@ function notice(html, bad) {
   if (!node) return;
   node.hidden = false;
   node.className = 'notice' + (bad ? ' bad' : '');
-  node.innerHTML = html + '<button class="x" onclick="document.getElementById(\'notice\').hidden=true" title="Dismiss">\u00d7</button>';
+  node.innerHTML = html + '<button data-cbsid="OWN003-B14" class="x" onclick="document.getElementById(\'notice\').hidden=true" title="Dismiss">\u00d7</button>';
 }
 
 async function seed() {
@@ -1556,7 +1557,7 @@ async function load() {
     if (!CASES.length) {
       document.getElementById('main').innerHTML =
         '<div class="say"><b>No test cases on this board yet.</b>' +
-        '<button class="btn pri" onclick="seed()" style="margin:6px 0">Load the test cases</button>' +
+        '<button data-cbsid="OWN003-B15" class="btn pri" onclick="seed()" style="margin:6px 0">Load the test cases</button>' +
         '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:5px;line-height:1.55">The documented cases ' +
         'for the counter, the bill, the queue, suppliers and the offer lab. Safe to press again later — it reloads ' +
         'the wording and leaves every result exactly where it is.</div></div>';
@@ -1735,7 +1736,7 @@ function fillFilters() {
   var tot = document.getElementById('f_tot');
   function n(val, nestedLabel, key, cls) {
     return (
-      '<b class="t' +
+      '<b data-cbsid="OWN003-C01" class="t' +
       (st === key ? ' on' : '') +
       (cls ? ' ' + cls : '') +
       '" onclick="setState(\'' +
@@ -2022,16 +2023,13 @@ function tally() {
   var node = (document.getElementById('f_state') || {}).value || '';
   var chip = function (state, n, label, cls) {
     return (
-      '<span class="t ' +
+      '<span data-cbsid="OWN003-B16" class="t ' +
       (cls || '') +
       (node === state ? ' on' : '') +
       '" onclick="chipTo(\'' +
       state +
       '\')"' +
-      ' title="Show these on the Cases tab" role="button" tabindex="0"' +
-      " onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();chipTo('" +
-      state +
-      '\')}">' +
+      ' title="Show these on the Cases tab" role="button" tabindex="0">' +
       '<b>' +
       n +
       '</b> ' +
@@ -2458,8 +2456,8 @@ function tryCardMoney() {
     'Currency \u00b7 the same figure, whoever reads it',
     'CBLocale.money(amount, currencyCode)',
     '<div class="row">' +
-      '<input type="text" id="tm_amt" value="1234567.5" style="flex:0 0 130px">' +
-      '<select id="tm_cur" onchange="tryMoney()">' +
+      '<input data-cbsid="OWN003-I07" type="text" id="tm_amt" value="1234567.5" style="flex:0 0 130px">' +
+      '<select data-cbsid="OWN003-S07" id="tm_cur" onchange="tryMoney()">' +
       ['INR', 'USD', 'AED', 'EUR', 'GBP', 'JPY', 'KWD', 'SGD', 'LKR', 'PKR']
         .map(function (item) {
           return '<option' + (item === 'INR' ? ' selected' : '') + '>' + item + '</option>';
@@ -2467,7 +2465,7 @@ function tryCardMoney() {
         .join('') +
       '</select>' +
       '<span class="dim" style="font-size:var(--fs-1)">sender</span>' +
-      '<select id="tm_send" onchange="tryMoney()">' +
+      '<select data-cbsid="OWN003-S08" id="tm_send" onchange="tryMoney()">' +
       ['en-IN', 'en-US', 'en-GB', 'de-DE', 'ar-AE', 'ta-IN']
         .map(function (item) {
           return '<option>' + item + '</option>';
@@ -2475,18 +2473,18 @@ function tryCardMoney() {
         .join('') +
       '</select>' +
       '<span class="dim" style="font-size:var(--fs-1)">receiver</span>' +
-      '<select id="tm_recv" onchange="tryMoney()">' +
+      '<select data-cbsid="OWN003-S09" id="tm_recv" onchange="tryMoney()">' +
       ['en-US', 'en-IN', 'en-GB', 'de-DE', 'ar-AE', 'ja-JP']
         .map(function (item) {
           return '<option>' + item + '</option>';
         })
         .join('') +
       '</select>' +
-      '<button class="btn pri" onclick="tryMoney()">Run</button></div>',
+      '<button data-cbsid="OWN003-B17" class="btn pri" onclick="tryMoney()">Run</button></div>',
     ['1234567.5 INR', '1234567.5 USD', '1234567 JPY', '1234567.5 KWD']
       .map(function (e) {
         var b = e.split(' ');
-        return "<button onclick=\"setVal('tm_amt','" + b[0] + "');setVal('tm_cur','" + b[1] + '\');tryMoney()">' + esc(e) + '</button>';
+        return "<button data-cbsid=\"OWN003-B18\" onclick=\"setVal('tm_amt','" + b[0] + "');setVal('tm_cur','" + b[1] + '\');tryMoney()">' + esc(e) + '</button>';
       })
       .join('')
   );
@@ -2498,10 +2496,10 @@ function tryCardNums() {
     'Numerals \u00b7 what a customer actually said',
     'CBNums.numeralsIn(text) \u00b7 verifyQuantity(text, qty) \u00b7 negationIn(text)',
     '<div class="row">' +
-      '<input type="text" id="tn_text" value="pathu kilo thakkali">' +
+      '<input data-cbsid="OWN003-I08" type="text" id="tn_text" value="pathu kilo thakkali">' +
       '<span class="dim" style="font-size:var(--fs-1)">check qty</span>' +
-      '<input type="text" id="tn_qty" value="10" style="flex:0 0 70px">' +
-      '<button class="btn pri" onclick="tryNums()">Run</button></div>',
+      '<input data-cbsid="OWN003-I09" type="text" id="tn_qty" value="10" style="flex:0 0 70px">' +
+      '<button data-cbsid="OWN003-B19" class="btn pri" onclick="tryNums()">Run</button></div>',
     [
       ['pathu kilo thakkali', '10'],
       ['oru watter bottle', '1'],
@@ -2511,7 +2509,7 @@ function tryCardNums() {
       ['thakkali venam', '']
     ]
       .map(function (e) {
-        return "<button onclick=\"setVal('tn_text','" + e[0] + "');setVal('tn_qty','" + e[1] + '\');tryNums()">' + esc(e[0]) + '</button>';
+        return "<button data-cbsid=\"OWN003-B20\" onclick=\"setVal('tn_text','" + e[0] + "');setVal('tn_qty','" + e[1] + '\');tryNums()">' + esc(e[0]) + '</button>';
       })
       .join('')
   );
@@ -2524,12 +2522,12 @@ function tryCardDoc() {
     'CBDoc.compose({country, prefix, kind, seq}) \u00b7 check(number, country)',
     '<div class="row">' +
       '<span class="dim" style="font-size:var(--fs-1)">country</span>' +
-      '<input type="text" id="td_cty" value="IN" style="flex:0 0 70px">' +
+      '<input data-cbsid="OWN003-I10" type="text" id="td_cty" value="IN" style="flex:0 0 70px">' +
       '<span class="dim" style="font-size:var(--fs-1)">till</span>' +
-      '<input type="text" id="td_till" value="C1" style="flex:0 0 80px">' +
+      '<input data-cbsid="OWN003-I11" type="text" id="td_till" value="C1" style="flex:0 0 80px">' +
       '<span class="dim" style="font-size:var(--fs-1)">no.</span>' +
-      '<input type="text" id="td_seq" value="41" style="flex:0 0 80px">' +
-      '<button class="btn pri" onclick="tryDoc()">Run</button></div>',
+      '<input data-cbsid="OWN003-I12" type="text" id="td_seq" value="41" style="flex:0 0 80px">' +
+      '<button data-cbsid="OWN003-B21" class="btn pri" onclick="tryDoc()">Run</button></div>',
     [
       ['IN', 'C1', '41'],
       ['IN', 'ABCDEF', '41'],
@@ -2538,7 +2536,7 @@ function tryCardDoc() {
     ]
       .map(function (e) {
         return (
-          "<button onclick=\"setVal('td_cty','" +
+          "<button data-cbsid=\"OWN003-B22\" onclick=\"setVal('td_cty','" +
           e[0] +
           "');setVal('td_till','" +
           e[1] +
@@ -2878,8 +2876,8 @@ async function paintReport() {
   var h =
     '<div class="rep">' +
     '<div class="noprint" style="margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap">' +
-    '<button class="btn pri" onclick="window.print()">Print / save as PDF</button>' +
-    '<button class="btn" onclick="setView(\'summary\')">\u2190 Summary</button></div>' +
+    '<button data-cbsid="OWN003-B23" class="btn pri" onclick="window.print()">Print / save as PDF</button>' +
+    '<button data-cbsid="OWN003-B24" class="btn" onclick="setView(\'summary\')">\u2190 Summary</button></div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.06em;text-transform:uppercase;' +
     'font-weight:700">' +
     esc(r.standard) +
@@ -3944,7 +3942,7 @@ function matrixHTML() {
       h +=
         '<td class="num">' +
         (n
-          ? '<span class="big clickable" onclick="drill(\'' + item + "','" + c.k + '\')">' + n + '</span>'
+          ? '<span data-cbsid="OWN003-C02" class="big clickable" onclick="drill(\'' + item + "','" + c.k + '\')">' + n + '</span>'
           : impossible
             ? '<span class="na" title="' + esc(NO_MANUAL[item]) + '">n/a</span>'
             : '<span class="dim">—</span>') +
@@ -4064,7 +4062,7 @@ function matrixHTML() {
   h += '<tr class="foot"><td><b>Everything</b></td>';
   COLS.forEach(function (item) {
     var n = colN[item.k] || 0;
-    h += '<td class="num">' + (n ? '<b class="clickable" onclick="drill(\'\',\'' + item.k + '\')">' + n + '</b>' : '<span class="dim">0</span>') + '</td>';
+    h += '<td class="num">' + (n ? '<b data-cbsid="OWN003-C03" class="clickable" onclick="drill(\'\',\'' + item.k + '\')">' + n + '</b>' : '<span class="dim">0</span>') + '</td>';
   });
   h +=
     '<td class="num"><b>' +
@@ -4397,7 +4395,7 @@ function treeNode(depth, glyph, label, count, tail, note, open, key) {
   var pad = 10 + depth * 18;
   var leaf = !!note && !key; /* a file: name and purpose, in tracks */
   return (
-    '<div class="tnode' +
+    '<div data-cbsid="OWN003-C04" class="tnode' +
     (leaf ? ' tleaf' : '') +
     (open ? ' open' : '') +
     '"' +
@@ -4917,20 +4915,20 @@ async function paintSummary() {
   var h =
     '<div class="sumswitch">' +
     /* ⭐ one clause on each button it describes, rather than four sentences beside the four of them */
-    '<button class="btn' +
+    '<button data-cbsid="OWN003-B25" class="btn' +
     (SUMVIEW === 'table' ? ' pri' : '') +
     '" onclick="setSumView(\'table\')" ' +
     'title="Compares the layers">Table</button>' +
-    '<button class="btn' +
+    '<button data-cbsid="OWN003-B26" class="btn' +
     (SUMVIEW === 'tree' ? ' pri' : '') +
     '" onclick="setSumView(\'tree\')" ' +
     'title="What is inside each layer">Tree \u00b7 by layer</button>' +
-    '<button class="btn' +
+    '<button data-cbsid="OWN003-B27" class="btn' +
     (SUMVIEW === 'folder' ? ' pri' : '') +
     '" onclick="setSumView(\'folder\')" ' +
     'title="Where the files actually are \u2014 the only one that cannot leave anything out">' +
     'Tree \u00b7 by folder</button>' +
-    '<button class="btn' +
+    '<button data-cbsid="OWN003-B28" class="btn' +
     (SUMVIEW === 'menu' ? ' pri' : '') +
     '" onclick="setSumView(\'menu\')" ' +
     'title="The product as a person sees it: every door, and every control behind it">' +
@@ -5006,7 +5004,7 @@ async function openRun(id) {
     });
     var first = rows[0] || {};
     var h =
-      '<div style="margin-bottom:12px"><button class="btn" onclick="setView(\'summary\')">\u2190 Back to the summary</button></div>' +
+      '<div style="margin-bottom:12px"><button data-cbsid="OWN003-B29" class="btn" onclick="setView(\'summary\')">\u2190 Back to the summary</button></div>' +
       '<h2 style="font-size:var(--fs-3);margin:0 0 9px">' +
       esc(first.run_label || 'This sitting') +
       '</h2>' +
@@ -5241,8 +5239,8 @@ function paint() {
 
   var h =
     '<div class="foldbar">' +
-    '<button class="btn" onclick="foldAll(true)">Expand all</button>' +
-    '<button class="btn" onclick="foldAll(false)">Collapse all</button>' +
+    '<button data-cbsid="OWN003-B30" class="btn" onclick="foldAll(true)">Expand all</button>' +
+    '<button data-cbsid="OWN003-B31" class="btn" onclick="foldAll(false)">Collapse all</button>' +
     '<span class="foldnote">' +
     rowKeys.length +
     ' row' +
@@ -5557,7 +5555,7 @@ function caseHTML(c) {
     '" id="c_' +
     esc(c.case_key) +
     '">' +
-    '<div class="chead" onclick="toggle(\'' +
+    '<div data-cbsid="OWN003-C05" class="chead" onclick="toggle(\'' +
     esc(c.case_key) +
     '\')">' +
     '<span class="key" title="' +
@@ -5651,7 +5649,7 @@ function caseHTML(c) {
      * worse than no button.
      */
     (RUNNABLE[c.case_key]
-      ? '<button class="btn" title="Run this here \u2014 the real engine, your own input, no server" ' +
+      ? '<button data-cbsid="OWN003-B32" class="btn" title="Run this here \u2014 the real engine, your own input, no server" ' +
         'onclick="event.stopPropagation();runCase(\'' +
         esc(c.case_key) +
         '\')" ' +
@@ -5731,22 +5729,22 @@ function caseHTML(c) {
 
     h +=
       '<div class="acts">' +
-      '<input type="text" id="n_' +
+      '<input data-cbsid="OWN003-I13" type="text" id="n_' +
       esc(c.case_key) +
       '" placeholder="What did you see? (kept with the result)">' +
-      '<button class="btn pass"    onclick="mark(\'' +
+      '<button data-cbsid="OWN003-B33" class="btn pass"    onclick="mark(\'' +
       esc(c.case_key) +
       "','pass')\">Pass</button>" +
-      '<button class="btn fail"    onclick="mark(\'' +
+      '<button data-cbsid="OWN003-B34" class="btn fail"    onclick="mark(\'' +
       esc(c.case_key) +
       "','fail')\">Fail</button>" +
-      '<button class="btn blocked" onclick="mark(\'' +
+      '<button data-cbsid="OWN003-B35" class="btn blocked" onclick="mark(\'' +
       esc(c.case_key) +
       "','blocked')\">Blocked</button>" +
-      '<button class="btn"         onclick="mark(\'' +
+      '<button data-cbsid="OWN003-B36" class="btn"         onclick="mark(\'' +
       esc(c.case_key) +
       "','skipped')\">Skip</button>" +
-      '<button class="btn"         onclick="caseHistory(\'' +
+      '<button data-cbsid="OWN003-B37" class="btn"         onclick="caseHistory(\'' +
       esc(c.case_key) +
       '\')">History</button>' +
       '</div>' +

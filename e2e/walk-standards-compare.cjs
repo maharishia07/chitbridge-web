@@ -3,9 +3,9 @@
  * e2e/walk-standards-compare.cjs — COMPARED WITH, WALKED (round STD-COMPARE, 2026-10-15): the Standards page's "Compared with" tab —
  * the country comparison of accounting packages (data/compare.json) as a CBList view with its own rows, beside Works with.
  * Black box: the real standards.html, cap-standards.js, list-ctl.js, avatar.js and data/compare.json. The page reads no API; the avatar's one
- * /me read is answered by a stand-in here, so the tab's default country can be proved both ways (the shop's country · no country → India).
+ * /me read is answered by a stand-in here, so the tab's default country can be proved both ways (the shop's country · no country → none picked, a line says so).
  *   S1  #compared-with, signed in to an Australian shop -> the tab is lit, the list is exactly compare.json's AU rows, each with a symbol AND a word
- *   S2  #compared-with with no shop country -> India by default; the Package filter narrows to one package; the tab stays lit and the address keeps #compared-with
+ *   S2  #compared-with with no shop country -> no India default (CTRY-72): every country, a line to set it; the Package filter narrows to one package; the tab stays lit and the address keeps #compared-with
  *   S3  the country filter -> the UAE rows; a claim from memory is marked "to confirm"
  *   S4  a row opens its source: links for a web source; a document-only source is said in words and Open the source is greyed WITH its sentence
  *   S5  See it on a core-books row -> the parallel run (accounts.html#compare); no other row offers it
@@ -72,13 +72,14 @@ W.run('standards-compare', async (w) => {
       saw: ids.length + ' rows · ' + Array.from(new Set(sts)).join(', ') + ' · tabs ' + tabs.join() + ' · head ' + hdr };
   });
 
-  await w.step('S2', 'no shop country -> India by default; Package narrows to one package; the tab stays lit, the address keeps #compared-with', async () => {
+  await w.step('S2', 'no shop country -> no country picked (never India) and a line says to set it; Package narrows to one package; the tab stays lit, the address keeps #compared-with', async () => {
     shopCountry = ''; await std('#compared-with'); await page.waitForTimeout(500);
     const n = (await shown()).length, h0 = await hash();
+    const line = await page.$eval('[data-testid="std-nocountry-line"]', (e) => ({ hidden: e.hidden, text: e.textContent, link: (e.querySelector('a') || {}).getAttribute ? e.querySelector('a').getAttribute('href') : '' })).catch(() => null);
     await setFilter('package', 'Zoho Books');
-    const n2 = (await shown()).length, want = byCountry('IN').filter((r) => r.pkg === 'Zoho Books').length, tabs = await lit(), h1 = await hash();
-    return { ok: n === byCountry('IN').length && n2 === want && n2 > 0 && tabs.join() === 'std-view-compared-with' && h0 === '#compared-with' && h1 === '#compared-with',
-      saw: 'IN ' + n + ' rows · Zoho Books ' + n2 + ' · tabs ' + tabs.join() + ' · hash ' + h1 };
+    const n2 = (await shown()).length, want = CROWS.filter((r) => r.pkg === 'Zoho Books').length, tabs = await lit(), h1 = await hash();
+    return { ok: n > byCountry('IN').length && n >= Math.min(CROWS.length, 50) && !!line && line.hidden === false && /Set your country first/.test(line.text) && /#\/country/.test(line.link) && n2 === want && n2 > 0 && tabs.join() === 'std-view-compared-with' && h0 === '#compared-with' && h1 === '#compared-with',
+      saw: 'all ' + n + ' rows (no India default) · line ' + (line ? (line.hidden ? 'hidden' : 'shown') : 'missing') + ' · Zoho Books ' + n2 + ' · tabs ' + tabs.join() + ' · hash ' + h1 };
   });
 
   await w.step('S3', 'the country filter -> the UAE rows; a claim from memory is marked "to confirm"', async () => {

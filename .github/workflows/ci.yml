@@ -63,6 +63,8 @@ jobs:
         run: |
           node e2e/screen-reads.cjs
           node e2e/signin-code.test.cjs
+          node e2e/tax-dropped-line.test.cjs
+          node e2e/supply-use-idem.test.cjs
           node e2e/lazy-screen-guard.cjs
           npm run check:modal
           npm run check:tax
@@ -74,31 +76,131 @@ jobs:
           npm run check:eps
           npm run check:undeclared
           npm run check:barereturn
+      # QA-153 (13 Nov): 41 offline guards that passed on main and that no CI job ran (packs only, or nothing). No browser, no sibling repo.
+      - name: Offline guards no CI job ran (QA-153)
+        run: |
+          node e2e/a11y-slice2.test.cjs
+          node e2e/acc336-advance-rows.test.cjs
+          node e2e/app-syntax.cjs
+          node e2e/attach-gate.cjs
+          node e2e/attempt-key.test.cjs
+          node e2e/barcode-check.cjs
+          node e2e/bill-row.cjs
+          node e2e/capability-bare-page.cjs
+          node e2e/cart-api.cjs
+          node e2e/cart-page-needs.cjs
+          node e2e/chart-smoke.cjs
+          node e2e/currency-distinct.cjs
+          node e2e/defs-batch.test.cjs
+          node e2e/developer-words.cjs
+          node e2e/double-fire.cjs
+          node e2e/employees-guard.cjs
+          node e2e/group-sum.cjs
+          node e2e/guard-static.test.cjs
+          node e2e/helper-scope.cjs
+          node e2e/html-syntax.cjs
+          node e2e/legend-complete.cjs
+          node e2e/network-guard.cjs
+          node e2e/offer-nudge-gap.cjs
+          node e2e/offers-combined.test.cjs
+          node e2e/offers-kinds.test.cjs
+          node e2e/offers-promise.test.cjs
+          node e2e/offline-poll.cjs
+          node e2e/one-cart.cjs
+          node e2e/one-price-reader.cjs
+          node e2e/panel-reachable.cjs
+          node e2e/pe-gst-still.test.cjs
+          node e2e/prefetch.cjs
+          node e2e/prim-homes.cjs
+          node e2e/rail-thread-guard.cjs
+          node e2e/raw-id-words.cjs
+          node e2e/register-off.cjs
+          node e2e/skeleton-guard.cjs
+          node e2e/stacking.cjs
+          node e2e/standards-one-list.cjs
+          node e2e/theme-literals.cjs
+          node e2e/shop-switch.cjs
+          # QA-154 (13 Nov): source scanners with a RATCHET baseline (e2e/scanner-known.json, e2e/lib/known-findings.cjs): today's findings
+          # are counted and listed, only a NEW one fails. api-envelope, crm-themes and index-page carry a baseline too but need the api
+          # sibling or a browser, which this step does not have: they run by hand (NODE_PATH at a Playwright install, api checkout beside).
+          node e2e/tx-leak.cjs
+          node e2e/bridge-id-audit.cjs
+          node e2e/cb-build-guard.cjs
+          node e2e/cb-build-guard-selftest.cjs
+          node e2e/empty-states.cjs
+          node e2e/list-standard.cjs
+          node e2e/silent-control.cjs
+          node e2e/token-check.cjs
+          node e2e/tooltip-length.cjs
+          # QA-153 red fixes (13 Nov): vm-sandbox checks re-pointed at the code they lift (shared e2e/lib/dom-stub.cjs for the four with a document); offline, no sibling repo
+          node e2e/locale-map.cjs
+          node e2e/prof-dirty.cjs
+          node e2e/profile-groups.cjs
+          node e2e/render-smoke.cjs
+          node e2e/api-dedupe.test.cjs
+          node e2e/arabic-catalogue.test.cjs
+          node e2e/docnumber-continuity.cjs
+          node e2e/movable-panels.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |
           node e2e/cx4-pack-words.cjs
           node e2e/field-ledger-guard.cjs
+          node e2e/proof/guard.test.cjs
+          node e2e/proof/remote-host.test.cjs
+          node e2e/proof/read-failures.test.cjs
           node e2e/gov-zone-first.test.cjs
           node e2e/icon-map-guard.cjs
           node e2e/index-not-app.cjs
           node e2e/iot-agent-retry.test.cjs
           node e2e/offer-live-confirm.test.cjs
+          node e2e/combo-lab-direct.test.cjs
           node e2e/detail-chip-errwords.test.cjs
           node e2e/pack-parity.test.cjs
+          node e2e/cart-keys-words.test.cjs
+          node e2e/match-money.test.cjs
+          node e2e/text-budget-json.test.cjs
           node e2e/rail-truth.cjs
           node e2e/screen-id-guard.cjs
           node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
+          node e2e/ui-dialog-widen.test.cjs
           node e2e/shell-identity.test.cjs
+          node e2e/ui-codes.test.cjs
+          node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-offer-lab.test.cjs
+          node e2e/ui-codes-finance.test.cjs
+          node e2e/ui-codes-accounts.test.cjs
+          node e2e/ui-codes-crm.test.cjs
+          node e2e/ui-codes-std-actions.test.cjs
+          node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
           node e2e/ui-batch-progress.test.cjs
+          node e2e/ui-codes-employees.test.cjs
+          node e2e/ui-codes-app-catalogue.test.cjs
+          node e2e/ui-codes-app-platform.test.cjs
+          node e2e/retired-routes-absent.test.cjs
+          node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
+          node e2e/ui-codes-catalogue.test.cjs
+          node e2e/ui-codes-shop.test.cjs
+          node e2e/ui-codes-intake.test.cjs
+          node e2e/intake-page-checks.test.cjs
+          node e2e/ui-codes-authority-forms.test.cjs
           node e2e/bulk-resume.test.cjs
+          node e2e/ui-codes-utility-pages.test.cjs
+          node e2e/modal-focus-return.test.cjs
+          node e2e/step-press.test.cjs
+          node e2e/ui-codes-network-design.test.cjs
+          node e2e/ui-codes-testing.test.cjs
+          node e2e/ui-codes-cart-design.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs
+          node e2e/till-names.test.cjs
+          node e2e/toast-live-host.test.cjs
+          node e2e/p2-small-2.test.cjs
           node e2e/ui-script-loaded.cjs
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
@@ -106,10 +208,14 @@ jobs:
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
+          node tests/ctry-72-no-country-refusal.test.cjs
+          node tests/country-literals.test.cjs
+          node tests/proof-nightly.test.cjs
           node tests/chit-pay-ask.test.cjs
           node tests/chit-sheet-captured.test.cjs
           node tests/cur1-money-reader.test.cjs
           node tests/chit-sheet-lines.test.cjs
+          node tests/match-other-unit.test.cjs
           node tests/acc-191-chit-sheet-not-decided.test.cjs
           node tests/crm-groups-reach.test.cjs
           node tests/crm-leads-import.test.cjs
@@ -190,6 +296,74 @@ jobs:
           node e2e/connector-gofrugal.test.cjs
           node e2e/connector-purchase.test.cjs
           node e2e/connector-zoho.test.cjs
+      - name: Every policy flag the API reads can be set by somebody (policy-reachable, QA-154 baseline; CB_API_REPO set, so a missing api FAILS)
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: node e2e/policy-reachable.cjs
+
+  till-copies:
+    # THE COPIES OF THE COUNTER SCREEN ARE JUDGED AT A PINNED API COMMIT (11 Nov 2026, root cause of the api reds on its vendor and parse guards).
+    # The master is in chitbridge-api; public/till.html, promo.html, till-sw.js, the manifest, engine/qr.js, engine/versions.json and app/their-bill.js
+    # are generated from it. vendor.lock.json names ONE merged api commit; this job vendors from THAT commit and fails if a copy differs (a hand-edited
+    # copy, or a forgotten re-vendor). The api moving on never reds this job; a master change on the api is a pin bump: node tools/vendor-pin.cjs bump <api checkout>.
+    # The api is public (no token); its own CI no longer reads this repo for these copies (api scripts/vendor-till.cjs --kit-only).
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Which api commit is pinned?
+        id: pin
+        run: echo "sha=$(node -p "require('./vendor.lock.json').api.sha")" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: ${{ steps.pin.outputs.sha }}
+          path: .side/api-pin
+      - name: the api's qrcode-generator (the one third-party file the vendoring copies)
+        working-directory: .side/api-pin
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: every copy is the pinned api master (vendor-till.cjs --check --web-only)
+        env:
+          CB_WEB_DIR: ${{ github.workspace }}
+        run: node .side/api-pin/scripts/vendor-till.cjs --check --web-only
+      # NON-BLOCKING: api MAIN against the pin, so a pin left behind is visible (warning with its age; STALE after 7 days).
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: main
+          path: .side/api-main
+          fetch-depth: 0
+      - name: has the api changed a master since the pin? (warns, never fails)
+        run: node tools/vendor-pin.cjs drift .side/api-main
+
+  twin-master-first:
+    # ⭐ PLT-92 (9 Nov): a vendored copy (public/till.html, promo.html, app/their-bill.js ... the api's vendor-till COPIES list, read from api main, never copied)
+    # may only change after its api master on api main holds the same bytes. Web #510 changed promo.html alone and every api PR went red.
+    name: twin-master-first (a vendored copy follows its api master)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/checkout@v4
+        with:
+          repository: maharishia07/chitbridge-api
+          ref: main
+          path: .side/api-main
+      - name: The check bites on a changed promo.html and passes on a clean copy (self-test)
+        run: node e2e/twin-master-first.cjs --self-test
+      - name: No copy this PR changed is ahead of the api master on api main
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node e2e/twin-master-first.cjs --api .side/api-main --base "$PR_BASE"
 
   seams-drift:
     # DOC-68 (docs truth): docs/SEAMS.md is GENERATED (node C:/dev/seams.cjs --write), so a drift check fails the build the way MODULES.md does.

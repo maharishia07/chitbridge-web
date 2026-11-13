@@ -323,7 +323,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
     </div>
     <nav class="nav" id="nav" aria-label="CRM"><a class="nav-btn" href="#/parties" data-testid="crm-nav-parties" aria-label="Parties"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="label">Parties</span></a><a class="nav-btn" href="#/chits" data-testid="crm-nav-chits" aria-label="Chits"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg><span class="label">Chits</span></a><a class="nav-btn" href="#/followups" data-testid="crm-nav-followups" aria-label="Follow-ups"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7v5l3 2"/></svg><span class="label">Follow-ups</span></a></nav>
     <div class="side-foot">
-      <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
+      <button data-cbsid="CRM001-B01" type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
         <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
       </button>
     </div>
@@ -390,6 +390,7 @@ function go() {
 <script src="/app/cap-crm-record.js"></script>
 <script src="/app/cap-crm-privacy.js"></script>   <!-- T3-P3-CONSENT: the record's Consent block (the server's may/why per channel × purpose) and #/privacy, the request register -->
 <script src="/app/cap-crm-calls.js"></script>   <!-- L2: the Calls tab and the one-tap outcome -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: THE step flow — the Import leads sheet walks File → Columns → Check on it (L3) -->
 <script src="/app/cap-crm-leads.js"></script>   <!-- L1: the Leads tab, Add lead, the record's stage chip + Move to… · L3: Import from a CSV -->
 <script src="/app/cap-crm-chits.js"></script>   <!-- the chits behind Home's rail: In · Out · Stuck -->
@@ -441,7 +442,7 @@ const confirmAsk = CBConfirm; /* the page's own confirm, as CB Accounts uses it 
 /* ── a sheet: the app's modal(html) / closeModal() signature on a native <dialog>, so cap-books.js's partyEditOpen opens here unchanged ── */
 function modal(html) {
   const node = $('crm_sheet');
-  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  node.innerHTML = '<button data-cbsid="CMP005" class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
   if (!node.open) {
     try {
       node.showModal();
@@ -540,7 +541,7 @@ function closeFirst(r) {
     r.others
       .map(
         (item, index) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(item))}</h2>
-      <button type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`
+      <button data-cbsid="CRM001-B02" type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`
       )
       .join(''),
     true

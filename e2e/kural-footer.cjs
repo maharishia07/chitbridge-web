@@ -64,6 +64,8 @@ const { standIn, route } = require('./lib/standin.cjs');
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     if (o.session !== null) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
+    /* W7: the band is on by default only where Tamil is read (pref kural=auto); this guard proves the band itself, so it asks for On unless a case seeds its own */
+    await ctx.addInitScript(() => { try { if (!localStorage.getItem('cb_kural')) localStorage.setItem('cb_kural', 'on'); } catch (_) {} });
     if (o.seed) await ctx.addInitScript(o.seed);
     const p = await ctx.newPage();
     if (o.clock) await p.clock.install();

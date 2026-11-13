@@ -235,7 +235,7 @@ function misScreen() {
     /* ⚠️ NO INLINE SPINNER, AND A WAY OUT WHILE IT LOADS. api() already shows the centred "Reading data…" pill,
        so a second spinner in the pane is two indicators for one fetch. And on mobile the loading pane COVERS the
        rail — without this button a slow read (measured ~3.6s against Railway) strands you on a blank screen. */
-    (m ? misBandHTML(misBand(), m) : '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>') +
+    (m ? misBandHTML(misBand(), m) : '<button data-cbsid="CMP006" class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>') +
     '</div></div>';
   var divider =
     '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
@@ -338,6 +338,43 @@ async function loadTaxLedger() {
     const el = rail.querySelector('[data-testid="mis-band-tax"] .misval');
     if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>';
   }
+}
+/**
+ * The bills the ledger could not read, said in words. api #1180 sends `dropped` (chit ids) and `dropped_why` (fixed English sentences);
+ * an older api sends neither, so read them only if present. Reuses the .miswarn notice; each bill opens with the standard Open (CMP010),
+ * named "bill 1, 2 ..." because the answer carries ids only and an id is never shown to a person (cbIsRawId).
+ * The count sentence is translated here (txn); the api's reason stays as the api wrote it, on the detail line.
+ */
+function taxDroppedHTML(ledger) {
+  const ids = Array.isArray(ledger.dropped) ? ledger.dropped : [];
+  if (!ids.length) return '';
+  const reason = errWords([].concat(ledger.dropped_why || []).join(' '));
+  const head = txn(
+    '{count} bill could not be read and is left out of this month',
+    '{count} bills could not be read and are left out of this month',
+    ids.length
+  );
+  const links = ids
+    .map(function (id, at) {
+      return (
+        '<button data-cbsid="CMP010" class="lineopen" data-testid="mis-tax-dropped-open-' +
+        at +
+        '" style="background:none;border:0;padding:0 8px 0 0;font:inherit" onclick="openChit(\'' +
+        esc(id) +
+        '\')">' +
+        esc(txf('Open bill {n}', { n: at + 1 })) +
+        '</button>'
+      );
+    })
+    .join('');
+  return (
+    '<div class="miswarn" role="status" data-testid="mis-tax-dropped">' +
+    esc(head) +
+    (reason ? '<div data-testid="mis-tax-dropped-why">' + esc(reason) + '</div>' : '') +
+    '<div>' +
+    links +
+    '</div></div>'
+  );
 }
 function misTax() {
   /* ⭐ CX0: this band is India's GST (CGST · SGST · IGST, GSTR-1 / 3B from the rail). Another country's shop is told where its own return is. */
@@ -452,7 +489,7 @@ function misTax() {
     '</bdi>' +
     (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') +
     '</div>' +
-    '<div class="misnote">CGST ' +
+    taxDroppedHTML(L) + '<div class="misnote">CGST ' +
     inr(L.net.cgst) +
     ' · SGST ' +
     inr(L.net.sgst) +
@@ -493,7 +530,7 @@ function misTaxExport(form) {
 /* ⚠️ The back button is separable from the title, because Governance drops the title (the rail already names it)
    but still needs a way back on mobile. Losing it with the heading is exactly the dead-end fixed earlier. */
 function _misBack() {
-  return '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>';
+  return '<button data-cbsid="CMP006" class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>';
 }
 /**
  * ⚠️ AN ABSENT SUBTITLE TAKES NO SPACE. Passing '' used to emit an empty `<div class="ds">` carrying a 14px
@@ -3718,7 +3755,7 @@ function profSaveBtn(sec) {
     '<div class="err" id="pf_err_' +
     sec +
     '" style="margin-top:8px"></div>' +
-    '<button class="composebtn" data-testid="prof-save-' +
+    '<button data-cbsid="CMP001" class="composebtn" data-testid="prof-save-' +
     sec +
     '" style="margin-top:6px" ' +
     'onclick="saveProfile(' +
@@ -4878,7 +4915,7 @@ function settingsScreen() {
     rail +
     '</div></div>';
   var detail =
-    '<div class="detail" id="detailpane"><div id="setbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
+    '<div class="detail" id="detailpane"><div id="setbody"><button data-cbsid="CMP006" class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
   var divider =
     '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   if (UI.misLw == null) UI.misLw = 320;
@@ -5553,7 +5590,7 @@ function _locPendingBar() {
     '</div>' +
     list.map(rowOf).join('') +
     '<div style="display:flex;gap:8px;margin-top:9px">' +
-    '<button class="btn pri" style="flex:1" onclick="localeSaveLocale()">' +
+    '<button data-cbsid="CMP001" class="btn pri" style="flex:1" onclick="localeSaveLocale()">' +
     tx('Save') +
     '</button>' +
     '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' +
@@ -7034,7 +7071,7 @@ function intReconcileHTML() {
               : '') +
             '</span>' +
             '<span style="display:flex;gap:6px;flex:0 0 auto">' +
-            '<button class="btn2" data-testid="int-rec-open-' +
+            '<button data-cbsid="CMP010" class="btn2" data-testid="int-rec-open-' +
             esc(short) +
             '" onclick="intRecOpen(\'' +
             esc(item.chit_id) +
@@ -7466,7 +7503,7 @@ function netCatBrandHTML(c, stores) {
   var waiting = c.pending
     ? '<div data-testid="netc-pending" style="padding:8px 0;color:var(--warn-2);font-size:var(--fs-2)">⏳ ' +
       esc((c.pending.changes || []).length + ' ' + tx('change(s) go to your stores') + ' ' + _netWhen(c.pending.at)) +
-      ' <button class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' +
+      ' <button data-cbsid="CMP003" class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' +
       esc(key) +
       '\')">' +
       tx('Cancel') +
@@ -7943,7 +7980,7 @@ function netMembersHTML(list) {
               '\')">' +
               tx('Remove — their counters stop selling your products') +
               '</button>'
-            : '<button data-testid="netm-remove-' +
+            : '<button data-cbsid="CMP008" data-testid="netm-remove-' +
               index +
               '" onclick="_NETO_ARMED=\'rm:' +
               esc(item.edge_id) +
@@ -8727,7 +8764,7 @@ function businessSettingsHTML(s) {
      its list behaves differently without being offered a switch that is not theirs to throw. */
   var netNote =
     me.catalogue_visibility === 'network'
-      ? '<div style="padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">' +
+      ? '<div style="color:var(--on-card);padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">' +
         '<b>' +
         tx('Your group decides this one.') +
         '</b> ' +
@@ -8739,7 +8776,7 @@ function businessSettingsHTML(s) {
     /* SET-46 (walk 2026-10-25 W5/W29): a choice MARKS, Save + confirm writes (Settings: Save + confirm); the box is repainted from the answer */
     card('What do you do?', 'This is how other businesses understand you.', '<div id="biz_does_box">' + bizChoice('does', does, does, BIZ_DOES) + '</div>') +
     card('Your price list', 'Your products and what they cost.', netNote ? '' : '<div id="biz_list_box">' + bizChoice('list', list, list, BIZ_LIST) + '</div>', netNote) +
-    '<div style="margin:-6px 0 var(--sp-4)"><button type="button" class="act" id="biz_save" data-testid="biz-save" disabled onclick="bizSaveAsk()">' +
+    '<div style="margin:-6px 0 var(--sp-4)"><button data-cbsid="CMP001" type="button" class="act" id="biz_save" data-testid="biz-save" disabled onclick="bizSaveAsk()">' +
     esc(tx('Save')) +
     '</button></div>' +
     /* ⚠️⚠️ A PRESELECTED RADIO ASSERTS AN ANSWER NOBODY GAVE. 'goods' is this column's long-standing DEFAULT
@@ -8781,7 +8818,7 @@ async function bizAbroadLoad() {
       (on ? ' checked' : '') +
       ' style="margin-top:3px"><span>' +
       esc(tx('Show my shop to buyers on other ChitBridge installations and abroad')) +
-      '</span></label><div style="margin-top:8px"><button type="button" class="act" data-testid="biz-abroad-save" onclick="bizAbroadSave()">' +
+      '</span></label><div style="margin-top:8px"><button data-cbsid="CMP001" type="button" class="act" data-testid="biz-abroad-save" onclick="bizAbroadSave()">' +
       esc(tx('Save')) +
       '</button></div>';
   } catch (ex) {
@@ -9009,7 +9046,7 @@ function workRoutingHTML() {
   if (d.error) {
     /* ⚠️ said plainly, with the remedy. "Could not load" on its own sends somebody to ask me. */
     return (
-      '<div style="background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);' +
+      '<div style="color:var(--warn-3);background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);' +
       'padding:9px 11px;font-size:var(--fs-1);line-height:1.5"><b>' +
       esc(tx('Not set up yet')) +
       '</b><div>' +
@@ -9909,7 +9946,7 @@ async function loadGaps() {
         ? _kbItems
             .map(function (e) {
               const eb = isHelp
-                ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\'' +
+                ? '<button data-cbsid="CMP012" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\'' +
                   esc(e.id) +
                   '\')">' +
                   tx('Edit') +

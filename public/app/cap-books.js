@@ -56,6 +56,17 @@ if (typeof EP !== 'undefined') {
  *   · bkRef  — every form that records money carries ONE client_ref from the moment it opens: sent again on a retry
  *              (so the server answers with what it already kept), replaced only after the server said yes
  */
+/* UX-137 IDENTITY: each control below carries data-cbsid, the code of its component element in the one register (CMP001/3/4/5/6/7/9/10/12/14 reused,
+   CMP040..CMP044 the books' own). The mount is the screen's code (from the screen chip) + U1nn, nn = the component number; none on a page without the chip. */
+/* the tap rule for a control the books still draw themselves (ui.js tap: 32 px on a desktop, 44 on a phone); none where ui.js is not loaded */
+function bkTapAttribute() {
+  return typeof ui !== 'undefined' && ui && typeof ui.tap === 'function' ? ui.tap('bookaction') : '';
+}
+function bkMountAttribute(component) {
+  var chip = document.querySelector('[data-testid="screen-id"][data-cbsid]');
+  var screen = chip ? chip.getAttribute('data-cbsid') : '';
+  return /^[A-Z]{3}\d{3}$/.test(screen || '') ? ' data-cbmount="' + screen + '-U1' + String(component).slice(-2) + '"' : '';
+}
 /* ⭐ M64: WIDENED into CBAction (app/accounts-shell.js) — the guard every page shares; bkOnce keeps its name for its callers */
 function bkOnce(key, btn, fn) {
   return CBAction.once(key, btn, fn);
@@ -256,7 +267,7 @@ function bkMoneyInput(o) {
     '><span class="mi-sym" aria-hidden="true">' +
     esc(sym) +
     '</span>' +
-    '<input class="mi-in" id="' +
+    '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="mi-in" id="' +
     o.id +
     '" data-testid="' +
     esc(tid) +
@@ -480,14 +491,14 @@ function partyBooksHTML(kind, partyId, row, moneyOnly) {
     (moneyOnly
       ? ''
       : '<div class="supacts" style="display:flex;gap:7px;padding:9px 13px;flex-wrap:wrap">' +
-        '<button data-testid="party-edit" onclick="partyEditOpen(\'' +
+        '<button data-cbsid="CMP012-B01"' + bkMountAttribute('CMP012') + ' data-testid="party-edit" onclick="partyEditOpen(\'' +
         kind +
         "','" +
         esc(partyId) +
         '\')">' +
         tx('Edit') +
         '</button>' +
-        '<button class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' +
+        '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="party-pay" onclick="payOpen(\'' +
         kind +
         "','" +
         esc(partyId) +
@@ -537,7 +548,7 @@ function bkDayBillsLink(s, tid) {
   var BKD = (BK.dayBills = BK.dayBills || {});
   BKD[tid] = s.bills;
   return (
-    '<a href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>'
+    '<a data-cbsid="CMP044-C01"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '-bills" onclick="event.stopPropagation();bkDayBillsOpen(\'' + esc(tid) + '\');return false">' + word + '</a>'
   );
 }
 /* open the popover listing the bills one day-book entry settled */
@@ -561,7 +572,7 @@ function bkDayBillsOpen(tid) {
         })
         .join('') +
       '</div>' +
-      '<div style="padding:12px 18px;border-top:1px solid var(--line,#e3dccb);display:flex;justify-content:flex-end"><button data-testid="daybills_close" onclick="closeModal()" style="min-height:44px;padding:8px 18px;border:1px solid var(--line,#e3dccb);border-radius:9px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:var(--fs-3,15px);font-weight:600;cursor:pointer">' +
+      '<div style="padding:12px 18px;border-top:1px solid var(--line,#e3dccb);display:flex;justify-content:flex-end"><button data-cbsid="CMP005-B01"' + bkMountAttribute('CMP005') + ' data-testid="daybills_close" onclick="closeModal()" style="min-height:44px;padding:8px 18px;border:1px solid var(--line,#e3dccb);border-radius:9px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:var(--fs-3,15px);font-weight:600;cursor:pointer">' +
       esc(tx('Close')) +
       '</button></div></div>'
   );
@@ -583,7 +594,7 @@ function bkBillPart(s, tid) {
   if (!s || !(s.ref || s.chit_id)) return '';
   var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
   var link = s.chit_id
-    ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>'
+    ? '<a data-cbsid="CMP044-C02"' + bkMountAttribute('CMP044') + ' href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>'
     : no;
   return link + (s.doc_at ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : '');
 }
@@ -720,7 +731,7 @@ function bkLineChips(l, tid) {
   /* M30: every recorded payment line offers the advice (send on rail · share off rail); whether THIS login may is the server's answer, painted by the unit */
   if (l && l.payment_id && !l.reversed_by && !l.reverses_entry_id && typeof CBAdvice !== 'undefined')
     out +=
-      ' <button type="button" class="cbl-btn" data-testid="' +
+      ' <button data-cbsid="CMP042-B20"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-btn" data-testid="' +
       esc(tid) +
       '-advbtn" data-adv="' +
       esc(l.payment_id) +
@@ -797,7 +808,7 @@ function statementHTML(r, partyId) {
     .map(function (item, index) {
       var rev =
         pid && item.payment_id && bkCanReverse(item) && typeof enReverse === 'function'
-          ? ' <button type="button" class="cbl-btn" data-testid="stmt-reverse-' +
+          ? ' <button data-cbsid="CMP042-B21"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-btn" data-testid="stmt-reverse-' +
             index +
             '" onclick="event.stopPropagation();bkStmtReverse(\'' +
             esc(pid) +
@@ -881,7 +892,7 @@ function partyTaxRowHTML(kind, partyId, t, i) {
   var sid = i === 0 ? 'pe_scheme' : 'pe_scheme' + i,
     vid = i === 0 ? 'pe_taxid' : 'pe_taxid' + i;
   return (
-    '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select class="inp" id="' +
+    '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="' +
     sid +
     '" data-testid="' +
     sid +
@@ -894,7 +905,7 @@ function partyTaxRowHTML(kind, partyId, t, i) {
       })
       .join('') +
     '</select>' +
-    '<input class="inp" id="' +
+    '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="' +
     vid +
     '" data-testid="' +
     vid +
@@ -923,7 +934,7 @@ function partyEditOpen(kind, partyId) {
   var taxes = r.tax_ids && r.tax_ids.length ? r.tax_ids : [{}];
   var inp = function (id, v, ph, extra) {
     return (
-      '<input class="inp" id="' +
+      '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="' +
       id +
       '" data-testid="' +
       id +
@@ -970,7 +981,7 @@ function partyEditOpen(kind, partyId) {
         })
         .join('') +
       '</div>' +
-      '<button type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' +
+      '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' +
       kind +
       "','" +
       esc(partyId) +
@@ -989,9 +1000,9 @@ function partyEditOpen(kind, partyId) {
       (typeof packSplitsByState !== 'function' || packSplitsByState()
         ? '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>'
         : '') /* CX0: a state only where the tax turns on it (India) */ +
-      '</div><div class="mfoot"><button onclick="closeModal()">' +
+      '</div><div class="mfoot"><button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="pri" data-testid="pe_save" onclick="partyEditSave(\'' +
+      '</button><button data-cbsid="CMP001-B01"' + bkMountAttribute('CMP001') + ' class="pri" data-testid="pe_save" onclick="partyEditSave(\'' +
       kind +
       "','" +
       esc(partyId) +
@@ -1153,7 +1164,7 @@ function payOpen(kind, partyId, pre) {
       (offer ? '<div data-testid="pay_offer" style="font-size:var(--fs-1);color:var(--grey)">' + esc(offer.words) + '</div>' : '') +
       '<label>' +
       tx('How') +
-      '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' +
+      '<select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' +
       tx('Cash') +
       '</option>' +
       payModeOpts() +
@@ -1166,25 +1177,25 @@ function payOpen(kind, partyId, pre) {
       '</option></select></label>' +
       '<label>' +
       tx('Reference') +
-      '<input class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>' +
-      '<div id="pay_chq" hidden style="gap:6px"><input class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' +
+      '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="pay_ref" data-testid="pay_ref" style="width:100%"></label>' +
+      '<div id="pay_chq" hidden style="gap:6px"><input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="pay_chqno" data-testid="pay_chqno" placeholder="' +
       esc(tx('Cheque no')) +
-      '"><input class="inp" id="pay_bank" placeholder="' +
+      '"><input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="pay_bank" placeholder="' +
       esc(tx('Bank')) +
-      '"><input class="inp" id="pay_chqdate" type="date"></div>' +
-      '<div style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pay_adv" data-testid="pay_adv" onchange="payAdvToggle()"><label for="pay_adv" style="display:inline;margin:0">' +
+      '"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' class="inp" id="pay_chqdate" type="date"></div>' +
+      '<div style="display:flex;gap:8px;align-items:center"><input data-cbsid="CMP040-I03"' + bkMountAttribute('CMP040') + ' type="checkbox" id="pay_adv" data-testid="pay_adv" onchange="payAdvToggle()"><label for="pay_adv" style="display:inline;margin:0">' +
       tx('Keep as advance') +
       '</label></div>' +
       '<div id="pay_band" data-testid="pay_band" role="alert" hidden class="payband" style="border:1px solid var(--warn-2);border-radius:6px;padding:8px;font-size:var(--fs-1)"></div>' +
       '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div>' +
       '<div id="pay_bills" data-testid="pay_bills"></div>' +
       '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
-      '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' +
+      '</div><div class="mfoot" id="pay_foot"><button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' +
+      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
       tx('Record') +
       '</button>' +
-      (kind === 'supplier' ? '' : '<button data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') +
+      (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') +
       '</div>'
   );
   payPaint();
@@ -1243,12 +1254,12 @@ function payDiscHTML(f) {
     '<span data-testid="pay_disc_words">' +
     esc(f.words) +
     '</span>' +
-    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
+    '<span style="display:flex;gap:8px;flex-wrap:wrap"><button data-cbsid="CMP042-B24"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' type="button" class="pri" data-testid="pay_disc_record" onclick="payDiscRecord(this)"' +
     (rec.ok ? '' : ' disabled aria-disabled="true"') +
     '>' +
     esc(tx('Record discount')) +
     '</button>' +
-    '<button type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' +
+    '<button data-cbsid="CMP042-B22"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' type="button" data-testid="pay_gst_note" disabled aria-disabled="true">' +
     esc(tx('GST credit note')) +
     '</button></span>' +
     (rec.ok ? '' : '<span class="hint" data-testid="pay_disc_why_not">' + esc(rec.say || '') + '</span>') +
@@ -1477,7 +1488,7 @@ function payPaint() {
         (asAdvance
           ? ' ' + esc(txf(PAY.kind === 'supplier' ? 'Pay {amt} again as an advance?' : 'Receive {amt} again as an advance?', { amt: bkMoney(PAY.amount) }))
           : '') +
-        '</div><div style="display:flex;gap:8px;margin-top:6px"><button class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
+        '</div><div style="display:flex;gap:8px;margin-top:6px"><button data-cbsid="CMP042-B25"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_ack" onclick="payRecord(true)">' +
         esc(
           asAdvance
             ? PAY.kind === 'supplier'
@@ -1488,7 +1499,7 @@ function payPaint() {
               : tx('Receive anyway')
         ) +
         '</button>' +
-        '<button data-testid="pay_band_cancel" onclick="closeModal()">' +
+        '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' data-testid="pay_band_cancel" onclick="closeModal()">' +
         tx('Cancel') +
         '</button></div>';
   }
@@ -1728,7 +1739,7 @@ function payOutcomePaint(r) {
       }
     });
   if (PAY.offer) node.insertAdjacentHTML('beforeend', payDiscHTML(PAY.offer)); /* F4: the discount is the owner's next step, never automatic */
-  pf.innerHTML = '<button class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
+  pf.innerHTML = '<button data-cbsid="CMP004-B01"' + bkMountAttribute('CMP004') + ' class="pri" data-testid="pay_done" onclick="closeModal()">' + tx('Done') + '</button>';
   booksAfterPay(r);
   if (PAY.after) PAY.after(); /* the statement, the dues chip and the record's header repaint now, behind the outcome */
 }
@@ -1787,7 +1798,7 @@ function ledgerScreen() {
     '</div></div><div class="rows" id="bk_tabs">' +
     BK_TABS.map(function (item) {
       return (
-        '<div class="row ' +
+        '<div data-cbsid="CMP043-K01"' + bkMountAttribute('CMP043') + ' class="row ' +
         (BK.tab === item[0] ? 'sel' : '') +
         '" data-testid="bk-tab-' +
         item[0] +
@@ -1815,7 +1826,7 @@ function ledgerScreen() {
     'px">' +
     list +
     divider +
-    '<div class="detail" id="detailpane"><div id="bk_back"><button class="supback" data-testid="bk-back" onclick="bkBack()">‹ ' +
+    '<div class="detail" id="detailpane"><div id="bk_back"><button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' class="supback" data-testid="bk-back" onclick="bkBack()">‹ ' +
     tx('Ledger') +
     '</button></div><div class="db" tabindex="0" role="region" aria-label="' + esc(tx('Ledger details')) + '" id="bk_body" data-testid="bk-body">' +
     tx('Reading…') +
@@ -1882,19 +1893,19 @@ function bkRange(id) {
 function bkRangeHTML(id, again) {
   var r = bkRange(id);
   return (
-    '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap"><input type="date" class="inp" id="' +
+    '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px;flex-wrap:wrap"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="' +
     id +
     '_from" aria-label="' +
     esc(tx('From')) +
     '" value="' +
     r.from +
-    '"><span>→</span><input type="date" class="inp" id="' +
+    '"><span>→</span><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="' +
     id +
     '_to" aria-label="' +
     esc(tx('To')) +
     '" value="' +
     r.to +
-    '"><button onclick="' +
+    '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="' +
     again +
     '">' +
     tx('Show') +
@@ -2383,7 +2394,7 @@ function bkDvRevChip(e) {
       esc(e.entry_no) +
       '">' +
       esc(tx('Reversed by')) +
-      ' <a href="#" class="mono" data-testid="db-rev-link-' +
+      ' <a data-cbsid="CMP044-C03"' + bkMountAttribute('CMP044') + ' href="#" class="mono" data-testid="db-rev-link-' +
       esc(e.entry_no) +
       '" onclick="event.stopPropagation();bkDvGoto(\'' +
       esc(e.reversed_by) +
@@ -2629,7 +2640,7 @@ function bkDvHead() {
       typeof enOpen === 'function' && !(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'customer')
         ? function (el) {
             el.innerHTML =
-              '<button type="button" class="cbl-chip" data-testid="db-add" aria-label="' +
+              '<button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' type="button" class="cbl-chip" data-testid="db-add" aria-label="' +
               esc(tx('New entry')) +
               '" style="cursor:pointer;min-height:44px;font-weight:700">＋ ' +
               esc(tx('Entry')) +
@@ -3127,7 +3138,7 @@ function bkLtTreeHTML() {
       open = kids ? bkLtOpenNow(n.id, n.t === 'ledger' ? false : true) : false;
     var tid = n.tid || (n.t === 'ledger' ? 'lg-acc-' + n.code : n.t === 'party' ? 'lg-party-' + n.party : '');
     h +=
-      '<button type="button" class="tn ltn ' +
+      '<button data-cbsid="CMP043-K02"' + bkMountAttribute('CMP043') + ' type="button" class="tn ltn ' +
       n.t +
       (n.id === selId ? ' on' : '') +
       '" role="treeitem" data-tn="' +
@@ -3166,7 +3177,7 @@ function bkLtTreeHTML() {
     '<div class="lt-empty">' +
       esc(String(BK.lt.tq || '').trim() ? txf('No ledger or party called “{q}”.', { q: String(BK.lt.tq).trim() }) : tx('No ledgers yet')) +
       (String(BK.lt.tq || '').trim()
-        ? '<br><button type="button" class="lt-btn" data-lt="clear" data-testid="lt-clear">' + esc(tx('Clear')) + '</button>'
+        ? '<br><button data-cbsid="CMP014-B01"' + bkMountAttribute('CMP014') + ' type="button" class="lt-btn" data-lt="clear" data-testid="lt-clear">' + esc(tx('Clear')) + '</button>'
         : '') +
       '</div>'
   );
@@ -3581,19 +3592,19 @@ function bkLgHead() {
   head.slot = function (el) {
     var x = '';
     if (bkLtNarrow())
-      x += '<button type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
+      x += '<button data-cbsid="CMP006-B01"' + bkMountAttribute('CMP006') + ' type="button" class="cbl-tbtn cbl-ico" data-lt="back" data-testid="lt-back" aria-label="' + esc(tx('Back to all ledgers')) + '">‹</button>';
     if (bkLtFolded() && !bkLtNarrow())
       x +=
-        '<button type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' +
+        '<button data-cbsid="CMP042-B06"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-lt="unfold" data-testid="lt-unfold" aria-label="' +
         esc(tx('Show the ledger list')) +
         '">☰ ' +
         esc(tx('Ledgers')) +
         '</button>';
     if (ownsParty) {
       x += '<span style="display:inline-flex;gap:6px;flex-wrap:nowrap">';
-      x += '<button type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
+      x += '<button data-cbsid="CMP042-B05"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-lt="statement" data-testid="lg-statement">' + esc(tx('Statement')) + '</button>';
       x +=
-        '<button type="button" class="cbl-tbtn" data-lt="pay" data-testid="lg-pay">' +
+        '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-lt="pay" data-testid="lg-pay">' +
         esc(tx(bkPartyKind(BK.lt.sel.party, BK.lt.sel.code) === 'supplier' ? 'Pay' : 'Receive')) +
         '</button>';
       x += '</span>';
@@ -4270,14 +4281,14 @@ async function bkLedgers(body) {
       'px">' +
       '<nav class="lt-tree" aria-label="' +
       esc(tx('All ledgers')) +
-      '"><div class="lt-tools" data-testid="lt-search"><div class="lt-search"><span aria-hidden="true">🔍</span><input id="lt_q" data-testid="lt-find" type="search" autocomplete="off" placeholder="' +
+      '"><div class="lt-tools" data-testid="lt-search"><div class="lt-search"><span aria-hidden="true">🔍</span><input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' id="lt_q" data-testid="lt-find" type="search" autocomplete="off" placeholder="' +
       esc(tx('Find a ledger or party')) +
       '" aria-label="' +
       esc(tx('Find a ledger or party')) +
       '" value="' +
       esc(BK.lt.tq || '') +
       '"></div>' +
-      '<button type="button" class="lt-btn lt-ico" data-lt="fold" data-testid="lt-fold" title="' +
+      '<button data-cbsid="CMP042-B06"' + bkMountAttribute('CMP042') + ' type="button" class="lt-btn lt-ico" data-lt="fold" data-testid="lt-fold" title="' +
       esc(tx('Hide this list')) +
       '" aria-label="' +
       esc(tx('Hide the ledger list')) +
@@ -4285,7 +4296,7 @@ async function bkLedgers(body) {
       '<div id="lt_tree" class="lt-list" data-testid="lt-tree" role="tree" aria-label="' +
       esc(tx('Ledgers by band')) +
       '"></div></nav>' +
-      '<button type="button" class="lt-rz" id="lt_rz" role="separator" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="520" aria-valuenow="' +
+      '<button data-cbsid="CMP042-B23"' + bkMountAttribute('CMP042') + ' type="button" class="lt-rz" id="lt_rz" role="separator" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="520" aria-valuenow="' +
       BK.lt.w +
       '" aria-label="' +
       esc(tx('Resize the ledger list (arrow keys)')) +
@@ -4345,9 +4356,9 @@ async function bkTB(body) {
       .join('');
     var ok = Number(reply.total_dr_minor) === Number(reply.total_cr_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="tb_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
-      '"><button onclick="bkTab(\'tb\')">' +
+      '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'tb\')">' +
       tx('Show') +
       '</button>' +
       '<span class="optchip" data-testid="tb-balanced" style="margin-inline-start:auto;' +
@@ -4385,7 +4396,7 @@ function bkOpenLedger(code) {
 /* a link that opens one ledger by its account code */
 function bkLedgerLink(code, name, tid) {
   return (
-    '<a href="#" data-testid="' +
+    '<a data-cbsid="CMP010-B01"' + bkMountAttribute('CMP010') + ' href="#" data-testid="' +
     esc(tid) +
     '-open-' +
     esc(code) +
@@ -4448,9 +4459,9 @@ async function bkBS(body) {
     var c = reply && reply.currency;
     var ok = Number(reply.total_assets_minor) === Number(reply.total_liab_equity_minor);
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
+      '<div class="supacts" style="display:flex;gap:6px;align-items:center;margin-bottom:9px"><input data-cbsid="CMP040-I02"' + bkMountAttribute('CMP040') + ' type="date" class="inp" id="bs_asof" aria-label="' + esc(tx('As of')) + '" value="' +
       asOf +
-      '"><button onclick="bkTab(\'bs\')">' +
+      '"><button data-cbsid="CMP042-B04"' + bkMountAttribute('CMP042') + ' onclick="bkTab(\'bs\')">' +
       tx('Show') +
       '</button>' +
       '<span class="optchip" data-testid="bs-balanced" style="margin-inline-start:auto;' +
@@ -4614,8 +4625,8 @@ function bkDuesActs(p) {
     id = esc(p.party_id),
     rcv = kind === 'customer';
   return (
-    '<span style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
-    '<button type="button" class="cbl-tbtn" data-testid="dues-pay-' +
+    '<span data-cbsid="CMP042-P01"' + bkMountAttribute('CMP042') + ' style="display:inline-flex;gap:6px" onclick="event.stopPropagation()">' +
+    '<button data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="dues-pay-' +
     id +
     '" onclick="event.stopPropagation();payOpen(\'' +
     kind +
@@ -4627,7 +4638,7 @@ function bkDuesActs(p) {
     esc(tx(bkDuesAdvance(p) ? 'Get back' : rcv && Number(p.balance_minor) < 0 ? 'Adjust' : rcv ? 'Receive' : 'Pay')) +
     '</button>' +
     (rcv
-      ? '<button type="button" class="cbl-tbtn" data-testid="dues-remind-' +
+      ? '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="dues-remind-' +
         id +
         '" onclick="event.stopPropagation();bkRemind(\'' +
         id +
@@ -4714,7 +4725,7 @@ function bkRemindOpen(t) {
       '<div data-testid="remind_for" style="font-size:var(--fs-1);margin-bottom:8px">' +
       esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.due_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
       '</div>' +
-      '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button onclick="closeModal()">' +
+      '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button data-cbsid="CMP005-B01"' + bkMountAttribute('CMP005') + ' onclick="closeModal()">' +
       tx('Close') +
       '</button></div>'
   );
@@ -5031,7 +5042,7 @@ async function bkPeriodsLoad() {
 /* a select of the financial years for the Month lock and Packs tabs */
 function bkFyPicker(id, tid, sty) {
   return (
-    '<select class="inp" id="' +
+    '<select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="' +
     id +
     '" data-testid="' +
     tid +
@@ -5096,7 +5107,7 @@ function bkLockRowsPaint() {
       'beforebegin',
       '<label id="lk_whybox">' +
         tx('Reason') +
-        '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' +
+        '<input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="lk_why" data-testid="lk_why" placeholder="' +
         esc(tx('Needed to open a month again')) +
         '"></label>'
     );
@@ -5117,7 +5128,7 @@ function bkLockRowsPaint() {
         why = x && x.lock && x.lock.why ? x.lock.why : '';
       if (own && st === 'open')
         b =
-          '<button class="supact-pri" data-testid="lk-lock-' +
+          '<button data-cbsid="CMP042-B07"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="lk-lock-' +
           p +
           '"' +
           (may
@@ -5129,14 +5140,14 @@ function bkLockRowsPaint() {
           bkLockNote(x, p, may, why);
       if (own && st === 'soft_locked')
         b =
-          '<button data-testid="lk-unlock-' +
+          '<button data-cbsid="CMP042-B08"' + bkMountAttribute('CMP042') + ' data-testid="lk-unlock-' +
           p +
           '" onclick="bkLockDo(\'unlock\',' +
           p +
           ')">🔓 ' +
           tx('Open again') +
           '</button>' +
-          '<button data-testid="lk-hard-' +
+          '<button data-cbsid="CMP042-B09"' + bkMountAttribute('CMP042') + ' data-testid="lk-hard-' +
           p +
           '" onclick="bkLockDo(\'hard\',' +
           p +
@@ -5255,7 +5266,7 @@ async function bkPacks(body) {
           ? '✓ ' + esc(bkDate(item.acknowledged_at))
           : has === false
             ? '<span data-testid="pack-nofile-' + id + '" style="color:var(--warn-2)">' + tx('No file · make it again') + '</span>'
-            : '<div class="supacts" style="margin:0"><button data-testid="pack-ack-' +
+            : '<div class="supacts" style="margin:0"><button data-cbsid="CMP042-B10"' + bkMountAttribute('CMP042') + ' data-testid="pack-ack-' +
               id +
               '" onclick="bkPackAck(\'' +
               id +
@@ -5265,7 +5276,7 @@ async function bkPacks(body) {
         var get =
           has === false
             ? ''
-            : '<div class="supacts" style="margin:0"><button data-testid="pack-get-' +
+            : '<div class="supacts" style="margin:0"><button data-cbsid="CMP042-B11"' + bkMountAttribute('CMP042') + ' data-testid="pack-get-' +
               id +
               '" onclick="bkPackGet(\'' +
               id +
@@ -5322,7 +5333,7 @@ function bkPackCtlPaint() {
   el.innerHTML =
     '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' +
     bkFyPicker('pk_fy', 'pk_fy') +
-    '<select class="inp" id="pk_p" data-testid="pk_p" aria-label="' + esc(tx('Month')) + '" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
+    '<select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="pk_p" data-testid="pk_p" aria-label="' + esc(tx('Month')) + '" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' +
     '><option value="">' +
     esc(tx('Month')) +
     '</option><option value="year">' +
@@ -5334,12 +5345,12 @@ function bkPackCtlPaint() {
       })
       .join('') +
     '</select>' +
-    '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' +
+    '<button data-cbsid="CMP042-B12"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' +
     tx('Make a pack') +
     '</button></div>' +
     (locked.length
       ? ''
-      : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' +
+      : '<div class="supacts" style="margin-bottom:9px"><button data-cbsid="CMP042-B13"' + bkMountAttribute('CMP042') + ' data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' +
         tx('Lock a month first') +
         '</button></div>');
 }
@@ -5485,8 +5496,8 @@ function bkOpeningView(body) {
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' +
     tx('Per line: code, party no, debit, credit, bill, due date') +
     '</div>' +
-    '<textarea class="inp" id="op_csv" data-testid="op_csv" rows="8" style="width:100%;font-family:var(--mono)" placeholder="1300,P-00001,5000,,INV-12,2026-10-15"></textarea>' +
-    '<div class="supacts" style="display:flex;gap:7px;margin-top:7px"><button class="supact-pri" data-testid="op_go" onclick="bkOpeningGo()">' +
+    '<textarea data-cbsid="CMP040-T01"' + bkMountAttribute('CMP040') + ' class="inp" id="op_csv" data-testid="op_csv" rows="8" style="width:100%;font-family:var(--mono)" placeholder="1300,P-00001,5000,,INV-12,2026-10-15"></textarea>' +
+    '<div class="supacts" style="display:flex;gap:7px;margin-top:7px"><button data-cbsid="CMP042-B14"' + bkMountAttribute('CMP042') + ' class="supact-pri" data-testid="op_go" onclick="bkOpeningGo()">' +
     tx('Enter opening balances') +
     '</button></div><div id="op_out" data-testid="op_out" style="font-size:var(--fs-1);margin-top:6px"></div>';
 }
@@ -5595,7 +5606,7 @@ function bkChequeStepsHTML(c) {
           .map(function (item) {
             /* class cbl-tbtn (T3-P1-MONEY): the list's own small button — a bare <button> wore the browser's colours and failed AA in Dark; outside a list the class has no rule */
             return (
-              '<button type="button" class="cbl-tbtn" data-testid="chq-' +
+              '<button data-cbsid="CMP042-B15"' + bkMountAttribute('CMP042') + ' type="button" class="cbl-tbtn" data-testid="chq-' +
               item +
               '-' +
               id +
@@ -5986,7 +5997,7 @@ function bkWaitSupplierHTML(row, rowIndex) {
     bkWaitCands(row)
       .map(function (item, index) {
         return (
-          '<button type="button" class="supact-pri" data-testid="wait-link-' +
+          '<button data-cbsid="CMP042-B16"' + bkMountAttribute('CMP042') + ' type="button" class="supact-pri" data-testid="wait-link-' +
           rowIndex +
           '-' +
           index +
@@ -6000,7 +6011,7 @@ function bkWaitSupplierHTML(row, rowIndex) {
         );
       })
       .join('') +
-    '<button type="button"' +
+    '<button data-cbsid="CMP042-B17"' + bkMountAttribute('CMP042') + ' type="button"' +
     (bkWaitCands(row).length ? '' : ' class="supact-pri"') +
     ' data-testid="wait-addsup-' +
     rowIndex +
@@ -6145,13 +6156,13 @@ function bkWaitShortHTML(row, index, model) {
   if (!model) return said + '<span style="color:var(--grey)">' + esc(tx('Reading the bill…')) + '</span>';
   return (
     said +
-    '<button type="button" class="supact-pri" data-testid="wait-accept-short-' +
+    '<button data-cbsid="CMP042-B18"' + bkMountAttribute('CMP042') + ' type="button" class="supact-pri" data-testid="wait-accept-short-' +
     index +
     '" onclick="event.stopPropagation(); bkWaitAcceptShort(' +
     index +
     ', this)">' +
     esc(txf('Accept at {ours}', { ours: bkMoney(short.ours_minor, currency) })) +
-    '</button> <button type="button" data-testid="wait-reject-short-' +
+    '</button> <button data-cbsid="CMP042-B19"' + bkMountAttribute('CMP042') + ' type="button" data-testid="wait-reject-short-' +
     index +
     '" onclick="event.stopPropagation(); bkWaitRejectShort(' +
     index +
@@ -6271,7 +6282,7 @@ async function bkWaitingView(body) {
       tx('Waiting to be recorded') +
       '</div>' +
       (list.length && failed
-        ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' +
+        ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button data-cbsid="CMP009-B01"' + bkMountAttribute('CMP009') + ' class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' +
           tx('Try again') +
           '</button></div>'
         : '') +
@@ -6388,15 +6399,15 @@ async function bkAccounts(body) {
       return item.is_group;
     });
     body.innerHTML =
-      '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="ac_name" data-testid="ac_name" placeholder="' +
+      '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input data-cbsid="CMP040-I01"' + bkMountAttribute('CMP040') + ' class="inp" id="ac_name" data-testid="ac_name" placeholder="' +
       esc(tx('New ledger name')) +
-      '"><select class="inp" id="ac_parent" data-testid="ac_parent" aria-label="' + esc(tx('Parent group')) + '">' +
+      '"><select data-cbsid="CMP041-S01"' + bkMountAttribute('CMP041') + ' class="inp" id="ac_parent" data-testid="ac_parent" aria-label="' + esc(tx('Parent group')) + '">' +
       groups
         .map(function (item) {
           return '<option value="' + esc(item.code) + '">' + esc(item.code + ' · ' + item.name) + '</option>';
         })
         .join('') +
-      '</select><button class="supact-pri" data-testid="ac_add" onclick="bkAccountAdd()">' +
+      '</select><button data-cbsid="CMP007-B01"' + bkMountAttribute('CMP007') + ' class="supact-pri" data-testid="ac_add" onclick="bkAccountAdd()">' +
       tx('Add') +
       '</button></div><div id="ac_out" style="font-size:var(--fs-1)"></div>' +
       bkTable(

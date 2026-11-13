@@ -595,6 +595,9 @@
     'Settings › Standards': 'அமைப்புகள் › தரநிலைகள்',
     'Shared · minted once': 'பகிரப்பட்டது · ஒருமுறை வழங்கப்பட்டது',
     'Show everything': 'அனைத்தையும் காட்டு',
+    'Open the cart': 'வண்டியைத் திற',
+    'Clear the cart': 'வண்டியை காலி செய்',
+    'Remove from the cart': 'வண்டியிலிருந்து நீக்கு',
     'Shown — in this order': 'காட்டப்படுகிறது — இந்த வரிசையில்',
     'Sits under': 'எதன் கீழ் உள்ளது',
     'Soft Paper': 'மென் காகிதம்',
@@ -753,6 +756,32 @@
     'CMP030.shown': 'செயல்பாடு',
     'CMP030.aria': 'செயல்பாடு {object}',
     'Activity': 'செயல்பாடு',
+    'CMP045.label': 'பட்டியல் புலம்',
+    'List field': 'பட்டியல் புலம்',
+    'CMP033.label': 'பட்டியல் திறப்பு',
+    'List opener': 'பட்டியல் திறப்பு',
+    'CMP034.label': 'பட்டியல் மாற்றி',
+    'List toggle': 'பட்டியல் மாற்றி',
+    'CMP035.label': 'பட்டியல் தேர்வு',
+    'List select': 'பட்டியல் தேர்வு',
+    'CMP036.label': 'பட்டியல் தாவல்',
+    'List tab': 'பட்டியல் தாவல்',
+    'CMP037.label': 'பட்டியல் கட்டளை',
+    'List command': 'பட்டியல் கட்டளை',
+    'CMP038.label': 'பட்டியல் வரிசைச் செயல்',
+    'List row action': 'பட்டியல் வரிசைச் செயல்',
+    'CMP039.label': 'பட்டியல் நெடுவரிசைத் தலைப்பு',
+    'List column header': 'பட்டியல் நெடுவரிசைத் தலைப்பு',
+    'CMP040.label': 'கணக்கு புலம்',
+    'Books field': 'கணக்கு புலம்',
+    'CMP041.label': 'கணக்கு தேர்வு',
+    'Books select': 'கணக்கு தேர்வு',
+    'CMP042.label': 'கணக்குச் செயல்',
+    'Books action': 'கணக்குச் செயல்',
+    'CMP043.label': 'கணக்கு தாவல்',
+    'Books tab': 'கணக்கு தாவல்',
+    'CMP044.label': 'கணக்கு இணைப்பு',
+    'Books link': 'கணக்கு இணைப்பு',
     'Choice': 'தேர்வு',
     'Spinner': 'சுழலும் குறி',
     'CMP020.working': 'வேலை நடக்கிறது…',
@@ -867,6 +896,21 @@
     'No chits here — try another tab.': 'இங்கே சீட்டுகள் இல்லை — வேறு தாவலைப் பார்.',
     'Search chits, party, item': 'சீட்டு, தரப்பு, பொருள் தேடு',
     'Search my orders': 'என் ஆர்டர்களைத் தேடு'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ta || (CBSTR.ta = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} பில்லைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டது',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} பில்களைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டன',
+    'Open bill {n}': 'பில் {n} ஐத் திற'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

@@ -357,6 +357,22 @@ var CBUiStandard = (function () {
       progressCell('Tray class: 3 items, always the tray', ui.action('open', { mount: SCREEN + '-U176', object: 'tray batch', testid: 'gal-progress-batch-always-tray', onPress: demoBatch(3, SCREEN + '-D06-U01', 'tray') })) +
       '</div></section>';
   }
+  /** CMP045, CMP033..CMP039 the list control's own components: a row each, listing the element codes it writes (the unit draws them itself, so no live control here) */
+  var LIST_ROWS = [
+    ['listfield', 'CMP045-I01 search, I02 date, I03 tick'], ['listopener', 'CMP033-B01 opener, D01 popover, M01 menu choice'], ['listtoggle', 'CMP034-B01 pressed toggle'],
+    ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
+    ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column'],
+    ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
+    ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal']
+  ];
+  function listRows() {
+    return LIST_ROWS.map(function (entry) {
+      var component = ui.components[entry[0]];
+      return '<section class="crow" data-testid="gal-row-' + component.code + '"><div class="cid"><span class="chip" data-testid="gal-code">' + component.code + '</span><b>' + esc(words(component.label)) + '</b>' +
+        '<span class="meta" data-testid="gal-fcode"><span class="mono">' + component.element + '</span> · fcode <span class="mono">' + esc(component.verb) + '</span></span></div>' +
+        '<div class="states"><figure class="st"><div class="slot"><span class="mono">' + esc(entry[1]) + '</span></div><figcaption>CBList (list-ctl.js)</figcaption></figure></div></section>';
+    }).join('');
+  }
   /** CMP032 Batch job note: every state of a saved job in words, each its own standard text key (the batch bar itself is CMP026, the corner tray CMP027) */
   function batchNoteRow() {
     var component = ui.components.batchnote, batch = ui.progress.batch;
@@ -377,6 +393,7 @@ var CBUiStandard = (function () {
     rows.push(choiceRow());
     rows.push(progressRow());
     rows.push(batchRow());
+    rows.push(listRows());
     rows.push(batchNoteRow());
     return rows.join('');
   }
@@ -820,8 +837,143 @@ var CBUiStandard = (function () {
     var rows = auditAll();
     var target = { rule: 'Buttons are big enough to hit with a thumb.', proof: 'The smallest real button on the page, measured now at the chosen size (24 px needed). Try Too small 20 in Size.', sources: [['WCAG 2.2 · SC 2.5.8 Target Size (Minimum)', WCAG_UNDERSTANDING + 'target-size-minimum.html']], custom: targetResult };
     var obscured = { rule: 'Nothing slides over the focused button.', proof: 'The result bar is a row below the page, never an overlay: the walk checks that it covers no button at 1366 and 390.', sources: [['WCAG 2.4.11 Focus Not Obscured (Minimum)', WCAG_UNDERSTANDING + 'focus-not-obscured-minimum.html']], custom: function () { return '<span class="pass">proved by the walk</span>'; } };
-    return MEETS.concat([target, obscured]).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
+    return MEETS.concat([target, obscured], KEY_ROWS).map(function (item) { return meetsRowHTML(item, rows); }).join('') +
       '<section class="country" data-testid="gal-country"><h3>Country rules (UK, EU, US, India, Australia, UAE)</h3><p class="note">Empty on purpose. A country research file will fill this section later; nothing about any country is stated here.</p></section>';
+  }
+
+  /* ── keyboard and focus rows: measured in the browser after the page is drawn (paintLive), never written as a result ── */
+  var NATIVE_FOCUS = 'button, a[href], input, select, textarea, summary';
+  /** a result placeholder; paintLive replaces it with the measured chip */
+  function liveHolder(key) {
+    return function () { return '<span data-live="' + key + '" data-testid="gal-meetlive-wait">' + esc(words('measuring')) + '</span>'; };
+  }
+  /** the controls on show: real buttons, links and boxes that are drawn, enabled, and not the dialog itself */
+  function liveControls() {
+    var found = [].slice.call(document.querySelectorAll('button, a[href], input:not([type="hidden"]), select, textarea, [role="button"]'));
+    return found.filter(function (node) {
+      return !node.closest('#modalhost') && !node.disabled && node.getAttribute('aria-disabled') !== 'true' && node.getClientRects().length > 0;
+    });
+  }
+  /** the words of the label tied to a control: aria-labelledby first, then a label element; empty when it has none */
+  function labelText(node) {
+    var ids = (node.getAttribute('aria-labelledby') || '').split(/s+/).filter(Boolean);
+    var spoken = ids.map(function (id) { var target = document.getElementById(id); return target ? target.textContent : ''; }).join(' ').trim();
+    if (spoken || !node.labels) return spoken;
+    return [].map.call(node.labels, function (label) { return label.textContent; }).join(' ').trim();
+  }
+  /** the words a control carries itself: aria-label, a button's value, its text, or the alt of a picture inside it */
+  function ownWords(node) {
+    var picture = node.querySelector('img[alt]');
+    var typed = /^(button|submit|reset)$/.test(node.type || '') ? String(node.value || '').trim() : '';
+    return (node.getAttribute('aria-label') || '').trim() || typed || (node.textContent || '').trim() || (picture ? picture.getAttribute('alt').trim() : '');
+  }
+  /** the name a screen reader says for a control: its label, else its own words; a title alone is not a name */
+  function nameOf(node) {
+    return labelText(node) || ownWords(node);
+  }
+  function keyboardFacts(nodes) {
+    return { total: nodes.length, out: nodes.filter(function (node) { return node.tabIndex < 0; }).length };
+  }
+  function nameFacts(nodes) {
+    var unnamed = nodes.filter(function (node) { return !nameOf(node); });
+    return { total: nodes.length, unnamed: unnamed.length, titleOnly: unnamed.filter(function (node) { return node.getAttribute('title'); }).length };
+  }
+  /** true when the box has more content than it shows and its overflow lets it scroll, down or sideways */
+  function rolls(node) {
+    var style = getComputedStyle(node), scrolls = /auto|scroll/;
+    if (scrolls.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) return true;
+    return scrolls.test(style.overflowX) && node.scrollWidth > node.clientWidth + 1;
+  }
+  /** a box that scrolls: reachable when it takes focus itself or holds something that does; named when it says what it is */
+  function scrollFacts() {
+    var areas = [].slice.call(document.querySelectorAll('body *')).filter(function (node) { return node.getClientRects().length > 0 && rolls(node); });
+    var cannotReach = areas.filter(function (node) { return !(node.tabIndex >= 0 || node.querySelector(NATIVE_FOCUS)); });
+    var unnamed = areas.filter(function (node) { return !(node.getAttribute('aria-label') || node.getAttribute('aria-labelledby')); });
+    return { total: areas.length, cannotReach: cannotReach.length, unnamed: unnamed.length };
+  }
+  function pressKey(target, key, shift) {
+    var event = new KeyboardEvent('keydown', { key: key, shiftKey: !!shift, bubbles: true, cancelable: true });
+    target.dispatchEvent(event);
+    return event;
+  }
+  /** Tab at the last button and Shift+Tab at the first must both be taken by the dialog and keep focus inside it */
+  function tabStays(box) {
+    var inside = [].slice.call(box.querySelectorAll(NATIVE_FOCUS)).filter(function (node) { return !node.disabled && node.tabIndex >= 0; });
+    if (!inside.length) return false;
+    inside[inside.length - 1].focus();
+    var forward = pressKey(inside[inside.length - 1], 'Tab', false).defaultPrevented && box.contains(document.activeElement);
+    inside[0].focus();
+    return !!(forward && pressKey(inside[0], 'Tab', true).defaultPrevented && box.contains(document.activeElement));
+  }
+  /** opens the example dialog from a real button of this page and reads where focus goes, whether Tab stays, whether Esc closes, where focus lands; the host is put back as it was */
+  function dialogFacts() {
+    var host = document.getElementById('modalhost'), before = host.innerHTML, opener = probeNode('primary');
+    if (opener) opener.focus();
+    openExampleDialog();
+    var box = host.querySelector('.modal'), facts = { focusIn: !!box && box.contains(document.activeElement) };
+    facts.tabStays = !!box && tabStays(box);
+    pressKey(document.activeElement || document.body, 'Escape', false);
+    facts.escCloses = !host.querySelector('.mover');
+    facts.focusBack = backOnOpener(facts, opener);
+    host.innerHTML = before;
+    if (opener) opener.focus();
+    return facts;
+  }
+  /** true only when focus went in, Esc closed the popup, and focus is now on the button that opened it */
+  function backOnOpener(facts, opener) {
+    return !!opener && facts.focusIn && facts.escCloses && document.activeElement === opener;
+  }
+  function yesNo(flag) {
+    return flag ? 'yes' : 'no';
+  }
+  function keyVerdict(ok, detail) {
+    return { ok: ok, text: (ok ? 'PASS' : 'FAIL') + ' · ' + detail };
+  }
+  function judgeFocusIn(facts) {
+    return keyVerdict(facts.focusIn, 'focus ' + (facts.focusIn ? 'moved into the popup' : 'stayed on the page'));
+  }
+  function judgeTrap(facts) {
+    return keyVerdict(facts.tabStays && facts.escCloses && facts.focusBack, 'Tab stays ' + yesNo(facts.tabStays) + ' · Esc closes ' + yesNo(facts.escCloses) + ' · focus back ' + yesNo(facts.focusBack));
+  }
+  function judgeKeys(facts) {
+    return keyVerdict(facts.out === 0, facts.out + ' of ' + facts.total + ' cannot be reached by Tab');
+  }
+  function judgeNames(facts) {
+    return keyVerdict(facts.unnamed === 0, facts.unnamed + ' of ' + facts.total + ' have no name (' + facts.titleOnly + ' only a title)');
+  }
+  function judgeScroll(facts) {
+    return keyVerdict(facts.cannotReach === 0 && facts.unnamed === 0, facts.total + ' scrolling here · ' + facts.cannotReach + ' cannot be reached · ' + facts.unnamed + ' without a name');
+  }
+  /** the six keyboard rules of the Meets tab: the rule, what the page measures, where the standard says it, and the key paintLive fills */
+  var KEY_ROWS = [
+    { rule: 'A popup puts the cursor on its first field, or on the safe button when it asks you to confirm.', proof: 'The Example dialog is opened from a real button here and the page reads where the focus went.', live: 'dialog-focus',
+      sources: [['WAI-ARIA APG Dialog (Modal)', 'https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/'], ['WCAG 2.4.3 Focus Order', WCAG_UNDERSTANDING + 'focus-order.html']] },
+    { rule: 'Tab stays inside a popup, Esc closes it, and you land back on the button you pressed.', proof: 'The same dialog is sent Tab at its last button, Shift+Tab at its first, then Esc; the page reads where the focus is.', live: 'dialog-trap',
+      sources: [['WAI-ARIA APG Dialog (Modal)', 'https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/'], ['WCAG 2.1.2 No Keyboard Trap', WCAG_UNDERSTANDING + 'no-keyboard-trap.html']] },
+    { rule: 'Every button and box works from the keyboard alone.', proof: 'Every drawn, enabled control on this page is checked: Tab must reach it.', live: 'keys',
+      sources: [['WCAG 2.1.1 Keyboard', WCAG_UNDERSTANDING + 'keyboard.html']] },
+    { rule: 'Every button and box has a name, not only a hover tip.', proof: 'Every drawn control on this page is read for its name: a label, its words or aria-label. A title alone does not count.', live: 'names',
+      sources: [['WCAG 4.1.2 Name, Role, Value', WCAG_UNDERSTANDING + 'name-role-value.html'], ['WCAG 1.1.1 Non-text Content', WCAG_UNDERSTANDING + 'non-text-content.html']] },
+    { rule: 'A state is said in words or shown by a shape, never by fading alone.', proof: 'A rule, not a measure here: the walk looks for a state carried only by opacity on each screen.', live: null,
+      sources: [['WCAG 1.4.1 Use of Color', WCAG_UNDERSTANDING + 'use-of-color.html'], ['WCAG 1.4.11 Non-text Contrast', WCAG_UNDERSTANDING + 'non-text-contrast.html']] },
+    { rule: 'A list that scrolls can be reached with Tab and has a name.', proof: 'Every box on this page that scrolls is checked for Tab focus (itself or something inside) and a name.', live: 'scroll',
+      sources: [['WCAG 2.1.1 Keyboard', WCAG_UNDERSTANDING + 'keyboard.html'], ['axe scrollable-region-focusable', 'https://dequeuniversity.com/rules/axe/4.10/scrollable-region-focusable']] }
+  ].map(function (item) {
+    item.custom = item.live ? liveHolder(item.live) : function () { return '<span data-testid="gal-meetlive-walk">' + esc(words('checked by the walk, not on this page')) + '</span>'; };
+    return item;
+  });
+  /** fills each placeholder with its measured chip; only the Meets tab holds any, and no result is written before it is read */
+  function paintLive() {
+    var holders = [].slice.call(document.querySelectorAll('#content [data-live]'));
+    if (!holders.length) return;
+    var dialog = dialogFacts(), controls = liveControls();
+    var results = { 'dialog-focus': judgeFocusIn(dialog), 'dialog-trap': judgeTrap(dialog), keys: judgeKeys(keyboardFacts(controls)), names: judgeNames(nameFacts(controls)), scroll: judgeScroll(scrollFacts()) };
+    holders.forEach(function (node) {
+      var result = results[node.getAttribute('data-live')];
+      node.className = result.ok ? 'pass' : 'fail';
+      node.setAttribute('data-testid', 'gal-meetlive-' + (result.ok ? 'pass' : 'fail'));
+      node.textContent = result.text;
+    });
   }
 
   /* ── paint: the whole page again, from state ── */
@@ -859,6 +1011,7 @@ var CBUiStandard = (function () {
     paintFocus();
     paintType();
     paintOverlay();
+    paintLive();
     if (document.querySelector('#modalhost .mover')) openExampleDialog();
   }
   function onSwitch(event) {
@@ -943,5 +1096,5 @@ var CBUiStandard = (function () {
     loadWaves();
     whenFacesLoad();
   }
-  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, SHELL_ROWS: SHELL_ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll };
+  return { wavesHTML: wavesHTML, start: start, sections: sections, chooseSection: chooseSection, firstSection: firstSection, avatarOptions: avatarOptions, state: state, ROWS: ROWS, SHELL_ROWS: SHELL_ROWS, CENSUS: CENSUS, PRESETS: PRESETS, TOKENS: TOKENS, LANGS: LANGS, coverageOf: coverageOf, translatedIn: translatedIn, contrastRatio: contrastRatio, paint: paint, audit: auditAll, KEY_ROWS: KEY_ROWS, meetsRowHTML: meetsRowHTML, judge: { focusIn: judgeFocusIn, trap: judgeTrap, keys: judgeKeys, names: judgeNames, scroll: judgeScroll } };
 })();

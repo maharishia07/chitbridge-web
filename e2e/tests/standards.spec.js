@@ -1,4 +1,5 @@
 // standards.spec.js — the Standards page (/standards.html: the matrix, the list, the two sheets) and Settings › Standards (what YOU follow, and the door).
+// CARD  21-compliance-attestation-and-trade/commerce-standards-and-standards-page
 //
 // 2026-10-03: the register moved off Settings onto its own page (docs/design/standards-page). The offline proof of the page is e2e/standards-page.cjs;
 // this spec keeps the live-app checks — the register as the app loads it, Settings' live reading of your own settings, the Legend — and reads the page

@@ -38,7 +38,7 @@ function scrErr(e, subject, retry) {
     '<div>' +
     esc(e && e.message) +
     '</div>' +
-    (retry ? '<button class="btn" data-testid="err-retry" onclick="' + esc(retry) + '" style="margin-top:4px">' + tx('Try again') + '</button>' : '') +
+    (retry ? '<button data-cbsid="CMP009" class="btn" data-testid="err-retry" onclick="' + esc(retry) + '" style="margin-top:4px">' + tx('Try again') + '</button>' : '') +
     '</div>'
   );
 }

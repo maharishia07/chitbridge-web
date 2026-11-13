@@ -82,7 +82,7 @@
     </select>
   </label>
   <label>Bill
-    <select id="kind" onchange="render()">
+    <select id="kind" onchange="show()">
       <option value="cash">Cash memo — unregistered shop</option>
       <option value="supply">Bill of supply — composition</option>
       <option value="tax">Tax invoice — registered</option>
@@ -110,7 +110,7 @@ var SHOP = {
   tax_id_word: 'GSTIN' /* the sample shop is Indian: its pack's word; a preview hands the shop's own (tax.id_word) */
 };
 var BILL = {
-  currency: 'INR' /* the sample shop's money — the slip writes it as the till does (fmtMoney · CBLocale.money) */,
+  currency: null /* the sample shop's money, told by the message — the slip writes it as the till does (fmtMoney · CBLocale.money); null = unknown, never rupees (CTRY-72) */,
   no: 'C1/26-27/0041',
   at: new Date(),
   till: 'Counter 1',
@@ -193,11 +193,11 @@ var PREVIEW = /[?&]preview=1/.test(location.search),
 if (PREVIEW) document.documentElement.setAttribute('data-preview', '1');
 /** the settings page's one message: keep the signature, then repaint the same slip with it (currency, the pack's rate, the kind, the paper) */
 /** the sample bill's number — composed by the ONE composer the till uses (CBDoc.compose), by the shop's country: India's Apr–Mar year (26-27); a country
- *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country is the Indian sample shop. */
+ *  whose rule has no year part (the UAE · Australia today) prints none. A preview that has not been told a country paints no slip (CTRY-72). */
 function billNo() {
   try {
     if (window.CBDoc && typeof CBDoc.compose === 'function')
-      return CBDoc.compose({ country: (signature && signature.country) || 'IN', prefix: 'C1', seq: 41, at: BILL.at });
+      return CBDoc.compose({ country: signature ? signature.country : '', prefix: 'C1', seq: 41, at: BILL.at });
   } catch (failure) {
     if (window.cbQuiet) window.cbQuiet('bill-print:billNo', failure);
   }
@@ -207,7 +207,7 @@ function onPreviewMessage(event) {
   var message = event.data;
   if (!message || !message.cb_preview) return;
   signature = message;
-  if (message.currency) BILL.currency = message.currency;
+  BILL.currency = message.currency || null; /* CTRY-72: a message with tax but no money leaves the money unknown, never the rupee */
   /* R47: a taxed sample line keeps its own rate when the pack's menu has it (India's 5 %), else takes the pack's standard rate (AU 10 %, AE 5 %) */
   var menu = message.tax && message.tax.rates ? message.tax.rates.map(Number) : null;
   if (message.tax && message.tax.rate)
@@ -261,9 +261,18 @@ function stateLine() {
     name = code && CBProfileMap.STATE_NAMES[code];
   return name ? '<div class="c small" data-testid="slip-state">State: ' + esc(name) + ' (' + esc(code) + ')</div>' : '';
 }
-/** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); India's words otherwise */
+/** the tax words: the pack's (a preview says GST · VAT, split by state or one line, the id's word); null when the shop has no country or pack (CTRY-72: never India's GST 18 %) */
 function taxWords() {
-  return (signature && signature.tax) || { word: 'GST', split: true, rate: 18, id_word: SHOP.tax_id_word };
+  return (signature && signature.tax) || null;
+}
+/** CTRY-72: where the slip would have been, the words and the way to the fix - no number is worked out. A preview not yet told anything paints nothing. */
+function refusalHTML() {
+  var refusalWords = (signature && signature.refusal) || (signature ? 'No money is set for this shop.' : 'Open Print setup to see the sample bill.'); /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
+  return (
+    '<div class="c" data-testid="slip-no-country" style="padding:6mm 2mm"><div class="b">' +
+    esc(refusalWords) +
+    '</div><div class="small"><a href="/settings.html#/country" target="_top" data-testid="slip-country-link">Country setup</a></div></div>'
+  );
 }
 /* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
 function when(date) {
@@ -272,14 +281,19 @@ function when(date) {
   };
   return p(date.getDate()) + '/' + p(date.getMonth() + 1) + '/' + date.getFullYear() + '  ' + p(date.getHours()) + ':' + p(date.getMinutes());
 }
+function paintRefusal() {
+  document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
+}
+/** the one door every repaint goes through: the slip when the shop has tax words, else the refusal (render() itself needs them) */
+function show() {
+  return taxWords() && BILL.currency ? render() : paintRefusal();
+}
 function render() {
   var kind = document.getElementById('kind').value;
   var m = calc(kind);
   var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
   var showGstin = kind !== 'cash';
-  var paid = BILL.paid.reduce(function (total, item) {
-    return r2(total + item.amount);
-  }, 0);
+  var paid = BILL.paid.reduce(function (total, item) { return r2(total + item.amount); }, 0);
   var change = r2(paid - m.net);
 
   var head =
@@ -442,7 +456,7 @@ function setW(w) {
       return e;
     })();
   node.textContent = page;
-  render();
+  show();
 }
 setW('80');
 </script>

@@ -28,6 +28,7 @@ const srv = http.createServer((q, r) => {
     S.notifs.unshift({ log_id: 'L' + (S.notifs.length + 1), chit_id: 'ch-1', action: 'message_sent', action_by_display_name: 'Ravi', auto_subject: 'Order 17', detail: 'Friday is fine', created_at: new Date().toISOString() });
     S.count++; S.conns.forEach((c) => c.write('event: cb\ndata: {"kind":"message","id":"ch-1"}\n\n')); return j(200, { ok: true });
   }
+  if (p === '/api/entities/me') return j(200, { data: { entity: { country: 'IN' } } });   /* the avatar's /me read: a 404 here means "this shop is gone" and signs Home out (avatar.js:512) */
   if (p === '/api/notifications') return j(200, { notifications: S.notifs, count: S.count });
   if (p === '/api/notifications/seen') { S.count = 0; return j(200, { ok: true }); }
   if (p === '/api/notifications/dismiss') { S.dismissed++; S.notifs = []; S.count = 0; return j(200, { ok: true }); }
@@ -68,7 +69,7 @@ let code = 2;
   console.log('\n-- crm.html: the dot arrives by the stream, within 5 s --');
   let p = await page(OWNER, '/crm.html');
   await p.waitForSelector('[data-testid="bell-btn"]', { timeout: 20000 });
-  ok(await p.locator('[data-testid="bell"]').count() === 1, 'the bell is in the crm header');
+  ok(await p.locator('[data-testid="shell-bell"] [data-testid="bell-btn"]').count() === 1, 'the bell is in the crm header (the shell\'s bell slot)');
   ok(await p.locator('[data-testid="bell-dot"]').count() === 0, 'no dot while nothing has arrived');
   await p.waitForFunction(() => true); await wait(800);
   ok(S.tickets === 1 && S.conns.length === 1, 'one ticket, one stream (' + S.tickets + '/' + S.conns.length + ')');
@@ -110,7 +111,7 @@ let code = 2;
   const tk = S.tickets;
   const a = await page(OWNER, '/accounts.html');
   await a.waitForSelector('[data-testid="bell-btn"]', { timeout: 20000 });
-  ok(await a.locator('[data-testid="bell"]').count() === 1, 'the bell is in the accounts header');
+  ok(await a.locator('[data-testid="shell-bell"] [data-testid="bell-btn"]').count() === 1, 'the bell is in the accounts header (the shell\'s bell slot)');
   await wait(800);
   ok(S.tickets === tk + 1, 'accounts opened its own ticket');
   const before = S.count;

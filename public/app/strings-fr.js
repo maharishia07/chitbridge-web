@@ -595,6 +595,9 @@
     'Settings › Standards': 'Paramètres › Normes',
     'Shared · minted once': 'Partagé · émis une seule fois',
     'Show everything': 'Tout afficher',
+    'Open the cart': 'Ouvrir le panier',
+    'Clear the cart': 'Vider le panier',
+    'Remove from the cart': 'Retirer du panier',
     'Shown — in this order': 'Affiché — dans cet ordre',
     'Sits under': 'Rattaché à',
     'Soft Paper': 'Papier doux',
@@ -753,6 +756,32 @@
     'CMP030.shown': 'Activité',
     'CMP030.aria': 'Activité {object}',
     'Activity': 'Activité',
+    'CMP045.label': 'Champ de liste',
+    'List field': 'Champ de liste',
+    'CMP033.label': 'Ouverture de liste',
+    'List opener': 'Ouverture de liste',
+    'CMP034.label': 'Bascule de liste',
+    'List toggle': 'Bascule de liste',
+    'CMP035.label': 'Sélecteur de liste',
+    'List select': 'Sélecteur de liste',
+    'CMP036.label': 'Onglet de liste',
+    'List tab': 'Onglet de liste',
+    'CMP037.label': 'Commande de liste',
+    'List command': 'Commande de liste',
+    'CMP038.label': 'Action de ligne de liste',
+    'List row action': 'Action de ligne de liste',
+    'CMP039.label': 'En-tête de colonne de liste',
+    'List column header': 'En-tête de colonne de liste',
+    'CMP040.label': 'Champ des livres',
+    'Books field': 'Champ des livres',
+    'CMP041.label': 'Sélecteur des livres',
+    'Books select': 'Sélecteur des livres',
+    'CMP042.label': 'Action des livres',
+    'Books action': 'Action des livres',
+    'CMP043.label': 'Onglet des livres',
+    'Books tab': 'Onglet des livres',
+    'CMP044.label': 'Lien des livres',
+    'Books link': 'Lien des livres',
     'Choice': 'Choix',
     'Spinner': 'Indicateur d\'attente',
     'CMP020.working': 'Travail en cours…',
@@ -867,6 +896,21 @@
     'No chits here — try another tab.': 'Aucun chit ici — essayez un autre onglet.',
     'Search chits, party, item': 'Rechercher chits, parties, articles',
     'Search my orders': 'Rechercher mes commandes'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.fr || (CBSTR.fr = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} facture illisible, exclue de ce mois',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} factures illisibles, exclues de ce mois',
+    'Open bill {n}': 'Ouvrir la facture {n}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

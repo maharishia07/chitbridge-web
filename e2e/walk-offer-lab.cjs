@@ -581,11 +581,11 @@ const walk = async (w) => {
     await phone.evaluate(() => { pickGoal('percent'); applyWholeCategory(CATS[1].id); apply(); });
     await phone.waitForSelector('#workScrim.on');
     const sheet = await phone.evaluate(() => {
-      const box = document.querySelector('#workScrim .sheet').getBoundingClientRect(), close = document.querySelector('#workScrim .shhd .ovlx').getBoundingClientRect();
+      const box = document.querySelector('#workScrim .sheet').getBoundingClientRect(), close = document.querySelector('#workScrim .shhd [data-cbname="close"]').getBoundingClientRect();
       const hit = document.elementFromPoint(close.left + close.width / 2, close.top + close.height / 2);
-      return { left: Math.round(box.left), right: Math.round(box.right), width: window.innerWidth, closeIn: close.left >= 0 && close.right <= window.innerWidth && close.top >= 0 && close.bottom <= window.innerHeight, closeHit: !!hit && (hit.classList.contains('ovlx') || !!hit.closest('.ovlx')) };
+      return { left: Math.round(box.left), right: Math.round(box.right), width: window.innerWidth, closeIn: close.left >= 0 && close.right <= window.innerWidth && close.top >= 0 && close.bottom <= window.innerHeight, closeHit: !!hit && !!hit.closest('[data-cbname="close"]') };
     });
-    await phone.click('#workScrim .shhd .ovlx');
+    await phone.click('#workScrim .shhd [data-cbname="close"]');
     const closed = await phone.evaluate(() => !document.getElementById('workScrim').classList.contains('on'));
     await phone.close();
     const toolsOk = toolsRowHigh <= 60 && landing.tools.length === 4 && landing.tools.every((t) => t.shown && t.word && t.word.trim() && t.high >= 44);

@@ -318,7 +318,7 @@ async function downloadCatalogueTemplate(btn) {
           tx('📄 Catalogue template') +
           '</div><div class="mbody">' +
           body +
-          '</div><div class="mfoot"><button class="pri" onclick="closeModal()">' +
+          '</div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('Got it') +
           '</button></div>'
       );
@@ -812,16 +812,11 @@ var CBCatalogueApp = (function () {
       '<div class="cat-pager" data-testid="cat-pager"><span>' +
       esc(T('{from}–{to} of {n}', { from: String(from), to: String(to), n: String(S.total) })) +
       '</span>' +
-      '<button type="button" class="act quiet" data-testid="cat-prev" onclick="CBCatalogueApp.page(-1)"' +
-      (S.offset === 0 ? ' disabled' : '') +
-      '>‹ ' +
-      esc(T('Previous')) +
-      '</button>' +
-      '<button type="button" class="act quiet" data-testid="cat-next" onclick="CBCatalogueApp.page(1)"' +
-      (to >= S.total ? ' disabled' : '') +
-      '>' +
-      esc(T('Next')) +
-      ' ›</button></div>'
+      CBList.pager({
+        prev: { label: T('Previous'), tid: 'cat-prev', act: 'CBCatalogueApp.page(-1)', off: S.offset === 0 },
+        next: { label: T('Next'), tid: 'cat-next', act: 'CBCatalogueApp.page(1)', off: to >= S.total }
+      }) +
+      '</div>'
     );
   }
   function cols() {
@@ -1262,7 +1257,7 @@ var CBCatalogueApp = (function () {
       d = p ? pData(p) : {};
     if (S.sel && !p)
       return (
-        '<button type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
+        '<button data-cbsid="CMP005" type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
         esc(T('Close')) +
         '">✕</button><h2>' +
         esc(T('Item')) +
@@ -1271,7 +1266,7 @@ var CBCatalogueApp = (function () {
         '</p>'
       );
     var head =
-      '<button type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
+      '<button data-cbsid="CMP005" type="button" class="mx" data-testid="cat-sheet-close" aria-label="' +
       esc(T('Close')) +
       '">✕</button>' +
       '<h2 data-testid="cat-sheet-title">' +
@@ -1673,7 +1668,7 @@ var CBCatalogueApp = (function () {
       })
       .join('');
     node.innerHTML =
-      '<button type="button" class="mx" data-testid="catg-sheet-close" aria-label="' +
+      '<button data-cbsid="CMP005" type="button" class="mx" data-testid="catg-sheet-close" aria-label="' +
       esc(T('Close')) +
       '">✕</button><h2 data-testid="catg-sheet-title">' +
       esc(c ? T('Rename “{n}”', { n: c.name }) : T('New category')) +

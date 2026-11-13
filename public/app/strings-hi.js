@@ -596,6 +596,9 @@
     'Settings › Standards': 'सेटिंग्स › मानक',
     'Shared · minted once': 'साझा · एक बार जारी',
     'Show everything': 'सब दिखाएँ',
+    'Open the cart': 'कार्ट खोलें',
+    'Clear the cart': 'कार्ट खाली करें',
+    'Remove from the cart': 'कार्ट से हटाएँ',
     'Shown — in this order': 'दिखाया गया — इसी क्रम में',
     'Sits under': 'किसके अधीन',
     'Soft Paper': 'सॉफ़्ट पेपर',
@@ -754,6 +757,32 @@
     'CMP030.shown': 'गतिविधि',
     'CMP030.aria': 'गतिविधि {object}',
     'Activity': 'गतिविधि',
+    'CMP045.label': 'सूची क्षेत्र',
+    'List field': 'सूची क्षेत्र',
+    'CMP033.label': 'सूची खोलना',
+    'List opener': 'सूची खोलना',
+    'CMP034.label': 'सूची टॉगल',
+    'List toggle': 'सूची टॉगल',
+    'CMP035.label': 'सूची चयन',
+    'List select': 'सूची चयन',
+    'CMP036.label': 'सूची टैब',
+    'List tab': 'सूची टैब',
+    'CMP037.label': 'सूची आदेश',
+    'List command': 'सूची आदेश',
+    'CMP038.label': 'सूची पंक्ति क्रिया',
+    'List row action': 'सूची पंक्ति क्रिया',
+    'CMP039.label': 'सूची स्तंभ शीर्षक',
+    'List column header': 'सूची स्तंभ शीर्षक',
+    'CMP040.label': 'बही क्षेत्र',
+    'Books field': 'बही क्षेत्र',
+    'CMP041.label': 'बही चयन',
+    'Books select': 'बही चयन',
+    'CMP042.label': 'बही क्रिया',
+    'Books action': 'बही क्रिया',
+    'CMP043.label': 'बही टैब',
+    'Books tab': 'बही टैब',
+    'CMP044.label': 'बही लिंक',
+    'Books link': 'बही लिंक',
     'Choice': 'चुनाव',
     'Spinner': 'घूमता संकेतक',
     'CMP020.working': 'काम चल रहा है…',
@@ -868,6 +897,21 @@
     'No chits here — try another tab.': 'यहाँ कोई चिट नहीं — दूसरा टैब देखें।',
     'Search chits, party, item': 'चिट, पक्ष, आइटम खोजें',
     'Search my orders': 'मेरे ऑर्डर खोजें'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.hi || (CBSTR.hi = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} बिल पढ़ा नहीं जा सका और इस महीने से बाहर रखा गया है',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} बिल पढ़े नहीं जा सके और इस महीने से बाहर रखे गए हैं',
+    'Open bill {n}': 'बिल {n} खोलें'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

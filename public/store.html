@@ -23,7 +23,12 @@
   .search input{flex:1;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;outline:none}
   .search input:focus{border-color:var(--accent)}
   .cats{max-width:1000px;margin:0 auto;padding:12px 18px 2px;display:flex;gap:8px;flex-wrap:wrap}
-  .chip{padding:6px 14px;border:1px solid var(--line);border-radius:20px;background:var(--card);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
+  .chip{padding:6px 14px;border:1px solid var(--line);border-radius:20px;background:var(--card);font:inherit;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;min-height:32px}   /* a real button: Tab, Enter and Space work (UX-5) */
+  .chip:focus-visible,.card button:focus-visible,.cartbar button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .po-ask{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .po-ask label{font-size:12px;font-weight:700;color:var(--muted)}
+  .po-ask input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:15px;color:var(--ink);background:var(--card)}
+  .po-ask ul{margin:6px 0;padding-inline-start:18px}
   .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   main{max-width:1000px;margin:0 auto;padding:16px 18px 60px}
   .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
@@ -37,10 +42,9 @@
   .msg .big{font-size:34px}
   .count{max-width:1000px;margin:0 auto;padding:4px 18px;font-size:12px;color:var(--muted)}
   footer{max-width:1000px;margin:0 auto;padding:20px 18px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line)}
-  .toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:#1a2230;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
-  .toast.show{opacity:1}
   .cartbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 18px;display:none;align-items:center;gap:14px;box-shadow:0 -2px 12px rgba(0,0,0,.06);z-index:15}
   .cartbar.show{display:flex}
+  body #toast{bottom:74px}   /* UX-142: the shared host sits at 20px; lift it above the cart bar (it loads its style after this one, so the selector must be stronger) */
   .cartbar .ct{font-weight:800;font-size:15px}
   .cartbar button{margin-inline-start:auto;padding:11px 22px;border:0;border-radius:10px;background:var(--good);color:#fff;font-weight:800;font-size:14px;cursor:pointer}
 </style>
@@ -50,21 +54,21 @@
 <div class="tools">
   <div class="srow">
     <span class="sub" id="netlabel"></span>
-    <div class="search"><input id="q" type="search" placeholder="Search products…" autocomplete="off"></div>
+    <div class="search"><input data-cbsid="STR001-I01" id="q" type="search" placeholder="Search products…" aria-label="Search products" autocomplete="off"></div>
   </div>
-  <div class="cats" id="cats"></div>
+  <div class="cats" id="cats" role="group" aria-label="Categories"></div>
 </div>
 <div class="count" id="count"></div>
 <main><div id="body"><div class="msg"><div class="big">⏳</div>Loading the store…</div></div></main>
 <footer id="foot"></footer>
 <div class="cartbar" id="cartbar"></div>
-<div class="toast" id="toast"></div>
 
 <!-- THE ONE FRAME (SHELL-ONE): the header every page wears — mark · name · the screen chip · ⌂ Home · the avatar (Sign in). Nothing of it is drawn here. -->
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies -->
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
+<script src="/app/accounts-shell.js"></script>   <!-- UX-142: toast() — the ONE shared toast (words, place, live region), not this page's own copy -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
@@ -91,14 +95,6 @@ function rs(v) {
     return (STATE.cur ? STATE.cur + ' ' : '') + v;
   }
 } /* CX0: the store's currency through the locale engine, never ₹ en-IN by name */
-function toast(m) {
-  var node = document.getElementById('toast');
-  node.textContent = m;
-  node.className = 'toast show';
-  setTimeout(function () {
-    node.className = 'toast';
-  }, 1800);
-}
 
 function addToCart(pid) {
   STATE.cart[pid] = (STATE.cart[pid] || 0) + 1;
@@ -132,17 +128,57 @@ function renderCart() {
     return;
   }
   bar.className = 'cartbar show';
-  bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button onclick="placeOrder()">Place order</button>';
+  bar.innerHTML = '<div class="ct">🛒 ' + n + ' item' + (n === 1 ? '' : 's') + ' · ' + rs(tot) + '</div><button type="button" data-cbsid="STR001-B01" onclick="placeOrder()">Place order</button>';
 }
+/* MONEY PROMISE = DELIBERATE CONFIRM (UX-5): Place order opens the library's one confirm (CBConfirm) saying WHAT is promised (the lines, the total) and TO WHOM (this store); the name and e-mail are form fields in it, not prompt() boxes. Nothing is sent until Place order is pressed in it. */
+/** the lines the buyer is about to order, as a list: quantity, name, line total */
+function orderLinesHtml(list) {
+  return (
+    '<ul>' +
+    list
+      .map(function (item) {
+        return '<li>' + item.qty + ' × ' + esc(item.name || item.product_id) + (item.price != null ? ' · ' + esc(rs(item.price * item.qty)) : '') + '</li>';
+      })
+      .join('') +
+    '</ul>'
+  );
+}
+/** the buyer pressed Place order: ask first (lines, total, store, name, e-mail); only the confirm sends */
 function placeOrder() {
-  var name = prompt('Your name:', '');
-  if (name === null) return;
-  var email = prompt('Your email (optional):', '') || '';
+  var list = cartItems();
+  if (!list.length) return;
+  var total = list.reduce(function (sum, item) {
+    return sum + (item.price || 0) * item.qty;
+  }, 0);
+  var buyer = { name: '', email: '' };
+  CBConfirm(
+    'Place this order?',
+    '<div>This sends an order to the store <b>' + esc(NET) + '</b>.</div><div class="po-ask">' + orderLinesHtml(list) + '<div><b>Total ' + esc(rs(total)) + '</b></div>' +
+      '<label for="po_name">Your name</label><input data-cbsid="STR001-I02" id="po_name" data-testid="po-name" autocomplete="name" placeholder="Customer">' +
+      '<label for="po_email">Your email (optional)</label><input data-cbsid="STR001-I03" id="po_email" data-testid="po-email" type="email" autocomplete="email"></div>',
+    'Place order',
+    function () {
+      sendOrder(list, buyer);
+    }
+  );
+  ['po_name', 'po_email'].forEach(function (id) {
+    var box = document.getElementById(id);
+    if (!box) return;
+    box.addEventListener('input', function () {
+      buyer[id === 'po_name' ? 'name' : 'email'] = box.value;
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') e.preventDefault(); /* Enter in a box never answers the question: only the Place order button does */
+    });
+  });
+}
+/** the buyer said yes: post the order to the network store and say the outcome in the toast */
+function sendOrder(list, buyer) {
   var body = {
-    items: cartItems().map(function (item) {
+    items: list.map(function (item) {
       return { product_id: item.product_id, qty: item.qty };
     }),
-    customer: { name: name || 'Customer', email: email }
+    customer: { name: (buyer.name || '').trim() || 'Customer', email: (buyer.email || '').trim() }
   };
   fetch(API + '/api/catalogue/network-store/' + encodeURIComponent(NET) + '/order', {
     method: 'POST',
@@ -156,7 +192,7 @@ function placeOrder() {
       if (reply && reply.ok) {
         STATE.cart = {};
         renderCart();
-        alert('✓ Order placed!\nOrder #' + String(reply.order_id).slice(0, 8) + '\n' + reply.item_count + ' item(s) · ' + rs(reply.total));
+        toast('✓ Order placed · #' + String(reply.order_id).slice(0, 8) + ' · ' + reply.item_count + ' item(s) · ' + rs(reply.total));
       } else {
         toast((reply && reply.message) || 'Order failed');
       }
@@ -178,9 +214,9 @@ function visible() {
 }
 function renderCats() {
   var el = document.getElementById('cats');
-  var chips = ['<span class="chip ' + (STATE.cat === '' ? 'on' : '') + '" data-cat="">All</span>'];
+  var chips = ['<button type="button" data-cbsid="STR001-C01" class="chip ' + (STATE.cat === '' ? 'on' : '') + '" aria-pressed="' + (STATE.cat === '') + '" data-cat="">All</button>'];
   STATE.categories.forEach(function (item) {
-    chips.push('<span class="chip ' + (STATE.cat === item ? 'on' : '') + '" data-cat="' + esc(item) + '">' + esc(item) + '</span>');
+    chips.push('<button type="button" data-cbsid="STR001-C02" class="chip ' + (STATE.cat === item ? 'on' : '') + '" aria-pressed="' + (STATE.cat === item) + '" data-cat="' + esc(item) + '">' + esc(item) + '</button>');
   });
   el.innerHTML = chips.join('');
 }
@@ -206,7 +242,7 @@ function renderBody() {
           '<div class="pr">' +
           (item.price != null ? rs(item.price) : '') +
           '</div>' +
-          '<button onclick="addToCart(\'' +
+          '<button type="button" data-cbsid="STR001-B02" onclick="addToCart(\'' +
           item.product_id +
           '\')">Add</button></div>'
         );
@@ -222,7 +258,11 @@ window.setCat = function (c) {
 /* SEC-FIX2 H4: a chip carries its category as DATA (esc'd once) and one listener reads it back — no handler is ever built from a shop's text. */
 document.getElementById('cats').addEventListener('click', function (e) {
   var chip = e.target.closest('[data-cat]');
-  if (chip) window.setCat(chip.getAttribute('data-cat'));
+  if (!chip) return;
+  window.setCat(chip.getAttribute('data-cat'));
+  /* the chips are drawn again: the keyboard user keeps their place on the chip they chose */
+  var again = document.querySelectorAll('#cats [data-cat]');
+  for (var i = 0; i < again.length; i++) if (again[i].getAttribute('data-cat') === STATE.cat) again[i].focus();
 });
 
 document.getElementById('q').addEventListener('input', function (e) {
