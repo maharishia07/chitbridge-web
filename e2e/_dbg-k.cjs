@@ -740,7 +740,7 @@ async function route(S, r) {
      within 20% of the window on a laptop — a wide one AND a narrow one (1080) — and within 30% on a phone. LEDGERS_SHOTS=<dir> also keeps a picture of each state
      (01 tree open · 02 tree folded · 03 control account with parties · 04 parties differ · 05 plain ledger · 06 party's ledger · 07 entry opened · 08 empty period · 09 long name). ── */
   const headPct = (p) => p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr'); if (!l) return null;
-    window.__d=[...document.querySelectorAll('#shell, .titlebar, #lg_out > *, #lg_out .cbl > *, .cbl-title, .cbl-hdr, .main > *')].filter(e=>e.offsetHeight).map(e=>(e.id||e.className||e.tagName).toString().slice(0,30)+':'+Math.round(e.getBoundingClientRect().top)+'+'+e.offsetHeight).join(' | ')+' LTOP '+Math.round(l.getBoundingClientRect().top)+' IH '+innerHeight; return Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100); });
+    return Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100); });
   const LSHOTS = process.env.LEDGERS_SHOTS;
   if (LSHOTS) fs.mkdirSync(LSHOTS, { recursive: true });
   for (const theme of ['cream', 'dark', 'terminal']) {
@@ -757,7 +757,7 @@ async function route(S, r) {
       await snap('01-tree-open');
       const checks = {};
       /* 03 · a control account with parties (Suppliers) */
-      await pick('lg-acc-2100'); checks.control = await headPct(p); console.log('DBG', await p.evaluate(()=>window.__d)); process.exit(0); await snap('03-control-parties');
+      await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
       S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
       await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p);   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
@@ -835,7 +835,7 @@ async function route(S, r) {
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', document.querySelectorAll('#nav .nav-btn').length - 1), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
     await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);
-    const a = await box(), tag = 'accounts @' + w;
+    const a = await box(), tag = 'accounts @' + w; console.log('DBG2', w, JSON.stringify(await p.evaluate(()=>{const e=document.querySelector('#cbkural,#cbkural-reserve');const q=document.querySelectorAll('#cbkural,#cbkural-reserve,[data-testid=kural-reserve]');return {n:q.length, html:e&&e.outerHTML.slice(0,300), h:e&&e.offsetHeight, cs:e&&getComputedStyle(e).display+'/'+getComputedStyle(e).height, cbk:document.documentElement.style.getPropertyValue('--cbk-h'), blocked:[...document.querySelectorAll('.cbl-chip.warn,.cbl-chip.bad,[role=alert],.card.bad,.pe-bad,.pe-warn,dialog[open],.modalback,#modal.on')].filter(x=>x.offsetWidth||x.offsetHeight).map(x=>x.className+'|'+(x.textContent||'').slice(0,40))}})));
     ok(a.navN === VIEWS.length && a.titleText === 'Day book' && a.skel >= 5 && !!a.band && a.band[3] >= 40, tag + ' FIRST PAINT, data still on its way: all ' + a.navN + ' menu items, the title "' + a.titleText + '", skeleton rows (' + a.skel + '), the kural\'s room (' + (a.band && a.band[3]) + ' px)');
     await p.waitForSelector('[data-testid^="db-entry-"]', { timeout: 15000 }); await p.waitForTimeout(700);
     const z = await box(), same = (u, v, tol) => !!u && !!v && u.every((x, i) => Math.abs(x - v[i]) <= (tol == null ? 1 : tol));
