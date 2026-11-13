@@ -489,7 +489,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     let w = await width(p);
     ok(w.sw === 390, 'phone, matrix page: document.scrollWidth === 390 (' + w.sw + ')');
     ok(await p.locator('#mxp').isVisible() && !(await p.locator('#main').isVisible()), 'the matrix is page one (the list is not on it)');
-    ok(await p.locator('.who .back').isHidden(), 'and it has no ‹ back');
+    ok(await p.locator('[data-testid="std-back"]').isHidden(), 'and it has no ‹ back');
     const mb = await p.evaluate(() => document.querySelector('#mxBody .mx').getBoundingClientRect().right);
     ok(mb <= 390, 'the matrix fits the width (right edge ' + Math.round(mb) + ')');
     await p.screenshot({ path: path.join(SHOTS, 'standards-phone-matrix.png') });
@@ -497,7 +497,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     ok(await p.locator('#main').isVisible() && !(await p.locator('#mxp').isVisible()), 'a cell opens page two: the list');
     const mp = ALL.filter((r) => r.a === 'money' && r.s === 'part').length;
     ok((await rowIds(p)).length === mp, 'with the ' + mp + ' rows of the cell (counted from the source)');
-    ok(await p.locator('.who .back').isVisible(), 'and a ‹ back');
+    ok(await p.locator('[data-testid="std-back"]').isVisible(), 'and a ‹ back');
     w = await width(p);
     ok(w.sw === 390, 'phone, list page: document.scrollWidth === 390 (' + w.sw + ')');
     const cards = await p.evaluate(() => { const r = document.querySelector('[data-testid^="std-row-"]'); return { card: !!r.closest('.cbl-card, .cbl-row') && getComputedStyle(r).display, w: r.getBoundingClientRect().width, labs: Array.from(r.querySelectorAll('.cbl-cell')).length }; });
