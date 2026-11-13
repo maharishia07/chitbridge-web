@@ -46,6 +46,23 @@ const LABEL = /Bridge ID/i;   // a SPACE only: [ _] matched bridge_id itself, th
 const ESCAPED = /esc\s*\(\s*[A-Za-z0-9_$]+\.bridge_id/;
 const FALLBACK = /user_id\s*\|\|\s*[A-Za-z0-9_$]+\.bridge_id/;
 
+/**
+ * onclickSpans — per line, the character range that sits inside an open onclick="..." call, or null.
+ * The call opens at `onclick=` and closes at the first `)"` (or a backslash-escaped one) after it, on this line or a later one.
+ */
+function onclickSpans(lines) {
+  const CLOSE = /\)\\?"/;
+  let open = false;
+  return lines.map((line) => {
+    let from = open ? 0 : line.indexOf('onclick=');
+    if (from < 0) return null;
+    open = true;
+    const close = CLOSE.exec(line.slice(from));
+    if (close) open = false;
+    return { from, to: close ? from + close.index : line.length };
+  });
+}
+
 const displayed = [], logic = [];
 for (const f of files) {
   const all = fs.readFileSync(path.join(ROOT, f), 'utf8').split(/\r?\n/);
@@ -56,40 +73,38 @@ for (const f of files) {
    * everywhere else is still checked. Tracked by the enclosing `function plat…(` a line sits in.
    */
   let fn = '';
+  const spans = onclickSpans(all);
   all.forEach((l, i) => {
     const fm = l.match(/^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/);
     if (fm) fn = fm[1];
     if (!/bridge_?[Ii]d/.test(l) || isComment(l)) return;
     if (/^plat[A-Z]/.test(fn)) { logic.push({ where: f + ':' + (i + 1), text: '(operator screen) ' + l.trim().slice(0, 80) }); return; }
     const entry = { where: f + ':' + (i + 1), text: l.trim().slice(0, 96) };
-    /* ⚠️ esc() INSIDE AN onclick IS AN ARGUMENT, NOT A DISPLAY. viewSupplierPassport(esc(x.bridge_id)) escapes
-       the key so it survives an attribute — the value is never read by a person. Escaping means "going into
-       markup", which is display MOST of the time, and this is the exception that would otherwise make the
-       guard cry wolf on two correct lines forever. */
-    /* ⚠️ WRITTEN WITH indexOf, NOT A REGEX. The regex form of this line was produced by a script that ate its
-       backslashes — the FIFTH escape a generated edit has silently dropped today — and the file stopped
-       parsing. Two string positions answer the question just as well and cannot be mangled. */
-    const oc = l.indexOf('onclick=');
-    const ec = l.indexOf('esc(');
-    /* ⚠️ AND THE onclick MAY BE ON AN EARLIER LINE. cap-network.js builds a netAskFor(...) call across four
-       continuation lines, so the argument and its attribute never appear together. A two-line lookback covers
-       the concatenation style this codebase actually uses. */
-    const prevHasOnclick = (i > 0 && all[i - 1].indexOf('onclick=') >= 0)
-                        || (i > 1 && all[i - 2].indexOf('onclick=') >= 0);
-    const isArg = (oc >= 0 && ec > oc) || prevHasOnclick;
+    /* ⚠️ esc() INSIDE AN onclick IS AN ARGUMENT, NOT A DISPLAY. netAskFor(esc(x.bridge_id)) escapes the key so
+       it survives an attribute; a person never reads it. The span is tracked from the line that opens
+       onclick= to the line that closes the call (see onclickSpans), so a call built over any number of
+       continuation lines is covered, and a bridge_id printed after the attribute closes is still a leak. */
+    const match = ESCAPED.exec(l);
+    const span = spans[i];
+    const isArg = !!(match && span && match.index >= span.from && match.index <= span.to);
     const leak = (LABEL.test(l) || ESCAPED.test(l)) && !FALLBACK.test(l) && !isArg;
     (leak ? displayed : logic).push(entry);
   });
 }
 
-if (displayed.length) {
-  console.error('\n✗ Bridge ID reaches a person here — show user_id instead (bridge_id is the internal key):\n');
-  displayed.forEach((d) => console.error('   ' + d.where.padEnd(26) + d.text));
+/* QA-154: known findings live in e2e/scanner-known.json; only a NEW one fails */
+const R = require('./lib/known-findings.cjs').ratchet('bridge-id-audit',
+  displayed.map((d) => ({ key: d.where.split(':')[0] + '  ' + d.text, show: d })), { owner: 'network' });
+if (R.known) console.log(R.line);
+const fresh = R.fresh.map((r) => r.show);
+if (fresh.length) {
+  console.error('\n✗ Bridge ID reaches a person here (NEW) — show user_id instead (bridge_id is the internal key):\n');
+  fresh.forEach((d) => console.error('   ' + d.where.padEnd(26) + d.text));
   console.error('\n  A primary key is not a name. If the entity may have no handle yet, write');
   console.error('  `x.user_id || x.bridge_id` — a fallback is honest and this guard allows it.\n');
 }
-console.log((displayed.length ? '' : '✓ ') + 'Bridge ID — ' + displayed.length + ' displayed · '
+console.log((fresh.length ? '' : '✓ ') + 'Bridge ID — ' + displayed.length + ' displayed (' + fresh.length + ' new) · '
   + logic.length + ' internal (keys, lookups, session) across '
   + [...new Set(logic.map((l) => l.where.split(':')[0]))].length + ' files');
 
-process.exit(displayed.length ? 1 : 0);
+process.exit(fresh.length ? 1 : 0);

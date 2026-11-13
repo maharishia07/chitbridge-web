@@ -120,6 +120,18 @@ jobs:
           node e2e/standards-one-list.cjs
           node e2e/theme-literals.cjs
           node e2e/shop-switch.cjs
+          # QA-154 (13 Nov): source scanners with a RATCHET baseline (e2e/scanner-known.json, e2e/lib/known-findings.cjs): today's findings
+          # are counted and listed, only a NEW one fails. api-envelope, crm-themes and index-page carry a baseline too but need the api
+          # sibling or a browser, which this step does not have: they run by hand (NODE_PATH at a Playwright install, api checkout beside).
+          node e2e/tx-leak.cjs
+          node e2e/bridge-id-audit.cjs
+          node e2e/cb-build-guard.cjs
+          node e2e/cb-build-guard-selftest.cjs
+          node e2e/empty-states.cjs
+          node e2e/list-standard.cjs
+          node e2e/silent-control.cjs
+          node e2e/token-check.cjs
+          node e2e/tooltip-length.cjs
           # QA-153 red fixes (13 Nov): vm-sandbox checks re-pointed at the code they lift (shared e2e/lib/dom-stub.cjs for the four with a document); offline, no sibling repo
           node e2e/locale-map.cjs
           node e2e/prof-dirty.cjs
@@ -152,6 +164,7 @@ jobs:
           node e2e/screen-id-guard.cjs
           node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
+          node e2e/ui-dialog-widen.test.cjs
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
@@ -283,6 +296,10 @@ jobs:
           node e2e/connector-gofrugal.test.cjs
           node e2e/connector-purchase.test.cjs
           node e2e/connector-zoho.test.cjs
+      - name: Every policy flag the API reads can be set by somebody (policy-reachable, QA-154 baseline; CB_API_REPO set, so a missing api FAILS)
+        env:
+          CB_API_REPO: .side/chitbridge-api
+        run: node e2e/policy-reachable.cjs
 
   till-copies:
     # THE COPIES OF THE COUNTER SCREEN ARE JUDGED AT A PINNED API COMMIT (11 Nov 2026, root cause of the api reds on its vendor and parse guards).
