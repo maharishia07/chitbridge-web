@@ -25,10 +25,13 @@ W.run('home', async (w) => {
   const { page, ctx, base } = w;
   /* the day as the log found it: 24 in, 0 out, 21 stuck; 1 supplier, 2 customers (self excluded); one posting waiting for the ledger */
   const RAIL = crmApi.railFacts({ suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 });
+  /* Home's rail is "Your work" since 17 Oct (4652ab12, Athi's index walk): ONE read, GET /api/work/facts, figures the server computed; the old suppliers · in · out · stuck chips are gone */
+  const WORK = { truncated: false, figures: { orders_new: 3, orders_in: 24, orders_out: 0, tasks: 5, tasks_mine: 2, done: 7 } };
   await ctx.route('**/api/**', (r0) => {
     const r = C.wrap(r0);
     const u = new URL(r.request().url());
     if (u.pathname === '/api/facts/rail') return J(r, 200, RAIL);
+    if (u.pathname === '/api/work/facts') return J(r, 200, WORK);
     if (u.pathname === '/api/books/health') return J(r, 200, books.health({ waiting: [books.waitingRow({ id: 1, reason: 'September is locked.' })] }));
     if (u.pathname === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR' } });
     if (u.pathname === '/api/crm/parties') return J(r, 200, crmApi.list(FX.list, { records: FX.records }));
@@ -42,37 +45,40 @@ W.run('home', async (w) => {
   const home = async () => { await page.goto(base + '/'); await page.waitForSelector('[data-testid="cbshell"]', { timeout: 20000 }); await page.evaluate(() => window.SHELL && window.SHELL.ready); await page.waitForSelector('[data-testid="rail"]', { timeout: 8000 }).catch(() => {}); await page.waitForTimeout(300); };
   await home();
 
-  await w.step('H1', 'Home -> the rail shows 24 in - 0 out - 21 stuck, and each digit is a door', async () => {
-    const pips = await page.$$eval('.pip', (as) => as.map((a) => ({ t: a.textContent.trim(), href: a.getAttribute('href') })));
-    /* TOUR-FIX1: in / out are Tasks & Orders' folder counts, so each opens THAT folder (tasks.html?view=…); stuck stays the rail's CRM door */
-    const want = { in: /\/tasks\.html\?view=orders_in$/, out: /\/tasks\.html\?view=orders_out$/, stuck: /#\/chits\?tab=stuck$/ };
-    const okIn = pips.some((p) => p.t === '24 in' && want.in.test(p.href || '')), okOut = pips.some((p) => p.t === '0 out' && want.out.test(p.href || '')), okStuck = pips.some((p) => p.t === '21 stuck' && want.stuck.test(p.href || ''));
-    return { ok: okIn && okOut && okStuck, saw: 'chips: ' + pips.map((p) => p.t + ' -> ' + (p.href || 'NOT A LINK')).join(' | ') };
+  /* H1 H2-r H4 H10-r H11 H16-r pinned the OLD Home: a rail of suppliers · in · out · stuck chips (read from /api/facts/rail) and a roadmap fold. Athi's index walk of
+     17 Oct (commit 4652ab12 "Home, first impression") replaced the rail by "Your work" (/api/work/facts: new orders · orders in · orders out · tasks for you · done, each
+     figure a door to its folder in Tasks & Orders) and took the roadmap off Home (index.html "the roadmap is our own self-declaration"; roadmap.js retired, RETIRED.md).
+     The same six paths now walk the same promises on what Home draws: figures are the server's, each is a door with a word on it, a click opens its folder, no second roadmap. */
+  await w.step('H1', 'Home -> "Your work" shows 3 new · 24 in · 0 out · 2 for you · 7 done, and each figure is a door to its folder', async () => {
+    const pips = await page.$$eval('[data-testid="rail"] a.node', (as) => as.map((a) => ({ t: a.textContent.replace(/\s+/g, ' ').trim(), href: a.getAttribute('href') })));
+    const want = [['3 New orders', /\/tasks\.html\?view=orders_in$/], ['24 Orders in', /\/tasks\.html\?view=orders_in$/], ['0 Orders out', /\/tasks\.html\?view=orders_out$/], ['2 Tasks for you', /\/tasks\.html\?view=tasks$/], ['7 Done', /\/tasks\.html\?view=done$/]];
+    const ok = want.every(([t, h]) => pips.some((p) => p.t === t && h.test(p.href || '')));
+    return { ok, saw: 'figures: ' + pips.map((p) => p.t + ' -> ' + (p.href || 'NOT A LINK')).join(' | ') };
   });
-  await w.step('H2-r', 'Home rail vs the people we serve -> 1 supplier, 2 customers (the shop itself is not one)', async () => {
-    const s = await txt('[data-testid="rail-suppliers"]'), c = await txt('[data-testid="rail-customers"]');
-    return { ok: s === '1' && c === '2', saw: 'Suppliers ' + s + ' - Customers ' + c };
+  await w.step('H2-r', 'Home "Your work" vs the server -> each number is exactly what /api/work/facts said (none made up, none 0 for a missing one)', async () => {
+    const got = {}; for (const k of ['new', 'in', 'out', 'mine', 'done']) got[k] = await txt('[data-testid="work-' + k + '"]');
+    return { ok: got.new === '3' && got.in === '24' && got.out === '0' && got.mine === '2' && got.done === '7', saw: JSON.stringify(got) };
   });
-  await w.step('H4', 'Home -> "21 stuck" is a door with a word on it, not a bare number', async () => {
-    const t = await txt('[data-testid="rail-stuck"]'); const tag = await page.locator('[data-testid="rail-stuck"]').first().evaluate((e) => e.tagName);
-    return { ok: /21 stuck/.test(t) && tag === 'A', saw: '"' + t + '" is ' + (tag === 'A' ? 'a link' : 'plain text') };
+  await w.step('H4', 'Home -> "24 Orders in" is a door with a word on it, not a bare number', async () => {
+    const t = await txt('[data-testid="work-in-open"]'); const tag = await page.locator('[data-testid="work-in-open"]').first().evaluate((e) => e.tagName);
+    return { ok: /24\s*Orders in/.test(t) && tag === 'A', saw: '"' + t + '" is ' + (tag === 'A' ? 'a link' : 'plain text') };
   });
-  await w.step('H10-r', 'Home -> click "21 stuck" -> opens the Chits list filtered to Stuck', async () => {
-    const [nav] = await Promise.all([page.waitForNavigation({ timeout: 10000 }).catch(() => null), page.click('[data-testid="rail-stuck"]')]);
+  await w.step('H10-r', 'Home -> click "24 Orders in" -> opens Tasks & Orders on the Orders in folder', async () => {
+    await Promise.all([page.waitForNavigation({ timeout: 10000 }).catch(() => null), page.click('[data-testid="work-in-open"]')]);
     await page.waitForTimeout(400);
     const u = page.url();
-    return { ok: /\/(crm|network)\.html/.test(u) && /chits\?tab=stuck/.test(u), saw: 'went to ' + u.replace(base, '') };
+    return { ok: /\/tasks\.html/.test(u) && /view=orders_in/.test(u), saw: 'went to ' + u.replace(base, '') };
   });
   await home();
-  await w.step('H11', 'Home -> click "1 Suppliers" -> the parties list, suppliers only', async () => {
-    await page.click('[data-testid="rail-suppliers-open"]'); await page.waitForTimeout(500);
+  await w.step('H11', 'Home -> click "2 Tasks for you" -> Tasks & Orders on the Tasks folder', async () => {
+    await page.click('[data-testid="work-mine-open"]'); await page.waitForTimeout(500);
     const u = page.url();
-    return { ok: /parties\?role=supplier/.test(u), saw: 'went to ' + u.replace(base, '') };
+    return { ok: /\/tasks\.html/.test(u) && /view=tasks/.test(u), saw: 'went to ' + u.replace(base, '') };
   });
   await home();
-  await w.step('H16-r', 'Home signed in -> the roadmap is one quiet fold, not the cards twice', async () => {
-    const n = await page.locator('[data-testid="roadmap"]').count(), open = await page.locator('[data-testid="rm-going"][open]').count();
-    return { ok: n === 1 && open === 0, saw: n + ' roadmap block, fold ' + (open ? 'OPEN' : 'closed') };
+  await w.step('H16-r', 'Home signed in -> no roadmap is drawn (the cards are not said twice; the comparison lives in Standards)', async () => {
+    const n = await page.locator('[data-testid="roadmap"]').count(), fold = await page.locator('[data-testid="rm-going"]').count();
+    return { ok: n === 0 && fold === 0, saw: n + ' roadmap block, ' + fold + ' fold' };
   });
   await w.step('H22-r', 'Home -> Storefront card -> a link to this shop\'s own page, not "No shop specified"', async () => {
     const h = await page.getAttribute('[data-testid="shell-card-storefront"]', 'href');
@@ -261,6 +267,8 @@ W.run('home', async (w) => {
   });
   await w.step('P2-2', 'Home -> the kural is in the FOOTER on every width: under the page on a laptop, above the tab bar on a phone — never a card in the middle', async () => {
     const where = () => page.evaluate(() => { const k = document.querySelector('#cbkural'); if (!k) return null; const nav = document.querySelector('[data-testid="shell-nav"]'), r = k.getBoundingClientRect(), n = nav && nav.getBoundingClientRect(); return { inFoot: !!k.closest('[data-testid="shell-foot"],[data-testid="shell-pfoot"]'), inSec: !!k.closest('.cbsh-sec'), bottom: Math.round(r.bottom), navTop: n ? Math.round(n.top) : null, navLeft: n ? Math.round(n.left) : null, ih: innerHeight, hidden: k.hidden }; });
+    /* the band is the OWNER'S choice since WALK-REG 2026-10-16 (off for an English shop by default, on when chosen: walk-settings-walk1 A25), so this walk chooses it first */
+    await page.evaluate(() => { try { localStorage.setItem('cb_kural', 'on'); } catch (_) {} });
     await page.setViewportSize({ width: 390, height: 844 }); await goPage('/'); await page.waitForSelector('#cbkural:not([hidden])', { timeout: 8000 }).catch(() => {});
     const ph = await where();
     await page.setViewportSize({ width: 1366, height: 800 }); await goPage('/'); await page.waitForSelector('#cbkural:not([hidden])', { timeout: 8000 }).catch(() => {});
