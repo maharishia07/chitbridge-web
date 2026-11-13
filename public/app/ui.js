@@ -5,7 +5,7 @@
  *
  * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch; CMP032 batch job note: the state of a saved job in words, and how it ended) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
- * CALLED BY  27 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html): the small apps, the labs, the shop pages, app.html, standards.html.
+ * CALLED BY  27 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html): the small apps, the labs, the shop pages, app.html, till.html, standards.html (not index.html).
  *            Callers of ui.action / ui.dialog / ui.progress (grep -nE 'ui\.(action|dialog|progress)' public): app.html, offer-lab-next.html, standards.html,
  *            the UI standard page's script, the six CRM screens, Settings policy, Print setup, the chit sheet, the shell and the screen-id chip.
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()

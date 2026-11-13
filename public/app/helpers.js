@@ -6,7 +6,7 @@
  *
  * OWNS  the generic leaves: esc · opt · money and date formatters · month words · emptyState · loader · the status words
  * CALLED BY  36 pages by <script src> (grep -lE 'src="/?app/helpers.js' public/*.html index.html): app.html, every small app, the labs, the shop pages. The till does NOT
- *            load it (its own esc, till.html T2-WEBPRIMS note). Callers by symbol (grep -lw): fmtMoney 46 files, monthNames 30, loader 21, emptyState 9.
+ *            load it (its own esc, till.html T2-WEBPRIMS note). Callers by symbol (grep -rlw SYM public, not helpers.js): fmtMoney 47 files, monthNames 32, loader 21, emptyState 9.
  * FLOW  loaded early on each page (app.html: after core.js) → every panel and small app calls these pure functions; emptyState draws the one empty-state action button (SCR038-B01)
  * CARD  29-qa-test-tooling-ux-locale-and-design-system/helpers
  */

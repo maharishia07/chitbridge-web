@@ -1,7 +1,7 @@
 /**
  * ── list-legacy.js — THE THIN LEGACY NAMES, kept ONLY while their callers move to CBList (public/app/list-ctl.js) ───────
  * OWNS       listCtl* (search, filter, sort, count for a browser-held card list) and lazyWrap / lazyReveal (50 at a time); SCR041-I01, S01, S02, B01, B02
- * CALLED BY  2 pages by <script src> (grep -lE 'src="/?app/list-legacy.js' public/*.html): accounts, app. Callers of listCtl / lazyWrap (grep -lE 'listCtl|lazyWrap' public/app):
+ * CALLED BY  2 pages by <script src> (grep -lE 'src="/?app/list-legacy.js' public/*.html): accounts.html, app.html. Callers of listCtl / lazyWrap (grep -lE 'listCtl|lazyWrap' public/app):
  *            the Categories, Disputes, Intake and Workforce screens' scripts, all lazy-loaded in app.html
  * FLOW       a screen calls listCtl(key, cfg) → draws its search / filter / sort → listCtlView(key).matched feeds its rows → lazyWrap reveals them in chunks
  * CARD       29-qa-test-tooling-ux-locale-and-design-system/list-control
