@@ -151,6 +151,12 @@ jobs:
           node e2e/cat-34-offer-lab-scope.test.cjs
           # NET proof (2026-11-14): the supplier-add confirm is plain text and a bridge id searched on another installation is never filed as local (NET-41 web half); red under a mutant
           node e2e/net-41-supplier-add-confirm.test.cjs
+          # CTR/ORD proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real till and cart code; each is red when its cited line is mutated
+          node e2e/ctr-12-refused-key-reenrols.test.cjs
+          node e2e/ctr-13-hour-group-wording.test.cjs
+          node e2e/ctr-146-counter-name.test.cjs
+          node e2e/ord-41-attach-ui-wired.test.cjs
+          node e2e/ord-43-unresolved-order-ref.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
