@@ -1722,6 +1722,7 @@ body.lab-only #cbtestpanel{
 <script src="/app/rail-thread.js"></script>   <!-- CBThread.mount: THE ONE COMPOSER + list for a chit's messages, threaded by line (R02) -->
 <script src="/app/rail-advice.js"></script>   <!-- CBAdvice.mount: the payment advice OUT (M30) — the Ledger's statement rows and the Pay outcome mount it -->
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
+<script src="/app/chit-price-moved.js"></script>   <!-- a draft sent after its prices moved: the question (CTR-245) -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
@@ -9462,6 +9463,7 @@ async function sendChit(v) {
         line_items: v.line_items || [],
         external_priority: v.priority || 'normal',
         promote_draft_id: v.promote_draft_id,
+        price_ack: v.price_ack,
         forwarded_from: v.forwarded_from,
         /* Pass-throughs, each omitted unless the caller asked for it — so every existing send is byte-identical.
          purpose: an inbound REQUEST is an 'inquiry', not an 'order'. business_json: where it came from.
@@ -9581,8 +9583,7 @@ async function sendChit(v) {
     return reply;
   } catch (e) {
     busyHide();
-    fail((e && e.message) || 'Something went wrong — please try again.');
-    return null;
+    return CBPriceMoved.failed(e, v, fail, sendChit); /* CTR-245: a 409 PRICE_MOVED opens the question; any other error says its words, as before */
   }
 }
 /**
