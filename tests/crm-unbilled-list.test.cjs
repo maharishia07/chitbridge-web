@@ -18,7 +18,7 @@ globalThis.tx = (s) => s; globalThis.esc = (s) => String(s);
 globalThis.bkMoney = (m, c) => (c === 'INR' ? '\u20b9' : c + ' ') + (m / 100).toLocaleString('en-IN');
 globalThis.bkDate = (d) => d;
 globalThis.CRM = { ledger: true, currency: 'INR' };
-eval(['crmPlural', 'crmUnbilledMoney', 'crmUnbilledSaid', 'crmDueCell', 'crmDueListCell'].map(fn).join('\n') + '\nglobalThis.cell = crmDueListCell; globalThis.said = crmUnbilledSaid;');
+eval(['crmPlural', 'crmUnbilledMoney', 'crmUnbilledSaid', 'crmNothingDueCell', 'crmDueCell', 'crmDueListCell'].map(fn).join('\n') + '\nglobalThis.cell = crmDueListCell; globalThis.said = crmUnbilledSaid;');
 const P = (o) => Object.assign({ party_id: 'pid-1', balance_minor: 0 }, o);
 
 assert.strictEqual(said({ n: 1, minor: 42000, currency: 'INR' }, 'INR'), '1 order not billed yet \u20b9420', 'the record\'s own words');

@@ -192,7 +192,7 @@ function crmCallScriptHTML(call) {
     '<div class="nx"><span class="tx"><span class="s">' +
     about +
     '</span></span><span class="btns">' +
-    '<button type="button" class="act sm ghost" data-crm="callnext" data-id="' +
+    '<button data-cbsid="CRM005-B01" type="button" class="act sm ghost" data-crm="callnext" data-id="' +
     esc(call.id) +
     '" data-testid="crm-call-next">' +
     esc(tx('Next')) +
@@ -231,17 +231,17 @@ function crmCallPick(c, o) {
     return;
   }
   CALLS.pick = { c: c, o: o };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx(CALL_WORD[o.key] || o.key)) +
-      ' · ' +
-      esc(c.party_name || '') +
-      '</div></div><div class="mbody" data-testid="crm-call-ask">' +
+  ui.dialog({
+    mount: 'CRM005-U201',
+    pop: 'POP096',
+    titleText: tx(CALL_WORD[o.key] || o.key) + ' · ' + (c.party_name || ''),
+    testid: 'crm-call-ask',
+    body:
       '<div class="supacts">' +
       (o.presets || [])
         .map(function (item) {
           return (
-            '<button type="button" class="act ghost" data-crm="callafter" data-v="' +
+            '<button data-cbsid="CRM005-B02" type="button" class="act ghost" data-crm="callafter" data-v="' +
             esc(item) +
             '" data-testid="crm-call-after-' +
             esc(item) +
@@ -254,14 +254,13 @@ function crmCallPick(c, o) {
       '</div>' +
       '<label>' +
       esc(tx('Pick a day')) +
-      '<input class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>' +
-      '<div id="crm_call_msg" class="hint" role="status" data-testid="crm-call-msg"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="callday" data-testid="crm-call-day-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<input data-cbsid="CRM005-I01" class="inp" type="date" id="crm_call_day" data-testid="crm-call-day"></label>' +
+      '<div id="crm_call_msg" class="hint" role="status" data-testid="crm-call-msg"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM005-U201' } },
+      { name: 'save', options: { mount: 'CRM005-U201', key: 'save', effect: 'preference', testid: 'crm-call-day-save', data: { crm: 'callday' } } }
+    ]
+  });
 }
 /** the one write (M64): the outcome goes to the server; saved → this call leaves the queue and the row that followed it opens, so the next call is on screen */
 function crmCallSend(call, chosen, extra, btn) {

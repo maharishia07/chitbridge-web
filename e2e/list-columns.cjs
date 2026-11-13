@@ -75,7 +75,7 @@ const heads = (p) => p.$$eval('.cbl-hdr [role=columnheader]', (els) => els.map((
   p = await open(ctx3);
   await tick(p, 'bill'); await tick(p, 'kind'); await shut(p);
   const card = await p.evaluate(() => { const r = document.querySelector('.cbl-row'); return { display: getComputedStyle(r).display, labelled: [].map.call(r.querySelectorAll('.cbl-cell[data-l]:not([data-l=""])'), (c) => c.getAttribute('data-l')) }; });
-  ok(card.display === 'flex' && card.labelled.join() === 'Entry,Party,Bill,Kind', 'below the card breakpoint every ticked column is kept, each a label : value line (' + card.labelled.join(' · ') + ')');
+  ok(card.display === 'flex' && card.labelled.join() === 'Entry,Party,Bill,Kind,Amount', 'below the card breakpoint every ticked column is kept, each a label : value line (' + card.labelled.join(' · ') + ')');
   await p.close(); await ctx3.close();
 
   console.log('\n== list-columns: stale keys and the view ==');

@@ -593,7 +593,7 @@ function c2PaneOrd(d) {
   out += frozenMoneyHTML(
     {
       business_json: hh.business_json || (d && d.business_json) || null,
-      summary_money: (hh.summary_json && hh.summary_json.money) || null, cost_hidden: c2CostHidden(d) /* RAIL-146: "Amounts hidden", not "No issued figures" */,
+      summary_money: (hh.summary_json && hh.summary_json.money) || null, cost_hidden: c2CostHidden(d), order_billed: d.order_billed /* RAIL-146: "Amounts hidden", not "No issued figures"; ORD-1: an open order no bill names says "Not billed yet" */,
       currency: cat.shop.currency_code,
       isDraft: /^draft$/i.test(String(hh.current_status || hh.status || ''))
     },

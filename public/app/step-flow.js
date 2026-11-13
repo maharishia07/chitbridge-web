@@ -178,6 +178,11 @@
     if (s) call(s, 'onDraft');
   }
 
+  /* the attributes of a rail step a person may go back to: the click, and a button role with a tab stop; Enter and Space are pressed by app/kbd-press.js (every page that loads this file loads that one first) */
+  function stepPress(flowKey, index) {
+    return ' onclick="CBSteps.go(\'' + esc(flowKey) + "'," + index + ')" style="cursor:pointer" role="button" tabindex="0"';
+  }
+
   /* ── the rail ────────────────────────────────────────────────────────────────────────────────────────────── */
   /**
    * ONE rail shape, with the numbered badge the compose mock drew. The other three mocks showed a bare "✓ Items";
@@ -203,7 +208,7 @@
             '" data-testid="step-' +
             esc(item.k || index) +
             '"' +
-            (clickable ? ' onclick="CBSteps.go(\'' + esc(ns) + "'," + index + ')" style="cursor:pointer"' : '') +
+            (clickable ? stepPress(ns, index) : '') +
             '><span class="n">' +
             (done ? '✓' : index + 1) +
             '</span>' +

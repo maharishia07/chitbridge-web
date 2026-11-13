@@ -75,6 +75,7 @@ test('[PRC-01] a tiered structure cited by the product prices the unit at the qu
       const otpBox = shop.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first(); await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(sj.dev_otp || require('../fixtures').signinCode('customer'));
       const confirmed = shop.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
+      await shop.locator('[data-testid="confirm-ok"]').click({ timeout: 10000 }); /* UX-6: Place order asks first; the yes sends */
       const cj = await (await confirmed).json().catch(() => ({}));
       expect(cj.chit_id, JSON.stringify(cj).slice(0, 200)).toBeTruthy();
       const line = await page.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ls = (c.detail && c.detail.line_items) || c.lines || c.line_items || [];   /* GET chit: { header, detail:{ line_items }, lines? } */ return ls[0] || null; }, cj.chit_id);

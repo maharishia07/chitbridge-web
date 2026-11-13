@@ -595,6 +595,9 @@
     'Settings › Standards': 'அமைப்புகள் › தரநிலைகள்',
     'Shared · minted once': 'பகிரப்பட்டது · ஒருமுறை வழங்கப்பட்டது',
     'Show everything': 'அனைத்தையும் காட்டு',
+    'Open the cart': 'வண்டியைத் திற',
+    'Clear the cart': 'வண்டியை காலி செய்',
+    'Remove from the cart': 'வண்டியிலிருந்து நீக்கு',
     'Shown — in this order': 'காட்டப்படுகிறது — இந்த வரிசையில்',
     'Sits under': 'எதன் கீழ் உள்ளது',
     'Soft Paper': 'மென் காகிதம்',
@@ -893,6 +896,21 @@
     'No chits here — try another tab.': 'இங்கே சீட்டுகள் இல்லை — வேறு தாவலைப் பார்.',
     'Search chits, party, item': 'சீட்டு, தரப்பு, பொருள் தேடு',
     'Search my orders': 'என் ஆர்டர்களைத் தேடு'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ta || (CBSTR.ta = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} பில்லைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டது',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} பில்களைப் படிக்க முடியவில்லை, இந்த மாதத்திலிருந்து விடப்பட்டன',
+    'Open bill {n}': 'பில் {n} ஐத் திற'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {
