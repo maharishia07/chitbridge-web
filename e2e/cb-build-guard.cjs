@@ -29,7 +29,8 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const WEB = path.join(__dirname, '..');
+// CB_BUILD_GUARD_ROOT lets e2e/cb-build-guard-selftest.cjs aim this guard at a scratch repo; unset = this checkout
+const WEB = process.env.CB_BUILD_GUARD_ROOT || path.join(__dirname, '..');
 const PUB = path.join(WEB, 'public');
 const APPDIR = path.join(PUB, 'app');
 
@@ -40,13 +41,19 @@ const t = (name, fn) => {
 };
 
 const git = (args) => {
-  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8' }).trim(); }
+  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim(); }
   catch (_) { return ''; }
 };
 
+/** a git read whose answer is judged: a failure THROWS with git's own message, it never becomes '' (an empty text made cbBuild read the working file) */
+const gitOrThrow = (args) => {
+  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); }
+  catch (e) { throw new Error('git ' + args.join(' ') + ' failed: ' + String((e.stderr || e.message || e)).trim().slice(0, 300)); }
+};
+
 /** the declared value, read from the shell that declares it */
-function cbBuild() {
-  const src = fs.readFileSync(path.join(PUB, 'app.html'), 'utf8');
+function cbBuild(text) {
+  const src = text || fs.readFileSync(path.join(PUB, 'app.html'), 'utf8');
   const m = /const\s+CB_BUILD\s*=\s*'([^']+)'/.exec(src);
   if (!m) throw new Error('app.html no longer declares CB_BUILD — this guard no longer knows what it guards');
   return m[1];
@@ -159,6 +166,36 @@ t('a capability edited right now is shipping with a bumped CB_BUILD', () => {
       + '\n      ⭐ Bump CB_BUILD in public/app.html before pushing, or these changes reach nobody who has '
       + 'already loaded the app.');
   }
+});
+
+t('a capability changed against main is shipping with a CB_BUILD different from main\'s', () => {
+  /**
+   * ⭐ REL-24 (13 Nov): the two tests above compare COMMIT TIMES, so a branch cut before the last bump and merged
+   * after it (every batch) carries a cap-*.js commit older than the bump and passes with no bump of its own.
+   * This asks the question by ANCESTRY instead: against the merge-base with origin/main, did a versioned file
+   * change, and is CB_BUILD the same as on main (or as at the merge-base)? On main itself HEAD IS the merge-base,
+   * nothing differs, and the two time-based tests above stay the judge.
+   */
+  const main = git(['rev-parse', '--verify', '-q', 'origin/main']);
+  const base = main ? git(['merge-base', 'HEAD', 'origin/main']) : '';
+  if (!base) {
+    // CI always has origin/main (fetch-depth 0): a missing one there means the check did not run, which must not look green
+    if (process.env.CI === 'true') throw new Error('CI=true and there is no origin/main to compare with, so the ancestry check cannot run. Fetch it (fetch-depth: 0).');
+    console.log('      (no origin/main to compare with, skipped)');
+    return;
+  }
+  const changed = git(['diff', '--name-only', base, '--']).split('\n').map((l) => l.trim()).filter(Boolean);
+  const touched = FILES.filter((f) => changed.indexOf(f) > -1);
+  if (!touched.length) { console.log('      no versioned file differs from origin/main: nothing to bump'); return; }
+  const mainValue = cbBuild(gitOrThrow(['show', 'origin/main:public/app.html']));
+  const baseValue = cbBuild(gitOrThrow(['show', base + ':public/app.html']));
+  if (VALUE === mainValue || VALUE === baseValue) {
+    throw new Error(touched.length + ' versioned file(s) differ from main and CB_BUILD (' + VALUE + ') is the same as '
+      + (VALUE === mainValue ? 'main\'s' : 'the merge-base\'s') + ':'
+      + '\n      ' + touched.slice(0, 8).join('\n      ')
+      + '\n      ⭐ THE FIX IS ONE LINE: bump CB_BUILD in public/app.html in this PR.');
+  }
+  console.log('      ' + touched.length + ' versioned file(s) differ from origin/main and CB_BUILD ' + VALUE + ' is bumped');
 });
 
 console.log('\n  ' + FILES.length + ' versioned file(s) · CB_BUILD ' + VALUE

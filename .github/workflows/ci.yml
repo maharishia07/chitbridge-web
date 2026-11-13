@@ -126,6 +126,7 @@ jobs:
           node e2e/tx-leak.cjs
           node e2e/bridge-id-audit.cjs
           node e2e/cb-build-guard.cjs
+          node e2e/cb-build-guard-selftest.cjs
           node e2e/empty-states.cjs
           node e2e/list-standard.cjs
           node e2e/silent-control.cjs
