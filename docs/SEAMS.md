@@ -80,7 +80,6 @@ of file each thing is; this says what already does the job.
 | 34 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 34 | `changes` | `books-store.js` |  |
 | 34 | `hold` | `orders.js` |  |
-| 33 | `modal` | `app.html` |  |
 | 33 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 33 | `note` | `dbwatch.js` |  |
 | 33 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
@@ -90,6 +89,7 @@ of file each thing is; this says what already does the job.
 | 32 | `sentence` | `one-person.js` |  |
 | 32 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 32 | `refuse` | `books-pack.js` | const sha = (text) => |
+| 31 | `modal` | `app.html` |  |
 | 31 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 31 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |

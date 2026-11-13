@@ -67,11 +67,11 @@ function bkMountAttribute(component) {
   var screen = chip ? chip.getAttribute('data-cbsid') : '';
   return /^[A-Z]{3}\d{3}$/.test(screen || '') ? ' data-cbmount="' + screen + '-U1' + String(component).slice(-2) + '"' : '';
 }
-/** the mount code of a popup this file opens through ui.dialog: the host screen's code (the screen chip) + -U20<n>; BKS001 (Accounts) when no chip is painted yet. n: 1 day bills, 2 party edit, 3 pay, 4 remind */
+/** the mount code of a popup this file opens through ui.dialog: the host screen's code (the screen chip) + -U2<n>; BKS001 (Accounts) when no chip is painted yet. n: 1 day bills, 2 party edit, 3 pay, 4 remind */
 function bkDialogMount(n) {
   var chip = document.querySelector('[data-testid="screen-id"][data-cbsid]');
   var screen = chip ? chip.getAttribute('data-cbsid') : '';
-  return (/^[A-Z]{3}d{3}$/.test(screen || '') ? screen : 'BKS001') + '-U20' + n;
+  return (/^[A-Z]{3}\d{3}$/.test(screen || '') ? screen : 'BKS001') + '-U2' + n;
 }
 /* ⭐ M64: WIDENED into CBAction (app/accounts-shell.js) — the guard every page shares; bkOnce keeps its name for its callers */
 function bkOnce(key, btn, fn) {

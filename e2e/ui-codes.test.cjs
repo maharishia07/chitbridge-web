@@ -91,5 +91,22 @@ FILES.forEach(([file, table, swaps]) => {
   const catalogue = read('public/app/cap-catalogue.js');
   ok(catalogue.indexOf('CBList.pager(') >= 0 && catalogue.indexOf('data-testid="cat-prev"') < 0, 'the catalogue pager is drawn by CBList.pager, not by hand');
 }
+/* critic fixes on #647: the books popups mount on the host screen's own code, and ui.dialog's sub line stays byte-identical unless a page names its own class */
+{
+  const books = read('public/app/cap-books.js');
+  const fn = books.slice(books.indexOf('function bkDialogMount'), books.indexOf('/* ⭐ M64: WIDENED into CBAction'));
+  const mountOn = (source, screen) => new Function('document', source + '; return bkDialogMount(2);')({ querySelector: () => ({ getAttribute: () => screen }) });
+  ok(mountOn(fn, 'CRM001') === 'CRM001-U22', 'bkDialogMount: a popup opened on CRM001 mounts as CRM001-U22, not BKS001');
+  ok(mountOn(fn.split('\\d{3}').join('d{3}'), 'CRM001') !== 'CRM001-U22', 'self-test: the old d{3} regex FAILS that check');
+  const html = [];
+  const box = { window: {}, document: undefined, modal: (h) => html.push(h) };
+  box.window = box;
+  vm.createContext(box);
+  vm.runInContext(read('public/app/ui.js'), box);
+  box.window.ui.dialog({ mount: 'ACC002-U01', titleText: 'T', subText: 'S', body: '' });
+  box.window.ui.dialog({ mount: 'ACC002-U01', titleText: 'T', subText: 'S', subClass: 's', body: '' });
+  ok(html[0].indexOf('<span class="sub">S</span>') > 0, 'ui.dialog without subClass draws the sub line as before (span.sub)');
+  ok(html[1].indexOf('<div class="s">S</div>') > 0, 'ui.dialog with subClass s draws the sub line as div.s (app.html styles .modal .mhd .s)');
+}
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

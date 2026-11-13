@@ -413,8 +413,9 @@ function cbcatSeedAsk() {
     })
     .join('');
   ui.dialog({
-    mount: 'CTG002-U201',
+    mount: 'CTG002-U21',
     pop: 'POP027',
+    subClass: 's', /* app.html styles .modal .mhd .s, not .sub */
     titleText: tx('Start from a standard set'),
     subText: 'real categories from the Google Product Taxonomy',
     body:
@@ -525,8 +526,9 @@ function cbcatSeedPick(v) {
     .join('');
 
   ui.dialog({
-    mount: 'CTG002-U202',
+    mount: 'CTG002-U22',
     pop: 'POP028',
+    subClass: 's',
     titleText: set.title,
     subText: tx('real categories from the Google Product Taxonomy'),
     wide: true,
