@@ -5,8 +5,10 @@
  *
  * OWNS      the proof that no button, input, select, textarea or role=button/tab/menuitem tag in public/app/list-ctl.js or public/app/cap-dispute.js
  *           is written without a data-cbsid (a literal code, or the held name `sid` of the pager pair), and that CBList.pager draws the same
- *           markup as before: Previous CMP037-B06, Next CMP037-B07.
- * CALLED BY by hand and the QA gate: node e2e/ui-codes-listctl-dispute.test.cjs   (LCD_MUTATE=remove must fail it)
+ *           markup as before: Previous CMP037-B06, Next CMP037-B07. It also pins one pair of codes per file to its OWN tag (read from the tag's '<'
+ *           to the code and forward, a marker only that tag carries), so a code moved onto a neighbour fails.
+ *           LCD_MUTATE=remove strips codes from BOTH files; LCD_MUTATE=swap exchanges two codes inside each file.
+ * CALLED BY by hand and the QA gate: node e2e/ui-codes-listctl-dispute.test.cjs   (LCD_MUTATE=remove or =swap must fail it)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/list-control
  */
 const fs = require('fs'), path = require('path'), vm = require('vm');
@@ -30,16 +32,43 @@ function untagged(src) {
   return out;
 }
 
+/* one pair per file: [code, marker only that tag carries]; a swap of the two codes moves each marker off its own tag */
+const PINS = {
+  'list-ctl.js': [['CMP033-B01', 'class="cbl-chip period"'], ['CMP034-B01', 'data-period=']],
+  'cap-dispute.js': [['TSK006-B01', 'data-testid="dispute-resolve-open"'], ['TSK006-B03', 'class="advbtn']]
+};
+const WINDOW = 400;
+/** the tag that wears the code: from the '<' before it, forward to the next code or WINDOW characters */
+function tagAfter(src, code) {
+  const at = src.indexOf('data-cbsid="' + code + '"');
+  if (at < 0) return null;
+  const open = src.lastIndexOf('<', at), rest = src.slice(at + 12), next = rest.search(/data-cbsid=/);
+  return (open >= 0 && at - open <= WINDOW ? src.slice(open, at) : '') + rest.slice(0, next >= 0 ? Math.min(next, WINDOW) : WINDOW);
+}
+/** LCD_MUTATE: remove strips the pinned codes (and, in list-ctl.js, the pager's held name); swap exchanges the pair's first occurrences */
+function mutated(f, src) {
+  const [one, two] = PINS[f].map((p) => 'data-cbsid="' + p[0] + '"');
+  if (mutate === 'remove') {
+    src = src.split(one).join('').split(two).join('');
+    return f === 'list-ctl.js' ? src.split("data-cbsid=\"' + sid + '\"").join('') : src;
+  }
+  if (mutate === 'swap') return src.replace(one, '@@A@@').replace(two, one).replace('@@A@@', two);
+  return src;
+}
+
 FILES.forEach((f) => {
-  let src = read(f);
-  if (mutate === 'remove' && f === 'list-ctl.js') src = src.split('data-cbsid="CMP037-B01"').join('').split("data-cbsid=\"' + sid + '\"").join('');
+  const src = mutated(f, read(f));
   const bad = untagged(src);
   check(bad.length === 0, f + ': 0 controls without data-cbsid' + (bad.length ? ' (lines ' + bad.join(',') + ')' : ''));
+  PINS[f].forEach(([code, marker]) => {
+    const tag = tagAfter(src, code);
+    check(tag !== null && tag.indexOf(marker) >= 0, f + ': ' + code + ' sits on the tag with ' + marker);
+  });
 });
 
 /* the pager pair draws the same markup as before the code moved into a name */
 const win = { document: undefined };
-vm.runInNewContext(read('list-ctl.js'), { window: win, self: win, globalThis: win, console });
+vm.runInNewContext(mutated('list-ctl.js', read('list-ctl.js')), { window: win, self: win, globalThis: win, console });
 const L = win.CBList;
 check(!!(L && L.pager), 'CBList.pager is exported');
 if (L && L.pager) {
