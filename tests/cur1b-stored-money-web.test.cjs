@@ -33,6 +33,21 @@ const ok = (body, what) => { body(); n++; console.log('  ok  ' + what); };
   }, code + ': an old record sums, reads and shows; new money in it is refused');
 });
 ok(() => ['conversion-lab.html'].forEach((f) => { const s = read(f); assert.ok(/CBMoney\.currencyOf\(d\.price, \{ stored: true \}\)/.test(s) && /CBMoney\.amountOf\(m, \{ stored: true \}\)/.test(s)); }), 'the conversion lab reads stored prices through the opt-in');
+ok(() => {
+  const admin = read('app/cap-admin.js');
+  const px = vm.createContext({});
+  px.window = px; px.self = px;
+  vm.runInContext(read('engine/money.js'), px);
+  px.esc = (x) => String(x);
+  px.tx = (x) => x;
+  px.CBLocale = { regionCurrencies: () => ['BGN', 'EUR'], currencyName: (c) => c, regionInfo: () => ({ name: 'Bulgaria' }), region: () => 'BG', currencies: () => ['BGN', 'HRK', 'INR'] };
+  vm.runInContext(lift(admin, '_curPicker'), px);
+  const html = px._curPicker('EUR');
+  assert.ok(html.indexOf('value="VED"') > 0 && html.indexOf('value="CLF"') > 0, 'VED and CLF (active, missing from the Intl list) are offered');
+  ['BGN', 'HRK', 'ANG', 'CUC', 'SLL', 'ZWL', 'MRO'].forEach((c) => assert.ok(html.indexOf('value="' + c + '"') < 0, c + ' is not offered for a NEW setup'));
+  assert.ok(html.indexOf('value="EUR" selected') > 0, 'the saved value is shown');
+  assert.ok(px._curPicker('BGN').indexOf('value="BGN" selected') > 0, 'a withdrawn saved value is still shown, as written');
+}, 'the shop currency picker offers the money engine ACTIVE list (VED, UYW, CLF in; withdrawn out), and keeps a saved withdrawn value visible');
 console.log('\n  ' + n + ' checks\n');ok(() => {
   const profiles = read('app/country-profiles.js');
   const cp = vm.createContext({});

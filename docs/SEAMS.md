@@ -50,7 +50,7 @@ of file each thing is; this says what already does the job.
 | 50 | `again` | `signin-ui.js` |  |
 | 50 | `view` | `books-payables.js` | group: |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
-| 46 | `read` | `cap-print.js` |  |
+| 47 | `read` | `cap-print.js` |  |
 | 46 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 45 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 45 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
