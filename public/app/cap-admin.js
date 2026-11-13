@@ -9766,7 +9766,7 @@ function showcaseCard() {
   if (typeof CBShowcase === 'undefined') return '';
   /* T3-P2-CRM: the chooser is app/cap-showcase.js (CBShowcasePick) — ONE copy, drawn here and on CB CRM's Shop window; a click on a template saves the flag (scPick) */
   var cur = ((_POL && _POL.flags) || {}).showcase_template || CBShowcase.DEFAULT,
-    id = (SESSION && (SESSION.user_id || SESSION.bridge_id)) || '';
+    id = (SESSION && SESSION.bridgeId) || '';
   return (
     '<div style="' +
     _CARD +

@@ -111,8 +111,6 @@ function crmMayRemove() {
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
 function crmHat() {
   /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
-  if (SESSION.access_level || SESSION.level) return String(SESSION.access_level || SESSION.level);
-  if (SESSION.hat) return String(SESSION.hat);
   /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
   try {
     var b = String(SESSION.token || '')
@@ -2397,7 +2395,7 @@ var CRM_CLICK = {
   },
   fuassign: function (control, id, value, event) {
     event.stopPropagation();
-    return crmFuAct(id, { assignee_user_id: SESSION.userId || SESSION.name || '' });
+    return crmFuAct(id, { assignee_user_id: SESSION.name || '' });
   },
   fudel: function (control, id, value, event) {
     event.stopPropagation();
