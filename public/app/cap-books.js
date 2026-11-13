@@ -566,8 +566,7 @@ function bkDayBillsLink(s, tid) {
 }
 /* open the popover listing the bills one day-book entry settled */
 function bkDayBillsOpen(tid) {
-  var bills = (BK.dayBills || {})[tid] || [];
-  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  var bills = (BK.dayBills || {})[tid] || [];  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(1),
     pop: 'POP093',
@@ -963,8 +962,7 @@ function partyEditOpen(kind, partyId) {
       tx('E-mail') +
       inp('pe_email', r.contacts.email, '', 'inputmode="email"') +
       '</label></div>'
-    : '';
-  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+    : '';  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(2), pop: 'POP089', bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     titleText: tx('Party') + ' · ' + (r.display_name || r.nickname || ''),
@@ -1157,8 +1155,7 @@ function payOpen(kind, partyId, pre) {
     preview: null,
     offer: offer,
     after: o.after || null
-  }; /* one ref per opened form */
-  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  }; /* one ref per opened form */  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(3), pop: 'POP090', titleId: 'pay_title', titleTestid: 'pay_title', bodyId: 'pay_body',
     titleText: (kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name,
@@ -4723,8 +4720,7 @@ function bkRemindOpen(t) {
       amt: bkMoney(t.bill.due_minor, t.currency),
       date: bkDate(t.bill.due_date)
     }
-  );
-  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  );  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
   ui.dialog({
     mount: bkDialogMount(4),
     pop: 'POP094',
