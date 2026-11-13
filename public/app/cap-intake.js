@@ -25,8 +25,11 @@
  * a CB entity, and no BSP is configured. So the honest way in today is "Record a message" — the same createCapture
  * the webhook calls, driven by hand. That is the test surface the spec asked for, not a mock: it exercises the real
  * queue, the real AI structuring and the real convert.
- 
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ *
+ * OWNS      the Intake screen (intakeScreen, paintIntake): the pending queue, Record a message, Structure, Make this a chit, Dismiss (intakeDismiss)
+ * CALLED BY app.html only: the nav entry 'intake' (CAP_OF intake, ensureCap) → intakeScreen() (app.html:22243) · loadIntake (app.html:6569). No customer page loads it: SUPPORT (back office).
+ * FLOW      nav Intake → ensureCap('intake') → intakeScreen → api('capturePending') → the cards → captureStructure → captureRaise → Compose opens with the lines filled in
+ * CARD      22-channels-capture-and-messaging/intake-screen
  */
 
 /* ── state ──────────────────────────────────────────────────────────────────────────────────────────────────── */

@@ -9,10 +9,10 @@
  * ⭐ NO CALCULATION HERE: who came back, the days, the money per currency and the reason for a 0 are the server's (GET /api/marketing/came-back, lib/marketing-results);
  *   the reason of a not-sent offer is the server's `reason_code`, worded below - the screen never branches on a sentence.
  * ⭐ NEW PATHS (rule 4): this module (the two screens did not exist) and MKT_EP (no reader of those two routes existed).
- * owns: the Marketing face (crmFace · crmFaceNav · crmFaceRoute) · Offers sent (#/sent) · Who came back (#/results) · the win-back card.
- * called by: crm.html (the face) · cap-crm.js (crmNav asks crmFaceNav; crmRoute asks crmFaceRoute; the click listener asks crmMarketingClick).
- * FLOW  crm.html?app=marketing → crmFace() → crmRoute → #/sent → mktSent() [GET /api/channels/outbound?purpose=marketing] · #/results → mktResults() [GET /api/marketing/came-back]
- * // CARD 12-marketing/README
+ * OWNS      the Marketing face (crmFace · crmFaceNav · crmFaceRoute · crmFaceKural) · Offers sent (#/sent) · Who came back (#/results) · the win-back card · MKT_EP.
+ * CALLED BY crm.html (<script src>; its `const FACE = crmFace()` and MKT_EP) · cap-crm.js (crmNav asks crmFaceNav; crmRoute asks crmFaceRoute; crmFaceKural; the click listener asks crmMarketingClick).
+ * FLOW      crm.html?app=marketing → crmFace() → crmRoute → #/sent → mktSent() [GET /api/channels/outbound?purpose=marketing] · #/results → mktResults() [GET /api/marketing/came-back]
+ * CARD      12-marketing/README
  * Needs cap-crm.js, cap-crm-groups.js (CRM · GROUPS · crmBar · crmNav · crmGo · crmSendOpen · crmGroupsLoad · tx/txf · esc · api). */
 'use strict';
 

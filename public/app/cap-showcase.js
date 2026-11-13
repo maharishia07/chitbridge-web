@@ -6,8 +6,10 @@
  *   CBShowcasePick.html({ current, shopId, t, cls, clsOn, why, origin }) → the buttons + the preview frame
  *     cls / clsOn: the host's button classes (the workshop's `btn` / `btn primary`; CB CRM's `act sm ghost` / `act sm`)
  *     why: a sentence → every button is shown greyed with it (the server's or the level's may/why), never hidden
- 
- * CALLED BY public/app/cap-admin.js, public/app/cap-crm-groups.js, public/app/cart.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      CBShowcasePick.html (the template buttons and the preview frame; the host saves the choice)
+ * CALLED BY app/cap-crm-groups.js (the Shop window tab, line 859) · app/cap-admin.js (Settings › Policy, line 9776) · loaded by crm.html and app.html (<script src>)
+ * FLOW      a host calls CBShowcasePick.html({ current, shopId, … }) → one button per CBShowcase.TEMPLATES entry (app/showcase-templates.js) → the host's click saves PATCH /api/entities/policy → the frame reloads shop.html?preview=1
+ * CARD      11-crm-and-marketing/showcase
  */
 (function (root) {
   'use strict';
@@ -35,7 +37,7 @@
         var tp = SC.TEMPLATES[item],
           on = item === cur;
         return (
-          '<button type="button" class="' +
+          '<button data-cbsid="SCR039-B01" type="button" class="' +
           _e(on ? o.clsOn || 'btn primary' : o.cls || 'btn') +
           '" data-testid="sc-pick" data-name="' +
           _e(item) +
