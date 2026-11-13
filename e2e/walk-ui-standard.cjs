@@ -94,8 +94,16 @@ const noScroll = (page) => page.evaluate(() => {
     for (let n = 1; n <= 10; n++) check(codes.indexOf('CMP' + String(n).padStart(3, '0')) >= 0, 'CMP' + String(n).padStart(3, '0') + ' renders with its code chip');
     check((await page.$$eval('[data-testid="gal-fcode"]', (nodes) => nodes.length)) >= 10, 'every row shows its fcode');
     check(await page.evaluate(() => document.documentElement.lang === 'en'), 'the planted cb_lang=fr is ignored: the page starts in English');
-    const states = await page.$$eval('[data-testid="gal-row-CMP001-preference"] button', (nodes) => nodes.map((node) => [node.getAttribute('data-demo'), node.disabled, node.getAttribute('aria-busy')]));
+    const states = await page.$$eval('[data-testid="gal-row-CMP001-preference"] button', (nodes) => nodes.map((node) => [node.getAttribute('data-demo'), node.getAttribute('aria-disabled') === 'true' && !node.disabled, node.getAttribute('aria-busy')]));
     check(states.length === 6 && states.some((s) => s[1]) && states.some((s) => s[2] === 'true') && states.filter((s) => s[0]).length === 3, 'six states: default, hover, focus, pressed (static), disabled, busy');
+    /* field-1: the disabled state is aria-disabled (no native disabled): Tab reaches it, its reason is real text, a press runs nothing and says why */
+    const dis = '[data-testid="gal-row-CMP001-preference"] button[aria-disabled="true"]';
+    const reason = await page.$eval(dis, (node) => { const el = document.getElementById(node.getAttribute('aria-describedby')); return el ? el.textContent : null; });
+    check(reason === 'Disabled', 'the disabled state names its reason through aria-describedby (' + reason + ')');
+    await page.focus(dis);
+    check(await page.$eval(dis, (node) => document.activeElement === node), 'the disabled state takes keyboard focus (it is in the Tab order)');
+    await page.keyboard.press('Enter');
+    check((await page.$eval('#toast', (node) => node.textContent).catch(() => '')) === 'Disabled', 'pressing a disabled action shows its reason in the page notice line (toast) and runs nothing');
     const idsOk = await page.$$eval('#content button', (nodes) => nodes.every((node) => node.getAttribute('data-cbsid') && node.getAttribute('data-cbmount')));
     check(idsOk, 'every component button carries its element code and its mount');
     const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^UIS001-B\d\d$/.test(node.getAttribute('data-cbsid'))));
