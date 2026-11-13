@@ -149,6 +149,8 @@ jobs:
           node e2e/cat-135-category-chips.test.cjs
           node e2e/cat-161-162-governance-rows.test.cjs
           node e2e/cat-34-offer-lab-scope.test.cjs
+          # NET proof (2026-11-14): the supplier-add confirm is plain text and a bridge id searched on another installation is never filed as local (NET-41 web half); red under a mutant
+          node e2e/net-41-supplier-add-confirm.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
