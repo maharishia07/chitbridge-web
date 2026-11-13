@@ -1527,7 +1527,7 @@ function crmHome(frame) {
     fill: false,
     views: crmViews(),
     head: function () {
-      return { title: tx('Parties'), notices: CRM.state === 'ready' ? crmNotices() : [] };
+      return { title: tx('Parties'), reserve: true, notices: CRM.state === 'ready' ? crmNotices() : [] };
     },
     state: function () {
       return CRM.state;
