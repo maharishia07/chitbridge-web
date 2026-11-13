@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why).
-     CALLED BY Home's CRM card (manifest /crm.html), CB Accounts and the Task panel's party links.
+     CALLED BY Home's cards CRM (/crm.html), Marketing (/crm.html?app=marketing) and Consent & privacy (/crm.html#/privacy) in app/manifest.json · CB Accounts' links (app/accounts-shell.js: customers, suppliers, the chit page) · MIS doors (app/cap-mis.js).
      FLOW  load → whoPaint (CBFrame) → crmLoad (GET /api/crm/parties) → the router → the view's CBList paints
      CARD 11-crm-and-marketing/cb-crm -->
 <head>

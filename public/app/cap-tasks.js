@@ -35,11 +35,12 @@
  *   window.parent.postMessage({ cb: 'tasks', event: 'open' | 'moved' | 'assigned' | 'bill' | 'close', chit_id, ... }, location.origin)
  *
  *   CBTasks.mount(el, { token, base, embed, view, onEnded }) → { reload, show(view) }
+ *
+ * OWNS      CBTasks: mount · VIEWS · EP · actRow (a step button greyed with the server's why) — Tasks and Orders as a standalone app
+ * CALLED BY tasks.html (<script src>; CBTasks.mount and VIEWS, also as tasks.html?embed=1 in a frame) · app/cap-dispute.js and app/cap-assist.js (CBTasks.actRow)
+ * FLOW      CBList rows from the work API → the sheet → amounts through bkMoney in the chit's own currency
+ * CARD      05-orders-and-workflow/tasks-and-orders
  */
-/* OWNS Tasks and Orders as a standalone app
- * CALLED BY tasks.html (and tasks.html?embed=1 as a frame)
- * FLOW CBList rows from the work API -> the sheet -> amounts through bkMoney in the chit's own currency
- * CARD 05-orders-and-workflow/tasks-and-orders */
 (function (root) {
   'use strict';
   /* the registry rows this screen adds (the scanner tools/endpoint-usage.cjs reads this shape); status · chit · wlAssign · wlDeliver · railChits come from CB_SHEET_EP, messages · sendMsg from CB_THREAD_EP */
