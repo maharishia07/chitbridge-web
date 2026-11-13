@@ -2,7 +2,7 @@
  * catalogue-lines.js — ONE walk from a catalogue payload to a list of display rows.
  *
  * OWNS      the one walk from a catalogue payload to display rows (cbLineRows), the media embed and gallery (cbMediaGallery), and the category ancestors (cbCatgAncestors)
- * CALLED BY public/shop.html (cbLineRows, cbMediaGallery, cbCatgAncestors), public/app.html (cbLineRows, cbMediaGallery), public/app/cart.js (cbLineRows), public/app/core.js (cbCatgAncestors); loaded by script tag on shop, app, cart-design, network-design, storefront-design, supplier-design
+ * CALLED BY public/shop.html (cbLineRows, cbMediaGallery, cbCatgAncestors), public/app.html (cbMediaGallery only), public/app/cart.js (cbLineRows), public/app/core.js (cbCatgAncestors); loaded by script tag on shop, app, cart-design, network-design, storefront-design, supplier-design
  * FLOW      a catalogue payload { items, groups } ──▶ cbLineRows() ──▶ ordered rows [product heading | line] ──▶ each surface styles them in its own CSS
  * CARD      06-catalogue-pim/items-create-edit-bulk-status
  *

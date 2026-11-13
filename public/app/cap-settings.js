@@ -648,7 +648,7 @@ var CBSettings = (function () {
       esc(T('Copy it now — it is shown once.')) +
       '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
       esc(key || '') +
-      '</div><button data-cbsid="ACC002-B25" type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
+      '</div><button data-cbsid="ACC002-B26" type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
       esc(T('Copy')) +
       '</button>';
     $('sx_key_copy').onclick = function () {

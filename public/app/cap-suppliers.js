@@ -1,6 +1,6 @@
 /* app/cap-suppliers.js — SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers).
  * OWNS      the Suppliers list outside the workshop (CBSuppliers.mount: readiness, add, link, remove) and the three moved helpers supName, supKindOf, isUserId
- * CALLED BY public/operations.html (script tag, CBSuppliers.mount at operations.html:133 for #/suppliers); public/app.html loads it at boot (script tag app.html:1654) and calls CBSuppliers and the three helpers
+ * CALLED BY public/operations.html (script tag, CBSuppliers.mount at operations.html:133 for #/suppliers); public/app.html loads it at boot (script tag app.html:1654) and calls the three helpers (not CBSuppliers; the workshop does not mount it)
  * FLOW      mount(host) ──▶ GET the supplier list (CBList rows) ──▶ readiness from the row's own fields ──▶ Add: a User ID or email ──▶ POST /api/relationships/suppliers (link), else a local supplier by name
  * CARD      12-suppliers-and-procurement/supplier-list
  *

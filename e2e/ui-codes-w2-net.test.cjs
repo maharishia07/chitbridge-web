@@ -80,7 +80,7 @@ const WANT = [
   ["SLB001-B03","signin-lab.html","button","type=\"button\" data-' + key + '=\"' + esc(x[0]) + '"],
   ["SLB001-B04","signin-lab.html","button","type=\"button\" data-theme=\"light\" aria-pressed=\"' + !dark + '\">Li"],
   ["SLB001-B05","signin-lab.html","button","type=\"button\" data-theme=\"dark\" aria-pressed=\"' + dark + '\">Dark"],
-  ["ACC002-B25","app/cap-settings.js","button","type=\"button\" class=\"act quiet\" id=\"sx_key_copy\" data-testid=\"sx"]
+  ["ACC002-B26","app/cap-settings.js","button","type=\"button\" class=\"act quiet\" id=\"sx_key_copy\" data-testid=\"sx"]
 ];
 
 /** the source of a file, LF only, with the mutation of this run applied (swap: the first two codes of network-app.js trade places) */
