@@ -854,6 +854,7 @@ async function route(S, r) {
     /* C12 — the group heading is a HEADING: tinted band, small upper-case title, count + total, rows indented, folds; and the stripe is VISIBLE */
     for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
       const { ctx, p } = await open(standIn(), { viewport: vp }); await homeReady(p);
+      if (vp.width <= 700) await p.click('[data-testid^="cbl-view-menu-"]'); /* a phone keeps Group in the View popover (list-ctl.js:1095, 889416f6) */
       await p.selectOption('[data-testid="crm-parties-group"]', 'role'); await p.waitForTimeout(200);
       const g = await p.evaluate(() => {
         const h = document.querySelector('#crm_list .cbl-group'), row = document.querySelector('#crm_list .cbl-row.ing, #crm_list .cbl-lrec.ing'), z = document.querySelector('#crm_list .cbl-row.z, #crm_list .cbl-lrec.z');
