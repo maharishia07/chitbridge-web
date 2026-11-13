@@ -831,7 +831,9 @@ async function route(S, r) {
 
   /* ── 8 · THE LISTS ROUND: no layout jump, and the ledger stripes ─────────────────────────────────────────────────────────────── */
   for (const [w, h] of [[1366, 768], [390, 844]]) {
-    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook' });
+    /* SET-WALK1 W7: the Thirukkural band is the owner's choice and 'auto' draws it only where the shop reads Tamil, so with no pref there is no band and no room;
+       this round measures the room the band keeps, so the owner has chosen it on (cb_kural) */
+    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook', seed: 'try { localStorage.setItem("cb_kural", "on"); } catch (_) {}' });
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', document.querySelectorAll('#nav .nav-btn').length - 1), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
     await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);
