@@ -22,7 +22,7 @@ of file each thing is; this says what already does the job.
 | 78 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 75 | `catalogue` | `books-manual.js` | GET /events → the grid. |
-| 70 | `list` | `cap-settings.js` |  |
+| 71 | `list` | `cap-settings.js` |  |
 | 69 | `register` | `regulation.js` | register(pack) → the pack — |
 | 68 | `entry` | `books-store.js` |  |
 | 68 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
@@ -74,9 +74,9 @@ of file each thing is; this says what already does the job.
 | 37 | `rate` | `convert.js` | A rate, with its evidence. |
 | 36 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 36 | `page` | `cap-catalogue.js` |  |
+| 36 | `shell` | `pick.js` |  |
 | 36 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
 | 35 | `closeModal` | `app.html` |  |
-| 35 | `shell` | `pick.js` |  |
 | 34 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 34 | `changes` | `books-store.js` |  |
 | 34 | `hold` | `orders.js` |  |
@@ -90,16 +90,16 @@ of file each thing is; this says what already does the job.
 | 32 | `sentence` | `one-person.js` |  |
 | 32 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 32 | `refuse` | `books-pack.js` | const sha = (text) => |
+| 31 | `ensureCap` | `app.html` |  |
 | 31 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 31 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 31 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
-| 30 | `ensureCap` | `app.html` |  |
+| 30 | `sheet` | `cap-employees.js` |  |
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 29 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
-| 29 | `sheet` | `cap-employees.js` |  |
 | 29 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 29 | `owner` | `books.js` |  |
 | 28 | `money` | `cart.js` |  |

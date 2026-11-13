@@ -1,4 +1,8 @@
 /* app/cap-settings.js — CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md).
+ * OWNS      CB Settings sections Counters and keys, Connectors, Policy, Plan and usage (CBSettings.mount) and the moved policy, key and kit helpers; it decides nothing about who may do what
+ * CALLED BY public/settings.html (script tag settings.html:154; CBSettings.mount per section at settings.html:230) and public/app/cap-admin.js (CBSettings.policyRun and the moved helpers, loaded first through CAP_WITH.admin)
+ * FLOW      mount(host, section) ──▶ the section's reads (counters, integrations, policy, plan) ──▶ CBList rows ──▶ a write goes through CBAction ──▶ repaint the row
+ * CARD      28-platform-and-operations/settings
  *
  * Owner, 14 Oct: "follow the same design standards or better … better UI … much simpler". The workshop holds these as eight Integrations tabs
  * and two Profile/Settings cards (cap-admin.js), each drawing its own rows and repainting through loadSettings(). Here every list is CBList
@@ -19,8 +23,6 @@
  *                                     #setbody (which needs renderApp · setSec · loadSettings).
  * Host globals (as every cap-*.js): api · EP (CB_SETTINGS_EP) · SESSION · CFG · esc · fmtMoney (helpers.js, the money unit) · tx · toast · CBAction · CBConfirm · CBList · CBLocale (optional).
  * Flow step: Onboarding · counters & keys / connectors / policy / plan (docs/process/flows.json, the SET rows).
- * CALLED BY settings.html (CBSettings.mount per section) and the workshop's Integrations / Profile cards (the moved helpers) · FLOW mount(host, section) → load the section's reads → CBList rows → CBAction writes.
- * CARD 28-platform-and-operations/settings
  */
 'use strict';
 
@@ -646,7 +648,7 @@ var CBSettings = (function () {
       esc(T('Copy it now — it is shown once.')) +
       '</b><div class="mono sx-secret" data-testid="sx-key-value">' +
       esc(key || '') +
-      '</div><button type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
+      '</div><button data-cbsid="ACC002-B25" type="button" class="act quiet" id="sx_key_copy" data-testid="sx-key-copy">' +
       esc(T('Copy')) +
       '</button>';
     $('sx_key_copy').onclick = function () {

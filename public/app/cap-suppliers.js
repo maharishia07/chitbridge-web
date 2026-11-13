@@ -1,4 +1,9 @@
 /* app/cap-suppliers.js — SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers).
+ * OWNS      the Suppliers list outside the workshop (CBSuppliers.mount: readiness, add, link, remove) and the three moved helpers supName, supKindOf, isUserId
+ * CALLED BY public/operations.html (script tag, CBSuppliers.mount at operations.html:133 for #/suppliers); public/app.html loads it at boot (script tag app.html:1654) and calls CBSuppliers and the three helpers
+ * FLOW      mount(host) ──▶ GET the supplier list (CBList rows) ──▶ readiness from the row's own fields ──▶ Add: a User ID or email ──▶ POST /api/relationships/suppliers (link), else a local supplier by name
+ * CARD      12-suppliers-and-procurement/supplier-list
+ *
  *
  * ── WHAT IS MOVED (CLAUDE.md rule 1 — moved, never copied; app.html calls these same names and no longer defines them) ─────────────────
  *   supName · supKindOf · isUserId — the supplier's shown name, its Trade/Other kind, and "is this a handle or a name" (were app.html:7769,
@@ -20,8 +25,6 @@
  *
  * Host globals: api · EP · esc · tx · txf · toast · CBList · CBAction · CBConfirm (accounts-shell.js) · taxIdWord (helpers.js, optional) · cblog.
  * Flow step: P2P step 1 · need (who you buy from) — docs/process/flows.json.
- * CALLED BY operations.html (#/suppliers) · app.html · assets.js
- * // CARD 12-suppliers-and-procurement/supplier-list
  */
 'use strict';
 /** the name a supplier is shown by: your label first, then their registered name */
@@ -317,7 +320,7 @@ var CBSuppliers = (function () {
           title: t('Suppliers'),
           chips: n ? [{ text: tf(n === 1 ? '{n} supplier' : '{n} suppliers', { n: n }), tid: 'sup-count' }] : [],
           slot: function (el) {
-            el.innerHTML = '<button type="button" class="act" data-testid="sup-add-open">+ ' + esc(t('Add supplier')) + '</button>';
+            el.innerHTML = '<button data-cbsid="BUS002-B01" type="button" class="act" data-testid="sup-add-open">+ ' + esc(t('Add supplier')) + '</button>';
             el.firstChild.onclick = openAdd;
           }
         };
@@ -346,24 +349,24 @@ var CBSuppliers = (function () {
       '</p>' +
       '<label class="fl" for="sp_q">' +
       esc(t('Name, User ID or email')) +
-      '</label><input class="inp" id="sp_q" data-testid="sup-add-q" autocomplete="off">' +
+      '</label><input data-cbsid="BUS002-I01" class="inp" id="sp_q" data-testid="sup-add-q" autocomplete="off">' +
       '<fieldset class="op-kind"><legend class="fl">' +
       esc(t('What do you buy from them?')) +
       '</legend>' +
-      '<label><input type="radio" name="sp_kind" value="resale"' +
+      '<label><input data-cbsid="BUS002-I02" type="radio" name="sp_kind" value="resale"' +
       (listKind !== 'own_use' ? ' checked' : '') +
       ' data-testid="sup-add-trade"> ' +
       esc(t('Goods to sell')) +
       '</label>' +
-      '<label><input type="radio" name="sp_kind" value="own_use"' +
+      '<label><input data-cbsid="BUS002-I03" type="radio" name="sp_kind" value="own_use"' +
       (listKind === 'own_use' ? ' checked' : '') +
       ' data-testid="sup-add-other"> ' +
       esc(t('Things the shop uses')) +
       '</label></fieldset>' +
       '<div class="err" id="sp_out" data-testid="sup-add-out" role="status"></div>' +
-      '<div class="op-acts"><button type="button" class="act" data-testid="sup-add-go">' +
+      '<div class="op-acts"><button data-cbsid="BUS002-B02" type="button" class="act" data-testid="sup-add-go">' +
       esc(t('Add')) +
-      '</button><button type="button" class="act quiet" data-x>' +
+      '</button><button data-cbsid="BUS002-B03" type="button" class="act quiet" data-x>' +
       esc(t('Cancel')) +
       '</button></div>';
     Array.prototype.forEach.call(node.querySelectorAll('[data-x]'), function (b) {
@@ -407,7 +410,7 @@ var CBSuppliers = (function () {
           if (link && e && e.status === 404) {
             out.innerHTML =
               esc(t('No business with that User ID or email.')) +
-              ' <button type="button" class="act quiet" data-testid="sup-add-local">' +
+              ' <button data-cbsid="BUS002-B04" type="button" class="act quiet" data-testid="sup-add-local">' +
               esc(t('Add as a local supplier')) +
               '</button>';
             out.querySelector('button').onclick = function () {

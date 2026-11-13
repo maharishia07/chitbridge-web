@@ -1,4 +1,9 @@
 /* rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09).
+ * OWNS      CBThread: the one composer and the one list for a chit's messages (channel, kind, line, send), and the one POST /api/chits/:id/messages path
+ * CALLED BY app.html (CBThread.mountAll, CBThread.send), app/cap-books.js, app/cap-dispute.js, app/cap-messages.js, app/cap-tasks.js, app/cap-worklist.js, app/chit-sheet.js (CBThread.mount); loaded by script tag on accounts, crm, finance, tasks and app.html
+ * FLOW      mount(el, opts) ──▶ read GET /chits/:id/messages and chit.actions ──▶ paint the channels (greyed with the server's sentence) ──▶ send ──▶ CBAction ──▶ POST ──▶ repaint and emit cb:rail
+ * CARD      01-rail-core-the-chit/thread-messages-on-a-chit
+ *
  *
  * DESIGN-rail-modules-2026-10-05 §2.1 (CBThread): *"one composer + one list, threaded by line; replaces the 4 composers."*
  * Before this file the web repo posted to POST /chits/:id/messages from FOUR places — app.html `doSendMessage`, cap-messages
@@ -46,9 +51,6 @@
  * Reuse: CBAction (accounts-shell.js) · api/EP (core.js) · CBRail.WHY (/engine/rail.js, the sentences) · cbAttachList /
  * cbAttachButton (attach-ui.js: an attachment is pinned to a sent message, after the send, exactly as before) · CBLocale ·
  * CBOffline.saveDraft (the typed text survives a repaint). ZERO app.html globals: no UI, SESSION, paintDetail, modal, toast.
- 
- * CARD 01-rail-core-the-chit/thread-messages-on-a-chit
- * CALLED BY public/app.html, public/app/cap-admin.js, public/app/cap-books.js, public/app/cap-dispute.js, public/app/cap-messages.js (+5 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -349,7 +351,7 @@
                 nestedV = verdict(m, item),
                 on = m.channel === item;
               return (
-                '<button type="button" class="' +
+                '<button data-cbsid="SCR071-B01" type="button" class="' +
                 (item === 'external' ? 'ext' : 'int') +
                 (on ? ' on' : '') +
                 (ok ? '' : ' off') +
@@ -381,7 +383,7 @@
           o.kinds
             .map(function (item) {
               return (
-                '<button type="button" class="rt-k' +
+                '<button data-cbsid="SCR071-B02" type="button" class="rt-k' +
                 (m.kind === item ? ' on' : '') +
                 '" data-rt-act="kind" data-k="' +
                 esc(item) +
@@ -397,7 +399,7 @@
       !o.line_id && !disp && o.lines && o.lines.length
         ? '<label class="rt-row">' +
           esc(T(W.about)) +
-          ' <select class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
+          ' <select data-cbsid="SCR071-S01" class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
           esc(T(W.whole)) +
           '</option>' +
           o.lines
@@ -416,7 +418,7 @@
       (toggle || kinds ? '<div class="rt-row">' + toggle + kinds + '</div>' : '') +
       offWhy +
       lines +
-      '<textarea data-rt-act="text" data-testid="' +
+      '<textarea data-cbsid="SCR071-T01" data-rt-act="text" data-testid="' +
       esc(ids.text || 'msg-body') +
       '" placeholder="' +
       esc(aud) +
@@ -428,7 +430,7 @@
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-foot"><button type="button" class="rt-send ' +
+      '<div class="rt-foot"><button data-cbsid="SCR071-B03" type="button" class="rt-send ' +
       tone +
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +
