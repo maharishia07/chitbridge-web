@@ -32,7 +32,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
     const u = q.url.split('?')[0];
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' },
       till: { suggested_id: 'C1', assigned_id: 'C1' },
-      items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
+      items: [{ id: 'xmango', item_id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     if (u === '/api/till/recheck') return j(200, recheckStub(raw, { xmango: 50 }));   /* nothing moved: a bare {ok:true} reads as an unreachable door and the bill waits (CTR-243, decision C) */
     if (u === '/api/till/bills') return j(200, { bills: HISTORY });
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
