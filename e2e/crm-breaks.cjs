@@ -80,7 +80,7 @@ for (let [name, rel, a, b, harness] of BREAKS) {
     const caught = BR.caught(v, base);
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
-  } finally { fs.copyFileSync(bak, f); fs.unlinkSync(bak); }
+  } finally { fs.writeFileSync(f, s); try { fs.unlinkSync(bak); } catch (_) {} }   /* restore from the text held in memory: a vanished .bak once left cap-crm.js broken */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

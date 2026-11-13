@@ -9,7 +9,8 @@ const BREAKS = [
   ['Accept offered on a cart bill', SHEET, "    if (m.counterBill) {\n      list.push('print');", "    if (m.counterBill) {\n      list.push('accept');\n      list.push('print');"],
   ['supplier bill loses Goods in', SHEET, "        list.push('dispute');\n        list.push('goodsin');", "        list.push('dispute');"],
   ['accepted bill still offers Accept', SHEET, "      } else if (!dead) list.push('dispute');\n    } else {", "      } else if (!dead) { list.push('accept'); list.push('dispute'); }\n    } else {"],
-  ['navigation instead of the sheet', BOOKS, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="event.stopPropagation();openChit(\\''`],
+  /* openChit() is now just openChitSheet(), so the break that navigates calls the page door */
+  ['navigation instead of the sheet', BOOKS, "event.stopPropagation();openChitSheet(", "event.stopPropagation();openChitPage("],
   ['Waiting row navigates', BOOKS, "        if (w.chit_id) openChitSheet(w.chit_id);", "        if (w.chit_id) openChitPage(w.chit_id);"],
   /* ── web-reads-invoice (2026-10-02): the four breaks the task names, and the guards around them ── */
   ['hand arithmetic back: a hand-halved CGST', SHEET, "esc(fmtMoney(inter ? v.igst : v.cgst, m.cur, '—'))", "esc(fmtMoney(inter ? v.igst : Math.round(Number(v.tax) * 50) / 100, m.cur, '—'))"],
@@ -53,7 +54,8 @@ const BREAKS = [
   ['tender sum wrong', SHEET, "esc(fmtMoney(x.amount, m.cur, '—')) +\n            '</b></div>'", "esc(fmtMoney(Number(x.amount) + 1, m.cur, '—')) +\n            '</b></div>'"],
   ['change line dropped', SHEET, "(p.change > 0 ? '<div class=\"cs-row cs-mute\" data-testid=\"cs-change\"><span>'", "(false ? '<div class=\"cs-row cs-mute\" data-testid=\"cs-change\"><span>'"],
   ['owner suffix missing', BOOKS, `(bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '')`, `''`],
-  ['owner suffix on everyone', BOOKS, `(bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '')`, `' ' + esc(tx('(owner)'))`],
+  /* the Day book's source cell (db-head), the one the check reads */
+  ['owner suffix on everyone', BOOKS, "(bkIsShopName(source.by) ? ' <span style=\"color:var(--grey)\">'", "(true ? ' <span style=\"color:var(--grey)\">'"],
 ];
 const ONLY = process.env.BREAK_ONLY || '';
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (a verdict in

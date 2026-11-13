@@ -59,7 +59,7 @@ for (let [name, rel, a, b, harness] of BREAKS) {
     const caught = r.status !== 0 && (xx.length > 0 || r.status > 1 || /Error/.test(r.stderr || ''));
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + (xx[0] || (r.stderr || '').split('\n')[0] || 'harness failed').trim().slice(0, 150) : 'NOT caught (exit ' + r.status + ')'));
-  } finally { fs.copyFileSync(bak, f); fs.unlinkSync(bak); }
+  } finally { fs.writeFileSync(f, s); try { fs.unlinkSync(bak); } catch (_) {} }   /* restore from the text held in memory: a vanished .bak once left cap-crm.js broken */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

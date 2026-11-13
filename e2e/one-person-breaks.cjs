@@ -87,7 +87,7 @@ for (const [name, edits] of BREAKS) {
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
   } finally {
-    for (const rel of files) { const f = path.join(W, rel); fs.copyFileSync(f + '.bak', f); fs.unlinkSync(f + '.bak'); }
+    for (const rel of files) { const f = path.join(W, rel); fs.writeFileSync(f, orig[rel]); try { fs.unlinkSync(f + '.bak'); } catch (_) {} }
   }
 }
 console.log('\n  ' + good + '/' + ran + (process.env.BREAK_DRY ? ' anchors found (dry — nothing run)' : ' breaks caught'));
