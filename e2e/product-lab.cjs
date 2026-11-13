@@ -15,7 +15,7 @@
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', 'public');
-const BP = require('../../chitbridge-api/lib/catalogue-blueprint');
+const BP = require((process.env.CB_API_REPO || '../../chitbridge-api') + '/lib/catalogue-blueprint');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
             '.svg':'image/svg+xml', '.png':'image/png' };
 let bad = 0;
