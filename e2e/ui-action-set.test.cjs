@@ -107,6 +107,10 @@ check(!/ disabled[ >=]/.test(stateOff) && stateOff.includes('aria-disabled="true
 check(!/tabindex="-1"/.test(stateOff), 'a disabled action has no tabindex -1: it stays in the Tab order');
 check(refused(() => ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: true })) && refused(() => ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: ' ' })), 'disabled: true (or an empty sentence) is refused: a greyed action says why');
 check(ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: false }).indexOf('aria-disabled') < 0, 'disabled: false draws an ordinary enabled button');
+const hinted = ui.action('save', { mount: 'TST001-U03', effect: 'preference', hint: 'Saves the policy', disabled: 'Needs the owner' });
+check((hinted.match(/ title=/g) || []).length === 1 && hinted.includes('title="Needs the owner"') && !hinted.includes('Saves the policy') && whyOf(hinted)[1] === 'Needs the owner', 'hint + disabled: ONE title attribute and it is the reason; the hidden text is the reason');
+const rowA = ui.action('save', { mount: 'TST001-U04', effect: 'preference', disabled: 'Needs the owner' }), rowB = ui.action('save', { mount: 'TST001-U04', effect: 'preference', disabled: 'Needs the owner' });
+check(rowA.match(/aria-describedby="([^"]+)"/)[1] !== rowB.match(/aria-describedby="([^"]+)"/)[1], 'two disabled rows on one mount without a key get different reason ids');
 const both = ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: 'Busy now', role: { ok: false, why: 'Only the owner may save' } });
 check(whyOf(both)[1] === 'Only the owner may save', 'role and disabled together: the permission sentence wins');
 check(/class="cbui-sr"/.test(read('app/ui.js')) && /\[data-cbname\]\[aria-disabled="true"\]\{[^}]*cursor:not-allowed/.test(read('app/ui.js')), 'the stylesheet mutes [aria-disabled] and hides the reason visually only');

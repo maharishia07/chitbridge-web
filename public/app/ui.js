@@ -258,8 +258,10 @@ var CBUi = (function () {
     if (typeof options.disabled !== 'string' || !options.disabled.trim()) refuse('disabled: give the reason as a sentence (disabled: "Needs the owner"); a greyed action always says why');
     return options.disabled;
   }
+  var whyCount = 0;
   /** the id of the visually hidden reason element written beside a disabled button */
   function whyId(options) {
+    if (options.whyId) return options.whyId;
     return 'cbui-why-' + String(options.mount).toLowerCase() + (options.key ? '-' + String(options.key).toLowerCase().replace(/[^a-z0-9_-]/g, '') : '');
   }
   function toneClass(options, component, surface) {
@@ -311,7 +313,7 @@ var CBUi = (function () {
   function lookAttributes(component, options) {
     var tooltip = component.tooltip || displayOf(component, options) === 'icon';
     return [
-      ['title', options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
+      ['title', disabledReason(options) !== null ? null : options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
       ['data-size', options.size === 'compact' ? 'compact' : null],
       ['aria-haspopup', component.popup || null],
       ['aria-expanded', component.popup ? String(!!options.expanded) : null]
@@ -355,6 +357,7 @@ var CBUi = (function () {
     var name = component.name;
     var tag = component.link ? 'a' : 'button';
     if (component.link && !options.href) refuse(name + ': a link needs href');
+    if (disabledReason(options) !== null) options = Object.assign({}, options, { whyId: whyId(options) + '-' + (++whyCount) });
     var html = '<' + tag + ' ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</' + tag + '>' + reasonNote(options);
     /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
     if (!shownText(component, options).trim()) refuse(name + ': no visible text');
@@ -589,7 +592,8 @@ var CBUi = (function () {
   function refusePress(event, button) {
     if (event.preventDefault) event.preventDefault();
     if (event.stopPropagation) event.stopPropagation();
-    var reason = button.getAttribute('title') || '';
+    var note = button.getAttribute('aria-describedby') && typeof document.getElementById === 'function' && document.getElementById(button.getAttribute('aria-describedby'));
+    var reason = (note && note.textContent) || button.getAttribute('title') || '';
     if (!reason) return;
     if (typeof toast === 'function') toast(reason);
     else announce(reason);
