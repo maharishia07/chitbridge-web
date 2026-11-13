@@ -32,8 +32,8 @@ of file each thing is; this says what already does the job.
 | 66 | `store` | `move-in-proof.js` | store(conn, entity, rec) — |
 | 65 | `refusal` | `availability.js` | and is not judged here (stamp keeps its own rule for those). |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
+| 63 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 63 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
-| 62 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 62 | `items` | `books-store.js` | PERF1: |
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
 | 59 | `record` | `access-events.js` |  |
