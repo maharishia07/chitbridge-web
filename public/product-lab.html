@@ -214,7 +214,7 @@ function storeLine(item) {
 function listPill(item) {
   return (
     '<button class="pill ' + (item.key === LIST.key ? 'on' : '') + (item.store_name ? ' has-sub' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' +
-    ' onclick="pickList('' + esc(item.key) + '')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
+    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
   );
 }
 function pickList(k, keep) {
