@@ -4,7 +4,7 @@
  *   a. PRICE ONLY (Athi A1): the bill goes as sold; the body the shop receives carries price_basis.stale_ack (via auto) and the bill's own total (236.00), unchanged.
  *   b. RATE MOVED (B1): the bill is HELD (_price_hold), the shop is not sent it, the rest of the queue goes, a reload keeps the hold, the popup is NOT raised while a bill is on the screen,
  *      then at an idle moment it is raised; "Not yet" sends nothing; the chip's decide button asks again; the owner PIN lets it go (stale_ack via send_as_sold, owner_pin true).
- *   c. THE DOOR FAILS: both bills go as sold with one toast, nothing held.
+ *   c. THE DOOR FAILS (Athi, DECISIONS 0b876ee1): the bills wait on the ladder, the next drain asks again, at the ceiling they go with the mark stale_unchecked (chip "Prices not checked").
  * Hand figures: 2 x 100.00 excl at 18 intra = 236.00 (23600 minor); at 120.00 it would be 283.20 and at rate 12 it would be 224.00; neither is ever shown or sent.
  * Shots (when SHOTS=<dir> is set): the Bills list with the chip at 1366x768 and 390x844.
  * Run: node e2e/till-stale-send.cjs        (SHOTS=<dir> node e2e/till-stale-send.cjs  for the screenshots)   NODE_PATH must reach @playwright/test; run on SIT, not on a laptop that is busy.
@@ -92,12 +92,21 @@ const iso = (h, m) => new Date(Date.UTC(2026, 10, 13, h, m)).toISOString();
   const released = wire.sent[0] && wire.sent[0].business_json.price_basis.stale_ack;
   say('"Send as sold" + the owner PIN: the bill is sent with the acknowledgement (send_as_sold, owner_pin true), total unchanged', !!(released && released.via === 'send_as_sold' && released.owner_pin === true && released.reason === 'rate_moved' && wire.sent[0].line_items[0].price === 100), JSON.stringify(released || {}).slice(0, 100));
 
-  console.log('\n── c. the door fails: every bill goes as sold, one toast, nothing held ' + '─'.repeat(2));
-  wire.sent = []; wire.door = 'fail';
+  console.log('\n── c. the door fails (Athi, DECISIONS 0b876ee1): the bills WAIT, the next drain asks again, at the ladder ceiling they go marked "Prices not checked" ' + '─'.repeat(2));
+  wire.sent = []; wire.door = 'fail'; wire.recheck = 0; wire.rows = [answer({ gst_rate: 12, price: 100 })];
   await p.evaluate(async () => { for (const r of await DB.all('queue')) await DB.del('queue', r.no); });
   await seed([billRow('C1/4'), billRow('C1/5')]);
-  const door = await p.evaluate(async () => { await HOST.drain({ force: true }); const q = await DB.all('queue'); return { left: q.length, note: (document.getElementById('lastnote') || {}).textContent || '' }; });
-  say('both bills were sent as sold; nothing held; one sentence said it', wire.sent.length === 2 && door.left === 0 && /could not be checked/.test(door.note), 'sent=' + wire.sent.length + ' note=' + door.note);
+  const door = await p.evaluate(async () => { await HOST.drain({ force: true }); const q = await DB.all('queue'); return { left: q.length, tries: q.map((r) => r._stale_tries).join(), note: (document.getElementById('lastnote') || {}).textContent || '' }; });
+  say('door down: nothing is sent, both bills stay queued on the ladder (_stale_tries 1), the words say they wait', wire.sent.length === 0 && door.left === 2 && door.tries === '1,1' && /wait here and the check is tried again/.test(door.note), 'sent=' + wire.sent.length + ' tries=' + door.tries + ' note=' + door.note);
+  wire.door = 'ok';
+  const back = await p.evaluate(async () => { await HOST.drain({ force: true }); await new Promise((r) => setTimeout(r, 300)); const q = await DB.all('queue'); return { holds: q.filter((r) => r._price_hold).length }; });
+  say('the next drain asks the door AGAIN, and the rate move it finds is HELD (not sent unchecked)', wire.recheck >= 2 && back.holds === 2 && wire.sent.length === 0, 'recheck=' + wire.recheck + ' holds=' + back.holds);
+  wire.door = 'fail'; wire.sent = [];
+  await p.evaluate(async () => { for (const r of await DB.all('queue')) await DB.del('queue', r.no); });
+  await seed([billRow('C1/7')]);
+  await p.evaluate(async () => { for (let i = 0; i < 9; i++) await HOST.drain({ force: true }); });
+  const unchecked = wire.sent[0] && wire.sent[0].business_json.price_basis.stale_unchecked;
+  say('at the ladder ceiling (9th failed check) the bill goes WITH the mark: stale_unchecked, tries 9, mode wait', !!(unchecked && unchecked.tries === 9 && unchecked.mode === 'wait' && wire.sent.length === 1), JSON.stringify(unchecked || {}));
 
   if (process.env.SHOTS) {
     fs.mkdirSync(process.env.SHOTS, { recursive: true });
