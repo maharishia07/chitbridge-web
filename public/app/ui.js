@@ -571,7 +571,8 @@ var CBUi = (function () {
     var title = options.titleText !== undefined ? options.titleText : words(options.title);
     var sub = options.subText || options.subId ? '<span class="sub"' + (options.subId ? ' id="' + escapeText(options.subId) + '"' : '') + '>' + escapeText(options.subText || '') + '</span>' : '';
     var chip = options.pop && typeof CBScreenId !== 'undefined' && CBScreenId.popupChip ? CBScreenId.popupChip(options.pop, 'margin-inline-start:auto') : '';
-    return '<div class="t">' + escapeText(title) + '</div>' + sub + chip;
+    var attrs = (options.titleId ? ' id="' + escapeText(options.titleId) + '"' : '') + (options.titleTestid ? ' data-testid="' + escapeText(options.titleTestid) + '"' : '');
+    return '<div class="t"' + attrs + '>' + escapeText(title) + '</div>' + sub + chip;
   }
   function dialogHead(options) {
     var pop = options.pop ? ' data-pop="' + escapeText(options.pop) + '"' : '';
@@ -599,10 +600,11 @@ var CBUi = (function () {
     return '<div class="mfoot"' + (options.footId ? ' id="' + escapeText(options.footId) + '"' : '') + '>' + inner + '</div>';
   }
   function dialogBody(options) {
-    return '<div class="mbody"' + (options.testid ? ' data-testid="' + escapeText(options.testid) + '"' : '') + '>' + (options.body || '') + '</div>';
+    var attrs = (options.bodyId ? ' id="' + escapeText(options.bodyId) + '"' : '') + (options.testid ? ' data-testid="' + escapeText(options.testid) + '"' : '') + (options.bodyStyle ? ' style="' + escapeText(options.bodyStyle) + '"' : '');
+    return '<div class="mbody"' + attrs + '>' + (options.body || '') + '</div>';
   }
   /**
-   * ui.dialog({ mount, title | titleText, subText, subId, footId, pop, testid, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
+   * ui.dialog({ mount, title | titleText, titleId, titleTestid, subText, subId, footId, pop, testid, bodyId, bodyStyle, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
    * modal(); the corner X is modal()'s own .mx. Actions are standard components only, Cancel/Close first, the primary last.
    * pop is the popup's register code (POP###): it is written on the header (data-pop) and shown as the quote-me chip. footerHtml is for a footer the
    * caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialog invents none. Not wired yet: onClose.

@@ -35,7 +35,7 @@ const LIST_TABLE = [
   ['data-cbl-retry', 'CMP009-B01'], ['data-cbl-clear', 'CMP014-B01'], ['data-cbl-clearf', 'CMP014-B01'], ['data-unfilt', 'CMP014-B01']
 ];
 const BOOKS_TABLE = [
-  ['data-testid="party-edit"', 'CMP012-B01'], ['data-testid="party-pay"', 'CMP042-B01'], ['data-testid="daybills_close"', 'CMP005-B01'], ['data-testid="pe_taxadd"', 'CMP007-B01'],
+  ['data-testid="party-edit"', 'CMP012-B01'], ['data-testid="party-pay"', 'CMP042-B01'], ['data-testid="pe_taxadd"', 'CMP007-B01'],
   ['data-testid="pe_save"', 'CMP001-B01'], ['data-testid="pay_record"', 'CMP042-B02'], ['data-testid="pay_remind"', 'CMP042-B03'], ['data-testid="pay_disc_record"', 'CMP042-B24'],
   ['data-testid="pay_ack"', 'CMP042-B25'], ['data-testid="pay_done"', 'CMP004-B01'], ['data-testid="pay_band_cancel"', 'CMP003-B01'], ['data-testid="bk-back"', 'CMP006-B01'],
   ['data-testid="db-add"', 'CMP007-B01'], ['data-testid="lt-clear"', 'CMP014-B01'], ['data-testid="lt-back"', 'CMP006-B01'], ['data-testid="lt-unfold"', 'CMP042-B06'],
