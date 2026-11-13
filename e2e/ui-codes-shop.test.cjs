@@ -3,7 +3,7 @@
 /**
  * ui-codes-shop.test.cjs - the customer Shop page (SHP001) wears its identity codes (UX-137 slice 5, 2026-11-12).
  *
- * OWNS      the proof that shop.html tags its 65 controls with SHP001-<kind><nn> (B button, I input, S select, T textarea, C chip), that the letter is the
+ * OWNS      the proof that shop.html tags its 61 own controls (the four sheet closers SHP001-B11 B15 B17 B26 are the library close, WEB-ICONS-1) with SHP001-<kind><nn> (B button, I input, S select, T textarea, C chip), that the letter is the
  *           tag's own kind, that no code is on two tags, that named controls wear THEIR code (a swap fails), that no control tag is left without a code
  *           (a new raw control fails), that the three privacy buttons drawn by the shared builder in shop-privacy.js take their codes from their call
  *           sites, and that the stamp only added attributes (strip them: no code is left).
@@ -30,13 +30,13 @@ const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) fa
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8').split('\r\n').join('\n');
 
 let src = read('shop.html');
-const first = 'SHP001-I04', second = 'SHP001-B05';
+const first = 'SHP001-I07', second = 'SHP001-B05';
 if (mutate === 'remove') src = src.split(' data-cbsid="' + first + '"').join('');
 if (mutate === 'swap') src = src.split(first).join('SWAPX').split(second).join(first).split('SWAPX').join(second);
 const tags = [...src.matchAll(/<(button|input|select|textarea|a|div|span)\b([^>]*?data-cbsid="([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2})"[^>]*)>/g)];
 const codes = tags.map((t) => t[3]);
 console.log('shop.html');
-check(codes.length === 41, 'shop.html has 41 tagged elements (the other 24 inputs are ui.field mounts, CMP055), found ' + codes.length);
+check(codes.length === 37, 'shop.html has 37 tagged elements (four closers moved to ui.action close, the other 24 inputs are ui.field mounts, CMP055), found ' + codes.length);
 check(new Set(codes).size === codes.length, 'no code is on two tags');
 check(codes.every((c) => c.indexOf(SCREEN + '-') === 0), 'every code is under ' + SCREEN);
 const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7));

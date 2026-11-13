@@ -21,6 +21,7 @@
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
+const { recheckStub } = require('./lib/recheck-stub.cjs');
 const ROOT = path.join(__dirname, '..', 'public');
 const OUT = path.join(__dirname, '..', 'png', 'selfheal');
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
@@ -31,7 +32,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(30) + '· ' + d 
 (async () => {
   /* ── the shop's own server, which we can take away and give back ──────────────────────────────────── */
   let reachable = true, posted = 0;
-  const srv = http.createServer((q, r) => {
+  const srv = http.createServer(async (q, r) => {
     const url = q.url.split('?')[0];
     /**
      * ⚠️ THE SERVER HALF OF THE OUTAGE. netSet('off') makes the counter believe the line is down; this makes
@@ -40,7 +41,10 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(30) + '· ' + d 
     if (url.startsWith('/api/')) {
       if (!reachable) { r.destroy(); return; }
       if (url === '/api/chits/send' && q.method === 'POST') posted++;   /* the real drain endpoint */
+      let raw = ''; for await (const c of q) raw += c;
       r.writeHead(200, { 'content-type': 'application/json' });
+      /* the price door answers honestly (nothing moved): a bare {ok:true} reads as unreachable and the bills wait, by design (CTR-243, decision C) */
+      if (url === '/api/till/recheck') return r.end(JSON.stringify(recheckStub(raw, { i1: 70, i2: 25 })));
       return r.end(JSON.stringify({ ok: true }));
     }
     const rel = decodeURIComponent(url).replace(/^\/+/, '') || 'index.html';

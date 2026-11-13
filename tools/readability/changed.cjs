@@ -77,6 +77,18 @@ function touched(root, baseSha) {
   return { files, why: null };
 }
 
+/** the paths a rename (git -M, content similarity) delivered since the base: an added file in this set is an OLD file that moved, never a new one */
+function renamedTo(root, baseSha) {
+  const listed = runGit(root, ['diff', '-M', '--name-status', '--diff-filter=R', '--no-color', '--no-ext-diff', baseSha, '--']);
+  const paths = new Set();
+  if (!listed.ok) return paths;
+  for (const line of listed.out.split('\n')) {
+    const cells = line.split('	');
+    if (cells[0] && cells[0][0] === 'R' && cells[2]) paths.add(cells[2]);
+  }
+  return paths;
+}
+
 /** the file as it was at the base commit, or null when it did not exist there */
 function baseText(root, baseSha, file) {
   const shown = runGit(root, ['show', baseSha + ':' + file]);
@@ -87,4 +99,4 @@ function shortSha(commitSha) {
   return String(commitSha || '').slice(0, 7);
 }
 
-module.exports = { mergeBase, touched, baseText, parseDiff, shortSha };
+module.exports = { mergeBase, touched, renamedTo, baseText, parseDiff, shortSha };

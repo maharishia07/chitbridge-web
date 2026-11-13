@@ -30,8 +30,8 @@ const run = (args, cwd) => spawnSync(process.execPath, args, { encoding: 'utf8',
 const git = (cwd, args) => { const r = spawnSync('git', ['-C', cwd].concat(args), { encoding: 'utf8' }); if (r.status !== 0) throw new Error('git ' + args.join(' ') + ': ' + r.stderr); return r.stdout.trim(); };
 
 /* ── the fixture texts ─────────────────────────────────────────────────────────────────────────────────────────── */
-const HEADER = (name) => `/* public/app/${name}.js — a fixture module.\n * OWNS the ${name} numbers. CALLED BY the test. FLOW read → paint. CARD qa/fixture-${name}\n */\n`;
-const NO_CARD_HEADER = '/* a fixture module. OWNS nothing much. CALLED BY the test. FLOW read → paint. */\n';
+const HEADER = (name) => `/* public/app/${name}.js — a fixture module.\n * OWNS      the ${name} numbers.\n * CALLED BY the test.\n * FLOW      read → paint.\n * CARD      qa/fixture-${name}\n */\n`;
+const NO_CARD_HEADER = '/* a fixture module.\n * OWNS      nothing much.\n * CALLED BY the test.\n * FLOW      read → paint.\n */\n';
 /** a function of exactly `lines` lines (header line + body + closing brace), complexity 1 */
 function longFunction(name, lines) {
   const body = []; for (let i = 0; i < lines - 2; i++) body.push('  total += ' + (i + 1) + ';');
@@ -343,6 +343,50 @@ for (const scenario of formRuns) fs.rmSync(scenario.dir, { recursive: true, forc
 const movedBody = exact.verdict.stdout.slice(exact.verdict.stdout.indexOf('## §6')).replace(/`<doc>`/g, 'n/a').replace('`<word>` → reused/widened `<name>` (or "nothing exists")', '`readability` → widened');
 ok(/- moved: 1 function/.test(movedBody) && checklist.problems(movedBody).length === 0, 'the §6 checklist with the moved line still passes pr-checklist');
 for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmSync(scenario.dir, { recursive: true, force: true });
+
+// ── 7 · the header-template grammar (tools/readability/headers.cjs, PM/HEADER-TEMPLATE.md): a full header passes, each missing field is named, a test needs CARD or UNIT
+const headerKit = require('../tools/readability/headers.cjs');
+const FULL = ['/* public/app/x.js — shows x.', '   OWNER     cb-ux-locale', '   ID        CMP001', '   OWNS      x', '   FLOW      read -> paint', '   CARD      07-x/x', '   RISK      plain', '*/', ''].join(String.fromCharCode(10));
+ok(headerKit.stateOf('component', headerKit.readFields(FULL, 'public/app/x.js')).state === 'full', 'header template: a header with every required field is full');
+ok(headerKit.stateOf('component', headerKit.readFields(FULL.replace(/ +RISK +plain\n/, ''), 'public/app/x.js')).lacks.join() === 'RISK', 'header template: a header without RISK is partial and names RISK');
+ok(headerKit.stateOf('module', headerKit.readFields('const a = 1;\n', 'lib/a.js')).state === 'none', 'header template: no comment at all is none');
+ok(headerKit.stateOf('test', headerKit.readFields(['// tests/a.test.cjs — a.', '// OWNER cb-qa', '// UNIT 08/Rewards'].join(String.fromCharCode(10)), 'tests/a.test.cjs')).state === 'full', 'header template: a test with OWNER and UNIT instead of CARD is full (test-evidence grammar kept)');
+const typedKind = headerKit.readFields(FULL.replace('   OWNER', '   KIND      module' + String.fromCharCode(10) + '   OWNER'), 'public/app/x.js');
+ok(headerKit.findings('component', typedKind).kindWrong === 1 && headerKit.findings('component', typedKind).derivedTyped === 1, 'header template: a typed KIND that disagrees with the path is a finding, and any typed KIND is a derived-field finding');
+ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === 'y' && headerKit.readFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: "OWNS:" is a field; prose "owns the thing" is not');
+ok(headerKit.readFields('/* lib/a.js — x\n   ID of the party\n*/', 'lib/a.js').fields.ID === undefined, 'header template: prose starting with ID is not an ID');
+
+const grammar = require('../tools/readability/header-grammar.cjs');
+ok(grammar.parseFields('/* lib/a.js — x\n   OWNS      y\n*/', 'lib/a.js').fields.OWNS === 'y', 'header grammar: parseFields reads a labelled OWNS field (unit test of header-grammar.cjs)');
+ok(grammar.parseFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header grammar: prose that merely says owns is not a field (unit test of header-grammar.cjs)');
+
+console.log('\n8 · the header template: a warning for a NEW file until the switch-over date, never a score change, never judges an old file');
+fs.writeFileSync(path.join(tmp, 'public/app/brand-new.js'), HEADER('brand-new') + 'module.exports = 1;' + String.fromCharCode(10));
+git(tmp, ['add', '-A']);
+const earlyRun = run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', '2026-10-16', '--json', out]);
+const earlyResult = JSON.parse(fs.readFileSync(out, 'utf8'));
+const templateWarns = earlyResult.findings.filter((finding) => finding.rule === 'header-template');
+const modifiedFiles = earlyResult.files.filter((file) => file.status === 'modified').map((file) => file.file);
+ok(templateWarns.length === 1 && templateWarns[0].level === 'warn' && templateWarns[0].text.includes('public/app/brand-new.js'), 'a new file without the template WARNS (before ' + headerKit.TEMPLATE_STRICT_FROM + '), and only the new file does');
+ok(modifiedFiles.length > 0 && !modifiedFiles.some((file) => templateWarns.some((finding) => finding.text.includes(file))), 'a touched OLD file gets no template finding at all');
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', headerKit.TEMPLATE_STRICT_FROM, '--json', out]);
+const afterSwitch = JSON.parse(fs.readFileSync(out, 'utf8'));
+ok(afterSwitch.findings.filter((finding) => finding.rule === 'header-template' && finding.level === 'fail').length === 1, 'from the switch-over date the new file without the template FAILS (and no old file is judged)');
+const legacyPath = path.join(tmp, 'public/app/legacy-words.js');
+fs.writeFileSync(legacyPath, '/* legacy-words.js — purpose: a fixture. Called by the test. Flow: read → paint.\n * CARD qa/legacy-words\n */\nmodule.exports = 1;\n');
+const legacyFacts = require('../tools/readability/measure.cjs').fileFacts({ abs: legacyPath, rel: 'public/app/legacy-words.js' });
+ok(require('../tools/readability/ratchet.cjs').headerComplete(legacyFacts.header) && !legacyFacts.header.template.fields.OWNS, 'the R4 words rule still scores a prose header as complete (score unchanged vs main) while the template reader says OWNS is missing');
+// a rename is not a new file: an old file moved by git mv keeps its old-file standing (HEADER-TEMPLATE: old files are never judged)
+const movedFrom = git(tmp, ['ls-files', 'public/app']).split(String.fromCharCode(10)).find((name) => /\.js$/.test(name) && !name.includes('brand-new') && !name.includes('legacy-words'));
+const movedTo = movedFrom.replace(/\.js$/, '-renamed.js');
+git(tmp, ['mv', movedFrom, movedTo]);
+git(tmp, ['add', '-A']);
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', headerKit.TEMPLATE_STRICT_FROM, '--json', out]);
+const afterMove = JSON.parse(fs.readFileSync(out, 'utf8'));
+const movedFacts = require('../tools/readability/measure.cjs').fileFacts({ abs: path.join(tmp, movedTo), rel: movedTo });
+ok(headerKit.missing(headerKit.kindOf('web', movedTo), movedFacts.header.template).length > 0, 'rename fixture: the moved old file really lacks the template (the proof is not vacuous)');
+ok(!afterMove.findings.some((finding) => finding.rule === 'header-template' && finding.text.includes(movedTo)), 'a renamed OLD file (git mv) gets no template finding, even from the switch-over date');
+ok(afterMove.findings.some((finding) => finding.rule === 'header-template' && finding.level === 'fail' && finding.text.includes('brand-new.js')), 'a truly new file still fails from the switch-over date in the same run');
 
 /* ── MNT-51: an html page's header is read from the page itself, not from the first inline script ─────────────── */
 {

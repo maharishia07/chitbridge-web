@@ -39,6 +39,9 @@ for (const rel of files) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
+    /* a line that is itself comment text (a header comment ending in the word "return") is prose, not a statement */
+    if (/^\s*(\*|\/\/)/.test(line)) continue;
+
     /**
      * ⚠️ `return` MUST BE THE WHOLE STATEMENT to be suspicious. `return x;`, `return {…}` and `return (` are
      * all fine — the value is on the same line. Only a `return` with nothing of substance after it is a

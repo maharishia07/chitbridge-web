@@ -1053,7 +1053,8 @@
     return root.CBAction.run(
       btn,
       function () {
-        return call('wlDeliver', { params: { id: chit.chit_id }, body: { rows: [{ line_id: line.line_id, quantity: amount, unit: line.unit || undefined }] } });
+        ensureEP();
+        return root.postDeliverLines('wlDeliver', chit.chit_id, [{ line_id: line.line_id, quantity: amount, unit: line.unit || undefined }]);
       },
       {
         key: 'tk-deliver-' + line.line_id,
