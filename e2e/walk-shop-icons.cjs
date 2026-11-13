@@ -25,7 +25,7 @@ const view = { available: true, visibility: 'public', categories: [],
   schema: null, fields: [], offers: [],
   items: [{ item_id: 'i1', item_data: { name: 'Basmati rice 5 kg', unit: 'bag', price: 640 } }],
   finishes: [{ title: 'Paints', source: 'SRC1', items: [item] }] };
-const SHEETS = [['U01', 'support', 'shop-sheet-x-support'], ['U02', 'basket', 'shop-sheet-x-order'], ['U03', 'order', 'shop-sheet-x-order-item'], ['U04', 'wall', 'shop-sheet-x-wall']];
+const SHEETS = [['SHP001-U01', 'support', 'shop-sheet-x-support'], ['SHP001-U02', 'basket', 'shop-sheet-x-order'], ['SHP001-U03', 'order', 'shop-sheet-x-order-item'], ['SHP001-U04', 'wall', 'shop-sheet-x-wall']];
 
 /** inside the page: the closer's facts (library attributes, box, ink against the painted sheet) */
 function readCloser(testid) {
@@ -76,7 +76,7 @@ W.run('shop-icons', async (w) => {
   }
   const all = Object.entries(facts);
   await w.step('I1', 'each closer is the library close: CMP005-B01, data-cbname close, its own SHP001 mount, a button with no inline onclick', async () => {
-    const bad = all.filter(([k, f]) => !f || f.sid !== 'CMP005-B01' || f.name !== 'close' || f.tag !== 'BUTTON' || f.onclick || (f.mountWant && f.mount !== 'SHP001-' + f.mountWant));
+    const bad = all.filter(([k, f]) => !f || f.sid !== 'CMP005-B01' || f.name !== 'close' || f.tag !== 'BUTTON' || f.onclick || (f.mountWant && f.mount !== f.mountWant));
     const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop.html'), 'utf8');
     const left = ['B11', 'B15', 'B17', 'B26'].filter((b) => src.includes('data-cbsid="SHP001-' + b + '"'));
     return { ok: !bad.length && !left.length, saw: all.length + ' reads · bad ' + bad.map((b) => b[0]).join(',') + ' · hand-written left ' + left.join(',') };
