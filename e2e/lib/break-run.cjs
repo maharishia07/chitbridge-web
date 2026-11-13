@@ -22,9 +22,9 @@ const norm = (l) => l.replace(/\s+—\s+not:.*$/, '').trim();
 function child(script, opts) {
   const re = opts.re || /^\s+XX/, base = opts.base ? new Set(opts.base) : null, t0 = Date.now(), seen = [];
   let summed = false;   /* the check printed its "N passed" summary: it ran to the end */
-  const p = cp.spawn(process.execPath, [script], { cwd: opts.cwd || ROOT, env: opts.env || process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const p = cp.spawn(process.execPath, [script], { cwd: opts.cwd || ROOT, env: opts.env || process.env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' });
   let buf = '', err = '', early = false, done = false;
-  const killTree = () => { try { if (process.platform === 'win32') cp.spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' }); else p.kill('SIGKILL'); } catch (_) {} };
+  const killTree = () => { try { if (process.platform === 'win32') cp.spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' }); else process.kill(-p.pid, 'SIGKILL'); } catch (_) {} };
   const finish = (status) => { if (done) return; done = true; clearTimeout(timer); console.log('BREAKRUN ' + JSON.stringify({ status, summed, xx: seen, early, secs: Math.round((Date.now() - t0) / 1000), stderr: err.split('\n').filter(Boolean).slice(0, 3).join(' | ').slice(0, 300) })); process.exit(0); };
   const timer = setTimeout(() => { killTree(); finish(-1); }, opts.timeout || 600000);
   p.stdout.on('data', (d) => {
@@ -91,7 +91,7 @@ function site(W) {
     if (COPY.has(n)) {
       fs.cpSync(from, to, { recursive: true, filter: (p) => !/e2e[\\/](shots|\.auth)([\\/]|$)/.test(p) });
       if (n === 'e2e') fs.mkdirSync(path.join(to, 'shots'), { recursive: true });
-    } else if (fs.statSync(from).isDirectory()) cp.spawnSync('cmd', ['/c', 'mklink', '/J', to, from], { stdio: 'ignore' });
+    } else if (fs.statSync(from).isDirectory()) { if (process.platform === 'win32') cp.spawnSync('cmd', ['/c', 'mklink', '/J', to, from], { stdio: 'ignore' }); else fs.symlinkSync(from, to, 'dir'); }
     else fs.copyFileSync(from, to);
   }
   return { dir, dispose: () => disposeDir(dir) };
