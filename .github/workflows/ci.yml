@@ -196,6 +196,7 @@ jobs:
           node e2e/ui-codes-network-design.test.cjs
           node e2e/ui-codes-testing.test.cjs
           node e2e/ui-codes-cart-design.test.cjs
+          node e2e/ui-codes-cart.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs
