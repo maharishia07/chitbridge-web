@@ -41,7 +41,7 @@
         (c.shop.logo ? '<img src="' + esc(c.shop.logo) + '" alt="" width="36" height="36">' : esc(c.shop.name.charAt(0).toUpperCase())) +
         '</span><h1 class="sc-name">' +
         esc(c.shop.name) +
-        '</h1><button data-cbsid="SCR040-B01" type="button" class="sc-ic" data-sc="share" aria-label="Share" title="Share">⤴ Share</button></header>'
+        '</h1><button data-cbsid="SCR062-B01" type="button" class="sc-ic" data-sc="share" aria-label="Share" title="Share">⤴ Share</button></header>'
       );
     },
     facts: function (c) {
@@ -60,12 +60,12 @@
     },
     find: function (c) {
       return (
-        '<div class="sc-find"><input data-cbsid="SCR040-I01" type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' +
+        '<div class="sc-find"><input data-cbsid="SCR062-I01" type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' +
         (c.categories.length
           ? '<div class="sc-chips">' +
             c.categories
               .map(function (item) {
-                return '<button data-cbsid="SCR040-B02" type="button" class="sc-chip" data-sc-cat="' + esc(item.id) + '">' + esc(item.name) + '</button>';
+                return '<button data-cbsid="SCR062-B02" type="button" class="sc-chip" data-sc-cat="' + esc(item.id) + '">' + esc(item.name) + '</button>';
               })
               .join('') +
             '</div>'
@@ -143,7 +143,7 @@
       return c.owner
         ? '<aside class="sc-found" data-sc="found"><code>' +
             esc(c.shop.url || '') +
-            '</code><button data-cbsid="SCR040-B03" type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>' +
+            '</code><button data-cbsid="SCR062-B03" type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>' +
             '<div class="sc-guide">Google › your Business Profile › Website — paste this link</div><div class="sc-guide">Facebook page › About › Website — paste this link</div></aside>'
         : '';
     }
@@ -203,7 +203,7 @@
   }
   function act(i, t) {
     var f = FACE[t.face];
-    return '<button data-cbsid="SCR040-B04" type="button" class="sc-add" data-sc-add="' + esc(i.id) + '" aria-label="' + esc(f.title) + '">' + f.item + '</button>';
+    return '<button data-cbsid="SCR062-B04" type="button" class="sc-add" data-sc-add="' + esc(i.id) + '" aria-label="' + esc(f.title) + '">' + f.item + '</button>';
   }
   function photo(i, cls) {
     return i.photo

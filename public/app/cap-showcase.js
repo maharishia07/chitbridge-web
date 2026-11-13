@@ -37,7 +37,7 @@
         var tp = SC.TEMPLATES[item],
           on = item === cur;
         return (
-          '<button data-cbsid="SCR039-B01" type="button" class="' +
+          '<button data-cbsid="SCR061-B01" type="button" class="' +
           _e(on ? o.clsOn || 'btn primary' : o.cls || 'btn') +
           '" data-testid="sc-pick" data-name="' +
           _e(item) +

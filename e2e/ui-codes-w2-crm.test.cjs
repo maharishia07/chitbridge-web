@@ -3,7 +3,7 @@
 /**
  * ui-codes-w2-crm.test.cjs - the one-pass CRM lane: the three SHARED scripts wear their identity codes, and the lane's headers say who calls them (UX-137, 13 Nov).
  *
- * OWNS      the proof that app/cap-quotes.js (SCR038), app/cap-showcase.js (SCR039) and app/showcase-templates.js (SCR040) carry their data-cbsid codes INSIDE the
+ * OWNS      the proof that app/cap-quotes.js (SCR060), app/cap-showcase.js (SCR061) and app/showcase-templates.js (SCR062) carry their data-cbsid codes INSIDE the
  *           tag of the control they name (a swap of two codes, or a removed code, fails it), that the two library controls of cap-quotes wear their component
  *           code (Try again CMP009, Cancel CMP003), that no code sits on two element definitions, and that every file of the lane keeps ONE module header
  *           with OWNS, CALLED BY, FLOW and exactly one CARD line (cap-intake.js and cap-messages.js are SUPPORT, app.html only, and trip the readability test-minimums on old debt: left as they are) (cap-showcase no longer names cart.js: nothing there calls CBShowcasePick).
@@ -20,22 +20,22 @@ const PUB = path.join(__dirname, '..', 'public');
 /** [file, code, the tag it must sit in, a marker that tag carries] */
 const CODES = [
   ['app/cap-quotes.js', 'CMP009', 'button', 'data-testid="quotes-retry"'],
-  ['app/cap-quotes.js', 'SCR038-B01', 'button', 'data-testid="quote-accept-'],
-  ['app/cap-quotes.js', 'SCR038-B02', 'button', 'data-testid="quote-counter-'],
-  ['app/cap-quotes.js', 'SCR038-B03', 'button', 'data-testid="quote-reject-'],
-  ['app/cap-quotes.js', 'SCR038-I01', 'input', 'data-f="quantity"'],
-  ['app/cap-quotes.js', 'SCR038-I02', 'input', 'data-testid="quote-price-'],
-  ['app/cap-quotes.js', 'SCR038-T01', 'textarea', 'data-testid="quote-note"'],
-  ['app/cap-quotes.js', 'SCR038-B04', 'button', 'data-testid="quote-send"'],
+  ['app/cap-quotes.js', 'SCR060-B01', 'button', 'data-testid="quote-accept-'],
+  ['app/cap-quotes.js', 'SCR060-B02', 'button', 'data-testid="quote-counter-'],
+  ['app/cap-quotes.js', 'SCR060-B03', 'button', 'data-testid="quote-reject-'],
+  ['app/cap-quotes.js', 'SCR060-I01', 'input', 'data-f="quantity"'],
+  ['app/cap-quotes.js', 'SCR060-I02', 'input', 'data-testid="quote-price-'],
+  ['app/cap-quotes.js', 'SCR060-T01', 'textarea', 'data-testid="quote-note"'],
+  ['app/cap-quotes.js', 'SCR060-B04', 'button', 'data-testid="quote-send"'],
   ['app/cap-quotes.js', 'CMP003', 'button', 'data-testid="quote-cancel"'],
-  ['app/cap-quotes.js', 'SCR038-B05', 'button', 'data-testid="quote-price-new"'],
-  ['app/cap-quotes.js', 'SCR038-B06', 'button', 'data-testid="quote-ask-again"'],
-  ['app/cap-showcase.js', 'SCR039-B01', 'button', 'type="button"'],
-  ['app/showcase-templates.js', 'SCR040-B01', 'button', 'data-sc="share"'],
-  ['app/showcase-templates.js', 'SCR040-I01', 'input', 'data-sc="search"'],
-  ['app/showcase-templates.js', 'SCR040-B02', 'button', 'data-sc-cat='],
-  ['app/showcase-templates.js', 'SCR040-B03', 'button', 'data-sc="copy"'],
-  ['app/showcase-templates.js', 'SCR040-B04', 'button', 'data-sc-add=']
+  ['app/cap-quotes.js', 'SCR060-B05', 'button', 'data-testid="quote-price-new"'],
+  ['app/cap-quotes.js', 'SCR060-B06', 'button', 'data-testid="quote-ask-again"'],
+  ['app/cap-showcase.js', 'SCR061-B01', 'button', 'type="button"'],
+  ['app/showcase-templates.js', 'SCR062-B01', 'button', 'data-sc="share"'],
+  ['app/showcase-templates.js', 'SCR062-I01', 'input', 'data-sc="search"'],
+  ['app/showcase-templates.js', 'SCR062-B02', 'button', 'data-sc-cat='],
+  ['app/showcase-templates.js', 'SCR062-B03', 'button', 'data-sc="copy"'],
+  ['app/showcase-templates.js', 'SCR062-B04', 'button', 'data-sc-add=']
 ];
 /** the lane's files: each must keep one header with these four labels, and say what it must (or must not) name */
 const HEADERS = [
@@ -53,8 +53,8 @@ const HEADERS = [
 
 const read = (f) => {
   let t = fs.readFileSync(path.join(PUB, f), 'utf8').split('\r\n').join('\n');
-  if (mutate === 'remove') t = t.split('data-cbsid="SCR038-B01"').join('');
-  if (mutate === 'swap') t = t.split('SCR038-B01').join('SWAPX').split('SCR038-B02').join('SCR038-B01').split('SWAPX').join('SCR038-B02');
+  if (mutate === 'remove') t = t.split('data-cbsid="SCR060-B01"').join('');
+  if (mutate === 'swap') t = t.split('SCR060-B01').join('SWAPX').split('SCR060-B02').join('SCR060-B01').split('SWAPX').join('SCR060-B02');
   return t;
 };
 let failures = 0;
