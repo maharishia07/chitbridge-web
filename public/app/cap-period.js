@@ -90,7 +90,7 @@ function peBad(id, e, fallback) {
     (w.calm ? '⏳ ' : '⚠ ') +
     esc(w.text) +
     '</span>' +
-    (w.fix ? '<button type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
+    (w.fix ? '<button data-cbsid="BKS016-B01" type="button" class="pe-fix" data-testid="pe-fix" onclick="show(\'' + w.fix.tab + '\')">' + esc(w.fix.label) + '</button>' : '') +
     '</div>';
 }
 function peOk(id, html) {
@@ -103,7 +103,7 @@ function peNote(tid, text) {
 const peNoOwner = (what) => peNote('pe-readonly', what);
 const peField = (id, label, inner) => '<label class="pe-f"><span>' + esc(tx(label)) + '</span>' + inner + '</label>';
 const peInput = (id, val, ph, type, extra) =>
-  '<input class="inp" id="' +
+  '<input data-cbsid="BKS016-I01" class="inp" id="' +
   id +
   '" data-testid="' +
   id +
@@ -117,7 +117,7 @@ const peInput = (id, val, ph, type, extra) =>
   '>';
 const peAmt = (id, val, ph) => bkMoneyInput({ id: id, text: val || '', ph: ph == null ? undefined : ph }); /* the one money input (cap-books bkMoneyInput) */
 const peSel = (id, opts, cur, extra) =>
-  '<select class="inp" id="' +
+  '<select data-cbsid="BKS016-S01" class="inp" id="' +
   id +
   '" data-testid="' +
   id +
@@ -135,7 +135,7 @@ const peMODES = [
   ['card', 'Card']
 ];
 const peBtn = (tid, label, fn, cls) =>
-  '<button type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
+  '<button data-cbsid="BKS016-B02" type="button" class="' + (cls || 'supact-pri') + '" data-testid="' + tid + '" onclick="' + fn + '">' + esc(tx(label)) + '</button>';
 /** a minor amount as the text of an amount field (the field is parsed back with bkToMinor — the same digits) */
 function peText(minor) {
   return bkMinorText(minor);
@@ -440,7 +440,7 @@ async function peDepForm() {
         ' onchange="peDepLabel()"'
       )
     ) +
-    '</div><div class="supacts"><button type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
+    '</div><div class="supacts"><button data-cbsid="BKS016-B03" type="button" class="supact-pri" id="pdp_run" data-testid="pdp-run" onclick="peDepRun(this)"></button>' +
     peBtn('pdp-cancel', 'Cancel', "peEl('pa_form').innerHTML=''", '') +
     '</div><div id="pdp_out" class="pe-slot"></div></div>';
   peDepLabel();
@@ -489,6 +489,8 @@ async function peDepRun(btn) {
 /* ═══ 3 · ACCRUALS & RECURRING ═════════════════════════════════════════════════════════════════════════════════════════
    Repeating entries: CRUD /recurring, post or skip a due one. Accruals: POST /accruals (comes back on the first day of the next month), POST /accruals/:ref/reverse.
    There is no list of accruals on the API yet: the page shows the ones that are DUE to turn back (the To-do feed's own list) and the ones made in this visit. */
+/** the sentence a reader who is not the owner sees where the Close card would be (ACC-229): one wording, two places */
+const PE_OWNER_ONLY_CLOSES = 'Only the owner closes and pays GST';
 const PE_FREQ = [
   ['monthly', 'Every month'],
   ['quarterly', 'Every 3 months'],
@@ -513,7 +515,7 @@ async function peAccrualsView(body) {
     ]
       .map(
         (item) =>
-          '<button type="button" class="pe-tab" data-testid="pr-tab-' +
+          '<button data-cbsid="BKS016-B04" type="button" class="pe-tab" data-testid="pr-tab-' +
           item[0] +
           '" aria-pressed="' +
           (PE.tab === item[0]) +
@@ -916,10 +918,8 @@ async function peAccrRev(a) {
    POST /gst/close { fy, period } → { utilised: [{ from, against, amount_minor }], payable_minor{cgst_minor…}, rcm_minor?, cash_minor?, carried_minor, pay_total_minor, entry_no }
    POST /gst/pay { fy, period, amounts, rcm, bank, challan_no } — a slip of the finger is caught by the server against what is owed. */
 async function peGstView(body) {
-  if (!peOwner()) {
-    body.innerHTML = peNoOwner('Only the owner closes and pays GST');
-    return;
-  }
+  /* ACC-229: the server decides who READS the return (the owner or the shop's auditor; any other login is refused in words, shown below). Closing and paying stay the owner's:
+     a reader who is not the owner sees the return and the sentence, never the Close card or the close form. */
   /* BAS1: the shop's OWN return first — an AU shop sees its BAS, an AE shop its VAT return (the pack's words). India (422 RETURN_FROM_RAIL), or a server
      without the route yet, keeps the GST close & pay below as the whole page. */
   let ret = null;
@@ -934,6 +934,10 @@ async function peGstView(body) {
     peReturnWord(ret);
     body.innerHTML = '<div id="pr_host" data-testid="pr-host"></div>';
     peReturnPaint(ret);
+    return;
+  }
+  if (!peOwner()) {
+    body.innerHTML = (PE_RET.why ? '<div class="pe-note" data-testid="pg-rail-why">' + esc(tx(PE_RET.why)) + '</div>' : '') + peNoOwner(PE_OWNER_ONLY_CLOSES);
     return;
   }
   let L;
@@ -1032,6 +1036,27 @@ function peGstPayableHTML(answer) {
     '</span></div>';
   return html;
 }
+/** ACC-336: the amounts a pay form may ask for, per head — still_to_pay_minor (after the payments named for the period) when the server sends it, else the set-off's payable_minor (an older server) */
+function peGstStillMinor(answer) {
+  return answer.still_to_pay_minor || answer.payable_minor || {};
+}
+/** ACC-336: the total still to pay: still_to_pay_total_minor when sent (reverse charge included), else pay_total_minor */
+function peGstStillTotal(answer) {
+  return typeof answer.still_to_pay_total_minor === 'number' ? answer.still_to_pay_total_minor : answer.pay_total_minor || 0;
+}
+/** ACC-336: the reverse-charge amount to prefill per head. The server sends no per-head still for reverse charge, only still_to_pay_total_minor, so what is left of that total after the forward heads is handed out head by head, never more than the head owes; an older server (no total) leaves the owed figure as it was */
+function peGstRcmStill(answer) {
+  const owed = answer.rcm_minor || {};
+  if (typeof answer.still_to_pay_total_minor !== 'number') return owed;
+  const forward = peGstStillMinor(answer);
+  let left = answer.still_to_pay_total_minor - peGstHeadsOf(answer).reduce((sum, item) => sum + (forward[item + '_minor'] || 0), 0);
+  const still = {};
+  Object.keys(owed).forEach((item) => {
+    still[item] = Math.max(0, Math.min(owed[item] || 0, left));
+    left -= still[item];
+  });
+  return still;
+}
 /** the close's answer painted: credit used · reverse charge where owed · what is payable per head · what is carried (the pack's word) */
 function peGstSetOff(answer) {
   return '<div class="pe-card" data-testid="pg-setoff">' + peGstUsedHTML(answer) + peGstPayableHTML(answer) + '</div>';
@@ -1053,7 +1078,7 @@ function peGstPaintClose(answer, resId, outId) {
       esc(txf(answer.form ? 'Period closed · {no}' : 'Month closed · {no}', { no: answer.entry_no || '' })) +
       '</div>' +
       html;
-  if (answer.pay_total_minor > 0) html += peGstPayForm(answer);
+  if (peGstStillTotal(answer) > 0) html += peGstPayForm(answer);
   peEl(resId).innerHTML = html;
   peEl(outId).innerHTML = '';
 }
@@ -1098,16 +1123,18 @@ async function peGstCloseReturn(btn) {
 }
 /** the payment form: paid from · the pack's reference (its label and hint come from the server — never "challan" typed for another country) · an amount per head the close left payable */
 function peGstPayForm(r) {
-  const heads = peGstHeadsOf(r).filter((item) => (r.payable_minor || {})[item + '_minor']),
-    list = peGstRcmHeadsOf(r).filter((item) => r.rcm_minor[item]);
+  const toPay = peGstStillMinor(r), /* ACC-336: what is STILL to pay after the payments named for the period; an older server sends only payable_minor */
+    heads = peGstHeadsOf(r).filter((item) => toPay[item + '_minor']),
+    rcmStill = peGstRcmStill(r), /* ACC-336: reverse charge still owed after the payments named for the period */
+    list = peGstRcmHeadsOf(r).filter((item) => rcmStill[item]);
   const label = r.ref_label || 'Challan number',
     hint = r.ref_hint || tx('The CPIN on the challan'); /* no ref words: an older server, which answered India alone */
   return (
     '<div class="pe-card" data-testid="pg-pay-form"><div class="pe-form">' +
     peField('pgp_bank', 'Paid from', peSel('pgp_bank', peMODES, 'bank')) +
     peField('pgp_ch', label, peInput('pgp_ch', '', hint)) +
-    heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(r.payable_minor[item + '_minor'])))).join('') +
-    list.map((item) => peField('pgr_' + item, item.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + item, peText(r.rcm_minor[item])))).join('') +
+    heads.map((item) => peField('pgp_' + item, item.toUpperCase(), peAmt('pgp_' + item, peText(toPay[item + '_minor'])))).join('') +
+    list.map((item) => peField('pgr_' + item, item.toUpperCase() + ' · ' + tx('reverse charge'), peAmt('pgr_' + item, peText(rcmStill[item])))).join('') +
     '</div><div class="supacts">' +
     peBtn('pg-pay', 'Pay', 'peGstPay(this)') +
     '</div><div id="pgp_out" class="pe-slot"></div></div>'
@@ -1326,8 +1353,12 @@ function peReturnPaint(r) {
       '</div>' +
       r.notes.map((item, index) => '<div class="pe-note" data-testid="pr-note-' + index + '">' + esc(item) + '</div>').join('') +
       '</div>';
-  host.innerHTML = h + peReturnCloseCard(r);
+  host.innerHTML = h + peReturnCloseSection(r);
   peReturnList(r);
+}
+/** ACC-229: the foot of the return — the owner gets the Close card; a reader who is not the owner (the shop's auditor) gets the sentence and no button */
+function peReturnCloseSection(r) {
+  return peOwner() ? peReturnCloseCard(r) : peNoOwner(PE_OWNER_ONLY_CLOSES);
 }
 /** W2-BOOKS: close and pay THIS period from the return (the same close & pay India has, per return period) — the server decides: a period still running (`ended` false) is greyed with the day it ends */
 function peReturnCloseCard(r) {
@@ -1343,7 +1374,7 @@ function peReturnCloseCard(r) {
     '</div>' +
     '<div class="supacts">' +
     (greyWhy
-      ? '<button type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
+      ? '<button data-cbsid="BKS016-B05" type="button" class="supact-pri" data-testid="pr-close" disabled title="' +
         esc(greyWhy) +
         '">' +
         esc(txf('Close {period}', { period: period.label })) +
@@ -1409,7 +1440,7 @@ function peReturnList(r) {
       (b.accounts || [])
         .map(
           (item) =>
-            '<button type="button" class="optchip" data-testid="pr-open-' +
+            '<button data-cbsid="BKS016-B06" type="button" class="optchip" data-testid="pr-open-' +
             esc(b.code) +
             '-' +
             esc(item.code) +
@@ -1564,7 +1595,7 @@ async function peYearStatus() {
       esc(notLocked ? txf('{n} of 12 months are not locked yet', { n: notLocked }) : tx('Every month is locked')) +
       '</span>' +
       (notLocked
-        ? '<button type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>'
+        ? '<button data-cbsid="BKS016-B07" type="button" class="pe-fix" data-testid="py-fix-months" onclick="show(\'lock\')">' + esc(tx('Open Month lock')) + '</button>'
         : '') +
       '</div>';
     h += refs
@@ -1576,7 +1607,7 @@ async function peYearStatus() {
           '"><span>✗</span><span>' +
           esc(x.why) +
           '</span>' +
-          (f ? '<button type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
+          (f ? '<button data-cbsid="BKS016-B08" type="button" class="pe-fix" data-testid="py-fix-' + index + '" onclick="show(\'' + f.tab + '\')">' + esc(f.label) + '</button>' : '') +
           '</div>'
         );
       })
@@ -1587,7 +1618,7 @@ async function peYearStatus() {
   if (!st.closed && peOwner())
     h +=
       '<div class="supacts">' +
-      '<button type="button" class="supact-pri" data-testid="py-close"' +
+      '<button data-cbsid="BKS016-B09" type="button" class="supact-pri" data-testid="py-close"' +
       (st.can_close ? '' : ' disabled') +
       ' onclick="peYearClose(this)">' +
       esc(tx('Close the year')) +

@@ -245,7 +245,7 @@ function crmEntryState(e) {
   if (e.state && e.state.word)
     h += '<span class="tag ' + esc(e.state.tone || '') + '" data-testid="crm-state-' + esc(e.id) + '">' + esc(e.state.word) + '</span>';
   if (e.fix && crmEdit())
-    h += ' <button type="button" class="crm-mini" data-crm="fixaddr" data-testid="crm-fix-' + esc(e.id) + '">' + esc(tx(e.fix)) + '</button>';
+    h += ' <button data-cbsid="CRM006-B01" type="button" class="crm-mini" data-crm="fixaddr" data-testid="crm-fix-' + esc(e.id) + '">' + esc(tx(e.fix)) + '</button>';
   return h || '<span class="sub">—</span>';
 }
 function crmTlCols() {
@@ -397,7 +397,7 @@ async function crmRecordOpen(route) {
       html =
         '<div class="empty" data-testid="crm-rec-error"><div class="t">' +
         esc(tx("Couldn't open this party.")) +
-        '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
+        '</div><button data-cbsid="CMP009" type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
         esc(tx('Try again')) +
         '</button></div>';
     if (w) w.outerHTML = html;
@@ -535,7 +535,7 @@ function crmNextHTML(p, rec) {
     key = esc(crmKey(p));
   var btn = function (a, label, pri, extra, tid) {
     return ed
-      ? '<button type="button" class="act sm' +
+      ? '<button data-cbsid="CRM006-B02" type="button" class="act sm' +
           (pri ? '' : ' ghost') +
           '" data-crm="' +
           a +
@@ -674,7 +674,7 @@ function crmViewerActionsHTML(p, rec) {
     list = [];
   var off = function (k, tid, label, cls) {
     return (
-      '<button type="button" class="act ghost' +
+      '<button data-cbsid="CRM006-B03" type="button" class="act ghost' +
       (cls ? ' ' + cls : '') +
       '" disabled aria-disabled="true" title="' +
       esc(why) +
@@ -718,7 +718,7 @@ function crmRemoveItemHTML(party, icon) {
   var mayRemove = crmMayRemove(),
     removeWhy = !mayRemove.ok ? mayRemove.why : CRM.ledger && !!party.balance_minor ? tx('dues open') : '';
   return (
-    '<button type="button" class="danger" data-crm="rremove" data-testid="crm-more-remove"' +
+    '<button data-cbsid="CRM006-B04" type="button" class="danger" data-crm="rremove" data-testid="crm-more-remove"' +
     (removeWhy ? ' disabled aria-disabled="true" title="' + esc(removeWhy) + '"' : '') +
     '>' +
     icon('warn') +
@@ -762,9 +762,9 @@ function crmActionsHTML(p, rec) {
     );
   };
   if (p.kind === 'walk-in')
-    primary = '<button type="button" class="act" data-crm="walkin" data-testid="crm-act-walkin">' + icon('plus') + esc(tx('Add to my parties')) + '</button>';
+    primary = '<button data-cbsid="CRM006-B05" type="button" class="act" data-crm="walkin" data-testid="crm-act-walkin">' + icon('plus') + esc(tx('Add to my parties')) + '</button>';
   else if (p.on_chitbridge) {
-    primary = '<button type="button" class="act" data-crm="message" data-testid="crm-act-message">' + icon('msg') + esc(tx('Message')) + '</button>';
+    primary = '<button data-cbsid="CRM006-B06" type="button" class="act" data-crm="message" data-testid="crm-act-message">' + icon('msg') + esc(tx('Message')) + '</button>';
     if (!mb) inline.push(mailBtn);
     if (phone) inline.push(callBtn(false));
   } else if (phone) {
@@ -773,14 +773,14 @@ function crmActionsHTML(p, rec) {
   } else if (!mb) primary = mailBtn.replace('ghost wide-only', '');
   else
     primary =
-      '<button type="button" class="act" data-crm="redit" data-testid="crm-act-addcontact">' + icon('plus') + esc(tx('Add phone or e-mail')) + '</button>';
+      '<button data-cbsid="CRM006-B07" type="button" class="act" data-crm="redit" data-testid="crm-act-addcontact">' + icon('plus') + esc(tx('Add phone or e-mail')) + '</button>';
   /* the list card's actions, at the top: Pay / Receive (greyed WITH its sentence) and Message when they are not on ChitBridge */
   if (p.kind !== 'walk-in') {
     var wpay = crmWhyNot(p, 'pay'),
       b0 = Number(p.balance_minor || 0),
       plab = b0 > 0 ? 'Receive' : b0 < 0 ? 'Pay' : 'Pay / Receive';
     inline.push(
-      '<button type="button" class="act' +
+      '<button data-cbsid="CRM006-B08" type="button" class="act' +
         (wpay ? ' ghost' : '') +
         '" data-crm="rpay" data-testid="crm-act-pay"' +
         (wpay ? ' disabled title="' + esc(wpay) + '"' : '') +
@@ -792,7 +792,7 @@ function crmActionsHTML(p, rec) {
     );
     if (!p.on_chitbridge)
       inline.push(
-        '<button type="button" class="act ghost wide-only" disabled data-testid="crm-act-message-off" title="' +
+        '<button data-cbsid="CRM006-B09" type="button" class="act ghost wide-only" disabled data-testid="crm-act-message-off" title="' +
           esc(crmWhyNot(p, 'message')) +
           '">' +
           icon('msg') +
@@ -805,12 +805,12 @@ function crmActionsHTML(p, rec) {
   var more = [];
   if (p.kind !== 'walk-in')
     more.push(
-      '<button type="button" class="narrow-only" data-crm="rfu" data-testid="crm-more-fu">' + icon('clock') + esc(tx('Follow-up')) + '</button>',
-      '<button type="button" class="narrow-only" data-crm="redit" data-testid="crm-more-edit">' + icon('pencil') + esc(tx('Edit')) + '</button>'
+      '<button data-cbsid="CRM006-B10" type="button" class="narrow-only" data-crm="rfu" data-testid="crm-more-fu">' + icon('clock') + esc(tx('Follow-up')) + '</button>',
+      '<button data-cbsid="CRM006-B11" type="button" class="narrow-only" data-crm="redit" data-testid="crm-more-edit">' + icon('pencil') + esc(tx('Edit')) + '</button>'
     );
   if (mb && p.kind !== 'walk-in')
     more.push(
-      '<button type="button" disabled data-testid="crm-act-mail-off" title="' +
+      '<button data-cbsid="CRM006-B12" type="button" disabled data-testid="crm-act-mail-off" title="' +
         esc(mb) +
         '">' +
         icon('mail') +
@@ -830,7 +830,7 @@ function crmActionsHTML(p, rec) {
     );
   if (p.kind !== 'walk-in' && p.roles.length === 1)
     more.push(
-      '<button type="button" data-crm="alsorole" data-testid="crm-more-also">' +
+      '<button data-cbsid="CRM006-B13" type="button" data-crm="alsorole" data-testid="crm-more-also">' +
         icon('plus') +
         esc(tx(p.roles[0] === 'customer' ? 'Also a supplier' : 'Also a customer')) +
         '</button>'
@@ -839,10 +839,10 @@ function crmActionsHTML(p, rec) {
   var wide =
     p.kind === 'walk-in'
       ? ''
-      : '<button type="button" class="act quiet wide-only" data-crm="rfu" data-testid="crm-act-fu">' +
+      : '<button data-cbsid="CRM006-B14" type="button" class="act quiet wide-only" data-crm="rfu" data-testid="crm-act-fu">' +
         icon('clock') +
         esc(tx('Follow-up')) +
-        '</button><button type="button" class="act quiet wide-only" data-crm="redit" data-testid="crm-act-edit">' +
+        '</button><button data-cbsid="CRM006-B15" type="button" class="act quiet wide-only" data-crm="redit" data-testid="crm-act-edit">' +
         icon('pencil') +
         esc(tx('Edit')) +
         '</button>';
@@ -852,13 +852,13 @@ function crmActionsHTML(p, rec) {
     '" data-testid="crm-actions">' +
     primary +
     inline.join('') +
-    '<button type="button" class="act quiet" data-crm="rlog" data-testid="crm-act-log">' +
+    '<button data-cbsid="CRM006-B16" type="button" class="act quiet" data-crm="rlog" data-testid="crm-act-log">' +
     icon('note') +
     esc(tx('Log')) +
     '</button>' +
     wide +
     crmStageBtn(p) +
-    '<span class="more"><button type="button" class="act quiet" data-crm="rmore" aria-haspopup="true" aria-expanded="' +
+    '<span class="more"><button data-cbsid="CRM006-B17" type="button" class="act quiet" data-crm="rmore" aria-haspopup="true" aria-expanded="' +
     CRMR.menu +
     '" data-testid="crm-act-more">' +
     icon('dots') +
@@ -1066,7 +1066,7 @@ function crmRecordPaint(p, rec) {
           '<p style="margin:8px 0">' +
             esc(tx('Dues show when Accounts is on')) +
             '</p>' +
-            (crmOwner() ? '<button type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''),
+            (crmOwner() ? '<button data-cbsid="CRM006-B18" type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''),
           false
         )
       );
@@ -1195,7 +1195,7 @@ async function crmTermsFill(pid, side) {
     rows +
     (why ? '<div class="hint" data-testid="crm-terms-why">' + esc(why) + '</div>' : '') +
     (r.events && r.events.length ? '<div data-testid="crm-terms-events">' + bkTermEvents(r.events.slice(0, 5), cur, 'crm-terms-event') + '</div>' : '') +
-    '<a class="act sm' +
+    '<a data-cbsid="CRM006-C01" class="act sm' +
     (can ? '' : ' disabled') +
     '" data-testid="crm-terms-go" href="' +
     (can ? '/finance.html#/terms' : '#') +
@@ -1362,7 +1362,7 @@ function crmTimelineView(p, tok) {
   crmBar(
     '<a href="#/party/' + esc(crmKey(p)) + '" data-testid="crm-back">‹ ' + esc(p.display_name) + '</a>',
     crmEdit()
-      ? '<button type="button" class="act sm" data-crm="rlog" data-testid="crm-act-log">+ ' + esc(tx('Log a call or note')) + '</button>'
+      ? '<button data-cbsid="CRM006-B19" type="button" class="act sm" data-crm="rlog" data-testid="crm-act-log">+ ' + esc(tx('Log a call or note')) + '</button>'
       : crmViewOnlyBtn('crm-act-log', '+ ' + tx('Log a call or note'), crmViewWhy()),
     true
   );
@@ -1440,7 +1440,7 @@ function crmLogOpen(p) {
       items
         .map(function (x) {
           return (
-            '<button type="button" data-crm="' +
+            '<button data-cbsid="CRM006-B20" type="button" data-crm="' +
             a +
             '" data-v="' +
             x[0] +
@@ -1459,12 +1459,12 @@ function crmLogOpen(p) {
       '</div>'
     );
   };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Log')) +
-      ' · ' +
-      esc(p.display_name) +
-      '</div></div><div class="mbody" data-testid="crm-log-sheet">' +
+  ui.dialog({
+    mount: 'CRM006-U201',
+    pop: 'POP101',
+    titleText: tx('Log') + ' · ' + p.display_name,
+    testid: 'crm-log-sheet',
+    body:
       '<div class="supacts">' +
       seg(
         'logkind',
@@ -1488,31 +1488,30 @@ function crmLogOpen(p) {
       '</span></div>' +
       '<label>' +
       esc(tx('What happened?')) +
-      '<textarea class="inp" id="crm_log_body" data-testid="crm-log-body" rows="4" placeholder="' +
+      '<textarea data-cbsid="CRM006-T01" class="inp" id="crm_log_body" data-testid="crm-log-body" rows="4" placeholder="' +
       esc(tx('Said, agreed, asked…')) +
       '"></textarea></label>' +
-      '<label style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="crm_log_fu" data-crm="logfu" data-testid="crm-log-fu"> ' +
+      '<label style="flex-direction:row;align-items:center;gap:8px;font-weight:600"><input data-cbsid="CRM006-I01" type="checkbox" id="crm_log_fu" data-crm="logfu" data-testid="crm-log-fu"> ' +
       esc(tx('Add a follow-up')) +
       '</label>' +
-      '<div id="crm_log_fubox" hidden style="display:none;flex-direction:column;gap:8px"><input class="inp" id="crm_log_fuwhat" data-testid="crm-log-fuwhat" placeholder="' +
+      '<div id="crm_log_fubox" hidden style="display:none;flex-direction:column;gap:8px"><input data-cbsid="CRM006-I02" class="inp" id="crm_log_fuwhat" data-testid="crm-log-fuwhat" placeholder="' +
       esc(tx('Call back about…')) +
-      '"><div class="supacts"><input class="inp" id="crm_log_fudue" data-testid="crm-log-fudue" type="date" style="width:auto">' +
+      '"><div class="supacts"><input data-cbsid="CRM006-I03" class="inp" id="crm_log_fudue" data-testid="crm-log-fudue" type="date" style="width:auto">' +
       [
         ['tomorrow', 'Tomorrow'],
         ['week', 'Next week']
       ]
         .map(function (x) {
-          return '<button type="button" class="crm-mini" data-crm="logpreset" data-v="' + x[0] + '">' + esc(tx(x[1])) + '</button>';
+          return '<button data-cbsid="CRM006-B21" type="button" class="crm-mini" data-crm="logpreset" data-v="' + x[0] + '">' + esc(tx(x[1])) + '</button>';
         })
         .join('') +
       '</div></div>' +
-      '<div id="crm_log_msg" class="hint" role="status"></div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button type="button" class="pri" data-crm="logsave" data-testid="crm-log-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_log_msg" class="hint" role="status"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM006-U201' } },
+      { name: 'save', options: { mount: 'CRM006-U201', key: 'save', effect: 'preference', testid: 'crm-log-save', data: { crm: 'logsave' } } }
+    ]
+  });
   document.getElementById('crm_log_body').focus();
 }
 async function crmLogSave() {

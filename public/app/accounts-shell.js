@@ -367,9 +367,9 @@ function friendlyErr(e) {
   return m || 'something went wrong';
 }
 
-/** the look of a host the page did not draw itself (same tokens and sizes as the pages that carry their own #toast rules) */
+/** the look of a host the page did not draw itself; a page with a bottom dock sets --cb-toast-bottom to clear it (shop.html) (same tokens and sizes as the pages that carry their own #toast rules) */
 const TOAST_HOST_CSS =
-  '#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}' +
+  '#toast{position:fixed;left:50%;bottom:var(--cb-toast-bottom,20px);transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}' +
   '#toast .toast{background:var(--ink,#2a2418);color:var(--ground,#fbf6ec);padding:12px 16px;border-radius:10px;font-size:14px}' +
   '#toast .toast.err{background:var(--red-i,#8e3517)}#toast .toast.warn{background:var(--amber-i,#7a5205)}' +
   '#toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}';
@@ -778,7 +778,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     bodyHtml +
     '</div>' +
     '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' +
-    '<button type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
+    '<button data-cbsid="CMP003" type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
     esc(tx('Cancel')) +
     '</button>' +
     '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' +

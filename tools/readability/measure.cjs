@@ -361,6 +361,14 @@ function defineBodyKey(record, code, node) {
   Object.defineProperty(record, 'bodyKey', { enumerable: false, get: () => (key === undefined ? (key = bodyKeyOf(code, node, record.name)) : key) });
 }
 
+/** a function's line span: the ONE measure behind len (long40 / long80) and the name-scope test (§6 Google 6.1) */
+const spanOf = (walk, node) => walk.endLineOf(node) - walk.lineOf(node) + 1;
+/** lines of the nearest function around the node on top of the stack (`own`: the node itself counts); module level = no limit */
+function scopeLines(walk, own) {
+  for (let at = walk.stack.length - (own ? 1 : 2); at >= 0; at--) if (FUNCTION_TYPES.has(walk.stack[at].type)) return spanOf(walk, walk.stack[at]);
+  return MODULE_SCOPE;
+}
+
 /** one chunk's walk state: what the visitor collects, with the line maps of the chunk */
 function newWalk(chunk, relPath) {
   const lineOf = (node) => node.loc.start.line + chunk.lineOffset;
@@ -395,7 +403,7 @@ function commentAbove(walk, statement, node) {
 function enterFunction(walk, node, parent) {
   const statement = enclosingStatement(walk.stack, node);
   const name = functionName(node, parent);
-  const lines = walk.endLineOf(node) - walk.lineOf(node) + 1;
+  const lines = spanOf(walk, node);
   const params = node.params.flatMap((param) => patternNames(param, []).map((id) => id.name));
   const record = {
     file: walk.relPath,
@@ -415,8 +423,8 @@ function enterFunction(walk, node, parent) {
   if (route) record.route = route;
   defineBodyKey(record, walk.chunk.code, node);
   walk.functions.push(record);
-  node.params.forEach((param) => patternNames(param, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind: 'param' })));
-  if (node.id && node.type === 'FunctionDeclaration') walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'function' });
+  node.params.forEach((param) => patternNames(param, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind: 'param', scope: lines })));
+  if (node.id && node.type === 'FunctionDeclaration') walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'function', scope: scopeLines(walk, false) });
   return record;
 }
 
@@ -432,7 +440,7 @@ function noteDeclarator(walk, node, parent) {
   const kind = isForHeaderVariable(walk.stack, parent) ? 'forvar' : 'var';
   const code = walk.chunk.code;
   const init = node.init ? code.slice(node.init.start, Math.min(node.init.end, node.init.start + 60)).replace(/\s+/g, ' ') : '';
-  patternNames(node.id, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind, init }));
+  patternNames(node.id, []).forEach((id) => walk.declarations.push({ name: id.name, line: walk.lineOf(id), kind, init, scope: scopeLines(walk, false) }));
 }
 
 /** strings R6 does not count: markup, double spaces, trivial words, dates, paths */
@@ -489,7 +497,7 @@ function noteNesting(node, parent, context, depth) {
 const NOTE_BY_TYPE = {
   VariableDeclarator: (walk, node, parent) => noteDeclarator(walk, node, parent),
   ClassDeclaration: (walk, node) => {
-    if (node.id) walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'class' });
+    if (node.id) walk.declarations.push({ name: node.id.name, line: walk.lineOf(node.id), kind: 'class', scope: scopeLines(walk, false) });
   },
   Literal: (walk, node, parent) => noteLiteral(walk, node, parent),
   CatchClause: (walk, node) => noteSilentCatch(walk, node),
@@ -604,7 +612,10 @@ function readHeader(syntaxTree, comments, relPath, text) {
 }
 
 // ── names (R1)
-const ALLOWED_SHORT = new Set(['_', '$', 'e', 'err', 'x', 'y']);
+const ALLOWED_SHORT = new Set(['_', '$', 'e', 'err', 'x', 'y', 'i', 'j', 'k']);
+/** Google JS style 6.1: a short name is fine where it is in scope for this many lines or fewer (DECISIONS 2026-11-12) */
+const SHORT_NAME_SCOPE_LINES = 10;
+const MODULE_SCOPE = Number.MAX_SAFE_INTEGER;
 const MAX_CRYPTIC_LENGTH = 3;
 /** conventional abbreviations READ-1 kept out of the cryptic count (req res db id key url … — flagging them is noise, not readability);
  *  READ-GUARD adds the two node module names every tool declares (`fs`, `os`) */
@@ -690,11 +701,12 @@ const CONVENTIONAL = new Set([
   'os'
 ]);
 
-/** a declared name that says nothing: 1–3 characters, not a loop counter / catch param / geometry / conventional word */
+/** a declared name that says nothing: 1–3 characters, in a function over 10 lines (or at module level), not a counter i/j/k / catch param / geometry / conventional word */
 function isCryptic(declaration) {
   if (declaration.kind === 'catch' || declaration.kind === 'forvar') return false;
   const name = declaration.name;
   if (name.length > MAX_CRYPTIC_LENGTH || name.length < 1 || ALLOWED_SHORT.has(name)) return false;
+  if (declaration.scope <= SHORT_NAME_SCOPE_LINES) return false;
   return !CONVENTIONAL.has(name) && !CONVENTIONAL.has(name.toLowerCase());
 }
 
@@ -741,6 +753,8 @@ function factsFromText(relPath, text) {
       isFirstChunk = false;
     }
   }
+  /* MNT-51: a page with no inline script (or none that parsed) has no chunk to read, but its <!-- --> header sits in the page text itself */
+  if (!facts.header && /\.html$/.test(relPath)) facts.header = readHeader({ body: [] }, [], relPath, text);
   if (!facts.header) facts.header = { file: relPath, has: false, lines: 0, owns: false, callers: false, flow: false, card: null, loc: 0 };
   facts.cryptic = facts.declarations.filter(isCryptic);
   return facts;

@@ -68,7 +68,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   say('"📋 Typed against each item" opens the overlay', opened, 'priceOverlay is on');
   const chrome = await p.evaluate(() => ({
     title: document.getElementById('ovlTitle').textContent,
-    hasClose: !!document.querySelector('.ovlx'),
+    hasClose: !!document.querySelector('[data-cbname="close"]'),
     hasSearch: !!document.getElementById('ovlSearch'),
     hasCats: document.querySelectorAll('#ovlCats .ovlchip').length > 1,
     rows: document.querySelectorAll('.ovltbl tbody tr').length,

@@ -263,7 +263,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
     </div>
     <nav class="nav scroll" id="nav" aria-label="Accounts"></nav>
     <div class="side-foot">
-      <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
+      <button data-cbsid="BKS001-B01" type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
         <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
       </button>
     </div>
@@ -330,6 +330,7 @@ function go() {
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
 <script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->
 <script src="/app/cap-compare.js"></script>   <!-- Parallel run (PR1): their Tally / Xero period beside ours — CBSteps to load a snapshot, CBList lines (differences first), CBAction for the one write -->
@@ -462,7 +463,7 @@ function navPaint(active) {
   $('nav').innerHTML = NAV_GROUPS.map(([text, ids]) => {
     const shut = !!(text && fold[text] && ids.indexOf(active) < 0);
     const head = text
-      ? `<button type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-label="${esc(tx(text))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
+      ? `<button data-cbsid="BKS001-B02" type="button" class="nav-grp" data-grp="${esc(text)}" data-testid="acc-grp-${esc(text.toLowerCase().replace(/ /g, '-'))}" aria-label="${esc(tx(text))}" aria-expanded="${!shut}"><span class="label">${esc(tx(text))}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>`
       : '';
     return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
   }).join('');
@@ -471,7 +472,7 @@ function navItems(items, active) {
   return items
     .map(
       ([id, label, d]) =>
-        `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(tx(label))}"${id === active ? ' aria-current="page"' : ''}>
+        `<button data-cbsid="BKS001-B03" type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(tx(label))}"${id === active ? ' aria-current="page"' : ''}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(tx(label))}</span></button>`
     )
     .join('');
@@ -543,7 +544,7 @@ const confirmAsk = CBConfirm;
 /* a sheet: the app's modal(html) / closeModal() signature on a native <dialog> (as crm.html), so cap-books.js's Pay and Remind open here unchanged */
 function modal(html) {
   const node = document.getElementById('acc_sheet');
-  node.innerHTML = '<button class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
+  node.innerHTML = '<button data-cbsid="CMP005" class="mx" style="position:absolute;right:6px;top:6px" onclick="closeModal()" aria-label="Close" title="Close">✕</button>' + html;
   if (!node.open) {
     try {
       node.showModal();
@@ -740,7 +741,7 @@ async function accBills(body) {
       sys
         .map(
           (item) =>
-            `<button type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
+            `<button data-cbsid="BKS001-B04" type="button" class="tab" data-testid="bills-tab-${esc(item.code)}" data-code="${esc(item.code)}" aria-pressed="${item.code === ACC.billTab}">${word(item)}<span class="n">${Number(item.count) || 0}</span></button>`
         )
         .join('') +
       '</div>';
@@ -812,7 +813,7 @@ function todoRow(it, i) {
     <span class="todo-sym" aria-hidden="true">${off ? '⏳' : '⚠'}</span>
     <span class="todo-n mono" data-testid="todo-n-${esc(it.kind)}">${off ? '' : Number(it.count) || 0}</span>
     <span class="todo-words" data-testid="todo-words-${esc(it.kind)}">${esc(off ? tx('Starts after an update') : it.words)}</span>
-    <button type="button" class="act todo-go" data-testid="todo-go-${esc(it.kind)}" data-i="${i}"${off ? ' disabled' : ''}>${esc(a.label || tx('Open'))}</button>
+    <button data-cbsid="BKS001-B05" type="button" class="act todo-go" data-testid="todo-go-${esc(it.kind)}" data-i="${i}"${off ? ' disabled' : ''}>${esc(a.label || tx('Open'))}</button>
   </div>`;
 }
 async function accTodo(body) {
@@ -884,7 +885,7 @@ function closeFirst(r) {
     r.others
       .map(
         (item, index) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(item))}</h2>
-      <button type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`
+      <button data-cbsid="BKS001-B06" type="button" class="act" data-testid="close-first-go" data-i="${index}">${esc(CBOnePerson.buttonLabel(item))}</button>`
       )
       .join(''),
     true
@@ -912,7 +913,7 @@ function offCard() {
   card(
     `<h2 data-testid="acc-off">Accounts is not switched on</h2>` +
       (isOwner()
-        ? `<button type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
+        ? `<button data-cbsid="BKS001-B07" type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
         : `<p data-testid="acc-ask-owner">Ask the owner to switch it on</p>`)
   );
   const node = $('switchOn');
@@ -935,7 +936,7 @@ function offCard() {
 }
 function failedCard() {
   card(
-    `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
+    `<h2>Accounts could not be read</h2><p>Check the connection, then try again.</p><button data-cbsid="CMP009" type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`,
     true
   );
   $('retry').onclick = () => start();

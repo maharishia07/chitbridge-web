@@ -1,4 +1,5 @@
 /**
+ * CARD  22-channels-capture-and-messaging/intake-screen
  * intake.spec.js — THE CAPTURE CONNECTOR, end to end in a browser.
  *
  * channel → CAPTURE (raw, untrusted) → AI STRUCTURE → HUMAN CONFIRM → chit on the rail.

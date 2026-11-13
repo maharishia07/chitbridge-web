@@ -83,7 +83,7 @@ function rpBtn(agreement, verb, testId, className, sayInline) {
   var ok = !!verbState.ok,
     sentence = verbState.say || '';
   return (
-    '<button type="button" class="' +
+    '<button data-cbsid="FIN005-B01" type="button" class="' +
     (className || 'act sm') +
     '" data-testid="' +
     esc(testId) +
@@ -163,7 +163,7 @@ function rpHead() {
     '<div class="kv"><b data-testid="rp-due">' +
     esc(dueCount ? (typeof txn === 'function' ? txn('{count} run due', '{count} runs due', dueCount) : dueCount + ' due') : rpT('Nothing due today')) +
     '</b>' +
-    '<span><button type="button" class="act sm" data-testid="rp-run-due"' +
+    '<span><button data-cbsid="FIN005-B02" type="button" class="act sm" data-testid="rp-run-due"' +
     (dueCount ? '' : ' disabled aria-disabled="true" title="' + esc(rpT('Nothing is due.')) + '"') +
     ' onclick="rpSweep(this)">' +
     esc(rpT('Run what is due')) +
@@ -291,7 +291,7 @@ function rpCols() {
       cell: function (agreement) {
         var verb = agreement.state === 'countered' ? 'agree' : agreement.state === 'paused' ? 'resume' : 'run';
         return (
-          '<span style="display:inline-flex;gap:6px;flex-direction:column;align-items:flex-start" onclick="event.stopPropagation()">' +
+          '<span data-cbsid="FIN005-C01" style="display:inline-flex;gap:6px;flex-direction:column;align-items:flex-start" onclick="event.stopPropagation()">' +
           rpBtn(agreement, verb, 'rp-' + verb + '-' + agreement.agreement_id, 'cbl-tbtn', true) +
           '</span>'
         );
@@ -416,10 +416,10 @@ function rpStepSchedule() {
   return (
     rpField(
       rpT('Every'),
-      '<input class="inp" id="rp_every" data-testid="rp-every" inputmode="numeric" value="' +
+      '<input data-cbsid="FIN005-I01" class="inp" id="rp_every" data-testid="rp-every" inputmode="numeric" value="' +
         esc(String(list.every)) +
         '" style="width:70px" oninput="CBRepeat.read()"> ' +
-        '<select class="inp" id="rp_unit" data-testid="rp-unit" onchange="CBRepeat.read()"><option value="daily"' +
+        '<select data-cbsid="FIN005-S01" class="inp" id="rp_unit" data-testid="rp-unit" onchange="CBRepeat.read()"><option value="daily"' +
         selectedIf('daily') +
         '>' +
         esc(rpT('day(s)')) +
@@ -433,35 +433,35 @@ function rpStepSchedule() {
         esc(rpT('month(s)')) +
         '</option></select>'
     ) +
-    rpField(rpT('From'), '<input class="inp" type="date" id="rp_start" data-testid="rp-start" value="' + esc(list.start_on) + '" onchange="CBRepeat.read()">') +
+    rpField(rpT('From'), '<input data-cbsid="FIN005-I02" class="inp" type="date" id="rp_start" data-testid="rp-start" value="' + esc(list.start_on) + '" onchange="CBRepeat.read()">') +
     rpField(
       rpT('Until'),
-      '<label><input type="radio" name="rp_until" value="none" data-testid="rp-until-none"' +
+      '<label><input data-cbsid="FIN005-I03" type="radio" name="rp_until" value="none" data-testid="rp-until-none"' +
         checkedIf('until', 'none') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('You end it')) +
         '</label> ' +
-        '<label><input type="radio" name="rp_until" value="runs" data-testid="rp-until-runs"' +
+        '<label><input data-cbsid="FIN005-I04" type="radio" name="rp_until" value="runs" data-testid="rp-until-runs"' +
         checkedIf('until', 'runs') +
-        ' onchange="CBRepeat.read()"> <input class="inp" id="rp_runs" data-testid="rp-runs" inputmode="numeric" value="' +
+        ' onchange="CBRepeat.read()"> <input data-cbsid="FIN005-I05" class="inp" id="rp_runs" data-testid="rp-runs" inputmode="numeric" value="' +
         esc(String(list.runs)) +
         '" style="width:60px" oninput="CBRepeat.read()"> ' +
         esc(rpT('runs')) +
         '</label> ' +
-        '<label><input type="radio" name="rp_until" value="on" data-testid="rp-until-on"' +
+        '<label><input data-cbsid="FIN005-I06" type="radio" name="rp_until" value="on" data-testid="rp-until-on"' +
         checkedIf('until', 'on') +
-        ' onchange="CBRepeat.read()"> <input class="inp" type="date" id="rp_on" data-testid="rp-on" value="' +
+        ' onchange="CBRepeat.read()"> <input data-cbsid="FIN005-I07" class="inp" type="date" id="rp_on" data-testid="rp-on" value="' +
         esc(list.on) +
         '" onchange="CBRepeat.read()"></label>'
     ) +
     rpField(
       rpT('Each run'),
-      '<label><input type="radio" name="rp_mode" value="draft" data-testid="rp-mode-draft"' +
+      '<label><input data-cbsid="FIN005-I08" type="radio" name="rp_mode" value="draft" data-testid="rp-mode-draft"' +
         checkedIf('mode', 'draft') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('Draft for me to send')) +
         '</label> ' +
-        '<label><input type="radio" name="rp_mode" value="send" data-testid="rp-mode-send"' +
+        '<label><input data-cbsid="FIN005-I09" type="radio" name="rp_mode" value="send" data-testid="rp-mode-send"' +
         checkedIf('mode', 'send') +
         ' onchange="CBRepeat.read()"> ' +
         esc(rpT('Send it')) +
@@ -723,7 +723,7 @@ function rpCounterForm(panel) {
         return (
           '<div class="cs-row"><span>' +
           esc(item.particulars || item.name || '') +
-          '</span><input class="inp" data-testid="rp-cq-' +
+          '</span><input data-cbsid="FIN005-I10" class="inp" data-testid="rp-cq-' +
           index +
           '" data-line="' +
           esc(item.line_id || '') +
@@ -735,9 +735,9 @@ function rpCounterForm(panel) {
       .join('') +
     '<div class="cs-row"><span>' +
     esc(rpT('Every')) +
-    '</span><span><input class="inp" id="rp_c_every" data-testid="rp-c-every" inputmode="numeric" style="width:60px" value="' +
+    '</span><span><input data-cbsid="FIN005-I11" class="inp" id="rp_c_every" data-testid="rp-c-every" inputmode="numeric" style="width:60px" value="' +
     esc(String(list.every)) +
-    '"> <select class="inp" id="rp_c_unit" data-testid="rp-c-unit">' +
+    '"> <select data-cbsid="FIN005-S02" class="inp" id="rp_c_unit" data-testid="rp-c-unit">' +
     ['daily', 'weekly', 'monthly']
       .map(function (item) {
         return '<option value="' + item + '"' + (list.unit === item ? ' selected' : '') + '>' + esc(rpT(RP_UNIT[item][0])) + '</option>';
@@ -746,13 +746,13 @@ function rpCounterForm(panel) {
     '</select></span></div>' +
     '<div class="cs-row"><span>' +
     esc(rpT('From')) +
-    '</span><input class="inp" type="date" id="rp_c_start" data-testid="rp-c-start" value="' +
+    '</span><input data-cbsid="FIN005-I12" class="inp" type="date" id="rp_c_start" data-testid="rp-c-start" value="' +
     esc(list.next_on || '') +
     '"></div>' +
-    '<input class="inp" id="rp_c_note" data-testid="rp-c-note" placeholder="' +
+    '<input data-cbsid="FIN005-I13" class="inp" id="rp_c_note" data-testid="rp-c-note" placeholder="' +
     esc(rpT('Why (they will read it)')) +
     '" style="width:100%;margin:6px 0">' +
-    '<button type="button" class="act sm" data-testid="rp-c-send" onclick="CBRepeat.sendCounter(this)">' +
+    '<button data-cbsid="FIN005-B03" type="button" class="act sm" data-testid="rp-c-send" onclick="CBRepeat.sendCounter(this)">' +
     esc(rpT('Send counter')) +
     '</button>'
   );
@@ -760,10 +760,10 @@ function rpCounterForm(panel) {
 /** the reason input and its one button, for the verbs that take a why (skip, decline, end, pause, refuse) */
 function rpReasonForm(verb, label, placeholder) {
   return (
-    '<div class="cs-row"><input class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' +
+    '<div class="cs-row"><input data-cbsid="FIN005-I14" class="inp" id="rp_reason" data-testid="rp-reason" placeholder="' +
     esc(placeholder) +
     '" style="flex:1">' +
-    '<button type="button" class="act sm" data-testid="rp-' +
+    '<button data-cbsid="FIN005-B04" type="button" class="act sm" data-testid="rp-' +
     verb +
     '-go" onclick="CBRepeat.go(\'' +
     verb +

@@ -86,7 +86,7 @@ function frPaint() {
         '</h2><p>' +
         esc(tx('Nothing was lost.')) +
         '</p>' +
-        '<button type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' +
+        '<button data-cbsid="CMP009" type="button" class="act" data-testid="fr-retry" onclick="frRetry()">' +
         esc(tx('Try again')) +
         '</button>',
       'fr-error'
@@ -119,17 +119,17 @@ function frPaint() {
         '</p>' +
         '<label style="display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600">' +
         esc(tx('Month')) +
-        '<select class="inp" id="fr_month" data-testid="fr-month">' +
+        '<select data-cbsid="FIN007-S01" class="inp" id="fr_month" data-testid="fr-month">' +
         months
           .map(function (x) {
             return '<option value="' + esc(x.v) + '">' + esc(x.label) + '</option>';
           })
           .join('') +
         '</select></label>' +
-        '<div class="supacts"><button type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' +
+        '<div class="supacts"><button data-cbsid="FIN007-B01" type="button" class="act" data-testid="fr-gstr1" onclick="frGet(\'gstr1\',this)">' +
         esc(tx('GSTR-1 file')) +
         '</button>' +
-        '<button type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
+        '<button data-cbsid="FIN007-B02" type="button" class="act quiet" data-testid="fr-gstr3b" onclick="frGet(\'gstr3b\',this)">' +
         esc(tx('GSTR-3B file')) +
         '</button></div>' +
         '<div id="fr_out" class="hint" role="status" data-testid="fr-out"></div>' +

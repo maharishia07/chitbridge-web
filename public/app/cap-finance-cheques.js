@@ -16,6 +16,8 @@
  * booksTermsSet) · fqRemindMe (Remind me: the follow-up's body comes from the cheque the server listed — party, day, sum — so there is nothing to type;
  * CRM's sheet lives in cap-crm.js, which this page does not load).
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again. Finance SUGGESTS: the steps are the owner's to press.
+ * FLOW  finance.html opens Cheques -> api(booksCheques) -> the list and the reminder switch -> a step, Remind me or Save asks the server and repaints
+ * CARD 16-finance/cheques
  */
 'use strict';
 
@@ -84,7 +86,7 @@ function fqPaintTop() {
     '<div class="tabs" role="group" aria-label="' +
     esc(tx('Cheque reminders')) +
     '" style="margin:10px 20px 0;align-items:center">' +
-    '<button type="button" class="tab" data-testid="fq-switch" onclick="fqReminderSheet()">' +
+    '<button data-cbsid="FIN006-B01" type="button" class="tab" data-testid="fq-switch" onclick="fqReminderSheet()">' +
     esc(tx('Reminders')) +
     '</button>' +
     '<span class="tag' +
@@ -105,7 +107,7 @@ function fqReminderSheet() {
     '<div class="mhd"><div class="t" data-testid="fq-sheet-title">' +
       esc(tx('Cheque reminders')) +
       '</div></div><div class="mbody" data-testid="fq-sheet">' +
-      '<label style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="fq_on" data-testid="fq-on"' +
+      '<label style="flex-direction:row;align-items:center;gap:8px"><input data-cbsid="FIN006-I01" type="checkbox" id="fq_on" data-testid="fq-on"' +
       (rm.on ? ' checked' : '') +
       (off ? ' disabled' : '') +
       '> ' +
@@ -113,7 +115,7 @@ function fqReminderSheet() {
       '</label>' +
       '<label>' +
       esc(tx('Days ahead')) +
-      '<input class="inp" id="fq_days" data-testid="fq-days" inputmode="numeric" autocomplete="off" value="' +
+      '<input data-cbsid="FIN006-I02" class="inp" id="fq_days" data-testid="fq-days" inputmode="numeric" autocomplete="off" value="' +
       esc(String(rm.lead_days)) +
       '"' +
       (off ? ' disabled' : '') +
@@ -124,10 +126,10 @@ function fqReminderSheet() {
       '<div id="fq_why" class="hint" role="status" data-testid="fq-why">' +
       esc(why) +
       '</div></div>' +
-      '<div class="mfoot"><button type="button" onclick="closeModal()">' +
+      '<div class="mfoot"><button data-cbsid="FIN006-B02" type="button" onclick="closeModal()">' +
       esc(tx('Cancel')) +
       '</button>' +
-      '<button type="button" class="pri" data-testid="fq-save"' +
+      '<button data-cbsid="FIN006-B03" type="button" class="pri" data-testid="fq-save"' +
       (off ? ' disabled aria-disabled="true"' : '') +
       ' onclick="fqSave(this)">' +
       esc(tx('Save')) +
@@ -212,7 +214,7 @@ function fqDueCell(c) {
     '</span>' +
     (fu
       ? ' <span class="sub" data-b="fu-set">' + esc(tx('Reminder set')) + '</span>'
-      : ' <button type="button" class="cbl-tbtn" data-testid="fq-remind-' +
+      : ' <button data-cbsid="FIN006-B04" type="button" class="cbl-tbtn" data-testid="fq-remind-' +
         esc(c.payment_id) +
         '" onclick="event.stopPropagation();fqRemindMe(\'' +
         esc(c.payment_id) +

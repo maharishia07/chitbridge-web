@@ -15,7 +15,14 @@
 'use strict';
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
 const E2E = __dirname;
-const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f)).sort();   /* SHELL-ONE: walk-shell-frame.cjs (every page wears the frame) runs with the walks; visual-tour.cjs is VTOUR's local-stack tour (its own workflow) */
+/* ⭐ QA-153 (2026-11-13): browser walks that are not named walk- or till- but ARE fixture walks (site from this checkout, a stand-in API in the
+ * page) went red unseen — no CI job ran them (payments, period-end, shell were stale for weeks). ONE explicit list, here: a file joins by being named,
+ * with its evidence (the PR body of QA-153: ran green on main, a customer or support screen, not a duplicate of a walk- file). Not listed on purpose:
+ * the report scripts, the probes of the deployed site and the *-breaks self-tests (see the QA-153 PR). */
+const EXTRA = ['app-register-gov.cjs', 'bills-folder.cjs', 'board-ran.cjs', 'cb-sides.cjs', 'cmdb-fields.cjs', 'combo-lab.cjs', 'counter-follows-shop.cjs', 'detail-page.cjs', 'lab-frame.cjs', 'lab-kit-promise.cjs', 'labs-flow.cjs', 'layout-honest.cjs', 'list-unit.cjs', 'offer-lab-next-cart.cjs', 'offer-lab-next-cheapest.cjs', 'offer-lab-next-engine.cjs', 'offer-lab-next-import.cjs', 'offer-lab-next-offcolumn.cjs', 'offer-lab-next-offline.cjs', 'offer-lab-next-pricelist.cjs', 'offer-lab-next-saved.cjs', 'offer-lab-next-search.cjs', 'offer-lab-next-typing.cjs', 'one-avatar.cjs', 'page-frame.cjs', 'phone-signin.cjs', 'prod-modifiers-tab.cjs', 'prod-pricing-cost.cjs', 'promo-pick-next.cjs', 'promo-screen-key.cjs', 'rail-thread.cjs', 'shop-tidy.cjs', 'payments.cjs', 'period-end.cjs', 'shell.cjs', 'manual-entry.cjs', 'reports-trend.cjs', 'todo-home.cjs'];
+const MISSING = EXTRA.filter((f) => !fs.existsSync(path.join(E2E, f)));
+if (MISSING.length) { console.error('run-shard EXTRA names a file that is not there: ' + MISSING.join(', ')); process.exit(2); }
+const files = fs.readdirSync(E2E).filter((f) => /^(walk|till)-[a-z0-9-]+\.cjs$/.test(f) || f === 'kural-footer.cjs').concat(EXTRA).sort();   /* UX-132: the kural footer guard is a browser harness too and runs with the walks. SHELL-ONE: walk-shell-frame.cjs (every page wears the frame) runs with the walks; visual-tour.cjs is VTOUR's local-stack tour (its own workflow) */
 if (process.argv[2] === '--list') { console.log(files.join('\n')); process.exit(0); }
 /**
  * ⭐ REPEAT (K2b, 2026-10-14): a file that once flaked runs this many times INSIDE its shard, every run must pass — and

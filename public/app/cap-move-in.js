@@ -187,7 +187,7 @@ function miView(body) {
 }
 function miSel(id, field, opts, selected) {
   return (
-    '<select class="inp" id="' +
+    '<select data-cbsid="BKS024-S01" class="inp" id="' +
     id +
     '" data-testid="' +
     id +
@@ -236,7 +236,7 @@ function miFileStepHTML(form) {
     (miNeedsDate(form.kind)
       ? miRow(
           tx('As at'),
-          '<input class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' +
+          '<input data-cbsid="BKS024-I01" class="inp" type="date" id="mi-asat" data-testid="mi-asat" value="' +
             esc(form.as_at) +
             '" onchange="miSet(\'as_at\', this.value)" style="width:auto">',
           'mi-asat'
@@ -244,7 +244,7 @@ function miFileStepHTML(form) {
       : '') +
     miRow(
       tx('File'),
-      '<input type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
+      '<input data-cbsid="BKS024-I02" type="file" id="mi-file" data-testid="mi-file" accept=".csv,.xlsx,text/csv" onchange="miFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
         (form.name ? '<div data-testid="mi-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(form.name) + '</div>' : ''),
       'mi-file'
     ) +
@@ -287,7 +287,7 @@ function miColumnsStepHTML() {
         '"><td style="padding:4px 8px 4px 0;word-break:break-word"><b>' +
         esc(item.incoming) +
         '</b></td>' +
-        '<td style="padding:4px 8px 4px 0"><select class="inp" style="width:100%;max-width:100%" data-testid="mi-pick-' +
+        '<td style="padding:4px 8px 4px 0"><select data-cbsid="BKS024-S02" class="inp" style="width:100%;max-width:100%" data-testid="mi-pick-' +
         esc(item.incoming) +
         '" onchange="miPick(' +
         JSON.stringify(item.incoming).replace(/"/g, '&quot;') +
@@ -682,9 +682,9 @@ function miDoneHTML() {
       .join('') +
     '<div class="supacts" style="margin:8px 0">' +
     ((done.rows || []).length
-      ? '<button type="button" data-testid="mi-download" onclick="miDownload()">' + esc(tx('Download rows not moved in')) + '</button>'
+      ? '<button data-cbsid="BKS024-B01" type="button" data-testid="mi-download" onclick="miDownload()">' + esc(tx('Download rows not moved in')) + '</button>'
       : '') +
-    '<button type="button" data-testid="mi-again" onclick="miAgain()">' +
+    '<button data-cbsid="BKS024-B02" type="button" data-testid="mi-again" onclick="miAgain()">' +
     esc(tx('Another file')) +
     '</button></div>' +
     '<div id="mi_skipped" data-testid="mi-skipped" style="min-height:160px"></div>' +

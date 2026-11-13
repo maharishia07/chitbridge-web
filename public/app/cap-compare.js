@@ -15,6 +15,8 @@
  * Better than a Xero / QuickBooks / Tally tie-out (the accountant's spreadsheet VLOOKUP) because each difference says WHY and opens the entries — and a bill that
  * came on the rail is named as such.
  
+ * OWNS      the Parallel run screen: loading an outside snapshot and laying it beside our books
+ * CARD      16-finance/cb-finance
  * CALLED BY public/accounts.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
@@ -93,7 +95,7 @@ function cmpPaint() {
   var snaps = (CMP.list && CMP.list.snapshots) || [],
     may = cmpMay();
   var pick = snaps.length
-    ? '<select class="inp" data-testid="cmp-pick" aria-label="' +
+    ? '<select data-cbsid="BKS007-S01" class="inp" data-testid="cmp-pick" aria-label="' +
       esc(tx('Snapshot')) +
       '" onchange="cmpPick(this.value)" style="min-width:0;max-width:100%">' +
       snaps
@@ -114,15 +116,15 @@ function cmpPaint() {
   bar.innerHTML =
     '<div class="supacts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
     pick +
-    '<button type="button" data-testid="cmp-load" onclick="cmpLoadOpen()"' +
+    '<button data-cbsid="BKS007-B01" type="button" data-testid="cmp-load" onclick="cmpLoadOpen()"' +
     (may.may ? '' : ' disabled title="' + esc(may.why || '') + '"') +
     '>' +
     esc(tx('Load their figures')) +
     '</button>' +
     (CMP.id
-      ? '<button type="button" data-testid="cmp-csv" onclick="cmpCsv(this)">' +
+      ? '<button data-cbsid="BKS007-B02" type="button" data-testid="cmp-csv" onclick="cmpCsv(this)">' +
         esc(tx('Download CSV')) +
-        '</button><button type="button" data-testid="cmp-print" onclick="window.print()">' +
+        '</button><button data-cbsid="BKS007-B03" type="button" data-testid="cmp-print" onclick="window.print()">' +
         esc(tx('Print')) +
         '</button>'
       : '') +
@@ -192,7 +194,7 @@ function cmpPaintCompare() {
       var nestedP = r.parts[item],
         n = nestedP.counts ? nestedP.counts.different + nestedP.counts.gap + nestedP.counts.only_ours : null;
       return (
-        '<button type="button" class="optchip" data-testid="cmp-part-' +
+        '<button data-cbsid="BKS007-B04" type="button" class="optchip" data-testid="cmp-part-' +
         item +
         '" aria-pressed="' +
         (item === CMP.part) +
@@ -390,7 +392,7 @@ function cmpNext(r) {
         esc(bkDrCr(e.amount_minor, c)) +
         '</span>' +
         (e.chit_id
-          ? '<button type="button" data-testid="cmp-chit-' +
+          ? '<button data-cbsid="BKS007-B05" type="button" data-testid="cmp-chit-' +
             esc(e.entry_no) +
             '" onclick="openChitSheet(\'' +
             esc(e.chit_id) +
@@ -408,7 +410,7 @@ function cmpNext(r) {
       ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(txf('{n} more in the ledger', { n: r.entries_n - list.length })) + '</div>'
       : '';
   var open = r.open
-    ? '<button type="button" data-testid="cmp-open-' +
+    ? '<button data-cbsid="BKS007-B06" type="button" data-testid="cmp-open-' +
       esc(r.open.code) +
       '" onclick="cmpOpenLedger(\'' +
       esc(r.open.code) +
@@ -507,7 +509,7 @@ function cmpLoadOpen() {
   if (!main) return;
   main.innerHTML =
     '<div data-testid="cmp-load-steps"><div id="cmp_rail"></div><div id="cmp_lsub" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px"></div><div id="cmp_lbody"></div><div id="cmp_lfoot" style="margin-top:12px"></div>' +
-    '<div style="margin-top:8px"><button type="button" data-testid="cmp-load-cancel" onclick="cmpLoadCancel()">' +
+    '<div style="margin-top:8px"><button data-cbsid="BKS007-B07" type="button" data-testid="cmp-load-cancel" onclick="cmpLoadCancel()">' +
     esc(tx('Cancel')) +
     '</button></div></div>';
   if (CMP.st) CMP.st.destroy();
@@ -547,7 +549,7 @@ function cmpLoadCancel() {
 }
 function cmpLoadSel(id, k, list, cur) {
   return (
-    '<select class="inp" id="' +
+    '<select data-cbsid="BKS007-S02" class="inp" id="' +
     id +
     '" data-testid="' +
     id +
@@ -580,7 +582,7 @@ function cmpLoadRender(k) {
     });
     var date = function (id, key) {
       return (
-        '<input class="inp" type="date" id="' +
+        '<input data-cbsid="BKS007-I01" class="inp" type="date" id="' +
         id +
         '" data-testid="' +
         id +
@@ -598,13 +600,13 @@ function cmpLoadRender(k) {
             tx('Adding to'),
             '<b data-testid="cmp-adding">' +
               esc((cmpSnap() || {}).label || '') +
-              '</b> <button type="button" data-testid="cmp-new" onclick="cmpLoadSet(\'add\', \'\')">' +
+              '</b> <button data-cbsid="BKS007-B08" type="button" data-testid="cmp-new" onclick="cmpLoadSet(\'add\', \'\')">' +
               esc(tx('Start a new one')) +
               '</button>'
           )
         : miRow(
             tx('Name'),
-            '<input class="inp" id="cmp-label" data-testid="cmp-label" maxlength="80" value="' +
+            '<input data-cbsid="BKS007-I02" class="inp" id="cmp-label" data-testid="cmp-label" maxlength="80" value="' +
               esc(L.label) +
               '" oninput="cmpLoadSet(\'label\', this.value, true)" style="max-width:100%">'
           ) +
@@ -614,13 +616,13 @@ function cmpLoadRender(k) {
       miRow(tx('Which statement'), cmpLoadSel('cmp-part', 'part', parts, L.part)) +
       miRow(
         tx('Headings on row'),
-        '<input class="inp" type="number" min="1" max="40" id="cmp-hrow" data-testid="cmp-hrow" value="' +
+        '<input data-cbsid="BKS007-I03" class="inp" type="number" min="1" max="40" id="cmp-hrow" data-testid="cmp-hrow" value="' +
           esc(L.header_row) +
           '" onchange="cmpLoadSet(\'header_row\', this.value)" style="width:80px">'
       ) +
       miRow(
         tx('File'),
-        '<input type="file" id="cmp-file" data-testid="cmp-file" accept=".csv,.xlsx,.xml,text/csv,text/xml" onchange="cmpLoadFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
+        '<input data-cbsid="BKS007-I04" type="file" id="cmp-file" data-testid="cmp-file" accept=".csv,.xlsx,.xml,text/csv,text/xml" onchange="cmpLoadFile(this)" style="max-width:100%;min-width:0;font-size:var(--fs-1)">' +
           (L.name ? '<div data-testid="cmp-file-name" style="font-size:var(--fs-1);margin-top:4px">' + esc(L.name) + '</div>' : '')
       ) +
       (L.err ? '<div class="err" data-testid="cmp-load-err" style="color:var(--warn-2);margin-top:8px">' + esc(L.err) + '</div>' : '') +
@@ -648,7 +650,7 @@ function cmpLoadRender(k) {
       .map(function (item) {
         return miRow(
           item.incoming,
-          '<select class="inp" style="width:100%;max-width:100%" data-testid="cmp-pick-' +
+          '<select data-cbsid="BKS007-S03" class="inp" style="width:100%;max-width:100%" data-testid="cmp-pick-' +
             esc(item.incoming) +
             '" onchange="cmpLoadPick(' +
             JSON.stringify(item.incoming).replace(/"/g, '&quot;') +

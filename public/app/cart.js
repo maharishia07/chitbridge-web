@@ -72,6 +72,16 @@
  */
 (function (root) {
   'use strict';
+  /* the span-with-onclick controls (bar, clear, add all, remove) are marked for the one Enter/Space rule, app/kbd-press.js (CMP053); every page that loads this file loads that first */
+  var KBD_PRESS = ' role="button" tabindex="0"';
+  /** a word for a screen reader through the translation path (accounts-shell tx), English where a page has none */
+  function translated(english) {
+    return typeof tx === 'function' ? tx(english) : english;
+  }
+  /** the cart bar's open control: pressable only while there is something to open */
+  function barPress(on) {
+    return on ? KBD_PRESS + ' aria-label="' + esc(translated('Open the cart')) + '"' : '';
+  }
   /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md): CBMoney (engine/money.js) in a page,
      lib/money.js in node. Looked up PER CALL, because on the shop screen an engine can load before money.js does.
      ⚠️⚠️ NO FALLBACK COPY (retired 2026-09-28, the loader step): every page that loads this file loads
@@ -1356,7 +1366,7 @@
       ';background:' +
       (on ? a : 'var(--neutral-tint)') +
       '">' +
-      '<span class="cbcart-bag">🛒' +
+      '<span class="cbcart-bag"' + barPress(on) + '>🛒' +
       (on ? '<span data-testid="cart-count-' + esc(ns) + '" class="cbcart-n" style="color:' + a + '">' + u + '</span>' : '') +
       '</span>' +
       /* ⚠️ The summary HIDES on a narrow screen (see .cbcart-sum), never the badge. The count is the fact you cannot
@@ -1366,7 +1376,7 @@
         ? '<span class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
           esc(ns) +
           '\')"' +
-          ' title="Clear the cart" aria-label="Clear the cart">✕</span>'
+          ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
         : '') +
       '</div>' +
       (on && T.partial ? '<div class="cbcart-partial">Some lines have no price — the total covers only the priced ones.</div>' : '')
@@ -1598,7 +1608,7 @@
             item.count +
             ' options</span>' +
             (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '') +
-            '<span onclick="CBCart.group(\'' +
+            '<span class="cbcart-grp"' + KBD_PRESS + ' onclick="CBCart.group(\'' +
             esc(ns) +
             "'," +
             index +
@@ -1681,7 +1691,7 @@
       '<b style="font-size:var(--fs-4);flex:1">🛒 ' +
       esc(opt(ns, 'cartTitle', 'Your cart')) +
       '</b>' +
-      '<button onclick="CBCart.close(\'' +
+      '<button data-cbsid="CMP005" onclick="CBCart.close(\'' +
       esc(ns) +
       '\')" aria-label="Close" title="Close" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>' +
       '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">' +
@@ -1712,7 +1722,7 @@
                 (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * item.qty)) + '</span>' : '') +
                 '</div></span>' +
                 stepperHTML(ns, item.item_id, item.qty) +
-                '<span onclick="CBCart.setQty(\'' +
+                '<span data-cbsid="CMP008"' + KBD_PRESS + ' aria-label="' + esc(translated('Remove from the cart')) + '" onclick="CBCart.setQty(\'' +
                 esc(ns) +
                 "','" +
                 esc(item.item_id) +
@@ -2118,7 +2128,7 @@
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
            as a misalignment even to someone who could not name what is wrong. */
         'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}' +
-        '.cbcart-bar.on{cursor:pointer;color:#fff}' +
+        '.cbcart-bar.on{cursor:pointer;color:#fff}' + '.cbcart-bag[role=button]:focus-visible,.cbcart-x:focus-visible,.cbcart-grp[role=button]:focus-visible,[data-cbsid="CMP008"]:focus-visible{outline:2px solid currentColor;outline-offset:2px;border-radius:3px}' +
         '.cbcart-bag{position:relative;font-size:17px;line-height:1}' +
         '.cbcart-n{position:absolute;top:-7px;inset-inline-end:-9px;background:var(--card);border-radius:9px;min-width:17px;' +
         /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must

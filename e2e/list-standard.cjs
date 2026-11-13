@@ -36,6 +36,7 @@ const EXCEPTIONS = {
   'app/chit-sheet.js::gstHTML': 'the BILL SLIP: the GST summary of one frozen invoice (rate · taxable · CGST · SGST), a printed document.',
   'app/cap-books.js::bkTable': 'the FINAL ACCOUNTS printout: trial balance, profit and loss and balance sheet are statements with a totals foot, read top to bottom and printed.',
   'app/cap-books.js::statementHTML': 'a party STATEMENT printout (opening … running balance … closing), a printed document.',
+  'app/country-profiles.js::invoiceHTML': 'the sample e-invoice a country pack would issue (Item · Qty · Price · Rate · Tax · Total): a printed-document preview of one frozen sample, like the bill slip.',
   'app.html::_aiMd': 'the markdown renderer for an AI answer: a table the model wrote is content, not a list of the shop\'s records.',
 };
 
@@ -43,7 +44,7 @@ const EXCEPTIONS = {
    All of them sit OUTSIDE the nine lists this change moved (Task · Waiting · Day book · Dues · Ledgers · Cheques · Suppliers · Customers ·
    Platform). Each is a read-only summary or an input grid inside a screen, not yet declared as a CBList. */
 const DEBT = {
-  'app.html::_cfRun': 'the product import preview (In your file · What to do with it · Why): a one-off check list in a form',
+  'app/cap-catalogue.js::_cfRun': 'the product import preview (In your file · What to do with it · Why): a one-off check list in a form (moved out of app.html by T3-CATALOGUE, acc8d951)',
   'app.html::prodBomTab': 'a product\'s bill of materials (components, qty): a small table in the product detail',
   'app.html::prodInvoiceTab': 'a product\'s invoice-line sheet (Description · HSN · Qty · Rate · Discount): a document-like table in the product detail',
   'app.html::prodHistoryTab': 'a product\'s version history (Version · From · What changed · Who) in the product detail',
@@ -136,11 +137,19 @@ say('  scanned ' + scope().length + ' file(s): app.html, accounts.html, app/*.js
 /* 1 · the exceptions and the debt must still be true */
 const exceptionKeys = new Set(Object.keys(EXCEPTIONS));
 let nEx = 0, nDebt = 0;
+const noMount = [];
 for (const e of byKey.values()) {
   if (exceptionKeys.has(e.key)) { nEx++; continue; }
   if (DEBT[e.key]) { nDebt++; continue; }
+  noMount.push({ key: e.key, show: e });
+}
+/* QA-154: places not yet in EXCEPTIONS or DEBT are recorded in e2e/scanner-known.json; only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('list-standard', noMount, { owner: 'ux-locale' });
+say('  ' + RK.line.trim() + '\n');
+for (const it of RK.fresh) {
+  const e = it.show;
   fails++;
-  say('  ✗ ' + e.key + '  (' + [...e.kinds].join(' ') + ', line ' + e.lines.join(',') + ')  draws a column header that is not a CBList mount.');
+  say('  ✗ NEW ' + e.key + '  (' + [...e.kinds].join(' ') + ', line ' + e.lines.join(',') + ')  draws a column header that is not a CBList mount.');
   say('       Mount it: CBList.mount(el, { key, rows, columns, … }) (app/list-ctl.js). The unit draws the header, the drag handles, ⚙ columns and the');
   say('       sticky scroll for you. If it is a printed document, name it in EXCEPTIONS with its reason; never in DEBT without Athi.');
 }
@@ -176,15 +185,15 @@ else say('  ✓ the ledger and statement tables (.bktab) carry the same stripe')
   const pct = (unitSrc.match(/--cl-zebra:var\(--zebra,color-mix\(in srgb,var\(--cl-ink\) (\d+)%/) || [])[1];
   if (!(Number(pct) >= 8 && Number(pct) <= 10)) { fails++; say('  ✗ the stripe is ' + pct + '% ink - it must be about 9% so it is visible at a glance.'); } else say('  ✓ the stripe is ' + pct + '% ink (visible)');
   const avSrc = fs.readFileSync(path.join(ROOT, 'app/avatar.js'), 'utf8');
-  if (!(/data-stripes="off"\]\{--zebra:transparent\}/.test(avSrc) && /data-stripes="light"\]\{--zebra:color-mix/.test(avSrc) && /STRIPES = \[\['off'/.test(avSrc))) { fails++; say('  ✗ app/avatar.js no longer drives the one --zebra token from Row stripes: Off · Light · Strong.'); } else say('  ✓ the avatar menu\'s Row stripes (Off · Light · Strong) drives the one --zebra token');
+  if (!(/data-stripes="off"\]\{--zebra:transparent\}/.test(avSrc) && /data-stripes="light"\]\{--zebra:color-mix/.test(avSrc) && /STRIPES = \[\s*\['off'/.test(avSrc))) { fails++; say('  ✗ app/avatar.js no longer drives the one --zebra token from Row stripes: Off · Light · Strong.'); } else say('  ✓ the avatar menu\'s Row stripes (Off · Light · Strong) drives the one --zebra token');
 }
 /* 2d · A GROUP HEADING LOOKS LIKE A HEADING (C12): a full-width tinted band from a theme token, small upper-case title, rows indented, foldable */
 {
-  const band = /\.cbl \.cbl-group\{[^}]*background:var\(--cl-gband\)[^}]*text-transform:uppercase/.test(unitSrc) && /--cl-gband:color-mix\(in srgb,var\(--cl-blue\) \d+%,var\(--cl-page\)\)/.test(unitSrc) && /\.cbl-row\.ing>:first-child\{padding-inline-start:\d+px/.test(unitSrc) && /aria-expanded="' \+ !shut/.test(unitSrc);
+  const band = /\.cbl \.cbl-group\{[^}]*background:var\(--cl-gband\)[^}]*text-transform:uppercase/.test(unitSrc) && /--cl-gband:color-mix\(in srgb,var\(--cl-blue\) \d+%,var\(--cl-page\)\)/.test(unitSrc) && /\.cbl-row\.ing>:first-child\{padding-inline-start:\d+px/.test(unitSrc) && /aria-expanded="'\s*\+\s*!shut/.test(unitSrc);
   if (!band) { fails++; say('  ✗ app/list-ctl.js: a group heading is no longer a tinted upper-case band with indented rows and a fold (aria-expanded).'); } else say('  ✓ a group heading is a tinted band (token, upper-case title), its rows are indented, and it folds');
 }
 {
-  const rawStripe = scope().filter((f) => /\.html$|\.js$/.test(f) && !/list-ctl\.js$|cap-books\.js$/.test(f)).filter((f) => /(tr|\.cbl-row|\.cbl-lrec)[^{}]*:nth-(child|of-type)\((even|odd|2n)/.test(fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/var _AI_MDCSS=.*$/m, '')));   /* the AI answer's own markdown stylesheet is rendered content, not a list */
+  const rawStripe = scope().filter((f) => /\.html$|\.js$/.test(f) && !/list-ctl\.js$|cap-books\.js$/.test(f)).filter((f) => /(tr|\.cbl-row|\.cbl-lrec)[^{}]*:nth-(child|of-type)\((even|odd|2n)/.test(fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/var _AI_MDCSS\s*=\s*'.*';/, '')));   /* the AI answer's own markdown stylesheet is rendered content, not a list */
   rawStripe.forEach((f) => { if (/accounts\.html$/.test(f)) return; fails++; say('  ✗ ' + f + ' paints a stripe of its own — the unit and cap-books.js own it (accounts.html only keeps it on the phone card, from the same token).'); });
 }
 

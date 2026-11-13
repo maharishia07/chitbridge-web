@@ -595,6 +595,9 @@
     'Settings › Standards': 'Paramètres › Normes',
     'Shared · minted once': 'Partagé · émis une seule fois',
     'Show everything': 'Tout afficher',
+    'Open the cart': 'Ouvrir le panier',
+    'Clear the cart': 'Vider le panier',
+    'Remove from the cart': 'Retirer du panier',
     'Shown — in this order': 'Affiché — dans cet ordre',
     'Sits under': 'Rattaché à',
     'Soft Paper': 'Papier doux',
@@ -893,6 +896,21 @@
     'No chits here — try another tab.': 'Aucun chit ici — essayez un autre onglet.',
     'Search chits, party, item': 'Rechercher chits, parties, articles',
     'Search my orders': 'Rechercher mes commandes'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try {
+    if (typeof renderApp === 'function') renderApp();
+  } catch (_) {}
+})();
+
+/* The Tax month's left-out bills line (api #1180); the plural category is the gettext key (msgid, a separator, then the plural category). */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.fr || (CBSTR.fr = {});
+  var pack = {
+    '{count} bill could not be read and is left out of this month\u0005one': '{count} facture illisible, exclue de ce mois',
+    '{count} bill could not be read and is left out of this month\u0005other': '{count} factures illisibles, exclues de ce mois',
+    'Open bill {n}': 'Ouvrir la facture {n}'
   };
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
   try {

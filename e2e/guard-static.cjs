@@ -442,6 +442,9 @@ console.log('\n11 · surfaces that name no text colour (inline styles)');
     '--blue-d','--disp','--disp-2','--ok','--ok-2','--ok-3','--purple','--purple-2','--gold','--prog','--warn',
     '--blue-tint-bg','--blue-tint','--ok-tint','--danger-tint','--warn-tint','--purple-tint','--neutral-tint','--gold-soft'];
   const bad = {};
+  /* UX-28 debt, named and only allowed to fall: three files whose readability debt (no module header / CARD / §7 tests) fails the touch gate until
+     cb-maintainability clears it; each still has ONE surface that inherits its text colour. A file not listed here has none. */
+  const DEBT_FILES = { 'cap-adopt.js': 1, 'cap-readiness.js': 1, 'cap-traceability.js': 1 };
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
       let n = 0;
@@ -455,13 +458,16 @@ console.log('\n11 · surfaces that name no text colour (inline styles)');
         const st = m[2];
         const bg = /background(?:-color)?\s*:\s*var\((--[a-z0-9-]+)\)/.exec(st);
         if (!bg || !SURF.includes(bg[1])) continue;
-        if (/(^|;)\s*color\s*:/.test(st)) continue;
+        if (/(^|[;'"`\s])color\s*:/.test(st)) continue;   /* a colour set inside a ternary fragment ('color:..' after a quote) is still a colour */
         n++;
       }
-      if (n) bad[name] = n;
+      const allowed = DEBT_FILES[name] || 0;
+      if (n > allowed) bad[name] = n;
+      else if (n < allowed) bad[name + ' (below its allowance of ' + allowed + ': lower DEBT_FILES)'] = n;
+      else if (allowed) warn(name + ': ' + n + ' inline surface(s) still inherit their text colour (named debt)');
     });
-  const total = Object.values(bad).reduce((a, b) => a + b, 0);
-  if (total) warn(total + ' inline surfaces inherit their text colour — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  const total = Object.keys(bad).length;   /* files over or under their allowance (a below-allowance entry counts even at 0 surfaces) */
+  if (total) fail(total + ' files with inline surfaces that inherit their text colour, or fewer than their DEBT_FILES allowance (UX-28) — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
   else pass('every painted surface names its own text');
 }
 
