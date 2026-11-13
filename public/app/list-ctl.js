@@ -189,7 +189,7 @@
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
     '.cbl .cbl-hc .sort{min-width:0;max-width:100%}.cbl .cbl-hc .sort .cbl-hl{min-width:0;overflow:hidden;text-overflow:ellipsis}',
     /* the resize grip (24 px, centred on the column edge) covers the last 12 px of its cell: the filter caret stays inside that line and the last column's grip (24 px, inside) gets its room (QA-156) */
-    '.cbl .cbl-hc:last-child:has(.cbl-hf){padding-inline-end:26px}',
+    '.cbl .cbl-hc:last-child:has(.cbl-hf),.cbl .cbl-hc.r.sortable:last-child{padding-inline-end:26px}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
     /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
@@ -266,8 +266,8 @@
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
     '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
     '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px;margin-block:0}',
-    /* UI9: the title row is reserved at the height of its chip before the data brings the chip, so the toolbar below never jumps (QA-156) */
-    '.cbl .cbl-title h1{min-height:44px;display:flex;align-items:center}}',
+    /* UI9: a head that says reserve:true keeps its title row at the height of the chip the data will bring (chip-less lists keep their short row), so the toolbar below never jumps (QA-156) */
+    '.cbl .cbl-title.reserve h1{min-height:44px;display:flex;align-items:center}}',
     /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
     'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
@@ -908,6 +908,7 @@
       out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
     if (typeof h.slot === 'function')
       out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
+    box.classList.toggle('reserve', !!h.reserve);
     box.innerHTML = out;
     if (list.o.views && list.o.views.inTitle) paintViews(list);
     if (typeof h.slot === 'function') {
@@ -1918,7 +1919,7 @@
             (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
-              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort"' +
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
                 '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
