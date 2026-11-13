@@ -226,7 +226,9 @@ ok(minimumsOf('page.html').join() === 'warn', 'html comment + data-cbsid attribu
 ok(minimumsOf('edit.js').join() === 'fail', 'a one-character code change (+ 1): test-minimums still FAILS');
 const noiseMod = require('../tools/readability/noise.cjs');
 ok(noiseMod.sameCode('x.js', 'a(1); // x', 'a(1);') && !noiseMod.sameCode('x.js', 'a(1);', 'a(2);') && !noiseMod.sameCode('x.js', 'a(1', 'a(1);'), 'noise: comment removed is the same code; a changed literal or an unparsable file is not');
-ok(!noiseMod.sameCode('x.html', '<p>a</p><script>b()</script>', '<p>a</p><script>c()</script>') && !noiseMod.sameCode('x.html', '<p>a</p>', '<p>b</p>'), 'noise: a changed script or changed markup is not noise');
+ok(!noiseMod.sameCode('x.js', 'function f(x) {\n  return\n  x;\n}', 'function f(x) {\n  return x;\n}') && !noiseMod.sameCode('x.js', 'a\n(b)', 'a(b)') && !noiseMod.sameCode('x.js', 'var a = 1\n+b', 'var a = 1 + b'), 'noise: a line break moved around return / ASI cases is a real change');
+ok(noiseMod.sameCode('x.js', '// head\nvar a = 1;\n// why\nb();', 'var a = 1;\nb();') && noiseMod.sameCode('x.js', 'a();\n  // note\nb();', 'a();\nb();'), 'noise: comment lines added between statements that already sit on separate lines stay noise');
+ok(!noiseMod.sameCode('x.html','<p>a</p><script>b()</script>', '<p>a</p><script>c()</script>') && !noiseMod.sameCode('x.html', '<p>a</p>', '<p>b</p>'), 'noise: a changed script or changed markup is not noise');
 fs.rmSync(noiseTmp, { recursive: true, force: true });
 
 console.log('\n6 · the modules behind the tool, one unit each');

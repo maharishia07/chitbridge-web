@@ -25,11 +25,17 @@ const CBSID_ATTRIBUTE = /\s*data-cbsid=(?:\\?"[^"\\]*\\?"|\\?'[^'\\]*\\?'|[^\s>"
 const withoutIds = (text) => text.replace(CBSID_ATTRIBUTE, '');
 const collapse = (text) => text.replace(/\s+/g, ' ').trim();
 
-/** the tokens of JS code (comments are not tokens), each as its own text with ids removed from strings and templates */
+/** the tokens of JS code (comments are not tokens), each as its own text with ids removed from strings and templates, plus an N flag when a
+ *  line break sits before it: a return-newline-x and a newline-before-parenthesis change behaviour (automatic semicolon insertion). The first
+ *  token carries no flag, so a header comment added at the top is noise; a line break inside a comment counts, as it does for the language. */
 function codeStream(code) {
   const tokens = [];
-  for (const token of acorn.tokenizer(code, { ecmaVersion: 'latest', allowHashBang: true }))
-    tokens.push(token.type.label + '\u0001' + withoutIds(code.slice(token.start, token.end)));
+  let previousEnd = null;
+  for (const token of acorn.tokenizer(code, { ecmaVersion: 'latest', allowHashBang: true })) {
+    const lineBreak = previousEnd !== null && code.slice(previousEnd, token.start).includes('\n') ? 'N' : '';
+    tokens.push(lineBreak + token.type.label + '\u0001' + withoutIds(code.slice(token.start, token.end)));
+    previousEnd = token.end;
+  }
   return tokens.join('\u0002');
 }
 
