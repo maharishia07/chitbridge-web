@@ -187,6 +187,9 @@
     '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
     '.cbl .cbl-hc.r{justify-content:flex-end}',
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
+    '.cbl .cbl-hc .sort{min-width:0;max-width:100%}.cbl .cbl-hc .sort .cbl-hl{min-width:0;overflow:hidden;text-overflow:ellipsis}',
+    /* the resize grip (24 px, centred on the column edge) covers the last 12 px of its cell: the filter caret stays inside that line and the last column's grip (24 px, inside) gets its room (QA-156) */
+    '.cbl .cbl-hc:last-child:has(.cbl-hf){padding-inline-end:26px}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
     /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
@@ -253,7 +256,7 @@
     '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
     '}',
     /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
-    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px;vertical-align:middle}.cbl .cbl-search input{align-self:stretch}',
+    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px;margin-block:-8px;vertical-align:middle}.cbl .cbl-search input{align-self:stretch}',
     '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
     '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
     '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
@@ -262,7 +265,9 @@
     '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
     '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
-    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
+    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px;margin-block:0}',
+    /* UI9: the title row is reserved at the height of its chip before the data brings the chip, so the toolbar below never jumps (QA-156) */
+    '.cbl .cbl-title h1{min-height:44px;display:flex;align-items:center}}',
     /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
     'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
@@ -1916,8 +1921,7 @@
               ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
-                label +
-                ' <span class="arrow">' +
+                '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
                 (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') +
                 '</span></button>'
               : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
