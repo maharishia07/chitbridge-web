@@ -4,8 +4,11 @@
  * reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay
  * in their panel module. Extracted verbatim from app.html (behaviour unchanged).
  *
- * OWNS  the generic leaves: esc · opt · money and date formatters · month words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total)
- * FLOW  loaded after core.js → every panel and small app calls these pure functions      CARD 29-qa-test-tooling-ux-locale-and-design-system/helpers
+ * OWNS  the generic leaves: esc · opt · money and date formatters · month words · emptyState · loader · the status words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total)
+ * CALLED BY  36 pages by <script src> (grep -lE 'src="/?app/helpers.js' public/*.html index.html): app.html, every small app, the labs, the shop pages. The till does NOT
+ *            load it (its own esc, till.html T2-WEBPRIMS note). Callers by symbol (grep -rlw SYM public, not helpers.js): fmtMoney 47 files, monthNames 32, loader 21, emptyState 9.
+ * FLOW  loaded early on each page (app.html: after core.js) → every panel and small app calls these pure functions; emptyState draws the one empty-state action button (SCR038-B01)
+ * CARD  29-qa-test-tooling-ux-locale-and-design-system/helpers
  */
 
 /* ⭐ ACC-206 D1: THE ONE WEB READ OF A CHIT'S BILL TOTAL (tax-in) from its header summary_json: money.total, else total_value, else `raw` (the detail column), else null.
@@ -244,7 +247,7 @@ function emptyState(icon, title, sub, node) {
     '</div>' +
     (sub ? '<div>' + sub + '</div>' : '') +
     (node && node.label
-      ? '<button class="btn pri" data-testid="empty-act" onclick="' + esc(node.onclick || '') + '" style="margin-top:4px">' + esc(node.label) + '</button>'
+      ? '<button data-cbsid="SCR038-B01" class="btn pri" data-testid="empty-act" onclick="' + esc(node.onclick || '') + '" style="margin-top:4px">' + esc(node.label) + '</button>'
       : '') +
     '</div>'
   );

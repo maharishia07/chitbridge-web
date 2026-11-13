@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Standards page: the register (cap-standards.js), Works with (compat.json), Compared with (compare.json), the country matrix — one CBList.
-     CALLED BY Home's Standards and Compatibility cards, Settings › Standards, Country setup (?std=country).
+     CALLED BY Home's Standards and Compatibility cards (manifest.json ids standards, compatibility), the Settings admin link (std-open-page) and Country setup (?std=country) — grep -rn 'standards.html' public/app.
+     CONTROLS  STD001-B01..B06: the matrix column header, row header and cell, the two "more" buttons, and the fold bar drawn by the register script.
      FLOW  load → compat.json · compare.json · country-matrix.json → start(): framePaint → mountList → paintMatrix → a row opens (nextOf)
      CARD 29-qa-test-tooling-ux-locale-and-design-system/standards-page -->
 <head>
@@ -1039,7 +1040,7 @@ function paintMatrix() {
     STD_STATUS.map((item) => {
       var on = f.status === item[0] && !f[fk];
       return (
-        '<button type="button" role="columnheader" class="mx-ch c-' +
+        '<button data-cbsid="STD001-B01" type="button" role="columnheader" class="mx-ch c-' +
         item[0] +
         '" data-mxs="' +
         item[0] +
@@ -1066,7 +1067,7 @@ function paintMatrix() {
       h +=
         '<div class="mx-r' +
         (all ? ' mx-all' : '') +
-        '" role="row"><button type="button" role="rowheader" class="mx-rh" data-mxr="' +
+        '" role="row"><button data-cbsid="STD001-B02" type="button" role="rowheader" class="mx-rh" data-mxr="' +
         esc(item.id) +
         '" data-testid="std-mx-row-' +
         esc(item.id) +
@@ -1080,7 +1081,7 @@ function paintMatrix() {
           var c = n[t[0]],
             on = f.status === t[0] && (all ? !f[fk] : f[fk] === item.id);
           return c
-            ? '<button type="button" role="gridcell" class="mx-c c-' +
+            ? '<button data-cbsid="STD001-B03" type="button" role="gridcell" class="mx-c c-' +
                 t[0] +
                 '" data-mxr="' +
                 esc(item.id) +
@@ -1114,7 +1115,7 @@ function paintMatrix() {
     esc(checkedLabel()) +
     '</p>'; /* the phone's copy of the title chip (hidden there) */
   h +=
-    '<div class="mx-more"><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
+    '<div class="mx-more"><button data-cbsid="STD001-B04" type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button data-cbsid="STD001-B05" type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
   $('mxBody').innerHTML = h;
   LAST = JSON.stringify(f) + '|' + LIST.state().q;
 }

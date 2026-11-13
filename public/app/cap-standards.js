@@ -1,4 +1,7 @@
 /**
+ * OWNS  the register of standards (STANDARDS and its area, kind, country and status lists) and the sheets that argue for it (stdWhyHTML, stdRecordHTML); STD001-B06 (the fold bar)
+ * CALLED BY  standards.html by <script src> (the only page: grep -lE 'src="/?app/cap-standards.js' public/*.html); its functions are called by standards.html (5 sites), the Legend
+ *            screen (3) and the Settings admin screen (1): grep -nE 'std(RowFor|Counts|CompatRows|CompareRows|WhyHTML|RecordHTML|Goto)\(' public
  * FLOW  the register (STANDARDS) → stdRowFor · stdCounts · stdCompatRows · stdCompareRows → the Standards page and the Legend paint what they read here
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/standards-register
  * cap-standards.js — THE REGISTER OF STANDARDS, and the argument for following them.
@@ -2939,7 +2942,7 @@ function stdRowFor(std) {
 function stdFoldBar() {
   var b = function (open, label, tid) {
     return (
-      '<button type="button" data-testid="' +
+      '<button data-cbsid="STD001-B06" type="button" data-testid="' +
       tid +
       '" style="font:inherit;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card,transparent);color:var(--on-card);border-radius:8px;padding:5px 10px;cursor:pointer;min-height:32px"' +
       ' onclick="var r=this.parentNode.parentNode;Array.prototype.forEach.call(r.querySelectorAll(&quot;details.std-fold&quot;),function(d){d.open=' +

@@ -5,7 +5,9 @@
  *
  * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch; CMP032 batch job note: the state of a saved job in words, and how it ended) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
- * CALLED BY  a page script that draws a button: settings.html (cap-settings.js policy Save/Cancel, cap-print.js Save).
+ * CALLED BY  27 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html): the small apps, the labs, the shop pages, app.html, till.html, standards.html (not index.html).
+ *            Callers of ui.action / ui.dialog / ui.progress (grep -nE 'ui\.(action|dialog|progress)' public): app.html, offer-lab-next.html, standards.html,
+ *            the UI standard page's script, the six CRM screens, Settings policy, Print setup, the chit sheet, the shell and the screen-id chip.
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
  *            (app.html) for the dialog. It adds no second confirm dialog and no second dialog path.
  * KEYBOARD   a native <button>: Tab reaches it, Enter and Space press it, the focus ring is the theme's; Esc closes a dialog (modal()) and so
@@ -363,26 +365,26 @@ var CBUi = (function () {
   /** the attributes a segment and a menu option share */
   function choiceAttrs(options, item, role, size) {
     return [
-      ['type', 'button'], ['role', role], ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-choice-value', item.value],
+      ['type', 'button'], ['role', role], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-choice-value', item.value],
       ['data-size', size === 'compact' ? 'compact' : null], ['data-testid', options.testid ? options.testid + '-' + item.value + (role === 'option' ? '-option' : '') : null]
     ];
   }
   function choiceItem(options, item, selected, size, tabbable) {
     var attrs = choiceAttrs(options, item, 'radio', size).concat([['aria-checked', String(selected)], ['tabindex', tabbable ? '0' : '-1']]);
-    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+    return '<button data-cbsid="CMP025-B01" ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
   }
   function choiceOption(options, item, selected) {
     var attrs = choiceAttrs(options, item, 'option', 'standard').concat([['aria-selected', String(selected)], ['tabindex', '-1']]);
-    return '<button ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
+    return '<button data-cbsid="CMP025-B01" ' + attributeList(attrs) + '>' + escapeText(words(item.label)) + '</button>';
   }
   /** the phone mode's one button: the current value, icon and word, and a chevron */
   function choiceTrigger(options) {
     var current = options.items.filter(function (item) { return item.value === options.value; })[0] || options.items[0];
     var attrs = [
       ['type', 'button'], ['class', 'cbui-choice-btn'], ['data-choice-trigger', true], ['aria-haspopup', 'listbox'], ['aria-expanded', 'false'],
-      ['data-cbsid', 'CMP025-B01'], ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-size', 'compact']
+      ['data-cbname', 'choice'], ['data-cbmount', options.mount], ['data-size', 'compact']
     ];
-    return '<button ' + attributeList(attrs) + '><span class="cbui-cur">' + escapeText(words(current.label)) + '</span> <span aria-hidden="true">' + CHEVRON + '</span></button>';
+    return '<button data-cbsid="CMP025-B01" ' + attributeList(attrs) + '><span class="cbui-cur">' + escapeText(words(current.label)) + '</span> <span aria-hidden="true">' + CHEVRON + '</span></button>';
   }
   function choiceMenu(options) {
     var items = options.items.map(function (item) { return choiceOption(options, item, item.value === options.value); }).join('');
