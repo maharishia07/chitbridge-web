@@ -49,7 +49,18 @@ var CBUi = (function () {
   /* TAP SIZE (Athi 10 Nov): a target under 24 px is never drawn. Standard is 44 px and is the default; compact is 32 px, for dense lists on a wide screen only;
      on a phone width a compact mount is lifted to 44 px; the 44 is a MINIMUM (a page that sets --act-h larger keeps it, and the UI standard page's deliberately small preset is still drawn small). One stylesheet, written here, so the size is changed in one place. */
   var SIZES = ['standard', 'compact'];
-  var SIZE_CSS =
+  /* FIELD EDGE (docs WEB-FIELD-PART section 6): the border of an input must reach 3:1 (WCAG 1.4.11) on card, paper AND panel in every theme. The engines theme's own --edge
+     (public/engine/screen.js, vendored: never forked here) is #918B87 on Cream, 2.93:1 on --panel; so the token is the theme's --edge pulled 10% toward the theme's --ink,
+     which measures 3.40:1 or more on every background of the four themes (e2e/field-edge.test.cjs fails the build under 3:1). Browsers without color-mix get the Cream
+     value already mixed. Dividers keep --line and --line-3, where 3:1 is not required. */
+  var FIELD_EDGE_CSS =
+    ':root{--field-edge:#85807C}' +
+    '@supports (color:color-mix(in srgb,currentcolor,currentcolor)){:root{--field-edge:color-mix(in srgb,var(--edge,#918B87) 90%,var(--ink,#1D1B16))}}';
+  /* a disabled action is aria-disabled, never native disabled: it stays in the Tab order and its reason is real text (APG "Focusability of disabled controls") */
+  var DISABLED_CSS =
+    '.cbui-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+    '[data-cbname][aria-disabled="true"]{color:var(--dim,#5e594d);cursor:not-allowed}';
+  var SIZE_CSS = FIELD_EDGE_CSS + DISABLED_CSS +
     '[data-cbname]{min-height:var(--act-h,44px);min-width:var(--act-h,44px)}' +
     '[data-cbname][data-size="compact"]{min-height:32px;min-width:32px}' +
     /* CMP024 the Assistant pill and CMP025 the segmented choice: theme tokens only */
@@ -140,7 +151,7 @@ var CBUi = (function () {
        code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP045 I01 search, I02 date, I03 tick; CMP033 B01 opener
        (period, notices, Filters, Columns, header filter), D01 popover, M01 menu choice; CMP034 B01 pressed toggle; CMP035 S01 select; CMP036 K01 saved-view tab;
        CMP037 B01 CSV, B02 reset columns, B03 select all shown, B04 bulk action, B05 show more, B06 pager Previous, B07 pager Next; CMP038 B01 row action; CMP039 B01 sort, B02 resize, B03 move column. */
-    listfield: { code: 'CMP045', element: 'CMP045-I01', elements: ['I01', 'I02', 'I03'], label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listfield: { code: 'CMP045', element: 'CMP045-I01', elements: ['I01', 'I02', 'I03'], label: 'List field', alias_of: 'CMP055', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listopener: { code: 'CMP033', element: 'CMP033-B01', elements: ['B01', 'D01', 'M01'], label: 'List opener', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listtoggle: { code: 'CMP034', element: 'CMP034-B01', elements: ['B01'], label: 'List toggle', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listselect: { code: 'CMP035', element: 'CMP035-S01', elements: ['S01'], label: 'List select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
@@ -153,11 +164,13 @@ var CBUi = (function () {
        I02 date, I03 tick, T01 free text; CMP041 S01 select; CMP042 B01..B25 the books' commands (pay, record, remind, show, statement, fold list, lock, unlock, close for good, pack, opening
        balances, cheque step, waiting-bill link, add supplier, accept / reject short, advance, reverse, GST note, resize pane, record discount, pay anyway), P01 row tools; CMP043 K01 tab, K02 ledger tree item;
        CMP044 C01 day bills link, C02 chit link, C03 reversal link. cap-books.js writes them with their codes (data-cbsid); none is drawn by ui.action (nonButton). */
-    bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', alias_of: 'CMP055', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     bookselect: { code: 'CMP041', element: 'CMP041-S01', elements: ['S01'], label: 'Books select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     bookaction: { code: 'CMP042', element: 'CMP042-B01', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'B25', 'P01'], label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     booktab: { code: 'CMP043', element: 'CMP043-K01', elements: ['K01', 'K02'], label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP055 FIELD (UX-137, docs WEB-FIELD-PART): one part for text-like, date, time, checkbox, file and long text, drawn by ui.field (app/ui-field.js). It WIDENS CMP040 and CMP045, which stay valid aliases until their pages convert. Elements: I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text. A field never confirms. */
+    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
@@ -236,9 +249,24 @@ var CBUi = (function () {
     });
   }
   /** the role gate { ok, why }: a refused action stays visible, greyed WITH its sentence (show-action rule) */
-  function gateAttributes(role) {
-    if (!role || role.ok !== false) return [];
-    return [['disabled', true], ['aria-disabled', 'true'], ['title', role.why || '']];
+  function gateAttributes(options) {
+    var reason = disabledReason(options);
+    if (reason === null) return [];
+    return [['aria-disabled', 'true'], ['data-disabled', '1'], ['aria-describedby', whyId(options)], ['title', reason]];
+  }
+  /** the reason a mount is disabled: role {ok:false, why} (permission) outranks disabled: 'sentence' (state); null when enabled. A disabled with no sentence is refused (show-action rule: greyed WITH its sentence). */
+  function disabledReason(options) {
+    var role = options.role;
+    if (role && role.ok === false) return String(role.why || '');
+    if (options.disabled === undefined || options.disabled === false) return null;
+    if (typeof options.disabled !== 'string' || !options.disabled.trim()) refuse('disabled: give the reason as a sentence (disabled: "Needs the owner"); a greyed action always says why');
+    return options.disabled;
+  }
+  var whyCount = 0;
+  /** the id of the visually hidden reason element written beside a disabled button */
+  function whyId(options) {
+    if (options.whyId) return options.whyId;
+    return 'cbui-why-' + String(options.mount).toLowerCase() + (options.key ? '-' + String(options.key).toLowerCase().replace(/[^a-z0-9_-]/g, '') : '');
   }
   function toneClass(options, component, surface) {
     var tone = options.tone || component.tone;
@@ -278,7 +306,7 @@ var CBUi = (function () {
     ]
       .concat(lookAttributes(component, options))
       .concat(shortcutAttributes(component))
-      .concat(gateAttributes(options.role))
+      .concat(gateAttributes(options))
       .concat(dataAttributes(options.data));
   }
   /** a component with a keyboard shortcut says so to assistive technology (Run in background: Control+B) */
@@ -289,7 +317,7 @@ var CBUi = (function () {
   function lookAttributes(component, options) {
     var tooltip = component.tooltip || displayOf(component, options) === 'icon';
     return [
-      ['title', options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
+      ['title', disabledReason(options) !== null ? null : options.hint ? words(options.hint) : tooltip ? accessibleName(component, options) : null],
       ['data-size', options.size === 'compact' ? 'compact' : null],
       ['aria-haspopup', component.popup || null],
       ['aria-expanded', component.popup ? String(!!options.expanded) : null]
@@ -333,10 +361,16 @@ var CBUi = (function () {
     var name = component.name;
     var tag = component.link ? 'a' : 'button';
     if (component.link && !options.href) refuse(name + ': a link needs href');
-    var html = '<' + tag + ' ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</' + tag + '>';
+    if (disabledReason(options) !== null) options = Object.assign({}, options, { whyId: whyId(options) + '-' + (++whyCount) });
+    var html = '<' + tag + ' ' + attributeList(buttonAttributes(component, options, surface, effect)) + '>' + shownText(component, options) + '</' + tag + '>' + reasonNote(options);
     /* born accessible: a visible text and an accessible name, always (the axe rules label-title-only and button-name cannot return through a component) */
     if (!shownText(component, options).trim()) refuse(name + ': no visible text');
     return html;
+  }
+  /** the reason of a disabled action as real text, beside the button, named by its aria-describedby */
+  function reasonNote(options) {
+    var reason = disabledReason(options);
+    return reason === null ? '' : '<span id="' + whyId(options) + '" class="cbui-sr">' + escapeText(reason) + '</span>';
   }
   /**
    * The tap rule for a control a screen still draws itself (a nonButton component: the books' commands): the attributes that put it under the one size rule
@@ -554,8 +588,24 @@ var CBUi = (function () {
     if (onChoiceTrigger(event)) return;
     var button = closestOf(event, '[data-cbmount]');
     if (!button || button.disabled) return;
+    if (button.getAttribute('aria-disabled') === 'true') return refusePress(event, button);
     var options = HANDLERS[button.getAttribute('data-cbmount') + '|' + (button.getAttribute('data-key') || '')];
     if (options) press(button, options);
+  }
+  /** aria-disabled does not block events, so the script does: no handler, no submit, no link; the reason is shown once (the page's toast, else the polite live region) */
+  function refusePress(event, button) {
+    if (event.preventDefault) event.preventDefault();
+    if (event.stopPropagation) event.stopPropagation();
+    var note = button.getAttribute('aria-describedby') && typeof document.getElementById === 'function' && document.getElementById(button.getAttribute('aria-describedby'));
+    var reason = (note && note.textContent) || button.getAttribute('title') || '';
+    if (!reason) return;
+    if (typeof toast === 'function') toast(reason);
+    else announce(reason);
+  }
+  /** a form whose submitter is aria-disabled does not submit (Enter in a field, a script's requestSubmit) */
+  function onDocumentSubmit(event) {
+    var submitter = event.submitter;
+    if (submitter && submitter.getAttribute && submitter.getAttribute('aria-disabled') === 'true' && event.preventDefault) event.preventDefault();
   }
   /** a footer entry { name, options }: Cancel and Close close the dialog unless the mount gave its own press */
   function footerAction(item) {
@@ -684,6 +734,8 @@ var CBUi = (function () {
   function inline(button, label, delay) {
     var saved = null;
     var ownedBusy = button.getAttribute('aria-busy') !== 'true';
+    /* native disabled drops focus to the body (WCAG 2.4.3): remember it and give it back on stop() */
+    var hadFocus = typeof document !== 'undefined' && document.activeElement === button;
     if (ownedBusy) {
       button.setAttribute('aria-busy', 'true');
       button.disabled = true;
@@ -700,6 +752,7 @@ var CBUi = (function () {
         if (ownedBusy) {
           button.removeAttribute('aria-busy');
           button.disabled = false;
+          if (hadFocus && typeof button.focus === 'function') button.focus();
         }
       }
     };
@@ -1143,9 +1196,10 @@ var CBUi = (function () {
   }
   var progress = { start: startProgress, batch: batchProgress, run: runInline, inline: inline, spinner: spinnerHtml, bar: barHtml, delay: PROGRESS_DELAY_MS };
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
+  if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('submit', onDocumentSubmit);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onBatchKey);
-  var library = { action: action, tap: tapAttributes, dialog: dialog, footerAction: footerAction, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
+  var library = { action: action, tap: tapAttributes, dialog: dialog, footerAction: footerAction, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey, words: words, escape: escapeText, style: ensureStyle };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

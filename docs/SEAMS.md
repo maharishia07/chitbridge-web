@@ -43,15 +43,15 @@ of file each thing is; this says what already does the job.
 | 54 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 53 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
+| 52 | `toast` | `accounts-shell.js` |  |
 | 52 | `rows` | `cap-settings.js` |  |
 | 52 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
-| 51 | `toast` | `accounts-shell.js` |  |
 | 51 | `count` | `money-check.js` | the count /health reads |
 | 50 | `again` | `signin-ui.js` |  |
 | 50 | `view` | `books-payables.js` | group: |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
-| 46 | `read` | `cap-print.js` |  |
-| 46 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 47 | `read` | `cap-print.js` |  |
+| 47 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 45 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 45 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 45 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
@@ -76,8 +76,8 @@ of file each thing is; this says what already does the job.
 | 36 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 36 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
 | 35 | `closeModal` | `app.html` |  |
+| 35 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 35 | `shell` | `pick.js` |  |
-| 34 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 34 | `changes` | `books-store.js` |  |
 | 34 | `hold` | `orders.js` |  |
 | 33 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
@@ -115,17 +115,18 @@ of file each thing is; this says what already does the job.
 | 25 | `view` | `country-ready.js` |  |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `customer` | `mintuserid.js` | silently becomes a second identity. |
+| 24 | `form` | `accounts-shell.js` |  |
 | 24 | `call` | `cap-assist.js` |  |
 | 24 | `shown` | `country-compare.js` | one side's value for the line: |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `governance` | `home-facts.js` |  |
 | 24 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |
-| 23 | `form` | `accounts-shell.js` |  |
 | 23 | `entries` | `books-store.js` |  |
 | 23 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 23 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 23 | `keep` | `signin.js` | see. |
+| 22 | `note` | `device-id.js` | note(where, problem) — |
 | 22 | `says` | `adopt.js` |  |
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
@@ -133,7 +134,6 @@ of file each thing is; this says what already does the job.
 | 22 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 21 | `model` | `chit-sheet.js` |  |
 | 21 | `cblog` | `core.js` | const __cblog = []; |
-| 21 | `note` | `device-id.js` | note(where, problem) — |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `panel` | `sides.js` |  |
 | 21 | `chart` | `fx-rates.js` |  |
@@ -155,6 +155,7 @@ of file each thing is; this says what already does the job.
 | 18 | `step` | `cart.js` |  |
 | 18 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 18 | `today` | `kural.js` |  |
+| 18 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 18 | `more` | `lab-kit.js` | idKey: |
 | 18 | `stamp` | `availability.js` | rounded to zero looks like an out-of-stock store instead of a broken connector. |
 | 18 | `verify` | `bookpack.js` | manifest's own hash. |
@@ -166,9 +167,9 @@ of file each thing is; this says what already does the job.
 | 18 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 17 | `close` | `avatar.js` |  |
 | 17 | `send` | `cap-quotes.js` |  |
-| 17 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 17 | `head` | `list-ctl.js` |  |
 | 17 | `label` | `screen-id.js` |  |
+| 17 | `field` | `ui-field.js` | the part: |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
@@ -199,6 +200,7 @@ of file each thing is; this says what already does the job.
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 14 | `link` | `chit-sheet.js` |  |
+| 14 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 14 | `check` | `network-app.js` |  |
 | 14 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 14 | `refuse_` | `bookpack.js` | an Error with status 422 — |
@@ -207,5 +209,3 @@ of file each thing is; this says what already does the job.
 | 14 | `outcome` | `crm-calls.js` | Body { outcome, followup_id?, after? · due_at? }. |
 | 14 | `members` | `crm-groups.js` | the customers (never a lead) in a segment or a group, from the list's own rows |
 | 14 | `apply` | `ctpreturn.js` | Apply one event the door has already verified (peer known, signature, membership, crossing). |
-| 14 | `declared` | `defaults.js` | The catalogue's declared defaults, from the face. |
-| 14 | `payload` | `govcontext.browser.js` | what actually goes to the server — |
