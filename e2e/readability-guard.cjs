@@ -376,6 +376,17 @@ const legacyPath = path.join(tmp, 'public/app/legacy-words.js');
 fs.writeFileSync(legacyPath, '/* legacy-words.js — purpose: a fixture. Called by the test. Flow: read → paint.\n * CARD qa/legacy-words\n */\nmodule.exports = 1;\n');
 const legacyFacts = require('../tools/readability/measure.cjs').fileFacts({ abs: legacyPath, rel: 'public/app/legacy-words.js' });
 ok(require('../tools/readability/ratchet.cjs').headerComplete(legacyFacts.header) && !legacyFacts.header.template.fields.OWNS, 'the R4 words rule still scores a prose header as complete (score unchanged vs main) while the template reader says OWNS is missing');
+// a rename is not a new file: an old file moved by git mv keeps its old-file standing (HEADER-TEMPLATE: old files are never judged)
+const movedFrom = git(tmp, ['ls-files', 'public/app']).split(String.fromCharCode(10)).find((name) => /\.js$/.test(name) && !name.includes('brand-new') && !name.includes('legacy-words'));
+const movedTo = movedFrom.replace(/\.js$/, '-renamed.js');
+git(tmp, ['mv', movedFrom, movedTo]);
+git(tmp, ['add', '-A']);
+run([TOOL, '--changed', '--repo', 'web', '--root', tmp, '--base', baseSha, '--ratchet', '--trace', 'none', '--today', headerKit.TEMPLATE_STRICT_FROM, '--json', out]);
+const afterMove = JSON.parse(fs.readFileSync(out, 'utf8'));
+const movedFacts = require('../tools/readability/measure.cjs').fileFacts({ abs: path.join(tmp, movedTo), rel: movedTo });
+ok(headerKit.missing(headerKit.kindOf('web', movedTo), movedFacts.header.template).length > 0, 'rename fixture: the moved old file really lacks the template (the proof is not vacuous)');
+ok(!afterMove.findings.some((finding) => finding.rule === 'header-template' && finding.text.includes(movedTo)), 'a renamed OLD file (git mv) gets no template finding, even from the switch-over date');
+ok(afterMove.findings.some((finding) => finding.rule === 'header-template' && finding.level === 'fail' && finding.text.includes('brand-new.js')), 'a truly new file still fails from the switch-over date in the same run');
 
 /* ── MNT-51: an html page's header is read from the page itself, not from the first inline script ─────────────── */
 {

@@ -173,7 +173,7 @@ function ruleTraceRow(file, trace) {
 
 /** the header TEMPLATE (PM/HEADER-TEMPLATE.md) for a NEW file only: a warning until headers.TEMPLATE_STRICT_FROM, then a failure; old files and the ratchet score are never touched by it */
 function ruleTemplate(entry, repo, today) {
-  if (entry.status !== 'added') return null;
+  if (entry.status !== 'added' || entry.renamed) return null; /* a renamed old file is still old (HEADER-TEMPLATE: old files are never judged) */
   const kind = headers.kindOf(repo, entry.file);
   const lacks = headers.missing(kind, entry.head.header.template);
   if (!lacks.length) return null;
@@ -301,12 +301,13 @@ function numbersOf(touchedFns, pairs, head, base) {
 
 // ── the run
 /** a touched own-code file measured at head and at the base */
-function entryOf(root, baseSha, touched, text) {
+function entryOf(root, baseSha, touched, text, renamedPaths) {
   const baseText = touched.status === 'added' ? null : changed.baseText(root, baseSha, touched.file);
   return {
     file: touched.file,
     status: baseText == null ? 'added' : touched.status,
     ranges: touched.ranges,
+    renamed: renamedPaths.has(touched.file),
     head: measure.factsFromText(touched.file, text),
     base: baseText == null ? null : measure.factsFromText(touched.file, baseText)
   };
@@ -329,6 +330,7 @@ function gather(options) {
   const entries = [],
     removed = [],
     skipped = [];
+  const renamedPaths = changed.renamedTo(root, base.sha);
   for (const touched of diff.files) {
     if (touched.status === 'deleted') {
       const gone = removedFile(repo, root, base.sha, touched.file);
@@ -339,7 +341,7 @@ function gather(options) {
     if (!fs.existsSync(absPath)) continue;
     const text = fs.readFileSync(absPath, 'utf8');
     if (!measure.inScope(repo, touched.file, text)) skipped.push(touched.file);
-    else entries.push(entryOf(root, base.sha, touched, text));
+    else entries.push(entryOf(root, base.sha, touched, text, renamedPaths));
   }
   return { baseSha: base.sha, entries, removed, skipped };
 }

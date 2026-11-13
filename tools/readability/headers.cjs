@@ -15,6 +15,7 @@ const path = require('path');
 const measure = require('./measure.cjs');
 const grammar = require('./header-grammar.cjs');
 
+/** the census reads the first 60 lines; the guard (measure.cjs HEADER_MAX_LINE) accepts a leading comment up to line 80, so a header that starts between 60 and 80 is seen by the guard only; the census is a count, the guard the judge */
 const HEAD_LINES = 60;
 /** the ONE copy of the switch-over date (Athi 12 Nov: warn for a week): from this day a NEW file without the template fails; before it, it warns. Old files are never judged by it */
 const TEMPLATE_STRICT_FROM = '2026-11-19';
