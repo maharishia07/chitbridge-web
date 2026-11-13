@@ -248,7 +248,7 @@
     '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
     '}',
     '@container screen (max-width: 640px){',
-    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(20px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
+    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
     '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
     '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
     '}',
@@ -822,6 +822,11 @@
     if (total === 1) return T(list, notes.length ? 'Notices' : 'Details');
     return T(list, notes.length ? '{n} notices' : '{n} details', { n: total });
   }
+  /** below this width (a 390 or 375 px phone) the period chip joins the ONE folded chip: a long title, period or count would make a third row, and the head stays within its 30% */
+  var TINY_MAX = 400;
+  function isTiny() {
+    return root.matchMedia ? root.matchMedia('(max-width: ' + TINY_MAX + 'px)').matches : root.innerWidth <= TINY_MAX;
+  }
   function paintTitle(list) {
     var h = head(list),
       box = $(list, ':scope > .cbl-title');
@@ -837,7 +842,8 @@
     }
     var out = '';
     if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    if (h.period) {
+    var foldPeriod = !!h.period && isPhone() && isTiny() && (h.chips || []).length + (h.notices || []).length > 0;
+    if (h.period && !foldPeriod) {
       var p = h.period;
       out +=
         '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
@@ -870,7 +876,7 @@
     };
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
     list.narrow = isPhone();
-    if (list.narrow && foldsToOneChip(chips, notes)) {
+    if (list.narrow && (foldPeriod || foldsToOneChip(chips, notes))) {
       var bad = notes.some(function (item) {
         return item.cls === 'bad';
       });
@@ -882,7 +888,7 @@
         '" data-testid="cbl-notes-' +
         esc(list.key) +
         '">' +
-        esc(foldedLabel(list, chips, notes)) +
+        esc(foldPeriod ? T(list, '{n} details', { n: chips.length + notes.length + 1 }) : foldedLabel(list, chips, notes)) +
         ' ▾</button>' +
         (list.pop === 'notes'
           ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
@@ -892,7 +898,9 @@
             '"><div class="cbl-notes">' +
             chips.map(chipHTML).join('') +
             notes.map(noteHTML).join('') +
-            '</div></div>'
+            '</div>' +
+            (foldPeriod ? periodInner(list, h.period) : '') +
+            '</div>'
           : '') +
         '</span>';
     } else {
@@ -913,13 +921,21 @@
         });
     }
   }
+  /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
-    var presets = p.presets || [],
-      nestedVal = I.pv || p.value;
     return (
       '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
       esc(T(I, 'Period')) +
-      '"><h4>' +
+      '">' +
+      periodInner(I, p) +
+      '</div>'
+    );
+  }
+  function periodInner(I, p) {
+    var presets = p.presets || [],
+      nestedVal = I.pv || p.value;
+    return (
+      '<h4>' +
       esc(T(I, 'Period')) +
       '</h4><div class="cbl-preset">' +
       presets
@@ -938,8 +954,7 @@
           '" aria-label="' +
           esc(T(I, 'To')) +
           '"></div>'
-        : '') +
-      '</div>'
+        : '')
     );
   }
 
