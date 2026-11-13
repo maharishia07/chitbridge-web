@@ -189,6 +189,8 @@ jobs:
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
+          node tests/price-moved-ui.test.cjs
+          node e2e/ui-codes-chit-price-moved.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
           node e2e/ui-codes-shop.test.cjs
           node e2e/ui-codes-w2-net.test.cjs
