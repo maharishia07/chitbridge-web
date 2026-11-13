@@ -46,12 +46,12 @@ of file each thing is; this says what already does the job.
 | 52 | `toast` | `accounts-shell.js` |  |
 | 52 | `rows` | `cap-settings.js` |  |
 | 52 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
+| 51 | `again` | `signin-ui.js` |  |
 | 51 | `count` | `money-check.js` | the count /health reads |
-| 50 | `again` | `signin-ui.js` |  |
 | 50 | `view` | `books-payables.js` | group: |
+| 48 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 47 | `read` | `cap-print.js` |  |
-| 47 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 45 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 45 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 45 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
@@ -80,17 +80,17 @@ of file each thing is; this says what already does the job.
 | 35 | `shell` | `pick.js` |  |
 | 34 | `changes` | `books-store.js` |  |
 | 34 | `hold` | `orders.js` |  |
+| 33 | `lines` | `cart.js` |  |
 | 33 | `resolve` | `catalogue-build.js` | resolve(sourceKey, commercials) → the SHARED catalogue (by reference) with the entity's COMMERCIALS overlaid p |
 | 33 | `note` | `dbwatch.js` |  |
 | 33 | `field` | `finance-terms.js` | one number field, or null (= not set); throws a shopkeeper sentence |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 33 | `counter` | `repeat-supply.js` | the customer COUNTERS: |
 | 32 | `ensureCap` | `app.html` |  |
-| 32 | `lines` | `cart.js` |  |
+| 32 | `modal` | `app.html` |  |
 | 32 | `sentence` | `one-person.js` |  |
 | 32 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 32 | `refuse` | `books-pack.js` | const sha = (text) => |
-| 31 | `modal` | `app.html` |  |
 | 31 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 31 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
@@ -132,13 +132,13 @@ of file each thing is; this says what already does the job.
 | 22 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 22 | `allowed` | `trips.js` | let _idsFrom = null, |
+| 21 | `next` | `cap-stock.js` | the next level: |
 | 21 | `model` | `chit-sheet.js` |  |
 | 21 | `cblog` | `core.js` | const __cblog = []; |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `panel` | `sides.js` |  |
 | 21 | `chart` | `fx-rates.js` |  |
 | 21 | `match` | `itemmatch.js` | actually state. |
-| 20 | `next` | `cap-stock.js` | the next level: |
 | 20 | `chip` | `screen-id.js` | var S = { app: |
 | 20 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 20 | `plan` | `crm-leads.js` | versus new is the owner's decision (docs/critique/CRM-247-248.md), never made here. |
@@ -152,6 +152,7 @@ of file each thing is; this says what already does the job.
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 19 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 19 | `connectors` | `home-facts.js` | declare (said in words — |
+| 18 | `close` | `avatar.js` |  |
 | 18 | `step` | `cart.js` |  |
 | 18 | `standards` | `catalogue-model.js` | cap-standards.js has loaded, or the array passed in); an id the register lacks comes back { id, where, missing |
 | 18 | `today` | `kural.js` |  |
@@ -165,7 +166,6 @@ of file each thing is; this says what already does the job.
 | 18 | `report` | `raida.js` | register at the one moment it must not. |
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
 | 18 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
-| 17 | `close` | `avatar.js` |  |
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `head` | `list-ctl.js` |  |
 | 17 | `label` | `screen-id.js` |  |

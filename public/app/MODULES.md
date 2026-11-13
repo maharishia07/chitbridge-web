@@ -84,7 +84,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (59)
+## Shared (60)
 
 | file | loading | what it is |
 |---|---|---|
@@ -97,6 +97,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `catalogue-lines.js` | eager |  |
 | `catalogue-model.js` | eager | catalogue-model.js — THE canonical catalogue model (single source of truth) |
 | `catalogue-starter-categories.js` | eager |  |
+| `chit-price-moved.js` | eager | A DRAFT SENT LONG AFTER IT WAS PRICED: SAY WHICH LINES MOVED AND LET THE PERSON DECIDE (CTR-245, CTR-212 S4, web half) |
 | `chit-sheet.js` | eager |  |
 | `core.js` | eager | shared client module for the Task Panel (module 1 of the app split) |
 | `country-compare.js` | — |  |
@@ -150,4 +151,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*123 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*124 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
