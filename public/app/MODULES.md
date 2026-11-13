@@ -69,7 +69,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
 | `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-repeat.js` | lazy · on demand | cap-repeat.js — REPEAT SUPPLY as an AGREEMENT both parties hold (round RI1, 2026-10-12): CB Finance › Repeat supply (the seller's list), |
-| `cap-rewards.js` | eager | cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned, |
+| `cap-rewards.js` | eager | cap-rewards.js — (global CBRewardsPane, NOT CBRewards: that name is the vendored engine /engine/rewards.js, CRM-255) THE REWARDS PANE, ONE COPY (T3-P2 |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
