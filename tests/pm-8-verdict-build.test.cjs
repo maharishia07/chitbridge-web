@@ -14,7 +14,8 @@ const { sliceFrom, run } = require('./lib/proof-lift.cjs');
 let pass = 0;
 const ok = (condition, name) => { assert(condition, name); pass++; console.log('  ok  ' + name); };
 
-const code = sliceFrom('public/app/cap-testing.js', 'async function testMark(key, status) {', '\n}\n') + '\n}\n'
+const code = sliceFrom('public/app/cap-testing.js', 'function testBuild() {', '\n}\n') + '\n}\n'
+  + sliceFrom('public/app/cap-testing.js', 'async function testMark(key, status) {', '\n}\n') + '\n}\n'
   + sliceFrom('public/app/cap-testing.js', 'function testEnv() {', 'function testCallsSince()');
 
 async function record(status, typed) {
