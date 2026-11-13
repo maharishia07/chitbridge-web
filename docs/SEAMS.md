@@ -43,9 +43,9 @@ of file each thing is; this says what already does the job.
 | 54 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 53 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
+| 52 | `toast` | `accounts-shell.js` |  |
 | 52 | `rows` | `cap-settings.js` |  |
 | 52 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
-| 51 | `toast` | `accounts-shell.js` |  |
 | 51 | `count` | `money-check.js` | the count /health reads |
 | 50 | `again` | `signin-ui.js` |  |
 | 50 | `view` | `books-payables.js` | group: |
@@ -126,6 +126,7 @@ of file each thing is; this says what already does the job.
 | 23 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 23 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 23 | `keep` | `signin.js` | see. |
+| 22 | `note` | `device-id.js` | note(where, problem) — |
 | 22 | `says` | `adopt.js` |  |
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
@@ -133,7 +134,6 @@ of file each thing is; this says what already does the job.
 | 22 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 21 | `model` | `chit-sheet.js` |  |
 | 21 | `cblog` | `core.js` | const __cblog = []; |
-| 21 | `note` | `device-id.js` | note(where, problem) — |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `chart` | `fx-rates.js` |  |
 | 21 | `match` | `itemmatch.js` | actually state. |
