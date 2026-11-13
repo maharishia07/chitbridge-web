@@ -96,7 +96,8 @@
 
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <script src="/engine/locale.js"></script>   <!-- CBLocale: the rupee written the rupee's way, as on the till's slip -->
-<script src="/engine/tax.js"></script>      <!-- CBTax.splitLineTax: each line's heads, the ONE place tax is worked out (R12: never halved here) · CBRegulation: the pack's tenders -->
+<script src="/engine/money.js"></script>   <!-- CBMoney: assertSameCurrency (CUR-1) and decimals — the sample builder refuses a mixed bill with its words -->
+<script src="/engine/tax.js"></script>      <!-- CBTax.determine then moneyOf: the ONE place the sample bill's tax is worked out (R12: never halved here; see sampleBill) · CBRegulation: the pack's tenders -->
 <script src="/engine/docnumber.js"></script> <!-- CBDoc: the bill number as the till writes it, by the shop's country (R49) -->
 <script src="/engine/profilemap.js"></script> <!-- CBProfileMap: India's state from the GSTIN's first two digits (R25) -->
 <script>
@@ -120,12 +121,12 @@ var BILL = {
     { name: 'Grapes', hsn: '0806', qty: 2, unit: 'kg', price: 200, rate: 0 },
     { name: 'Cooking oil 1L', hsn: '1512', qty: 1, unit: 'litre', price: 250, rate: 5 },
     { name: 'Vegetables (mixed)', hsn: '0709', qty: 1.5, unit: 'kg', price: 100, rate: 0 },
-    { name: 'Dish wash bar', hsn: '3401', qty: 3, unit: 'piece', price: 30, rate: 5, off: 10 } /* off = % off this line · soap 5 % from 22-09-2025 */
+    { name: 'Dish wash bar', hsn: '3401', qty: 3, unit: 'piece', price: 30, rate: 5, off: 10, discount: 9 } /* off = the % printed; discount = that offer's amount, handed to the engine as the till hands it (10 % of 90.00 — tests/bill-print-sample.test.cjs pins the pair) · soap 5 % from 22-09-2025 */
   ],
-  /* 881.00 due: half in cash, the rest on UPI (a card where the pack has no UPI — R47) — a split payment, which every counter takes and no slip should hide */
+  /* a split payment, which every counter takes and no slip should hide: 500.00 in cash, the balance on UPI (a card where the pack has no UPI — R47). Only the cash is data; the balance is taken in whole minor units by sampleBill */
   paid: [
     { how: 'Cash', amount: 500 },
-    { how: 'UPI', amount: 381 }
+    { how: 'UPI' }
   ]
 };
 BILL.lines.forEach(function (line) {
@@ -141,48 +142,6 @@ function tenderFor(country) {
     if (window.cbQuiet) window.cbQuiet('bill-print:tender', failure);
   }
   return !pack || (pack.chart && pack.chart.paymentModes && pack.chart.paymentModes.upi) ? 'UPI' : 'Card';
-}
-
-/* ── money ─────────────────────────────────────────────────────────────────────────────────────────────────── */
-function r2(n) {
-  return Math.round((Number(n) || 0) * 100) / 100;
-}
-/** R12: each line's tax is the tax engine's (CBTax.splitLineTax — the shelf price INCLUDES the tax, as in every Indian shop): its heads (CGST and
-    SGST each at half the rate on the same base, or one GST/VAT head) and their sum. The slip only ADDS those heads up; it never halves a total. */
-function lineTax(netAmount, rate, split) {
-  if (!rate) return { assessable: netAmount, tax: 0, heads: { cgst: 0, sgst: 0, igst: 0, vat: 0 } };
-  var answer = CBTax.splitLineTax({ net: netAmount, rate: rate, priceIncludesTax: true, supply: split ? 'intra' : 'domestic', split: split });
-  return { assessable: answer.assessable, tax: answer.tax, heads: answer.heads };
-}
-function calc(kind) {
-  var taxed = kind === 'tax',
-    split = !!taxWords().split;
-  var lines = BILL.lines.map(function (item) {
-    var gross = r2(item.price * item.qty);
-    var save = r2((gross * (item.off || 0)) / 100);
-    var net = r2(gross - save);
-    var rate = taxed ? item.rate || 0 : 0;
-    var taxParts = lineTax(net, rate, split);
-    return Object.assign({}, item, { gross: gross, save: save, net: net, base: taxParts.assessable, tax: taxParts.tax, heads: taxParts.heads, rate: rate });
-  });
-  var sum = function (k) {
-    return r2(
-      lines.reduce(function (total, item) {
-        return total + item[k];
-      }, 0)
-    );
-  };
-  var byRate = {};
-  lines.forEach(function (item) {
-    if (!item.rate) return;
-    var k = String(item.rate),
-      slab = (byRate[k] = byRate[k] || { base: 0, tax: 0, cgst: 0, sgst: 0 });
-    slab.base = r2(slab.base + item.base);
-    slab.tax = r2(slab.tax + item.tax);
-    slab.cgst = r2(slab.cgst + item.heads.cgst);
-    slab.sgst = r2(slab.sgst + item.heads.sgst);
-  });
-  return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
 }
 
 /* ── ⭐ SET-WALK1 · W27 (2026-10-15): THIS PAGE IS THE LIVE PREVIEW OF CB SETTINGS › PRINT SETUP. Opened as /bill-print.html?preview=1 in a frame,
@@ -266,8 +225,8 @@ function taxWords() {
   return (signature && signature.tax) || null;
 }
 /** CTRY-72: where the slip would have been, the words and the way to the fix - no number is worked out. A preview not yet told anything paints nothing. */
-function refusalHTML() {
-  var refusalWords = (signature && signature.refusal) || (signature ? 'No money is set for this shop.' : 'Open Print setup to see the sample bill.'); /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
+function refusalHTML(said) {
+  var refusalWords = said || (signature && signature.refusal) || (signature ? 'No money is set for this shop.' : 'Open Print setup to see the sample bill.'); /* no message = the page was opened on its own: the print test is gone, the sample needs a shop */
   return (
     '<div class="c" data-testid="slip-no-country" style="padding:6mm 2mm"><div class="b">' +
     esc(refusalWords) +
@@ -281,8 +240,8 @@ function when(date) {
   };
   return p(date.getDate()) + '/' + p(date.getMonth() + 1) + '/' + date.getFullYear() + '  ' + p(date.getHours()) + ':' + p(date.getMinutes());
 }
-function paintRefusal() {
-  document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML();
+function paintRefusal(words) {
+  document.getElementById('slip').innerHTML = PREVIEW && !signature ? '' : refusalHTML(words);
 }
 /** the one door every repaint goes through: the slip when the shop has tax words, else the refusal (render() itself needs them) */
 function show() {
@@ -290,11 +249,10 @@ function show() {
 }
 function render() {
   var kind = document.getElementById('kind').value;
-  var m = calc(kind);
+  var sample = sampleBill(kind);
+  if (sample.refusal) return paintRefusal(sample.refusal);
   var title = kind === 'tax' ? 'TAX INVOICE' : kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO';
   var showGstin = kind !== 'cash';
-  var paid = BILL.paid.reduce(function (total, item) { return r2(total + item.amount); }, 0);
-  var change = r2(paid - m.net);
 
   var head =
     headHTML(showGstin) +
@@ -318,14 +276,14 @@ function render() {
     '</span></div>' +
     '<div class="rule"></div>';
 
-  var items = m.lines
+  var items = sample.rows
     .map(function (item) {
       return (
         '<div class="item">' +
         '<div class="row"><span class="l">' +
         esc(item.name) +
         '</span><span class="v">' +
-        fmtMoney(item.net, BILL.currency) +
+        fmtMoney(item.fig.total, BILL.currency) +
         '</span></div>' +
         '<div class="row small qty"><span class="l">' +
         item.qty +
@@ -341,93 +299,8 @@ function render() {
     })
     .join('');
 
-  var totals =
-    '<div class="rule"></div>' +
-    (m.save > 0
-      ? '<div class="row"><span class="l">Items</span><span class="v">' +
-        fmtMoney(m.gross, BILL.currency) +
-        '</span></div>' +
-        '<div class="row"><span class="l">You saved</span><span class="v">-' +
-        fmtMoney(m.save, BILL.currency) +
-        '</span></div>'
-      : '') +
-    (kind === 'tax'
-      ? '<div class="row"><span class="l">Taxable</span><span class="v">' +
-        fmtMoney(m.base, BILL.currency) +
-        '</span></div>' +
-        Object.keys(m.byRate)
-          .sort(function (first, second) {
-            return first - second;
-          })
-          .map(function (item) {
-            var slab = m.byRate[item],
-              words = taxWords();
-            if (!words.split)
-              return (
-                '<div class="row small"><span class="l">' +
-                esc(words.word) +
-                ' ' +
-                item +
-                '% </span><span class="v">' +
-                fmtMoney(slab.tax, BILL.currency) +
-                '</span></div>'
-              ); /* AU · AE: one line, the pack's rate */
-            /* R12: the engine's per-line heads, summed — CGST + SGST is the total by construction */
-            return (
-              '<div class="row small"><span class="l">CGST ' +
-              item / 2 +
-              '% </span><span class="v">' +
-              fmtMoney(slab.cgst, BILL.currency) +
-              '</span></div>' +
-              '<div class="row small"><span class="l">SGST ' +
-              item / 2 +
-              '% </span><span class="v">' +
-              fmtMoney(slab.sgst, BILL.currency) +
-              '</span></div>'
-            );
-          })
-          .join('') +
-        '<div class="row"><span class="l">Total ' +
-        esc(taxWords().word) +
-        '</span><span class="v">' +
-        fmtMoney(m.tax, BILL.currency) +
-        '</span></div>'
-      : '') +
-    '<div class="solid"></div>' +
-    '<div class="row big"><span class="l">TOTAL</span><span class="v">' +
-    fmtMoney(m.net, BILL.currency) +
-    '</span></div>' +
-    '<div class="solid"></div>' +
-    BILL.paid
-      .map(function (item) {
-        return '<div class="row small"><span class="l">' + esc(item.how) + '</span><span class="v">' + fmtMoney(item.amount, BILL.currency) + '</span></div>';
-      })
-      .join('') +
-    (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + fmtMoney(change, BILL.currency) + '</span></div>' : '');
-
-  var hsn =
-    kind === 'tax' && taxWords().split
-      ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>' +
-        m.lines
-          .filter(function (item) {
-            return item.rate;
-          })
-          .map(function (item) {
-            return (
-              '<tr><td>' +
-              esc(item.hsn) +
-              '</td><td>' +
-              fmtMoney(item.base, BILL.currency) +
-              '</td><td>' +
-              item.rate +
-              '%</td><td>' +
-              fmtMoney(item.tax, BILL.currency) +
-              '</td></tr>'
-            );
-          })
-          .join('') +
-        '</table>'
-      : '';
+  var totals = totalsHTML(kind, sample);
+  var hsn = hsnHTML(kind, sample);
 
   var foot =
     '<div class="rule"></div>' +
@@ -459,6 +332,135 @@ function setW(w) {
   show();
 }
 setW('80');
+
+/** the totals block of the slip: every figure is moneyOf's (sample.money), printed as it stands */
+function totalsHTML(kind, sample) {
+  var money = sample.money,
+    currencyCode = BILL.currency,
+    out =
+    '<div class="rule"></div>' +
+    (money.savings > 0
+      ? '<div class="row"><span class="l">Items</span><span class="v" data-testid="slip-items">' +
+        fmtMoney(money.gross, currencyCode) +
+        '</span></div>' +
+        '<div class="row"><span class="l">You saved</span><span class="v" data-testid="slip-saved">-' +
+        fmtMoney(money.savings, currencyCode) +
+        '</span></div>'
+      : '') +
+    (kind === 'tax'
+      ? '<div class="row"><span class="l">Taxable</span><span class="v" data-testid="slip-taxable">' +
+        fmtMoney(money.taxable, currencyCode) +
+        '</span></div>' +
+        money.heads
+          .map(function (head) {
+            return '<div class="row small"><span class="l">' + esc(head.name) + ' ' + head.rate + '% </span><span class="v">' + fmtMoney(head.amount, currencyCode) + '</span></div>';
+          })
+          .join('') /* the engine's heads in its order: CGST + SGST at half the rate each, or the pack's one head (AU · AE) */ +
+        '<div class="row"><span class="l">Total ' +
+        esc(taxWords().word) +
+        '</span><span class="v" data-testid="slip-tax">' +
+        fmtMoney(money.tax, currencyCode) +
+        '</span></div>'
+      : '') +
+    '<div class="solid"></div>' +
+    '<div class="row big"><span class="l">TOTAL</span><span class="v" data-testid="slip-total">' +
+    fmtMoney(money.total, currencyCode) +
+    '</span></div>' +
+    '<div class="solid"></div>' +
+    sample.paid
+      .map(function (item) {
+        return '<div class="row small"><span class="l">' + esc(item.how) + '</span><span class="v">' + fmtMoney(item.amount, currencyCode) + '</span></div>';
+      })
+      .join('');
+  return out;}
+/** India's HSN table: each taxed sample line with its own ItemList figures (sample.rows[].fig) */
+function hsnHTML(kind, sample) {
+  var out =
+    kind === 'tax' && taxWords().split
+      ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>' +
+        sample.rows
+          .filter(function (item) {
+            return item.rate;
+          })
+          .map(function (item) {
+            return (
+              '<tr><td>' +
+              esc(item.hsn) +
+              '</td><td>' +
+              fmtMoney(item.fig.taxable, BILL.currency) +
+              '</td><td>' +
+              item.rate +
+              '%</td><td>' +
+              fmtMoney(item.fig.tax, BILL.currency) +
+              '</td></tr>'
+            );
+          })
+          .join('') +
+        '</table>'
+      : '';
+  return out;}
+
+/* ── THE SAMPLE BUILDER (PRINT-1 S1b) ─ INTERIM, WEB-LOCAL: this path exists only until PRINT-1 S2 moves it into chitbridge-engines (a sample builder beside the
+   billslip module), when this page reads it from there. It is the ONLY place the sample bill's money is made, and it makes it ONCE: the till's own pair —
+   CBTax.determine (the invoice) then CBTax.moneyOf (its read-out) — and render() only READS the answer. Nothing on this page adds, multiplies, halves or
+   rounds a price or a tax: the gross / "You saved" rows are moneyOf's gross and savings (the engine's sums of the invoice's TotAmt and Discount); the tax
+   rows are moneyOf's heads, taxable and tax; each line's figures are its ItemList row. The page never re-runs this for a saved bill (S3 reads the carried invoice).
+   Pinned by tests/bill-print-sample.test.cjs (hand values, the break test) and e2e/print-s1b-same-total.cjs (preview total = the till's carried total). */
+/** CUR-1: a line in another currency than the bill's is refused with the money engine's own words (an amount is labelled, never converted); '' = one currency */
+function currencyRefusal(currency) {
+  try {
+    BILL.lines.forEach(function (line) {
+      CBMoney.assertSameCurrency({ amount: 0, currency: line.currency || currency }, { amount: 0, currency: currency }, 'This sample bill');
+    });
+  } catch (failure) {
+    return failure.message;
+  }
+  return '';
+}
+/** the sample's payments: the data's cash first, the balance on the second way to pay, in whole minor units (an integer subtracts exactly; no change is ever dueMinor) */
+function sampleTenders(total, currency) {
+  var unit = Math.pow(10, CBMoney.decimals(currency)),
+    dueMinor = Math.round(total * unit),
+    cash = Math.min(Math.round(BILL.paid[0].amount * unit), dueMinor);
+  return [
+    { how: BILL.paid[0].how, amount: cash / unit },
+    { how: BILL.paid[1].how, amount: (dueMinor - cash) / unit }
+  ].filter(function (part) {
+    return part.amount > 0;
+  });
+}
+/** one invoice from the sample's lines, by the engine, in the sample shop's own state (India: both parties in it, so CGST + SGST) or country (AU · AE: the one head) */
+function sampleInvoice(taxed) {
+  var split = !!taxWords().split,
+    state = split && window.CBProfileMap ? CBProfileMap.stateOfGstin((signature && signature.tax_id) || SHOP.gstin) || CBProfileMap.stateOfGstin(SHOP.gstin) : '',
+    country = (signature && signature.country) || '',
+    party = split ? { Country: country, State: state } : { Country: country };
+  return CBTax.determine({
+    seller: Object.assign({ LglNm: SHOP.name, RegType: 'regular' }, party),
+    buyer: Object.assign({ LglNm: BILL.customer.name, RegType: 'unregistered' }, party, split ? { Pos: state } : {}),
+    lines: BILL.lines.map(function (line) {
+      return { name: line.name, unit: line.unit, hsn: line.hsn, qty: line.qty, unit_price: line.price, list_price: line.price, discount: line.discount || 0, gst_rate: taxed ? line.rate || 0 : 0, cess_rate: 0 };
+    }),
+    priceIncludesTax: taxed,
+    zeroRated: !taxed,
+    asOf: BILL.at.toISOString().slice(0, 10)
+  });
+}
+/** { refusal } in words, or { money: moneyOf's read-out, rows: each sample line with its own figures (fig), paid: the tenders } — everything render() prints */
+function sampleBill(kind) {
+  var mixed = currencyRefusal(BILL.currency);
+  if (mixed) return { refusal: mixed };
+  var money = CBTax.moneyOf(sampleInvoice(kind === 'tax'), BILL.currency);
+  if (!money.lines.length || money.tax === null || (money.bridge && money.bridge.ok === false))
+    return { refusal: (money.bridge && money.bridge.words) || 'The tax engine could not work this sample out. Check the shop country in Country setup.' };
+  return {
+    money: money,
+    rows: BILL.lines.map(function (line, index) {
+      return Object.assign({}, line, { fig: money.lines[index] });
+    }),
+    paid: sampleTenders(money.total, BILL.currency)
+  };
+}
 </script>
 </body>
 </html>
