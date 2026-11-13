@@ -16,7 +16,7 @@
  *
  * OWNS       the People list (mountList · cols · actRow), the person sheet (openPerson · accessPanel · emailPanel · coverPanel · resetPin · switchIt) and the Add person
  *            sheet (openAdd · createPerson · added), plus the on-duty view; no rule of who may do what (the server's may/why answers).
- * CALLED BY public/employees.html (CBEmployees.mount, a <script> tag) · public/app/cap-finance.js and public/app/their-bill.js (named by the knowledge graph, 2026-10-18; the embed host app/embed-host.js opens it in a dialog).
+ * CALLED BY public/employees.html (CBEmployees.mount, a <script> tag) · public/till.html (+ Add a person, through app/embed-host.js: employees.html?embed=1&view=add in a dialog).
  * FLOW       employees.html → CBEmployees.mount(el, o) → start → load (GET /api/people → may/why) → mountList (CBList) → a row → openPerson(id) → a panel → CBAction write
  *            → changed → reload; view=add → openAdd → createPerson → added; embed=1 tells the host page by postMessage.
  * IDS        every control carries its register code (data-cbsid, UX-137): EMP001, the People screen; the row action builder actRow takes its code from each call.

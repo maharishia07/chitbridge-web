@@ -27,8 +27,8 @@
  *
  * OWNS      the product routes (CB_CATALOGUE_EP), the item and price readers every catalogue screen shares, the catalogue file check and import
  *            (downloadCatalogueTemplate · _cfRun · _cfImportRun), and CBCatalogueApp: the items list, the item sheet, the categories list and import.
- * CALLED BY public/catalogue.html (CBCatalogueApp.mount, a <script> tag) · public/app.html (the workshop, loaded eagerly) · the other caps that read the
- *            item slots (cap-categories.js, cap-catsetup.js, cap-compare.js, cap-network-member.js, +3 more; knowledge graph, 2026-10-18).
+ * CALLED BY public/catalogue.html (CBCatalogueApp.mount and CB_CATALOGUE_EP, a <script> tag) · public/app.html (the workshop, loaded eagerly) · app/cap-categories.js (pData · prodId) ·
+ *            app/cap-catsetup.js (pName · cbAmount); each found by grepping the symbol, 2026-11-13.
  * FLOW      catalogue.html → CBCatalogueApp.mount(host) → show(section) → mountItems | mountCatgs | importHTML → CBList over GET /api/products
  *            → openItem(id) → sheetHTML (read) | formHTML (edit) → prodAdd | prodEdit | prodStatus → CBCatalogueApp.changed() re-reads the list.
  * IDS      every control carries its register code (data-cbsid, UX-137): CTG001 Items · CTG002 Categories · CTG003 Import; Cancel and Edit wear the
