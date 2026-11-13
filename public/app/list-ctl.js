@@ -898,6 +898,16 @@
       '</span>'
     );
   }
+  /** the head's chips and notices: a narrow container folds them into ONE chip that opens them (a phone's head stays within its 30%); a laptop that asked for foldHead keeps the figures inline (the Closing figure, "Dr with no party" stay visible without a tap) and folds only the notices */
+  function titleChipsHTML(list, h, foldPeriod) {
+    var chips = h.chips || [],
+      notes = h.notices || [],
+      inline = chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
+    list.narrow = foldsHead(list);
+    if (!list.narrow) return inline;
+    if (isPhone() || foldPeriod) return foldPeriod || foldsToOneChip(chips, notes) ? foldedChipHTML(list, h, foldPeriod) : inline;
+    return foldsToOneChip([], notes) ? chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false) : inline;
+  }
   function paintTitle(list) {
     var h = head(list),
       box = $(list, ':scope > .cbl-title');
@@ -917,13 +927,7 @@
       notes = h.notices || [],
       foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
     if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
-    /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
-    list.narrow = foldsHead(list);
-    /* a head folded by the page's own ask (foldHead) on a laptop keeps the figures inline (the Closing figure, "Dr with no party" stay visible without a tap): only the notices fold */
-    var keepChips = list.narrow && !isPhone() && !foldPeriod;
-    if (keepChips && foldsToOneChip([], notes)) out += chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false);
-    else if (list.narrow && !keepChips && (foldPeriod || foldsToOneChip(chips, notes))) out += foldedChipHTML(list, h, foldPeriod);
-    else out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
+    out += titleChipsHTML(list, h, foldPeriod);
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)
       out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
