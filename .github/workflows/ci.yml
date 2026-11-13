@@ -233,6 +233,7 @@ jobs:
           node tests/sheets-links.test.cjs
           node tests/showcase-templates.test.cjs
           node tests/stock-pane.test.cjs
+          node tests/till-money-grain.test.cjs
           node tests/t2e-cart.test.cjs
           node tests/t2e-pin.test.cjs
           node tests/t2f-backdrop.test.cjs
