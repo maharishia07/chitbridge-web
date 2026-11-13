@@ -7,7 +7,8 @@
  * Run: node e2e/sec-proofs.red.cjs [--browser] */
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
-const BROWSER = process.argv.includes('--browser');
+let hasPw = false; try { require.resolve('@playwright/test'); hasPw = true; } catch (e) { /* CI: no browser */ }
+const BROWSER = process.argv.includes('--browser') || hasPw;   /* on a SIT box (Playwright image) the screen mutants run by themselves */
 const M = [
   { id: 'PLT-13', name: 'the credential box is given value="123456"', file: 'public/app/signin-ui.js', test: 'e2e/plt-13-no-hardcoded-otp.test.cjs',
     from: `' autocomplete="one-time-code" enterkeyhint="go"></label>'`, to: `' value="123456" autocomplete="one-time-code" enterkeyhint="go"></label>'` },
@@ -36,7 +37,7 @@ const M = [
 ];
 let bad = 0, ran = 0;
 for (const m of M) {
-  if (m.browser && !BROWSER) { console.log('  skip  ' + m.id + ' · ' + m.name + ' (needs --browser; SIT box)'); continue; }
+  if (m.browser && !BROWSER) { console.log('  skip  ' + m.id + ' · ' + m.name + ' (needs a browser: --browser or a SIT box)'); continue; }
   const file = path.join(ROOT, m.file), orig = fs.readFileSync(file);
   const text = orig.toString('utf8');
   const hits = text.split(m.from).length - 1;

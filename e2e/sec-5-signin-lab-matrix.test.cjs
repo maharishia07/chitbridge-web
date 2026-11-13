@@ -17,6 +17,8 @@ const PEOPLE = practice.PEOPLE;
 
 let bad = 0, checks = 0;
 const say = (l, ok, d) => { checks++; console.log('  ' + String(l).padEnd(92) + (ok ? 'OK' : (bad++, '✗ FAILED ' + (d || '')))); };
+/* the window sends a mobile as id, an e-mail as email, a user id as user_id (api routes/signin.js reads id || email || user_id) — always the typed text, untouched */
+const sentId = (b) => b.id || b.email || b.user_id;
 const METHODS = [['mobile', 'mobile'], ['email', 'email'], ['userid', 'userid']];
 const DEVICES = [['laptop 1366x768', { viewport: { width: 1366, height: 768 } }],
   ['phone 390x844', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 }]];
@@ -69,7 +71,7 @@ const DEVICES = [['laptop 1366x768', { viewport: { width: 1366, height: 768 } }]
         const asks = await p.evaluate(() => window.__lab.calls().filter((c) => c.path === '/api/signin/ask'));
         const box = (await p.locator('[data-testid="signin-code"]').count()) ? 'signin-code' : (await p.locator('[data-testid="signin-pin"]').count()) ? 'signin-pin' : null;
         const val = box ? await p.locator('[data-testid="' + box + '"]').inputValue() : null;
-        say(tag + ': Continue sends exactly the typed id to /api/signin/ask; the secret box opens EMPTY', asks.length === 1 && asks[0].body.id === typed && box && val === '', JSON.stringify({ asks: asks.length, id: asks[0] && asks[0].body.id, box, val }));
+        say(tag + ': Continue sends exactly the typed id to /api/signin/ask; the secret box opens EMPTY', asks.length === 1 && sentId(asks[0].body) === typed && box && val === '', JSON.stringify({ asks: asks.length, sent: asks[0] && asks[0].body, box, val }));
         const cred = await p.evaluate(() => { const c = window.__lab.practice().person.cred; return c.pin || c.code; });
         await tap('[data-testid="' + box + '"]'); await p.keyboard.type(cred);
         await tap('[data-testid="signin-verify"]');
