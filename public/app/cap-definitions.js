@@ -26,11 +26,11 @@
  * ⚠️ AND WHERE A REGISTRY IS ABSENT, SAY SO. If offers.js has not loaded, the row reads "not loaded" rather than
  * rendering an empty section that looks like "there are none" — an empty list and a missing source look identical
  * on screen and mean opposite things.
+ * OWNS      the Definitions workshop: offers, tax slabs, categories and their editors, with the test panel (cbDefLoad is the shelf read, cbDefNew / cbDefEdit the editors).
+ * CALLED BY app.html: CAP_OF definitions + the '+ New requirement' button (ensureCap('definitions')) · cap-catsetup.js (ensureCap('definitions'), cbDefNew / cbDefEdit) · cap-categories.js (cbDefRegistries · cbDefLabelOnce; its ensureCap('definitions') is a dead path on catalogue.html, which does not define ensureCap). No <script src> on any page: SUPPORT.
+ * FLOW      ensureCap('definitions') → cbDefLoad → editor rows (cbDefFormHTML) → test panel (cbDefPaintPreview) evaluates through CBOffers with fmtMoney(moneyCode())
+ * CARD      06-catalogue-pim/definitions-shelf
  */
-/* OWNS the Definitions workshop: offers, tax slabs, categories and their editors
- * CALLED BY app.html (ensureCap('definitions'))
- * FLOW ensureCap -> list definitions -> editor rows -> test panel evaluates through CBOffers with fmtMoney(moneyCode())
- * CARD 07-catalogue-and-pricing/definitions */
 
 var CBDEF = { open: {}, mine: null, loading: false, err: '' };
 
