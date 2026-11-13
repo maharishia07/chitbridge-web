@@ -872,11 +872,11 @@
       '" data-testid="cbl-notes-' +
       esc(list.key) +
       '">' +
-      esc(foldPeriod ? T(list, '{n} details', { n: chips.length + notes.length + 1 }) : foldedLabel(list, chips, notes)) +
+      esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + T(list, notes.length ? '{n} notices' : '{n} details', { n: chips.length + notes.length }) : foldedLabel(list, chips, notes)) +
       ' ▾</button>' +
       (list.pop === 'notes'
         ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
-          esc(T(list, 'Notices')) +
+          esc(T(list, foldPeriod ? 'Period and notices' : 'Notices')) +
           '" data-testid="cbl-notes-pop-' +
           esc(list.key) +
           '"><div class="cbl-notes">' +

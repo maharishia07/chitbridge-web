@@ -121,7 +121,7 @@ const measure = (page, table) => page.evaluate(([pairs, SCREEN_]) => {
             const set = (sel, txt) => { const e = document.querySelector(sel); if (e) e.firstChild.textContent = txt; };
             set('.cbl-title h1', 'Journal des écritures comptables');
             set('.cbl-chip.period', '1 avr. 2025 – 2 oct. 2026 ▾');
-            set('[data-cbl-pop="notes"]', '128 notifications ▾');
+            set('[data-cbl-pop="notes"]', '1 avr. 2025 – 2 oct. 2026 · 128 notifications ▾');
           });
         }
         const m = await measure(page, CODE_OF);
@@ -129,6 +129,8 @@ const measure = (page, table) => page.evaluate(([pairs, SCREEN_]) => {
         const pct = Math.round((m.head / m.ih) * 100);
         ok(pct <= limit, label + ' · ' + sz + ' · daybook: the head is ' + pct + '% of the window (<= ' + limit + '%) (' + Math.round(m.head) + ' px)');
         ok(m.sideways <= 0, label + ' · ' + sz + ' · daybook: no sideways scroll (' + m.sideways + ')');
+        if (!longWords) ok(/Apr/.test(await page.$eval('[data-cbl-pop="notes"]', (e) => e.textContent)), label + ' · ' + sz + ' · daybook: the folded chip names the period');
+        if (!longWords) ok(!(await page.$('.cbl-chip.period')), label + ' · ' + sz + ' · daybook: no second period chip beside the folded one');
         await page.close();
       }
     }
