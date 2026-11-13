@@ -66,6 +66,10 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
+/** an order entry that is not cancelled, rejected or declined */
+function crmIsOpenOrder(e) {
+  return e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '');
+}
 /** bills only (count + last date) from the entries the page already holds (C18/C22); `orders` is the count of open orders when the server's figure is absent. NO money is added here: the unbilled money is the server's (CRM-D7) */
 function crmBillFacts(entries) {
   var chitBills = 0,
@@ -77,7 +81,7 @@ function crmBillFacts(entries) {
       if (e.src === 'ledger') ledBills++;
       else chitBills++;
       if (!lastBill || e.at > lastBill) lastBill = e.at;
-    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) orders++;
+    } else if (crmIsOpenOrder(e)) orders++;
   });
   return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, orders: orders };
 }

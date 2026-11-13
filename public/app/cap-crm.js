@@ -179,23 +179,26 @@ function crmPlural(n, one, many) {
 /** CRM-D7: the unbilled orders' money as the SERVER carries it (lib/work-rows sumUnbilled), said, never worked out here. { figs, notes }:
  * figs = one figure per currency side by side (the select bar's words: "not added together"), or "hidden" for a cost-blind reader (the blind rule wins: no per-currency figure is read);
  * notes = what is left out, said: orders without a currency (never the reader's) and orders not priced yet (never a made-up 0). */
+function crmUnbilledNotes(unbilled) {
+  var notes = [];
+  if (unbilled.no_currency) notes.push(crmPlural(unbilled.no_currency, 'without a currency', 'without a currency'));
+  if (unbilled.unpriced) notes.push(crmPlural(unbilled.unpriced, 'not priced yet', 'not priced yet'));
+  return notes;
+}
+function crmUnbilledFigs(unbilled, currency) {
+  var buckets = unbilled.by_currency;
+  if (!buckets) return unbilled.minor == null ? '' : bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency); // an older api: its one figure
+  var figs = buckets
+    .map(function (bucket) {
+      return bkMoney(bucket.minor, bucket.currency);
+    })
+    .join(' + ');
+  return buckets.length > 1 ? figs + ' · ' + tx('not added together') : figs;
+}
 function crmUnbilledParts(unbilled, currency) {
-  var u = unbilled || {},
-    by = u.by_currency || [],
-    notes = [];
-  if (u.no_currency) notes.push(crmPlural(u.no_currency, 'without a currency', 'without a currency'));
-  if (u.unpriced) notes.push(crmPlural(u.unpriced, 'not priced yet', 'not priced yet'));
-  if (u.cost_hidden && u.minor == null) return { figs: tx('hidden'), notes: [] }; // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
-  var figs = '';
-  if (by.length) {
-    figs = by
-      .map(function (b) {
-        return bkMoney(b.minor, b.currency);
-      })
-      .join(' + ');
-    if (by.length > 1) figs += ' · ' + tx('not added together');
-  } else if (u.minor != null && !u.by_currency) figs = bkMoney(u.minor, u.currency || currency || CRM.currency); // an older api: its one figure
-  return { figs: figs, notes: notes };
+  var carried = unbilled || {};
+  if (carried.cost_hidden && carried.minor == null) return { figs: tx('hidden'), notes: [] }; // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
+  return { figs: crmUnbilledFigs(carried, currency), notes: crmUnbilledNotes(carried) };
 }
 function crmUnbilledMoney(unbilled, currency) {
   var q = crmUnbilledParts(unbilled, currency);

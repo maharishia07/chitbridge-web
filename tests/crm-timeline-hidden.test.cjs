@@ -23,7 +23,7 @@ globalThis.CRM = { ledger: true, currency: 'INR' };
 globalThis.crmRolesList = (r) => r; globalThis.crmRealEmail = (v) => v; globalThis.crmPlural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 globalThis.crmNoDate = (s) => s; globalThis.crmEntryWhat = globalThis.crmEntryState = () => '';
 eval(
-  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledParts'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
+  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledNotes'), fn(crm, 'crmUnbilledFigs'), fn(crm, 'crmUnbilledParts'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmIsOpenOrder'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
     NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.chip = crmDueChip; globalThis.said = crmUnbilledSaid; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
 );
 const amountCell = (e) => cols().filter((c) => c.key === 'amount')[0].cell(e);
