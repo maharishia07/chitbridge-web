@@ -34,8 +34,6 @@
  * IDS      every control carries its register code (data-cbsid, UX-137): CTG001 Items · CTG002 Categories · CTG003 Import; Cancel and Edit wear the
  *            component codes CMP003 / CMP012 with their mount.
  * CARD 06-catalogue-pim/items
- *
- * (older note) CALLED BY public/app.html, public/app/cap-categories.js, public/app/cap-catsetup.js, public/app/cap-compare.js, public/app/cap-network-member.js (+3 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
 /* ── the product routes — ONE registration (e2e/ep-aliases.cjs); app.html and catalogue.html merge this into EP ── */
