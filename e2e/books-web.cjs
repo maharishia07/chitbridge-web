@@ -972,8 +972,11 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
        step measures is the workshop's Customers list, so open the workshop for it */
     await p2.goto(new URL('/app.html#/app', p2.url()).href); await p2.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     await p2.evaluate(() => navTo('customers')); await p2.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 8000 });
+    /* a phone's list bar keeps ONE View button; Grid / Lines live inside its popover (list-ctl viewMenuHTML), so open it to read them, then close it */
+    await p2.click('[data-testid="cbl-view-menu-customers"]'); await p2.waitForSelector('[data-testid="view-grid-customers"]', { timeout: 5000 });
     const pc = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, row: getComputedStyle(document.querySelector('[data-testid="cust-row-c1"]')).display, labelled: document.querySelectorAll('[data-testid="cust-row-c1"] .lcell[data-l]').length, gridOff: document.querySelector('[data-testid="view-grid-customers"]').disabled, linesOn: document.querySelector('[data-testid="view-lines-customers"]').getAttribute('aria-pressed') }));
     ok(pc.sw === 390 && pc.row === 'flex' && pc.labelled === 3, 'phone: the CRM shows its three columns as label : value lines in a card (a container query, not the page width), scrollWidth === ' + pc.sw + ', ' + pc.labelled + ' labelled');
+    await p2.click('[data-testid="cbl-view-menu-customers"]');
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-phone.png') });
     await c2.close();
   }
