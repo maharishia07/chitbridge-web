@@ -15,7 +15,6 @@
  *   5. a different body is a different attempt (a corrected amount is not a replay)
  *   6. no answer at all (network failure, timeout: settleAttempt never runs) keeps the key
  *   7. idem:true stays a fresh key per send; a GET has no key
- *   8. the four quote writes (public/app/cap-quotes.js CB_QUOTE_EP) are idem:'attempt', and a retry after a lost answer reuses the key
  *
  * Run: node e2e/attempt-key.test.cjs
  */
@@ -72,24 +71,6 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
   const q1 = cbIdemKey(Q, false, sandbox.CB, 'rid', null);
   ok(q1 && cbIdemKey(Q, false, sandbox.CB, 'rid', null) !== q1, '7a · idem:true stays a fresh key per send');
   ok(cbIdemKey({ m: 'GET', p: '/api/books/payments', idem: 'attempt' }, false, sandbox.CB, 'rid', 'x') === null, '7b · a GET has no key');
-
-  /* 8 · the quote rows: a lost answer then a retry must not create or send a proposal twice (queue 345) */
-  const qctx = { console };
-  vm.createContext(qctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-quotes.js'), 'utf8'), qctx);
-  const QEP = qctx.CB_QUOTE_EP;
-  const QWRITES = ['quotePropose', 'quoteAccept', 'quoteReject', 'quoteCounter'];
-  for (const name of QWRITES) {
-    const row = QEP[name];
-    ok(row && row.m === 'POST' && row.idem === 'attempt', "8a · " + name + " is idem:'attempt'");
-    const params = { id: 'c1', pid: 'p1' }, body = { note: 'n' };
-    const first = cbIdemKey(row, false, sandbox.CB, 'rid', attemptOf(name, params, body));
-    ok(first && cbIdemKey(row, false, sandbox.CB, 'rid', attemptOf(name, params, body)) === first, '8b · ' + name + ': the retry after a lost answer reuses the key');
-    ok(cbIdemKey(row, false, sandbox.CB, 'rid', attemptOf(name, { id: 'c1', pid: 'p2' }, body)) !== first, '8c · ' + name + ': another proposal is another attempt');
-    await settleAttempt(row, attemptOf(name, params, body), answer(200, {}));
-    ok(cbIdemKey(row, false, sandbox.CB, 'rid', attemptOf(name, params, body)) !== first, '8d · ' + name + ': a settled answer ends the attempt');
-  }
-  ok(QEP.quoteList.m === 'GET' && !QEP.quoteList.idem, '8e · quoteList (a read) carries no key');
 
   console.log(bad ? `\n  ✗ ${bad} failed\n` : '\n  ✓ all passed\n');
   process.exit(bad ? 1 : 0);

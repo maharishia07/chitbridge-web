@@ -15,6 +15,7 @@
     "check:cart": "node scripts/cart-ui.test.mjs && node scripts/cap-network-render.test.mjs",
     "check:steps": "node scripts/step-flow.test.mjs",
     "check:attempt": "node e2e/attempt-key.test.cjs",
+    "check:quoteattempt": "node e2e/quote-attempt-key.test.cjs",
     "check:gststill": "node e2e/pe-gst-still.test.cjs",
     "check:taxpick": "node tests/country-tax-pick.test.cjs",
     "check:signin": "node tests/signin-ui.test.cjs",
