@@ -1312,10 +1312,15 @@ async function settleAttempt(endpoint, attempt, res) {
   delete _attempts[attempt];
   return res;
 }
-/** serverErrorWords(endpoint) → the words for a 5xx: a money write (idem:'attempt') may have landed, so it says check first */
+/** serverErrorWords(endpoint) → the words for a 5xx: a write kept on one key (idem:'attempt') may have landed, so it says check first */
 function serverErrorWords(endpoint) {
-  if (endpoint.idem === 'attempt') return 'No answer came back. The payment may already be recorded: check before you pay again.';
+  if (endpoint.idem === 'attempt') return 'Something went wrong on our side. This may already be saved: check before you try again.';
   return 'Server error — please try again.';
+}
+/** deadlineWords(endpoint) → the words for the 90 s abort: the same meaning as a 5xx when the key is kept */
+function deadlineWords(endpoint) {
+  if (endpoint.idem === 'attempt') return 'No answer in 90 s. This may already be saved: check before you try again.';
+  return 'No answer from the server in 90 s — try again.';
 }
 /* errWords(v) → plain words from whatever an answer carries in a message slot: a string as is; an object (RFC 9457 problem, or {code,message}) by its detail, message, title, error; else ''.
    Never String(object): that is how a screen came to say "[object Object]" (SIT crawl 11 Nov, Work > Intake). */
@@ -1417,7 +1422,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
       /* a DEADLINE is not "offline": never queue it, say what happened */
       if (netErr && netErr.name === 'AbortError') {
         cblog('error', ep.m + ' ' + key + ' → no answer in 90 s [' + _rid + ']');
-        throw new Error('No answer from the server in 90 s — try again.');
+        throw new Error(deadlineWords(ep));
       }
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
       if (outboxSafe && CB) {

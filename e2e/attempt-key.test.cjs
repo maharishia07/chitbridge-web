@@ -17,6 +17,7 @@
  *   7. idem:true stays a fresh key per send; a GET has no key
  *   8. a 5xx (500 502 503 504) keeps the key: a gateway or deadline 5xx can follow a committed payment, and a new key would post twice
  *   9. every answer under 500 ends it (200 400 404 422 409 CONFLICT); a 5xx then a 200 ends it; a changed body after a 5xx is a new key
+ *  11. apiOnce on an idem:'attempt' row: a 5xx with no api message shows serverErrorWords, a 90 s abort shows deadlineWords; a plain row keeps the old words
  *  10. the two copies of the rule (cap-attach.js callDoor, shop.html attemptKey/attemptAnswered) follow the same line
  *
  * Run: node e2e/attempt-key.test.cjs
@@ -98,7 +99,7 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
     ok(keyFor(body5) !== k5, '9 · a 503 then a 200 ends the attempt');
   }
 
-  ok(/may already be recorded/.test(serverErrorWords(PAY)) && !/may already/.test(serverErrorWords({ m: 'POST', idem: true })), '8 · a 5xx on a money write says the payment may already be recorded; other writes keep the plain words');
+  ok(/may already be saved/.test(serverErrorWords(PAY)) && !/may already/.test(serverErrorWords({ m: 'POST', idem: true })), '8 · a 5xx on a money write says it may already be saved; other writes keep the plain words');
 
   /* 10a · cap-attach.js callDoor */
   {
@@ -133,6 +134,32 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
     const send = (code) => { status = code; return ctx.moneyPost('d', '/order/confirm', { v: 1 }); };
     for (const code of [500, 502, 503, 504]) { await send(code); await send(code); ok(keys[keys.length - 1] === keys[keys.length - 2], `10b · shop: a ${code} keeps the key`); }
     for (const code of [200, 400, 404, 422, 409]) { await send(code); await send(code); ok(keys[keys.length - 1] !== keys[keys.length - 2], `10b · shop: a ${code} ends the attempt`); }
+  }
+
+  /* 11 · apiOnce itself: the words a person reads (FIN-63 copy) */
+  {
+    const a = src.indexOf('async function apiOnce(');
+    const b = src.indexOf('/* ── the DEFINITIONS routes');
+    if (a < 0 || b < 0) throw new Error('apiOnce not found in core.js');
+    let reply = { status: 503, body: {} };
+    let abort = false;
+    const ctx2 = {
+      console, JSON, Date, Promise, Error, Set, Object, Array, Math, URLSearchParams, String, setTimeout, clearTimeout, cblog: () => {},
+      CB: { _uuid: () => 'z' }, window: {}, CFG: { API_BASE: '' }, SESSION: {}, OUTBOX_KEYS: new Set(), _lockKeys: new Set(), _inflight: 0, _netBusy() {},
+      fill: (p) => p, epOf: (k) => ({ pay: { m: 'POST', p: '/x', idem: 'attempt' }, plain: { m: 'POST', p: '/y' } })[k], AbortController: undefined
+    };
+    ctx2.fetch = () => (abort ? Promise.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })) : Promise.resolve({ status: reply.status, ok: false, headers: { get: () => null }, clone() { return this; }, json: async () => reply.body }));
+    vm.createContext(ctx2);
+    vm.runInContext(src.slice(i, b) + '\nthis.apiOnce = apiOnce; this.serverErrorWords = serverErrorWords;', ctx2);
+    const say = async (key) => { try { await ctx2.apiOnce(key, { body: { v: 1 } }); return ''; } catch (e) { return e.message; } };
+    reply = { status: 503, body: {} };
+    const words = await say('pay');
+    ok(words === ctx2.serverErrorWords({ idem: 'attempt' }) && /may already be saved/.test(words), '11 · a 5xx with no api message on a money write shows serverErrorWords: ' + words);
+    ok((await say('plain')) === 'Server error — please try again.', '11 · a plain write keeps the plain 5xx words');
+    reply = { status: 503, body: { message: 'Upstream down' } };
+    ok((await say('pay')) === 'Upstream down', '11 · the api message still wins');
+    abort = true;
+    ok(/may already be saved/.test(await say('pay')) && /try again/.test(await say('plain')) && !/may already/.test(await say('plain')), '11 · the 90 s abort says the same on a kept key, the old words elsewhere');
   }
 
   console.log(bad ? `\n  ✗ ${bad} failed\n` : '\n  ✓ all passed\n');
