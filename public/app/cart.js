@@ -2,7 +2,7 @@
  * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
  * OWNS      the one basket every ordering surface draws: the state (item_id → quantity), the money block (offers → GST → total), the row with its
  *           six quantity models, the bar, the panel and the picker (CBCart = state + money + panel; CBCatUI = the catalogue rows, chip and picker).
- * CALLED BY shop.html (the storefront card), network-design.html (the network lab), cart-design.html and storefront-design.html (reference drawings),
+ * CALLED BY shop.html (the storefront card), network-design.html (the network lab), cart-design.html, storefront-design.html and supplier-design.html (reference drawings),
  *           app.html (Compose and Suppliers, through CBCart.create). Loaded by <script src> on those pages and no other.
  * FLOW      CBCart.init or create(catalogue, WRAP) → barHTML / listHTML / pickerHTML paint the rows → add, dec, setQty change the state and repaint →
  *           money(lines) prices them → open() draws the panel → checkout() hands the lines to the outlet's onCheckout (the outlet confirms and sends).
