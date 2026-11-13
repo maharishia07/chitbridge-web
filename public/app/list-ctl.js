@@ -3051,8 +3051,9 @@
   /** one button of the pager pair: Previous (glyph first) or Next (glyph last) with its register code */
   function pagerButton(side, code, spec) {
     var text = esc(spec.label);
+    var sid = 'CMP037-' + code; /* B06 or B07: held in a name so the census reads the code on the element */
     return (
-      '<button type="button" data-cbsid="CMP037-' + code + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
+      '<button type="button" data-cbsid="' + sid + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
       (spec.off ? ' disabled' : '') + '>' + (side === 'prev' ? '‹ ' + text : text + ' ›') + '</button>'
     );
   }
