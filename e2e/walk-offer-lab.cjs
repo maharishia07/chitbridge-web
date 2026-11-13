@@ -583,7 +583,7 @@ const walk = async (w) => {
     const sheet = await phone.evaluate(() => {
       const box = document.querySelector('#workScrim .sheet').getBoundingClientRect(), close = document.querySelector('#workScrim .shhd [data-cbname="close"]').getBoundingClientRect();
       const hit = document.elementFromPoint(close.left + close.width / 2, close.top + close.height / 2);
-      return { left: Math.round(box.left), right: Math.round(box.right), width: window.innerWidth, closeIn: close.left >= 0 && close.right <= window.innerWidth && close.top >= 0 && close.bottom <= window.innerHeight, closeHit: !!hit && (hit.classList.contains('ovlx') || !!hit.closest('.ovlx')) };
+      return { left: Math.round(box.left), right: Math.round(box.right), width: window.innerWidth, closeIn: close.left >= 0 && close.right <= window.innerWidth && close.top >= 0 && close.bottom <= window.innerHeight, closeHit: !!hit && !!hit.closest('[data-cbname="close"]') };
     });
     await phone.click('#workScrim .shhd [data-cbname="close"]');
     const closed = await phone.evaluate(() => !document.getElementById('workScrim').classList.contains('on'));
