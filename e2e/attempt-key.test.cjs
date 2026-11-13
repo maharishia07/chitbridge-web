@@ -15,6 +15,9 @@
  *   5. a different body is a different attempt (a corrected amount is not a replay)
  *   6. no answer at all (network failure, timeout: settleAttempt never runs) keeps the key
  *   7. idem:true stays a fresh key per send; a GET has no key
+ *   8. a 5xx (500 502 503 504) keeps the key: a gateway or deadline 5xx can follow a committed payment, and a new key would post twice
+ *   9. every answer under 500 ends it (200 400 404 422 409 CONFLICT); a 5xx then a 200 ends it; a changed body after a 5xx is a new key
+ *  10. the two copies of the rule (cap-attach.js callDoor, shop.html attemptKey/attemptAnswered) follow the same line
  *
  * Run: node e2e/attempt-key.test.cjs
  */
@@ -31,8 +34,8 @@ if (i < 0 || j < 0) throw new Error('idempotency block not found in core.js');
 let n = 0;
 const sandbox = { console, JSON, Date, cblog: () => {}, CB: { _uuid: () => 'k' + ++n } };
 vm.createContext(sandbox);
-vm.runInContext(src.slice(i, j) + '\nthis.cbIdemKey = cbIdemKey; this.attemptOf = attemptOf; this.settleAttempt = settleAttempt;', sandbox);
-const { cbIdemKey, attemptOf, settleAttempt } = sandbox;
+vm.runInContext(src.slice(i, j) + '\nthis.cbIdemKey = cbIdemKey; this.attemptOf = attemptOf; this.settleAttempt = settleAttempt; this.serverErrorWords = serverErrorWords;', sandbox);
+const { cbIdemKey, attemptOf, settleAttempt, serverErrorWords } = sandbox;
 
 const PAY = { m: 'POST', p: '/api/books/payments', idem: 'attempt' };
 const answer = (status, body) => ({ status, clone: () => ({ json: async () => body }) });
@@ -71,6 +74,66 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
   const q1 = cbIdemKey(Q, false, sandbox.CB, 'rid', null);
   ok(q1 && cbIdemKey(Q, false, sandbox.CB, 'rid', null) !== q1, '7a · idem:true stays a fresh key per send');
   ok(cbIdemKey({ m: 'GET', p: '/api/books/payments', idem: 'attempt' }, false, sandbox.CB, 'rid', 'x') === null, '7b · a GET has no key');
+
+  /* 8 · a 5xx keeps the key (FIN-63 follow-up) */
+  for (const st of [500, 502, 503, 504]) {
+    const kk = keyFor({ ...pay, amount: 900 + st });
+    await settleAttempt(PAY, attemptOf('booksPayRecord', {}, { ...pay, amount: 900 + st }), answer(st, { code: 'X' }));
+    ok(keyFor({ ...pay, amount: 900 + st }) === kk, `8 · a ${st} keeps the key: the retry is the same attempt`);
+  }
+  /* 9 · anything under 500 ends it */
+  for (const [st, b] of [[200, {}], [400, {}], [404, {}], [422, {}], [409, { code: 'CONFLICT' }]]) {
+    const kk = keyFor({ ...pay, amount: 700 + st });
+    await settleAttempt(PAY, attemptOf('booksPayRecord', {}, { ...pay, amount: 700 + st }), answer(st, b));
+    ok(keyFor({ ...pay, amount: 700 + st }) !== kk, `9 · a ${st}${b.code ? ' ' + b.code : ''} ends the attempt`);
+  }
+  {
+    const body5 = { ...pay, amount: 555 };
+    const a5 = attemptOf('booksPayRecord', {}, body5);
+    const k5 = keyFor(body5);
+    await settleAttempt(PAY, a5, answer(503, {}));
+    ok(keyFor({ ...body5, amount: 556 }) !== k5, '9 · after a 503 a changed body is a new key');
+    ok(keyFor(body5) === k5, '9 · after a 503 the same body still holds the key');
+    await settleAttempt(PAY, a5, answer(200, { ok: true }));
+    ok(keyFor(body5) !== k5, '9 · a 503 then a 200 ends the attempt');
+  }
+
+  ok(/may already be recorded/.test(serverErrorWords(PAY)) && !/may already/.test(serverErrorWords({ m: 'POST', idem: true })), '8 · a 5xx on a money write says the payment may already be recorded; other writes keep the plain words');
+
+  /* 10a · cap-attach.js callDoor */
+  {
+    const sent = [];
+    let status = 200;
+    const ctx = { console, JSON, Object, Promise, Error, encodeURIComponent, crypto: { randomUUID: (() => { let c = 0; return () => 'u' + ++c; })() }, document: { currentScript: { dataset: { cap: 'testing', token: 'T' } }, createElement: () => ({}), head: { appendChild() {} }, body: { appendChild() {} } } };
+    ctx.window = ctx;
+    ctx.fetch = (url, o) => { sent.push(JSON.parse(o.body).client_ref); return Promise.resolve({ status, ok: status < 400, json: async () => (status === 409 ? { code: 'CONFLICT' } : {}) }); };
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-attach.js'), 'utf8'), ctx);
+    const send = (code) => { status = code; return ctx.api('testRecord', { body: { v: 1 } }).catch(() => {}); };
+    for (const code of [500, 502, 503, 504]) { await send(code); await send(code); ok(sent[sent.length - 1] === sent[sent.length - 2], `10a · cap-attach: a ${code} keeps the client_ref`); }
+    for (const code of [200, 400, 404, 422, 409]) { await send(code); await send(code); ok(sent[sent.length - 1] !== sent[sent.length - 2], `10a · cap-attach: a ${code} ends the attempt`); }
+    await send(503); await send(200); await send(200);
+    ok(sent[sent.length - 3] === sent[sent.length - 2] && sent[sent.length - 1] !== sent[sent.length - 2], '10a · cap-attach: 503 then 200 ends the attempt');
+  }
+
+  /* 10b · shop.html attemptKey + attemptAnswered + moneyPost */
+  {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'shop.html'), 'utf8');
+    const a = html.indexOf('var _ATTEMPTS = {};');
+    const b = html.indexOf('function sfLoginStart');
+    if (a < 0 || b < 0) throw new Error('shop.html attempt block not found');
+    const keys = [];
+    let status = 200;
+    let m = 0;
+    const ctx = { console, JSON, Object, Promise, Date, Math, encodeURIComponent, API: '', BRIDGE: 'b', window: {} };
+    ctx.fetch = (url, o) => { keys.push(o.headers['Idempotency-Key']); return Promise.resolve({ status, json: async () => (status === 409 ? { code: 'CONFLICT' } : {}) }); };
+    ctx.window.CBOffline = ctx.CBOffline = { _uuid: () => 'k' + ++m };
+    vm.createContext(ctx);
+    vm.runInContext(html.slice(a, b), ctx);
+    const send = (code) => { status = code; return ctx.moneyPost('d', '/order/confirm', { v: 1 }); };
+    for (const code of [500, 502, 503, 504]) { await send(code); await send(code); ok(keys[keys.length - 1] === keys[keys.length - 2], `10b · shop: a ${code} keeps the key`); }
+    for (const code of [200, 400, 404, 422, 409]) { await send(code); await send(code); ok(keys[keys.length - 1] !== keys[keys.length - 2], `10b · shop: a ${code} ends the attempt`); }
+  }
 
   console.log(bad ? `\n  ✗ ${bad} failed\n` : '\n  ✓ all passed\n');
   process.exit(bad ? 1 : 0);
