@@ -239,6 +239,7 @@ jobs:
           node tests/t3a-money.test.cjs
           node tests/tasks-orders-list.test.cjs
           node tests/wx-bills-cols.test.cjs
+          node tests/acc342-todo-no-action.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
