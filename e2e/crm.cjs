@@ -981,7 +981,7 @@ async function route(S, r) {
       S.live = { record, timeline };
       const { ctx, p } = await open(S, { hash: '#/party/P-0004' }); await recReady(p); await openAll(p); await p.waitForTimeout(400);
       const chip = await text(p, '.rchips'), cs = await text(p, '[data-testid="crm-sec-customer"]');
-      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the server's figure (' + chip + ' || ' + cs.slice(0, 110) + ')');
+      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the carried figure (' + chip + ' || ' + cs.slice(0, 110) + ')');
       ok(!never.test(chip.replace(/d{1,2} w{3}/g, '')) , 'CRM-D7 ' + name + ': nothing summed, no reader currency borrowed (' + chip + ')');
       await ctx.close();
     }
