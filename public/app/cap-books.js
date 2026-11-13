@@ -93,6 +93,13 @@ function bkQuiet(where, failure, fallback) {
   if (typeof cbQuiet === 'function') cbQuiet('books:' + where, failure);
   return fallback;
 }
+/* the Ledgers head (#lg_out): its laptop and phone rules, apart so bkCss stays within its size */
+var LG_HEAD_CSS = [
+    /* the Ledgers head on a laptop pane (#lg_out: list-ctl writes .cbl as .cbl:not(#_), id weight, so these name the id too): the title row and the tools row share ONE row (the tools sit at the right, folded to search · Filters · View · count), the column header is the second line */,
+    '@container lt (min-width:621px){#bk_lt #lg_out{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr)}#bk_lt #lg_out > *{grid-column:1/-1}#bk_lt #lg_out > .cbl-title{grid-column:1;grid-row:1}#bk_lt #lg_out > .cbl-tools{grid-column:2;grid-row:1;flex-wrap:nowrap;align-items:center;border-bottom:1px solid var(--line-soft,var(--line));padding-inline:0 12px;gap:6px}#bk_lt #lg_out > .cbl-title{padding-inline:16px;gap:4px 8px;flex-wrap:nowrap}#bk_lt #lg_out > .cbl-title .cbl-chip{flex:0 1 auto}#bk_lt #lg_out > .cbl-tools .cbl-search{flex:0 0 120px;width:120px}#bk_lt #lg_out .cbl-hc{padding-block:2px}#bk_lt #lg_out > .cbl-list{grid-row:2}}',
+    /* a phone: search · Filters · View · count on ONE line (the party ledger's head was 36% of the window) */,
+    '@container lt (max-width:620px){#bk_lt #lg_out .cbl-tools{flex-wrap:nowrap}#bk_lt #lg_out .cbl-tools .cbl-search{flex:1 1 60px;min-width:0}#bk_lt #lg_out .cbl-tools .cbl-count{flex:0 0 auto}/* the figures chip is text, not a button: it needs no 44 px tap height (it was a third row of the head) */#bk_lt #lg_out .cbl-title > span.cbl-chip{min-height:0}}'
+].join('\n');
 /* the tables' look, once, the way cap-categories does it (cbcatCss) */
 function bkCss() {
   if (typeof document === 'undefined' || document.getElementById('bk_css')) return;
@@ -166,7 +173,7 @@ function bkCss() {
     /* the opened entry: its journal never scrolls sideways (a long ledger name wraps) and its quiet facts line */
     '#bk_lt .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}#bk_lt .cbl-next{overflow-x:hidden}',
     '#bk_lt .lg-facts{display:flex;flex-wrap:wrap;gap:2px 0;color:var(--grey);font-size:var(--fs-1);margin:8px 0 0}',
-    '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}',
+    '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}', LG_HEAD_CSS,
     /* phone: the tree is page one, the ledger page two (list → detail → back); no squeezed side panel */
     '@container lt (max-width:620px){#bk_lt .lt-tree{width:100%;border-top:0}#bk_lt .lt-rz,#bk_lt [data-lt="fold"]{display:none}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt .tn{min-height:44px;padding-block:10px}#bk_lt .tn.band{min-height:40px}#bk_lt .lt-tools{padding:8px 16px}#bk_lt .cbl-nrow > span:not(:first-child){width:auto!important;min-width:76px;padding-inline-start:10px;white-space:nowrap}',
     /* the ledger page's title row on a phone: ‹ title … bell · home · avatar on line one (R06: the bell takes ~36 px of it); the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
@@ -3680,7 +3687,7 @@ function bkLgMount(el) {
   };
   var dflt = kind === 'control' ? ['date', 'party', 'what'] : kind === 'party' ? ['date', 'what', 'bal'] : ['date', 'what', 'bal'];
   return CBList.mount(el, {
-    key: 'ledger-' + kind,
+    key: 'ledger-' + kind, foldHead: true /* the phone's head fold at every width: the title and the tools share a row on a laptop (head within 20% / 30%) */,
     t: tx,
     view: 'grid',
     fill: false /* the pane's own layout (flex) sizes the list — it leaves room for the kural footer, which fit() (window height minus the top) would not */,

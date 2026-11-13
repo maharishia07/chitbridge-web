@@ -58,3 +58,6 @@ The prototype's purple "PROTOTYPE ONLY" strip is **deleted** from index.html, st
 
 ## Measured (e2e/cb-accounts.cjs)
 Head ≤ 20% at 1366×768 and 1080×768 (17%), ≤ 30% at 390 (24–29%), in every state, in Cream, Dark and Terminal; no sideways scroll at 1366, 1080 and 390.
+
+## Head budget, 13 Nov 2026 (q356)
+The 9 Nov tap rule (32 px controls) took the head to 26% on a laptop and 36% on a phone party ledger. Now: the list passes `foldHead: true` (list-ctl: the phone fold at every width: Group, Columns and CSV inside one **View** chip; the figures and a notice into one notices chip when there are two or more); on a pane over 620 px the title row and the tools row share ONE row (cap-books.js, `#bk_lt #lg_out`), and the column header is the second line; on a phone the search, Filters, View and count share one line. Measured (e2e/cb-accounts.cjs, sit-grund): laptop 18% (was 26%), narrow laptop 18% (was 26%), phone party 30% (was 36%), in Cream, Dark and Terminal. The Columns gear and the notice popover are one step inside their chips.
