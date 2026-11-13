@@ -127,6 +127,7 @@ if (reg) {
   const rows = {}; Object.values(reg.screens || {}).forEach((row) => { if (row.code) rows[row.code] = row; });
   const all = WANT.map((row) => row[0]), missing = all.filter((code) => !rows[code]), retired = all.filter((code) => rows[code] && rows[code].retired);
   console.log('  register: ' + (all.length - missing.length) + ' of ' + all.length + ' codes found' + (missing.length ? ' (pending until the docs PR lands: ' + missing.length + ')' : ''));
+  if (process.env.UIID_REG) check(!missing.length, "every code is in the register UIID_REG names (" + missing.length + " missing)"); /* a set register: a missing code FAILS, no pending */
   check(retired.length === 0, 'no code is retired in the register');
 }
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
