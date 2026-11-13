@@ -92,7 +92,7 @@ const bkbRec = () => (BKB.rec = BKB.rec || bkbLoad('marks:' + BKB.acct, {}));
 const bkbRules = () => (BKB.rules = BKB.rules || bkbLoad('rules', []));
 const bkbBy = () => {
   try {
-    return (typeof SESSION !== 'undefined' && SESSION && (SESSION.name || SESSION.display_name)) || null;
+    return (typeof SESSION !== 'undefined' && SESSION && SESSION.name) || null;
   } catch (_) {
     return null;
   }
