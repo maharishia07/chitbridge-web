@@ -33,4 +33,15 @@ const ok = (body, what) => { body(); n++; console.log('  ok  ' + what); };
   }, code + ': an old record sums, reads and shows; new money in it is refused');
 });
 ok(() => ['conversion-lab.html'].forEach((f) => { const s = read(f); assert.ok(/CBMoney\.currencyOf\(d\.price, \{ stored: true \}\)/.test(s) && /CBMoney\.amountOf\(m, \{ stored: true \}\)/.test(s)); }), 'the conversion lab reads stored prices through the opt-in');
-console.log('\n  ' + n + ' checks\n');
+console.log('\n  ' + n + ' checks\n');ok(() => {
+  const profiles = read('app/country-profiles.js');
+  const cp = vm.createContext({});
+  cp.window = cp; cp.self = cp; cp.root = cp;
+  vm.runInContext(read('engine/money.js'), cp);
+  vm.runInContext(lift(profiles, 'decimalsOf'), cp);
+  const want = { IQD: 3, YER: 2, LBP: 2, SYP: 2, HUF: 2, AFN: 2, JPY: 0, KWD: 3, INR: 2 };
+  Object.keys(want).forEach((c) => assert.strictEqual(cp.decimalsOf(c), want[c], 'the country lab shows the money engine decimals for ' + c));
+  assert.throws(() => cp.decimalsOf('ZZZ'), (e) => e.code === 'MONEY_CURRENCY_UNKNOWN');
+  assert.ok(profiles.indexOf('resolvedOptions().maximumFractionDigits') < 0, 'no Intl decimals table left in country-profiles.js');
+}, 'country-profiles decimalsOf reads the vendored money (IQD 3, YER/LBP/SYP/HUF/AFN 2), one calculation');
+
