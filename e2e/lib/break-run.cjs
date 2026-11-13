@@ -74,7 +74,7 @@ function disposeDir(dir) {
     const p = path.join(dir, n);
     try { if (fs.lstatSync(p).isSymbolicLink() || (fs.lstatSync(p).isDirectory() && fs.realpathSync(p) !== p)) fs.rmdirSync(p); } catch (_) {}
   }
-  fs.rmSync(dir, { recursive: true, force: true });
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 8, retryDelay: 400 }); } catch (_) { /* a Windows handle still open: the next run's sweep removes it */ }
 }
 function site(W) {
   const fs = require('fs');

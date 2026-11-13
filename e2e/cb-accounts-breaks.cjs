@@ -6,6 +6,8 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const CAPB = 'public/app/cap-books.js', LCTL = 'public/app/list-ctl.js';
 const AV = 'public/app/avatar.js';   /* the avatar is CBAvatar now: its Profile link and its sign-out live here, not on the page */
 const PAGE = 'public/accounts.html', SHELL = 'public/app/accounts-shell.js', FRAME = 'public/app/page-frame.js';   /* SHELL-ONE: ⌂ Home is the frame's */   /* N18: the index tile is a manifest card now (e2e/index-page.cjs); its breaks left with it */
@@ -82,9 +84,7 @@ if (process.env.BREAK_CHECK) {
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (so a break
    gets its verdict in seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines. */
 const BASES = {};
-const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' XX line(s) already red, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
-/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
-const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: SITE.dir }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' XX line(s) already red, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;

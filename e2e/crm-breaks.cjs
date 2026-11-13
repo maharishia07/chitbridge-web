@@ -7,6 +7,8 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const PAGE = 'public/crm.html', HOME = 'public/app/cap-crm.js', REC = 'public/app/cap-crm-record.js';
 const H = 'e2e/crm.cjs';
 const BREAKS = [
@@ -63,9 +65,7 @@ if (process.env.BREAK_CHECK) {
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (so a break
    gets its verdict in seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines. */
 const BASES = {};
-const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' XX line(s) already red, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
-/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
-const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: SITE.dir }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' XX line(s) already red, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;

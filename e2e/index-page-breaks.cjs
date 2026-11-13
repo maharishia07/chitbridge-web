@@ -3,6 +3,8 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const IDX = 'index.html', MAN = 'public/app/manifest.json';
 const BREAKS = [
   ['a hand-written card sneaks in', IDX, `<div id="shell"></div>`, `<div id="shell"></div><a class="cbsh-box" href="/till.html">Till</a>`],
@@ -24,11 +26,9 @@ const ONLY = process.env.BREAK_ONLY || '';
 /* The parent walk is already red on main (budget lines lag), so "exit != 0 and some XX" proves nothing: a break counts only when it adds an
    XX line the UNBROKEN run does not print (2026-11-13). */
 const H = 'e2e/index-page.cjs';
-const BASE = BR.baseline(H, { cwd: W });
+const BASE = BR.baseline(H, { cwd: SITE.dir });
 console.log('  baseline ' + H + ' (unbroken, ' + BASE.runs + ' runs): exit ' + BASE.status + ', ' + BASE.xx.length + ' XX line(s) already red, ignored');
 BASE.xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120)));
-/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
-const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;

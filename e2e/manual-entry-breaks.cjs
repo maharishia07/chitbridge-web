@@ -6,6 +6,8 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const ENT = 'public/app/cap-entry.js', A = 'e2e/manual-entry.cjs';
 const BREAKS = [
   /* the two the task names */
@@ -40,11 +42,9 @@ if (process.env.BREAK_CHECK) {
 }
 /* The parent is red on main for its own reasons (its stand-in lacks reversed_by), so "exit != 0" proves nothing: a break counts only when it
    adds an XX line, or a crash, that the UNBROKEN run does not have (2026-11-13). */
-const BASE = BR.baseline(A, { cwd: W });
+const BASE = BR.baseline(A, { cwd: SITE.dir });
 console.log('  baseline ' + A + ' (unbroken, ' + BASE.runs + ' runs): exit ' + BASE.status + ', ' + BASE.xx.length + ' XX line(s) already red, ignored');
 BASE.xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120)));
-/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
-const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;

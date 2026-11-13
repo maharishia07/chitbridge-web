@@ -3,6 +3,8 @@
 const fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const SHEET = 'app/chit-sheet.js', BOOKS = 'app/cap-books.js', APP = 'app.html', ACCOUNTS = 'accounts.html';
 const BREAKS = [
   ['Dispute offered on a cart bill', SHEET, "    if (m.counterBill) {\n      list.push('print');", "    if (m.counterBill) {\n      list.push('print');\n      list.push('dispute');"],
@@ -61,7 +63,7 @@ const ONLY = process.env.BREAK_ONLY || '';
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (a verdict in
    seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines (2026-11-13). */
 const BASES = {};
-const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: SITE.dir }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
@@ -74,7 +76,7 @@ for (const [name, rel, a, b] of BREAKS) {
     if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
     const out = loc.apply(b);
     fs.writeFileSync(f, crlf ? out.replace(/\n/g, '\r\n') : out);
-    const H = 'e2e/chit-sheet.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: W, timeout: 600000, env: Object.assign({}, process.env, { CHS_ROOT: path.join(tmp, 'public') }) });
+    const H = 'e2e/chit-sheet.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: SITE.dir, timeout: 600000, env: Object.assign({}, process.env, { CHS_ROOT: path.join(tmp, 'public') }) });
     const caught = BR.caught(v, base);
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));

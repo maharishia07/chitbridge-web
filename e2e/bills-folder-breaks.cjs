@@ -3,6 +3,8 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const CAP = 'public/app/cap-folders.js';
 const BREAKS = [
   /* anchors follow the prettier-formatted _foldersFrom in cap-folders.js (2026-11-13); multi-line on purpose */
@@ -15,8 +17,6 @@ const BREAKS = [
     } catch (e) {`, `      UI.folders = (reply && reply.folders) || [];
     } catch (e) {`],
 ];
-/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
-const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   ran++;
