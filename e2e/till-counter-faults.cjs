@@ -126,12 +126,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   await p.waitForFunction(() => ls.get(shopLs('cb_till_retained'), '') === bizDay(), null, { timeout: 15000 }).catch(() => {});
   const r15 = await p.evaluate(async (at) => {
     var nos = ((await DB.all('bills')) || []).map(function(b){ return b.no; });
-    return { nos: nos, sum: !!(await DB.get('sum:' + at.slice(0, 10))), ran: ls.get(shopLs('cb_till_retained'), '') === bizDay() };
+    var dk = dayKeyOf(at); /* CTR-242: the till keys a day's summary by the SHOP day, not the UTC date */
+    return { nos: nos, dk: dk, sum: !!(await DB.get('sum:' + dk)), ran: ls.get(shopLs('cb_till_retained'), '') === bizDay() };
   }, old);
   say('the day\'s first open ran it (not only a counter being retired)', r15.ran, 'ran=' + r15.ran);
   say('settled bills older than 30 days left this device', r15.nos.indexOf('OLD/0001') < 0 && r15.nos.indexOf('OLD/0002') < 0, 'kept: ' + r15.nos.join(', '));
   say('⚠️⚠️ the UNSENT one stayed, however old', r15.nos.indexOf('OLD/0003') >= 0, 'OLD/0003 kept');
-  say('and the day they left was summarised first', r15.sum, 'sum:' + old.slice(0, 10));
+  say('and the day they left was summarised first', r15.sum, 'sum:' + r15.dk);
   await p.evaluate(() => openSettings('technical'));
   await p.waitForSelector('[data-testid="till-set-keep-days"]', { timeout: 10000 });
   await p.fill('[data-testid="till-set-keep-days"]', '7');
