@@ -1183,7 +1183,7 @@ function idCheck(side, v) {
 
 /* ── the cart, billed by the tax engine under each pack ─────────────────────────────────────────────────────── */
 function kindOptions(cur) {
-  var out = ['<option value=""' + (cur ? '' : ' selected') + ">— none (the line's rate)</option>"];
+  var out = ['<option value=""' + (cur ? '' : ' selected') + ">— none</option>"];
   ['from', 'to'].forEach(function (side) {
     var p = PACKS[side],
       k = p && p.tax && p.tax.supplyKinds;
@@ -1245,8 +1245,8 @@ function paintCart() {
 }
 /**
  * ⭐ ONE CALCULATION. The engine is handed the cart as the counter would hand it: the seller in the pack's country (with a state when
- * the pack splits by state — Tamil Nadu, 33), the buyer where the picker says, each line's kind, and the slab rate only where no kind is
- * named. A pack with supply kinds takes the kind's rate (the engine's rule); a pack without them reads the line's rate.
+ * the pack splits by state — Tamil Nadu, 33), the buyer where the picker says, each line's kind, and the slab rate only to a pack with no
+ * supply kinds. A pack with supply kinds takes the kind's rate (the engine's rule) and leaves a no-kind line unrated; a pack without them reads the line's rate.
  */
 function billUnder(p) {
   if (!p) return null;
@@ -1260,7 +1260,7 @@ function billUnder(p) {
   var lines = LAB.lines.map(function (item, index) {
     var line = { id: index, name: item.name, qty: item.qty, unit_price: item.price };
     if (item.kind) line.supply_kind = item.kind;
-    if (!(p.tax && p.tax.supplyKinds) || !item.kind) line.rate = item.rate;
+    if (!(p.tax && p.tax.supplyKinds)) line.rate = item.rate; /* CTRY-69: a pack with supply kinds is handed NO rate: a line with no kind stays unrated (held), never taxed at the picker's rate */
     return line;
   });
   try {
