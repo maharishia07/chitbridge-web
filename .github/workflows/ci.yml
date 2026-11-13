@@ -132,6 +132,11 @@ jobs:
           node e2e/silent-control.cjs
           node e2e/token-check.cjs
           node e2e/tooltip-length.cjs
+          # SEC/PLT proofs (2026-11-14): vm-sandbox checks on the real sign-in, row and key-watch code; the .red script breaks each cited line in place and demands red. SEC-5's screen matrix is SIT-run (no browser here)
+          node e2e/plt-13-no-hardcoded-otp.test.cjs
+          node e2e/sec-61-row-escaping.test.cjs
+          node e2e/sec-24-key-watch.test.cjs
+          node e2e/sec-proofs.red.cjs
           # QA-153 red fixes (13 Nov): vm-sandbox checks re-pointed at the code they lift (shared e2e/lib/dom-stub.cjs for the four with a document); offline, no sibling repo
           node e2e/locale-map.cjs
           node e2e/prof-dirty.cjs
