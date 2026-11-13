@@ -2639,7 +2639,7 @@ async function testIncSend() {
         happened_at: testWhenAt(),
         screen_code: testHereScreen(),
         popup_code: typeof modalCode === 'function' ? modalCode() : null,
-        build: window.CBBUILD || null
+        build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null
       }
     });
     CBTEST.incForm = false;
@@ -5210,7 +5210,7 @@ async function testFromCase(key, kind, shot, seenIn, sev, when) {
           severity: ['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'].indexOf(String(sev)) >= 0 ? String(sev) : 'Sev-3',
           screen_code: code,
           case_key: key,
-          build: window.CBBUILD || null
+          build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null
         }
       });
       if (typeof toast === 'function') toast('Failed, and an incident is raised');

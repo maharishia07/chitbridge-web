@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // @type: unit
 /**
- * pm-8-incident-build.red.cjs — PM-8 REGRESSION PROOF, RED ON MAIN BY DESIGN (2026-11-14). Not enrolled: it fails until the defect is fixed, then rename it to
- * pm-8-incident-build.test.cjs and enrol it.
+ * pm-8-incident-build.test.cjs — PM-8 REGRESSION PROOF, FIXED 2026-11-14 (fix/pm-8-incident-build); was red on main. Enrolled in ci.yml as
+ * pm-8-incident-build.test.cjs.
  * THE DEFECT  public/app/cap-testing.js:2642 (testIncSend) and :5213 (testFromCase, kind 'inc') send `build: window.CBBUILD || null`. Nothing in the repo defines
  *             window.CBBUILD (the build is the const CB_BUILD in public/app.html, the one testMark reads), so every incident is filed with build null.
- *   node tests/pm-8-incident-build.red.cjs        (exit 1 today)
+ *   node tests/pm-8-incident-build.test.cjs        (exit 1 if the incident reads window.CBBUILD again)
  */
 'use strict';
 const fs = require('fs');
