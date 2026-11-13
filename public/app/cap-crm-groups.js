@@ -789,7 +789,7 @@ function crmSendGo(btn) {
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() {
-  var id = SESSION.bridgeId || SESSION.userId || '';
+  var id = SESSION.bridgeId || '';
   return location.origin + '/shop.html?s=' + encodeURIComponent(id);
 }
 /** paint the Shop window screen: template chooser, preview and the share-with-a-party / group controls */
@@ -858,7 +858,7 @@ function crmShowcasePaint() {
       : '') +
     CBShowcasePick.html({
       current: SHOW.flags && SHOW.flags.showcase_template,
-      shopId: SESSION.bridgeId || SESSION.userId || '',
+      shopId: SESSION.bridgeId || '',
       t: tx,
       cls: 'act sm quiet',
       clsOn: 'act sm',

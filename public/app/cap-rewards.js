@@ -1,13 +1,14 @@
-/* cap-rewards.js — THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned,
+/* cap-rewards.js — (global CBRewardsPane, NOT CBRewards: that name is the vendored engine /engine/rewards.js, CRM-255) THE REWARDS PANE, ONE COPY (T3-P2-CRM, 2026-10-14): what a customer holds in points, what it is worth, how it was earned,
  * what is next, when it expires, and where it came from — painted from GET /api/relationships/customers/:id/rewards (chitbridge-api
  * routes/relationships.js: the engine's own worthOf · describeEarn over reward-store.balance → rewards.balanceOf).
  * LIFTED from app.html custRewardsLoad (the workshop's Customers pane) so CB CRM's record paints the SAME pane; app.html now calls this.
  * ⭐ ONE CALCULATION: nothing is added up here — the balance, the worth, the expiry are the server's (the engine's) figures and SENTENCES.
  *   The money is formatted by the host (o.money) in the shop's own locale: the engine returns a bare figure on purpose.
  * ⚠️ Not a programme → the one plain line the server sends (says). Could not read → words, never "nothing here".
- *   CBRewards.html(r, o)        → the pane's HTML for a server answer r;  o = { money(n), t(english) }
- *   CBRewards.load(host, o)     → reads and paints into host (an element or an id); o = { id, api(name, opts) | fetch(), money, t }
+ *   CBRewardsPane.html(r, o)        → the pane's HTML for a server answer r;  o = { money(n), t(english) }
+ *   CBRewardsPane.load(host, o)     → reads and paints into host (an element or an id); o = { id, api(name, opts) | fetch(), money, t }
  
+ * CARD 08-rewards-and-loyalty/customer-s-rewards-view
  * CALLED BY public/app.html, public/app/cap-crm-record.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
@@ -112,5 +113,5 @@
 
   var api = { html: html, load: load };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  else root.CBRewards = api;
+  else root.CBRewardsPane = api;
 })(typeof window !== 'undefined' ? window : globalThis);

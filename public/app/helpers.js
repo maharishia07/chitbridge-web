@@ -4,10 +4,26 @@
  * reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay
  * in their panel module. Extracted verbatim from app.html (behaviour unchanged).
  *
- * OWNS  the generic leaves: esc · opt · money and date formatters · month words
+ * OWNS  the generic leaves: esc · opt · money and date formatters · month words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total)
  * FLOW  loaded after core.js → every panel and small app calls these pure functions      CARD 29-qa-test-tooling-ux-locale-and-design-system/helpers
  */
 
+/* ⭐ ACC-206 D1: THE ONE WEB READ OF A CHIT'S BILL TOTAL (tax-in) from its header summary_json: money.total, else total_value, else `raw` (the detail column), else null.
+   READ ONLY, never worked out: the same order as api lib/counter-bill.js standingCopy (minus the invoice arm; a list row carries none). A chit made before 2 Nov holds
+   total_value = NET beside money.total = tax-in; reading money.total first shows 189, not 180. Whether two stored copies AGREE (agree:false / legacy_net) is decided by
+   api pickOf alone; D2 carries bill_total.agree to the screen. Never compare or recompute here. Returns a bare number (CUR-1 slice 6 turns it into a money value);
+   the caller still reads currency_code from the same summary. Only a finite number or a non-empty plain decimal string counts: never a bare Number() of ''/null/[5]/true. */
+function billFigure(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  return typeof v === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(v) ? Number(v) : null;
+}
+function billTotalOf(summary, raw) {
+  var s = summary && typeof summary === 'object' ? summary : {};
+  var m = s.money && typeof s.money === 'object' ? billFigure(s.money.total) : null;
+  if (m != null) return m;
+  var t = billFigure(s.total_value);
+  return t != null ? t : billFigure(raw);
+}
 function deepClone(x) {
   return JSON.parse(JSON.stringify(x));
 }
