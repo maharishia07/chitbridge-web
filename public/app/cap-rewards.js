@@ -8,6 +8,7 @@
  *   CBRewardsPane.html(r, o)        → the pane's HTML for a server answer r;  o = { money(n), t(english) }
  *   CBRewardsPane.load(host, o)     → reads and paints into host (an element or an id); o = { id, api(name, opts) | fetch(), money, t }
  
+ * CARD 08-rewards-and-loyalty/customer-s-rewards-view
  * CALLED BY public/app.html, public/app/cap-crm-record.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
