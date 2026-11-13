@@ -19,6 +19,7 @@ const path = require('path');
 const { chromium } = require('@playwright/test');
 const { standIn, route: booksRoute } = require('./books-web.cjs');
 const { serve } = require('./lib/serve.cjs');
+const C = require('./lib/contract.cjs');   /* the one altered answer (periods) is checked against the API contract, like every harness that serves /api/books */
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
@@ -42,7 +43,7 @@ const SESSION = () => {
       await new Promise((res) => setTimeout(res, HOLD));
     }
     if (m === 'GET' && p === '/api/books/periods') {   /* the server lets a soft-locked month reopen with a reason (M157); the shared stand-in says may:false for every row, which hides the Reason box part C types into */
-      return booksRoute(S, { request: () => q, fulfill: (o) => { const j = JSON.parse(o.body); j.periods.forEach((x) => { if (x.status === 'soft_locked') x.reopen = { may: true, why: null }; }); return r.fulfill(Object.assign({}, o, { body: JSON.stringify(j) })); } });
+      return booksRoute(S, { request: () => q, fulfill: (o) => { const j = JSON.parse(o.body); j.periods.forEach((x) => { if (x.status === 'soft_locked') x.reopen = { may: true, why: null }; }); C.check('GET', '/api/books/periods', o.status || 200, j, 'action-state'); return r.fulfill(Object.assign({}, o, { body: JSON.stringify(j) })); } });
     }
     return booksRoute(S, r);
   };
@@ -149,6 +150,7 @@ const SESSION = () => {
     ok(hard.length === 1 && hard[0].body.hard === true, 'C · Yes → ONE POST …/lock {hard:true}, a press while it was out sent nothing (' + hard.length + ')');
     ok(/Closed for good/.test(await p.textContent('[data-testid="lk-state-' + mo + '"]')) && await p.locator('[data-testid="lk-hard-' + mo + '"]').count() === 0 && await p.locator('[data-testid="confirm-ok"]').count() === 0, 'C · the outcome: the row says Closed for good and offers nothing more; no dialog left open');
 
+    ok(...C.finish());
     ok(errs.length === 0, 'no page error and no browser dialog (confirm/alert) the whole run' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
   } catch (e) {
     ok(false, 'the run threw: ' + (e && e.message));
