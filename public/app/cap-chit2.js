@@ -1024,10 +1024,7 @@ async function c2Deliver(line_id, unit, back) {
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   try {
-    var reply = await api('c2DeliverLines', {
-      params: { id: C2.id },
-      body: { rows: [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }] }
-    });
+    var reply = await postDeliverLines('c2DeliverLines', C2.id, [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }]);
     /**
      * ⭐⭐ THE WRITE NOW CARRIES THE NEW STATE, so the screen stops asking for it. This ran `loadChit2()` — a
      * twelve-round-trip re-read measured at ~4.9s, MORE than the ~3.5s write it was confirming. Recording
@@ -1769,7 +1766,7 @@ async function c2TakeMaterial(line_id) {
         note: own ? null : 'from ' + srcName
       };
     });
-    var reply = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: rows } });
+    var reply = await postDeliverLines('c2DeliverLines', C2.id, rows);
     if (!c2ApplyProgress(reply)) await loadChit2();
     toast(txf('{n} added to this line', { n: rows.length }));
   } catch (e) {
