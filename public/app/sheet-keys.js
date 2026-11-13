@@ -96,6 +96,17 @@
     if (panel.contains(document.activeElement) || confirmIsOpen()) return;
     if (!sameBox(panel)) (reachable(panel)[0] || panel).focus();
   }
+  /** the control that had the focus is still in the panel: the focus is only MID-MOVE (during focusout activeElement is briefly body), not lost */
+  function focusIsMoving(panel) {
+    return !!lastFocus && lastFocus.isConnected && panel.contains(lastFocus);
+  }
+  /** a change in the sheet: when the focus is mid-move, look again next task, once the move has landed (a Tab out of a box whose focusout writes an echo or an error is a change too); a draw that REMOVED the focused control is answered at once */
+  function checkFocus(panel) {
+    if (!focusIsMoving(panel)) return keepFocusInside(panel);
+    setTimeout(function () {
+      if (panel.isConnected) keepFocusInside(panel);
+    }, 0);
+  }
   /** watch one host: see the file header */
   function watch(host, options) {
     var state = { open: false, opener: null };
@@ -117,7 +128,7 @@
       if (!panel) return state.open ? closed() : undefined;
       if (!state.open) opened();
       describe(panel, options.label);
-      if (openSheets[openSheets.length - 1] === state) keepFocusInside(panel);
+      if (openSheets[openSheets.length - 1] === state) checkFocus(panel);
     }
     function onKey(event) {
       var panel = state.open && openSheets[openSheets.length - 1] === state ? panelOf(host) : null;

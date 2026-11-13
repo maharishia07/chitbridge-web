@@ -8,6 +8,7 @@
  *   I2  it has an accessible name (Close), a tooltip, a box of at least 44x44 at 1366 and at 390
  *   I3  its ink against the sheet is at least 4.5:1 in the cream theme and with data-theme=dark set on the page
  *   I4  keyboard: Tab reaches it; Enter closes; (Space closes, on the support sheet)
+ *   I4b Tab leaves the sheet number box forward when its echo changes or an error shows (focus must not be pulled back)
  * It must FAIL on main: there the x is a 22 px hand-written glyph in #8a949c with no component code.
  *   NODE_PATH=<dir with playwright> node e2e/walk-shop-icons.cjs
  */
@@ -105,6 +106,24 @@ W.run('shop-icons', async (w) => {
       const gone = (await page.locator('[data-testid="' + testid + '"]').count()) === 0;
       out.push(mount + ' ' + key + ' reached ' + reached + ' closed ' + gone);
       if (!(reached && gone)) return { ok: false, saw: out.join(' · ') };
+    }
+    return { ok: true, saw: out.join(' · ') };
+  });
+  await w.step('I4b', 'keyboard: Tab leaves the quantity box forward when its echo changes (1234.5) and when it shows an error (abc)', async () => {
+    const out = [];
+    await load({ width: 1366, height: 768 });
+    await open.order();
+    await page.waitForSelector('[data-testid="shop-qty"]', { timeout: 8000 });
+    for (const typed of ['1234.5', 'abc']) {
+      const box = page.locator('[data-testid="shop-qty"]');
+      await box.focus();
+      await box.fill(typed);
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(300);
+      const where = await page.evaluate(() => { const a = document.activeElement; return { id: a && a.id, tag: a && a.tagName, inSheet: !!(a && a.closest('[role=dialog]')) }; });
+      const moved = where.id !== 'o_qty' && where.tag !== 'BODY' && where.inSheet;
+      out.push(typed + ' -> ' + where.tag + '#' + where.id + (moved ? ' moved' : ' STUCK'));
+      if (!moved) return { ok: false, saw: out.join(' · ') };
     }
     return { ok: true, saw: out.join(' · ') };
   });
