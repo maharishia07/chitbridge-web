@@ -157,6 +157,11 @@ jobs:
           node e2e/ctr-146-counter-name.test.cjs
           node e2e/ord-41-attach-ui-wired.test.cjs
           node e2e/ord-43-unresolved-order-ref.test.cjs
+          # CRM proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
+          node e2e/crm-9-standards-fold.test.cjs
+          node e2e/crm-23-dues-columns.test.cjs
+          node e2e/crm-26-sheet-reads-invoice.test.cjs
+          node e2e/crm-30-31-sum-scope.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
