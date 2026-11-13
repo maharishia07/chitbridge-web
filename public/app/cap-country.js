@@ -380,8 +380,8 @@ function csuLogExample(what, failure) {
 /** lakh · crore words for an amount from one lakh up, or '' below it. NOT Intl: a browser's ICU decides whether en-IN compact says "crore" (Chromium 129,
     CLDR 45, says "1.2 billion"), and an Indian shop that chose lakh · crore must read lakh · crore whatever browser it opens (SET-93, found 13 Nov on sit-au). */
 function csuLakhWords(amount) {
-  var n = Math.abs(Number(amount)),
-    unit = n >= 1e7 ? [1e7, 'crore'] : n >= 1e5 ? [1e5, 'lakh'] : null;
+  var size = Math.abs(Number(amount)),
+    unit = size >= 1e7 ? [1e7, 'crore'] : size >= 1e5 ? [1e5, 'lakh'] : null;
   if (!unit) return '';
   try {
     return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 }).format(Number(amount) / unit[0]) + ' ' + unit[1];
