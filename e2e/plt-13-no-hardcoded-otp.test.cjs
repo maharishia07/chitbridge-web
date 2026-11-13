@@ -37,7 +37,7 @@ ok(devHits.length === 0, 'no shipped page names setDevOtp / DEV_OTP / devOtp' + 
 ok(presetHits.length === 0, 'no shipped page presets the code 123456' + (presetHits.length ? ' — ' + presetHits.join(', ') : ''));
 
 const ui = fs.readFileSync(path.join(ROOT, 'public/app/signin-ui.js'), 'utf8');
-const at = ui.indexOf('<input name="cred"');
+const at = ui.lastIndexOf('<input', ui.indexOf('name="cred"')); /* batch 14c: the input now opens with data-cbsid before name */
 ok(at > 0, 'signin-ui.js still draws the one credential input (name="cred")');
 const block = ui.slice(at, ui.indexOf('</label>', at));
 ok(block.length > 40 && block.length < 600, 'the credential input block was found whole (' + block.length + ' chars)');
