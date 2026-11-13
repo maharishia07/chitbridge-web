@@ -181,6 +181,28 @@ function _isPayload() {
 function _submitLabel() {
   return _isPayload() ? (_cur().preset === 'form' ? 'Submit' : 'Send enquiry') : _isNegotiable() ? 'Make an offer' : t('order');
 }
+/* the declared field's kind: the page's own words for a type, the library's names for the part */
+function _schemaKind(declared) {
+  if (declared.type === 'boolean') return 'checkbox';
+  if (declared.maxLength && declared.maxLength > 200) return 'long';
+  return declared.type === 'number' || declared.type === 'integer' ? 'number' : 'text';
+}
+/* CMP055 (ui.field): the label, the Required word, the hint and the 44 px control come from the library; id, testid and value are the page's own, as before.
+   The provenance chip ("from your <document>") is the hint now: a reader hears it with the field. */
+function _schemaField(item, declared, current, required, provenance) {
+  return ui.field({
+    mount: 'SHP001-U01',
+    kind: _schemaKind(declared),
+    id: 'f_' + item,
+    key: item,
+    testid: 'shop-f-' + item,
+    label: item.replace(/_/g, ' '),
+    required: required,
+    hint: provenance ? 'From your ' + provenance.from : undefined,
+    value: declared.type === 'boolean' ? !!current : current,
+    maxlength: declared.maxLength && declared.maxLength <= 200 ? declared.maxLength : undefined
+  });
+}
 // ── render the DECLARED fields — same subset the server validates (type · enum · maxLength · required) ──
 function _schemaFields(schema, vals) {
   var props = (schema && schema.properties) || {},
@@ -220,20 +242,7 @@ function _schemaFields(schema, vals) {
             .join('') +
           '</select>';
       } else {
-        /* CMP055 (ui.field): the label, the Required word, the hint and the 44 px control come from the library; id, name-less, data-testid and value are the page's own, as before.
-           The provenance chip ("from your <document>") is the hint now: a reader hears it with the field. */
-        return ui.field({
-          mount: 'SHP001-U01',
-          kind: p.type === 'boolean' ? 'checkbox' : p.maxLength && p.maxLength > 200 ? 'long' : p.type === 'number' || p.type === 'integer' ? 'number' : 'text',
-          id: 'f_' + item,
-          key: item,
-          testid: 'shop-f-' + item,
-          label: item.replace(/_/g, ' '),
-          required: req.indexOf(item) >= 0,
-          hint: src ? 'From your ' + src.from : undefined,
-          value: p.type === 'boolean' ? !!v : v,
-          maxlength: p.maxLength && p.maxLength <= 200 ? p.maxLength : undefined
-        });
+        return _schemaField(item, p, v, req.indexOf(item) >= 0, src);
       }
       return '<label style="font-size:12px;color:var(--grey-3,#6a707a)">' + label + '</label>' + inp;
     })

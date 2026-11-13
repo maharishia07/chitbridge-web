@@ -31,7 +31,7 @@ var CBUiField = (function () {
   var DIGITS = [['٠', '٩'], ['۰', '۹'], ['०', '९']]; /* Arabic-Indic, Extended Arabic-Indic, Devanagari: each ten code points in a row */
   var HANDLERS = {};
   /* the error colour: the theme has no danger TEXT token (the page's own #b4453f is 2.98:1 on Dark), so it is the red pulled 30% toward the theme's --ink: dark red on Cream, light red on Dark, AA on both (the walk measures it) */
-  var CSS =
+  var FIELD_STYLE =
     '@supports (color:color-mix(in srgb,currentcolor,currentcolor)){:root{--field-bad:color-mix(in srgb,var(--bad-source,#b4453f) 65%,var(--ink,#1d1b16))}}' +
     '.cbf{margin:3px 0 11px;max-width:100%;box-sizing:border-box;min-width:0}' +
     '.cbf-row{display:flex;gap:8px;align-items:baseline;justify-content:space-between}' +
@@ -59,7 +59,7 @@ var CBUiField = (function () {
     if (!lib || !lib.words || !lib.escape) refuse('app/ui.js must be loaded before app/ui-field.js');
     return lib;
   }
-  function say(english, key, values) {
+  function words(english, key, values) {
     var text = library().words(english, 'CMP055.' + key);
     return values ? text.replace(/\{(\w+)\}/g, function (whole, name) { return Object.prototype.hasOwnProperty.call(values, name) ? values[name] : whole; }) : text;
   }
@@ -68,7 +68,7 @@ var CBUiField = (function () {
     if (typeof document === 'undefined' || !document.head || document.getElementById('cbui-field-css')) return;
     var node = document.createElement('style');
     node.id = 'cbui-field-css';
-    node.textContent = CSS;
+    node.textContent = FIELD_STYLE;
     document.head.appendChild(node);
   }
   function pairs(list) {
@@ -104,27 +104,44 @@ var CBUiField = (function () {
     var lakh = new RegExp('^\\d{1,2}(' + group + '\\d{2})*' + group + '\\d{3}$');
     return western.test(whole) || (marks.lakh && lakh.test(whole));
   }
+  function badNumber() {
+    return { ok: false, error: words('That is not a number. Type digits only, like 1234.5', 'badnumber') };
+  }
+  /** a lone wrong mark with 1 or 2 digits after it ("1,50" in a "." locale): the silent 100x, refused */
+  function isWrongMark(whole, marks) {
+    var parts = whole.split(marks.mark === '.' ? ',' : '.');
+    return parts.length === 2 && /^\d+$/.test(parts[0]) && /^\d{1,2}$/.test(parts[1]);
+  }
+  /** the whole part without its grouping marks, or null when the grouping sits in a place this locale does not group */
+  function ungrouped(whole, marks) {
+    if (!marks.group || whole.indexOf(marks.group) < 0) return whole;
+    return groupedRight(whole, marks) ? whole.split(marks.group).join('') : null;
+  }
+  /** the unsigned text cut at the shop's decimal mark: { halves } or null when it is not even shaped like a number */
+  function splitNumber(unsigned, marks) {
+    var halves = unsigned.split(marks.mark);
+    var digitsOnly = unsigned.replace(marks.mark, '');
+    return digitsOnly && halves.length <= 2 && /^\d[\d.,]*$/.test(digitsOnly) ? { halves: halves } : null;
+  }
   /** ui.field.parse(text, marks?) -> { ok:true, value:'1234.5' } or { ok:false, error:'sentence' }. "1,50" in a "." locale is an ERROR, never 150 and never 1.5. */
   function parse(text, given) {
     var marks = given || marksOf();
     var typed = asciiDigits(text, marks).replace(/[\s  ]/g, '');
     var sign = /^[+-]/.test(typed) ? typed.charAt(0) : '';
-    var body = typed.slice(sign.length);
-    var cut = body.split(marks.mark);
-    if (!body || cut.length > 2 || !/^\d[\d.,]*$|^\d*$/.test(body.replace(marks.mark, ''))) return { ok: false, error: say('That is not a number. Type digits only, like 1234.5', 'badnumber') };
-    var whole = cut[0];
-    var wrongMark = marks.mark === '.' ? ',' : '.';
-    if (cut.length === 1 && whole.split(wrongMark).length === 2 && /^\d+$/.test(whole.split(wrongMark)[0]) && /^\d{1,2}$/.test(whole.split(wrongMark)[1])) {
-      return { ok: false, error: say('Use a {mark} before the decimals, like 1{mark}5', 'wrongmark', { mark: marks.mark }) };
-    }
-    if (marks.group && whole.indexOf(marks.group) >= 0) {
-      if (!groupedRight(whole, marks)) return { ok: false, error: say('Check the commas in that number', 'badgroup') };
-      whole = whole.split(marks.group).join('');
-    }
-    if (!/^\d*$/.test(whole) || (whole === '' && !cut[1]) || (cut[1] !== undefined && !/^\d*$/.test(cut[1]))) return { ok: false, error: say('That is not a number. Type digits only, like 1234.5', 'badnumber') };
-    if (whole === '') whole = '0';
-    whole = whole.replace(/^0+(?=\d)/, '');
-    return { ok: true, value: sign + whole + (cut[1] ? '.' + cut[1] : '') };
+    var shape = splitNumber(typed.slice(sign.length), marks);
+    return shape ? readShape(sign, shape.halves, marks) : badNumber();
+  }
+  /** the signed, cut number: the wrong-mark and grouping refusals, then the canonical value */
+  function readShape(sign, halves, marks) {
+    if (halves.length === 1 && isWrongMark(halves[0], marks)) return { ok: false, error: words('Use a {mark} before the decimals, like 1{mark}5', 'wrongmark', { mark: marks.mark }) };
+    var whole = ungrouped(halves[0], marks);
+    if (whole === null) return { ok: false, error: words('Check the commas in that number', 'badgroup') };
+    return digitsValue(sign, whole, halves[1] || '');
+  }
+  /** the canonical value from the whole and fraction digits; leading zeros dropped, ".5" is 0.5, anything else is not a number */
+  function digitsValue(sign, whole, fraction) {
+    if (!/^\d*$/.test(whole + fraction) || (whole === '' && !fraction)) return badNumber();
+    return { ok: true, value: sign + (whole === '' ? '0' : whole.replace(/^0+(?=\d)/, '')) + (fraction ? '.' + fraction : '') };
   }
 
   /* ---------- the mark-up ---------- */
@@ -135,8 +152,13 @@ var CBUiField = (function () {
     if (!MOUNT_CODE.test(options.mount || '')) refuse('mount must be a screen mount code like SHP001-U03');
     if (!KINDS[options.kind]) refuse('kind must be ' + Object.keys(KINDS).join(', '));
     if (!options.label || !String(options.label).trim()) refuse('label is required (the accessible name; a placeholder is never the name)');
+    checkHandlers(options);
+  }
+  /** a handler is a function, never inline JavaScript; attrs is the closed name list */
+  function checkHandlers(options) {
     ['onInput', 'onChange'].forEach(function (name) { if (options[name] !== undefined && typeof options[name] !== 'function') refuse(name + ' must be a function, never inline JavaScript'); });
-    if (options.attrs && (typeof options.attrs !== 'object' || Object.keys(options.attrs).some(function (name) { return ATTRS.indexOf(name) < 0; }))) refuse('attrs is an object of ' + ATTRS.join(', ') + ' only');
+    var names = options.attrs ? (typeof options.attrs === 'object' ? Object.keys(options.attrs) : [null]) : [];
+    if (names.some(function (name) { return ATTRS.indexOf(name) < 0; })) refuse('attrs is an object of ' + ATTRS.join(', ') + ' only');
   }
   function idOf(options) {
     if (options.id) return String(options.id);
@@ -153,33 +175,53 @@ var CBUiField = (function () {
   function describedBy(id, hasHint, hasError, hasName) {
     return [hasHint ? id + '-h' : '', hasError ? id + '-e' : '', hasName ? id + '-n' : ''].filter(Boolean).join(' ') || null;
   }
-  function controlAttributes(kind, options, id, reason) {
-    var shape = KINDS[options.kind];
-    var inputMode = options.inputmode || shape.mode || null;
-    var attrs = Object.keys(options.attrs || {}).map(function (name) { return [name, options.attrs[name]]; });
-    var base = [['data-cbsid', 'CMP055-' + shape.el], ['data-cbname', 'field'], ['data-cbmount', options.mount], ['data-cbkind', options.kind], ['id', id], ['name', options.name],
-      ['data-testid', options.testid], ['class', 'cbf-in' + (options.cls ? ' ' + options.cls : '')], ['placeholder', options.placeholder], ['autocomplete', options.autocomplete || shape.auto],
-      ['inputmode', inputMode], ['dir', shape.dir || (shape.tag || shape.type === 'text' || shape.type === 'search' ? 'auto' : null)], ['min', options.min], ['max', options.max],
-      ['step', options.step], ['maxlength', options.maxlength], ['accept', options.accept], ['required', !!options.required], ['readonly', reason !== null],
-      ['aria-invalid', options.error ? 'true' : null], ['aria-describedby', describedBy(id, !!(options.hint || reason || shape.decimal || shape.type === 'date'), !!options.error, kind === 'file')]];
+  /** the register and page-owned attributes: id, name, testid, class, data-* and the closed attrs list, all as the page wrote them */
+  function ownedPairs(options, shape, id) {
+    var own = [['data-cbsid', 'CMP055-' + shape.el], ['data-cbname', 'field'], ['data-cbmount', options.mount], ['data-cbkind', options.kind], ['id', id], ['name', options.name],
+      ['data-testid', options.testid], ['class', 'cbf-in' + (options.cls ? ' ' + options.cls : '')]];
     var data = Object.keys(options.data || {}).map(function (suffix) { return ['data-' + suffix, String(options.data[suffix])]; });
-    return pairs(base.concat([['type', shape.tag ? null : shape.type], ['rows', shape.tag ? options.rows || 4 : null]], data, attrs));
+    var extra = Object.keys(options.attrs || {}).map(function (name) { return [name, options.attrs[name]]; });
+    return own.concat(data, extra);
+  }
+  /** what the browser needs to type into it: keypad, direction, limits */
+  function typingPairs(options, shape) {
+    return shapePairs(options, shape).concat([['placeholder', options.placeholder], ['autocomplete', options.autocomplete || shape.auto], ['inputmode', options.inputmode || shape.mode || null],
+      ['min', options.min], ['max', options.max], ['step', options.step], ['maxlength', options.maxlength], ['accept', options.accept]]);
+  }
+  /** the element's own type, rows and text direction (numbers, email and phone stay left-to-right on an Arabic page) */
+  function shapePairs(options, shape) {
+    var autoDirection = shape.tag || shape.type === 'text' || shape.type === 'search' ? 'auto' : null;
+    return [['type', shape.tag ? null : shape.type], ['rows', shape.tag ? options.rows || 4 : null], ['dir', shape.dir || autoDirection]];
+  }
+  /** required, locked, invalid and described-by: the state of the field */
+  function statePairs(options, shape, id, reason) {
+    var hasNote = !!(options.hint || reason || shape.decimal || shape.type === 'date');
+    return [['required', !!options.required], ['readonly', reason !== null], ['aria-invalid', options.error ? 'true' : null],
+      ['aria-describedby', describedBy(id, hasNote, !!options.error, options.kind === 'file')]];
+  }
+  function controlAttributes(options, id, reason) {
+    var shape = KINDS[options.kind];
+    return pairs(ownedPairs(options, shape, id).concat(typingPairs(options, shape), statePairs(options, shape, id, reason)));
   }
   function controlHtml(options, id, reason) {
     var shape = KINDS[options.kind], esc = library().escape;
-    var attributes = controlAttributes(options.kind, options, id, reason);
+    var attributes = controlAttributes(options, id, reason);
     if (shape.tag) return '<textarea ' + attributes + '>' + esc(options.value == null ? '' : options.value) + '</textarea>';
-    var checked = shape.type === 'checkbox' ? !!options.value : false;
-    var value = shape.type === 'checkbox' || shape.type === 'file' || options.value == null ? '' : options.value;
-    var input = '<input ' + attributes + (shape.type === 'checkbox' || shape.type === 'file' ? '' : ' value="' + esc(value) + '"') + (checked ? ' checked' : '') + '>';
+    var input = '<input ' + attributes + inputValue(options, shape) + '>';
     return shape.suffix ? '<span class="cbf-suf">' + input + '<b aria-hidden="true">' + shape.suffix + '</b></span>' : input;
+  }
+  /** the value attribute of an input: a checkbox is checked, a file has none, the rest are escaped text */
+  function inputValue(options, shape) {
+    if (shape.type === 'checkbox') return options.value ? ' checked' : '';
+    if (shape.type === 'file') return '';
+    return ' value="' + library().escape(options.value == null ? '' : options.value) + '"';
   }
   function noteHtml(options, id, reason) {
     var shape = KINDS[options.kind], esc = library().escape;
-    var words = [options.hint, reason].filter(Boolean).map(function (text) { return esc(text); }).join(' · ');
+    var hintText = [options.hint, reason].filter(Boolean).map(function (text) { return esc(text); }).join(' · ');
     var echoes = shape.decimal || shape.type === 'date';
-    if (!words && !echoes) return '';
-    return '<div class="cbf-h" id="' + id + '-h"><span>' + words + '</span>' + (echoes ? ' <span id="' + id + '-x" aria-live="polite"></span>' : '') + '</div>';
+    if (!hintText && !echoes) return '';
+    return '<div class="cbf-h" id="' + id + '-h"><span>' + hintText + '</span>' + (echoes ? ' <span id="' + id + '-x" aria-live="polite"></span>' : '') + '</div>';
   }
   function errorHtml(options, id) {
     if (!options.error) return '';
@@ -187,7 +229,7 @@ var CBUiField = (function () {
   }
   function labelHtml(options, id) {
     var esc = library().escape;
-    var required = options.required ? '<span class="cbf-req">' + esc(say('Required', 'required')) + '</span>' : '';
+    var required = options.required ? '<span class="cbf-req">' + esc(words('Required', 'required')) + '</span>' : '';
     return '<div class="cbf-row"><label class="cbf-l" for="' + id + '">' + esc(options.label) + '</label>' + required + '</div>';
   }
   /** the part: ui.field({ mount, kind, label, ... }) -> HTML */
@@ -215,7 +257,10 @@ var CBUiField = (function () {
     var kind = el.getAttribute('data-cbkind');
     if (kind === 'checkbox') return { value: !!el.checked };
     if (kind === 'file') return { value: el.files && el.files[0] ? el.files[0].name : '' };
-    if (!KINDS[kind] || !KINDS[kind].decimal) return { value: el.value };
+    return KINDS[kind].decimal ? readNumber(el) : { value: el.value };
+  }
+  /** a number field: '' when empty, the canonical ASCII decimal, or NaN and the sentence to show */
+  function readNumber(el) {
     if (!String(el.value).trim()) return { value: '' };
     var parsed = parse(el.value);
     return parsed.ok ? { value: parsed.value } : { value: NaN, error: parsed.error };
@@ -227,39 +272,53 @@ var CBUiField = (function () {
   function showError(target, sentence) {
     var el = elementOf(target);
     if (!el) return;
-    var box = noteOf(el, 'e');
-    if (sentence && !box) {
-      box = document.createElement('div');
-      box.id = el.id + '-e';
-      box.className = 'cbf-e';
-      (noteOf(el, 'h') || (el.closest('.cbf-suf') || el).parentNode).insertAdjacentElement('afterend', box);
-    }
-    if (box && sentence) { box.textContent = '⚠ ' + sentence; box.setAttribute('role', 'alert'); }
-    if (box && !sentence) box.remove();
-    if (sentence) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid');
-    var ids = [noteOf(el, 'h') ? el.id + '-h' : '', sentence ? el.id + '-e' : '', noteOf(el, 'n') ? el.id + '-n' : ''].filter(Boolean).join(' ');
-    if (ids) el.setAttribute('aria-describedby', ids); else el.removeAttribute('aria-describedby');
+    paintErrorLine(el, sentence);
+    setAttributeIf(el, 'aria-invalid', sentence ? 'true' : null);
+    var described = [noteOf(el, 'h') ? el.id + '-h' : '', sentence ? el.id + '-e' : '', noteOf(el, 'n') ? el.id + '-n' : ''].filter(Boolean).join(' ');
+    setAttributeIf(el, 'aria-describedby', described || null);
+  }
+  /** write the sentence in the field's error line (made when the field was drawn without one), or take the line away */
+  function paintErrorLine(el, sentence) {
+    var box = noteOf(el, 'e') || (sentence ? makeErrorBox(el) : null);
+    if (!box) return;
+    if (!sentence) { box.remove(); return; }
+    box.textContent = '⚠ ' + sentence;
+    box.setAttribute('role', 'alert');
+  }
+  /** set an attribute, or remove it when there is no value */
+  function setAttributeIf(el, name, value) {
+    if (value === null) el.removeAttribute(name); else el.setAttribute(name, value);
+  }
+  /** the error line a repaint adds under a field that was drawn without one */
+  function makeErrorBox(el) {
+    var box = document.createElement('div');
+    box.id = el.id + '-e';
+    box.className = 'cbf-e';
+    (noteOf(el, 'h') || (el.closest('.cbf-suf') || el).parentNode).insertAdjacentElement('afterend', box);
+    return box;
   }
   /** the locale echo: a date as words ("13 Nov 2026"), a number grouped the shop's way, so a mismatched browser still shows what the app understood */
   function echoOf(el) {
-    var kind = el.getAttribute('data-cbkind'), have = String(el.value || '');
     if (typeof CBLocale === 'undefined') return '';
-    if (kind === 'date') {
-      var part = /^(\d{4})-(\d\d)-(\d\d)$/.exec(have);
-      return part ? CBLocale.date(Date.UTC(+part[1], +part[2] - 1, +part[3], 12), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
-    }
+    var kind = el.getAttribute('data-cbkind'), have = String(el.value || '');
+    if (kind === 'date') return dateWords(have);
     var parsed = KINDS[kind] && KINDS[kind].decimal && have.trim() ? parse(have) : null;
     return parsed && parsed.ok ? String(CBLocale.number(Number(parsed.value), { maximumFractionDigits: 20 })) : '';
   }
+  /** an ISO date as words in the shop's locale, read at noon UTC in UTC so the day never moves */
+  function dateWords(iso) {
+    var part = /^(\d{4})-(\d\d)-(\d\d)$/.exec(iso);
+    return part ? CBLocale.date(Date.UTC(+part[1], +part[2] - 1, +part[3], 12), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
+  }
   /** when the person leaves a number field: read it, say what was understood, or say what to fix; a good number is written back canonical so a page's own .value reader agrees */
   function settle(el) {
-    var kind = el.getAttribute('data-cbkind');
     var echo = noteOf(el, 'x');
-    if (KINDS[kind] && KINDS[kind].decimal && String(el.value).trim()) {
+    var decimal = !!KINDS[el.getAttribute('data-cbkind')].decimal;
+    if (decimal && String(el.value).trim()) {
       var result = read(el);
       showError(el, result.error || null);
       if (!result.error) el.value = result.value;
-    } else if (el.getAttribute('aria-invalid') === 'true' && KINDS[kind] && KINDS[kind].decimal) showError(el, null);
+    } else if (decimal && el.getAttribute('aria-invalid') === 'true') showError(el, null);
     if (echo) echo.textContent = echoOf(el);
   }
   function set(target, value) {
@@ -283,13 +342,17 @@ var CBUiField = (function () {
   function onInput(event) {
     var el = fieldOf(event);
     if (!el) return;
-    var kind = el.getAttribute('data-cbkind');
-    if (KINDS[kind] && KINDS[kind].decimal) {
+    if (KINDS[el.getAttribute('data-cbkind')].decimal) {
       var mapped = asciiDigits(el.value, marksOf());
       if (mapped !== el.value) el.value = mapped;
     }
     var handler = HANDLERS[el.id];
-    if (handler && handler.input) { var got = read(el); handler.input(got.value !== got.value ? el.value : got.value, el, event); }
+    if (handler && handler.input) handler.input(valueForPage(el), el, event);
+  }
+  /** what the page's handler gets: the canonical value, or the raw text while a number is not readable yet */
+  function valueForPage(el) {
+    var answer = read(el);
+    return answer.value !== answer.value ? el.value : answer.value;
   }
   function onChange(event) {
     var el = fieldOf(event);
