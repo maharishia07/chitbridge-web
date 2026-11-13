@@ -71,9 +71,9 @@ W.run('crm-popups', async (w) => {
       return { ok: s.open && s.body && s.lib && s.pop === code && s.chip === code && s.inside, saw: JSON.stringify({ open: s.open, body: s.body, library: s.lib, pop: s.pop, chip: s.chip, focusInside: s.inside }) };
     });
     await w.step(id + 'k', fn + ' -> Tab and Shift+Tab stay inside', async () => {
-      const left = [];
-      for (let i = 0; i < 14; i++) { await page.keyboard.press(i < 10 ? 'Tab' : 'Shift+Tab'); const s = await page.evaluate(READ, testid); if (!s.inside) left.push(i + ':' + s.outside); }
-      return { ok: left.length === 0, saw: left.length ? 'focus left the popup on key press ' + left.join(',') : '14 key presses, focus always inside' };
+      const left = []; let chrome = 0; /* a Tab past the last control of a native modal dialog lands on BODY = the browser's own chrome, not a leak (toolset/web-done.cjs, 11 Nov measure); any other element outside is a leak */
+      for (let i = 0; i < 14; i++) { await page.keyboard.press(i < 10 ? 'Tab' : 'Shift+Tab'); const s = await page.evaluate(READ, testid); if (!s.inside) { if (s.outside === 'BODY') chrome++; else left.push(i + ':' + s.outside); } }
+      return { ok: left.length === 0, saw: left.length ? 'focus left the popup on key press ' + left.join(',') : '14 key presses, focus never reached another element' + (chrome ? ' (' + chrome + ' went through the browser chrome)' : '') };
     });
     await w.step(id + 'w', fn + ' -> every text block is inside the budget (140 characters, 2 sentences)', async () => {
       const s = await page.evaluate(READ, testid);
