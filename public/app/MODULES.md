@@ -110,7 +110,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `kural.js` | — |  |
 | `lab-kit.js` | — |  |
 | `list-ctl.js` | eager |  |
-| `list-legacy.js` | eager | .html): accounts, app. Callers of listCtl / lazyWrap (grep -lE 'listCtl|lazyWrap' public/app): |
+| `list-legacy.js` | eager | .html): accounts.html, app.html. Callers of listCtl / lazyWrap (grep -lE 'listCtl|lazyWrap' public/app): |
 | `network-app.js` | — |  |
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
