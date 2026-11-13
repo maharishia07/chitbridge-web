@@ -48,6 +48,12 @@ for (const [needle, code] of WANT) {
 /** field-2: every converted input is a ui.field mount SHP001-U01..U22 (literal, so the census reads it), and the old element codes are gone from the page */
 const mounts = [...src.matchAll(/ui\.field\(\{\s*mount: '(SHP001-U\d\d)'/g)].map((t) => t[1]);
 check(new Set(mounts).size === 22, 'shop.html mounts 22 distinct ui.field mounts, found ' + new Set(mounts).size);
+/** field-2: each mount code sits on exactly its input (id literal as written in the call; 'none' = a file picker with no id), so swapping two codes fails */
+const MOUNT_ID = { U01: "'f_' + item", U02: 'none', U03: "'p_search'", U04: "'lg_contact'", U05: "'lg_otp'", U06: "'sup_what'", U07: "'sup_contact'", U08: "'sup_otp'", U09: "'o_loc'", U10: "'o_date'", U11: "'o_time'", U12: "'o_remark'", U13: "'o_name'", U14: "'o_contact'", U15: "'o_otp'", U16: "'o_qty'", U17: "'o_name'", U18: "'o_loc'", U19: "'o_contact'", U20: "'o_otp'", U21: 'none', U22: 'none' };
+const callOf = (at) => { let d = 0, i = src.indexOf('{', at); const from = i; for (; i < src.length; i++) { if (src[i] === '{') d++; else if (src[i] === '}' && --d === 0) break; } return src.slice(from, i + 1); };
+const found = {};
+for (const m of src.matchAll(/ui\.field\(/g)) { const body = callOf(m.index); const mt = /mount: 'SHP001-(U\d\d)'/.exec(body); const idm = /(?:^|[\s,{])id: ('[^']*'(?: \+ item)?)/.exec(body); if (mt) found[mt[1]] = idm ? idm[1] : 'none'; }
+for (const [u, id] of Object.entries(MOUNT_ID)) check(found[u] === id, 'SHP001-' + u + ' is on the field ' + (id === 'none' ? 'with no id (file picker)' : 'id ' + id) + (found[u] === id ? '' : ' (found ' + found[u] + ')'));
 check(!/SHP001-I(0[1-6]|0[89]|1[0-7]|19|2\d)"/.test(src) && !/SHP001-T0[12]"/.test(src), 'the converted element codes are not on the page any more (radio I07 and the money offer I18 keep theirs)');
 check(src.indexOf('src="/app/ui-field.js"') > src.indexOf('src="/app/ui.js"') && src.indexOf('src="/app/ui.js"') > 0, 'ui-field.js is loaded after ui.js');
 /** the census counts every control tag; each must carry a code (a new raw control fails here) */
