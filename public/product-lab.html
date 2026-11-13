@@ -437,7 +437,7 @@ function buildChoose() {
     '</div>' +
     '<div class="row">' +
     '<input data-cbsid="PLB001-I01" type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select data-cbsid="PLB001-S01" id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<select id="cat" aria-label="Shelf" data-cbsid="PLB001-S01" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
