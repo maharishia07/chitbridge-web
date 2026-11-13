@@ -92,8 +92,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('it opens on one of them, ticked', await p.$eval('#lists .pill.on', (e) => !!e), 'veg');
 
   const rows0 = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
-  say('the whole list is laid out as a spreadsheet', rows0 === BP.blueprint('veg').starter.length,
-    rows0 + ' rows');
+  /* CAT-218: one row per PRODUCT (name + shelf), its units as lines in the row — the starter holds one row per name AND unit,
+     so the page's row count is the distinct products, not starter.length (public/product-lab.html:531, groupRows) */
+  const vegProductsAll = new Set(BP.blueprint('veg').starter.map((x) => x.name + '|' + (x.category || ''))).size;
+  say('the whole list is laid out as a spreadsheet', rows0 === vegProductsAll,
+    rows0 + ' rows (' + BP.blueprint('veg').starter.length + ' units in the list)');
   say('⭐ grouped under its shelf, so a category is readable at a glance',
     (await p.$$eval('[data-testid=pl-table] tbody tr.catrow', (r) => r.length)) === BP.blueprint('veg').categories.length,
     (await p.$$eval('[data-testid=pl-table] tbody tr.catrow', (r) => r.length)) + ' shelves');
@@ -197,7 +200,10 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
   await p.click('[data-testid=pl-own-new]');
   const newRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
-  const vegProducts = new Set(BP.blueprint('veg').starter.map((x) => x.name + '|' + (x.category || ''))).size;
+  /* "Not yet" hides a UNIT the shop sells, so a product leaves the list only when EVERY one of its units is on the shelf. By now the
+     shelf holds the 22 Greens adopted above (every unit) and Tomato kg, so the rest is derived from the stub's own shelf, never a literal. */
+  const soldKeys = new Set(shelf.map((x) => x.name + '|' + x.unit));
+  const vegProducts = new Set(BP.blueprint('veg').starter.filter((x) => !soldKeys.has(x.name + '|' + x.unit)).map((x) => x.name + '|' + (x.category || ''))).size;
   /* ⚠️ derived, never a literal — the list grows (202 → 216 the day bulk rows landed) and a hardcoded
      count turns a healthy change into a red test. */
   const vegTotal = BP.blueprint('veg').starter.length;
