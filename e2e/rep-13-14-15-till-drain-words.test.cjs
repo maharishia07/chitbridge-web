@@ -29,6 +29,14 @@ const refusedStart = src.indexOf('async function refusedRow(');
 if (queueFrom < 0 || refusedStart < 0) throw new Error('queue ladder or refusedRow not found');
 const queueBlock = src.slice(queueFrom, src.indexOf('\n}\n', refusedStart) + 3); /* qBackoff … refusedRow */
 const fetchByUnder = between('async function fetchBy_(url, opts, ms){', '\n}\n');
+/* the stale-price gate, the held-wait words and the sent-proof the drain calls (the base batch added them): the REAL functions, lifted whole, never stand-ins */
+const liftTop = (name) => {
+  const start = src.search(new RegExp('^(?:async )?function ' + name + '\\(', 'm'));
+  if (start < 0) throw new Error('till.html: function ' + name + ' not found');
+  const first = src.slice(start, src.indexOf('\n', start));
+  return /\}\s*$/.test(first) && !/\{\s*$/.test(first) ? first : src.slice(start, src.indexOf('\n}\n', start) + 3);
+};
+const gateBlock = ['throwIfFrozen', 'staleSaleRow', 'staleCandidate', 'staleGate', 'staleGateSafe', 'heldWaitWords', 'drainAnswerProof', 'drainRecordSent'].map(liftTop).join('\n');
 const drainStart = src.indexOf('  async drain(opts){');
 const drainText = drainStart < 0 ? '' : src.slice(drainStart, src.indexOf('\n  },\n};', drainStart) + 4);
 if (!drainText.includes('this.last = {')) throw new Error('HOST.drain not found whole');
@@ -43,14 +51,14 @@ async function run(world) {
     console, Date, Math, JSON, Promise, Object, Number, String, Array, setTimeout, clearTimeout, AbortController, posts,
     DEADLINE: world.deadline || 30000, OWNER: world.owner || null, FOREIGN: 0, WAITS_FOR_BILL: 'WAITS_FOR_BILL',
     STATE: { queued: world.queued === undefined ? db.queue.length : world.queued },
-    cbQuiet() {}, frozenDrain: () => false, lineUp: () => world.line !== false, queueTally: async () => {}, paintStatus() {}, drainSoon() {},
+    cbQuiet() {}, toastLine() {}, frozenDrain: () => false, lineUp: () => world.line !== false, queueTally: async () => {}, paintStatus() {}, drainSoon() {},
     personOn: () => false, isSaleRow: () => false, renumberBill: async () => null, stampDeliveryRefs: (n, rows) => rows, chitOf: (b) => ({ no: b.no }),
     deviceId: () => 'dev', netGate: async () => {}, lineNote() {}, devTimed() {}, ls: { set() {} },
     DB: { all: async (t) => db[t] || [], put: async (t, row) => { const l = db[t] || (db[t] = []); const i = l.findIndex((x) => x.no === row.no); if (i >= 0) l[i] = row; else l.push(row); }, del: async (t, no) => { db[t] = (db[t] || []).filter((x) => x.no !== no); } },
     fetch: world.fetch || (async () => { throw new Error('no fetch expected'); })
   };
   sb.window = sb; vm.createContext(sb);
-  vm.runInContext(queueBlock + '\n' + fetchByUnder + '\nasync function fetchBy(url, opts, ms){ posts.push(url); return fetchBy_(url, opts, ms); }\n', sb);
+  vm.runInContext(queueBlock + '\n' + gateBlock + '\n' + fetchByUnder + '\nasync function fetchBy(url, opts, ms){ posts.push(url); return fetchBy_(url, opts, ms); }\n', sb);
   vm.runInContext('var HOST = {\n  api: "https://api.test", _busy: false, _busyAt: 0, cred: function(){ return ' + (world.noKey ? 'null' : '"key-1"') + '; },\n  auth: function(h){ return h; }, idemHeaders: function(p, b, h){ return h; },\n  last: null,\n' + drainText + '}; ', sb);
   await vm.runInContext('HOST.drain(' + (world.force ? '{ force: true }' : '') + ')', sb);
   return { last: vm.runInContext('HOST.last', sb), posts, db, foreign: sb.FOREIGN };
