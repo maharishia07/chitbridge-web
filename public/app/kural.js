@@ -23,8 +23,11 @@
  *  · Tokens only (--panel, --hair, --line, --ink, --muted, --faint), so it reads in all 16 themes. Never amber, never blue, no italic.
  *  · The verse is Noto Serif Tamil (loaded once from Google Fonts); a line breaks only at its middle, the rest indented.
  *
- * OWNS the band and the room kept for it · CALLED BY every CB page's shell (CBKural.mount) and CB Accounts (CBKural.set) · CBAvatar (repaint on a pref change).
- * FLOW  mount → load kurals.json → wanted()? → find(route) → paint → touch (the room's height)      CARD 29-qa-test-tooling-ux-locale-and-design-system/kural
+ * OWNS       the band and the room kept for it; its two buttons SCR043-B01 (Show the kural) and SCR043-B02 (Hide it for today)
+ * CALLED BY  12 pages by <script src> (grep -lE 'src="/?app/kural.js' public/*.html index.html): Home, accounts, catalogue, country-lab, crm, employees, finance, network, settings,
+ *            shell-lab, standards, tasks. CBKural.mount is called by the shell and the page frame; CBKural.set by the Books screen, the CRM screen and accounts.html (grep -n 'CBKural\.' public)
+ * FLOW       mount → load kurals.json → wanted()? → find(route) → paint → touch (the room's height)
+ * CARD       29-qa-test-tooling-ux-locale-and-design-system/kural
  *
  * ONE FILE, ONE GLOBAL. Nothing is read from the page except the document and (optionally) CBLocale.lang().
  */
@@ -319,7 +322,7 @@
       clearInterval(TIMER);
       TIMER = null;
       EL.className = 'cbk off';
-      EL.innerHTML = '<button type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>';
+      EL.innerHTML = '<button data-cbsid="SCR043-B01" type="button" class="cbk-show" data-kshow="1" data-testid="kural-show" aria-label="Show the kural">குறள் ' + k.no + ' ›</button>';
       touch();
       return;
     }
@@ -335,7 +338,7 @@
       '<span class="cbk-no" data-testid="kural-no">குறள் ' +
       k.no +
       '</span>' +
-      '<button type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
+      '<button data-cbsid="SCR043-B02" type="button" class="cbk-x" data-khide="1" data-testid="kural-hide" aria-label="Hide the kural for today" title="Hide for today">✕</button>';
     var phone = EL.clientWidth > 0 && EL.clientWidth <= 640,
       body = EL.querySelector('.cbk-body');
     if (phone) {
