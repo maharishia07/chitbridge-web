@@ -827,6 +827,20 @@
     if (total === 1) return T(list, notes.length ? 'Notices' : 'Details');
     return T(list, notes.length ? '{n} notices' : '{n} details', { n: total });
   }
+  /* the period chip and its popover, as one anchored span */
+  function periodChipHTML(list, p) {
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'period') +
+      '" data-testid="cbl-period-' +
+      esc(list.key) +
+      '">' +
+      esc(p.label || '') +
+      ' ▾</button>' +
+      (list.pop === 'period' ? periodPop(list, p) : '') +
+      '</span>'
+    );
+  }
   function paintTitle(list) {
     var h = head(list),
       box = $(list, ':scope > .cbl-title');
@@ -842,19 +856,7 @@
     }
     var out = '';
     if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    if (h.period) {
-      var p = h.period;
-      out +=
-        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
-        (list.pop === 'period') +
-        '" data-testid="cbl-period-' +
-        esc(list.key) +
-        '">' +
-        esc(p.label || '') +
-        ' ▾</button>' +
-        (list.pop === 'period' ? periodPop(list, p) : '') +
-        '</span>';
-    }
+    if (h.period) out += periodChipHTML(list, h.period);
     var chips = h.chips || [],
       notes = h.notices || [],
       chipHTML = function (c) {
