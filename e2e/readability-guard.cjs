@@ -356,6 +356,10 @@ ok(headerKit.findings('component', typedKind).kindWrong === 1 && headerKit.findi
 ok(headerKit.readFields('/* lib/a.js — x\n   OWNS: y\n*/', 'lib/a.js').fields.OWNS === 'y' && headerKit.readFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header template: "OWNS:" is a field; prose "owns the thing" is not');
 ok(headerKit.readFields('/* lib/a.js — x\n   ID of the party\n*/', 'lib/a.js').fields.ID === undefined, 'header template: prose starting with ID is not an ID');
 
+const grammar = require('../tools/readability/header-grammar.cjs');
+ok(grammar.parseFields('/* lib/a.js — x\n   OWNS      y\n*/', 'lib/a.js').fields.OWNS === 'y', 'header grammar: parseFields reads a labelled OWNS field (unit test of header-grammar.cjs)');
+ok(grammar.parseFields('/* lib/a.js — x\n   owns the thing\n*/', 'lib/a.js').fields.OWNS === undefined, 'header grammar: prose that merely says owns is not a field (unit test of header-grammar.cjs)');
+
 console.log('\n8 · the header template: a warning for a NEW file until the switch-over date, never a score change, never judges an old file');
 fs.writeFileSync(path.join(tmp, 'public/app/brand-new.js'), HEADER('brand-new') + 'module.exports = 1;' + String.fromCharCode(10));
 git(tmp, ['add', '-A']);
