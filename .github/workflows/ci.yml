@@ -57,6 +57,9 @@ jobs:
           node scripts/cap-network-render.test.mjs
           node scripts/step-flow.test.mjs
           node scripts/offers.test.mjs
+          node scripts/attach-deferred.test.mjs
+          node scripts/price-origin.test.mjs
+          node scripts/price-resolve.test.mjs
           node scripts/check-adoption.js
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs

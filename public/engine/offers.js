@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.89.0 · offers · sha256 03ca0b51d6f9529336f46924de98e1627ff45bb4a9a8a73991ffff8081521ecb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.92.0 · offers · sha256 1bdba6c51c1ef87f718baf3df8cea036d089d6ada949613b47f79783eb54136c — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · offers. Edited ONLY in chitbridge-engines/src/offers.js; every platform adopts a released version of it. */
 /* app/offers.js — OFFERS AS A SUBJECT OF THEIR OWN.  (classic script, shared global scope)
  *
@@ -355,9 +355,50 @@
 
   /** the tiers sorted by their quantity, smallest first (a copy; the offer's own list is not touched) */
   function sortedTiers_(tiers) {
-    return (tiers || []).slice().sort(function (first, second) {
+    if (!Array.isArray(tiers)) return [];
+    return tiers.filter(isPlainObject_).sort(function (first, second) {
       return (first.qty || 0) - (second.qty || 0);
     });
+  }
+  /** CAT-330: a value that is a real object (not null, not a list, not a string) */
+  function isPlainObject_(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+  /** CAT-330: a number or a non-blank numeric string, finite. Never true, [5], null, "" or " " (Number() reads those as 1, 5, 0, 0, 0) */
+  function isNumeric_(value) {
+    var readable = typeof value === 'number' || (typeof value === 'string' && value.trim() !== '');
+    return readable && Number.isFinite(Number(value));
+  }
+  /** CAT-330: why a tier_price offer's tiers cannot be read, or null. A tier needs qty > 0 and a price (0 or more) or a percent (0 to 100). */
+  function tiersRefusal_(tiers) {
+    if (!Array.isArray(tiers) || !tiers.length) return 'tiers is not a list of price breaks, so the offer was not applied';
+    for (var index = 0; index < tiers.length; index++) {
+      var tier = tiers[index];
+      if (!isPlainObject_(tier)) return 'tier ' + (index + 1) + ' is not a price break, so the offer was not applied';
+      if (!isNumeric_(tier.qty) || Number(tier.qty) <= 0) return 'tier ' + (index + 1) + ' has no quantity above 0, so the offer was not applied';
+      var why = tierValueRefusal_(tier);
+      if (why) return 'tier ' + (index + 1) + ' ' + why + ', so the offer was not applied';
+    }
+    return null;
+  }
+  /** a tier states a price or a percent (percent read through tierPercentOf, which carries the pct alias); null when it does */
+  function tierValueRefusal_(tier) {
+    var hasPrice = tier.price != null && tier.price !== '';
+    var percent = tierPercentOf(tier);
+    if (hasPrice && !(isNumeric_(tier.price) && Number(tier.price) >= 0)) return 'has a price that is not a number';
+    if (percent != null && !(isNumeric_(percent) && Number(percent) >= 0 && Number(percent) <= 100)) return 'has a percent that is not a number from 0 to 100';
+    return hasPrice || percent != null ? null : 'states neither a price nor a percent';
+  }
+  /** CAT-330: why an amount_off has no readable amount, or null */
+  function amountRefusal_(offer) {
+    if (!isNumeric_(offer.amount)) return 'amount is blank or not a number, so there is nothing to take off and the offer was not applied';
+    return Number(offer.amount) > 0 ? null : 'amount is 0 or less, so there is nothing to take off and the offer was not applied';
+  }
+  /** CAT-330: the terms only this kind reads (tiers for tier_price, amount for amount_off) must be readable, or the offer is skipped in words */
+  function termsRefusal_(offer) {
+    if (offer.kind === 'tier_price') return tiersRefusal_(offer.tiers);
+    if (offer.kind === 'amount_off') return amountRefusal_(offer);
+    return null;
   }
   /** the highest tier this quantity reaches, or null when it reaches none (tiers are sorted, smallest first) */
   function tierHit_(tiers, quantity) {
@@ -841,19 +882,57 @@
    * offer written before a field existed — the same rule products.js applies to a missing status.
    */
   function within(offer, ctx) {
-    return windowRefusal_(offer, ctx.now) || placeRefusal_(offer, ctx) || groupRefusal_(offer, ctx);
+    return windowRefusal_(offer, ctx.now, ctx.timezone) || placeRefusal_(offer, ctx) || groupRefusal_(offer, ctx);
   }
-  /** the validity window: why the offer has not started or has ended, else null */
-  function windowRefusal_(offer, now) {
-    if (offer.valid_from && new Date(offer.valid_from) > now) return 'not started (from ' + offer.valid_from + ')';
-    if (offer.valid_to) {
-      /* An end DATE means the end OF that day. "valid to 31 Oct" ending at 00:00 on the 31st is the kind of
-         off-by-one a customer notices and nobody can defend. */
-      var end = new Date(offer.valid_to);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(String(offer.valid_to))) end.setUTCHours(23, 59, 59, 999);
-      if (end < now) return 'expired (' + offer.valid_to + ')';
+  /** the YYYY-MM-DD calendar day of a moment in the shop's IANA `zone` (UTC when none or unknown), never the machine's zone; '' when the moment is not a date.
+   *  ⚠️ Twin of tax-packs.js dayOf_ (CTRY-83): kept private because this file is adopted ALONE (api lib/offers-engine.js, web public/engine/offers.js). Change both together. */
+  function dayInZone_(moment, zone) {
+    if (!(moment instanceof Date) || isNaN(moment.getTime())) return '';
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: zone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(moment);
+    } catch (_) {
+      return moment.toISOString().slice(0, 10);
     }
-    return null;
+  }
+  /** a date-only value that is a REAL calendar day (2026-02-31 is not: Date would roll it into March) */
+  function isRealDay_(text) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+    var probe = new Date(text + 'T00:00:00Z');
+    return !isNaN(probe.getTime()) && probe.toISOString().slice(0, 10) === text;
+  }
+  /** the instant (ms) of a date-and-time value, or NaN. Only ISO is read (a dd/mm string is ambiguous, so it is refused); a time with no zone is UTC, never the machine's. */
+  function instantOf_(value) {
+    if (value instanceof Date) return value.getTime();
+    var text = String(value).trim();
+    var m = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(Z|[+-]\d{2}:?\d{2})?$/.exec(text);
+    if (!m || !isRealDay_(m[1])) return NaN;
+    return Date.parse(m[1] + 'T' + m[2] + (m[3] || 'Z'));
+  }
+  /** one edge of the window ('from' or 'to'): why the offer is outside it, or null; an edge that cannot be read refuses (CAT-248: never fail open) */
+  function edgeRefusal_(value, edge, now, zone) {
+    if (!value) return null;
+    var text = value instanceof Date ? '' : String(value).trim();
+    if (text !== '' && /^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      if (!isRealDay_(text)) return unreadableEdge_(edge, value);
+      /* an end DATE means the end OF that day IN THE SHOP'S ZONE (CAT-247); a start DATE, its first moment */
+      var today = dayInZone_(now, zone);
+      if (edge === 'from') return today < text ? 'not started (from ' + value + ')' : null;
+      return today > text ? 'expired (' + value + ')' : null;
+    }
+    var at = instantOf_(value);
+    if (isNaN(at)) return unreadableEdge_(edge, value);
+    if (edge === 'from') return at > now.getTime() ? 'not started (from ' + value + ')' : null;
+    return at < now.getTime() ? 'expired (' + value + ')' : null;
+  }
+  function unreadableEdge_(edge, value) {
+    return 'the ' + (edge === 'from' ? 'start' : 'end') + ' date "' + value + '" cannot be read (write it YYYY-MM-DD), so the offer was not applied';
+  }
+  /** the validity window: why the offer has not started or has ended, else null. `zone` is the shop's IANA time zone (ctx.timezone); none = UTC, because the engine must not guess one. */
+  function windowRefusal_(offer, now, zone) {
+    if (!offer.valid_from && !offer.valid_to) return null;
+    var at = now instanceof Date ? now : new Date(now);
+    if (isNaN(at.getTime())) return 'the date to check the offer window against cannot be read, so the offer was not applied';
+    return edgeRefusal_(offer.valid_from, 'from', at, zone) || edgeRefusal_(offer.valid_to, 'to', at, zone);
   }
   /** the region and currency gates: why the offer is for another place, else null (a field missing on either side is no restriction) */
   function placeRefusal_(offer, ctx) {
@@ -1322,9 +1401,13 @@
     var fields = ['percent', 'get_percent'];
     for (var index = 0; index < fields.length; index++) {
       var value = offer[fields[index]];
-      if (value != null && value !== '' && Number(value) > 100)
-        return fields[index].replace('_', ' ') + ' ' + value + ' is more than 100 — a discount cannot exceed the price, so this offer was not applied';
+      if (value == null || value === '') continue;
+      var label = fields[index].replace('_', ' ');
+      if (Number(value) > 100) return label + ' ' + value + ' is more than 100 — a discount cannot exceed the price, so this offer was not applied';
+      if (!isNumeric_(value) || !(Number(value) >= 0)) return label + ' ' + value + ' is not a number from 0 to 100, so this offer was not applied'; /* CAT-312: -10 or "abc" was dropped without a word */
     }
+    /* a percent_off with no percent (blank or 0) takes nothing off: say so instead of returning nothing */
+    if (offer.kind === 'percent_off' && !(Number(offer.percent) > 0)) return 'percent is blank or 0, so there is nothing to take off and the offer was not applied';
     return null;
   }
 
@@ -1428,6 +1511,7 @@
     return {
       now: input.now || inputCtx.now ? new Date(input.now || inputCtx.now) : new Date(),
       region: input.region || inputCtx.region,
+      timezone: input.timezone || inputCtx.timezone,
       currency: input.currency || inputCtx.currency,
       customer_group: input.customer_group || inputCtx.customer_group,
       customer_groups: customerGroupsOf_(input, inputCtx),
@@ -1506,7 +1590,7 @@
       skipOffer_(pass, offer, 'unknown kind: ' + offer.kind);
       return null;
     }
-    var refusal = within(offer, pass.ctx) || overHundred(offer);
+    var refusal = within(offer, pass.ctx) || overHundred(offer) || termsRefusal_(offer);
     if (refusal) {
       skipOffer_(pass, offer, refusal);
       return null;
