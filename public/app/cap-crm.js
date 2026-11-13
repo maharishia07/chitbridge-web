@@ -2049,10 +2049,12 @@ function crmAddOpen(q) {
   ADD.q = q || '';
   ADD.found = null;
   ADD.busy = false;
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Add party')) +
-      '</div></div><div class="mbody" data-testid="crm-add-sheet">' +
+  ui.dialog({
+    mount: 'CRM001-U201',
+    pop: 'POP095',
+    title: 'Add party',
+    testid: 'crm-add-sheet',
+    body:
       '<p class="hint" style="margin:0">' +
       esc(tx('One field — we look on the network and in your parties first.')) +
       '</p>' +
@@ -2074,11 +2076,11 @@ function crmAddOpen(q) {
       '</button><button data-cbsid="CRM001-B10" type="button" data-crm="addrole" data-v="both" aria-pressed="false" data-testid="crm-add-role-both">' +
       esc(tx('Both')) +
       '</button></div></div>' +
-      '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button></div>'
-  );
+      '<div id="crm_addres" aria-live="polite" style="display:flex;flex-direction:column;gap:8px"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM001-U201' } }
+    ]
+  });
   ADD.role = 'customer';
   var node = document.getElementById('crm_addq');
   if (node) {
@@ -2218,10 +2220,12 @@ function crmFuAddOpen(partyKey, then, prefill) {
   FUADD.asked = false;
   FUADD.then = then || null;
   FUADD.source = (prefill && prefill.source) || 'manual';
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Add follow-up')) +
-      '</div></div><div class="mbody" data-testid="crm-fu-sheet">' +
+  ui.dialog({
+    mount: 'CRM001-U202',
+    pop: 'POP097',
+    title: 'Add follow-up',
+    testid: 'crm-fu-sheet',
+    body:
       '<label>' +
       esc(tx('Party')) +
       '<input data-cbsid="CRM001-I02" class="inp" id="crm_fu_pq" data-testid="crm-fu-pq" placeholder="' +
@@ -2270,13 +2274,12 @@ function crmFuAddOpen(partyKey, then, prefill) {
         })
         .join('') +
       '</select></label>' +
-      '<div id="crm_fu_msg" class="hint" role="status"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="fusave" data-testid="crm-fu-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_fu_msg" class="hint" role="status"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM001-U202' } },
+      { name: 'save', options: { mount: 'CRM001-U202', key: 'save', effect: 'preference', testid: 'crm-fu-save', data: { crm: 'fusave' } } }
+    ]
+  });
   var node = document.getElementById('crm_fu_pq');
   if (node) {
     node.addEventListener('input', function () {
