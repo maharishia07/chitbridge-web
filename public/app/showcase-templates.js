@@ -18,7 +18,7 @@
  * Pure string functions, no DOM access — the shop page and the owner preview both call render().
  *
  * OWNS      CBShowcase: TEMPLATES · DEFAULT · contractOf (the one data contract) · assemble (section mix) · render (the page's HTML)
- * CALLED BY shop.html (contractOf + render on the shop page and the owner preview) · app/cap-showcase.js (TEMPLATES, DEFAULT) · app/cap-admin.js (DEFAULT, TEMPLATES) · loaded by shop.html, crm.html and app.html (<script src>)
+ * CALLED BY shop.html (contractOf + render on the shop page and the owner preview) · app/cap-showcase.js (TEMPLATES, DEFAULT) · app/cap-admin.js (DEFAULT) · loaded by shop.html, crm.html and app.html (<script src>)
  * FLOW      shop.html reads the public catalogue → contractOf(data) → render(contract, opts) → the template's sections → the page paints; cap-showcase draws one button per TEMPLATES entry
  * CARD      11-crm-and-marketing/showcase
  */
