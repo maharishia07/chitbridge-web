@@ -1,6 +1,12 @@
 /**
+ * public/app/shell.js — CBShell: the one frame every page lives in (header, shop sheet, five areas, kural)
+ * ID        HOM001 (Home's own controls); the header's popups are POP113-POP116 and its controls wear CMP codes with a mount
+ * OWNER     cb-ux-locale
+ * OWNS      the header and the shop sheet, the area switcher, Home's rail and tiles, the licence and edition chips
  * CALLED BY index.html (Home: CBShell.mount) and app/page-frame.js (every other page's header, SHELL-ONE); the avatar, the bell and the screen chip mount into its slots.
- * CARD 29-qa-test-tooling-ux-locale-and-design-system/shell
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/shell
+ * RISK      personal-data
+ * FLOW      mount(el, opts) → headerHTML → workHTML → slots (bell · avatar · screen chip · kural) → work into the slot
  * ── ⭐ CBShell — THE FRAME EVERY UTILITY APP LIVES IN: HEADER · SHEET · FIVE AREAS · KURAL ──────────────────────────────────────
  *
  * Plan row N17 (C:\dev\FIT-shell-enterprise-2026-10-07.md row 93, decisions §D Q1–Q10). The design is
@@ -337,6 +343,8 @@
        (the spacer gives way to it) at 14 px; a bar narrower than its need (a pane beside the sidebar, ~326 px) shows the whole name or none — never "F…" (the button's aria-label still says it) */
     '.cbsh-bar:has(.cbsh-who) .cbsh-grow{display:none}',
     '@container (max-width:359px){.cbsh-who b{display:none}}',
+    /* the name has no room beside the controls, so a keyboard user who lands on the shop button is told it in a caption under the bar (the same words the aria-label says); it is the button's own name, drawn only while the ring is on it */
+    '@container (max-width:359px){.cbsh-who{position:relative}.cbsh-who:focus-visible b{display:block;position:absolute;top:calc(100% + 4px);left:0;z-index:40;width:max-content;max-width:calc(100cqw - 16px);white-space:normal;overflow:visible;padding:6px 10px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-card);color:var(--sh-ink);box-shadow:0 8px 18px var(--sh-shadow)}}',
     '.cbsh-tohome .hw{display:none}.cbsh-tohome{padding:0 8px}.cbsh-title{font-size:13px}' /* TAP RULE (Athi 10 Nov): every control of the header is 44 px on a phone */,
     '.cbsh-hdr .cbsh-who,.cbsh-hdr .cbsh-swb,.cbsh-hdr .cbsid,.cbsh-hdr .cbb-btn,.cbsh-hdr .cbav-btn,.cbsh-hdr .cbav-signin{min-height:44px;min-width:44px}' /* one level more specific: the bell's and the chip's own stylesheets load after this one */ /* a phone: ⌂ alone (aria-label keeps the word) */,
     '.cbsh-swb .sn{display:none}' /* a phone: the switcher is its icon — the screen chip names the screen; with ⌂ Home beside it the app's name no longer fits a 390 px pane (INT7b, walk-returns R6) */,
@@ -509,7 +517,7 @@
         ? '<nav class="cbsh-nav" data-testid="shell-nav" aria-label="Areas">' +
           AREAS.map(function (item) {
             return (
-              '<button type="button" class="cbsh-nv" data-go="' +
+              '<button type="button" class="cbsh-nv" data-cbsid="HOM001-K01" data-go="' +
               item +
               '" data-testid="shell-nav-' +
               item +
@@ -520,7 +528,7 @@
               '</span></button>'
             );
           }).join('') +
-          '<button type="button" class="cbsh-nv" data-go="more" data-testid="shell-nav-more"><span class="i" aria-hidden="true">' +
+          '<button type="button" class="cbsh-nv" data-cbsid="HOM001-K01" data-go="more" data-testid="shell-nav-more"><span class="i" aria-hidden="true">' +
           ICON.more +
           '</span><span class="t">' +
           esc(W.areas.more) +
@@ -530,7 +538,7 @@
       (frame.sides ? '<aside class="cbsh-side l" data-slot="sideL"></aside>' : '') +
       '<main class="cbsh-main" data-testid="shell-main" data-tab="home" tabindex="0"><div class="cbsh-inner">' +
       (frame.sides
-        ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-slot="btnL"></button><button type="button" data-slot="btnR"></button></div>'
+        ? '<div class="cbsh-tools" data-testid="shell-sidetools"><button type="button" data-cbsid="HOM001-B03" data-slot="btnL"></button><button type="button" data-cbsid="HOM001-B04" data-slot="btnR"></button></div>'
         : '') +
       '<div class="cbsh-signin" data-testid="shell-signin"></div>' +
       (frame.mode === 'home' ? '<div class="cbsh-areas" data-testid="shell-areas"></div>' : '<div class="cbsh-slotwork" data-slot="work"></div>') +
@@ -841,7 +849,7 @@
     var name = esc(T(W.caption[area]));
     if (PHONE_MORE.indexOf(area) < 0) return '<h2 class="cbsh-ph">' + name + '</h2>';
     return (
-      '<h2 class="cbsh-ph"><button type="button" class="cbsh-row" data-row="' +
+      '<h2 class="cbsh-ph"><button type="button" class="cbsh-row" data-cbsid="HOM001-B02" data-row="' +
       area +
       '" aria-expanded="false" data-testid="shell-row-' +
       area +
@@ -1141,7 +1149,7 @@
     function card(e) {
       if (String(e.route || '').indexOf('{bridge_id}') >= 0 && !shopIdOf()) return greyedTileHTML(e, glyph(e.icon), !!person);
       return (
-        '<a class="cbsh-box" href="' +
+        '<a class="cbsh-box" data-cbsid="HOM001-B01" href="' +
         esc(routeOf(e)) +
         '" data-testid="shell-card-' +
         esc(e.id) +

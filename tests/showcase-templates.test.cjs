@@ -8,6 +8,7 @@
  *   6  390px: no fixed width over 390 in the template CSS; only the chip row scrolls sideways
  * Run: node tests/showcase-templates.test.cjs   · no browser, no network.
  * CARD      10-online-shop-and-storefront-orders/the-online-shop
+ * CARD  11-crm-and-marketing/showcase
  */
 'use strict';
 const fs = require('fs'), path = require('path');

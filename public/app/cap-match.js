@@ -13,7 +13,11 @@
  * Backend: GET /api/till/match (routes/till.js — deliberately outside the till key scope: a counter records what it sees and must
  * never read what the shop pays its suppliers).
  
+ * FLOW      matchScreen → matchLoad (GET /api/till/match) → matchCard → matchDetail (matchReceivedFig · matchGapNote) → matchDispute
+ * CARD      12-suppliers-and-procurement/purchase-order-and-goods-receipt
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * FLOW      GET /api/till/match ──▶ matchLoad ──▶ matchDetail (lines · Difference cell) ──▶ matchDispute (draft) ──▶ POST /api/chits/:chit_id/disputes
+ * CARD 03-disputes-service-and-register/three-way-match
  */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -106,8 +110,8 @@ function matchScreen() {
     '</select></div>';
 
   if (MATCH.busy && !MATCH.rows)
-    return '<div class="panel">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
-  if (MATCH.error) return '<div class="panel">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
+    return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:30px;text-align:center;color:var(--grey)"><span class="spin"></span></div></div>';
+  if (MATCH.error) return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:22px;color:var(--warn)">' + esc(MATCH.error) + '</div></div>';
 
   var body = shown.length
     ? shown.map(matchCard).join('')
@@ -117,7 +121,7 @@ function matchScreen() {
         : esc(tx('No purchase orders yet. Send an order to a supplier, then receive the goods at the counter — this screen fills itself.'))) +
       '</div>';
 
-  return '<div class="panel" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
+  return '<div style="flex:1;min-width:0;min-height:0;overflow:auto" data-testid="match-screen">' + head + '<div style="padding:0 16px 24px">' + body + '</div></div>';
 }
 
 function matchCard(o) {
@@ -125,7 +129,9 @@ function matchCard(o) {
   var open = MATCH.open === o.chit_id;
   return (
     '<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden" data-testid="match-order">' +
-    '<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onclick="MATCH.open=' +
+    '<div role="button" tabindex="0" aria-expanded="' +
+    (open ? 'true' : 'false') +
+    '" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click()}" onclick="MATCH.open=' +
     (open ? 'null' : "'" + esc(o.chit_id) + "'") +
     ';renderApp()">' +
     '<span style="font-weight:800;flex:1">' +
@@ -142,14 +148,59 @@ function matchCard(o) {
     '<span style="opacity:.5">' +
     (open ? '▾' : '▸') +
     '</span></div>' +
-    (open ? matchDetail(o, money) : '')
+    (open ? matchDetail(o) : '') +
+    '</div>'
   );
 }
 
-function matchDetail(o, money) {
+/**
+ * CTR-248 (api #1194, OPS-87): goods counted in a unit other than the ordered one sit beside the total, never summed into it, so
+ * the cell says both (short 6 · counted in another unit ...) and never hides one behind the other. One segment per other unit; no conversion is guessed, a person settles it.
+ * Returns '' for an ordinary line, so the caller falls through to short / excess.
+ */
+function matchOtherUnits(item) {
+  if (!item.counted_in_another_unit || !Array.isArray(item.other_units) || !item.other_units.length) return '';
+  return item.other_units
+    .map(function (part) {
+      var seen = function (n) {
+        return n == null ? '—' : n;
+      };
+      return txf('counted in another unit: {unit} mine {mine} / theirs {theirs}', { unit: part.unit, mine: seen(part.mine), theirs: seen(part.theirs) });
+    })
+    .join(' · ');
+}
+
+/**
+ * The words of a line's Difference: the shortfall or excess in the ORDERED unit, then the other-unit counts (the api flags
+ * counted_in_another_unit whenever other_units is non-empty, so 10 box ordered / 4 box + 2 dozen received says both). '' = agrees.
+ */
+function matchDiffWords(item) {
+  var parts = [];
+  if (item.difference < 0) parts.push(txf('short {n}', { n: String(-item.difference) }));
+  else if (item.difference > 0) parts.push(txf('excess {n}', { n: String(item.difference) }));
+  var other = matchOtherUnits(item);
+  if (other) parts.push(other);
+  return parts.join(' · ');
+}
+
+/** the Difference cell of one line: the words, warn-coloured when there are any, else "agrees" in ok-colour; the door's reason after */
+function matchDiffCell(item) {
+  var words = matchDiffWords(item);
+  return (
+    '<td style="padding:6px 8px;color:' +
+    (words ? 'var(--warn)' : 'var(--ok)') +
+    ';font-weight:' +
+    (words ? '700' : '400') +
+    '">' +
+    (words ? esc(words) : tx('agrees')) +
+    (item.reason ? ' · ' + esc(item.reason) : '') +
+    '</td>'
+  );
+}
+
+function matchDetail(o) {
   var rows = o.lines
     .map(function (item) {
-      var bad = item.difference !== 0;
       return (
         '<tr data-testid="match-line">' +
         '<td style="padding:6px 8px">' +
@@ -163,14 +214,8 @@ function matchDetail(o, money) {
         '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' +
         item.received +
         '</td>' +
-        '<td style="padding:6px 8px;color:' +
-        (bad ? 'var(--warn)' : 'var(--ok)') +
-        ';font-weight:' +
-        (bad ? '700' : '400') +
-        '">' +
-        (bad ? (item.difference < 0 ? txf('short {n}', { n: String(-item.difference) }) : txf('excess {n}', { n: String(item.difference) })) : tx('agrees')) +
-        (item.reason ? ' · ' + esc(item.reason) : '') +
-        '</td></tr>'
+        matchDiffCell(item) +
+        '</tr>'
       );
     })
     .join('');
@@ -179,19 +224,14 @@ function matchDetail(o, money) {
    * ⭐ THE THREE FIGURES, AND WHERE EACH CAME FROM. "Invoiced" is either a chit they sent or the total somebody keyed off their paper
    * bill at the door — and the screen SAYS WHICH, because a figure whose source is unknown is not evidence.
    */
-  var gap = o.money_gap;
   return (
     '<div style="border-top:1px solid var(--line);padding:12px 14px">' +
     '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">' +
     matchFig(tx('Ordered'), fmtMoney(o.ordered_total, myCur(), '—'), tx('what you asked for')) +
-    matchFig(tx('Received'), fmtMoney(o.received_total, myCur(), '—'), tx('what your own door counted')) +
+    matchReceivedFig(o) +
     matchFig(tx('Invoiced'), fmtMoney(o.invoiced_total, myCur(), '—'), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet')) +
     '</div>' +
-    (gap != null && gap !== 0
-      ? '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;color:var(--warn);font-weight:700" data-testid="match-gap">' +
-        (gap > 0 ? txf('You counted {v} more than they billed.', { v: inr(gap) }) : txf('They billed {v} more than you counted.', { v: inr(-gap) })) +
-        '</div>'
-      : '') +
+    matchGapNote(o) +
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">' +
     '<thead><tr style="color:var(--grey);text-align:left">' +
     '<th style="padding:4px 8px">' +
@@ -240,6 +280,50 @@ function matchDetail(o, money) {
   );
 }
 
+/**
+ * ⭐ "RECEIVED" IN THE SAME TERMS AS "INVOICED" (OPS-83). A bill's total is what they CHARGE, tax in, so beside it the door's count is painted tax in too:
+ * the api's received_with_tax (the receipts' carried taxable + tax, read through lib/their-bill). Only a receipt older than that carries no such figure;
+ * then the pre-tax count stands, and says so, and the api gives no gap to compare it with.
+ */
+function matchReceivedFig(order) {
+  var taxed = order.received_with_tax != null;
+  return matchFig(
+    tx('Received'),
+    fmtMoney(taxed ? order.received_with_tax : order.received_total, myCur(), '—'),
+    taxed ? tx('what your own door counted, tax in') : tx('what your own door counted, before tax')
+  );
+}
+
+/**
+ * the money note under the three figures, worded from the api's money_code (never from the sign alone): another currency is said, never compared; a round-off is calm,
+ * not a warning; a gap is named only once every line has closed (while goods are still short, the gap is the goods' news, not the bill's). '' when there is nothing to say.
+ */
+function matchGapNote(order) {
+  var gap = order.money_gap,
+    code = order.money_code,
+    closed = order.lines.every(function (item) {
+      return item.state === 'agreed';
+    });
+  var words =
+    code === 'currency_mismatch'
+      ? tx('Their bill is in another currency, so it is not compared.')
+      : !closed || gap == null || gap === 0
+      ? ''
+      : code === 'round_off'
+      ? txf('Their bill is {v} off: their round-off.', { v: inr(Math.abs(gap)) })
+      : gap > 0
+      ? txf('You counted {v} more than they billed.', { v: inr(gap) })
+      : txf('They billed {v} more than you counted.', { v: inr(-gap) });
+  if (!words) return '';
+  return (
+    '<div style="background:var(--warn-tint,rgba(200,120,0,.12));border-radius:8px;padding:9px 11px;margin-bottom:12px;font-weight:700;color:' +
+    (code === 'round_off' ? 'var(--grey)' : 'var(--warn)') +
+    '" data-testid="match-gap">' +
+    words +
+    '</div>'
+  );
+}
+
 function matchFig(label, value, note) {
   return (
     '<div style="border:1px solid var(--line);border-radius:10px;padding:10px">' +
@@ -266,7 +350,7 @@ function matchDispute(chit_id) {
   })[0];
   if (!o) return;
   var list = o.lines.filter(function (item) {
-    return item.difference !== 0;
+    return matchDiffWords(item) !== '';
   });
   var draft = list
     .map(function (item) {
@@ -278,12 +362,14 @@ function matchDispute(chit_id) {
         item.unit +
         ', received ' +
         item.received +
-        (item.difference < 0 ? ' (short ' + -item.difference + ')' : ' (excess ' + item.difference + ')') +
+        ' (' +
+        matchDiffWords(item) +
+        ')' +
         (item.reason ? ' — ' + item.reason : '')
       );
     })
     .join('\n');
-  if (o.money_gap)
+  if (o.money_gap && o.money_code !== 'round_off')
     draft += '\n' + (o.money_gap > 0 ? 'We counted ' + inr(o.money_gap) + ' more than billed.' : 'Billed ' + inr(-o.money_gap) + ' more than we counted.');
 
   modal(
