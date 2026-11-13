@@ -620,7 +620,7 @@ function route(S, r) {
 
     /* close the modal — the ONE documented way out of this Lab now — and check it actually leaves, rather
        than revealing the inert shell underneath (the 2026-10-01 finding this whole Lab exists to not repeat) */
-    const closeBtn = p.locator('#modLabOverlay .ovlx');
+    const closeBtn = p.locator('#modLabOverlay [data-cbname="close"]');
     ok('combo', await closeBtn.count() > 0, 'the modal has its own close (✕) button (' + state + ')', 'no .ovlx close button found');
     if (await closeBtn.count()) {
       await Promise.all([

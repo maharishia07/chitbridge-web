@@ -47,11 +47,12 @@ function apiStandIn() {
     calls.push({ m: q.method, u, b });
     const id = String(b.id || b.email || b.user_id || '').toLowerCase();
     if (u === '/api/signin/ask') {
-      if (id !== 'athi@mayur.test' && id !== 'mayuri123') return j(400, { error: 'Not found', code: 'NO_ACCOUNT', message: 'No account found — please register first' });
+      /* the real api answers an unknown id exactly as a known one (ASK_ANSWER) and sends no code */
+      if (id !== 'athi@mayur.test' && id !== 'mayuri123') return j(200, { message: 'If that sign-in exists, enter your PIN or the code we sent.', need: 'pin_or_code' });
       issued = '123456'; return j(200, { message: 'Verification code sent to your email', kind: 'entity', need: 'code', id: 'mayuri123' });
     }
     if (u === '/api/signin/verify') {
-      if (b.otp !== issued && b.otp !== TESTER) return j(400, { error: 'Verification failed', message: 'Invalid or expired OTP' });   /* SEC1: the stand-in's TESTER_CODE */
+      if (b.otp !== issued && b.otp !== TESTER) return j(400, { error: 'Sign-in failed', code: 'SIGNIN_REFUSED', message: REFUSED_WORDS });   /* SEC1: the stand-in's TESTER_CODE */
       issued = null;
       return j(200, { token: token({ identity_id: 'ent-mayur', identity_type: 'entity', display_name: 'Mayur Bhavan', bridge_id: 'CB-MAYUR' }),
         identity: { identity_id: 'ent-mayur', display_name: 'Mayur Bhavan', user_id: 'mayuri123', identity_type: 'entity', bridge_id: 'CB-MAYUR', entity_id: 'ent-mayur' } });
@@ -61,6 +62,7 @@ function apiStandIn() {
   return { srv, calls };
 }
 
+const REFUSED_WORDS = "That sign-in didn't work. Check the details and try again.";   /* lib/otp.js SIGNIN_REFUSED_SENTENCE: one sentence for unknown, wrong and locked */
 /* ── the lab walk: one scenario = one page load with the strip's choice in the query ── */
 async function lab(b, WEB, dev, q, steps) {
   const ctx = await b.newContext(dev), p = await ctx.newPage(), errs = [];
@@ -92,14 +94,6 @@ async function signIn(r, opts) {
   await r.tap('[data-testid="signin-go"]');
   await r.p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-pin"], [data-testid="signin-choice"], [data-testid="signin-why"]', { timeout: 10000 });
   r.shots.push(await r.shot('2-asked'));
-  if (opts.choose) {
-    const n = await r.p.locator('[data-testid="signin-choice"]').count();
-    r.choices = n;
-    const i = await r.p.evaluate((want) => Array.from(document.querySelectorAll('[data-testid="signin-choice"]')).findIndex((b) => b.textContent.includes(want)), opts.choose);
-    await r.tap('[data-testid="signin-choice"] >> nth=' + Math.max(0, i));
-    await r.p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-pin"]', { timeout: 10000 });
-    r.shots.push(await r.shot('2b-chosen'));
-  }
   const pinBox = await r.p.locator('[data-testid="signin-pin"]').count();
   r.needed = pinBox ? 'pin' : (await r.p.locator('[data-testid="signin-code"]').count()) ? 'code' : 'none';
   if (r.needed === 'none') return r;
@@ -114,6 +108,13 @@ async function signIn(r, opts) {
   const cred = opts.cred || (await r.p.evaluate(() => { const c = window.__lab.practice().person.cred; return c.pin || c.code; }));
   await r.tap('[data-testid="' + (pinBox ? 'signin-pin' : 'signin-code') + '"]'); await r.p.keyboard.type(cred);
   await r.tap('[data-testid="signin-verify"]');
+  if (opts.choose) {   /* SEC-143 (web 4de4de9f): one PIN-or-code box; a shared contact's account choice is shown AFTER a correct secret */
+    await r.p.waitForSelector('[data-testid="signin-choice"]', { timeout: 10000 });
+    r.choices = await r.p.locator('[data-testid="signin-choice"]').count();
+    const i = await r.p.evaluate((want) => Array.from(document.querySelectorAll('[data-testid="signin-choice"]')).findIndex((b) => b.textContent.includes(want)), opts.choose);
+    await r.tap('[data-testid="signin-choice"] >> nth=' + Math.max(0, i));
+    r.shots.push(await r.shot('2b-chosen'));
+  }
   await r.p.waitForSelector('[data-testid="signin-pin1"], [data-testid="signin-in"], [data-testid="signin-why"]', { timeout: 10000 });
   r.shots.push(await r.shot('3-verified'));
   if (await r.p.locator('[data-testid="signin-pin1"]').count()) {
@@ -166,7 +167,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' owner: every built app opens; every rail action is allowed (editor)', (o.apps || []).length && o.apps.every((a) => /:true$/.test(a)) && (o.actions || []).length === 8 && o.actions.every((a) => /:true$/.test(a)) && o.level === 'editor', 'apps=' + (o.apps || []).join(' ') + ' actions=' + (o.actions || []).length);
     say(D + ' planned roles are marked, never offered as working', (o.planned || []).length === 3 && o.planned.every((t) => /planned role — not built/.test(t)), JSON.stringify(o.planned));
     say(D + ' what only the server decides says so (hat-gate)', /decided by the server/.test(o.hatgate || ''), o.hatgate);
-    say(D + ' session life and device are said (not named → 7 days, unlisted)', /7 days/.test(o.life || '') && /not named/.test(o.device || ''), o.life + ' · ' + o.device);
+    say(D + ' session life and device are said (7 days; the page names its device, listed — K-SEC PR A)', /7 days/.test(o.life || '') && /listed/.test(o.device || ''), o.life + ' · ' + o.device);
 
     const om = await lab(b, WEB, dev, 'who=owner&by=mobile&dev=till', async (r) => { await signIn(r); });
     errs.push(...om.errs);
@@ -178,7 +179,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' employee without costs: Accounts and owner-only apps are refused, the till opens', (e1.apps || []).includes('till:true') && (e1.apps || []).includes('accounts:false') && (e1.apps || []).includes('storefront:false') && /\bno\b/.test(e1.costs || ''), (e1.apps || []).join(' '));
     const e2 = await lab(b, WEB, dev, 'who=employee&by=mobile&stage=returning', async (r) => { await signIn(r, { wrongFirst: true }); });
     errs.push(...e2.errs);
-    say(D + ' employee returning: the PIN box (4 digits) by mobile; a wrong PIN is a sentence; the right one signs in', e2.needed === 'pin' && /Incorrect PIN|did not match/.test(e2.wrongWhy || '') && e2.storedId === 'bala@mayuri123.br' && /PIN/.test(e2.method || ''), 'needed=' + e2.needed + ' wrong="' + e2.wrongWhy + '" ' + (e2.err || ''));
+    say(D + ' employee returning: the PIN box (4 digits) by mobile; a wrong PIN is a sentence; the right one signs in', (e2.needed === 'pin' || e2.needed === 'code') && (e2.wrongWhy || '').trim() === REFUSED_WORDS && e2.storedId === 'bala@mayuri123.br' && /PIN/.test(e2.method || ''), 'needed=' + e2.needed + ' wrong="' + e2.wrongWhy + '" ' + (e2.err || ''));
 
     const c = await lab(b, WEB, dev, 'who=customer&by=email', async (r) => { await signIn(r); });
     errs.push(...c.errs);
@@ -186,7 +187,7 @@ const fits = (p) => p.evaluate(() => {
 
     const s = await lab(b, WEB, dev, 'who=shared&by=mobile&stage=returning', async (r) => { await signIn(r, { choose: 'Alpha Timers' }); });
     errs.push(...s.errs);
-    say(D + ' ⭐ one mobile, two people: the chooser (2); choosing the employee re-asks with the STORED id and the PIN signs in at Alpha Timers', s.choices === 2 && s.calls[1] && s.calls[1].body.id === 'athi@alpha-timers.br' && s.storedId === 'athi@alpha-timers.br', 'choices=' + s.choices + ' reask=' + JSON.stringify(s.calls[1] && s.calls[1].body) + ' ' + (s.err || s.why || ''));
+    say(D + ' ⭐ one mobile, two people: the chooser (2); choosing the employee re-verifies with the STORED id (SEC-143: the chooser follows the secret) and the PIN signs in at Alpha Timers', s.choices === 2 && (s.calls || []).filter((x) => x.path === '/api/signin/verify').length === 2 && s.calls[2] && s.calls[2].body.id === 'athi@alpha-timers.br' && s.storedId === 'athi@alpha-timers.br', 'choices=' + s.choices + ' reask=' + JSON.stringify(s.calls[2] && s.calls[2].body) + ' ' + (s.err || s.why || ''));
 
     const sp = await lab(b, WEB, dev, 'who=owner&by=email', async (r) => {
       await signIn(r, { wrongFirst: true });
@@ -196,7 +197,7 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' ⚠️ a spent code is not re-sent: one ask for the whole walk, a wrong code included', asks === 1 && sp.who === 'Mayur Bhavan', 'asks=' + asks + ' ' + (sp.err || ''));
 
     const lk = await lab(b, WEB, dev, 'who=employee&by=email&stage=locked', async (r) => { await signIn(r); });
-    say(D + ' locked: refused with the server\'s sentence, still at the credential box', /Too many wrong attempts/.test(lk.why || '') && lk.at === 'credential', lk.why);
+    say(D + ' locked: refused with the ONE sentence (never a count, never "locked"), still at the credential box', (lk.why || '').trim() === REFUSED_WORDS && lk.at === 'credential', lk.why);
     const rm = await lab(b, WEB, dev, 'who=employee&by=email&stage=removed', async (r) => { await signIn(r); });
     say(D + ' device removed: "The shop removed this device. Ask the owner."', /removed this device/.test(rm.why || ''), rm.why);
 
@@ -287,8 +288,12 @@ const fits = (p) => p.evaluate(() => {
     say(D + ' the index (front door): ONE window in the shell slot; Sign in is a button that brings you to its box — nothing names the workshop', doorTag === 'BUTTON' && opened === 1 && focused === 'signin-id', 'door=' + doorTag + ' windows=' + opened + ' focused=' + focused);
     await tap('[data-testid="signin-id"]'); await p.keyboard.type('9876543210'); await tap('[data-testid="signin-go"]');
     await p.waitForSelector('[data-testid="signin-code"], [data-testid="signin-why"]', { timeout: 10000 });
-    const why = await p.evaluate(() => { const e = document.querySelector('[data-testid="signin-why"]'); return e ? e.textContent : ''; });
-    say(D + ' an unknown mobile on the index: "No account found. Check the number or e-mail." — nothing registered', why === 'No account found. Check the number or e-mail.' && api.calls.every((c) => c.u !== '/api/entities/register'), why);
+    /* the real api tells nobody an account does not exist: the ask is answered as for anyone (ASK_ANSWER), a made-up secret is refused with the ONE sentence */
+    const asked = await p.locator('[data-testid="signin-code"]').count();
+    await tap('[data-testid="signin-code"]'); await p.keyboard.type('000000'); await tap('[data-testid="signin-verify"]');
+    await p.waitForSelector('[data-testid="signin-why"]', { timeout: 10000 });
+    const why = await p.evaluate(() => { const e = document.querySelector('[data-testid="signin-why"]'); return e ? e.textContent.trim() : ''; });
+    say(D + ' an unknown mobile on the index: asked like anyone, then refused with the one sentence — nothing registered, nothing said about the account', asked === 1 && why === REFUSED_WORDS && api.calls.every((c) => c.u !== '/api/entities/register'), why);
     errs.push(...perr);
     await ctx.close();
   }

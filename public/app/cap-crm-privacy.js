@@ -580,10 +580,12 @@ function crmPrivReqOpen(pre) {
       return '<option value="' + item + '">' + esc(tx(CRM_REQ_KIND[item])) + '</option>';
     })
     .join('');
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Log a privacy request')) +
-      '</div></div><div class="mbody" data-testid="crm-prv-sheet">' +
+  ui.dialog({
+    mount: 'CRM010-U201',
+    pop: 'POP103',
+    title: 'Log a privacy request',
+    testid: 'crm-prv-sheet',
+    body:
       '<label>' +
       esc(tx('Who asked?')) +
       '<input data-cbsid="CRM010-I01" class="inp" id="crm_prv_who" data-testid="crm-prv-who" value="' +
@@ -607,13 +609,13 @@ function crmPrivReqOpen(pre) {
       '<div class="hint">' +
       esc(tx('The answer date follows the shop’s country’s law.')) +
       '</div>' +
-      '<div id="crm_prv_msg" class="hint" role="status" data-testid="crm-prv-msg"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CRM010-B06" type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
+      '<div id="crm_prv_msg" class="hint" role="status" data-testid="crm-prv-msg"></div>',
+    footerHtml:
+      ui.footerAction({ name: 'cancel', options: { mount: 'CRM010-U201' } }) +
+      '<button data-cbsid="CRM010-B06" type="button" class="pri" data-crm="prvsave" data-testid="crm-prv-save">' +
       esc(tx('Log')) +
-      '</button></div>'
-  );
+      '</button>'
+  });
   document.getElementById('crm_prv_who').focus();
 }
 async function crmPrivReqSave() {
@@ -651,12 +653,12 @@ function crmPrivAnswerOpen(id) {
     toast(PRV.why || tx('Only the owner answers'));
     return;
   }
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Answer')) +
-      ' · ' +
-      esc(r.who) +
-      '</div></div><div class="mbody" data-testid="crm-prv-answer-sheet">' +
+  ui.dialog({
+    mount: 'CRM010-U202',
+    pop: 'POP102',
+    titleText: tx('Answer') + ' · ' + r.who,
+    testid: 'crm-prv-answer-sheet',
+    body:
       '<div class="kv"><b>' +
       esc(tx('Asked for')) +
       '</b><span>' +
@@ -683,15 +685,15 @@ function crmPrivAnswerOpen(id) {
       '<label>' +
       esc(tx('What was done, or why not')) +
       '<textarea data-cbsid="CRM010-T01" class="inp" id="crm_prv_ans" data-testid="crm-prv-ans" rows="3"></textarea></label>' +
-      '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CRM010-B07" type="button" class="pri" data-crm="prvanswersave" data-id="' +
+      '<div id="crm_prv_amsg" class="hint" role="status" data-testid="crm-prv-amsg"></div>',
+    footerHtml:
+      ui.footerAction({ name: 'cancel', options: { mount: 'CRM010-U202' } }) +
+      '<button data-cbsid="CRM010-B07" type="button" class="pri" data-crm="prvanswersave" data-id="' +
       esc(id) +
       '" data-testid="crm-prv-answer-save">' +
       esc(tx('Answer')) +
-      '</button></div>'
-  );
+      '</button>'
+  });
   document.getElementById('crm_prv_ans').focus();
 }
 async function crmPrivAnswerSave(id) {

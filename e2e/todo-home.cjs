@@ -55,6 +55,8 @@ const SEVERAL = [
       if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return S.status ? J(r, S.status, { error: 'internal detail that must never reach the screen' }) : (S.rawTodo ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.todo) }) /* the page's defensive per-item 503 is not an API shape: not held to the contract */ : J(r, 200, S.todo.map((x) => Object.assign({ items: [] }, x))));
       if (p === '/api/books/periods') return J(r, 200, { periods: [] });
+      /* A1: this shop is India's - the contract's rail answer (the returns screen says the GST return is made from the bills, not from these books) */
+      if (p === '/api/books/returns') return J(r, 200, books.returnsRail());
       if (p.startsWith('/api/books')) return J(r, 200, {});
       return J(r, 200, {});
     });
@@ -85,8 +87,11 @@ const SEVERAL = [
     /* ── 2 · A BUTTON OPENS THE RIGHT PAGE ── */
     await p.click('[data-testid="todo-go-bills_to_accept"]');
     await p.waitForSelector('[data-testid="wait-empty"], [data-testid="wait-0"], #bk_body .cbl, #bk_body .empty, #bk_body');
-    await p.waitForFunction(() => document.querySelector('.nav-btn.active').getAttribute('aria-label') === 'Waiting', null, { timeout: 5000 }).catch(() => {});
-    ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'Waiting', '"Open the bills" opens Waiting');
+    /* A1 (2026-10-03): Waiting is no longer a menu item, so no nav button lights for it. What proves the button opened the Waiting page is the page itself:
+       the tab is waiting AND its own heading 'Waiting to be recorded' is painted (a body still saying 'Reading…' does not count). */
+    await p.waitForFunction(() => /Waiting to be recorded/i.test((document.querySelector('#bk_body') || {}).innerText || ''), null, { timeout: 5000 }).catch(() => {});
+    const onWaiting = await p.evaluate(() => ({ tab: window.BK && window.BK.tab, text: (document.querySelector('#bk_body') || {}).innerText || '' }));
+    ok(onWaiting.tab === 'waiting' && /Waiting to be recorded/i.test(onWaiting.text), '"Open the bills" opens the Waiting page (the tab is waiting; its heading "Waiting to be recorded" is on screen)');
     await p.click('[data-testid="acc-nav-todo"]'); await p.waitForSelector('[data-testid="todo-list"]');
     await p.click('[data-testid="todo-go-months_not_locked"]');
     await p.waitForFunction(() => document.querySelector('.nav-btn.active').getAttribute('aria-label') === 'Month lock', null, { timeout: 5000 }).catch(() => {});

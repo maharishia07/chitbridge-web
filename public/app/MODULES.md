@@ -119,7 +119,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
-| `rail-bell.js` | — | rail-bell.js — CBBell.mount: THE BELL, mountable in any header (R06, 2026-10-09) |
+| `rail-bell.js` | — | public/app/rail-bell.js — CBBell: the bell, mountable in any header |
 | `rail-thread.js` | eager | rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09) |
 | `register-form.js` | eager | register-form.js — THE REGISTER FORM: a new shop's User ID · e-mail → the code · the gov panel (reg-agree) → verify (FX-UX2, 2026-10-14) |
 | `screen-id.js` | — |  |

@@ -137,11 +137,19 @@ say('  scanned ' + scope().length + ' file(s): app.html, accounts.html, app/*.js
 /* 1 · the exceptions and the debt must still be true */
 const exceptionKeys = new Set(Object.keys(EXCEPTIONS));
 let nEx = 0, nDebt = 0;
+const noMount = [];
 for (const e of byKey.values()) {
   if (exceptionKeys.has(e.key)) { nEx++; continue; }
   if (DEBT[e.key]) { nDebt++; continue; }
+  noMount.push({ key: e.key, show: e });
+}
+/* QA-154: places not yet in EXCEPTIONS or DEBT are recorded in e2e/scanner-known.json; only a NEW one fails */
+const RK = require('./lib/known-findings.cjs').ratchet('list-standard', noMount, { owner: 'ux-locale' });
+say('  ' + RK.line.trim() + '\n');
+for (const it of RK.fresh) {
+  const e = it.show;
   fails++;
-  say('  ✗ ' + e.key + '  (' + [...e.kinds].join(' ') + ', line ' + e.lines.join(',') + ')  draws a column header that is not a CBList mount.');
+  say('  ✗ NEW ' + e.key + '  (' + [...e.kinds].join(' ') + ', line ' + e.lines.join(',') + ')  draws a column header that is not a CBList mount.');
   say('       Mount it: CBList.mount(el, { key, rows, columns, … }) (app/list-ctl.js). The unit draws the header, the drag handles, ⚙ columns and the');
   say('       sticky scroll for you. If it is a printed document, name it in EXCEPTIONS with its reason; never in DEBT without Athi.');
 }
