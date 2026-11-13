@@ -1370,8 +1370,34 @@ function cbcatOfferTicksHTML(cid) {
     '</div>'
   );
 }
-async function cbcatOfferToggle(cid, offerId, btn) {
+/**
+ * ⭐ ATTACHING AN OFFER TO A WHOLE CATEGORY IS A MONEY PROMISE (UX-109, Athi's "money promise = deliberate confirm"):
+ * the first press asks, in the shared confirmAsk popup, and says the reach — the category and how many products it holds
+ * (the server's tally, CBCAT_UI.counts; no number is claimed when the tally is not loaded or is only a page). Nothing is
+ * written until yes; Cancel leaves the offer exactly as it was. Taking an offer OFF a category narrows the reach, so it
+ * does not ask.
+ */
+function cbcatOfferToggle(cid, offerId, btn) {
   var on = btn && btn.className.indexOf('on') >= 0;
+  if (on) return _cbcatOfferSave(cid, offerId, btn, on);
+  var cat = (CBCAT_UI.list || []).filter(function (x) {
+    return x.id === cid;
+  })[0];
+  var counted = CBCAT_UI.counts && !CBCAT_UI.counts.partial;
+  var n = counted ? cbcatCount(cid) : 0;
+  var reach = counted
+    ? '<b>' + n + ' ' + (n === 1 ? tx('product') : tx('products')) + '</b> ' + tx('in this category')
+    : tx('Every product in this category');
+  confirmAsk(
+    tx('Apply this offer to') + ' “' + ((cat && cat.name) || tx('this category')) + '”?',
+    reach + ' ' + tx('and under it will get this offer at the till and in the shop, from now on.'),
+    tx('Apply to category'),
+    function () {
+      return _cbcatOfferSave(cid, offerId, btn, on);
+    }
+  );
+}
+async function _cbcatOfferSave(cid, offerId, btn, on) {
   if (btn) btn.disabled = true;
   try {
     const reply = await api('defGet', { params: { id: offerId } });
