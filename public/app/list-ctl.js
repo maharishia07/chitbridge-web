@@ -822,10 +822,14 @@
     return notes.length === 1 && String(notes[0].text || '').length > LONG_NOTICE_CHARS;
   }
   /** the folded chip's words: a count for several, the plain word for a single notice */
+  function foldedCount(list, chips, notes, plural) {
+    /* the count names what the chip is painted for: notices when there are any (the figures chip is not a notice), else the details */
+    var n = notes.length || chips.length;
+    if (n === 1 && !plural) return T(list, notes.length ? 'Notices' : 'Details');
+    return T(list, notes.length ? '{n} notices' : '{n} details', { n: n });
+  }
   function foldedLabel(list, chips, notes) {
-    var total = chips.length + notes.length;
-    if (total === 1) return T(list, notes.length ? 'Notices' : 'Details');
-    return T(list, notes.length ? '{n} notices' : '{n} details', { n: total });
+    return foldedCount(list, chips, notes, false);
   }
   /** below this width (a 390 or 375 px phone) the period chip joins the ONE folded chip: a long title, period or count would make a third row, and the head stays within its 30% */
   var TINY_MAX = 400;
@@ -877,7 +881,7 @@
       '" data-testid="cbl-notes-' +
       esc(list.key) +
       '">' +
-      esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + T(list, notes.length ? '{n} notices' : '{n} details', { n: chips.length + notes.length }) : foldedLabel(list, chips, notes)) +
+      esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + foldedCount(list, chips, notes, true) : foldedLabel(list, chips, notes)) +
       ' ▾</button>' +
       (list.pop === 'notes'
         ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
@@ -915,7 +919,10 @@
     if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
     list.narrow = foldsHead(list);
-    if (list.narrow && (foldPeriod || foldsToOneChip(chips, notes))) out += foldedChipHTML(list, h, foldPeriod);
+    /* a head folded by the page's own ask (foldHead) on a laptop keeps the figures inline (the Closing figure, "Dr with no party" stay visible without a tap): only the notices fold */
+    var keepChips = list.narrow && !isPhone() && !foldPeriod;
+    if (keepChips && foldsToOneChip([], notes)) out += chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false);
+    else if (list.narrow && !keepChips && (foldPeriod || foldsToOneChip(chips, notes))) out += foldedChipHTML(list, h, foldPeriod);
     else out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)

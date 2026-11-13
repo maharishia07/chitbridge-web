@@ -714,7 +714,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' recorded 01 Oct' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
   /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
   {
-    /* the Ledgers head folds two or more notes into ONE chip at every width (foldHead): the figures are in its popover */
+    /* the Ledgers head keeps the figures inline on a laptop and folds two or more notices into ONE chip (foldHead); on a phone the figures are in its popover */
     if (!(await p.locator('[data-testid="lg-sum"]').count())) await p.click('[data-testid^="cbl-notes-ledger-"]').catch(() => {});
     const lg = await p.evaluate(() => { const o = document.getElementById('lg_out'), l = o.querySelector('.cbl-list'), s = o.querySelectorAll('[data-testid="lg-sum"]');
       return { text: o.textContent, tree: document.getElementById('lt_tree').textContent, sums: s.length, sum: s[0] ? s[0].textContent.replace(/\s+/g, ' ').trim() : '', sw: l ? l.scrollWidth : 0, cw: l ? l.clientWidth : 0 }; });

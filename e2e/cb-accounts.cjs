@@ -744,7 +744,9 @@ async function route(S, r) {
      within 20% of the window on a laptop — a wide one AND a narrow one (1080) — and within 30% on a phone. LEDGERS_SHOTS=<dir> also keeps a picture of each state
      (01 tree open · 02 tree folded · 03 control account with parties · 04 parties differ · 05 plain ledger · 06 party's ledger · 07 entry opened · 08 empty period · 09 long name). ── */
   const headPct = (p) => p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr'); if (!l) return null;
-    return Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100); });
+    return (l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100; });
+  /* the budget is judged on the ROUNDED percent (limits 20 / 30, unchanged); the spec also reports the unrounded one so the margin is visible */
+  const rd = (v) => v == null ? null : Math.round(v), fx = (v) => v == null ? 'n/a' : v.toFixed(2);
   const LSHOTS = process.env.LEDGERS_SHOTS;
   if (LSHOTS) fs.mkdirSync(LSHOTS, { recursive: true });
   for (const theme of ['cream', 'dark', 'terminal']) {
@@ -780,8 +782,8 @@ async function route(S, r) {
       await pick('lg-acc-7777'); await snap('09-long-name');
       /* 02 · the tree folded (laptop) / page two (phone) */
       if (!phone) { await p.click('[data-testid="lt-fold"]').catch(() => {}); await p.waitForTimeout(200); await snap('02-tree-folded'); await p.click('[data-testid="lt-unfold"]').catch(() => {}); } else await snap('02-tree-folded');
-      const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null));
-      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + checks[k] + '%').join(' · ') + ')');
+      const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null).map(rd));
+      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + rd(checks[k]) + '% (' + fx(checks[k]) + ')').join(' · ') + ')');
       if (theme === 'cream' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-cream.png') });
       if (theme === 'dark' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-dark.png') });
       if (theme === 'cream' && phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-phone-cream.png') });
@@ -798,11 +800,11 @@ async function route(S, r) {
     ok(await p.locator('.lt-tree').isVisible(), 'narrow laptop: with no ledger open the tree is shown (the way in)');
     await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop (1080): once a ledger is open the tree folds, and "☰ Ledgers" is one tap away');
-    const n1 = await headPct(p);
-    ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% of the window with the amber notice showing (limit 20%)');
+    const n1 = rd(await headPct(p)), n1x = await headPct(p);
+    ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% (' + fx(n1x) + ') of the window with the notices chip showing (limit 20%)');
     await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200);
     const ov = await p.evaluate(() => { const t = document.querySelector('.lt-tree'), l = document.querySelector('#lg_out .cbl-list'); return { pos: getComputedStyle(t).position, lw: l.getBoundingClientRect().width }; });
-    const n2 = await headPct(p);
+    const n2 = rd(await headPct(p));
     ok(ov.pos === 'absolute' && n2 === n1, 'narrow laptop: "☰ Ledgers" brings the tree back OVER the list — the list keeps its width, the head stays ' + n2 + '%');
     await p.keyboard.press('Escape'); await p.waitForTimeout(150);
     ok(await p.locator('.lt-tree').isHidden(), 'Esc puts the overlay away');
