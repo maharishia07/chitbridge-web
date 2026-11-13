@@ -41,7 +41,7 @@ const t = (name, fn) => {
 };
 
 const git = (args) => {
-  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8' }).trim(); }
+  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim(); }
   catch (_) { return ''; }
 };
 
