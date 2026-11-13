@@ -105,7 +105,7 @@ const noScroll = (page) => page.evaluate(() => {
     await page.keyboard.press('Enter');
     check((await page.$eval('#toast', (node) => node.textContent).catch(() => '')) === 'Disabled', 'pressing a disabled action shows its reason in the page notice line (toast) and runs nothing');
     /* the notice line clears on its own: wait for it, so the later "Cancel sends nothing" check reads only what Cancel did (it saw this toast when the walk ran fast) */
-    await page.waitForFunction(() => !document.querySelector('#toast .toast'), null, { timeout: 15000 });
+    for (let wait = 0; wait < 60 && (await page.$$('#toast .toast')).length > 0; wait++) await page.waitForTimeout(250); /* polls the DOM: the page CSP refuses waitForFunction eval */
     const idsOk = await page.$$eval('#content button', (nodes) => nodes.every((node) => node.getAttribute('data-cbsid') && node.getAttribute('data-cbmount')));
     check(idsOk, 'every component button carries its element code and its mount');
     const headIds = await page.$$eval('#hdr button', (nodes) => nodes.every((node) => /^UIS001-B\d\d$/.test(node.getAttribute('data-cbsid'))));
