@@ -6,17 +6,28 @@ const IDX = 'index.html', MAN = 'public/app/manifest.json';
 const BREAKS = [
   ['a hand-written card sneaks in', IDX, `<div id="shell"></div>`, `<div id="shell"></div><a class="cbsh-box" href="/till.html">Till</a>`],
   ['a built card links into the workshop', MAN, `"route": "/till.html"`, `"route": "/app.html#/app/till"`],
-  ['a workshop chip grows a route', MAN, `"id": "catalogue", "name": "Catalogue", "route": null`, `"id": "catalogue", "name": "Catalogue", "route": "/crm.html"`],
-  ['the rail invents a number', IDX, `if (!rail || !rail.facts) return;`, `if (!rail) return; if (!rail.facts) return railPaint({ suppliers: 0, customers: 0 });`],
+  ['a workshop chip grows a route', MAN, `"id": "delivery", "name": "Delivery", "route": null`, `"id": "delivery", "name": "Delivery", "route": "/crm.html"`],
+  ['the rail invents a number', IDX, `if (!rail || !rail.facts) return;`, `if (!rail || !rail.facts) return railPaint({ figures: { open: 0 } });`],
   ['an alert loses its fix button', IDX, `+ '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });`, `+ '</div>' });`],
-  ['the 404 reaches the screen', IDX, `' waiting to be recorded', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(e){\n    if (g !== GEN || !e || e.status !== 422 || !e.data) return;`, `' waiting to be recorded', '', 'See them', '/accounts.html#waiting');\n  }).catch(function(e){\n    if (e && e.status === 404) alert_('ledger-err', 'bad', '!', 'Error ' + e.status, '', 'Retry', '/');\n    if (g !== GEN || !e || e.status !== 422 || !e.data) return;`],
+  ['the 404 reaches the screen', IDX, `  }).catch(function(e){
+    if (g !== GEN || !e || e.status !== 422 || !e.data) return;`, `  }).catch(function(e){
+    if (e && e.status === 404) alert_('ledger-err', 'bad', '!', 'Error ' + e.status, '', 'Retry', '/');
+    if (g !== GEN || !e || e.status !== 422 || !e.data) return;`],
   ['the page mounts the bar, not Home', IDX, `    host: null,`, `    host: { bar: true },`],
   ['the signed-out row grows a second door', IDX, `<button class="fix" data-testid="signed-out-go">Sign in</button>`, `<a class="fix" href="/app.html#/login" data-testid="signed-out-go">Sign in</a>`],
-  ['the word accounting reaches the page', IDX, `<h3>Your suppliers and customers</h3>`, `<h3>Your suppliers and customers (accounting)</h3>`],
+  ['the word accounting reaches the page', IDX, `<h3>Your work</h3>`, `<h3>Your work (accounting)</h3>`],
   ['the rail overflows a phone', IDX, `.rail{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`, `.rail{min-width:600px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:14px 20px 16px;`],
 ];
 /* BREAK_ONLY=<text> runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
+/* The parent walk is already red on main (budget lines lag), so "exit != 0 and some XX" proves nothing: a break counts only when it adds an
+   XX line the UNBROKEN run does not print (2026-11-13). */
+const runIt = () => {
+  const r = cp.spawnSync(process.execPath, ['e2e/index-page.cjs'], { cwd: W, encoding: 'utf8', timeout: 300000 });
+  return { r, xx: (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l)).map((l) => l.replace(/\s+—\s+not:.*$/, '').trim()) };
+};
+const BASE = new Set(runIt().xx);
+console.log('  baseline (unbroken): ' + BASE.size + ' XX line(s) already red, ignored');
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
@@ -27,8 +38,8 @@ for (const [name, rel, a, b] of BREAKS) {
   fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));
-    const r = cp.spawnSync(process.execPath, ['e2e/index-page.cjs'], { cwd: W, encoding: 'utf8', timeout: 300000 });
-    const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
+    const { r, xx: all } = runIt();
+    const xx = all.filter((l) => !BASE.has(l));
     const caught = r.status !== 0 && xx.length > 0;
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + xx[0].trim() : 'NOT caught (exit ' + r.status + ')'));

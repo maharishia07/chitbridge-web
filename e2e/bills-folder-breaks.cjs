@@ -4,10 +4,15 @@ const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const CAP = 'public/app/cap-folders.js';
 const BREAKS = [
-  ['system folders fall under Task again', CAP, `  return all.filter(function(f){ return !view(f); });`, `  return all;`],
-  ['a view folder (kind view, not system) falls under Task', CAP, `var view=function(f){ return !!(f.system || f.kind==='view'); };`, `var view=function(f){ return !!f.system; };`],
-  ['the system folders are thrown away, not kept for the Bills screen', CAP, `  UI.sysFolders=all.filter(view);`, `  UI.sysFolders=[];`],
-  ['Move reads the raw list', CAP, `UI.folders=_foldersFrom(rr); }catch(e){ UI.folders=[]; } }`, `UI.folders=(rr&&rr.folders)||[]; }catch(e){ UI.folders=[]; } }`],
+  /* anchors follow the prettier-formatted _foldersFrom in cap-folders.js (2026-11-13); multi-line on purpose */
+  ['system folders fall under Task again', CAP, `  return all.filter(function (item) {
+    return !view(item);
+  });`, `  return all;`],
+  ['a view folder (kind view, not system) falls under Task', CAP, `return !!(f.system || f.kind === 'view');`, `return !!f.system;`],
+  ['the system folders are thrown away, not kept for the Bills screen', CAP, `  UI.sysFolders = all.filter(view);`, `  UI.sysFolders = [];`],
+  ['Move reads the raw list', CAP, `      UI.folders = _foldersFrom(reply);
+    } catch (e) {`, `      UI.folders = (reply && reply.folders) || [];
+    } catch (e) {`],
 ];
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
