@@ -18,7 +18,7 @@ const make = (items) => { const h = sb.CBCart.create({ items, categories: CATS, 
 function chips(h) {
   const html = sb.CBCatUI.pickerHTML(h, {});
   const out = [];
-  const re = /<button type="button" class="cbpick-chip( on)?"[^>]*data-testid="pick-catg"[^>]*>([^<]*)<span class="cbpick-chipn">(\d+)<\/span><\/button>/g;
+  const re = /<button(?: data-cbsid="[^"]*")? type="button" class="cbpick-chip( on)?"[^>]*data-testid="pick-catg"[^>]*>([^<]*)<span class="cbpick-chipn">(\d+)<\/span><\/button>/g;
   let m;
   while ((m = re.exec(html))) out.push({ name: m[2].trim(), n: Number(m[3]), on: !!m[1] });
   return out;
