@@ -909,6 +909,7 @@ async function route(S, r) {
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
       const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [] });
       record.customer = Object.assign({}, record.customer, { added_via: 'catalogue', segment: 'new', txn_count: 1 });
+      record.unbilled = { n: 1, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 0, unpriced: 0 }; /* CRM-D7: the server's figure on the record; the page adds nothing */
       const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
         { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order · 09 Oct', value: 90, currency: 'INR', open_disputes: 0 },
         { kind: 'ledger', at: new Date(now - 7200e3).toISOString(), ref: 'pay:0d102689-e69d-41be-b175-08762c7afbdc', ledger_kind: 'receipt', source: null, amount_minor: 100, currency: 'INR', doc_date: '2026-10-03' }] };
@@ -963,6 +964,26 @@ async function route(S, r) {
       await o2.p.click('[data-testid="crm-act-pay"]'); await o2.p.waitForTimeout(500);
       ok(await o2.p.evaluate(() => !!document.querySelector('.modal, #modal, [role="dialog"], dialog[open]')) || true, 'C16: Receive opens the same Pay / Receive popup the list uses');
       await o2.ctx.close();
+    }
+    /* CRM-D7: the record paints the SERVER's unbilled figure - one per currency, nothing added in the browser (the timeline below holds INR 90 + 150 on purpose: summed it would say 240) */
+    for (const [name, un, want, never] of [
+      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yets*₹90.00 + AUD 150.00 · not added together/, /240|₹150/],
+      ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yets*₹90.00 · 1 without a currency/, /not added together|240/],
+      ['one not priced', { n: 1, minor: null, currency: null, by_currency: [], no_currency: 0, unpriced: 1 }, /1 order not billed yet · 1 not priced yet/, /₹0|₹/],
+      ['a cost-blind reader', { n: 2, minor: null, currency: 'INR', cost_hidden: true }, /2 orders not billed yet hidden/, /AUD|₹d/],
+    ]) {
+      const S = standIn();
+      S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
+      const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [], unbilled: un });
+      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
+        { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order', value: 90, currency: 'INR', open_disputes: 0 },
+        { kind: 'chit', at: new Date(now - 7200e3).toISOString(), chit_id: 'ch-o2', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order', value: 150, currency: 'AUD', open_disputes: 0 }] };
+      S.live = { record, timeline };
+      const { ctx, p } = await open(S, { hash: '#/party/P-0004' }); await recReady(p); await openAll(p); await p.waitForTimeout(400);
+      const chip = await text(p, '.rchips'), cs = await text(p, '[data-testid="crm-sec-customer"]');
+      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the server's figure (' + chip + ' || ' + cs.slice(0, 110) + ')');
+      ok(!never.test(chip.replace(/d{1,2} w{3}/g, '')) , 'CRM-D7 ' + name + ': nothing summed, no reader currency borrowed (' + chip + ')');
+      await ctx.close();
     }
     /* the Chits list (stop-gap home): only chits with another party by default; the advice reads To the counterparty with ITS amount; age on one line */
     {

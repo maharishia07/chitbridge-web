@@ -176,19 +176,36 @@ function crmLocalISO(date) {
 function crmPlural(n, one, many) {
   return n + ' ' + (n === 1 ? tx(one) : tx(many));
 }
-/** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
-function crmUnbilledMoney(unbilled, currency) {
-  if (unbilled.cost_hidden && unbilled.minor == null) return tx('hidden'); // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
-  if (unbilled.hidden && !unbilled.minor) return tx('hidden');
-  return bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
+/** CRM-D7: the unbilled orders' money as the SERVER carries it (lib/work-rows sumUnbilled), said, never worked out here. { figs, notes }:
+ * figs = one figure per currency side by side (the select bar's words: "not added together"), or "hidden" for a cost-blind reader (the blind rule wins: no per-currency figure is read);
+ * notes = what is left out, said: orders without a currency (never the reader's) and orders not priced yet (never a made-up 0). */
+function crmUnbilledParts(unbilled, currency) {
+  var u = unbilled || {},
+    by = u.by_currency || [],
+    notes = [];
+  if (u.no_currency) notes.push(crmPlural(u.no_currency, 'without a currency', 'without a currency'));
+  if (u.unpriced) notes.push(crmPlural(u.unpriced, 'not priced yet', 'not priced yet'));
+  if (u.cost_hidden && u.minor == null) return { figs: tx('hidden'), notes: [] }; // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
+  var figs = '';
+  if (by.length) {
+    figs = by
+      .map(function (b) {
+        return bkMoney(b.minor, b.currency);
+      })
+      .join(' + ');
+    if (by.length > 1) figs += ' · ' + tx('not added together');
+  } else if (u.minor != null && !u.by_currency) figs = bkMoney(u.minor, u.currency || currency || CRM.currency); // an older api: its one figure
+  return { figs: figs, notes: notes };
 }
-/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency } (the record's chip says the same words); '' when nothing is waiting. minor is null across two currencies: the count alone. */
+function crmUnbilledMoney(unbilled, currency) {
+  var q = crmUnbilledParts(unbilled, currency);
+  return (q.figs ? [q.figs] : []).concat(q.notes).join(' · ');
+}
+/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency, by_currency, no_currency, unpriced } (the record's chip says the same words); '' when nothing is waiting. No figure across two currencies without saying so. */
 function crmUnbilledSaid(unbilled, currency) {
   if (!unbilled || !unbilled.n) return '';
-  return (
-    crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') +
-    (unbilled.minor == null && !unbilled.hidden && !unbilled.cost_hidden ? '' : ' ' + crmUnbilledMoney(unbilled, currency))
-  );
+  var q = crmUnbilledParts(unbilled, currency);
+  return crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') + (q.figs ? ' ' + q.figs : '') + q.notes.map(function (s) { return ' · ' + s; }).join('');
 }
 
 var CRM_ICON = {
