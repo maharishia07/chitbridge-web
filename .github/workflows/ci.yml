@@ -165,6 +165,7 @@ jobs:
           node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
           node e2e/field-edge.test.cjs
+          node e2e/ui-dialog-widen.test.cjs
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
