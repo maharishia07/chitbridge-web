@@ -36,7 +36,7 @@ check(own.every((c) => /^RAL001-D01-B[0-9]{2}$/.test(c)), 'every own code is a b
 /** data-cbsid is the last attribute of a tag: the markup of both helpers ends the tag with it */
 const markup = [...src.matchAll(/'<button type="button" data-testid="' \+ testid \+ '" style="'[^>]*?data-cbsid="' \+ code \+ '">'/g)];
 check(markup.length === 2, 'both button helpers write data-cbsid as the LAST attribute of the tag, found ' + markup.length);
-check(/esc\(say\(label\)\)/.test(src), 'the button words are the label, translated and escaped');
+check(/esc\(wordsOf\(label\)\)/.test(src), 'the button words are the label, translated and escaped');
 
 let reg = null;
 for (const p of [process.env.UIID_REG, path.join(__dirname, '..', '..', 'chitbridge-docs', 'SCREENS.json'), 'C:/dev/SCREENS.json']) {
