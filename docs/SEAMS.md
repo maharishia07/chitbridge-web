@@ -22,7 +22,7 @@ of file each thing is; this says what already does the job.
 | 78 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 75 | `catalogue` | `books-manual.js` | GET /events → the grid. |
-| 71 | `list` | `cap-settings.js` |  |
+| 72 | `list` | `cap-settings.js` |  |
 | 69 | `register` | `regulation.js` | register(pack) → the pack — |
 | 68 | `entry` | `books-store.js` |  |
 | 68 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
@@ -55,9 +55,9 @@ of file each thing is; this says what already does the job.
 | 45 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 45 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 45 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
+| 44 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 44 | `rules` | `docnumber.js` | the rule set for a country — |
-| 43 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 43 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 42 | `facts` | `bill-steps.js` | MY state_log — |
 | 42 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
