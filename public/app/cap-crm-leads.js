@@ -269,10 +269,12 @@ function crmLeadAddOpen() {
     toast(tx(CRM_LEADS_WAIT));
     return;
   }
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Add lead')) +
-      '</div></div><div class="mbody" data-testid="crm-lead-sheet">' +
+  ui.dialog({
+    mount: 'CRM004-U201',
+    pop: 'POP100',
+    title: 'Add lead',
+    testid: 'crm-lead-sheet',
+    body:
       '<label>' +
       esc(tx('Name')) +
       '<input data-cbsid="CRM004-I01" class="inp" id="crm_lead_name" data-testid="crm-lead-name" autocomplete="off"></label>' +
@@ -288,13 +290,12 @@ function crmLeadAddOpen() {
         })
         .join('') +
       '</select></label>' +
-      '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="leadsave" data-testid="crm-lead-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_lead_msg" class="hint" role="status" data-testid="crm-lead-msg"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM004-U201' } },
+      { name: 'save', options: { mount: 'CRM004-U201', key: 'save', effect: 'preference', testid: 'crm-lead-save', data: { crm: 'leadsave' } } }
+    ]
+  });
   var node = document.getElementById('crm_lead_name');
   if (node) node.focus();
 }
@@ -352,10 +353,12 @@ function crmStageBtn(party) {
 function crmStageOpen(party, rec) {
   var lead = (rec && rec.lead) || party.lead;
   if (!lead) return;
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Move to…')) +
-      '</div></div><div class="mbody" data-testid="crm-stage-sheet">' +
+  ui.dialog({
+    mount: 'CRM004-U202',
+    pop: 'POP106',
+    title: 'Move to…',
+    testid: 'crm-stage-sheet',
+    body:
       '<div class="supacts">' +
       (lead.moves || [])
         .map(function (item) {
@@ -371,11 +374,11 @@ function crmStageOpen(party, rec) {
         })
         .join('') +
       '</div>' +
-      '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button></div>'
-  );
+      '<div id="crm_stage_msg" class="hint" role="status" data-testid="crm-stage-msg"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM004-U202' } }
+    ]
+  });
 }
 /** move the open party to a stage through CBAction, then repaint the record */
 function crmStageGo(stage, btn) {
@@ -584,13 +587,16 @@ function crmImportOpen() {
     return;
   }
   LIMP = { name: '', rows: [], head: [], map: {}, plan: null, planErr: null, flow: null, prev: null, gen: 0 };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Import leads')) +
-      '</div><div class="sub" id="crm_imp_sub"></div></div>' +
-      '<div class="mbody" data-testid="crm-import-sheet"><div id="crm_imp_rail"></div><div id="crm_imp_body"></div></div>' +
-      '<div class="mfoot" id="crm_imp_foot"></div>'
-  );
+  ui.dialog({
+    mount: 'CRM004-U203',
+    pop: 'POP099',
+    title: 'Import leads',
+    subId: 'crm_imp_sub',
+    footId: 'crm_imp_foot',
+    testid: 'crm-import-sheet',
+    body: '<div id="crm_imp_rail"></div><div id="crm_imp_body"></div>',
+    footerHtml: ''
+  });
   LIMP.flow = CBSteps.create({
     steps: [
       { k: 'file', n: tx('File'), t: tx('A .csv with a header row') },
