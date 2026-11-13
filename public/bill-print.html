@@ -13,7 +13,7 @@
 
   OWNS the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by
   app/cap-print.js (/bill-print.html?preview=1, one postMessage). FLOW  load → render() → (preview) onPreviewMessage → render() again → Print.
-  CARD 20-settings-governance-and-plan/print-setup
+  CARD 09-counter/printers-bill-slip-bill-print
 
   THERMAL PRINTING, THE FEW THINGS THAT MATTER:
    · The paper is 80mm or 58mm wide; the PRINTABLE strip is narrower (72mm / 48mm). Everything is sized to the printable strip.
@@ -75,20 +75,20 @@
 
 <div class="controls">
   <label>Paper
-    <select id="w" onchange="setW(this.value)">
+    <select id="w" onchange="setW(this.value)" data-cbsid="SCR047-S01">
       <option value="80">80&nbsp;mm (3")</option>
       <option value="58">58&nbsp;mm (2")</option>
       <option value="a4">A4</option>
     </select>
   </label>
   <label>Bill
-    <select id="kind" onchange="show()">
+    <select id="kind" onchange="show()" data-cbsid="SCR047-S02">
       <option value="cash">Cash memo — unregistered shop</option>
       <option value="supply">Bill of supply — composition</option>
       <option value="tax">Tax invoice — registered</option>
     </select>
   </label>
-  <button onclick="window.print()">Print</button>
+  <button onclick="window.print()" data-cbsid="SCR047-B01">Print</button>
   <span class="hint" title="Paper = the roll (80mm/58mm) · margins none · scale 100% · headers and footers off" style="cursor:help">Printer settings ⓘ</span>
 </div>
 

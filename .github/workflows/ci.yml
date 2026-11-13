@@ -172,6 +172,7 @@ jobs:
           node e2e/ui-codes-offer-lab.test.cjs
           node e2e/ui-codes-finance.test.cjs
           node e2e/ui-codes-accounts.test.cjs
+          node e2e/ui-codes-w2-fin.test.cjs
           node e2e/ui-codes-crm.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
