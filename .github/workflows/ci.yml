@@ -143,6 +143,12 @@ jobs:
           node e2e/profile-groups.cjs
           node e2e/render-smoke.cjs
           node e2e/api-dedupe.test.cjs
+          # CAT proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real catalogue code; each is red when its cited line is mutated
+          node e2e/cat-131-def-live.test.cjs
+          node e2e/cat-133-138-item-form-categories.test.cjs
+          node e2e/cat-135-category-chips.test.cjs
+          node e2e/cat-161-162-governance-rows.test.cjs
+          node e2e/cat-34-offer-lab-scope.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
