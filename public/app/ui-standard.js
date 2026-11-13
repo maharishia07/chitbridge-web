@@ -143,11 +143,6 @@ var CBUiStandard = (function () {
     counters.mount += 1;
     return SCREEN + '-U' + String(counters.mount).padStart(2, '0');
   }
-  /** the page's own controls (switches, tabs): native buttons with a stable code, UIS001-B01.. in reading order */
-  function controlCode() {
-    counters.control += 1;
-    return SCREEN + '-B' + String(counters.control).padStart(2, '0');
-  }
   /** which of the four packs hold this exact text (the English is the key); a glyph-only name needs none */
   function translatedIn(text) {
     return PACK_LANGS.filter(function (lang) {

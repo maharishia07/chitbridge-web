@@ -304,7 +304,6 @@ function enPaint() {
 function enActs() {
   var acts = document.getElementById('en_acts'),
     last = EN.step === 4,
-    pv = EN.pv,
     can = enCanSave();
   acts.innerHTML =
     '<button data-cbsid="CMP006" data-cbmount="SCR022-U106" class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' +

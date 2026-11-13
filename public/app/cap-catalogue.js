@@ -584,7 +584,6 @@ async function _cfImportRun(btn, decisions, out) {
     var reply = await api('prodImport', {
       body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true })
     }); /* the SAME file the preflight read */
-    var sum = reply.summary || {};
     out.innerHTML =
       '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
       esc(reply.message || 'Imported') +
