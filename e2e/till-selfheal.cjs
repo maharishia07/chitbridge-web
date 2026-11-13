@@ -40,6 +40,16 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(30) + '· ' + d 
     if (url.startsWith('/api/')) {
       if (!reachable) { r.destroy(); return; }
       if (url === '/api/chits/send' && q.method === 'POST') posted++;   /* the real drain endpoint */
+      /* the price check (CTR-243 stale gate, web #624 / api #1219) runs FIRST in drain() and treats a door with no items as down, parking every bill. Answer it with the real shape: the shelf equals what was sold, so nothing is held. */
+      if (url === '/api/till/recheck' && q.method === 'POST') {
+        let raw = ''; q.on('data', (c) => { raw += c; });
+        return q.on('end', () => {
+          let ids = []; try { ids = JSON.parse(raw).item_ids || []; } catch (_) {}
+          const shelf = { i1: { name: 'Masala Dosa', price: 70, unit: 'plate' }, i2: { name: 'Filter Coffee', price: 25, unit: 'cup' } };
+          r.writeHead(200, { 'content-type': 'application/json' });
+          r.end(JSON.stringify({ ok: true, at: new Date().toISOString(), items: ids.map((id) => Object.assign({ item_id: id, found: true, checked: true, active: true }, shelf[id] || { price: 0 })) }));
+        });
+      }
       r.writeHead(200, { 'content-type': 'application/json' });
       return r.end(JSON.stringify({ ok: true }));
     }

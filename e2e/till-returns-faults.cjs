@@ -31,11 +31,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
     const u = q.url.split('?')[0];
     if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), entity_id: 'ent-x', shop: { country: 'IN', name: 'Shop X', bridge_id: 'CB-X' },
       till: { suggested_id: 'C1', assigned_id: 'C1' },
-      items: [{ id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
+      items: [{ id: 'xmango', item_id: 'xmango', name: 'XMANGO', price: 50, unit: 'nos', code: 'XMANGO' }] });
     if (u === '/api/till/bills') return j(200, { bills: HISTORY });
     if ((u === '/api/entities/register' || u === '/api/signin/ask')) return j(200, { message: 'sent', dev_otp: '123456' });
     if ((u === '/api/entities/verify' || u === '/api/signin/verify')) return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
     if (u === '/api/chits/send') { try { sent.push(JSON.parse(raw)); } catch (_) {} return j(200, { chit_id: 'c' + sent.length }); }
+    /* the price check (CTR-243 stale gate, web #624 / api #1219) needs items back or it treats the door as down: the shelf equals what was sold, so nothing is held */
+    if (u === '/api/till/recheck') { let ids = []; try { ids = JSON.parse(raw).item_ids || []; } catch (_) {} return j(200, { ok: true, at: new Date().toISOString(), items: ids.map((id) => ({ item_id: id, found: true, checked: true, active: true, name: 'XMANGO', price: 50, unit: 'nos' })) }); }
     return j(200, { ok: true });
   });
   await new Promise((res) => web.listen(0, '127.0.0.1', res));
