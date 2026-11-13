@@ -323,7 +323,9 @@ var CBUiField = (function () {
       showError(el, result.error || null);
       if (!result.error) el.value = result.value;
     } else if (decimal && el.getAttribute('aria-invalid') === 'true') showError(el, null);
-    if (echo) echo.textContent = echoOf(el);
+    /* written only when it changed: a rewrite of the same words is still a DOM mutation, and the sheet-keys observer reads it while focus is mid-move and pulls focus back, so Tab never left the box */
+    var echoWords = echo ? echoOf(el) : '';
+    if (echo && echo.textContent !== echoWords) echo.textContent = echoWords;
   }
   function set(target, value) {
     var el = elementOf(target);
