@@ -58,9 +58,9 @@ const ONLY = process.env.BREAK_ONLY || '';
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (a verdict in
    seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines (2026-11-13). */
 const BASES = {};
-/* one-person.cjs is red on main at steps 3 · 4 · 5 in some runs and not in others (3 standalone runs 13 Nov: red in 2). A break must not be 'caught' by a line main itself prints, so these are baselined whichever run shows them. */
-const KNOWN_RED = ['XX  3 · after the clear-out, tab 2 opens as Tally Test', 'XX  4 · its button and the Till card open the counter, which offers the switch itself', "XX  5 · the owner's tab 2 is still signed in", 'XX  the harness stopped: page.click: Timeout 30000ms exceeded.'];
-const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); BASES[h].xx.push.apply(BASES[h].xx, KNOWN_RED.filter((l) => BASES[h].xx.indexOf(l) < 0)); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
+/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own files are never edited, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0;
 for (const [name, edits] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
@@ -81,15 +81,14 @@ for (const [name, edits] of BREAKS) {
   if (bad) { console.log('  ??  ' + name + ': ' + bad); continue; }
   /* BREAK_DRY=1: only prove every anchor is found once — nothing is written, nothing is run */
   if (process.env.BREAK_DRY) { good++; console.log('  ok  anchor: ' + name); continue; }
-  for (const rel of files) fs.copyFileSync(path.join(W, rel), path.join(W, rel) + '.bak');
   try {
-    for (const rel of files) fs.writeFileSync(path.join(W, rel), work[rel]);
-    const H = 'e2e/one-person.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: W, timeout: 600000 });
+    for (const rel of files) fs.writeFileSync(path.join(SITE.dir, rel), work[rel]);
+    const H = 'e2e/one-person.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: SITE.dir, timeout: 600000 });
     const caught = BR.caught(v, base);
     if (caught) good++;
-    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
+    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
   } finally {
-    for (const rel of files) { const f = path.join(W, rel); fs.writeFileSync(f, orig[rel]); try { fs.unlinkSync(f + '.bak'); } catch (_) {} }
+    for (const rel of files) fs.writeFileSync(path.join(SITE.dir, rel), orig[rel]);   /* back to the original inside the copy for the next break */
   }
 }
 console.log('\n  ' + good + '/' + ran + (process.env.BREAK_DRY ? ' anchors found (dry — nothing run)' : ' breaks caught'));

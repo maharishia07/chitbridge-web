@@ -6,6 +6,7 @@
  * once (fast — nothing is run). Exit 0 only when every break was caught. */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
+const BR = require('./lib/break-run.cjs');
 const K = 'public/app/kural.js', DATA = 'public/app/kurals.json', ACC = 'public/accounts.html', CRM = 'public/crm.html', IDX = 'index.html', MSG = 'public/app/cap-messages.js', CRMJS = 'public/app/cap-crm.js';
 const H = 'e2e/kural-footer.cjs';
 const BREAKS = [
@@ -44,24 +45,25 @@ if (process.env.BREAK_CHECK) {
   for (const [name, rel, a2] of BREAKS) { const n = fs.readFileSync(path.join(W, rel), 'utf8').replace(/\r\n/g, '\n').split(a2.replace(/\r?\n/g, '\n')).length - 1; if (n !== 1) { bad++; console.log('  ??  ' + name + ': anchor x' + n); } }
   console.log('\n  ' + (BREAKS.length - bad) + '/' + BREAKS.length + ' anchors match once'); process.exit(bad ? 1 : 0);
 }
+/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
-  const f = path.join(W, rel), bak = f + '.bak';
+  const f = path.join(SITE.dir, rel);
   const s = fs.readFileSync(f, 'utf8');
   if (/\r\n/.test(s)) { a = a.replace(/\r?\n/g, '\r\n'); b = b.replace(/\r?\n/g, '\r\n'); }
   const n = s.split(a).length - 1;
   if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n + ' — this break measured NOTHING'); unanchored++; continue; }
-  fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));
-    const r = cp.spawnSync(process.execPath, [harness], { cwd: W, encoding: 'utf8', timeout: 400000, env: Object.assign({}, process.env, { KURAL_SHOTS: process.env.KURAL_SHOTS || require('os').tmpdir() }) });
+    const r = cp.spawnSync(process.execPath, [harness], { cwd: SITE.dir, encoding: 'utf8', timeout: 400000, env: Object.assign({}, process.env, { KURAL_SHOTS: process.env.KURAL_SHOTS || require('os').tmpdir() }) });
     const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
     const caught = r.status !== 0 && xx.length > 0;
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + xx[0].trim().slice(0, 150) : 'NOT caught (exit ' + r.status + ')'));
-  } finally { fs.writeFileSync(f, s); try { fs.unlinkSync(bak); } catch (_) {} }   /* restore from the text held in memory: a vanished .bak once left cap-crm.js broken */
+  } finally { fs.writeFileSync(f, s); }   /* back to the original inside the copy for the next break */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

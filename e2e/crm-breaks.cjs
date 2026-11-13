@@ -64,23 +64,24 @@ if (process.env.BREAK_CHECK) {
    gets its verdict in seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines. */
 const BASES = {};
 const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' XX line(s) already red, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
+/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
-  const f = path.join(W, rel), bak = f + '.bak';
+  const f = path.join(SITE.dir, rel);
   const s = fs.readFileSync(f, 'utf8');
   if (/\r\n/.test(s)) { a = a.replace(/\r?\n/g, '\r\n'); b = b.replace(/\r?\n/g, '\r\n'); }
   const loc = BR.locate(s, a), n = loc.n;
   if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n + ' — this break measured NOTHING'); unanchored++; continue; }
-  fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, loc.apply(b));
-    const base = baseOf(harness), v = BR.verdict(harness, base, { cwd: W, timeout: 400000 });
+    const base = baseOf(harness), v = BR.verdict(harness, base, { cwd: SITE.dir, timeout: 400000 });
     const caught = BR.caught(v, base);
     if (caught) good++;
-    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
-  } finally { fs.writeFileSync(f, s); try { fs.unlinkSync(bak); } catch (_) {} }   /* restore from the text held in memory: a vanished .bak once left cap-crm.js broken */
+    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
+  } finally { fs.writeFileSync(f, s); }   /* back to the original inside the copy for the next break */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

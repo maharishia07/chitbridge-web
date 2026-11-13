@@ -77,7 +77,7 @@ for (const [name, rel, a, b] of BREAKS) {
     const H = 'e2e/chit-sheet.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: W, timeout: 600000, env: Object.assign({}, process.env, { CHS_ROOT: path.join(tmp, 'public') }) });
     const caught = BR.caught(v, base);
     if (caught) good++;
-    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
+    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught');

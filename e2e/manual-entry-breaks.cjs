@@ -5,6 +5,7 @@
  * Exit 0 only when every break was caught. Same runner as cb-accounts-breaks.cjs. */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
+const BR = require('./lib/break-run.cjs');
 const ENT = 'public/app/cap-entry.js', A = 'e2e/manual-entry.cjs';
 const BREAKS = [
   /* the two the task names */
@@ -39,27 +40,27 @@ if (process.env.BREAK_CHECK) {
 }
 /* The parent is red on main for its own reasons (its stand-in lacks reversed_by), so "exit != 0" proves nothing: a break counts only when it
    adds an XX line, or a crash, that the UNBROKEN run does not have (2026-11-13). */
-const xxOf = (r) => (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l)).map((l) => l.trim());
-const BASE = new Set(xxOf(cp.spawnSync(process.execPath, [A], { cwd: W, encoding: 'utf8', timeout: 400000 })));
-console.log('  baseline (unbroken): ' + BASE.size + ' XX line(s) already red, ignored');
+const BASE = BR.baseline(A, { cwd: W });
+console.log('  baseline ' + A + ' (unbroken, ' + BASE.runs + ' runs): exit ' + BASE.status + ', ' + BASE.xx.length + ' XX line(s) already red, ignored');
+BASE.xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120)));
+/* the break is made in a throw-away copy of the checkout (BR.site): the repo's own public/ and index.html are never edited, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
-  const f = path.join(W, rel), bak = f + '.bak';
+  const f = path.join(SITE.dir, rel);
   const s = fs.readFileSync(f, 'utf8');
   if (/\r\n/.test(s)) { a = a.replace(/\r?\n/g, '\r\n'); b = b.replace(/\r?\n/g, '\r\n'); }
   const n = s.split(a).length - 1;
   if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n + ' — this break measured NOTHING'); unanchored++; continue; }
-  fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));
-    const r = cp.spawnSync(process.execPath, [harness], { cwd: W, encoding: 'utf8', timeout: 400000 });
-    const xx = xxOf(r).filter((l) => !BASE.has(l));
-    const caught = r.status !== 0 && (xx.length > 0 || r.status > 1 || /Error/.test(r.stderr || ''));
+    const v = BR.verdict(harness, BASE, { cwd: SITE.dir, timeout: 400000 });
+    const caught = BR.caught(v, BASE);
     if (caught) good++;
-    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + (xx[0] || (r.stderr || '').split('\n')[0] || 'harness failed').trim().slice(0, 150) : 'NOT caught (exit ' + r.status + ')'));
-  } finally { fs.writeFileSync(f, s); try { fs.unlinkSync(bak); } catch (_) {} }   /* restore from the text held in memory: a vanished .bak once left cap-crm.js broken */
+    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
+  } finally { fs.writeFileSync(f, s); }   /* back to the original inside the copy for the next break */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

@@ -45,17 +45,58 @@ function spawnSelf(script, opts) {
   const m = /^BREAKRUN (.*)$/m.exec(r.stdout || '');
   return m ? JSON.parse(m[1]) : { status: -1, xx: [], early: false, secs: 0, stderr: 'break-run produced no verdict: ' + (r.stderr || '').slice(0, 200) };
 }
-/* a check that is red on main can be red in a different place on a loaded machine (one-person.cjs printed 2 red lines in one run and 4 in the next),
-   so a red baseline is run twice and the red lines are the UNION; a green one is run once. */
+/* The baseline is only what the UNBROKEN check printed in runs we actually made. A check can be red in a different place on a loaded machine
+   (one-person.cjs printed 2 red lines in one run and 4 in the next), so it runs TWICE (a third time when either was red) and the red lines are the UNION. */
 const baseline = (script, opts) => {
-  const a = spawnSelf(script, Object.assign({}, opts, { base: null }));
-  if (!a.xx.length && a.status === 0) return a;
-  const b = spawnSelf(script, Object.assign({}, opts, { base: null }));
-  return { status: a.status === 0 ? b.status : a.status, summed: a.summed && b.summed, xx: [...new Set(a.xx.concat(b.xx))], early: false, secs: a.secs + b.secs, stderr: a.stderr };
+  const runs = [spawnSelf(script, Object.assign({}, opts, { base: null })), spawnSelf(script, Object.assign({}, opts, { base: null }))];
+  if (runs.some((r) => r.xx.length || r.status !== 0)) runs.push(spawnSelf(script, Object.assign({}, opts, { base: null })));
+  const bad = runs.find((r) => r.status !== 0);
+  return { status: bad ? bad.status : 0, summed: runs.every((r) => r.summed), xx: [...new Set([].concat(...runs.map((r) => r.xx)))], early: false, secs: runs.reduce((t, r) => t + r.secs, 0), runs: runs.length, stderr: runs[0].stderr };
 };
-const verdict = (script, base, opts) => spawnSelf(script, Object.assign({}, opts, { base: base.xx }));
-const caught = (v, base) => v.xx.length > 0 || (v.status !== -1 && v.status !== 0 && (base.status === 0 || (base.summed && !v.summed)));   /* a crash caught the break when the unbroken check ran to its summary and this one did not */   /* -1 = no verdict in time: a hang is reported, not counted */
-module.exports = { baseline, verdict, caught };
+const crashOnly = (v, base) => !v.xx.length && v.status !== -1 && v.status !== 0 && (base.status === 0 || (base.summed && !v.summed));
+/* a break that is only "caught" by a crash can be load noise (a locator timeout on a busy machine): run it once more, and count it only if it crashes again */
+const verdict = (script, base, opts) => {
+  const v = spawnSelf(script, Object.assign({}, opts, { base: base.xx }));
+  if (!crashOnly(v, base)) return v;
+  const again = spawnSelf(script, Object.assign({}, opts, { base: base.xx }));
+  return crashOnly(again, base) || again.xx.length ? Object.assign(again, { rechecked: true }) : again;
+};
+const caught = (v, base) => v.xx.length > 0 || crashOnly(v, base);   /* a crash caught the break when the unbroken check ran to its summary and this one did not; -1 = no verdict in time, reported, not counted */
+
+/* site(W) — a throw-away copy of the web checkout the break is made in, so the REAL public/ and index.html are never edited (a hard kill, a Ctrl-C or a
+   vanished .bak can no longer leave a broken product behind; signal handlers are not enough on Windows). A sibling of W, so the checks still find
+   ../chitbridge-api and ../chitbridge-engines. public/, index.html, e2e/ and package.json are copied (the breaks edit public/ and index.html; the
+   checks write e2e/shots into the copy, not the repo); every other top-level folder is a read-only junction to W. dispose() removes the junctions
+   first (rmdir, never recursive), then the copy. Stale copies of a killed run (older than 3 h) are swept when the next one starts. */
+function disposeDir(dir) {
+  const fs = require('fs');
+  for (const n of fs.readdirSync(dir)) {
+    const p = path.join(dir, n);
+    try { if (fs.lstatSync(p).isSymbolicLink() || (fs.lstatSync(p).isDirectory() && fs.realpathSync(p) !== p)) fs.rmdirSync(p); } catch (_) {}
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+function site(W) {
+  const fs = require('fs');
+  const root = path.dirname(W), dir = path.join(root, 'web-brk-' + process.pid + '-' + Date.now().toString(36));
+  for (const n of fs.readdirSync(root)) {
+    if (!/^web-brk-/.test(n)) continue;
+    try { const d = path.join(root, n); if (Date.now() - fs.statSync(d).mtimeMs > 3 * 3600e3) disposeDir(d); } catch (_) {}
+  }
+  fs.mkdirSync(dir);
+  const COPY = new Set(['public', 'index.html', 'e2e', 'package.json']);
+  for (const n of fs.readdirSync(W)) {
+    if (n === '.git') continue;
+    const from = path.join(W, n), to = path.join(dir, n);
+    if (COPY.has(n)) {
+      fs.cpSync(from, to, { recursive: true, filter: (p) => !/e2e[\\/](shots|\.auth)([\\/]|$)/.test(p) });
+      if (n === 'e2e') fs.mkdirSync(path.join(to, 'shots'), { recursive: true });
+    } else if (fs.statSync(from).isDirectory()) cp.spawnSync('cmd', ['/c', 'mklink', '/J', to, from], { stdio: 'ignore' });
+    else fs.copyFileSync(from, to);
+  }
+  return { dir, dispose: () => disposeDir(dir) };
+}
+module.exports = { baseline, verdict, caught, site };
 
 if (require.main === module) {
   const o = JSON.parse(process.env.BREAKRUN_OPTS || '{}'); if (o.re) o.re = new RegExp(o.re);
