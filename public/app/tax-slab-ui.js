@@ -12,7 +12,7 @@
  *           (the takeover picker), cap-catalogue.js (the item sheet's rate row), till.html (the bill's "No tax rate · Fix" ask-once sheet).
  * FLOW      resolve() → cbSlabChipHTML → Set rate → cbSlabMenu(slabs, pack, code) → cbSlabMenuHTML → the HOST confirms and writes (PATCH /products/:id
  *           on the catalogue, POST /api/till/rate at the counter) → the host repaints the row in place
- * CARD      06-catalogue-pim/items
+ * CARD      15-tax-and-country-packs/tax-compute-rate-invoice-tax
  *
  * ⚠️ NOTHING HERE DECIDES A RATE. The engine resolves (CBTaxSlab.resolve), the pack suggests (CBTaxPacks.suggestFor) and the shop taps; a rate is
  * written only by the host through the engine's one writer (CBTaxSlab.setOn, on the server too). The words are the pack's (describe({short}) says

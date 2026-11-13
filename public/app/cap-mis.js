@@ -14,8 +14,8 @@
  * Host globals (finance.html, as cap-finance-cash.js): api · EP (CB_MIS_EP misMetrics) · esc · tx · txn · CBList · CBLocale · ftNav · FIN.
  * OWNS      the Reports tab's state (FM) and the two MIS rules both surfaces share — misWindow (period → since) and misReadAt (the read stamp)
  * RPT2: #/reports/trend hands fmMount/fmLoad to app/cap-mis-trend.js (trMount/trLoad); fmViews links the two views.
- * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (fmLoad · fmMount) · public/app/cap-mis-trend.js (fmLoad · fmViews · fmMount) · public/app/cap-admin.js and public/app.html (misWindow · misReadAt;
- *           app.html loads this file through ensureCap, CAP_WITH admin: shop · settings · mis)
+ * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (fmLoad · fmMount) · public/app/cap-mis-trend.js (fmLoad · fmViews · fmMount) · public/app/cap-admin.js (misWindow · misReadAt, at 1112 and 1323;
+ *           app.html only loads this file through ensureCap, CAP_WITH admin: shop · settings · mis)
  * FLOW  Reports tab → fmMount() → fmLoad() → GET /api/folders/mis?since=misWindow(period) → fmPaintTop() (misReadAt) + CBList rows (fmRows) → a figure → ftNav(list)
  * Flow step: R2R · reports (docs/process/flows.json).
  */
