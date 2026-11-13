@@ -43,4 +43,10 @@ assert.strictEqual(finWords({ n: 2, minor: 50000, currency: 'INR', by_currency: 
 assert.strictEqual(finWords({ n: 4, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 84000, n: 2 }, { currency: 'AUD', minor: 15000, n: 2 }], no_currency: 0, unpriced: 0 }), '4 orders unpaid, not yet billed ₹840 + AUD 150 · not added together');
 assert.strictEqual(finWords({ n: 2, minor: null, currency: 'INR', cost_hidden: true }), '2 orders unpaid, not yet billed hidden', 'Finance, a blind reader: hidden, not a bare count');
 assert.strictEqual(finWords({ n: 1, minor: 42000, currency: 'INR' }), '1 order unpaid, not yet billed ₹420', 'an older api: unchanged');
+/* one reader: the SAME carried figure through the CRM path and the Finance path ends in the SAME words (only each screen's own head differs) */
+for (const u of [{ n: 4, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 84000, n: 2 }, { currency: 'AUD', minor: 15000, n: 2 }], no_currency: 1, unpriced: 1 }, { n: 2, minor: null, currency: 'INR', cost_hidden: true }, { n: 1, minor: 42000, currency: 'INR' }, { n: 2 }]) {
+  const crmTail = said(u, 'INR').replace(/^[0-9]+ orders? not billed yet/, ''), finTail = finWords(u).replace(/^[0-9]+ orders? unpaid, not yet billed/, '');
+  assert.strictEqual(crmTail, finTail, 'CRM and Finance say the same money for ' + JSON.stringify(u) + ': [' + crmTail + '] vs [' + finTail + ']');
+  assert.strictEqual(crmTail, cbUnbilledTail(u, 'INR'), 'both are cbUnbilledTail and nothing else');
+}
 console.log('crm-unbilled-list: all ok');
