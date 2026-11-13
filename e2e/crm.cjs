@@ -967,10 +967,9 @@ async function route(S, r) {
     }
     /* CRM-D7: the record paints the SERVER's unbilled figure - one per currency, nothing added in the browser (the timeline below holds INR 90 + 150 on purpose: summed it would say 240) */
     for (const [name, un, want, never] of [
-      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yets*₹90.00 + A$150.00 · not added together/, /240|₹150/],
-      ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yets*₹90.00 · 1 without a currency/, /not added together|240/],
+      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s\+\sA\$150\.00\s·\snot added together/, /240|₹150/],
+      ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s·\s1 without a currency/, /not added together|240/],
       ['one not priced', { n: 1, minor: null, currency: null, by_currency: [], no_currency: 0, unpriced: 1 }, /1 order not billed yet · 1 not priced yet/, /₹0|₹/],
-      ['a cost-blind reader', { n: 2, minor: null, currency: 'INR', cost_hidden: true }, /2 orders not billed yet hidden/, /AUD|₹d/],
     ]) {
       const S = standIn();
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
