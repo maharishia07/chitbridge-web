@@ -149,7 +149,7 @@ var CBUi = (function () {
        code, the verb and the element kinds have ONE home; none is drawn by ui.action (nonButton). Elements: CMP045 I01 search, I02 date, I03 tick; CMP033 B01 opener
        (period, notices, Filters, Columns, header filter), D01 popover, M01 menu choice; CMP034 B01 pressed toggle; CMP035 S01 select; CMP036 K01 saved-view tab;
        CMP037 B01 CSV, B02 reset columns, B03 select all shown, B04 bulk action, B05 show more, B06 pager Previous, B07 pager Next; CMP038 B01 row action; CMP039 B01 sort, B02 resize, B03 move column. */
-    listfield: { code: 'CMP045', element: 'CMP045-I01', elements: ['I01', 'I02', 'I03'], label: 'List field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    listfield: { code: 'CMP045', element: 'CMP045-I01', elements: ['I01', 'I02', 'I03'], label: 'List field', alias_of: 'CMP055', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listopener: { code: 'CMP033', element: 'CMP033-B01', elements: ['B01', 'D01', 'M01'], label: 'List opener', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listtoggle: { code: 'CMP034', element: 'CMP034-B01', elements: ['B01'], label: 'List toggle', verb: 'CHANGE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     listselect: { code: 'CMP035', element: 'CMP035-S01', elements: ['S01'], label: 'List select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
@@ -162,11 +162,13 @@ var CBUi = (function () {
        I02 date, I03 tick, T01 free text; CMP041 S01 select; CMP042 B01..B25 the books' commands (pay, record, remind, show, statement, fold list, lock, unlock, close for good, pack, opening
        balances, cheque step, waiting-bill link, add supplier, accept / reject short, advance, reverse, GST note, resize pane, record discount, pay anyway), P01 row tools; CMP043 K01 tab, K02 ledger tree item;
        CMP044 C01 day bills link, C02 chit link, C03 reversal link. cap-books.js writes them with their codes (data-cbsid); none is drawn by ui.action (nonButton). */
-    bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', alias_of: 'CMP055', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     bookselect: { code: 'CMP041', element: 'CMP041-S01', elements: ['S01'], label: 'Books select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     bookaction: { code: 'CMP042', element: 'CMP042-B01', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'B25', 'P01'], label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     booktab: { code: 'CMP043', element: 'CMP043-K01', elements: ['K01', 'K02'], label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP055 FIELD (UX-137, docs WEB-FIELD-PART): one part for text-like, date, time, checkbox, file and long text, drawn by ui.field (app/ui-field.js). It WIDENS CMP040 and CMP045, which stay valid aliases until their pages convert. Elements: I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text. A field never confirms. */
+    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
@@ -1186,7 +1188,7 @@ var CBUi = (function () {
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('submit', onDocumentSubmit);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onBatchKey);
-  var library = { action: action, tap: tapAttributes, dialog: dialog, footerAction: footerAction, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
+  var library = { action: action, tap: tapAttributes, dialog: dialog, footerAction: footerAction, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey, words: words, escape: escapeText, style: ensureStyle };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

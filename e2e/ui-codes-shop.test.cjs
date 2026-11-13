@@ -19,8 +19,8 @@ const SCREEN = 'SHP001';
 const KIND = { button: 'B', input: 'I', select: 'S', textarea: 'T', a: 'C', div: 'C', span: 'C' };
 /** the attribute text each named control is found by -> the code its tag must wear */
 const WANT = [
-  ['id="p_search"', 'SHP001-I04'], ['onclick="shopCatToggle()"', 'SHP001-B05'], ['id="lg_contact"', 'SHP001-I05'], ['onclick="supOpen();return false"', 'SHP001-C02'],
-  ['id="sup_what"', 'SHP001-T02'], ['onclick="supSendCode()"', 'SHP001-B09'], ['onclick="supSubmit()"', 'SHP001-B10'], ['id="o_qty"', 'SHP001-I17'],
+  ['onclick="shopCatToggle()"', 'SHP001-B05'], ['onclick="supOpen();return false"', 'SHP001-C02'],
+  ['onclick="supSendCode()"', 'SHP001-B09'], ['onclick="supSubmit()"', 'SHP001-B10'], 
   ['onclick="orderConfirm()"', 'SHP001-B19'], ['onclick="orderStart()"', 'SHP001-B20'], ['onclick="shopPrivacy()"', 'SHP001-B21'], ['data-testid="shop-orders-more"', 'SHP001-B23'],
   ['onclick="shopMyOrders()"', 'SHP001-B24'], ['onclick="vizToOrder()"', 'SHP001-B27']
 ];
@@ -36,7 +36,7 @@ if (mutate === 'swap') src = src.split(first).join('SWAPX').split(second).join(f
 const tags = [...src.matchAll(/<(button|input|select|textarea|a|div|span)\b([^>]*?data-cbsid="([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2})"[^>]*)>/g)];
 const codes = tags.map((t) => t[3]);
 console.log('shop.html');
-check(codes.length === 65, 'shop.html has 65 tagged elements, found ' + codes.length);
+check(codes.length === 41, 'shop.html has 41 tagged elements (the other 24 inputs are ui.field mounts, CMP055), found ' + codes.length);
 check(new Set(codes).size === codes.length, 'no code is on two tags');
 check(codes.every((c) => c.indexOf(SCREEN + '-') === 0), 'every code is under ' + SCREEN);
 const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7));
@@ -45,6 +45,11 @@ for (const [needle, code] of WANT) {
   const tag = tags.filter((t) => t[2].indexOf(needle) >= 0)[0];
   check(!!tag && tag[3] === code, needle + ' wears ' + code);
 }
+/** field-2: every converted input is a ui.field mount SHP001-U01..U22 (literal, so the census reads it), and the old element codes are gone from the page */
+const mounts = [...src.matchAll(/ui\.field\(\{\s*mount: '(SHP001-U\d\d)'/g)].map((t) => t[1]);
+check(new Set(mounts).size === 22, 'shop.html mounts 22 distinct ui.field mounts, found ' + new Set(mounts).size);
+check(!/SHP001-I(0[1-6]|0[89]|1[0-7]|19|2\d)"/.test(src) && !/SHP001-T0[12]"/.test(src), 'the converted element codes are not on the page any more (radio I07 and the money offer I18 keep theirs)');
+check(src.indexOf('src="/app/ui-field.js"') > src.indexOf('src="/app/ui.js"') && src.indexOf('src="/app/ui.js"') > 0, 'ui-field.js is loaded after ui.js');
 /** the census counts every control tag; each must carry a code (a new raw control fails here) */
 const census = [...src.matchAll(/<(button|input|select|textarea)\b([^>]*)>/g)].filter((t) => !/type=["']hidden["']/.test(t[2]));
 const chips = [...src.matchAll(/<(a|div|span)\b([^>]*\sonclick=[^>]*)>/g)];
