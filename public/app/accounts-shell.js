@@ -207,7 +207,7 @@ function billUseChoiceHTML(rows, pick) {
         item[0] +
         '" onclick="' +
         (pick || 'pickBillUse') +
-        '(this.dataset.use)" data-cbsid="SCR038-B01">' +
+        '(this.dataset.use)" data-cbsid="SCR045-B01">' +
         tx(item[1]) +
         '</button>'
       );
@@ -401,7 +401,7 @@ function toast(msg, undo) {
   const _lvl = toastLevel(msg);
   if (typeof cblog === 'function') cblog(_lvl, msg);
   const node = toastHost(_lvl === 'error');
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn" data-cbsid="SCR038-B02">' + tx('Undo') + '</button>' : ''}</div>`;
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();
@@ -785,7 +785,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     '<button data-cbsid="CMP003" type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
     esc(tx('Cancel')) +
     '</button>' +
-    '<button type="button" data-testid="confirm-ok" data-cbsid="SCR038-B03" style="min-height:44px;padding:0 18px;border:1px solid ' +
+    '<button type="button" data-testid="confirm-ok" data-cbsid="SCR045-B03" style="min-height:44px;padding:0 18px;border:1px solid ' +
     (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') +
     ';border-radius:9px;background:' +
     (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') +
