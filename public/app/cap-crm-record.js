@@ -1141,11 +1141,11 @@ function crmRecordPaint(p, rec) {
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
   var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
-  if (rwSec && typeof CBRewards !== 'undefined') {
+  if (rwSec && typeof CBRewardsPane !== 'undefined') {
     var rwOnce = function () {
       if (rwSec.open && !rwSec.getAttribute('data-read')) {
         rwSec.setAttribute('data-read', '1');
-        CBRewards.load('crm_rw', {
+        CBRewardsPane.load('crm_rw', {
           id: p.party_id,
           api: api,
           t: tx,

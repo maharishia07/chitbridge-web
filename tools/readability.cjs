@@ -16,6 +16,7 @@
  *                                                                 judge only what the change touched (git diff vs merge-base); --md prints the
  *                                                                 §6 checklist with numbers; --write tightens the touched files' ratchet rows;
  *                                                                 --strict = the touch rule FAILS a touched file not at 0 now (MNT-30; warn mode until the date in tools/readability/touch.cjs)
+ *   node tools/readability.cjs --headers [--roots web=.,api=..,engines=..]   READ-ONLY census of the PM/HEADER-TEMPLATE.md fields per repo and kind (never fails)
  *   node tools/readability.cjs --write [--repo api|engines --root ../chitbridge-<repo>]   write/tighten the whole ratchet (lower only)
  * MOVES    a function whose body (tokens: whitespace and comments ignored) EXACTLY equals one the same diff deletes is a MOVE: it keeps the old
  *           score (tools/readability/moves.cjs), is listed as "moved: N functions (exact body match)", and any other change is new code.
@@ -30,6 +31,7 @@ const baseline = require('./readability/baseline.cjs');
 const guard = require('./readability/guard.cjs');
 const ratchet = require('./readability/ratchet.cjs');
 const moves = require('./readability/moves.cjs');
+const headers = require('./readability/headers.cjs');
 
 const WEB_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_ROOTS = 'web=.,api=../chitbridge-api,engines=../chitbridge-engines';
@@ -124,7 +126,7 @@ function runChanged() {
     failed: result.failed,
     moved: result.moved.length,
     findings: result.findings,
-    files: result.files.map((file) => ({ file: file.file, numbers: file.numbers, score: file.score })),
+    files: result.files.map((file) => ({ file: file.file, status: file.status, numbers: file.numbers, score: file.score })),
     markdown: guard.markdown(result)
   });
   const warnings = result.warnings ? ' (' + result.warnings + ' warning(s))' : '';
@@ -189,6 +191,14 @@ function runBaseline() {
   for (const repoMetrics of Object.values(out)) baseline.print(repoMetrics, top);
 }
 
-if (flag('changed')) runChanged();
+/** --headers: the read-only header-template census (tools/readability/headers.cjs); never fails */
+function runHeaders() {
+  const roots = parseRoots(flag('roots', DEFAULT_ROOTS));
+  for (const repo of Object.keys(roots)) if (!fs.existsSync(roots[repo])) delete roots[repo];
+  console.log(headers.table(headers.census(roots)));
+}
+
+if (flag('headers')) runHeaders();
+else if (flag('changed')) runChanged();
 else if (flag('write')) writeRatchet();
 else runBaseline();

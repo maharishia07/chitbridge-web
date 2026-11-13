@@ -2219,7 +2219,7 @@ function chit2Screen() {
       ? '<div style="padding:8px 14px 2px">' +
         chitSpendStrip({
           id: C2.id,
-          amt: (d.detail && d.detail.total_value) || h.total_value || 0, cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
+          amt: billTotalOf(h.summary_json, (d.detail && d.detail.total_value) || h.total_value) || 0, /* ACC-206 D1: the header's summary_json (money.total first), never delivery_summary (no money) */ cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
           delivery_summary: sum,
           line_delivery: d.line_delivery,
           line_assignment: d.line_assignment,

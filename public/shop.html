@@ -63,6 +63,9 @@
   .shopband input{ flex:1; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; box-sizing:border-box; background:var(--card,#fff); }
   .catbtn{ flex:none; border:1px solid var(--line); background:var(--card,#fff); color:var(--ink); border-radius:8px; padding:9px 11px; font:600 13px var(--font-ui); cursor:pointer; white-space:nowrap; touch-action:manipulation; }
   .catbtn[aria-expanded="true"]{ border-color:var(--accent); color:var(--accent); }
+  /* the library close icon (ui.action close, 44 px) in a sheet head: ink on the sheet's white, never the old #8a949c grey; the focus ring is the page accent */
+  [data-cbname="close"][data-cbmount^="SHP001-"]{ border:0; background:none; color:var(--ink); font:600 22px/1 var(--font-ui); cursor:pointer; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
+  [data-cbname="close"][data-cbmount^="SHP001-"]:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .catpanel{ position:absolute; top:100%; inset-inline:0; max-height:62vh; overflow:auto; background:var(--card,#fff); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 28px rgba(15,22,32,.18); padding:4px; z-index:21; }
   .catpanel[hidden]{ display:none; }
   .catpick{ display:flex; justify-content:space-between; gap:10px; width:100%; border:0; background:none; padding:12px; font:600 14px var(--font-ui); color:var(--ink); text-align:start; border-radius:8px; cursor:pointer; touch-action:manipulation; -webkit-touch-callout:none; user-select:none; }
@@ -1968,7 +1971,7 @@ function supRender() {
     '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:18px;max-height:92vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
     '<b class="sg" style="font-size:16px;flex:1">📣 Report a problem</b>' +
-    '<button data-cbsid="SHP001-B11" onclick="supClose()" aria-label="Close" title="Close" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ui.action('close', { mount: 'SHP001-U01', display: 'icon', surface: 'dialog', onPress: supClose, testid: 'shop-sheet-x-support' }) + '</div>' +
     supNoteHtml() +
     (_sup.err && !_sup.dead ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(_sup.err) + '</div>' : '') +
     (_sup.msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(_sup.msg) + '</div>' : '') +
@@ -2509,7 +2512,7 @@ function _cartPanelHtml() {
     '<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 ' +
     esc(shop.display_name || 'Your order') +
     '</b>' +
-    '<button data-cbsid="SHP001-B15" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ui.action('close', { mount: 'SHP001-U02', display: 'icon', surface: 'dialog', onPress: orderClose, testid: 'shop-sheet-x-order' }) + '</div>' +
     '<div id="oc_rail"></div><div id="oc_body"></div>' +
     (_ord.busy
       ? '<div style="margin-top:12px"><button data-cbsid="SHP001-B16" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
@@ -2560,7 +2563,7 @@ function orderRender(msg, err) {
     esc(_isPayload() ? _submitLabel() : 'Order') +
     ' · ' +
     esc(it.name) +
-    '</b><button data-cbsid="SHP001-B17" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '</b>' + ui.action('close', { mount: 'SHP001-U03', display: 'icon', surface: 'dialog', onPress: orderClose, testid: 'shop-sheet-x-order-item' }) + '</div>' +
     (function () {
       var p = itemPrice(it),
         bits = [];
@@ -3138,7 +3141,7 @@ function vizRender() {
     '<div style="background:#fff;width:100%;max-width:560px;border-radius:16px;padding:16px 16px 20px;max-height:94vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(it.name) +
-    ' on your wall</b><button data-cbsid="SHP001-B26" type="button" aria-label="Close" onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ' on your wall</b>' + ui.action('close', { mount: 'SHP001-U04', display: 'icon', surface: 'dialog', onPress: vizClose, testid: 'shop-sheet-x-wall' }) + '</div>' +
     '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>' +
     (_VIZ.img
       ? '<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">' +
