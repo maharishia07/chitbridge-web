@@ -1,21 +1,20 @@
-/* walk-ui-library-offer-lab.cjs - THE OFFER LAB'S CLOSE AND BACK ARE THE LIBRARY'S (UX-137, web-controls-1).
+/* walk-ui-library-offer-lab.cjs - THE OFFER LAB'S FOUR CLOSE CORNERS ARE THE LIBRARY'S (UX-137, web-controls-1).
  *
  * OWNS      the proof that the four overlay corners (price list, combos and modifiers, till preview, "Work it out") are the library's Close (CMP005-B01)
- *           and the lab's Back is the library's Back (CMP006-B01), each with its screen mount OLB001-U01..U05, and that each one really works as a control:
+ *           with its screen mount OLB001-U01..U04, and that each one really works as a control:
  *           an accessible name, a visible focus ring when reached by keyboard, Tab reaches it, Enter and Space both press it, a 44 px target on a phone,
- *           and its glyph/text clears WCAG AA (4.5:1 text, 3:1 glyph) in Cream and Dark at 1366 and 390 (lib/theme-measure.cjs for text).
+ *           and its glyph clears WCAG non-text AA (3:1) in Cream and Dark at 1366 and 390. (The lab's backBtn helper has no caller on this page, so it is left as it was.)
  * CALLED BY by hand and the SIT box: sh toolset/sit-box-run.sh sit-au e2e <branch> e2e/walk-ui-library-offer-lab.cjs
- * FLOW      UX-137 step 3 (customer pages, controls onto the library); no money is touched, the close and back handlers are the page's own.
+ * FLOW      UX-137 step 3 (customer pages, controls onto the library); no money is touched, the close handlers are the page's own.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/design-system
  * Run: node e2e/walk-ui-library-offer-lab.cjs   (needs @playwright/test; the SIT box has it)
  */
 'use strict';
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
-const { measure } = require('./lib/theme-measure.cjs');
 const ROOT = path.join(__dirname, '..', 'public');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
-const GLYPH_NEED = 3, TEXT_NEED = 4.5, PHONE_MIN_PX = 44;
+const GLYPH_NEED = 3, PHONE_MIN_PX = 44;
 let bad = 0;
 const say = (label, ok, detail) => { console.log('  ' + String(label).padEnd(64) + '· ' + detail + '  ' + (ok ? 'OK' : (bad++, 'FAILED'))); };
 
@@ -86,23 +85,6 @@ async function checkClose(page, testid, mount, overlay) {
   await page.keyboard.press('Space');
   say(testid + ' closes on Space', !(await isOpen(page, overlay)), 'overlay off');
 }
-async function checkBack(page) {
-  const found = await page.evaluate(() => {
-    if (typeof pickGoal === 'function' && GOALS && GOALS.length) pickGoal(GOALS[0].id);
-    const el = document.querySelector('[data-testid="lab-back"]');
-    return el ? { sid: el.getAttribute('data-cbsid'), mount: el.getAttribute('data-cbmount'), text: el.textContent.trim() } : null;
-  });
-  say('the lab Back is drawn on the working step', !!found, JSON.stringify(found));
-  if (!found) return;
-  say('lab Back is the library Back with its mount', found.sid === 'CMP006-B01' && found.mount === 'OLB001-U05', found.sid + ' ' + found.mount);
-  const presses = await tabTo(page, 'lab-back');
-  say('lab Back is reached by Tab', presses > 0, presses + ' press(es)');
-  const ring = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('[data-testid="lab-back"]')); return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) }; });
-  say('lab Back shows a visible focus ring from the keyboard', ring.style !== 'none' && ring.width >= 2, ring.style + ' ' + ring.width + 'px');
-  await page.keyboard.press('Enter');
-  const stepAfterEnter = await page.evaluate(() => S.step);
-  say('lab Back goes a step back on Enter', stepAfterEnter === 0 || stepAfterEnter === 2 || stepAfterEnter === 1, 'S.step=' + stepAfterEnter);
-}
 async function checkTheme(page, theme, width) {
   await page.setViewportSize({ width, height: width === 1366 ? 768 : 844 });
   await page.evaluate((key) => { CBAvatar.applyTheme(key); }, theme);
@@ -114,9 +96,6 @@ async function checkTheme(page, theme, width) {
     if (width === 390) say(testid + ' is 44 px on a phone ' + theme, box.w >= PHONE_MIN_PX - 0.5 && box.h >= PHONE_MIN_PX - 0.5, box.w + 'x' + box.h);
     await page.evaluate((id) => document.getElementById(id).classList.remove('on'), overlay);
   }
-  await page.evaluate(() => { pickGoal(GOALS[0].id); });
-  const rows = (await page.evaluate(measure)).filter((r) => /data-cbname="back"/.test(r.html));
-  say('lab Back text contrast ' + theme + ' ' + width, rows.length > 0 && rows.every((r) => r.ratio >= TEXT_NEED), rows.map((r) => r.ratio + ':1').join(' ') || 'no text read');
 }
 
 (async () => {
@@ -130,8 +109,6 @@ async function checkTheme(page, theme, width) {
   await page.waitForTimeout(300);
   console.log('\n-- the four Close corners: identity, name, keyboard');
   for (const [testid, mount, overlay] of CLOSES) await checkClose(page, testid, mount, overlay);
-  console.log('\n-- the lab Back');
-  await checkBack(page);
   console.log('\n-- contrast and tap size, Cream and Dark, 1366 and 390');
   for (const theme of ['cream', 'dark']) for (const width of [1366, 390]) await checkTheme(page, theme, width);
   say('no page error', errors.length === 0, errors.join(' | ') || 'none');

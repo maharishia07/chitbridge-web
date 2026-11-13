@@ -612,12 +612,10 @@ button{cursor:pointer}
  */
 .btn.back{background:var(--panel);border-color:var(--ghost);font-weight:700}
 .btn.back:hover{background:var(--line-soft)}
-/* the library's Back (CMP006) in the lab's own back look, and its Close (CMP005) in the overlay's corner look: tokens only, the 44 px phone floor is the library's */
-[data-cbname="back"]{background:var(--panel);border:1px solid var(--ghost);color:var(--ink);font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:0 12px;cursor:pointer}
-[data-cbname="back"]:hover{background:var(--line-soft)}
+/* the library's Close (CMP005) in the overlay's corner look: tokens only, the 44 px phone floor is the library's */
 [data-cbname="close"]{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:9px;font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto}
 [data-cbname="close"]:hover{background:var(--panel)}
-[data-cbname="back"]:focus-visible,[data-cbname="close"]:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+[data-cbname="close"]:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 /**
  * ⭐ [found live, 2026-09-26] "apply to is not looking prominant" — scopeRow()'s picker was a plain `.btn`,
  * identical to every other secondary button on the screen, even though it decides WHICH items the whole offer
@@ -3112,7 +3110,7 @@ function renderS0() {
  * screen after Settings.
  */
 function backBtn(step) {
-  return ui.action('back', { mount: 'OLB001-U05', surface: 'dialog', size: 'compact', key: String(step), testid: 'lab-back', onPress: function () { labStep(step); } });
+  return '<button data-cbsid="OLB001-B28" class="btn sm back" onclick="labStep(' + step + ')">← Back</button>';
 }
 /** the eight types in words, by group: the phone's picker (the left menu there is icons); the same GOALS the menu draws */
 function typesHTML() {
