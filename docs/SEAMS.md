@@ -22,7 +22,7 @@ of file each thing is; this says what already does the job.
 | 78 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 75 | `catalogue` | `books-manual.js` | GET /events → the grid. |
-| 70 | `list` | `cap-settings.js` |  |
+| 71 | `list` | `cap-settings.js` |  |
 | 69 | `register` | `regulation.js` | register(pack) → the pack — |
 | 68 | `entry` | `books-store.js` |  |
 | 68 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
@@ -98,7 +98,6 @@ of file each thing is; this says what already does the job.
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 29 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
-| 29 | `sheet` | `cap-employees.js` |  |
 | 29 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 29 | `owner` | `books.js` |  |
 | 28 | `money` | `cart.js` |  |
