@@ -1004,7 +1004,7 @@ function partyEditOpen(kind, partyId) {
       (typeof packSplitsByState !== 'function' || packSplitsByState()
         ? '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>'
         : '') /* CX0: a state only where the tax turns on it (India) */ +
-      '</div>',
+      '',
     footerHtml:
       '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
@@ -1195,7 +1195,7 @@ function payOpen(kind, partyId, pre) {
       '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div>' +
       '<div id="pay_bills" data-testid="pay_bills"></div>' +
       '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
-      '</div>',
+      '',
     footId: 'pay_foot', footerHtml: '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
