@@ -97,7 +97,7 @@ async function route(S, r) {
     if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, todo: w.todo || 'record', name: w.name || null })) }));   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
     if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; /* 2026-10-02: a cheque recorded in the APP is held on the server too, and CB Accounts (a fresh page, no session memory) lists it from there */
     const held = Object.keys(S.payments).filter((k) => S.payments[k].mode === 'cheque' && !S.chequeSteps.some((x) => x.id === k && x.body.status === 'cleared')).map((k) => ({ payment_id: k, party_id: S.payments[k].party_id, name: 'Ravi Stores', amount_minor: Math.round(Number(S.payments[k].amount || 0) * 100), cheque_no: S.payments[k].cheque_no, cheque_bank: S.payments[k].cheque_bank, status: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? 'cheque_deposited' : 'cheque_received', next: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? ['cleared'] : ['deposited'] }));
-      return J(r, 200, { currency: 'INR', cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
+      return J(r, 200, books.cheques({ cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) })); }   /* the contract's keys beside them: asOf · pdc_reminders · remind */   /* GET /cheques: the held ones, each with the steps the engine accepts now */
     if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries++; const n = S.waiting.length; S.waiting = S.waiting.filter((w) => w.stuck); return J(r, 200, { ok: true, tried: n, posted: n - S.waiting.length }); }
     if ((x = p.match(/^\/api\/books\/cheques\/([^/]+)\/status$/)) && m === 'POST') {
       S.chequeSteps.push({ id: x[1], body });
@@ -113,7 +113,7 @@ async function route(S, r) {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
       if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));
       const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
-      if (S.locked[per]) return J(r, 409, books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'));
+      if (S.locked[per]) return J(r, 409, Object.assign(books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'), { type: 'about:blank', title: 'Conflict', status: 409 }));   /* RFC 9457 problem details, as the API's one error shape */
       /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
       if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { ok: true, payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true }, posted: { ok: true, duplicate: true, entry_id: 'e-' + was, entry_no: 'PY/2026-27/000001', posting_date: '2026-09-29' } }); }
       const id = 'pay' + (Object.keys(S.payments).length + 1); S.payments[id] = body;
