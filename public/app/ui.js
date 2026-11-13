@@ -562,28 +562,56 @@ var CBUi = (function () {
     if (closes && typeof options.onPress !== 'function' && typeof closeModal === 'function') options.onPress = closeModal;
     return dialogAction(item.name, options);
   }
+  /** the popup code a caller names must be the register's own shape, POP and three digits (POPUP-FAMILIES G9) */
+  function checkPop(code) {
+    if (code && !/^POP\d{3}$/.test(code)) refuse('dialog: pop must be a register code like POP098');
+  }
+  /** the header's own line: the title (a literal the catalogue translates, or titleText already resolved), the optional second line, the popup-code chip */
+  function dialogHeadText(options) {
+    var title = options.titleText !== undefined ? options.titleText : words(options.title);
+    var sub = options.subText || options.subId ? '<span class="sub"' + (options.subId ? ' id="' + escapeText(options.subId) + '"' : '') + '>' + escapeText(options.subText || '') + '</span>' : '';
+    var chip = options.pop && typeof CBScreenId !== 'undefined' && CBScreenId.popupChip ? CBScreenId.popupChip(options.pop, 'margin-inline-start:auto') : '';
+    return '<div class="t">' + escapeText(title) + '</div>' + sub + chip;
+  }
+  function dialogHead(options) {
+    var pop = options.pop ? ' data-pop="' + escapeText(options.pop) + '"' : '';
+    return '<div class="mhd" data-cbsid="' + ACTION_SET.dialog.element + '" data-cbmount="' + escapeText(options.mount) + '"' + pop + '>' + dialogHeadText(options) + '</div>';
+  }
+  /** the first field of a form takes the keyboard when the popup opens (WCAG 2.4.3); a popup with none leaves the host's own first stop */
+  function focusFirstField() {
+    var host = typeof document !== 'undefined' && document.querySelector ? document.querySelector('dialog[open] .mbody, #modalhost .mbody') : null;
+    var field = host ? host.querySelector('input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled])') : null;
+    if (field && field.focus) field.focus();
+  }
+  /** the refusals of a dialog call, then its footer actions */
+  function checkDialog(options) {
+    if (typeof modal !== 'function') refuse('dialog: no modal() on this page');
+    if (!MOUNT_CODE.test(options.mount || '')) refuse('dialog: mount must be a screen mount code like ACC002-U01');
+    checkPop(options.pop);
+    var list = options.actions || [];
+    if (list.length > 4) refuse('dialog: at most 4 actions');
+    if (options.footerHtml !== undefined && list.length) refuse('dialog: give actions or footerHtml, not both');
+    return list;
+  }
+  /** the footer: the caller's own HTML, or the standard actions; the id is for a footer a step wizard repaints */
+  function dialogFoot(options, list) {
+    var inner = options.footerHtml !== undefined ? options.footerHtml : list.map(footerAction).join('');
+    return '<div class="mfoot"' + (options.footId ? ' id="' + escapeText(options.footId) + '"' : '') + '>' + inner + '</div>';
+  }
+  function dialogBody(options) {
+    return '<div class="mbody"' + (options.testid ? ' data-testid="' + escapeText(options.testid) + '"' : '') + '>' + (options.body || '') + '</div>';
+  }
   /**
-   * ui.dialog({ mount, title, body, actions: [{ name, ...action options }], wide, onClose }) — opens through the app's
+   * ui.dialog({ mount, title | titleText, subText, subId, footId, pop, testid, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
    * modal(); the corner X is modal()'s own .mx. Actions are standard components only, Cancel/Close first, the primary last.
+   * pop is the popup's register code (POP###): it is written on the header (data-pop) and shown as the quote-me chip. footerHtml is for a footer the
+   * caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialog invents none. Not wired yet: onClose.
    */
   function dialog(options) {
     options = options || {};
-    if (typeof modal !== 'function') refuse('dialog: no modal() on this page');
-    if (!MOUNT_CODE.test(options.mount || '')) refuse('dialog: mount must be a screen mount code like ACC002-U01');
-    var list = options.actions || [];
-    if (list.length > 4) refuse('dialog: at most 4 actions');
-    var footer = list.map(footerAction).join('');
-    modal(
-      '<div class="mhd" data-cbsid="' + ACTION_SET.dialog.element + '" data-cbmount="' + escapeText(options.mount) + '"><div class="t">' +
-        escapeText(words(options.title)) +
-        '</div></div><div class="mbody">' +
-        (options.body || '') +
-        '</div><div class="mfoot">' +
-        footer +
-        '</div>',
-      !!options.wide,
-      options.opt
-    );
+    var list = checkDialog(options);
+    modal(dialogHead(options) + dialogBody(options) + dialogFoot(options, list), !!options.wide, options.opt);
+    focusFirstField();
   }
   /* ── CMP020 PROGRESS (Athi 10 Nov): one component, three levels (Nielsen response-time limits, Apple HIG, Material).
      1  under about 1 s  nothing shows: the indicator waits PROGRESS_DELAY_MS, so a quick reply never flashes
@@ -1106,7 +1134,7 @@ var CBUi = (function () {
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', onDocumentClick);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onChoiceKey);
   if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('keydown', onBatchKey);
-  var library = { action: action, tap: tapAttributes, dialog: dialog, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
+  var library = { action: action, tap: tapAttributes, dialog: dialog, footerAction: footerAction, choice: choice, choiceSet: choiceSet, progress: progress, components: ACTION_SET, textKey: textKey };
   /* screens write the short name: ui.action(...) */
   if (typeof window !== 'undefined') window.ui = library;
   return library;

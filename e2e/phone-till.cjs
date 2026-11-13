@@ -60,7 +60,7 @@ function webServer(){
      memory instead of a server. The sign-in and enrol code is not touched or bypassed; sign-in is simply not
      what this walk is testing. */
   await p.evaluate(({ tea, dosa }) => {
-    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: [tea, dosa], offers: [], at: new Date().toISOString() };
+    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR', country: 'IN' }, items: [tea, dosa], offers: [], at: new Date().toISOString() };
     CloudHost.key = 'demo-key';                                 /* paired() reads this, whatever HOST is */
     ls.set(tillGivenKey(), 'C1');                                /* tillStopped() must stay a real gate */
     window.WHO = { id: 'c1', name: 'Clerk', kind: 'coassist' };
@@ -166,7 +166,7 @@ function webServer(){
   const bills = await p.evaluate(() => ({
     hour: document.querySelector('#billsbody details summary').innerText.replace(/\s+/g, ' '),
     banner: (document.querySelector('[data-testid="till-sync-report"]') || {}).innerText || '',
-    dayclose: (document.getElementById('billsbody') ? document.querySelector('[data-testid="till-dayclose"]').textContent : ''),
+    dayclose: (document.getElementById('billsbody') ? document.querySelector('[data-testid="till-dayclose"]').getAttribute('aria-label') : ''),
     close: document.querySelector('[data-testid="till-bills-close"]').textContent,
   }));
   say('the hour group reads in words, not "HH:00"', /\d{1,2}\s?(am|pm)\s?–\s?\d{1,2}\s?(am|pm)/i.test(bills.hour), '"' + bills.hour + '"');
