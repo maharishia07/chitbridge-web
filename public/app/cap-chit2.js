@@ -1016,6 +1016,29 @@ function c2ApplyProgress(r) {
   return true;
 }
 
+/**
+ * ⭐ OPS-89 · ONE client_ref PER USER ACTION on the deliver-lines write (the idempotency key — Stripe's rule, and the
+ * client_ref every other money write here already carries). lib/deliverline.js replays a row only when it names a ref,
+ * so a double tap or a retry after a lost answer used to record the same delivery twice.
+ * ⚠️ The ref is held for the SAME action (this chit + these rows) until the server has answered, so a retry re-sends it;
+ * it is dropped on success, so the next press is a new delivery. Never minted per send. Row n carries ref:n.
+ */
+var C2_REFS = {};
+function c2NewRef() {
+  var id = window.CBOffline && window.CBOffline._uuid ? window.CBOffline._uuid() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return 'c2-' + id;
+}
+async function c2PostDelivery(rows) {
+  var action = JSON.stringify([C2.id, rows]);
+  var ref = C2_REFS[action] || (C2_REFS[action] = c2NewRef());
+  var stamped = rows.map(function (row, position) {
+    return Object.assign({}, row, { client_ref: ref + ':' + position });
+  });
+  var reply = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: stamped } });
+  delete C2_REFS[action];
+  return reply;
+}
+
 async function c2Deliver(line_id, unit, back) {
   var el = document.getElementById('c2dq_' + line_id);
   /* WX-P2P-19: the empty box SHOWS the pending quantity (its placeholder) — Delivered records what it shows, never "How many?" over a 2 */
@@ -1024,10 +1047,7 @@ async function c2Deliver(line_id, unit, back) {
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   try {
-    var reply = await api('c2DeliverLines', {
-      params: { id: C2.id },
-      body: { rows: [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }] }
-    });
+    var reply = await c2PostDelivery([{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }]);
     /**
      * ⭐⭐ THE WRITE NOW CARRIES THE NEW STATE, so the screen stops asking for it. This ran `loadChit2()` — a
      * twelve-round-trip re-read measured at ~4.9s, MORE than the ~3.5s write it was confirming. Recording
@@ -1769,7 +1789,7 @@ async function c2TakeMaterial(line_id) {
         note: own ? null : 'from ' + srcName
       };
     });
-    var reply = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: rows } });
+    var reply = await c2PostDelivery(rows);
     if (!c2ApplyProgress(reply)) await loadChit2();
     toast(txf('{n} added to this line', { n: rows.length }));
   } catch (e) {
