@@ -23,6 +23,7 @@ const file = process.env.PMOVED_FILE || path.join(ROOT, 'public', 'app', 'chit-p
 const ctx = { console, Math, Object, Array, String, Number, JSON };
 ctx.window = ctx;
 ctx.tx = (text) => text;
+ctx.esc = (text) => String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 ctx.fmtMoney = (amount, code) => code + ' ' + Number(amount).toFixed(2);
 ctx.myCur = () => 'INR';
 vm.createContext(ctx);

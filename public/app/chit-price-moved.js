@@ -27,9 +27,6 @@
   function say(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
-  function esc(text) {
-    return typeof root.esc === 'function' ? root.esc(text) : String(text == null ? '' : text).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
-  }
   /** is this failed call the server's "prices have moved" answer? (by its status and its code, never by its words) */
   function isMoved(error) {
     return !!error && error.status === STATUS_CONFLICT && !!error.data && error.data.code === CODE_MOVED && Array.isArray(error.data.lines);
@@ -83,7 +80,7 @@
     return '<button type="button" data-testid="' + testid + '" style="' + BUTTON_CSS + 'border:1px solid var(--line,#DDD6C6);background:transparent;color:inherit" data-cbsid="' + code + '">' + esc(say(label)) + '</button>';
   }
   function primaryButton(code, testid, label) {
-    return '<button type="button" data-testid="' + testid + '" style="' + BUTTON_CSS + 'border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:#fff" data-cbsid="' + code + '">' + esc(say(label)) + '</button>';
+    return '<button type="button" data-testid="' + testid + '" style="' + BUTTON_CSS + 'border:1px solid var(--green,#16693F);background:var(--green,#16693F);color:var(--card,#fff)" data-cbsid="' + code + '">' + esc(say(label)) + '</button>';
   }
   /** the whole popup's markup: what moved, then the choices (Send as drafted only when the server allows it) */
   function dialogHtml(data, currency) {
