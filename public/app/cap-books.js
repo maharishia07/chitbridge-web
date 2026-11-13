@@ -964,10 +964,8 @@ function partyEditOpen(kind, partyId) {
       '</label></div>'
     : '';
   ui.dialog({
-    mount: bkDialogMount(2),
-    pop: 'POP089',
+    mount: bkDialogMount(2), pop: 'POP089', bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     titleText: tx('Party') + ' · ' + (r.display_name || r.nickname || ''),
-    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body:
       '<label>' +
       tx('Legal name') +
@@ -1159,12 +1157,8 @@ function payOpen(kind, partyId, pre) {
     after: o.after || null
   }; /* one ref per opened form */
   ui.dialog({
-    mount: bkDialogMount(3),
-    pop: 'POP090',
-    titleId: 'pay_title',
-    titleTestid: 'pay_title',
+    mount: bkDialogMount(3), pop: 'POP090', titleId: 'pay_title', titleTestid: 'pay_title', bodyId: 'pay_body',
     titleText: (kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name,
-    bodyId: 'pay_body',
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body:
       '<label>' +
@@ -1202,9 +1196,7 @@ function payOpen(kind, partyId, pre) {
       '<div id="pay_bills" data-testid="pay_bills"></div>' +
       '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
       '</div>',
-    footId: 'pay_foot',
-    footerHtml:
-      '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
+    footId: 'pay_foot', footerHtml: '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
       tx('Record') +

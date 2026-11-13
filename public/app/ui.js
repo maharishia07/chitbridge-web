@@ -566,13 +566,16 @@ var CBUi = (function () {
   function checkPop(code) {
     if (code && !/^POP\d{3}$/.test(code)) refuse('dialog: pop must be a register code like POP098');
   }
+  /** the optional id, data-testid and style of a dialog part, as attribute text (empty when none is given) */
+  function ownAttrs(id, testid, style) {
+    return (id ? ' id="' + escapeText(id) + '"' : '') + (testid ? ' data-testid="' + escapeText(testid) + '"' : '') + (style ? ' style="' + escapeText(style) + '"' : '');
+  }
   /** the header's own line: the title (a literal the catalogue translates, or titleText already resolved), the optional second line, the popup-code chip */
   function dialogHeadText(options) {
     var title = options.titleText !== undefined ? options.titleText : words(options.title);
     var sub = options.subText || options.subId ? '<span class="sub"' + (options.subId ? ' id="' + escapeText(options.subId) + '"' : '') + '>' + escapeText(options.subText || '') + '</span>' : '';
     var chip = options.pop && typeof CBScreenId !== 'undefined' && CBScreenId.popupChip ? CBScreenId.popupChip(options.pop, 'margin-inline-start:auto') : '';
-    var attrs = (options.titleId ? ' id="' + escapeText(options.titleId) + '"' : '') + (options.titleTestid ? ' data-testid="' + escapeText(options.titleTestid) + '"' : '');
-    return '<div class="t"' + attrs + '>' + escapeText(title) + '</div>' + sub + chip;
+    return '<div class="t"' + ownAttrs(options.titleId, options.titleTestid) + '>' + escapeText(title) + '</div>' + sub + chip;
   }
   function dialogHead(options) {
     var pop = options.pop ? ' data-pop="' + escapeText(options.pop) + '"' : '';
@@ -600,8 +603,7 @@ var CBUi = (function () {
     return '<div class="mfoot"' + (options.footId ? ' id="' + escapeText(options.footId) + '"' : '') + '>' + inner + '</div>';
   }
   function dialogBody(options) {
-    var attrs = (options.bodyId ? ' id="' + escapeText(options.bodyId) + '"' : '') + (options.testid ? ' data-testid="' + escapeText(options.testid) + '"' : '') + (options.bodyStyle ? ' style="' + escapeText(options.bodyStyle) + '"' : '');
-    return '<div class="mbody"' + attrs + '>' + (options.body || '') + '</div>';
+    return '<div class="mbody"' + ownAttrs(options.bodyId, options.testid, options.bodyStyle) + '>' + (options.body || '') + '</div>';
   }
   /**
    * ui.dialog({ mount, title | titleText, titleId, titleTestid, subText, subId, footId, pop, testid, bodyId, bodyStyle, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
