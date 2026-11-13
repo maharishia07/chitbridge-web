@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * e2e/walk-standards-icons.cjs - THE STANDARDS PAGE'S THREE ICONS ARE THE LIBRARY ICON (WEB-ICONS-2, 2026-11-13).
- * OWNS      the element test for standards.html's STD001-U01 (back to the matrix) and STD001-U02, STD001-U03 (the two sheets' close): library part, register mount, size, name, contrast, keys.
+ * OWNS      the element test for standards.html's STD001-U01 (back to the matrix) and STD001-U02, STD001-U03 (the sheets' close: why, country readiness): library part, register mount, size, name, contrast, keys.
  * CALLED BY a person / the cloud walks (named walk-* so run-shard picks it up).  FLOW  the real page (it reads no api) -> open a sheet or the list page -> read the icon (lib/icon-measure.cjs).
  *   I1  each is drawn by ui.action: data-cbsid CMP005-B01 (close) or CMP006-B01 (back), its own mount, a button, no hand-written .back / .sh-x left
  *   I2  name (Close / Back to the matrix), a tooltip, a box of at least 44x44 at 1366 and 390
@@ -19,7 +19,7 @@ const { readIcon } = require('./lib/icon-measure.cjs');
 const ICONS = [
   { mount: 'STD001-U01', testid: 'std-back', sid: 'CMP006-B01', name: 'back', label: 'Back to the matrix' },
   { mount: 'STD001-U02', testid: 'std-sheet-x', sid: 'CMP005-B01', name: 'close', label: 'Close', sheet: 'why' },
-  { mount: 'STD001-U03', testid: 'std-sheet-x', sid: 'CMP005-B01', name: 'close', label: 'Close', sheet: 'record' }
+  { mount: 'STD001-U03', testid: 'std-sheet-x', sid: 'CMP005-B01', name: 'close', label: 'Close', sheet: 'ready' }
 ];
 
 W.run('standards-icons', async (w) => {
@@ -28,7 +28,7 @@ W.run('standards-icons', async (w) => {
   /* put the icon on screen: a sheet by its address, or the list page of a phone (a cell opens page two, where the back shows) */
   const show = async (ic, vp) => {
     await page.setViewportSize(vp);
-    await page.goto(w.base + '/standards.html' + (ic.sheet ? '?sheet=' + ic.sheet : ''));
+    await page.goto(w.base + '/standards.html' + (ic.sheet === 'ready' ? '?ready=IN' : ic.sheet ? '?sheet=' + ic.sheet : ''));
     if (ic.sheet) { await page.waitForSelector('dialog[open] [data-testid="' + ic.testid + '"]', { timeout: 10000 }); return; }
     await page.waitForSelector('[data-testid^="std-cell-"]', { timeout: 10000 });
     await page.locator('[data-testid^="std-cell-"]').first().click();
