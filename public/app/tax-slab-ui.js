@@ -102,7 +102,7 @@ function cbcatSlabPickHTML(form, opts) {
 /** the picker itself: the <select> (greyed with the reason in its title when `greyedWhy` is given) and the one line under it — the reason, or what the picker does */
 function slabPickSelect_(slabs, chosen, greyedWhy) {
   return (
-    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)"' +
+    '<select class="inp" data-testid="catg-slab" data-cbsid="SCR039-S01" onchange="cbcatField(\'default_slab\',this.value)"' +
     (greyedWhy ? ' disabled title="' + esc(greyedWhy) + '"' : '') +
     '>' +
     '<option value="">— ' +
@@ -175,7 +175,7 @@ function cbRateButtonHTML(verdict, opts) {
   var testId = opts.tid ? ' data-testid="' + esc(opts.tid) + '"' : '';
   var button =
     ' <button type="button" class="' + esc(opts.cls || 'act quiet') + '"' + testId + (allowed ? '' : ' disabled title="' + esc(verdict.why) + '"') +
-    ' onclick="' + esc(opts.onclick || '') + '">' + esc(opts.word || slabT_('Set rate')) + '</button>';
+    ' onclick="' + esc(opts.onclick || '') + '" data-cbsid="SCR039-B01">' + esc(opts.word || slabT_('Set rate')) + '</button>';
   return allowed ? button : button + ' <span class="sub" data-testid="' + esc((opts.tid || 'rate') + '-why') + '">' + esc(verdict.why) + '</span>';
 }
 
@@ -293,7 +293,7 @@ function slabMenuButton_(row, menu, opts) {
   var isSuggested = !!(row.suggested && menu.suggestion);
   var onclick = opts.pick ? opts.pick(row.id) : '';
   return (
-    '<button type="button" class="' + esc(opts.cls || 'choice') + (isSuggested ? ' suggested' : '') + '" data-testid="rate-pick-' + esc(row.id) + '" data-rate="' + esc(row.rate) + '" onclick="' + esc(onclick) + '">' +
+    '<button type="button" class="' + esc(opts.cls || 'choice') + (isSuggested ? ' suggested' : '') + '" data-testid="rate-pick-' + esc(row.id) + '" data-rate="' + esc(row.rate) + '" onclick="' + esc(onclick) + '" data-cbsid="SCR039-B02">' +
     slabMenuFace_(row, menu, opts) +
     '</button>' +
     (isSuggested ? slabCiteHTML_(menu.suggestion) : '')
