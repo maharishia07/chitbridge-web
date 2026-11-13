@@ -372,7 +372,7 @@ button{cursor:pointer}
      screen spot instead of full-width on the page. */
   .sheet{position:static!important;left:auto!important;top:auto!important;margin:0!important;
     width:100%;max-height:none;height:auto;box-shadow:none;border:0;resize:none;overflow:visible}
-  .no-print, .shft, .ovlx, #workPnl{display:none!important}
+  .no-print, .shft, .ovlx, [data-cbname="close"], #workPnl{display:none!important}
   .shbd{overflow:visible!important}
   .vtbl thead{position:static}
   .scroll{overflow:visible!important}
@@ -612,6 +612,10 @@ button{cursor:pointer}
  */
 .btn.back{background:var(--panel);border-color:var(--ghost);font-weight:700}
 .btn.back:hover{background:var(--line-soft)}
+/* the library's Close (CMP005) in the overlay's corner look: tokens only, the 44 px phone floor is the library's */
+[data-cbname="close"]{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:9px;font-size:16px;line-height:1;cursor:pointer;flex:0 0 auto}
+[data-cbname="close"]:hover{background:var(--panel)}
+[data-cbname="close"]:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 /**
  * ⭐ [found live, 2026-09-26] "apply to is not looking prominant" — scopeRow()'s picker was a plain `.btn`,
  * identical to every other secondary button on the screen, even though it decides WHICH items the whole offer
@@ -917,7 +921,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="ovlTitle">Price list</h2>
-      <button data-cbsid="OLB001-B06" class="ovlx" onclick="closePriceOverlay()" aria-label="Close" title="Close">✕</button>
+      <span id="slotClosePrice"></span>
     </div>
     <div class="ovltools">
       <input data-cbsid="OLB001-I02" type="text" id="ovlSearch" placeholder="Search products…" oninput="priceOvSearch(this.value)">
@@ -938,7 +942,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="modLabTitle">Combos and modifiers</h2>
-      <button data-cbsid="OLB001-B07" class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
+      <span id="slotCloseModLab"></span>
     </div>
     <!-- ⭐ [2026-09-27] two tabs, each carrying its own count (paintModLab() fills modLabTabs; see its own
          header comment). #modLabSearch stays a STATIC element, never replaced by innerHTML on repaint — only
@@ -961,7 +965,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   <div class="ovlpanel" style="max-width:520px">
     <div class="ovlhead">
       <h2 id="comboTillPreviewTitle">Preview</h2>
-      <button data-cbsid="OLB001-B08" class="ovlx" onclick="closeComboTillPreview()" aria-label="Close" title="Close">✕</button>
+      <span id="slotCloseTillPreview"></span>
     </div>
     <div class="ovlbody" id="comboTillPreviewBody" style="padding:16px 20px"></div>
     <div class="ovlfoot" id="comboTillPreviewFoot"></div>
@@ -974,7 +978,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
       <h3 id="workTitle"></h3>
       <span class="tag" id="workTag"></span>
       <div class="pnl" id="workPnl"></div>
-      <button data-cbsid="OLB001-B09" class="ovlx" onclick="closeWork()" aria-label="Close" title="Close" style="margin-left:auto">✕</button>
+      <span id="slotCloseWork" style="margin-left:auto"></span>
     </div>
     <div id="workDemo"></div>
     <div class="shbd" id="workBody"></div>
@@ -6144,6 +6148,15 @@ function render() {
   if (node && node.classList.contains('on')) paintWork();
 }
 applyBiz('hotel');
+/** the four ✕ corners are the library's Close (CMP005), drawn into their slots once, before the first paint (OLB001-U01..U04) */
+(function paintStaticActions() {
+  /* each press resolves the handler by name when it happens, as the old onclick="closeWork()" did (combo-mode.js declares its own closeModLab) */
+  var put = function (slot, html) { document.getElementById(slot).innerHTML = html; };
+  put('slotClosePrice', ui.action('close', { mount: 'OLB001-U01', surface: 'dialog', testid: 'close-price-list', onPress: function () { closePriceOverlay(); } }));
+  put('slotCloseModLab', ui.action('close', { mount: 'OLB001-U02', surface: 'dialog', testid: 'close-mod-lab', onPress: function () { closeModLab(); } }));
+  put('slotCloseTillPreview', ui.action('close', { mount: 'OLB001-U03', surface: 'dialog', testid: 'close-till-preview', onPress: function () { closeComboTillPreview(); } }));
+  put('slotCloseWork', ui.action('close', { mount: 'OLB001-U04', surface: 'dialog', testid: 'close-work', onPress: function () { closeWork(); } }));
+})();
 render();
 /* ⭐ T2-LABS: ?mode=combo IS the Combo Lab — the builder opens as the page, under its own name */
 var LAB_MODE = new URLSearchParams(location.search).get('mode') === 'combo' ? 'combo' : 'offer';

@@ -1460,12 +1460,12 @@ function crmLogOpen(p) {
       '</div>'
     );
   };
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Log')) +
-      ' · ' +
-      esc(p.display_name) +
-      '</div></div><div class="mbody" data-testid="crm-log-sheet">' +
+  ui.dialog({
+    mount: 'CRM006-U201',
+    pop: 'POP101',
+    titleText: tx('Log') + ' · ' + p.display_name,
+    testid: 'crm-log-sheet',
+    body:
       '<div class="supacts">' +
       seg(
         'logkind',
@@ -1507,13 +1507,12 @@ function crmLogOpen(p) {
         })
         .join('') +
       '</div></div>' +
-      '<div id="crm_log_msg" class="hint" role="status"></div></div>' +
-      '<div class="mfoot"><button data-cbsid="CMP003" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button><button data-cbsid="CMP001" type="button" class="pri" data-crm="logsave" data-testid="crm-log-save">' +
-      esc(tx('Save')) +
-      '</button></div>'
-  );
+      '<div id="crm_log_msg" class="hint" role="status"></div>',
+    actions: [
+      { name: 'cancel', options: { mount: 'CRM006-U201' } },
+      { name: 'save', options: { mount: 'CRM006-U201', key: 'save', effect: 'preference', testid: 'crm-log-save', data: { crm: 'logsave' } } }
+    ]
+  });
   document.getElementById('crm_log_body').focus();
 }
 async function crmLogSave() {
