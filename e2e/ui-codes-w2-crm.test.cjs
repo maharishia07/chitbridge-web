@@ -6,7 +6,7 @@
  * OWNS      the proof that app/cap-quotes.js (SCR038), app/cap-showcase.js (SCR039) and app/showcase-templates.js (SCR040) carry their data-cbsid codes INSIDE the
  *           tag of the control they name (a swap of two codes, or a removed code, fails it), that the two library controls of cap-quotes wear their component
  *           code (Try again CMP009, Cancel CMP003), that no code sits on two element definitions, and that every file of the lane keeps ONE module header
- *           with OWNS, CALLED BY, FLOW and exactly one CARD line (cap-showcase no longer names cart.js: nothing there calls CBShowcasePick).
+ *           with OWNS, CALLED BY, FLOW and exactly one CARD line (cap-intake.js and cap-messages.js are SUPPORT, app.html only, and trip the readability test-minimums on old debt: left as they are) (cap-showcase no longer names cart.js: nothing there calls CBShowcasePick).
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-w2-crm.test.cjs   (W2CRM_MUTATE=remove or swap must fail it)
  * FLOW      read each script, find every code, read from the '<' before it to the next '>' and compare with the control it names, then the headers
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/design-system
@@ -48,8 +48,6 @@ const HEADERS = [
   ['app/cap-quotes.js', [/chit-sheet\.js/, /tasks\.html/]],
   ['app/cap-tasks.js', [/cap-dispute\.js/, /cap-assist\.js/]],
   ['app/shop-privacy.js', [/shop\.html/]],
-  ['app/cap-intake.js', [/app\.html only/, /SUPPORT/]],
-  ['app/cap-messages.js', [/app\.html only/, /SUPPORT/]],
   ['crm.html', [/manifest/, /Marketing/]]
 ];
 

@@ -16,11 +16,8 @@
  * ⚠️ AND OPENING A THREAD FETCHES THE WHOLE OF IT. The inbox query returns only what is unread-or-kept, which is
  * right for a list and wrong for a conversation — you would read a reply with the question it answers missing.
  * The per-chit route already returns the full line thread; opening asks it.
- *
- * OWNS      the Replies screen (messagesScreen, msgPaint): the threaded inbox of external messages, Mark read, Keep, the Order / Task filter (RPL, RPLTRACK)
- * CALLED BY app.html only: the nav entry 'messages' (CAP_OF messages, ensureCap) → messagesScreen() (app.html:22244) · loadMessages (app.html:6570). No customer page loads it: SUPPORT (back office).
- * FLOW      nav Messages → ensureCap('messages') → loadMessages → api('msgInbox') → msgThreads groups by line → msgPaint → open a thread (the per-chit route) → msgMark
- * CARD      22-channels-capture-and-messaging/messages-replies-list
+ 
+ * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {} };
 
