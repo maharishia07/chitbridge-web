@@ -154,7 +154,7 @@
           esc(x.name || '') +
           '</div>';
       var del = o.onRemove
-        ? '<button data-cbsid="SCR075-B01" type="button" data-testid="prod-media-del-' +
+        ? '<button data-cbsid="SCR055-B01" type="button" data-testid="prod-media-del-' +
           esc(x.id) +
           '" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer" onclick="' +
           esc(o.onRemove.replace('{id}', String(x.id))) +

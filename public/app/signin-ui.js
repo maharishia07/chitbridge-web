@@ -604,7 +604,7 @@
         .methods()
         .map(function (item) {
           return (
-            '<button data-cbsid="SCR074-B01" type="button" class="cbsi-m" data-cbsi="method" data-method="' +
+            '<button data-cbsid="SCR054-B01" type="button" class="cbsi-m" data-cbsi="method" data-method="' +
             item +
             '" data-testid="signin-' +
             item +
@@ -621,10 +621,10 @@
         why +
         '<label>' +
         esc(W.id) +
-        '<input data-cbsid="SCR074-I01" name="id" data-testid="signin-id" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' +
+        '<input data-cbsid="SCR054-I01" name="id" data-testid="signin-id" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" value="' +
         esc(S.typed) +
         '"></label>' +
-        '<button data-cbsid="SCR074-B02" type="submit" class="cbsi-go" data-testid="signin-go"' +
+        '<button data-cbsid="SCR054-B02" type="submit" class="cbsi-go" data-testid="signin-go"' +
         busy +
         '>' +
         esc(S.busy ? W.working : W.go) +
@@ -642,7 +642,7 @@
         S.choices
           .map(function (item, index) {
             return (
-              '<button data-cbsid="SCR074-B03" type="button" class="cbsi-ch" data-cbsi="choose" data-i="' +
+              '<button data-cbsid="SCR054-B03" type="button" class="cbsi-ch" data-cbsi="choose" data-i="' +
               index +
               '" data-testid="signin-choice"><b>' +
               esc(item.name || item.id) +
@@ -652,7 +652,7 @@
             );
           })
           .join('') +
-        '<button data-cbsid="SCR074-B04" type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' +
+        '<button data-cbsid="SCR054-B04" type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' +
         esc(W.back) +
         '</button>';
     } else if (S.at === 'credential') {
@@ -668,20 +668,20 @@
         '<label>' +
         esc(local ? W.localPin : W.secret) +
         /* UI element SGN-secret · path CBSignin.mount@<host page>›sign-in window›credential: the ONE masked box (testid kept: signin-code) */
-        '<input data-cbsid="SCR074-I02" name="cred" data-el="CBSignin.secret@signin-ui.js›credential" data-testid="' +
+        '<input data-cbsid="SCR054-I02" name="cred" data-el="CBSignin.secret@signin-ui.js›credential" data-testid="' +
         (pin ? 'signin-pin' : 'signin-code') +
         '" type="password" inputmode="numeric"' +
         (pin ? ' pattern="[0-9]*" maxlength="4"' : ' maxlength="64"') +
         ' autocomplete="one-time-code" enterkeyhint="go"></label>' +
-        '<button data-cbsid="SCR074-B05" type="submit" class="cbsi-go" data-testid="signin-verify"' +
+        '<button data-cbsid="SCR054-B05" type="submit" class="cbsi-go" data-testid="signin-verify"' +
         busy +
         '>' +
         esc(S.busy ? W.working : W.verify) +
         '</button>' +
         '<div class="cbsi-row">' +
-        (local ? '' : '<button data-cbsid="SCR074-B06" type="button" class="cbsi-ln" data-cbsi="again" data-testid="signin-again">' + esc(W.again) + '</button>') +
-        (local && m.online() ? '<button data-cbsid="SCR074-B07" type="button" class="cbsi-ln" data-cbsi="line" data-testid="signin-line">' + esc(W.line) + '</button>' : '') +
-        '<button data-cbsid="SCR074-B08" type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' +
+        (local ? '' : '<button data-cbsid="SCR054-B06" type="button" class="cbsi-ln" data-cbsi="again" data-testid="signin-again">' + esc(W.again) + '</button>') +
+        (local && m.online() ? '<button data-cbsid="SCR054-B07" type="button" class="cbsi-ln" data-cbsi="line" data-testid="signin-line">' + esc(W.line) + '</button>' : '') +
+        '<button data-cbsid="SCR054-B08" type="button" class="cbsi-ln" data-cbsi="back" data-testid="signin-back">' +
         esc(W.back) +
         '</button></div>';
     } else if (S.at === 'setpin') {
@@ -695,16 +695,16 @@
         why +
         '<label>' +
         esc(W.pin1) +
-        '<input data-cbsid="SCR074-I03" name="pin1" data-testid="signin-pin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password"></label>' +
+        '<input data-cbsid="SCR054-I03" name="pin1" data-testid="signin-pin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password"></label>' +
         '<label>' +
         esc(W.pin2) +
-        '<input data-cbsid="SCR074-I04" name="pin2" data-testid="signin-pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="done"></label>' +
-        '<button data-cbsid="SCR074-B09" type="submit" class="cbsi-go" data-testid="signin-pinsave"' +
+        '<input data-cbsid="SCR054-I04" name="pin2" data-testid="signin-pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="done"></label>' +
+        '<button data-cbsid="SCR054-B09" type="submit" class="cbsi-go" data-testid="signin-pinsave"' +
         busy +
         '>' +
         esc(S.busy ? W.working : W.save) +
         '</button>' +
-        (lp ? '<button data-cbsid="SCR074-B10" type="button" class="cbsi-ln" data-cbsi="later" data-testid="signin-later">' + esc(W.later) + '</button>' : '');
+        (lp ? '<button data-cbsid="SCR054-B10" type="button" class="cbsi-ln" data-cbsi="later" data-testid="signin-later">' + esc(W.later) + '</button>' : '');
     } else if (S.at === 'in') {
       h = '<p class="cbsi-in" data-testid="signin-in">' + esc(S.said) + '</p>';
     }

@@ -167,7 +167,7 @@ function regCountryChoice() {
     h +=
       '<label style="display:block;margin-top:4px">' +
       esc(tx('Another country')) +
-      ' <select data-cbsid="SCR073-S01" class="inp" data-testid="reg-country" style="width:auto;max-width:100%;display:inline-block;padding:4px 8px" onchange="REG.country=this.value;REG.agreed=false;renderRegister()">' +
+      ' <select data-cbsid="SCR053-S01" class="inp" data-testid="reg-country" style="width:auto;max-width:100%;display:inline-block;padding:4px 8px" onchange="REG.country=this.value;REG.agreed=false;renderRegister()">' +
       (REG.country ? '' : '<option value="" selected>' + esc(tx('Pick one')) + '</option>') +
       list
         .map(function (item) {
@@ -223,7 +223,7 @@ function govPanel() {
       .join('') +
     '</div>' +
     /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. GOV-SPIN: the same one control accepts the country. */
-    '<label class="govagree"><input data-cbsid="SCR073-I01" type="checkbox" id="r_agree" data-testid="reg-agree"' +
+    '<label class="govagree"><input data-cbsid="SCR053-I01" type="checkbox" id="r_agree" data-testid="reg-agree"' +
     (REG.agreed ? ' checked' : '') +
     ' onchange="REG.agreed=this.checked;renderRegister()">' +
     '<span>' +
@@ -261,19 +261,19 @@ function renderRegister() {
            acmetraders.clothing   a NETWORK node — . binds a store to its network
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
-    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}<label class="fl">${esc(tx('User ID'))}</label><input data-cbsid="SCR073-I02" class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
+    form = `${typeof onbBanner === 'function' ? onbBanner() : ''}<label class="fl">${esc(tx('User ID'))}</label><input data-cbsid="SCR053-I02" class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
        <div data-testid="reg-name-hint" style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px">${txf('8+ letters, numbers or dashes · {fixed}', { fixed: '<b>' + esc(tx("can't be changed later")) + '</b>' })}
          <span data-testid="reg-name-why" tabindex="0" style="cursor:help" title="${esc(tx('No spaces, no @ . ~ (kept for staff, network stores and suppliers). Your business name can be anything; set it after you sign in.'))}">ⓘ</span></div>
-       <label class="fl">${esc(tx('Email'))}</label><input data-cbsid="SCR073-I03" class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
+       <label class="fl">${esc(tx('Email'))}</label><input data-cbsid="SCR053-I03" class="inp" id="r_email" data-testid="reg-email" placeholder="you@yourshop.example" value="${esc(R.email)}">
        ${R.err ? `<div class="err">${R.err}</div>` : ''}
-       <button data-cbsid="SCR073-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
+       <button data-cbsid="SCR053-B01" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> ' + esc(tx('Registering…')) : esc(tx('Register')) + ' <span class=arw>→</span>'}</button>`;
   } else {
-    form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR073-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
+    form = `<div ${who}>${esc(tx('User ID'))} <b>${esc(R.name)}</b> · <a data-cbsid="SCR053-C01" onclick="regReset()">${esc(tx('change'))}</a></div>
        ${regVerticalChooser()}
        ${govPanel()}
-       <label class="fl">${esc(txf('Code sent to {e}', { e: R.email }))}</label><input data-cbsid="SCR073-I04" class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
+       <label class="fl">${esc(txf('Code sent to {e}', { e: R.email }))}</label><input data-cbsid="SCR053-I04" class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code" autocomplete="one-time-code" inputmode="numeric">
        ${R.err ? `<div class="err">${R.err}</div>` : ''}
-       <button data-cbsid="SCR073-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
+       <button data-cbsid="SCR053-B02" class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy || !R.agreed ? 'disabled' : ''}>${R.busy ? '<span class="spin"></span> Verifying…' : 'Verify &amp; enter <span class=arw>→</span>'}</button>`;
   }
   /* ⭐ FX-UX2: a small app's pane — the same form, under the page's own heading; "Sign in" is Home's one sign-in window (never #/login) */
   if (REG_AT.host) {
@@ -293,7 +293,7 @@ function renderRegister() {
     <div class="body">
       ${form}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
-      <div class="swap">Already registered? <a data-cbsid="SCR073-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
+      <div class="swap">Already registered? <a data-cbsid="SCR053-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
     </div>
   </div></div>`;
   const node = document.getElementById('r_go');
@@ -413,7 +413,7 @@ function regVerticalChooser() {
         const sel = (REG.constitution || '') === item.key;
         const caps = (item.capabilities || []).join(' · ');
         return (
-          '<div data-cbsid="SCR073-C03" data-testid="reg-vertical-' +
+          '<div data-cbsid="SCR053-C03" data-testid="reg-vertical-' +
           esc(item.key) +
           '" onclick="REG.constitution=\'' +
           esc(item.key) +
@@ -432,8 +432,8 @@ function regVerticalChooser() {
       .join('') +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">' +
     txf('None fits? {tailor} · {contact}', {
-      tailor: '<a data-cbsid="SCR073-C04" onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a>',
-      contact: '<a data-cbsid="SCR073-C05" onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Contact the team') + '</a>'
+      tailor: '<a data-cbsid="SCR053-C04" onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a>',
+      contact: '<a data-cbsid="SCR053-C05" onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Contact the team') + '</a>'
     }) +
     '</div>' +
     '</div>'

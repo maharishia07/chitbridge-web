@@ -7,7 +7,7 @@
  *           register-form.js, signin-ui.js, signin-lab.html and the Copy-the-key button of cap-settings.js carries a data-cbsid, that each code sits
  *           INSIDE its own tag (the tag name and the text that follows the code are pinned, so a swap of two codes fails), that no code is written
  *           twice, and that the counts per file hold (60 coded elements in all).
- *           Known limit: SCR074-B04 and SCR074-B08 are the same Back button drawn in two steps, so a swap of those two is not told apart.
+ *           Known limit: SCR054-B04 and SCR054-B08 are the same Back button drawn in two steps, so a swap of those two is not told apart.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-w2-net.test.cjs   (W2NET_MUTATE=remove or W2NET_MUTATE=swap must fail it)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/screen-library
  * Register  codes are looked up in UIID_REG, else ../chitbridge-docs/SCREENS.json, else C:/dev/SCREENS.json: a code not there yet is printed as
@@ -34,47 +34,47 @@ const WANT = [
   ["BUS002-B02","app/cap-suppliers.js","button","type=\"button\" class=\"act\" data-testid=\"sup-add-go\">' + esc(t('Ad"],
   ["BUS002-B03","app/cap-suppliers.js","button","type=\"button\" class=\"act quiet\" data-x>' + esc(t('Cancel')) + '<"],
   ["BUS002-B04","app/cap-suppliers.js","button","type=\"button\" class=\"act quiet\" data-testid=\"sup-add-local\">' + "],
-  ["SCR075-B01","app/catalogue-lines.js","button","type=\"button\" data-testid=\"prod-media-del-' + esc(x.id) + '\" sty"],
-  ["SCR070-B01","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-link-' + index + "],
-  ["SCR070-I01","app/chit-sheet.js","input","class=\"inp\" id=\"cs_reason\" data-testid=\"cs-reason\" maxlength=\"50"],
-  ["SCR070-B02","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-reject-go\" onclick"],
-  ["SCR070-B03","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-use-auto\" onclick="],
-  ["SCR070-B04","app/chit-sheet.js","button","type=\"button\" class=\"cs-act\" data-testid=\"cs-act-' + item + '\" o"],
-  ["SCR070-B05","app/chit-sheet.js","button","type=\"button\" class=\"cs-back\" data-testid=\"cs-close\" aria-label="],
-  ["SCR071-B01","app/rail-thread.js","button","type=\"button\" class=\"' + (item === 'external' ? 'ext' : 'int') +"],
-  ["SCR071-B02","app/rail-thread.js","button","type=\"button\" class=\"rt-k' + (m.kind === item ? ' on' : '') + "],
-  ["SCR071-S01","app/rail-thread.js","select","class=\"rt-sel\" data-rt-act=\"line\" data-testid=\"rt-line\"><option "],
-  ["SCR071-T01","app/rail-thread.js","textarea","data-rt-act=\"text\" data-testid=\"' + esc(ids.text || 'msg-body') "],
-  ["SCR071-B03","app/rail-thread.js","button","type=\"button\" class=\"rt-send ' + tone + '\" data-rt-act=\"send\" da"],
-  ["SCR072-B01","app/rail-advice.js","button","type=\"button\" class=\"ra-b pri' + (send.ok ? '' : ' off') + '\" da"],
-  ["SCR072-B02","app/rail-advice.js","button","type=\"button\" class=\"ra-b\" data-ra-act=\"copy\" data-testid=\"adv-c"],
-  ["SCR072-B03","app/rail-advice.js","button","type=\"button\" class=\"ra-b off\" aria-disabled=\"true\" data-testid="],
-  ["SCR073-S01","app/register-form.js","select","class=\"inp\" data-testid=\"reg-country\" style=\"width:auto;max-widt"],
-  ["SCR073-I01","app/register-form.js","input","type=\"checkbox\" id=\"r_agree\" data-testid=\"reg-agree\"' + (REG.agr"],
-  ["SCR073-I02","app/register-form.js","input","class=\"inp\" id=\"r_name\" data-testid=\"reg-name\" placeholder=\"acme"],
-  ["SCR073-I03","app/register-form.js","input","class=\"inp\" id=\"r_email\" data-testid=\"reg-email\" placeholder=\"yo"],
-  ["SCR073-B01","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy ? '"],
-  ["SCR073-C01","app/register-form.js","a","onclick=\"regReset()\">${esc(tx('change'))}</a></div> ${regVertica"],
-  ["SCR073-I04","app/register-form.js","input","class=\"inp\" id=\"r_otp\" data-testid=\"reg-otp\" placeholder=\"6-digi"],
-  ["SCR073-B02","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy || "],
-  ["SCR073-C02","app/register-form.js","a","onclick=\"go('#/login')\">${tx('Sign in')}</a></div> </div> </div>"],
-  ["SCR073-C03","app/register-form.js","div","data-testid=\"reg-vertical-' + esc(item.key) + '\" onclick=\"REG.co"],
-  ["SCR073-C04","app/register-form.js","a","onclick=\"regTailor();return false\" style=\"color:var(--blue);curs"],
-  ["SCR073-C05","app/register-form.js","a","onclick=\"regContact();return false\" style=\"color:var(--blue);cur"],
-  ["SCR074-B01","app/signin-ui.js","button","type=\"button\" class=\"cbsi-m\" data-cbsi=\"method\" data-method=\"' +"],
-  ["SCR074-I01","app/signin-ui.js","input","name=\"id\" data-testid=\"signin-id\" type=\"text\" inputmode=\"email\" "],
-  ["SCR074-B02","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-go\"' + busy + "],
-  ["SCR074-B03","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ch\" data-cbsi=\"choose\" data-i=\"' + ind"],
-  ["SCR074-B04","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"back\" data-testid=\"sign"],
-  ["SCR074-I02","app/signin-ui.js","input","name=\"cred\" data-el=\"CBSignin.secret@signin-ui.js›credential\" da"],
-  ["SCR074-B05","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-verify\"' + bus"],
-  ["SCR074-B06","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"again\" data-testid=\"sig"],
-  ["SCR074-B07","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"line\" data-testid=\"sign"],
-  ["SCR074-B08","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"back\" data-testid=\"sign"],
-  ["SCR074-I03","app/signin-ui.js","input","name=\"pin1\" data-testid=\"signin-pin1\" type=\"password\" inputmode="],
-  ["SCR074-I04","app/signin-ui.js","input","name=\"pin2\" data-testid=\"signin-pin2\" type=\"password\" inputmode="],
-  ["SCR074-B09","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-pinsave\"' + bu"],
-  ["SCR074-B10","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"later\" data-testid=\"sig"],
+  ["SCR055-B01","app/catalogue-lines.js","button","type=\"button\" data-testid=\"prod-media-del-' + esc(x.id) + '\" sty"],
+  ["SCR050-B01","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-link-' + index + "],
+  ["SCR050-I01","app/chit-sheet.js","input","class=\"inp\" id=\"cs_reason\" data-testid=\"cs-reason\" maxlength=\"50"],
+  ["SCR050-B02","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-reject-go\" onclick"],
+  ["SCR050-B03","app/chit-sheet.js","button","type=\"button\" class=\"optchip\" data-testid=\"cs-use-auto\" onclick="],
+  ["SCR050-B04","app/chit-sheet.js","button","type=\"button\" class=\"cs-act\" data-testid=\"cs-act-' + item + '\" o"],
+  ["SCR050-B05","app/chit-sheet.js","button","type=\"button\" class=\"cs-back\" data-testid=\"cs-close\" aria-label="],
+  ["SCR051-B01","app/rail-thread.js","button","type=\"button\" class=\"' + (item === 'external' ? 'ext' : 'int') +"],
+  ["SCR051-B02","app/rail-thread.js","button","type=\"button\" class=\"rt-k' + (m.kind === item ? ' on' : '') + "],
+  ["SCR051-S01","app/rail-thread.js","select","class=\"rt-sel\" data-rt-act=\"line\" data-testid=\"rt-line\"><option "],
+  ["SCR051-T01","app/rail-thread.js","textarea","data-rt-act=\"text\" data-testid=\"' + esc(ids.text || 'msg-body') "],
+  ["SCR051-B03","app/rail-thread.js","button","type=\"button\" class=\"rt-send ' + tone + '\" data-rt-act=\"send\" da"],
+  ["SCR052-B01","app/rail-advice.js","button","type=\"button\" class=\"ra-b pri' + (send.ok ? '' : ' off') + '\" da"],
+  ["SCR052-B02","app/rail-advice.js","button","type=\"button\" class=\"ra-b\" data-ra-act=\"copy\" data-testid=\"adv-c"],
+  ["SCR052-B03","app/rail-advice.js","button","type=\"button\" class=\"ra-b off\" aria-disabled=\"true\" data-testid="],
+  ["SCR053-S01","app/register-form.js","select","class=\"inp\" data-testid=\"reg-country\" style=\"width:auto;max-widt"],
+  ["SCR053-I01","app/register-form.js","input","type=\"checkbox\" id=\"r_agree\" data-testid=\"reg-agree\"' + (REG.agr"],
+  ["SCR053-I02","app/register-form.js","input","class=\"inp\" id=\"r_name\" data-testid=\"reg-name\" placeholder=\"acme"],
+  ["SCR053-I03","app/register-form.js","input","class=\"inp\" id=\"r_email\" data-testid=\"reg-email\" placeholder=\"yo"],
+  ["SCR053-B01","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy ? '"],
+  ["SCR053-C01","app/register-form.js","a","onclick=\"regReset()\">${esc(tx('change'))}</a></div> ${regVertica"],
+  ["SCR053-I04","app/register-form.js","input","class=\"inp\" id=\"r_otp\" data-testid=\"reg-otp\" placeholder=\"6-digi"],
+  ["SCR053-B02","app/register-form.js","button","class=\"btn gold\" id=\"r_go\" data-testid=\"reg-submit\" ${R.busy || "],
+  ["SCR053-C02","app/register-form.js","a","onclick=\"go('#/login')\">${tx('Sign in')}</a></div> </div> </div>"],
+  ["SCR053-C03","app/register-form.js","div","data-testid=\"reg-vertical-' + esc(item.key) + '\" onclick=\"REG.co"],
+  ["SCR053-C04","app/register-form.js","a","onclick=\"regTailor();return false\" style=\"color:var(--blue);curs"],
+  ["SCR053-C05","app/register-form.js","a","onclick=\"regContact();return false\" style=\"color:var(--blue);cur"],
+  ["SCR054-B01","app/signin-ui.js","button","type=\"button\" class=\"cbsi-m\" data-cbsi=\"method\" data-method=\"' +"],
+  ["SCR054-I01","app/signin-ui.js","input","name=\"id\" data-testid=\"signin-id\" type=\"text\" inputmode=\"email\" "],
+  ["SCR054-B02","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-go\"' + busy + "],
+  ["SCR054-B03","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ch\" data-cbsi=\"choose\" data-i=\"' + ind"],
+  ["SCR054-B04","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"back\" data-testid=\"sign"],
+  ["SCR054-I02","app/signin-ui.js","input","name=\"cred\" data-el=\"CBSignin.secret@signin-ui.js›credential\" da"],
+  ["SCR054-B05","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-verify\"' + bus"],
+  ["SCR054-B06","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"again\" data-testid=\"sig"],
+  ["SCR054-B07","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"line\" data-testid=\"sign"],
+  ["SCR054-B08","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"back\" data-testid=\"sign"],
+  ["SCR054-I03","app/signin-ui.js","input","name=\"pin1\" data-testid=\"signin-pin1\" type=\"password\" inputmode="],
+  ["SCR054-I04","app/signin-ui.js","input","name=\"pin2\" data-testid=\"signin-pin2\" type=\"password\" inputmode="],
+  ["SCR054-B09","app/signin-ui.js","button","type=\"submit\" class=\"cbsi-go\" data-testid=\"signin-pinsave\"' + bu"],
+  ["SCR054-B10","app/signin-ui.js","button","type=\"button\" class=\"cbsi-ln\" data-cbsi=\"later\" data-testid=\"sig"],
   ["SLB001-B01","signin-lab.html","button","type=\"button\" data-tab=\"window\" aria-pressed=\"true\" data-testid="],
   ["SLB001-B02","signin-lab.html","button","type=\"button\" data-tab=\"roadmap\" aria-pressed=\"false\" data-testi"],
   ["SLB001-B03","signin-lab.html","button","type=\"button\" data-' + key + '=\"' + esc(x[0]) + '"],
@@ -110,11 +110,11 @@ for (const file of FILES) {
     const tag = tagOf(src, code);
     check(tag !== null && tag.name === name && tag.after.indexOf(marker) === 0, file + ' ' + code + ' sits inside its own <' + name + '> tag');
   });
-  const written = [...src.matchAll(/data-cbsid=\\?"((?:NET00[123]|BUS002|SCR07[0-5]|SLB001|ACC002)-[A-Z][0-9]{2})\\?"/g)].map((m) => m[1]);
+  const written = [...src.matchAll(/data-cbsid=\\?"((?:NET00[123]|BUS002|SCR05[0-5]|SLB001|ACC002)-[A-Z][0-9]{2})\\?"/g)].map((m) => m[1]);
   const dup = written.filter((code, i) => written.indexOf(code) !== i);
   check(dup.length === 0, file + ' writes no code twice' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 }
-const perFile = (file) => source(file).match(/data-cbsid=\\?"(?:NET00[123]|SCR07[0-5]|SLB001)-[A-Z][0-9]{2}\\?"/g) || [];
+const perFile = (file) => source(file).match(/data-cbsid=\\?"(?:NET00[123]|SCR05[0-5]|SLB001)-[A-Z][0-9]{2}\\?"/g) || [];
 check(WANT.length === 60, 'the table holds 60 coded elements: ' + WANT.length);
 check(perFile('app/signin-ui.js').length === 14 && perFile('app/register-form.js').length === 12, 'signin-ui.js has 14 coded elements and register-form.js 12');
 

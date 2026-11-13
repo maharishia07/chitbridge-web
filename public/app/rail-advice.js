@@ -141,7 +141,7 @@
   /** the Send button: always painted; greyed with the server's sentence when this login may not press it */
   function sendButtonHtml(panel, send) {
     return (
-      '<button data-cbsid="SCR072-B01" type="button" class="ra-b pri' +
+      '<button data-cbsid="SCR052-B01" type="button" class="ra-b pri' +
       (send.ok ? '' : ' off') +
       '" data-ra-act="send" data-testid="adv-send"' +
       (panel.failed ? ' data-action-state="failed"' : '') +
@@ -156,7 +156,7 @@
   function shareLinksHtml(block, share) {
     if (share.ok && block.share)
       return (
-        '<button data-cbsid="SCR072-B02" type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
+        '<button data-cbsid="SCR052-B02" type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
         esc(T(W.copy)) +
         '</button>' +
         '<a class="ra-b" href="' +
@@ -171,7 +171,7 @@
         '</a>'
       );
     return (
-      '<button data-cbsid="SCR072-B03" type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
+      '<button data-cbsid="SCR052-B03" type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
       esc(share.say || '') +
       '">↗ ' +
       esc(T(W.share)) +

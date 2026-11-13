@@ -351,7 +351,7 @@
                 nestedV = verdict(m, item),
                 on = m.channel === item;
               return (
-                '<button data-cbsid="SCR071-B01" type="button" class="' +
+                '<button data-cbsid="SCR051-B01" type="button" class="' +
                 (item === 'external' ? 'ext' : 'int') +
                 (on ? ' on' : '') +
                 (ok ? '' : ' off') +
@@ -383,7 +383,7 @@
           o.kinds
             .map(function (item) {
               return (
-                '<button data-cbsid="SCR071-B02" type="button" class="rt-k' +
+                '<button data-cbsid="SCR051-B02" type="button" class="rt-k' +
                 (m.kind === item ? ' on' : '') +
                 '" data-rt-act="kind" data-k="' +
                 esc(item) +
@@ -399,7 +399,7 @@
       !o.line_id && !disp && o.lines && o.lines.length
         ? '<label class="rt-row">' +
           esc(T(W.about)) +
-          ' <select data-cbsid="SCR071-S01" class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
+          ' <select data-cbsid="SCR051-S01" class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
           esc(T(W.whole)) +
           '</option>' +
           o.lines
@@ -418,7 +418,7 @@
       (toggle || kinds ? '<div class="rt-row">' + toggle + kinds + '</div>' : '') +
       offWhy +
       lines +
-      '<textarea data-cbsid="SCR071-T01" data-rt-act="text" data-testid="' +
+      '<textarea data-cbsid="SCR051-T01" data-rt-act="text" data-testid="' +
       esc(ids.text || 'msg-body') +
       '" placeholder="' +
       esc(aud) +
@@ -430,7 +430,7 @@
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-foot"><button data-cbsid="SCR071-B03" type="button" class="rt-send ' +
+      '<div class="rt-foot"><button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
       tone +
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +

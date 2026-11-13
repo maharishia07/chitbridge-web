@@ -9,7 +9,7 @@
 (b) Conflicts with standing rules
 - signin-ui.js is web master of a byte copy in the api kit (scripts/vendor-till.cjs, tools/tally-connector/signin-ui.js). A data-cbsid and a header change the copy: an api twin (vendor-till) is needed; behaviour is unchanged. Not mine to edit: said in the PR.
 - chit-sheet.js is shared by five pages: header and ids only; no option added, other callers byte-identical.
-- Screen codes: scripts shared by several pages take SCR### (never OWN###). SCR070-SCR075 are minted here from a gap left clear of the open lanes (SCR037 ops, SCR038-SCR06x for the others); cb-capability may renumber at batch time. NET001-003 and SLB001 are declared in screen-id.js and only lacked register rows.
+- Screen codes: scripts shared by several pages take SCR### (never OWN###). SCR050-SCR055 are minted here from a gap left clear of the open lanes (SCR038-SCR047 are other lanes); cb-capability may renumber at batch time. NET001-003 and SLB001 are declared in screen-id.js and only lacked register rows.
 
 (c) Simpler way: none for ids (the stamp tool is the one path). The code goes right after the tag name (tool default); no e2e regex binds any touched tag (grep of e2e/ and api tests), so attribute order is moot.
 

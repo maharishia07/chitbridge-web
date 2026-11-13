@@ -847,7 +847,7 @@
           serverSaid(m)
             .cands.map(function (item, index) {
               return (
-                '<button data-cbsid="SCR070-B01" type="button" class="optchip" data-testid="cs-link-' +
+                '<button data-cbsid="SCR050-B01" type="button" class="optchip" data-testid="cs-link-' +
                 index +
                 '" onclick="CBSheet.link(' +
                 index +
@@ -865,10 +865,10 @@
         ? '<div class="cs-use" data-testid="cs-reject"><label class="cs-sec" for="cs_reason">' +
           esc(T('Why is it refused?')) +
           '</label>' +
-          '<input data-cbsid="SCR070-I01" class="inp" id="cs_reason" data-testid="cs-reason" maxlength="500" autocomplete="off" value="' +
+          '<input data-cbsid="SCR050-I01" class="inp" id="cs_reason" data-testid="cs-reason" maxlength="500" autocomplete="off" value="' +
           esc(CS.reason || '') +
           '" oninput="CBSheet.reason(this.value)">' +
-          '<button data-cbsid="SCR070-B02" type="button" class="optchip" data-testid="cs-reject-go" onclick="CBSheet.reject()"' +
+          '<button data-cbsid="SCR050-B02" type="button" class="optchip" data-testid="cs-reject-go" onclick="CBSheet.reject()"' +
           (CS.busy ? ' disabled' : '') +
           '>' +
           esc(T('Reject — it goes on the bill')) +
@@ -878,7 +878,7 @@
       (CS.useAsk
         ? '<div class="cs-use" data-testid="cs-use">' +
           billUseChoiceHTML([m], 'CBSheet.use') +
-          '<button data-cbsid="SCR070-B03" type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' +
+          '<button data-cbsid="SCR050-B03" type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' +
           esc(T('Let my catalogue decide')) +
           '</button></div>'
         : '') +
@@ -911,7 +911,7 @@
           var why = CS.sample ? T(SAMPLE_SAY) : item === 'accept' ? no : item === 'reject' ? noR : null,
             refused = !!why; /* the server's refusal (actions.accept / .reject): shown, greyed, with its sentence */
           return (
-            '<button data-cbsid="SCR070-B04" type="button" class="cs-act" data-testid="cs-act-' +
+            '<button data-cbsid="SCR050-B04" type="button" class="cs-act" data-testid="cs-act-' +
             item +
             '" onclick="CBSheet.act(\'' +
             item +
@@ -1027,7 +1027,7 @@
     node.className = 'cs';
     node.setAttribute('aria-label', T('Bill'));
     node.innerHTML =
-      '<div class="cs-top"><button data-cbsid="SCR070-B05" type="button" class="cs-back" data-testid="cs-close" aria-label="' +
+      '<div class="cs-top"><button data-cbsid="SCR050-B05" type="button" class="cs-back" data-testid="cs-close" aria-label="' +
       esc(T('Back')) +
       '" onclick="CBSheet.close()"><span class="cs-back-ic" aria-hidden="true">←</span><span>' +
       esc(T('Back')) +
