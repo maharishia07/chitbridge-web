@@ -96,5 +96,13 @@ function pointMainAt(s, ref) { s.run(['update-ref', 'refs/remotes/origin/main', 
   expect('5b. a local run with no origin/main', verdict(s.dir, false), false);
 }
 
-console.log('\n  ' + (bad ? bad + ' case(s) wrong' : 'all 6 cases come out as stated'));
+{ // 6. a real-sized app.html (1.2 MB, over execFileSync's 1 MB default): a bump must still be read against main's
+  const s = mk();
+  const big = '/* ' + 'x'.repeat(1200 * 1024) + ' */\n';
+  s.put('public/app.html', big + s.shell('A')); s.commit('big shell', D('02')); pointMainAt(s, 'HEAD');
+  s.put('public/app/cap-x.js', '// x changed\n'); s.put('public/app.html', big + s.shell('B')); s.commit('cap change + bump on a big shell', D('05'));
+  expect('6. a cap-*.js change with a bump, app.html over 1 MB', verdict(s.dir), false);
+}
+
+console.log('\n  ' + (bad ? bad + ' case(s) wrong' : 'all 7 cases come out as stated'));
 process.exit(bad ? 1 : 0);
