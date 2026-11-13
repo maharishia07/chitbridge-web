@@ -101,6 +101,21 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++
 
   ok(/may already be saved/.test(serverErrorWords(PAY)) && !/may already/.test(serverErrorWords({ m: 'POST', idem: true })), '8 · a 5xx on a money write says it may already be saved; other writes keep the plain words');
 
+  /* 12 · the screen filter (accounts-shell actWords) hands the kept-key words back unchanged */
+  {
+    const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'accounts-shell.js'), 'utf8');
+    const a = shell.indexOf('function actWords(');
+    const b = shell.indexOf('function actSay(');
+    if (a < 0 || b < 0) throw new Error('actWords not found in accounts-shell.js');
+    const ctx3 = { String, tx: (w) => w };
+    vm.createContext(ctx3);
+    vm.runInContext(src.slice(i, j) + shell.slice(a, b) + '\nthis.actWords = actWords; this.serverErrorWords = serverErrorWords; this.deadlineWords = deadlineWords;', ctx3);
+    for (const [name, words] of [['serverErrorWords', ctx3.serverErrorWords({ idem: 'attempt' })], ['deadlineWords', ctx3.deadlineWords({ idem: 'attempt' })]]) {
+      ok(ctx3.actWords({ message: words, status: name === 'serverErrorWords' ? 503 : undefined }, 'Could not record it') === words, '12 · actWords returns ' + name + ' unchanged');
+    }
+    ok(ctx3.actWords({ message: 'Server error — please try again.', status: 503 }, 'Could not record it') === 'Could not record it', '12 · a plain 5xx still falls back to the screen words');
+  }
+
   /* 10a · cap-attach.js callDoor */
   {
     const sent = [];

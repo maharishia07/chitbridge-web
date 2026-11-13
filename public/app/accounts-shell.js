@@ -554,6 +554,7 @@ var CBAction = (function () {
     var m = String((e && e.message) || '');
     if (/Already working/i.test(m)) return tx('Still finishing the last one — one moment');
     if (/session expired|sign in again/i.test(m)) return tx('Your session expired — please sign in again');
+    if (typeof isKeptKeyWords === 'function' && isKeptKeyWords(m)) return m; /* core.js: a 5xx or a 90 s abort on a kept key says check first; never "nothing was sent" */
     if (/offline|Failed to fetch|network|No answer from the server/i.test(m)) return tx('No connection — nothing was sent. Try again');
     var st = e && e.status;
     if (st >= 400 && st < 500 && st !== 404 && m && !/^API \d/.test(m)) return m;

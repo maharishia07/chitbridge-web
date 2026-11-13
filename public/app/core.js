@@ -1317,6 +1317,10 @@ function serverErrorWords(endpoint) {
   if (endpoint.idem === 'attempt') return 'Something went wrong on our side. This may already be saved: check before you try again.';
   return 'Server error — please try again.';
 }
+/** isKeptKeyWords(text) → true for the words above: a screen-level words filter (accounts-shell actWords) lets them through unchanged */
+function isKeptKeyWords(text) {
+  return /may already be saved/i.test(String(text || ''));
+}
 /** deadlineWords(endpoint) → the words for the 90 s abort: the same meaning as a 5xx when the key is kept */
 function deadlineWords(endpoint) {
   if (endpoint.idem === 'attempt') return 'No answer in 90 s. This may already be saved: check before you try again.';
