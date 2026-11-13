@@ -26,7 +26,7 @@ const sb = {
   confirmAsk: function () { asks.push(Array.prototype.slice.call(arguments)); }
 };
 vm.createContext(sb);
-vm.runInContext(liftFns('public/app/cap-categories.js', ['cbcatOfferCats', 'cbcatCount', 'cbcatOfferToggle', '_cbcatOfferSave']), sb);
+vm.runInContext(liftFns('public/app/cap-categories.js', ['cbcatOfferCats', 'cbcatCount', 'cbcatOfferToggle', 'cbcatOfferReach', 'cbcatOfferRulesOf', 'cbcatRulesWithCategory', '_cbcatOfferSave']), sb);
 
 (async () => {
   const btn = { className: 'chip', disabled: false };
