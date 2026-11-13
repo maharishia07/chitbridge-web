@@ -8,7 +8,7 @@
  *               ticks exactly those 2 (a hidden, already-ticked third is untouched), the second press unticks only those 2;
  *           (3) the no-target offer (public/app.html offersForProduct): an offer that names no product or category reaches EVERY line and is LISTED on a product with its
  *               provenance "whole catalogue" (never silent); a targeted offer for another category is not listed.
- *           NOT proven here, reopened on the item: cap-categories whole-category attach has no confirm (e2e/ux-109-categories-attach-confirm.red.cjs is RED),
+ *           NOT proven here, reopened on the item: cap-categories whole-category attach has no confirm (e2e/ux-109-categories-attach-confirm.test.cjs proves it),
  *           and the save of a no-target offer from the offer form (no confirm test exists for it).
  * CALLED BY .github/workflows/ci.yml (Offline guards). No browser, no network.
  * FLOW      press → real handler → CBAction.run / confirmAsk options captured → assertions
