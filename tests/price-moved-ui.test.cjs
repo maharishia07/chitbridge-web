@@ -46,23 +46,23 @@ check('the words of the answer never decide: a 409 PRICE_MOVED with other words 
 
 /* Use the new prices */
 const a = P.usingNew([mint()], answer(), 'INR');
-check('new prices: price 100 -> 120, total 2 x 120 = 240 (the server prices the bill, no total is sent back)', a.lines.length === 1 && a.lines[0].price === 120 && a.lines[0].total === 240 && a.removed === 0, JSON.stringify(a));
+check('new prices: price 100 -> 120 and the line total is DROPPED (the engine run decides 283.20; no total is rebuilt here)', a.lines.length === 1 && a.lines[0].price === 120 && !('total' in a.lines[0]) && a.removed === 0, JSON.stringify(a));
 check('new prices: the original line is not touched (a copy is sent)', true && mint().price === 100);
 const orig = [mint({ discount: 5, total: 195 })];
 const b = P.usingNew(orig, answer(), 'INR');
-check('new prices with a 5.00 discount: 2 x 120.00 - 5.00 = 235; the discount stays', b.lines[0].total === 235 && b.lines[0].discount === 5 && orig[0].price === 100, JSON.stringify(b));
+check('new prices with a 5.00 discount: the discount stays, no total (the engine nets it)', !('total' in b.lines[0]) && b.lines[0].discount === 5 && orig[0].price === 100 && orig[0].total === 195, JSON.stringify(b));
 const c = P.usingNew([mint({ freebie: true, total: 0 })], answer(), 'INR');
-check('a freebie line keeps its total 0 (the price moves, the gift stays a gift)', c.lines[0].price === 120 && c.lines[0].total === 0, JSON.stringify(c));
+check('a freebie line keeps its flag (the price moves, the gift stays a gift), no total', c.lines[0].price === 120 && c.lines[0].freebie === true && !('total' in c.lines[0]), JSON.stringify(c));
 const rate = answer({ can_send_as_drafted: false, lines: [{ item_id: ITEM, name: 'Item', kind: 'rate_moved', was_minor: null, now_minor: null, was_rate: 18, now_rate: 12 }] });
 const d = P.usingNew([mint({ gst_rate: 18 })], rate, 'INR');
-check('rate 18 -> 12: the line carries gst_rate 12, its price is as it was, total as it was', d.lines[0].gst_rate === 12 && d.lines[0].price === 100 && d.lines[0].total === 200, JSON.stringify(d));
+check('rate 18 -> 12: the line carries gst_rate 12, its price is as it was, total as it was', d.lines[0].gst_rate === 12 && d.lines[0].price === 100, JSON.stringify(d));
 const gone = answer({ can_send_as_drafted: false, lines: [{ item_id: GONE, name: 'Old', kind: 'withdrawn', was_minor: 5000, now_minor: null }] });
 const e = P.usingNew([mint(), mint({ ref: { item_id: GONE }, particulars: 'Old' })], gone, 'INR');
 check('a withdrawn line is removed, the other line stays, the count is said', e.lines.length === 1 && e.lines[0].particulars === 'Item' && e.removed === 1, JSON.stringify(e));
 const f = P.usingNew([mint({ ref: undefined, item_id: ITEM })], answer(), 'INR');
 check('a line that names its product by item_id (no ref) is matched too', f.lines[0].price === 120, JSON.stringify(f));
 const jpy = P.usingNew([mint({ price: 1000, total: 2000 })], answer({ lines: [Object.assign({}, priceFact, { was_minor: 1000, now_minor: 1200 })] }), 'JPY');
-check('JPY has no minor digits: 1200 minor is 1200 (the currency\'s own decimals)', jpy.lines[0].price === 1200 && jpy.lines[0].total === 2400, JSON.stringify(jpy));
+check('JPY has no minor digits: 1200 minor is 1200 (the currency\'s own decimals)', jpy.lines[0].price === 1200, JSON.stringify(jpy));
 
 /* Send as drafted */
 check('as drafted: the ack is handed back exactly as the server gave it', P.asDrafted(answer()) === ACK, '');
@@ -71,6 +71,11 @@ check('as drafted: a rate or a withdrawn line has no ack to hand back', P.asDraf
 /* the words */
 check('words: a price line names both figures', P.rowWords(priceFact, 'INR') === 'Item - price changed: INR 100.00 > INR 120.00', P.rowWords(priceFact, 'INR'));
 check('words: a rate line names both rates, a withdrawn line says it will be removed', P.rowWords(rate.lines[0], 'INR') === 'Item - tax rate changed: 18% > 12%' && /no longer sold/.test(P.rowWords(gone.lines[0], 'INR')) && /will be removed/.test(P.rowWords(gone.lines[0], 'INR')), '');
+
+/* the reach line: the engine's totals before > after, who gets it, how many lines */
+const withTotal = answer({ total: { currency: 'INR', before: 236, after: 283.2 }, reach: { recipients: ['Sri Ganesh Provisions'], lines: 1 } });
+check('reach words: total 236 > 283.2 from the answer, who gets it, the lines (no figure worked out here)', P.reachWords(withTotal, 'INR') === 'Total: INR 236.00 > INR 283.20 (with the new prices). Goes to Sri Ganesh Provisions · Lines 1', P.reachWords(withTotal, 'INR'));
+check('reach words: no total from the server says no total, a self bill says own copy only', P.reachWords(answer({ total: null, reach: { recipients: [], lines: 2 } }), 'INR') === 'Your own copy only · Lines 2', P.reachWords(answer({ total: null, reach: { recipients: [], lines: 2 } }), 'INR'));
 
 /* failed(): the one place every failed send goes */
 let said = null, asked = null, sent = null;
@@ -83,7 +88,7 @@ said = null;
 check('failed: an error with no message says the old plain sentence', P.failed(null, sentBody, fail, resend) === null && /Something went wrong/.test(said), said);
 check('failed: PRICE_MOVED opens the question with the answer and the shop currency, says nothing as an error', P.failed(err(answer()), sentBody, fail, resend) === null && asked && asked.data.code === 'PRICE_MOVED' && asked.currency === 'INR', '');
 sent = null; asked.choices.onNew();
-check('choose new prices: resent once with the re-priced lines, no ack, the rest of the send as it was', sent && sent.line_items[0].price === 120 && sent.price_ack === null && sent.promote_draft_id === 'D1' && sentBody.line_items[0].price === 100, JSON.stringify(sent));
+check('choose new prices: resent once with the re-priced lines, no ack, the rest of the send as it was', sent && sent.line_items[0].price === 120 && !('total' in sent.line_items[0]) && sent.price_ack === null && sent.promote_draft_id === 'D1' && sentBody.line_items[0].price === 100, JSON.stringify(sent));
 sent = null; asked.choices.onDrafted();
 check('choose as drafted: resent with the lines as drafted (100) and the server\'s ack', sent && sent.line_items[0].price === 100 && sent.price_ack === ACK, JSON.stringify(sent));
 sent = null; asked.choices.onBack();

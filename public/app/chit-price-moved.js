@@ -3,13 +3,15 @@
  * OWNS      isMoved(error) · usingNew(lines, data, currency) -> { lines, removed } · asDrafted(data) -> the ack to hand back · rowWords(fact, currency) · askQuestion(data, choices, currency)
  *           · failed(error, sent, fail, resend) -> null. The popup is ONE native <dialog> drawn here over the compose modal (ui.dialog would replace the modal host and lose the compose form).
  * CALLED BY public/app.html sendChit (its catch: every failed send goes through failed(); a 409 PRICE_MOVED opens the question, any other error says its words as before)
- * FLOW      POST /api/chits/send answers 409 PRICE_MOVED { lines, can_send_as_drafted, ack } -> the person picks:
- *             Use the new prices -> the lines are re-priced ONCE here (price and rate from the answer, total again from price x quantity - discount, a withdrawn line removed) -> sent again
+ * FLOW      POST /api/chits/send answers 409 PRICE_MOVED { lines, total { before, after, currency }, reach, can_send_as_drafted, ack (a signed token) } -> the person picks:
+ *             Use the new prices -> the lines take the answer's price and rate, their own totals are dropped, the server's engine run prices the bill -> sent again
  *             Send as drafted    -> sent again with price_ack (the stamps the 409 showed; void after 5 minutes or if a price moved again), only offered when every line is a price move
  *             Back to the draft  -> nothing sent, the draft is as it was
  * CARD      09-counter/README
+ * LIBRARY   ui-find 'dialog over modal' -> nothing registered. cb-ux-locale decided OK AS A ONE-OFF (comment on web #657): rows RAL001-D01 with B01 and B02 (Back stays CMP003) go into docs SCREENS.json
+ *           through the docs stamp run (one docs PR); the CMDB row is marked 'interim, replaced when ui.dialog gains a stacked mode' (backlog UX-193). The keyboard and contrast walks stay.
  *
- * ⚠️ THE SERVER SENDS NO TOTAL. The figures here are the per-line price (minor units) the answer names; the total the bill ends with is the server's engine run on the lines it is sent.
+ * ⚠️ THE SERVER SENDS NO TOTAL OF ITS OWN WORKING: the totals in the question are the send's engine runs, copied (before = the draft as sent, after = the same lines at the catalogue's prices). The figures here are the per-line price (minor units) the answer names; the total the bill ends with is the server's engine run on the lines it is sent.
  * ⚠️ A RATE THAT MOVED OR A WITHDRAWN LINE HAS NO "SEND AS DRAFTED": the rate in force is the law's, a withdrawn item is not sold. The button is not drawn, the sentence says why.
  * ⚠️ NOTHING IS DECIDED FOR THE PERSON: Escape, the backdrop and Back all leave the draft untouched.
  */
@@ -39,12 +41,12 @@
   function itemOf(line) {
     return String((line && ((line.ref && line.ref.item_id) || line.item_id)) || '');
   }
-  /** one line re-priced from the fact the server named: price and rate as the catalogue holds them now, the total again from price x quantity - discount */
+  /** one line re-priced from the fact the server named: price and rate as the catalogue holds them now; its own total is dropped, the server's engine run prices the bill (no total is rebuilt here) */
   function repriced(line, fact, currency) {
     var next = Object.assign({}, line);
     if (fact.now_minor != null) next.price = majorOf(fact.now_minor, currency);
     if (fact.now_rate != null) next.gst_rate = Number(fact.now_rate);
-    if (fact.now_minor != null && !line.freebie) next.total = root.CBMoney.round(next.price * (Number(next.quantity) || 0) - (Number(next.discount) || 0), currency);
+    delete next.total;
     return next;
   }
   /** "Use the new prices": the lines as they should be sent, and how many withdrawn lines were left out. Pure: the answer and the lines in, new lines out. */
@@ -75,6 +77,13 @@
   function listHtml(data, currency) {
     return '<ul data-testid="price-moved-lines" style="margin:0;padding-inline-start:18px">' + data.lines.map(function (fact) { return '<li>' + esc(rowWords(fact, currency)) + '</li>'; }).join('') + '</ul>';
   }
+  /** the money and the reach, as the server's engine gave them: total before > after, who gets it, how many lines (a missing total says nothing rather than a guess) */
+  function reachWords(data, currency) {
+    var total = data.total && data.total.after != null ? wordsOf('Total') + ': ' + root.fmtMoney(data.total.before, data.total.currency || currency) + ' > ' + root.fmtMoney(data.total.after, data.total.currency || currency) + ' (' + wordsOf('with the new prices') + '). ' : '';
+    var reach = data.reach || {};
+    var who = reach.recipients && reach.recipients.length ? wordsOf('Goes to') + ' ' + reach.recipients.join(', ') : wordsOf('Your own copy only');
+    return total + who + ' · ' + wordsOf('Lines') + ' ' + (reach.lines || data.lines.length);
+  }
   var BUTTON_CSS = 'min-height:44px;padding:0 16px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer;';
   function quietButton(code, testid, label) {
     return '<button type="button" data-testid="' + testid + '" style="' + BUTTON_CSS + 'border:1px solid var(--line,#DDD6C6);background:transparent;color:inherit" data-cbsid="' + code + '">' + esc(wordsOf(label)) + '</button>';
@@ -90,7 +99,7 @@
       '<div style="font-weight:700;font-size:18px">' + esc(wordsOf('Prices have moved')) + '</div>' +
       '<div style="color:var(--muted,#5E594D);display:flex;flex-direction:column;gap:8px">' +
       '<p style="margin:0">' + esc(wordsOf('These items changed in your catalogue after this draft was made. Nothing has been sent.')) + '</p>' +
-      listHtml(data, currency) + note + '</div>' +
+      listHtml(data, currency) + '<p style="margin:0" data-testid="price-moved-reach">' + esc(reachWords(data, currency)) + '</p>' + note + '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">' +
       quietButton(CODE_BACK, 'price-moved-back', 'Back to the draft') +
       (drafted ? quietButton(CODE_DRAFTED, 'price-moved-drafted', 'Send as drafted') : '') +
@@ -155,5 +164,5 @@
     }, currency);
     return null;
   }
-  root.CBPriceMoved = { isMoved: isMoved, usingNew: usingNew, asDrafted: asDrafted, rowWords: rowWords, askQuestion: askQuestion, failed: failed };
+  root.CBPriceMoved = { isMoved: isMoved, usingNew: usingNew, asDrafted: asDrafted, rowWords: rowWords, reachWords: reachWords, askQuestion: askQuestion, failed: failed };
 })(typeof window !== 'undefined' ? window : this);

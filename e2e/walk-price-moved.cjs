@@ -3,7 +3,7 @@
  * e2e/walk-price-moved.cjs - CTR-245 (api ctr/ctr-245-price-moved, CTR-212 S4): THE "PRICES HAVE MOVED" QUESTION WALKED, over the compose send.
  * Library card 09-counter/README. Black box: the page is the workshop (public/app.html), the shop is a FIXTURE shop, POST /api/chits/send is a stand-in inside the page (nothing reaches a server).
  * The stand-in answers the first send of a promoted draft with 409 PRICE_MOVED (the server's body: lines, can_send_as_drafted, ack) and records every body it is sent.
- * Hand figures: line 2 x 100.00, the catalogue now 120.00 (12000 minor) -> new prices send price 120, as drafted sends price 100 and the ack unchanged.
+ * Hand figures: line 2 x 100.00, the catalogue now 120.00 (12000 minor) -> the question shows the engine's totals 236.00 > 283.20 and who gets it; new prices send price 120 with no line total (the server's engine decides), as drafted sends price 100 and the signed ack unchanged.
  *
  *   P1  a send that is answered 409 PRICE_MOVED opens the question over the page: the moved line with both figures, three choices, nothing sent yet
  *   P2  Use the new prices: sent again with price 120, no ack; the question is gone
@@ -23,10 +23,10 @@ const { rule13 } = require('./lib/rule13.cjs');
 /** the module under test, by path: the walk proves it was really loaded by the page (the knowledge graph reads this name as the tested-by link) */
 const UNDER_TEST = ['public/app/chit-price-moved.js'];
 const ITEM = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-const ACK = { issued_at: '2026-11-13T10:00:00.000Z', lines: [{ item_id: ITEM, changed_at: '2026-11-13T09:00:00.000Z' }] };
-const PRICE = { line_id: 'l1', item_id: ITEM, name: 'Basmati rice 5 kg', kind: 'price_moved', was_minor: 10000, now_minor: 12000, was_rate: null, now_rate: null, changed_at: ACK.lines[0].changed_at };
-const RATE = { line_id: 'l1', item_id: ITEM, name: 'Basmati rice 5 kg', kind: 'rate_moved', was_minor: null, now_minor: null, was_rate: 18, now_rate: 12, changed_at: ACK.lines[0].changed_at };
-const MOVED = (lines, drafted) => ({ code: 'PRICE_MOVED', error: 'Prices have moved since this draft was made.', message: 'One item in this draft changed.', lines, can_send_as_drafted: drafted, ack: ACK });
+const ACK = 'eyJhbGciOiJIUzI1NiJ9.eyJraW5kIjoicHJpY2VfYWNrIn0.c2lnbmVk'; /* the server's ack is a signed token: opaque here */
+const PRICE = { line_id: 'l1', item_id: ITEM, name: 'Basmati rice 5 kg', kind: 'price_moved', was_minor: 10000, now_minor: 12000, was_rate: null, now_rate: null, changed_at: '2026-11-13T09:00:00.000Z' };
+const RATE = { line_id: 'l1', item_id: ITEM, name: 'Basmati rice 5 kg', kind: 'rate_moved', was_minor: null, now_minor: null, was_rate: 18, now_rate: 12, changed_at: '2026-11-13T09:00:00.000Z' };
+const MOVED = (lines, drafted) => ({ code: 'PRICE_MOVED', error: 'Prices have moved since this draft was made.', message: 'One item in this draft changed.', lines, can_send_as_drafted: drafted, ack: ACK, total: { currency: 'INR', before: 236, after: 283.2 }, reach: { recipients: ['Sri Ganesh Provisions'], lines: 1 } });
 
 /** RULE 13 measures THIS popup: the workshop behind it is not the popup and has its own walks. The rest of the page is made invisible (not removed) while it is measured. */
 const scope = (page, host) => page.evaluate((h) => { const st = document.createElement('style'); st.id = '__scope'; st.textContent = 'body *:not(' + h + '):not(' + h + ' *):not(:has(' + h + ')){visibility:hidden!important}'; document.head.appendChild(st); }, host);
@@ -85,7 +85,7 @@ W.run('price-moved', async (w) => {
     await page.locator('[data-testid="price-moved-new"]').click();
     await page.waitForTimeout(600);
     const second = S.sends[1] || {}, line = (second.line_items || [])[0] || {};
-    return { ok: sendCount() === 2 && line.price === 120 && line.total === 240 && second.price_ack == null && second.promote_draft_id === 'draft-1' && (await open().count()) === 0, saw: 'price ' + line.price + ' total ' + line.total + ' ack ' + JSON.stringify(second.price_ack) };
+    return { ok: sendCount() === 2 && line.price === 120 && !('total' in line) && second.price_ack == null && second.promote_draft_id === 'draft-1' && (await open().count()) === 0, saw: 'price ' + line.price + ' total ' + line.total + ' ack ' + JSON.stringify(second.price_ack) };
   });
 
   await w.step('P3', 'Send as drafted: sent again with price 100 and the server\'s ack, unchanged', async () => {
