@@ -566,12 +566,21 @@ var CBUi = (function () {
   function checkPop(code) {
     if (code && !/^POP\d{3}$/.test(code)) refuse('dialog: pop must be a register code like POP098');
   }
+  /** the optional id, data-testid and style of a dialog part, as attribute text (empty when none is given) */
+  function ownAttrs(id, testid, style) {
+    return (id ? ' id="' + escapeText(id) + '"' : '') + (testid ? ' data-testid="' + escapeText(testid) + '"' : '') + (style ? ' style="' + escapeText(style) + '"' : '');
+  }
+  /** the dialog's second line: a span.sub, or (subClass given, for a page whose own css styles another class) a div of that class */
+  function subLine(options) {
+    var tag = options.subClass ? 'div' : 'span';
+    return '<' + tag + ' class="' + escapeText(options.subClass || 'sub') + '"' + (options.subId ? ' id="' + escapeText(options.subId) + '"' : '') + '>' + escapeText(options.subText || '') + '</' + tag + '>';
+  }
   /** the header's own line: the title (a literal the catalogue translates, or titleText already resolved), the optional second line, the popup-code chip */
   function dialogHeadText(options) {
     var title = options.titleText !== undefined ? options.titleText : words(options.title);
-    var sub = options.subText || options.subId ? '<span class="sub"' + (options.subId ? ' id="' + escapeText(options.subId) + '"' : '') + '>' + escapeText(options.subText || '') + '</span>' : '';
+    var sub = options.subText || options.subId ? subLine(options) : '';
     var chip = options.pop && typeof CBScreenId !== 'undefined' && CBScreenId.popupChip ? CBScreenId.popupChip(options.pop, 'margin-inline-start:auto') : '';
-    return '<div class="t">' + escapeText(title) + '</div>' + sub + chip;
+    return '<div class="t"' + ownAttrs(options.titleId, options.titleTestid) + '>' + escapeText(title) + '</div>' + sub + chip;
   }
   function dialogHead(options) {
     var pop = options.pop ? ' data-pop="' + escapeText(options.pop) + '"' : '';
@@ -599,10 +608,10 @@ var CBUi = (function () {
     return '<div class="mfoot"' + (options.footId ? ' id="' + escapeText(options.footId) + '"' : '') + '>' + inner + '</div>';
   }
   function dialogBody(options) {
-    return '<div class="mbody"' + (options.testid ? ' data-testid="' + escapeText(options.testid) + '"' : '') + '>' + (options.body || '') + '</div>';
+    return '<div class="mbody"' + ownAttrs(options.bodyId, options.testid, options.bodyStyle) + '>' + (options.body || '') + '</div>';
   }
   /**
-   * ui.dialog({ mount, title | titleText, subText, subId, footId, pop, testid, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
+   * ui.dialog({ mount, title | titleText, titleId, titleTestid, subText, subClass, subId, footId, pop, testid, bodyId, bodyStyle, body, actions: [{ name, options }] | footerHtml, wide }) — opens through the app's
    * modal(); the corner X is modal()'s own .mx. Actions are standard components only, Cancel/Close first, the primary last.
    * pop is the popup's register code (POP###): it is written on the header (data-pop) and shown as the quote-me chip. footerHtml is for a footer the
    * caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialog invents none. Not wired yet: onClose.

@@ -13,7 +13,8 @@
  *   sentence (`may.group/send/delete`), never hidden. "Make an offer" is greyed with its own sentence: Offer Lab cannot pick a group yet.
  * ⭐ NEW PATHS (rule 4): this module (no groups screen existed — the workshop has a per-customer chip row only); the three sheets (New group ·
  *   Send · Share) — each one field over the new routes; CRM_EP gained the four rows (cap-crm.js).
- * CALLED BY crm.html (#/groups) · cap-crm.js · app.html
+ * OWNS the Groups screen (#/groups: segment and group rows, mini-card, New group, Send to group, Share with a group) and the Shop window (#/showcase)
+ * CALLED BY crm.html and app.html (script tag); cap-crm.js routes into it; cap-marketing.js calls crmGroupsWhyNot, crmGroupsLoad and GROUPS
  * FLOW crm.html → cap-crm.js → this file paints Groups & segments → the server answers each write
  * // CARD 11-crm-and-marketing/marketing-app
  * Needs cap-crm.js (CRM · crmNav · crmBar · crmGo · crmKey · crmEdit · crmOwner · crmIsLead · cells · modal · CBAction · tx/txf · esc · api). */
