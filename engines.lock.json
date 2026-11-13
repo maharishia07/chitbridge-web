@@ -1,7 +1,7 @@
 {
   "$comment": "The engines this platform ADOPTS from chitbridge-engines — ONE PIN PER ENGINE, so a rollout moves one engine at a time. Change a pin, then run: node ../chitbridge-engines/tools/adopt.cjs . — never edit an adopted file.",
   "pins": {
-    "money": "1.0.0",
+    "money": "1.89.0",
     "tax-packs": "1.86.0",
     "tax-slab": "1.72.0",
     "tax": "1.86.0",
@@ -147,7 +147,7 @@
     ]
   },
   "sha256": {
-    "money": "1d27c14c8a7240e035e916537fbd77ce945b9083c6efa9d9ec2f579f9ba58e5a",
+    "money": "4fa4e90de64298d4c7ec3756230ae8b865eaf3a2f1df1be6365724ae13305415",
     "pricing": "8fa9a3ec7cae3c049222706433c6fcfac7aaa33cae27d4a259ed60359ba208fd",
     "offers": "510f7b855206d0449fbb5abcc851b9e9dc4d665fea29ecadce1c53c6557aa39c",
     "variant": "2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946",
