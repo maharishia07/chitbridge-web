@@ -914,7 +914,7 @@
       foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
     if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
     /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
-    list.narrow = isPhone();
+    list.narrow = foldsHead(list);
     if (list.narrow && (foldPeriod || foldsToOneChip(chips, notes))) out += foldedChipHTML(list, h, foldPeriod);
     else out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
@@ -1049,8 +1049,12 @@
   function isPhone() {
     return root.matchMedia ? root.matchMedia('(max-width: ' + PHONE_MAX + 'px)').matches : root.innerWidth <= PHONE_MAX;
   }
+  /** a phone folds the head (one View chip, one notices chip); a page may ask for the same fold at any width (foldHead: true: the Ledgers head, which must stay within 20% of a laptop) */
+  function foldsHead(list) {
+    return isPhone() || !!list.o.foldHead;
+  }
   function isNarrowList(list) {
-    list.narrow = isPhone();
+    list.narrow = foldsHead(list);
     return list.narrow;
   }
   /** the one View button of a phone and its popover: Group by, Grid / Lines, Columns and CSV inside it (a list opener and its popover, CMP033); Columns opens its own sheet in its place */
