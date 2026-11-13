@@ -52,7 +52,7 @@ const VIEWS = [
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
-  entry_id: 'e-' + date, entry_no: null, event_type: null,   /* PERF1 / M29: a ledger line names its entry (the contract's keys; the journal's entry_id is the same 'e-' + date) */
+  entry_id: 'e-' + date, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null,   /* PERF1 / M29: a ledger line names its entry and its reversal pair (the contract's keys; the journal's entry_id is the same 'e-' + date) */
   source: books.source({ kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by }) });
 const L1 = LINE('k1', '2026-09-05', 'C2/26-27/0016', 'c1', 300000, 0, 300000, 'bill', 'Mayur Bhavan');
 const L2 = LINE('k2', '2026-09-06', 'C2/26-27/0017', 'c2', 300000, 0, 600000, 'bill', 'Mayur Bhavan');
