@@ -22,12 +22,10 @@
   ]
  },
  "bridge-id-audit": {
-  "count": 3,
+  "count": 1,
   "owner": "network",
   "keys": [
-   "app/cap-connector.js  esc(item.bridge_id) +",
-   "app/cap-network-member.js  esc(item.bridge_id || '') +",
-   "app/cap-network-member.js  esc(r.bridge_id || '') +"
+   "app/cap-connector.js  esc(item.bridge_id) +"
   ]
  },
  "cb-build-guard": {
@@ -173,11 +171,8 @@
   ]
  },
  "tx-leak": {
-  "count": 2,
+  "count": 0,
   "owner": "connect",
-  "keys": [
-   "app/cap-connector.js  .code:\"\")+\" \"+String(j.message||b).slice(0,160",
-   "app/cap-connector.js  e+(j.code?\" \"+j.code:\"\")+\" \"+String(j.message|"
-  ]
+  "keys": []
  }
 }

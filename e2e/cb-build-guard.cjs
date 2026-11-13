@@ -41,8 +41,14 @@ const t = (name, fn) => {
 };
 
 const git = (args) => {
-  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8' }).trim(); }
+  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim(); }
   catch (_) { return ''; }
+};
+
+/** a git read whose answer is judged: a failure THROWS with git's own message, it never becomes '' (an empty text made cbBuild read the working file) */
+const gitOrThrow = (args) => {
+  try { return execFileSync('git', ['-C', WEB].concat(args), { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); }
+  catch (e) { throw new Error('git ' + args.join(' ') + ' failed: ' + String((e.stderr || e.message || e)).trim().slice(0, 300)); }
 };
 
 /** the declared value, read from the shell that declares it */
@@ -181,8 +187,8 @@ t('a capability changed against main is shipping with a CB_BUILD different from 
   const changed = git(['diff', '--name-only', base, '--']).split('\n').map((l) => l.trim()).filter(Boolean);
   const touched = FILES.filter((f) => changed.indexOf(f) > -1);
   if (!touched.length) { console.log('      no versioned file differs from origin/main: nothing to bump'); return; }
-  const mainValue = cbBuild(git(['show', 'origin/main:public/app.html']));
-  const baseValue = cbBuild(git(['show', base + ':public/app.html']));
+  const mainValue = cbBuild(gitOrThrow(['show', 'origin/main:public/app.html']));
+  const baseValue = cbBuild(gitOrThrow(['show', base + ':public/app.html']));
   if (VALUE === mainValue || VALUE === baseValue) {
     throw new Error(touched.length + ' versioned file(s) differ from main and CB_BUILD (' + VALUE + ') is the same as '
       + (VALUE === mainValue ? 'main\'s' : 'the merge-base\'s') + ':'
