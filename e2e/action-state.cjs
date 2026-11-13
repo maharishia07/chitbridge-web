@@ -41,6 +41,9 @@ const SESSION = () => {
       if (S.failNextLock && /\/lock$/.test(p)) { S.failNextLock = false; return r.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'TypeError: Cannot read properties of undefined (reading \'status\')' }) }); }
       await new Promise((res) => setTimeout(res, HOLD));
     }
+    if (m === 'GET' && p === '/api/books/periods') {   /* the server lets a soft-locked month reopen with a reason (M157); the shared stand-in says may:false for every row, which hides the Reason box part C types into */
+      return booksRoute(S, { request: () => q, fulfill: (o) => { const j = JSON.parse(o.body); j.periods.forEach((x) => { if (x.status === 'soft_locked') x.reopen = { may: true, why: null }; }); return r.fulfill(Object.assign({}, o, { body: JSON.stringify(j) })); } });
+    }
     return booksRoute(S, r);
   };
   const count = (re) => writes.filter((w) => re.test(w.m + ' ' + w.p)).length;

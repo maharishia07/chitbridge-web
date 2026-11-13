@@ -1646,7 +1646,7 @@ body.lab-only #cbtestpanel{
 <script src="/engine/locale.js"></script>
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the template names the Settings › Policy chooser lists (S2) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick: the chooser itself, ONE copy (T3-P2-CRM) — Settings › Policy and CB CRM's Shop window draw it -->
-<script src="/app/cap-rewards.js"></script>   <!-- CBRewards: the points pane, ONE copy (T3-P2-CRM) — the Customers pane here and CB CRM's record paint it -->
+<script src="/app/cap-rewards.js"></script>   <!-- CBRewardsPane: the points pane, ONE copy (T3-P2-CRM) — the Customers pane here and CB CRM's record paint it -->
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/engine/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
@@ -14384,9 +14384,9 @@ function custNamedGroupsHTML(c) {
  * second opinion about what somebody is owed is exactly what must not exist.
  */
 async function custRewardsLoad(id) {
-  /* T3-P2-CRM: the pane is app/cap-rewards.js (CBRewards) — ONE copy, painted here and on CB CRM's record; the money is formatted in the shop's locale */
-  if (typeof CBRewards === 'undefined') return;
-  return CBRewards.load('cu_rw', {
+  /* T3-P2-CRM: the pane is app/cap-rewards.js (CBRewardsPane) — ONE copy, painted here and on CB CRM's record; the money is formatted in the shop's locale */
+  if (typeof CBRewardsPane === 'undefined') return;
+  return CBRewardsPane.load('cu_rw', {
     id: id,
     api: api,
     t: tx,
