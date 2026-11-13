@@ -15,7 +15,10 @@
  *
  * Injected by ensureCap('adopt'). Uses api, esc, modal/closeModal, toast, money, tx/txf.
  
- * CALLED BY public/app/cap-chit2.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      the Adopt panel opened from a delivery (adoptOpen · adoptPaint · adoptRow · adoptFields · adoptSet · adoptUseSku · adoptReady · adoptAccept): the shop's own name and SKU per row before Accept does anything
+ * CALLED BY public/app/cap-chit2.js (c2Adopt → ensureCap('adopt') → adoptOpen), and public/app.html names its route adoptAccept in EP. Loaded only through app.html's ensureCap, so it is app.html-only (SUPPORT)
+ * FLOW      adoptOpen (GET what the delivery offers, changes nothing) → adoptPaint → adoptSet per row → adoptAccept (POST /api/adopt/:id) after a confirm → the catalogue repaints
+ * CARD      06-catalogue-pim/adopt-a-supplier-s-delivery-into-my-catalogue
  */
 
 var ADO = { chit_id: null, data: null, edits: {} };

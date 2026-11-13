@@ -2,8 +2,10 @@
  * brings (chart of accounts · contacts · items · trial balance · open invoices and bills), each the same three steps:
  *   File → Columns (guessed by the server, confirmed here) → Preview (the DRY RUN: will add · will merge · will skip, with the reason) → Import.
  * Phase 1 is files; CA1's practice door will call the same screen later.
- * CALLED BY accounts.html (the Setup › Move in tab, BK.views.movein); the practice door (CA1) will call miConnect with a company's country
- * CARD 23-connectors-and-integrations/move-in
+ * OWNS      the Move in screen of CB Accounts › Setup (miView · miRender · miGuard · miOnStep · miImport · miConnect): the five exports as File → Columns → Preview → Import, the country gate's one line, the held rows
+ * CALLED BY public/accounts.html (script tag; BK.views movein: miView) · public/app/cap-compare.js (miRow) · public/app/cap-fx.js (miRow). The practice door (CA1) will call miConnect with a company's country
+ * FLOW      pick a source and file → columns guessed by the server and confirmed → the dry-run preview → Import through CBAction.run → the outcome and the skipped rows said in place (MVI steps 1–4, docs/process/flows.json)
+ * CARD      14-accounting/move-in-from-xero-quickbooks
  *
  * ── WHAT IS REUSED (CLAUDE.md rule 1) ────────────────────────────────────────────────────────────────────────────────────────────
  *   · the steps ARE CBSteps (app/step-flow.js): the rail, the guard-with-a-reason, the footer, focus — this file supplies only what each step renders
