@@ -17,6 +17,10 @@
  * FLOW crm.html → cap-crm.js → this file paints Groups & segments → the server answers each write
  * // CARD 11-crm-and-marketing/marketing-app
  * Needs cap-crm.js (CRM · crmNav · crmBar · crmGo · crmKey · crmEdit · crmOwner · crmIsLead · cells · modal · CBAction · tx/txf · esc · api). */
+/* OWNS the Groups screen (#/groups: one row per segment and per named group, the mini-card, New group, Send to group, Share with a group) and the Shop window (#/showcase) screen
+ * CALLED BY crm.html and app.html (the router in cap-crm.js); cap-marketing.js and cap-showcase.js use its helpers
+ * FLOW #/groups -> CBList over GET /api/crm/segments (members, reach and each member's may from the server) -> a row's mini-card -> a sheet (ui.dialog) -> CBAction write; Send asks the server twice (dry, then the one sender)
+ * CARD 07-offers-pricing-and-combos/customer-groups-and-customer-only-offers */
 'use strict';
 
 var GROUPS = {

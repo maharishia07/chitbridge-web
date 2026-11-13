@@ -17,9 +17,10 @@
  *
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
- * CARD 06-catalogue-pim/categories-and-fields
- 
+ * OWNS the Categories panel (the tree list, create/edit sheet, sort, retire) and the two start-from-a-standard-set popups (pick a trade, untick and add your own)
  * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction; the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
+ * CARD 06-catalogue-pim/categories-and-fields
  */
 var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view', form: null, counts: null };
 
@@ -411,12 +412,13 @@ function cbcatSeedAsk() {
       );
     })
     .join('');
-  modal(
-    '<div class="mhd"><div class="t">' +
-      tx('Start from a standard set') +
-      '</div>' +
-      '<div class="s">real categories from the Google Product Taxonomy</div></div>' +
-      '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
+  ui.dialog({
+    mount: 'CTG002-U201',
+    pop: 'POP027',
+    titleText: tx('Start from a standard set'),
+    subText: 'real categories from the Google Product Taxonomy',
+    body:
+      '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
       'Pick the trade you are in and its usual categories are added, nested as the standard nests them. ' +
       '<b>Nothing you already have is changed</b> — names that already exist are skipped.' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a ' +
@@ -424,11 +426,9 @@ function cbcatSeedAsk() {
       'land.</div></div>' +
       '<div class="bulklist">' +
       opts +
-      '</div></div>' +
-      '<div class="mfoot"><button data-cbsid="CTG002-B02" onclick="closeModal()">' +
-      tx('Cancel') +
-      '</button></div>'
-  );
+      '</div>',
+    footerHtml: '<button data-cbsid="CTG002-B02" onclick="closeModal()">' + tx('Cancel') + '</button>'
+  });
 }
 /**
  * ── ⭐⭐ SEE WHAT IS IN A SET, AND TAKE THE PART YOU WANT ──────────────────────────────────────────────────────
@@ -524,14 +524,13 @@ function cbcatSeedPick(v) {
     })
     .join('');
 
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(set.title) +
-      '</div>' +
-      '<div class="s">' +
-      tx('real categories from the Google Product Taxonomy') +
-      '</div></div>' +
-      '<div class="mbody">' +
+  ui.dialog({
+    mount: 'CTG002-U202',
+    pop: 'POP028',
+    titleText: set.title,
+    subText: tx('real categories from the Google Product Taxonomy'),
+    wide: true,
+    body:
       '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:8px">' +
       tx('Untick anything you do not want. A child needs its parent, so those two travel together.') +
       '</div>' +
@@ -568,14 +567,13 @@ function cbcatSeedPick(v) {
       '">' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
       tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.') +
-      '</div></div>' +
-      '</div>' +
-      '<div class="mfoot"><button data-cbsid="CTG002-B05" onclick="closeModal()">' +
+      '</div></div>',
+    footerHtml:
+      '<button data-cbsid="CTG002-B05" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>',
-    true
-  );
+      '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button>'
+  });
   cbcatSeedCount();
 }
 
