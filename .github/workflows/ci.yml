@@ -216,6 +216,7 @@ jobs:
           node tests/cur1-money-reader.test.cjs
           node tests/cur1-money-adopt-web.test.cjs
           node tests/till-money-helpers.test.cjs
+          node tests/cur1b-stored-money-web.test.cjs
           node tests/chit-sheet-lines.test.cjs
           node tests/match-other-unit.test.cjs
           node tests/acc-191-chit-sheet-not-decided.test.cjs

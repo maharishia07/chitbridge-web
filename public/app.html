@@ -7809,7 +7809,7 @@ function navTo(k) {
  */
 /* ⚠️ LOOSE, not strict: amountOf() throws on a legacy bare number and 24 call sites pass one. */
 function cbCurrency(v) {
-  return CBMoney.currencyOf(v);
+  return CBMoney.currencyOf(v, { stored: true });
 }
 const LIMITS = { to: 5, cc: 5, for: 1, items: 50, attachments: 10 };
 let CC = { items: [], rcpts: [], fields: {} };
