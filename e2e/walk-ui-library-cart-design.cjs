@@ -109,7 +109,7 @@ async function pressesCallTheRealHandler(page) {
 async function disabledCancel(page) {
   console.log('\n-- step 1: Cancel is shown, off, and says why');
   await goStep(page, 0);
-  const facts = await page.evaluate(() => { const el = document.querySelector('[data-testid="cd-cancel"]'); return { sid: el.getAttribute('data-cbsid'), mount: el.getAttribute('data-cbmount'), off: el.disabled && el.getAttribute('aria-disabled') === 'true', why: el.getAttribute('title') }; });
+  const facts = await page.evaluate(() => { const el = document.querySelector('[data-testid="cd-cancel"]'); return { sid: el.getAttribute('data-cbsid'), mount: el.getAttribute('data-cbmount'), off: el.getAttribute('aria-disabled') === 'true' /* the library never sets native disabled: the control stays in the Tab order (ui.js:59) */, why: el.getAttribute('title') }; });
   say('cd-cancel is the library Cancel with its mount', facts.sid === 'CMP003-B01' && facts.mount === 'OWN004-U07', facts.sid + ' ' + facts.mount);
   say('cd-cancel is off and says why in words', facts.off && /first step/i.test(facts.why || ''), JSON.stringify(facts.why));
 }
