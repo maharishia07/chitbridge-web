@@ -58,7 +58,9 @@ const ONLY = process.env.BREAK_ONLY || '';
 /* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (a verdict in
    seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines (2026-11-13). */
 const BASES = {};
-const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
+/* one-person.cjs is red on main at steps 3 · 4 · 5 in some runs and not in others (3 standalone runs 13 Nov: red in 2). A break must not be 'caught' by a line main itself prints, so these are baselined whichever run shows them. */
+const KNOWN_RED = ['XX  3 · after the clear-out, tab 2 opens as Tally Test', 'XX  4 · its button and the Till card open the counter, which offers the switch itself', "XX  5 · the owner's tab 2 is still signed in", 'XX  the harness stopped: page.click: Timeout 30000ms exceeded.'];
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: W }); BASES[h].xx.push.apply(BASES[h].xx, KNOWN_RED.filter((l) => BASES[h].xx.indexOf(l) < 0)); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
 let good = 0, ran = 0;
 for (const [name, edits] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
