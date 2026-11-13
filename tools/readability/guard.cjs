@@ -2,6 +2,7 @@
  *
  * OWNS      the judgement: which functions a diff touched, each rule's findings (hard limits · new cryptic name · new empty catch ·
  *           module header · CARD line · trace row · §7 minimums · ratchet score), the before → after numbers, the checklist markdown.
+ *           A comment-only / data-cbsid-only diff (noise.cjs) downgrades trace-row + test-minimums from fail to warn (module debt).
  * CALLED BY tools/readability.cjs (--changed), e2e/readability-guard.cjs (the rule fixtures), the api's tests/readability-guard.test.cjs.
  * FLOW      changed.touched ──▶ for each own-code file: measure(head) + measure(base) ──▶ touchedFunctions ──▶ rules ──▶ findings
  *           ──▶ numbers (Pass 1 · 2 · 3) ──▶ markdown checklist · exit code   (moves.find first: an exact move is carried, not judged as new)
@@ -18,12 +19,15 @@ const ratchet = require('./ratchet.cjs');
 const changed = require('./changed.cjs');
 const moves = require('./moves.cjs');
 const touch = require('./touch.cjs');
+const noise = require('./noise.cjs');
 
 const LIMITS = ratchet.LIMITS;
 /** §7 minimums warn for the first week (brief: "warn first week, then fail") */
 const MINIMUMS_FAIL_FROM = '2026-10-22';
 
 // ── touched functions and their base twins
+/** lines of distance that one line of size difference is worth when pairing twins */
+const SIZE_WEIGHT = 4;
 const functionKey = (fn) => (fn.name || '') + '(' + fn.params.join(',') + ')';
 
 const groupBy = (list, keyOf) => {
@@ -45,8 +49,11 @@ function matchBase(headFns, baseFns) {
     byName = groupBy(baseFns, (fn) => fn.name);
   const pairs = new Map(),
     taken = new Set();
+  /** lowest cost: lines apart + SIZE_WEIGHT per line of size difference (after a big shift a 32-line anonymous callback must not pair
+   *  with a 7-line twin that merely sits nearer: the same function has about the same size) */
+  const costOf = (fn, twin) => Math.abs(twin.line - fn.line) + SIZE_WEIGHT * Math.abs(twin.len - fn.len);
   const nearest = (fn, twins) =>
-    twins.filter((candidate) => !taken.has(candidate)).sort((left, right) => Math.abs(left.line - fn.line) - Math.abs(right.line - fn.line))[0];
+    twins.filter((candidate) => !taken.has(candidate)).sort((left, right) => costOf(fn, left) - costOf(fn, right))[0];
   const take = (fn, twins) => {
     const twin = nearest(fn, twins || []);
     if (twin) {
@@ -185,6 +192,12 @@ function ruleMinimums(file, trace, today) {
   };
 }
 
+/** a test-layer finding on a file whose diff is comment-only or data-cbsid-only stays visible as module debt (warn), it does not fail the change */
+function asModuleDebt(finding, noiseOnly) {
+  if (!finding || finding.level !== 'fail' || !noiseOnly) return finding;
+  return { ...finding, level: 'warn', text: finding.text + ' — MODULE DEBT: this diff changes only comments / data-cbsid, so it is a warning, not a failure' };
+}
+
 /** the reference a file is held to: its ratchet row, or the base's own score when that is higher (a row written before other rounds landed) */
 const higherOf = (row, floor) => (floor && (!row || floor.score > row.score) ? floor : row);
 /** the file's score may not rise above its ratchet row (a file with no row is new: it must score 0) — nor above the BASE the change
@@ -232,6 +245,7 @@ function judgeFile(entry, context) {
   const touchedFns = touchedOf(entry, headFns, view);
   const pairs = matchBase(touchedFns.filter((fn) => !view.moved.includes(fn)), baseFns);
   view.carriedMoves.forEach((move) => pairs.set(move.fn, move.from.fn));
+  const noiseOnly = entry.status === 'modified' && noise.sameCode(entry.file, entry.headText, entry.baseText);
   const scored = ruleRatchet(entry.file, entry.head, entry.base, context.ratchetRows, view.carried);
   const findings = [
     ...touchedFns.map((fn) => ruleHardLimits(entry.file, fn, pairs.get(fn) || null)),
@@ -239,8 +253,8 @@ function judgeFile(entry, context) {
     ruleNewEmptyCatch(entry.file, head, base, addedLines),
     ruleHeader(entry.file, head),
     ruleCard(entry.file, head),
-    ruleTraceRow(entry.file, context.trace),
-    ruleMinimums(entry.file, context.trace, context.today),
+    asModuleDebt(ruleTraceRow(entry.file, context.trace), noiseOnly),
+    asModuleDebt(ruleMinimums(entry.file, context.trace, context.today), noiseOnly),
     scored.level === 'ok' ? null : scored,
     touch.ruleTouch(entry.file, entry.base ? ratchet.score(entry.base) : null, scored.score, context.touchMode)
   ].filter(Boolean);
@@ -289,6 +303,8 @@ function entryOf(root, baseSha, touched, text) {
     file: touched.file,
     status: baseText == null ? 'added' : touched.status,
     ranges: touched.ranges,
+    headText: text,
+    baseText,
     head: measure.factsFromText(touched.file, text),
     base: baseText == null ? null : measure.factsFromText(touched.file, baseText)
   };

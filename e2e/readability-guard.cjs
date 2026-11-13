@@ -197,6 +197,38 @@ const bareFlag = spawnSync(process.execPath, [TRACE_TOOL, '--repo', 'api', '--no
 ok(bareFlag.status !== 124, 'a bare --max-seconds means the default, not one second');
 ok(/\[TRACE_TOOL, '--repo', repo,/.test(fs.readFileSync(path.join(ROOT, 'tools/readability.cjs'), 'utf8')), 'the readability guard builds a missing trace for ONE repo (--repo), never the three-repo default');
 
+console.log('\n5b · a comment-only or data-cbsid-only diff WARNS on the test-layer rules (module debt); a one-character code change still FAILS');
+const noiseTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cb-readability-noise-'));
+const noiseWrite = (files) => { for (const [file, text] of Object.entries(files)) { fs.mkdirSync(path.join(noiseTmp, path.dirname(file)), { recursive: true }); fs.writeFileSync(path.join(noiseTmp, file), text); } };
+const FN = 'function paintRows(rows) {\n  return rows.length;\n}\n';
+const PAGE = (extra, attr) => '<!doctype html>\n' + extra + '<html><body>\n<button id="go"' + attr + '>Go</button>\n<script>\n' + FN + '</script>\n</body></html>\n';
+const NOISE_BASE = { 'public/app/note.js': HEADER('note') + FN, 'public/app/edit.js': HEADER('edit') + FN, 'public/app/ids.js': HEADER('ids') + "var tag = '<b>' + FN_NAME;\n".replace('FN_NAME', "'x'") + FN, 'public/page.html': PAGE('', '') };
+noiseWrite(NOISE_BASE);
+git(noiseTmp, ['init', '-q']); git(noiseTmp, ['config', 'user.email', 'fixture@example']); git(noiseTmp, ['config', 'user.name', 'fixture']);
+git(noiseTmp, ['add', '-A']); git(noiseTmp, ['commit', '-q', '-m', 'base']);
+const noiseBase = git(noiseTmp, ['rev-parse', 'HEAD']);
+noiseWrite({
+  'public/app/note.js': '/* OWNS a header added later. CALLED BY the test. */\n' + NOISE_BASE['public/app/note.js'].replace('return', '// count them\n  return'),
+  'public/app/edit.js': NOISE_BASE['public/app/edit.js'].replace('rows.length', 'rows.length + 1'),
+  'public/app/ids.js': NOISE_BASE['public/app/ids.js'].replace("'<b>'", "'<b data-cbsid=\"UX900\">'"),
+  'public/page.html': PAGE('<!-- OWNS the page. CALLED BY nobody. -->\n', ' data-cbsid="BTN01"')
+});
+const noiseTrace = { generated: '2026-10-30', repo: 'web', modules: {} };
+for (const file of Object.keys(NOISE_BASE)) noiseTrace.modules[file] = { card: 'qa/fixture', layer: 'ui', tests: [{ file: 'e2e/fixture.cjs', via: [], steps: [] }], walks: [], minimums: { layer: 'ui', have: [], missing: ['aa-contrast'] } };
+fs.writeFileSync(path.join(noiseTmp, 'trace.json'), JSON.stringify(noiseTrace));
+const noiseOut = path.join(noiseTmp, 'result.json');
+run([TOOL, '--changed', '--repo', 'web', '--root', noiseTmp, '--base', noiseBase, '--today', '2026-10-30', '--json', noiseOut]);
+const noiseFindings = JSON.parse(fs.readFileSync(noiseOut, 'utf8')).findings.filter((finding) => finding.rule === 'test-minimums');
+const minimumsOf = (file) => noiseFindings.filter((finding) => finding.text.includes(file)).map((finding) => finding.level);
+ok(minimumsOf('note.js').join() === 'warn' && /MODULE DEBT/.test(noiseFindings.find((finding) => finding.text.includes('note.js')).text), 'comment-only diff (a header and a line comment): test-minimums WARNS, listed as module debt, not failed');
+ok(minimumsOf('ids.js').join() === 'warn', 'data-cbsid-only diff in a JS string: test-minimums WARNS');
+ok(minimumsOf('page.html').join() === 'warn', 'html comment + data-cbsid attribute only: test-minimums WARNS');
+ok(minimumsOf('edit.js').join() === 'fail', 'a one-character code change (+ 1): test-minimums still FAILS');
+const noiseMod = require('../tools/readability/noise.cjs');
+ok(noiseMod.sameCode('x.js', 'a(1); // x', 'a(1);') && !noiseMod.sameCode('x.js', 'a(1);', 'a(2);') && !noiseMod.sameCode('x.js', 'a(1', 'a(1);'), 'noise: comment removed is the same code; a changed literal or an unparsable file is not');
+ok(!noiseMod.sameCode('x.html', '<p>a</p><script>b()</script>', '<p>a</p><script>c()</script>') && !noiseMod.sameCode('x.html', '<p>a</p>', '<p>b</p>'), 'noise: a changed script or changed markup is not noise');
+fs.rmSync(noiseTmp, { recursive: true, force: true });
+
 console.log('\n6 · the modules behind the tool, one unit each');
 const measure = require('../tools/readability/measure.cjs');
 const facts = measure.factsFromText('public/app/unit.js', HEADER('unit') + 'function readShop(shop) {\n  var q = shop.id;\n' + PAD + '  try { return q; } catch (_) {}\n}\n' + complexFunction('manyBranches', 4));
@@ -229,6 +261,12 @@ const pairedRoute = (route) => { const head = routeHead.find((fn) => fn.route ==
 ok(routeHead[0].route === 'GET /a' && routeHead[1].route === 'POST /b' && !routeHead[2].route, 'measure: a handler passed to router.<verb>(\'path\', …) carries its route; a plain function carries none');
 ok(pairedRoute('GET /a') === 'GET /a' && pairedRoute('POST /b') === 'POST /b', 'guard: a handler moved 9 lines down still pairs with its own route (INT7b)');
 ok(routePairs.get(routeHead[2]) === routeBase[2], 'guard: a function with no route pairs by name + params, as before');
+/* a 36-line shift above two anonymous callbacks of one name + params: each pairs with its own size, not the nearer line */
+const CALLBACKS = (pad) => pad + 'function big(rows) {\n  var total = 0;\n  rows.forEach(function (b) {\n' + '    total += 1;\n'.repeat(28) + '  });\n  return total;\n}\nfunction small(rows) {\n  var total = 0;\n  rows.forEach(function (b) {\n    total += b;\n  });\n  return total;\n}\n';
+const callBase = measure.factsFromText('public/app/cb.js', CALLBACKS('')).functions.filter((fn) => !fn.name);
+const callHead = measure.factsFromText('public/app/cb.js', CALLBACKS('\n'.repeat(36))).functions.filter((fn) => !fn.name);
+const callPairs = matchBase(callHead, callBase);
+ok(callHead.length === 2 && callPairs.get(callHead[0]) === callBase[0] && callPairs.get(callHead[1]) === callBase[1], 'guard: anonymous twins pair by size as well as line, so a big shift does not cross them (matchBase defect)');
 const ratchet = require('../tools/readability/ratchet.cjs');
 const merged = ratchet.tighten({ 'a.js': { score: 3 }, 'b.js': { score: 1 } }, { 'a.js': { score: 1 }, 'b.js': { score: 5 }, 'c.js': { score: 0 } });
 ok(merged.rows['a.js'].score === 1 && merged.rows['b.js'].score === 1 && merged.rows['c.js'].score === 0 && merged.refused.length === 1 && merged.lowered.length === 1, 'ratchet: tighten lowers a.js, refuses b.js, adds c.js');
