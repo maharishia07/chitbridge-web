@@ -170,6 +170,34 @@ function cbMoneyList(list, opts) {
     '</span>'
   );
 }
+/**
+ * CRM-D7: the unbilled orders' money as the SERVER carries it (lib/work-rows sumUnbilled: { n, minor, currency, by_currency, no_currency, unpriced, cost_hidden }), said and never worked out here.
+ * ONE reader for the CRM record, the Parties list and Finance. The tail is " ₹840 + AUD 150 · not added together" (one figure per currency, the select bar's words), or " hidden" for a
+ * cost-blind reader (blind wins: no per-currency figure is read), then " · N without a currency" (never given the reader's) and " · N not priced yet" (never a made-up 0).
+ * An older api (no by_currency) says its one figure; no figure at all says the count alone.
+ */
+function cbUnbilledNotes(unbilled) {
+  var notes = [];
+  if (unbilled.no_currency) notes.push(unbilled.no_currency + ' ' + tx('without a currency'));
+  if (unbilled.unpriced) notes.push(unbilled.unpriced + ' ' + tx('not priced yet'));
+  return notes;
+}
+function cbUnbilledFigs(unbilled, currency) {
+  var buckets = unbilled.by_currency;
+  if (!buckets) return unbilled.minor == null ? '' : bkMoney(unbilled.minor, unbilled.currency || currency); // an older api: its one figure
+  var figs = buckets
+    .map(function (bucket) {
+      return bkMoney(bucket.minor, bucket.currency);
+    })
+    .join(' + ');
+  return buckets.length > 1 ? figs + ' · ' + tx('not added together') : figs;
+}
+function cbUnbilledTail(unbilled, currency) {
+  var carried = unbilled || {};
+  if (carried.cost_hidden && carried.minor == null) return ' ' + tx('hidden'); // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
+  var figs = cbUnbilledFigs(carried, currency);
+  return (figs ? ' ' + figs : '') + cbUnbilledNotes(carried).map(function (note) { return ' · ' + note; }).join('');
+}
 function nm(v, fb) {
   return esc(v || fb || '—');
 } /* R3: one name-with-fallback — esc(display_name || fallback) */

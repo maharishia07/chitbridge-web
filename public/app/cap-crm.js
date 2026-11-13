@@ -176,39 +176,10 @@ function crmLocalISO(date) {
 function crmPlural(n, one, many) {
   return n + ' ' + (n === 1 ? tx(one) : tx(many));
 }
-/** CRM-D7: the unbilled orders' money as the SERVER carries it (lib/work-rows sumUnbilled), said, never worked out here. { figs, notes }:
- * figs = one figure per currency side by side (the select bar's words: "not added together"), or "hidden" for a cost-blind reader (the blind rule wins: no per-currency figure is read);
- * notes = what is left out, said: orders without a currency (never the reader's) and orders not priced yet (never a made-up 0). */
-function crmUnbilledNotes(unbilled) {
-  var notes = [];
-  if (unbilled.no_currency) notes.push(crmPlural(unbilled.no_currency, 'without a currency', 'without a currency'));
-  if (unbilled.unpriced) notes.push(crmPlural(unbilled.unpriced, 'not priced yet', 'not priced yet'));
-  return notes;
-}
-function crmUnbilledFigs(unbilled, currency) {
-  var buckets = unbilled.by_currency;
-  if (!buckets) return unbilled.minor == null ? '' : bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency); // an older api: its one figure
-  var figs = buckets
-    .map(function (bucket) {
-      return bkMoney(bucket.minor, bucket.currency);
-    })
-    .join(' + ');
-  return buckets.length > 1 ? figs + ' · ' + tx('not added together') : figs;
-}
-function crmUnbilledParts(unbilled, currency) {
-  var carried = unbilled || {};
-  if (carried.cost_hidden && carried.minor == null) return { figs: tx('hidden'), notes: [] }; // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
-  return { figs: crmUnbilledFigs(carried, currency), notes: crmUnbilledNotes(carried) };
-}
-function crmUnbilledMoney(unbilled, currency) {
-  var q = crmUnbilledParts(unbilled, currency);
-  return (q.figs ? [q.figs] : []).concat(q.notes).join(' · ');
-}
-/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency, by_currency, no_currency, unpriced } (the record's chip says the same words); '' when nothing is waiting. No figure across two currencies without saying so. */
+/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency, by_currency, no_currency, unpriced } (the record's chip says the same words); '' when nothing is waiting. The money is cbUnbilledTail's (helpers.js), the one reader Finance uses too. */
 function crmUnbilledSaid(unbilled, currency) {
   if (!unbilled || !unbilled.n) return '';
-  var q = crmUnbilledParts(unbilled, currency);
-  return crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') + (q.figs ? ' ' + q.figs : '') + q.notes.map(function (s) { return ' · ' + s; }).join('');
+  return crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') + cbUnbilledTail(unbilled, currency || CRM.currency);
 }
 
 var CRM_ICON = {

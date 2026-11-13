@@ -27,12 +27,12 @@ var FIN_OWNER_ONLY = 'Only the owner may see collections.';
 function finOwes(p) {
   return Number(p.balance_minor) > 0;
 }
-/** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (no figure when the orders are in two currencies — the server says null) — '' when none */
+/** the unbilled orders in words: "1 order unpaid, not yet billed ₹420" (CRM-D7: the figure per currency, "hidden" for a blind reader, what is left out said: cbUnbilledTail, the same reader the CRM record uses) — '' when none */
 function finUnbilledWords(unbilled) {
   if (!unbilled || !Number(unbilled.n)) return '';
   return (
     txn('{count} order unpaid, not yet billed', '{count} orders unpaid, not yet billed', Number(unbilled.n)) +
-    (unbilled.minor == null ? '' : ' ' + bkMoney(Number(unbilled.minor), unbilled.currency || FIN.cur))
+    cbUnbilledTail(unbilled, FIN.cur)
   );
 }
 /** the dues (the server's, finance=1) and, beside them in parallel, the unbilled orders into FIN.unbilled — a failure there leaves the line out, never a guessed 0 */

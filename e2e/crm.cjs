@@ -206,7 +206,7 @@ async function route(S, r) {
     ok(!/role=\\?["']columnheader|<thead|class=\\?["'][^"']*\blhead\b/.test(all), 'no column header is drawn by hand — every list is a CBList mount');
     ok((js.match(/CBList\.mount\(/g) || []).length >= 4, 'home, follow-ups and both timeline views are CBList mounts (' + (js.match(/CBList\.mount\(/g) || []).length + ')');
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    ok(!/balance_minor\s*[-+*\/]|\.reduce\s*\(|amount_minor\s*[-+*\/]|\bsum\s*\(/.test(code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '')), 'the page computes no money: balance_minor / amount_minor are only painted and ordered, never summed');
+    ok(!/balance_minor\s*[-+*\/]|\.reduce\s*\(|amount_minor\s*[-+*\/]|\bsum\s*\(|\.?minor\s*\+=|\+=[^;\n]*amount_minor/.test(code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '')), 'the page computes no money: balance_minor / amount_minor are only painted and ordered, never summed');
   }
 
   /* ── 2 · HOME ───────────────────────────────────────────────────────────────────────────────────────────── */
@@ -970,6 +970,8 @@ async function route(S, r) {
       ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s\+\sA\$150\.00\s·\snot added together/, /240|₹150/],
       ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s·\s1 without a currency/, /not added together|240/],
       ['one not priced', { n: 1, minor: null, currency: null, by_currency: [], no_currency: 0, unpriced: 1 }, /1 order not billed yet · 1 not priced yet/, /₹0|₹/],
+      ['a cost-blind reader (as the api sends it, no by_currency)', { n: 2, minor: null, currency: 'INR', cost_hidden: true }, /2 orders not billed yet hidden/, /AUD|₹\d/],
+      ['an older api (one figure, no split)', { n: 1, minor: 9000, currency: 'INR' }, /1 order not billed yet\s*₹90\.00/, /not added together|without|hidden/],
     ]) {
       const S = standIn();
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });

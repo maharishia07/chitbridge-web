@@ -8,7 +8,7 @@
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const NL = String.fromCharCode(10);
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8').replace(/\r\n/g, NL);
-const crm = read('cap-crm.js'), rec = read('cap-crm-record.js');
+const crm = read('cap-crm.js') + NL + read('helpers.js'), rec = read('cap-crm-record.js');
 /* just the named functions, cut out of the page's own files - no second copy of the logic lives in this test */
 const fn = (src, name) => {
   const i = src.indexOf('function ' + name + '('); assert(i >= 0, name + ' not found');
@@ -23,8 +23,8 @@ globalThis.CRM = { ledger: true, currency: 'INR' };
 globalThis.crmRolesList = (r) => r; globalThis.crmRealEmail = (v) => v; globalThis.crmPlural = (n, a, b) => n + ' ' + (n === 1 ? a : b);
 globalThis.crmNoDate = (s) => s; globalThis.crmEntryWhat = globalThis.crmEntryState = () => '';
 eval(
-  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'crmUnbilledNotes'), fn(crm, 'crmUnbilledFigs'), fn(crm, 'crmUnbilledParts'), fn(crm, 'crmUnbilledMoney'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmIsOpenOrder'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
-    NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.unbilledMoney = crmUnbilledMoney; globalThis.chip = crmDueChip; globalThis.said = crmUnbilledSaid; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
+  [fn(crm, 'crmNothingDueCell'), fn(crm, 'crmDueCell'), fn(crm, 'crmUnbilledSaid'), fn(crm, 'cbUnbilledNotes'), fn(crm, 'cbUnbilledFigs'), fn(crm, 'cbUnbilledTail'), fn(crm, 'crmDueListCell'), fn(rec, 'crmDueChip'), fn(crm, 'crmPartyFrom'), fn(rec, 'crmIsOpenOrder'), fn(rec, 'crmBillFacts'), fn(rec, 'crmEntryFrom'), fn(rec, 'crmMarkHidden'), fn(rec, 'crmTlCols')].join(NL) +
+    NL + 'globalThis.dueCell = crmDueCell; globalThis.partyFrom = crmPartyFrom; globalThis.facts = crmBillFacts; globalThis.chip = crmDueChip; globalThis.said = crmUnbilledSaid; globalThis.listCell = crmDueListCell; globalThis.entry = crmEntryFrom; globalThis.cols = crmTlCols;'
 );
 const amountCell = (e) => cols().filter((c) => c.key === 'amount')[0].cell(e);
 const order = (o) => Object.assign({ kind: 'chit', at: '2026-11-01T10:00:00Z', chit_id: 'c1', purpose: 'order', title: 'Order', currency: 'INR', direction: 'out' }, o);
@@ -39,8 +39,8 @@ assert(/>hidden</.test(amountCell(ledBlind)), 'a hidden ledger amount says hidde
 const shown = entry(order({ chit_id: 'c2', value: 1000 }), 2);
 let f = facts([shown, blind]);
 assert.deepStrictEqual([f.orders, f.unbilled], [2, undefined], 'the entries give the order count, never a sum');
-assert.strictEqual(unbilledMoney({ n: 2, minor: null, currency: 'INR', cost_hidden: true }), 'hidden', 'a blind reader: the word, not a made-up zero');
-assert.strictEqual(unbilledMoney({ n: 1, minor: 100000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 100000, n: 1 }], no_currency: 0, unpriced: 0 }), '₹1,000', 'the owner: the figure, no "hidden" anywhere');
+assert.strictEqual(globalThis.said({ n: 2, minor: null, currency: 'INR', cost_hidden: true }, 'INR'), '2 orders not billed yet hidden', 'a blind reader: the word, not a made-up zero');
+assert.strictEqual(globalThis.said({ n: 1, minor: 100000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 100000, n: 1 }], no_currency: 0, unpriced: 0 }, 'INR'), '1 order not billed yet ₹1,000', 'the owner: the figure, no "hidden" anywhere');
 assert(!/hidden/.test(amountCell(shown)) && /₹1,000/.test(amountCell(shown)), 'owner: the figure');
 assert(/>—</.test(amountCell(entry(order({ chit_id: 'c4', value: null }), 4))), 'a null value WITHOUT cost_hidden is still a dash (a note has no amount)');
 /* the party list: dues.cost_hidden -> "hidden" in the Dues cell; a plain null balance is still a dash; the owner's figure unchanged */
