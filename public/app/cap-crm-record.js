@@ -89,37 +89,6 @@ function crmBillFacts(entries) {
 function crmUnbilledOf(R, entries) {
   return R.unbilled || { n: crmBillFacts(entries).orders };
 }
-var CRM_CHANNEL = { catalogue: 'online shop', storefront: 'online shop', counter: 'counter' };
-/** a title that repeats the entry's own date ("Order · 09 Oct") loses the date: the When column says it once (C17) */
-function crmNoDate(text) {
-  text = String(text || '');
-  if (!text) return '';
-  var u = text
-    .replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{4}-\d{2}-\d{2}\b\)?\s*$/, '')
-    .replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{1,2}[ \/-](?:[A-Za-z]{3,9}|\d{1,2})\.?(?:[ ,\/-]+\d{2,4})?\)?\s*$/, '')
-    .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
-  return u || text;
-}
-/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
-function crmBillFacts(entries) {
-  var chitBills = 0,
-    ledBills = 0,
-    lastBill = '',
-    un = { n: 0, minor: 0, currency: null, hidden: 0 };
-  (entries || []).forEach(function (e) {
-    if (e.kind === 'bill') {
-      if (e.src === 'ledger') ledBills++;
-      else chitBills++;
-      if (!lastBill || e.at > lastBill) lastBill = e.at;
-    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
-      un.n++;
-      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the sum (an unpriced order, null without the flag, still adds 0)
-      else un.minor += Number(e.amount_minor || 0);
-      un.currency = un.currency || e.currency;
-    }
-  });
-  return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, unbilled: un };
-}
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
 
 /* ═══ THE API'S REAL SHAPES (chitbridge-api routes/crm.js) → the shapes this page paints ═════════════════════════════════
