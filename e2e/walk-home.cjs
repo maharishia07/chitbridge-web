@@ -26,7 +26,7 @@ W.run('home', async (w) => {
   /* the day as the log found it: 24 in, 0 out, 21 stuck; 1 supplier, 2 customers (self excluded); one posting waiting for the ledger */
   const RAIL = crmApi.railFacts({ suppliers: 1, customers: 2, in: 24, out: 0, stuck: 21 });
   /* Home's rail is "Your work" since 17 Oct (4652ab12, Athi's index walk): ONE read, GET /api/work/facts, figures the server computed; the old suppliers · in · out · stuck chips are gone */
-  const WORK = { truncated: false, figures: { orders_new: 3, orders_in: 24, orders_out: 0, tasks: 5, tasks_mine: 2, done: 7 } };
+  const WORK = { truncated: false, counts: { orders_in: 24, orders_out: 0, tasks: 5, done: 7 }, lines: [{ text: '3 new orders', value: 3, tone: 'dn' }], figures: { orders_new: 3, orders_in: 24, orders_out: 0, tasks: 5, tasks_mine: 2, done: 7 } };
   await ctx.route('**/api/**', (r0) => {
     const r = C.wrap(r0);
     const u = new URL(r.request().url());
@@ -50,7 +50,7 @@ W.run('home', async (w) => {
      figure a door to its folder in Tasks & Orders) and took the roadmap off Home (index.html "the roadmap is our own self-declaration"; roadmap.js retired, RETIRED.md).
      The same six paths now walk the same promises on what Home draws: figures are the server's, each is a door with a word on it, a click opens its folder, no second roadmap. */
   await w.step('H1', 'Home -> "Your work" shows 3 new · 24 in · 0 out · 2 for you · 7 done, and each figure is a door to its folder', async () => {
-    const pips = await page.$$eval('[data-testid="rail"] a.node', (as) => as.map((a) => ({ t: a.textContent.replace(/\s+/g, ' ').trim(), href: a.getAttribute('href') })));
+    const pips = await page.$$eval('[data-testid="rail"] a.node', (as) => as.map((a) => ({ t: a.textContent.replace(/\s+/g, ' ').trim().replace(/^(\d+)\s*/, '$1 '), href: a.getAttribute('href') })));   /* the figure and its word sit in two spans: "3" + "New orders" */
     const want = [['3 New orders', /\/tasks\.html\?view=orders_in$/], ['24 Orders in', /\/tasks\.html\?view=orders_in$/], ['0 Orders out', /\/tasks\.html\?view=orders_out$/], ['2 Tasks for you', /\/tasks\.html\?view=tasks$/], ['7 Done', /\/tasks\.html\?view=done$/]];
     const ok = want.every(([t, h]) => pips.some((p) => p.t === t && h.test(p.href || '')));
     return { ok, saw: 'figures: ' + pips.map((p) => p.t + ' -> ' + (p.href || 'NOT A LINK')).join(' | ') };
@@ -61,7 +61,7 @@ W.run('home', async (w) => {
   });
   await w.step('H4', 'Home -> "24 Orders in" is a door with a word on it, not a bare number', async () => {
     const t = await txt('[data-testid="work-in-open"]'); const tag = await page.locator('[data-testid="work-in-open"]').first().evaluate((e) => e.tagName);
-    return { ok: /24\s*Orders in/.test(t) && tag === 'A', saw: '"' + t + '" is ' + (tag === 'A' ? 'a link' : 'plain text') };
+    return { ok: /^24\s*Orders in$/.test(t) && tag === 'A', saw: '"' + t + '" is ' + (tag === 'A' ? 'a link' : 'plain text') };
   });
   await w.step('H10-r', 'Home -> click "24 Orders in" -> opens Tasks & Orders on the Orders in folder', async () => {
     await Promise.all([page.waitForNavigation({ timeout: 10000 }).catch(() => null), page.click('[data-testid="work-in-open"]')]);
