@@ -5,7 +5,7 @@
  * CARD      11-crm-and-marketing/marketing-app
  * Moved byte for byte out of cap-crm-groups.js; no behaviour changed. Needs the base's GROUPS and crmSendOpen (cap-crm-groups-send.js), CBShowcase (cap-showcase.js) and the host globals of cap-crm.js. */
 'use strict';
-var GROUPS; /* the base's list state (cap-crm-groups.js loads first): a bare var declares the name here and keeps the value. The host's CRM state is read as window.CRM below, so no 3-letter name is declared */
+/* the base's GROUPS (cap-crm-groups.js) and the host's CRM (cap-crm.js) load first; both are read as window.GROUPS / window.CRM, so this file declares no name of theirs */
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() {
@@ -167,7 +167,7 @@ async function crmShareParty(partyKey) {
 function crmShareVerdict() {
   var rec = SHOW.rec,
     prefs = rec && rec.contact_prefs,
-    allowed = prefs && prefs.may && prefs.may[GROUPS.channel] && prefs.may[GROUPS.channel][GROUPS.purpose];
+    allowed = prefs && prefs.may && prefs.may[window.GROUPS.channel] && prefs.may[window.GROUPS.channel][window.GROUPS.purpose];
   if (!rec) return { may: false, code: 'UNREADABLE', why: tx('Could not read their consent, so nothing can be sent.') };
   if (!allowed) return { may: false, code: 'NO_CONSENT', why: tx('No consent for offers on WhatsApp. Ask them first.') };
   return allowed;
@@ -186,7 +186,7 @@ function crmShopLinkCopy() {
 }
 /** the Send sheet for the group picked in the share list, opened with the shop-window message filled in */
 function crmSharePicked(key) {
-  var group = GROUPS.rows.filter(function (row) {
+  var group = window.GROUPS.rows.filter(function (row) {
     return row.key === key;
   })[0];
   closeModal();
@@ -245,7 +245,7 @@ function crmShareGo(btn) {
     async function () {
       return api('crmLog', {
         params: { id: party.party_id },
-        body: { kind: 'message', direction: 'out', channel: GROUPS.channel, purpose: GROUPS.purpose, body: text }
+        body: { kind: 'message', direction: 'out', channel: window.GROUPS.channel, purpose: window.GROUPS.purpose, body: text }
       });
     },
     {
@@ -271,11 +271,11 @@ function crmShareGo(btn) {
 }
 /** share the shop link with a group: load the groups first if needed, then offer the list to pick from */
 function crmShareGroup() {
-  if (!GROUPS.loaded) {
+  if (!window.GROUPS.loaded) {
     toast(tx('Reading your groups…'));
     return crmGroupsLoad(true).then(crmShareGroup);
   }
-  var rows = GROUPS.rows;
+  var rows = window.GROUPS.rows;
   if (!rows.length) {
     toast(tx('No groups yet. Make one under Groups.'));
     return;
