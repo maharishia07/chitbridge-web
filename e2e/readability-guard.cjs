@@ -342,6 +342,8 @@ for (const scenario of formRuns) fs.rmSync(scenario.dir, { recursive: true, forc
 
 const movedBody = exact.verdict.stdout.slice(exact.verdict.stdout.indexOf('## §6')).replace(/`<doc>`/g, 'n/a').replace('`<word>` → reused/widened `<name>` (or "nothing exists")', '`readability` → widened');
 ok(/- moved: 1 function/.test(movedBody) && checklist.problems(movedBody).length === 0, 'the §6 checklist with the moved line still passes pr-checklist');
+ok(checklist.gateRecordProblem(movedBody) !== null && /heading is missing/.test(checklist.gateRecordProblem(movedBody)), 'a body without the "### Gate record" heading fails pr-checklist (REL-22)');
+ok(checklist.gateRecordProblem(movedBody + '\n### Gate record\n\n- **G0** idea · PASS · x\n') === null && checklist.gateRecordProblem('## Gate record\n') === null && checklist.gateRecordProblem('a sentence about a Gate record, not a heading') !== null, 'any heading level "Gate record" counts; a sentence that mentions it does not');
 for (const scenario of [exact, intoNew, renamed, copied, dropped, whole]) fs.rmSync(scenario.dir, { recursive: true, force: true });
 
 /* ── MNT-51: an html page's header is read from the page itself, not from the first inline script ─────────────── */
