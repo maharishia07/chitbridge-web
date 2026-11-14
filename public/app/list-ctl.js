@@ -1,5 +1,7 @@
 /**
- * CALLED BY every list on every page — app.html (the Task table), crm, accounts, finance, standards, employees, network (CBList.mount · CBList.every).
+ * OWNS      window.CBList: mount (a list: toolbar · header · rows · columns chooser · paging) · nextRow · get · reset · every (reads every page of a server-paged list) · pager (the Previous / Next pair, CMP037 B06 and B07), and the Task table drawing (tbl*).
+ * CALLED BY every page that loads it with <script src>: accounts.html · app.html (the Task table) · catalogue.html · crm.html · employees.html · finance.html · list-lab.html · network.html · offer-lab-next.html · operations.html · settings.html · standards.html · tasks.html · testing.html; cap-attach.js loads it with loadScript when CBList is not there yet (CBList.mount · CBList.every · CBList.pager).
+ * FLOW      a page loads the script → CBList.mount(el, opts) draws the toolbar, header and rows from the rows the page hands it (nothing is read from the page) → a press on search, sort, filter or ⚙ columns repaints the list in place → a server-paged page asks CBList.every or draws CBList.pager and keeps what each press does.
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/list-control
  * ── ⭐⭐⭐ CBList — THE LIST CONTROL, AS A SELF-SUSTAINING UNIT ───────────────────────────────────────────────────────
  *
@@ -3036,8 +3038,9 @@
   /** one button of the pager pair: Previous (glyph first) or Next (glyph last) with its register code */
   function pagerButton(side, code, spec) {
     var text = esc(spec.label);
+    var sid = 'CMP037-' + code; /* B06 or B07: held in a name so the census reads the code on the element */
     return (
-      '<button type="button" data-cbsid="CMP037-' + code + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
+      '<button type="button" data-cbsid="' + sid + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
       (spec.off ? ' disabled' : '') + '>' + (side === 'prev' ? '‹ ' + text : text + ' ›') + '</button>'
     );
   }
