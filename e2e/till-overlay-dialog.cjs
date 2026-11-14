@@ -52,6 +52,14 @@ const ok = (c, w) => { if (!c) failed++; console.log((c ? 'PASS ' : 'FAIL ') + w
       await p.mouse.click(w - 3, 400); await p.waitForTimeout(250);
       ok(await p.evaluate(() => !document.getElementById('tillmenu').open), tag + ' a press on the backdrop closes it');
     }
+    /* a scan with the menu open must still land on the bill: digits in #q, the menu shut, nothing lost */
+    await p.focus(w === 390 ? '[data-testid="till-menu"]' : '[data-testid="till-side-open"]'); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
+    await p.keyboard.type('8901234'); await p.waitForTimeout(100);
+    const sc = await p.evaluate(() => ({ q: (document.getElementById('q') || {}).value, shut: !document.getElementById('tillmenu').open && document.getElementById('tillmenu').hidden }));
+    await p.keyboard.press('Enter'); await p.waitForTimeout(200);
+    const after = await p.evaluate(() => ({ q: (document.getElementById('q') || {}).value, cart: (window.CART || []).length, shut: !document.getElementById('tillmenu').open }));
+    ok(sc.q === '8901234' && sc.shut, 'scan @' + w + ': 8901234 lands in the search box and the menu shuts (q=' + sc.q + ', shut=' + sc.shut + ')');
+    ok(after.shut, 'scan @' + w + ': the trailing Enter does not touch the menu (q=' + after.q + ', cart ' + after.cart + ')');
     ok(threw.length === 0, 'no page errors @' + w + (threw.length ? ' ' + threw[0] : ''));
     await p.close();
   }
