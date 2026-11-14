@@ -28,7 +28,8 @@
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
-const BKB = { acct: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
+/* stmtAcct = the account the statement on screen was read FOR; stmtCur = the currency the person said the file is in (B5-05: never the account's by default) */
+const BKB = { acct: '', stmtAcct: '', stmtCur: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
 const bkbE = (v) => esc(v);
 const bkbEl = (id) => document.getElementById(id);
 const bkbWords = {
@@ -109,8 +110,31 @@ function bkbNoCountryWords() {
   const said = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
   return (said && said.why) || tx('Set the shop country first (Country setup).');
 }
+/**
+ * B5-07: every action on a statement (a mark, an entry, a payment, the sign-off) belongs to the account the statement was read for. True when the dropdown still names it; otherwise says so and refuses,
+ * so nothing the person does on account A's lines can land on account B.
+ */
+function bkbBound() {
+  if (BKB.parsed && BKB.stmtAcct && BKB.stmtAcct === BKB.acct) return true;
+  toast(tx('This statement was read for another bank account. Load the file again for this account.'));
+  return false;
+}
+/** the dropdown moved to another account: the statement, its marks and its reconciliation belong to the old one, so they are cleared and the file is asked for again (B5-07) */
+function bankAcctPick(code) {
+  const moved = BKB.stmtAcct && BKB.stmtAcct !== code;
+  BKB.acct = code;
+  if (!moved) return;
+  Object.assign(BKB, { stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], teach: null, bal: '' });
+  const file = bkbEl('bk_file'),
+    res = bkbEl('bk_res'),
+    out = bkbEl('bk_out');
+  if (file) file.value = '';
+  if (res) res.innerHTML = '';
+  if (out) out.innerHTML = '<div class="pe-note" data-testid="bank-acct-changed">' + bkbE(tx('You changed the bank account, so the statement on screen was cleared. Load the statement file for this account.')) + '</div>';
+}
 /** one step action: the engine's step, the device copy, then the shared record */
 function bkbStep(action) {
+  if (!bkbBound()) return false;
   const next = CBBankRecon.step(bkbRec(), Object.assign({ at: new Date().toISOString(), by: bkbBy() }, action));
   if (next.why) {
     toast(tx(next.why));
@@ -183,7 +207,7 @@ async function bankView(body) {
         'bk_acct',
         banks.map((item) => [item.code, item.name]),
         BKB.acct,
-        ' onchange="BKB.acct=this.value"'
+        ' onchange="bankAcctPick(this.value)"'
       )
     ) +
     peField(
@@ -208,14 +232,14 @@ async function bankView(body) {
   if (BKB.rows.length || BKB.parsed) bankPaint();
 }
 
-async function bankPick(inp) {
-  const f = inp.files && inp.files[0];
-  if (!f) return;
+async function bankPick(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
   const out = bkbEl('bk_out');
   out.innerHTML = '';
   let text;
   try {
-    text = await f.text();
+    text = await file.text();
   } catch (_) {
     return peBad('bk_out', tx('That file could not be read.'));
   }
@@ -228,14 +252,58 @@ async function bankPick(inp) {
     bkbEl('bk_res').innerHTML = '';
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
-  BKB.file = { name: f.name, hash: hash.slice(0, 16) };
+  BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
+  BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
+  BKB.stmtCur = parsed.currency || ''; /* B5-05: the file's own currency, else asked below; never the account's */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
   BKB.to = parsed.to || dates[dates.length - 1];
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
+  await bankCurrencyRun();
+}
+/** B5-05: the file does not say its currency, so ask once; the statement is not read against the books until the person answers */
+function bankCurrencyAsk() {
+  bkbEl('bk_res').innerHTML = '';
+  bkbEl('bk_out').innerHTML =
+    '<div class="pe-note" data-testid="bank-currency-ask">' +
+    bkbE(tx('Which currency is this statement in? Nothing is assumed.')) +
+    ' <input class="inp" id="bk_cur" type="text" maxlength="3" size="4" autocomplete="off" data-testid="bank-currency" data-cbsid="BKS014-S01" aria-label="' + bkbE(tx('Statement currency, three capital letters')) + '"> <button data-cbsid="BKS014-B09" type="button" class="act" data-testid="bank-currency-go" onclick="bankCurrencyUse()">' +
+    bkbE(tx('Read this statement')) +
+    '</button></div>';
+}
+function bankCurrencyUse() {
+  const chosen = String((bkbEl('bk_cur') || {}).value || '').trim().toUpperCase();
+  if (!chosen) return toast(tx('Say which currency the statement is in first.'));
+  if (typeof CBMoney !== 'undefined' && CBMoney.isIsoCurrency && !CBMoney.isIsoCurrency(chosen)) return toast(tx('That is not a currency code. Use three capital letters.'));
+  BKB.stmtCur = chosen;
+  bankCurrencyRun().catch((failure) => bkQuiet('bank-currency', failure));
+}
+/** the statement's currency, asked when the file did not say: it must be the bank account's (nothing is converted), then the books are read */
+async function bankCurrencyRun() {
+  if (!BKB.stmtCur) return bankCurrencyAsk();
+  const accountCurrency = String(bkCur() || '').toUpperCase();
+  if (accountCurrency && BKB.stmtCur.toUpperCase() !== accountCurrency) {
+    BKB.parsed = null;
+    BKB.rows = [];
+    bkbEl('bk_res').innerHTML = '';
+    return peBad('bk_out', txf('This statement is in {a} but the bank account is in {b}. Nothing is converted.', { a: BKB.stmtCur, b: accountCurrency }));
+  }
+  bkbEl('bk_out').innerHTML = '';
   await bankRun();
+  bankFileAccountNote();
+}
+/** the digits of an account number or name, so a file's "062-000 1234" and a ledger's "Bank 062000 1234" meet */
+const bkbDigits = (text) => String(text || '').replace(/\D/g, '');
+/** B5-07: the account number the FILE prints against the ledger picked: when they differ (or the ledger names none) the person is told, never silently trusted */
+function bankFileAccountNote() {
+  const said = bkbDigits(BKB.parsed && BKB.parsed.account),
+    ledger = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.acct))[0] || {},
+    ours = bkbDigits(ledger.name),
+    out = bkbEl('bk_out');
+  if (!said || !out || (ours && (ours.includes(said) || said.includes(ours)))) return;
+  out.innerHTML = '<div class="pe-warn" data-testid="bank-file-account">' + bkbE(txf('The file is for account {a}. Check it is the one you picked: {b}.', { a: String(BKB.parsed.account), b: ledger.name || BKB.acct })) + '</div>';
 }
 
 /** the shop's own bank lines for the statement's dates → the engine's ledger lines */
@@ -263,6 +331,7 @@ async function bankRail() {
   }
 }
 async function bankRun() {
+  if (!bkbBound()) return;
   const res = bkbEl('bk_res');
   if (res) res.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + bkbE(tx('Reading…')) + '</div>';
   let rail;
@@ -621,7 +690,7 @@ function bankList() {
         label: 'Add missing',
         tid: 'bank-add',
         when: (r) => own && (r.status === 'suggested' || r.status === 'bank-only' || r.status === 'check') && !bankIsParty(r),
-        run: (r) => bankAdd(r)
+        run: (r) => bankAddBound(r)
       },
       {
         id: 'dues',
@@ -681,6 +750,7 @@ function bankForget(r) {
 }
 /** their chit says what was paid and for which bills → the pay sheet opens with it placed; the person presses Record (POST /payments) */
 function bankRecord(r) {
+  if (!bkbBound()) return;
   const c = (r.chits || [])[0];
   if (!c || !c.party || !c.party.id) return toast(tx('This chit names no party.'));
   if (typeof payOpen !== 'function') return toast(tx('This starts after an update'));
@@ -919,6 +989,10 @@ function bankNext(r) {
 }
 
 /** ＋ Entry with the engine's suggestion filled in; the owner confirms in its preview, and the entry is posted through the API */
+/** B5-07: an entry opened from a line belongs to the account the statement was read for */
+function bankAddBound(r) {
+  if (bkbBound()) bankAdd(r);
+}
 function bankAdd(r) {
   const s = r.stmt,
     ev = (r.sugg && r.sugg.event) || null,

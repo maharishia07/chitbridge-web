@@ -36,8 +36,9 @@ const money = (minor) => ({ amount_minor: minor, currency: 'AUD' });
 function engines(seen) {
   return {
     recon: {
-      parse: (text) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], opening_minor: 1000000, closing_minor: 1750850 }),
-      match: () => ({ matched: [{ stmt: [4], ledger: ['L1'], how: 'amount+date' }] }),
+      parse: (text) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], skipped: seen.skipped || [], opening_minor: 1000000, closing_minor: 1750850 }),
+      match: () => ({ matched: [{ stmt: [4], ledger: ['L1'], how: 'amount+date' }], unmatched_stmt: LINES.slice(0, 4).map((l, i) => Object.assign({ i }, l)), unmatched_ledger: [{ id: 'L9' }, { id: 'L8' }] }),
+      nearMatches: (open, free) => ((seen.nearArgs = { open, free }), seen.near || {}),
       suggest: (line, o) => (seen.suggest.push(o), { event: { type: 'expense', date: line.date, amount: 1 } })
     },
     project: {
@@ -75,6 +76,7 @@ const make = (over) => {
       {
         engine: engines(seen),
         currency: 'AUD',
+        statementCurrency: () => 'AUD', /* B5-05: the statement's currency is never the account's by default; a test that wants the file silent passes statementCurrency: () => null */
         account: 'Demo',
         ledger: () => ({ lines: [], opening_minor: 1000000 }),
         post: async (item) => (seen.posted.push(item.ref), { ok: true, entry_no: 'E' + seen.posted.length }),
@@ -95,6 +97,49 @@ const make = (over) => {
   assert.deepStrictEqual(usd.ctl.view().items, []);
   assert.strictEqual(make().ctl.load('bad').ok, false);
   ok('a statement in another currency is refused (the engine words, naming both) and no line is shown');
+  /* B5-05: a file that does not say its currency is NOT read as the account's */
+  const silent = make({ statementCurrency: () => null });
+  assert.strictEqual(silent.ctl.load('ok', 'f.csv').ok, false);
+  assert.strictEqual(silent.seen.args.books.statement.currency, null);
+  assert.deepStrictEqual(silent.ctl.view().items, []);
+  const noAsker = make({ statementCurrency: undefined });
+  assert.strictEqual(noAsker.ctl.load('ok', 'f.csv').ok, false);
+  assert.strictEqual(noAsker.seen.args.books.statement.currency, null);
+  ok('B5-05: with no statement currency (none said, none in the file) nothing is defaulted to the account\'s: the engine is handed none and refuses');
+
+  /* B5-06: every skipped row reaches the engine's statement, so "tied" can refuse */
+  const skip = make();
+  skip.seen.skipped = [{ row: 3, why: 'unreadable date "06/11/2026 09:14"' }];
+  skip.ctl.load('ok', 'f.csv');
+  assert.deepStrictEqual(skip.seen.args.books.statement.skipped, skip.seen.skipped);
+  ok('B5-06: the skipped rows of the parse ride into project() with the statement');
+
+  /* B5-02: a line that may already be in the books asks; a pair takes the line (and the entry) out of the question */
+  const near = make();
+  near.seen.near = { 0: [{ id: 'L9', date: '2026-10-20', entry_no: 'MJ/1', narration: 'Account fee', gap_days: 3 }] };
+  near.ctl.load('ok', 'f.csv');
+  assert.deepStrictEqual(near.seen.args.books.near, near.seen.near);
+  const nearKey = near.ctl.view().items[0].key;
+  assert.strictEqual(near.ctl.pair(nearKey, 'L9').ok, true);
+  assert.strictEqual(near.seen.args.proposals[0], null, 'a paired line is in the books: no proposal is asked for');
+  assert.deepStrictEqual(near.seen.nearArgs.free.map((x) => x.id), ['L8'], 'the paired entry is out of every other line\'s list');
+  near.ctl.notMatch(near.ctl.view().items[1].key);
+  assert.ok(!near.seen.nearArgs.open.some((x) => x.i === 1), '"it is new" takes the line out of the question');
+  assert.strictEqual(near.ctl.pair('no-such-line', 'L9').ok, false);
+  ok('B5-02: near matches are handed to the engine; a pair makes the line "in your books" and uses its entry up; "it is new" ends the question; an unknown line is refused');
+
+  /* B5-01 / B5-03: the tick and the word on the tax invoice ride into the engine call for THAT line only */
+  const ask = make();
+  ask.ctl.load('ok', 'f.csv');
+  const tickKey = ask.ctl.view().items[3].key;
+  ask.ctl.tick(tickKey);
+  ask.ctl.invoice(tickKey, 'held');
+  const last = ask.seen.suggest.slice(-4);
+  assert.deepStrictEqual(last.map((o) => o.confirmed), [false, false, false, true]);
+  assert.deepStrictEqual(last.map((o) => o.tax_invoice), [undefined, undefined, undefined, 'held']);
+  ask.ctl.invoice(tickKey, 'anything else');
+  assert.strictEqual(ask.seen.suggest.slice(-4)[3].tax_invoice, 'none');
+  ok('B5-01/03: a tick and an invoice answer are per line, and anything but "held" is "none" (no credit), never a default of "held"');
 
   /* never offered: needs-you, gst question; ready count */
   const m = make();
