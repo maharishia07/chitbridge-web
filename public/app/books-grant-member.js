@@ -170,7 +170,7 @@
       },
       columns: [
         col('who', words('Who'), 1, 200, function (g) { return nameOf(g.grantee_entity); }),
-        col('purpose', words('Why'), 3, 260, function (g) { return g.purpose || '—'; }),
+        col('purpose', words('Why'), 2, 260, function (g) { return g.purpose || '—'; }),
         col('until', words('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
         col('costs', words('Costs'), 4, 110, function (g) { return g.can_see_costs ? words('Seen') : words('Hidden'); }),
         col('state', words('State'), 1, 170, function (g) { return root.CBBooksGrantApi.stateWords(g.state); })
@@ -200,9 +200,9 @@
       },
       columns: [
         col('at', words('When'), 1, 170, function (look) { return whenWords(look.at); }, function (look) { return look.at || ''; }),
-        col('who', words('Who'), 2, 200, function (look) { return nameOf(look.grantee_entity); }),
+        col('who', words('Who'), 3, 200, function (look) { return nameOf(look.grantee_entity); }),
         col('what', words('Looked at'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
-        col('out', words('Result'), 3, 220, function (look) { return words(LOOKED[look.outcome] || look.outcome || ''); })
+        col('out', words('Result'), 1, 220, function (look) { return words(LOOKED[look.outcome] || look.outcome || ''); })
       ],
       search: function (look) {
         return [nameOf(look.grantee_entity), whatWords(look.route_pattern), look.outcome].join(' ');

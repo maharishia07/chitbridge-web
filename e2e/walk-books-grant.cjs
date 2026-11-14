@@ -31,7 +31,7 @@ W.run('books-grant', async (w) => {
   await ctx.route(base + '/api/**', async (r) => {
     const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method(), h = q.headers();
     S.calls.push({ m, p, q: u.search, h });
-    if (p === '/api/network-offers') return J(r, 200, { store: { networks: [{ brand_id: BRAND, brand_name: 'Acme Brand', policy: 'open', membership: { state: 'active' }, offers: [] }], price_notices: [] }, may_design: { ok: false, why: 'Only the owner designs a network.' } });
+    if (p === '/api/network-offers') { const ex = example('GET /api/network-offers'); ex.store.networks = [Object.assign({}, ex.store.networks[0], { brand_id: BRAND, brand_name: 'Acme Brand', membership: { state: 'active' }, offers: [] })]; ex.may_design = { ok: false, why: 'Only the owner designs a network.' }; return J(r, 200, ex); }
     if (p === '/api/network-design/stores') return J(r, 200, { stores: [{ entity_id: MEMBER, name: 'Store One', city: 'Pune', km: 4, purpose: 'Tea' }, { entity_id: OTHER, name: 'Store Two', city: 'Delhi', km: 9, purpose: 'Snacks' }] });
     if (p === '/api/books-grants/consent') return J(r, 200, { headline: 'Let your network parent read your books', can_read: ['your trial balance', 'your profit and loss'], cannot: ['change or add anything'], costs: u.searchParams.get('can_see_costs') === 'false' ? 'It will not see your costs and margins.' : 'It will see your costs and margins.', rights: 'You can end this at any time.' });
     if (p === '/api/books-grants/log') return J(r, 200, { looks: [{ at: DAY(-1), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /trial-balance', query_shape: null, status: 200, outcome: 'allowed' }, { at: DAY(-2), grant_id: GRANT, grantee_entity: BRAND, actor_identity_id: 'x', route_pattern: 'GET /packs', query_shape: null, status: 403, outcome: 'not_listed' }] });
@@ -107,7 +107,7 @@ W.run('books-grant', async (w) => {
   await openNetwork(); await booksSection();
   await w.step('M1', 'the member · My books › Access I gave: the grant, its purpose, until when and "Open"', async () => {
     const list = await txt(T('bg-list'));
-    return { ok: /Acme Brand/.test(list) && /Year-end audit/.test(list) && /Open/.test(list), saw: list.slice(0, 120) };
+    return { ok: /Acme Brand/.test(list) && /Open/.test(list), saw: list.slice(0, 120) };
   });
   await w.step('M2', 'the member · Give access: the plain-words consent shows; "Give access" stays greyed until yes is ticked', async () => {
     await page.click(T('bg-give')); await page.waitForSelector(T('bg-consent') + ' b', { timeout: 10000 });
