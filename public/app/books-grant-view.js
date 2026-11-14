@@ -145,7 +145,7 @@
         return {
           key: column[0],
           label: words(column[1]),
-          prio: i < 2 || column[2] === MONEY ? 1 : 2,
+          prio: i < 3 || column[2] === MONEY ? 1 : 2,
           w: column[2] === MONEY ? 140 : 180,
           cell: function (row) {
             return figure(row, column);
