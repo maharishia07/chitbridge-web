@@ -42,7 +42,10 @@ function popups() {
   if (registerPath && fs.existsSync(registerPath)) {
     const screens = JSON.parse(fs.readFileSync(registerPath, 'utf8')).screens;
     const live = Object.values(screens).filter((row) => !row.retired && /^POP\d{3}$/.test(row.code || '')).map((row) => row.code);
-    return { codes: [...new Set(live)].sort(), source: 'SCREENS.json' };
+    const codes = [...new Set(live)].sort();
+    const sources = webSources();
+    const na = codes.filter((code) => closeOnly(code, sources));
+    return { codes: codes.filter((code) => !na.includes(code)), na, source: 'SCREENS.json' };
   }
   const found = new Set();
   ['public', 'public/app'].forEach((dir) => fs.readdirSync(path.join(WEB_DIR, dir)).filter((name) => /\.(js|html)$/.test(name)).forEach((name) => {
@@ -50,18 +53,38 @@ function popups() {
   }));
   return { codes: [...found].sort(), source: 'provisional: a grep of POPnnn strings, comments included' };
 }
+/** a popup with no main action: read from its opener's own source. The ui.dialog call that carries `pop: 'POPnnn'` has a footer whose buttons are all Cancel or Close (no .pri,
+    no action but cancel/close). A key exists only for an action (Esc already closes a dialog, proof item 2b), so such a popup is n/a, not missing. An opener that cannot be
+    read this way (no pop: literal, a footer built elsewhere, no button written out) stays in the denominator. Decision 14 Nov, DECISIONS "Keyboard shortcuts". */
+function closeOnly(code, sources) {
+  const mark = "pop: '" + code + "'";
+  const source = sources.find((text) => text.includes(mark));
+  if (!source) return false;
+  const call = source.slice(source.indexOf(mark)).split(/\n {2}\}\);/)[0];
+  const footer = /footerHtml:([\s\S]*)$|actions:([\s\S]*)$/.exec(call);
+  if (!footer) return false;
+  if (footer[2] !== undefined) {
+    const names = footer[2].match(/name:\s*'(\w+)'/g) || [];
+    return names.length > 0 && names.every((item) => /'(cancel|close)'/.test(item));
+  }
+  const buttons = footer[1].match(/<button[^>]*>/g) || [];
+  return buttons.length > 0 && buttons.every((tag) => /closeModal\(/.test(tag) && !/\bpri\b/.test(tag)); /* every button is the library close; a lone danger or other action is a main action */
+}
+function webSources() {
+  return ['public', 'public/app'].flatMap((dir) => fs.readdirSync(path.join(WEB_DIR, dir)).filter((name) => /\.(js|html)$/.test(name)).map((name) => read(dir + '/' + name)));
+}
 /** the whole count: the wanted row codes, the declared ones, and the number */
 function count() {
   const rows = register().rows;
   const popupList = popups();
   const wanted = areas().map((id) => 'HOM001-K01#' + id).concat(cards().map((id) => 'HOM001-B01#' + id), popupList.codes);
   const declared = wanted.filter((code) => Object.prototype.hasOwnProperty.call(rows, code) && KEY_FORM.test(rows[code]));
-  return { declared: declared.length, of: wanted.length, nav: { declared: declared.filter((code) => code.startsWith('HOM001')).length, of: wanted.filter((code) => code.startsWith('HOM001')).length }, popups: { declared: declared.filter((code) => code.startsWith('POP')).length, of: wanted.filter((code) => code.startsWith('POP')).length, source: popupList.source }, missing: wanted.filter((code) => !declared.includes(code)) };
+  return { declared: declared.length, of: wanted.length, nav: { declared: declared.filter((code) => code.startsWith('HOM001')).length, of: wanted.filter((code) => code.startsWith('HOM001')).length }, popups: { declared: declared.filter((code) => code.startsWith('POP')).length, of: wanted.filter((code) => code.startsWith('POP')).length, na: popupList.na || [], source: popupList.source }, missing: wanted.filter((code) => !declared.includes(code)) };
 }
 
-module.exports = { register, areas, cards, popups, customerPaths, count, KEY_FORM };
+module.exports = { closeOnly, register, areas, cards, popups, customerPaths, count, KEY_FORM };
 if (require.main === module) {
   const result = count();
   if (process.argv.includes('--json')) console.log(JSON.stringify(result, null, 1));
-  else console.log('shortcuts declared ' + result.declared + ' of ' + result.of + ' (nav entries ' + result.nav.declared + ' of ' + result.nav.of + ' · popups ' + result.popups.declared + ' of ' + result.popups.of + ', ' + result.popups.source + ')');
+  else console.log('shortcuts declared ' + result.declared + ' of ' + result.of + ' (nav entries ' + result.nav.declared + ' of ' + result.nav.of + ' · popups ' + result.popups.declared + ' of ' + result.popups.of + ', n/a (close only) ' + result.popups.na.length + ', ' + result.popups.source + ')');
 }
