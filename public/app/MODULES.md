@@ -84,7 +84,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (63)
+## Shared (65)
 
 | file | loading | what it is |
 |---|---|---|
@@ -93,6 +93,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `attach-ui.js` | eager | ATTACH + VIEW, as a helper any screen can reuse. (classic script, shared global scope) |
 | `avatar.js` | eager |  |
 | `barcode.js` | eager | CBBarcode — Code 128 as inline SVG, no dependency, no network |
+| `books-acting.js` | — |  |
+| `books-actions-view.js` | — |  |
 | `books-grant-api.js` | — |  |
 | `books-grant-member.js` | — |  |
 | `books-grant-view.js` | — |  |
@@ -154,4 +156,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*127 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*129 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
