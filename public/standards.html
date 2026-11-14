@@ -194,7 +194,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
     <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
-<dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
+<dialog class="sheet" id="sheet" data-pop="host" data-testid="std-sheet" aria-label="Detail"></dialog>
 <div id="toast" role="status" hidden></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
@@ -1302,7 +1302,7 @@ function openSheet(which) {
     '</div>';
   if (!node.open) {
     try {
-      node.showModal();
+      node.setAttribute('data-pop', 'POP117'); node.showModal();
     } catch (_) {
       node.setAttribute('open', '');
     }
@@ -1446,7 +1446,7 @@ function openReady(countryCode) {
     '<div class="sh-body" data-testid="std-sheet-ready"><div class="hint" data-testid="std-ready-loading">Reading…</div></div>';
   if (!sheet.open) {
     try {
-      sheet.showModal();
+      sheet.setAttribute('data-pop', 'POP118'); sheet.showModal();
     } catch (_) {
       sheet.setAttribute('open', '');
     }

@@ -161,7 +161,7 @@ async function enOpen(preset) {
     document.documentElement.style.overflow = 'hidden';
   } catch (_) {}
   if (!node.open) {
-    if (node.showModal) node.showModal();
+    if (node.showModal) { node.setAttribute('data-pop', 'POP120'); node.showModal(); }
     else node.setAttribute('open', '');
   }
   try {
