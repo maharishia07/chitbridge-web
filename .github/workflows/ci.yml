@@ -262,7 +262,7 @@ jobs:
       - name: The file-size ratchet bites on its fixtures (e2e/filesize-ratchet.cjs)
         run: node e2e/filesize-ratchet.cjs
       - name: No file grew past its baseline; a new file is at most 500 lines (tools/readability/filesize.cjs)
-        run: node tools/readability/filesize.cjs --repo web
+        run: node tools/readability/filesize.cjs
       - name: Only the code this change touched is judged (readability --changed --ratchet; the checklist numbers are printed)
         env:
           HEAD_REF: ${{ github.head_ref || github.ref_name }}
