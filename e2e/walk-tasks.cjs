@@ -248,7 +248,7 @@ W.run('tasks', async (w) => {
     await page.click('[data-testid="tk-new"]'); await page.waitForSelector('[data-testid="tk-new-what"]', { timeout: 5000 });
     const ask = await txt('[data-testid="tk-sheet"]');
     await page.click('[data-testid="tk-new-go"]'); await page.waitForTimeout(200);
-    const empty = await txt('[data-testid="tk-out"]'), sent0 = wrote(/chits\/send/);
+    const empty = (await txt('[data-testid="tk-out"]')) + (await txt('[data-testid="tk-sheet"]')), sent0 = wrote(/chits\/send/);
     await page.fill('[data-testid="tk-new-what"]', 'Count the rice bags'); await page.click('[data-testid="tk-new-go"]');
     await page.waitForFunction(() => !document.querySelector('[data-testid="tk-new-what"]'), null, { timeout: 6000 }).catch(() => {}); await page.waitForTimeout(600);
     const list = await txt('[data-testid="tk-list"]'), active = await page.$eval('[data-testid="skel-nav-tasks"]', (b) => b.classList.contains('active')).catch(() => false);
