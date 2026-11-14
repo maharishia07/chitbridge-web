@@ -5,7 +5,7 @@
  * CARD      11-crm-and-marketing/marketing-app
  * Moved byte for byte out of cap-crm-groups.js; no behaviour changed. Needs the base's GROUPS and crmSendOpen (cap-crm-groups-send.js), CBShowcase (cap-showcase.js) and the host globals of cap-crm.js. */
 'use strict';
-var CRM, GROUPS; /* the host's globals (cap-crm.js, cap-crm-groups.js load first): a bare var declares the name here and keeps the value */
+var GROUPS; /* the base's list state (cap-crm-groups.js loads first): a bare var declares the name here and keeps the value. The host's CRM state is read as window.CRM below, so no 3-letter name is declared */
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() {
@@ -48,7 +48,7 @@ function crmShowcase(frame) {
     '" autocomplete="off" oninput="crmSharePick(this.value)"></label>' +
     '<div id="crm_sc_res" data-testid="crm-sc-res"></div><div id="crm_sc_party" data-testid="crm-sc-party"></div></div></div>';
   if (frame) return;
-  if (!CRM.loaded) crmLoad(true);
+  if (!window.CRM.loaded) crmLoad(true);
   crmShowcaseLoad();
 }
 /** read the policy flags (the chosen template) and repaint the chooser; an unreadable answer shows the default */
@@ -120,7 +120,7 @@ function crmSharePick(query) {
     box.innerHTML = '';
     return;
   }
-  var list = CRM.rows
+  var list = window.CRM.rows
     .filter(function (item) {
       return item.kind !== 'walk-in' && [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(query) >= 0;
     })
@@ -145,8 +145,8 @@ function crmSharePick(query) {
 /** choose the party to share the shop link with, then paint the share box */
 async function crmShareParty(partyKey) {
   var party =
-      CRM.byKey[partyKey] ||
-      CRM.rows.filter(function (x) {
+      window.CRM.byKey[partyKey] ||
+      window.CRM.rows.filter(function (x) {
         return x.party_id === partyKey;
       })[0],
     box = document.getElementById('crm_sc_party');
@@ -310,5 +310,5 @@ function crmShareGroup() {
 document.addEventListener('click', function (event) {
   var node = event.target.closest && event.target.closest('[data-sc-pick]');
   if (!node || node.disabled) return;
-  if (CRM.route && CRM.route.view === 'showcase') crmShowcasePick(node.getAttribute('data-sc-pick'), node);
+  if (window.CRM.route && window.CRM.route.view === 'showcase') crmShowcasePick(node.getAttribute('data-sc-pick'), node);
 });

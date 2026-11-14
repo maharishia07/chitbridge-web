@@ -701,6 +701,10 @@
   }
 
   /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
+  /** one on/off row of the menu (Less motion · Keyboard shortcuts, MNT-63, WCAG 2.2 SC 2.1.4): a label and a switch whose click picks the other value of its kind */
+  function switchRow(label, kind, on, offValue, onValue) {
+    return '<div class="cbav-motion"><span>' + label + '</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="' + kind + '-switch" data-av-' + kind + '="' + (on ? offValue : onValue) + '" aria-checked="' + on + '" aria-label="' + label + '"></button></div>';
+  }
   function choiceGroup(heading, kind, choices) {
     return (
       '<h4>' +
@@ -841,13 +845,8 @@
       '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
       (w === 'bold') +
       '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
-      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="motion-switch" data-av-motion="1" aria-checked="' +
-      (pref('motion') === 'reduce') +
-      '" aria-label="Less motion"></button></div>' +
-      /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — a switch, on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off. A switch under Less motion in the shorter column: the menu still fits a 1280×800 window with no inner scroll */
-      '<div class="cbav-motion"><span>Keyboard shortcuts</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="keys-switch" data-av-keysw="1" aria-checked="' +
-      (pref('keys') !== 'off') +
-      '" aria-label="Keyboard shortcuts"></button></div>' +
+      switchRow('Less motion', 'motion', pref('motion') === 'reduce', 'auto', 'reduce') +
+      switchRow('Keyboard shortcuts', 'keys', pref('keys') !== 'off', 'off', 'on') +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
@@ -1039,7 +1038,7 @@
   }
 
   /** the saved looks a menu button sets by its data-av-<kind> attribute */
-  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font', 'motion', 'keys'];
   /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
   function onMenuAction(e, action, o) {
     var closeThen = function (callback) {
@@ -1080,8 +1079,6 @@
       return target.closest('[data-av-' + kind + ']');
     })[0];
     if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
-    if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
-    if (target.closest('[data-av-keysw]')) return set('keys', pref('keys') === 'off' ? 'on' : 'off');
     if ((button = target.closest('[data-av-lang]'))) {
       if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang'));
       return;
