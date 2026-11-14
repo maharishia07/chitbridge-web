@@ -171,15 +171,49 @@ function crmShareVerdict() {
   if (!allowed) return { may: false, code: 'NO_CONSENT', why: tx('No consent for offers on WhatsApp. Ask them first.') };
   return allowed;
 }
-/** paint the share box: the server's verdict on this party, greyed with its reason (no phone, not allowed, view-only) */
+/** copy the shop's link; where the clipboard is not there, show the link itself so it can be copied by hand */
+function crmShopLinkCopy() {
+  var shopUrl = crmShopUrl();
+  (navigator.clipboard ? navigator.clipboard.writeText(shopUrl) : Promise.reject(new Error('no clipboard'))).then(
+    function () {
+      toast(tx('Link copied'));
+    },
+    function () {
+      toast(shopUrl);
+    }
+  );
+}
+/** the Send sheet for the group picked in the share list, opened with the shop-window message filled in */
+function crmSharePicked(key) {
+  var group = GROUPS.rows.filter(function (row) {
+    return row.key === key;
+  })[0];
+  closeModal();
+  if (group) crmSendOpen(group, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
+}
+/** the clicks of the Shop window (the share box and its link); true when this module answered, false for an action that is not its own */
+function crmShareClick(action, node) {
+  if (action === 'sccopy') crmShopLinkCopy();
+  else if (action === 'scgroup') crmShareGroup();
+  else if (action === 'scgrouppick') crmSharePicked(node.getAttribute('data-k'));
+  else if (action === 'scparty') crmShareParty(node.getAttribute('data-k'));
+  else if (action === 'scshare') crmShareGo(node);
+  else return false;
+  return true;
+}
+/** why Share on WhatsApp is greyed for this party, in the shop's words; empty when it may go (no phone, not allowed, view-only) */
+function crmShareBlockedWhy(party, verdict) {
+  if (!crmEdit()) return tx('Your login can only view.');
+  if (!verdict.may) return verdict.why || tx('Not allowed');
+  return String(party.phone || '').replace(/[^0-9]/g, '') ? '' : tx('No phone number yet');
+}
+/** paint the share box: the server's verdict on this party, greyed with its reason */
 function crmSharePaint() {
   var party = SHOW.party,
     box = document.getElementById('crm_sc_party');
   if (!party || !box) return;
   var verdict = crmShareVerdict(),
-    phone = String(party.phone || '').replace(/[^0-9]/g, ''),
-    blockedWhy = verdict.may ? (phone ? '' : tx('No phone number yet')) : verdict.why || tx('Not allowed');
-  if (!crmEdit()) blockedWhy = tx('Your login can only view.');
+    blockedWhy = crmShareBlockedWhy(party, verdict);
   box.innerHTML =
     '<div class="result" data-testid="crm-sc-verdict" data-code="' +
     esc(verdict.code || '') +

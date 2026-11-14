@@ -13,8 +13,8 @@
  *   sentence (`may.group/send/delete`), never hidden. "Make an offer" is greyed with its own sentence: Offer Lab cannot pick a group yet.
  * ⭐ NEW PATHS (rule 4): this module (no groups screen existed — the workshop has a per-customer chip row only); the three sheets (New group ·
  *   Send · Share) — each one field over the new routes; CRM_EP gained the four rows (cap-crm.js).
- * OWNS the Groups screen (#/groups: segment and group rows, mini-card, New group, Share with a group) and the page-wide click answer crmGroupsClick. Two PARTS (MNT-59, flat prefix, loaded right after this file): cap-crm-groups-send.js (the Send sheet) and cap-crm-groups-window.js (the Shop window, #/showcase).
- * CALLED BY crm.html only (<script src>, this file first, then its two parts; app.html names it in comments only); cap-crm.js routes into it (crmGroups on #/groups, GROUPS, crmGroupsClick); cap-marketing.js calls crmGroupsWhyNot, crmGroupsLoad and GROUPS
+ * OWNS the Groups screen (#/groups: segment and group rows, mini-card, row actions) and the page-wide click answer crmGroupsClick. Three PARTS (MNT-59, flat prefix, loaded right after this file): cap-crm-groups-sheet.js (the New group / Members sheet), cap-crm-groups-send.js (the Send sheet) and cap-crm-groups-window.js (the Shop window, #/showcase).
+ * CALLED BY crm.html only (<script src>, this file first, then its three parts; app.html names it in comments only); cap-crm.js routes into it (crmGroups on #/groups, GROUPS, crmGroupsClick); cap-marketing.js calls crmGroupsWhyNot, crmGroupsLoad and GROUPS
  * FLOW crm.html → cap-crm.js → this file paints Groups & segments → the server answers each write
  * CARD 11-crm-and-marketing/marketing-app
  * Needs cap-crm.js (CRM · crmNav · crmBar · crmGo · crmKey · crmEdit · crmOwner · crmIsLead · cells · modal · CBAction · tx/txf · esc · api). */
@@ -53,6 +53,28 @@ function crmGroupsRows(reply) {
   });
   return segs.concat(groupRows);
 }
+/** keep the server's answer on the screen's state: the rows, what may be sent, the channel and purpose, and whether consent and groups are switched on */
+function crmGroupsKeep(reply) {
+  var answer = reply || {};
+  GROUPS.rows = crmGroupsRows(reply);
+  GROUPS.may = answer.may || null;
+  GROUPS.channel = answer.channel || 'whatsapp';
+  GROUPS.purpose = answer.purpose || 'marketing';
+  GROUPS.consent = answer.consent_migrated !== false;
+  GROUPS.migrated = answer.groups_migrated !== false;
+  GROUPS.state = 'ready';
+  GROUPS.loaded = true;
+  GROUPS.err = null;
+}
+/** a failed read: a list already on screen stays and reads as ready, a first read shows the error */
+function crmGroupsFailed(error) {
+  if (GROUPS.loaded) {
+    GROUPS.state = 'ready';
+    return;
+  }
+  GROUPS.state = 'error';
+  GROUPS.err = error;
+}
 /** read the segments and named groups from the server (the latest call wins); quiet keeps the list on screen while it reloads */
 async function crmGroupsLoad(quiet) {
   var generation = ++GROUPS.gen;
@@ -63,22 +85,10 @@ async function crmGroupsLoad(quiet) {
   try {
     var reply = await api('crmSegments');
     if (generation !== GROUPS.gen) return;
-    GROUPS.rows = crmGroupsRows(reply);
-    GROUPS.may = (reply && reply.may) || null;
-    GROUPS.channel = (reply && reply.channel) || 'whatsapp';
-    GROUPS.purpose = (reply && reply.purpose) || 'marketing';
-    GROUPS.consent = !(reply && reply.consent_migrated === false);
-    GROUPS.migrated = !(reply && reply.groups_migrated === false);
-    GROUPS.state = 'ready';
-    GROUPS.loaded = true;
-    GROUPS.err = null;
+    crmGroupsKeep(reply);
   } catch (e) {
     if (generation !== GROUPS.gen) return;
-    if (GROUPS.loaded) GROUPS.state = 'ready';
-    else {
-      GROUPS.state = 'error';
-      GROUPS.err = e;
-    }
+    crmGroupsFailed(e);
   }
   if (CRM.route && CRM.route.view === 'groups') crmGroupsBar();
   crmGroupsRefresh();
@@ -114,7 +124,20 @@ function crmGroupsParamsHref(row) {
   return row.kind === 'segment' ? '#/parties?seg=' + encodeURIComponent(row.key) : '#/parties?group=' + encodeURIComponent(row.name);
 }
 /* ═══ THE SCREEN — a CBList mount, grouped Segments · Groups ═══════════════════════════════════════════════════════ */
-function crmGroupsCols() {
+/** the "May be sent offers" cell: how many may be sent, and in small words how many are left out */
+function crmReachCell(group) {
+  var words = crmReachWords(group.reach);
+  return (
+    '<span data-testid="crm-grp-reach-' +
+    crmGroupTid(group) +
+    '">' +
+    esc(String((group.reach || {}).may || 0)) +
+    '</span>' +
+    (group.reach && group.reach.not ? ' <span class="sub">· ' + esc(words.not) + '</span>' : '')
+  );
+}
+/** the list's first two columns: the segment or group's name with its kind, and its member count */
+function crmGroupsNameCols() {
   return [
     {
       key: 'name',
@@ -149,7 +172,12 @@ function crmGroupsCols() {
       tid: function (group) {
         return 'crm-grp-count-' + crmGroupTid(group);
       }
-    },
+    }
+  ];
+}
+/** the list's last three columns: who may be sent offers, the offers only for them, and the rule */
+function crmGroupsReachCols() {
+  return [
     {
       key: 'reach',
       label: 'May be sent offers',
@@ -157,17 +185,7 @@ function crmGroupsCols() {
       w: 220,
       html: true,
       sort: 'reach',
-      cell: function (group) {
-        var words = crmReachWords(group.reach);
-        return (
-          '<span data-testid="crm-grp-reach-' +
-          crmGroupTid(group) +
-          '">' +
-          esc(String((group.reach || {}).may || 0)) +
-          '</span>' +
-          (group.reach && group.reach.not ? ' <span class="sub">· ' + esc(words.not) + '</span>' : '')
-        );
-      },
+      cell: crmReachCell,
       value: function (group) {
         return (group.reach || {}).may || 0;
       }
@@ -196,6 +214,10 @@ function crmGroupsCols() {
     }
   ];
 }
+/** the groups list's columns, in reading order */
+function crmGroupsCols() {
+  return crmGroupsNameCols().concat(crmGroupsReachCols());
+}
 function crmGroupTid(group) {
   return String(group.key).replace(/[^A-Za-z0-9_-]/g, '_');
 }
@@ -214,11 +236,9 @@ function crmGroupsNotices() {
     list.push({ text: tx('Consent records are not set up yet. Nobody can be sent offers until they are.'), cls: 'warn', tid: 'crm-grp-noconsent' });
   return list;
 }
-/** ▸ the mini-card: members · reach · offers — the same three-box shape as a party's */
-function crmGroupMini(group) {
-  var ms = crmGroupMembers(group),
-    key = crmGroupTid(group),
-    words = crmReachWords(group.reach);
+/** the members box of the mini-card: six names that open the party, a link to all of them in Parties, or the sentence for an empty set */
+function crmGroupMembersHtml(group, key) {
+  var ms = crmGroupMembers(group);
   var names = ms
     .slice(0, 6)
     .map(function (item) {
@@ -241,11 +261,17 @@ function crmGroupMini(group) {
           '<a href="' + crmGroupsParamsHref(group) + '" data-testid="crm-grp-seeall-' + key + '">' + esc(txf('See all {n} in Parties', { n: ms.length })) + '</a>'
         )
       : '';
-  var members = ms.length
+  return ms.length
     ? names + more
     : '<div class="mc-r sub" style="white-space:normal">' +
       esc(group.kind === 'group' ? tx('Nobody is in this group yet. Use Members.') : tx('Nobody is in this segment right now.')) +
       '</div>';
+}
+/** ▸ the mini-card: members · reach · offers — the same three-box shape as a party's */
+function crmGroupMini(group) {
+  var key = crmGroupTid(group),
+    words = crmReachWords(group.reach),
+    members = crmGroupMembersHtml(group, key);
   var reach = [
     crmMiniRow('msg', '<b data-testid="crm-grp-may-' + key + '">' + esc(words.may) + '</b>'),
     words.not ? '<div class="mc-r sub" style="white-space:normal;min-height:0" data-testid="crm-grp-not-' + key + '">' + esc(words.not) + '</div>' : '',
@@ -279,8 +305,8 @@ function crmGroupsWhyNot(group, action) {
   if (action === 'offer') return tx(CRM_OFFER_WHY);
   return '';
 }
-/** the row actions of the Groups list (send, members, delete…), each with its test id and its why-not */
-function crmGroupsActions() {
+/** the row actions that reach the customers: send an offer message, make an offer (each with its test id and its why-not) */
+function crmGroupsMessageActions() {
   return [
     {
       id: 'send',
@@ -305,7 +331,12 @@ function crmGroupsActions() {
       run: function () {
         toast(tx(CRM_OFFER_WHY));
       }
-    },
+    }
+  ];
+}
+/** the row actions that change or leave the set: edit the members, delete the group, open it in Parties */
+function crmGroupsSetActions() {
+  return [
     {
       id: 'members',
       label: tx('Members'),
@@ -335,7 +366,12 @@ function crmGroupsActions() {
       run: function (group) {
         crmGroupDelete(group);
       }
-    },
+    }
+  ];
+}
+/** the row action that opens a set's customers in the Parties list; always allowed */
+function crmGroupsOpenAction() {
+  return [
     {
       id: 'seeall',
       label: tx('Open in Parties'),
@@ -346,6 +382,10 @@ function crmGroupsActions() {
       }
     }
   ];
+}
+/** the row actions of the list, in order; each is shown greyed with the server's sentence when it may not run (never hidden) */
+function crmGroupsActions() {
+  return crmGroupsMessageActions().concat(crmGroupsSetActions(), crmGroupsOpenAction());
 }
 /** the groups list's orders */
 function crmGroupSorts() {
@@ -373,21 +413,19 @@ function crmGroupSorts() {
     }
   ];
 }
-/** paint the Groups screen: the bar, then a CBList mount with one row per segment or named group */
-function crmGroups(frame) {
-  crmGroupsBar();
-  var node = document.getElementById('screen');
-  node.className = 'screen flush';
-  node.innerHTML = '<div id="crm_groups" data-testid="crm-groups"></div>';
-  if (GROUPS.api && GROUPS.api.destroy) {
-    try {
-      GROUPS.api.destroy();
-    } catch (failure) {
-      // the old list is replaced right below, so a failed tear-down only leaves stale listeners; say so and carry on
-      if (typeof cblog === 'function') cblog('warn', 'crm groups: the old list could not be torn down — ' + ((failure && failure.message) || 'no answer'));
-    }
+/** the old list's tear-down before a new one is mounted on the same screen */
+function crmGroupsTearDown() {
+  if (!(GROUPS.api && GROUPS.api.destroy)) return;
+  try {
+    GROUPS.api.destroy();
+  } catch (failure) {
+    // the old list is replaced right below, so a failed tear-down only leaves stale listeners; say so and carry on
+    if (typeof cblog === 'function') cblog('warn', 'crm groups: the old list could not be torn down — ' + ((failure && failure.message) || 'no answer'));
   }
-  GROUPS.api = CBList.mount(document.getElementById('crm_groups'), {
+}
+/** the groups list's shape: its key, rows, columns, header and the three states (loading, error, empty) */
+function crmGroupsListShape() {
+  return {
     key: 'crm-groups',
     t: tx,
     rows: function () {
@@ -415,7 +453,12 @@ function crmGroups(frame) {
     onRetry: function () {
       crmGroupsLoad();
     },
-    empty: { title: tx('No groups yet'), sub: tx('Name one to offer or message a set of customers together. Use + New group.') },
+    empty: { title: tx('No groups yet'), sub: tx('Name one to offer or message a set of customers together. Use + New group.') }
+  };
+}
+/** the groups list's ways to find and act: search, orders, grouping, the mini-card and the row actions */
+function crmGroupsListFind() {
+  return {
     search: function (group) {
       return [group.name, group.rule].join(' ');
     },
@@ -440,173 +483,19 @@ function crmGroups(frame) {
       return crmGroupMini(group);
     },
     actions: crmGroupsActions()
-  });
+  };
+}
+/** paint the Groups screen: the bar, then a CBList mount with one row per segment or named group */
+function crmGroups(frame) {
+  crmGroupsBar();
+  var node = document.getElementById('screen');
+  node.className = 'screen flush';
+  node.innerHTML = '<div id="crm_groups" data-testid="crm-groups"></div>';
+  crmGroupsTearDown();
+  GROUPS.api = CBList.mount(document.getElementById('crm_groups'), Object.assign(crmGroupsListShape(), crmGroupsListFind()));
   if (frame) return;
   if (!CRM.loaded) crmLoad(true); /* the members come from the Parties list in memory */
   crmGroupsLoad(GROUPS.loaded);
-}
-/* ═══ NEW GROUP · MEMBERS — one sheet: a name, then who is in it (the customers of the Parties list, ticked) ═══════ */
-var GSHEET = { name: '', fixed: false, orig: {}, on: {}, q: '' };
-/** open the New group / Edit members sheet; an existing name starts with its current members ticked */
-function crmGroupOpen(name) {
-  GSHEET = { name: name || '', fixed: !!name, orig: {}, on: {}, q: '' };
-  if (name)
-    CRM.rows.forEach(function (item) {
-      if ((item.groups || []).indexOf(name) >= 0) {
-        GSHEET.orig[item.party_id] = 1;
-        GSHEET.on[item.party_id] = 1;
-      }
-    });
-  ui.dialog({
-    mount: 'CRM008-U201',
-    pop: 'POP098',
-    titleText: name ? txf('Members of {name}', { name: name }) : tx('New group'),
-    testid: 'crm-grp-sheet',
-    body:
-      '<label>' +
-      esc(tx('Name')) +
-      '<input data-cbsid="CRM008-I01" class="inp" id="crm_grp_name" data-testid="crm-grp-name" maxlength="40" autocomplete="off" value="' +
-      esc(name || '') +
-      '"' +
-      (name ? ' readonly' : '') +
-      '></label>' +
-      '<label>' +
-      esc(tx('Find a customer')) +
-      '<input data-cbsid="CRM008-I02" class="inp" id="crm_grp_q" data-testid="crm-grp-q" placeholder="' +
-      esc(tx('Name, ID, phone')) +
-      '" autocomplete="off" oninput="crmGroupPick(this.value)"></label>' +
-      '<div id="crm_grp_list" class="grp-list" data-testid="crm-grp-list"></div>' +
-      '<div id="crm_grp_msg" class="hint" role="status" data-testid="crm-grp-msg"></div>',
-    footerHtml:
-      '<span class="sub" id="crm_grp_n" data-testid="crm-grp-n" style="margin-right:auto;align-self:center"></span>' +
-      ui.footerAction({ name: 'cancel', options: { mount: 'CRM008-U201' } }) +
-      ui.footerAction({ name: 'save', options: { mount: 'CRM008-U201', key: 'save', effect: 'preference', testid: 'crm-grp-save', data: { crm: 'grpsave' } } })
-  });
-  crmGroupPick('');
-  var node = document.getElementById(name ? 'crm_grp_q' : 'crm_grp_name');
-  if (node) node.focus();
-}
-function crmGroupCands() {
-  return CRM.rows.filter(function (item) {
-    return item.kind !== 'walk-in' && (item.roles || []).indexOf('customer') >= 0 && !crmIsLead(item);
-  });
-}
-/** filter the member picker of the group sheet by the typed text and repaint the list */
-function crmGroupPick(query) {
-  GSHEET.q = String(query || '')
-    .trim()
-    .toLowerCase();
-  var box = document.getElementById('crm_grp_list');
-  if (!box) return;
-  var all = crmGroupCands(),
-    matches = all.filter(function (item) {
-      return !GSHEET.q || [item.display_name, item.nickname, item.party_no, item.phone, item.user_id].join(' ').toLowerCase().indexOf(GSHEET.q) >= 0;
-    });
-  var ticked = all.filter(function (item) {
-    return GSHEET.on[item.party_id];
-  });
-  box.innerHTML = matches.length
-    ? matches
-        .slice(0, 60)
-        .map(function (item) {
-          return (
-            '<label class="grp-row" data-testid="crm-grp-cand-' +
-            esc(crmKey(item)) +
-            '"><input data-cbsid="CRM008-I03" type="checkbox" data-crm="grptick" data-k="' +
-            esc(item.party_id) +
-            '"' +
-            (GSHEET.on[item.party_id] ? ' checked' : '') +
-            '><span class="nm">' +
-            esc(item.display_name) +
-            '</span><span class="sub">' +
-            esc(item.party_no || item.phone || '') +
-            '</span></label>'
-          );
-        })
-        .join('') + (matches.length > 60 ? '<div class="hint">' + esc(txf('{n} more — type to narrow', { n: matches.length - 60 })) + '</div>' : '')
-    : '<div class="hint">' + esc(all.length ? tx('Nobody matches.') : tx('No customers yet. They appear when you bill them.')) + '</div>';
-  var node = document.getElementById('crm_grp_n');
-  if (node) node.textContent = crmPlural(ticked.length, 'member', 'members');
-}
-function crmGroupTick(key, on) {
-  if (on) GSHEET.on[key] = 1;
-  else delete GSHEET.on[key];
-  var node = document.getElementById('crm_grp_n');
-  if (node) node.textContent = crmPlural(Object.keys(GSHEET.on).length, 'member', 'members');
-}
-function crmGroupWords(e) {
-  var code = e && e.data && e.data.code;
-  if (e && e.status === 403) return (e.data && (e.data.why || e.data.message)) || tx('Your login can only view.');
-  if (code === 'GROUPS_NOT_MIGRATED') return tx('Groups are not switched on for your shop yet.');
-  if (code === 'BAD_NAME') return tx('Name the group: up to 40 letters, digits, spaces, - & /.');
-  if (code === 'TOO_MANY_GROUPS') return tx('A customer can be in at most 20 groups.');
-  if (code === 'TOO_MANY') return tx('At most 500 at a time.');
-  if (code === 'NOTHING_TO_DO') return tx('Tick at least one customer.');
-  return tx("Couldn't save the group. Try again.");
-}
-/** save the group sheet (a name is required) through CBAction, then reload the groups */
-function crmGroupSave(btn) {
-  var name = String((document.getElementById('crm_grp_name') || {}).value || '')
-      .replace(/\s+/g, ' ')
-      .trim(),
-    msg = document.getElementById('crm_grp_msg');
-  if (!name) {
-    msg.textContent = tx('Name the group.');
-    return;
-  }
-  var toAdd = Object.keys(GSHEET.on).filter(function (item) {
-      return !GSHEET.orig[item];
-    }),
-    remove = Object.keys(GSHEET.orig).filter(function (item) {
-      return !GSHEET.on[item];
-    });
-  if (!toAdd.length && !remove.length) {
-    msg.textContent = tx('Tick at least one customer.');
-    return;
-  }
-  return CBAction.run(
-    btn,
-    async function () {
-      return api('crmGroupSet', { body: { name: name, add: toAdd, remove: remove } });
-    },
-    {
-      key: 'group-save',
-      busy: tx('Saving…'),
-      onFail: function (words, e) {
-        msg.textContent = crmGroupWords(e);
-      },
-      outcome: async function (reply) {
-        closeModal();
-        toast(txf('{name}: {n}', { name: (reply && reply.name) || name, n: crmPlural((reply && reply.count) || 0, 'member', 'members') }));
-        await crmLoad(true);
-        crmGroupsLoad(true);
-      }
-    }
-  );
-}
-/** a delete asks first — with the offers that name it (the server's count): they would reach no one */
-function crmGroupDelete(group) {
-  var body = group.offers
-    ? txf('{n} only for this group. They will reach no one.', { n: crmPlural(group.offers, 'offer is', 'offers are') })
-    : tx('Its members stay your customers; only the name goes.');
-  CBAction.run(
-    null,
-    async function () {
-      return api('crmGroupDel', { params: { name: group.name } });
-    },
-    {
-      key: 'group-del',
-      confirm: { title: txf('Delete group {name}?', { name: group.name }), body: esc(body), yes: group.offers ? tx('Delete anyway') : tx('Delete') },
-      onFail: function (words, e) {
-        toast(crmGroupWords(e));
-      },
-      outcome: async function () {
-        toast(txf('{name} deleted', { name: group.name }));
-        await crmLoad(true);
-        crmGroupsLoad(true);
-      }
-    }
-  );
 }
 /* ═══ the clicks this module answers (cap-crm.js's one listener asks) ═══════════════════════════════════════════════ */
 function crmGroupsClick(action, node) {
@@ -630,37 +519,5 @@ function crmGroupsClick(action, node) {
     crmSendGo(node);
     return true;
   }
-  if (action === 'sccopy') {
-    var shopUrl = crmShopUrl();
-    (navigator.clipboard ? navigator.clipboard.writeText(shopUrl) : Promise.reject(new Error('no clipboard'))).then(
-      function () {
-        toast(tx('Link copied'));
-      },
-      function () {
-        toast(shopUrl);
-      }
-    );
-    return true;
-  }
-  if (action === 'scgroup') {
-    crmShareGroup();
-    return true;
-  }
-  if (action === 'scgrouppick') {
-    var group = GROUPS.rows.filter(function (x) {
-      return x.key === node.getAttribute('data-k');
-    })[0];
-    closeModal();
-    if (group) crmSendOpen(group, { text: txf('Have a look at our shop window: {url}', { url: crmShopUrl() }) });
-    return true;
-  }
-  if (action === 'scparty') {
-    crmShareParty(node.getAttribute('data-k'));
-    return true;
-  }
-  if (action === 'scshare') {
-    crmShareGo(node);
-    return true;
-  }
-  return false;
+  return crmShareClick(action, node);
 }

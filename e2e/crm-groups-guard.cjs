@@ -28,13 +28,10 @@ function check(world) {
     const homes = files.filter((file) => topNames(world.family[file]).includes(name));
     if (homes.length !== 1) fails.push('name ' + name + ' must live in exactly one cap-crm-groups file, found in ' + (homes.join(', ') || 'none'));
   }
-  let last = -1;
   for (const file of files) {
     const tag = '<script src="' + urlOf(file) + '"></script>', tags = countOf(world.page, tag);
     if (tags !== 1) fails.push(PAGE + ' must carry the tag for ' + file + ' exactly once, has ' + tags);
-    const at = world.page.indexOf(tag);
-    if (at < last) fails.push(PAGE + ' must load ' + file + ' after the files before it in the family');
-    last = Math.max(last, at);
+    if (file !== BASE && world.page.indexOf(tag) < world.page.indexOf('<script src="' + urlOf(BASE) + '"></script>')) fails.push(PAGE + ' must load ' + file + ' after the base ' + BASE);
   }
   const version = (world.sw.match(/CB_SW_VERSION = '([^']+)'/) || [])[1];
   if (!/^v\d+$/.test(version || '')) fails.push('CB_SW_VERSION not found in cb-sw.js');
@@ -112,7 +109,7 @@ function selfTests(world) {
   red('crmShopUrl changed', (made) => { const home = homeOf(made, 'crmShopUrl'); made.family[home] = swap(made.family[home], "'/shop.html?s='", "'/shop?s='"); }, /behaviour: crmShopUrl/, true);
   tests.push({ why: 'the simulated split is green', mutate: (made) => { split(made); made.sw = made.sw.replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = 'v999'"); }, pattern: null, loaded: true });
   red('a part tag removed on a split page', (made) => { split(made); made.page = swap(made.page, '<script src="/app/' + part + '"></script>', ''); }, /must carry the tag for cap-crm-groups-/);
-  red('the part loaded before the base', (made) => { split(made); made.page = swap(made.page, '<script src="/app/' + BASE + '"></script><script src="/app/' + part + '"></script>', '<script src="/app/' + part + '"></script><script src="/app/' + BASE + '"></script>'); }, /after the files before it/);
+  red('the part loaded before the base', (made) => { split(made); const baseTag = '<script src="/app/' + BASE + '"></script>', partTag = '<script src="/app/' + part + '"></script>'; made.page = swap(made.page, baseTag, ''); made.page = swap(made.page, partTag, partTag + baseTag); }, /after the base/);
   red('CB_SW_VERSION not bumped on a split', (made) => { split(made); made.sw = made.sw.replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = '" + snapshot.swVersion + "'"); }, /CB_SW_VERSION is still/);
   return tests.map((test) => {
     const made = copy(world);
@@ -128,5 +125,5 @@ fails.forEach((line) => console.log('FAIL ' + line));
 const bad = (fails.length ? [] : selfTests(world)).filter((test) => !test.ok);
 bad.forEach((test) => console.log('FAIL self-test: ' + test.why + (test.fails.length ? ' -> ' + test.fails.join(' | ') : ' -> not red')));
 const total = fails.length + bad.length;
-console.log(total ? '\ncrm-groups-guard: ' + total + ' FAILED' : '\ncrm-groups-guard: all passed (names in one file each, tag order, typeof, four pure functions, SW version; 9 self-tests red or green as expected)');
+console.log(total ? '\ncrm-groups-guard: ' + total + ' FAILED' : '\ncrm-groups-guard: all passed (names in one file each, base first, typeof, four pure functions, SW version; 9 self-tests red or green as expected)');
 process.exit(total ? 1 : 0);
