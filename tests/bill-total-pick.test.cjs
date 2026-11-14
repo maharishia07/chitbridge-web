@@ -27,12 +27,12 @@ assert.strictEqual((SRC.match(/function\s+billTotalOf\s*\(/g) || []).length, 1, 
 
 /* the readers' real expressions, lifted from source */
 const grab = (file, re, what) => { const m = read(file).match(re); assert(m, what + ' call not found in ' + file); return m[1]; };
-const exprApp = grab('app.html', /\bamt: (billTotalOf\(sum\) \|\| 0),/, 'app.html amt');
-const exprC2 = grab('app/cap-chit2.js', /\bamt: (billTotalOf\(h\.summary_json, \(d\.detail && d\.detail\.total_value\) \|\| h\.total_value\) \|\| 0),/, 'cap-chit2 amt');
+const exprApp = grab('app.html', /\bamt: (billTotalOf\(sum, null, c\.bill_total\) \|\| 0),/, 'app.html amt');
+const exprC2 = grab('app/cap-chit2.js', /\bamt: (billTotalOf\(summary, \(reply\.detail && reply\.detail\.total_value\) \|\| header\.total_value, wire\) \|\| 0),/, 'cap-chit2 amt');
 const exprAuth = grab('authority-forms.html', /\bv = (billTotalOf\(sj\)),/, 'authority-forms v');
-const stripOf = (bt, expr, r) => new Function('billTotalOf', 'd', 'h', 'return ' + expr)(bt,
-  { header: { summary_json: r.summary }, detail: { total_value: r.detail }, delivery_summary: { lines: [] } }, { summary_json: r.summary });
-const listOf = (bt, r) => new Function('billTotalOf', 'sum', 'return ' + exprApp)(bt, r.summary);
+const stripOf = (bt, expr, r) => new Function('billTotalOf', 'reply', 'header', 'summary', 'wire', 'return ' + expr)(bt,
+  { header: { summary_json: r.summary }, detail: { total_value: r.detail }, delivery_summary: { lines: [] } }, { summary_json: r.summary }, r.summary, undefined);
+const listOf = (bt, r) => new Function('billTotalOf', 'sum', 'c', 'return ' + exprApp)(bt, r.summary, {});
 const authOf = (bt, r) => new Function('billTotalOf', 'sj', 'return ' + exprAuth)(bt, r.summary);
 
 const bad = [];
@@ -70,9 +70,33 @@ const swapped = SRC.replace(/  var m = s\.money[^\n]*\n  if \(m != null\) return
   '  var t = billFigure(s.total_value);\n  if (t != null) return t;\n  var m = s.money && typeof s.money === "object" ? billFigure(s.money.total) : null;\n  return m != null ? m : billFigure(raw);');
 assert.notStrictEqual(swapped, SRC, 'mutation 1 applied');
 assert.notStrictEqual(helperOf(swapped)(b.summary), 189, 'arms swapped: row b must go red');
-const wrong = exprC2.replace('h.summary_json', 'd.delivery_summary');
+const wrong = exprC2.replace('(summary,', '(reply.delivery_summary,');
 assert.notStrictEqual(wrong, exprC2, 'mutation 2 applied');
 assert.notStrictEqual(stripOf(pick, wrong, b), 189, 'delivery_summary passed: row b must go red');
 assert.notStrictEqual(new Function('sum', 'return sum.total_value || 0')(b.summary), 189, 'raw read restored: row b must go red');
+
+/* ACC-348b (twin of api #1308): the api's bill_total wins and is painted; the web never compares */
+const wireSrc = SRC.slice(SRC.indexOf('function billCurrencyOf('), SRC.indexOf('function deepClone('));
+const escText = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (ch) => '&#' + ch.charCodeAt(0) + ';');
+const paint = new Function('esc', 'tx', wireSrc + '; return { notice: billNoticeHTML, chip: billChipHTML, currency: billCurrencyOf };')(escText, (text) => text);
+const stamped = row('k-stamped-mismatch');
+const says = 'The system did not get the right value for this figure. We have been told and are on it. Urgent? Call the help desk.';
+const wireK = { total: 189, agree: false, source: 'money', currency_code: 'INR', says };
+assert.strictEqual(pick(stamped.summary, null, wireK), 189, 'the wire total is read');
+assert.strictEqual(pick({ money: { total: 50 } }, null, { total: 75, agree: true, source: 'invoice', currency_code: 'AUD' }), 75, 'the wire wins over the stored copies');
+assert.strictEqual(pick({ money: { total: 50 } }, null, { total: null, agree: true, source: 'withheld', currency_code: null }), null, 'a withheld wire stays null, never the stored copy');
+assert.strictEqual(pick(stamped.summary, null, undefined), 189, 'no wire (older api): the D1 read');
+assert.strictEqual(paint.currency({ currency_code: 'AUD' }, { currency_code: 'INR' }), 'AUD', 'every amount: the wire currency first');
+assert.strictEqual(paint.currency(undefined, { currency_code: 'INR' }), 'INR', 'no wire: the row summary currency');
+assert.strictEqual(paint.currency(null, {}), undefined, 'unknown stays unknown, never defaulted');
+assert(paint.notice(wireK).includes(escText(says)), 'agree:false shows the says sentence in full');
+assert(paint.notice(wireK).includes('data-testid="bill-not-confirmed"'), 'the notice carries its test id');
+assert(paint.chip(wireK).includes('title=') && paint.chip(wireK).includes('not confirmed'), 'the list chip says not confirmed');
+assert.strictEqual(paint.notice({ total: 189, agree: true, source: 'money', currency_code: 'INR' }), '', 'agree:true is silent');
+assert.strictEqual(paint.notice(null) + paint.chip(undefined), '', 'no wire is silent');
+const appSrc = read('app.html');
+assert(/currency: billCurrencyOf\(c\.bill_total, sum\)/.test(appSrc), 'list row currency: the wire first');
+assert(/\$\{billNoticeHTML\(c\.billTotal\)\}/.test(appSrc) && /billChipHTML\(c\.billTotal\)/.test(appSrc) && /billTotal: reply\.bill_total/.test(appSrc), 'list cell, detail strip and detail carry all read it');
+assert(/billNoticeHTML\(wire\)/.test(read('app/cap-chit2.js')), 'design 2 paints it too');
 
 console.log('bill-total-pick: all ok (' + FX.rows.length + ' rows x 3 readers, ' + (FX.refused.length + 3) + ' refused inputs, 3 mutations)');

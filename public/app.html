@@ -24174,8 +24174,8 @@ function mapApiChit(c) {
      */
     isDraft: c.role === 'Draft',
     kind: c.purpose || 'order',
-    amt: billTotalOf(sum) || 0, /* ACC-206 D1: money.total first (helpers.js billTotalOf), so Amount = the Total cell on an old invoice */ costHidden: !!c.cost_hidden /* ⭐ RAIL-146: the server took the money off this row for a co-assist who may not see cost (api lib/cost-view) — the cell says "hidden", never ₹0 */,
-    currency: sum.currency_code,
+    billTotal: c.bill_total /* ACC-348b: { total, agree, source, currency_code, says? }, carried to the cell and the detail unchanged */, amt: billTotalOf(sum, null, c.bill_total) || 0, /* the api's bill_total first, else ACC-206 D1 (money.total first, helpers.js billTotalOf) */ costHidden: !!c.cost_hidden /* ⭐ RAIL-146: the server took the money off this row for a co-assist who may not see cost (api lib/cost-view) — the cell says "hidden", never ₹0 */,
+    currency: billCurrencyOf(c.bill_total, sum),
     state: ST[c.current_status] || 'open',
     _status: c.current_status || 'pending',
     assignTo: c.assigned_to_actor_id || null,
@@ -25135,7 +25135,7 @@ const LISTCOLS = [
     w: '112px',
     align: 'right',
     cell: function (c) {
-      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
+      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>' + billChipHTML(c.billTotal);
     }
   },
   /* the rest of the money, off until someone picks them in ⚙ columns. A missing figure is "—", never 0. */
@@ -25755,7 +25755,8 @@ function chitDetailCarry(reply) {
     line_assignment: reply.line_assignment || {},
     cost_hidden: !!reply.cost_hidden /* ⭐ RAIL-146: the server's own word that it took the cost off this read for a cost-blind co-assist (api lib/cost-view); the strip, the lines and the money block say "hidden" on it */,
     ctp_unconfirmed: reply.ctp_unconfirmed || null /* RAIL-118: a change the other installation has not confirmed */,
-    order_billed: reply.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */
+    order_billed: reply.order_billed /* W36: a bill names this order yet? (the server's; chitUnpaidWord) */,
+    billTotal: reply.bill_total || null /* ACC-348b: the detail's own bill_total, the same pick as the list row (api money-check billTotalWire) */
   };
 }
 async function openChit(id, silent) {
@@ -25826,7 +25827,7 @@ async function openChit(id, silent) {
           manual_subject: h.manual_subject,
           auto_subject: h.auto_subject,
           current_status: ((r.participants || []).find((x) => x && x.entity_id === h.entity_id) || {}).current_status || 'delivered',
-          open_dispute_count: 0
+          open_dispute_count: 0, bill_total: r.bill_total /* ACC-348b: a chit opened by its door has no list row: its amount comes from the detail's bill_total */
         });
       /* ⚠️ WX-O2C (2026-10-13): MY copy's status (participants[] row of my entity — the header is my copy) — a chit opened by its door, not on the
              list's page, was painted with a fixed 'delivered' and read OPEN after it was accepted or completed. */
@@ -27158,7 +27159,7 @@ function detailInner() {
   ]);
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c) ? ' ' + msgCount(c) : ''}</button><div class="dt">${esc(c.code)} · ${esc(chitOtherParty(c) || '—')}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${chitMoney(c.amt, c)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender || SESSION.entity || 'You')}</b></span>`}<span class="ptag">${c.kind === 'counter' ? 'to <b>' + esc(SESSION.entity || 'You') + '</b>' : esc(c.rsummary || 'to ' + (c.party || '—'))}</span>${c.kind === 'counter' ? `<span class="ptag">for <b>${esc(c.cust)}</b></span>` : ''}</div><div class="dchips">${dchipShows('ext') ? `<span class="prichip-btn pri-${c.priExt || 'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt || 'normal'].label}</span>` : ''}${SESSION.role !== 'customer' && dchipShows('int') ? `<button class="prichip-btn pri-${c.pri || 'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri || 'normal'].label} ▾</button>` : ''}${c.custPri && dchipShows('custpri') ? '<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>' : ''}${dchipShows('assignee') ? `<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee ? esc(c.assignee) : 'Unassigned'}</span>` : ''}${dchipMore()}</div></div>
-   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
+   ${window.CBPage && !c._loading ? CBPage.noteHTML(c.business_json) : ''}${chitSpendStrip(c)}${billNoticeHTML(c.billTotal)}${typeof disputeBanner === 'function' ? disputeBanner(c) : ''}${cancelBanner(c)}${ctpBanner(c)}<div class="dtabs">${dtabs.map(([k, l]) => `<button class="${UI.dtab === k ? 'on' : ''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join('')}</div>
    <div class="db" tabindex="0" role="region" aria-label="${esc(tx('Chit details'))}">${body}</div><div class="actbar">${typeof SESSION !== 'undefined' && (SESSION.name === 'GOV-01-Help' || SESSION.isHelpdesk) && c.kind === 'inquiry' ? '<button class="pri" onclick="answerPublish(\'' + c.id + '\')">🧠 Answer &amp; publish</button>' : ''}${actbar}</div>`;
 }
 /**

@@ -4,7 +4,7 @@
  * reference app state (UI/SESSION/STORE/…) or DOM at load time. Panel-specific mappers/renderers stay
  * in their panel module. Extracted verbatim from app.html (behaviour unchanged).
  *
- * OWNS  the generic leaves: esc · opt · money and date formatters · month words · emptyState · loader · the status words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total)
+ * OWNS  the generic leaves: esc · opt · money and date formatters · month words · emptyState · loader · the status words · billTotalOf (ACC-206 D1: the ONE web read of a chit's bill total; ACC-348b reads the api bill_total first) · billNoticeHTML · billChipHTML (the not-confirmed words)
  * CALLED BY  36 pages by <script src> (grep -lE 'src="/?app/helpers.js' public/*.html index.html): app.html, every small app, the labs, the shop pages. The till does NOT
  *            load it (its own esc, till.html T2-WEBPRIMS note). Callers by symbol (grep -rlw SYM public, not helpers.js): fmtMoney 47 files, monthNames 32, loader 21, emptyState 9.
  * FLOW  loaded early on each page (app.html: after core.js) → every panel and small app calls these pure functions; emptyState draws the one empty-state action button (SCR038-B01)
@@ -20,12 +20,33 @@ function billFigure(v) {
   if (typeof v === 'number') return isFinite(v) ? v : null;
   return typeof v === 'string' && /^\s*-?\d+(\.\d+)?\s*$/.test(v) ? Number(v) : null;
 }
-function billTotalOf(summary, raw) {
+function billTotalOf(summary, raw, wire) {
+  if (wire && typeof wire === 'object') return billFigure(wire.total); /* ACC-348b: the api's own bill_total (list row and detail) wins; a withheld null stays null */
   var s = summary && typeof summary === 'object' ? summary : {};
   var m = s.money && typeof s.money === 'object' ? billFigure(s.money.total) : null;
   if (m != null) return m;
   var t = billFigure(s.total_value);
   return t != null ? t : billFigure(raw);
+}
+/* the currency a bill's amount is painted in: the api's bill_total first, else the row's own summary (never defaulted: unknown stays undefined) */
+function billCurrencyOf(wire, summary) {
+  var code = wire && wire.currency_code;
+  return code || (summary && summary.currency_code);
+}
+/* ⭐ ACC-348b: the api's bill_total { total, agree, source, currency_code, says? } painted. Silent when the copies agree (or the key is absent: an older api); when `agree` is false
+   the server's `says` sentence is SHOWN in full on the detail (never a tooltip alone, never composed here: silence is the bug). The web only reads the flag, it never compares. */
+function billNoticeHTML(wire) {
+  if (!wire || wire.agree !== false) return '';
+  return (
+    '<div class="billwarn" role="alert" data-testid="bill-not-confirmed" style="margin:6px 12px;padding:6px 10px;border:1px solid var(--warn,#b26a00);border-radius:8px;font-size:var(--fs-1);color:var(--on-card)">' +
+    '<b>' + esc(tx('Total not confirmed')) + '</b> · ' + esc(wire.says || tx('The system did not get the right value for this figure.')) + '</div>'
+  );
+}
+/* the list cell's short form of the same flag: plain words in the cell, the server's sentence in title and aria-label (the full sentence is on the detail) */
+function billChipHTML(wire) {
+  if (!wire || wire.agree !== false) return '';
+  var says = esc(wire.says || '');
+  return ' <span class="billwarn" data-testid="bill-not-confirmed-chip" title="' + says + '" aria-label="' + says + '" style="color:var(--warn,#b26a00);font-size:var(--fs-1);white-space:nowrap">⚠ ' + esc(tx('not confirmed')) + '</span>';
 }
 function deepClone(x) {
   return JSON.parse(JSON.stringify(x));

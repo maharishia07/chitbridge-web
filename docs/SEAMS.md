@@ -162,6 +162,7 @@ of file each thing is; this says what already does the job.
 | 18 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 18 | `more` | `lab-kit.js` | idKey: |
 | 18 | `resolve` | `page.js` |  |
+| 18 | `label` | `screen-id.js` |  |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
 | 18 | `notMigrated` | `crm-followups.js` |  |
 | 18 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
@@ -170,7 +171,6 @@ of file each thing is; this says what already does the job.
 | 18 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `head` | `list-ctl.js` |  |
-| 17 | `label` | `screen-id.js` |  |
 | 17 | `field` | `ui-field.js` | the part: |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |

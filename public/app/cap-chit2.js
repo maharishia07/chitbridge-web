@@ -2068,6 +2068,38 @@ function c2PaneSummary(d) {
   );
 }
 
+/**
+ * ⭐⭐ THE SAME STRIP DESIGN 1 CARRIES — quoted, spent so far, how much of the work is done — because a
+ * person switching between the two readings of one chit must not have to relearn where the money is.
+ * Athi, 2026-08-24: *"the spend strip you have in design 1 has to be there in design 2 as well."*
+ *
+ * ⚠️ chitSpendStrip() lives in the shell and takes a CHIT-SHAPED object, so design 2 hands it one rather
+ * than growing a second strip that would drift the first time either changed.
+ *
+ * ACC-348b: the amount and its currency are the api's bill_total (the detail's own answer) first, the header's summary_json (ACC-206 D1,
+ * never delivery_summary: it has no money) only when an older api sends none; a total whose copies disagree is said under the strip.
+ */
+function c2SpendHTML(reply, header, delivery) {
+  var wire = reply.bill_total;
+  var summary = header.summary_json;
+  var strip =
+    typeof chitSpendStrip === 'function'
+      ? '<div style="padding:8px 14px 2px">' +
+        chitSpendStrip({
+          id: C2.id,
+          amt: billTotalOf(summary, (reply.detail && reply.detail.total_value) || header.total_value, wire) || 0,
+          currency: (wire && wire.currency_code) || (summary && summary.currency_code),
+          cost_hidden: c2CostHidden(reply) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
+          delivery_summary: delivery,
+          line_delivery: reply.line_delivery,
+          line_assignment: reply.line_assignment,
+          order_billed: reply.order_billed /* W36: "Not billed yet" on an order */
+        }) +
+        '</div>'
+      : '';
+  return strip + billNoticeHTML(wire);
+}
+
 /* ── the screen ────────────────────────────────────────────────────────────────────────────────────────────── */
 function chit2Screen() {
   if (C2.busy && !C2.data)
@@ -2204,26 +2236,7 @@ function chit2Screen() {
         '\')"' +
         ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">⏱ Service clock &amp; SLA</span></div>'
       : '') +
-    /**
-     * ⭐⭐ THE SAME STRIP DESIGN 1 CARRIES — quoted, spent so far, how much of the work is done — because a
-     * person switching between the two readings of one chit must not have to relearn where the money is.
-     * Athi, 2026-08-24: *"the spend strip you have in design 1 has to be there in design 2 as well."*
-     *
-     * ⚠️ chitSpendStrip() lives in the shell and takes a CHIT-SHAPED object, so design 2 hands it one rather
-     * than growing a second strip that would drift the first time either changed.
-     */
-    (typeof chitSpendStrip === 'function'
-      ? '<div style="padding:8px 14px 2px">' +
-        chitSpendStrip({
-          id: C2.id,
-          amt: billTotalOf(h.summary_json, (d.detail && d.detail.total_value) || h.total_value) || 0, /* ACC-206 D1: the header's summary_json (money.total first), never delivery_summary (no money) */ cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
-          delivery_summary: sum,
-          line_delivery: d.line_delivery,
-          line_assignment: d.line_assignment,
-          order_billed: d.order_billed /* W36: "Not billed yet" on an order */
-        }) +
-        '</div>'
-      : '') +
+    c2SpendHTML(d, h, sum) +
     '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' +
     tabs +
     '</div>' +
