@@ -1082,8 +1082,8 @@
         '<div class="tk-panel"><label class="sub" for="tk_new_what">' +
         esc(T('What needs doing?')) +
         '</label>' +
-        '<input data-cbsid="TSK003-I03" class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">' +
-        '<button data-cbsid="TSK003-B14" type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' +
+        '<input data-cbsid="TSK003-I03" class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off" required data-required-msg="' + esc(T('Type what needs doing first.')) + '">' +
+        '<button data-cbsid="TSK003-B14" type="button" class="act" id="tk_new_go" data-testid="tk-new-go" data-sheet-save>' +
         esc(T('Add task')) +
         '</button></div>' +
         '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out"></div>'
