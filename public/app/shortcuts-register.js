@@ -6,12 +6,12 @@
  * CALLED BY public/app/shell.js (loads it beside the frame, then shortcuts.js); e2e/shortcuts-guard.cjs and tools/shortcuts-count.cjs read it by name.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/shortcuts
  * RISK      plain
- * FLOW      row -> shortcuts.js (stamps aria-keyshortcuts, one listener, the ? sheet) -> ui.js (stamps a popup's main action)
+ * FLOW      row -> shortcuts.js (stamps aria-keyshortcuts, one listener, the ? sheet) -> ui.js (stamps a popup's main action (Alt+Shift+D; Chrome owns Alt+Shift+A))
  *
  * THE ROW  'HOM001-K01#selling'  the rail's area button (data-cbsid HOM001-K01, data-go) · 'HOM001-B01#finance'  the Home card (data-cbsid HOM001-B01, data-id = the
  *          manifest entry id) · 'POP096'  the popup with that code: one key presses its main action, whichever popup is open (one scope each, so one key serves all).
  * THE KEYS (WCAG 2.2 SC 2.1.4, WAI-ARIA aria-keyshortcuts):
- *          'g x'  press g, then the letter (a card: it opens that page) · 'Alt+Shift+X'  a modifier chord (an area, a card past the 26 letters, a popup's main action).
+ *          'g x'  press g, then the letter (a card: it opens that page) · 'Alt+Shift+X'  a modifier chord (an area, a card past the 26 letters, a popup's main action (Alt+Shift+D; Chrome owns Alt+Shift+A)).
  *          Never a bare letter on its own, never Ctrl+letter (the browser and screen readers own those). The avatar menu's "Keyboard shortcuts" turns every one off.
  *          'sheet' is the one bare key, "?", and it obeys the same switch.
  */
@@ -65,20 +65,20 @@
       'HOM001-B01#compatibility': 'Alt+Shift+Q',
       'HOM001-B01#connectors': 'Alt+Shift+K',
       'HOM001-B01#governance': 'Alt+Shift+G',
-      /* a popup's main action (the popups that open through ui.dialog with their code) */
-      POP095: 'Alt+Shift+A',
-      POP096: 'Alt+Shift+A',
-      POP097: 'Alt+Shift+A',
-      POP098: 'Alt+Shift+A',
-      POP099: 'Alt+Shift+A',
-      POP100: 'Alt+Shift+A',
-      POP101: 'Alt+Shift+A',
-      POP102: 'Alt+Shift+A',
-      POP103: 'Alt+Shift+A',
-      POP104: 'Alt+Shift+A',
-      POP105: 'Alt+Shift+A',
-      POP106: 'Alt+Shift+A',
-      POP144: 'Alt+Shift+A'
+      /* a popup's main action (Alt+Shift+D; Chrome owns Alt+Shift+A) (the popups that open through ui.dialog with their code) */
+      POP095: 'Alt+Shift+D',
+      POP096: 'Alt+Shift+D',
+      POP097: 'Alt+Shift+D',
+      POP098: 'Alt+Shift+D',
+      POP099: 'Alt+Shift+D',
+      POP100: 'Alt+Shift+D',
+      POP101: 'Alt+Shift+D',
+      POP102: 'Alt+Shift+D',
+      POP103: 'Alt+Shift+D',
+      POP104: 'Alt+Shift+D',
+      POP105: 'Alt+Shift+D',
+      POP106: 'Alt+Shift+D',
+      POP144: 'Alt+Shift+D'
     }
   };
 })(typeof window !== 'undefined' ? window : this);

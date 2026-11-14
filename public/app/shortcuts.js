@@ -76,17 +76,13 @@
   function anyPopupOpen() {
     return !!doc.querySelector('dialog[open], #modalhost .mbody');
   }
-  /** a popup's main action: the last primary button of its footer, else its last button that is not a danger one */
+  /** a popup's main action: the last enabled primary (.pri) button of its footer and nothing else; a popup with none has no key (a danger or quiet button is never pressed by a key) */
   function mainOf(host) {
     var foot = host && host.querySelector('.mfoot');
-    if (!foot) return null;
-    var buttons = [].slice.call(foot.querySelectorAll('button:not(.danger)')).filter(function (button) {
+    var primary = foot ? [].slice.call(foot.querySelectorAll('button.pri:not(.danger)')) : [];
+    return primary.filter(function (button) {
       return !button.disabled;
-    });
-    var primary = buttons.filter(function (button) {
-      return button.classList.contains('pri');
-    });
-    return (primary.length ? primary : buttons).pop() || null;
+    }).pop() || null;
   }
   /** press the open popup main action when it is the popup with this code */
   function pressMain(code) {
@@ -144,6 +140,7 @@
   }
   /** a chord: the open popup's main action when the chord is that popup's key, otherwise (no popup open) a nav row */
   function onChord(event, chord) {
+    if (event.repeat) return; /* a held key must never press the confirm popup the first press opened */
     var popup = openPopup();
     var code = popup || anyPopupOpen() ? '' : codeForKey(chord, 'HOM001');
     var did = popup ? keyOf(popup.code) === chord && pressMain(popup.code) : code && goTo(code);
@@ -205,7 +202,7 @@
       if (code.indexOf('HOM001-K01') === 0) groups.Areas.push([areas[id] || id, key]);
       else if (code.indexOf('HOM001-B01') === 0 && cards[id]) groups.Pages.push([cards[id], key]);
     });
-    groups.Popups.push([tr('The main action of the open popup'), 'Alt+Shift+A']);
+    groups.Popups.push([tr('The main action of the open popup'), 'Alt+Shift+D']);
     groups.Popups.push([tr('This list'), REGISTER.sheet.key]);
     return groups;
   }
@@ -241,7 +238,7 @@
       title: title,
       pop: REGISTER.sheet.code,
       body: body,
-      actions: [{ name: 'close', options: { mount: 'HOM001-U01' } }]
+      actions: [{ name: 'close', options: { mount: 'HOM001-U01', tone: 'primary' } }]
     });
   }
   /** a page with no modal(): the same head, body and footer in a native dialog, closed by Esc or its Close */
@@ -249,15 +246,17 @@
     var style = doc.getElementById('cbsc-css') || doc.head.appendChild(doc.createElement('style'));
     style.id = 'cbsc-css';
     style.textContent = SHEET_CSS;
+    var opener = doc.activeElement; /* the sheet gives focus back to where the person was */
     sheetNode = doc.createElement('dialog');
     sheetNode.className = 'cbsc-d';
     sheetNode.setAttribute('aria-label', title);
-    var close = root.CBUi ? root.CBUi.action('close', { mount: 'HOM001-U01', surface: 'dialog' }) : '<button type="button" class="pri">' + esc(tr('Close')) + '</button>';
+    var close = root.CBUi ? root.CBUi.action('close', { mount: 'HOM001-U01', surface: 'dialog', tone: 'primary' }) : '<button type="button" class="pri">' + esc(tr('Close')) + '</button>';
     sheetNode.innerHTML = sheetHead(title) + '<div class="mbody">' + body + '</div><div class="mfoot">' + close + '</div>';
     sheetNode.addEventListener('click', function (event) {
       if (event.target.closest && event.target.closest('.mfoot button')) sheetNode.close();
     });
     sheetNode.addEventListener('close', function () {
+      if (opener && opener.focus) opener.focus();
       sheetNode.remove();
       sheetNode = null;
     });
