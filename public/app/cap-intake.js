@@ -1,4 +1,4 @@
-/* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake').
+/* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen
  *
  * Athi, 2026-07-12: someone is chatting on WhatsApp or emailing, and they want it to become a chit on the rail.
  *
@@ -26,7 +26,7 @@
  * the webhook calls, driven by hand. That is the test surface the spec asked for, not a mock: it exercises the real
  * queue, the real AI structuring and the real convert.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]  · CARD 22-channels-capture-and-messaging/intake-screen
  */
 
 /* ── state ──────────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -707,5 +707,5 @@ function _copyJson(id) {
   try {
     navigator.clipboard.writeText(el.textContent);
     if (typeof toast === 'function') toast('copied');
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }

@@ -157,8 +157,8 @@
    "--scrim  app/cap-print.js",
    "--scrim  app/ui.js",
    "--shadow-menu  app/cap-print.js",
-   "--surface  app/cap-crm-groups.js",
-   "--surface  app/cap-crm-groups.js",
+   "--surface  app/cap-crm-groups-window.js",
+   "--surface  app/cap-crm-groups-window.js",
    "--surface  app/cap-crm.js"
   ]
  },

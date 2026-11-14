@@ -6,11 +6,12 @@
  * the sheet's "Open page" lands on the chit PAGE below (#/chit/<id>) — the same painters, full-page (CRM2).
  * Nothing is computed here: the reason a chit is stuck is the server's sentence. A stuck row names its fix by opening the sheet,
  * whose action row offers only what this chit allows (accept · answer · close · cancel).
- * Route: CB CRM  #/chits?tab=stuck|in|out. Needs from cap-crm.js: CRM · crmNav · crmBar · crmGo · esc · tx · api · crmErrWords. */
-/* OWNS the chits behind the Home rail: In, Out, Stuck
- * CALLED BY crm.html (the Home rail opens it)
- * FLOW GET /api/facts/rail/chits -> the list -> each value through fmtMoney in the row's own currency
- * CARD 03-crm-and-parties/home-rail-chits */
+ * Route: CB CRM  #/chits?tab=stuck|in|out. Needs from cap-crm.js: CRM · crmNav · crmBar · crmGo · esc · tx · api · crmErrWords.
+ *
+ * OWNS      the chits behind the Home rail: In, Out, Stuck (chitsHome, chitPage, chitsLoad, chitsStuckCount, the CHITS state)
+ * CALLED BY crm.html (<script src>, line 396) · cap-crm.js (crmRoute: chitsHome on #/chits, chitPage on #/chit/<id>; the nav badge reads CHITS and chitsStuckCount) · the doors that open the route: cap-mis.js (the Open and Stuck rows of its door table link to /crm.html#/chits and ?tab=in|out|stuck) and rail-bell.js (a bell chit opens /crm.html#/chits?open=<id>)
+ * FLOW      GET /api/facts/rail/chits -> the list -> each value through fmtMoney in the row's own currency
+ * CARD      03-crm-and-parties/home-rail-chits */
 'use strict';
 
 var CHITS = { items: [], state: 'loading', err: null, truncated: false, days: 7, api: null, gen: 0 };
@@ -253,7 +254,7 @@ function chitsHome(params, frame) {
   if (CHITS.api && CHITS.api.destroy) {
     try {
       CHITS.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var tab = params && /^(stuck|in|out|orders)$/.test(params.tab || '') ? params.tab : null;
   CHITS.api = CBList.mount(document.getElementById('chits_list'), {

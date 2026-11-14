@@ -15,7 +15,7 @@
 const { chromium } = require('@playwright/test');
 const http = require('http'), fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..', 'public');
-const BP = require((process.env.CB_API_REPO || '../../chitbridge-api') + '/lib/catalogue-blueprint');
+const BP = require(path.join(process.env.CB_API_REPO || path.join(__dirname, '..', '..', 'chitbridge-api'), 'lib', 'catalogue-blueprint'));
 const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
             '.svg':'image/svg+xml', '.png':'image/png' };
 let bad = 0;
@@ -36,6 +36,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
         lists: Object.keys(BP.BLUEPRINTS).map((k) => {
           const bp = BP.blueprint(k);
           return { key: bp.key, label: bp.label, outcome: bp.outcome, pin: BP.pin(bp),
+                   store_id: 'store-' + k, store_name: 'Reference · ' + bp.label,
                    categories: bp.categories, units: bp.units, languages: BP.languagesOf(k),
                    count: bp.starter.length,
                    rows: bp.starter.map((x) => ({ name: x.name, unit: x.unit || bp.defaultUnit,
@@ -89,6 +90,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const lists = await p.$$eval('#lists .pill', (bs) => bs.map((x) => x.textContent.trim()));
   say('every product list is offered by name and size', lists.length === Object.keys(BP.BLUEPRINTS).length,
     lists.join(' · '));
+  say('each tile writes its store name, visible (CAT-124 C2)', (await p.$$eval('#lists .pill', (bs) => bs.map((x) => { const s = x.querySelector('.sub'); return !!s && /^Reference · /.test(s.textContent.trim()) && s.offsetHeight > 0; }))).every(Boolean), 'a visible line in every tile');
+  await p.focus('#lists .pill'); await p.keyboard.press('Tab'); await p.keyboard.press('Shift+Tab');
+  const ring = await p.$eval('#lists .pill:focus-visible', (e) => { const c = getComputedStyle(e); return { s: c.outlineStyle, w: parseFloat(c.outlineWidth) }; }).catch(() => null);
+  say('6a a tile with its store name shows a focus ring from the keyboard', !!ring && ring.s !== 'none' && ring.w > 0, ring ? ring.s + ' ' + ring.w + 'px' : 'not focus-visible');
+  say('6b the store name is part of the tile a keyboard user reaches', /Reference · /.test(await p.$eval('#lists .pill:focus-visible', (e) => e.textContent).catch(() => '')), 'inside the button');
   say('it opens on one of them, ticked', await p.$eval('#lists .pill.on', (e) => !!e), 'veg');
 
   const rows0 = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
@@ -348,6 +354,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('it lands back on step 1, ready for the next helping',
     await p.$eval('[data-testid=pl-step-1]', (e) => e.classList.contains('on')), 'step 1');
 
+  /* CAT-124 layout: the store line makes the tiles one line taller; only the rows may scroll (#tablewrap, CAT-218), never the page */
+  fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
+  for (const vp of [{ w: 1366, h: 768 }, { w: 390, h: 844 }]) {
+    await p.setViewportSize({ width: vp.w, height: vp.h });
+    await p.click('[data-testid=pl-list-veg]');
+    const over = await p.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+    await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab-store-' + vp.w + 'x' + vp.h + '.png') });
+    say('the page does not scroll with the store lines · ' + vp.w + 'x' + vp.h, over <= 1, 'overflow ' + over + 'px');
+  }
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
   if (process.argv.includes('--shots')) {

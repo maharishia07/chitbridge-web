@@ -1150,7 +1150,7 @@ function wlKeepFields(skip) {
       if (e.type === 'checkbox' || e.type === 'radio') return;
       out[e.id] = e.value;
     });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   return out;
 }
 function wlRestoreFields(vals) {
@@ -1161,7 +1161,7 @@ function wlRestoreFields(vals) {
          closed and reopened should show what the server says, not a ghost of a previous edit. */
       if (e && vals[id] !== undefined && vals[id] !== '') e.value = vals[id];
     });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 function wlPaintCard(loading) {
@@ -1317,7 +1317,7 @@ async function wlRaidaAfterSave() {
   WLL.raida = null;
   try {
     await wlRaidaLoad();
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 /**

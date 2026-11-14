@@ -22,6 +22,11 @@
  * context prefix (`ctx\u0004msgid`) and plural suffix (`msgid\u0005category`) are stripped before transforming,
  * exactly as a real pack would key on them.
  */
+/*
+ * OWNS      the pseudo-locale pack (qps): every catalogue string back accented, longer and bracketed, for tests and labs
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack('qps')); e2e/walk-locale.cjs
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
 

@@ -26,6 +26,7 @@
       f = doc.createElement('iframe'),
       x = doc.createElement('button');
     var src = '/' + o.app + '.html?embed=1' + (o.view ? '&view=' + encodeURIComponent(o.view) : '');
+    node.setAttribute('data-pop', 'POP150');
     node.setAttribute('data-testid', 'embed-' + o.app);
     node.style.cssText =
       'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(560px,96vw);height:min(640px,90vh);background:var(--card,#fff);overflow:hidden';
@@ -48,7 +49,7 @@
       root.removeEventListener('message', heard);
       try {
         node.close();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       node.remove();
       if (o.onClose) o.onClose();
     }
@@ -64,7 +65,7 @@
             { cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : root.CloudHost && root.CloudHost.api) || null },
             root.location.origin
           );
-        } catch (_) {}
+        } catch (_) { /* no host window to tell: standalone page */ }
         return;
       }
       if (o.onMessage) o.onMessage(m);

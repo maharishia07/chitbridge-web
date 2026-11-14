@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  OWNS      the Screen Library: every entry of every screen registry drawn on one page
+  CALLED BY listed in public/app/screen-id.js:267; e2e/tests/screen-gallery.spec.js screenshots it per theme
+  FLOW      registries -> one drawing per entry -> checked by the spec
+  CARD      29-qa-test-tooling-ux-locale-and-design-system/screen-library
+-->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -56,8 +62,8 @@
   <header class="top">
     <h1>Screen library</h1>
     <div class="ctl">
-      <label>Theme <select id="g_theme" data-testid="gal-theme"></select></label>
-      <label><input type="checkbox" id="g_photos" data-testid="gal-photos"> Photos on keys</label>
+      <label>Theme <select data-cbsid="OWN008-S01" id="g_theme" data-testid="gal-theme"></select></label>
+      <label><input data-cbsid="OWN008-I01" type="checkbox" id="g_photos" data-testid="gal-photos"> Photos on keys</label>
     </div>
   </header>
 
@@ -160,7 +166,7 @@
       .map(function (item) {
         var v = K.THEMES[item].vars;
         return (
-          '<div class="theme" role="button" tabindex="0" data-testid="gal-theme-' +
+          '<div data-cbsid="OWN008-B01" class="theme" role="button" tabindex="0" data-testid="gal-theme-' +
           item +
           '" aria-pressed="' +
           (item === S.theme) +
@@ -187,7 +193,7 @@
       .map(function (item) {
         var p = K.PRESETS[item];
         return (
-          '<button class="preset" data-testid="gal-preset-' +
+          '<button data-cbsid="OWN008-B02" class="preset" data-testid="gal-preset-' +
           item +
           '" aria-pressed="' +
           (item === S.preset) +

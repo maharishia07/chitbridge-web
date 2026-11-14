@@ -14,6 +14,7 @@
  * Flow step: Onboarding · Register → Country setup (docs/process/flows.json O0 "country setup") · and the Country lab (Labs).
  
  * CALLED BY public/app/cap-showcase.js, public/country-lab.html, public/standards.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD      15-tax-and-country-packs/country-setup-and-country-lab
  */
 (function (root) {
   'use strict';

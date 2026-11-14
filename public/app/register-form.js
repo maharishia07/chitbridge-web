@@ -91,10 +91,10 @@ function regLangHTML(code) {
     own = '';
   try {
     text = new Intl.DisplayNames(['en'], { type: 'language' }).of(code) || code;
-  } catch (_) {}
+  } catch (_) { /* browser feature missing: the default applies */ }
   try {
     own = new Intl.DisplayNames([code], { type: 'language' }).of(code) || '';
-  } catch (_) {}
+  } catch (_) { /* browser feature missing: the default applies */ }
   return esc(text) + (own && own.toLowerCase() !== text.toLowerCase() ? ' <bdi dir="auto" lang="' + esc(code) + '">' + esc(own) + '</bdi>' : '');
 }
 /** how numbers and dates print in the pack's format — the browser's own Intl: one fixed number, today's date (R4: never a hard-coded day) */
@@ -291,8 +291,8 @@ function renderRegister() {
     <div class="top">${logo()}<h1>${esc(tx('Register your business'))}</h1></div>
     <div class="body">
       ${form}
-      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
-      <div class="swap">Already registered? <a data-cbsid="SCR053-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
+      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — emailed code via <span class="mono">${EP.register.p}</span>.</div>
+      <div class="swap">Have an account <a data-cbsid="SCR053-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
     </div>
   </div></div>`;
   const node = document.getElementById('r_go');
@@ -467,4 +467,4 @@ var CBRegistration = {
 };
 try {
   window.CBRegistration = CBRegistration;
-} catch (_) {}
+} catch (_) { /* best effort: failing here changes nothing the user sees */ }

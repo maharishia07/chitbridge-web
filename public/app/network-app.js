@@ -123,7 +123,7 @@
               );
             })
             .join('') +
-          '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet"></dialog>';
+          '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-pop="POP119" data-testid="nw-sheet"></dialog>';
     Array.prototype.forEach.call(N.el.querySelectorAll('.nw-tab'), function (element) {
       element.onclick = function () {
         N.tab = element.getAttribute('data-tab');
@@ -150,14 +150,14 @@
     var node = $('nw_sheet');
     try {
       node.close();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     node.innerHTML = '';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {
       try {
         N.lists[cfg.key].destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset(cfg.key);
     cfg.t = T;

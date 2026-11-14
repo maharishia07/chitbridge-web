@@ -10,6 +10,11 @@
  *   node tools/gen-process-docs.cjs            write the pages
  *   node tools/gen-process-docs.cjs --check    exit 1 if a page differs from what flows.json says
  */
+/*
+ * OWNS      the docs/process/<FLOW>.md pages and INDEX.md, written from docs/process/flows.json
+ * CALLED BY package.json:63 (docs:process); e2e/process-map.cjs (--check); tools/pr-ready.cjs
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/requirements-and-traceability
+ */
 'use strict';
 const fs = require('fs');
 const path = require('path');

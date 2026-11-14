@@ -59,7 +59,10 @@ async function run(o) {
   const unit = fs.readFileSync(path.join(ROOT, 'public', 'app', 'shell.js'), 'utf8');
   ok(!/app\.html/.test(unit), 'static · zero "app.html" in the unit (I12)');
   ok(!/\btier\b/i.test(unit), 'static · no word "tier" in the unit (Q5)');
-  ok(!/cap-[a-z-]+\.js|ensureCap|createElement\(\s*['"]script/.test(unit), 'static · the unit loads no application script');
+  /* MNT-63: the shortcuts unit rides with the frame (loadShortcuts); it is the one script the shell may add, never a cap-*.js */
+  const scriptTags = (unit.match(/createElement\(\s*['"]script/g) || []).length;
+  const appended = (unit.match(/appendScript\(\s*'([^']+)'/g) || []).map((m) => m.replace(/^appendScript\(\s*'|'$/g, ''));
+  ok(!/cap-[a-z-]+\.js|ensureCap/.test(unit) && scriptTags <= 1 && appended.every((u) => /^\/app\/shortcuts(-register)?\.js$/.test(u)), "static · the unit loads no application script (only the frame's own shortcuts unit)");
   ok(!/class="avmenu"|data-testid="avatar-menu"|class="avatar"|class="av"/.test(unit) && /CBAvatar\.mount|root\.CBAvatar\.mount/.test(unit), 'static · the avatar is CBAvatar mounted, never built here');
   const man = JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'app', 'manifest.json'), 'utf8'));
   const exists = (r) => { if (/^https?:\/\//.test(r)) return true; /* TEMPORARY Coverage card (UX-141): an absolute URL */ const p = r.split(/[#?]/)[0]; return p === '/' ? fs.existsSync(path.join(ROOT, 'index.html')) : fs.existsSync(path.join(ROOT, 'public', p)); };

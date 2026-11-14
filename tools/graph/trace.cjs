@@ -44,6 +44,7 @@ const LAYER_RULES = [
   { repo: 'api', test: /^tools\/tally-connector\//, layer: 'counter' },
   { repo: 'api', test: /^(tools|scripts)\//, layer: 'tool' },
   { repo: 'api', test: /./, layer: 'lib' },
+  { repo: 'web', test: /^public\/cb-sw\.js$/, layer: 'tool' }, /* the service worker draws nothing: its one minimum is a unit test (a guard that reads it) */
   { repo: 'web', test: /^public\//, layer: 'ui' },
   { repo: 'web', test: /./, layer: 'tool' },
   { repo: 'engines', test: /^src\//, layer: 'engine' },

@@ -23,6 +23,12 @@
  
  * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-categories.js, public/app/cap-catsetup.js, public/app/cap-definitions.js (+11 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      CB_STARTER_CATEGORIES: the small standard category set per trade (Google Product Taxonomy ids), as DATA only
+ * CALLED BY <script src="/app/catalogue-starter-categories.js"> at public/app.html:1593; read as a global by cap-categories.js, cap-catsetup.js, cap-definitions.js, attach-ui.js
+ * FLOW      script load -> global -> the opt-in seeding action reads the trade's nodes (asks first, never automatic)
+ * CARD      06-catalogue-pim/categories-and-fields
+ */
 var CB_STARTER_CATEGORIES = {
   veg: {
     title: 'Fresh produce & groceries',
