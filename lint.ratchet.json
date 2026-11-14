@@ -108,8 +108,16 @@
   "warnings": 1,
   "prettierOk": false
  },
+ "public/app/cap-crm-groups-send.js": {
+  "warnings": 0,
+  "prettierOk": false
+ },
+ "public/app/cap-crm-groups-window.js": {
+  "warnings": 0,
+  "prettierOk": false
+ },
  "public/app/cap-crm-groups.js": {
-  "warnings": 1,
+  "warnings": 0,
   "prettierOk": false
  },
  "public/app/cap-crm-leads.js": {
