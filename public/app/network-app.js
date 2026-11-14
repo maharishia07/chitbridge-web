@@ -6,6 +6,9 @@
  * FLOW      mount(el, o) ──▶ load() reads GET /api/network-offers and the stores ──▶ paint() draws the tabs ──▶ paintMine | paintOffers | paintDesign ──▶ a choice or a check goes to the server, then reload()
  * CARD      04-network/network-app-member-view
  *
+ * ACC-176 (books grant): a fourth section MY BOOKS (the member's "Who can see my books", books-grant-member.js) and, on My network, an "Open books" button on a store that holds a live grant for
+ * this business (books-grant-view.js: read only). Both screens are theirs; this file only gives them its call(), its sheet and its CBList mount, and says which stores hold a grant.
+ *
  * Three tabs on one page: MY NETWORK (the networks this store sits in, who its parent is, the stores it can see — a CBList) · OFFERS
  * (what each brand released to it, and whether it takes them — a CBList; In / Out are CBAction writes) · DESIGN (the builder's canvas,
  * shown for every login and greyed with the SERVER's sentence for one that may not design: GET /api/network-offers → may_design).
@@ -20,7 +23,7 @@
  */
 (function (root) {
   'use strict';
-  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {} };
+  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) {
@@ -39,12 +42,12 @@
     var e = EP[key];
     return call(e.m, e.p, body);
   }
-  function call(method, path, body) {
+  function call(method, path, body, headers) {
     return root
       .fetch((N.o.base || '') + path, {
         method: method,
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + N.o.token },
+        headers: Object.assign({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + N.o.token }, headers || {}),
         body: body ? JSON.stringify(body) : undefined
       })
       .then(function (reply) {
@@ -71,8 +74,10 @@
       call('GET', '/api/network-offers'),
       call('GET', '/api/network-design/stores').catch(function () {
         return { stores: [] };
-      })
+      }),
+      root.CBBooksGrantApi.held(call)
     ]).then(function (reply) {
+      N.held = reply[2] || {};
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
@@ -98,7 +103,8 @@
     var tabs = [
       ['mine', T('My network')],
       ['offers', T('Offers')],
-      ['design', T('Design')]
+      ['design', T('Design')],
+      ['books', T('My books')]
     ];
     N.el.innerHTML =
       (N.o.sidebar
@@ -127,6 +133,7 @@
     Array.prototype.forEach.call(N.el.querySelectorAll('.nw-tab'), function (element) {
       element.onclick = function () {
         N.tab = element.getAttribute('data-tab');
+        N.opened = null;
         paint();
       };
     });
@@ -138,7 +145,7 @@
     node.addEventListener('click', function (e) {
       if (e.target === node) closeSheet();
     });
-    ({ mine: paintMine, offers: paintOffers, design: paintDesign })[N.tab]($('nw_body'));
+    ({ mine: paintMine, offers: paintOffers, design: paintDesign, books: paintBooks })[N.tab]($('nw_body'));
   }
   function sheet(html) {
     var node = $('nw_sheet');
@@ -166,6 +173,7 @@
 
   /* ── MY NETWORK ── */
   function paintMine(host) {
+    if (N.opened) return paintOpened(host);
     if (!N.networks.length && !N.stores.length) {
       host.innerHTML =
         '<div class="empty" data-testid="nw-none"><div class="t">' +
@@ -261,6 +269,17 @@
           value: function (s) {
             return s.purpose || '';
           }
+        },
+        {
+          key: 'books',
+          label: T('Books'),
+          prio: 1,
+          w: 130,
+          html: true,
+          cell: booksCell,
+          value: function (s) {
+            return N.held[String(s.entity_id)] ? 'open' : '';
+          }
         }
       ],
       search: function (s) {
@@ -291,6 +310,54 @@
       ],
       empty: { title: T('No stores to show') }
     });
+    $('nw_stores').addEventListener('click', openBooksClick);
+  }
+
+  /* ── ACC-176: a store that holds a live grant for this business gets "Open books"; a store without one shows nothing extra ── */
+  function booksCell(s) {
+    var id = esc(s.entity_id);
+    return N.held[String(s.entity_id)]
+      ? '<button data-cbsid="NET001-B04" type="button" class="act quiet" id="nw_books_' + id + '" data-open-books="' + id + '" data-testid="nw-books-' + id + '">' + esc(T('Open books')) + '</button>'
+      : '';
+  }
+  function openBooksClick(ev) {
+    var button = ev.target.closest && ev.target.closest('[data-open-books]');
+    if (!button) return;
+    var id = button.getAttribute('data-open-books');
+    var store = N.stores.filter(function (s) {
+      return String(s.entity_id) === id;
+    })[0];
+    N.opened = { id: id, name: (store && store.name) || T('this store') };
+    paint();
+  }
+  function paintOpened(host) {
+    root.CBBooksGrantView.mount(host, {
+      call: call,
+      member: N.opened,
+      mountList: mountList,
+      onEnded: N.o.onEnded,
+      onBack: function () {
+        var id = N.opened.id;
+        N.opened = null;
+        paint();
+        var back = $('nw_books_' + id);
+        if (back) back.focus();
+      }
+    });
+  }
+
+  /* ── MY BOOKS: the member's "Who can see my books" ── */
+  function parentsOf() {
+    return N.networks
+      .filter(function (item) {
+        return (item.membership || {}).state === 'active';
+      })
+      .map(function (item) {
+        return { id: item.brand_id, name: item.brand_name };
+      });
+  }
+  function paintBooks(host) {
+    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList });
   }
 
   /* ── OFFERS ── */
@@ -548,8 +615,9 @@
     return load().then(paint, paintFail);
   }
   function go(tab) {
-    if (N.tab !== tab) {
+    if (N.tab !== tab || N.opened) {
       N.tab = tab;
+      N.opened = null;
       if (N.el.querySelector('#nw_body')) paint();
     }
   } /* the page's sidebar picks the section; the in-page tab strip is for a page without one */
