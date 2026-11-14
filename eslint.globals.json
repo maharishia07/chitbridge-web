@@ -80,6 +80,8 @@
  "public/app/cap-finance-returns.js":["public/finance.html"],
  "public/app/cap-finance-terms.js":["public/finance.html"],
  "public/app/cap-finance.js":["public/finance.html"],
+ "public/app/cap-folders-groupsum.js":["public/accounts.html","public/crm.html","public/finance.html"],
+ "public/app/cap-folders-rules.js":["public/accounts.html","public/crm.html","public/finance.html"],
  "public/app/cap-folders.js":["public/accounts.html","public/crm.html","public/finance.html"],
  "public/app/cap-fx.js":["public/accounts.html"],
  "public/app/cap-iddocs.js":"*",
