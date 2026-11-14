@@ -18,7 +18,7 @@
  * 11  the popup names the counter as the Day book does (Counter C2); CB Accounts' Bills rows open the sheet and name who accepted
  * 12  #/app/ledger, a remembered cb_nav of 'ledger' and navTo('ledger') land on /accounts.html at the same view; the app's menu has a Bills door
  * ⚠️ "Open page" (test 3) pins TODAY's door: the chit page in CB CRM (crm.html#/chit/<id>, round CRM2) — it moves with the round that moves the page.
- *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); screenshots to e2e/shots/chit-sheet-*.png
+ *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); CHS_BLOCKS = run only these walk blocks; screenshots to e2e/shots/chit-sheet-*.png
  */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -30,6 +30,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
+const B = require('./chit-sheet-blocks.cjs');   /* walk blocks kept in their own file (size ceiling) */
 const SHOP = 'Books Shop', TODAY = new Date().toISOString().slice(0, 10);
 
 /* the REAL engine, the real invoice: the adopted tax.js run in a sandbox, CBTax.determine() once, CBTax.moneyOf() to read it */
@@ -47,6 +48,9 @@ const RCM_INV = eng.CBTax.determine({ rcm: true, seller: { LglNm: 'Sri Ram Trans
   lines: [{ name: 'Freight Salem to Chennai', unit: 'trip', hsn: '996511', qty: 1, unit_price: 10000, rate: 18, rcm_category: 'gta' }] });
 const RCM_EXP = eng.CBTax.moneyOf(RCM_INV, 'INR');
 const f2 = (n) => Number(n).toFixed(2);
+/* CHS_BLOCKS=3,7 runs only those top-level blocks of the walk (numbered from 0, in order); chit-sheet-breaks.cjs names the block that guards each break, so a break costs seconds, not the whole walk */
+const BLOCKS = process.env.CHS_BLOCKS ? new Set(process.env.CHS_BLOCKS.split(',').map(Number)) : null; let blockNo = 0;
+const take = () => { const n = blockNo++; return !BLOCKS || BLOCKS.has(n); };
 
 /* ── the stand-in: three chits (a counter bill, a supplier bill, a task) and the Ledger's day book that points at them ── */
 function standIn() {
@@ -182,6 +186,7 @@ async function route(S, r) {
   }
   async function open(S, width) {
     const ctx = await b.newContext({ viewport: { width: width || 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+    if (BLOCKS) ctx.setDefaultTimeout(6000);   /* a targeted break run fails fast: a missing control is a red line in seconds, not after 30 s */
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     await ctx.addInitScript(([shop]) => { try {
@@ -203,12 +208,15 @@ async function route(S, r) {
   const noAccounting = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': the word "accounting" is nowhere on screen'); };
   const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 
+  const env = { ok, open, standIn, waitSheet, acts, sheetOpen, yesAccept, take, SHOP, TODAY };   /* what the blocks in chit-sheet-blocks.cjs need */
+
   /* ── 1 · the counter bill, from the Day book ─────────────────────────────────────────────────────── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     const head1 = await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]');
     ok(/Books Shop \(owner\)/.test(head1), 'by == the shop\'s own name → "Books Shop (owner)" in the source line');
     ok(!/Mani \(owner\)/.test(await p.textContent('[data-testid="db-head-JV/2026-27/000002"]')), 'another person is not marked (owner)');
+    await B.wideRung(env);
     /* scroll the page down to a row far from the top, remember where */
     const scroller = await p.evaluateHandle(() => { let e = document.querySelector('[data-testid="db-entry-JV/2026-27/000001"]'); while (e && e !== document.documentElement) { if (e.scrollHeight > e.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return e; e = e.parentElement; } return document.scrollingElement; });
     await scroller.evaluate((e) => { e.scrollTop = 120; });
@@ -262,11 +270,12 @@ async function route(S, r) {
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
+    await B.windowScrollSpy(env, p);
     await ctx.close();
   }
 
   /* ── 2 · a received supplier bill: Accept · Dispute · Goods in · Open page ─────────────────────── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
     const a = await acts(p);
@@ -305,30 +314,10 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="todo-accept"]').count() === 0, 'the Day book\'s "supplier bill to accept" to-do is gone');
     await ctx.close();
   }
-  /* "Let my catalogue decide": accepted without a /use call */
-  {
-    const S = standIn(); const { ctx, p } = await open(S);
-    await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-accept"]'); await p.click('[data-testid="cs-use-auto"]'); await yesAccept(p);
-    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.useCalls.length === 0 && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', '"Let my catalogue decide" → accepted with no /use call');
-    await ctx.close();
-  }
-  /* Goods in asks what the goods are for, then accepts */
-  {
-    const S = standIn(); const { ctx, p } = await open(S);
-    await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]'); await yesAccept(p);
-    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.useCalls.length === 1 && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', 'Goods in → what it is for (PUT /use) then accepted');
-    /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in the SAME tab so Back returns (NAV-MAP 13; accounts.html openChitPage sets location.href), never the workshop */
-    await p.click('[data-testid="cs-act-page"]');
-    await p.waitForURL(/[\/]crm[.]html#[\/]chit[\/]sb1$/, { timeout: 8000 }).catch(() => {});
-    ok(/[\/]crm[.]html#[\/]chit[\/]sb1$/.test(p.url()), 'Open page leaves the sheet for the chit page in CRM (/crm.html#/chit/sb1), the same tab — the only navigation (' + p.url().replace(/^https?:[\/][\/][^\/]+/, '') + ')');
-    await ctx.close();
-  }
+  await B.billStepBlocks(env);
+  await B.acceptUseBlocks(env);
   /* ── 3 · a task, from the Waiting list ──────────────────────────────────────────────────────────── */
-  {
+  if (take()) {
     const S = standIn(); S.waiting = [{ id: 9, chit_id: 'tk1', ref: 'chit:tk1', todo: 'accept', reason: 'Waiting for you to confirm a task.', tries: 0, since: TODAY + 'T04:00:00Z', stuck: true }];
     const { ctx, p } = await open(S);
     await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
@@ -346,7 +335,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 3b · the to-do "supplier bill to accept": one → its sheet over the Day book; several → Waiting. Never Intake ── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
     const href = await p.evaluate(() => location.href), nav = await p.evaluate(() => UI.nav);
@@ -360,7 +349,7 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await p.waitForTimeout(200);
     await ctx.close();
   }
-  {
+  if (take()) {
     const S = standIn(); S.waiting.push({ id: 2, chit_id: 'sb2', ref: 'bill:sb2', todo: 'accept', reason: 'Waiting for you to confirm Agro Mills’ bill AM-82.', tries: 0, since: TODAY + 'T04:30:00Z', stuck: true });
     const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
@@ -371,7 +360,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 3d · THE WAITING LIST IS THE TASK TABLE (docs/design/one-table): Supplier · Bill no · Amount · Date · Step; the bill opens in the popup ── */
-  {
+  if (take()) {
     const S = standIn();
     S.waiting.push({ id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' });
     const { ctx, p } = await open(S);
@@ -408,7 +397,7 @@ async function route(S, r) {
   }
   /* ── 3c · the other two readings: summary_json.money alone · neither (opened from the page, as a link would) ── */
   /* ── 3e · FX-F10W: a captured receipt — Accept repaints the sheet from the server's answer, and its Waiting row leaves without a reload ── */
-  {
+  if (take()) {
     const S = standIn();
     S.waiting = [{ id: 11, chit_id: 'rc1', ref: 'chit:rc1', todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)', tries: 0, since: TODAY + 'T04:20:00Z' },
       { id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' }];   /* a second row keeps the list on screen */
@@ -430,7 +419,7 @@ async function route(S, r) {
       'F10W · STD1 · …and the one count follows the flip (0 to accept · 1 to record · 1 in all)');
     await p.keyboard.press('Escape'); await ctx.close();
   }
-  {
+  if (take()) {
     /* the server already moved it (a second door) — the answer is the noop "Already accepted", and a read that has not caught up still says pending */
     const S = standIn(); S.noop = true; S.staleRead = true;
     S.waiting = [{ id: 11, chit_id: 'rc1', ref: 'chit:rc1', todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-103 from Sri Ganesh Provisions)', tries: 0, since: TODAY + 'T04:20:00Z' }];
@@ -443,7 +432,7 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await ctx.close();
   }
   /* ── 3e2 · FX-F10W2: REJECT, with its reason — the existing status step (PUT /status rejected + note); the row leaves Waiting; the popup reads the receipt's own money ── */
-  {
+  if (take()) {
     const S = standIn();
     S.chits.rc1.header.business_json.their_bill.total = 441;
     S.chits.rc1.header.business_json.input_tax = { taxable: 420, tax: 21, supply: 'intra', heads: [{ name: 'CGST', rate: 2.5, amount: 10.5 }, { name: 'SGST', rate: 2.5, amount: 10.5 }], inclusive: false, vendor_state: '33' };
@@ -477,7 +466,7 @@ async function route(S, r) {
     ok(!/SG-103/.test(await p.textContent('[data-testid="waiting-list"]')), 'FX-F10W2 · its Waiting row left the list (the server closed it: "Rejected — not posted")');
     await p.keyboard.press('Escape'); await ctx.close();
   }
-  {
+  if (take()) {
     const S = standIn(); S.rejectRefused = true;
     const { ctx, p } = await open(S);
     await p.evaluate(() => openChitSheet('rc1')); await waitSheet(p, 'SG-103');
@@ -488,7 +477,7 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await ctx.close();
   }
   /* ── 3f · FX-F10W: "Who is Sri Ganesh?" carries the shop's near match — "Is this Sri Ganesh Provisions (P-00001)?" links, never a second party ── */
-  {
+  if (take()) {
     const S = standIn();
     const toAccept = { id: 12, chit_id: 'rc2', ref: 'chit:rc2', todo: 'accept', reason: 'Waiting for you to confirm the goods were received (bill SG-102 from Sri Ganesh Provisions)', tries: 1, since: TODAY + 'T04:10:00Z' };
     S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', todo: 'add_supplier', name: 'Sri Ganesh', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.', tries: 0, since: TODAY + 'T04:10:00Z',
@@ -507,7 +496,7 @@ async function route(S, r) {
     ok(/To accept/.test(await p.textContent('[data-testid="wait-0"]')) && await p.locator('[data-testid^="wait-addsup-"]').count() === 0, 'F10W · …and the bill moved to "To accept" — no second supplier was added');
     await ctx.close();
   }
-  {
+  if (take()) {
     const S = standIn();
     S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', todo: 'add_supplier', name: 'Sri Ganesh', reason: 'Who is Sri Ganesh? Add them as a supplier — then bill SG-102 waits for you to accept it.', tries: 0, since: TODAY + 'T04:10:00Z',
       candidates: [{ name: 'Sri Ganesh Provisions', party_no: 'P-00001' }] }];
@@ -523,12 +512,13 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await ctx.close();
   }
   /* ── 3g · STD1: the popup greys Accept from the SERVER's may/why on the chit read — off the Books page too (app.html: no BK, no Waiting list) ── */
-  {
+  if (take()) {
     const S = standIn();
     S.waiting = [{ id: 13, chit_id: 'rc1', ref: 'chit:rc1', todo: 'record', reason: 'Their bill SG-103 says ₹50, the lines counted come to ₹45 — ₹5 apart. Ask Sri Ganesh Provisions to correct it.', tries: 0, since: TODAY + 'T04:20:00Z' },
       { id: 12, chit_id: 'rc2', ref: 'chit:rc2', todo: 'add_supplier', name: 'Sri Ganesh', reason: 'A sentence the server reworded — nothing reads it but people.', tries: 0, since: TODAY + 'T04:10:00Z',
         candidates: [{ name: 'Sri Ganesh Provisions', party_no: 'P-00001' }] }];
     const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
+    if (BLOCKS) ctx.setDefaultTimeout(6000);   /* a targeted break run fails fast: a missing control is a red line in seconds, not after 30 s */
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
     await ctx.addInitScript(([shop]) => { try {
@@ -552,7 +542,7 @@ async function route(S, r) {
       'STD1 · a supplier to add — the row\'s todo and name are DATA: a reworded sentence still greys Accept, offers "Is this …?" and Add supplier');
     await p.keyboard.press('Escape'); await ctx.close();
   }
-  {
+  if (take()) {
     const S = standIn();
     S.waiting = [{ id: 12, chit_id: 'rc2', ref: 'chit:rc2', todo: 'add_supplier', name: 'Sri Ganesh', reason: 'A sentence the server reworded — nothing reads it but people.', tries: 0, since: TODAY + 'T04:10:00Z' },
       { id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' }];
@@ -568,7 +558,7 @@ async function route(S, r) {
       'STD1 · …and the ROW flips to "To accept" — the list is the same one (no view reload)');
     await ctx.close();
   }
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.evaluate(() => openChitSheet('ch2')); await waitSheet(p, 'C1/26-27/0003');
     const c = await p.$$eval('[data-testid="cs-gst-18"] td', (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, '')));
@@ -580,7 +570,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 3d · CB Accounts: a Bills row opens the sheet (no new tab) and names who accepted by name, not by handle ── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="acc-nav-bills"]'); await p.waitForSelector('[data-testid="bills-list"]', { timeout: 8000 });
     await p.click('[data-testid="bill-sb1"] [role="button"]');   /* who took it is the row's next level */
@@ -594,7 +584,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 3e · the old Ledger door is closed: it lands on /accounts.html at the same view; the app's menu has a Bills door ── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.goto(base + '/app.html#/app');
     await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
@@ -614,7 +604,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 3f · THE TASK DETAIL READS THE FROZEN BILL, NEVER RECOMPUTES (Athi, 2026-10-02: "never ever recompute") ─────────────── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     const tab = async (id, t) => { await p.evaluate(([i, tt]) => { UI.dtab = tt; return openChit(i); }, [id, t]); await p.waitForFunction(() => !(UI.detail && UI.detail._loading), null, { timeout: 15000 }); await p.waitForTimeout(300); };
@@ -647,7 +637,7 @@ async function route(S, r) {
     await ctx.close();
   }
   /* ── 4 · phone width ────────────────────────────────────────────────────────────────────────────── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S, 390);
     await p.click('[data-testid="db-src-JV/2026-27/000001"]'); await waitSheet(p, 'C2/26-27/0002');
     ok(await p.evaluate(() => document.documentElement.scrollWidth) === 390, 'phone: scrollWidth === 390 with the sheet open');
@@ -657,7 +647,7 @@ async function route(S, r) {
   }
 
   /* ── 13 · RCM-POST: a bill under reverse charge SAYS who pays the tax, from the frozen invoice's own code (moneyOf(inv).rcm) ── */
-  {
+  if (take()) {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="db-src-JV/2026-27/000003"]'); await waitSheet(p, 'SRT-7');
     const sheet = await p.textContent('#chitsheet');
