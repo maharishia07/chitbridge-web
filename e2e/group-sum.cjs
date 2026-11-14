@@ -90,7 +90,7 @@ t('a zero-amount row does not create a group',
 
 console.log('\n── one renderer, both callers ──');
 const admin = fs.readFileSync(path.join(W, 'app.html'), 'utf8');
-const folders = fs.readFileSync(path.join(W, 'app', 'cap-folders.js'), 'utf8');
+const folders = fs.readFileSync(path.join(W, 'app', 'cap-folders-groupsum.js'), 'utf8'); /* the Group-sum pane lives in its own part since the folders split (MNT-59) */
 t('the select bar uses it', /cbSumByCurrency\(/.test(admin) && /cbMoneyList\(/.test(admin));
 t('the folders panel uses it', /cbMoneyList\(/.test(folders));
 /**

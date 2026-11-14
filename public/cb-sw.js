@@ -2,13 +2,15 @@
 // app shell. Strategy = NETWORK-FIRST with cache fallback: when online you ALWAYS get fresh content (safe for a fast-
 // deploying app — no stale-code trap); the cache only answers when the network fails. Mutations (non-GET) are never touched
 // here — they are the outbox's job (cb-offline.js). Bump CB_SW_VERSION to invalidate all caches on the next load.
+// CALLED BY app.html (registers it at load) · e2e/folders-offline.cjs, e2e/folders-guard.cjs (what it caches).
+// FLOW  fetch (same-origin GET) → network first → cache.put → network down: cache.match → app.html for a navigation      CARD 28-platform-and-operations/offline
 //
 // SCOPE = SAME-ORIGIN app shell/static + fonts ONLY. The cross-origin API (Railway) is deliberately NOT intercepted: a
 // service worker on Firefox/Safari REJECTS a re-fetch of a cross-origin request, so intercepting it handed back a bogus 503
 // for LIVE data (a just-created chit wouldn't appear). The page's own fetch works on every engine, so we stay out of its
 // way. (Offline API read-cache is dropped for now — it only ever worked on Chromium; re-add later via a SAME-ORIGIN API
 // proxy the SW can actually cache, and restore the logout cache-clear hook then.)
-const CB_SW_VERSION = 'v3';
+const CB_SW_VERSION = 'v4';
 const SHELL = 'cb-shell-' + CB_SW_VERSION; // same-origin app shell + static JS
 const EXT = 'cb-ext-' + CB_SW_VERSION; // cross-origin static (fonts)
 const KEEP = [SHELL, EXT];
@@ -23,6 +25,8 @@ const PRECACHE = [
   '/app/cap-connector.js',
   '/app/cap-workforce.js',
   '/app/cap-folders.js',
+  '/app/cap-folders-rules.js',
+  '/app/cap-folders-groupsum.js',
   '/app/cap-readiness.js',
   '/app/cap-legend.js',
   '/cb-offline.js',

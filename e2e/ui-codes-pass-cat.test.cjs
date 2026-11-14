@@ -78,10 +78,10 @@ const PINS = {
     ["SCR004-C06"," style=\"font-size:var(--fs-1);colo"],
     ["SCR004-C07"," data-testid=\"folder-tab-' +"],
     ["SCR004-C08"," style=\"padding:9px 12px;border-bo"],
-    ["SCR004-C09"," style=\"padding:10px 12px;color:va"],
+    ["SCR004-C09"," style=\"padding:10px 12px;color:va"]
+  ],
+  "cap-folders-rules": [
     ["SCR004-B01"," type=\"button\" class=\"mv-btn\" ' +"],
-    ["SCR004-C10"," onclick=\"gsScope(' +"],
-    ["SCR004-C11"," onclick=\"gsToggle(' +"],
     ["SCR004-I01"," type=\"checkbox\" data-testid=\"rule"],
     ["SCR004-B02"," class=\"composebtn\" data-testid=\"r"],
     ["SCR004-I02"," class=\"inp\" data-testid=\"rule-nam"],
@@ -90,6 +90,10 @@ const PINS = {
     ["SCR004-B03"," data-testid=\"rule-preview\" onclic"],
     ["SCR004-B04"," class=\"composebtn\" data-testid=\"r"],
     ["CMP003"," onclick=\"ruleDraftCancel()\" style"]
+  ],
+  "cap-folders-groupsum": [
+    ["SCR004-C10"," onclick=\"gsScope(' +"],
+    ["SCR004-C11"," onclick=\"gsToggle(' +"]
   ]
 };
 /** ACC002-B25 in cap-shop.js and CMP048-B01 in avatar.js: one pin each */
@@ -118,7 +122,8 @@ const own = (file, re) => (srcOf[file].match(re) || []).length;
 check(own('cap-catalogue', /data-cbsid="CTG001-[A-Z][0-9]{2}"/g) === 9 && own('cap-catalogue', /data-cbsid="CTG003-[A-Z][0-9]{2}"/g) === 6, 'cap-catalogue.js: 9 Items and 6 Import codes (the Categories ones are the 5 CTG002 beside them)');
 check(own('cap-entry', /data-cbsid="SCR022-B[0-9]{2}"|data-cbsid="SCR022-[ISBT][0-9]{2}"/g) === 18, 'cap-entry.js: 18 Entry codes of SCR022 (none of BKS002)');
 check(srcOf['cap-entry'].indexOf('BKS002') < 0, 'cap-entry.js: no leftover BKS002 code');
-check(own('cap-folders', /data-cbsid="SCR004-[A-Z][0-9]{2}"/g) === 19, 'cap-folders.js: 19 Folders codes of SCR004');
+const folderCodes = ['cap-folders', 'cap-folders-rules', 'cap-folders-groupsum'].map((file) => own(file, /data-cbsid="SCR004-[A-Z][0-9]{2}"/g));
+check(folderCodes.reduce((sum, n) => sum + n, 0) === 19, 'cap-folders.js and its two parts: 19 Folders codes of SCR004, ' + folderCodes.join(' + '));
 
 let reg = null;
 for (const p of [process.env.UIID_REG, path.join(__dirname, '..', '..', 'chitbridge-docs', 'SCREENS.json'), 'C:/dev/SCREENS.json']) {
