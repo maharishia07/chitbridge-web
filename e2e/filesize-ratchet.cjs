@@ -9,6 +9,7 @@
  *           · --rebaseline on a feature branch is refused, with the batch tool stamp it resets the rows · --ceiling lists a computed customer file
  *           · a batch/* branch with only a CB_BUILD comment line is red · CB_FILESIZE_STAMP in a PR that edits a workflow is refused and red
  *           · a real batch (CB_BUILD assignment bumped, a merge commit touching the file) is green and prints the raised row
+ *           · api/engines (no CB_BUILD): a filesize.stamp line "<batch branch> <date>" is green; none, another branch, a feature branch, two lines, no date are red
  *           · tests count; a copy, a fixtures/ file and the generated and vendored web paths do not
  * CALLED BY .github/workflows/ci.yml (web check job).
  * FLOW      build the fixture repo on main ──▶ branch ──▶ edit ──▶ run tools/readability/filesize.cjs --against main ──▶ assert exit code and words
@@ -171,6 +172,33 @@ function showRealBatch(root) {
   check(batch.code === 0 && /STAMP \(batch\) row lib\/big\.js 600 -> 700/.test(batch.text), 'a real batch (CB_BUILD assignment bumped + a merge commit touching the file) is GREEN and prints the raised row');
 }
 
+/** the api/engines stamp: a committed filesize.stamp line "<branch> <date>" on a batch/* branch; every other shape is red */
+function stampRun(root, branch, stampText) {
+  branchFromMain(root, 'feat/z-' + branch.replace(/\W/g, ''));
+  raiseRow(root);
+  commitAll(root, 'feature grew a file');
+  const feature = git(root, ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
+  branchFromMain(root, branch);
+  if (stampText) put(root, 'filesize.stamp', stampText);
+  commitAll(root, 'stamp');
+  git(root, ['merge', '-q', '--no-ff', '-m', 'merge ' + feature, feature]);
+  return run(root);
+}
+
+function showFileStamp(root) {
+  const ok = stampRun(root, 'batch/api-ok', 'batch/api-ok 2026-11-15\n');
+  check(ok.code === 0 && /STAMP \(batch\) row lib\/big\.js 600 -> 700/.test(ok.text), 'api/engines: filesize.stamp "<this batch branch> <date>" + a merge commit is GREEN and prints the raised row');
+  check(stampRun(root, 'batch/api-none', '').code === 1, 'api/engines: a batch/* branch with NO filesize.stamp change is RED');
+  check(stampRun(root, 'batch/api-other', 'batch/api-old 2026-11-14\n').code === 1, 'api/engines: a stamp naming ANOTHER branch (carried over) is RED');
+  check(stampRun(root, 'feature/api-stamp', 'feature/api-stamp 2026-11-15\n').code === 1, 'api/engines: the right stamp line on a NON-batch branch is RED');
+  check(stampRun(root, 'batch/api-two', 'batch/api-two 2026-11-15\nbatch/api-x 2026-11-15\n').code === 1, 'api/engines: a stamp file with two added lines is RED');
+  check(stampRun(root, 'batch/api-nodate', 'batch/api-nodate soon\n').code === 1, 'api/engines: a stamp line without a YYYY-MM-DD date is RED');
+  branchFromMain(root, 'batch/api-rb');
+  put(root, 'filesize.stamp', 'batch/api-rb 2026-11-15\n');
+  commitAll(root, 'stamp');
+  check(run(root, ['--rebaseline']).code === 0, 'api/engines: --rebaseline is allowed on that stamp');
+}
+
 function showExclusions() {
   const skipped = ['public/app/screens.js', 'public/app/strings-hi.js', 'public/engine/tax.js', 'public/till.html', 'vendor/x.js', 'a/node_modules/b.js', 'public/x.min.js', 'tests/fixtures/y.js'];
   check(skipped.every(isExcluded) && !isExcluded('tests/x.test.cjs') && !isExcluded('public/app/cart.js'), 'generated, copied, vendored, minified and fixture paths are not counted; tests and app files are');
@@ -184,6 +212,7 @@ showHiddenGrowth(fixture);
 showRebaseline(fixture);
 showForgeries(fixture);
 showRealBatch(fixture);
+showFileStamp(fixture);
 showExclusions();
 fs.rmSync(fixture, { recursive: true, force: true });
 console.log(bad ? '\n' + bad + ' FAILED' : '\nall ok');
