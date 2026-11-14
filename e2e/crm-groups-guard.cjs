@@ -14,6 +14,8 @@ const root = path.join(__dirname, '..', 'public');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const snapshot = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'crm-groups-names.json'), 'utf8'));
 const PAGE = 'crm.html';
+/* the service worker whose CB_SW_VERSION the family bumps (the guard reads it; it must exist where the register says) */
+if (!fs.existsSync(path.join(root, '..', 'public/cb-sw.js'))) throw new Error('public/cb-sw.js is missing');
 const CALLED_FROM_OUTSIDE = ['crmGroups', 'crmShowcase', 'crmGroupsClick', 'crmSendOpen', 'crmGroupsLoad'];
 const BASE = 'cap-crm-groups.js';
 const familyFiles = () => fs.readdirSync(path.join(root, 'app')).filter((file) => /^cap-crm-groups(-[a-z]+)?\.js$/.test(file)).sort((a, b) => (a === BASE ? -1 : b === BASE ? 1 : a < b ? -1 : 1));

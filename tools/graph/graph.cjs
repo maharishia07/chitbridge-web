@@ -122,7 +122,7 @@ function addWebCode(webRoot, addFile) {
 
 /** a test naming a module by path string → that module's file node (web: app/ engine/ tools/ scripts/; api: lib/ routes/ … tools/ scripts/) */
 const FILE_NAMED = {
-  web: [/(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js)$/, /(?:^|[\/'"\s])((?:tools|scripts)\/[\w.\/-]+\.(?:cjs|js|mjs))$/],
+  web: [/(?:^|[\/'"\s])(?:public\/)?((?:app|engine)\/[\w.-]+\.js|cb-sw\.js)$/, /(?:^|[\/'"\s])((?:tools|scripts)\/[\w.\/-]+\.(?:cjs|js|mjs))$/],
   api: [
     /(?:^|[\/'"\s])((?:lib|routes|middleware|src|governance|tools|scripts)\/[\w.\/-]+?)(?:\.c?js)?$/,
     /(?:^|[\/'"\s])(tools\/tally-connector\/[\w.-]+\.html)$/
