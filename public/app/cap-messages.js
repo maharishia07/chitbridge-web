@@ -236,7 +236,7 @@ function messagesScreen() {
             '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' +
             (isNew ? 'background:var(--blue-tint-bg);' : '') +
             ';color:var(--on-card)">' +
-            '<div onclick="msgOpen(&quot;' +
+            '<div data-cbsid="WRK001-C01" onclick="msgOpen(&quot;' +
             item.key +
             '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">' +
             '<span style="width:8px;flex:none">' +
@@ -283,7 +283,7 @@ function messagesScreen() {
             esc(m.message_text || '') +
             '</div>' +
             '</div>' +
-            '<span data-testid="msg-keep" onclick="msgKeep(&quot;' +
+            '<span data-cbsid="WRK001-C02" data-testid="msg-keep" onclick="msgKeep(&quot;' +
             item.key +
             '&quot;,event)" title="' +
             (item.kept ? 'Kept here — click to release' : 'Keep this conversation in the tab') +
@@ -304,7 +304,7 @@ function messagesScreen() {
                  */
                 '<div style="display:flex;gap:10px;align-items:center;padding:2px 0 8px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:6px">' +
                 (item.line_id
-                  ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' +
+                  ? '<span data-cbsid="WRK001-C03" data-testid="msg-open-line" onclick="rplOpenLine(&quot;' +
                     item.chit_id +
                     '&quot;,&quot;' +
                     item.line_id +
@@ -313,7 +313,7 @@ function messagesScreen() {
                     tx('↗ Open the line') +
                     '</span>'
                   : '') +
-                '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' +
+                '<span data-cbsid="WRK001-C04" data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' +
                 item.chit_id +
                 '&quot;)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">↗ Open the ' +
                 ((RPLTRACK[m.track] || {}).label || 'order').toLowerCase() +
@@ -376,7 +376,7 @@ function messagesScreen() {
           : (RPL.data || []).length;
         var lbl = item ? RPLTRACK[item].icon + ' ' + RPLTRACK[item].label : 'All';
         return (
-          '<span data-testid="msg-track-' +
+          '<span data-cbsid="WRK001-C05" data-testid="msg-track-' +
           (item || 'all') +
           '" onclick="rplTrack(&quot;' +
           item +
@@ -399,7 +399,7 @@ function messagesScreen() {
     '</div>' +
     '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)">' +
     '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);cursor:pointer">' +
-    '<input type="checkbox" data-testid="msg-all" ' +
+    '<input data-cbsid="WRK001-I01" type="checkbox" data-testid="msg-all" ' +
     (RPL.all ? 'checked' : '') +
     ' onchange="msgShowAll()" style="width:15px;height:15px;accent-color:var(--blue)">everything, including dealt with</label>' +
     '</div>' +
