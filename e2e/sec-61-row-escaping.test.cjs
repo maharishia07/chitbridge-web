@@ -25,7 +25,7 @@ const listcols = lift(read('public/app.html'), /^const LISTCOLS = \[/m, '\n];\n'
 
 const cx = vm.createContext({
   console, UI: { folder: 'inbox' }, tx: (s) => s, safe: (f, d) => { try { return f(); } catch (e) { return d; } },
-  attnFlag: () => '', cancelFlag: () => '', statusChip: () => '', priChip: () => '', fmtMoney: (v) => String(v), lcDate: (v) => String(v), cap: (s) => s
+  attnFlag: () => '', cancelFlag: () => '', billChipHTML: () => '', statusChip: () => '', priChip: () => '', fmtMoney: (v) => String(v), lcDate: (v) => String(v), cap: (s) => s
 });
 vm.runInContext(esc + '\n' + cellOf + '\n' + listcols, cx);
 const cols = vm.runInContext('LISTCOLS', cx);

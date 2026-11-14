@@ -54,6 +54,7 @@
  "public/app/cap-adopt.js":"*",
  "public/app/cap-assist.js":["public/tasks.html"],
  "public/app/cap-bank.js":["public/accounts.html"],
+ "public/app/cap-bank-store.js":["public/accounts.html"],
  "public/app/cap-books.js":["public/accounts.html","public/crm.html","public/finance.html","public/tasks.html"],
  "public/app/cap-catalogue.js":["public/app.html","public/catalogue.html"],
  "public/app/cap-categories.js":["public/catalogue.html"],
