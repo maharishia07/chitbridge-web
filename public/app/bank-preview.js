@@ -21,7 +21,7 @@
 (function (root) {
   'use strict';
   var STATE_WORDS = { in_books: 'In your books', proposed: 'Ready to add', needs_you: 'Needs you', posted: 'Added', failed: 'Not added', closed: 'Month closed' };
-  var NEEDS_WORDS = { gst_basis: 'GST basis needed', no_entry: 'Needs you' };
+  var NEEDS_WORDS = { gst_basis: 'Tax basis needed', no_entry: 'Needs you' };
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
 
