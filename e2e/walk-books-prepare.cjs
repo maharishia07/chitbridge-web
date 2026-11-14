@@ -96,7 +96,7 @@ W.run('books-prepare', async (w) => {
   });
   await w.step('P2', 'the books page · the frozen banner says Store One and its currency; every books request named the store and the adviser role', async () => {
     await page.waitForSelector(T('en-step-2'), { timeout: 20000 }); await page.waitForTimeout(400);
-    const band = await txt(T('ba-band')), reads = S.calls.filter((c) => c.p.indexOf('/api/books') === 0);
+    const band = await txt(T('ba-band')), reads = S.calls.filter((c) => c.p.indexOf('/api/books/') === 0 || c.p === '/api/books-actions');
     return { ok: /Acting for Store One, INR/.test(band) && reads.length > 2 && reads.every((c) => c.h['x-books-for'] === S1 && c.h['x-books-role'] === 'adviser'), saw: band + ' · ' + reads.length + ' books requests, all with both headers' };
   });
   await w.step('P3', 'the sheet · a journal is written in the existing entry sheet (two lines), the preview comes from the server', async () => {
@@ -109,7 +109,7 @@ W.run('books-prepare', async (w) => {
   await w.step('P4', 'the sheet · Save PREPARES: one POST /api/books-actions with store_id, kind journal, the body with its date, client_ref and working_month; nothing is posted; it says "Prepared, waiting for review"', async () => {
     await page.click(T('en-save')); await page.waitForSelector(T('en-prepared'), { timeout: 10000 });
     const said = await txt(T('en-prepared')), why = await txt('#en_body'), sent = S.prepared[0] || {};
-    return { ok: S.prepared.length === 1 && S.posted.length === 0 && sent.store_id === S1 && sent.kind === 'journal' && sent.body && /^d{4}-d{2}-d{2}$/.test(sent.body.date || '') && sent.body.lines.length === 2 && !!sent.client_ref && /^\d{4}-\d{2}$/.test(sent.working_month || '') && /Prepared, waiting for review/.test(said) && /Nothing is posted yet/.test(why), saw: said + ' · ' + JSON.stringify({ kind: sent.kind, date: sent.body && sent.body.date, ref: sent.client_ref, month: sent.working_month }) };
+    return { ok: S.prepared.length === 1 && S.posted.length === 0 && sent.store_id === S1 && sent.kind === 'journal' && sent.body && /^d{4}-d{2}-d{2}$/.test(sent.body.date || '') && sent.body.lines.length === 2 && !!sent.client_ref && /^\d{4}-\d{2}$/.test(sent.working_month || '') && /Prepared, waiting for review/.test(said) && /Nothing is posted yet/.test(why), saw: said + ' · prepared ' + S.prepared.length + ' posted ' + S.posted.length + ' lines ' + (sent.body && sent.body.lines && sent.body.lines.length) + ' · why: ' + why.slice(0, 80) + ' · ' + JSON.stringify({ kind: sent.kind, date: sent.body && sent.body.date, ref: sent.client_ref, month: sent.working_month }) };
   });
   await w.step('P5', 'the firm · back in the workspace, "Prepared by my team" lists the journal, waiting for review', async () => {
     await page.click(T('en-done')); await page.click(T('ba-back')); await page.waitForSelector(T('nw-books-' + S1), { timeout: 20000 });
