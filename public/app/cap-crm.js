@@ -788,7 +788,7 @@ function crmGo(hash, replace) {
   if (replace) {
     try {
       history.replaceState(null, '', hash);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     crmRoute();
   } else location.hash = hash;
 }
@@ -1507,7 +1507,7 @@ function crmHome(frame) {
   if (CRM.api && CRM.api.destroy) {
     try {
       CRM.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   CRM.api = CBList.mount(document.getElementById('crm_list'), {
     key: 'crm-parties',
@@ -1820,7 +1820,7 @@ function crmFollowups(frame) {
   if (CRM.fuApi && CRM.fuApi.destroy) {
     try {
       CRM.fuApi.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var by = function (f) {
     return function (a, b) {

@@ -188,7 +188,7 @@ async function peStockList() {
   if (PE_STOCK.api) {
     try {
       PE_STOCK.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   PE_STOCK.api = CBList.mount(host, {
     key: 'stock',
@@ -786,7 +786,7 @@ async function peAccrBody(node) {
   try {
     const t = peList(await api('booksTodo'), 'items').filter((item) => item.kind === 'accrual_reversals_due')[0];
     list = (t && t.items) || [];
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   const seen = {};
   PE.accr.forEach((item) => {
     seen[item.ref] = 1;
@@ -1195,7 +1195,7 @@ function peRetRemember() {
         simpler: PE_RET.q.simpler || null
       })
     );
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
 }
 function peRetRecall() {
   try {
@@ -1399,7 +1399,7 @@ function peReturnList(r) {
   if (PE_RET.api) {
     try {
       PE_RET.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   const rows = (r.boxes || []).map((item, index) => Object.assign({ i: index }, item));
   const cols = [
@@ -1514,7 +1514,7 @@ async function peReturnCopy(btn) {
       await navigator.clipboard.writeText(text);
       done = true;
     }
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   if (!done) {
     try {
       const node = document.createElement('textarea');
@@ -1526,7 +1526,7 @@ async function peReturnCopy(btn) {
       node.select();
       done = !!(document.execCommand && document.execCommand('copy'));
       document.body.removeChild(node);
-    } catch (_) {}
+    } catch (_) { /* cosmetic (focus/scroll): nothing to recover */ }
   }
   if (done) peOk('pr_out', esc(txf('Copied {n} boxes · paste them into the {who} portal', { n: n, who: r.authority })));
   else peBad('pr_out', tx('Could not copy — select the figures and copy by hand.'));

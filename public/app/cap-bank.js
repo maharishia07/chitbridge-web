@@ -90,7 +90,7 @@ function bkbLoad(what, dflt) {
 function bkbSave(what, v) {
   try {
     localStorage.setItem(bkbKey(what), JSON.stringify(v));
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
 }
 const bkbRec = () => (BKB.rec = BKB.rec || bkbLoad('marks:' + BKB.acct, {}));
 const bkbRules = () => (BKB.rules = BKB.rules || bkbLoad('rules', []));

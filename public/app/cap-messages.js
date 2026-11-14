@@ -232,7 +232,6 @@ function messagesScreen() {
           var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
           var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
           var sub = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
-          var rid = item.key.replace(/[^a-z0-9]/gi, '');
           return (
             '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' +
             (isNew ? 'background:var(--blue-tint-bg);' : '') +

@@ -1027,7 +1027,7 @@ function setLbTab(t) {
  */
 try {
   localStorage.removeItem('cb_lb_fs');
-} catch (_) {}
+} catch (_) { /* storage blocked or full: the page works without it */ }
 
 function _lifeTabHtml() {
   const SS = { ok: ['var(--ok-3)', '✅'], built: ['var(--warn-2)', '◐'], todo: ['var(--grey-4)', '○'] };

@@ -254,7 +254,7 @@ function chitsHome(params, frame) {
   if (CHITS.api && CHITS.api.destroy) {
     try {
       CHITS.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var tab = params && /^(stuck|in|out|orders)$/.test(params.tab || '') ? params.tab : null;
   CHITS.api = CBList.mount(document.getElementById('chits_list'), {

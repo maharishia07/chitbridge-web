@@ -513,7 +513,7 @@ function c2PaneOrd(d) {
   if (C2.cart) {
     try {
       C2.cart.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   C2.cart = CBCart.create(cat, { renderer: CBCatUI, listEl: 'c2_lines_none', barEl: 'c2_bar_none', barHideEmpty: true });
   items.forEach(function (item) {
@@ -522,7 +522,7 @@ function c2PaneOrd(d) {
   });
   try {
     CBCatUI.ensureCss();
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   out +=
     '<div class="plist">' +
     items
@@ -1277,7 +1277,6 @@ function c2PaneWork(d) {
     return Object.keys(buckets)
       .sort(list.sort)
       .map(function (item) {
-        var n = buckets[item].length;
         var roll = c2RollupText(buckets[item], asg, prog);
         var head =
           depth === 0
@@ -1334,7 +1333,6 @@ function c2PaneWork(d) {
  *   'person' → show the DATE only     'date' → show the PERSON only     'line' → show both
  */
 function c2WorkRow(e, asg, prog, ctx) {
-  var indent = ctx === 'person' || ctx === 'date' ? 'padding-inline-start:28px;' : '';
   var a = asg[e.line_id] || {};
   var l = e.live || e.original || {};
   var p = prog[e.line_id] || {};

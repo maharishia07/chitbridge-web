@@ -28,7 +28,7 @@ var LISTCTL = {};
 function listCtlResetRows(key) {
   try {
     if (LAZY) delete LAZY[key];
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 /**
@@ -269,7 +269,7 @@ function lazyWrap(id, items, cardFn, empty) {
   if (kept && kept._io) {
     try {
       kept._io.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   if (!items.length) return empty || '';
   const chunk = 50;
@@ -315,7 +315,7 @@ function lazyReveal(id) {
     if (s._io) {
       try {
         s._io.disconnect();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       s._io = null;
     }
   } else
@@ -348,5 +348,5 @@ function lazyAttach(id) {
       { rootMargin: '0px' }
     );
     s._io.observe(sent);
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }

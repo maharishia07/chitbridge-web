@@ -38,7 +38,7 @@ async function svcOpen(chit_id) {
 async function svcReload() {
   try {
     SVC.data = await api('svcGet', { params: { id: SVC.id } });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   svcPaint();
 }
 

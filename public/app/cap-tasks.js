@@ -1041,7 +1041,7 @@
       '</button></div>';
     $('tk_dq').focus();
     $('tk_dq_go').onclick = function () {
-      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.\-]/g, ''));
+      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
         return;

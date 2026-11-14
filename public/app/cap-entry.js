@@ -120,7 +120,7 @@ function enDlg() {
   node.addEventListener('close', function () {
     try {
       document.documentElement.style.overflow = '';
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   });
   node.addEventListener('click', function (e) {
     if (e.target === node) enClose();
@@ -133,7 +133,7 @@ function enClose() {
   if (node && node.open) node.close();
   try {
     document.documentElement.style.overflow = '';
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 /* ── the one door ── */
@@ -159,7 +159,7 @@ async function enOpen(preset) {
   enPaint();
   try {
     document.documentElement.style.overflow = 'hidden';
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   if (!node.open) {
     if (node.showModal) node.showModal();
     else node.setAttribute('open', '');
