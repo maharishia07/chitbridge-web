@@ -10,7 +10,10 @@
  * ⚠️ NOTHING HERE DECIDES ANYTHING. It does not auto-resolve, auto-accept a pause, or declare a winner. The same
  * discipline as the matcher and for the same reason: a confident wrong number is worse than a gap.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      the service clock panel of one chit: the two elapsed numbers, the pauses and their answers, impact and urgency, respond, resolve (svc* functions, the SVC state).
+ * CALLED BY public/app.html only (openServiceClock: ensureCap('service') then svcOpen, line 29755); app/cap-chit2.js names svcOpen in a comment, it does not call it (grepped 14 Nov). SUPPORT: no customer page loads it.
+ * FLOW      svcOpen(chit) → api svcGet → svcPaint (svcClockBlock, svcPauseRow) → an action (svcStart svcSet · svcRespond · svcDoPause · svcEndPause · svcAnswer · svcDoResolve) writes through api svcSet/svcRespond/svcPause/svcPauseEnd/svcPauseAnswer/svcResolve → svcReload → svcPaint
+ * CARD      03-disputes-service-and-register/service-request-sla-pause
  */
 var SVC = { id: null, data: null, busy: false, err: null, view: 'main' };
 

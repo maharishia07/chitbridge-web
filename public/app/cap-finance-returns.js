@@ -11,8 +11,10 @@
  * ⭐ NEW PATHS (rule 4): FR (this tab's state) · frMonths (the last twelve calendar months as a picker; the workshop's band has one typed month and
  * bkMonths is the fiscal year's names, not a picker) · frPaint.
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again.
- * OWNS the Returns view of Finance: the country's return, the server's figures painted
- * // CARD 15-tax-and-country-packs/gst-returns-bas-vat
+ * OWNS      the Returns tab of CB Finance: the country's return, the server's files and words painted (frLoad · frMount · frMonths · frCard · frPaint · frGet)
+ * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (frLoad · frMount). Not loaded by app.html
+ * FLOW      finance.html opens Returns → api('me') (the shop's country) → frPaint: India downloads the GSTR files (gstrDownload), AU / AE are told where the return is prepared → Try again on a failure
+ * CARD      15-tax-and-country-packs/gst-returns-bas-vat
  */
 'use strict';
 

@@ -1,7 +1,13 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
- * CALLED BY shop.html · store.html · embed.html · network-shop.html and app.html's compose (CBCart.create — the one basket, SHELL-ONE's storefront pages).
+ * OWNS      the one basket every ordering surface draws: the state (item_id → quantity), the money block (offers → GST → total), the row with its
+ *           six quantity models, the bar, the panel and the picker (CBCart = state + money + panel; CBCatUI = the catalogue rows, chip and picker).
+ * CALLED BY shop.html (the storefront card), network-design.html (the network lab), cart-design.html, storefront-design.html and supplier-design.html (reference drawings),
+ *           app.html (Compose and Suppliers, through CBCart.create). Loaded by <script src> on those pages and no other.
+ * FLOW      CBCart.init or create(catalogue, WRAP) → barHTML / listHTML / pickerHTML paint the rows → add, dec, setQty change the state and repaint →
+ *           money(lines) prices them → open() draws the panel → checkout() hands the lines to the outlet's onCheckout (the outlet confirms and sends).
  * CARD storefront-and-catalogue/cart
+ * IDS       every control wears SCR037-B/C/I## (the cart's own register rows, UX-137); the close and remove marks reuse CMP005 and CMP008.
  * CAPABILITY: CART — one basket, everywhere (app/cart.js). Athi, 2026-09-05: "the cart is a single view we should be able to
  * embed anywhere so we get the same style and response everywhere — single source of truth; convert as a capability and
  * remove duplicate code, so we can work on one piece of code."
@@ -979,7 +985,7 @@
       sf = soft(ns);
     var chip = function (id, label, n, on) {
       return (
-        '<button type="button" class="cbpick-chip' +
+        '<button data-cbsid="SCR037-B01" type="button" class="cbpick-chip' +
         (on ? ' on' : '') +
         '"' +
         (on ? ' style="background:' + sf + ';border-color:' + a + ';color:' + a + '"' : '') +
@@ -1353,7 +1359,7 @@
     /* M166: the bar reads '🛒 1 · ₹35' — the badge is the count, so the summary is the money (lines only while nothing is priced) */
     var sum = on ? (T.amount ? '· ' + fmt(ns, T.amount) + (T.partial ? '+' : '') : n + ' line' + (n === 1 ? '' : 's')) : '';
     return (
-      '<div class="cbcart-bar' +
+      '<div data-cbsid="SCR037-C01" class="cbcart-bar' +
       (on ? ' on' : '') +
       '" data-testid="cart-' +
       esc(ns) +
@@ -1373,7 +1379,7 @@
          lose; the money is the detail, and it is one tap away in the cart itself. */
       (on ? '<span class="cbcart-sum">' + esc(sum) + '</span>' : '') +
       (on
-        ? '<span class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
+        ? '<span data-cbsid="SCR037-C02" class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' +
           esc(ns) +
           '\')"' +
           ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
@@ -1404,7 +1410,7 @@
 
     if (o_model === 'pick') {
       return (
-        '<button data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' +
+        '<button data-cbsid="SCR037-B02" data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' +
         esc(ns) +
         "','" +
         esc(id) +
@@ -1424,7 +1430,7 @@
     }
     if (!q) {
       return (
-        '<button data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + esc(ns) + "','" + esc(id) + '\')">+</button>'
+        '<button data-cbsid="SCR037-B03" data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + esc(ns) + "','" + esc(id) + '\')">+</button>'
       );
     }
     var off = '';
@@ -1432,7 +1438,7 @@
       // The offer rides beside the quantity, and says immediately whether it sits inside the seller's band.
       var os = offerState(ns, id);
       off =
-        '<input placeholder="your price" value="' +
+        '<input data-cbsid="SCR037-I01" placeholder="your price" value="' +
         esc(os.value == null ? '' : String(os.value)) +
         '" inputmode="decimal"' +
         ' onchange="CBCart.setOffer(\'' +
@@ -1445,16 +1451,16 @@
         ';border-radius:6px;font-size:var(--fs-2);text-align:end">';
     }
     return (
-      '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' +
+      '<span data-cbsid="SCR037-C03" style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' +
       off +
-      '<button style="' +
+      '<button data-cbsid="SCR037-B04" style="' +
       rnd +
       '" onclick="CBCart.dec(\'' +
       esc(ns) +
       "','" +
       esc(id) +
       '\')">−</button>' +
-      '<input value="' +
+      '<input data-cbsid="SCR037-I02" value="' +
       esc(String(q)) +
       '" inputmode="decimal" onchange="CBCart.setQty(\'' +
       esc(ns) +
@@ -1462,7 +1468,7 @@
       esc(id) +
       '\',this.value)"' +
       ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);text-align:center">' +
-      '<button data-testid="cart-add" style="' +
+      '<button data-cbsid="SCR037-B05" data-testid="cart-add" style="' +
       rnd +
       ';background:' +
       a +
@@ -1581,7 +1587,7 @@
         '<div style="padding:34px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">' +
         why +
         (s.catg
-          ? '<div style="margin-top:8px"><button type="button" class="cbpick-chip"' +
+          ? '<div style="margin-top:8px"><button data-cbsid="SCR037-B06" type="button" class="cbpick-chip"' +
             ' onclick="CBCart.category(\'' +
             esc(ns) +
             "','')\">" +
@@ -1608,7 +1614,7 @@
             item.count +
             ' options</span>' +
             (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '') +
-            '<span class="cbcart-grp"' + KBD_PRESS + ' onclick="CBCart.group(\'' +
+            '<span data-cbsid="SCR037-C04" class="cbcart-grp"' + KBD_PRESS + ' onclick="CBCart.group(\'' +
             esc(ns) +
             "'," +
             index +
@@ -1766,7 +1772,7 @@
         : // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
           '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Nothing in the cart yet.</div>') +
       '<div style="display:flex;gap:9px;margin-top:15px">' +
-      '<button style="' +
+      '<button data-cbsid="SCR037-B07" style="' +
       btn +
       ';background:var(--card);color:' +
       a +
@@ -1776,7 +1782,7 @@
       (list.length ? 'Keep shopping' : 'Browse the catalogue') +
       '</button>' +
       (list.length
-        ? '<button data-testid="cart-checkout" style="' +
+        ? '<button data-cbsid="SCR037-B08" data-testid="cart-checkout" style="' +
           btn +
           ';background:' +
           a +
@@ -1828,7 +1834,7 @@
       '<div class="cbpick-stick">' +
       '<div class="cbpick-row">' +
       (o.cart === false ? '' : '<div id="' + esc(barId) + '" class="cbpick-cartslot">' + barHTML(ns) + '</div>') +
-      '<input class="inp cbpick-q" placeholder="' +
+      '<input data-cbsid="SCR037-I03" class="inp cbpick-q" placeholder="' +
       esc(o.placeholder || 'Search this catalogue…') +
       '"' +
       ' value="' +
@@ -1934,7 +1940,7 @@
           var T = total(ns);
           box.className = 'cbcart-float cbcart-float-min';
           box.innerHTML =
-            '<button type="button" class="cbcart-float-pill" data-testid="' +
+            '<button data-cbsid="SCR037-B09" type="button" class="cbcart-float-pill" data-testid="' +
             esc(text.replace(/-total$/, '')) +
             '-pill" onclick="CBCart.closeSummary(\'' +
             esc(ns) +
@@ -1956,7 +1962,7 @@
           ' · ' +
           esc(String(n)) +
           '</span>' +
-          '<button type="button" class="cbcart-float-x" aria-label="minimise" title="' +
+          '<button data-cbsid="SCR037-B10" type="button" class="cbcart-float-x" aria-label="minimise" title="' +
           esc('minimise') +
           '" onclick="CBCart.closeSummary(\'' +
           esc(ns) +
@@ -3060,7 +3066,7 @@
       /* ⚠️ NO STEPPER AT ALL. `pick` is one or none — a second press must not make it two, so there must be no
          control that invites one. The model already refuses it; offering a + that does nothing would be worse. */
       return (
-        '<button type="button" class="cbcat-pick' +
+        '<button data-cbsid="SCR037-B11" type="button" class="cbcat-pick' +
         (q ? ' on' : '') +
         '"' +
         ' data-testid="cart-add" data-cbcat="pick-' +
@@ -3074,10 +3080,10 @@
       );
     }
     var out = q
-      ? '<span class="cbcat-stp"><button type="button" aria-label="less" onclick="' +
+      ? '<span class="cbcat-stp"><button data-cbsid="SCR037-B12" type="button" aria-label="less" onclick="' +
         call('dec') +
         '">−</button>' +
-        '<input value="' +
+        '<input data-cbsid="SCR037-I04" value="' +
         esc(q) +
         '" inputmode="decimal" aria-label="quantity"' +
         ' onchange="CBCart.setQty(\'' +
@@ -3085,13 +3091,13 @@
         "','" +
         esc(id) +
         '\',this.value)"></span>' +
-        '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
+        '<button data-cbsid="SCR037-B13" type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
         esc(id) +
         '"' +
         ' aria-label="more" onclick="' +
         call('add') +
         '">+</button>'
-      : '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
+      : '<button data-cbsid="SCR037-B14" type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' +
         esc(id) +
         '"' +
         ' aria-label="add" onclick="' +
@@ -3259,7 +3265,7 @@
      */
     var offerInput =
       modelOf(r) === 'offer'
-        ? '<input class="cbcat-offer" placeholder="your ' +
+        ? '<input data-cbsid="SCR037-I05" class="cbcat-offer" placeholder="your ' +
           esc(sym) +
           '" value="' +
           esc(u.offered ? u.amount : '') +
@@ -3585,7 +3591,7 @@
       else
         html =
           html.slice(0, fi) +
-          '<span class="cbcat-moret" data-testid="cbcat-moret-' +
+          '<span data-cbsid="SCR037-C05" class="cbcat-moret" data-testid="cbcat-moret-' +
           esc(id) +
           "\" onclick=\"event.stopPropagation();this.closest('.cbcat-row').classList.toggle('open')\">" +
           esc(typeof tx === 'function' ? tx('more') : 'more') +
@@ -3603,7 +3609,7 @@
       '<span class="cbcat-cnt">' +
       r.count +
       ' options</span>' +
-      '<span class="cbcat-all" onclick="CBCart.group(\'' +
+      '<span data-cbsid="SCR037-C06" class="cbcat-all" onclick="CBCart.group(\'' +
       esc(cart.ns) +
       "'," +
       i +
@@ -3761,7 +3767,7 @@
     return (
       '<div class="cbcat-wrap">' +
       '<div class="cbcat-hdr">' +
-      '<input class="cbcat-q" disabled placeholder="' +
+      '<input data-cbsid="SCR037-I06" class="cbcat-q" disabled placeholder="' +
       esc(opts.placeholder || 'Search this catalogue…') +
       '">' +
       '</div>' +
@@ -3795,7 +3801,7 @@
       '</b> ready' +
       (amt ? ' · ' + esc(amt) : '') +
       ' — <b>not on the chit yet</b></span>' +
-      '<button type="button" data-testid="cbcat-checkout-' +
+      '<button data-cbsid="SCR037-B15" type="button" data-testid="cbcat-checkout-' +
       esc(cart.ns) +
       '"' +
       ' onclick="CBCart.checkout(\'' +
@@ -3967,7 +3973,7 @@
            * never a question which line it refers to.
            */
           var note = noteFn
-            ? '<input class="cbcat-note" value="' +
+            ? '<input data-cbsid="SCR037-I07" class="cbcat-note" value="' +
               esc(item.comment || '') +
               '"' +
               ' data-testid="cbcat-note-' +
@@ -3997,7 +4003,7 @@
           var att =
             (attachFn
               ? '<label class="cbcat-clip" title="Attach a picture or file to this line">📎' +
-                '<input type="file" multiple style="display:none"' +
+                '<input data-cbsid="SCR037-I08" type="file" multiple style="display:none"' +
                 ' onchange="' +
                 esc(attachFn) +
                 '(' +
@@ -4158,7 +4164,7 @@
        * disagreeing about what is in the cart, which is precisely the thing this whole helper exists to prevent.
        */
       (opts.cart === false ? '' : '<span id="' + esc(barId) + '" class="cbcat-chipslot">' + chipHTML(cart, opts) + '</span>') +
-      '<input class="cbcat-q" placeholder="' +
+      '<input data-cbsid="SCR037-I09" class="cbcat-q" placeholder="' +
       esc(opts.placeholder || 'Search this catalogue…') +
       '"' +
       ' value="' +
@@ -4197,7 +4203,7 @@
        * filter that disagrees with the badge printed on it.
        */
       ((opts.offers || []).length && root.CBOffers
-        ? '<button type="button" class="cbcat-chip cbcat-offchip' +
+        ? '<button data-cbsid="SCR037-B16" type="button" class="cbcat-chip cbcat-offchip' +
           ((cart.state() || {}).onlyOffers ? ' on' : '') +
           '"' +
           ' data-testid="pick-onoffer" onclick="CBCart.onlyOffers(\'' +
@@ -4248,7 +4254,7 @@
      * nothing; the cap-network harness caught exactly that here and said so.
      */
     return (
-      '<button type="button" class="cbcart-bar cbcat-chip' +
+      '<button data-cbsid="SCR037-B17" type="button" class="cbcart-bar cbcat-chip' +
       (n ? ' on' : '') +
       '"' +
       ' data-testid="cart-' +

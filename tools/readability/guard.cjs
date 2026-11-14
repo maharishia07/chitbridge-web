@@ -19,6 +19,7 @@ const ratchet = require('./ratchet.cjs');
 const changed = require('./changed.cjs');
 const moves = require('./moves.cjs');
 const touch = require('./touch.cjs');
+const headers = require('./headers.cjs');
 const noise = require('./noise.cjs');
 
 const LIMITS = ratchet.LIMITS;
@@ -177,6 +178,22 @@ function ruleTraceRow(file, trace) {
   };
 }
 
+/** the header TEMPLATE (PM/HEADER-TEMPLATE.md) for a NEW file only: a warning until headers.TEMPLATE_STRICT_FROM, then a failure; old files and the ratchet score are never touched by it */
+function ruleTemplate(entry, repo, today) {
+  if (entry.status !== 'added' || entry.renamed) return null; /* a renamed old file is still old (HEADER-TEMPLATE: old files are never judged) */
+  const kind = headers.kindOf(repo, entry.file);
+  const lacks = headers.missing(kind, entry.head.header.template);
+  if (!lacks.length) return null;
+  const level = today >= headers.TEMPLATE_STRICT_FROM ? 'fail' : 'warn';
+  return {
+    level,
+    rule: 'header-template',
+    text:
+      `${entry.file} (new ${kind}): header template lacks ${lacks.join(' · ')} — PM/HEADER-TEMPLATE.md` +
+      (level === 'warn' ? ` — a warning until ${headers.TEMPLATE_STRICT_FROM}` : '')
+  };
+}
+
 /** the module's §7 layer minimums, from its trace row: a warning until MINIMUMS_FAIL_FROM, then a failure */
 function ruleMinimums(file, trace, today) {
   const row = trace && trace.modules ? trace.modules[file] : null;
@@ -253,6 +270,7 @@ function judgeFile(entry, context) {
     ruleNewEmptyCatch(entry.file, head, base, addedLines),
     ruleHeader(entry.file, head),
     ruleCard(entry.file, head),
+    ruleTemplate(entry, context.repo, context.today),
     asModuleDebt(ruleTraceRow(entry.file, context.trace), noiseOnly),
     asModuleDebt(ruleMinimums(entry.file, context.trace, context.today), noiseOnly),
     scored.level === 'ok' ? null : scored,
@@ -297,12 +315,13 @@ function numbersOf(touchedFns, pairs, head, base) {
 
 // ── the run
 /** a touched own-code file measured at head and at the base */
-function entryOf(root, baseSha, touched, text) {
+function entryOf(root, baseSha, touched, text, renamedPaths) {
   const baseText = touched.status === 'added' ? null : changed.baseText(root, baseSha, touched.file);
   return {
     file: touched.file,
     status: baseText == null ? 'added' : touched.status,
     ranges: touched.ranges,
+    renamed: renamedPaths.has(touched.file),
     headText: text,
     baseText,
     head: measure.factsFromText(touched.file, text),
@@ -327,6 +346,7 @@ function gather(options) {
   const entries = [],
     removed = [],
     skipped = [];
+  const renamedPaths = changed.renamedTo(root, base.sha);
   for (const touched of diff.files) {
     if (touched.status === 'deleted') {
       const gone = removedFile(repo, root, base.sha, touched.file);
@@ -337,7 +357,7 @@ function gather(options) {
     if (!fs.existsSync(absPath)) continue;
     const text = fs.readFileSync(absPath, 'utf8');
     if (!measure.inScope(repo, touched.file, text)) skipped.push(touched.file);
-    else entries.push(entryOf(root, base.sha, touched, text));
+    else entries.push(entryOf(root, base.sha, touched, text, renamedPaths));
   }
   return { baseSha: base.sha, entries, removed, skipped };
 }
@@ -347,6 +367,7 @@ function judgeChange(options) {
   const gathered = gather(options);
   if (gathered.error) return { error: gathered.error };
   const context = {
+    repo: options.repo,
     trace: options.trace || null,
     today: options.today || new Date().toISOString().slice(0, 10),
     ratchetRows: options.ratchetRows === undefined ? ratchet.read(options.root) : options.ratchetRows,

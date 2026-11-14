@@ -31,7 +31,7 @@ const WANT = {
     'tk-reason"': 'TSK003-I01', 'tk-reason-go': 'TSK003-B11', 'id="tk_who_sel"': 'TSK003-S02', 'id="tk_who_go"': 'TSK003-B12', 'tk-deliver-qty': 'TSK003-I02',
     'tk-deliver-go': 'TSK003-B13', 'tk-new-what': 'TSK003-I03', 'tk-new-go': 'TSK003-B14' },
   'cap-dispute.js': { 'id="adv_disp"': 'TSK006-I01', 'dispute-category': 'TSK006-S03', 'dispute-reason"': 'TSK006-T01', 'dispute-raise': 'TSK006-B10',
-    'dispute-resolve-note': 'TSK006-T02', 'dispute-resolve-submit': 'TSK006-B12', 'dp-retry': 'TSK006-B13', 'dp-prev': 'TSK006-B14', 'dp-next': 'TSK006-B15',
+    'dispute-resolve-note': 'TSK006-T02', 'dispute-resolve-submit': 'TSK006-B12', 'dp-prev': 'TSK006-B14', 'dp-next': 'TSK006-B15',
     'id="dp_cat"': 'TSK006-S04', 'id="dp_reason"': 'TSK006-T03', 'dp-raise-go': 'TSK006-B18', 'id="dp_sheet_retry"': 'TSK006-B19', 'dp-rwho': 'TSK006-S05',
     'dp-rnote': 'TSK006-T04', 'dp-rgo': 'TSK006-B21' },
   'cap-assist.js': { 'ca-retry': 'TSK007-B01', 'id="ca_q"': 'TSK007-I01', 'ca-draft': 'TSK007-B02', 'id="ca_a"': 'TSK007-T01', 'id="ca_c"': 'TSK007-I02', 'ca-reject': 'TSK007-B04' }
@@ -55,7 +55,8 @@ for (const f of FILES) {
 }
 const dup = Object.keys(all).filter((c) => all[c].length > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 60, 'the page has 60 tagged elements, counted by code: ' + Object.keys(all).length);
+check(Object.keys(all).length === 59, 'the page has 59 tagged elements, counted by code (the disputes Try again is the library CMP009, mount TSK006-U01): ' + Object.keys(all).length);
+check(src['cap-dispute.js'].indexOf("ui.action('reload', { mount: 'TSK006-U01', surface: 'page', tone: 'primary', id: 'dp_retry', testid: 'dp-retry' })") >= 0, 'the disputes Try again is drawn by ui.action reload at mount TSK006-U01');
 check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
 check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'the dispute wrapper hands the code on');
 
@@ -76,6 +77,7 @@ if (reg) {
   const rows = {}; Object.values(reg.screens || {}).forEach((r) => { if (r.code) rows[r.code] = r; });
   const missing = Object.keys(all).filter((c) => !rows[c]), retired = Object.keys(all).filter((c) => rows[c] && rows[c].retired);
   console.log('  register: ' + (Object.keys(all).length - missing.length) + ' of ' + Object.keys(all).length + ' codes found' + (missing.length ? ' (pending until the docs PR lands: ' + missing.length + ')' : ''));
+  if (process.env.UIID_REG) check(!missing.length, "every code is in the register UIID_REG names (" + missing.length + " missing)"); /* a set register: a missing code FAILS, no pending */
   check(retired.length === 0, 'no code is retired in the register');
 }
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');

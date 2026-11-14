@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB CRM page: parties · leads · follow-ups · calls · a party's record (cap-crm*.js paint the server's answers and its may/why).
-     CALLED BY Home's CRM card (manifest /crm.html), CB Accounts and the Task panel's party links.
+     CALLED BY Home's cards CRM (/crm.html), Marketing (/crm.html?app=marketing) and Consent & privacy (/crm.html#/privacy) in app/manifest.json · CB Accounts' links (app/accounts-shell.js: customers, suppliers, the chit page) · MIS doors (app/cap-mis.js).
      FLOW  load → whoPaint (CBFrame) → crmLoad (GET /api/crm/parties) → the router → the view's CBList paints
      CARD 11-crm-and-marketing/cb-crm -->
 <head>
@@ -394,7 +394,7 @@ function go() {
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: THE step flow — the Import leads sheet walks File → Columns → Check on it (L3) -->
 <script src="/app/cap-crm-leads.js"></script>   <!-- L1: the Leads tab, Add lead, the record's stage chip + Move to… · L3: Import from a CSV -->
 <script src="/app/cap-crm-chits.js"></script>   <!-- the chits behind Home's rail: In · Out · Stuck -->
-<script src="/app/cap-rewards.js"></script>   <!-- CBRewards (T3-P2-CRM): the points pane the record paints — ONE copy with the workshop's Customers pane -->
+<script src="/app/cap-rewards.js"></script>   <!-- CBRewardsPane (T3-P2-CRM): the points pane the record paints — ONE copy with the workshop's Customers pane -->
 <script src="/app/showcase-templates.js"></script>   <!-- CBShowcase: the registered shop-window templates (S2) -->
 <script src="/app/cap-showcase.js"></script>   <!-- CBShowcasePick (T3-P2-CRM): the chooser + the live preview of the shop's own page — ONE copy with the workshop's Settings › Policy -->
 <script src="/app/cap-crm-groups.js"></script>   <!-- T3-P2-CRM: Groups & segments (#/groups) and the Shop window (#/showcase) -->

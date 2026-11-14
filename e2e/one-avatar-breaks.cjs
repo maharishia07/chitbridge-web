@@ -5,7 +5,7 @@
  *   1  a second avatar builder in public/                       → "no second avatar builder"
  *   2  a page that ignores cb_theme (it never loads the avatar) → "opens in Sand"
  *   3  a page that wears the theme on <html> but not on itself  → "its own background follows the theme"
- *   4  Settings on accounts.html                                → "no Settings here"
+ *   4  the owner menu loses Settings                       → "Settings is in the owner menu"
  *   5  an avatar page that does not load the engine themes      → "loads the engine themes"
  *   6  a page that reads cb_sess and does not mount the avatar  → "every page that reads cb_sess loads avatar.js"
  *
@@ -24,10 +24,11 @@ const CASES = [
     mutate: (d) => edit(d, 'accounts.html', (s) => s.replace('<script src="/app/avatar.js"></script>', '<!-- no avatar -->')) },
   { name: 'a page that takes the theme on <html> but not on itself (accounts drops its bridge)', groups: ['theme'], pages: ['accounts'], expect: /accounts's own background follows the theme/,
     mutate: (d) => edit(d, 'accounts.html', (s) => s.replace(':root[data-themed]{--ground:var(--paper,#fbf6ec)', ':root[data-themed-off]{--ground:var(--paper,#fbf6ec)')) },
-  { name: 'Settings shown on accounts.html', groups: ['present'], pages: ['accounts'], expect: /accounts · no Settings here/,
-    mutate: (d) => edit(d, 'accounts.html', (s) => s.replace("items: ['profile', 'support', 'signout']", "items: ['profile', 'settings', 'support', 'signout']")) },
+  /* UX-96 turned the old rule round: Settings is in the OWNER menu on every page (one-avatar.cjs 'present'), so the break is the menu losing it */
+  { name: 'the owner menu loses Settings (avatar.js shows it to no one)', groups: ['present'], pages: ['accounts'], expect: /accounts · Settings is in the owner menu/,
+    mutate: (d) => edit(d, 'app/avatar.js', (s) => s.replace("var showSettings = items.indexOf('settings') >= 0 && !!P.owner;", 'var showSettings = false;')) },
   { name: 'an avatar page without the engine themes', groups: ['static'], expect: /loads the engine themes/,
-    mutate: (d) => edit(d, 'list-lab.html', (s) => s.replace('<script src="/engine/screen.js"></script>', '')) },
+    mutate: (d) => edit(d, 'list-lab.html', (s) => s.split('<script src="/engine/screen.js"></script>').join('')) },
   { name: 'a page that reads cb_sess and shows no avatar', groups: ['static'], expect: /every page that reads cb_sess loads avatar\.js/,
     mutate: (d) => edit(d, 'product-lab.html', (s) => s.replace('<script src="/app/avatar.js"></script>', '').replace(/<script>if\(window\.CBAvatar\)[^\n]*<\/script>/, '')) },
 ];

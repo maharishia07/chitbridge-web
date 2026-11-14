@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
-<!-- OWNS  the Network design page: a brand's network built, validated and published (POST /api/network-design/build · /validate).
-     CALLED BY network.html and Home's Network card.
-     FLOW  load → CBFrame.lab (the Finance frame) → the design read → paint → build/validate → the server's verdict painted
+<!-- OWNS  the Network Lab: a network sketched on sample stores and checked by the server's dry run (POST /api/network-design/validate with sample:true: nothing is saved or made), plus the paper ordering mock a member sees.
+     CALLED BY Home's Labs card (manifest id network-lab); network.html names it in a comment only.
+     FLOW  load → CBFrame.lab (the Finance frame) → the sketch typed → See what it would create → /validate → the server's verdict painted; the mock steps through app/cart.js
      CARD network-and-trade/network-design -->
 <meta charset="utf-8">
 <script src="/app/device-id.js"></script>
@@ -506,7 +506,7 @@ function stepReview() {
     (T.amount ? CBCart.fmt('net', T.amount) + (T.partial ? '+' : '') : '—') +
     '</span></div></div>' +
     (T.offered ? '<div class="note">This contains an OFFER — your price, not theirs.</div>' : '') +
-    '<div data-cbsid="NLB001-C07" class="rev"><div class="h">Details<span class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(1)">Change</span></div>' +
+    '<div class="rev"><div class="h">Details<span data-cbsid="NLB001-C07" class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(1)">Change</span></div>' +
     '<div class="r"><span class="k">Needed by</span><span>' +
     (S.by ? esc(S.by) : '—') +
     '</span></div>' +

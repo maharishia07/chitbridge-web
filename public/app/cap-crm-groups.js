@@ -13,7 +13,8 @@
  *   sentence (`may.group/send/delete`), never hidden. "Make an offer" is greyed with its own sentence: Offer Lab cannot pick a group yet.
  * ⭐ NEW PATHS (rule 4): this module (no groups screen existed — the workshop has a per-customer chip row only); the three sheets (New group ·
  *   Send · Share) — each one field over the new routes; CRM_EP gained the four rows (cap-crm.js).
- * CALLED BY crm.html (#/groups) · cap-crm.js · app.html
+ * OWNS the Groups screen (#/groups: segment and group rows, mini-card, New group, Send to group, Share with a group) and the Shop window (#/showcase)
+ * CALLED BY crm.html and app.html (script tag); cap-crm.js routes into it; cap-marketing.js calls crmGroupsWhyNot, crmGroupsLoad and GROUPS
  * FLOW crm.html → cap-crm.js → this file paints Groups & segments → the server answers each write
  * // CARD 11-crm-and-marketing/marketing-app
  * Needs cap-crm.js (CRM · crmNav · crmBar · crmGo · crmKey · crmEdit · crmOwner · crmIsLead · cells · modal · CBAction · tx/txf · esc · api). */
@@ -789,7 +790,7 @@ function crmSendGo(btn) {
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() {
-  var id = SESSION.bridgeId || SESSION.userId || '';
+  var id = SESSION.bridgeId || '';
   return location.origin + '/shop.html?s=' + encodeURIComponent(id);
 }
 /** paint the Shop window screen: template chooser, preview and the share-with-a-party / group controls */
@@ -858,7 +859,7 @@ function crmShowcasePaint() {
       : '') +
     CBShowcasePick.html({
       current: SHOW.flags && SHOW.flags.showcase_template,
-      shopId: SESSION.bridgeId || SESSION.userId || '',
+      shopId: SESSION.bridgeId || '',
       t: tx,
       cls: 'act sm quiet',
       clsOn: 'act sm',

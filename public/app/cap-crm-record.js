@@ -2,7 +2,7 @@
  * FLOW  crmRecordOpen(route) → the party and timeline reads (crmParty · crmTimeline) → crmRecordPaint → the actions greyed by the server's may/why
  * CARD 11-crm-and-marketing/crm-record
  * OWNS  one party's record page and its timeline: the wire entry to page entry grammar (crmEntryFrom), the bill facts, the Log sheet, the party edit
- * CALLED BY  crm.html, through the router in cap-crm.js (crmRecordOpen)
+ * CALLED BY  crm.html (<script src>), through the router in cap-crm.js (crmRecordOpen) · cap-crm-leads.js (crmRecordOpen, CRMR.p, CRMR.rec) · cap-crm-privacy.js (crmRecordOpen, CRMR.consentApi): each call grepped 14 Nov (crmRemove in cap-crm.js is an EP table row and crmRecordPaint in cap-crm-privacy.js a comment, so neither is a caller)
  * Loaded by crm.html after cap-crm.js (which owns the list, the router and the shared helpers). docs/design/crm/REQUIREMENT-record.md ·
  * REQUIREMENT-timeline.md · FLOWS F3–F8 · the designer handoff, where the FROZEN list standard wins: both timeline views are CBList
  * mounts (the record's latest five, and the full server-paged history) — no entry, row or card is drawn by hand.
@@ -397,9 +397,9 @@ async function crmRecordOpen(route) {
       html =
         '<div class="empty" data-testid="crm-rec-error"><div class="t">' +
         esc(tx("Couldn't open this party.")) +
-        '</div><button data-cbsid="CMP009" type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' +
-        esc(tx('Try again')) +
-        '</button></div>';
+        '</div>' +
+        ui.action('reload', { mount: 'CRM006-U01', surface: 'page', testid: 'crm-rec-retry', data: { crm: 'recretry' } }) +
+        '</div>';
     if (w) w.outerHTML = html;
     else {
       var rr = node.querySelector('.rec');
@@ -1054,8 +1054,7 @@ function crmRecordPaint(p, rec) {
   if (typeof crmConsentHTML === 'function') secs.push(crmConsentHTML(p, rec));
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
-    var kind = cu ? 'customer' : 'supplier',
-      pid = p.party_id;
+    var kind = cu ? 'customer' : 'supplier';
     if (CRM.ledger)
       secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
     else
@@ -1141,11 +1140,11 @@ function crmRecordPaint(p, rec) {
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
   var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
-  if (rwSec && typeof CBRewards !== 'undefined') {
+  if (rwSec && typeof CBRewardsPane !== 'undefined') {
     var rwOnce = function () {
       if (rwSec.open && !rwSec.getAttribute('data-read')) {
         rwSec.setAttribute('data-read', '1');
-        CBRewards.load('crm_rw', {
+        CBRewardsPane.load('crm_rw', {
           id: p.party_id,
           api: api,
           t: tx,
