@@ -41,13 +41,13 @@ const SCOPE = {
   api: ['lib', 'routes', 'middleware', 'src', 'scripts', 'tools', 'server.js', 'public'],
   engines: ['src', 'tools', 'index.js']
 };
-const SKIP_DIR = /^(node_modules|vendor|\.git|tests?|e2e|fixture|fixtures|out|dist|docs|migrations|seed|data)$/;
+const VENDOR_DIR = /^(node_modules|vendor|\.git|fixture|fixtures|out|dist)$/; /* no own code at all; filesize.cjs skips only these, tests counted */
+const SKIP_DIR = new RegExp(VENDOR_DIR.source.slice(0, -2) + '|tests?|e2e|docs|migrations|seed|data)$');
 const SKIP_FILE = /(\.min\.|^qr\.js$|\.test\.(c?js|mjs)$)/;
 const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 /* a file whose master lives elsewhere: an engine adopted from chitbridge-engines, or a copy vendor-till.cjs writes (judged at its master) */
 const ADOPTED_HEAD = /ADOPTED from chitbridge-engines|GENERATED — DO NOT EDIT\. Written by chitbridge-api\/scripts\/vendor-till\.cjs/;
-const VENDORED_TILL = 'public/till.html';
-const HEAD_BYTES = 700;
+const VENDORED_TILL = 'public/till.html', HEAD_BYTES = 700;
 
 /** every code file under one scope entry (a folder walked, or a single file) */
 function walkDir(dir, out) {
@@ -222,7 +222,7 @@ function chunks(relPath, text) {
   }
   return out;
 }
-
+/** the acorn parse of one chunk of code, its comments collected through onComment */
 function parse(code, comments) {
   const options = { ecmaVersion: 'latest', locations: true, allowReturnOutsideFunction: true, allowHashBang: true, onComment: comments };
   try {
@@ -766,4 +766,4 @@ function fileFacts(file) {
   return factsFromText(file.rel, fs.readFileSync(file.abs, 'utf8'));
 }
 
-module.exports = { isDataPack, SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };
+module.exports = { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR, SKIP_DIR, isDataPack, SCOPE, CONVENTIONAL, ALLOWED_SHORT, collect, inScope, chunks, parse, factsFromText, fileFacts, isCryptic };
