@@ -17,7 +17,7 @@ of file each thing is; this says what already does the job.
 | 114 | `problem` | `problem.js` | problem(req, res, spec) — |
 | 104 | `answer` | `availability.js` | from March; then nearest. |
 | 98 | `money` | `bill-privacy.js` |  |
-| 86 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
+| 87 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 80 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 80 | `next` | `dayopen.js` | the next thing to do — |
 | 77 | `catalogue` | `books-manual.js` | GET /events → the grid. |
@@ -125,13 +125,13 @@ of file each thing is; this says what already does the job.
 | 24 | `governance` | `home-facts.js` |  |
 | 23 | `says` | `adopt.js` |  |
 | 23 | `entries` | `books-store.js` |  |
+| 23 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 23 | `known` | `knownerr.js` | known(err) → { status, body } · null: |
 | 23 | `keep` | `signin.js` | see. |
 | 22 | `next` | `cap-stock.js` | the next level: |
 | 22 | `model` | `chit-sheet.js` |  |
 | 22 | `note` | `device-id.js` | note(where, problem) — |
 | 22 | `reason` | `lab-kit.js` | W9: |
-| 22 | `summary` | `catalogue-read.js` | A count a person can act on: |
 | 22 | `match` | `itemmatch.js` | actually state. |
 | 22 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 22 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
@@ -162,6 +162,7 @@ of file each thing is; this says what already does the job.
 | 18 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 18 | `more` | `lab-kit.js` | idKey: |
 | 18 | `resolve` | `page.js` |  |
+| 18 | `label` | `screen-id.js` |  |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
 | 18 | `notMigrated` | `crm-followups.js` |  |
 | 18 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
@@ -170,11 +171,11 @@ of file each thing is; this says what already does the job.
 | 18 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `head` | `list-ctl.js` |  |
-| 17 | `label` | `screen-id.js` |  |
 | 17 | `field` | `ui-field.js` | the part: |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
+| 17 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
 | 16 | `done` | `attach-ui.js` |  |
 | 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
@@ -190,7 +191,6 @@ of file each thing is; this says what already does the job.
 | 16 | `where` | `istest.js` | READING is_test is fine and stays — |
 | 16 | `decimals` | `money.js` | decimals(currency) → how many minor-unit digits it has: |
 | 16 | `close` | `person-session.js` | When device_id is null the jti is looked for under every device (an owner revoking a jti from the list). |
-| 16 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
 | 15 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
 | 15 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 15 | `chips` | `country-profiles.js` | words as chips; null when there are none |
