@@ -97,6 +97,7 @@ jobs:
         run: |
           node e2e/a11y-slice2.test.cjs
           node e2e/acc336-advance-rows.test.cjs
+          node e2e/r103-reverse-live-bill.test.cjs
           node e2e/app-syntax.cjs
           node e2e/attach-gate.cjs
           node e2e/attempt-key.test.cjs
