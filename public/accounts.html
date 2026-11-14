@@ -252,6 +252,25 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   /* the party table (1300 / 2100): one line a party — name · balance */
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+/* The Add to your books sheet (app/cap-bank-sheet.js, lines painted by app/bank-preview-ui.js): the lines are rows that stack at phone width — tokens only */
+.bks-lines{min-height:0;max-height:60vh;overflow:auto}
+.bks-lines .bd-table{width:100%;border-collapse:collapse;font-size:13px}
+.bks-lines .bd-table th{position:sticky;top:0;background:var(--sub);text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.bks-lines .bd-table td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.bks-lines .bd-m{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bks-lines .bd-sub{margin-top:3px;font-size:12px;color:var(--muted-2)}
+.bks-lines .bd-tag{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
+.bks-lines .bd-ask{background:var(--sub);color:var(--ink)}
+.bks-lines .bd-bad{color:var(--ink);border-color:var(--ink)}
+.bks-lines .bd-btn,.bks-lines .bd-inp{font:inherit;font-size:13px;min-height:44px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);max-width:100%}
+@media (max-width:760px){
+  .bks-lines .bd-table thead{display:none}
+  .bks-lines .bd-table,.bks-lines .bd-table tbody{display:block}
+  .bks-lines .bd-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:8px;border-bottom:1px solid var(--line);padding:4px 0}
+  .bks-lines .bd-row td{border:0;padding:2px 0}
+  .bks-lines .bd-row .bd-d{display:none}
+  .bks-lines .bd-row .bd-st{grid-column:1 / -1}
+}
 </style>
 </head>
 <body>
@@ -332,6 +351,11 @@ function go() {
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
+<script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
+<script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
+<script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
+<script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press the rail steps (role=button) -->
 <script src="/app/step-flow.js"></script>   <!-- CBSteps: the one step flow (rail · guard with a reason · footer) the Move in screen composes on -->
 <script src="/app/cap-move-in.js"></script>   <!-- Move in from Xero / QuickBooks (IM1): CBSteps file → columns → preview → import; CBList rows; CBAction for the one write -->

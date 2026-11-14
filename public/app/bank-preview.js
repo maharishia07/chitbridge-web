@@ -30,10 +30,12 @@
     unbalanced: 'Entry does not balance',
     refused: 'The books refused this entry',
     bank_leg_mismatch: "Entry does not match the bank line's amount",
+    tax_kind: 'Tax needed',
+    not_here: 'Record it as a payment in Dues, or ask the party',
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
-  var ASKED_ = ['may_be_in_books', 'gst_basis', 'tax_invoice', 'needs_tick'];
+  var ASKED_ = ['may_be_in_books', 'tax_kind', 'gst_basis', 'tax_invoice', 'needs_tick'];
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
 
@@ -180,6 +182,25 @@
     if (asked && asked.party) item.party = Object.assign({}, asked.party);
     return item;
   }
+  /**
+   * what THIS host cannot post from a line, held on the line in words (opt-in: the demo passes neither option, so its lines do not move).
+   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a payment between parties) says where it is recorded instead
+   *   opts.taxRegistered true when the shop SAID it is registered for tax (unknown is not true, SET-49): a money-out line the bank's words proposed carries no tax until the owner says what kind
+   *                      it is, so it is asked (need tax_kind), never defaulted and never posted without
+   */
+  function heldHere_(item, opts) {
+    var type = item.event && item.event.type;
+    if (!type || !item.ready) return item;
+    var hold = function (code, needs) {
+      item.blockers = (item.blockers || []).concat(code);
+      item.ready = false;
+      if (needs) item.needs = needs;
+      return item;
+    };
+    if (opts.postable && opts.postable.indexOf(type) < 0) return hold('not_here', null);
+    if (opts.taxRegistered === true && type === 'expense' && !item.tax) return hold('tax_kind', 'tax_kind');
+    return item;
+  }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
   function projectAgain(opts, preview) {
     var out = projectNow(opts, preview);
@@ -192,7 +213,7 @@
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
-      return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
+      return heldHere_(withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]), opts);
     });
     return true;
   }

@@ -124,7 +124,7 @@ function bankAcctPick(code) {
   const moved = BKB.stmtAcct && BKB.stmtAcct !== code;
   BKB.acct = code;
   if (!moved) return;
-  Object.assign(BKB, { stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], teach: null, bal: '' });
+  Object.assign(BKB, { text: null, stmtAcct: '', stmtCur: '', file: null, parsed: null, ledger: null, ledgerRaw: null, m: null, brs: null, rec: null, rows: [], teach: null, bal: '' });
   const file = bkbEl('bk_file'),
     res = bkbEl('bk_res'),
     out = bkbEl('bk_out');
@@ -181,6 +181,11 @@ async function bkbHash(text) {
   }
 }
 
+/** the banks the shop's COUNTRY pack knows (pack.bank.presets), never another country's list (I6: an Australian shop was offered the Indian banks); none when no country is stated */
+function bkbPresets() {
+  const pack = typeof CBRegulation !== 'undefined' && bkbCountry() ? CBRegulation.resolve({ country: bkbCountry() }) : null;
+  return (pack && pack.bank && pack.bank.presets) || {};
+}
 async function bankView(body) {
   let accts = [];
   try {
@@ -197,7 +202,8 @@ async function bankView(body) {
     return;
   }
   if (!banks.some((item) => item.code === BKB.acct)) BKB.acct = banks[0].code;
-  const presets = Object.keys((window.CBBankRecon && CBBankRecon.PRESETS) || {});
+  const known = bkbPresets(),
+    presets = Object.keys(known);
   body.innerHTML =
     '<div class="pe-bank"><div class="pe-card" data-testid="bank-form"><div class="pe-form">' +
     peField(
@@ -215,7 +221,7 @@ async function bankView(body) {
       'Which bank',
       peSel(
         'bk_preset',
-        [['', 'Find out from the file']].concat(presets.map((item) => [item, CBBankRecon.PRESETS[item].bank])),
+        [['', 'Find out from the file']].concat(presets.map((item) => [item, known[item].bank])),
         BKB.preset,
         ' onchange="BKB.preset=this.value"'
       )
@@ -252,6 +258,7 @@ async function bankPick(input) {
     bkbEl('bk_res').innerHTML = '';
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
+  BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
   BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
@@ -497,6 +504,7 @@ function bankPaint() {
       )
       .join('') +
     '</div>' +
+    (typeof bankSheetButton === 'function' ? bankSheetButton() : '') +
     (BKB.tab === 'brs' ? '<div id="bk_brs" data-testid="bank-brs"></div>' : '<div id="bkl_bank" data-testid="bank-list"></div>');
   if (BKB.tab === 'brs') bankBrsPaint();
   else bankList();
@@ -993,32 +1001,10 @@ function bankNext(r) {
 function bankAddBound(r) {
   if (bkbBound()) bankAdd(r);
 }
-function bankAdd(r) {
-  const s = r.stmt,
-    ev = (r.sugg && r.sugg.event) || null,
-    v = {
-      date: s.date,
-      amount: bkMinorText(r.amount_minor),
-      narration: (ev && ev.narration) || 'Bank statement ' + s.date + ': ' + String(s.narration || '').slice(0, 120)
-    };
-  let kind = null;
-  const mode = bkbModeOf(BKB.accts, BKB.acct); /* the statement's own ledger, never a fixed Bank */
-  if (ev && ev.type === 'expense' && mode) {
-    kind = 'expense';
-    v.class = ev.class;
-    v.paid_from = mode;
-  } else if (ev && ev.type === 'other_income' && mode) {
-    kind = 'other_income';
-    v.class = ev.class;
-    v.into = mode;
-  } else if (ev && ev.type === 'contra' && mode) {
-    kind = 'contra';
-    v.from = ev.from === 'bank' ? mode : ev.from;
-    v.to = ev.to === 'bank' ? mode : ev.to;
-  }
-  if (typeof enOpen !== 'function') return toast(tx('This starts after an update'));
-  BKB.teach = ev && kind ? { line: s, x: { event: ev, label: bkbEventWord(ev) } } : null; /* learned once the entry is SAVED (BK.onEntrySaved) */
-  enOpen({ kind, v, ref: 'bank:' + BKB.file.hash + ':' + (s.row != null ? s.row : s.i + 1) });
+/** Add missing (on a line) and the Add button both open the one sheet: every line against the books, each with what it needs (FIN-117; the sheet is cap-bank-sheet.js) */
+function bankAdd() {
+  if (typeof bankSheetOpen !== 'function') return toast(tx('This starts after an update'));
+  bankSheetOpen().catch((failure) => bkQuiet('bank-add', failure));
 }
 /* a saved entry → fetch the bank ledger again, so the line is matched (the guard against posting it twice) */
 if (typeof BK !== 'undefined')

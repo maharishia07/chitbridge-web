@@ -2,9 +2,7 @@
  * OWNS      adapter(deps) → post(item): (1) a new party is made FIRST through the ONE party list door (supAdd / custAdd, POST /api/relationships/suppliers | customers,
  *           CRM's, { name }), (2) the entry is posted with client_ref = item.ref = bank:<fingerprint> (the same line twice answers the first entry, duplicate:true).
  *           A failure at either step is THAT line's reason and nothing more: bank-preview.js goes on with the others.
- * CALLED BY nothing yet. ⚠️ TODO(BANK-WEB-2, follow-up): wire it behind the Bank view's entry point. cap-bank.js is at its size ceiling and the Bank view loads
- *           by cap name from app.html (/app/cap-<name>.js?v=CB_BUILD), so wiring = one call-in from cap-bank.js + a loader row + a CB_BUILD bump + the owner-only
- *           check below; it is its own small change, not part of the no-login showcase.
+ * CALLED BY public/app/cap-bank-sheet.js (the in-app Bank sheet, FIN-117); loaded by public/accounts.html after bank-preview.js. The body it sends is the one POST /events reads (kind, never type; no key the closed EVENT_BODY lacks).
  * FLOW      bank-preview.postReady → post(item) → [party door] → api('booksEventPost') → { ok, duplicate?, entry_no? } | { ok:false, why }
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * ⚠️ POST /events is OWNER-ONLY: an accountant login is told up front (ownerRefusal), not once per line. A closed month answers 409 PERIOD_LOCKED / YEAR_CLOSED; the
@@ -35,12 +33,22 @@
       return { ok: false, why: 'Could not add ' + party.name + ': ' + ((failure && failure.message) || 'try again') };
     }
   }
-  /** the body POST /events takes: the proposal's own event (the one posting.post composed the entry from), its party, and the one client_ref */
+  /** the keys of each entry kind POST /events reads beside the common ones (books-contract EVENT_BODY is CLOSED: a key it does not list is refused, so nothing else is sent) */
+  var KIND_KEYS = { expense: ['class', 'paid_from'], other_income: ['class', 'into'], contra: ['from', 'to'] };
+  /** the event types this adapter posts through POST /events; a payment between parties is recorded through Dues, not here */
+  var POSTABLE = Object.keys(KIND_KEYS);
+  /**
+   * the body POST /events takes, built from the proposal's own event (the one posting.post composed the entry from): `kind` (the server reads kind, not type), the common fields, the
+   * kind's own keys, the one client_ref. A taxed expense sends the NET as amount and the tax inside the bank figure as input_tax_minor, both the engine's own figures (nothing is worked out here).
+   */
   function bodyOf(item, partyId, modeOf) {
-    var body = Object.assign({}, item.event, { client_ref: item.ref });
-    if (partyId) body.party = partyId;
-    if (modeOf) body = modeOf(body);
-    return body;
+    var event = item.event || {},
+      body = { kind: event.type, date: event.date, amount: event.amount, narration: event.narration, client_ref: item.ref };
+    (KIND_KEYS[event.type] || []).forEach(function (key) {
+      if (event[key] != null) body[key] = event[key];
+    });
+    if (event.type === 'expense' && item.tax && item.tax.tax_minor > 0) body.input_tax_minor = item.tax.tax_minor;
+    return modeOf ? modeOf(body) : body;
   }
   /** the id of the party this line's entry names: an existing one as picked, a new one made FIRST (once per name and kind in this run); { ok, id } or the reason it could not be made */
   async function partyOf(deps, made, party) {
@@ -64,6 +72,7 @@
     return async function post(item) {
       var refused = ownerRefusal(deps.who);
       if (refused) return { ok: false, why: refused };
+      if (POSTABLE.indexOf(item.event && item.event.type) < 0) return { ok: false, why: 'A payment between parties is recorded in Dues, not here.' };
       var party = await partyOf(deps, made, item.party);
       if (!party.ok) return party;
       try {
@@ -75,6 +84,6 @@
     };
   }
 
-  root.CBBankPost = { adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf };
+  root.CBBankPost = { POSTABLE: POSTABLE, adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPost;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
