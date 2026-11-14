@@ -18,8 +18,8 @@
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
  * OWNS the Categories panel (the tree list, create/edit sheet, sort, retire) and the two start-from-a-standard-set popups (pick a trade, untick and add your own)
- * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
- * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction; the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
+ * CALLED BY public/catalogue.html (<script src>, the customer door: card catalogue), public/app.html (CAP_OF categories, ensureCap('categories'); cbcatLoad at app.html:6541 and :16844), public/app/cap-catalogue.js (cbcatLoad, CBCAT_UI), public/app/tax-slab-ui.js (CBCAT_UI, cbcatPaint); each claim grepped 2026-11-14
+ * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction (Cancel on the library, ui.action/footerAction CTG002-U23..U25); the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
  * CARD 06-catalogue-pim/categories-and-fields
  */
 var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view', form: null, counts: null };
@@ -428,7 +428,7 @@ function cbcatSeedAsk() {
       '<div class="bulklist">' +
       opts +
       '</div>',
-    footerHtml: '<button data-cbsid="CTG002-B02" onclick="closeModal()">' + tx('Cancel') + '</button>'
+    footerHtml: ui.footerAction({ name: 'cancel', options: { mount: 'CTG002-U23', object: 'standard set' } })
   });
 }
 /**
@@ -571,9 +571,7 @@ function cbcatSeedPick(v) {
       tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.') +
       '</div></div>',
     footerHtml:
-      '<button data-cbsid="CTG002-B05" onclick="closeModal()">' +
-      tx('Cancel') +
-      '</button>' +
+      ui.footerAction({ name: 'cancel', options: { mount: 'CTG002-U24', object: 'standard set' } }) +
       '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button>'
   });
   cbcatSeedCount();
@@ -949,9 +947,9 @@ function cbcatDetailHTML() {
       '</div>' +
       '<div class="actbar"><button data-cbsid="CTG002-B08" class="pri" data-testid="catg-save" onclick="cbcatSave()">' +
       (editing ? 'Save' : 'Create') +
-      '</button><button data-cbsid="CTG002-B09" onclick="cbcatCancel()">' +
-      tx('Cancel') +
-      '</button></div>'
+      '</button>' +
+      ui.action('cancel', { mount: 'CTG002-U25', object: 'category edit', onPress: function () { cbcatCancel(); } }) +
+      '</div>'
     );
   }
 
