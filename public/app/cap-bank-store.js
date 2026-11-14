@@ -78,7 +78,7 @@ function bankStoreMark(action) {
 /** one step → one mark, sent in the order made; a failure is said on the line and the device copy stays */
 function bankStoreAppend(action) {
   if (bankStoreState.mode === 'device') return;
-  const acct = bankStoreState.view.acct,
+  const acct = bankStoreState.view.stmtAcct || bankStoreState.view.acct /* B5-07: the account the statement was read for, never the dropdown's */,
     body = { account: acct, file_hash: (bankStoreState.view.file && bankStoreState.view.file.hash) || undefined, marks: [bankStoreMark(action)] };
   bankStoreState.chain = bankStoreState.chain
     .then(() => api('booksBankMarks', { body }))
@@ -111,7 +111,7 @@ function bankStoreBody() {
   const worked = bankStoreState.view.brs,
     ledger = bankStoreState.view.ledgerRaw || {};
   return {
-    account: bankStoreState.view.acct,
+    account: bankStoreState.view.stmtAcct || bankStoreState.view.acct, /* B5-07: bound to the statement, not the dropdown */
     period_from: bankStoreState.view.from,
     period_to: bankStoreState.view.to,
     opening_minor: Number(ledger.opening_minor) || 0,
@@ -141,6 +141,7 @@ function bankStoreAsk(body) {
 }
 /** Sign off: confirm, then one POST /bank/statements; the signed list grows */
 function bankStoreSignOff(btn) {
+  if (!bkbBound()) return;
   if (!bankStoreState.view.brs || !bankStoreState.view.brs.ok || bankStoreState.mode !== 'server') return;
   const body = bankStoreBody();
   return CBAction.run(btn, () => api('booksBankStatements', { body }), {

@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · bank-entry · sha256 475573abc6da4c762e6a810ad5e64a2efc2fd925d20a89d7cc71c1644a85fdcb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.96.0 · bank-entry · sha256 64f8c5ad5fb8ac9b78009e8ce35855cccb9b01f0ca99e90c2cd3917615a2a771 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-entry.js: WHAT A BANK-LINE PROPOSAL'S ENTRY CARRIES: the shape of the entry posting.post composed, and the tax inside a tax-inclusive expense.
  * OWNS withTax (a taxed expense: the amount worked back through tax.splitLineTax, the tax handed to posting.post as input_tax) · entryOf (the composed entry as a proposal shows it) · newParty (a payee who is no party yet: proposed, never created here).
@@ -47,27 +47,32 @@
   /**
    * withTax(event, ctx) → { event, tax }: the event as posting.post should compose it, and what was decided about its tax (null when nothing was).
    *   ctx { rule, pack, currency, minor (the amount on the statement, tax included), decimals, basis ('cash' | 'accrual' | undefined) }
-   * Only an `expense` is split. The event handed in is not touched. tax = { kind, rate, tax_minor, credit, basis, invoice: { required, cite } | null }.
+   * An `expense` is split as an INPUT tax; an `other_income` (money in coded to an income class) as an OUTPUT tax (B5-04). The event handed in is not touched.
+   * tax = { kind, rate, tax_minor, credit, direction: 'input' | 'output', basis, invoice: { required, cite } | null, invoice_answer: 'held' | 'none' | null }.
+   * B5-03: ctx.invoice = 'held' (the person holds the tax invoice: the credit stands) | 'none' (no invoice: the whole figure is the expense, no credit) | undefined (asked: bank-recon says needs 'tax_invoice').
    */
   function withTax(event, ctx) {
-    var kindName = event && event.type === 'expense' ? kindNameOf_(event) : null,
+    var income = !!event && event.type === 'other_income',
+      kindName = event && (event.type === 'expense' || income) ? kindNameOf_(event) : null,
       pack = ctx.pack;
     if (!kindName || typeof pack.supplyKindOf !== 'function' || !Array.isArray(pack.taxHeads) || pack.taxHeads.length !== 1) return { event: event, tax: null };
     var kind = pack.supplyKindOf({ supply_kind: kindName });
     if (!kind) return { event: event, tax: null };
     var posted = Object.assign({}, event),
-      tax = { kind: kind.id, rate: kind.rate, tax_minor: 0, credit: !!kind.credit, basis: ctx.basis || null, invoice: null };
+      tax = { kind: kind.id, rate: kind.rate, tax_minor: 0, credit: !income && !!kind.credit, direction: income ? 'output' : 'input', basis: ctx.basis || null, invoice: null, invoice_answer: null };
     delete posted.tax_kind;
     if (!(kind.rate > 0)) return { event: posted, tax: tax };
-    var split = splitOf_(ctx.minor / Math.pow(10, ctx.decimals), kind.rate, ctx.currency);
+    var scale = Math.pow(10, ctx.decimals);
+    if (tax.credit) tax.invoice = invoiceNeed_(pack, ctx.minor, posted.date);
+    if (tax.invoice && tax.invoice.required && ctx.invoice === 'none') return { event: posted, tax: Object.assign(tax, { credit: false, invoice_answer: 'none' }) }; /* B5-03: no tax invoice, no credit: the whole figure is the expense */
+    if (tax.invoice && tax.invoice.required && ctx.invoice === 'held') tax.invoice_answer = 'held';
+    var split = splitOf_(ctx.minor / scale, kind.rate, ctx.currency);
     if (!split) return { event: event, tax: null };
     var head = {};
     head[pack.taxHeads[0]] = split.tax;
-    var scale = Math.pow(10, ctx.decimals);
     tax.tax_minor = Math.round(split.tax * scale);
     posted.amount = (ctx.minor - tax.tax_minor) / scale; /* what is left of the statement figure, so amount + tax is always exactly the bank's figure */
-    posted.input_tax = Object.assign({ rate: kind.rate }, head);
-    if (kind.credit) tax.invoice = invoiceNeed_(pack, ctx.minor, posted.date);
+    posted[income ? 'output_tax' : 'input_tax'] = Object.assign({ rate: kind.rate }, head); /* B5-04: money in carries the tax it collected through posting's output-tax path, the mirror of the expense's input tax */
     return { event: posted, tax: tax };
   }
   /** the entry posting.post composed, as the proposal shows it: its lines, whether Dr equals Cr, its totals and voucher type, in the owner-made series MJ */
@@ -171,8 +176,15 @@
   /** the event the owner's answers make of a line: an account picked (an expense class out, an income class in) or a party named (paid to / received from, by bank) */
   function eventOf_(answers, out) {
     if (answers.account && out) return { type: 'expense', class: answers.account, paid_from: 'bank', tax_kind: answers.tax_kind };
-    if (answers.account) return { type: 'other_income', class: answers.account, into: 'bank' };
+    if (answers.account) return { type: 'other_income', class: answers.account, into: 'bank', tax_kind: answers.tax_kind }; /* B5-04: money in names its tax kind too */
     return null;
+  }
+  /** B5-04: a pack with ONE tax head and supply kinds gives no default tax kind to a coded line: it is asked from the pack's own supply kinds, never assumed; null when it is given or the pack asks nothing */
+  function taxKindMissing_(answers, opts) {
+    var regulation = dep_('./regulation', 'CBRegulation'),
+      pack = (opts && opts.pack) || (regulation && regulation.resolve ? regulation.resolve(opts || {}) : null);
+    var asks = pack && typeof pack.supplyKindOf === 'function' && Array.isArray(pack.taxHeads) && pack.taxHeads.length === 1;
+    return answers.account && asks && !answers.tax_kind ? "say the tax kind for this line, from the pack's own list; it is never assumed" : null;
   }
   /**
    * resolve(line, answers, opts) → the proposal for a line the engine could not explain, once the owner has answered:
@@ -188,6 +200,8 @@
       out = (+line.debit_minor || 0) > 0;
     var event = eventOf_(given, out);
     if (!recon || (!event && !given.party)) return { ok: false, why: 'say which party it is, or which account it goes to' };
+    var missing = taxKindMissing_(given, opts);
+    if (missing) return { ok: false, why: missing };
     var taught = recon.learn(line, { party: given.party, party_name: given.party_name, event: event }, Object.assign({ at: (opts && opts.at) || null, by: (opts && opts.by) || null }, opts));
     if (!taught.ok) return { ok: false, why: taught.why };
     return Object.assign({ taught: taught.rule }, recon.suggest(line, Object.assign({}, opts, { learned: [taught.rule].concat((opts && opts.learned) || []) })));

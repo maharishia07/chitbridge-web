@@ -86,7 +86,12 @@ const CONTRAST_IN_PAGE = () => {
       check(!outside.length && !logs.length, tag + ': no request outside the page, no console error');
       check((await page.evaluate(CONTRAST_IN_PAGE)).length === 0, tag + ': every text at AA contrast (4.5:1)');
       await page.screenshot({ path: path.join(__dirname, 'shots', 'walk-bank-demo-' + scheme + '-' + width + '.png') });
-      if (scheme === 'light' && width === 1366) await passTest(page);
+      if (scheme === 'light' && width === 1366) {
+        await fableChecks(page, base);
+        await page.goto(base + '/bank-demo.html');
+        await page.waitForSelector('#bd_sum:not(:empty)');
+        await passTest(page);
+      }
       await context.close();
     }
   }
@@ -101,7 +106,12 @@ async function passTest(page) {
   const text = (selector) => page.textContent(selector);
   check((await text('#bd_sum')).includes('Books now AUD 14,400.00') && (await text('#bd_sum')).includes('Difference now AUD 3,108.50'), 'pass test: books 14,400.00, difference 3,108.50');
   check((await text('#bd_lines')).includes('19 Oct 2026'), 'locale: dates read "19 Oct 2026" (en-AU)');
+  check((await text('#bd_lines')).includes('Ready to add') === false && (await text('#bd_add')).includes('Nothing ready'), 'B5-01: nothing is "Ready to add" before the owner has answered anything: the bank words, the tax basis and the tax invoice are all questions');
   await page.click('#bd_gst_cash');
+  check((await text('#bd_lines')).includes('Tax invoice needed') === false && (await text('#bd_lines')).includes('needs a tax invoice. Do you hold it?'), 'B5-03: Origin Energy (330.00) and Telstra (110.00) ask for the tax invoice before any GST credit');
+  check((await text('#bd_lines')).includes('Dr electricity AUD 300.00') && (await text('#bd_lines')).includes('GST AUD 30.00'), 'B5-03: the row shows the account and the GST it would book (300.00 + 30.00)');
+  for (let guard = 0; guard < 8 && (await page.locator('[data-act=tick]').count()); guard++) await page.locator('[data-act=tick]').first().click();
+  for (let guard = 0; guard < 8 && (await page.locator('[data-act=inv][data-v=held]').count()); guard++) await page.locator('[data-act=inv][data-v=held]').first().click();
   const seq = [];
   await page.focus('#bd_load');
   for (let i = 0; i < 3; i++) { await page.keyboard.press('Tab'); seq.push(await page.evaluate(() => document.activeElement.id)); }
@@ -115,4 +125,29 @@ async function passTest(page) {
   await page.click('[data-testid=lk-confirm-ok]');
   await page.waitForTimeout(300);
   check((await text('#bd_sum')).includes('Books now AUD 13,428.50') && (await text('#bd_sum')).includes('Difference now AUD 4,080.00'), 'after the press: books 13,428.50, difference 4,080.00');
+}
+
+const CSV_HEAD = 'Date,Description,Debit,Credit,Balance\n';
+const upload = (page, name, body) => page.setInputFiles('#bd_file', { name, mimeType: 'text/csv', buffer: Buffer.from(body) });
+/** B5-05 (a file's currency is asked, a USD file is refused) and B5-06 (skipped rows are shown, the reconciliation is not tied) on the light desktop page */
+async function fableChecks(page, base) {
+  const text = (selector) => page.textContent(selector);
+  await upload(page, 'usd.csv', CSV_HEAD + '05/11/2026,Receipt A,,100.00,1100.00');
+  await page.waitForSelector('#bd_cur_sel');
+  check((await text('#bd_lines')) === '' && (await text('#bd_cur')).includes('Which currency'), 'B5-05: a file of your own is not read until its currency is asked; the last statement is cleared');
+  await page.click('#bd_cur_go');
+  check((await text('#bd_msg')).includes('Say which currency'), 'B5-05: no answer, no reading');
+  await page.selectOption('#bd_cur_sel', 'USD');
+  await page.click('#bd_cur_go');
+  const refused = await text('#bd_msg');
+  check(refused.includes('USD') && refused.includes('AUD') && (await text('#bd_lines')) === '', 'B5-05: a USD file is refused naming both currencies and shows no lines (' + refused.slice(0, 80) + ')');
+  await upload(page, 'skip.csv', CSV_HEAD + '05/11/2026,Receipt A,,100.00,1100.00\n06/11/2026 09:14,Receipt B,,22.00,1122.00\n07/11/2026,Receipt C,,50.00,1172.00\n,Orphan narration,10.00,,1162.00');
+  await page.waitForSelector('#bd_cur_sel');
+  await page.selectOption('#bd_cur_sel', 'AUD');
+  await page.click('#bd_cur_go');
+  const skipped = await text('[data-testid=bd-skip]');
+  check(skipped.includes('2 rows') && skipped.includes('Row 3') && skipped.includes('Row 5'), 'B5-06: both skipped rows are listed by row number on the lines view (' + skipped.slice(0, 90) + ')');
+  await page.click('#bd_tab_brs');
+  const verdict = await text('[data-testid=bd-not-tied]');
+  check(verdict.includes('Not tied') && verdict.includes('not read') && (await text('#bd_brs')).includes('Row 3'), 'B5-06: the reconciliation says Not tied and why while rows are missing');
 }
