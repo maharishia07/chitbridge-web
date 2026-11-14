@@ -121,7 +121,7 @@ const saved = (p) => p.evaluate(() => window.SAVED.length);
     const blip = await p.evaluate(async () => {
       var real = IDBDatabase.prototype.transaction, left = 1;
       IDBDatabase.prototype.transaction = function () { if (left-- > 0) throw new DOMException('closing', 'InvalidStateError'); return real.apply(this, arguments); };
-      try { var n = await nextNumber(); return n + ' | mem ' + MEM.on + ' | err ' + JSON.stringify(DB.lastErr()) + ' | seen ' + JSON.stringify(MEM.get('mark','idb')); } catch (e) { return 'threw ' + e.message; } finally { IDBDatabase.prototype.transaction = real; }
+      try { var dbg = JSON.stringify(await DB.get('series')); left = 1; var dbg2 = JSON.stringify(await DB.get('series')); left = 1; var n = dbg.slice(0,60) + ' // ' + dbg2.slice(0,60) + ' // ' + await nextNumber(); return n + ' | mem ' + MEM.on + ' | err ' + JSON.stringify(DB.lastErr()) + ' | seen ' + JSON.stringify(MEM.get('mark','idb')); } catch (e) { return 'threw ' + e.message; } finally { IDBDatabase.prototype.transaction = real; }
     });
     say('BAD  one refused call → the next number is 0004, never 0001', /0004$/.test(String(blip)), String(blip));
 
