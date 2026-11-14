@@ -618,7 +618,7 @@ function netReissueKey(userId) {
         esc(reply.claim_code) +
         '</div>' +
         '<div style="color:var(--grey);font-size:var(--fs-2)">Expires in 7 days. The previous code no longer works.</div>' +
-        '<button class="pri" onclick="netCopyKey(\'' +
+        '<button data-cbsid="BUS004-B01" class="pri" onclick="netCopyKey(\'' +
         esc(reply.user_id) +
         "','" +
         esc(reply.claim_code) +
@@ -1264,7 +1264,7 @@ function _netConfirmNarrow(title, lead, changes, apply) {
     '<button onclick="netCancelNarrow()" style="flex:1;padding:9px">' +
     tx('Cancel') +
     '</button>' +
-    '<button class="pri" onclick="netRunNarrow()" style="flex:1;padding:9px">' +
+    '<button data-cbsid="BUS004-B02" class="pri" onclick="netRunNarrow()" style="flex:1;padding:9px">' +
     tx('Make these changes') +
     '</button>' +
     '</div></div>';
@@ -1732,7 +1732,7 @@ function netBuild() {
   var gate =
     '<div style="padding:13px 16px">' +
     '<div style="padding:11px 13px;border:1px solid #b7a3d6;border-radius:9px;background:var(--purple-tint);font-size:var(--fs-2);color:var(--purple-2);line-height:1.6">🔒 <b>Nothing has been created yet.</b> This is the wiring plan for the capabilities each node holds. The next step names the actual stores and asks before creating anything.</div>' +
-    '<button class="pri" onclick="netMint()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">🔨 Name the stores and create them <span class=arw>→</span></button>' +
+    '<button data-cbsid="BUS004-B03" class="pri" onclick="netMint()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">🔨 Name the stores and create them <span class=arw>→</span></button>' +
     '</div>';
   var body = '<div style="max-height:66vh;overflow:auto">' + totals + blocks + gate + '</div>';
   if (typeof modal === 'function')
@@ -1872,7 +1872,7 @@ function netMint() {
           ? (create.length
               ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:9px;background:var(--warn-tint);font-size:var(--fs-2);color:var(--warn-3);line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>'
               : '') +
-            '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">' +
+            '<button data-cbsid="BUS004-B04" class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">' +
             [
               create.length ? 'Create ' + create.length + ' store' + (create.length === 1 ? '' : 's') : '',
               update.length ? 'change ' + update.length : '',
@@ -1946,7 +1946,7 @@ function netMintGo() {
               '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-3);font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' +
               esc(item.claim_code) +
               '</span>' +
-              '<button onclick="netCopyKey(\'' +
+              '<button data-cbsid="BUS004-B05" onclick="netCopyKey(\'' +
               esc(item.handle) +
               "','" +
               esc(item.claim_code) +
@@ -2002,7 +2002,7 @@ function netMintGo() {
               })
               .join('')
           : '') +
-        '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">' +
+        '<div style="padding:13px 16px"><button data-cbsid="BUS004-B06" class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">' +
         tx('I have the codes — done') +
         '</button></div>' +
         '</div>';
@@ -2151,7 +2151,7 @@ function _netTree(parentKey, depth) {
       var sel = UI.net.sel === item.key;
       var dots = _capDots(item);
       return (
-        '<div onclick="netSelect(\'' +
+        '<div data-cbsid="BUS004-C01" onclick="netSelect(\'' +
         item.key +
         '\')" style="cursor:pointer;padding:7px 9px;padding-inline-start:' +
         (9 + depth * 16) +
@@ -2195,7 +2195,7 @@ function _netModeStrip() {
   var tab = function (k, icon, label) {
     var on = m === k;
     return (
-      '<span onclick="netMode(\'' +
+      '<span data-cbsid="BUS004-C02" onclick="netMode(\'' +
       k +
       '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;' +
       'padding:8px 13px;border-radius:9px;font-size:var(--fs-2);font-weight:' +
@@ -2259,7 +2259,7 @@ function networkScreen() {
       '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>' +
       tx('Nothing is created') +
       '</b> until you choose to Build.</div>' +
-      '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>'
+      '<button data-cbsid="BUS004-B07" class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>'
     );
   }
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
@@ -2344,7 +2344,7 @@ function _netLeftPane() {
             ' · ' +
             esc(_netPlatLab[item.visibility] || item.visibility) +
             '</div></div>' +
-            '<span onclick="netRevertOne(\'' +
+            '<span data-cbsid="BUS004-C03" onclick="netRevertOne(\'' +
             item.key +
             '\')" title="Remove it — it was never created" style="cursor:pointer;color:var(--grey-3);font-weight:700;padding:0 3px">✕</span></div>'
           );
@@ -2379,7 +2379,7 @@ function _netLeftPane() {
                 '</div>'
               : '') +
             '</div>' +
-            '<span onclick="netRevertOne(\'' +
+            '<span data-cbsid="BUS004-C04" onclick="netRevertOne(\'' +
             item.key +
             '\')" title="Leave it as ' +
             esc(_netPlatLab[item.from] || item.from) +
@@ -2389,7 +2389,7 @@ function _netLeftPane() {
         .join('') +
       '<div style="display:flex;gap:8px;align-items:center;padding:6px 9px;font-size:var(--fs-1);color:var(--warn-2)">' +
       '<span style="flex:1">Nothing above has happened yet.</span>' +
-      '<span onclick="netRevertAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' +
+      '<span data-cbsid="BUS004-C05" onclick="netRevertAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' +
       tx('↺ Discard all') +
       '</span></div></div>'
     : '';
@@ -2416,7 +2416,7 @@ function _netLeftPane() {
     '</div>' +
     tree +
     '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">' +
-    '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">' +
+    '<button data-cbsid="BUS004-B08" class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">' +
     (built ? '🔨 Apply changes' + (pendingCount ? ' (' + pendingCount + ')' : '') : '🔨 Build network' + (count ? ' (' + count + ')' : '')) +
     '</button>' +
     pendingList +
@@ -2430,7 +2430,7 @@ function _netLeftPane() {
             ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet'
             : 'add nodes, then build') +
         '</div>') +
-    '<div style="font-size:var(--fs-1);color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">' +
+    '<div data-cbsid="BUS004-C06" style="font-size:var(--fs-1);color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">' +
     tx('↺ Start over') +
     '</div>' +
     '</div>'
@@ -2507,7 +2507,7 @@ function _catFieldRow(n, f, i) {
       .join('');
     var ok = _legBacked(n, f);
     viaSel =
-      '<select onchange="netSetCatField(\'' +
+      '<select data-cbsid="BUS004-S01" onchange="netSetCatField(\'' +
       n.key +
       "'," +
       i +
@@ -2532,14 +2532,14 @@ function _catFieldRow(n, f, i) {
     '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-inline-start:3px solid ' +
     col[0] +
     ';padding-inline-start:7px">' +
-    '<input value="' +
+    '<input data-cbsid="BUS004-I01" value="' +
     esc(f.name || '') +
     '" oninput="netSetCatField(\'' +
     n.key +
     "'," +
     i +
     ',\'name\',this.value)" placeholder="what you need to know" style="flex:1;min-width:0;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px">' +
-    '<select onchange="netSetCatField(\'' +
+    '<select data-cbsid="BUS004-S02" onchange="netSetCatField(\'' +
     n.key +
     "'," +
     i +
@@ -2547,14 +2547,14 @@ function _catFieldRow(n, f, i) {
     legOpts +
     '</select>' +
     viaSel +
-    '<select onchange="netSetCatField(\'' +
+    '<select data-cbsid="BUS004-S03" onchange="netSetCatField(\'' +
     n.key +
     "'," +
     i +
     ',\'type\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
     typOpts +
     '</select>' +
-    '<span onclick="netDelCatField(\'' +
+    '<span data-cbsid="BUS004-C07" onclick="netDelCatField(\'' +
     n.key +
     "'," +
     i +
@@ -2618,7 +2618,7 @@ function _adoptedPricing(n, c) {
     CAT_PRICE_SRC.map(function (item) {
       var on = v === item.k;
       return (
-        '<div onclick="netSetPriceSrc(\'' +
+        '<div data-cbsid="BUS004-C08" onclick="netSetPriceSrc(\'' +
         n.key +
         "','" +
         item.k +
@@ -2697,7 +2697,7 @@ function _catConfig(n) {
   var variantRows = (c.variants || [])
     .map(function (item, index) {
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input data-cbsid="BUS004-I02" value="' +
         esc(item.name || '') +
         '" oninput="netSetVariant(\'' +
         n.key +
@@ -2705,7 +2705,7 @@ function _catConfig(n) {
         index +
         ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' +
         _in +
-        '"><span onclick="netDelVariant(\'' +
+        '"><span data-cbsid="BUS004-C09" onclick="netDelVariant(\'' +
         n.key +
         "'," +
         index +
@@ -2716,7 +2716,7 @@ function _catConfig(n) {
   var altRows = (c.altUnits || [])
     .map(function (item, index) {
       return (
-        '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' +
+        '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input data-cbsid="BUS004-I03" value="' +
         esc(item.unit || '') +
         '" oninput="netSetAltUnit(\'' +
         n.key +
@@ -2724,7 +2724,7 @@ function _catConfig(n) {
         index +
         ',\'unit\',this.value)" placeholder="unit" style="width:66px;' +
         _in +
-        '"><span style="font-size:var(--fs-1);color:var(--grey)">1=</span><input type="number" min="1" value="' +
+        '"><span style="font-size:var(--fs-1);color:var(--grey)">1=</span><input data-cbsid="BUS004-I04" type="number" min="1" value="' +
         (item.num || 1) +
         '" oninput="netSetAltUnit(\'' +
         n.key +
@@ -2732,7 +2732,7 @@ function _catConfig(n) {
         index +
         ',\'num\',this.value)" style="width:48px;' +
         _in +
-        '"><span style="font-size:var(--fs-1);color:var(--grey)">/</span><input type="number" min="1" value="' +
+        '"><span style="font-size:var(--fs-1);color:var(--grey)">/</span><input data-cbsid="BUS004-I05" type="number" min="1" value="' +
         (item.den || 1) +
         '" oninput="netSetAltUnit(\'' +
         n.key +
@@ -2742,7 +2742,7 @@ function _catConfig(n) {
         _in +
         '"><span style="font-size:var(--fs-1);color:var(--grey)">' +
         esc(c.baseUnit || 'base') +
-        '</span><span onclick="netDelAltUnit(\'' +
+        '</span><span data-cbsid="BUS004-C10" onclick="netDelAltUnit(\'' +
         n.key +
         "'," +
         index +
@@ -2757,7 +2757,7 @@ function _catConfig(n) {
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:8px">' +
     tx('Product (browse name)') +
     '</label>' +
-    '<input value="' +
+    '<input data-cbsid="BUS004-I06" value="' +
     esc(c.product || '') +
     '" oninput="netSetCatProduct(\'' +
     n.key +
@@ -2766,11 +2766,11 @@ function _catConfig(n) {
     '">' +
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:9px">Variants <span style="color:var(--faint,var(--grey-3))">(the orderable unit — the chit freezes the variant; none = product is its own)</span></label>' +
     variantRows +
-    '<div onclick="netAddVariant(\'' +
+    '<div data-cbsid="BUS004-C11" onclick="netAddVariant(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ variant</div>' +
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:6px">Base unit <span style="color:var(--faint,var(--grey-3))">(lowest indivisible — kg, litre)</span></label>' +
-    '<input value="' +
+    '<input data-cbsid="BUS004-I07" value="' +
     esc(c.baseUnit || '') +
     '" oninput="netSetBaseUnit(\'' +
     n.key +
@@ -2779,14 +2779,14 @@ function _catConfig(n) {
     '">' +
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:9px">Alternative units <span style="color:var(--faint,var(--grey-3))">(integer conversion — 1 crate = 20/1 kg)</span></label>' +
     altRows +
-    '<div onclick="netAddAltUnit(\'' +
+    '<div data-cbsid="BUS004-C12" onclick="netAddAltUnit(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ unit</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
   var refRows = (c.refs || [])
     .map(function (item, index) {
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input data-cbsid="BUS004-I08" value="' +
         esc(item.system || '') +
         '" oninput="netSetRef(\'' +
         n.key +
@@ -2794,7 +2794,7 @@ function _catConfig(n) {
         index +
         ',\'system\',this.value)" placeholder="system (ERP, Tally, Supplier A)" style="width:150px;' +
         _in +
-        '"><input value="' +
+        '"><input data-cbsid="BUS004-I09" value="' +
         esc(item.code || '') +
         '" oninput="netSetRef(\'' +
         n.key +
@@ -2802,7 +2802,7 @@ function _catConfig(n) {
         index +
         ',\'code\',this.value)" placeholder="their code / local name" style="flex:1;min-width:0;' +
         _in +
-        '"><span onclick="netDelRef(\'' +
+        '"><span data-cbsid="BUS004-C13" onclick="netDelRef(\'' +
         n.key +
         "'," +
         index +
@@ -2813,14 +2813,14 @@ function _catConfig(n) {
   var partB =
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">B · KNOWN AS <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(the same item — its name in each system)</span></div>' +
     refRows +
-    '<div onclick="netAddRef(\'' +
+    '<div data-cbsid="BUS004-C14" onclick="netAddRef(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ system name</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">CB stores the reference {system · their code}, not their data — so it can gather from, and order in, each system\'s own name.</div>';
   var bomRows = (c.bom || [])
     .map(function (b, index) {
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input data-cbsid="BUS004-I10" value="' +
         esc(b.item || '') +
         '" oninput="netSetBom(\'' +
         n.key +
@@ -2828,7 +2828,7 @@ function _catConfig(n) {
         index +
         ',\'item\',this.value)" placeholder="component / related item" style="flex:1;min-width:0;' +
         _in +
-        '"><span style="font-size:var(--fs-1);color:var(--grey)">×</span><input type="number" min="0" step="any" value="' +
+        '"><span style="font-size:var(--fs-1);color:var(--grey)">×</span><input data-cbsid="BUS004-I11" type="number" min="0" step="any" value="' +
         (b.qty != null ? b.qty : 1) +
         '" oninput="netSetBom(\'' +
         n.key +
@@ -2838,7 +2838,7 @@ function _catConfig(n) {
         _in +
         '"><span style="font-size:var(--fs-1);color:var(--grey)">' +
         esc(c.baseUnit || 'unit') +
-        '</span><span onclick="netDelBom(\'' +
+        '</span><span data-cbsid="BUS004-C15" onclick="netDelBom(\'' +
         n.key +
         "'," +
         index +
@@ -2849,7 +2849,7 @@ function _catConfig(n) {
   var partBOM =
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">MADE OF <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(related line items — a reorder cascades to these)</span></div>' +
     bomRows +
-    '<div onclick="netAddBom(\'' +
+    '<div data-cbsid="BUS004-C16" onclick="netAddBom(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ component</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Ordering the parent proposes its components (a BOM), not a full MRP explosion.</div>';
@@ -2860,13 +2860,13 @@ function _catConfig(n) {
         return '<option' + (item.scheme === x ? ' selected' : '') + '>' + x + '</option>';
       }).join('');
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><select onchange="netSetStd(\'' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><select data-cbsid="BUS004-S04" onchange="netSetStd(\'' +
         n.key +
         "'," +
         index +
         ',\'scheme\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
         scOpts +
-        '</select><input value="' +
+        '</select><input data-cbsid="BUS004-I12" value="' +
         esc(item.code || '') +
         '" oninput="netSetStd(\'' +
         n.key +
@@ -2874,7 +2874,7 @@ function _catConfig(n) {
         index +
         ',\'code\',this.value)" placeholder="code (e.g. 8544.49)" style="width:120px;' +
         _in +
-        '"><input value="' +
+        '"><input data-cbsid="BUS004-I13" value="' +
         esc(item.label || '') +
         '" oninput="netSetStd(\'' +
         n.key +
@@ -2882,7 +2882,7 @@ function _catConfig(n) {
         index +
         ',\'label\',this.value)" placeholder="what it classifies (optional)" style="flex:1;min-width:0;' +
         _in +
-        '"><span onclick="netDelStd(\'' +
+        '"><span data-cbsid="BUS004-C17" onclick="netDelStd(\'' +
         n.key +
         "'," +
         index +
@@ -2893,7 +2893,7 @@ function _catConfig(n) {
   var partStd =
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">C · STANDARDS <span style="font-weight:500;color:var(--faint,var(--grey-3));letter-spacing:0">(classification — by reference, never mirrored)</span></div>' +
     stdRows +
-    '<div onclick="netAddStd(\'' +
+    '<div data-cbsid="BUS004-C18" onclick="netAddStd(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ standard</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">HS / GS1 / Schema.org codes point OUT to the authority; CB holds the reference, not the scheme.</div>';
@@ -2910,7 +2910,7 @@ function _catConfig(n) {
         }).join('');
         var valField =
           item.by === 'value'
-            ? '<input type="number" step="any" value="' +
+            ? '<input data-cbsid="BUS004-I14" type="number" step="any" value="' +
               (item.amount != null ? item.amount : '') +
               '" oninput="netSetPrice(\'' +
               n.key +
@@ -2918,7 +2918,7 @@ function _catConfig(n) {
               index +
               ',\'amount\',this.value)" placeholder="amount" style="width:88px;' +
               _in +
-              '"><input value="' +
+              '"><input data-cbsid="BUS004-I15" value="' +
               esc(item.currency || '') +
               '" oninput="netSetPrice(\'' +
               n.key +
@@ -2929,7 +2929,7 @@ function _catConfig(n) {
               '" style="width:56px;' +
               _in +
               '">'
-            : '<input value="' +
+            : '<input data-cbsid="BUS004-I16" value="' +
               esc(item.source || '') +
               '" oninput="netSetPrice(\'' +
               n.key +
@@ -2940,7 +2940,7 @@ function _catConfig(n) {
               '">';
         return (
           '<div style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-top:6px">' +
-          '<div style="display:flex;gap:6px;align-items:center"><input value="' +
+          '<div style="display:flex;gap:6px;align-items:center"><input data-cbsid="BUS004-I17" value="' +
           esc(item.label || '') +
           '" oninput="netSetPrice(\'' +
           n.key +
@@ -2948,18 +2948,18 @@ function _catConfig(n) {
           index +
           ',\'label\',this.value)" placeholder="price label (list · trade · spot)" style="flex:1;min-width:0;' +
           _in +
-          '"><span onclick="netDelPrice(\'' +
+          '"><span data-cbsid="BUS004-C19" onclick="netDelPrice(\'' +
           n.key +
           "'," +
           index +
           ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>' +
-          '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select onchange="netSetPrice(\'' +
+          '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select data-cbsid="BUS004-S05" onchange="netSetPrice(\'' +
           n.key +
           "'," +
           index +
           ',\'basis\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
           basisOpts +
-          '</select><select onchange="netSetPrice(\'' +
+          '</select><select data-cbsid="BUS004-S06" onchange="netSetPrice(\'' +
           n.key +
           "'," +
           index +
@@ -2968,7 +2968,7 @@ function _catConfig(n) {
           '</select>' +
           valField +
           '</div>' +
-          '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input type="date" value="' +
+          '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input data-cbsid="BUS004-I18" type="date" value="' +
           esc(item.validFrom || '') +
           '" onchange="netSetPrice(\'' +
           n.key +
@@ -2976,7 +2976,7 @@ function _catConfig(n) {
           index +
           ',\'validFrom\',this.value)" style="' +
           _in +
-          '"><span class=arw>→</span><input type="date" value="' +
+          '"><span class=arw>→</span><input data-cbsid="BUS004-I19" type="date" value="' +
           esc(item.validTo || '') +
           '" onchange="netSetPrice(\'' +
           n.key +
@@ -2984,7 +2984,7 @@ function _catConfig(n) {
           index +
           ',\'validTo\',this.value)" style="' +
           _in +
-          '"> · region <input value="' +
+          '"> · region <input data-cbsid="BUS004-I20" value="' +
           esc(item.region || '') +
           '" oninput="netSetPrice(\'' +
           n.key +
@@ -3007,13 +3007,13 @@ function _catConfig(n) {
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:var(--blue-2);letter-spacing:.05em">' +
     tx('D · PRICING') +
     '</b> <span style="color:var(--faint,var(--grey-3))">— governed by context; by ref (loose) or by value (frozen)</span></label>' +
-    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:6px 9px;border:1px dashed var(--line);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)"><span style="font-size:var(--fs-1);color:var(--grey)">Context governs <span class=arw>→</span></span><input value="' +
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:6px 9px;border:1px dashed var(--line);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)"><span style="font-size:var(--fs-1);color:var(--grey)">Context governs <span class=arw>→</span></span><input data-cbsid="BUS004-I21" value="' +
     esc(ctx.currency || '') +
     '" oninput="netSetContext(\'' +
     n.key +
     '\',\'currency\',this.value)" placeholder="currency (INR)" style="width:108px;' +
     _in +
-    '"><input value="' +
+    '"><input data-cbsid="BUS004-I22" value="' +
     esc(ctx.region || '') +
     '" oninput="netSetContext(\'' +
     n.key +
@@ -3021,7 +3021,7 @@ function _catConfig(n) {
     _in +
     '"></div>' +
     priceRows +
-    '<div onclick="netAddPrice(\'' +
+    '<div data-cbsid="BUS004-C20" onclick="netAddPrice(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:5px 0">＋ price</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">Currency &amp; region inherit the context unless overridden. A by-ref price (and its FX rate) freezes only when the chit is sealed.</div>';
@@ -3029,7 +3029,7 @@ function _catConfig(n) {
     .map(function (item, index) {
       var onRail = !!item.onRail;
       var railBtn =
-        '<span onclick="netSetFeedbackFmt(\'' +
+        '<span data-cbsid="BUS004-C21" onclick="netSetFeedbackFmt(\'' +
         n.key +
         "'," +
         index +
@@ -3044,7 +3044,7 @@ function _catConfig(n) {
         '</span>';
       var fmt = onRail
         ? '<span style="font-size:var(--fs-1);color:var(--ok-2);flex:1">native chit — CB delivers it directly</span>'
-        : '<input value="' +
+        : '<input data-cbsid="BUS004-I23" value="' +
           esc(item.format || '') +
           '" oninput="netSetFeedbackFmt(\'' +
           n.key +
@@ -3054,7 +3054,7 @@ function _catConfig(n) {
           _in +
           '">';
       return (
-        '<div style="border:1px solid var(--line);border-radius:9px;padding:6px 8px;margin-top:5px"><div style="display:flex;gap:6px;align-items:center"><input value="' +
+        '<div style="border:1px solid var(--line);border-radius:9px;padding:6px 8px;margin-top:5px"><div style="display:flex;gap:6px;align-items:center"><input data-cbsid="BUS004-I24" value="' +
         esc(item.system || '') +
         '" oninput="netSetFeedback(\'' +
         n.key +
@@ -3064,7 +3064,7 @@ function _catConfig(n) {
         _in +
         '">' +
         railBtn +
-        '<span onclick="netDelFeedback(\'' +
+        '<span data-cbsid="BUS004-C22" onclick="netDelFeedback(\'' +
         n.key +
         "'," +
         index +
@@ -3090,7 +3090,7 @@ function _catConfig(n) {
         var sm = 'font-size:var(--fs-1);padding:4px 5px;border:1px solid var(--line);border-radius:6px';
         return (
           '<div style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-top:5px;display:flex;gap:5px;align-items:center;flex-wrap:wrap;font-size:var(--fs-1);color:var(--grey)">' +
-          'When <input value="' +
+          'When <input data-cbsid="BUS004-I25" value="' +
           esc(item.watch || '') +
           '" oninput="netSetTrigger(\'' +
           n.key +
@@ -3099,7 +3099,7 @@ function _catConfig(n) {
           ',\'watch\',this.value)" placeholder="stock" style="width:78px;' +
           sm +
           '">' +
-          ' is <select onchange="netSetTrigger(\'' +
+          ' is <select data-cbsid="BUS004-S07" onchange="netSetTrigger(\'' +
           n.key +
           "'," +
           index +
@@ -3108,7 +3108,7 @@ function _catConfig(n) {
           '">' +
           opSel +
           '</select>' +
-          ' <input value="' +
+          ' <input data-cbsid="BUS004-I26" value="' +
           esc(item.value || '') +
           '" oninput="netSetTrigger(\'' +
           n.key +
@@ -3117,7 +3117,7 @@ function _catConfig(n) {
           ',\'value\',this.value)" placeholder="EOQ / min" style="width:70px;' +
           sm +
           '">' +
-          ' <span class=arw>→</span> <select onchange="netSetTrigger(\'' +
+          ' <span class=arw>→</span> <select data-cbsid="BUS004-S08" onchange="netSetTrigger(\'' +
           n.key +
           "'," +
           index +
@@ -3126,7 +3126,7 @@ function _catConfig(n) {
           '">' +
           actSel +
           '</select>' +
-          ' to <input value="' +
+          ' to <input data-cbsid="BUS004-I27" value="' +
           esc(item.target || '') +
           '" oninput="netSetTrigger(\'' +
           n.key +
@@ -3135,7 +3135,7 @@ function _catConfig(n) {
           ',\'target\',this.value)" placeholder="supplier / system" style="width:110px;' +
           sm +
           '">' +
-          '<span onclick="netDelTrigger(\'' +
+          '<span data-cbsid="BUS004-C23" onclick="netDelTrigger(\'' +
           n.key +
           "'," +
           index +
@@ -3161,7 +3161,7 @@ function _catConfig(n) {
     TABS.map(function (item) {
       var on = tab === item.k;
       return (
-        '<span onclick="netCatTab(\'' +
+        '<span data-cbsid="BUS004-C24" onclick="netCatTab(\'' +
         n.key +
         "','" +
         item.k +
@@ -3181,7 +3181,7 @@ function _catConfig(n) {
   if (tab === 'purpose') {
     body =
       '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">Purpose <span style="color:var(--faint,var(--grey-3))">(what this catalogue is for — in your words)</span></label>' +
-      '<textarea oninput="netSetCatStory(\'' +
+      '<textarea data-cbsid="BUS004-T01" oninput="netSetCatStory(\'' +
       n.key +
       '\',this.value)" onchange="netCatTab(\'' +
       n.key +
@@ -3211,7 +3211,7 @@ function _catConfig(n) {
       tx('LOOP') +
       '</b> <span style="color:var(--faint,var(--grey-3))">— when a watched signal crosses a threshold, act automatically</span></label>' +
       trigRows +
-      '<div onclick="netAddTrigger(\'' +
+      '<div data-cbsid="BUS004-C25" onclick="netAddTrigger(\'' +
       n.key +
       '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:5px 0">＋ trigger</div>' +
       '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:2px">The signal is usually a Computed value (e.g. EOQ) or a System-fed one (e.g. stock). The action fires down a Feed-back destination.</div>';
@@ -3224,12 +3224,12 @@ function _catConfig(n) {
       legLegend +
       '</div>' +
       fields +
-      '<div onclick="netAddCatField(\'' +
+      '<div data-cbsid="BUS004-C26" onclick="netAddCatField(\'' +
       n.key +
       '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ requirement</div>' +
       legNote +
       '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">List is built by <span style="color:var(--faint,var(--grey-3))">(how the catalogue itself is loaded)</span></label>' +
-      '<select onchange="netSetCatLoad(\'' +
+      '<select data-cbsid="BUS004-S09" onchange="netSetCatLoad(\'' +
       n.key +
       '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
       loadOpts +
@@ -3240,7 +3240,7 @@ function _catConfig(n) {
       tx('FEED BACK') +
       '</b> <span style="color:var(--faint,var(--grey-3))">— once complete, push the record to these systems (with a receipt)</span></label>' +
       fbRows +
-      '<div onclick="netAddFeedback(\'' +
+      '<div data-cbsid="BUS004-C27" onclick="netAddFeedback(\'' +
       n.key +
       '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600;padding:4px 0">＋ system to feed back</div>' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Nothing here = CB is the end of the chain (it just holds the record).</div>';
@@ -3248,7 +3248,7 @@ function _catConfig(n) {
     body =
       _catChain(n) +
       _catRecordPreview(n) +
-      '<div onclick="netExportCat(\'' +
+      '<div data-cbsid="BUS004-C28" onclick="netExportCat(\'' +
       n.key +
       '\')" style="cursor:pointer;display:inline-block;margin-top:10px;font-size:var(--fs-1);font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:6px;padding:5px 11px">⤓ Export draft (JSON)</div>' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
@@ -3692,7 +3692,7 @@ function _storefrontConfig(n) {
   var opt = function (val, label, hint) {
     var on = e === val;
     return (
-      '<div onclick="netSetExposure(\'' +
+      '<div data-cbsid="BUS004-C29" onclick="netSetExposure(\'' +
       n.key +
       "','" +
       val +
@@ -3745,19 +3745,19 @@ function _storefrontConfig(n) {
         return '<option value="' + ch + '"' + (item.channel === ch ? ' selected' : '') + '>' + ch + '</option>';
       }).join('');
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netSetInlet(\'' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select data-cbsid="BUS004-S10" onchange="netSetInlet(\'' +
         n.key +
         "'," +
         index +
         ',\'channel\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
         chOpts +
-        '</select><input value="' +
+        '</select><input data-cbsid="BUS004-I28" value="' +
         esc(item.handle || '') +
         '" oninput="netSetInlet(\'' +
         n.key +
         "'," +
         index +
-        ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelInlet(\'' +
+        ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C30" onclick="netDelInlet(\'' +
         n.key +
         "'," +
         index +
@@ -3772,19 +3772,19 @@ function _storefrontConfig(n) {
           return '<option value="' + item + '"' + (cb.cadence === item ? ' selected' : '') + '>' + item + '</option>';
         }).join('');
         return (
-          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' +
+          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input data-cbsid="BUS004-I29" value="' +
           esc(cb.name || '') +
           '" oninput="netSetCollectBack(\'' +
           n.key +
           "'," +
           index +
-          ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select onchange="netSetCollectBack(\'' +
+          ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select data-cbsid="BUS004-S11" onchange="netSetCollectBack(\'' +
           n.key +
           "'," +
           index +
           ',\'cadence\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
           cadOpts +
-          '</select><span onclick="netDelCollectBack(\'' +
+          '</select><span data-cbsid="BUS004-C31" onclick="netDelCollectBack(\'' +
           n.key +
           "'," +
           index +
@@ -3799,7 +3799,7 @@ function _storefrontConfig(n) {
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:8px">' +
     tx('How they order (commercial method)') +
     '</label>' +
-    '<select onchange="netSetOrderMethod(\'' +
+    '<select data-cbsid="BUS004-S12" onchange="netSetOrderMethod(\'' +
     n.key +
     '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">' +
     methOpts +
@@ -3809,7 +3809,7 @@ function _storefrontConfig(n) {
     '</div>' +
     _methodPreview(o.method) +
     '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,var(--grey-3))">(optional)</span></label>' +
-    '<input value="' +
+    '<input data-cbsid="BUS004-I30" value="' +
     (o.maxItems != null ? esc(String(o.maxItems)) : '') +
     '" oninput="netSetOrderMax(\'' +
     n.key +
@@ -3819,7 +3819,7 @@ function _storefrontConfig(n) {
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Info you ask the buyer to provide with the order (e.g. delivery address, a monthly forecast).</div>' +
     cbRows +
-    '<div onclick="netAddCollectBack(\'' +
+    '<div data-cbsid="BUS004-C32" onclick="netAddCollectBack(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ collect field</div>' +
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">' +
@@ -3830,7 +3830,7 @@ function _storefrontConfig(n) {
     '</b> — customers order at your storefront (they find you in ChitBridge).</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">Off-rail inlets <span style="color:var(--faint,var(--grey-3))">(optional)</span> — a message to a channel <b>you own &amp; publish</b>, captured into a chit:</div>' +
     inletRows +
-    '<div onclick="netAddInlet(\'' +
+    '<div data-cbsid="BUS004-C33" onclick="netAddInlet(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add off-rail inlet</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;font-style:italic">De-duplicated automatically — the same scan or message won\'t create a second chit (matched by content).</div>' +
@@ -3844,7 +3844,7 @@ function _storefrontConfig(n) {
         return (
           '<div style="display:flex;gap:5px;align-items:center;padding:2px 0"><span style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));width:16px">' +
           (index + 1) +
-          '</span><input value="' +
+          '</span><input data-cbsid="BUS004-I31" value="' +
           esc(item.name || '') +
           '" oninput="netSetState(\'' +
           n.key +
@@ -3852,12 +3852,12 @@ function _storefrontConfig(n) {
           index +
           ',this.value)" placeholder="state name" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' +
           (index > 0
-            ? '<span onclick="netMoveState(\'' + n.key + "'," + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>'
+            ? '<span data-cbsid="BUS004-C34" onclick="netMoveState(\'' + n.key + "'," + index + ',-1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↑</span>'
             : '<span style="display:inline-block;width:14px"></span>') +
           (!last
-            ? '<span onclick="netMoveState(\'' + n.key + "'," + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>'
+            ? '<span data-cbsid="BUS004-C35" onclick="netMoveState(\'' + n.key + "'," + index + ',1)" style="cursor:pointer;color:var(--grey);padding:0 3px">↓</span>'
             : '<span style="display:inline-block;width:14px"></span>') +
-          '<span onclick="netDelState(\'' +
+          '<span data-cbsid="BUS004-C36" onclick="netDelState(\'' +
           n.key +
           "'," +
           index +
@@ -3865,7 +3865,7 @@ function _storefrontConfig(n) {
         );
       })
       .join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No states — a one-shot chit (created, done).</div>') +
-    '<div onclick="netAddState(\'' +
+    '<div data-cbsid="BUS004-C37" onclick="netAddState(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ state</div>' +
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">📎 ATTACHMENTS &amp; NOTES</div>' +
@@ -3873,13 +3873,13 @@ function _storefrontConfig(n) {
     ((o.attachments || [])
       .map(function (item, index) {
         return (
-          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' +
+          '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input data-cbsid="BUS004-I32" value="' +
           esc(item.name || '') +
           '" oninput="netSetAttach(\'' +
           n.key +
           "'," +
           index +
-          ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelAttach(\'' +
+          ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C38" onclick="netDelAttach(\'' +
           n.key +
           "'," +
           index +
@@ -3887,10 +3887,10 @@ function _storefrontConfig(n) {
         );
       })
       .join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No attachments.</div>') +
-    '<div onclick="netAddAttach(\'' +
+    '<div data-cbsid="BUS004-C39" onclick="netAddAttach(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add attachment</div>' +
-    '<textarea oninput="netSetOrderNotes(\'' +
+    '<textarea data-cbsid="BUS004-T02" oninput="netSetOrderNotes(\'' +
     n.key +
     '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);box-sizing:border-box;min-height:2.4rem;resize:vertical">' +
     esc(o.notes || '') +
@@ -4108,13 +4108,13 @@ function _coassistConfig(n) {
   var roleChips = c.human.roles
     .map(function (item, index) {
       return (
-        '<span style="display:inline-flex;align-items:center;gap:3px;margin:0 5px 4px 0"><input value="' +
+        '<span style="display:inline-flex;align-items:center;gap:3px;margin:0 5px 4px 0"><input data-cbsid="BUS004-I33" value="' +
         esc(item) +
         '" oninput="netCaHumanSetRole(\'' +
         n.key +
         "'," +
         index +
-        ',this.value)" placeholder="role" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaHumanDelRole(\'' +
+        ',this.value)" placeholder="role" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C40" onclick="netCaHumanDelRole(\'' +
         n.key +
         "'," +
         index +
@@ -4127,14 +4127,14 @@ function _coassistConfig(n) {
     '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' +
     tx('🧑 Human workforce') +
     '</span>' +
-    '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input type="number" min="0" value="' +
+    '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input data-cbsid="BUS004-I34" type="number" min="0" value="' +
     (c.human.count || '') +
     '" oninput="netCaHuman(\'' +
     n.key +
     '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></div>' +
     '<div style="margin-top:6px">' +
     roleChips +
-    '<span onclick="netCaHumanAddRole(\'' +
+    '<span data-cbsid="BUS004-C41" onclick="netCaHumanAddRole(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ role</span></div>' +
     '</div>';
@@ -4144,25 +4144,25 @@ function _coassistConfig(n) {
         return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
       }).join('');
       return (
-        '<div style="display:flex;gap:5px;align-items:center;padding:3px 0;flex-wrap:wrap"><select onchange="netCaSetIot(\'' +
+        '<div style="display:flex;gap:5px;align-items:center;padding:3px 0;flex-wrap:wrap"><select data-cbsid="BUS004-S13" onchange="netCaSetIot(\'' +
         n.key +
         "'," +
         index +
         ',\'type\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
         opts +
-        '</select><span style="font-size:var(--fs-1);color:var(--grey)">how many</span><input type="number" min="0" value="' +
+        '</select><span style="font-size:var(--fs-1);color:var(--grey)">how many</span><input data-cbsid="BUS004-I35" type="number" min="0" value="' +
         (item.count || '') +
         '" oninput="netCaSetIot(\'' +
         n.key +
         "'," +
         index +
-        ',\'count\',this.value)" placeholder="1" style="width:46px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">devices</span><input type="number" min="0" value="' +
+        ',\'count\',this.value)" placeholder="1" style="width:46px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">devices</span><input data-cbsid="BUS004-I36" type="number" min="0" value="' +
         (item.devices || '') +
         '" oninput="netCaSetIot(\'' +
         n.key +
         "'," +
         index +
-        ',\'devices\',this.value)" placeholder="0" style="width:54px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' +
+        ',\'devices\',this.value)" placeholder="0" style="width:54px;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C42" onclick="netCaDelIot(\'' +
         n.key +
         "'," +
         index +
@@ -4176,7 +4176,7 @@ function _coassistConfig(n) {
     '</span>' +
     '<div style="margin-top:5px">' +
     iotRows +
-    '<span onclick="netCaAddIot(\'' +
+    '<span data-cbsid="BUS004-C43" onclick="netCaAddIot(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ connection</span></div></div>';
   var erpRows = c.erp.connectors
@@ -4185,19 +4185,19 @@ function _coassistConfig(n) {
         return '<option value="' + item + '"' + (e.system === item ? ' selected' : '') + '>' + item + '</option>';
       }).join('');
       return (
-        '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetErp(\'' +
+        '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select data-cbsid="BUS004-S14" onchange="netCaSetErp(\'' +
         n.key +
         "'," +
         index +
         ',\'system\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
         opts +
-        '</select><input value="' +
+        '</select><input data-cbsid="BUS004-I37" value="' +
         esc(e.label || '') +
         '" oninput="netCaSetErp(\'' +
         n.key +
         "'," +
         index +
-        ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelErp(\'' +
+        ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C44" onclick="netCaDelErp(\'' +
         n.key +
         "'," +
         index +
@@ -4211,7 +4211,7 @@ function _coassistConfig(n) {
     '</span>' +
     '<div style="margin-top:5px">' +
     erpRows +
-    '<span onclick="netCaAddErp(\'' +
+    '<span data-cbsid="BUS004-C45" onclick="netCaAddErp(\'' +
     n.key +
     '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);font-weight:600">＋ connector</span></div></div>';
   var auOpts = AI_AUTONOMY.map(function (item) {
@@ -4222,16 +4222,16 @@ function _coassistConfig(n) {
     '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:var(--fs-2);font-weight:600;color:var(--ink-2)">' +
     tx('🤖 AI agents') +
     '</span>' +
-    '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input type="number" min="0" value="' +
+    '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input data-cbsid="BUS004-I38" type="number" min="0" value="' +
     (c.ai.count || '') +
     '" oninput="netCaAiCount(\'' +
     n.key +
     '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></div>' +
-    '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><input value="' +
+    '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><input data-cbsid="BUS004-I39" value="' +
     esc(c.ai.role || '') +
     '" oninput="netCaAiRole(\'' +
     n.key +
-    '\',this.value)" placeholder="what it does" style="flex:1 0 110px;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">autonomy</span><select onchange="netCaAiAutonomy(\'' +
+    '\',this.value)" placeholder="what it does" style="flex:1 0 110px;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">autonomy</span><select data-cbsid="BUS004-S15" onchange="netCaAiAutonomy(\'' +
     n.key +
     '\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' +
     auOpts +
@@ -4254,7 +4254,7 @@ function _coassistConfig(n) {
 }
 function _radioOpt(onclick, on, label, hint, color, bg) {
   return (
-    '<div onclick="' +
+    '<div data-cbsid="BUS004-C46" onclick="' +
     onclick +
     '" style="cursor:pointer;padding:8px 10px;border:1px solid ' +
     (on ? color : 'var(--line)') +
@@ -4336,13 +4336,13 @@ function _tradereadyConfig(n) {
           ? certs
               .map(function (item, index) {
                 return (
-                  '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' +
+                  '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input data-cbsid="BUS004-I40" value="' +
                   esc(item) +
                   '" oninput="netSetCert(\'' +
                   n.key +
                   "'," +
                   index +
-                  ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelCert(\'' +
+                  ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span data-cbsid="BUS004-C47" onclick="netDelCert(\'' +
                   n.key +
                   "'," +
                   index +
@@ -4351,7 +4351,7 @@ function _tradereadyConfig(n) {
               })
               .join('')
           : '<div style="font-size:var(--fs-1);color:var(--grey)">No certifications yet.</div>') +
-        '<div onclick="netAddCert(\'' +
+        '<div data-cbsid="BUS004-C48" onclick="netAddCert(\'' +
         n.key +
         '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2);font-weight:600;padding:5px 0">＋ add certification</div></div>'
       : '';
@@ -4428,7 +4428,7 @@ function netSetPlaceNum(key, f, v) {
 }
 function _inp(val, oninput, ph, extra) {
   return (
-    '<input value="' +
+    '<input data-cbsid="BUS004-I41" value="' +
     esc(val == null ? '' : val) +
     '" oninput="' +
     oninput +
@@ -4993,7 +4993,7 @@ function _netNetworkVisibilityBlock() {
   var btn = function (val, label, hint) {
     var on = v === val;
     return (
-      '<div onclick="netSetNetworkVisibility(\'' +
+      '<div data-cbsid="BUS004-C49" onclick="netSetNetworkVisibility(\'' +
       val +
       '\')" style="cursor:pointer;flex:1;min-width:190px;padding:10px 12px;border:1px solid ' +
       (on ? 'var(--blue-2)' : 'var(--line)') +
@@ -5060,12 +5060,12 @@ function _netVisibilityBlock(n) {
         var off = allowed.indexOf(item.k) < 0;
         if (off)
           return (
-            '<button disabled title="Not available while the network is not public" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);border:1px dashed var(--line);background:var(--card);color:var(--on-card);cursor:not-allowed">' +
+            '<button data-cbsid="BUS004-B09" disabled title="Not available while the network is not public" style="padding:7px 13px;border-radius:9px;font-size:var(--fs-2);border:1px dashed var(--line);background:var(--card);color:var(--on-card);cursor:not-allowed">' +
             item.label +
             '</button>'
           );
         return (
-          '<button onclick="netSetExposure(\'' +
+          '<button data-cbsid="BUS004-B10" onclick="netSetExposure(\'' +
           n.key +
           "','" +
           item.k +
@@ -5175,7 +5175,7 @@ function _netNodeView(n) {
         '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-3);font-weight:700;color:var(--blue-2)">' +
         esc(_netRootHandle()) +
         '</span>' +
-        '<button onclick="netSetNetworkName()" style="padding:3px 10px;font-size:var(--fs-1)">' +
+        '<button data-cbsid="BUS004-B11" onclick="netSetNetworkName()" style="padding:3px 10px;font-size:var(--fs-1)">' +
         tx('Change') +
         '</button>' +
         '</div>' +
@@ -5276,7 +5276,7 @@ function _netTabStrip(n) {
         var on = item.k === cur;
         var yes = item.k !== 'general' && (n.holds || []).indexOf(item.k) >= 0;
         return (
-          '<span onclick="netPickTab(\'' +
+          '<span data-cbsid="BUS004-C50" onclick="netPickTab(\'' +
           item.k +
           '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;' +
           'flex:0 0 auto;scroll-snap-align:start;padding:8px 12px;border-radius:9px;font-size:var(--fs-2);white-space:nowrap;' +
@@ -5322,31 +5322,31 @@ function _netGeneralTab(n) {
   return (
     '<div style="padding-top:14px">' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
-    '<button class="pri" onclick="netAddChild(\'' +
+    '<button data-cbsid="BUS004-B12" class="pri" onclick="netAddChild(\'' +
     n.key +
     '\')" style="padding:8px 13px">＋ Add owned node</button>' +
-    '<button onclick="netAddPartner(\'' +
+    '<button data-cbsid="BUS004-B13" onclick="netAddPartner(\'' +
     n.key +
     '\')" style="padding:8px 13px">' +
     tx('🤝 Add partner') +
     '</button>' +
     (isRoot
       ? ''
-      : '<button onclick="netRename(\'' +
+      : '<button data-cbsid="BUS004-B14" onclick="netRename(\'' +
         n.key +
         '\')" style="padding:8px 13px">' +
         tx('✏️ Rename') +
-        '</button><button onclick="netDelete(\'' +
+        '</button><button data-cbsid="BUS004-B15" onclick="netDelete(\'' +
         n.key +
         '\')" style="padding:8px 13px">' +
         tx('🗑️ Remove') +
         '</button>' +
         // The arrangement everyone sees. Applied to the stores at the next Build, like every other change.
         '<span style="margin-inline-start:4px;display:inline-flex;gap:4px">' +
-        '<button onclick="netMove(\'' +
+        '<button data-cbsid="BUS004-B16" onclick="netMove(\'' +
         n.key +
         '\',-1)" title="Move up among its siblings" style="padding:8px 11px">↑</button>' +
-        '<button onclick="netMove(\'' +
+        '<button data-cbsid="BUS004-B17" onclick="netMove(\'' +
         n.key +
         '\',1)" title="Move down among its siblings" style="padding:8px 11px">↓</button></span>') +
     '</div>' +
@@ -5357,7 +5357,7 @@ function _netGeneralTab(n) {
       : '<div style="margin-top:16px"><label style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em">' +
         tx('THEIR USER ID') +
         '</label>' +
-        '<input value="' +
+        '<input data-cbsid="BUS004-I42" value="' +
         esc(n.partner_ref || '') +
         '" oninput="netSetPartnerRef(\'' +
         n.key +
@@ -5372,7 +5372,7 @@ function _netGeneralTab(n) {
         esc(n.built.user_id) +
         '</b> · ' +
         esc(n.built.bridge_id) +
-        '<br><button onclick="netReissueKey(\'' +
+        '<br><button data-cbsid="BUS004-B18" onclick="netReissueKey(\'' +
         esc(n.built.user_id) +
         '\')" style="margin-top:7px;padding:5px 11px;font-size:var(--fs-1)">' +
         tx('Issue a new sign-in code') +
@@ -5385,7 +5385,7 @@ function _netGeneralTab(n) {
         '</label>' +
         // oninput saves without re-rendering (typing must not fight the cursor); onchange fires on blur and
         // redraws, so the line the person just wrote appears under the store in the tree.
-        '<input value="' +
+        '<input data-cbsid="BUS004-I43" value="' +
         esc(n.purpose || '') +
         '" oninput="netSetPurpose(\'' +
         n.key +
@@ -5482,7 +5482,7 @@ function _netOptionsTab(n) {
         '<label style="display:flex;align-items:center;gap:10px;padding:11px 13px;' +
         (blocked ? 'cursor:not-allowed' : 'cursor:pointer') +
         '">' +
-        '<input type="checkbox" ' +
+        '<input data-cbsid="BUS004-I44" type="checkbox" ' +
         (on ? 'checked ' : '') +
         (blocked ? 'disabled ' : '') +
         'data-testid="net-cap-' +
@@ -5509,7 +5509,7 @@ function _netOptionsTab(n) {
         (blocked
           ? '<div style="padding:0 13px 11px;font-size:var(--fs-1);color:var(--warn-2);line-height:1.55">' +
             esc(blocked) +
-            ' <span onclick="netPickTab(' +
+            ' <span data-cbsid="BUS004-C51" onclick="netPickTab(' +
             q +
             'visibility' +
             q +
@@ -5618,7 +5618,7 @@ function _capPanel(n, k) {
       '</b>.' +
       (NET_SOON[k] ? ' ' + esc(NET_SOON[k].q) : '') +
       '</div>' +
-      '<button class="pri" onclick="netCapYes(\'' +
+      '<button data-cbsid="BUS004-B19" class="pri" onclick="netCapYes(\'' +
       n.key +
       "','" +
       k +
@@ -5634,7 +5634,7 @@ function _capPanel(n, k) {
     '<span style="font-size:var(--fs-1);color:var(--grey);flex:1">' +
     esc(_capSummary(n, k)) +
     '</span>' +
-    '<span onclick="netCapNo(\'' +
+    '<span data-cbsid="BUS004-C52" onclick="netCapNo(\'' +
     n.key +
     "','" +
     k +

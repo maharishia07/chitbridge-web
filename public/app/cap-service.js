@@ -163,12 +163,12 @@ function svcPauseRow(p) {
   var answer =
     !p.mine && p.accepted === null && !open
       ? '<div style="display:flex;gap:6px;margin-top:7px">' +
-        '<button class="btn" style="flex:1;font-size:var(--fs-2)" onclick="svcAnswer(\'' +
+        '<button data-cbsid="SCR008-B01" class="btn" style="flex:1;font-size:var(--fs-2)" onclick="svcAnswer(\'' +
         esc(p.pause_id) +
         '\',true)">' +
         tx('Accept this pause') +
         '</button>' +
-        '<button class="btn" style="flex:1;font-size:var(--fs-2);color:var(--disp)" onclick="svcAnswer(\'' +
+        '<button data-cbsid="SCR008-B02" class="btn" style="flex:1;font-size:var(--fs-2);color:var(--disp)" onclick="svcAnswer(\'' +
         esc(p.pause_id) +
         '\',false)">' +
         tx('Reject — the clock kept running') +
@@ -176,7 +176,7 @@ function svcPauseRow(p) {
       : '';
   var endBtn =
     p.mine && open
-      ? '<button class="btn" style="width:100%;margin-top:7px;font-size:var(--fs-2)" onclick="svcEndPause(\'' +
+      ? '<button data-cbsid="SCR008-B03" class="btn" style="width:100%;margin-top:7px;font-size:var(--fs-2)" onclick="svcEndPause(\'' +
         esc(p.pause_id) +
         '\')">' +
         tx('End this pause') +
@@ -237,7 +237,7 @@ function svcPaint() {
         '<button class="btn" style="flex:1" onclick="closeModal()">' +
         tx('Cancel') +
         '</button>' +
-        '<button class="btn pri" style="flex:1" onclick="svcStart()">' +
+        '<button data-cbsid="SCR008-B04" class="btn pri" style="flex:1" onclick="svcStart()">' +
         tx('Start the clock') +
         '</button></div>'
     );
@@ -266,9 +266,9 @@ function svcPaint() {
         ? pauses.map(svcPauseRow).join('')
         : '<div style="font-size:var(--fs-2);color:var(--grey);padding:8px 0">None — the clock has run continuously.</div>') +
       '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' +
-      (c.responded ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcRespond()">' + tx('Mark responded') + '</button>') +
-      (iPaused || c.resolved ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcPauseAsk()">' + tx('Pause the clock') + '</button>') +
-      (c.resolved ? '' : '<button class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">' + tx('Resolve') + '</button>') +
+      (c.responded ? '' : '<button data-cbsid="SCR008-B05" class="btn" style="flex:1;min-width:120px" onclick="svcRespond()">' + tx('Mark responded') + '</button>') +
+      (iPaused || c.resolved ? '' : '<button data-cbsid="SCR008-B06" class="btn" style="flex:1;min-width:120px" onclick="svcPauseAsk()">' + tx('Pause the clock') + '</button>') +
+      (c.resolved ? '' : '<button data-cbsid="SCR008-B07" class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">' + tx('Resolve') + '</button>') +
       '<button class="btn" style="flex:1;min-width:90px" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>'
@@ -280,7 +280,7 @@ function svcPickers(d) {
     return (
       '<label class="fl">' +
       label +
-      '</label><select id="' +
+      '</label><select data-cbsid="SCR008-S01" id="' +
       id +
       '" class="inp" style="width:100%;margin-bottom:10px">' +
       (list || [])
@@ -323,7 +323,7 @@ function svcPauseAsk() {
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">The other party sees this pause and can accept or reject it. If they reject it, both figures are shown and neither is overruled.</div>' +
       '<label class="fl">' +
       tx('Why') +
-      '</label><select id="svc_reason" class="inp" style="width:100%;margin-bottom:10px">' +
+      '</label><select data-cbsid="SCR008-S02" id="svc_reason" class="inp" style="width:100%;margin-bottom:10px">' +
       reasons
         .map(function (x) {
           return '<option value="' + esc(x) + '">' + esc(String(x).replace(/_/g, ' ')) + '</option>';
@@ -333,13 +333,13 @@ function svcPauseAsk() {
       '<label class="fl">' +
       tx('Note (what you are waiting for)') +
       '</label>' +
-      '<input id="svc_note" class="inp" style="width:100%;margin-bottom:10px" placeholder="asked for the serial number on 14 Aug">' +
-      '<label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" id="svc_onother"> This is waiting on <b>them</b></label>' +
+      '<input data-cbsid="SCR008-I01" id="svc_note" class="inp" style="width:100%;margin-bottom:10px" placeholder="asked for the serial number on 14 Aug">' +
+      '<label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><input data-cbsid="SCR008-I02" type="checkbox" id="svc_onother"> This is waiting on <b>them</b></label>' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
       '<button class="btn" style="flex:1" onclick="svcPaint()">' +
       tx('Back') +
       '</button>' +
-      '<button class="btn pri" style="flex:1" onclick="svcDoPause()">' +
+      '<button data-cbsid="SCR008-B08" class="btn pri" style="flex:1" onclick="svcDoPause()">' +
       tx('Pause') +
       '</button></div>'
   );
@@ -383,7 +383,7 @@ function svcResolveAsk() {
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">What was done. Whether they accept it is a separate step — that gap is the record, not a gap in the record.</div>' +
       '<label class="fl">' +
       tx('Resolution') +
-      '</label><select id="svc_code" class="inp" style="width:100%;margin-bottom:10px">' +
+      '</label><select data-cbsid="SCR008-S03" id="svc_code" class="inp" style="width:100%;margin-bottom:10px">' +
       codes
         .map(function (x) {
           return '<option value="' + esc(x) + '">' + esc(String(x).replace(/_/g, ' ')) + '</option>';
@@ -392,12 +392,12 @@ function svcResolveAsk() {
       '</select>' +
       '<label class="fl">' +
       tx('Note') +
-      '</label><input id="svc_rnote" class="inp" style="width:100%">' +
+      '</label><input data-cbsid="SCR008-I03" id="svc_rnote" class="inp" style="width:100%">' +
       '<div style="display:flex;gap:8px;margin-top:14px">' +
       '<button class="btn" style="flex:1" onclick="svcPaint()">' +
       tx('Back') +
       '</button>' +
-      '<button class="btn pri" style="flex:1" onclick="svcDoResolve()">' +
+      '<button data-cbsid="SCR008-B09" class="btn pri" style="flex:1" onclick="svcDoResolve()">' +
       tx('Resolve') +
       '</button></div>'
   );
