@@ -172,14 +172,6 @@
   "warnings": 0,
   "prettierOk": false
  },
- "public/app/cap-folders-rules.js": {
-  "warnings": 0,
-  "prettierOk": false
- },
- "public/app/cap-folders-groupsum.js": {
-  "warnings": 0,
-  "prettierOk": false
- },
  "public/app/cap-fx.js": {
   "warnings": 0,
   "prettierOk": false

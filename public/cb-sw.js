@@ -14,7 +14,7 @@
  * FLOW      install -> network-first fetch -> cache answers only when the network fails; non-GET never touched
  * CARD      28-platform-and-operations/offline
  */
-const CB_SW_VERSION = 'v4';
+const CB_SW_VERSION = 'v3';
 const SHELL = 'cb-shell-' + CB_SW_VERSION; // same-origin app shell + static JS
 const EXT = 'cb-ext-' + CB_SW_VERSION; // cross-origin static (fonts)
 const KEEP = [SHELL, EXT];
@@ -29,8 +29,6 @@ const PRECACHE = [
   '/app/cap-connector.js',
   '/app/cap-workforce.js',
   '/app/cap-folders.js',
-  '/app/cap-folders-rules.js',
-  '/app/cap-folders-groupsum.js',
   '/app/cap-readiness.js',
   '/app/cap-legend.js',
   '/cb-offline.js',
