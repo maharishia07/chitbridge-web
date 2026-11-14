@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (65)
+## Capabilities (66)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -24,6 +24,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-assist.js` | — |  |
 | `cap-attach.js` | — |  |
 | `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ), after its NEW |
+| `cap-bank-store.js` | — | cap-bank-store.js — the SERVER STORE of the Bank view's marks (FIN-70, web half; api: POST /bank/marks, POST /bank/statements, GET /bank/log) |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
 | `cap-catalogue.js` | eager | THE CATALOGUE'S PRIMITIVES, ONE COPY, and the catalogue as a small app (T3-CATALOGUE, 2026-10-14) |
@@ -154,4 +155,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*127 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*128 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
