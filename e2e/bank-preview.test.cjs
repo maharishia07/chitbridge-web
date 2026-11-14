@@ -107,24 +107,20 @@ const make = (over) => {
   assert.strictEqual(noAsker.seen.args.books.statement.currency, null);
   ok('B5-05: with no statement currency (none said, none in the file) nothing is defaulted to the account\'s: the engine is handed none and refuses');
 
-  /* FIN-116 / FIN-117: what the host cannot post, and a tax kind asked of a registered shop, are held on the line in words; the demo (no options) does not move */
+  /* FIN-116 / FIN-117: what the host cannot post, and a tax kind asked of a registered shop, ride on the PROPOSAL as the engine's own `needs` (so its counts and totals leave the line out); the demo (no options) does not move */
   const plain = make();
   plain.ctl.load('ok', 'f.csv');
-  assert.strictEqual(plain.ctl.view().items[0].ready, true);
+  assert.strictEqual(plain.seen.args.proposals[0].needs, undefined);
   const registered = make({ taxRegistered: true });
   registered.ctl.load('ok', 'f.csv');
-  const taxed0 = registered.ctl.view().items[0];
-  assert.strictEqual(taxed0.ready, false);
-  assert.strictEqual(taxed0.needs, 'tax_kind');
-  assert.ok(taxed0.blockers.indexOf('tax_kind') >= 0);
+  assert.strictEqual(registered.seen.args.proposals[0].needs, 'tax_kind');
   const unknownReg = make({ taxRegistered: null });
   unknownReg.ctl.load('ok', 'f.csv');
-  assert.strictEqual(unknownReg.ctl.view().items[0].ready, true, 'registration unknown asks nothing and claims nothing');
+  assert.strictEqual(unknownReg.seen.args.proposals[0].needs, undefined, 'registration unknown asks nothing and claims nothing');
   const onlyContra = make({ postable: ['contra'] });
   onlyContra.ctl.load('ok', 'f.csv');
-  assert.ok(onlyContra.ctl.view().items[0].blockers.indexOf('not_here') >= 0);
-  assert.strictEqual(onlyContra.ctl.view().items[0].ready, false);
-  ok('FIN-116/117: a registered shop is ASKED the tax kind (held, never defaulted); unknown registration asks nothing; a kind the host cannot post says where it is recorded; the demo is unchanged');
+  assert.strictEqual(onlyContra.seen.args.proposals[0].needs, 'not_here');
+  ok('FIN-116/117: a registered shop is ASKED the tax kind (needs tax_kind, never defaulted); unknown registration asks nothing; a kind the host cannot post says where it is recorded; the demo is unchanged');
 
   /* B5-06: every skipped row reaches the engine's statement, so "tied" can refuse */
   const skip = make();
