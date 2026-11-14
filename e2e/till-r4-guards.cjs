@@ -30,9 +30,10 @@ async function tillPage(browser, WEB, init) {
   if (init) await p.addInitScript(init);
   await p.goto(WEB + '/till.html');
   await p.waitForFunction(() => typeof modOpen === 'function' && typeof finish === 'function', null, { timeout: 30000 });
-  await p.evaluate((items) => {
+  await p.evaluate(async (items) => {
     window.S = { shop: { country: 'IN', name: 'Mayur Bhavan', currency: 'INR', gstin: '33ABCDE1234F1Z5', reg_type: 'regular' }, items: items, offers: [], at: new Date().toISOString() };
-    CloudHost.key = 'demo-key'; ls.set(tillGivenKey(), 'C1'); window.WHO = { id: 'c1', name: 'Clerk', kind: 'coassist' };
+    CloudHost.key = 'demo-key'; await DB.reopen();   /* the key names the database: reopen it as the page does when the shop is set */
+    ls.set(tillGivenKey(), 'C1'); window.WHO = { id: 'c1', name: 'Clerk', kind: 'coassist' };
     window.SAVED = [];
     window.HOST = { mode: 'cloud', key: 'demo-key',
       bill: async function (body) {
@@ -121,7 +122,7 @@ const saved = (p) => p.evaluate(() => window.SAVED.length);
     const blip = await p.evaluate(async () => {
       var real = IDBDatabase.prototype.transaction, left = 1;
       IDBDatabase.prototype.transaction = function () { if (left-- > 0) throw new DOMException('closing', 'InvalidStateError'); return real.apply(this, arguments); };
-      try { var dbg = JSON.stringify(await DB.get('series')); left = 1; var dbg2 = JSON.stringify(await DB.get('series')); left = 1; var n = dbg.slice(0,60) + ' // ' + dbg2.slice(0,60) + ' // ' + await nextNumber(); return n + ' | mem ' + MEM.on + ' | err ' + JSON.stringify(DB.lastErr()) + ' | seen ' + JSON.stringify(MEM.get('mark','idb')); } catch (e) { return 'threw ' + e.message; } finally { IDBDatabase.prototype.transaction = real; }
+      try { return await nextNumber(); } catch (e) { return 'threw ' + e.message; } finally { IDBDatabase.prototype.transaction = real; }
     });
     say('BAD  one refused call → the next number is 0004, never 0001', /0004$/.test(String(blip)), String(blip));
 
