@@ -67,7 +67,8 @@ function closeOnly(code, sources) {
     const names = footer[2].match(/name:\s*'(\w+)'/g) || [];
     return names.length > 0 && names.every((item) => /'(cancel|close)'/.test(item));
   }
-  return /<button/.test(footer[1]) && !/\bpri\b|primary/.test(footer[1]);
+  const buttons = footer[1].match(/<button[^>]*>/g) || [];
+  return buttons.length > 0 && buttons.every((tag) => /closeModal\(/.test(tag) && !/\bpri\b/.test(tag)); /* every button is the library close; a lone danger or other action is a main action */
 }
 function webSources() {
   return ['public', 'public/app'].flatMap((dir) => fs.readdirSync(path.join(WEB_DIR, dir)).filter((name) => /\.(js|html)$/.test(name)).map((name) => read(dir + '/' + name)));
@@ -81,7 +82,7 @@ function count() {
   return { declared: declared.length, of: wanted.length, nav: { declared: declared.filter((code) => code.startsWith('HOM001')).length, of: wanted.filter((code) => code.startsWith('HOM001')).length }, popups: { declared: declared.filter((code) => code.startsWith('POP')).length, of: wanted.filter((code) => code.startsWith('POP')).length, na: popupList.na || [], source: popupList.source }, missing: wanted.filter((code) => !declared.includes(code)) };
 }
 
-module.exports = { register, areas, cards, popups, customerPaths, count, KEY_FORM };
+module.exports = { closeOnly, register, areas, cards, popups, customerPaths, count, KEY_FORM };
 if (require.main === module) {
   const result = count();
   if (process.argv.includes('--json')) console.log(JSON.stringify(result, null, 1));

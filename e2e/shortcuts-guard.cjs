@@ -69,6 +69,11 @@ const bad = {
   'a popup key that is also a nav key': { POP001: 'Alt+Shift+H', 'HOM001-K01#home': 'Alt+Shift+H' }
 };
 Object.keys(bad).forEach((name) => ok('fixture ' + name + ' fails the guard', judge(bad[name]).length > 0));
+const dialogOf = (footer) => "x pop: 'POP900',\n  footerHtml:" + footer + "\n  });";
+ok('closeOnly: a lone Cancel footer is n/a', counter.closeOnly('POP900', [dialogOf("'<button onclick=\"closeModal()\">Cancel</button>'")]));
+ok('closeOnly: a lone danger action is NOT n/a', !counter.closeOnly('POP900', [dialogOf("'<button class=\"danger\" onclick=\"doRemove()\">Remove</button>'")]));
+ok('closeOnly: Cancel plus a plain action is NOT n/a', !counter.closeOnly('POP900', [dialogOf("'<button onclick=\"closeModal()\">Cancel</button><button onclick=\"save()\">Save</button>'")]));
+ok('closeOnly: an unreadable opener stays in', !counter.closeOnly('POP900', ['nothing here']));
 ok('a clean fixture passes (the rules are not blanket)', judge({ 'HOM001-B01#a': 'g a', 'HOM001-K01#home': 'Alt+Shift+H', POP001: 'Alt+Shift+D' }).length === 0);
 
 console.log('\n== the rows name real things ==');
