@@ -14,7 +14,7 @@ of file each thing is; this says what already does the job.
 | 54 | `toast` | `accounts-shell.js` |  |
 | 54 | `rows` | `cap-settings.js` |  |
 | 54 | `again` | `signin-ui.js` |  |
-| 50 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
+| 51 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 48 | `read` | `cap-print.js` |  |
 | 45 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 42 | `host` | `chit-sheet.js` |  |
