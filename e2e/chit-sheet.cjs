@@ -268,13 +268,12 @@ async function route(S, r) {
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
-    /* the WINDOW does not move either: make the page itself scrollable, open and close the sheet, and it is where it was (the app shell scrolls inside, but a phone page scrolls as a whole) */
-    await p.evaluate(() => { document.documentElement.style.overflow = 'auto'; document.body.style.minHeight = '3000px'; window.scrollTo(0, 150); });
-    const winBefore = await p.evaluate(() => window.scrollY);
+    /* the WINDOW does not move either: opening and closing the sheet never asks the page to scroll (a spy on window.scrollTo; the app shell scrolls inside, so the position itself cannot show it) */
+    await p.evaluate(() => { window.__scrolls = []; window.scrollTo = function () { window.__scrolls.push([].slice.call(arguments)); }; });
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
-    ok(winBefore > 0 && await p.evaluate(() => window.scrollY) === winBefore, 'the page behind the sheet does not move when the sheet opens and closes (window scroll ' + winBefore + ')');
-    await ctx.close();
+    const scrolls = await p.evaluate(() => window.__scrolls.length);
+    ok(!(await sheetOpen(p)) && scrolls === 0, 'the page behind the sheet is never scrolled when the sheet opens and closes (window.scrollTo called ' + scrolls + ' times)');
   }
 
   /* ── 2 · a received supplier bill: Accept · Dispute · Goods in · Open page ─────────────────────── */
