@@ -111,6 +111,7 @@ of file each thing is; this says what already does the job.
 | 9 | `bkCur` | `cap-books.js` |  |
 | 9 | `steps` | `cap-quotes.js` | Returns { sent(), waiting(), answered(), failed(words) }; each paints into host (an element) and says the stag |
 | 9 | `waiting` | `cap-settings.js` |  |
+| 9 | `total` | `cart.js` |  |
 | 9 | `readiness` | `lab-kit.js` | the grouped readiness block: |
 | 9 | `columns` | `list-ctl.js` |  |
 | 9 | `opened` | `sheet-keys.js` | the host's content went from empty to a sheet: |
@@ -125,7 +126,6 @@ of file each thing is; this says what already does the job.
 | 8 | `onClick` | `cap-print.js` | a ↑ / ↓ press: |
 | 8 | `plan` | `cap-settings.js` |  |
 | 8 | `ready` | `cap-suppliers.js` | readiness in three answers + the server's own sentence when it has one |
-| 8 | `total` | `cart.js` |  |
 | 8 | `part` | `country-compare.js` | value); flags: |
 | 8 | `refuses` | `device-id.js` | refuses(url, init, request) → true when this api write must not go: |
 | 8 | `taxIdWord` | `helpers.js` | the pack's own word for a tax id: |
