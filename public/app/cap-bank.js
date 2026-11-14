@@ -264,22 +264,20 @@ async function bankPick(inp) {
   if (!BKB.stmtCur) return bankCurrencyAsk();
   await bankCurrencyRun();
 }
-const BKB_CURRENCIES = ['AUD', 'USD', 'NZD', 'GBP', 'EUR', 'INR', 'AED', 'SGD', 'CAD'];
 /** B5-05: the file does not say its currency, so ask once; the statement is not read against the books until the person answers */
 function bankCurrencyAsk() {
   bkbEl('bk_res').innerHTML = '';
   bkbEl('bk_out').innerHTML =
     '<div class="pe-note" data-testid="bank-currency-ask">' +
     bkbE(tx('Which currency is this statement in? Nothing is assumed.')) +
-    ' <select class="inp" id="bk_cur" data-testid="bank-currency" data-cbsid="BKS014-S01">' +
-    ['<option value="">' + bkbE(tx('Choose')) + '</option>'].concat(BKB_CURRENCIES.map((code) => '<option>' + code + '</option>')).join('') +
-    '</select> <button data-cbsid="BKS014-B09" type="button" class="act" data-testid="bank-currency-go" onclick="bankCurrencyUse()">' +
+    ' <input class="inp" id="bk_cur" type="text" maxlength="3" size="4" autocomplete="off" data-testid="bank-currency" data-cbsid="BKS014-S01" aria-label="' + bkbE(tx('Statement currency, three capital letters')) + '"> <button data-cbsid="BKS014-B09" type="button" class="act" data-testid="bank-currency-go" onclick="bankCurrencyUse()">' +
     bkbE(tx('Read this statement')) +
     '</button></div>';
 }
 function bankCurrencyUse() {
-  const chosen = (bkbEl('bk_cur') || {}).value;
+  const chosen = String((bkbEl('bk_cur') || {}).value || '').trim().toUpperCase();
   if (!chosen) return toast(tx('Say which currency the statement is in first.'));
+  if (typeof CBMoney !== 'undefined' && CBMoney.isIsoCurrency && !CBMoney.isIsoCurrency(chosen)) return toast(tx('That is not a currency code. Use three capital letters.'));
   BKB.stmtCur = chosen;
   bankCurrencyRun().catch(() => {});
 }
