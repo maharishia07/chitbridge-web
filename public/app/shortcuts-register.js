@@ -1,6 +1,6 @@
 /**
  * public/app/shortcuts-register.js: THE SHORTCUT REGISTER (MNT-63). One row per element code that has a keyboard shortcut: code -> key.
- * ID        HOM001 (rail and cards) · POP095-POP106 (popup main actions) · POP126 (the shortcut sheet)
+ * ID        HOM001 (rail and cards) · POP095-POP106 (popup main actions) · POP144 (the shortcut sheet)
  * OWNER     cb-ux-locale
  * OWNS      the key of every nav entry and popup main action; nothing else holds a key (the guard e2e/shortcuts-guard.cjs refuses a literal key anywhere else).
  * CALLED BY public/app/shell.js (loads it beside the frame, then shortcuts.js); e2e/shortcuts-guard.cjs and tools/shortcuts-count.cjs read it by name.
@@ -18,7 +18,7 @@
 (function (root) {
   root.CB_SHORTCUT_REGISTER = {
     setting: 'keys',
-    sheet: { code: 'POP126', key: '?' },
+    sheet: { code: 'POP144', key: '?' },
     rows: {
       /* the rail: seven areas, Alt+Shift+letter */
       'HOM001-K01#home': 'Alt+Shift+H',
@@ -78,7 +78,7 @@
       POP104: 'Alt+Shift+A',
       POP105: 'Alt+Shift+A',
       POP106: 'Alt+Shift+A',
-      POP126: 'Alt+Shift+A'
+      POP144: 'Alt+Shift+A'
     }
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -55,7 +55,7 @@ async function sheetProof(ctx, web, errors) {
   const text = await page.textContent('[data-testid="shortcut-sheet"]');
   ok(/Alt\+Shift\+R/.test(text) && /g, t/.test(text), 'the ? sheet lists the area chords and the g keys from the register');
   const chip = await page.locator('dialog[open] [data-testid="popup-code"]').first().textContent().catch(() => '');
-  ok(chip.trim() === 'POP126', 'the sheet wears its own popup code POP126');
+  ok(chip.trim() === 'POP144', 'the sheet wears its own popup code POP144');
   await page.keyboard.press('Alt+Shift+A');
   await page.waitForSelector('[data-testid="shortcut-sheet"]', { state: 'detached', timeout: 3000 }).then(() => ok(true, 'the popup key closes the sheet (its main action is Close)'), () => ok(false, 'the popup key closes the sheet'));
   await page.close();
