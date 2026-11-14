@@ -20,8 +20,8 @@ of file each thing is; this says what already does the job.
 | 88 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 82 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 82 | `next` | `dayopen.js` | the next thing to do — |
+| 78 | `list` | `cap-settings.js` |  |
 | 78 | `catalogue` | `books-manual.js` | GET /events → the grid. |
-| 77 | `list` | `cap-settings.js` |  |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 74 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 73 | `entry` | `books-store.js` |  |
@@ -50,8 +50,8 @@ of file each thing is; this says what already does the job.
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
+| 51 | `read` | `cap-print.js` |  |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
-| 50 | `read` | `cap-print.js` |  |
 | 48 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
@@ -65,8 +65,8 @@ of file each thing is; this says what already does the job.
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
+| 42 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 42 | `gate` | `country-setup.js` | gate(h, entity): |
-| 41 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 41 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 41 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 40 | `page` | `cap-catalogue.js` |  |
