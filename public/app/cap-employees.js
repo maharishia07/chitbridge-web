@@ -13,9 +13,14 @@
  * host what happened: window.parent.postMessage({ cb: 'employees', event: 'added' | 'changed' | 'close', person? }, location.origin).
  *
  *   CBEmployees.mount(el, { token, base, embed, view, onEnded }) → { reload }
- 
- * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in
- * CALLED BY public/app/cap-finance.js, public/app/their-bill.js, public/employees.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ *
+ * OWNS       the People list (mountList · cols · actRow), the person sheet (openPerson · accessPanel · emailPanel · coverPanel · resetPin · switchIt) and the Add person
+ *            sheet (openAdd · createPerson · added), plus the on-duty view; no rule of who may do what (the server's may/why answers).
+ * CALLED BY public/employees.html (CBEmployees.mount, a <script> tag) · public/till.html (+ Add a person, through app/embed-host.js: employees.html?embed=1&view=add in a dialog).
+ * FLOW       employees.html → CBEmployees.mount(el, o) → start → load (GET /api/people → may/why) → mountList (CBList) → a row → openPerson(id) → a panel → CBAction write
+ *            → changed → reload; view=add → openAdd → createPerson → added; embed=1 tells the host page by postMessage.
+ * IDS        every control carries its register code (data-cbsid, UX-137): EMP001, the People screen; the row action builder actRow takes its code from each call.
+ * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -63,7 +68,7 @@
     if (!E.o.embed || !root.parent || root.parent === root) return;
     try {
       root.parent.postMessage({ cb: 'employees', event: event, person: person || null }, root.location.origin);
-    } catch (_) {}
+    } catch (_) { /* no host window to tell: standalone page */ }
   }
 
   function say(msg) {
@@ -255,7 +260,7 @@
     if (E.list) {
       try {
         E.list.destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset('employees');
     E.list = root.CBList.mount(host, {
@@ -681,10 +686,10 @@
       '<h2>' +
         esc(T('Add a person')) +
         '</h2><div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
-        '<div class="emp-form">' +
+        '<form class="emp-form" novalidate onsubmit="return false">' +
         '<label for="emp_n">' +
         esc(T('Name')) +
-        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off" required data-required-msg="' + esc(T('Type their name.')) + '">' +
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
@@ -703,9 +708,9 @@
         '<label for="emp_e">' +
         esc(T('E-mail')) +
         '</label><input data-cbsid="EMP001-I07" class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
-        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go">' +
+        '<button data-cbsid="EMP001-B12" type="submit" class="act" id="emp_add_go" data-testid="emp-add-go" data-sheet-save>' +
         esc(T('Add')) +
-        '</button></div>'
+        '</button></form>'
     );
     var typedKey = false,
       tm = null;

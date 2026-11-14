@@ -67,6 +67,12 @@ function bkMountAttribute(component) {
   var screen = chip ? chip.getAttribute('data-cbsid') : '';
   return /^[A-Z]{3}\d{3}$/.test(screen || '') ? ' data-cbmount="' + screen + '-U1' + String(component).slice(-2) + '"' : '';
 }
+/** the mount code of a popup this file opens through ui.dialog: the host screen's code (the screen chip) + -U2<n>; BKS001 (Accounts) when no chip is painted yet. n: 1 day bills, 2 party edit, 3 pay, 4 remind */
+function bkDialogMount(n) {
+  var chip = document.querySelector('[data-testid="screen-id"][data-cbsid]');
+  var screen = chip ? chip.getAttribute('data-cbsid') : '';
+  return (/^[A-Z]{3}\d{3}$/.test(screen || '') ? screen : 'BKS001') + '-U2' + n;
+}
 /* ⭐ M64: WIDENED into CBAction (app/accounts-shell.js) — the guard every page shares; bkOnce keeps its name for its callers */
 function bkOnce(key, btn, fn) {
   return CBAction.once(key, btn, fn);
@@ -93,6 +99,13 @@ function bkQuiet(where, failure, fallback) {
   if (typeof cbQuiet === 'function') cbQuiet('books:' + where, failure);
   return fallback;
 }
+/* the Ledgers head (#lg_out): its laptop and phone rules, apart so bkCss stays within its size */
+var LG_HEAD_CSS = [
+    /* the Ledgers head on a laptop pane (#lg_out: list-ctl writes .cbl as .cbl:not(#_), id weight, so these name the id too): the title row and the tools row share ONE row (the tools sit at the right, folded to search · Filters · View · count), the column header is the second line */,
+    '@container lt (min-width:621px){#bk_lt #lg_out{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr)}#bk_lt #lg_out > *{grid-column:1/-1}#bk_lt #lg_out > .cbl-title{grid-column:1;grid-row:1}#bk_lt #lg_out > .cbl-tools{grid-column:2;grid-row:1;flex-wrap:nowrap;align-items:center;border-bottom:1px solid var(--line-soft,var(--line));padding-inline:0 12px;gap:6px}#bk_lt #lg_out > .cbl-title{padding-inline:16px;gap:4px 8px;flex-wrap:nowrap}#bk_lt #lg_out > .cbl-title .cbl-chip{flex:0 1 auto}#bk_lt #lg_out > .cbl-tools .cbl-search{flex:0 0 120px;width:120px}#bk_lt #lg_out .cbl-hc{padding-block:2px}#bk_lt #lg_out > .cbl-list{grid-row:2}}',
+    /* a phone: search · Filters · View · count on ONE line (the party ledger's head was 36% of the window) */,
+    '@container lt (max-width:620px){#bk_lt #lg_out .cbl-tools{flex-wrap:nowrap}#bk_lt #lg_out .cbl-tools .cbl-search{flex:1 1 60px;min-width:0}#bk_lt #lg_out .cbl-tools .cbl-count{flex:0 0 auto}/* the figures chip is text, not a button: it needs no 44 px tap height (it was a third row of the head) */#bk_lt #lg_out .cbl-title > span.cbl-chip{min-height:0}}'
+].join('\n');
 /* the tables' look, once, the way cap-categories does it (cbcatCss) */
 function bkCss() {
   if (typeof document === 'undefined' || document.getElementById('bk_css')) return;
@@ -166,7 +179,7 @@ function bkCss() {
     /* the opened entry: its journal never scrolls sideways (a long ledger name wraps) and its quiet facts line */
     '#bk_lt .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}#bk_lt .cbl-next{overflow-x:hidden}',
     '#bk_lt .lg-facts{display:flex;flex-wrap:wrap;gap:2px 0;color:var(--grey);font-size:var(--fs-1);margin:8px 0 0}',
-    '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}',
+    '#bk_lt .lg-facts > span:not(:last-child)::after{content:"·";margin:0 7px;opacity:.7}', LG_HEAD_CSS,
     /* phone: the tree is page one, the ledger page two (list → detail → back); no squeezed side panel */
     '@container lt (max-width:620px){#bk_lt .lt-tree{width:100%;border-top:0}#bk_lt .lt-rz,#bk_lt [data-lt="fold"]{display:none}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt .tn{min-height:44px;padding-block:10px}#bk_lt .tn.band{min-height:40px}#bk_lt .lt-tools{padding:8px 16px}#bk_lt .cbl-nrow > span:not(:first-child){width:auto!important;min-width:76px;padding-inline-start:10px;white-space:nowrap}',
     /* the ledger page's title row on a phone: ‹ title … bell · home · avatar on line one (R06: the bell takes ~36 px of it); the period, the figures and the notice on line two (the slot dissolves so each of its buttons takes its own place) */
@@ -553,29 +566,22 @@ function bkDayBillsLink(s, tid) {
 }
 /* open the popover listing the bills one day-book entry settled */
 function bkDayBillsOpen(tid) {
-  var bills = (BK.dayBills || {})[tid] || [];
-  /* M132b: the shared popover look (the cb-design tokens: card ground, line, radius, readable size) - the sheet host (accounts.html) carries no .mhd/.mbody/.mfoot of its own */
-  var pad = 'padding:14px 18px;font-size:var(--fs-3,15px);color:var(--ink,#2a2418)';
-  modal(
-    '<div style="min-width:min(300px,86vw);background:var(--card,#fffdf8);border-radius:12px">' +
-      '<div data-testid="daybills_title" style="' +
-      pad +
-      ';font-weight:700;border-bottom:1px solid var(--line,#e3dccb)">' +
-      esc(txn('{count} bill', '{count} bills', bills.length)) +
-      '</div>' +
-      '<div data-testid="daybills_list" style="' +
-      pad +
-      ';max-height:54vh;overflow-y:auto">' +
+  var bills = (BK.dayBills || {})[tid] || [];  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  ui.dialog({
+    mount: bkDialogMount(1),
+    pop: 'POP093',
+    titleText: txn('{count} bill', '{count} bills', bills.length),
+    titleTestid: 'daybills_title',
+    body:
+      '<div data-testid="daybills_list" style="max-height:54vh;overflow-y:auto">' +
       bills
         .map(function (item, index) {
           return '<div style="padding:6px 0">' + bkBillPart({ ref: item.ref, chit_id: item.chit_id }, 'daybills-' + index) + '</div>';
         })
         .join('') +
-      '</div>' +
-      '<div style="padding:12px 18px;border-top:1px solid var(--line,#e3dccb);display:flex;justify-content:flex-end"><button data-cbsid="CMP005-B01"' + bkMountAttribute('CMP005') + ' data-testid="daybills_close" onclick="closeModal()" style="min-height:44px;padding:8px 18px;border:1px solid var(--line,#e3dccb);border-radius:9px;background:var(--card,#fffdf8);color:var(--ink,#2a2418);font-size:var(--fs-3,15px);font-weight:600;cursor:pointer">' +
-      esc(tx('Close')) +
-      '</button></div></div>'
-  );
+      '</div>',
+    actions: [{ name: 'close', options: { mount: bkDialogMount(1), testid: 'daybills_close' } }]
+  });
 }
 /** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
 function bkShortRef(r) {
@@ -956,13 +962,11 @@ function partyEditOpen(kind, partyId) {
       tx('E-mail') +
       inp('pe_email', r.contacts.email, '', 'inputmode="email"') +
       '</label></div>'
-    : '';
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(tx('Party')) +
-      ' · ' +
-      esc(r.display_name || r.nickname || '') +
-      '</div></div><div class="mbody" style="display:flex;flex-direction:column;gap:8px">' +
+    : '';  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  ui.dialog({
+    mount: bkDialogMount(2), pop: 'POP089', bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    titleText: tx('Party') + ' · ' + (r.display_name || r.nickname || ''),
+    body:
       '<label>' +
       tx('Legal name') +
       inp('pe_legal', r.legal_name, tx('as on their tax registration')) +
@@ -1000,7 +1004,9 @@ function partyEditOpen(kind, partyId) {
       (typeof packSplitsByState !== 'function' || packSplitsByState()
         ? '<label>' + tx('State code') + inp('pe_state', r.state_code, '33') + '</label>'
         : '') /* CX0: a state only where the tax turns on it (India) */ +
-      '</div><div class="mfoot"><button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
+      '',
+    footerHtml:
+      '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="CMP001-B01"' + bkMountAttribute('CMP001') + ' class="pri" data-testid="pe_save" onclick="partyEditSave(\'' +
       kind +
@@ -1008,8 +1014,8 @@ function partyEditOpen(kind, partyId) {
       esc(partyId) +
       '\')">' +
       tx('Save') +
-      '</button></div>'
-  );
+      '</button>'
+  });
   partyDupCheck(kind, partyId);
 }
 /** the sheet's tax-id rows → [{scheme, value}], blanks dropped */
@@ -1149,17 +1155,16 @@ function payOpen(kind, partyId, pre) {
     preview: null,
     offer: offer,
     after: o.after || null
-  }; /* one ref per opened form */
-  modal(
-    '<div class="mhd"><div class="t" id="pay_title" data-testid="pay_title">' +
-      esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) +
-      ' · ' +
-      esc(PAY.name) +
-      '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">' +
+  }; /* one ref per opened form */  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  ui.dialog({
+    mount: bkDialogMount(3), pop: 'POP090', titleId: 'pay_title', titleTestid: 'pay_title', bodyId: 'pay_body',
+    titleText: (kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + PAY.name,
+    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    body:
       '<label>' +
       tx('Amount') +
       '' +
-      bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null }) +
+      bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null, extra: 'required data-required-msg="' + esc(tx('Type the amount')) + '"' }) +
       '</label>' +
       (offer ? '<div data-testid="pay_offer" style="font-size:var(--fs-1);color:var(--grey)">' + esc(offer.words) + '</div>' : '') +
       '<label>' +
@@ -1190,14 +1195,14 @@ function payOpen(kind, partyId, pre) {
       '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div>' +
       '<div id="pay_bills" data-testid="pay_bills"></div>' +
       '<div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>' +
-      '</div><div class="mfoot" id="pay_foot"><button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
+      '',
+    footId: 'pay_foot', footerHtml: '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
+      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" data-sheet-save onclick="payRecord()">' +
       tx('Record') +
       '</button>' +
-      (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>') +
-      '</div>'
-  );
+      (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>')
+  });
   payPaint();
   if (pre) payPrefill(pre);
   else if (offer) payPreviewSoon(0); /* F4: the amount came filled in: read its bills now */
@@ -3680,7 +3685,7 @@ function bkLgMount(el) {
   };
   var dflt = kind === 'control' ? ['date', 'party', 'what'] : kind === 'party' ? ['date', 'what', 'bal'] : ['date', 'what', 'bal'];
   return CBList.mount(el, {
-    key: 'ledger-' + kind,
+    key: 'ledger-' + kind, foldHead: true /* the phone's head fold at every width: the title and the tools share a row on a laptop (head within 20% / 30%) */,
     t: tx,
     view: 'grid',
     fill: false /* the pane's own layout (flex) sizes the list — it leaves room for the kural footer, which fit() (window height minus the top) would not */,
@@ -4715,20 +4720,19 @@ function bkRemindOpen(t) {
       amt: bkMoney(t.bill.due_minor, t.currency),
       date: bkDate(t.bill.due_date)
     }
-  );
-  modal(
-    '<div class="mhd"><div class="t" data-testid="remind_title">' +
-      esc(tx('Remind')) +
-      ' · ' +
-      esc(name) +
-      '</div></div><div class="mbody">' +
+  );  /* where-used: out-of-scope the mount is bkDialogMount(n): the host screen's own code plus -U2n, so it cannot be one literal */
+  ui.dialog({
+    mount: bkDialogMount(4),
+    pop: 'POP094',
+    titleText: tx('Remind') + ' · ' + name,
+    titleTestid: 'remind_title',
+    body:
       '<div data-testid="remind_for" style="font-size:var(--fs-1);margin-bottom:8px">' +
       esc((t.bill.bill_no || '') + ' · ' + bkMoney(t.bill.due_minor, t.currency) + ' · ' + bkDate(t.bill.due_date)) +
       '</div>' +
-      '<div id="remind_thread" data-testid="remind_thread"></div></div><div class="mfoot"><button data-cbsid="CMP005-B01"' + bkMountAttribute('CMP005') + ' onclick="closeModal()">' +
-      tx('Close') +
-      '</button></div>'
-  );
+      '<div id="remind_thread" data-testid="remind_thread"></div>',
+    footerHtml: '<button data-cbsid="CMP005-B01"' + bkMountAttribute('CMP005') + ' onclick="closeModal()">' + tx('Close') + '</button>'
+  });
   CBThread.mount('remind_thread', {
     chit_id: t.chit_id,
     line_id: t.line_id || undefined,

@@ -1,6 +1,11 @@
 /**
  * network-app.js — P2: NETWORK AS A SMALL APP (member view + Design tab). Athi, 2026-10-10: *"reuse Network lab … very easy."*
  *
+ * OWNS      the Network small app: the three tabs (My network, Offers, Design), the member's In / Out choice on a brand's offer, and the design dry-run check; it computes nothing
+ * CALLED BY public/network.html only (script tag network.html:83, CBNetworkApp.mount at network.html:118)
+ * FLOW      mount(el, o) ──▶ load() reads GET /api/network-offers and the stores ──▶ paint() draws the tabs ──▶ paintMine | paintOffers | paintDesign ──▶ a choice or a check goes to the server, then reload()
+ * CARD      04-network/network-app-member-view
+ *
  * Three tabs on one page: MY NETWORK (the networks this store sits in, who its parent is, the stores it can see — a CBList) · OFFERS
  * (what each brand released to it, and whether it takes them — a CBList; In / Out are CBAction writes) · DESIGN (the builder's canvas,
  * shown for every login and greyed with the SERVER's sentence for one that may not design: GET /api/network-offers → may_design).
@@ -12,8 +17,6 @@
  * (cap-network.js) — the Design tab here READS the draft and CHECKS it; "Open the builder" goes there to change it.
  *
  *   CBNetworkApp.mount(el, { token, base, onEnded }) → { reload }
- 
- * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-admin.js, public/app/cap-adopt.js, public/app/cap-assist.js (+59 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -105,7 +108,7 @@
             .map(function (item) {
               var no = item[0] === 'design' && N.may.ok === false;
               return (
-                '<button type="button" role="tab" class="nw-tab' +
+                '<button data-cbsid="NET001-B01" type="button" role="tab" class="nw-tab' +
                 (N.tab === item[0] ? ' on' : '') +
                 (no ? ' no' : '') +
                 '" data-tab="' +
@@ -139,7 +142,7 @@
   }
   function sheet(html) {
     var node = $('nw_sheet');
-    node.innerHTML = '<button type="button" class="mx" data-testid="nw-close" aria-label="' + esc(T('Close')) + '">✕</button>' + html;
+    node.innerHTML = '<button data-cbsid="NET001-B02" type="button" class="mx" data-testid="nw-close" aria-label="' + esc(T('Close')) + '">✕</button>' + html;
     node.querySelector('.mx').onclick = closeSheet;
     if (!node.open) node.showModal();
   }
@@ -147,14 +150,14 @@
     var node = $('nw_sheet');
     try {
       node.close();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     node.innerHTML = '';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {
       try {
         N.lists[cfg.key].destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset(cfg.key);
     cfg.t = T;
@@ -384,10 +387,10 @@
         (o.live ? '' : ' · ' + esc(T('not live'))) +
         '</div>' +
         '<div class="nw-out" id="nw_out" data-testid="nw-out"></div><div class="nw-acts">' +
-        '<button type="button" class="act" id="nw_in" data-testid="nw-offer-in">' +
+        '<button data-cbsid="NET002-B01" type="button" class="act" id="nw_in" data-testid="nw-offer-in">' +
         esc(T('Use this offer')) +
         '</button>' +
-        '<button type="button" class="act quiet" id="nw_outb" data-testid="nw-offer-out">' +
+        '<button data-cbsid="NET002-B02" type="button" class="act quiet" id="nw_outb" data-testid="nw-offer-out">' +
         esc(T('Not for us')) +
         '</button></div>'
     );
@@ -427,7 +430,7 @@
       esc(T('Loading')) +
       '</div></div>' +
       '<div class="nw-out" id="nw_dout" data-testid="nw-check-out"></div><div class="nw-acts">' +
-      '<button type="button" class="act" id="nw_check" data-testid="nw-check"' +
+      '<button data-cbsid="NET003-B01" type="button" class="act" id="nw_check" data-testid="nw-check"' +
       (no ? ' disabled aria-disabled="true"' : '') +
       ' title="' +
       esc(no ? N.may.why || '' : T('See what would break — nothing is made')) +
@@ -532,7 +535,7 @@
     N.el.innerHTML =
       '<div class="empty" data-testid="nw-fail"><div class="t">' +
       esc(T("Couldn't read your network")) +
-      '</div><button type="button" class="act" id="nw_retry" data-testid="nw-retry">' +
+      '</div><button data-cbsid="NET001-B03" type="button" class="act" id="nw_retry" data-testid="nw-retry">' +
       esc(T('Try again')) +
       '</button></div>';
     $('nw_retry').onclick = start;

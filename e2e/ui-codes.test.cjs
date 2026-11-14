@@ -35,7 +35,7 @@ const LIST_TABLE = [
   ['data-cbl-retry', 'CMP009-B01'], ['data-cbl-clear', 'CMP014-B01'], ['data-cbl-clearf', 'CMP014-B01'], ['data-unfilt', 'CMP014-B01']
 ];
 const BOOKS_TABLE = [
-  ['data-testid="party-edit"', 'CMP012-B01'], ['data-testid="party-pay"', 'CMP042-B01'], ['data-testid="daybills_close"', 'CMP005-B01'], ['data-testid="pe_taxadd"', 'CMP007-B01'],
+  ['data-testid="party-edit"', 'CMP012-B01'], ['data-testid="party-pay"', 'CMP042-B01'], ['data-testid="pe_taxadd"', 'CMP007-B01'],
   ['data-testid="pe_save"', 'CMP001-B01'], ['data-testid="pay_record"', 'CMP042-B02'], ['data-testid="pay_remind"', 'CMP042-B03'], ['data-testid="pay_disc_record"', 'CMP042-B24'],
   ['data-testid="pay_ack"', 'CMP042-B25'], ['data-testid="pay_done"', 'CMP004-B01'], ['data-testid="pay_band_cancel"', 'CMP003-B01'], ['data-testid="bk-back"', 'CMP006-B01'],
   ['data-testid="db-add"', 'CMP007-B01'], ['data-testid="lt-clear"', 'CMP014-B01'], ['data-testid="lt-back"', 'CMP006-B01'], ['data-testid="lt-unfold"', 'CMP042-B06'],
@@ -90,6 +90,23 @@ FILES.forEach(([file, table, swaps]) => {
   ok(listSource.indexOf("pagerButton('prev', 'B06'") >= 0 && listSource.indexOf("pagerButton('next', 'B07'") >= 0, 'CBList.pager stamps Previous B06 and Next B07');
   const catalogue = read('public/app/cap-catalogue.js');
   ok(catalogue.indexOf('CBList.pager(') >= 0 && catalogue.indexOf('data-testid="cat-prev"') < 0, 'the catalogue pager is drawn by CBList.pager, not by hand');
+}
+/* critic fixes on #647: the books popups mount on the host screen's own code, and ui.dialog's sub line stays byte-identical unless a page names its own class */
+{
+  const books = read('public/app/cap-books.js');
+  const fn = books.slice(books.indexOf('function bkDialogMount'), books.indexOf('/* ⭐ M64: WIDENED into CBAction'));
+  const mountOn = (source, screen) => new Function('document', source + '; return bkDialogMount(2);')({ querySelector: () => ({ getAttribute: () => screen }) });
+  ok(mountOn(fn, 'CRM001') === 'CRM001-U22', 'bkDialogMount: a popup opened on CRM001 mounts as CRM001-U22, not BKS001');
+  ok(mountOn(fn.split('\\d{3}').join('d{3}'), 'CRM001') !== 'CRM001-U22', 'self-test: the old d{3} regex FAILS that check');
+  const html = [];
+  const box = { window: {}, document: undefined, modal: (h) => html.push(h) };
+  box.window = box;
+  vm.createContext(box);
+  vm.runInContext(read('public/app/ui.js'), box);
+  box.window.ui.dialog({ mount: 'ACC002-U01', titleText: 'T', subText: 'S', body: '' });
+  box.window.ui.dialog({ mount: 'ACC002-U01', titleText: 'T', subText: 'S', subClass: 's', body: '' });
+  ok(html[0].indexOf('<span class="sub">S</span>') > 0, 'ui.dialog without subClass draws the sub line as before (span.sub)');
+  ok(html[1].indexOf('<div class="s">S</div>') > 0, 'ui.dialog with subClass s draws the sub line as div.s (app.html styles .modal .mhd .s)');
 }
 console.log('\n  ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

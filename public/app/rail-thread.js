@@ -1,4 +1,9 @@
 /* rail-thread.js — CBThread.mount: ONE composer + ONE list for a chit's messages, threaded by line (R02, 2026-10-09).
+ * OWNS      CBThread: the one composer and the one list for a chit's messages (channel, kind, line, send), and the one POST /api/chits/:id/messages path
+ * CALLED BY app.html (CBThread.mountAll, CBThread.send), app/cap-books.js, app/cap-dispute.js, app/cap-messages.js, app/cap-tasks.js, app/cap-worklist.js, app/chit-sheet.js (CBThread.mount); loaded by script tag on accounts, crm, finance, tasks and app.html
+ * FLOW      mount(el, opts) ──▶ read GET /chits/:id/messages and chit.actions ──▶ paint the channels (greyed with the server's sentence) ──▶ send ──▶ CBAction ──▶ POST ──▶ repaint and emit cb:rail
+ * CARD      01-rail-core-the-chit/thread-messages-on-a-chit
+ *
  *
  * DESIGN-rail-modules-2026-10-05 §2.1 (CBThread): *"one composer + one list, threaded by line; replaces the 4 composers."*
  * Before this file the web repo posted to POST /chits/:id/messages from FOUR places — app.html `doSendMessage`, cap-messages
@@ -46,9 +51,6 @@
  * Reuse: CBAction (accounts-shell.js) · api/EP (core.js) · CBRail.WHY (/engine/rail.js, the sentences) · cbAttachList /
  * cbAttachButton (attach-ui.js: an attachment is pinned to a sent message, after the send, exactly as before) · CBLocale ·
  * CBOffline.saveDraft (the typed text survives a repaint). ZERO app.html globals: no UI, SESSION, paintDetail, modal, toast.
- 
- * CARD 01-rail-core-the-chit/thread-messages-on-a-chit
- * CALLED BY public/app.html, public/app/cap-admin.js, public/app/cap-books.js, public/app/cap-dispute.js, public/app/cap-messages.js (+5 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -118,7 +120,7 @@
     try {
       if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts); /* UX-123: the shop's zone */
       if (root.CBLocale) return root.CBLocale.datetime(ts);
-    } catch (_) {} /* CU4: the one date-time stamp */
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ } /* CU4: the one date-time stamp */
     return String(ts).replace('T', ' ').slice(0, 16);
   }
   /** the sentence for an engine refusal word — the engine's own (CBRail.WHY) when the page loads /engine/rail.js, else the server's words */
@@ -126,7 +128,7 @@
     try {
       var R = root.CBRail;
       if (R && R.WHY && Object.prototype.hasOwnProperty.call(R.WHY, word)) return R.WHY[word];
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     return fallback || T(W.viewOnly);
   }
 
@@ -178,7 +180,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.loadDraft) return C.loadDraft(k) || '';
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     return '';
   }
   function draftSet(o, v) {
@@ -187,7 +189,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.saveDraft) C.saveDraft(k, v);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   function draftClear(o) {
     var k = dkey(o);
@@ -195,7 +197,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.clearDraft) C.clearDraft(k);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ── eligibility: the engine's verdict per channel ── */
@@ -251,7 +253,7 @@
     if (typeof o.onList === 'function' && m.rows) {
       try {
         o.onList(m.rows.slice(), o);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
   }
   /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
@@ -263,7 +265,7 @@
         m.actions = reply.actions;
         paint(m);
       }
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ── paint ── */
@@ -273,7 +275,7 @@
     if (x.is_dispute && typeof o.decorate === 'function') {
       try {
         dec = o.decorate(x.message_text || '');
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var body = dec && dec.body != null ? dec.body : x.message_text || '';
     var mine =
@@ -349,7 +351,7 @@
                 nestedV = verdict(m, item),
                 on = m.channel === item;
               return (
-                '<button type="button" class="' +
+                '<button data-cbsid="SCR051-B01" type="button" class="' +
                 (item === 'external' ? 'ext' : 'int') +
                 (on ? ' on' : '') +
                 (ok ? '' : ' off') +
@@ -381,7 +383,7 @@
           o.kinds
             .map(function (item) {
               return (
-                '<button type="button" class="rt-k' +
+                '<button data-cbsid="SCR051-B02" type="button" class="rt-k' +
                 (m.kind === item ? ' on' : '') +
                 '" data-rt-act="kind" data-k="' +
                 esc(item) +
@@ -397,7 +399,7 @@
       !o.line_id && !disp && o.lines && o.lines.length
         ? '<label class="rt-row">' +
           esc(T(W.about)) +
-          ' <select class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
+          ' <select data-cbsid="SCR051-S01" class="rt-sel" data-rt-act="line" data-testid="rt-line"><option value="">' +
           esc(T(W.whole)) +
           '</option>' +
           o.lines
@@ -416,7 +418,7 @@
       (toggle || kinds ? '<div class="rt-row">' + toggle + kinds + '</div>' : '') +
       offWhy +
       lines +
-      '<textarea data-rt-act="text" data-testid="' +
+      '<textarea data-cbsid="SCR051-T01" data-rt-act="text" data-testid="' +
       esc(ids.text || 'msg-body') +
       '" placeholder="' +
       esc(aud) +
@@ -428,7 +430,7 @@
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-foot"><button type="button" class="rt-send ' +
+      '<div class="rt-foot"><button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
       tone +
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +
@@ -484,7 +486,7 @@
   function emit(el, chit_id, result) {
     try {
       (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   /** post ONE message through CBAction (busy · one press one write · outcome). btn may be null (a host's own control, or none). */
   function post(btn, o, body, say) {
@@ -616,7 +618,7 @@
           if (typeof o.onDone === 'function') {
             try {
               o.onDone(m.sent, o);
-            } catch (_) {}
+            } catch (_) { /* best effort: failing here changes nothing the user sees */ }
           }
           load(m).then(function () {
             var target = out();
@@ -676,7 +678,7 @@
             if (typeof o.onDone === 'function') {
               try {
                 o.onDone(v, o);
-              } catch (_) {}
+              } catch (_) { /* best effort: failing here changes nothing the user sees */ }
             }
           },
           onFail: function (words, e) {

@@ -35,6 +35,7 @@ const HARNESSES = [
   ['till-hub-shape.cjs',   'one hub, one shape per width — no empty panel beside a floating card'],
   ['till-hub-look.cjs',    'every hub section has a hue of its own, and the strip agrees with it'],
   ['till-menu-steady.cjs', 'the hub holds its place when a section opens (it once jumped 1367px)'],
+  ['till-overlay-dialog.cjs', 'the Menu and Check overlays are native modal dialogs: keyboard open, Tab kept inside, Esc closes, focus returns'],
   ['till-style-shot.cjs',  'the style preview shows the WHOLE screen — five settings used to change nothing'],
   ['till-keysize.cjs',     'the preview counts the keys the counter actually fits, exactly, at 16 combinations'],
   ['till-apply-again.cjs', 'apply works again and again, and a held change says so'],

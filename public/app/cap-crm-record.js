@@ -62,7 +62,7 @@ function crmNoDate(text) {
   if (!text) return '';
   var u = text
     .replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{4}-\d{2}-\d{2}\b\)?\s*$/, '')
-    .replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{1,2}[ \/-](?:[A-Za-z]{3,9}|\d{1,2})\.?(?:[ ,\/-]+\d{2,4})?\)?\s*$/, '')
+    .replace(/\s*[\u00b7,(\-\u2013\u2014]*\s*\b\d{1,2}[ /-](?:[A-Za-z]{3,9}|\d{1,2})\.?(?:[ ,/-]+\d{2,4})?\)?\s*$/, '')
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
@@ -426,7 +426,7 @@ async function crmRecordFold(route, tok) {
         route.key;
       return crmGo('#/party/' + encodeURIComponent(crmKey(keeper)), true);
     }
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   if (tok !== CRMR.tok) return;
   crmBar('<a href="#/parties">‹ ' + esc(tx('Parties')) + '</a>', '');
   node.className = 'screen';
@@ -1054,8 +1054,6 @@ function crmRecordPaint(p, rec) {
   if (typeof crmConsentHTML === 'function') secs.push(crmConsentHTML(p, rec));
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
-    var kind = cu ? 'customer' : 'supplier',
-      pid = p.party_id;
     if (CRM.ledger)
       secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
     else
@@ -1114,7 +1112,7 @@ function crmRecordPaint(p, rec) {
     if (CRMR.headApi) {
       try {
         CRMR.headApi.destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     CRMR.headApi = CBList.mount(head, {
       key: 'crm-tl-head',
@@ -1141,11 +1139,11 @@ function crmRecordPaint(p, rec) {
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
   var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
-  if (rwSec && typeof CBRewards !== 'undefined') {
+  if (rwSec && typeof CBRewardsPane !== 'undefined') {
     var rwOnce = function () {
       if (rwSec.open && !rwSec.getAttribute('data-read')) {
         rwSec.setAttribute('data-read', '1');
-        CBRewards.load('crm_rw', {
+        CBRewardsPane.load('crm_rw', {
           id: p.party_id,
           api: api,
           t: tx,
@@ -1372,7 +1370,7 @@ function crmTimelineView(p, tok) {
   if (CRMR.tlApi) {
     try {
       CRMR.tlApi.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var el = document.getElementById('crm_tl');
   CRMR.tlApi = CBList.mount(el, {

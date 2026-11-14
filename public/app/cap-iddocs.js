@@ -1,6 +1,11 @@
 /**
  * cap-iddocs.js — a person's identity record, as ONE module used in every place it appears.
  *
+ * OWNS      CBIdDocs: a person's identity record as one module (html, load, save, ORDER), drawn on the co-assist forms and the employee's own profile; the server revalidates every value
+ * CALLED BY public/app/cap-admin.js (the profile card) and public/app/cap-workforce.js (the co-assist forms); both load it with ensureCap('iddocs'), app.html only, no page carries a script tag for it
+ * FLOW      load(id) reads the person's documents ──▶ html(rows, mode) paints self | owner ──▶ save() posts the changed rows ──▶ the route answers per scheme
+ * CARD      18-identity-sign-in-and-access/identity-documents-and-the-vault
+ *
  * Athi, 2026-08-20: *"we have to add as part of coassist registration and it has to be visible here… naturally
  * it has to be there in employee screen and as a separate module to update."*
  *
@@ -12,8 +17,6 @@
  * ⭐ WHO IS LOOKING CHANGES WHAT IS SAID, NOT WHAT IS BUILT. `mode` is 'self' or 'owner':
  *      self   — "your record", submits as you, no consent question (submitting IS consenting)
  *      owner  — "on file for this person", names who filed it, and ASKS for consent before an Aadhaar
- 
- * CALLED BY public/app/cap-admin.js, public/app/cap-workforce.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
 

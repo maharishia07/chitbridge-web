@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Offer lab (and its combo mode): the offers engine on a bare page — a cart priced live by engine/offers.js, never a second sum.
-     CALLED BY the labs links on Home, the Catalogue's "see the offer", combo-lab.html (forwards here).
+     CALLED BY Home's Labs cards (manifest ids offer-lab and combo-lab), Category setup's Offer lab and Combo lab links (app/cap-catsetup.js), the till's openOfferLab (till.html), combo-lab.html (forwards here).
      LAB STANDARD (W16-W19, 22 Oct): the left menu = the eight offer types in four groups (GOALS/KINDS) · the middle = Settings or the form of the picked type ·
      the right = the cart, "Your offers (draft)" = the saved-offers shelf (SAVED, /api/definitions), with Make live and Only for a group. ?mode=combo has neither.
      FLOW  load → CBFrame.lab (the Finance frame, types in its left menu) → pick a type → the engine prices the typed cart → Add to your offers → attach from the cart → paint
@@ -383,7 +383,7 @@ button{cursor:pointer}
 .ovlinother:hover{background:var(--amber-t)}
 /* ⭐⭐⭐ [2026-09-26] THE SAME CHECKBOX app.html's product list ALREADY USES (its own `.cbx`, `prodPickAll()`)
    — Athi: "why do you always find very different methods when already proven methods are there?" Right call;
-   ported verbatim rather than inventing a native <input type=checkbox> look of its own. */
+   ported verbatim rather than inventing a native checkbox (input type=checkbox) look of its own. */
 .cbx{width:17px;height:17px;border:1.6px solid var(--faint);border-radius:4px;flex:0 0 auto;display:inline-flex;
   align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;background:var(--card);cursor:pointer}
 .cbx.on{background:var(--green);border-color:var(--green)}
@@ -735,6 +735,7 @@ button{cursor:pointer}
 .ovltools input[type=text],.ovltools input[type=search]{width:100%;height:42px;border:1px solid var(--line);
   border-radius:10px;padding:0 14px;font-size:14px;background:var(--card)}
 .ovltools input:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.inp input:focus-visible,.numf input:focus-visible,.loyrow .sm input:focus-visible{outline:2px solid var(--green);outline-offset:1px}   /* keyboard 6a: the field itself draws the ring (the wrapper's glow does not count) */
 .ovlcats{display:flex;gap:6px;flex-wrap:wrap}
 .ovlchip{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);
   font-size:12.5px;font-weight:600;color:var(--muted)}
@@ -2237,7 +2238,7 @@ function priceOvOpen() {
  * path changes shape — it just reads OVL.pickMode being falsy the same way it always implicitly was.
  */
 function openOverlay(pickMode, pickFn, picked, onlyIds, titleOverride) {
-  OVL = { q: '', cat: null, noCostOnly: false, pickMode: pickMode || null, pickFn: pickFn || null, picked: picked || [], onlyIds: onlyIds || null };
+  OVL = { q: '', cat: null, noCostOnly: false, pickMode: pickMode || null, pickFn: pickFn || null, picked: picked || [], onlyIds: onlyIds || null, back: priceOvOpenerOf(document.activeElement) };
   var el = document.getElementById('priceOverlay');
   if (!el) return;
   el.classList.add('on');
@@ -2277,6 +2278,26 @@ function closePriceOverlay() {
   var el = document.getElementById('priceOverlay');
   if (el) el.classList.remove('on');
   render();
+  priceOvGiveBack();
+}
+/** keyboard rule 2c: who opened the overlay, by what can find it again after render() redraws the page (its id, else its register code) */
+function priceOvOpenerOf(node) {
+  if (!node || node === document.body) return null;
+  return { id: node.id || '', code: node.getAttribute('data-cbsid') || '', label: node.textContent.trim() };
+}
+/** keyboard rule 2c: the focus goes back to the control that opened the overlay, or the one that took its place */
+function priceOvGiveBack() {
+  var saved = OVL.back;
+  if (!saved) return;
+  var back = (saved.id && document.getElementById(saved.id)) || null;
+  if (!back && saved.code) {
+    var same = Array.prototype.filter.call(document.querySelectorAll('[data-cbsid="' + saved.code + '"]'), function (node) {
+      return node.textContent.trim() === saved.label;
+    });
+    back = same[0] || document.querySelector('[data-cbsid="' + saved.code + '"]');
+  }
+  if (back && back.focus) back.focus();
+  OVL.back = null;
 }
 function priceOvSearch(v) {
   OVL.q = v;

@@ -19,6 +19,12 @@
  * product, and careful — but not reviewed by someone who sells in Arabic every day. The STRUCTURE is proven
  * (e2e/arabic-catalogue.test.cjs); the nouns want a native commercial reader before this goes near a customer.
  */
+/*
+ * OWNS      the Arabic label pack (CBSTR.ar), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('ar') injects this file -> tx() reads CBSTR.ar
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var ar = CBSTR.ar || (CBSTR.ar = {});
@@ -803,6 +809,16 @@
     'CMP039.label': 'رأس عمود القائمة',
     'List column header': 'رأس عمود القائمة',
     'CMP040.label': 'حقل الدفاتر',
+    'CMP055.label': 'حقل',
+    'Field': 'حقل',
+    'CMP055.required': 'مطلوب',
+    'Required': 'مطلوب',
+    'CMP055.badnumber': 'هذا ليس رقمًا. اكتب أرقامًا فقط، مثل 1234.5',
+    'That is not a number. Type digits only, like 1234.5': 'هذا ليس رقمًا. اكتب أرقامًا فقط، مثل 1234.5',
+    'CMP055.wrongmark': 'استخدم {mark} قبل الكسور العشرية، مثل 1{mark}5',
+    'Use a {mark} before the decimals, like 1{mark}5': 'استخدم {mark} قبل الكسور العشرية، مثل 1{mark}5',
+    'CMP055.badgroup': 'تحقق من الفواصل في هذا الرقم',
+    'Check the commas in that number': 'تحقق من الفواصل في هذا الرقم',
     'Books field': 'حقل الدفاتر',
     'CMP041.label': 'اختيار الدفاتر',
     'Books select': 'اختيار الدفاتر',

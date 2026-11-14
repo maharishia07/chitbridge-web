@@ -12,6 +12,12 @@
  *
  * ⚠️ TAMIL IS THE LANGUAGE ATHI CAN JUDGE FASTEST. It wants his eye before anyone else's.
  */
+/*
+ * OWNS      the Tamil label pack (CBSTR.ta), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176; read by public/app/strings-ui-standard.js
+ * FLOW      language chosen -> CBLocale.pack('ta') injects this file -> tx() reads CBSTR.ta
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var ta = CBSTR.ta || (CBSTR.ta = {});
@@ -773,6 +779,16 @@
     'CMP039.label': 'பட்டியல் நெடுவரிசைத் தலைப்பு',
     'List column header': 'பட்டியல் நெடுவரிசைத் தலைப்பு',
     'CMP040.label': 'கணக்கு புலம்',
+    'CMP055.label': 'புலம்',
+    'Field': 'புலம்',
+    'CMP055.required': 'தேவை',
+    'Required': 'தேவை',
+    'CMP055.badnumber': 'இது எண் அல்ல. இலக்கங்கள் மட்டும் எழுதுங்கள், எ.கா. 1234.5',
+    'That is not a number. Type digits only, like 1234.5': 'இது எண் அல்ல. இலக்கங்கள் மட்டும் எழுதுங்கள், எ.கா. 1234.5',
+    'CMP055.wrongmark': 'தசமத்திற்கு முன் {mark} இடுங்கள், எ.கா. 1{mark}5',
+    'Use a {mark} before the decimals, like 1{mark}5': 'தசமத்திற்கு முன் {mark} இடுங்கள், எ.கா. 1{mark}5',
+    'CMP055.badgroup': 'இந்த எண்ணின் காற்புள்ளிகளைச் சரிபார்க்கவும்',
+    'Check the commas in that number': 'இந்த எண்ணின் காற்புள்ளிகளைச் சரிபார்க்கவும்',
     'Books field': 'கணக்கு புலம்',
     'CMP041.label': 'கணக்கு தேர்வு',
     'Books select': 'கணக்கு தேர்வு',

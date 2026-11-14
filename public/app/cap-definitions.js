@@ -26,11 +26,11 @@
  * ⚠️ AND WHERE A REGISTRY IS ABSENT, SAY SO. If offers.js has not loaded, the row reads "not loaded" rather than
  * rendering an empty section that looks like "there are none" — an empty list and a missing source look identical
  * on screen and mean opposite things.
+ * OWNS      the Definitions workshop: offers, tax slabs, categories and their editors, with the test panel (cbDefLoad is the shelf read, cbDefNew / cbDefEdit the editors).
+ * CALLED BY app.html: CAP_OF definitions + the '+ New requirement' button (ensureCap('definitions')) · cap-catsetup.js (ensureCap('definitions'), cbDefNew / cbDefEdit) · cap-categories.js (cbDefRegistries · cbDefLabelOnce; its ensureCap('definitions') is a dead path on catalogue.html, which does not define ensureCap). No <script src> on any page: SUPPORT.
+ * FLOW      ensureCap('definitions') → cbDefLoad → editor rows (cbDefFormHTML) → test panel (cbDefPaintPreview) evaluates through CBOffers with fmtMoney(moneyCode())
+ * CARD      06-catalogue-pim/definitions-shelf
  */
-/* OWNS the Definitions workshop: offers, tax slabs, categories and their editors
- * CALLED BY app.html (ensureCap('definitions'))
- * FLOW ensureCap -> list definitions -> editor rows -> test panel evaluates through CBOffers with fmtMoney(moneyCode())
- * CARD 07-catalogue-and-pricing/definitions */
 
 var CBDEF = { open: {}, mine: null, loading: false, err: '' };
 
@@ -1744,7 +1744,7 @@ function cbDefPreviewHTML() {
   /* ⭐ PREVIEWED AS THE CUSTOMER IT IS FOR (Athi, 2026-09-06 19:27: "the offer computation not works properly during test?") — a customer-only offer fails closed for a stranger, so the seller's own preview must stand in that customer's shoes */
   try {
     promise = CBOffers.promise(o, { now: new Date(), money: inr, customer_groups: o.customer_group ? [o.customer_group] : [] });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   var one = cbDefPreviewRow(o, 1, cat, money),
     many = cbDefPreviewRow(o, qty2, cat, money);
   /* ⚠️ The window is the FIRST thing said when it is closed, because every row under it would otherwise show a
@@ -2046,7 +2046,7 @@ async function cbDefTakeoverAsk(id, why) {
     slabs = (await cbDefsLive('tax', true)).filter(function (x) {
       return String(x.definition_id || x.id) !== String(id) && (!x.status || x.status === 'live');
     });
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   var opts =
     typeof cbSlabOptionsHTML === 'function'
       ? cbSlabOptionsHTML(slabs, '')
@@ -2740,7 +2740,7 @@ function cbDefTestRun() {
   var keep = typeof UI !== 'undefined' ? UI.prodSel : undefined;
   try {
     if (typeof UI !== 'undefined') UI.prodSel = d.item_id;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   var html = '';
   try {
     html = typeof prodOfferCartHTML === 'function' ? prodOfferCartHTML(d, [offer], CBDEF_TEST.qty, 'cbdef-test-total', { customer_groups: _groups }) : '';
@@ -2749,7 +2749,7 @@ function cbDefTestRun() {
   } finally {
     try {
       if (typeof UI !== 'undefined') UI.prodSel = keep;
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var why = '';
   try {

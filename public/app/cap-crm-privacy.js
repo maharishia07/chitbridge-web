@@ -1,6 +1,9 @@
 /* cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy).
- * CARD 11-crm-and-marketing/crm-privacy
- * T3-P3-CONSENT (2026-10-14). Loaded by crm.html after cap-crm-record.js. Flow: CRM step 6 "consent & privacy requests" (docs/process/flows.json).
+ * OWNS      the Consent block on a party record (crmConsentHTML, crmConsentMount, crmConsentSet) · the privacy register (crmPrivacy, a CBList) · Log a request (crmPrivReqOpen) · Answer (crmPrivAnswerOpen)
+ * CALLED BY crm.html (<script src>, after cap-crm-record.js) · cap-crm.js (crmRoute → crmPrivacy on #/privacy) · cap-crm-record.js (crmConsentHTML, crmConsentMount, and crmRecordClick → crmPrivacyClick)
+ * FLOW      a record opens → crmConsentHTML draws the block → crmConsentMount, on open, crmConsentOpen reads crmPrefs → Yes/No → crmConsentSet (crmPrefSet) → CBAction · #/privacy → crmPrivLoad → the register → Log / Answer sheets
+ * CARD      11-crm-and-marketing/crm-privacy
+ * T3-P3-CONSENT (2026-10-14). Flow: CRM step 6 "consent & privacy requests" (docs/process/flows.json).
  *
  * ⭐ REUSE (rule 1): crmSec (the record's own section) · CBList (the history and the register) · modal/closeModal (crm.html's sheet) · crmBar ·
  *   crmViewOnlyBtn · crmErrWords · api() (core.js) · bkDate (cap-books.js) · the record's data-crm click door (crmRecordClick hands here).
@@ -230,7 +233,7 @@ async function crmConsentOpen(p) {
   if (CRMR.consentApi) {
     try {
       CRMR.consentApi.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   CRMR.consentApi = CBList.mount(hist, {
     key: 'crm-consent-hist',
@@ -369,7 +372,7 @@ function crmPrivacy(frame, params) {
   if (PRV.api && PRV.api.destroy) {
     try {
       PRV.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var el = document.getElementById('crm_prv');
   var due = function (r) {

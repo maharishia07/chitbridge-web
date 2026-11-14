@@ -1,6 +1,8 @@
 /**
- * CALLED BY public/app/shell.js (mount, Home only, signed in, when the page loaded this file): index.html and shell-lab.html load it.
- * CARD 29-qa-test-tooling-ux-locale-and-design-system/shell
+ * OWNS  CBSides: the two reference panels on Home ("We lean on", "Leans on us") and their two row buttons SCR044-B01 / B02
+ * CALLED BY  the shell's mount (Home only, signed in, when the page loaded this file: grep -n CBSides public/app/shell.js); loaded by <script src> on index.html and shell-lab.html
+ * FLOW  the shell lays out the two drawers → mount() → GET /api/entities/sides → paint rows → a row action or the Who button repaints the drawer
+ * CARD  29-qa-test-tooling-ux-locale-and-design-system/shell
  * ── ⭐ CBSides — THE TWO REFERENCE PANELS: "We lean on" (blue, →) and "Leans on us" (green, ←) ──────────────────────────────────
  *
  * Designer handoff: designs-inbox/cb-sides-2026-10-08 (the prototype's business-kind switcher is NOT built). The shell (shell.js) gives this
@@ -150,7 +152,7 @@
       var act = '';
       if (r.fix === 'Review')
         act =
-          '<button type="button" class="cbsd-fix" data-act="review" data-key="' +
+          '<button data-cbsid="SCR044-B01" type="button" class="cbsd-fix" data-act="review" data-key="' +
           esc(key) +
           '" aria-expanded="' +
           shown +
@@ -197,7 +199,7 @@
         '</div><div class="m" data-testid="sides-impact-m">' +
         esc(im.m) +
         '</div>' +
-        '<button type="button" data-act="who" aria-expanded="' +
+        '<button data-cbsid="SCR044-B02" type="button" data-act="who" aria-expanded="' +
         S.who +
         '" data-testid="sides-who-btn">' +
         esc(S.who ? W.hide : W.who) +

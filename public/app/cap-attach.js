@@ -39,7 +39,7 @@
   }
 
   /* core.js's rule (attemptOf/settleAttempt) in miniature: core.js is the whole app and cannot load on a bare page.
-     One attempt id per door+body, kept while a send runs or after a network error, deleted on ANY settled reply, so pass, fail, pass is three rows */
+     One attempt id per door+body, kept while a send runs or after a network error, deleted on a settled reply (status under 500), so pass, fail, pass is three rows; a 5xx keeps it (the write may have landed) */
   var attempts = {};
   function refOf(text) {
     return attempts[text] || (attempts[text] = crypto.randomUUID());
@@ -74,7 +74,7 @@
           throw new Error('Sign in again to record results');
         }
         return reply.json().then(function (json) {
-          if (!(reply.status === 409 && json && json.code === 'IDEMPOTENCY_IN_PROGRESS')) delete attempts[attempt];
+          if (reply.status < 500 && !(reply.status === 409 && json && json.code === 'IDEMPOTENCY_IN_PROGRESS')) delete attempts[attempt];
           if (!reply.ok) throw new Error(answerWords(json) || 'Failed');
           return json && 'data' in json ? json.data : json;
         });

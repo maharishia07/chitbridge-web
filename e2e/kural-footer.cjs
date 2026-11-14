@@ -169,7 +169,11 @@ const { standIn, route } = require('./lib/standin.cjs');
     await ph.ctx.close();
     const still = await open(standIn(), { viewport: { width: 390, height: 844 }, clock: true, reduce: true });
     await still.p.waitForSelector('[data-testid="kural-footer"]:not([hidden])');
-    await still.p.clock.fastForward(30000); await still.p.waitForTimeout(700);
+    /* 8 s is ONE turn of the 7 s clock, so a clock that still runs shows it; at 30 s it is four turns, which flips back to where it began and hid the break */
+    await still.p.clock.fastForward(8000); await still.p.waitForTimeout(700);
+    v = await view(still.p);
+    ok(v.kv.vo === '1' && v.kv.mo === '0', 'Less motion: 8 s later (one turn of the clock) it has NOT changed by itself');
+    await still.p.clock.fastForward(22000); await still.p.waitForTimeout(700);
     v = await view(still.p);
     ok(v.kv.vo === '1' && v.kv.mo === '0', 'Less motion: 30 s later it has NOT changed by itself');
     await still.p.click('[data-testid="kural-body"]'); await still.p.waitForTimeout(700);

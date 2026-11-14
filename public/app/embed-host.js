@@ -1,5 +1,9 @@
 /**
  * embed-host.js — CBEmbed: open one of the small apps INSIDE another page, in a dialog, and hear what happened there.
+ * OWNS       CBEmbed.open: the dialog + iframe for an embedded small app, its postMessage handshake and its close button
+ * CALLED BY  till.html by <script src> (grep -lE 'src="/?app/embed-host.js' public/*.html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public)
+ * FLOW       a host calls open({ app, view, ... }) → dialog with /<app>.html?embed=1 → the embed posts { cb, event } → onMessage / onClose → close()
+ * CARD       29-qa-test-tooling-ux-locale-and-design-system/embed-host
  * P1 (2026-10-10). Tasks & Orders will use the same helper for its own embeds; nothing here knows about employees.
  *
  *   var h = CBEmbed.open({ app: 'employees', view: 'add', title: 'Add a person',
@@ -44,7 +48,7 @@
       root.removeEventListener('message', heard);
       try {
         node.close();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       node.remove();
       if (o.onClose) o.onClose();
     }
@@ -60,7 +64,7 @@
             { cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : root.CloudHost && root.CloudHost.api) || null },
             root.location.origin
           );
-        } catch (_) {}
+        } catch (_) { /* no host window to tell: standalone page */ }
         return;
       }
       if (o.onMessage) o.onMessage(m);

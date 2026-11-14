@@ -4,9 +4,9 @@ const fs = require('fs'), path = require('path'), os = require('os'), cp = requi
 const W = path.join(__dirname, '..');
 const LINES = `const L=(c.items||[]).map(it=>it[3]&&it[3].live).filter(Boolean);`;
 const BREAKS = [
-  ['Content tab recomputes from the lines', 'app.html', `\${frozenMoneyHTML(c,'chit-money','chit-total')}`, `\${(()=>{ ${LINES} const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:'INR', money:n=>n }); return CBCart.moneyRowsHTML(M,{}); })()}`],
-  ['Summary tab recomputes from the lines', 'app.html', `const FM=frozenMoney(c);\n    const tile`, `${'const FM=(function(){ '}${LINES} return CBCart.moneyFromLines(L,{ now:new Date(), currency:'INR', money:n=>n }); })();\n    const tile`],
-  ['Detail calls CBCart.money( on the live lines', 'app.html', `function frozenMoney(c){`, `function frozenMoney(c){ try{ CBCart.money([],{ offers:[] }); }catch(_){}`],
+  ['Content tab recomputes from the lines', 'app.html', `\${frozenMoneyHTML(c, 'chit-money', 'chit-total')}`, `\${(()=>{ ${LINES} const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:'INR', money:n=>n }); return CBCart.moneyRowsHTML(M,{}); })()}`],
+  ['Summary tab recomputes from the lines', 'app.html', `const FM = frozenMoney(c);\n    const tile`, `${'const FM=(function(){ '}${LINES} return CBCart.moneyFromLines(L,{ now:new Date(), currency:'INR', money:n=>n }); })();\n    const tile`],
+  ['Detail calls CBCart.money( on the live lines', 'app.html', `function frozenMoney(c) {`, `function frozenMoney(c) { try{ CBCart.money([],{ offers:[] }); }catch(_){}`],
   ['Order tab (cap-chit2) recomputes from the lines', 'app/cap-chit2.js', `  var hh = (d && (d.header`, `  try { CBCart.moneyFromLines(recLines, { now: new Date(), currency: 'INR', money: function(n){ return n; } }); } catch (_) {}\n  var hh = (d && (d.header`],
   ['any other reader (cap-books) recomputes', 'app/cap-books.js', `function `, `var __x = function(){ return CBCart.moneyFromLines([], {}); };\nfunction `],
 ];

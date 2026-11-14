@@ -33,18 +33,19 @@ W.run('shop-codes', async (w) => {
     await w.step('S1·' + width, 'the drawn shop wears valid SHP001 codes at ' + width + 'x' + height + ', nothing moved', async () => {
       const codes = await coded(page);
       const side = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
-      const need = ['SHP001-I04', 'SHP001-B05'].every((c) => codes.includes(c));
+      const searchField = await page.locator('[data-cbmount="SHP001-U03"]').count(); /* the search input is ui.field CMP055 since field-2: its screen identity is the mount U03, not the old I04 */
+      const need = searchField === 1 && codes.includes('SHP001-B05');
       return { ok: need && codes.every((c) => /^SHP001-[A-Z][0-9]{2}$/.test(c)) && side <= 0, saw: codes.length + ' coded elements (' + codes.join(' ') + ') · sideways overflow ' + side + ' px' };
     });
   }
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto(w.base + '/shop.html?s=CBSIMFIT&api=' + encodeURIComponent(w.base));
   await page.waitForSelector('[data-cbsid="SHP001-B05"]', { timeout: 15000 });
-  await w.step('S2', 'Categories (SHP001-B05) still opens its menu, a category (SHP001-B06) still jumps, search (SHP001-I04) still takes typing', async () => {
-    await page.locator('[data-cbsid="SHP001-I04"]').fill('rice 3');
+  await w.step('S2', 'Categories (SHP001-B05) still opens its menu, a category (SHP001-B06) still jumps, search (SHP001-U03, the ui.field that replaced I04) still takes typing', async () => {
+    await page.locator('[data-cbmount="SHP001-U03"]').fill('rice 3');
     await page.waitForTimeout(300);
     const left = await page.locator('[data-testid="cart-add"]').count();
-    await page.locator('[data-cbsid="SHP001-I04"]').fill('');
+    await page.locator('[data-cbmount="SHP001-U03"]').fill('');
     await page.waitForTimeout(300);
     await page.locator('[data-cbsid="SHP001-B05"]').click();
     await page.waitForTimeout(300);

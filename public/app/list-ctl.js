@@ -1,5 +1,7 @@
 /**
- * CALLED BY every list on every page — app.html (the Task table), crm, accounts, finance, standards, employees, network (CBList.mount · CBList.every).
+ * OWNS      window.CBList: mount (a list: toolbar · header · rows · columns chooser · paging) · nextRow · get · reset · every (reads every page of a server-paged list) · pager (the Previous / Next pair, CMP037 B06 and B07), and the Task table drawing (tbl*).
+ * CALLED BY every page that loads it with <script src>: accounts.html · app.html (the Task table) · catalogue.html · crm.html · employees.html · finance.html · list-lab.html · network.html · offer-lab-next.html · operations.html · settings.html · standards.html · tasks.html · testing.html; cap-attach.js loads it with loadScript when CBList is not there yet (CBList.mount · CBList.every · CBList.pager).
+ * FLOW      a page loads the script → CBList.mount(el, opts) draws the toolbar, header and rows from the rows the page hands it (nothing is read from the page) → a press on search, sort, filter or ⚙ columns repaints the list in place → a server-paged page asks CBList.every or draws CBList.pager and keeps what each press does.
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/list-control
  * ── ⭐⭐⭐ CBList — THE LIST CONTROL, AS A SELF-SUSTAINING UNIT ───────────────────────────────────────────────────────
  *
@@ -89,7 +91,7 @@
     MEM[k] = v;
     try {
       root.localStorage.setItem(k, JSON.stringify(v));
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
@@ -120,7 +122,8 @@
     '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
     '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
     '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
-    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue);outline:2px solid var(--cl-blue);outline-offset:2px}', /* the input draws no ring of its own inside the pill, so the pill carries it (WCAG 2.4.7) */
+    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}', /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
+    '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
     '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
     '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
@@ -187,6 +190,9 @@
     '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
     '.cbl .cbl-hc.r{justify-content:flex-end}',
     '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
+    '.cbl .cbl-hc .sort{min-width:0;max-width:100%}.cbl .cbl-hc .sort .cbl-hl{min-width:0;white-space:normal;overflow-wrap:anywhere;text-align:start;line-height:1.25}',
+    /* the resize grip (24 px, centred on the column edge) covers the last 12 px of its cell: the filter caret stays inside that line and the last column's grip (24 px, inside) gets its room (QA-156) */
+    '.cbl .cbl-hc:last-child:has(.cbl-hf),.cbl .cbl-hc.r.sortable:last-child{padding-inline-end:26px}',
     '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
     '.cbl .cbl-rz{position:absolute;inset-inline-end:-12px;top:0;bottom:0;width:24px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
     /* T3-COMPAT: the LAST column's handle stays inside the grid — hung 4 px past its edge it gave every filled list a 4 px sideways scroll (rule 13) */
@@ -253,7 +259,7 @@
     '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
     '}',
     /* UX-137 TAP RULE (Athi 10 Nov): a desktop control is 32 px at least, a phone's 44 px; a word beside a toolbar icon leaves a phone (the aria-label keeps it) */
-    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px;vertical-align:middle}.cbl .cbl-search input{align-self:stretch}',
+    '.cbl .cbl-tw{display:inline-flex;align-items:center;justify-content:center;width:32px;min-height:32px;margin-inline:-9px;margin-block:-8px;vertical-align:middle}.cbl .cbl-search input{align-self:stretch}',
     '.cbl .cbl-ico{width:auto;min-width:34px}.cbl .cbl-w{font-size:calc(13px * var(--k,1))}.cbl .cbl-ico .cbl-w{margin-inline-start:1px}',
     '.cbl .cbl-chip,.cbl .cbl-btn,.cbl .cbl-vtab,.cbl .cbl-seg button,.cbl .cbl-tbtn,.cbl .cbl-end button,.cbl .cbl-fchip button,.cbl .cbl-hf,.cbl .cbl-mv,.cbl .cbl-hc .sort,.cbl .cbl-pop button{min-height:32px}',
     '.cbl .cbl-vtab{height:auto}.cbl .cbl-mv,.cbl .cbl-mvsp{width:32px;height:32px}.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:32px}.cbl .cbl-fchip button{width:auto;height:auto}',
@@ -262,7 +268,9 @@
     '.cbl .cbl-tbtn,.cbl .cbl-seg,.cbl .cbl-search,.cbl .cbl-gsel{height:auto}.cbl .cbl-ico,.cbl .cbl-mv,.cbl .cbl-mvsp,.cbl .cbl-hf,.cbl .cbl-fchip button,.cbl .cbl-seg button{min-width:44px}.cbl .cbl-mv,.cbl .cbl-mvsp{width:44px;height:44px}.cbl input[type="checkbox"]{width:24px;height:24px}',
     /* the phone head stays within its 30% with 44 px controls: tighter gaps, the count beside the icon row */
     '.cbl .cbl-title{padding-block:4px 2px;gap:2px 8px}.cbl .cbl-tools{gap:4px 4px}.cbl .cbl-count{padding:0}.cbl .cbl-search input{min-height:44px;margin-block:-1px}',
-    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px}}',
+    '.cbl .cbl-tw{width:44px;min-height:44px;margin-inline:-15px;margin-block:0}',
+    /* UI9: a head that says reserve:true keeps its title row at the height of the chip the data will bring (chip-less lists keep their short row), so the toolbar below never jumps (QA-156) */
+    '.cbl .cbl-title.reserve h1{min-height:44px;display:flex;align-items:center}}',
     /* the pager pair every server-paged page draws with CBList.pager: 32 px on a desktop, 44 on a phone, outside the list's own box */
     'button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:32px;min-width:32px}@media (max-width:' + PHONE_MAX + 'px){button.act.quiet.cbl-pgbtn,.cbl button.cbl-pgbtn{min-height:44px;min-width:44px}}',
     /* a tick box: 24 px and never squeezed on a wide screen; on a phone the box is drawn small (22 px) inside a 44 px hit area (an unstyled native box cannot take a bigger one) */
@@ -300,8 +308,8 @@
     }
   }
   function cmpVals(a, b) {
-    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')),
-      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.-]/g, '')),
+      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.-]/g, ''));
     if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) {
       return (na || 0) - (nb || 0);
     }
@@ -326,16 +334,16 @@
     I.dead = true;
     try {
       if (I.io) I.io.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     clearTimeout(I.qt);
     try {
       var node = I.el.querySelector(':scope > .cbl-list');
       if (node && node.__cblRO) node.__cblRO.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     (I.off || []).forEach(function (x) {
       try {
         I.el.removeEventListener(x[0], x[1]);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     });
     I.off = [];
   }
@@ -817,10 +825,91 @@
     return notes.length === 1 && String(notes[0].text || '').length > LONG_NOTICE_CHARS;
   }
   /** the folded chip's words: a count for several, the plain word for a single notice */
+  function foldedCount(list, chips, notes, plural) {
+    /* the count names what the chip is painted for: notices when there are any (the figures chip is not a notice), else the details */
+    var n = notes.length || chips.length;
+    if (n === 1 && !plural) return T(list, notes.length ? 'Notices' : 'Details');
+    return T(list, notes.length ? '{n} notices' : '{n} details', { n: n });
+  }
   function foldedLabel(list, chips, notes) {
-    var total = chips.length + notes.length;
-    if (total === 1) return T(list, notes.length ? 'Notices' : 'Details');
-    return T(list, notes.length ? '{n} notices' : '{n} details', { n: total });
+    return foldedCount(list, chips, notes, false);
+  }
+  /** below this width (a 390 or 375 px phone) the period chip joins the ONE folded chip: a long title, period or count would make a third row, and the head stays within its 30% */
+  var TINY_MAX = 400;
+  function isTiny() {
+    return root.matchMedia ? root.matchMedia('(max-width: ' + TINY_MAX + 'px)').matches : root.innerWidth <= TINY_MAX;
+  }
+  /** the period chip, and its popover while open */
+  function periodChipHTML(list, p) {
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'period') +
+      '" data-testid="cbl-period-' +
+      esc(list.key) +
+      '">' +
+      esc(p.label || '') +
+      ' ▾</button>' +
+      (list.pop === 'period' ? periodPop(list, p) : '') +
+      '</span>'
+    );
+  }
+  function chipHTML(c) {
+    return '<span class="cbl-chip"' + (c.tid ? ' data-testid="' + esc(c.tid) + '"' : '') + '>' + esc(c.text) + '</span>';
+  }
+  function noteHTML(n, i) {
+    return (
+      '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
+      esc(n.cls === 'bad' ? 'bad' : 'warn') +
+      '" data-notice="' +
+      i +
+      '"' +
+      (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +
+      '>' +
+      esc(n.text) +
+      '</button>'
+    );
+  }
+  /** the ONE chip a phone folds the strip, the notices and (on a tiny phone) the period into, and its popover while open */
+  function foldedChipHTML(list, headSpec, foldPeriod) {
+    var chips = headSpec.chips || [],
+      notes = headSpec.notices || [],
+      bad = notes.some(function (item) {
+        return item.cls === 'bad';
+      });
+    return (
+      '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
+      (notes.length ? (bad ? 'bad' : 'warn') : '') +
+      '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' +
+      (list.pop === 'notes') +
+      '" data-testid="cbl-notes-' +
+      esc(list.key) +
+      '">' +
+      esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + foldedCount(list, chips, notes, true) : foldedLabel(list, chips, notes)) +
+      ' ▾</button>' +
+      (list.pop === 'notes'
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+          esc(T(list, foldPeriod ? 'Period and notices' : 'Notices')) +
+          '" data-testid="cbl-notes-pop-' +
+          esc(list.key) +
+          '"><div class="cbl-notes">' +
+          chips.map(chipHTML).join('') +
+          notes.map(noteHTML).join('') +
+          '</div>' +
+          (foldPeriod ? periodInner(list, headSpec.period) : '') +
+          '</div>'
+        : '') +
+      '</span>'
+    );
+  }
+  /** the head's chips and notices: a narrow container folds them into ONE chip that opens them (a phone's head stays within its 30%); a laptop that asked for foldHead keeps the figures inline (the Closing figure, "Dr with no party" stay visible without a tap) and folds only the notices */
+  function titleChipsHTML(list, h, foldPeriod) {
+    var chips = h.chips || [],
+      notes = h.notices || [],
+      inline = chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
+    list.narrow = foldsHead(list);
+    if (!list.narrow) return inline;
+    if (isPhone() || foldPeriod) return foldPeriod || foldsToOneChip(chips, notes) ? foldedChipHTML(list, h, foldPeriod) : inline;
+    return foldsToOneChip([], notes) ? chips.map(chipHTML).join('') + foldedChipHTML(list, { chips: [], notices: notes, period: h.period }, false) : inline;
   }
   function paintTitle(list) {
     var h = head(list),
@@ -837,72 +926,17 @@
     }
     var out = '';
     if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
-    if (h.period) {
-      var p = h.period;
-      out +=
-        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' +
-        (list.pop === 'period') +
-        '" data-testid="cbl-period-' +
-        esc(list.key) +
-        '">' +
-        esc(p.label || '') +
-        ' ▾</button>' +
-        (list.pop === 'period' ? periodPop(list, p) : '') +
-        '</span>';
-    }
     var chips = h.chips || [],
       notes = h.notices || [],
-      chipHTML = function (c) {
-        return '<span class="cbl-chip"' + (c.tid ? ' data-testid="' + esc(c.tid) + '"' : '') + '>' + esc(c.text) + '</span>';
-      };
-    var noteHTML = function (n, i) {
-      return (
-        '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-        esc(n.cls === 'bad' ? 'bad' : 'warn') +
-        '" data-notice="' +
-        i +
-        '"' +
-        (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +
-        '>' +
-        esc(n.text) +
-        '</button>'
-      );
-    };
-    /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
-    list.narrow = isPhone();
-    if (list.narrow && foldsToOneChip(chips, notes)) {
-      var bad = notes.some(function (item) {
-        return item.cls === 'bad';
-      });
-      out +=
-        '<span class="cbl-anchor"><button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-        (notes.length ? (bad ? 'bad' : 'warn') : '') +
-        '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' +
-        (list.pop === 'notes') +
-        '" data-testid="cbl-notes-' +
-        esc(list.key) +
-        '">' +
-        esc(foldedLabel(list, chips, notes)) +
-        ' ▾</button>' +
-        (list.pop === 'notes'
-          ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
-            esc(T(list, 'Notices')) +
-            '" data-testid="cbl-notes-pop-' +
-            esc(list.key) +
-            '"><div class="cbl-notes">' +
-            chips.map(chipHTML).join('') +
-            notes.map(noteHTML).join('') +
-            '</div></div>'
-          : '') +
-        '</span>';
-    } else {
-      out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
-    }
+      foldPeriod = !!h.period && isPhone() && isTiny() && chips.length + notes.length > 0;
+    if (h.period && !foldPeriod) out += periodChipHTML(list, h.period);
+    out += titleChipsHTML(list, h, foldPeriod);
     /* T3-COMPAT: views.inTitle — the saved-view tabs sit in the title row, after the chips, instead of a row of their own (a head that must stay short) */
     if (list.o.views && list.o.views.inTitle)
       out += '<span class="cbl-views in-title" data-cbl-part="views" role="tablist" aria-label="' + esc(T(list, 'Views')) + '"></span>';
     if (typeof h.slot === 'function')
       out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
+    box.classList.toggle('reserve', !!h.reserve);
     box.innerHTML = out;
     if (list.o.views && list.o.views.inTitle) paintViews(list);
     if (typeof h.slot === 'function') {
@@ -913,13 +947,21 @@
         });
     }
   }
+  /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
-    var presets = p.presets || [],
-      nestedVal = I.pv || p.value;
     return (
       '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
       esc(T(I, 'Period')) +
-      '"><h4>' +
+      '">' +
+      periodInner(I, p) +
+      '</div>'
+    );
+  }
+  function periodInner(I, p) {
+    var presets = p.presets || [],
+      nestedVal = I.pv || p.value;
+    return (
+      '<h4>' +
       esc(T(I, 'Period')) +
       '</h4><div class="cbl-preset">' +
       presets
@@ -938,8 +980,7 @@
           '" aria-label="' +
           esc(T(I, 'To')) +
           '"></div>'
-        : '') +
-      '</div>'
+        : '')
     );
   }
 
@@ -1022,8 +1063,12 @@
   function isPhone() {
     return root.matchMedia ? root.matchMedia('(max-width: ' + PHONE_MAX + 'px)').matches : root.innerWidth <= PHONE_MAX;
   }
+  /** a phone folds the head (one View chip, one notices chip); a page may ask for the same fold at any width (foldHead: true: the Ledgers head, which must stay within 20% of a laptop) */
+  function foldsHead(list) {
+    return isPhone() || !!list.o.foldHead;
+  }
   function isNarrowList(list) {
-    list.narrow = isPhone();
+    list.narrow = foldsHead(list);
     return list.narrow;
   }
   /** the one View button of a phone and its popover: Group by, Grid / Lines, Columns and CSV inside it (a list opener and its popover, CMP033); Columns opens its own sheet in its place */
@@ -1283,7 +1328,7 @@
       try {
         ss = ae.selectionStart;
         se = ae.selectionEnd;
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     box.innerHTML = h;
     if (keepId) {
@@ -1293,7 +1338,7 @@
         if (ss != null) {
           try {
             back.setSelectionRange(ss, se);
-          } catch (_) {}
+          } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         }
       }
     }
@@ -1650,7 +1695,7 @@
       });
       try {
         box.__cblRO.observe(box);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var keepTop = box.scrollTop,
       o = I.o,
@@ -1661,13 +1706,12 @@
     if (I.io) {
       try {
         I.io.disconnect();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       I.io = null;
     }
     I.el.classList.toggle('tbllines', s.view === 'lines');
     var state = typeof o.state === 'function' ? o.state() : o.state;
     var hdr = headerHTML(I, cols, tpl, state === 'loading');
-    var h = '';
     if (state === 'loading') {
       box.innerHTML =
         '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>');
@@ -1827,7 +1871,7 @@
             { root: box, rootMargin: '0px' }
           );
           I.io.observe(sent);
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
     var node = $(I, '.cbl-count');
@@ -1913,11 +1957,10 @@
             (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') +
             '">' +
             (id
-              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort"' +
+              ? '<button type="button" data-cbsid="CMP039-B01"' + mountAttribute('CMP039') + ' class="sort" title="' + label + '"' +
                 (plainHead ? ' disabled tabindex="-1"' : ' data-sort="' + esc(id) + '"') +
                 '>' +
-                label +
-                ' <span class="arrow">' +
+                '<span class="cbl-hl">' + label + '</span> <span class="arrow">' +
                 (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') +
                 '</span></button>'
               : label) /* the loading header keeps the SAME boxes (its buttons are just inert), so it does not change height when the rows arrive */ +
@@ -1947,7 +1990,7 @@
         : null;
     if (at)
       Object.keys(at).forEach(function (item) {
-        if (/^[a-z][a-z0-9\-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
+        if (/^[a-z][a-z0-9-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
       });
     var tid = o.rowTid
       ? safe(function () {
@@ -2393,7 +2436,7 @@
       setTimeout(function () {
         root.URL.revokeObjectURL(u);
       }, 2000);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
@@ -2778,7 +2821,7 @@
     }
   }
   function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
   function refocusCol(I, k) {
     var node = I.el.querySelector('[data-col="' + k + '"]');
@@ -2870,7 +2913,7 @@
     node.classList.add('drag');
     try {
       node.setPointerCapture(event.pointerId);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);
     root.document.addEventListener('pointercancel', onPointerUp);
@@ -3010,8 +3053,9 @@
   /** one button of the pager pair: Previous (glyph first) or Next (glyph last) with its register code */
   function pagerButton(side, code, spec) {
     var text = esc(spec.label);
+    var sid = 'CMP037-' + code; /* B06 or B07: held in a name so the census reads the code on the element */
     return (
-      '<button type="button" data-cbsid="CMP037-' + code + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
+      '<button type="button" data-cbsid="' + sid + '"' + mountAttribute('CMP037') + ' class="act quiet cbl-pgbtn" data-testid="' + esc(spec.tid) + '" onclick="' + esc(spec.act) + '"' +
       (spec.off ? ' disabled' : '') + '>' + (side === 'prev' ? '‹ ' + text : text + ' ›') + '</button>'
     );
   }

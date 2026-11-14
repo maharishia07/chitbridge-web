@@ -1,5 +1,9 @@
 /**
  * step-flow.js — THE step flow. One implementation, used by every screen that composes an order in steps.
+ * OWNS      CBSteps: the one step flow (rail, guard-with-a-reason, footer Back / Save draft / Next or Send, focus), its three footer buttons SCR039-B01..B03
+ * CALLED BY  5 pages by <script src> (grep -lE 'src="/?app/step-flow.js' public/*.html): accounts, app, crm, finance, shop. CBSteps.create is called in app.html (3 sites),
+ *            shop.html (1) and five screens' own scripts: Compare, CRM leads import, Move in, Network member, Repeat (grep -n 'CBSteps\.create' public)
+ * FLOW       a screen supplies its steps, what each renders, what blocks each and what send means → create() → paint rail + body + foot → back / next / send / draft
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/step-flow
  *
  * Athi, 2026-08-08: *"we do not want the left half, we are going to show just the product list and the cart, nothing
@@ -253,7 +257,7 @@
     var out = '<div class="cbst-foot" data-testid="stepfoot-' + esc(ns) + '">';
     if (backLbl) {
       out +=
-        '<button type="button" data-testid="' +
+        '<button data-cbsid="SCR039-B01" type="button" data-testid="' +
         esc(tidBack) +
         '"' +
         (iconBack && s.i ? ' data-ic="back" aria-label="Back" title="Back"' : '') +
@@ -265,7 +269,7 @@
     }
     if (opt(s, 'draftLabel')) {
       out +=
-        '<button type="button" data-testid="' +
+        '<button data-cbsid="SCR039-B02" type="button" data-testid="' +
         esc(tidDraft) +
         '"' +
         ' onclick="CBSteps.draft(\'' +
@@ -276,7 +280,7 @@
     }
     // ⚠️ The reason rides on `title`. A dead button that will not say why is the thing this guard exists to avoid.
     out +=
-      '<button type="button" class="pri" data-testid="' +
+      '<button data-cbsid="SCR039-B03" type="button" class="pri" data-testid="' +
       esc(tidPri) +
       '"' +
       (blocked ? ' disabled title="' + esc(blocked) + '"' : '') +

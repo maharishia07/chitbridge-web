@@ -22,8 +22,10 @@
  * unchanged (declareVariants · startFromStandardSet · checkCatalogueFile · downloadCatalogueTemplate ·
  * exportCatalogueCSV · the face wizard). Moving a control must not become rewriting it — the point of the change
  * is WHERE things live, and a re-implementation would smuggle behaviour changes in under a re-organisation.
- * CALLED BY app.html (the workshop) · assets.js · cap-cmdb.js · screens.js (the registry rows)
- * // CARD 06-catalogue-pim/definitions-shelf
+ * OWNS      the Catalogue setup screen: how the catalogue is SHAPED (definitions list, columns/fields, variants, units of measure, language, adopted lists, the face wizard); catalogueSetupHubScreen is its entry.
+ * CALLED BY app.html (the workshop): CAP_OF catsetup + ensureCap('catsetup') in the nav, catalogueSetupHubScreen() in its screen switch · cap-definitions.js (ensureCap('catsetup')). No page carries a <script src> for it and no customer page defines ensureCap, so it is SUPPORT (reached only through app.html).
+ * FLOW      ensureCap('catsetup') → catalogueSetupHubScreen → catsetBody (one section, chosen by catsetSec) → the section's load (catsetDefsLoad · catsetUnitsLoad · catsetFieldsLoad …) → catsetPaint
+ * CARD      06-catalogue-pim/categories-and-fields
  */
 /* ⭐ OPENS ON BLUEPRINT, not Columns — the fastest way in is the one a reader should meet first. Someone with
    no blueprint for their trade reads one card and moves down the rail; someone with one is already there. */
@@ -1536,7 +1538,7 @@ function catsetBlueprint() {
   try {
     UI.cw = UI.cw || {};
     UI.cw.step = 1;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   renderApp();
 }
 
@@ -2484,7 +2486,7 @@ async function catsetPlanCreate(rows, err) {
     if (typeof cbDefAfterChange === 'function') {
       try {
         await cbDefAfterChange('offer');
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     await catsetDefsLoad('offer', true);
     catsetPaintDetail();

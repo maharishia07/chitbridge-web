@@ -1,4 +1,4 @@
-/* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake').
+/* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen
  *
  * Athi, 2026-07-12: someone is chatting on WhatsApp or emailing, and they want it to become a chit on the rail.
  *
@@ -707,5 +707,5 @@ function _copyJson(id) {
   try {
     navigator.clipboard.writeText(el.textContent);
     if (typeof toast === 'function') toast('copied');
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }

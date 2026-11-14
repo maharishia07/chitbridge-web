@@ -38,18 +38,21 @@ const VIEWS = [
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['compare', 'Parallel run', '[data-testid="cmp"]'],   /* PR1 (e2e/walk-compare.cjs walks it) */
   ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'],
   /* A1 (Athi, 2026-10-03 · T20/T21): Outstandings > Receivables · Payables · Bills · Cheques; Waiting is not a menu item (a failed posting is a To do item) */
-  ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
-  ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
+  /* ACC-175: Dues (both sides together) has its own button, first in Outstandings; the bills item is named "Unpaid bills" */
+  ['dues', 'Dues', '[data-testid="dues-list"]'], ['receivables', 'Receivables', '[data-testid="dues-side-rcv"]'], ['payables', 'Payables', '[data-testid="dues-side-pay"]'],
+  ['bills', 'Unpaid bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
   ['lock', 'Month lock', '[data-testid="lk_fy"]'],
   ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
   ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
   ['movein', 'Move in', '[data-testid="mi-steps"]'],   /* IM1: move in from Xero / QuickBooks (e2e/walk-move-in.cjs walks it) */
+  ['rates', 'Rates', '[data-testid="fx"]'],   /* FX1: exchange rates, the last Setup item (e2e/walk-fx.cjs walks it) */
 ];
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
 const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
+  entry_id: 'e-' + date, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null,   /* PERF1 / M29: a ledger line names its entry and its reversal pair (the contract's keys; the journal's entry_id is the same 'e-' + date) */
   source: books.source({ kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by }) });
 const L1 = LINE('k1', '2026-09-05', 'C2/26-27/0016', 'c1', 300000, 0, 300000, 'bill', 'Mayur Bhavan');
 const L2 = LINE('k2', '2026-09-06', 'C2/26-27/0017', 'c2', 300000, 0, 600000, 'bill', 'Mayur Bhavan');
@@ -59,8 +62,9 @@ const CONTROL = {
   '1300': books.ledger('1300', 'Customers (Sundry Debtors)', [L1, L2], { closing_minor: 600000 }),
   '2100': books.ledger('2100', 'Suppliers (Sundry Creditors)', [P1, P2], { closing_minor: -250000 }),
 };
-/* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it */
-const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, reverses_entry_id: null, narration: 'Sale',
+/* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it.
+   PERF1: an opened ledger line reads its own entry by id (GET /daybook?entries=<entry_id>), so the entry's id must be the one the statement line names ('e-' + date, lib/books-api.cjs) */
+const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'e-' + d, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, reverses_entry_id: null, narration: 'Sale',
   source: books.source({ kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' }),
   lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0, counter: 'C2', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, rate: 12, dr_minor: 0, cr_minor: 267857, counter: 'C2' },
     { code: '2200', name: 'Output CGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16072, counter: 'C2' }, { code: '2201', name: 'Output SGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16071, counter: 'C2' }] }));
@@ -112,6 +116,8 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   S.calls.push(m + ' ' + p + u.search);
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
+  /* "Your work" on the shell's rail: the API's keys (truncated · counts · lines · figures), nothing waiting */
+  if (p === '/api/work/facts') return J(r, 200, { truncated: false, counts: { orders_in: 0, orders_out: 0, tasks: 0, done: 0 }, lines: [], figures: { orders_new: 0, tasks_mine: 0, orders_in: 0, orders_out: 0, tasks: 0, done: 0 } });
   if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: S.folders });
   let x;
   if ((x = p.match(/^\/api\/folders\/([^/]+)\/chits$/))) return J(r, 200, { chits: S.bills[x[1]] || [] });
@@ -128,7 +134,7 @@ async function route(S, r) {
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat(((S.extra && S.extra[x[1]]) || []).map((l) => Object.assign({ doc_date: l.date }, l))) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, books.ledger(x[1], 'Cash', [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }], { closing_minor: 1240000 }));
     if (p === '/api/books/daybook') return J(r, 200, books.daybook(JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales',
-      source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }])));
+      source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }]).map((e) => Object.assign({ reversed_by: null, reversed_by_id: null }, e))));   /* the contract's reversal pair, null = not reversed */
     if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
       { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
@@ -137,7 +143,7 @@ async function route(S, r) {
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
       { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
-    if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] });
+    if (p === '/api/books/cheques') return J(r, 200, books.cheques({ cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] }));   /* the contract's keys beside them: asOf · pdc_reminders · remind */
     if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
     if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
     if (p === '/api/books/packs') return J(r, 200, { packs: [] });
@@ -204,6 +210,10 @@ async function route(S, r) {
     ok(k.fy && k.mo && k.dis && k.off === 0 && k.sw <= w, 'Packs ' + tag + ': year and month boxes are whole, nothing sideways');
     await p.screenshot({ path: path.join(SHOTS, 'packs-' + tag + '.png') });
   }
+  /* the Ledgers head folds its tools into ONE View chip at every width (foldHead), so the Columns gear is one step inside it */
+  const openCols = async (p, kind) => { const b = '[data-testid="cols-btn-' + kind + '"]'; if (!(await p.locator(b).isVisible())) await p.click('[data-testid="cbl-view-menu-' + kind + '"]'); await p.click(b); };
+  /* two or more head notes (the figures + a notice, or an agreed-up-to date) fold into ONE chip at every width: its popover holds them, so a check that reads a note opens the chip first */
+  const openNotes = async (p, kind, tid) => { await p.waitForSelector('[data-testid="' + tid + '"], [data-testid="cbl-notes-' + kind + '"]', { timeout: 8000 }); if (!(await p.locator('[data-testid="' + tid + '"]').isVisible())) await p.click('[data-testid="cbl-notes-' + kind + '"]'); await p.waitForSelector('[data-testid="' + tid + '"]', { timeout: 8000 }); };
   const width = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
 
   /* ── the page's own source ── */
@@ -232,7 +242,7 @@ async function route(S, r) {
     const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
     ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Outstandings', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
     ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs,compare,bank', 'Books holds Day book → Balance sheet, Parallel run, Bank');
-    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'receivables,payables,bills,cheques', 'A1: Outstandings holds Receivables · Payables · Bills · Cheques');
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[2] && Array.from(s[2].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'dues,receivables,payables,bills,cheques', 'A1: Outstandings holds Dues · Receivables · Payables · Bills · Cheques');
     ok(await p.locator('[data-testid="acc-nav-waiting"]').count() === 0 && await p.locator('[data-testid="acc-nav-dues"]').count() === 1, 'A1: Waiting is no longer a menu item; Dues is one again, under Outstandings (ACC-175)');
     await p.click('[data-testid="acc-grp-setup"]');
     ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
@@ -456,10 +466,10 @@ async function route(S, r) {
     ok(rt.length === 2 && pc.length === 2 && /^P-00002 · Chola Auto Care$/.test(pc[0]) && /^P-00001 · Ravi Stores$/.test(pc[1]), 'every 1300 row leads with its party — newest first, "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
     ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter as its party');
     ok(rt.every((t) => /^Sale · Bill C2\/26-27\/001[67]( recorded \d\d \w+)?$/.test(t)), 'Details is the kind and the bill, once (' + rt[0] + ')');
-    await p.click('[data-testid="cols-btn-ledger-control"]'); await p.waitForSelector('[data-testid="cols-menu-ledger-control"]');
+    await openCols(p, 'ledger-control'); await p.waitForSelector('[data-testid="cols-menu-ledger-control"]');
     const colsOff = await p.$$eval('[data-testid="cols-menu-ledger-control"] input[type=checkbox]', (c) => c.map((x) => x.getAttribute('data-testid').replace('cols-ledger-control-', '') + ':' + (x.checked ? 1 : 0)));
     ok(JSON.stringify(colsOff) === JSON.stringify(['date:1', 'party:1', 'what:1', 'entry:0', 'tender:0', 'counter:0', 'person:0', 'bal:0']) || colsOff.join() === ['date:1', 'party:1', 'what:1', 'bal:0', 'entry:0', 'tender:0', 'counter:0', 'person:0'].join(), 'the gear keeps Balance · Entry no. · Tender · Counter · Rung by (' + colsOff.join(' ') + ')');
-    await p.click('[data-testid="cols-btn-ledger-control"]');
+    await p.keyboard.press('Escape');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
 
     /* expand one → its journal's Dr/Cr lines (the ledger you are in is bold), then the facts no visible column shows; its bill number opens the sheet */
@@ -482,9 +492,9 @@ async function route(S, r) {
     const one = await p.textContent('[data-testid="lg_out"]');
     ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
     ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
-    await p.click('[data-testid="cols-btn-ledger-party"]'); await p.waitForSelector('[data-testid="cols-menu-ledger-party"]');
+    await openCols(p, 'ledger-party'); await p.waitForSelector('[data-testid="cols-menu-ledger-party"]');
     ok(await p.locator('[data-testid="cols-ledger-party-party"]').count() === 0 && await p.locator('[data-testid="cols-ledger-party-what"]').count() === 1, 'a party\'s ledger offers no Party column, not even in the gear');
-    await p.click('[data-testid="cols-btn-ledger-party"]');
+    await p.keyboard.press('Escape');
     ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
     await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
@@ -519,10 +529,10 @@ async function route(S, r) {
     /* a control account that does not equal its parties is said in words, never hidden: an amber chip with the amount, that shows the entry with no party */
     S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
     await p.click('[data-testid="lg-acc-1300"]');
-    await p.waitForSelector('[data-testid="lg-parties-diff"]');
+    await openNotes(p, 'ledger-control', 'lg-parties-diff');
     ok(/^₹500\.00 Dr with no party$/.test((await p.textContent('[data-testid="lg-parties-diff"]')).replace(/\s+/g, ' ').trim()) && /Closing ₹6,500\.00 Dr/.test(await p.textContent('[data-testid="lg-sum"]')) && !/parties agree/.test(await p.textContent('.cbl-title')), 'when the parties and the ledger differ there is NO green text — an amber chip names the amount; the figures line stays');
     ok(await p.locator('[data-testid^="kural-footer"]:visible').count() === 0, 'and the kural is not drawn beside that warning');
-    await p.click('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(200);
+    await p.click('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(200); await openNotes(p, 'ledger-control', 'lg-parties-diff');
     ok(await p.locator('[data-testid^="stmt-row-"]').count() === 1 && /Showing the 1 entry with no party/.test(await p.textContent('[data-testid="lg-parties-diff"]')) && /No party/.test(await p.textContent('[data-testid="stmt-row-2"]')), 'the chip\'s fix shows the one entry that has no party (and reads "Show all" to undo it)');
     await p.click('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(200);
     ok(await p.locator('[data-testid^="stmt-row-"]').count() === 3, 'and Show all brings the three entries back');
@@ -734,7 +744,11 @@ async function route(S, r) {
      within 20% of the window on a laptop — a wide one AND a narrow one (1080) — and within 30% on a phone. LEDGERS_SHOTS=<dir> also keeps a picture of each state
      (01 tree open · 02 tree folded · 03 control account with parties · 04 parties differ · 05 plain ledger · 06 party's ledger · 07 entry opened · 08 empty period · 09 long name). ── */
   const headPct = (p) => p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr'); if (!l) return null;
-    return Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100); });
+    return (l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100; });
+  /* the budget is judged on the ROUNDED percent (limits 20 / 30, unchanged); the spec also reports the unrounded one so the margin is visible */
+  const rd = (v) => v == null ? null : Math.round(v), fx = (v) => v == null ? 'n/a' : v.toFixed(2);
+  /* where the head's pixels go: the page above the pane, then each part of the pane's head (so a head that grows can be traced to its row) */
+  const headParts = (p) => p.evaluate(() => { const o = document.querySelector('#lg_out'); if (!o) return ''; const t = o.getBoundingClientRect().top; return 'above ' + Math.round(t) + ' · ' + Array.from(o.children).filter((c) => c.offsetParent && !c.classList.contains('cbl-list')).map((c) => (c.className.split(' ')[0] || c.tagName) + ' ' + Math.round(c.offsetHeight)).join(' · ') + ' · col-header ' + Math.round((document.querySelector('#lg_out .cbl-hdr') || { offsetHeight: 0 }).offsetHeight) + ' · title parts ' + Array.from(document.querySelectorAll('#lg_out .cbl-title > *, #lg_out .cbl-title .cbl-slot > *')).filter((c) => c.offsetParent).map((c) => { const r = c.getBoundingClientRect(), tt = o.querySelector('.cbl-title').getBoundingClientRect(); return (c.getAttribute('data-testid') || c.getAttribute('data-lt') || c.tagName.toLowerCase() + '.' + c.className + '"' + c.textContent.slice(0, 22) + '"') + '@' + Math.round(r.top - tt.top) + '+' + Math.round(r.height) + 'x' + Math.round(r.width); }).join(' ');  });
   const LSHOTS = process.env.LEDGERS_SHOTS;
   if (LSHOTS) fs.mkdirSync(LSHOTS, { recursive: true });
   for (const theme of ['cream', 'dark', 'terminal']) {
@@ -749,7 +763,7 @@ async function route(S, r) {
       await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
       ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
       await snap('01-tree-open');
-      const checks = {};
+      const checks = {}; let parts = '';
       /* 03 · a control account with parties (Suppliers) */
       await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
       /* 04 · the parties differ (Customers, one entry with no party) */
@@ -759,7 +773,7 @@ async function route(S, r) {
       /* 05 · a plain ledger (Rent) */
       await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');
       /* 06 · a party's ledger, and 07 · its first entry opened */
-      await pick('lg-acc-1300'); await pick('lg-party-c1'); checks.party = await headPct(p); await snap('06-party-ledger');
+      await pick('lg-acc-1300'); await pick('lg-party-c1'); checks.party = await headPct(p); parts = await headParts(p); await snap('06-party-ledger');
       await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 }); await p.waitForTimeout(250);
       const g = await p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'); return { th: document.documentElement.getAttribute('data-theme'), lsw: l.scrollWidth, lcw: l.clientWidth, nsw: n.scrollWidth, ncw: n.clientWidth, dsw: document.documentElement.scrollWidth, iw: innerWidth }; });
       ok(g.lsw <= g.lcw + 1 && g.nsw <= g.ncw + 1 && g.dsw <= g.iw, 'Ledgers ' + tag + ' in ' + theme + ' (' + g.th + '): the list and the opened entry fit, nothing scrolls sideways (' + g.lsw + '/' + g.lcw + ', ' + g.nsw + '/' + g.ncw + ')');
@@ -770,8 +784,8 @@ async function route(S, r) {
       await pick('lg-acc-7777'); await snap('09-long-name');
       /* 02 · the tree folded (laptop) / page two (phone) */
       if (!phone) { await p.click('[data-testid="lt-fold"]').catch(() => {}); await p.waitForTimeout(200); await snap('02-tree-folded'); await p.click('[data-testid="lt-unfold"]').catch(() => {}); } else await snap('02-tree-folded');
-      const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null));
-      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + checks[k] + '%').join(' · ') + ')');
+      const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null).map(rd));
+      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + rd(checks[k]) + '% (' + fx(checks[k]) + ')').join(' · ') + ') [party head: ' + parts + ']');
       if (theme === 'cream' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-cream.png') });
       if (theme === 'dark' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-dark.png') });
       if (theme === 'cream' && phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-phone-cream.png') });
@@ -786,13 +800,13 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
     await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isVisible(), 'narrow laptop: with no ledger open the tree is shown (the way in)');
-    await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(250);
+    await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); await p.waitForTimeout(250);
     ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop (1080): once a ledger is open the tree folds, and "☰ Ledgers" is one tap away');
-    const n1 = await headPct(p);
-    ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% of the window with the amber notice showing (limit 20%)');
+    const n1 = rd(await headPct(p)), n1x = await headPct(p);
+    ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% (' + fx(n1x) + ') of the window with the notices chip showing (limit 20%)');
     await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200);
     const ov = await p.evaluate(() => { const t = document.querySelector('.lt-tree'), l = document.querySelector('#lg_out .cbl-list'); return { pos: getComputedStyle(t).position, lw: l.getBoundingClientRect().width }; });
-    const n2 = await headPct(p);
+    const n2 = rd(await headPct(p));
     ok(ov.pos === 'absolute' && n2 === n1, 'narrow laptop: "☰ Ledgers" brings the tree back OVER the list — the list keeps its width, the head stays ' + n2 + '%');
     await p.keyboard.press('Escape'); await p.waitForTimeout(150);
     ok(await p.locator('.lt-tree').isHidden(), 'Esc puts the overlay away');
@@ -818,14 +832,16 @@ async function route(S, r) {
     await p.click('[data-testid="lg-party-c1"]'); await p.waitForFunction(() => /Ravi/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
     await p.evaluate(() => { BK.dues[Object.keys(BK.dues)[0]].agreed_to = '2026-08-31'; Object.keys(BK.dues).forEach((k) => { BK.dues[k].agreed_to = '2026-08-31'; }); BK.lt.r.agreed_to = '2026-08-31'; bkLtTreePaint(); BK.lt.api.refresh(); });
-    await p.waitForSelector('[data-testid="lg-agreed"]', { timeout: 8000 }).catch(() => {});
+    await openNotes(p, 'ledger-party', 'lg-agreed').catch(() => {});
     ok(/Agreed up to 31 Aug 2026/.test((await p.textContent('[data-testid="lg-agreed"]').catch(() => '')) || '') && await p.locator('#lt_tree .ck').count() >= 1, 'when the API sends the agreement date the head says "✓ Agreed up to 31 Aug 2026" and the tree puts a ✓ beside the party');
     await ctx.close();
   }
 
   /* ── 8 · THE LISTS ROUND: no layout jump, and the ledger stripes ─────────────────────────────────────────────────────────────── */
   for (const [w, h] of [[1366, 768], [390, 844]]) {
-    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook' });
+    /* SET-WALK1 W7: the Thirukkural band is the owner's choice and 'auto' draws it only where the shop reads Tamil, so with no pref there is no band and no room;
+       this round measures the room the band keeps, so the owner has chosen it on (cb_kural) */
+    const { ctx, p } = await open(standIn(), { viewport: { width: w, height: h }, delay: 1200, path: '/accounts.html#daybook', seed: 'try { localStorage.setItem("cb_kural", "on"); } catch (_) {}' });
     const box = () => p.evaluate(() => { const r = (s, n) => { const e = document.querySelectorAll(s)[n || 0]; if (!e) return null; const b = e.getBoundingClientRect(); return [Math.round(b.left), Math.round(b.top), Math.round(b.width), Math.round(b.height)]; };
       return { navN: document.querySelectorAll('#nav .nav-btn').length, nav0: r('#nav .nav-btn', 0), navLast: r('#nav .nav-btn', document.querySelectorAll('#nav .nav-btn').length - 1), title: r('#title'), brand: r('#side .brand'), skel: document.querySelectorAll('.bk-skel i').length, band: r('#cbkural,#cbkural-reserve'), content: r('#content'), collapse: r('#toggleNav'), titleText: (document.getElementById('title') || {}).textContent }; });
     await p.waitForSelector('.bk-skel', { timeout: 6000 }); await p.waitForTimeout(250);

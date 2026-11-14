@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <!-- OWNS  the Catalogue page: the shop's products as it keeps them (one CBList), their offers and slabs attached with the downstream result shown beside.
-     CALLED BY Home's Catalogue card (manifest) and the storefront's links.
+     CALLED BY Home's Catalogue card (app/manifest.json id catalogue, route /catalogue.html); no other page links to it.
      FLOW  load → CBFrame → GET /api/products (paged) → CBList paints → a change → CBAction → repaint
      CARD storefront-and-catalogue/catalogue -->
 <head>
@@ -147,6 +147,8 @@ function go() {
 <script src="/app/rail-bell.js"></script>
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the header (CTG001-003) -->
 <script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
+<script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
+<script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
 <script src="/app/shell.js"></script>
 <script src="/app/kural.js"></script>
 <script src="/app/page-frame.js"></script>

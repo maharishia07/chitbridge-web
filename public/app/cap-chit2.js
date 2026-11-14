@@ -513,7 +513,7 @@ function c2PaneOrd(d) {
   if (C2.cart) {
     try {
       C2.cart.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   C2.cart = CBCart.create(cat, { renderer: CBCatUI, listEl: 'c2_lines_none', barEl: 'c2_bar_none', barHideEmpty: true });
   items.forEach(function (item) {
@@ -522,7 +522,7 @@ function c2PaneOrd(d) {
   });
   try {
     CBCatUI.ensureCss();
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   out +=
     '<div class="plist">' +
     items
@@ -1024,10 +1024,7 @@ async function c2Deliver(line_id, unit, back) {
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   try {
-    var reply = await api('c2DeliverLines', {
-      params: { id: C2.id },
-      body: { rows: [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }] }
-    });
+    var reply = await postDeliverLines('c2DeliverLines', C2.id, [{ line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref }]);
     /**
      * ⭐⭐ THE WRITE NOW CARRIES THE NEW STATE, so the screen stops asking for it. This ran `loadChit2()` — a
      * twelve-round-trip re-read measured at ~4.9s, MORE than the ~3.5s write it was confirming. Recording
@@ -1280,7 +1277,6 @@ function c2PaneWork(d) {
     return Object.keys(buckets)
       .sort(list.sort)
       .map(function (item) {
-        var n = buckets[item].length;
         var roll = c2RollupText(buckets[item], asg, prog);
         var head =
           depth === 0
@@ -1337,7 +1333,6 @@ function c2PaneWork(d) {
  *   'person' → show the DATE only     'date' → show the PERSON only     'line' → show both
  */
 function c2WorkRow(e, asg, prog, ctx) {
-  var indent = ctx === 'person' || ctx === 'date' ? 'padding-inline-start:28px;' : '';
   var a = asg[e.line_id] || {};
   var l = e.live || e.original || {};
   var p = prog[e.line_id] || {};
@@ -1769,7 +1764,7 @@ async function c2TakeMaterial(line_id) {
         note: own ? null : 'from ' + srcName
       };
     });
-    var reply = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: rows } });
+    var reply = await postDeliverLines('c2DeliverLines', C2.id, rows);
     if (!c2ApplyProgress(reply)) await loadChit2();
     toast(txf('{n} added to this line', { n: rows.length }));
   } catch (e) {
@@ -2219,7 +2214,7 @@ function chit2Screen() {
       ? '<div style="padding:8px 14px 2px">' +
         chitSpendStrip({
           id: C2.id,
-          amt: (d.detail && d.detail.total_value) || h.total_value || 0, cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
+          amt: billTotalOf(h.summary_json, (d.detail && d.detail.total_value) || h.total_value) || 0, /* ACC-206 D1: the header's summary_json (money.total first), never delivery_summary (no money) */ cost_hidden: c2CostHidden(d) /* RAIL-146: the server took the money off this read (a cost-blind co-assist): the strip says "hidden" */,
           delivery_summary: sum,
           line_delivery: d.line_delivery,
           line_assignment: d.line_assignment,
