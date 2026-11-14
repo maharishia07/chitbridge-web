@@ -46,7 +46,7 @@ async function tillPage(browser, WEB, init) {
   await p.waitForTimeout(300);
   return { ctx, p };
 }
-const ring = (p) => p.evaluate(() => { CART.length = 0; addItem(S.items[0], 1); price(); return CART.length; });
+const ring = (p) => p.evaluate(() => { document.querySelectorAll('dialog[open]').forEach((d) => d.close()); CART.length = 0; addItem(S.items[0], 1); price(); return CART.length; });
 const saved = (p) => p.evaluate(() => window.SAVED.length);
 
 (async () => {
