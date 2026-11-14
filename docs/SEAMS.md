@@ -113,7 +113,7 @@ of file each thing is; this says what already does the job.
 | 28 | `opts` | `cap-stock.js` |  |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
 | 27 | `call` | `cap-assist.js` |  |
-| 27 | `names` | `shortcuts.js` |  |
+| 28 | `names` | `shortcuts.js` |  |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 27 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 27 | `customer` | `mintuserid.js` | silently becomes a second identity. |
