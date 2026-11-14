@@ -119,22 +119,28 @@
   }
 
   /* ── the one listener ── */
+  /** true when a modifier is down, so the key belongs to the browser or the page */
+  function isModified(event) {
+    return event.altKey || event.ctrlKey || event.metaKey;
+  }
   function onKey(event) {
     if (!enabled() || event.defaultPrevented || event.isComposing) return;
     var chord = chordOf(event);
     if (chord) return onChord(event, chord);
-    if (event.altKey || event.ctrlKey || event.metaKey || editable(event.target)) return;
+    if (isModified(event) || editable(event.target)) return;
     if (event.key === REGISTER.sheet.key) {
       event.preventDefault();
       return toggleSheet();
     }
-    if (anyPopupOpen()) return;
+    if (!anyPopupOpen()) onPlainKey(event);
+  }
+  /** a plain key outside popups: the letter after g, or g itself starting the wait */
+  function onPlainKey(event) {
     if (pending) return onSecond(event);
-    if (event.key === 'g' && !event.repeat) {
-      pending = root.setTimeout(function () {
-        pending = null;
-      }, SEQUENCE_MS);
-    }
+    if (event.key !== 'g' || event.repeat) return;
+    pending = root.setTimeout(function () {
+      pending = null;
+    }, SEQUENCE_MS);
   }
   /** a chord: the open popup's main action when the chord is that popup's key, otherwise (no popup open) a nav row */
   function onChord(event, chord) {
