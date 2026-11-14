@@ -15,12 +15,13 @@ const path = require('path');
 const counter = require('../tools/shortcuts-count.cjs');
 
 const WEB = path.join(__dirname, '..');
-/* Chrome's own Alt+Shift keys. Source: Google Chrome Help, "Chrome keyboard shortcuts" (support.google.com/chrome/answer/157179):
-   Alt+Shift+A focus inactive dialog, Alt+Shift+I send feedback, Alt+Shift+T focus the toolbar, Alt+Shift+B focus the bookmarks bar. */
-const CHROME_OWNED = ['Alt+Shift+A', 'Alt+Shift+I', 'Alt+Shift+T', 'Alt+Shift+B'];
-/* Screen readers. NVDA User Guide, "NVDA modifier key" (nvaccess.org/files/nvda/documentation/userGuide.html): every NVDA command uses Insert or CapsLock as its modifier.
-   JAWS keystroke reference (support.freedomscientific.com, "JAWS keystrokes"): Insert (or CapsLock) is the JAWS key. Neither takes Alt+Shift+letter, so no chord is refused for them;
-   the rule below refuses the Insert and CapsLock keys themselves as a modifier name in a row. */
+/* Chrome's own Alt+Shift keys, copied from the page itself (fetched 14 Nov 2026), Windows and Linux column: https://support.google.com/chrome/answer/157179
+   "Focus on inactive dialogs" Alt+Shift+A · "Set focus on the first item in the Chrome toolbar" Shift+Alt+T · "Open a feedback form" Alt+Shift+I · "Open split view in the active tab" Shift+Alt+N.
+   Alt+Shift+B is not on that page, so it is not refused. */
+const CHROME_OWNED = ['Alt+Shift+A', 'Alt+Shift+T', 'Alt+Shift+I', 'Alt+Shift+N'];
+/* Screen readers (fetched 14 Nov 2026). NVDA: "can be configured so that the insert, numpadInsert, and/or capsLock key can be used as the NVDA modifier key"
+   (https://download.nvaccess.org/documentation/userGuide.html#TheNVDAModifierKey). JAWS: "By default, Insert is the JAWS modifier key" (https://webaim.org/articles/jaws/).
+   Both use Insert or CapsLock as their modifier, so no Alt+Shift+letter is refused for them; the rule below refuses those key names as a modifier in a row. */
 const SCREEN_READER_MODIFIERS = /(^|\+)(Insert|CapsLock|NVDA|JAWS)(\+|$)/i;
 const GRANDFATHERED_LITERALS = { 'public/app/ui.js': 1 }; /* the Run in background component's Control+B: it only shrinks */
 const scopeOf = (code) => (code.startsWith('POP') ? 'popup' : 'nav');
@@ -63,6 +64,7 @@ const bad = {
   'a Meta+letter': { 'HOM001-B01#a': 'Meta+K' },
   'a Chrome-owned chord (Alt+Shift+A)': { POP001: 'Alt+Shift+A' },
   'a Chrome-owned chord (Alt+Shift+T)': { 'HOM001-K01#trade': 'Alt+Shift+T' },
+  'a Chrome-owned chord (Alt+Shift+N, split view)': { 'HOM001-B01#network-lab': 'Alt+Shift+N' },
   'a screen reader modifier': { 'HOM001-K01#home': 'Insert+H' },
   'a popup key that is also a nav key': { POP001: 'Alt+Shift+H', 'HOM001-K01#home': 'Alt+Shift+H' }
 };

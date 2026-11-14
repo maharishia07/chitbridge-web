@@ -59,7 +59,7 @@
       'HOM001-B01#product-lab': 'Alt+Shift+P',
       'HOM001-B01#offer-lab': 'Alt+Shift+O',
       'HOM001-B01#combo-lab': 'Alt+Shift+C',
-      'HOM001-B01#network-lab': 'Alt+Shift+N',
+      'HOM001-B01#network-lab': 'Alt+Shift+W',
       'HOM001-B01#country-lab': 'Alt+Shift+Y',
       'HOM001-B01#conversion-lab': 'Alt+Shift+V',
       'HOM001-B01#compatibility': 'Alt+Shift+Q',
