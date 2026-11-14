@@ -1660,7 +1660,7 @@ function _openLegendImpl() {
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab] || titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
-        <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
+        <button data-cbsid="CMP005" onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>
     <div style="flex:none">${_lbTabBar()}</div>

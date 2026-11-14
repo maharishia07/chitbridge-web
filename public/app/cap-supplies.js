@@ -189,10 +189,10 @@ function supAddModal() {
       ) +
       '</div></span></label>' +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
-      '<button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="composebtn pri" style="flex:1" data-testid="supply-save" onclick="supAdd()">' +
+      '<button data-cbsid="CMP007" class="composebtn pri" style="flex:1" data-testid="supply-save" onclick="supAdd()">' +
       tx('Add') +
       '</button>' +
       '</div></div>',
@@ -263,7 +263,7 @@ function supBuyModal(from) {
       tx('another line') +
       '</button>' +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
-      '<button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="composebtn pri" style="flex:1" data-testid="supply-record" onclick="supBuy()">' +
@@ -419,7 +419,7 @@ function supUseModal(id, name) {
       tx('How many') +
       '" style="width:100%">' +
       '<div style="display:flex;gap:8px;margin-top:16px">' +
-      '<button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
       '<button class="composebtn pri" style="flex:1" data-testid="supply-use-save" onclick="supUse(\'' +

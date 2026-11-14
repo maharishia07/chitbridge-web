@@ -1618,7 +1618,7 @@ function cbDefFormHTML() {
     '<button data-cbsid="CMP003" onclick="closeModal()">' +
     tx('Cancel') +
     '</button>' +
-    '<button class="pri" data-testid="cbdef-save" onclick="cbDefSave()">' +
+    '<button data-cbsid="CMP001" class="pri" data-testid="cbdef-save" onclick="cbDefSave()">' +
     (editing ? tx('Save') : tx('Create')) +
     '</button>' +
     '</div>'
@@ -2466,7 +2466,7 @@ function cbDefHTML() {
     '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' +
     tx('🧱 Definitions') +
     '</span>' +
-    '<button onclick="openAssist(\'definitions\')" title="Ask the assistant about this screen"' +
+    '<button data-cbsid="CMP016" onclick="openAssist(\'definitions\')" title="Ask the assistant about this screen"' +
     ' style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;' +
     'height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>' +
     '</div>' +

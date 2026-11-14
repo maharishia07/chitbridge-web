@@ -136,7 +136,7 @@ function acHowItWorks(iot) {
   modal(
     '<div style="padding:2px 2px">' +
       body +
-      '<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;margin-top:16px"><button data-cbsid="CMP004" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
       tx('Got it') +
       '</button></div></div>',
     false
@@ -155,7 +155,7 @@ function _erpReceiptsHTML() {
       head +
       '<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ ' +
       esc(UI.acReceiptsErr) +
-      ' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\'' +
+      ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\'' +
       esc(UI.acSel) +
       '\')">' +
       tx('Retry') +
@@ -301,7 +301,7 @@ function piCockpit(x) {
     list =
       '<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ ' +
       esc(UI.acConnsErr) +
-      ' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadDevices(\'' +
+      ' <button data-cbsid="CMP009" class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadDevices(\'' +
       x.id +
       '\')">' +
       tx('Retry') +
@@ -507,13 +507,13 @@ function _addDeviceForm(x, iot) {
       : '') +
     '<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">' +
     '<div class="err" id="ad_err" style="margin-top:6px"></div>' +
-    '<div style="display:flex;gap:8px;margin-top:10px"><button class="composebtn pri" onclick="acAddDevice(\'' +
+    '<div style="display:flex;gap:8px;margin-top:10px"><button data-cbsid="CMP007" class="composebtn pri" onclick="acAddDevice(\'' +
     x.id +
     "'," +
     (iot ? 'true' : 'false') +
     ')">' +
     tx('Add') +
-    '</button><button class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">' +
+    '</button><button data-cbsid="CMP003" class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">' +
     tx('Cancel') +
     '</button></div></div>'
   );
@@ -686,7 +686,7 @@ function acReissueGate(id, mode) {
       tx('Send code') +
       '</button></div>' +
       '<div id="rg_msg" style="font-size:var(--fs-1);color:var(--blue-2);min-height:15px;margin-bottom:10px"></div>' +
-      '<div style="display:flex;gap:10px"><button class="composebtn" style="flex:1" onclick="closeModal()">' +
+      '<div style="display:flex;gap:10px"><button data-cbsid="CMP003" class="composebtn" style="flex:1" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">' +
       tx('Reissue') +

@@ -1261,7 +1261,7 @@ function _netConfirmNarrow(title, lead, changes, apply) {
     tx('Apply changes') +
     '</b>.</div>' +
     '<div style="display:flex;gap:9px;margin-top:14px">' +
-    '<button onclick="netCancelNarrow()" style="flex:1;padding:9px">' +
+    '<button data-cbsid="CMP003" onclick="netCancelNarrow()" style="flex:1;padding:9px">' +
     tx('Cancel') +
     '</button>' +
     '<button class="pri" onclick="netRunNarrow()" style="flex:1;padding:9px">' +

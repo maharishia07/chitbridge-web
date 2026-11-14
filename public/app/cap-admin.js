@@ -7802,7 +7802,7 @@ function netCatNoticesHTML(notes) {
             '</b><div style="font-size:var(--fs-1);color:var(--ok)">' +
             esc((item.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) +
             '</div></span>' +
-            '<button data-testid="netc-ok-' +
+            '<button data-cbsid="CMP004" data-testid="netc-ok-' +
             index +
             '" onclick="netcAnswer(' +
             index +
@@ -7828,7 +7828,7 @@ function netCatNoticesHTML(notes) {
                 _netWhen(item.at)
             ) +
             '</div></span>' +
-            '<button data-testid="netc-ok-' +
+            '<button data-cbsid="CMP004" data-testid="netc-ok-' +
             index +
             '" onclick="netcAnswer(' +
             index +

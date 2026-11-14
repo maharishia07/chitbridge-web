@@ -8107,7 +8107,7 @@ async function compose(prefill) {
      where x is there"*. `right:42px` clears the ✕ (26px wide at right:9px). The slot is always in the DOM so
      paintBar has something to fill; it renders nothing until the cart holds a line. */
   modal(
-    `<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;inset-inline-end:42px;top:9px"></div></div>
+    `<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-cbsid="CMP016" data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;inset-inline-end:42px;top:9px"></div></div>
    <div class="mbody">
      <div id="cc_rail"></div>
      <div id="cc_body"></div>
@@ -10482,7 +10482,7 @@ function actorCleanupModal(action, name, parts) {
 /* ---------------- shared screen helpers ---------------- */
 function scr(title, id, helpKey) {
   const q = helpKey
-    ? `<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`
+    ? `<button data-cbsid="CMP016" data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`
     : '';
   const hint = helpKey
     ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">${txf('Explore {q} to know more about this screen.', { q: '<b onclick="openAssist(\'' + helpKey + '\')" style="cursor:pointer;color:var(--blue)">?</b>' })}</div>`
@@ -10882,7 +10882,7 @@ function suppliersScreen() {
                what you sell, which is why it was the odd tenant left in Definitions. -->
           <button class="${UI.supReq ? 'on' : ''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
-        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-inline-start:auto">?</button></div>
+        <button data-cbsid="CMP016" onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-inline-start:auto">?</button></div>
       ${
         UI.supFind || UI.supReq
           ? ''
@@ -11193,7 +11193,7 @@ function supInfoCardHTML(x) {
     '<div class="supacts">' +
     /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:var(--card).
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
-    '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\'' +
+    '<button data-cbsid="CMP012" class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\'' +
     x.supplier_list_id +
     '\')">' +
     tx('✎ Edit') +
@@ -11477,7 +11477,7 @@ function supFindBodyHTML() {
         esc(supName(r.sup)) +
         '</b>' +
         (r.sup.preferred ? '<span style="color:#e0a92b">★</span>' : '') +
-        '<button onclick="selectSupplier(\'' +
+        '<button data-cbsid="CMP010" onclick="selectSupplier(\'' +
         r.sup.supplier_list_id +
         '\')">Open <span class=arw>→</span></button></div>' +
         /* ⚠️ THE SUPPLIER'S CURRENCY, not inr(). inr() formats in MY currency (myCur()), so a supplier pricing in
@@ -12853,7 +12853,7 @@ function platPopBarHTML(ap) {
       .join('') +
     '</select>' +
     platDeskHTML(cur, live) +
-    '<button data-testid="plat-pop-add" onclick="platAddPopulation()" title="' +
+    '<button data-cbsid="CMP007" data-testid="plat-pop-add" onclick="platAddPopulation()" title="' +
     esc(tx('Add a population — a sealed set of books that can never trade with another')) +
     '" ' +
     'style="flex:none;font:inherit;font-size:var(--fs-1);padding:4px 10px;cursor:pointer;' +
@@ -13803,9 +13803,9 @@ function custListOpts() {
 }
 function customersScreen() {
   const list = `<div class="list"><div class="lh">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button data-cbsid="CMP016" onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from you (storefront, Suppliers, a bill), or added here. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
-    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID, email or name')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><input class="inp" id="cu_add_phone" data-testid="cust-add-phone" placeholder="${tx('Phone (for a name)')}" style="width:130px" autocomplete="off" inputmode="tel" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
+    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID, email or name')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><input class="inp" id="cu_add_phone" data-testid="cust-add-phone" placeholder="${tx('Phone (for a name)')}" style="width:130px" autocomplete="off" inputmode="tel" onkeydown="if(event.key==='Enter')addCustomer()"><button data-cbsid="CMP007" class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
     </div>
     <div class="rows" id="cu_rows" style="overflow:hidden;padding-bottom:0;min-height:0"></div></div>`;
   setTimeout(paintCustList, 0); /* the rows are a CBList mount: painted once the panel is in the page */
@@ -13926,7 +13926,7 @@ function crmCols(kind) {
             '">' +
             (r.preferred ? '★' : '☆') +
             '</button>' +
-            '<button class="rowinfo" data-testid="sup-details-' +
+            '<button data-cbsid="CMP017" class="rowinfo" data-testid="sup-details-' +
             r.supplier_list_id +
             '" title="Their full record" onclick="event.stopPropagation();supOpenPanel(\'' +
             r.supplier_list_id +
@@ -19204,7 +19204,7 @@ async function prodAllFields(id) {
       '\')">' +
       tx('Set status') +
       '</button>' +
-      '<button class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' +
+      '<button data-cbsid="CMP012" class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' +
       id +
       "');setProdMode('edit')\">" +
       tx('✎ Edit') +
@@ -21827,7 +21827,7 @@ function prodDetailHTML() {
     body = prodRowsVisible()
       .map((item) => ptabWrap(item[0], prodSectionHTML(item[0], d, id, false)))
       .join('');
-    bar = `<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
+    bar = `<button data-cbsid="CMP012" class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-cbsid="CAT005-B18" data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button data-cbsid="CMP011" class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
      stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
@@ -24469,7 +24469,7 @@ function listLegend() {
     '<div class="keypanel" onclick="event.stopPropagation()"><div class="keyhead"><h4>' +
     tx('Legend / key') +
     '</h4>' +
-    '<button class="keyx" onclick="toggleLegend()" title="' +
+    '<button data-cbsid="CMP005" class="keyx" onclick="toggleLegend()" title="' +
     tx('Close') +
     '" aria-label="' +
     tx('Close') +
@@ -28949,7 +28949,7 @@ function dchipPick() {
 /** The ⋯ that opens the box. Rendered beside the chips so the way back is on the row it emptied. */
 function dchipMore() {
   return (
-    '<button type="button" class="prichip-btn" data-testid="dchip-more" onclick="dchipPick()"' +
+    '<button data-cbsid="CMP018" type="button" class="prichip-btn" data-testid="dchip-more" onclick="dchipPick()"' +
     ' title="' +
     esc(tx('Choose which details show here')) +
     '"' +
