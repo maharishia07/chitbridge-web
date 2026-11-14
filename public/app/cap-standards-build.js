@@ -15,10 +15,10 @@ var STD_BUILD_TABLE = [
   /* [id, std, name, source url or doc, rule, check in words, check key, scope] */
   ['build-wcag22-aa', 'wcag-audit', 'WCAG 2.2 level AA', 'https://www.w3.org/TR/WCAG22/',
     'Every screen passes the WCAG 2.2 A and AA success criteria: no serious or critical axe finding at 1366 and 390 wide.',
-    'axe-core in the UI sweep (--measure) → PM/SCREEN-SWEEP.json, a11y.pass', 'axe', ['screen', 'component']],
+    'axe-core in the UI sweep (--measure) → PM/SCREEN-SWEEP.json, a11y.pass; an element is judged through the screen it sits on', 'axe', ['screen', 'component', 'popup', 'control', 'chip', 'nav', 'icon']],
   ['build-wcag-214', '', 'WCAG 2.2 success criterion 2.1.4, character key shortcuts', 'https://www.w3.org/TR/WCAG22/#character-key-shortcuts',
     'A single-character shortcut can be turned off, remapped, or works only while its control has focus. One register holds every key.',
-    'MNT-61 shortcuts lane: public/app/shortcuts-register.js + e2e/shortcuts-guard.cjs (branch feat/shortcuts-mnt63); not yet written to the CMDB', 'none', ['screen', 'component']],
+    'PM/SHORTCUTS.json (the shortcuts register, MNT-61): every nav entry declared, a popup declared or not applicable; a control has no per-element evidence yet', 'shortcut', ['nav', 'popup']],
   ['build-apg', '', 'WAI-ARIA Authoring Practices patterns', 'https://www.w3.org/WAI/ARIA/apg/patterns/',
     'A custom widget (dialog, combobox, tabs, menu) follows its APG pattern: roles, keys and focus order.',
     'keyboard-only pass in the UI sweep (the keyboard_pattern column is n/c today)', 'none', ['component']],
@@ -36,7 +36,7 @@ var STD_BUILD_TABLE = [
     'no route-level date check yet', 'none', ['route']],
   ['build-rls', 'postgres-rls', 'Postgres row level security on every table', 'https://www.postgresql.org/docs/current/ddl-rowsecurity.html',
     'Every shop-scoped table has row level security on and a policy; a read as another shop returns nothing.',
-    'RLS isolation tests (cb-db); there are no table CIs in the CMDB yet', 'none', ['table']],
+    'the newest SIT schema probe, PM/SCHEMA-PROBE-<date>.json (RLS enabled and forced, per table); none exists yet, so every table reads "not checked"', 'rls', ['table']],
   ['build-fn-size', '', 'Function size: no function over 40 lines', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
     'No function is longer than 40 lines.', 'tools/readability.cjs ratchet, counter long40 = 0 on the CI\'s files', 'ratchet:long40', ['module']],
   ['build-complexity', '', 'Complexity: no function above 10', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
@@ -50,9 +50,14 @@ var STD_BUILD_TABLE = [
   ['build-readability-touch', '', 'Readability: a touched file comes out better or zero', 'DISCIPLINES.md §6 · rule 2 (Athi 14 Nov 2026)',
     'A file a change touches ends with a lower readability score, or zero.', 'tools/readability/touch.cjs runs on the PR diff; it leaves nothing the CMDB can read yet', 'none', ['module']],
   ['build-element-id', '', 'Every UI element has a code on the element (data-cbsid)', 'DISCIPLINES.md §3a · SCREENS.json _scheme (Athi 2 Nov 2026)',
-    'Each control carries its register code on the element and is named in the CMDB.', 'ui-cmdb.cjs: the element\'s code is found in the page\'s own files; a failing SWEEP control overrides', 'element-code', ['screen', 'component']]
+    'Each control carries its register code on the element and is named in the CMDB.', 'a screen or component: ui-cmdb.cjs finds its code in the page\'s own files; a popup or control: the census (toolset/coverage/ui-identity.cjs) finds the code on the element (data-cbsid, data-pop or its opening function); a failing SWEEP control overrides', 'element-code', ['screen', 'component', 'popup', 'control', 'chip']],
+  ['build-control-sweep', '', 'Every control passes its UI sweep case', 'DISCIPLINES.md §3a · the UI sweep (e2e)',
+    'A control does what its code says in the sweep: the CONTROL case for its code passes on the SIT run.', 'PM/junit/junit-ui-sweep-*.xml, the CONTROL <code> case (newest result, 7 days)', 'control-sweep', ['control', 'chip']],
+  ['build-keyboard', '', 'WCAG 2.2 success criterion 2.1.1, keyboard operable', 'https://www.w3.org/TR/WCAG22/#keyboard',
+    'Every popup and control is reached and used from the keyboard alone, with a visible and unobscured focus.',
+    'PM/A11Y-KEYBOARD-PROOF-<date>.md (the keyboard-only proof, per page): a popup needs 1b 2a 2b 2c 4 5 8, a control 6a and 6b', 'keyboard', ['popup', 'control', 'chip']]
 ];
-var STD_BUILD_SCOPES = [['screen', 'Screen'], ['component', 'UI component'], ['route', 'Api route'], ['module', 'Source file'], ['table', 'Database table']];
+var STD_BUILD_SCOPES = [['screen', 'Screen'], ['component', 'UI component'], ['popup', 'Popup'], ['control', 'Control'], ['chip', 'Chip'], ['icon', 'Icon'], ['nav', 'Navigation entry'], ['route', 'Api route'], ['module', 'Source file'], ['table', 'Database table']];
 /** one register row from one table line: the shape the page and the other readers already know */
 function stdBuildRow(line) {
   var checked = line[6] !== 'none';

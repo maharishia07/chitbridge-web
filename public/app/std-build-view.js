@@ -5,8 +5,9 @@
  * FLOW      CBStdBuild.load() → BUILD → cols() paints the three counts (each a button with its own code) → a press opens the page's own #sheet with the CIs of that number.
  *           The popup is the library's ui.dialog (POP145); the page gives it modal() over its own <dialog>.
  *           The rows are the register's (cap-standards-build.js, kind 'build'); a standard the file does not know yet reads "not checked" everywhere.
+ *           CAP-STD-2: the opened list has a Kind filter (every kind of CI behind the number, with its count) and a Where column (page or file:line, from the generator).
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/standards-register
- * Codes     STD001-B01 pass · STD001-B02 fail · STD001-B03 not checked (one code per column, like a list's header button); STD001-U05 the popup's mount.
+ * Codes     STD001-B01 pass · STD001-B02 fail · STD001-B03 not checked (one code per column, like a list's header button); STD001-U05 the popup's mount; STD001-S01 the Kind filter of the list.
  */
 var CBStdBuild = (function () {
   var BUILD = null,
@@ -88,6 +89,19 @@ var CBStdBuild = (function () {
   function ciRows(line, key) {
     return line[key].map(function (index) { return BUILD.cis[index]; });
   }
+  /** the Kind filter: every kind present in the list, with how many; the list shows one kind or all */
+  function kindFilter(list) {
+    var counts = {};
+    list.forEach(function (item) { counts[item[1]] = (counts[item[1]] || 0) + 1; });
+    var scopes = typeof STD_BUILD_SCOPES !== 'undefined' ? STD_BUILD_SCOPES : [];
+    var name = function (kind) { return (scopes.filter(function (s) { return s[0] === kind; })[0] || [kind, kind])[1]; };
+    return '<label class="sbl-kind">Kind <select data-cbsid="STD001-S01" data-sbkind data-testid="std-build-kind" aria-label="Show one kind of item"><option value="">All kinds (' + list.length + ')</option>' +
+      Object.keys(counts).sort().map(function (kind) { return '<option value="' + esc(kind) + '">' + esc(name(kind)) + ' (' + counts[kind] + ')</option>'; }).join('') + '</select></label>';
+  }
+  /** one CI line: its code, its kind, and where it is (a page or file:line) */
+  function ciLine(item) {
+    return '<li data-sbkind-of="' + esc(item[1]) + '"><code>' + esc(item[0]) + '</code> <span class="hint">' + esc(item[1]) + '</span> <span class="sbl-where" data-testid="std-build-where">' + esc(item[2] || '') + '</span>' + (item[3] ? ' <span class="hint">' + esc(item[3]) + '</span>' : '') + '</li>';
+  }
   /** the CIs behind one number, in the library dialog (POP145) */
   function openList(code, key) {
     var line = countsOf(code), row = STANDARDS.filter(function (item) { return item.id === code; })[0], kind = KINDS.filter(function (item) { return item[0] === key; })[0], host = document.getElementById('sheet');
@@ -98,11 +112,16 @@ var CBStdBuild = (function () {
       pop: 'POP145',
       titleText: row.n + ' · ' + kind[1] + ' (' + list.length + ')',
       testid: 'std-sheet-build',
-      body: '<div class="sbl-box" tabindex="0" role="region" aria-label="' + esc(row.n + ' · ' + kind[1]) + '"><p class="hint">' + esc(row.chk) + '</p><ul class="sbl" data-testid="std-build-cis">' +
-        list.map(function (item) { return '<li><code>' + esc(item[0]) + '</code> <span class="hint">' + esc(item[1]) + '</span></li>'; }).join('') + '</ul></div>',
+      body: '<div class="sbl-box" tabindex="0" role="region" aria-label="' + esc(row.n + ' · ' + kind[1]) + '"><p class="hint">' + esc(row.chk) + '</p>' + kindFilter(list) + '<ul class="sbl" data-testid="std-build-cis">' + list.map(ciLine).join('') + '</ul></div>',
       actions: [{ name: 'close', options: { mount: 'STD001-U05' } }]
     });
   }
+  document.addEventListener('change', function (event) {
+    var pick = event.target.closest && event.target.closest('[data-sbkind]');
+    if (!pick) return;
+    var items = document.querySelectorAll('.sbl [data-sbkind-of]');
+    Array.prototype.forEach.call(items, function (li) { li.hidden = !!pick.value && li.getAttribute('data-sbkind-of') !== pick.value; });
+  });
   document.addEventListener('click', function (event) {
     var node = event.target.closest && event.target.closest('[data-sbk]');
     if (node) openList(node.getAttribute('data-sbid'), node.getAttribute('data-sbk'));
