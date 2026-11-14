@@ -10,8 +10,8 @@
  * real mint wiring is Phase B (through the real API / capability modules), added when that step is built.
  * OWNS      the DESIGN-first network builder: a draft tree under your own entity (nodes, the capabilities each holds, per-node config), its draft store
  *           (localStorage + /api/network-design) and the dry-run Build. Draws only inside app.html (the workshop), never on a customer page.
- * CALLED BY public/app.html (ensureCap('network'); calls loadNetwork, networkScreen, netBuild, _netFlush) and public/app/cap-network-member.js (calls _netByName, networkScreen);
- *           no customer page loads it by <script src>. network-app.js (network.html) calls none of its symbols; it only READS the draft and links here.
+ * CALLED BY public/app.html (ensureCap('network'); loadNetwork() at :6493, _netFlush() at :5609, capScreen('networkScreen') at :22202) and
+ *           public/app/cap-network-member.js (_netByName as the sort callback, :35). No customer page loads it by <script src>; network-app.js (network.html) calls none of its symbols.
  * FLOW      ensureCap('network') -> loadNetwork -> _netInit -> netWhereAmI (operator | member | standalone) -> the tree paints -> netSelect / netCapYes / netCapNo edit the draft -> Build (dry run).
  * CARD      04-network/network-design-builder
  * IDS       SUPPORT file (reached only through app.html, Athi: back office later): no data-cbsid here yet, header only (14 Nov).
