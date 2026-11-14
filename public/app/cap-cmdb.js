@@ -211,7 +211,7 @@ function cmdbKindsHTML() {
     .map(function (item) {
       var on = CBCMDB.kind === item[0];
       return (
-        "<button onclick=\"cmdbFilter('kind','" +
+        "<button data-cbsid=\"SCR011-B01\" onclick=\"cmdbFilter('kind','" +
         item[0] +
         '\')" style="' +
         base +
@@ -533,10 +533,10 @@ function cmdbPaint() {
     '<div style="display:flex;align-items:center;gap:6px">' +
     '<b style="font-size:var(--fs-3);white-space:nowrap">\uD83D\uDDC2\uFE0F Configuration register</b>' +
     '<span style="flex:1 1 auto"></span>' +
-    '<button title="Minimise" onclick="cmdbMinimise()" style="' +
+    '<button data-cbsid="SCR011-B02" title="Minimise" onclick="cmdbMinimise()" style="' +
     ico +
     '">\u2013</button>' +
-    '<button title="Close" onclick="cmdbSet(false)" style="' +
+    '<button data-cbsid="SCR011-B03" title="Close" onclick="cmdbSet(false)" style="' +
     ico +
     '">\u2715</button>' +
     '</div>' +
@@ -549,7 +549,7 @@ function cmdbPaint() {
     '</div>' +
     '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;align-items:center">' +
     (CBCMDB.kind === 'SCREEN'
-      ? '<select onchange="cmdbFilter(\'group\',this.value)" style="font-size:var(--fs-2);padding:3px 5px">' +
+      ? '<select data-cbsid="SCR011-S01" onchange="cmdbFilter(\'group\',this.value)" style="font-size:var(--fs-2);padding:3px 5px">' +
         '<option value="">Every menu \u00b7 ' +
         all.length +
         '</option>' +
@@ -563,7 +563,7 @@ function cmdbPaint() {
           .join('') +
         '</select>'
       : '') +
-    '<input value="' +
+    '<input data-cbsid="SCR011-I01" value="' +
     esc(CBCMDB.q) +
     '" oninput="cmdbFilter(\'q\',this.value)" placeholder="code or name"' +
     ' style="flex:1 1 140px;font-size:var(--fs-2);padding:3px 6px;border:1px solid var(--line,#e7e3d8);' +

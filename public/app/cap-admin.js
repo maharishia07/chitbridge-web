@@ -64,7 +64,7 @@ function pfExposureDefaultsHTML(e) {
     '<div data-testid="pf-exposure" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-width:520px">' +
     PF_EXPOSURE.map(function (x) {
       return (
-        '<label style="display:flex;gap:6px;align-items:center;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" data-testid="pf-expose-' +
+        '<label style="display:flex;gap:6px;align-items:center;font-size:var(--fs-2);cursor:pointer"><input data-cbsid="ACC002-I14" type="checkbox" data-testid="pf-expose-' +
         x[0] +
         '"' +
         (cur[x[0]] ? ' checked' : '') +
@@ -188,7 +188,7 @@ function misScreen() {
     var sel = misBand() === item.key ? ' sel' : '';
     var hv = m ? misHeadline(item.key, m) : { v: '·', s: '' };
     return (
-      '<div class="row misrow' +
+      '<div data-cbsid="INS001-C01" class="row misrow' +
       sel +
       '" data-testid="mis-band-' +
       item.key +
@@ -211,7 +211,7 @@ function misScreen() {
     );
   }).join('');
   var seg = function (p, l) {
-    return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>';
+    return '<button data-cbsid="INS001-B01" class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>';
   };
   /* The period bar sits ABOVE the split because it reframes all four bands at once; anything scoped to one band
      lives inside that band. Same rule that puts the Suppliers tabs above its list. */
@@ -226,7 +226,7 @@ function misScreen() {
     '</span>' +
     '<span class="misbar-r">' +
     (m ? '<span class="misasof">' + esc(m.asOf) + '</span>' : '') /* the one read stamp: cap-mis.js misReadAt (W2-SHOP) */ +
-    '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' +
+    '<button data-cbsid="INS001-B02" class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' +
     tx('✨ Explain') +
     '</button></span></div>';
   var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>' + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
@@ -423,7 +423,7 @@ function misTax() {
     .map(function (item) {
       const tone = item.side === 'output' ? 'var(--warn-3)' : item.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
       return (
-        '<div class="row" style="cursor:pointer" onclick="openChit(\'' +
+        '<div data-cbsid="INS001-C02" class="row" style="cursor:pointer" onclick="openChit(\'' +
         esc(item.chit_id) +
         '\')">' +
         '<div class="main2"><div class="l1"><span class="code">' +
@@ -457,11 +457,11 @@ function misTax() {
       tx('What this month owes, from the chits on the rail. Provisional until a copy is completed; off-rail purchases are not here; this is not a filing.')
     ) +
     '<div class="misbar" style="margin-bottom:8px"><span class="seg">' +
-    '<button onclick="misTaxSetMonth(\'' +
+    '<button data-cbsid="INS001-B03" onclick="misTaxSetMonth(\'' +
     prev +
-    '\')">‹</button><button class="on">' +
+    '\')">‹</button><button data-cbsid="INS001-B04" class="on">' +
     esc(m) +
-    '</button><button onclick="misTaxSetMonth(\'' +
+    '</button><button data-cbsid="INS001-B05" onclick="misTaxSetMonth(\'' +
     next +
     '\')">›</button></span>' +
     '<span class="misbar-r" style="font-size:var(--fs-1);color:var(--grey)">' +
@@ -498,10 +498,10 @@ function misTax() {
     (L.net.cess ? ' · Cess ' + inr(L.net.cess) : '') +
     '</div>' +
     '<div style="display:flex;gap:8px;margin:10px 0">' +
-    '<button class="composebtn" onclick="misTaxExport(\'gstr1\')">' +
+    '<button data-cbsid="INS001-B06" class="composebtn" onclick="misTaxExport(\'gstr1\')">' +
     tx('⬇ GSTR-1 JSON') +
     '</button>' +
-    '<button class="composebtn" onclick="misTaxExport(\'gstr3b\')">' +
+    '<button data-cbsid="INS001-B07" class="composebtn" onclick="misTaxExport(\'gstr3b\')">' +
     tx('⬇ GSTR-3B JSON') +
     '</button></div>' +
     '<div class="sec">' +
@@ -772,7 +772,7 @@ function _misOverdue(m) {
     ' received · ' +
     theirs +
     ' sent</span></div>' +
-    '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — ' +
+    '<div class="misnote" style="margin-top:4px">The threshold is the <b data-cbsid="INS001-C03" onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — ' +
     'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>'
   );
 }
@@ -989,7 +989,7 @@ function misPlan(m) {
     '<div class="misnote" style="margin-bottom:12px"><b>' +
     esc(PLAN.tier) +
     '</b> plan · limits declared in ' +
-    '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance <span class=arw>→</span> Constitution <span class=arw>→</span></b></div>' +
+    '<b data-cbsid="INS001-C04" onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance <span class=arw>→</span> Constitution <span class=arw>→</span></b></div>' +
     meter('Entities', 1, PLAN.entities) +
     meter('Chits today', chitsToday, PLAN.chitsPerDay) +
     meter('Networks formed', 0, null, 'not counted on this screen') +
@@ -1328,7 +1328,7 @@ async function _loadMIS() {
         const sel = misBand() === item.key ? ' sel' : '',
           hv = misHeadline(item.key, UI._mis);
         return (
-          '<div class="row misrow' +
+          '<div data-cbsid="INS001-C05" class="row misrow' +
           sel +
           '" data-testid="mis-band-' +
           item.key +
@@ -1888,7 +1888,7 @@ function iamSection(key, title, body, opts) {
   var Q = String.fromCharCode(39);
   return (
     '<div style="border:1px solid var(--line);border-radius:11px;margin-bottom:9px;background:var(--card);color:var(--on-card);overflow:hidden">' +
-    '<button type="button" data-testid="iam-sec-' +
+    '<button data-cbsid="ACC002-B27" type="button" data-testid="iam-sec-' +
     key +
     '" aria-expanded="' +
     (open ? 'true' : 'false') +
@@ -2001,7 +2001,7 @@ function profSrcToggle() {
 function profSrcBtn() {
   var on = profSrcOn();
   return (
-    '<a href="#" data-testid="prof-src-toggle" onclick="profSrcToggle();return false" ' +
+    '<a data-cbsid="ACC002-C01" href="#" data-testid="prof-src-toggle" onclick="profSrcToggle();return false" ' +
     'style="color:var(--blue);font-size:var(--fs-1);text-decoration:none">' +
     (on ? tx('Hide where these come from') : tx('Show where these come from')) +
     '</a>'
@@ -2088,7 +2088,7 @@ function iamMeHTML(e) {
     ' <span style="color:var(--grey);font-weight:400" title="' +
     esc(tx('You can change this')) +
     '">✎</span></label>' +
-    '<input class="inp" id="pf_name" value="' +
+    '<input data-cbsid="ACC002-I15" class="inp" id="pf_name" value="' +
     esc(e.display_name || '') +
     '">' +
     /* ⚠️⚠️ THE THREE-LINE EXPLANATION IS GONE. Athi: *"we don't want this info — that is what we are showcasing
@@ -2108,7 +2108,7 @@ function iamMeHTML(e) {
       : '<label class="fl" style="margin-top:0">' +
         tx('User ID') +
         '</label>' +
-        '<input class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">' +
+        '<input data-cbsid="ACC002-I16" class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">' +
         /* ⚠️ THIS ONE STAYS. It is not explanation — it is the rule you must satisfy to fill the box, and it
              is unrecoverable if you get it wrong. Set-once means there is no second attempt to learn from. */
         '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px;line-height:1.5">' +
@@ -2177,7 +2177,7 @@ function iamMeHTML(e) {
     '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' +
     tx('Trading') +
     '</label>' +
-    '<select class="inp" id="pf_bs" style="margin:0">' +
+    '<select data-cbsid="ACC002-S08" class="inp" id="pf_bs" style="margin:0">' +
     opt(['open', 'away', 'closed'], st) +
     '</select></div>' +
     /* ⚠️ THE CAP IS HONOURED HERE OR THE CONTROL LIES. visibility_cap can pin an entity to private from a layer
@@ -2187,7 +2187,7 @@ function iamMeHTML(e) {
     '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' +
     tx('Visible to') +
     '</label>' +
-    '<select class="inp" id="pf_vis" style="margin:0"' +
+    '<select data-cbsid="ACC002-S09" class="inp" id="pf_vis" style="margin:0"' +
     (capped ? ' disabled' : '') +
     '>' +
     opt(capped ? ['private'] : ['public', 'network', 'private'], vis) +
@@ -2223,7 +2223,7 @@ function iamMeHTML(e) {
       ? '<label class="fl">' +
         tx('Customers') +
         '</label>' +
-        '<select class="inp" id="pf_sfaccess" style="max-width:320px">' +
+        '<select data-cbsid="ACC002-S10" class="inp" id="pf_sfaccess" style="max-width:320px">' +
         [
           ['browse', tx('Browse first')],
           ['login', tx('Sign in first')]
@@ -2360,7 +2360,7 @@ function iamRightsBody(e) {
   var Q = String.fromCharCode(39);
   return (
     (govCardHTML(e.governance) || '<div class="misnote">' + tx('Nothing resolved yet.') + '</div>') +
-    '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" ' +
+    '<button data-cbsid="ACC002-B28" class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" ' +
     'onclick="navTo(' +
     Q +
     'settings' +
@@ -2583,7 +2583,7 @@ function iamTradeBody() {
 function iamTradeLink() {
   var Q = String.fromCharCode(39);
   return (
-    '<button class="composebtn" style="margin-top:10px" data-testid="prof-to-readiness" ' +
+    '<button data-cbsid="ACC002-B29" class="composebtn" style="margin-top:10px" data-testid="prof-to-readiness" ' +
     'onclick="navTo(' +
     Q +
     'readiness' +
@@ -2691,7 +2691,7 @@ function iamChannelRows() {
       '<span style="color:var(--grey)">' +
       tx('no channel yet') +
       '</span>' +
-      ' <a href="#" onclick="navTo(' +
+      ' <a data-cbsid="ACC002-C02" href="#" onclick="navTo(' +
       Q0 +
       'settings' +
       Q0 +
@@ -2728,7 +2728,7 @@ function iamChannelRows() {
         );
       })
       .join('') +
-    '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' +
+    '<div class="kv" style="margin-top:6px"><a data-cbsid="ACC002-C03" href="#" onclick="navTo(' +
     Q +
     'settings' +
     Q +
@@ -2904,7 +2904,7 @@ function iamDetailDesignRow(e) {
     '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' +
     esc(why) +
     '</div></div>' +
-    '<a href="#" data-testid="prof-detail-design"' +
+    '<a data-cbsid="ACC002-C04" href="#" data-testid="prof-detail-design"' +
     ' onclick="navTo(' +
     Q +
     'settings' +
@@ -3389,7 +3389,7 @@ function iamGovernedRows(e) {
        theme and text size in Appearance. One link would send half the readers to the wrong screen, and a
        link that lands you somewhere without the control you came for is worse than no link. */
     '<div style="margin-top:9px;display:flex;gap:14px;flex-wrap:wrap">' +
-    '<a href="#" onclick="navTo(' +
+    '<a data-cbsid="ACC002-C05" href="#" onclick="navTo(' +
     Q +
     'settings' +
     Q +
@@ -3400,7 +3400,7 @@ function iamGovernedRows(e) {
     ');return false" style="color:var(--blue);font-size:var(--fs-1)">' +
     tx('Language and formats') +
     ' <span class=arw>→</span></a>' +
-    '<a href="#" onclick="navTo(' +
+    '<a data-cbsid="ACC002-C06" href="#" onclick="navTo(' +
     Q +
     'settings' +
     Q +
@@ -3881,21 +3881,21 @@ function profGuard(go, map, nameMap) {
       tx('and have not saved it.') +
       '</div></div>' +
       '<div class="mfoot">' +
-      '<button data-testid="prof-guard-stay" onclick="profGuardDo(' +
+      '<button data-cbsid="ACC002-B30" data-testid="prof-guard-stay" onclick="profGuardDo(' +
       Q +
       'stay' +
       Q +
       ')">' +
       esc(tx('Stay here')) +
       '</button>' +
-      '<button data-testid="prof-guard-discard" onclick="profGuardDo(' +
+      '<button data-cbsid="ACC002-B31" data-testid="prof-guard-discard" onclick="profGuardDo(' +
       Q +
       'discard' +
       Q +
       ')">' +
       esc(tx('Discard')) +
       '</button>' +
-      '<button class="pri" data-testid="prof-guard-save" onclick="profGuardDo(' +
+      '<button data-cbsid="ACC002-B32" class="pri" data-testid="prof-guard-save" onclick="profGuardDo(' +
       Q +
       'save' +
       Q +
@@ -4002,10 +4002,10 @@ async function loadActorProfile(node) {
   /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
      *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
      behave the same way beat two accordions and one loose card sitting under them. */
-  const pinBody = `<label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button>`;
+  const pinBody = `<label class="fl">${tx('Current PIN')}</label><input data-cbsid="ACC002-I17" class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('New PIN')}</label><input data-cbsid="ACC002-I18" class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('Confirm new PIN')}</label><input data-cbsid="ACC002-I19" class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <div class="err" id="pf_err"></div><button data-cbsid="ACC002-B33" class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button>`;
   const pinCard = iamSection('pin', tx('Change your PIN'), pinBody, { hint: tx('4 digits') });
 
   /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
@@ -4169,7 +4169,7 @@ function govPlanBlock() {
     govRowHtml('Entities allowed', String(PLAN.entities), 'bound') +
     govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound') +
     govRowHtml('Networks allowed', String(PLAN.networks), 'bound') +
-    '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS <span class=arw>→</span></b></div>'
+    '<div class="misnote" style="margin-top:9px">These are the limits. <b data-cbsid="ACC002-C07" onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS <span class=arw>→</span></b></div>'
   );
 }
 function govCodeStandards() {
@@ -4258,7 +4258,7 @@ function govCatVisWhy() {
  * tell which one last won. One owner, many viewers.
  */
 function govOwnedElsewhere(where, nav) {
-  return '<button class="govref-go" onclick="' + nav + '">change in ' + esc(where) + ' <span class=arw>→</span></button>';
+  return '<button data-cbsid="ACC002-B34" class="govref-go" onclick="' + nav + '">change in ' + esc(where) + ' <span class=arw>→</span></button>';
 }
 /* A declared value may be a literal or a function of live state — resolve it the same way everywhere, so no
    consumer has to know which kind it got. */
@@ -4290,7 +4290,7 @@ function govRefHTML(label) {
     '<span class="govref-v">' +
     esc(d.value) +
     '</span>' +
-    '<button class="govref-go" onclick="govGoTo(' +
+    '<button data-cbsid="ACC002-B35" class="govref-go" onclick="govGoTo(' +
     d.layerIndex +
     ')" title="Open the layer that declares this">' +
     esc(d.layer) +
@@ -4539,7 +4539,7 @@ function govLayersBlock() {
   var L = GOV[t];
   var tabs = GOV.map(function (item, index) {
     return (
-      '<button class="composebtn' +
+      '<button data-cbsid="ACC002-B36" class="composebtn' +
       (index === t ? ' on' : '') +
       '" style="font-size:var(--fs-1);padding:5px 9px" onclick="govSetTab(' +
       index +
@@ -4634,7 +4634,7 @@ function govLayersBlock() {
       '<div class="govgrp' +
       (open ? ' open' : '') +
       '">' +
-      '<button class="govgrp-h" data-testid="gov-grp-' +
+      '<button data-cbsid="ACC002-B37" class="govgrp-h" data-testid="gov-grp-' +
       key +
       '" onclick="govToggleGrp(\'' +
       key +
@@ -4752,15 +4752,15 @@ function govLayersBlock() {
      */
     '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line);font-size:var(--fs-1);line-height:1.6">' +
     '<div style="color:var(--grey);margin-bottom:5px"><b>This sets the limits. You choose inside them:</b></div>' +
-    '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' +
+    '<a data-cbsid="ACC002-C08" href="#" data-testid="gov-to-locale" onclick="setSetSec(' +
     "'locale'" +
     ');return false" style="color:var(--blue);font-weight:600">Localisation <span class=arw>→</span></a>' +
     '<span style="color:var(--grey)"> language, formats, time zone, working days &nbsp;·&nbsp; </span>' +
-    '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' +
+    '<a data-cbsid="ACC002-C09" href="#" data-testid="gov-to-appearance" onclick="setSetSec(' +
     "'appearance'" +
     ');return false" style="color:var(--blue);font-weight:600">Appearance <span class=arw>→</span></a>' +
     '<span style="color:var(--grey)"> theme, text size, motion &nbsp;·&nbsp; </span>' +
-    '<a href="#" data-testid="gov-to-standards" onclick="setSetSec(' +
+    '<a data-cbsid="ACC002-C10" href="#" data-testid="gov-to-standards" onclick="setSetSec(' +
     "'standards'" +
     ');return false" style="color:var(--blue);font-weight:600">Standards <span class=arw>→</span></a>' +
     '<span style="color:var(--grey)"> the authority every rule above derives from, and what each one removes</span>' +
@@ -4850,7 +4850,7 @@ function settingsScreen() {
   })
     .map(function (item) {
       var row =
-        '<div class="row misrow' +
+        '<div data-cbsid="ACC002-C11" class="row misrow' +
         (setSec() === item.key ? ' sel' : '') +
         '" data-testid="set-sec-' +
         item.key +
@@ -4865,7 +4865,7 @@ function settingsScreen() {
       if (item.key === 'integrations' && setSec() === 'integrations') {
         row += INT_TABS.map(function (entry) {
           return (
-            '<div class="row misrow sub' +
+            '<div data-cbsid="ACC002-C12" class="row misrow sub' +
             (intTab() === entry.key ? ' sel' : '') +
             '" data-testid="int-tab-' +
             entry.key +
@@ -4885,7 +4885,7 @@ function settingsScreen() {
         row += GOV.map(function (entry, index) {
           var on = (UI.govTab || 0) === index;
           return (
-            '<div class="row misrow sub' +
+            '<div data-cbsid="ACC002-C13" class="row misrow sub' +
             (on ? ' sel' : '') +
             '" data-testid="gov-layer-' +
             index +
@@ -4954,7 +4954,7 @@ function aiSettingsCard() {
     TERM.coassist +
     '. ' +
     'It works to a rule you set, and everything it does is a chit you can dispute.</div>' +
-    '<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'
+    '<button data-cbsid="ACC002-B38" class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'
   );
 }
 function goCoassistAI() {
@@ -5155,7 +5155,7 @@ function appearanceSettingsHTML() {
 
   var pill = function (id, on, click, label, sub) {
     return (
-      '<button type="button" data-testid="' +
+      '<button data-cbsid="ACC002-B39" type="button" data-testid="' +
       id +
       '" onclick="' +
       click +
@@ -5417,7 +5417,7 @@ function _locGoto(testid, sec) {
 function _locLink(label, testid, sec) {
   var Q = String.fromCharCode(39);
   return (
-    ' <a href="#" title="' +
+    ' <a data-cbsid="ACC002-C14" href="#" title="' +
     esc(label) +
     '" onclick="return _locGoto(' +
     Q +
@@ -5509,7 +5509,7 @@ function _curPicker(cur) {
   var _ri = CBLocale.regionInfo && CBLocale.regionInfo();
   var regionName = (_ri && _ri.name) || CBLocale.region();
   return (
-    '<select class="inp" id="loc-cur" style="margin:0;max-width:320px" onchange="localeSetCurrency(this.value)">' +
+    '<select data-cbsid="ACC002-S11" class="inp" id="loc-cur" style="margin:0;max-width:320px" onchange="localeSetCurrency(this.value)">' +
     (top.length ? '<optgroup label="' + esc(regionName ? tx('Used in') + ' ' + regionName : tx('In use')) + '">' + optsOf(top) + '</optgroup>' : '') +
     (rest.length ? '<optgroup label="' + esc(tx('All currencies')) + '">' + optsOf(rest) + '</optgroup>' : '') +
     '</select>'
@@ -5590,7 +5590,7 @@ function _locPendingBar() {
     '<button data-cbsid="CMP001" class="btn pri" style="flex:1" onclick="localeSaveLocale()">' +
     tx('Save') +
     '</button>' +
-    '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' +
+    '<button data-cbsid="ACC002-B40" class="btn" style="flex:1" onclick="localeDiscardLocale()">' +
     tx('Discard') +
     '</button>' +
     '</div></div>'
@@ -5638,7 +5638,7 @@ function _localeSettingsBody() {
   var cur = CBLocale.getExt('locale'); /* CU3: the layer's own read, not a second one of its storage */
   var sel = function (id, list, val, fn) {
     return (
-      '<select class="inp" data-testid="' +
+      '<select data-cbsid="ACC002-S12" class="inp" data-testid="' +
       id +
       '" onchange="' +
       fn +
@@ -5677,7 +5677,7 @@ function _localeSettingsBody() {
     .map(function (item) {
       var on = work.indexOf(item) >= 0;
       return (
-        '<button type="button" data-testid="loc-day-' +
+        '<button data-cbsid="ACC002-B41" type="button" data-testid="loc-day-' +
         item +
         '" onclick="localeToggleWorkday(' +
         item +
@@ -5773,7 +5773,7 @@ function _localeSettingsBody() {
       var on = at >= 0;
       var full = !on && chosen.length >= CBLocale.MAX_LANGS;
       return (
-        '<button type="button" data-testid="loc-lang-' +
+        '<button data-cbsid="ACC002-B42" type="button" data-testid="loc-lang-' +
         code +
         '"' +
         ' onclick="localeToggleLang(' +
@@ -5897,7 +5897,7 @@ function _localeSettingsBody() {
         '</div>' +
         '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">' +
         (CBLocale.hasWorkdayOverride()
-          ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' +
+          ? 'You have set these yourself. <a data-cbsid="ACC002-C15" href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' +
             tx('Use the regional default') +
             '</a> instead.'
           : 'These come from <b>' + tx('CLDR') + '</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.') +
@@ -6285,14 +6285,14 @@ function intEnrolHTML(r) {
       '</span> — ' +
       facts +
       (e.reason ? ' <span style="color:var(--grey)">(' + esc(e.reason) + ')</span>' : '') +
-      '<div style="display:flex;gap:6px;margin-top:5px"><button class="composebtn" data-testid="int-approve-' +
+      '<div style="display:flex;gap:6px;margin-top:5px"><button data-cbsid="ACC002-B43" class="composebtn" data-testid="int-approve-' +
       esc(r.actor_id) +
       '" onclick="intApprove(\'' +
       esc(r.actor_id) +
       '\')">✓ ' +
       tx('Approve this PC') +
       '</button>' +
-      (r.key_jti ? '<button class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') +
+      (r.key_jti ? '<button data-cbsid="ACC002-B44" class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') +
       '</div></div>'
     );
   return '<div style="font-weight:400;font-size:var(--fs-1);color:var(--ok-2);margin-top:3px">✓ ' + tx('approved') + (facts ? ' · ' + facts : '') + '</div>';
@@ -6446,7 +6446,7 @@ function intConnectorsHTML() {
           var adapters = (item.adapters || [])
             .map(function (a) {
               return (
-                '<button class="composebtn" data-testid="int-download-' +
+                '<button data-cbsid="ACC002-B45" class="composebtn" data-testid="int-download-' +
                 esc(item.id) +
                 '-' +
                 esc(a) +
@@ -6464,7 +6464,7 @@ function intConnectorsHTML() {
             .join(' ');
           var open = intOpen() === item.id;
           var nestedMore =
-            '<span data-testid="int-card-' +
+            '<span data-cbsid="ACC002-C16" data-testid="int-card-' +
             esc(item.id) +
             '-toggle" onclick="intToggleCard(\'' +
             esc(item.id) +
@@ -6482,7 +6482,7 @@ function intConnectorsHTML() {
               '</a>'
             : '';
           var tick =
-            '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' +
+            '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input data-cbsid="ACC002-I20" type="checkbox" data-testid="int-use-' +
             esc(item.id) +
             '"' +
             (use.indexOf(item.id) >= 0 ? ' checked' : '') +
@@ -6559,7 +6559,7 @@ function intConnectorsHTML() {
             (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') +
             (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') +
             (item.note ? ' · ' + esc(item.note) : '') +
-            ' · <span data-testid="int-row-help-' +
+            ' · <span data-cbsid="ACC002-C17" data-testid="int-row-help-' +
             esc(item.id) +
             '" onclick="intToSetup(\'' +
             esc(item.adapter || '') +
@@ -6707,7 +6707,7 @@ function intFold(key, lines) {
     .join('');
   return (
     '<div style="font-size:var(--fs-2);margin-bottom:6px">' +
-    '<span data-testid="int-fold-' +
+    '<span data-cbsid="ACC002-C18" data-testid="int-fold-' +
     esc(key) +
     '" onclick="intFoldToggle(\'' +
     esc(key) +
@@ -6811,7 +6811,7 @@ function intStreamsHTML() {
       list
         .map(function (item) {
           var sel =
-            '<select class="inp" data-testid="int-stream-' +
+            '<select data-cbsid="ACC002-S13" class="inp" data-testid="int-stream-' +
             esc(item.id) +
             '" onchange="intStreamSet(\'' +
             esc(item.id) +
@@ -7054,7 +7054,7 @@ function intReconcileHTML() {
             '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' +
             esc(when(item.released_at || item.created_at)) +
             (item.why
-              ? ' · <span data-testid="int-rec-raw-' +
+              ? ' · <span data-cbsid="ACC002-C19" data-testid="int-rec-raw-' +
                 esc(short) +
                 '" onclick="intRecRaw(\'' +
                 esc(short) +
@@ -7078,21 +7078,21 @@ function intReconcileHTML() {
             tx('Open') +
             '</button>' +
             (item.state === 'set_aside'
-              ? '<button class="btn2" data-testid="int-rec-unskip-' +
+              ? '<button data-cbsid="ACC002-B46" class="btn2" data-testid="int-rec-unskip-' +
                 esc(short) +
                 '" onclick="intRecSkip(\'' +
                 esc(item.chit_id) +
                 '\', false)">' +
                 tx('Send after all') +
                 '</button>'
-              : '<button class="btn2" data-testid="int-rec-retry-' +
+              : '<button data-cbsid="ACC002-B47" class="btn2" data-testid="int-rec-retry-' +
                 esc(short) +
                 '" onclick="intRecRetry(\'' +
                 esc(item.chit_id) +
                 '\')">' +
                 tx('Ask again') +
                 '</button>' +
-                '<button class="btn2" data-testid="int-rec-skip-' +
+                '<button data-cbsid="ACC002-B48" class="btn2" data-testid="int-rec-skip-' +
                 esc(short) +
                 '" onclick="intRecSkip(\'' +
                 esc(item.chit_id) +
@@ -7243,7 +7243,7 @@ function netOffersHTML() {
     var pol = b.policy || 'opt_in';
     var polBtn = function (k, label, hint) {
       return (
-        '<button class="' +
+        '<button data-cbsid="BUS004-B01" class="' +
         (pol === k ? 'pri' : '') +
         '" data-testid="neto-policy-' +
         k +
@@ -7286,14 +7286,14 @@ function netOffersHTML() {
             : '') +
           '</div></span>' +
           (live && (!running || item.changed)
-            ? '<button class="pri" data-testid="neto-release-' +
+            ? '<button data-cbsid="BUS004-B02" class="pri" data-testid="neto-release-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
               esc(item.id) +
               '\',false)">' +
               tx('Release at next opening') +
               '</button>' +
-              '<button data-testid="neto-release-now-' +
+              '<button data-cbsid="BUS004-B03" data-testid="neto-release-now-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
               esc(item.id) +
@@ -7302,7 +7302,7 @@ function netOffersHTML() {
               '</button>'
             : '') +
           (running
-            ? '<button class="warn" data-testid="neto-withdraw-' +
+            ? '<button data-cbsid="BUS004-B04" class="warn" data-testid="neto-withdraw-' +
               esc(item.id) +
               '" onclick="netoWithdraw(\'' +
               esc(item.id) +
@@ -7352,7 +7352,7 @@ function netOffersHTML() {
     var lines = (item.offers || [])
       .map(function (entry) {
         var btn = entry.applies
-          ? '<button data-testid="neto-out-' +
+          ? '<button data-cbsid="BUS004-B05" data-testid="neto-out-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
             esc(entry.id) +
@@ -7361,7 +7361,7 @@ function netOffersHTML() {
             '\')">' +
             tx(optIn ? 'Stop taking it' : 'Decline') +
             '</button>'
-          : '<button class="pri" data-testid="neto-in-' +
+          : '<button data-cbsid="BUS004-B06" class="pri" data-testid="neto-in-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
             esc(entry.id) +
@@ -7483,7 +7483,7 @@ function netCatBrandHTML(c, stores) {
         '<label data-testid="netc-add-' +
         esc(item.item_id) +
         '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">' +
-        '<input type="checkbox" ' +
+        '<input data-cbsid="BUS004-I01" type="checkbox" ' +
         (sel[item.item_id] ? 'checked ' : '') +
         'onchange="netcTick(\'' +
         esc(key) +
@@ -7534,7 +7534,7 @@ function netCatBrandHTML(c, stores) {
         index +
         '" style="padding:3px 0;font-size:var(--fs-2)">' +
         '<label style="display:flex;gap:8px;align-items:center">' +
-        '<input type="checkbox" ' +
+        '<input data-cbsid="BUS004-I02" type="checkbox" ' +
         (outSel[item] ? 'checked ' : '') +
         'onchange="netcOut(\'' +
         esc(key) +
@@ -7549,7 +7549,7 @@ function netCatBrandHTML(c, stores) {
         (missing[item] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '') +
         (outSel[item] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '') +
         (!outSel[item] && storeList.length
-          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' +
+          ? ' <span data-cbsid="BUS004-B07" role="button" tabindex="0" data-testid="netc-at-open-' +
             index +
             '" onclick="event.preventDefault();netcAtOpen(\'' +
             esc(key) +
@@ -7576,7 +7576,7 @@ function netCatBrandHTML(c, stores) {
                   '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' +
                   (changed ? ';font-weight:700' : '') +
                   '">' +
-                  '<input type="checkbox" ' +
+                  '<input data-cbsid="BUS004-I03" type="checkbox" ' +
                   (isOut(entry.id) ? 'checked ' : '') +
                   'onchange="netcAt(\'' +
                   esc(key) +
@@ -7648,12 +7648,12 @@ function netCatBrandHTML(c, stores) {
       : '') +
     (any
       ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-        '<button class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
+        '<button data-cbsid="BUS004-B08" class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
         esc(key) +
         '\',false)">' +
         tx('Publish at next opening') +
         '</button>' +
-        '<button data-testid="netc-publish-now" onclick="netcPublish(\'' +
+        '<button data-cbsid="BUS004-B09" data-testid="netc-publish-now" onclick="netcPublish(\'' +
         esc(key) +
         '\',true)">' +
         (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) +
@@ -7855,14 +7855,14 @@ function netCatNoticesHTML(notes) {
               _netMoney(item.yours)
           ) +
           '</div></span>' +
-          '<button class="pri" data-testid="netc-use-' +
+          '<button data-cbsid="BUS004-B10" class="pri" data-testid="netc-use-' +
           index +
           '" onclick="netcAnswer(' +
           index +
           ",'use')\">" +
           esc(tx('Use') + ' ' + _netMoney(item.suggested)) +
           '</button>' +
-          '<button data-testid="netc-keep-' +
+          '<button data-cbsid="BUS004-B11" data-testid="netc-keep-' +
           index +
           '" onclick="netcAnswer(' +
           index +
@@ -7935,14 +7935,14 @@ function netMembersHTML(list) {
       var btns = '';
       if (item.state === 'requested' && item.asked_by === 'store')
         btns =
-          '<button class="pri" data-testid="netm-approve-' +
+          '<button data-cbsid="BUS004-B12" class="pri" data-testid="netm-approve-' +
           index +
           "\" onclick=\"netmAct('netApprove','" +
           esc(item.edge_id) +
           '\')">' +
           tx('Approve') +
           '</button>' +
-          '<button data-testid="netm-decline-' +
+          '<button data-cbsid="BUS004-B13" data-testid="netm-decline-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
           esc(item.edge_id) +
@@ -7951,7 +7951,7 @@ function netMembersHTML(list) {
           '</button>';
       else if (item.state === 'requested')
         btns =
-          '<button data-testid="netm-cancel-' +
+          '<button data-cbsid="BUS004-B14" data-testid="netm-cancel-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
           esc(item.edge_id) +
@@ -7960,7 +7960,7 @@ function netMembersHTML(list) {
           '</button>';
       else if (item.state === 'suspended' && item.edge_id)
         btns =
-          '<button class="pri" data-testid="netm-resume-' +
+          '<button data-cbsid="BUS004-B15" class="pri" data-testid="netm-resume-' +
           index +
           "\" onclick=\"netmAct('netResume','" +
           esc(item.edge_id) +
@@ -7970,7 +7970,7 @@ function netMembersHTML(list) {
       else if (item.state === 'active' && item.via === 'joined')
         btns =
           _NETO_ARMED === 'rm:' + item.edge_id
-            ? '<button class="warn" data-testid="netm-remove-' +
+            ? '<button data-cbsid="BUS004-B16" class="warn" data-testid="netm-remove-' +
               index +
               "\" onclick=\"netmAct('netDisconnect','" +
               esc(item.edge_id) +
@@ -7985,7 +7985,7 @@ function netMembersHTML(list) {
               tx('Remove') +
               '</button>';
       else if (item.state === 'active' && item.edge_id)
-        btns = '<button data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+        btns = '<button data-cbsid="BUS004-B17" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
       var words =
         item.state === 'requested'
           ? item.asked_by === 'store'
@@ -8013,10 +8013,10 @@ function netMembersHTML(list) {
     '<div data-testid="neto-members" style="margin-bottom:8px">' +
     rows +
     '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">' +
-    '<input id="netm_handle" data-testid="netm-handle" placeholder="' +
+    '<input data-cbsid="BUS004-I04" id="netm_handle" data-testid="netm-handle" placeholder="' +
     esc(tx('Invite a store by its handle')) +
     '" style="flex:1;min-width:0">' +
-    '<button data-testid="netm-invite" onclick="netmInvite()">' +
+    '<button data-cbsid="BUS004-B18" data-testid="netm-invite" onclick="netmInvite()">' +
     tx('Invite') +
     '</button></div></div>'
   );
@@ -8043,14 +8043,14 @@ function netStandingHTML(nw) {
   if (m.state === 'invited')
     return note(
       esc(tx('invited your store to its network')),
-      '<button class="pri" data-testid="neto-accept-' +
+      '<button data-cbsid="BUS004-B19" class="pri" data-testid="neto-accept-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netApprove','" +
         esc(m.edge_id) +
         '\')">' +
         tx('Accept') +
         '</button>' +
-        '<button data-testid="neto-refuse-' +
+        '<button data-cbsid="BUS004-B20" data-testid="neto-refuse-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netDecline','" +
         esc(m.edge_id) +
@@ -8061,7 +8061,7 @@ function netStandingHTML(nw) {
   if (m.state === 'asked')
     return note(
       esc(tx('You asked to join — its products show here once it approves.')),
-      '<button data-testid="neto-unask-' +
+      '<button data-cbsid="BUS004-B21" data-testid="neto-unask-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netDecline','" +
         esc(m.edge_id) +
@@ -8073,7 +8073,7 @@ function netStandingHTML(nw) {
   return note(
     esc(tx('Not in its network — its products are not shown here.')),
     m.brand_node
-      ? '<button class="pri" data-testid="neto-ask-' +
+      ? '<button data-cbsid="BUS004-B22" class="pri" data-testid="neto-ask-' +
           esc(nw.brand_id) +
           '" onclick="netmAsk(\'' +
           esc(m.brand_node) +
@@ -8198,7 +8198,7 @@ function ctrRegisterHTML() {
         (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '') +
         '</span>' +
         (open
-          ? '<button class="warn" data-testid="ctr-release-' +
+          ? '<button data-cbsid="ACC002-B49" class="warn" data-testid="ctr-release-' +
             esc(item.id) +
             '" onclick="ctrRelease(\'' +
             esc(item.id) +
@@ -8207,7 +8207,7 @@ function ctrRegisterHTML() {
             '">' +
             (armed ? tx('Release — unsent bills stay on that PC') : tx('Release')) +
             '</button>'
-          : '<button class="pri" data-testid="ctr-open-' +
+          : '<button data-cbsid="ACC002-B50" class="pri" data-testid="ctr-open-' +
             esc(item.id) +
             '" onclick="ctrOpenHere(\'' +
             esc(item.id) +
@@ -8236,10 +8236,10 @@ function ctrRegisterHTML() {
     '</div>' +
     (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No counters yet.') + '</div>') +
     '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
-    '<input class="inp" id="ctr_new_name" data-testid="ctr-new-name" placeholder="' +
+    '<input data-cbsid="ACC002-I21" class="inp" id="ctr_new_name" data-testid="ctr-new-name" placeholder="' +
     esc(tx('Name — Front desk, Billing 2 …')) +
     '" style="flex:1 1 220px">' +
-    '<button class="pri" data-testid="ctr-add" onclick="ctrAdd()">' +
+    '<button data-cbsid="ACC002-B51" class="pri" data-testid="ctr-add" onclick="ctrAdd()">' +
     tx('Add a counter') +
     '</button></div>' +
     (_CTRS && _CTRS.error ? '<div style="color:var(--warn);font-size:var(--fs-1);margin-top:6px">' + tx('Could not read the counters.') + '</div>' : '') +
@@ -8386,7 +8386,7 @@ function intPairingsHTML() {
         esc(state.t) +
         '</span>' +
         /* ⚠️ two presses, and the second one SAYS WHAT IT COSTS — closing strands whatever that PC has not sent */
-        '<button class="warn" data-testid="int-counter-close-' +
+        '<button data-cbsid="ACC002-B52" class="warn" data-testid="int-counter-close-' +
         esc(item.jti) +
         '" onclick="intCounterClose(\'' +
         esc(item.jti) +
@@ -8414,7 +8414,7 @@ function intPairingsHTML() {
     note +=
       '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-dups">' +
       esc(tx('The same PC is paired more than once. Each pairing keeps its own copy of the bills on that machine and only the one in use is sent from.')) +
-      ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' +
+      ' <button data-cbsid="ACC002-B53" data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' +
       tx('Close the unused duplicates') +
       '</button></div>';
 
@@ -8567,7 +8567,7 @@ function integrationsSettingsHTML() {
             esc(String(item.created_at || '').slice(0, 10)) +
             ' · ' +
             _keySeen(item) +
-            '</span><button class="warn" data-testid="int-key-revoke-' +
+            '</span><button data-cbsid="ACC002-B54" class="warn" data-testid="int-key-revoke-' +
             esc(item.jti) +
             '" onclick="intKeyRevoke(\'' +
             esc(item.jti) +
@@ -8618,13 +8618,13 @@ function integrationsSettingsHTML() {
     tx('Your keys') +
     '</div>' +
     rows +
-    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' +
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input data-cbsid="ACC002-I22" class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' +
     esc(tx('Name — which system')) +
-    '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' +
+    '" style="flex:1 1 200px"><select data-cbsid="ACC002-S14" class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px">' +
     KEY_SCOPES.map(function (item) {
       return '<option value="' + esc(item[0]) + '">' + esc(tx(item[1])) + '</option>';
     }).join('') +
-    '</select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' +
+    '</select><button data-cbsid="ACC002-B55" class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' +
     tx('Mint a key') +
     '</button></div>' +
     '<div id="int_key_out">' +
@@ -8715,7 +8715,7 @@ function bizChoice(group, val, cur, rows) {
          a border, not a background, so it survives every one of the fifteen themes at full strength. */
         (on ? 'background:var(--wash);box-shadow:inset 3px 0 0 var(--blue)' : 'box-shadow:inset 3px 0 0 transparent') +
         '">' +
-        '<input type="radio" name="biz_' +
+        '<input data-cbsid="ACC002-I23" type="radio" name="biz_' +
         group +
         '" value="' +
         esc(item[0]) +
@@ -8811,7 +8811,7 @@ async function bizAbroadLoad() {
     UI._abroadProfile = profile;
     var on = profile && profile.trade_mode === 'export';
     box.innerHTML =
-      '<label style="display:flex;gap:8px;align-items:flex-start;color:var(--on-card)"><input type="checkbox" id="biz_abroad_on" data-testid="biz-abroad-on"' +
+      '<label style="display:flex;gap:8px;align-items:flex-start;color:var(--on-card)"><input data-cbsid="ACC002-I24" type="checkbox" id="biz_abroad_on" data-testid="biz-abroad-on"' +
       (on ? ' checked' : '') +
       ' style="margin-top:3px"><span>' +
       esc(tx('Show my shop to buyers on other ChitBridge installations and abroad')) +
@@ -8871,7 +8871,7 @@ function bizLedgerHTML(r) {
       '<span data-testid="biz-ledger-country" style="color:var(--warn-2)">' +
       esc(r.country.why || '') +
       '</span>' +
-      '<a class="pri" data-testid="biz-ledger-country-setup" data-to="#/country" onclick="go(this.dataset.to)" style="cursor:pointer">' +
+      '<a data-cbsid="ACC002-C20" class="pri" data-testid="biz-ledger-country-setup" data-to="#/country" onclick="go(this.dataset.to)" style="cursor:pointer">' +
       esc(tx('Country setup')) +
       '</a></div>'
     );
@@ -8886,7 +8886,7 @@ function bizLedgerHTML(r) {
       ' <b>' +
       esc(tx(r.walkin_grain === 'bill' ? 'bill' : r.walkin_grain === 'shift' ? 'shift' : 'day')) +
       '</b></span>' +
-      '<button data-testid="biz-ledger-off" onclick="bizLedgerSwitch(false)">' +
+      '<button data-cbsid="ACC002-B56" data-testid="biz-ledger-off" onclick="bizLedgerSwitch(false)">' +
       esc(tx('Switch off')) +
       '</button></div>'
     );
@@ -8895,7 +8895,7 @@ function bizLedgerHTML(r) {
     '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' +
     esc(tx('Off')) +
     '</span>' +
-    '<button class="pri" data-testid="biz-ledger-on" onclick="bizLedgerSwitch(true)">' +
+    '<button data-cbsid="ACC002-B57" class="pri" data-testid="biz-ledger-on" onclick="bizLedgerSwitch(true)">' +
     esc(tx('Switch on')) +
     '</button>' +
     '<span>' +
@@ -9053,7 +9053,7 @@ function workRoutingHTML() {
   }
   var sel = function (id, kind, field, cur, list, none) {
     return (
-      '<select class="inp" data-testid="wr-' +
+      '<select data-cbsid="ACC002-S15" class="inp" data-testid="wr-' +
       field +
       '-' +
       kind +
@@ -9237,7 +9237,7 @@ function paintSettings(s, _daOpts) {
          */ ''
       }
       <div class="kv" style="margin-bottom:9px"><b>${tx('Supplies')}</b> · ${esc((UI._me && UI._me.supplies) || 'goods')}
-        <a href="#" onclick="navTo('profile');profSetSec('identity');UI._iamOpen=Object.assign(UI._iamOpen||{},{profile:true});return false"
+        <a data-cbsid="ACC002-C21" href="#" onclick="navTo('profile');profSetSec('identity');UI._iamOpen=Object.assign(UI._iamOpen||{},{profile:true});return false"
            style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">${tx('Change in Business')} <span class=arw>→</span></a></div>
       ${
         /**
@@ -9252,11 +9252,11 @@ function paintSettings(s, _daOpts) {
         <div id="wr_pane">${workRoutingHTML()}</div>
       </div>
       ${notYetWork}
-      <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(['pull', 'push', 'both'], s.assignment_model || 'both')}</select>
-      <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">
-      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible ? 'checked' : ''}> All tasks visible to all co-assists</label>
-      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break ? 'checked' : ''}> ${tx('Auto-return tasks on short break')}</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>` +
+      <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select data-cbsid="ACC002-S16" class="inp" id="st_am">${opt(['pull', 'push', 'both'], s.assignment_model || 'both')}</select>
+      <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input data-cbsid="ACC002-I25" class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks || 10)}">
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I26" type="checkbox" id="st_av" ${s.all_task_visible ? 'checked' : ''}> All tasks visible to all co-assists</label>
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input data-cbsid="ACC002-I27" type="checkbox" id="st_ar" ${s.auto_return_on_short_break ? 'checked' : ''}> ${tx('Auto-return tasks on short break')}</label>
+      <div class="err" id="st_err"></div><button data-cbsid="ACC002-B58" class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>` +
         /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
          set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
          renderer. The link would have opened the right screen and shown nothing.
@@ -9512,7 +9512,7 @@ function _chRow(c) {
     '">' +
     pill[2] +
     '</span>' +
-    '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-' +
+    '<span data-cbsid="ACC002-C22" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-' +
     esc(c.key) +
     '" onclick="chToggleAdd(\'' +
     esc(c.key) +
@@ -9557,7 +9557,7 @@ function _chRow(c) {
           '">' +
           esc(item.status === 'verified' ? 'verified' + (item.verified_via ? ' · ' + item.verified_via : '') : 'declared — not receiving yet') +
           '</span>' +
-          '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\'' +
+          '<span data-cbsid="ACC002-C23" style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\'' +
           esc(item.id) +
           '\')">✕</span></div>' +
           /**
@@ -9571,7 +9571,7 @@ function _chRow(c) {
           (item.auto_raise === undefined
             ? ''
             : '<label style="display:flex;align-items:center;gap:6px;margin:5px 0 0 10px;font-size:var(--fs-1);color:var(--grey);cursor:pointer">' +
-              '<input type="checkbox" data-testid="ch-autoraise" ' +
+              '<input data-cbsid="ACC002-I28" type="checkbox" data-testid="ch-autoraise" ' +
               (item.auto_raise ? 'checked' : '') +
               ' onchange="chSetAutoRaise(\'' +
               esc(item.id) +
@@ -9613,7 +9613,7 @@ function _chRow(c) {
                     ' · ' +
                     esc(t.language) +
                     '</span>' +
-                    '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\'' +
+                    '<span data-cbsid="ACC002-C24" style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\'' +
                     esc(item.id) +
                     "','" +
                     esc(t.name) +
@@ -9640,11 +9640,11 @@ function _chRow(c) {
       })
       .join('') +
     (_CH.adding === c.key
-      ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="' +
+      ? '<div style="display:flex;gap:6px;margin-top:8px"><input data-cbsid="ACC002-I29" class="inp" id="ch_addr" placeholder="' +
         esc(c.placeholder) +
         '" data-testid="ch-addr" style="flex:1">' +
-        '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">' +
-        '<button class="composebtn" data-testid="ch-save" onclick="chBind(\'' +
+        '<input data-cbsid="ACC002-I30" class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">' +
+        '<button data-cbsid="ACC002-B59" class="composebtn" data-testid="ch-save" onclick="chBind(\'' +
         esc(c.key) +
         '\')">' +
         tx('Bind') +
@@ -9850,12 +9850,12 @@ function policyFlagsInner() {
 function autoAssignCard(s, daOpts) {
   const m = s.auto_assign_mode || 'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
-    <label class="fl">${tx('Mode')}${helpQ('work.autoassign', 'How auto-assign picks someone')}</label><select class="inp" id="st_aam">
+    <label class="fl">${tx('Mode')}${helpQ('work.autoassign', 'How auto-assign picks someone')}</label><select data-cbsid="ACC002-S17" class="inp" id="st_aam">
       <option value="off"${m === 'off' ? ' selected' : ''}>${tx('Off — received chits wait in the pool')}</option>
       <option value="default_assignee"${m === 'default_assignee' ? ' selected' : ''}>${tx('Default assignee — all to one person')}</option>
       <option value="least_loaded"${m === 'least_loaded' ? ' selected' : ''}>${tx('Least-loaded — balance across the team')}</option>
     </select>
-    <label class="fl">${tx('Default / overflow assignee')}</label><select class="inp" id="st_ada">${daOpts}</select>
+    <label class="fl">${tx('Default / overflow assignee')}</label><select data-cbsid="ACC002-S18" class="inp" id="st_ada">${daOpts}</select>
     ${
       /* ⚠️⚠️ THE PARAGRAPH THAT WAS HERE IS NOW BEHIND THE "?". Athi, 2026-08-20: *"do we need this message —
           again a ? can take it to assistant and can answer the same."* It explained three separate rules at once:
@@ -9866,7 +9866,7 @@ function autoAssignCard(s, daOpts) {
           ⚠️ IT WAS ALSO WRONG UNTIL AN HOUR AGO: it said "Act / Manager", two levels retired in b173. A
           paragraph nobody re-reads is a paragraph nobody corrects, which is its own argument for moving it. */ ''
     }
-    <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
+    <div class="err" id="st_aerr"></div><button data-cbsid="ACC002-B60" class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
 }
 async function saveAutoAssign() {
   const x = document.getElementById('st_aerr');
