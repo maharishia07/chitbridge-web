@@ -2,7 +2,7 @@
  * books-acting.js — ACC-176b: THE ONE PLACE THAT KNOWS WHICH STORE'S BOOKS THIS SCREEN IS WORKING IN.
  *
  * OWNS      the acting context (store, currency, role) · the headers and the `store_id` every request of that store carries · the frozen "Acting for <store>, <currency>" banner with its store switch · the clearing of drafts and cached data when the store changes · the one minor-units-in-words helper of the books screens · this business's own entity
- * CALLED BY books-grant-view.js (the firm's workspace) · books-actions-view.js (the queues) · network-app.js (opens and switches the store)
+ * CALLED BY books-grant-view.js (the firm's workspace) · books-actions-view.js (the queues) · network-app.js (opens and switches the store) · accounts.html + core.js (the books page opened to act for a store: banner, headers)
  * FLOW      enter(store, role) → headers() / body() are built from THIS context only → a different store runs every registered clear (drafts, caches, open sheets) before the new one is set → leave() clears and forgets
  * CARD      04-network/ACC-176B-ADVISER-REQUIREMENT
  *
@@ -72,6 +72,18 @@
     return { id: claims.parent_entity_id || claims.identity_id, name: name };
   }
 
+  /* ── acting on another page: the address carries the store, the server checks the grant on every request ── */
+  /** the books page of the firm's workspace for one store (optionally straight into preparing a journal) */
+  function addressOf(store, doing) {
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&actingName=' + encodeURIComponent(store.name) + (doing ? '&prepare=' + doing : '') + '#/daybook';
+  }
+  /** read the store from the page address: a page opened with ?acting=<store> works in that store's books as the adviser; null when it carries none */
+  function fromAddress(search) {
+    var query = new URLSearchParams(search || '');
+    var id = query.get('acting');
+    return id ? enter({ id: id, name: query.get('actingName') || '' }, 'adviser') : null;
+  }
+
   /* ── the banner: frozen at the top of every screen that acts for a store ── */
   function switchBox(stores) {
     if (!stores || stores.length < 2) return '';
@@ -101,5 +113,5 @@
       };
   }
 
-  root.CBBooksActing = { enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
+  root.CBBooksActing = { enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

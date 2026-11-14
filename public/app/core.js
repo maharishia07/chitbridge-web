@@ -1362,6 +1362,10 @@ function answerWords(body) {
   var answer = body || {};
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
+/** ACC-176b: a page opened to act for a store names it on every request (X-Books-For, X-Books-Role); {} on every other page */
+function actingHeaders() {
+  return typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {};
+}
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
   const ep = epOf(key);
   if (!ep) throw new Error('no endpoint ' + key);
@@ -1438,7 +1442,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
             'Content-Type': 'application/json',
             'X-Request-Id': _rid,
             ...(idemKey ? { 'Idempotency-Key': idemKey } : {}),
-            ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {})
+            ...(SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {}), ...actingHeaders()
           },
           body: body ? JSON.stringify(body) : undefined
         }).then((answer) => settleAttempt(ep, attempt, answer));

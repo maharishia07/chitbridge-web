@@ -271,6 +271,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 
   <main class="main scroll">
     <div id="shell" data-testid="acc-shell"></div>   <!-- THE ONE HEADER (CBFrame → CBShell, SHELL-ONE): mark · CB Accounts · chip · ⌂ Home · bell · avatar -->
+    <div id="acting-band" data-testid="acting-band"></div>
     <div class="titlebar">
       <div class="titles">
         <h1 id="title">Accounts</h1>
@@ -308,6 +309,8 @@ function go() {
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script src="/app/books-grant-api.js"></script>   <!-- ACC-176b: the header names of a grant (X-Books-For / X-Books-Role) — one file -->
+<script src="/app/books-acting.js"></script>   <!-- ACC-176b: ?acting=<store> → this page works in that store's books as the adviser: banner, headers, Save prepares -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
@@ -966,7 +969,7 @@ function countryCard(d) {
 
 /* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 async function start() {
-  SESS = session();
+  SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
   SESSION = Object.assign(
@@ -1020,7 +1023,16 @@ async function start() {
   }
   if (!ON) return offCard();
   const first = (location.hash || '').replace(/^#\/?/, '');
-  show(NAV.some((item) => item[0] === first) ? first : 'todo');
+  show(NAV.some((item) => item[0] === first) ? first : 'todo'); actingStart();
+}
+/** ACC-176b: a page opened to act for a store shows the frozen banner and, when asked, opens the journal sheet that PREPARES */
+function actingStart() {
+  if (!CBBooksActing.current()) return;
+  CBBooksActing.setCurrency(SESSION.currency);
+  const band = $('acting-band');
+  band.innerHTML = CBBooksActing.banner();
+  CBBooksActing.wireBanner(band, { onBack: () => location.assign('/network.html') });
+  if (/[?&]prepare=journal/.test(location.search)) enOpen({ kind: 'journal' });
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */

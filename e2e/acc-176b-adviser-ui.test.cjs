@@ -65,6 +65,13 @@ const mine = [].concat(tags(acting), tags(actions), tags(member).filter((t) => /
 check(mine.length >= 8 && mine.every((t) => /\sid="/.test(t.tag)), mine.length + ' new controls each wear a code and an id');
 const codeList = mine.map((t) => t.code);
 check(new Set(codeList).size === codeList.length - 0 || codeList.filter((c, i) => codeList.indexOf(c) !== i).every((c) => c === 'NET007-B01'), 'no code written twice (NET007-B01 is the one generated queue tab)');
+/* (9) prepare: the entry sheet PREPARES under an adviser, from the owner's books page opened for the store */
+const pub = (f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8');
+const entry = pub('app/cap-entry.js'), core = pub('app/core.js'), accounts = pub('accounts.html');
+check(entry.includes("enActingAdviser() ? await enPrepare(body) : await api('booksEventPost'"), 'Save under an adviser grant prepares; any other login posts as before');
+check(entry.includes("CBBooksActing.body({ kind: 'journal', body: journal, client_ref: body.client_ref, working_month:") && entry.includes('if (!body.date) throw'), 'prepare sends store_id, kind journal, the body, client_ref and working_month, and needs the date');
+check(core.includes("typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}") && core.includes('...actingHeaders()'), 'every request of a page acting for a store carries its headers; other pages send none');
+check(accounts.includes('CBBooksActing.fromAddress(location.search)') && accounts.includes('id="acting-band"') && view.includes("'Prepare a journal'"), 'the books page reads the store from its address and shows the banner; the workspace offers Prepare a journal');
 /* (8) the header names live in one file */
 check(![acting, actions, member, view].some((src) => /X-Books-(For|Role)/.test(src.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/^ \*.*$/gm, ''))), 'no literal header name outside books-grant-api.js');
 

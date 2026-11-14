@@ -95,7 +95,14 @@
       return (
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
-    }).join('');
+    }).join('') + prepareButton();
+  }
+  /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares and never posts */
+  function prepareButton() {
+    return isAdviser() ? '<button data-cbsid="NET005-B03" type="button" class="act" id="bv_prepare" data-testid="bv-prepare">' + esc(words('Prepare a journal')) + '</button>' : '';
+  }
+  function openPrepare() {
+    root.location.assign(root.CBBooksActing.addressOf(root.CBBooksActing.current().store, 'journal'));
   }
   /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
   function band() {
@@ -118,6 +125,7 @@
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
+    if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
       button.onclick = function () {
         viewState.report = button.getAttribute('data-report');
