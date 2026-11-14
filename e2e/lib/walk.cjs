@@ -20,6 +20,34 @@ const SHOW = process.argv.includes('--show') || process.env.WALK_SHOW === '1';
 const ROOT = path.join(__dirname, '..', '..');
 const PUB = path.join(ROOT, 'public');
 const SHOTS = path.join(__dirname, '..', 'shots');
+/* SCREEN LOG (Q11, 1 Nov): every screen, popup and control a walk opens is written, with the step's pass/fail, to e2e/.walk-screens/<script>.json
+   (WALK_SCREENS_DIR moves it). TEST HELPER ONLY: it reads the codes the product already stamps on screen (data-testid screen-code / popup-code) and the
+   register CBSCREENS; it changes nothing the page does and no assertion. ~/walk/runall.cjs gathers the file per script into the walk-results JSON. */
+const SCREEN_DIR = process.env.WALK_SCREENS_DIR || path.join(__dirname, '..', '.walk-screens');
+const SCRIPT = path.basename(process.argv[1] || 'walk').replace(/\.cjs$/, '');
+const WATCH = () => {
+  if (window.__cbwalkWatch) return; window.__cbwalkWatch = 1;
+  const CODE = new RegExp(String.fromCharCode(92)+"b[A-Z]{3}"+String.fromCharCode(92)+"d{3}"+String.fromCharCode(92)+"b");
+  const tell = (c) => { try { window.__cbwalkSeen(c); } catch (_) {} };
+  const scan = () => { try {
+    document.querySelectorAll('[data-testid="screen-code"],[data-testid="popup-code"],[data-testid="screen-id"]').forEach((e) => { const m = CODE.exec(e.textContent || ''); if (m) tell(m[0]); });
+  } catch (_) {} };
+  setInterval(scan, 250);
+  document.addEventListener('click', (ev) => { try {
+    const el = ev.target && ev.target.closest && ev.target.closest('button,a,[role=button],input[type=button],input[type=submit]'); if (!el) return;
+    const label = String(el.getAttribute('aria-label') || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
+    const chip = document.querySelector('[data-testid="screen-code"]'), m = chip && CODE.exec(chip.textContent || ''), reg = window.CBSCREENS;
+    if (!label || !m || !reg || !reg.rows) return;
+    const scr = reg.rows.find((r) => r.code === m[0]); if (!scr) return;
+    const bare = label.replace(/^[^A-Za-z0-9]+/, '');
+    for (const l of [label, bare]) { const r = reg.rows.find((x) => x.path === 'Control › ' + scr.path + ' • ' + l); if (r) { tell(r.code); return; } }
+  } catch (_) {} }, true);
+  scan();
+};
+/** every context gets the binding and the watcher; the codes go to whoever is collecting (the walk's seen-set) */
+async function watchContext(c, seen) {
+  try { await c.exposeFunction('__cbwalkSeen', (code) => { if (/^[A-Z]{3}\d{3}$/.test(String(code))) seen.add(String(code)); }); await c.addInitScript(WATCH); } catch (_) { /* a missing log never fails a walk */ }
+}
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 /** the site as it deploys: / is the repo-root index.html, everything else public/ ; /api/** is answered by `api(req)` (or a plain 404) */
@@ -64,6 +92,8 @@ async function start(name, opts) {
   /* opts.base (HX0): walk a site that is already running — the compose stack's web container — instead of serving this checkout; WX: e2e/lib/stack-local.cjs's site, its api on 3000 */
   const { srv, base } = opts.base ? { srv: null, base: String(opts.base).replace(/\/+$/, '') } : await serve();
   const browser = await chromium.launch(SHOW ? { headless: false, slowMo: 450, args: ['--window-size=1360,900', '--window-position=40,20'] } : {});
+  const seen = new Set(), allSeen = new Map(), stepLog = [];   // seen: codes since the last step ended · allSeen: code -> {pass, fail}
+  { const open0 = browser.newContext.bind(browser); browser.newContext = async (o) => { const c = await open0(o); await watchContext(c, seen); return c; }; }
   /* QW1-TODAY: CB_TODAY fixes the page's clock (timers still run) in EVERY context this browser opens (contextAt, or a walk's own browser.newContext) —
      stand-in walks only; a real api cannot be moved, so there the page keeps real time */
   if (TD.injected && !opts.base) { const open = browser.newContext.bind(browser); browser.newContext = async (o) => { const c = await open(o); await c.clock.setFixedTime(TD.now()); return c; }; }
@@ -94,6 +124,12 @@ async function start(name, opts) {
   const errs = []; page.on('pageerror', (e) => errs.push(String(e && e.message || e)));
   const results = [];
   let n = 0;
+  /** write the screen log now (after every step, so a walk that is killed still leaves it) */
+  const writeScreens = () => { try {
+    fs.mkdirSync(SCREEN_DIR, { recursive: true });
+    const screens = [...allSeen].map(([code, v]) => ({ code, result: v.pass ? 'pass' : 'fail' })).sort((a, b) => a.code.localeCompare(b.code));
+    fs.writeFileSync(path.join(SCREEN_DIR, SCRIPT + '.json'), JSON.stringify({ script: SCRIPT, walk: name, steps: stepLog, screens }, null, 1));
+  } catch (_) {} };
   const w = {
     SHOW, base, browser, ctx, page, errs, results, contextAt, refused,
     /** one path: fn returns { ok, saw } (or throws - which is a FAIL that says what threw) */
@@ -103,6 +139,10 @@ async function start(name, opts) {
       let ok = false, saw = '';
       try { const r = await fn(); ok = !!(r && r.ok); saw = (r && r.saw) || ''; } catch (e) { ok = false; saw = 'it stopped: ' + String(e && e.message || e).split('\n')[0].slice(0, 160); }
       results.push({ id, path: pathText, ok, saw });
+      try { await page.waitForTimeout(300); } catch (_) {}   // one watcher tick, so a screen that just painted is counted
+      const codes = [...seen]; seen.clear();
+      for (const c of codes) { const v = allSeen.get(c) || { pass: 0, fail: 0 }; v[ok ? 'pass' : 'fail']++; allSeen.set(c, v); }
+      stepLog.push({ id, ok, screens: codes.sort() }); writeScreens();
       await banner(page, (ok ? 'PASS' : 'FAIL') + ' · ' + pathText + (saw ? '  -  ' + saw : ''), ok ? 'pass' : 'fail');
       try { await page.screenshot({ path: path.join(SHOTS, 'walk-' + name + '-' + String(n).padStart(2, '0') + '.png') }); } catch (_) {}
       console.log(id + ' · ' + pathText + ' · ' + (ok ? 'PASS' : 'FAIL') + ' (' + saw + ')');
