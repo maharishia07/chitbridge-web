@@ -57,20 +57,21 @@ function fcWhere(answer, currency) {
   );
 }
 
+/** read the cash-flow answer for the chosen number of days and repaint; an older read that returns late is ignored */
 async function fcLoad(quiet) {
-  var g = ++FC.gen;
+  var generation = ++FC.gen;
   if (!quiet) {
     FC.state = 'loading';
     if (FC.api) FC.api.refresh();
   }
   try {
     var reply = await api('booksCashflow', { query: { days: String(FC.days) } });
-    if (g !== FC.gen) return;
+    if (generation !== FC.gen) return;
     FC.r = reply;
     FC.rows = (reply && reply.series) || [];
     FC.state = 'ready';
   } catch (e) {
-    if (g !== FC.gen) return;
+    if (generation !== FC.gen) return;
     if (e && e.status === 404) {
       finOff();
       return;
@@ -98,16 +99,16 @@ function fcDays(n) {
 function fcPaintTop() {
   var el = document.getElementById('fc_top');
   if (!el) return;
-  var pill = function (n) {
+  var pill = function (days) {
     return (
       '<button data-cbsid="FIN003-B01" type="button" class="tab" aria-pressed="' +
-      (FC.days === n ? 'true' : 'false') +
+      (FC.days === days ? 'true' : 'false') +
       '" data-testid="fc-days-' +
-      n +
+      days +
       '" onclick="fcDays(' +
-      n +
+      days +
       ')">' +
-      esc(txn('{count} day', '{count} days', n)) +
+      esc(txn('{count} day', '{count} days', days)) +
       '</button>'
     );
   };
@@ -139,63 +140,63 @@ window.addEventListener('resize', function () {
  * the running balance as bars, one per day (the server's balance_minor — drawn, never worked out here): the accent above zero, red below (a sale
  * at risk is the one red), a zero line, the day under every bar (every 5th on 30 days) and the lowest day labelled. The same numbers are the table.
  */
-function fcChart(r, width) {
-  var rows = r.series || [],
-    n = rows.length;
-  if (!n) return '';
-  var cur = r.currency,
+function fcChart(report, width) {
+  var rows = report.series || [],
+    count = rows.length;
+  if (!count) return '';
+  var currency = report.currency,
     vals = rows.map(function (item) {
       return Number(item.balance_minor || 0);
     });
-  var hi = Math.max(0, Math.max.apply(null, vals)),
-    lo = Math.min(0, Math.min.apply(null, vals)),
-    span = hi - lo || 1;
-  var W = width || 640,
-    H = 150,
+  var highest = Math.max(0, Math.max.apply(null, vals)),
+    lowest = Math.min(0, Math.min.apply(null, vals)),
+    span = highest - lowest || 1;
+  var chartWidth = width || 640,
+    chartHeight = 150,
     top = 14,
     bottom = 22,
-    plot = H - top - bottom,
-    gap = 2,
-    bw = Math.max(2, Math.floor(W / n) - gap),
-    step = W / n;
+    plot = chartHeight - top - bottom,
+    barGap = 2,
+    barWidth = Math.max(2, Math.floor(chartWidth / count) - barGap),
+    step = chartWidth / count;
   var y = function (v) {
-      return top + ((hi - v) / span) * plot;
+      return top + ((highest - v) / span) * plot;
     },
-    y0 = y(0);
+    zeroY = y(0);
   var lowI = vals.indexOf(Math.min.apply(null, vals));
   var bars = rows
     .map(function (item, index) {
-      var v = vals[index],
-        x = index * step + (step - bw) / 2,
-        h = Math.max(1, Math.abs(y(v) - y0)),
-        yy = v >= 0 ? y0 - h : y0;
-      var neg = v < 0,
+      var value = vals[index],
+        x = index * step + (step - barWidth) / 2,
+        barHeight = Math.max(1, Math.abs(y(value) - zeroY)),
+        barTop = value >= 0 ? zeroY - barHeight : zeroY;
+      var negative = value < 0,
         today = index === 0;
       return (
         '<rect x="' +
         x.toFixed(1) +
         '" y="' +
-        yy.toFixed(1) +
+        barTop.toFixed(1) +
         '" width="' +
-        bw +
+        barWidth +
         '" height="' +
-        h.toFixed(1) +
+        barHeight.toFixed(1) +
         '" rx="2" data-testid="fc-bar-' +
         esc(item.date) +
         '" data-neg="' +
-        neg +
+        negative +
         '"' +
         ' style="fill:' +
-        (neg ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)') +
+        (negative ? 'var(--red,#C4562F)' : 'var(--accent,#1f5f5b)') +
         (today ? '' : ';opacity:.82') +
         '"><title>' +
-        esc(bkDate(item.date) + ' · ' + fcBal(v, cur)) +
+        esc(bkDate(item.date) + ' · ' + fcBal(value, currency)) +
         '</title></rect>' +
-        (n <= 7 || index % 5 === 0 || index === n - 1
+        (count <= 7 || index % 5 === 0 || index === count - 1
           ? '<text x="' +
             (index * step + step / 2).toFixed(1) +
             '" y="' +
-            (H - 6) +
+            (chartHeight - 6) +
             '" text-anchor="middle" style="font:10px var(--mono,monospace);fill:var(--muted,#6f6450)">' +
             esc(String(item.date).slice(8, 10)) +
             '</text>'
@@ -208,35 +209,35 @@ function fcChart(r, width) {
       '<text x="' +
       lowX.toFixed(1) +
       '" y="' +
-      (vals[lowI] < 0 ? Math.min(H - bottom - 2, y(vals[lowI]) + 11) : Math.max(10, y(vals[lowI]) - 4)).toFixed(1) +
+      (vals[lowI] < 0 ? Math.min(chartHeight - bottom - 2, y(vals[lowI]) + 11) : Math.max(10, y(vals[lowI]) - 4)).toFixed(1) +
       '" text-anchor="' +
-      (lowX > W * 0.8 ? 'end' : lowX < W * 0.2 ? 'start' : 'middle') +
+      (lowX > chartWidth * 0.8 ? 'end' : lowX < chartWidth * 0.2 ? 'start' : 'middle') +
       '" data-testid="fc-low-label" style="font:600 11px var(--mono,monospace);fill:var(--ink,#2a2418)">' +
-      esc(fcBal(vals[lowI], cur)) +
+      esc(fcBal(vals[lowI], currency)) +
       '</text>';
   return (
     '<div class="sec" style="display:flex;justify-content:space-between;gap:8px"><span>' +
     esc(tx('Running balance')) +
     '</span><span class="mono" data-testid="fc-opening">' +
-    esc(tx('Today') + ' ' + fcBal(r.opening_minor, cur)) +
+    esc(tx('Today') + ' ' + fcBal(report.opening_minor, currency)) +
     '</span></div>' +
-    fcWhere(r, cur) +
+    fcWhere(report, currency) +
     /* inline sizes: the page's icon rule (svg{width:18px;height:18px;stroke:currentColor}) would otherwise shrink the chart to an icon */
     '<svg viewBox="0 0 ' +
-    W +
+    chartWidth +
     ' ' +
-    H +
+    chartHeight +
     '" role="img" aria-label="' +
-    esc(r.words || '') +
+    esc(report.words || '') +
     '" style="display:block;width:100%;height:' +
-    H +
+    chartHeight +
     'px;overflow:visible;stroke:none;fill:none">' +
     '<line x1="0" x2="' +
-    W +
+    chartWidth +
     '" y1="' +
-    y0.toFixed(1) +
+    zeroY.toFixed(1) +
     '" y2="' +
-    y0.toFixed(1) +
+    zeroY.toFixed(1) +
     '" style="stroke:var(--line-3,#d8ccb0);stroke-width:1"/>' +
     bars +
     lowLabel +
@@ -246,7 +247,7 @@ function fcChart(r, width) {
 
 /* ── the table: the days — every figure is the server's ── */
 function fcCols() {
-  var c = function () {
+  var currencyOf = function () {
       return bkCur(FC.r && FC.r.currency);
     },
     dash = '<span style="color:var(--grey)">—</span>';
@@ -276,7 +277,7 @@ function fcCols() {
       w: 150,
       html: true,
       cell: function (d) {
-        return Number(d.in_minor) ? '<span class="due get" data-b="in">' + esc(bkMoney(d.in_minor, c())) + '</span>' : dash;
+        return Number(d.in_minor) ? '<span class="due get" data-b="in">' + esc(bkMoney(d.in_minor, currencyOf())) + '</span>' : dash;
       }
     },
     {
@@ -287,7 +288,7 @@ function fcCols() {
       w: 150,
       html: true,
       cell: function (d) {
-        return Number(d.out_minor) ? '<span class="due give" data-b="out">' + esc(bkMoney(d.out_minor, c())) + '</span>' : dash;
+        return Number(d.out_minor) ? '<span class="due give" data-b="out">' + esc(bkMoney(d.out_minor, currencyOf())) + '</span>' : dash;
       }
     },
     {
@@ -300,7 +301,7 @@ function fcCols() {
       html: true,
       cell: function (d) {
         var v = Number(d.balance_minor || 0);
-        return '<b data-b="balance">' + esc(fcBal(v, c())) + '</b>' + (v < 0 ? ' <span class="tag red" data-b="short">⚠ ' + esc(tx('Short')) + '</span>' : '');
+        return '<b data-b="balance">' + esc(fcBal(v, currencyOf())) + '</b>' + (v < 0 ? ' <span class="tag red" data-b="short">⚠ ' + esc(tx('Short')) + '</span>' : '');
       }
     },
     {
@@ -309,10 +310,10 @@ function fcCols() {
       prio: 5,
       w: 320,
       html: true,
-      cell: function (d) {
-        return d.items.length
+      cell: function (dayRow) {
+        return dayRow.items.length
           ? esc(
-              d.items
+              dayRow.items
                 .map(function (item) {
                   return item.name;
                 })
@@ -324,11 +325,11 @@ function fcCols() {
   ];
 }
 /** what a day counts: the dues and cheques behind it, as the server listed them (the Task table's next level, CBList.nextRow) */
-function fcNext(d) {
-  var c = bkCur(FC.r && FC.r.currency);
-  var rows = (d.items || [])
+function fcNext(dayRow) {
+  var currency = bkCur(FC.r && FC.r.currency);
+  var rows = (dayRow.items || [])
     .map(function (item) {
-      var who = item.party_id ? bkPartyLabel(item.party_id, item.name) : esc(item.name || '');
+      var party = item.party_id ? bkPartyLabel(item.party_id, item.name) : esc(item.name || '');
       var what =
         tx(FC_KIND[item.kind] || item.kind) +
         (item.cheque_no ? ' ' + item.cheque_no : '') +
@@ -336,13 +337,13 @@ function fcNext(d) {
           ? ' · ' + tx('promised')
           : item.overdue
             ? ' · ' + tx('overdue')
-            : item.due_date && item.due_date !== d.date
+            : item.due_date && item.due_date !== dayRow.date
               ? ' · ' + tx('due') + ' ' + bkDate(item.due_date)
               : '');
       return CBList.nextRow(
         [
-          '<span data-b="who">' + esc(who) + '</span> <span class="sub">' + esc(what) + '</span>',
-          '<span class="due ' + (fcIsIn(item) ? 'get' : 'give') + '">' + esc((fcIsIn(item) ? '+ ' : '− ') + bkMoney(item.amount_minor, c)) + '</span>'
+          '<span data-b="who">' + esc(party) + '</span> <span class="sub">' + esc(what) + '</span>',
+          '<span class="due ' + (fcIsIn(item) ? 'get' : 'give') + '">' + esc((fcIsIn(item) ? '+ ' : '− ') + bkMoney(item.amount_minor, currency)) + '</span>'
         ],
         [140]
       );
@@ -350,7 +351,7 @@ function fcNext(d) {
     .join('');
   return (
     '<div data-testid="fc-next-' +
-    esc(d.date) +
+    esc(dayRow.date) +
     '">' +
     (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing is due this day')) + '</div>') +
     '</div>'
@@ -358,23 +359,23 @@ function fcNext(d) {
 }
 /** the sentence on top (the server's words), what is left out, and GST — as the list's own notices and chips */
 function fcHead() {
-  var r = FC.r,
+  var reply = FC.r,
     notices = [],
     chips = [];
-  if (r && FC.state === 'ready') {
+  if (reply && FC.state === 'ready') {
     /* R75: a shortfall is a WARNING notice; good news ("You stay above zero…") is a plain chip — never the amber ⚠ */
-    if (r.shortfall)
+    if (reply.shortfall)
       notices.push({
         cls: 'warn',
         tid: 'fc-words',
-        text: r.words,
+        text: reply.words,
         onOpen: function () {
           if (FC.api) FC.api.refresh();
         }
       });
-    else chips.push({ tid: 'fc-words', text: r.words });
-    if (r.uncounted && r.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: r.uncounted.words });
-    if (r.gst && Number(r.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(r.gst, r.currency) });
+    else chips.push({ tid: 'fc-words', text: reply.words });
+    if (reply.uncounted && reply.uncounted.words) notices.push({ cls: 'warn', tid: 'fc-uncounted', text: reply.uncounted.words });
+    if (reply.gst && Number(reply.gst.payable_minor) > 0) chips.push({ tid: 'fc-gst', text: fcReturnChip(reply.gst, reply.currency) });
   }
   return { title: tx('Cash position'), notices: notices, chips: chips };
 }
@@ -383,6 +384,7 @@ function fcReturnChip(g, cur) {
   var when = g.due_date ? bkDate(g.due_date) + (g.counted ? '' : ' · ' + tx('after this window')) : g.why || tx('due date not known');
   return g.short + ' ' + bkMoney(g.payable_minor, cur) + ' · ' + when;
 }
+/** mount the Cash tab into the screen */
 function fcMount(frame) {
   var node = document.getElementById('screen');
   if (!node) return;
