@@ -821,6 +821,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   node.addEventListener('click', function (ev) {
     if (ev.target === node && Date.now() - openedAt >= CONFIRM_BACKDROP_GRACE_MS) close(false);
   });
+  node.setAttribute('data-pop', 'POP121');
   node.showModal();
   openedAt = Date.now();
 }

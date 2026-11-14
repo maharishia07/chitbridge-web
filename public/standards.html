@@ -194,7 +194,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
     <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
-<dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
+<dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail" data-pop="host"></dialog>
 <div id="toast" role="status" hidden></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
@@ -1300,6 +1300,7 @@ function openSheet(which) {
     '">' +
     stdGloss(W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) +
     '</div>';
+  node.setAttribute('data-pop', 'POP117');
   if (!node.open) {
     try {
       node.showModal();
@@ -1444,6 +1445,7 @@ function openReady(countryCode) {
     esc(countryName) +
     '</h2>' + ui.action('close', { mount: 'STD001-U03', display: 'icon', surface: 'dialog', data: { act: 'sheetx' }, testid: 'std-sheet-x' }) + '</div>' +
     '<div class="sh-body" data-testid="std-sheet-ready"><div class="hint" data-testid="std-ready-loading">Reading…</div></div>';
+  sheet.setAttribute('data-pop', 'POP118');
   if (!sheet.open) {
     try {
       sheet.showModal();

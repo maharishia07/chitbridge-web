@@ -123,7 +123,7 @@
               );
             })
             .join('') +
-          '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet"></dialog>';
+          '</div>') + '<div class="nw-body" id="nw_body" data-testid="nw-body"></div><dialog class="sheet" id="nw_sheet" data-testid="nw-sheet" data-pop="POP119"></dialog>';
     Array.prototype.forEach.call(N.el.querySelectorAll('.nw-tab'), function (element) {
       element.onclick = function () {
         N.tab = element.getAttribute('data-tab');
