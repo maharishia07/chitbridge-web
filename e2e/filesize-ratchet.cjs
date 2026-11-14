@@ -6,8 +6,10 @@
  *           · the untouched repo is green · a baseline file that GREW is red · a NEW file of 501 lines is red · a NEW file of 500 is green
  *           · a shrunk file is green and --write lowers its row · --write refuses to raise a row and to add a new 900-line file
  *           · a hand-added baseline row for that 900-line file is red against main (a PR cannot hide growth) · a hand-raised row is red
- *           · --rebaseline on a feature branch is refused, with the batch stamp env it resets the rows · --ceiling lists a customer file over 1,000
- *           · tests count; a copy (ADOPTED header), a fixtures/ file and the generated and vendored web paths do not
+ *           · --rebaseline on a feature branch is refused, with the batch tool stamp it resets the rows · --ceiling lists a computed customer file
+ *           · a batch/* branch with only a CB_BUILD comment line is red · CB_FILESIZE_STAMP in a PR that edits a workflow is refused and red
+ *           · a real batch (CB_BUILD assignment bumped, a merge commit touching the file) is green and prints the raised row
+ *           · tests count; a copy, a fixtures/ file and the generated and vendored web paths do not
  * CALLED BY .github/workflows/ci.yml (web check job).
  * FLOW      build the fixture repo on main ──▶ branch ──▶ edit ──▶ run tools/readability/filesize.cjs --against main ──▶ assert exit code and words
  * CARD      qa/readability-guard
@@ -20,7 +22,10 @@ const { spawnSync } = require('child_process');
 
 const TOOL = path.join(__dirname, '..', 'tools', 'readability', 'filesize.cjs');
 const { isExcluded } = require(TOOL);
-const QUIET_ENV = ['CI', 'GITHUB_HEAD_REF', 'GITHUB_BASE_REF', 'FILESIZE_BASE', 'CB_FILESIZE_STAMP'];
+const QUIET_ENV = ['CI', 'GITHUB_HEAD_REF', 'GITHUB_BASE_REF', 'FILESIZE_BASE', 'CB_FILESIZE_STAMP', 'GITHUB_STEP_SUMMARY'];
+const STAMP_V1 = "<script>\nconst CB_BUILD =\n  '2026-11-13a'; /* stamp */\n</script>\n";
+const STAMP_V2 = "<script>\nconst CB_BUILD =\n  '2026-11-14a'; /* stamp */\n</script>\n";
+const STAMP_COMMENT = "<script>\n// const CB_BUILD = '2026-11-14z';\nconst CB_BUILD =\n  '2026-11-13a'; /* stamp */\n</script>\n";
 let bad = 0;
 
 function check(cond, what) {
@@ -54,6 +59,11 @@ function baselineText(root) {
   return fs.readFileSync(path.join(root, 'filesize.baseline.json'), 'utf8');
 }
 
+function commitAll(root, message) {
+  git(root, ['add', '-A']);
+  git(root, ['commit', '-q', '-m', message]);
+}
+
 function buildFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'filesize-'));
   git(root, ['init', '-q', '-b', 'main']);
@@ -62,9 +72,13 @@ function buildFixture() {
   put(root, 'tests/fixtures/data.js', lines(900));
   put(root, 'lib/adopted.js', lines(900, '/* ADOPTED from chitbridge-engines v1.0.0 · lib/adopted.js · sha256 abc */'));
   put(root, 'tests/big.test.cjs', lines(550));
+  put(root, 'public/app.html', STAMP_V1);
+  put(root, 'public/big.html', '<!-- <script src="/app/ghost.js"></script> -->\n<script src="/app/cust.js"></script>\n');
+  put(root, 'public/app/cust.js', lines(300));
+  put(root, 'e2e/proof/pages.json', JSON.stringify({ pages: [['big', '/big.html']] }));
+  put(root, '.github/workflows/ci.yml', 'name: ci\n');
   put(root, 'filesize.baseline.json', '{\n  "files": {\n    "lib/big.js": 600,\n    "tests/big.test.cjs": 550\n  }\n}\n');
-  git(root, ['add', '-A']);
-  git(root, ['commit', '-q', '-m', 'base']);
+  commitAll(root, 'base');
   git(root, ['checkout', '-q', '-b', 'feature/x']);
   return root;
 }
@@ -105,20 +119,56 @@ function showHiddenGrowth(root) {
   const hidden = run(root);
   check(hidden.code === 1 && /baseline row added or raised: lib\/new900\.js/.test(hidden.text), 'the same row added by hand is RED against main (a PR cannot hide growth)');
   fs.rmSync(path.join(root, 'lib/new900.js'));
+}
+
+/** a raised row: lib/big.js 600 -> 700, in the file and in the baseline */
+function raiseRow(root) {
+  put(root, 'lib/big.js', lines(700));
   fs.writeFileSync(path.join(root, 'filesize.baseline.json'), JSON.stringify({ files: { 'lib/big.js': 700, 'tests/big.test.cjs': 550 } }, null, 2));
-  put(root, 'lib/big.js', lines(650));
-  check(/baseline row added or raised: lib\/big\.js 600 -> 700/.test(run(root).text), 'a row raised by hand (600 -> 700) is RED against main');
+}
+
+function branchFromMain(root, name) {
+  git(root, ['checkout', '-q', '-f', 'main']);
+  git(root, ['clean', '-fdq']);
+  git(root, ['checkout', '-q', '-b', name]);
 }
 
 function showRebaseline(root) {
-  put(root, 'lib/big.js', lines(1200));
+  put(root, 'public/app/cust.js', lines(1200));
   const refused = run(root, ['--rebaseline']);
   check(refused.code === 1 && /REFUSED: --rebaseline runs only at a batch stamp/.test(refused.text), '--rebaseline on a feature branch is REFUSED');
   const stamped = run(root, ['--rebaseline'], { CB_FILESIZE_STAMP: '1' });
-  check(stamped.code === 0 && /"lib\/big\.js": 1200/.test(baselineText(root)), '--rebaseline with the batch stamp resets the rows');
-  check(run(root, [], { CB_FILESIZE_STAMP: '1' }).code === 0, 'and a stamp may raise rows against main');
+  check(stamped.code === 0 && /"public\/app\/cust\.js": 1200/.test(baselineText(root)), '--rebaseline with the batch tool stamp resets the rows');
   const ceiling = run(root, ['--ceiling']);
-  check(ceiling.code === 1 && /lib\/big\.js \(1200\)/.test(ceiling.text), '--ceiling lists the customer-facing file over 1,000 and exits 1');
+  check(ceiling.code === 1 && /public\/app\/cust\.js \(1200\)/.test(ceiling.text), '--ceiling lists the computed customer file over 1,000 and exits 1');
+  check(!/ghost/.test(ceiling.text) && /computed: 2 /.test(ceiling.text), 'the customer list is the page and its one live script (a commented-out tag is not loaded)');
+}
+
+function showForgeries(root) {
+  branchFromMain(root, 'batch/fake');
+  put(root, 'public/app.html', STAMP_COMMENT);
+  raiseRow(root);
+  commitAll(root, 'forged');
+  const comment = run(root);
+  check(comment.code === 1 && /baseline row added or raised: lib\/big\.js/.test(comment.text), 'a batch/* branch with only a CB_BUILD comment line is RED (stamp forged)');
+  branchFromMain(root, 'feature/env');
+  put(root, '.github/workflows/ci.yml', 'name: ci\nenv: { CB_FILESIZE_STAMP: 1 }\n');
+  raiseRow(root);
+  commitAll(root, 'env forged');
+  const forged = run(root, [], { CB_FILESIZE_STAMP: '1' });
+  check(forged.code === 1 && /REFUSED CB_FILESIZE_STAMP: this change edits a workflow file/.test(forged.text), 'CB_FILESIZE_STAMP set while the PR edits a workflow is REFUSED, the row RED');
+}
+
+function showRealBatch(root) {
+  branchFromMain(root, 'feat/y');
+  raiseRow(root);
+  commitAll(root, 'feature grew a file');
+  branchFromMain(root, 'batch/real');
+  put(root, 'public/app.html', STAMP_V2);
+  commitAll(root, 'stamp');
+  git(root, ['merge', '-q', '--no-ff', '-m', 'merge feat/y', 'feat/y']);
+  const batch = run(root);
+  check(batch.code === 0 && /STAMP \(batch\) row lib\/big\.js 600 -> 700/.test(batch.text), 'a real batch (CB_BUILD assignment bumped + a merge commit touching the file) is GREEN and prints the raised row');
 }
 
 function showExclusions() {
@@ -132,6 +182,8 @@ showGrowth(fixture);
 showNewFile(fixture);
 showHiddenGrowth(fixture);
 showRebaseline(fixture);
+showForgeries(fixture);
+showRealBatch(fixture);
 showExclusions();
 fs.rmSync(fixture, { recursive: true, force: true });
 console.log(bad ? '\n' + bad + ' FAILED' : '\nall ok');

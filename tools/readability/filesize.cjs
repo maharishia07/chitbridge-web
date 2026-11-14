@@ -3,7 +3,8 @@
  *
  * OWNS      the line count of every tracked code file and <repo>/filesize.baseline.json: no file grows past its baseline row, a file with no
  *           row (NEW, or one that never passed 500) is at most 500 lines, a row only falls or disappears (never added, never raised: checked
- *           against the base branch, so a PR cannot hide growth in the baseline). The 1,000-line ceiling is enforced on the customer-facing
+ *           against the base branch, so a PR cannot hide growth in the baseline; a stamp may raise a row only for a file a merge commit touched, and
+ *           prints every raised row). The 1,000-line ceiling is enforced on the customer-facing
  *           files, COMPUTED here (never typed): --ceiling lists those still over it, MNT-59 brings them down.
  * CALLED BY by hand and CI: web e2e/filesize-ratchet.cjs (the fixtures) and ci.yml; the api's tests/filesize-ratchet.test.cjs and the engines
  *           test.yml run THIS file from the web checkout beside them (one scanner, no copy per repo; engines has no tools/readability).
@@ -12,7 +13,8 @@
  *   node tools/readability/filesize.cjs [--root DIR] [--against REF]   check (exit 1: a file grew, a NEW file over 500, a row added or raised)
  *   node tools/readability/filesize.cjs ... --write         lower rows to today's size, drop rows now at or under 500; refuses to raise or add one
  *   node tools/readability/filesize.cjs ... --rebaseline    reset every row to today's size: ONLY on a stamp (CB_FILESIZE_STAMP=1 set by the batch
- *                                                           tool, or a batch/* branch whose diff changes CB_BUILD); refused anywhere else
+ *                                                           tool, never in a change that edits a workflow; or a batch/* branch whose diff
+ *                                                           changes the CB_BUILD assignment); refused anywhere else
  *   node tools/readability/filesize.cjs ... --ceiling       the customer-facing files still over 1,000 (exit 1 while any is)
  *
  * SCOPE: every tracked .js .cjs .mjs .html .css file, TESTS INCLUDED (a test file may not grow either). Not counted, each judged where it is made:
@@ -157,12 +159,29 @@ function baseBaseline(root, ref) {
   return { rows: shown.status === 0 ? readRows(shown.stdout) : null };
 }
 
-/** a stamp: the batch tool says so, or a batch/* branch whose diff against the base changes CB_BUILD */
-function isStamp(root, ref) {
-  if (process.env.CB_FILESIZE_STAMP) return true;
+/** the batch stamp is the CB_BUILD assignment itself changing on a batch/* branch (a comment line or a quoted date elsewhere does not count) */
+function batchStamp(root, ref) {
   const branch = process.env.GITHUB_HEAD_REF || gitIn(root, ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
   if (!/^batch\//.test(branch)) return false;
-  return /^\+.*(CB_BUILD|'20\d\d-\d\d-\d\d\w*')/m.test(gitIn(root, ['diff', '-U1', ref + '...HEAD', '--', 'public/app.html']).stdout);
+  const diff = gitIn(root, ['diff', '-U1', ref + '...HEAD', '--', 'public/app.html']).stdout;
+  return /^[ +]const CB_BUILD =\r?\n(?:-.*\r?\n)?\+\s*'\d{4}-\d\d-\d\d[a-z]*';/m.test(diff);
+}
+
+/** a stamp: the batch tool's env (never in a PR that changes a workflow file), or the batch stamp; returns its name or null */
+function stampReason(root, ref) {
+  if (process.env.CB_FILESIZE_STAMP) {
+    const workflows = gitIn(root, ['diff', '--name-only', ref + '...HEAD', '--', '.github/workflows']).stdout.trim();
+    if (!workflows) return 'env';
+    console.log('  REFUSED CB_FILESIZE_STAMP: this change edits a workflow file (' + workflows.split(/\r?\n/)[0] + ')');
+    return null;
+  }
+  return batchStamp(root, ref) ? 'batch' : null;
+}
+
+/** the files a MERGE commit between the base and HEAD changed (a stamp may raise a row only for a file a merged PR touched) */
+function mergeTouched(root, ref) {
+  const shown = gitIn(root, ['log', '--merges', '-m', '--first-parent', '--name-only', '--format=', ref + '..HEAD']).stdout;
+  return new Set(shown.split(/\r?\n/).filter(Boolean));
 }
 
 function argValue(args, flag) {
@@ -191,7 +210,7 @@ function nextRows(sizes, rows, force) {
 /** --write and --rebaseline: lower the rows (a stamp resets them), refuse to raise or add one */
 function runWrite(root, args, sizes) {
   const force = args.includes('--rebaseline');
-  if (force && !isStamp(root, baseRef(args))) {
+  if (force && !stampReason(root, baseRef(args))) {
     console.log('REFUSED: --rebaseline runs only at a batch stamp (CB_FILESIZE_STAMP=1 from the batch tool, or a batch/* branch that changes CB_BUILD)');
     return 1;
   }
@@ -212,7 +231,7 @@ function runCeiling(root, sizes) {
   return report.judged.length ? 1 : 0;
 }
 
-/** the baseline may not hide growth: against the base branch, no row added or raised (a stamp may) */
+/** the baseline may not hide growth: against the base branch no row is added or raised; a stamp may, for files a merged PR touched, and says every row */
 function hiddenGrowth(root, args, rows) {
   const ref = baseRef(args);
   const base = baseBaseline(root, ref);
@@ -220,8 +239,19 @@ function hiddenGrowth(root, args, rows) {
     console.log((process.env.CI ? '  FAIL' : '  skip') + ' base ref ' + ref + ' not found: the baseline cannot be compared (CI: fetch-depth 0)');
     return process.env.CI ? [{ rel: BASELINE_FILE, was: 'no base', now: 'unresolved' }] : [];
   }
-  if (!base.rows || isStamp(root, ref)) return [];
-  return rowsRaised(rows, base.rows);
+  const raised = base.rows ? rowsRaised(rows, base.rows) : [];
+  const reason = raised.length ? stampReason(root, ref) : null;
+  if (!reason) return raised;
+  return stampedRows(root, ref, raised, reason);
+}
+
+/** on a stamp: print every raised row (and the job summary), and return those whose file no merge commit touched */
+function stampedRows(root, ref, raised, reason) {
+  const touched = mergeTouched(root, ref);
+  const lines = raised.map((row) => '  STAMP (' + reason + ') row ' + row.rel + ' ' + row.was + ' -> ' + row.now + (touched.has(row.rel) ? '' : '  NOT touched by a merge commit'));
+  lines.forEach((line) => console.log(line));
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '### file-size stamp: rows raised\n' + lines.join('\n') + '\n');
+  return raised.filter((row) => !touched.has(row.rel));
 }
 
 /** the check: files that grew, new files over 500, rows added or raised against the base branch; prints the one summary line */
