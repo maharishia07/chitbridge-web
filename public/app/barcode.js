@@ -1,5 +1,8 @@
 /* CBBarcode — Code 128 as inline SVG, no dependency, no network.
  *
+ * OWNS      CBBarcode.code128(text): the Code 128 SVG of a SKU (set B text, set C digit runs, checksum, quiet zones); nothing else
+ * FLOW      text -> encode (set B or C) -> checksum -> bar pattern -> inline SVG string {svg, ok, reason}
+ *
  * WHY THIS EXISTS (observation-4 §, 2026-09-03: "barcode"): a trader wants to print the SKU on a label and scan it back
  * at the counter. Code 128 is the symbology every handheld scanner reads, it encodes the full ASCII an SKU can contain,
  * and it needs no registration — unlike EAN-13/GS1, whose digits are ASSIGNED (a GS1 company prefix is bought). So:
