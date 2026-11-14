@@ -118,8 +118,8 @@
           return tag('ask', preview.NEEDS_WORDS[code] || code);
         })
         .join(' ');
-    var why = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + esc(item.why || 'Nothing here says who or what this is.') + '</span>' : '';
-    return entryNote(item) + asked + (others ? ' ' + others : '') + why;
+    var reason = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + esc(item.why || 'Nothing here says who or what this is.') + '</span>' : '';
+    return entryNote(item) + asked + (others ? ' ' + others : '') + reason;
   }
   /** the entry a proposed line would make, in words: each leg's account and amount, and the tax it carries (B5-03: shown on the row, ready or not) */
   function entryNote(item) {
@@ -130,15 +130,15 @@
         return side + ' ' + String(leg.account).replace(/_/g, ' ') + ' ' + amountText(leg.dr_minor || leg.cr_minor);
       })
       .join(' · ');
-    var tax = item.tax;
-    var taxWords = !tax
-      ? ''
-      : tax.invoice_answer === 'none'
-        ? ' No GST credit: you hold no tax invoice.'
-        : tax.tax_minor
-          ? ' ' + (tax.direction === 'output' ? 'GST collected ' : 'GST ') + amountText(tax.tax_minor) + ' (' + String(tax.kind).replace(/_/g, ' ') + ')' + (tax.invoice && tax.invoice.required ? ', tax invoice required' + (tax.invoice_answer === 'held' ? ', you hold it' : '') : '') + '.'
-          : '';
-    return '<span class="bd-why bd-entry">' + esc(legs + '.' + taxWords) + '</span> ';
+    return '<span class="bd-why bd-entry">' + esc(legs + '.' + taxWordsOf(item.tax)) + '</span> ';
+  }
+  /** the tax a proposal carries, in words: GST collected or paid, the invoice it needs, or that no credit is claimed */
+  function taxWordsOf(taxRecord) {
+    if (!taxRecord) return '';
+    if (taxRecord.invoice_answer === 'none') return ' No GST credit: you hold no tax invoice.';
+    if (!taxRecord.tax_minor) return '';
+    var invoice = taxRecord.invoice && taxRecord.invoice.required ? ', tax invoice required' + (taxRecord.invoice_answer === 'held' ? ', you hold it' : '') : '';
+    return ' ' + (taxRecord.direction === 'output' ? 'GST collected ' : 'GST ') + amountText(taxRecord.tax_minor) + ' (' + String(taxRecord.kind).replace(/_/g, ' ') + ')' + invoice + '.';
   }
   /** the one question a held-back line asks next: is it already in the books · cash or accrual · do you hold the tax invoice · is this right */
   function askedBox(item) {
@@ -229,10 +229,15 @@
     var found = Array.prototype.filter.call(doc.querySelectorAll('select[data-act="' + action + '"]'), function (one) { return one.getAttribute('data-key') === key; })[0];
     return found ? found.value : '';
   }
+  /** the state a row is painted in: what happened to it when added, else its state; a proposal something still holds back is never painted "Ready to add" */
+  function stateKeyOf(item, result) {
+    if (result) return result.ok ? 'posted' : 'failed';
+    return item.state === 'proposed' && !item.ready ? 'check' : item.state;
+  }
   function lineRow(item, results) {
     var line = item.line,
       result = results[item.key];
-    var stateKey = result ? (result.ok ? 'posted' : 'failed') : item.state === 'proposed' && !item.ready ? 'check' : item.state; /* a proposal something still holds back is never painted "Ready to add" */
+    var stateKey = stateKeyOf(item, result);
     return (
       '<tr class="bd-row bd-s-' + esc(stateKey) + '"><td class="bd-d">' + esc(preview.dateText(line.date)) + '</td><td class="bd-n">' + esc(line.narration) + '</td>' +
       '<td class="bd-m">' + (line.debit_minor ? esc(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? esc(amountText(line.credit_minor)) : '') + '</td>' +
@@ -385,22 +390,26 @@
     if (account === NOT_INCOME_OR_EXPENSE) return { ok: false, why: 'A tax payment, loan, drawings or a transfer between your own accounts is not booked here yet. Add it with + Entry in the app.' };
     return controller.resolveLine(key, { account: account, tax_kind: chosenFor('taxkind', key) });
   }
+  /** what each button does, by its data-act: it reads its own attributes and answers { ok, why } when the controller refuses, nothing otherwise */
+  var ACTIONS = {
+    gst: function (key, target) { return controller.answer('gst_basis', target.getAttribute('data-v')); },
+    meant: function (key, target) { return controller.editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') }); },
+    resolve: function (key) { return controller.resolveLine(key); },
+    useacct: function (key) { return useAccount(key); },
+    tick: function (key) { return controller.tick(key); },
+    inv: function (key, target) { return controller.invoice(key, target.getAttribute('data-v')); },
+    pair: function (key, target) { return controller.pair(key, target.getAttribute('data-id')); },
+    notmatch: function (key) { return controller.notMatch(key); },
+    curuse: function () { readAskedFile(); return { cancelled: true }; },
+    view: function (key, target) { view = target.getAttribute('data-v'); }
+  };
   function onClick(event) {
     var target = event.target.closest('[data-act]');
     if (!target) return;
-    var action = target.getAttribute('data-act'),
-      said = null;
-    if (action === 'gst') controller.answer('gst_basis', target.getAttribute('data-v'));
-    else if (action === 'meant') controller.editParty(target.getAttribute('data-key'), { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') });
-    else if (action === 'resolve') said = controller.resolveLine(target.getAttribute('data-key'));
-    else if (action === 'useacct') said = useAccount(target.getAttribute('data-key'));
-    else if (action === 'tick') said = controller.tick(target.getAttribute('data-key'));
-    else if (action === 'inv') said = controller.invoice(target.getAttribute('data-key'), target.getAttribute('data-v'));
-    else if (action === 'pair') said = controller.pair(target.getAttribute('data-key'), target.getAttribute('data-id'));
-    else if (action === 'notmatch') said = controller.notMatch(target.getAttribute('data-key'));
-    else if (action === 'curuse') return void readAskedFile();
-    else if (action === 'view') view = target.getAttribute('data-v');
-    if (said && !said.ok) el('bd_msg').textContent = said.why;
+    var act = ACTIONS[target.getAttribute('data-act')],
+      said = act ? act(target.getAttribute('data-key'), target) : null;
+    if (said && said.cancelled) return;
+    if (said && said.ok === false) el('bd_msg').textContent = said.why;
     paint();
   }
   function onChange(event) {

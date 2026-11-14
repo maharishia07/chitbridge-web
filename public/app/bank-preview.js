@@ -72,6 +72,18 @@
       })[0] || null
     );
   }
+  /** the one blocker the person answers next, by the order they are asked; null when none of them is held */
+  function askedNeedOf_(blockers) {
+    return (
+      ASKED_.filter(function (code) {
+        return blockers.indexOf(code) >= 0;
+      })[0] || null
+    );
+  }
+  /** what the engine carried about a line besides its entry: the tax record, what made the proposal, the books entries it may already be */
+  function carriedOf_(projected) {
+    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [] };
+  }
   /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
   function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate) {
     var blockers = projected.blockers || [],
@@ -84,18 +96,13 @@
       line: statementLine,
       entry: projected.entry || null,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
-      needs: ASKED_.filter(function (code) {
-        return blockers.indexOf(code) >= 0;
-      })[0] || null,
+      needs: askedNeedOf_(blockers),
       blockers: blockers,
-      tax: projected.tax || null,
-      basis: projected.basis || null,
-      near: projected.near || [],
       closed: closed,
       party: projected.party ? Object.assign({}, projected.party) : null,
       didYouMean: (named && named.did_you_mean) || []
     };
-    return Object.assign(item, standingOf_(projected, closed));
+    return Object.assign(item, carriedOf_(projected), standingOf_(projected, closed));
   }
 
   /* ── the controller's steps, each on its own: they take the options and the one state object `preview`, so create() only joins them ── */

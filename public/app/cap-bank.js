@@ -232,14 +232,14 @@ async function bankView(body) {
   if (BKB.rows.length || BKB.parsed) bankPaint();
 }
 
-async function bankPick(inp) {
-  const f = inp.files && inp.files[0];
-  if (!f) return;
+async function bankPick(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
   const out = bkbEl('bk_out');
   out.innerHTML = '';
   let text;
   try {
-    text = await f.text();
+    text = await file.text();
   } catch (_) {
     return peBad('bk_out', tx('That file could not be read.'));
   }
@@ -252,7 +252,7 @@ async function bankPick(inp) {
     bkbEl('bk_res').innerHTML = '';
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
-  BKB.file = { name: f.name, hash: hash.slice(0, 16) };
+  BKB.file = { name: file.name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
   BKB.stmtCur = parsed.currency || ''; /* B5-05: the file's own currency, else asked below; never the account's */
@@ -261,7 +261,6 @@ async function bankPick(inp) {
   BKB.from = parsed.from || dates[0];
   BKB.to = parsed.to || dates[dates.length - 1];
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
-  if (!BKB.stmtCur) return bankCurrencyAsk();
   await bankCurrencyRun();
 }
 /** B5-05: the file does not say its currency, so ask once; the statement is not read against the books until the person answers */
@@ -279,29 +278,32 @@ function bankCurrencyUse() {
   if (!chosen) return toast(tx('Say which currency the statement is in first.'));
   if (typeof CBMoney !== 'undefined' && CBMoney.isIsoCurrency && !CBMoney.isIsoCurrency(chosen)) return toast(tx('That is not a currency code. Use three capital letters.'));
   BKB.stmtCur = chosen;
-  bankCurrencyRun().catch(() => {});
+  bankCurrencyRun().catch((failure) => bkQuiet('bank-currency', failure));
 }
-/** the statement's currency is known: it must be the bank account's (nothing is converted), then the books are read */
+/** the statement's currency, asked when the file did not say: it must be the bank account's (nothing is converted), then the books are read */
 async function bankCurrencyRun() {
-  const own = String(bkCur() || '').toUpperCase();
-  if (own && BKB.stmtCur.toUpperCase() !== own) {
+  if (!BKB.stmtCur) return bankCurrencyAsk();
+  const accountCurrency = String(bkCur() || '').toUpperCase();
+  if (accountCurrency && BKB.stmtCur.toUpperCase() !== accountCurrency) {
     BKB.parsed = null;
     BKB.rows = [];
     bkbEl('bk_res').innerHTML = '';
-    return peBad('bk_out', txf('This statement is in {a} but the bank account is in {b}. Nothing is converted.', { a: BKB.stmtCur, b: own }));
+    return peBad('bk_out', txf('This statement is in {a} but the bank account is in {b}. Nothing is converted.', { a: BKB.stmtCur, b: accountCurrency }));
   }
   bkbEl('bk_out').innerHTML = '';
   await bankRun();
   bankFileAccountNote();
 }
+/** the digits of an account number or name, so a file's "062-000 1234" and a ledger's "Bank 062000 1234" meet */
+const bkbDigits = (text) => String(text || '').replace(/\D/g, '');
 /** B5-07: the account number the FILE prints against the ledger picked: when they differ (or the ledger names none) the person is told, never silently trusted */
 function bankFileAccountNote() {
-  const said = String((BKB.parsed && BKB.parsed.account) || '').replace(/D/g, ''),
+  const said = bkbDigits(BKB.parsed && BKB.parsed.account),
     ledger = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.acct))[0] || {},
-    ours = String(ledger.name || '').replace(/D/g, '');
-  const same = said && ours && (ours.indexOf(said) >= 0 || said.indexOf(ours) >= 0);
-  const out = bkbEl('bk_out');
-  if (said && !same && out) out.innerHTML = '<div class="pe-warn" data-testid="bank-file-account">' + bkbE(txf('The file is for account {a}. Check it is the one you picked: {b}.', { a: String(BKB.parsed.account), b: ledger.name || BKB.acct })) + '</div>';
+    ours = bkbDigits(ledger.name),
+    out = bkbEl('bk_out');
+  if (!said || !out || (ours && (ours.includes(said) || said.includes(ours)))) return;
+  out.innerHTML = '<div class="pe-warn" data-testid="bank-file-account">' + bkbE(txf('The file is for account {a}. Check it is the one you picked: {b}.', { a: String(BKB.parsed.account), b: ledger.name || BKB.acct })) + '</div>';
 }
 
 /** the shop's own bank lines for the statement's dates → the engine's ledger lines */
@@ -688,7 +690,7 @@ function bankList() {
         label: 'Add missing',
         tid: 'bank-add',
         when: (r) => own && (r.status === 'suggested' || r.status === 'bank-only' || r.status === 'check') && !bankIsParty(r),
-        run: (r) => bankAdd(r)
+        run: (r) => bankAddBound(r)
       },
       {
         id: 'dues',
@@ -987,8 +989,11 @@ function bankNext(r) {
 }
 
 /** ＋ Entry with the engine's suggestion filled in; the owner confirms in its preview, and the entry is posted through the API */
+/** B5-07: an entry opened from a line belongs to the account the statement was read for */
+function bankAddBound(r) {
+  if (bkbBound()) bankAdd(r);
+}
 function bankAdd(r) {
-  if (!bkbBound()) return;
   const s = r.stmt,
     ev = (r.sugg && r.sugg.event) || null,
     v = {
