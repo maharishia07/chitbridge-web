@@ -38,14 +38,14 @@ var FP_BUCKETS = [
 var FP_GROUPS = { overdue: 'Overdue', msme: 'MSME at risk', week: 'Due this week', later: 'Later' };
 
 async function fpLoad(quiet) {
-  var g = ++FP.gen;
+  var generation = ++FP.gen;
   if (!quiet) {
     FP.state = 'loading';
     if (FP.api) FP.api.refresh();
   }
   try {
     var reply = await api('booksDues', { query: { asOf: bkToday(), side: 'supplier', finance: '1' } });
-    if (g !== FP.gen) return;
+    if (generation !== FP.gen) return;
     bkDuesStore(reply);
     FP.cur = (reply && reply.currency) || bkCur();
     if (reply && reply.currency && typeof SESSION !== 'undefined' && SESSION)
@@ -55,7 +55,7 @@ async function fpLoad(quiet) {
     FP.total = reply && reply.payables ? reply.payables.total_minor : null;
     FP.state = 'ready';
   } catch (e) {
-    if (g !== FP.gen) return;
+    if (generation !== FP.gen) return;
     if (e && e.status === 404) {
       finOff();
       return;
@@ -110,7 +110,7 @@ function fpPay(pid) {
 
 /* ── the columns: every figure is the server's ── */
 function fpCols() {
-  var c = function () {
+  var currencyOf = function () {
       return FP.cur;
     },
     dash = '<span style="color:var(--grey)">—</span>';
@@ -124,7 +124,7 @@ function fpCols() {
       html: true,
       cell: function (p) {
         var v = Number(p.payable.buckets[k] || 0);
-        return v ? '<span data-b="' + k + '">' + esc(bkMoney(v, c())) + '</span>' : dash;
+        return v ? '<span data-b="' + k + '">' + esc(bkMoney(v, currencyOf())) + '</span>' : dash;
       }
     };
   };
@@ -147,7 +147,7 @@ function fpCols() {
       w: 140,
       html: true,
       cell: function (p) {
-        return '<b data-b="topay">' + esc(bkMoney(Number(p.payable.total_minor), c())) + '</b>';
+        return '<b data-b="topay">' + esc(bkMoney(Number(p.payable.total_minor), currencyOf())) + '</b>';
       }
     },
     {
@@ -189,12 +189,12 @@ function fpCols() {
       pin: 'end',
       w: 100,
       html: true,
-      cell: function (p) {
+      cell: function (party) {
         return (
           '<button type="button" data-cbsid="CMP042-B01"' + bkMountAttribute('CMP042') + ' class="cbl-tbtn" data-testid="fp-pay-' +
-          esc(p.party_id) +
+          esc(party.party_id) +
           '" onclick="event.stopPropagation();fpPay(\'' +
-          esc(p.party_id) +
+          esc(party.party_id) +
           '\')">' +
           esc(tx('Pay')) +
           '</button>'
@@ -204,15 +204,15 @@ function fpCols() {
   ];
 }
 /** what a supplier row opens to: its ages (the server's buckets), then its bills as the server listed them — the MSME sentence and the offer under the bill they belong to */
-function fpNext(p) {
-  var c = FP.cur,
-    bills = (p.payable && p.payable.bills) || [],
-    b0 = (p.payable && p.payable.buckets) || {};
+function fpNext(party) {
+  var currency = FP.cur,
+    bills = (party.payable && party.payable.bills) || [],
+    buckets = (party.payable && party.payable.buckets) || {};
   var ages = FP_BUCKETS.filter(function (item) {
-    return Number(b0[item[0]]) > 0;
+    return Number(buckets[item[0]]) > 0;
   })
     .map(function (item) {
-      return CBList.nextRow(['<span data-b="age-' + item[0] + '">' + esc(tx(item[1])) + '</span>', esc(bkMoney(Number(b0[item[0]]), c))]);
+      return CBList.nextRow(['<span data-b="age-' + item[0] + '">' + esc(tx(item[1])) + '</span>', esc(bkMoney(Number(buckets[item[0]]), currency))]);
     })
     .join('');
   /* the bill's line is a nextRow (its date | amount — short, so a phone card stays inside the screen); its age, due day and sentences sit UNDER it on their own
@@ -224,32 +224,32 @@ function fpNext(p) {
   };
   var rows = bills
     .map(function (item) {
-      var lab = (FP_BUCKETS.filter(function (k) {
+      var label = (FP_BUCKETS.filter(function (k) {
         return k[0] === item.bucket;
       })[0] || [0, ''])[1];
       return (
         CBList.nextRow([
           '<span data-b="bill">' + esc(bkDate(item.date)) + '</span>',
-          '<span class="due give">' + esc(bkMoney(item.open_minor, c)) + '</span>'
+          '<span class="due give">' + esc(bkMoney(item.open_minor, currency)) + '</span>'
         ]) +
-        line('due', tx(lab) + ' · ' + (item.overdue ? tx('overdue since') : tx('due')) + ' ' + bkDate(item.due_date)) +
+        line('due', tx(label) + ' · ' + (item.overdue ? tx('overdue since') : tx('due')) + ' ' + bkDate(item.due_date)) +
         (item.note ? line('note', item.note, true) : '') /* R106: the bill's own word — "₹250 short against their ₹2,940" */ +
         (item.msme_words ? line('msme', item.msme_words, item.msme_risk) : '') +
         (item.early ? line('early', item.early.words) : '') +
-        fpBillActs(p, item)
+        fpBillActs(party, item)
       );
     })
     .join('');
-  var sec = function (t) {
+  var section = function (t) {
     return '<div style="color:var(--grey);font-size:var(--fs-1);padding:4px 0 2px">' + esc(tx(t)) + '</div>';
   };
   return (
     '<div data-testid="fp-next-' +
-    esc(p.party_id) +
+    esc(party.party_id) +
     '">' +
-    (ages ? sec('Age') + '<div data-testid="fp-ages-' + esc(p.party_id) + '">' + ages + '</div>' + sec('Bills') : '') +
+    (ages ? section('Age') + '<div data-testid="fp-ages-' + esc(party.party_id) + '">' + ages + '</div>' + section('Bills') : '') +
     (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing to pay')) + '</div>') +
-    fpHeldHTML(p, sec, line) +
+    fpHeldHTML(party, section, line) +
     '</div>'
   );
 }
