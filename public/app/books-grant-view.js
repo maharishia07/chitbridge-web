@@ -14,7 +14,7 @@
  */
 (function (root) {
   'use strict';
-  var V = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null };
+  var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null };
   var MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
   var REPORTS = [
@@ -26,7 +26,7 @@
     { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: function (a) { return a.periods || []; }, cols: [['fiscal_year', 'Year'], ['period', 'Month'], ['status', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
-  function T(s) {
+  function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function $(id) {
@@ -34,52 +34,52 @@
   }
   function side(list, name) {
     return (list || []).map(function (row) {
-      return Object.assign({ side: T(name) }, row);
+      return Object.assign({ side: words(name) }, row);
     });
   }
   function current() {
     return REPORTS.filter(function (r) {
-      return r.k === V.report;
+      return r.k === viewState.report;
     })[0];
   }
   /** a figure the way the books screens paint it: the server's minor units, the currency's own decimals, never a guessed symbol */
   function minorWords(minor) {
     if (minor == null || minor === '') return '—';
-    var code = V.answer && V.answer.currency;
+    var code = viewState.answer && viewState.answer.currency;
     var places = root.CBMoney && root.CBMoney.decimals && code ? root.CBMoney.decimals(code) : NaN;
     return typeof root.fmtMoney === 'function' && isFinite(places) ? root.fmtMoney(Number(minor) / Math.pow(10, places), code) : String(minor);
   }
-  function figure(row, c) {
-    var v = row[c[0]];
-    return c[2] === MONEY ? minorWords(v) : v == null || v === '' ? '—' : String(v);
+  function figure(row, column) {
+    var v = row[column[0]];
+    return column[2] === MONEY ? minorWords(v) : v == null || v === '' ? '—' : String(v);
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    if (!V.day || !report.day) return {};
-    if (report.day === 'both') return { from: V.day, to: V.day };
+    if (!viewState.day || !report.day) return {};
+    if (report.day === 'both') return { from: viewState.day, to: viewState.day };
     var q = {};
-    q[report.day] = V.day;
+    q[report.day] = viewState.day;
     return q;
   }
 
   /* ── the read ── */
   function load() {
     var report = current();
-    return root.CBBooksGrantApi.run(V.o.call, report.ep, { query: queryOf(report), headers: headerOf() }).then(
+    return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: headerOf() }).then(
       function (answer) {
-        V.answer = answer;
-        V.why = null;
+        viewState.answer = answer;
+        viewState.why = null;
       },
       function (failure) {
         if (failure.status === 401) throw failure;
-        V.answer = null;
-        V.why = failure.message || T("Couldn't open these books. Nothing was changed.");
+        viewState.answer = null;
+        viewState.why = failure.message || words("Couldn't open these books. Nothing was changed.");
       }
     );
   }
   function headerOf() {
     var h = {};
-    h[root.CBBooksGrantApi.HEADER] = V.o.member.id;
+    h[root.CBBooksGrantApi.HEADER] = viewState.o.member.id;
     return h;
   }
 
@@ -87,50 +87,50 @@
   function tabs() {
     return REPORTS.map(function (r) {
       return (
-        '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (V.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (V.report === r.k) + '">' + esc(T(r.label)) + '</button>'
+        '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
     }).join('');
   }
   function paint() {
     var report = current();
-    V.host.innerHTML =
-      '<div class="bv-band" role="status" data-testid="bv-band"><b>' + esc(T('Viewing')) + ' ' + esc(V.o.member.name) + ' — ' + esc(T('read only')) + '</b>' +
-      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(T('Back to My network')) + '</button></div>' +
-      '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(T('Books')) + '">' + tabs() +
-      (report.day ? '<label class="sub" for="bv_day">' + esc(T('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(V.day) + '" data-testid="bv-day">' : '') + '</div>' +
-      (V.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(V.why) + '</div>' : facts(report)) +
+    viewState.host.innerHTML =
+      '<div class="bv-band" role="status" data-testid="bv-band"><b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
+      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Back to My network')) + '</button></div>' +
+      '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
+      (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
+      (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
-    $('bv_back').onclick = V.o.onBack;
-    Array.prototype.forEach.call(V.host.querySelectorAll('[data-report]'), function (button) {
+    $('bv_back').onclick = viewState.o.onBack;
+    Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
       button.onclick = function () {
-        V.report = button.getAttribute('data-report');
+        viewState.report = button.getAttribute('data-report');
         reload().then(function () {
-          $('bv_tab_' + V.report).focus();
+          $('bv_tab_' + viewState.report).focus();
         });
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
-    if (!V.why) paintRows($('bv_list'), report);
+    if (!viewState.why) paintRows($('bv_list'), report);
   }
   function pickDay() {
-    V.day = $('bv_day').value;
+    viewState.day = $('bv_day').value;
     reload();
   }
   function facts(report) {
     var items = report.facts
       .filter(function (f) {
-        return V.answer && V.answer[f[0]] != null;
+        return viewState.answer && viewState.answer[f[0]] != null;
       })
       .map(function (f) {
-        return '<span class="tag" data-testid="bv-fact-' + f[0] + '">' + esc(T(f[1])) + ': ' + esc(minorWords(V.answer[f[0]])) + '</span>';
+        return '<span class="tag" data-testid="bv-fact-' + f[0] + '">' + esc(words(f[1])) + ': ' + esc(minorWords(viewState.answer[f[0]])) + '</span>';
       });
     return items.length ? '<div class="nw-acts" data-testid="bv-facts">' + items.join('') + '</div>' : '';
   }
   function paintRows(host, report) {
-    var rows = report.rows(V.answer || {}).map(function (row, n) {
+    var rows = report.rows(viewState.answer || {}).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
-    V.o.mountList(host, {
+    viewState.o.mountList(host, {
       key: 'books-grant-' + report.k,
       rows: function () {
         return rows;
@@ -141,37 +141,37 @@
       rowTid: function (row) {
         return 'bv-row-' + row._n;
       },
-      columns: report.cols.map(function (c, i) {
+      columns: report.cols.map(function (column, i) {
         return {
-          key: c[0],
-          label: T(c[1]),
+          key: column[0],
+          label: words(column[1]),
           prio: i < 3 ? 1 : 2,
-          w: c[2] === MONEY ? 140 : 180,
+          w: column[2] === MONEY ? 140 : 180,
           cell: function (row) {
-            return figure(row, c);
+            return figure(row, column);
           },
           value: function (row) {
-            return row[c[0]] == null ? '' : String(row[c[0]]);
+            return row[column[0]] == null ? '' : String(row[column[0]]);
           }
         };
       }),
       search: function (row) {
         return report.cols
-          .map(function (c) {
-            return row[c[0]];
+          .map(function (column) {
+            return row[column[0]];
           })
           .join(' ');
       },
-      empty: { title: T('Nothing to show here'), body: T('These books have no entries for this day.') }
+      empty: { title: words('Nothing to show here'), body: words('These books have no entries for this day.') }
     });
   }
   function reload() {
     return load().then(paint, function () {
-      if (V.o.onEnded) V.o.onEnded();
+      if (viewState.o.onEnded) viewState.o.onEnded();
     });
   }
   function mount(host, o) {
-    V = { host: host, o: o, report: 'tb', day: '', answer: null, why: null };
+    viewState = { host: host, o: o, report: 'tb', day: '', answer: null, why: null };
     reload();
     return {
       destroy: function () {

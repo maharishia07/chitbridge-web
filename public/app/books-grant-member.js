@@ -15,7 +15,7 @@
  */
 (function (root) {
   'use strict';
-  var G = { host: null, o: {}, given: [], looks: [], view: 'given', why: null };
+  var panel = { host: null, o: {}, given: [], looks: [], view: 'given', why: null };
   var LOOKED = {
     allowed: 'Looked',
     no_grant: 'Refused: no access',
@@ -44,20 +44,20 @@
     '/returns': 'Tax returns'
   };
 
-  function T(s) {
+  function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function $(id) {
     return root.document.getElementById(id);
   }
   function api(key, o) {
-    return root.CBBooksGrantApi.run(G.o.call, key, o);
+    return root.CBBooksGrantApi.run(panel.o.call, key, o);
   }
   function nameOf(entity) {
-    var found = (G.o.parents() || []).filter(function (item) {
+    var found = (panel.o.parents() || []).filter(function (item) {
       return String(item.id) === String(entity);
     })[0];
-    return found ? found.name : T('Your network parent');
+    return found ? found.name : words('Your network parent');
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
@@ -82,75 +82,80 @@
   }
   function whatWords(pattern) {
     var route = String(pattern || '').replace(/^[A-Z]+ /, '');
-    return T(WHAT[route] || route || '—');
+    return words(WHAT[route] || route || '—');
   }
   function isOpen(grant) {
     return grant.state === 'live' || grant.state === 'edge_off';
   }
 
   /* ── the reads ── */
+  /** read the list or the log, whichever view is on; a refusal becomes the sentence shown above the list */
   function load() {
-    var read = G.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
+    var read = panel.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
     return read.then(
       function (answer) {
-        G.why = null;
-        if (G.view === 'looks') G.looks = (answer && answer.looks) || [];
-        else G.given = (answer && answer.given) || [];
+        panel.why = null;
+        if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
+        else panel.given = (answer && answer.given) || [];
       },
       function (failure) {
-        G.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
-        if (!G.why) throw failure;
+        panel.why = failure.status === 403 || failure.status === 503 ? failure.message : null;
+        if (!panel.why) throw failure;
       }
     );
   }
 
   /* ── the screen ── */
+  /** the two view buttons, the one in use marked pressed */
   function segButtons() {
     return [
-      ['given', T('Access I gave'), 'NET004-B01'],
-      ['looks', T('Who looked'), 'NET004-B02']
+      ['given', words('Access I gave'), 'NET004-B01'],
+      ['looks', words('Who looked'), 'NET004-B02']
     ]
       .map(function (item) {
         return (
-          '<button data-cbsid="' + item[2] + '" type="button" id="bg_seg_' + item[0] + '" class="act' + (G.view === item[0] ? '' : ' quiet') + '" data-view="' + item[0] +
-          '" data-testid="bg-seg-' + item[0] + '" aria-pressed="' + (G.view === item[0]) + '">' + esc(item[1]) + '</button>'
+          '<button data-cbsid="' + item[2] + '" type="button" id="bg_seg_' + item[0] + '" class="act' + (panel.view === item[0] ? '' : ' quiet') + '" data-view="' + item[0] +
+          '" data-testid="bg-seg-' + item[0] + '" aria-pressed="' + (panel.view === item[0]) + '">' + esc(item[1]) + '</button>'
         );
       })
       .join('');
   }
+  /** the screen: the two views, Give access, the server's sentence if the list was refused, and the list */
   function paint() {
-    G.host.innerHTML =
-      '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(T('Who can see my books')) + '">' + segButtons() + '</div>' +
-      '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(T('Give access')) + '</button></div>' +
-      '<div class="sub" data-testid="bg-note">' + esc(T('Read only. You choose who and until when; every look is recorded.')) + '</div>' +
-      (G.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(G.why) + '</div>' : '') +
+    panel.host.innerHTML =
+      '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
+      '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
+      '<div class="sub" data-testid="bg-note">' + esc(words('Read only. You choose who and until when; every look is recorded.')) + '</div>' +
+      (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
       '<div class="nw-list" id="bg_list" data-testid="bg-list"></div>';
-    Array.prototype.forEach.call(G.host.querySelectorAll('[data-view]'), function (button) {
+    Array.prototype.forEach.call(panel.host.querySelectorAll('[data-view]'), function (button) {
       button.onclick = function () {
-        G.view = button.getAttribute('data-view');
+        panel.view = button.getAttribute('data-view');
         reload();
       };
     });
     greyGive();
     $('bg_give').onclick = openGive;
-    (G.view === 'looks' ? paintLooks : paintGiven)($('bg_list'));
+    (panel.view === 'looks' ? paintLooks : paintGiven)($('bg_list'));
   }
   /** Give access is always shown; when the server refused the list (not the owner) it is greyed WITH that sentence */
   function greyGive() {
-    if (!G.why) return;
+    if (!panel.why) return;
     var button = $('bg_give');
     button.setAttribute('disabled', '');
     button.setAttribute('aria-disabled', 'true');
-    button.title = G.why;
+    button.title = panel.why;
   }
+  /** one list column: how a row paints and sorts */
   function col(key, label, prio, w, text, sortValue) {
     return { key: key, label: label, prio: prio, w: w, cell: text, value: sortValue || text };
   }
+  /** the access this business gave, one row each, with Change date and End access */
   function paintGiven(host) {
-    G.o.mountList(host, {
+    panel.o.mountList(host, {
       key: 'books-grants-given',
       rows: function () {
-        return G.given;
+        return panel.given;
       },
       id: function (g) {
         return g.grant_id;
@@ -159,27 +164,28 @@
         return 'bg-grant-' + g.grant_id;
       },
       columns: [
-        col('who', T('Who'), 1, 200, function (g) { return nameOf(g.grantee_entity); }),
-        col('purpose', T('Why'), 3, 260, function (g) { return g.purpose || '—'; }),
-        col('until', T('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
-        col('costs', T('Costs'), 4, 110, function (g) { return g.can_see_costs ? T('Seen') : T('Hidden'); }),
-        col('state', T('State'), 1, 170, function (g) { return root.CBBooksGrantApi.stateWords(g.state); })
+        col('who', words('Who'), 1, 200, function (g) { return nameOf(g.grantee_entity); }),
+        col('purpose', words('Why'), 3, 260, function (g) { return g.purpose || '—'; }),
+        col('until', words('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
+        col('costs', words('Costs'), 4, 110, function (g) { return g.can_see_costs ? words('Seen') : words('Hidden'); }),
+        col('state', words('State'), 1, 170, function (g) { return root.CBBooksGrantApi.stateWords(g.state); })
       ],
       actions: [
-        { id: 'change', tid: 'bg-change', label: T('Change date'), when: isOpen, run: openChange },
-        { id: 'end', tid: 'bg-end', label: T('End access'), when: isOpen, run: askEnd }
+        { id: 'change', tid: 'bg-change', label: words('Change date'), when: isOpen, run: openChange },
+        { id: 'end', tid: 'bg-end', label: words('End access'), when: isOpen, run: askEnd }
       ],
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
       },
-      empty: { title: T('Nobody can see your books'), body: T('Give access to your network parent when an audit needs it.') }
+      empty: { title: words('Nobody can see your books'), body: words('Give access to your network parent when an audit needs it.') }
     });
   }
+  /** who looked at these books, when and at what, newest first */
   function paintLooks(host) {
-    G.o.mountList(host, {
+    panel.o.mountList(host, {
       key: 'books-grants-looks',
       rows: function () {
-        return G.looks;
+        return panel.looks;
       },
       id: function (look) {
         return look.at + '|' + look.route_pattern + '|' + look.outcome;
@@ -188,69 +194,74 @@
         return 'bg-look-' + look.outcome;
       },
       columns: [
-        col('at', T('When'), 1, 170, function (look) { return whenWords(look.at); }, function (look) { return look.at || ''; }),
-        col('who', T('Who'), 2, 200, function (look) { return nameOf(look.grantee_entity); }),
-        col('what', T('Looked at'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
-        col('out', T('Result'), 3, 220, function (look) { return T(LOOKED[look.outcome] || look.outcome || ''); })
+        col('at', words('When'), 1, 170, function (look) { return whenWords(look.at); }, function (look) { return look.at || ''; }),
+        col('who', words('Who'), 2, 200, function (look) { return nameOf(look.grantee_entity); }),
+        col('what', words('Looked at'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
+        col('out', words('Result'), 3, 220, function (look) { return words(LOOKED[look.outcome] || look.outcome || ''); })
       ],
       search: function (look) {
         return [nameOf(look.grantee_entity), whatWords(look.route_pattern), look.outcome].join(' ');
       },
-      empty: { title: T('Nobody has looked yet'), body: T('Each look at your books will be listed here.') }
+      empty: { title: words('Nobody has looked yet'), body: words('Each look at your books will be listed here.') }
     });
   }
 
   /* ── Give access: the consent, then a confirm that names the reach ── */
+  /** the Give access form: who, why, until, costs, the consent words and the yes */
   function giveForm(parents) {
     return (
-      '<h2>' + esc(T('Let your network parent read your books')) + '</h2><div class="bg-form" data-testid="bg-form">' +
-      '<label class="sub" for="bg_who">' + esc(T('Who')) + '</label><select data-cbsid="NET004-S01" id="bg_who" class="inp" data-testid="bg-who">' +
+      '<h2>' + esc(words('Let your network parent read your books')) + '</h2><div class="bg-form" data-testid="bg-form">' +
+      '<label class="sub" for="bg_who">' + esc(words('Who')) + '</label><select data-cbsid="NET004-S01" id="bg_who" class="inp" data-testid="bg-who">' +
       parents.map(function (item) { return '<option value="' + esc(item.id) + '">' + esc(item.name) + '</option>'; }).join('') + '</select>' +
-      '<label class="sub" for="bg_purpose">' + esc(T('Why (optional)')) + '</label><input data-cbsid="NET004-I01" id="bg_purpose" class="inp" maxlength="300" data-testid="bg-purpose" autocomplete="off" placeholder="' + esc(T('For example: year-end audit')) + '">' +
-      '<label class="sub" for="bg_until">' + esc(T('Until')) + '</label><input data-cbsid="NET004-I02" id="bg_until" class="inp" type="date" value="' + inAYear() + '" data-testid="bg-until">' +
-      '<label class="bg-tick"><input data-cbsid="NET004-I03" id="bg_costs" type="checkbox" checked data-testid="bg-costs"> ' + esc(T('They can see my costs and margins')) + '</label>' +
+      '<label class="sub" for="bg_purpose">' + esc(words('Why (optional)')) + '</label><input data-cbsid="NET004-I01" id="bg_purpose" class="inp" maxlength="300" data-testid="bg-purpose" autocomplete="off" placeholder="' + esc(words('For example: year-end audit')) + '">' +
+      '<label class="sub" for="bg_until">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I02" id="bg_until" class="inp" type="date" value="' + inAYear() + '" data-testid="bg-until">' +
+      '<label class="bg-tick"><input data-cbsid="NET004-I03" id="bg_costs" type="checkbox" checked data-testid="bg-costs"> ' + esc(words('They can see my costs and margins')) + '</label>' +
       '<div id="bg_consent" class="bg-consent" role="status" data-testid="bg-consent"><span class="spin"></span></div>' +
-      '<label class="bg-tick"><input data-cbsid="NET004-I04" id="bg_yes" type="checkbox" data-testid="bg-yes"> ' + esc(T('I have read this, and I say yes')) + '</label>' +
+      '<label class="bg-tick"><input data-cbsid="NET004-I04" id="bg_yes" type="checkbox" data-testid="bg-yes"> ' + esc(words('I have read this, and I say yes')) + '</label>' +
       '<div class="nw-out" id="bg_out" data-testid="bg-out" role="status"></div>' +
-      '<div class="nw-acts"><button data-cbsid="NET004-B04" type="button" class="act" id="bg_go" data-testid="bg-go" disabled aria-disabled="true" title="' + esc(T('Tick yes to go on.')) + '">' + esc(T('Give access')) + '</button>' +
-      '<button data-cbsid="NET004-B05" type="button" class="act quiet" id="bg_cancel" data-testid="bg-cancel">' + esc(T('Cancel')) + '</button></div></div>'
+      '<div class="nw-acts"><button data-cbsid="NET004-B04" type="button" class="act" id="bg_go" data-testid="bg-go" disabled aria-disabled="true" title="' + esc(words('Tick yes to go on.')) + '">' + esc(words('Give access')) + '</button>' +
+      '<button data-cbsid="NET004-B05" type="button" class="act quiet" id="bg_cancel" data-testid="bg-cancel">' + esc(words('Cancel')) + '</button></div></div>'
     );
   }
+  /** open the Give access sheet for the network parents this store may open its books to */
   function openGive() {
-    var parents = G.o.parents() || [];
+    var parents = panel.o.parents() || [];
     if (!parents.length) {
-      G.o.sheet('<h2>' + esc(T('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(T('You have no network parent to give access to.')) + '</p>');
+      panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('You have no network parent to give access to.')) + '</p>');
       return;
     }
-    G.o.sheet(giveForm(parents));
-    $('bg_cancel').onclick = G.o.closeSheet;
+    panel.o.sheet(giveForm(parents));
+    $('bg_cancel').onclick = panel.o.closeSheet;
     $('bg_costs').onchange = readConsent;
     $('bg_yes').onchange = tickYes;
     $('bg_go').onclick = askGive;
     readConsent();
     $('bg_who').focus();
   }
+  /** Give access is held until yes is ticked */
   function tickYes() {
     var go = $('bg_go');
     var yes = $('bg_yes').checked;
     go.disabled = !yes;
     go.setAttribute('aria-disabled', String(!yes));
-    go.title = yes ? '' : T('Tick yes to go on.');
+    go.title = yes ? '' : words('Tick yes to go on.');
   }
+  /** read the consent words for the costs choice and clear the yes, so it is said again */
   function readConsent() {
     $('bg_yes').checked = false;
     tickYes();
     api('grantsConsent', { query: { can_see_costs: $('bg_costs').checked ? 'true' : 'false' } }).then(
-      function (words) {
+      function (consent) {
         $('bg_consent').innerHTML =
-          '<b>' + esc(words.headline) + '</b><div>' + esc(T('They can read')) + ': ' + esc((words.can_read || []).join(', ')) + '.</div>' +
-          '<div>' + esc(T('They cannot')) + ': ' + esc((words.cannot || []).join(', ')) + '.</div><div>' + esc(words.costs) + '</div><div>' + esc(words.rights) + '</div>';
+          '<b>' + esc(consent.headline) + '</b><div>' + esc(words('They can read')) + ': ' + esc((consent.can_read || []).join(', ')) + '.</div>' +
+          '<div>' + esc(words('They cannot')) + ': ' + esc((consent.cannot || []).join(', ')) + '.</div><div>' + esc(consent.costs) + '</div><div>' + esc(consent.rights) + '</div>';
       },
       function (failure) {
-        $('bg_consent').textContent = failure.message || T("Couldn't load the words. Try again.");
+        $('bg_consent').textContent = failure.message || words("Couldn't load the words. Try again.");
       }
     );
   }
+  /** what the form sends: the parent, the purpose, the end day, costs, and the yes */
   function giveBody() {
     return {
       grantee: $('bg_who').value,
@@ -260,8 +271,9 @@
       consent: $('bg_yes').checked
     };
   }
+  /** send the grant once the owner confirms who, until when and read only */
   function askGive() {
-    var who = $('bg_who');
+    var parentBox = $('bg_who');
     var until = $('bg_until').value;
     var body = giveBody();
     root.CBAction.run(
@@ -272,17 +284,17 @@
       {
         key: 'bg-give',
         confirm: {
-          title: T('Give read-only access?'),
+          title: words('Give read-only access?'),
           body:
-            '<b>' + esc(who.options[who.selectedIndex].text) + '</b> ' + esc(T('will be able to read your books until')) + ' <b>' +
-            esc(until ? dayWords(until + 'T12:00:00') : T('12 months from today')) + '</b>. ' + esc(T('Read only: they cannot change anything. Every look is recorded.')),
-          yes: T('Give access')
+            '<b>' + esc(parentBox.options[parentBox.selectedIndex].text) + '</b> ' + esc(words('will be able to read your books until')) + ' <b>' +
+            esc(until ? dayWords(until + 'T12:00:00') : words('12 months from today')) + '</b>. ' + esc(words('Read only: they cannot change anything. Every look is recorded.')),
+          yes: words('Give access')
         },
-        failed: T("Couldn't give access"),
+        failed: words("Couldn't give access"),
         out: 'bg_out',
         outcome: function () {
-          G.o.closeSheet();
-          G.view = 'given';
+          panel.o.closeSheet();
+          panel.view = 'given';
           reload();
         }
       }
@@ -290,15 +302,17 @@
   }
 
   /* ── Change the end date · End access ── */
+  /** the sheet that changes the end date of one open access */
   function openChange(grant) {
-    G.o.sheet(
-      '<h2>' + esc(T('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + '</div>' +
-        '<label class="sub" for="bg_until2">' + esc(T('Until')) + '</label><input data-cbsid="NET004-I05" id="bg_until2" class="inp" type="date" value="' + esc(dayValue(new Date(grant.expires_at))) + '" data-testid="bg-until2">' +
+    panel.o.sheet(
+      '<h2>' + esc(words('Change the end date')) + '</h2><div class="bg-form" data-testid="bg-change-form"><div class="sub">' + esc(nameOf(grant.grantee_entity)) + '</div>' +
+        '<label class="sub" for="bg_until2">' + esc(words('Until')) + '</label><input data-cbsid="NET004-I05" id="bg_until2" class="inp" type="date" value="' + esc(dayValue(new Date(grant.expires_at))) + '" data-testid="bg-until2">' +
         '<div class="nw-out" id="bg_out2" data-testid="bg-out2" role="status"></div>' +
-        '<div class="nw-acts"><button data-cbsid="NET004-B06" type="button" class="act" id="bg_save" data-testid="bg-save">' + esc(T('Save')) + '</button>' +
-        '<button data-cbsid="NET004-B07" type="button" class="act quiet" id="bg_cancel2" data-testid="bg-cancel2">' + esc(T('Cancel')) + '</button></div></div>'
+        '<div class="nw-acts"><button data-cbsid="NET004-B06" type="button" class="act" id="bg_save" data-testid="bg-save">' + esc(words('Save')) + '</button>' +
+        '<button data-cbsid="NET004-B07" type="button" class="act quiet" id="bg_cancel2" data-testid="bg-cancel2">' + esc(words('Cancel')) + '</button></div></div>'
     );
-    $('bg_cancel2').onclick = G.o.closeSheet;
+    $('bg_cancel2').onclick = panel.o.closeSheet;
+    /** Save sends the new end day once; the sheet closes and the list is read again */
     $('bg_save').onclick = function () {
       root.CBAction.run(
         $('bg_save'),
@@ -307,16 +321,17 @@
         },
         {
           key: 'bg-change-' + grant.grant_id,
-          failed: T("Couldn't change the date"),
+          failed: words("Couldn't change the date"),
           out: 'bg_out2',
           outcome: function () {
-            G.o.closeSheet();
+            panel.o.closeSheet();
             reload();
           }
         }
       );
     };
   }
+  /** end an access now, after a confirm that names who */
   function askEnd(grant) {
     root.CBAction.run(
       null,
@@ -326,31 +341,34 @@
       {
         key: 'bg-end-' + grant.grant_id,
         confirm: {
-          title: T('End this access now?'),
-          body: '<b>' + esc(nameOf(grant.grantee_entity)) + '</b> ' + esc(T('will not be able to open your books again unless you give access again.')),
-          yes: T('End access'),
+          title: words('End this access now?'),
+          body: '<b>' + esc(nameOf(grant.grantee_entity)) + '</b> ' + esc(words('will not be able to open your books again unless you give access again.')),
+          yes: words('End access'),
           danger: true
         },
-        failed: T("Couldn't end the access"),
-        done: T('Access ended.'),
+        failed: words("Couldn't end the access"),
+        done: words('Access ended.'),
         outcome: reload
       }
     );
   }
 
+  /** the list could not be read: say so and offer Try again */
   function paintFail() {
-    G.host.innerHTML =
-      '<div class="empty" data-testid="bg-fail"><div class="t">' + esc(T("Couldn't read who can see your books")) + '</div>' +
-      '<button data-cbsid="NET004-B08" type="button" class="act" id="bg_retry" data-testid="bg-retry">' + esc(T('Try again')) + '</button></div>';
+    panel.host.innerHTML =
+      '<div class="empty" data-testid="bg-fail"><div class="t">' + esc(words("Couldn't read who can see your books")) + '</div>' +
+      '<button data-cbsid="NET004-B08" type="button" class="act" id="bg_retry" data-testid="bg-retry">' + esc(words('Try again')) + '</button></div>';
     $('bg_retry').onclick = reload;
   }
+  /** read the current view from the server and paint it */
   function reload() {
     return load().then(paint, paintFail);
   }
+  /** start the screen in the host the page gives */
   function mount(host, o) {
-    G.host = host;
-    G.o = o || {};
-    G.view = 'given';
+    panel.host = host;
+    panel.o = o || {};
+    panel.view = 'given';
     return reload().then(function () {
       return { reload: reload };
     });

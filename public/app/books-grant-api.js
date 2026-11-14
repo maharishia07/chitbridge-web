@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
   /* ⭐ the endpoint registry — the ONE declaration shape (accounts-shell.js) the round-trip scanner reads */
-  var EP = {
+  var ENDPOINTS = {
     grantsList: { m: 'GET', p: '/api/books-grants' } /* { given, received }: each row with its state (live · revoked · expired · edge_off) */,
     grantsConsent: { m: 'GET', p: '/api/books-grants/consent' } /* the plain words a member reads before it says yes */,
     grantsGive: { m: 'POST', p: '/api/books-grants' },
@@ -26,11 +26,11 @@
   var HEADER = 'X-Books-For'; /* names the member whose books are read; the server checks it against a live grant */
   var STATE = { live: 'Open', revoked: 'Ended', expired: 'Ran out', edge_off: 'Paused: not connected now' };
 
-  function T(s) {
+  function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
   function pathOf(key, params) {
-    var path = EP[key] ? EP[key].p : READS[key];
+    var path = ENDPOINTS[key] ? ENDPOINTS[key].p : READS[key];
     Object.keys(params || {}).forEach(function (name) {
       path = path.replace(':' + name, encodeURIComponent(params[name]));
     });
@@ -47,13 +47,13 @@
     return parts.length ? '?' + parts.join('&') : '';
   }
   /** run(call, key, { params, query, body, headers }) → the server's answer; `call` is the page's own (token, base, 401) */
-  function run(call, key, o) {
+  function callEndpoint(call, key, o) {
     o = o || {};
-    return call(EP[key] ? EP[key].m : 'GET', pathOf(key, o.params) + queryOf(o.query), o.body, o.headers);
+    return call(ENDPOINTS[key] ? ENDPOINTS[key].m : 'GET', pathOf(key, o.params) + queryOf(o.query), o.body, o.headers);
   }
   /** held(call) → { <member entity id>: the live grant this business holds on its books }: a login that may not list grants gets {} and the list shows nothing extra */
   function held(call) {
-    return run(call, 'grantsList').then(
+    return callEndpoint(call, 'grantsList').then(
       function (answer) {
         var out = {};
         ((answer && answer.received) || []).forEach(function (grant) {
@@ -67,7 +67,7 @@
     );
   }
   function stateWords(state) {
-    return T(STATE[state] || state || '');
+    return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: run, held: held, stateWords: stateWords, HEADER: HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, stateWords: stateWords, HEADER: HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);

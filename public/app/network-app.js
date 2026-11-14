@@ -183,29 +183,124 @@
         '</div></div>';
       return;
     }
-    host.innerHTML =
-      '<div class="nw-nets" data-testid="nw-nets">' +
-      N.networks
-        .map(function (item) {
-          return (
-            '<div class="nw-net" data-testid="nw-net-' +
-            esc(item.brand_id) +
-            '"><b>' +
-            esc(item.brand_name) +
-            '</b> <span class="tag' +
-            ((item.membership || {}).state === 'active' ? ' green' : ' amber') +
-            '">' +
-            esc(stand(item)) +
-            '</span>' +
-            '<div class="sub">' +
-            esc(T('Your parent')) +
-            ': ' +
-            esc(item.brand_name) +
-            '</div></div>'
-          );
-        })
-        .join('') +
-      '</div><div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div><div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    mountStores();
+  }
+  /** one network this store sits in: the brand, where this store stands, who its parent is */
+  function netCard(item) {
+        return (
+          '<div class="nw-net" data-testid="nw-net-' +
+          esc(item.brand_id) +
+          '"><b>' +
+          esc(item.brand_name) +
+          '</b> <span class="tag' +
+          ((item.membership || {}).state === 'active' ? ' green' : ' amber') +
+          '">' +
+          esc(stand(item)) +
+          '</span>' +
+          '<div class="sub">' +
+          esc(T('Your parent')) +
+          ': ' +
+          esc(item.brand_name) +
+          '</div></div>'
+        );
+  }
+  /** the store list's columns */
+  function storeColumns() {
+    return [
+      {
+        key: 'name',
+        label: T('Store'),
+        prio: 1,
+        w: 240,
+        sort: 'name',
+        html: true,
+        value: function (s) {
+          return s.name;
+        },
+        cell: function (s) {
+          return '<b>' + esc(s.name) + '</b>' + (s.is_me ? ' <span class="tag">' + esc(T('You')) + '</span>' : '');
+        }
+      },
+      {
+        key: 'city',
+        label: T('City'),
+        prio: 2,
+        w: 150,
+        sort: 'city',
+        cell: function (s) {
+          return s.city || '—';
+        },
+        value: function (s) {
+          return s.city || '';
+        }
+      },
+      {
+        key: 'km',
+        label: T('Distance'),
+        prio: 3,
+        w: 110,
+        sort: 'km',
+        cell: function (s) {
+          return s.km == null ? '—' : Math.round(s.km) + ' km';
+        },
+        value: function (s) {
+          return s.km == null ? '' : String(s.km);
+        }
+      },
+      {
+        key: 'purpose',
+        label: T('What it does'),
+        prio: 4,
+        w: 240,
+        cell: function (s) {
+          return s.purpose || '—';
+        },
+        value: function (s) {
+          return s.purpose || '';
+        }
+      },
+      {
+        key: 'books',
+        label: T('Books'),
+        prio: 1,
+        w: 130,
+        html: true,
+        cell: booksCell,
+        value: function (s) {
+          return N.held[String(s.entity_id)] ? 'open' : '';
+        }
+      }
+    ];
+  }
+  /** the store list's sort choices */
+  function storeSorts() {
+    return [
+      {
+        key: 'name',
+        label: T('Name'),
+        cmp: function (a, b) {
+          return String(a.name).localeCompare(String(b.name));
+        }
+      },
+      {
+        key: 'city',
+        label: T('City'),
+        cmp: function (a, b) {
+          return String(a.city || '').localeCompare(String(b.city || ''));
+        }
+      },
+      {
+        key: 'km',
+        label: T('Distance'),
+        cmp: function (a, b) {
+          return (a.km == null ? 1e9 : a.km) - (b.km == null ? 1e9 : b.km);
+        }
+      }
+    ];
+  }
+  /** the stores this login can see, as a CBList; a store that holds a live books grant gets "Open books" */
+  function mountStores() {
     mountList($('nw_stores'), {
       key: 'network-stores',
       rows: function () {
@@ -217,97 +312,11 @@
       rowTid: function (s) {
         return 'nw-store-' + s.entity_id;
       },
-      columns: [
-        {
-          key: 'name',
-          label: T('Store'),
-          prio: 1,
-          w: 240,
-          sort: 'name',
-          html: true,
-          value: function (s) {
-            return s.name;
-          },
-          cell: function (s) {
-            return '<b>' + esc(s.name) + '</b>' + (s.is_me ? ' <span class="tag">' + esc(T('You')) + '</span>' : '');
-          }
-        },
-        {
-          key: 'city',
-          label: T('City'),
-          prio: 2,
-          w: 150,
-          sort: 'city',
-          cell: function (s) {
-            return s.city || '—';
-          },
-          value: function (s) {
-            return s.city || '';
-          }
-        },
-        {
-          key: 'km',
-          label: T('Distance'),
-          prio: 3,
-          w: 110,
-          sort: 'km',
-          cell: function (s) {
-            return s.km == null ? '—' : Math.round(s.km) + ' km';
-          },
-          value: function (s) {
-            return s.km == null ? '' : String(s.km);
-          }
-        },
-        {
-          key: 'purpose',
-          label: T('What it does'),
-          prio: 4,
-          w: 240,
-          cell: function (s) {
-            return s.purpose || '—';
-          },
-          value: function (s) {
-            return s.purpose || '';
-          }
-        },
-        {
-          key: 'books',
-          label: T('Books'),
-          prio: 1,
-          w: 130,
-          html: true,
-          cell: booksCell,
-          value: function (s) {
-            return N.held[String(s.entity_id)] ? 'open' : '';
-          }
-        }
-      ],
+      columns: storeColumns(),
       search: function (s) {
         return [s.name, s.city, s.purpose].join(' ');
       },
-      sorts: [
-        {
-          key: 'name',
-          label: T('Name'),
-          cmp: function (a, b) {
-            return String(a.name).localeCompare(String(b.name));
-          }
-        },
-        {
-          key: 'city',
-          label: T('City'),
-          cmp: function (a, b) {
-            return String(a.city || '').localeCompare(String(b.city || ''));
-          }
-        },
-        {
-          key: 'km',
-          label: T('Distance'),
-          cmp: function (a, b) {
-            return (a.km == null ? 1e9 : a.km) - (b.km == null ? 1e9 : b.km);
-          }
-        }
-      ],
+      sorts: storeSorts(),
       empty: { title: T('No stores to show') }
     });
     $('nw_stores').addEventListener('click', openBooksClick);

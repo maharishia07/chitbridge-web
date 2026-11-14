@@ -17,7 +17,7 @@ const T = (id) => '[data-testid="' + id + '"]';
 const WIDE = { width: 1366, height: 768 }, NARROW = { width: 390, height: 844 };
 const MEMBER = 'a0000000-0000-4000-8000-000000000001', OTHER = 'a0000000-0000-4000-8000-000000000002', BRAND = 'b0000000-0000-4000-8000-000000000009';
 const GRANT = 'c0000000-0000-4000-8000-000000000001';
-const DAY = (n) => new Date(Date.now() + n * 86400000).toISOString();
+const DAY = (n) => new Date(W.nowMs() + n * 86400000).toISOString();
 
 W.run('books-grant', async (w) => {
   const { page, ctx, base } = w;
@@ -113,7 +113,7 @@ W.run('books-grant', async (w) => {
     await page.click(T('bg-give')); await page.waitForSelector(T('bg-consent') + ' b', { timeout: 10000 });
     const consent = await txt(T('bg-consent')), before = await page.locator(T('bg-go')).isDisabled();
     await page.check(T('bg-yes')); const after = await page.locator(T('bg-go')).isDisabled();
-    const until = await page.inputValue(T('bg-until')), months = Math.round((new Date(until + 'T12:00:00') - Date.now()) / 86400000 / 30.4);
+    const until = await page.inputValue(T('bg-until')), months = Math.round((new Date(until + 'T12:00:00') - W.nowMs()) / 86400000 / 30.4);
     return { ok: /read your books/.test(consent) && /cannot/i.test(consent) && before && !after && months >= 11 && months <= 12, saw: 'greyed ' + before + ' → ' + after + ' · default end ' + until + ' (~' + months + ' months)' };
   });
   await w.step('M3', 'the member · untick costs → the consent says it will not see costs and margins, yes is cleared', async () => {

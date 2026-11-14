@@ -36,7 +36,7 @@ check(!/CBAction/.test(view) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(view.replace
 check(!/csv|export|download|print/i.test(view.replace(/\/\*[^]*?\*\//g, '')), 'the auditor\'s view offers no export or copy');
 
 /* (3) the header */
-check(/headers: headerOf\(\)/.test(view) && /HEADER\] = V\.o\.member\.id/.test(view), 'every read of the view sends X-Books-For with the member it opened');
+check(/headers: headerOf\(\)/.test(view) && /HEADER\] = viewState\.o\.member\.id/.test(view), 'every read of the view sends X-Books-For with the member it opened');
 check(!/X-Books-For|x-books-for/i.test(member) && !/X-Books-For/.test(net), 'only the view and the api file name the header');
 
 /* (4) the member's writes */
