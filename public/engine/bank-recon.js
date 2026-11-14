@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.88.0 · bank-recon · sha256 5836a400e800f5e6672bf452a4e21203d8ac883332406dc282e85a436a49ac87 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.96.0 · bank-recon · sha256 9b3fdd56313db8a4e044cf7dbfba2f6cf21a12d0decf1ba105a47d24d198fd67 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -57,6 +57,7 @@
   var POSTING_ = null,
     REG_ = null,
     MONEY_ = null,
+    ENTRY_ = null,
     LOAD_FAILURES_ = {}; /* a sibling engine that would not load: file → why, one entry per file (a later call tries again, as before); the callers still get null and say so in plain words */
   function dep_(file, globalName) {
     var globalScope = typeof globalThis !== 'undefined' ? globalThis : root;
@@ -73,6 +74,9 @@
   }
   function posting_() {
     return POSTING_ || (POSTING_ = dep_('./posting', 'CBPosting'));
+  }
+  function bankEntry_() {
+    return ENTRY_ || (ENTRY_ = dep_('./bank-entry', 'CBBankEntry'));
   }
   function money_() {
     return MONEY_ || (MONEY_ = dep_('./money', 'CBMoney'));
@@ -1044,6 +1048,8 @@
    *   receipts  [{ ref, party, amount_minor, cheque_no? }] the cleared receipts — a returned cheque names the one it reverses
    *   learned   (v1.44.0, BR1) the rules learn() made from a person's confirmed explanations — tried FIRST; the answer is still a proposal
    *             (rule 'learned', confidence 'medium') and carries `source` (the line and the day it was taught) and `learned_id`
+   *   gst_basis (v1.93.0) 'cash' | 'accrual' — a proposal whose entry holds tax (an expense the pack or the taught rule names a supply kind for) is split by bank-entry.withTax and carries
+   *             `tax` { kind, rate, tax_minor, credit, basis, invoice }; with no gst_basis it also says `needs: 'gst_basis'` (the entry stays, the owner says the basis once)
    */
   function suggest(line, opts) {
     var options = opts || {},
@@ -1057,7 +1063,7 @@
     var debit = situation.debit,
       credit = situation.credit;
     if (debit > 0 === credit > 0) return none('a statement line has money going one way — this has ' + (debit && credit ? 'both' : 'neither'));
-    return ruleSuggestion_(situation) || none('no rule matched');
+    return ruleSuggestion_(situation) || withNewParty_(none('no rule matched'), situation);
   }
   /** everything the rules look at for one statement line: the pack's keywords, the line's side, amount and narration, `base` (the call that completes a proposal) and `none` (the no-proposal answer) */
   function situationOf_(line, options, bankRules, none) {
@@ -1076,9 +1082,16 @@
       event.amount = minor / Math.pow(10, decimals);
       if (ref) event.ref = String(ref);
       event.narration = 'Bank statement ' + date + ': ' + String(line.narration || '').slice(0, 120);
-      return finish_(event, rule, confidence, reason, minor, extra, currency, bankRules.pack);
+      var taxed = bankEntry_().withTax(event, { rule: rule, pack: bankRules.pack, currency: currency, minor: minor, decimals: decimals, basis: options.gst_basis });
+      return finish_(taxed.event, rule, confidence, reason, minor, Object.assign({ tax: taxed.tax }, extra), currency, bankRules.pack);
     };
-    return { line: line, options: options, rules: rules, debit: debit, credit: credit, out: out, minor: minor, text: text, base: base, none: none };
+    return { line: line, pack: bankRules.pack, options: options, rules: rules, debit: debit, credit: credit, out: out, minor: minor, text: text, base: base, none: none };
+  }
+  /** the answer for an unexplained line, with the party it would be — only when the caller handed in its parties (opt-in: no caller's answer changes): a payee who is no party yet is PROPOSED new (never created here), near names listed first */
+  function withNewParty_(answer, situation) {
+    var party = Array.isArray(situation.options.parties) && bankEntry_().newParty(situation.line, { out: situation.out, parties: situation.options.parties, ownWords: bankWords_(situation.pack) });
+    if (party) answer.party = party;
+    return answer;
   }
   /** the first rule that fits the line, in order — a rule a person taught, then the bank's own words for the side the money moved, then a named party; null when none fits */
   function ruleSuggestion_(situation) {
@@ -1185,7 +1198,11 @@
   }
   /** the proposal: the event, composed by posting.post so it carries the entry that would be posted */
   function finish_(event, rule, confidence, reason, minor, extra, currency, pack) {
-    var res = { event: event, confidence: confidence, why: reason, rule: rule, proposal: true, needs_confirm: true, amount_minor: minor };
+    var res = { event: event, confidence: confidence, why: reason, rule: rule, proposal: true, needs_confirm: true, amount_minor: minor, currency: currency };
+    if (extra && extra.tax) {
+      res.tax = extra.tax;
+      if (extra.tax.tax_minor > 0 && !extra.tax.basis) res.needs = 'gst_basis'; /* cash or accrual is in no pack: the owner says once, never defaulted */
+    }
     if (extra && extra.source !== undefined) {
       res.source = extra.source;
       res.learned_id = extra.learned_id;
@@ -1208,31 +1225,12 @@
       res.refused = posted.why;
       return res;
     }
-    res.entry = entryOf_(posted);
+    res.entry = bankEntry_().entryOf(posted);
     if (!res.entry.balanced) {
       res.confidence = 'low';
       res.why += ' — but the composed entry does not balance';
     }
     return res;
-  }
-  /** the entry posting.post composed, as the proposal shows it: its lines, whether Dr equals Cr, its totals and voucher type, in the owner-made series MJ */
-  function entryOf_(posted) {
-    var debitTotal = 0,
-      creditTotal = 0;
-    posted.lines.forEach(function (item) {
-      debitTotal += item.dr_minor;
-      creditTotal += item.cr_minor;
-    });
-    return {
-      lines: posted.lines.map(function (item) {
-        return { code: item.code, account: item.account, party: item.party || null, dr_minor: item.dr_minor, cr_minor: item.cr_minor };
-      }),
-      balanced: debitTotal === creditTotal,
-      dr_minor: debitTotal,
-      cr_minor: creditTotal,
-      voucher: posted.voucher,
-      series: 'MJ'
-    };
   }
 
   /* ═══ brs ═════════════════════════════════════════════════════════════════════════════════════════════════════════ */
