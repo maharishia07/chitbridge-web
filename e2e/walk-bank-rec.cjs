@@ -60,7 +60,7 @@ const advice = (id, party, minor, ref, day, bills) => ({ chit_id: id, direction:
 
 const EVENTS = { events: [{ kind: 'expense', words: 'Pay expense', icon: 'receipt', band: 'paid', preview: true, fields: [{ key: 'class', kind: 'pick', pick: 'expense_class', required: true }, { key: 'amount', kind: 'amount' }, { key: 'paid_from', kind: 'pick', pick: 'mode' }, { key: 'date', kind: 'date' }, { key: 'narration', kind: 'text' }] }],
   picks: { mode: ['cash', 'bank', 'upi', 'card'], expense_class: [{ role: 'bank_charges', code: '6090', name: 'Bank charges' }] } };
-const ACCOUNTS = [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }];
+const ACCOUNTS = [{ code: 'G-BANK', name: 'Bank accounts', is_group: true, role: null, parent_code: null }, { code: '1500', name: 'Bank', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }, { code: '1501', name: 'Bank two', is_group: false, role: 'bank', parent_code: 'G-BANK', active: true }];
 
 function stand() {
   const S = { reqs: [], bodies: [], opened: [], who: 'owner' };
@@ -119,7 +119,7 @@ function stand() {
     if ((o.hash || 'bank') === 'bank') await pg.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p: pg };
   }
-  const load = async (pg, csv) => { await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
+  const load = async (pg, csv) => { await pg.selectOption('#bk_preset', 'hdfc'); await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await pg.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 }); await pg.selectOption('[data-testid="bank-currency"]', 'INR'); await pg.click('[data-testid="bank-currency-go"]'); await pg.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 }); };
   const st = (pg, s) => pg.locator('[data-testid="bank-list"] [data-status="' + s + '"]').count();
   const rowOf = (i) => '[data-testid="bank-row-s' + i + '"]';
   const openRow = async (pg, i) => { await pg.click(rowOf(i) + ' [data-caret]'); await pg.waitForSelector('[data-testid="bank-next-s' + i + '"]', { timeout: 5000 }); };
@@ -236,6 +236,26 @@ function stand() {
   ok('B8', /^⚠ 2 bank lines need you — from the last statement read on this device Open Bank$/.test(home), 'Accounts Home: the bank row in the Home\'s own to-do row ("' + home + '")');
   await p.click('[data-testid="todo-go-bank"]').catch(() => {}); await p.waitForTimeout(500);
   ok('B8', /#bank$/.test(p.url()) || (await p.locator('[data-testid="bank-file"]').count()) === 1, 'its button opens Bank');
+  await ctx.close();
+
+  /* ── B10 · B5-05 the file's currency is asked, never the account's · B5-07 a statement belongs to the account it was read for ── */
+  ({ ctx, p } = await open(S, {}));
+  await p.selectOption('#bk_preset', 'hdfc');
+  await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
+  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
+  ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0, 'B5-05: the file is NOT read against the books until its currency is said');
+  await p.selectOption('[data-testid="bank-currency"]', 'USD');
+  await p.click('[data-testid="bank-currency-go"]');
+  await p.waitForTimeout(400);
+  ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0 && /USD/.test(await p.textContent('#bk_out')) && /INR/.test(await p.textContent('#bk_out')), 'B5-05: a USD statement against the INR account is refused, naming both (' + (await p.textContent('#bk_out')).trim().slice(0, 90) + ')');
+  await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) }); /* a refused statement is loaded again, with its currency said */
+  await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 });
+  await p.selectOption('[data-testid="bank-currency"]', 'INR');
+  await p.click('[data-testid="bank-currency-go"]');
+  await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
+  await p.selectOption('#bk_acct', '1501');
+  await p.waitForSelector('[data-testid="bank-acct-changed"]', { timeout: 5000 });
+  ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0 && (await p.locator('[data-testid="bank-res"] *').count()) === 0, 'B5-07: changing the bank account clears the statement, its marks and the reconciliation, and asks for the file again');
   await ctx.close();
 
   /* ── B9 · rule 13 ── */

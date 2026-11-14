@@ -101,7 +101,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
     await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
     return { ctx, p };
   }
-  const load = async (p, csv) => { await p.selectOption('#bk_preset', 'hdfc'); await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); };
+  const load = async (p, csv) => { await p.selectOption('#bk_preset', 'hdfc'); await p.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(csv || CSV) }); await p.waitForSelector('[data-testid="bank-currency"]', { timeout: 10000 }); await p.selectOption('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }; /* B5-05: the file's currency is asked */
   const status = (p, s) => p.locator('[data-status="' + s + '"]').count();
   const noSide = async (p) => { await p.waitForTimeout(300); return p.evaluate(() => ({ d: document.documentElement.scrollWidth, m: document.querySelector('.main').scrollWidth <= document.querySelector('.main').clientWidth })); };
 

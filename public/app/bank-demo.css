@@ -53,3 +53,7 @@ body{display:flex;flex-direction:column;background:var(--page,#fcfaf5);color:var
   .bd-row .bd-st{grid-column:1 / -1}
   .bd-inp{max-width:100%}
 }
+.bd-cur{margin:8px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bd-skip{margin:10px 12px;padding:8px 12px;border:1px solid var(--bad-i,#8e3517);border-radius:8px;background:var(--bad-t,#fbeae3);color:var(--bad-i,#8e3517)}
+.bd-skip p{margin:0 0 4px}.bd-skip ul{margin:0;padding-left:18px}
+.bd-entry{display:block;margin-bottom:2px}

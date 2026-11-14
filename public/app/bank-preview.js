@@ -20,8 +20,20 @@
  */
 (function (root) {
   'use strict';
-  var STATE_WORDS = { in_books: 'In your books', proposed: 'Ready to add', needs_you: 'Needs you', posted: 'Added', failed: 'Not added', closed: 'Month closed' };
-  var NEEDS_WORDS = { gst_basis: 'Tax basis needed', no_entry: 'Needs you' };
+  var STATE_WORDS = { in_books: 'In your books', proposed: 'Ready to add', check: 'Needs you', needs_you: 'Needs you', posted: 'Added', failed: 'Not added', closed: 'Month closed' };
+  /** why a proposed line is held back, in the words the line shows (B5-01/02/03: a held-back line says so ON the line, never a silent "Ready") */
+  var NEEDS_WORDS = {
+    gst_basis: 'Tax basis needed',
+    tax_invoice: 'Tax invoice needed',
+    needs_tick: 'Needs your tick',
+    may_be_in_books: 'May already be in your books',
+    unbalanced: 'Entry does not balance',
+    refused: 'The books refused this entry',
+    bank_leg_mismatch: "Entry does not match the bank line's amount",
+    no_entry: 'Needs you'
+  };
+  /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
+  var ASKED_ = ['may_be_in_books', 'gst_basis', 'tax_invoice', 'needs_tick'];
   var MAX_FILE_BYTES = 2 * 1024 * 1024;
   var MATCH_WINDOW_DAYS = 3;
 
@@ -72,8 +84,13 @@
       line: statementLine,
       entry: projected.entry || null,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
-      needs: blockers.indexOf('gst_basis') >= 0 ? 'gst_basis' : null,
+      needs: ASKED_.filter(function (code) {
+        return blockers.indexOf(code) >= 0;
+      })[0] || null,
       blockers: blockers,
+      tax: projected.tax || null,
+      basis: projected.basis || null,
+      near: projected.near || [],
       closed: closed,
       party: projected.party ? Object.assign({}, projected.party) : null,
       didYouMean: (named && named.did_you_mean) || []
@@ -88,19 +105,41 @@
     var loaded = parts.recon && parts.recon.parse && parts.recon.match && parts.recon.suggest && parts.project && parts.project.project;
     return loaded ? null : 'The books engine for this page has not loaded, so nothing can be checked here yet.';
   }
-  /** the statement line numbers the books already hold (match found them): { index: true } */
-  function indexesInBooks(opts, lines, bookLines) {
-    var held = {};
-    opts.engine.recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS }).matched.forEach(function (pair) {
+  /**
+   * the books' answer for every statement line: { held, near }.
+   *   held  the line numbers the books already hold: match() found them, or the person PAIRED the line with a books entry (preview.pairs, by the line's ref) — { index: true }
+   *   near  B5-02: for every other line, the unmatched books entries with the same amount and side nearby (the engine's nearMatches, 45 days), { index: [entry] }. Such a line is "may already be in
+   *         your books", never ready: a cheque that cleared late, or one of two equal amounts, would otherwise be proposed again and posted twice. A pair the person made takes its entry out of
+   *         every other line's list; "it is new" (preview.notMatch) takes the line out of the question.
+   */
+  function booksPass(opts, preview, lines, refs, bookLines) {
+    var recon = opts.engine.recon,
+      found = recon.match(lines, bookLines, { window_days: MATCH_WINDOW_DAYS }),
+      held = {},
+      taken = {};
+    found.matched.forEach(function (pair) {
       pair.stmt.forEach(function (index) {
         held[index] = true;
       });
     });
-    return held;
+    lines.forEach(function (line, index) {
+      var entryId = preview.pairs[refs[index]];
+      if (entryId == null || held[index]) return;
+      held[index] = true;
+      taken[entryId] = true;
+    });
+    var open = (found.unmatched_stmt || []).filter(function (line) {
+        return !held[line.i] && !preview.notMatch[refs[line.i]];
+      }),
+      free = (found.unmatched_ledger || []).filter(function (entry) {
+        return !taken[entry.id];
+      });
+    return { held: held, near: recon.nearMatches ? recon.nearMatches(open, free, {}) : {} };
   }
   /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
   function proposalFor(opts, preview, line, ref) {
-    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers),
+    /* the person's tick (B5-01) and word on the tax invoice (B5-03) for THIS line ride into the same engine call */
+    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers, { confirmed: !!preview.ticks[ref], tax_invoice: preview.invoice[ref] }),
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
@@ -118,14 +157,15 @@
   function projectNow(opts, preview) {
     var books = opts.ledger(),
       lines = preview.parsed.lines,
-      held = indexesInBooks(opts, lines, books.lines);
-    var refs = opts.engine.project.refsOf(lines, opts.account, lines);
+      refs = opts.engine.project.refsOf(lines, opts.account, lines),
+      pass = booksPass(opts, preview, lines, refs, books.lines);
     preview.proposals = lines.map(function (line, index) {
-      return held[index] ? null : proposalFor(opts, preview, line, refs[index]);
+      return pass.held[index] ? null : proposalFor(opts, preview, line, refs[index]);
     });
-    var stated = (opts.statementCurrency && opts.statementCurrency()) || preview.parsed.currency || opts.currency;
-    var statement = { currency: stated, opening_minor: preview.parsed.opening_minor, closing_minor: preview.parsed.closing_minor };
-    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: opts.account, posted_refs: books.posted_refs || [], period_lines: lines });
+    /* B5-05: the statement's currency is what the FILE or the person said, never the account's: with none the engine refuses (statement_currency_missing), with another it refuses (currency_mismatch) */
+    var stated = (opts.statementCurrency && opts.statementCurrency()) || preview.parsed.currency || null;
+    var statement = { currency: stated, opening_minor: preview.parsed.opening_minor, closing_minor: preview.parsed.closing_minor, skipped: preview.parsed.skipped || [] };
+    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: opts.account, posted_refs: books.posted_refs || [], period_lines: lines, near: pass.near });
   }
   /** the owner's edit of a line's party (a new name or kind, or an existing party picked from did-you-mean) laid over what the engine said */
   function withPartyEdit(item, edit, asked) {
@@ -171,7 +211,7 @@
     var held = preview.items.filter(function (item) {
       return item.closed;
     }).length;
-    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
+    return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
   }
   /** the popup: count · in · out · date range · currency · new parties · how many still need you */
   function confirmWords(reach) {
@@ -185,6 +225,7 @@
       lines: [
         'Money in: ' + amountOf(reach.in),
         'Money out: ' + amountOf(reach.out),
+        minorOf(reach.tax) ? 'Tax inside these entries: ' + amountOf(reach.tax) : null, /* the engine's carried total of each ready line's own tax record (B5-03: the tax is on the popup too) */
         'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
         'Currency: ' + reach.currency,
         parties,
@@ -229,7 +270,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {} });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -279,17 +320,50 @@
     if (refusalWords) projectAgain(opts, preview);
     return refusalWords ? { ok: false, why: refusalWords } : { ok: true };
   }
+  /** a person's answer on one line (tick · tax invoice · pair · "it is new"): it is laid in the state, the engine is asked again, and the line says what it is now; refused for a line that is not on the statement */
+  function answerLine(opts, preview, key, lay) {
+    var known = preview.items.some(function (one) {
+      return one.key === key;
+    });
+    if (!known) return { ok: false, why: 'This line is not on the statement.' };
+    lay();
+    projectAgain(opts, preview);
+    return { ok: true };
+  }
   /**
    * create(opts) → the preview controller.
    *   opts.engine   { recon: CBBankRecon, project: CBBankProject, entry: CBBankEntry }      opts.currency  the ACCOUNT's currency (from the shop, never the file)
    *   opts.account  the bank account's name (in every ref)               opts.ledger()  → { lines (each with its currency), opening_minor, posted_refs }, read again after posting
    *   opts.post(item) → Promise<{ ok, duplicate?, entry_no?, why? }>      opts.lockedMonth(date) → null | { month, words }
-   *   opts.statementCurrency()  the currency the STATEMENT says it is in (the engine refuses a mismatch with the account); default the file's own, else the account's
+   *   opts.statementCurrency()  the currency the STATEMENT says it is in (the engine refuses a mismatch with the account); the file's own when it says, else NONE: it is never taken from the account (B5-05), the engine refuses with "say which currency"
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
     return {
+      /** the person's tick: "yes, this is right" for a line only the bank's words proposed (B5-01) */
+      tick: function (key) {
+        return answerLine(opts, preview, key, function () {
+          preview.ticks[key] = true;
+        });
+      },
+      /** the person's word on the tax invoice for a line claiming a GST credit above the pack's threshold (B5-03): 'held' keeps the credit, 'none' books the whole amount to the expense */
+      invoice: function (key, answer) {
+        return answerLine(opts, preview, key, function () {
+          preview.invoice[key] = answer === 'held' ? 'held' : 'none';
+        });
+      },
+      /** B5-02: pair this statement line with the books entry (by its id) it already is, or say it is new */
+      pair: function (key, entryId) {
+        return answerLine(opts, preview, key, function () {
+          preview.pairs[key] = entryId;
+        });
+      },
+      notMatch: function (key) {
+        return answerLine(opts, preview, key, function () {
+          preview.notMatch[key] = true;
+        });
+      },
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
       },
