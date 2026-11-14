@@ -30,6 +30,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
+const B = require('./chit-sheet-blocks.cjs');   /* walk blocks kept in their own file (size ceiling) */
 const SHOP = 'Books Shop', TODAY = new Date().toISOString().slice(0, 10);
 
 /* the REAL engine, the real invoice: the adopted tax.js run in a sandbox, CBTax.determine() once, CBTax.moneyOf() to read it */
@@ -203,12 +204,15 @@ async function route(S, r) {
   const noAccounting = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': the word "accounting" is nowhere on screen'); };
   const shot = async (p, n) => { if (SHOTS) { fs.mkdirSync(SHOTS, { recursive: true }); await p.screenshot({ path: path.join(SHOTS, n + '.png') }); } };
 
+  const env = { ok, open, standIn, waitSheet, acts, sheetOpen, yesAccept, take, SHOP, TODAY };   /* what the blocks in chit-sheet-blocks.cjs need */
+
   /* ── 1 · the counter bill, from the Day book ─────────────────────────────────────────────────────── */
   {
     const S = standIn(); const { ctx, p } = await open(S);
     const head1 = await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]');
     ok(/Books Shop \(owner\)/.test(head1), 'by == the shop\'s own name → "Books Shop (owner)" in the source line');
     ok(!/Mani \(owner\)/.test(await p.textContent('[data-testid="db-head-JV/2026-27/000002"]')), 'another person is not marked (owner)');
+    await B.wideRung(env);
     /* scroll the page down to a row far from the top, remember where */
     const scroller = await p.evaluateHandle(() => { let e = document.querySelector('[data-testid="db-entry-JV/2026-27/000001"]'); while (e && e !== document.documentElement) { if (e.scrollHeight > e.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return e; e = e.parentElement; } return document.scrollingElement; });
     await scroller.evaluate((e) => { e.scrollTop = 120; });
@@ -262,6 +266,7 @@ async function route(S, r) {
     await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
+    await B.windowScrollSpy(env, p);
     await ctx.close();
   }
 
@@ -305,28 +310,8 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="todo-accept"]').count() === 0, 'the Day book\'s "supplier bill to accept" to-do is gone');
     await ctx.close();
   }
-  /* "Let my catalogue decide": accepted without a /use call */
-  {
-    const S = standIn(); const { ctx, p } = await open(S);
-    await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-accept"]'); await p.click('[data-testid="cs-use-auto"]'); await yesAccept(p);
-    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.useCalls.length === 0 && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', '"Let my catalogue decide" → accepted with no /use call');
-    await ctx.close();
-  }
-  /* Goods in asks what the goods are for, then accepts */
-  {
-    const S = standIn(); const { ctx, p } = await open(S);
-    await p.click('[data-testid="db-src-JV/2026-27/000002"]'); await waitSheet(p, 'AM-81');
-    await p.click('[data-testid="cs-act-goodsin"]'); await p.click('[data-testid="bill-use-resale"]'); await yesAccept(p);
-    await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-    ok(S.useCalls.length === 1 && S.useCalls[0].body.use === 'resale' && S.statusCalls.length === 1 && S.statusCalls[0].body.status === 'accepted', 'Goods in → what it is for (PUT /use) then accepted');
-    /* Open page: the one way out — the chit PAGE in CB CRM (crm.html#/chit/<id>, CRM2), in the SAME tab so Back returns (NAV-MAP 13; accounts.html openChitPage sets location.href), never the workshop */
-    await p.click('[data-testid="cs-act-page"]');
-    await p.waitForURL(/[\/]crm[.]html#[\/]chit[\/]sb1$/, { timeout: 8000 }).catch(() => {});
-    ok(/[\/]crm[.]html#[\/]chit[\/]sb1$/.test(p.url()), 'Open page leaves the sheet for the chit page in CRM (/crm.html#/chit/sb1), the same tab — the only navigation (' + p.url().replace(/^https?:[\/][\/][^\/]+/, '') + ')');
-    await ctx.close();
-  }
+  await B.billStepBlocks(env);
+  await B.acceptUseBlocks(env);
   /* ── 3 · a task, from the Waiting list ──────────────────────────────────────────────────────────── */
   {
     const S = standIn(); S.waiting = [{ id: 9, chit_id: 'tk1', ref: 'chit:tk1', todo: 'accept', reason: 'Waiting for you to confirm a task.', tries: 0, since: TODAY + 'T04:00:00Z', stuck: true }];

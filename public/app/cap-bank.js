@@ -19,9 +19,7 @@
  *   Suggested · Needs you. A line nobody explained → ✉ Ask: a message chit to the party ("INR 4,200.00 on 12 Oct, ref R — which bill?"), only
  *   the date, the amount and the reference travel; their advice answers it, for both books. Better than Xero / QBO: they GUESS from amount and
  *   narration; we confirm from a sealed record both sides hold, and ask the payer when nobody did.
- * ⭐ ON THIS DEVICE: the accept marks, notes and the rules learned from what a person confirmed (CBBankRecon.step / learn) live in localStorage,
- *   beside the statement — undo takes an accept back and keeps the notes; a note never blocks accepting; a learned rule is only ever a suggestion,
- *   shown with where it came from. The count of lines that need a person rides to Accounts Home (bankTodoItem) in the same words.
+ * ⭐ THE MARKS: accept marks, notes and the rules learned (CBBankRecon.step / learn) stay in localStorage as the cache; the shared record (FIN-70, cap-bank-store.js) keeps the marks too and until it is set up says so. Undo takes an accept back and keeps the notes; a note never blocks accepting; a learned rule is only a suggestion, shown with where it came from. The count of lines that need a person rides to Accounts Home (bankTodoItem).
  * OWNS      the Bank view of CB Accounts (Daily › Bank): the statement read on the device (bankView · bankRun · bkbLoad), each line's state (bankRail · bankExplain · bankList),
  *           accept · undo · forget · note · record · ask (bankAccept · bankUndo · bankForget · bankNote · bankRecord · bankAsk), the BRS and its CSV (bankBrsPaint · bankBrsCsv ·
  *           bankBrsDownload) and the count of lines that need a person (bankTodoItem)
@@ -111,6 +109,7 @@ function bkbNoCountryWords() {
   const said = typeof CBRegulation !== 'undefined' && CBRegulation.status ? CBRegulation.status(null) : null;
   return (said && said.why) || tx('Set the shop country first (Country setup).');
 }
+/** one step action: the engine's step, the device copy, then the shared record */
 function bkbStep(action) {
   const next = CBBankRecon.step(bkbRec(), Object.assign({ at: new Date().toISOString(), by: bkbBy() }, action));
   if (next.why) {
@@ -119,6 +118,7 @@ function bkbStep(action) {
   }
   BKB.rec = next;
   bkbSave('marks:' + BKB.acct, next);
+  bankStoreAppend(action); /* the shared record (cap-bank-store.js); the device copy above stays as the offline cache */
   return true;
 }
 /** a confirmed explanation → a suggestion rule (the newest wins for the same words) */
@@ -137,7 +137,6 @@ function bkbBanks(accts) {
     g = main ? main.parent_code : null;
   return accts.filter((item) => bkbIsBank(item, g) && item.active !== false);
 }
-const bkbMinorText = (m) => bkMinorText(m);
 /** the payment mode of the ledger a statement belongs to (its own role: 1520 Card settlements is 'card'); null when the ledger has no mode, so nothing is posted to another account by guess */
 function bkbModeOf(accts, code) {
   const a = (accts || []).filter((x) => String(x.code) === String(code))[0];
@@ -274,7 +273,7 @@ async function bankRun() {
     return peBad('bk_out', e, tx('Could not read the bank ledger'));
   }
   BKB.rail = rail;
-  BKB.rec = null;
+  BKB.rec = await bankStoreLoad(BKB);
   BKB.rules = null;
   bankExplain();
   bankBrs();
@@ -409,6 +408,7 @@ function bankPaint() {
   res.innerHTML =
     warn +
     bankFinish() +
+    bankStorePanel() +
     '<div class="tabs" role="group">' +
     [
       ['lines', 'Lines'],
@@ -706,7 +706,7 @@ function bankNote(r) {
       '</div>' +
       '<textarea data-cbsid="BKS014-T01" class="inp" id="bk_note" data-testid="bank-note-text" rows="3" style="width:100%" maxlength="500"></textarea>' +
       '<div class="pe-note">' +
-      bkbE(tx('Kept on this device. A note never stops you accepting.')) +
+      bkbE(bankStoreNoteWords()) +
       '</div>',
     footerHtml: '<button data-cbsid="BKS014-B03" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
@@ -924,7 +924,7 @@ function bankAdd(r) {
     ev = (r.sugg && r.sugg.event) || null,
     v = {
       date: s.date,
-      amount: bkbMinorText(r.amount_minor),
+      amount: bkMinorText(r.amount_minor),
       narration: (ev && ev.narration) || 'Bank statement ' + s.date + ': ' + String(s.narration || '').slice(0, 120)
     };
   let kind = null;

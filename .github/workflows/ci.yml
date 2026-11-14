@@ -74,6 +74,8 @@ jobs:
           node tests/mnt-16-checklist-anchor.test.cjs
           node tests/pm-8-verdict-build.test.cjs
           node tests/pm-8-incident-build.test.cjs
+          node tests/chunk0-proofs.test.cjs
+          node tests/chunk0-web-proofs2.test.cjs
           node tests/pm-53-edition-chip.test.cjs
       - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
         run: |
@@ -119,6 +121,7 @@ jobs:
           node e2e/html-syntax.cjs
           node e2e/legend-complete.cjs
           node e2e/network-guard.cjs
+          node e2e/acc-176-books-grant-ui.test.cjs
           node e2e/offer-nudge-gap.cjs
           node e2e/offers-combined.test.cjs
           node e2e/offers-kinds.test.cjs
@@ -266,6 +269,7 @@ jobs:
           node e2e/ui-codes-cart.test.cjs
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
+          node e2e/bank-preview.test.cjs
           node e2e/ui-codes-refpages.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs

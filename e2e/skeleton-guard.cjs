@@ -70,12 +70,13 @@ const SHELL_NOT_YET_WHY = {
   'bill-print.html': 'the printed bill: a print surface, single-theme by decision', 'cart-design.html': 'design reference', 'design-mock.html': 'design reference',
   'storefront-design.html': 'design reference', 'supplier-design.html': 'design reference', 'screen-gallery.html': 'the gallery of screen drawings', 'lifecycle-test.html': 'a tool board',
   'testing.html': 'the test board', 'intake.html': 'a prototype, no customer door', 'iot-howitworks.html': 'a showcase opened in the workshop\'s overlay',
-  'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo'
+  'offer-lab.html': 'forwards to offer-lab-next.html', 'combo-lab.html': 'forwards to offer-lab-next.html?mode=combo',
+  'bank-demo.html': 'the no-login showcase for the auditor: inert BY DECISION (no api call, no storage, no device id, strict CSP), and the shell reads the device id and config.js'
 };   /* shell-lab.html mounts CBShell itself (the unit's pass mark, e2e/shell.cjs): it loads the shell, so it is not here */
 const SHELL_NOT_YET = Object.keys(SHELL_NOT_YET_WHY);
 /* every page on the no-shell list is a design reference in the register, or one of the named exceptions (the workshop · the counter · the print surface · the two forwards) */
 const refs = (() => { const w = {}; new Function('window', 'globalThis', read('public/app/screen-id.js'))(w, w); return (w.CBScreenId.DECLARED.references || []).map((r) => r[0].replace(/^\//, '')); })();
-const EXCEPTIONS = ['app.html', 'till.html'];
+const EXCEPTIONS = ['app.html', 'till.html', 'bank-demo.html'];
 SHELL_NOT_YET.forEach((f) => { if (!refs.includes(f) && !EXCEPTIONS.includes(f)) bad(f + ': skips the shell but is neither a design reference in app/screen-id.js DECLARED.references nor the workshop / the counter'); });
 refs.forEach((f) => { if (!SHELL_NOT_YET.includes(f)) bad(f + ': a design reference in the register must be on the no-shell list here (or stop being a reference)'); });
 const shellPages = [];
