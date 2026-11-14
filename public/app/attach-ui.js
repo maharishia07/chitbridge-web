@@ -293,7 +293,7 @@ function cbAttachUnstage(bucket, key) {
   });
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 /**
@@ -358,7 +358,7 @@ async function cbAttachStage(bucket, opts) {
      one at a time. */
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   return entry;
 }
 
@@ -413,7 +413,7 @@ async function cbAttachFlush(bucket, chit_id, opts) {
   }
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   return { uploaded: uploaded, failed: failed };
 }
 
@@ -494,11 +494,11 @@ async function cbAttachPick(ctxJson) {
        function NAME through the attribute, and anything holding real elements can listen for the event. */
     try {
       document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: reply } }));
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     if (ctx.after && typeof window[ctx.after] === 'function') {
       try {
         window[ctx.after]();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     return reply;
   } catch (e) {
@@ -530,7 +530,7 @@ function cbAttachChoose() {
       done = true;
       try {
         input.remove();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       resolve(f || null);
     }
     input.addEventListener('change', function () {
@@ -592,7 +592,7 @@ async function cbAttachOpen(id) {
     node.click();
     try {
       node.remove();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   } catch (e) {
     toast((e && e.message) || 'Could not open that file');
   }
@@ -636,11 +636,11 @@ var CBAttach = (function () {
       if (!att) return;
       try {
         el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } }));
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       if (typeof o.onDone === 'function') {
         try {
           o.onDone(att);
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
     function press(event) {

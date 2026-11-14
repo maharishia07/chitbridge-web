@@ -150,14 +150,14 @@
     var node = $('nw_sheet');
     try {
       node.close();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     node.innerHTML = '';
   }
   function mountList(host, cfg) {
     if (N.lists[cfg.key]) {
       try {
         N.lists[cfg.key].destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset(cfg.key);
     cfg.t = T;

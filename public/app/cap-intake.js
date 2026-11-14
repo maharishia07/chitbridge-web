@@ -707,5 +707,5 @@ function _copyJson(id) {
   try {
     navigator.clipboard.writeText(el.textContent);
     if (typeof toast === 'function') toast('copied');
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }

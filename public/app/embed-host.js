@@ -48,7 +48,7 @@
       root.removeEventListener('message', heard);
       try {
         node.close();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       node.remove();
       if (o.onClose) o.onClose();
     }
@@ -64,7 +64,7 @@
             { cb: 'host', event: 'session', token: t || null, api: (o.api ? o.api() : root.CloudHost && root.CloudHost.api) || null },
             root.location.origin
           );
-        } catch (_) {}
+        } catch (_) { /* no host window to tell: standalone page */ }
         return;
       }
       if (o.onMessage) o.onMessage(m);

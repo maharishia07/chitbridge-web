@@ -68,7 +68,7 @@
     if (!E.o.embed || !root.parent || root.parent === root) return;
     try {
       root.parent.postMessage({ cb: 'employees', event: event, person: person || null }, root.location.origin);
-    } catch (_) {}
+    } catch (_) { /* no host window to tell: standalone page */ }
   }
 
   function say(msg) {
@@ -260,7 +260,7 @@
     if (E.list) {
       try {
         E.list.destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset('employees');
     E.list = root.CBList.mount(host, {

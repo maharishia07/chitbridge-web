@@ -182,7 +182,7 @@ function _netSetDirty(on) {
   try {
     if (on) localStorage.setItem(_netDirtyKey(), '1');
     else localStorage.removeItem(_netDirtyKey());
-  } catch (e) {}
+  } catch (e) { /* storage blocked or full: the page works without it */ }
 }
 function _netStripView(net) {
   try {
@@ -209,7 +209,7 @@ function _netPushServer() {
         _netQueuePush(); // retry the latest state after an in-flight push / transient failure
         if (typeof toast === 'function' && !/Already working/.test((err && err.message) || '')) toast('Design saved on this device — not synced yet');
       });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
 }
 function _netQueuePush() {
   if (!_netLoggedIn()) return;
@@ -226,7 +226,7 @@ function _netFlush() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
       body: JSON.stringify({ draft: _netStripView(UI.net) })
     });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
 }
 function _netPullServer() {
   if (!_netLoggedIn() || UI._netPulled || UI._netPulling) return;
@@ -246,7 +246,7 @@ function _netPullServer() {
           _netInit();
           try {
             localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net));
-          } catch (e) {}
+          } catch (e) { /* storage blocked or full: the page works without it */ }
           if (typeof renderApp === 'function') renderApp();
         } else if (UI.net && UI.net.nodes) {
           // server empty but this device has a design → migrate it up once
@@ -271,7 +271,7 @@ if (typeof window !== 'undefined' && !window._netFlushBound) {
 function _netSave() {
   try {
     if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net));
-  } catch (e) {}
+  } catch (e) { /* storage blocked or full: the page works without it */ }
   _netSetDirty(true);
   _netQueuePush();
 }
@@ -390,7 +390,7 @@ async function netWhereAmI() {
           SESSION.bridgeId = e0.bridge_id;
           if (typeof setSession === 'function') setSession({ bridgeId: e0.bridge_id });
         }
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     if (!SESSION.bridgeId) {
       UI._netRole = null;
@@ -1478,7 +1478,7 @@ function netStartOver() {
   var go = function () {
     try {
       localStorage.removeItem(_netDraftKey());
-    } catch (e) {}
+    } catch (e) { /* storage blocked or full: the page works without it */ }
     UI.net = null;
     _netRerender();
   };
@@ -4701,7 +4701,7 @@ function _netRootHandle() {
           _netRerender();
         })
         .catch(function () {});
-    } catch (e) {}
+    } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   }
   return _netSlug((typeof SESSION !== 'undefined' && SESSION.entity) || '') || 'your-network';
 }

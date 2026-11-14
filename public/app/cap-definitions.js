@@ -1744,7 +1744,7 @@ function cbDefPreviewHTML() {
   /* ⭐ PREVIEWED AS THE CUSTOMER IT IS FOR (Athi, 2026-09-06 19:27: "the offer computation not works properly during test?") — a customer-only offer fails closed for a stranger, so the seller's own preview must stand in that customer's shoes */
   try {
     promise = CBOffers.promise(o, { now: new Date(), money: inr, customer_groups: o.customer_group ? [o.customer_group] : [] });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   var one = cbDefPreviewRow(o, 1, cat, money),
     many = cbDefPreviewRow(o, qty2, cat, money);
   /* ⚠️ The window is the FIRST thing said when it is closed, because every row under it would otherwise show a
@@ -2046,7 +2046,7 @@ async function cbDefTakeoverAsk(id, why) {
     slabs = (await cbDefsLive('tax', true)).filter(function (x) {
       return String(x.definition_id || x.id) !== String(id) && (!x.status || x.status === 'live');
     });
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   var opts =
     typeof cbSlabOptionsHTML === 'function'
       ? cbSlabOptionsHTML(slabs, '')
@@ -2740,7 +2740,7 @@ function cbDefTestRun() {
   var keep = typeof UI !== 'undefined' ? UI.prodSel : undefined;
   try {
     if (typeof UI !== 'undefined') UI.prodSel = d.item_id;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   var html = '';
   try {
     html = typeof prodOfferCartHTML === 'function' ? prodOfferCartHTML(d, [offer], CBDEF_TEST.qty, 'cbdef-test-total', { customer_groups: _groups }) : '';
@@ -2749,7 +2749,7 @@ function cbDefTestRun() {
   } finally {
     try {
       if (typeof UI !== 'undefined') UI.prodSel = keep;
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var why = '';
   try {

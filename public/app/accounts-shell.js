@@ -801,7 +801,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     done = true;
     try {
       node.close();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     node.remove();
     if (yes) onOk();
     else if (onCancel) onCancel();

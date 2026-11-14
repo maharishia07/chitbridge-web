@@ -135,7 +135,7 @@ function cmdbSet(on) {
   CBCMDB.on = !!on;
   try {
     localStorage.setItem('cb_cmdb', CBCMDB.on ? '1' : '');
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
   if (CBCMDB.on) cmdbOpen();
   else cmdbClose();
   if (typeof renderApp === 'function') renderApp();
@@ -178,7 +178,7 @@ function cmdbOpen() {
         fit: '#cbcmdbbody'
       });
     }
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   cmdbPaint();
 }
 

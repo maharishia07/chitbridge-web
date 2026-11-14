@@ -49,7 +49,7 @@ function acTypeInfo(t) {
   var reg = (window.ACTOR_TYPES || {})[t] || {},
     h = (window.AC_TYPE_HOW || {})[t];
   if (!h || typeof modal !== 'function') return;
-  var lbl = (reg.label || t).split(/[ \/]/)[0];
+  var lbl = (reg.label || t).split(/[ /]/)[0];
   var extra =
     t === 'iot'
       ? '<div style="margin-top:12px"><button class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough <span class=arw>→</span></button></div>'
@@ -166,7 +166,7 @@ function _aiPolSet(key, patch) {
   p[key] = Object.assign({}, p[key] || {}, patch);
   try {
     localStorage.setItem(_aiPolKey(), JSON.stringify(p));
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
 }
 function aiSlotState(s) {
   var p = aiPolicy()[s.key] || {};
@@ -387,7 +387,7 @@ function closeShowcase() {
 function coassistsScreen() {
   const _tf = UI.acTypeF || 'all';
   const _treg = (window.ACTOR_TYPES || {})[_tf] || null;
-  const _shortLbl = _treg ? (_treg.label || _tf).split(/[ \/]/)[0] : '';
+  const _shortLbl = _treg ? (_treg.label || _tf).split(/[ /]/)[0] : '';
   const _title = _tf !== 'all' && _treg ? (_treg.icon ? _treg.icon + ' ' : '') + esc(_shortLbl) + ' · co-assists' : '🧑‍🤝‍🧑 Co-assists';
   const _typeInfoBtn =
     _tf !== 'all' && (window.AC_TYPE_HOW || {})[_tf]
@@ -405,7 +405,7 @@ function coassistsScreen() {
           .map((item) => {
             var reg = (window.ACTOR_TYPES || {})[item] || {};
             var on = (UI.acTypeF || 'all') === item;
-            var lbl = item === 'all' ? 'All' : (reg.icon ? reg.icon + ' ' : '') + (reg.label || item).split(/[ \/]/)[0];
+            var lbl = item === 'all' ? 'All' : (reg.icon ? reg.icon + ' ' : '') + (reg.label || item).split(/[ /]/)[0];
             return `<button onclick="setAcTypeF('${item}')" title="${item === 'all' ? 'all types' : reg.label || item}${reg.comingSoon ? ' — coming soon' : ''}" style="border:0;background:${on ? 'var(--blue)' : 'var(--card)'};color:${on ? 'var(--on-accent)' : 'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon ? ';font-weight:400;cursor:not-allowed;outline:1px dashed var(--grey);outline-offset:-3px' : ''}"${reg.comingSoon ? ' aria-disabled="true"' : ''}>${lbl}</button>`;
           })
           .join('')}</span>
@@ -456,7 +456,7 @@ function awDownloadPkg() {
   try {
     if (UI.awInstaller && typeof _download === 'function') _download('chitbridge-install.sh', UI.awInstaller);
     else if (typeof toast === 'function') toast('Package not ready — open the gateway and hit 📦 Create package (it re-creates the same installer).');
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 function awHost() {
   var node = document.getElementById('actorwiz');
@@ -486,7 +486,7 @@ function awCapture() {
       var node = document.getElementById('idoc_consent');
       if (node) UI.awDocs._consent = !!node.checked;
     }
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 function awPick(t) {
   UI.awType = t;
@@ -656,7 +656,7 @@ async function awFinish() {
             spool_dir: '/opt/chitbridge/spool',
             devices: []
           });
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       UI.awResult =
         '<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:var(--fs-4)">' +
         tx('Gateway created') +
@@ -1010,7 +1010,7 @@ function setAcSort(v) {
   UI.acSort = v;
   try {
     if (LAZY) delete LAZY.ac;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   paintAcList();
 }
 function acVisible() {
@@ -1197,7 +1197,7 @@ async function acOpenManage(id) {
   if (reg.load && typeof window[reg.load] === 'function') {
     try {
       window[reg.load](id);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   } // per-type data fetch (repaints when done)
   paintAcDetail();
 }

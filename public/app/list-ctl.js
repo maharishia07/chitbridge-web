@@ -91,7 +91,7 @@
     MEM[k] = v;
     try {
       root.localStorage.setItem(k, JSON.stringify(v));
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
@@ -308,8 +308,8 @@
     }
   }
   function cmpVals(a, b) {
-    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')),
-      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.-]/g, '')),
+      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.-]/g, ''));
     if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) {
       return (na || 0) - (nb || 0);
     }
@@ -334,16 +334,16 @@
     I.dead = true;
     try {
       if (I.io) I.io.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     clearTimeout(I.qt);
     try {
       var node = I.el.querySelector(':scope > .cbl-list');
       if (node && node.__cblRO) node.__cblRO.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     (I.off || []).forEach(function (x) {
       try {
         I.el.removeEventListener(x[0], x[1]);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     });
     I.off = [];
   }
@@ -1328,7 +1328,7 @@
       try {
         ss = ae.selectionStart;
         se = ae.selectionEnd;
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     box.innerHTML = h;
     if (keepId) {
@@ -1338,7 +1338,7 @@
         if (ss != null) {
           try {
             back.setSelectionRange(ss, se);
-          } catch (_) {}
+          } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         }
       }
     }
@@ -1695,7 +1695,7 @@
       });
       try {
         box.__cblRO.observe(box);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var keepTop = box.scrollTop,
       o = I.o,
@@ -1706,7 +1706,7 @@
     if (I.io) {
       try {
         I.io.disconnect();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       I.io = null;
     }
     I.el.classList.toggle('tbllines', s.view === 'lines');
@@ -1871,7 +1871,7 @@
             { root: box, rootMargin: '0px' }
           );
           I.io.observe(sent);
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
     var node = $(I, '.cbl-count');
@@ -1990,7 +1990,7 @@
         : null;
     if (at)
       Object.keys(at).forEach(function (item) {
-        if (/^[a-z][a-z0-9\-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
+        if (/^[a-z][a-z0-9-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
       });
     var tid = o.rowTid
       ? safe(function () {
@@ -2436,7 +2436,7 @@
       setTimeout(function () {
         root.URL.revokeObjectURL(u);
       }, 2000);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
@@ -2821,7 +2821,7 @@
     }
   }
   function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
   function refocusCol(I, k) {
     var node = I.el.querySelector('[data-col="' + k + '"]');
@@ -2913,7 +2913,7 @@
     node.classList.add('drag');
     try {
       node.setPointerCapture(event.pointerId);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);
     root.document.addEventListener('pointercancel', onPointerUp);

@@ -69,11 +69,11 @@ function csuCountryName(code, list) {
   try {
     var R = window.CBLocale && CBLocale.REGIONS;
     if (R && R[code] && R[code].name) return R[code].name;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   try {
     var n = new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }).of(code);
     if (n && n !== code && !/unknown/i.test(n)) return n;
-  } catch (_) {}
+  } catch (_) { /* browser feature missing: the default applies */ }
   return code;
 }
 /**
@@ -98,14 +98,14 @@ function csuCountries() {
   else {
     try {
       Object.keys((window.CBLocale && CBLocale.REGIONS) || {}).forEach(add);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     try {
       var g = govCtx();
       if (g && g.country) {
         add(g.country.value);
         add(g.country.unserved);
       }
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   if (CSU.p && CSU.p.country) add(CSU.p.country.code);
   if (CSU.edit) add(CSU.edit.country);
@@ -127,7 +127,7 @@ function csuCurrencies(country) {
   try {
     var R = window.CBLocale && CBLocale.REGIONS;
     if (R && R[country]) (R[country].cur || []).forEach(add);
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   if (CSU.edit) add(CSU.edit.currency);
   if (CSU.p) add(CSU.p.currency);
   return out;
@@ -163,7 +163,7 @@ function csuDeviceZone() {
   try {
     var g = govCtx();
     if (g && g.timezone && g.timezone.value) return g.timezone.value;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
   } catch (_) {
@@ -273,7 +273,7 @@ function csuPrefill() {
     g = null;
   try {
     g = govCtx();
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   var e = {
     country: '',
     currency: '',
@@ -1095,7 +1095,7 @@ function csuSave() {
         CSU.p = p || CSU.p;
         try {
           if (p && p.pack) SESSION.booksOn = false;
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         /* CS2: a correction before the shop was constituted — the server says what it set again from the new pack */
         if (p && p.rederived) toast(txf('Country now {c} — the rest set from its pack.', { c: csuCountryName(p.rederived.to) }));
         else if (first) toast(tx('Country set.'));

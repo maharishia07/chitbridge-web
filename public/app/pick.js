@@ -230,12 +230,12 @@ var CBPick = (function () {
             open_ = null;
             try {
               if (state.cart && state.cart.close) state.cart.close();
-            } catch (e) {}
+            } catch (e) { /* best effort: failing here changes nothing the user sees */ }
             if (typeof closeModal === 'function') closeModal();
             if (typeof o.onClose === 'function') {
               try {
                 o.onClose(val);
-              } catch (e) {}
+              } catch (e) { /* best effort: failing here changes nothing the user sees */ }
             }
             resolve(val);
           }
