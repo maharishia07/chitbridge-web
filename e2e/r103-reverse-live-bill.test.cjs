@@ -16,7 +16,7 @@ check(why({ may_reverse: false, why: { code: 'ENTRY_OF_LIVE_BILL', words: WORDS 
 check(why({ may_reverse: true, why: null }) === '' && why({}) === '' && why(null) === '', 'allowed, unknown (older server) or no entry: no sentence, the button stays live');
 check(/why: bkEntryWhy/.test(books) && /return bkEntryWhy\(bkLgEntry\(l\)\)/.test(books), 'the Day book and the Ledger Reverse actions both pass why');
 check(/\(why \? ' disabled aria-disabled="true" title="'/.test(ctl), 'list-ctl greys an action whose why is a sentence and shows it');
-const entry = ((fixture['GET /api/books/daybook'] || {}).example || {}).entries;
+const entry = (((fixture.routes || fixture)['GET /api/books/daybook'] || {}).example || {}).entries;
 check(Array.isArray(entry) && entry[0] && entry[0].may_reverse === false && entry[0].why && entry[0].why.code === 'ENTRY_OF_LIVE_BILL', 'the contract fixture carries may_reverse + why on a day book entry');
 console.log(bad ? bad + ' failed' : 'all passed');
 process.exit(bad ? 1 : 0);
