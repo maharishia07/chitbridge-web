@@ -152,7 +152,7 @@
       asked = preview.resolved[ref],
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
-    if (!asked || !entry || !entry.resolve) return proposal;
+    if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
     var resolved = entry.resolve(line, answers, suggestOpts);
     if (resolved.ok === false) {
@@ -160,7 +160,7 @@
       return proposal;
     }
     delete preview.resolveRefusal[ref];
-    return resolved;
+    return holdProposal_(resolved, opts);
   }
   /** match against the books, a proposal for each line the books lack (null for a line already there), then the engine's preview of it all */
   function projectNow(opts, preview) {
@@ -183,23 +183,17 @@
     return item;
   }
   /**
-   * what THIS host cannot post from a line, held on the line in words (opt-in: the demo passes neither option, so its lines do not move).
-   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a payment between parties) says where it is recorded instead
+   * what THIS host cannot post from a line, set on the PROPOSAL as the one `needs` code the engine already turns into a blocker, so the engine's own counts and totals (the confirm popup) leave the line out (opt-in: the demo passes neither option).
+   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a payment between parties) says where it is recorded instead (not_here)
    *   opts.taxRegistered true when the shop SAID it is registered for tax (unknown is not true, SET-49): a money-out line the bank's words proposed carries no tax until the owner says what kind
-   *                      it is, so it is asked (need tax_kind), never defaulted and never posted without
+   *                      it is, so it is asked (tax_kind), never defaulted and never posted without. A need the engine already set (the tick, the tax basis) comes first.
    */
-  function heldHere_(item, opts) {
-    var type = item.event && item.event.type;
-    if (!type || !item.ready) return item;
-    var hold = function (code, needs) {
-      item.blockers = (item.blockers || []).concat(code);
-      item.ready = false;
-      if (needs) item.needs = needs;
-      return item;
-    };
-    if (opts.postable && opts.postable.indexOf(type) < 0) return hold('not_here', null);
-    if (opts.taxRegistered === true && type === 'expense' && !item.tax) return hold('tax_kind', 'tax_kind');
-    return item;
+  function holdProposal_(proposal, opts) {
+    var type = proposal && proposal.event && proposal.event.type;
+    if (!type || proposal.needs) return proposal;
+    if (opts.postable && opts.postable.indexOf(type) < 0) return Object.assign({}, proposal, { needs: 'not_here' });
+    if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
+    return proposal;
   }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
   function projectAgain(opts, preview) {
@@ -213,7 +207,7 @@
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
-      return heldHere_(withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]), opts);
+      return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
   }
