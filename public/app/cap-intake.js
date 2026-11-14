@@ -40,10 +40,10 @@ function intakeScreen() {
     tx('📥 Intake') +
     '</span>' +
     '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>' +
-    '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' +
+    '<button data-cbsid="WRK003-B06" data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' +
     tx('↻ Refresh') +
     '</button>' +
-    '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' +
+    '<button data-cbsid="WRK003-B07" data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' +
     tx('✚ Record a message') +
     '</button>' +
     '</div>' +
@@ -64,7 +64,7 @@ function intakeScreen() {
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — ' +
-    '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> ' +
+    '<a data-cbsid="WRK003-C01" onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> ' +
     tx('Business rules') +
     '</a>.</div>' +
     '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' +
@@ -101,7 +101,7 @@ function intakeSimHTML() {
     '</div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-    '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' +
+    '<select data-cbsid="WRK003-S02" class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' +
     tx('WhatsApp') +
     '</option><option value="email">' +
     tx('Email') +
@@ -110,10 +110,10 @@ function intakeSimHTML() {
     '</option><option value="sms">' +
     tx('SMS') +
     '</option></select>' +
-    '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email (required)" style="flex:1;min-width:150px">' +
+    '<input data-cbsid="WRK003-I04" class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email (required)" style="flex:1;min-width:150px">' +
     '</div>' +
-    '<textarea class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>' +
-    '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">' +
+    '<textarea data-cbsid="WRK003-T02" class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>' +
+    '<div style="margin-top:8px"><button data-cbsid="WRK003-B08" class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">' +
     tx('Add to the queue') +
     '</button></div>' +
     '</div>'
@@ -287,24 +287,24 @@ function intakeCardHTML(c) {
        to edit, price and address it, which is what you want when the message is a starting point rather than the
        thing itself. Neither sends anything without a person pressing it. */
     (s
-      ? '<button class="composebtn" data-testid="intake-raise" ' +
+      ? '<button data-cbsid="WRK003-B09" class="composebtn" data-testid="intake-raise" ' +
         (w.busy ? 'disabled' : '') +
         ' onclick="intakeRaise(\'' +
         esc(c.id) +
         '\')" title="File as a request in your inbox, in their words">' +
         (w.busy ? 'Raising…' : '📥 Raise as a request') +
         '</button>' +
-        '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\'' +
+        '<button data-cbsid="WRK003-B10" data-testid="intake-make-chit" onclick="intakeMakeChit(\'' +
         esc(c.id) +
         '\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit <span class=arw>→</span></button>'
-      : '<button class="composebtn" data-testid="intake-structure" ' +
+      : '<button data-cbsid="WRK003-B11" class="composebtn" data-testid="intake-structure" ' +
         (w.busy ? 'disabled' : '') +
         ' onclick="intakeStructure(\'' +
         esc(c.id) +
         '\')">' +
         (w.busy ? '✨ Reading…' : '✨ Structure it') +
         '</button>') +
-    '<button data-testid="intake-dismiss" onclick="intakeDismiss(\'' +
+    '<button data-cbsid="WRK003-B12" data-testid="intake-dismiss" onclick="intakeDismiss(\'' +
     esc(c.id) +
     '\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--grey)">' +
     tx('Dismiss') +
@@ -314,7 +314,7 @@ function intakeCardHTML(c) {
        so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
        exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
        difference between tuning a prompt and guessing at one. */
-    '<button data-testid="intake-json" onclick="intakeShowJson(\'' +
+    '<button data-cbsid="WRK003-B13" data-testid="intake-json" onclick="intakeShowJson(\'' +
     esc(c.id) +
     '\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace;color:var(--on-card)">{ } JSON</button>' +
     '</div>' +
@@ -682,7 +682,7 @@ function _jsonBlock(title, obj) {
     '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' +
     esc(title) +
     '</span>' +
-    '<span onclick="_copyJson(\'' +
+    '<span data-cbsid="WRK003-C02" onclick="_copyJson(\'' +
     id +
     '\')" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>' +
     '</div>' +
