@@ -62,14 +62,9 @@
   function formatTag(pack) {
     return (pack.locale && pack.locale.format) || 'en';
   }
-  /** how many decimals the currency has (Intl decides; ¥ has none) */
+  /** how many decimals the currency has: the vendored money engine's ISO 4217 answer, the same one the till and the server read (CUR-1b: no Intl table of its own; a code ISO does not list throws in words) */
   function decimalsOf(currency) {
-    try {
-      return new Intl.NumberFormat('en', { style: 'currency', currency: currency }).resolvedOptions().maximumFractionDigits;
-    } catch (failure) {
-      quiet('decimals', failure);
-      return 2;
-    }
+    return root.CBMoney.decimals(currency);
   }
   /** an amount in the country's own currency and format */
   function inCountryMoney(pack, amount) {

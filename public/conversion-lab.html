@@ -225,7 +225,7 @@ function fmt(n, c) {
 }
 function fmtM(m) {
   try {
-    return fmt(CBMoney.amountOf(m), CBMoney.currencyOf(m));
+    return fmt(CBMoney.amountOf(m, { stored: true }), CBMoney.currencyOf(m, { stored: true }));
   } catch (_) {
     return '—';
   }
@@ -708,7 +708,7 @@ async function loadCatalogue() {
       if (!isFinite(amt) || amt <= 0) return;
       var cur = null;
       try {
-        cur = CBMoney.currencyOf(d.price);
+        cur = CBMoney.currencyOf(d.price, { stored: true });
       } catch (_) {
         cur = null;
       }

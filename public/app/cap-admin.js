@@ -5486,8 +5486,9 @@ function _locName(table, code) {
  * business a currency it does not use and write it on the next save.
  */
 function _curPicker(cur) {
-  var all = (CBLocale.currencies && CBLocale.currencies()) || null;
-  var mine = (CBLocale.regionCurrencies && CBLocale.regionCurrencies()) || [];
+  /* CUR-1b: ONE list - the vendored money engine's ACTIVE ISO 4217 codes (never the Intl list: it offers withdrawn codes and misses VED, UYW, CLF); the saved value is still shown below */
+  var all = Object.keys(CBMoney.ISO_4217).sort();
+  var mine = ((CBLocale.regionCurrencies && CBLocale.regionCurrencies()) || []).filter(CBMoney.isActiveCurrency);
   var top = mine.slice();
   if (cur && top.indexOf(cur) < 0) top.unshift(cur); /* what you use is never buried */
   var rest = (all || []).filter(function (item) {
