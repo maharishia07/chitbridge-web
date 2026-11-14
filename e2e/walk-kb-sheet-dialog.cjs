@@ -25,6 +25,11 @@ const read = (f) => fs.readFileSync(path.join(PUB, f), 'utf8');
   ['app/cap-books.js', 'data-testid="pay_record" data-sheet-save'], ['app/cap-crm.js', "' data-sheet-save'"]].forEach(([f, s]) => ok(read(f).includes(s), 'static · ' + f + ' marks its save button (data-sheet-save)'));
 ['app/cap-catalogue.js', 'app/cap-employees.js', 'app/cap-tasks.js', 'app/cap-books.js'].forEach((f) => ok(/required[^\n]{0,24}data-required-msg/.test(read(f)), 'static · ' + f + ' marks its required field'));
 
+/* static: the Price list overlay (offer-lab-next.html, not a native dialog) gives the focus back to its opener on close (2c) */
+const lab = read('offer-lab-next.html');
+const closeBody = (/function closePriceOverlay[(][)] [{]([^}]*)[}]/.exec(lab) || [])[1] || '';
+ok(closeBody.indexOf('priceOvGiveBack()') > closeBody.indexOf('render()') && lab.includes('back: priceOvOpenerOf(document.activeElement)'),'static · offer-lab-next.html closePriceOverlay gives the focus back to the opener it remembered at open');
+
 const FIXTURE = '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>kb</title></head><body>' +
   '<button id="open1" data-cbsid="KBT001-B01">New thing</button><button id="other">Other</button><div id="saved">0</div>' +
   '<dialog class="sheet" id="sh"></dialog>' +
