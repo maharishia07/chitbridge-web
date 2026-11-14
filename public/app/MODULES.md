@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (65)
+## Capabilities (67)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -35,6 +35,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-groups-send.js` | — | cap-crm-groups-send.js — PART of cap-crm-groups.js (MNT-59): the Send-to-group sheet, who may be sent first (the server's dry answer, by code), then t |
+| `cap-crm-groups-window.js` | — | cap-crm-groups-window.js — PART of cap-crm-groups.js (MNT-59): the Shop window screen (#/showcase), the template chooser, the preview of the shop's ow |
 | `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file) |
 | `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |
@@ -156,4 +158,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*129 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*131 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

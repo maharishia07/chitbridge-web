@@ -96,6 +96,7 @@ function selfTests(world) {
   const tests = [];
   const red = (why, mutate, pattern, loaded) => tests.push({ why, mutate, pattern, loaded });
   const part = Object.keys(world.family).find((file) => file !== BASE) || 'cap-crm-groups-send.js';
+  const homeOf = (made, name) => Object.keys(made.family).find((file) => topNames(made.family[file]).includes(name));
   const split = (made) => {
     if (Object.keys(made.family).length > 1) return made;
     const unit = /^function crmShopUrl[^]*?^\}\n/m;
@@ -106,9 +107,9 @@ function selfTests(world) {
   };
   red('the page tag removed', (made) => { made.page = swap(made.page, '<script src="/app/' + BASE + '"></script>', ''); }, /must carry the tag/);
   red('a name defined in two files', (made) => { made.family['cap-crm-groups-x.js'] = 'function crmShopUrl() {}\n'; made.page += '<script src="/app/cap-crm-groups-x.js"></script>'; }, /name crmShopUrl .*exactly one/);
-  red('a name removed', (made) => { made.family[BASE] = swap(made.family[BASE], 'function crmShopUrl', 'function crmShopUrlGone'); }, /name crmShopUrl .*none/);
-  red('crmSendWords changed', (made) => { made.family[BASE] = swap(made.family[BASE], "'Write the message.'", "'Write it.'"); }, /behaviour: crmSendWords/, true);
-  red('crmShopUrl changed', (made) => { made.family[BASE] = swap(made.family[BASE], "'/shop.html?s='", "'/shop?s='"); }, /behaviour: crmShopUrl/, true);
+  red('a name removed', (made) => { const home = homeOf(made, 'crmShopUrl'); made.family[home] = swap(made.family[home], 'function crmShopUrl', 'function crmShopUrlGone'); }, /name crmShopUrl .*none/);
+  red('crmSendWords changed', (made) => { const home = homeOf(made, 'crmSendWords'); made.family[home] = swap(made.family[home], "'Write the message.'", "'Write it.'"); }, /behaviour: crmSendWords/, true);
+  red('crmShopUrl changed', (made) => { const home = homeOf(made, 'crmShopUrl'); made.family[home] = swap(made.family[home], "'/shop.html?s='", "'/shop?s='"); }, /behaviour: crmShopUrl/, true);
   tests.push({ why: 'the simulated split is green', mutate: (made) => { split(made); made.sw = made.sw.replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = 'v999'"); }, pattern: null, loaded: true });
   red('a part tag removed on a split page', (made) => { split(made); made.page = swap(made.page, '<script src="/app/' + part + '"></script>', ''); }, /must carry the tag for cap-crm-groups-/);
   red('the part loaded before the base', (made) => { split(made); made.page = swap(made.page, '<script src="/app/' + BASE + '"></script><script src="/app/' + part + '"></script>', '<script src="/app/' + part + '"></script><script src="/app/' + BASE + '"></script>'); }, /after the files before it/);

@@ -32,7 +32,7 @@ const g = {
 };
 const out = { innerHTML: '' };
 vm.createContext(g);
-vm.runInContext('var SEND = { row: { key: "regulars" }, dry: null, done: null };\n' + liftFns('public/app/cap-crm-groups.js', ['crmSendBody', 'crmSendGo']), g);
+vm.runInContext('var SEND = { row: { key: "regulars" }, dry: null, done: null };\n' + liftFns('public/app/cap-crm-groups-send.js', ['crmSendBody', 'crmSendGo']), g);
 g.crmSendGo({});
 ok('send BEFORE the dry count: nothing runs, the person is told "Check who may be sent first."', runs.length === 0 && /Check who may be sent first/.test(out.innerHTML), out.innerHTML + ' runs=' + runs.length);
 vm.runInContext('SEND.dry = { may: 0 };', g);
