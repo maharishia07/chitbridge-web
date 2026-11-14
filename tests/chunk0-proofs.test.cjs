@@ -52,6 +52,11 @@ ok('OPS-52 ruleMove places against the full entity-wide list, from a filtered li
   assert.deepStrictEqual(final.sort((x, y) => x.sort - y.sort).map((r) => r.rule_id), ['a', 'd', 'b', 'c', 'e']);
   assert.deepStrictEqual(ctx.writes.map((w) => w[0]).sort(), ['b', 'c', 'd'], 'only rows whose sort changed are written');
   assert(!ctx.writes.some(([id]) => id === 'a' || id === 'e'), 'a and e are untouched');
+  // and downwards: b moves below its VISIBLE neighbour d (c sits between them in the full list): full order a c d b e
+  ctx.writes.length = 0; ctx._FLD.rules = [{ rule_id: 'b' }, { rule_id: 'd' }];
+  await vm.runInContext('ruleMove("b", 1)', ctx);
+  const down = ctx._fullList(); ctx.writes.forEach(([id, s2]) => { down.find((r) => r.rule_id === id).sort = s2; });
+  assert.deepStrictEqual(down.sort((x, y) => x.sort - y.sort).map((r) => r.rule_id), ['a', 'c', 'd', 'b', 'e']);
 });
 
 // OPS-53 / OPS-54: supRequiredScope extracted from app.html
