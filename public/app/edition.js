@@ -19,6 +19,7 @@
  *   CBEdition.prune(el, m)          hide every such link under `el` (a page's nav, Home's alert rows); returns how many
  
  * CALLED BY public/app/avatar.js, public/app/rail-bell.js, public/app/shell.js, public/standards.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/editions
  */
 (function (root) {
   'use strict';
