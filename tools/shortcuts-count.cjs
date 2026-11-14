@@ -44,8 +44,8 @@ function popups() {
     const live = Object.values(screens).filter((row) => !row.retired && /^POP\d{3}$/.test(row.code || '')).map((row) => row.code);
     const codes = [...new Set(live)].sort();
     const sources = webSources();
-    const na = codes.filter((code) => closeOnly(code, sources));
-    return { codes: codes.filter((code) => !na.includes(code)), na, source: 'SCREENS.json' };
+    const notApplicable = codes.filter((code) => closeOnly(code, sources));
+    return { codes: codes.filter((code) => !notApplicable.includes(code)), na: notApplicable, source: 'SCREENS.json' };
   }
   const found = new Set();
   ['public', 'public/app'].forEach((dir) => fs.readdirSync(path.join(WEB_DIR, dir)).filter((name) => /\.(js|html)$/.test(name)).forEach((name) => {
