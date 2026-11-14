@@ -918,7 +918,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   search, category, scroll, a column of context (sale price) beside the thing they're actually setting —
   opens this same panel rather than growing a second one.
 -->
-<div class="ovl" id="priceOverlay" role="dialog" aria-modal="true" aria-labelledby="ovlTitle">
+<div class="ovl" id="priceOverlay" data-pop="POP122" role="dialog" aria-modal="true" aria-labelledby="ovlTitle">
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="ovlTitle">Price list</h2>
@@ -939,7 +939,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
   is different (pick ONE product, then build against it) — but the chrome (.ovl/.ovlpanel/.ovlhead/.ovlx) is
   the exact same CSS the price list already proved out, precisely so a third icon has somewhere to land too.
 -->
-<div class="ovl" id="modLabOverlay" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
+<div class="ovl" id="modLabOverlay" data-pop="POP123" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
   <div class="ovlpanel">
     <div class="ovlhead">
       <h2 id="modLabTitle">Combos and modifiers</h2>
@@ -962,7 +962,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
 <!-- ⭐⭐⭐ [TILL/OFFR-08] "how it appears in the counter app" — CBVariant.chooserHTML(), the SAME function
      till.html's own combo dialog calls, so there is nothing here that could show a different combo than the
      one a customer would actually see. -->
-<div class="ovl" id="comboTillPreviewOverlay" role="dialog" aria-modal="true" aria-labelledby="comboTillPreviewTitle">
+<div class="ovl" id="comboTillPreviewOverlay" data-pop="POP124" role="dialog" aria-modal="true" aria-labelledby="comboTillPreviewTitle">
   <div class="ovlpanel" style="max-width:520px">
     <div class="ovlhead">
       <h2 id="comboTillPreviewTitle">Preview</h2>
@@ -974,7 +974,7 @@ var LAB_FRAME = null; /* the mounted frame: render() lights the menu entry of th
 </div>
 <!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
 <div data-cbsid="OLB001-C03" class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
-  <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
+  <div class="sheet" data-pop="POP125" role="dialog" aria-modal="true" aria-label="What this offer does">
     <div class="shhd" onpointerdown="dragSheetStart(event)">
       <h3 id="workTitle"></h3>
       <span class="tag" id="workTag"></span>
