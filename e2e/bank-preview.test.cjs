@@ -251,7 +251,7 @@ const make = (over) => {
   assert.strictEqual(done.ok, true);
   await post(item);
   assert.strictEqual(calls.filter((x) => x[0] === 'supAdd').length, 1);
-  const bad = await post({ ref: 'bank:x', event: {}, party: { status: 'new', name: 'Fail Co', kind: 'supplier' } });
+  const bad = await post({ ref: 'bank:x', event: { type: 'expense', amount: 1 }, party: { status: 'new', name: 'Fail Co', kind: 'supplier' } });
   assert.strictEqual(bad.ok, false);
   assert.ok(/Fail Co/.test(bad.why) && /Name taken/.test(bad.why));
   assert.strictEqual(calls.filter((x) => x[1] && x[1].client_ref === 'bank:x').length, 0);
