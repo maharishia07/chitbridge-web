@@ -80,12 +80,19 @@
     motion: 'cb_motion',
     stripes: 'cb_stripes',
     edition: 'cb_edition',
-    kural: 'cb_kural'
+    kural: 'cb_kural',
+    keys: 'cb_keys'
   };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto', keys: 'on' };
+  var DEVICE_ONLY = ['keys']; /* held on this device: the server's ui.keys list has no 'keys' yet, so hydrate and push leave it alone */
   /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
   var KURAL = [
     ['auto', 'Where Tamil is read'],
+    ['on', 'On'],
+    ['off', 'Off']
+  ];
+  /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off */
+  var KEYS = [
     ['on', 'On'],
     ['off', 'Off']
   ];
@@ -141,7 +148,8 @@
       motion: pref('motion'),
       stripes: pref('stripes'),
       edition: pref('edition'),
-      kural: pref('kural')
+      kural: pref('kural'),
+      keys: pref('keys')
     };
   }
 
@@ -447,6 +455,7 @@
       return STRIPES.some(function (x) {
         return x[0] === v;
       });
+    if (kind === 'keys') return v === 'on' || v === 'off';
     if (kind === 'edition') return EDITION.test(String(v));
     if (kind === 'kural')
       return KURAL.some(function (x) {
@@ -469,6 +478,7 @@
       again = false;
     try {
       Object.keys(KEY).forEach(function (item) {
+        if (DEVICE_ONLY.indexOf(item) >= 0) return;
         var v = prefs[item],
           held = v != null && v !== '';
         if (has(pend, item)) {
@@ -551,8 +561,9 @@
     if (!has(KEY, kind) || !valid(kind, value)) return;
     if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
-    pendMark(kind); /* held against a server reset until a push lands (F9) */
+    if (DEVICE_ONLY.indexOf(kind) < 0) pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
+    if (kind === 'keys' && root.CBShortcuts) root.CBShortcuts.stamp(); /* the rail and cards say their keys only while the switch is on */
     if (kind === 'edition') {
       push(true);
       if (root.CBEdition) root.CBEdition.clearTab();
@@ -804,6 +815,7 @@
       choiceGroup('Row stripes', 'stripes', STRIPES) +
       /* W7: the Thirukkural band — the stripes look, never a new one */
       choiceGroup('Thirukkural', 'kural', KURAL) +
+      choiceGroup('Keyboard shortcuts', 'keys', KEYS) +
       '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
       TEXT_SIZES.map(function (x, index) {
@@ -1027,7 +1039,7 @@
   }
 
   /** the saved looks a menu button sets by its data-av-<kind> attribute */
-  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font', 'keys'];
   /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
   function onMenuAction(e, action, o) {
     var closeThen = function (callback) {

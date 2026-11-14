@@ -577,6 +577,13 @@ var CBUi = (function () {
     var pop = options.pop ? ' data-pop="' + escapeText(options.pop) + '"' : '';
     return '<div class="mhd" data-cbsid="' + ACTION_SET.dialog.element + '" data-cbmount="' + escapeText(options.mount) + '"' + pop + '>' + dialogHeadText(options) + '</div>';
   }
+  /** MNT-63: the popup's main action wears the register's key for assistive technology; the one shared listener (shortcuts.js) presses it */
+  function markMainAction(pop) {
+    var keys = typeof CBShortcuts !== 'undefined' && pop ? CBShortcuts : null;
+    var host = keys && keys.keyOf(pop) ? document.querySelector('dialog[open], #modalhost') : null;
+    var button = host ? keys.mainOf(host) : null;
+    if (button) button.setAttribute('aria-keyshortcuts', keys.keyOf(pop));
+  }
   /** the first field of a form takes the keyboard when the popup opens (WCAG 2.4.3); a popup with none leaves the host's own first stop */
   function focusFirstField() {
     var host = typeof document !== 'undefined' && document.querySelector ? document.querySelector('dialog[open] .mbody, #modalhost .mbody') : null;
@@ -611,6 +618,7 @@ var CBUi = (function () {
     options = options || {};
     var list = checkDialog(options);
     modal(dialogHead(options) + dialogBody(options) + dialogFoot(options, list), !!options.wide, options.opt);
+    markMainAction(options.pop);
     focusFirstField();
   }
   /* ── CMP020 PROGRESS (Athi 10 Nov): one component, three levels (Nielsen response-time limits, Apple HIG, Material).
