@@ -189,6 +189,7 @@ var CBUiStandard = (function () {
   }
   function openExampleDialog() {
     ui.dialog({
+      pop: 'POP151',
       mount: SCREEN + '-D01-U02',
       title: 'Example dialog',
       body: '<p>' + esc(words('This is the one dialog shell. Its buttons are the standard set.')) + '</p>',

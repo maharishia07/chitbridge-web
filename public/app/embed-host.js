@@ -26,6 +26,7 @@
       f = doc.createElement('iframe'),
       x = doc.createElement('button');
     var src = '/' + o.app + '.html?embed=1' + (o.view ? '&view=' + encodeURIComponent(o.view) : '');
+    node.setAttribute('data-pop', 'POP150');
     node.setAttribute('data-testid', 'embed-' + o.app);
     node.style.cssText =
       'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(560px,96vw);height:min(640px,90vh);background:var(--card,#fff);overflow:hidden';

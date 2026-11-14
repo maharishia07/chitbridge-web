@@ -1024,6 +1024,7 @@
     ensureCSS();
     node = document.createElement('dialog');
     node.id = 'chitsheet';
+    node.setAttribute('data-pop', 'POP148');
     node.className = 'cs';
     node.setAttribute('aria-label', T('Bill'));
     node.innerHTML =
