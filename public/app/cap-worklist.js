@@ -2145,11 +2145,5 @@ async function wlAssignSave(edit, msg) {
 
 /* Tapping a line opens the chit it belongs to — the line is where the work is, the chit is where the context is. */
 function wlOpen(chit_id) {
-  if (typeof openChit2 === 'function' && typeof ensureCap === 'function') {
-    ensureCap('chit2').then(function () {
-      openChit2(chit_id);
-    });
-  } else if (typeof openChit === 'function') {
-    openChit(chit_id);
-  }
+  openChitDetail(chit_id);
 }

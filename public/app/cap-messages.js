@@ -447,11 +447,5 @@ async function rplOpenLine(chit_id, line_id) {
 
 /* Opening the order reuses the chit opener when it is loaded, and falls back to plain nav. */
 function rplOpenChit(chit_id) {
-  if (typeof openChit2 === 'function' && typeof ensureCap === 'function') {
-    ensureCap('chit2').then(function () {
-      openChit2(chit_id);
-    });
-  } else if (typeof openChit === 'function') {
-    openChit(chit_id);
-  }
+  openChitDetail(chit_id);
 }

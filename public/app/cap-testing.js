@@ -283,11 +283,7 @@ function incidentHere() {
 }
 
 function testModeIsOn() {
-  try {
-    return localStorage.getItem('cb_testmode') === '1';
-  } catch (_) {
-    return false;
-  }
+  return lsGet('cb_testmode', '') === '1';
 }
 
 /* ── loading ──────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -472,11 +468,7 @@ async function testLoad(force) {
  * on every toggle is a dialog people learn to dismiss without reading — which costs the FIRST reader too.
  */
 function testGuideSeen() {
-  try {
-    return localStorage.getItem('cb_testguide') === '1';
-  } catch (_) {
-    return false;
-  }
+  return lsGet('cb_testguide', '') === '1';
 }
 function testGuide(force) {
   if (!force && testGuideSeen()) return false;
@@ -2437,11 +2429,7 @@ function testAskCancel() {
 }
 
 function testIncFilterGet() {
-  try {
-    return localStorage.getItem('cb_test_incf') || 'open';
-  } catch (_) {
-    return 'open';
-  }
+  return lsGet('cb_test_incf', '') || 'open';
 }
 function testIncFilter(v) {
   try {
@@ -2860,16 +2848,10 @@ function testIncHTML() {
  */
 /* ⭐ remembered per browser: a person who works in menu order works in menu order every day */
 function testScrSortGet() {
-  try {
-    return localStorage.getItem('cb_test_scrsort') || 'menu';
-  } catch (_) {
-    return 'menu';
-  }
+  return lsGet('cb_test_scrsort', '') || 'menu';
 }
 function testScrSort(v) {
-  try {
-    localStorage.setItem('cb_test_scrsort', v);
-  } catch (_) {}
+  lsSet('cb_test_scrsort', v);
   testPaint();
 }
 
@@ -5310,11 +5292,7 @@ function testScrOpen(code) {
  */
 /* which cases the panel is showing — remembered, because a tester works one way all day */
 function testCaseFilterGet() {
-  try {
-    return localStorage.getItem('cb_case_filter') || 'todo';
-  } catch (_) {
-    return 'todo';
-  }
+  return lsGet('cb_case_filter', '') || 'todo';
 }
 function testCaseFilter(v) {
   try {
@@ -8173,11 +8151,7 @@ function testDiagRaise() {
 }
 
 function testAreaGet() {
-  try {
-    return localStorage.getItem('cb_case_area') || '';
-  } catch (_) {
-    return '';
-  }
+  return lsGet('cb_case_area', '') || '';
 }
 function testArea(v) {
   try {
@@ -8855,16 +8829,10 @@ function testFindFixed(id) {
 }
 
 function testHandFilterGet() {
-  try {
-    return localStorage.getItem('cb_hand_filter') || 'open';
-  } catch (_) {
-    return 'open';
-  }
+  return lsGet('cb_hand_filter', '') || 'open';
 }
 function testHandFilter(v) {
-  try {
-    localStorage.setItem('cb_hand_filter', v);
-  } catch (_) {}
+  lsSet('cb_hand_filter', v);
   testPaint();
 }
 
@@ -9002,16 +8970,10 @@ function testMeId() {
 }
 
 function testFindWho() {
-  try {
-    return localStorage.getItem('cb_find_who') || 'all';
-  } catch (_) {
-    return 'all';
-  }
+  return lsGet('cb_find_who', '') || 'all';
 }
 function testFindSetWho(v) {
-  try {
-    localStorage.setItem('cb_find_who', v);
-  } catch (_) {}
+  lsSet('cb_find_who', v);
   testPaint();
 }
 
@@ -9279,16 +9241,10 @@ function testWorkRow(r) {
 }
 
 function testWorkFilterGet() {
-  try {
-    return localStorage.getItem('cb_work_filter') || 'live';
-  } catch (_) {
-    return 'live';
-  }
+  return lsGet('cb_work_filter', '') || 'live';
 }
 function testWorkFilter(v) {
-  try {
-    localStorage.setItem('cb_work_filter', v);
-  } catch (_) {}
+  lsSet('cb_work_filter', v);
   testPaint();
 }
 
