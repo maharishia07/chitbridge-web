@@ -156,7 +156,7 @@ async function _aiDraft(skill, label, ctx, attach) {
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' +
       tx('📋 Copy') +
       '</button>' +
-      '<button onclick="closeModal()" style="' +
+      '<button data-cbsid="CMP004" onclick="closeModal()" style="' +
       bs +
       ';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' +
       tx('Done') +
@@ -1360,7 +1360,7 @@ function _rdComTwoPane() {
     left +
     '</div>' +
     '<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">' +
-    '<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>' +
+    '<button data-cbsid="CMP006" class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>' +
     _rdComDetail(list[sel]) +
     '</div></div>'
   );
@@ -1392,7 +1392,7 @@ function _rdTwoPane(list) {
     left +
     '</div>' +
     '<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">' +
-    '<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>' +
+    '<button data-cbsid="CMP006" class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>' +
     _rdDetailPane(sel) +
     '</div></div>'
   );
