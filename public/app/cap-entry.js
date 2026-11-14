@@ -1,5 +1,5 @@
 /* cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save.
- * Contract: docs/design/manual-entry/REQUIREMENT.md; the server's shapes: chitbridge-api routes/books.js (GET /events · POST /preview · POST /events · POST /entries/:id/reverse) and lib/books-manual.js. Loaded by accounts.html after cap-books.js; the Day book offers the ＋ only when
+ * Contract: docs/design/manual-entry/REQUIREMENT.md; the server's shapes: chitbridge-api routes/books.js (GET /events · POST /preview · POST /events · POST /entries/:id/reverse) and lib/books-manual.js. Loaded by accounts.html after cap-books.js and by finance.html; the Day book offers the ＋ only when
  * enOpen exists (cap-books.js bkDvHead), and offers Reverse on a row through CBList's own `actions`.
  *
  * ⭐ THE PAGE HOLDS NO RULES AND COMPUTES NO MONEY. The events, their words, icons, fields and save routes are GET /api/books/events;
@@ -13,8 +13,8 @@
  *
  * OWNS       the ＋ Entry sheet: the event tiles, the step fields, the journal preview, Save and Reverse (enOpen · enPick · enNext · enBack · enSet ·
  *             enPreview · enSave · enSaveWrite · enPaintSaved · enReverse · enClose). It owns no rule and no figure: the server's events and preview answer.
- * CALLED BY  public/accounts.html and public/finance.html (a <script> tag each) · cap-books.js:2640-2649 (the Day book's ＋ Entry door) · cap-bank.js:943 (enOpen from a bank line) ·
- *            cap-finance-pay.js:413 (a debit note is opened through enOpen with a preset).
+ * CALLED BY  public/accounts.html and public/finance.html (a <script> tag each; grep -n 'cap-entry' public/*.html) · cap-books.js (the Day book's ＋ Entry door, enOpen near line 2645) · cap-bank.js (enOpen from a bank line, near line 947) ·
+ *            cap-finance-pay.js (a debit note is opened through enOpen with a preset, near line 413).
  * FLOW       enOpen(preset) → GET /api/books/events → tiles → enPick(event) → fields (enSet) → enNext → enPreview (POST /preview) → enSave →
  *            enSaveWrite (POST /events, one client_ref) → enPaintSaved → enReverse (POST /entries/:id/reverse) → enClose.
  * IDS        every control carries its register code (data-cbsid, UX-137): SCR022 (Inside a screen › Entry), whichever page opens the sheet; Back wears CMP006.

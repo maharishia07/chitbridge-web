@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures).
-     CALLED BY Home's Accounts card (manifest /accounts.html), CB Finance and CRM links to a party's statement.
+     CALLED BY Home's Accounts card (manifest ids accounts and compare, /accounts.html#compare), the doors in cap-crm.js (#dues) and cap-finance-returns.js (#gstclose), and the other pages' links (grep -ln 'accounts.html' public/*.html public/app/*.js).
      FLOW  load → whoPaint (CBFrame) → the section's read (GET /api/books/…) → paint; a 401 ends the session
      CARD 16-finance/cb-accounts -->
 <head>

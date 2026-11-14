@@ -8,8 +8,10 @@
  *           four words of source, or the amber "No GST rate" + the host's one action) · cbSlabMenu and cbSlabMenuHTML (the ask-once menu: the shop's
  *           live slabs whose rate is on the pack's menu TODAY, the pack's suggestion for the item's code first with "Use", its citation behind ⓘ; the
  *           shop's 0% exempt slab reads "No GST (exempt)").
- * CALLED BY app.html (prodTaxHTML · prodTaxAttachHTML), cap-categories.js (cbcatPaint), cap-catsetup.js (the catalogue default), cap-definitions.js
- *           (the takeover picker), cap-catalogue.js (the item sheet's rate row), till.html (the bill's "No tax rate · Fix" ask-once sheet).
+ * CALLED BY the three pages that load it by <script src> (grep -lE 'src="/?app/tax-slab-ui.js' public/*.html: app, catalogue, till) and the scripts that call its functions (grep -lw <name> public/*.html public/app/*.js, 14 Nov 2026):
+ *           app.html (prodTaxHTML · prodTaxAttachHTML · cbcatSlabPickHTML · cbSlabOptionsHTML · cbRateMay), cap-categories.js (cbcatSlabPickHTML), cap-catsetup.js (cbSlabOptionsHTML · cbRateMay, the catalogue default),
+ *           cap-definitions.js (cbSlabOptionsHTML, the takeover picker), cap-catalogue.js (the item sheet's rate row: cbSlabChipHTML · cbRateButtonHTML · cbSlabMenu · cbRateMay · cbTaxCharges · cbRateColumnKeys · cbcatSlabPickHTML),
+ *           till.html (cbSlabMenu · cbRateMay, the bill's "No tax rate · Fix" ask-once sheet).
  * FLOW      resolve() → cbSlabChipHTML → Set rate → cbSlabMenu(slabs, pack, code) → cbSlabMenuHTML → the HOST confirms and writes (PATCH /products/:id
  *           on the catalogue, POST /api/till/rate at the counter) → the host repaints the row in place
  * CARD      15-tax-and-country-packs/tax-compute-rate-invoice-tax
