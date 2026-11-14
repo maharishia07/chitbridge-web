@@ -29,6 +29,12 @@
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      the CMDB panel: the configuration register of screens, drawn from /app/screens.js (nothing counted or derived here)
+ * CALLED BY ensureCap('cmdb') in public/app.html:2480 and :6307
+ * FLOW      CBSCREENS (generated app/screens.js) -> register rows -> the read-only panel
+ * CARD      20-settings-governance-and-plan/cmdb
+ */
 'use strict';
 
 var CBCMDB = { on: false, q: '', group: '', kind: 'SCREEN' };

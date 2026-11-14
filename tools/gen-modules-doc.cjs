@@ -12,6 +12,12 @@
  *   node tools/gen-modules-doc.cjs           writes the file
  *   node tools/gen-modules-doc.cjs --check   exits 1 if the file on disk differs
  */
+/*
+ * OWNS      the writer of public/app/MODULES.md from the files that are actually there
+ * CALLED BY e2e/docs-guard.cjs:19 (--check); tools/pr-ready.cjs:134
+ * FLOW      read each public/app file -> one row per module -> MODULES.md (--check exits 1 on drift)
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/seams-index
+ */
 const fs = require('fs');
 const path = require('path');
 
