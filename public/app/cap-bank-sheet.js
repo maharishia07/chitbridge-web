@@ -26,14 +26,14 @@ function bkshParties() {
   const known = (BKB.rail && BKB.rail.parties) || [];
   return known.map((item) => ({ id: item.party_id, name: item.name || '', kind: item.kind || item.role || undefined })).filter((item) => item.id && item.name);
 }
-/** true / false as the shop said, null when it did not or the read failed (SET-49: unknown is not false, and nothing is claimed on unknown) */
+/** true / false as the shop said, null when it did not say (SET-49: unknown is not false, nothing is claimed on it); 'unread' when the read failed: the sheet then ASKS the tax kind and says so, so a registered shop's charge is never posted untaxed by a failed read */
 async function bkshRegistered() {
   try {
     const answer = (await api('bankSheetCountry')) || {};
     return answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null;
   } catch (failure) {
     bkQuiet('bank-sheet-registration', failure);
-    return null;
+    return 'unread';
   }
 }
 /** the shop's own bank ledger stands in for "bank" on the entry: the statement's own account, never a fixed Bank */
@@ -57,7 +57,7 @@ function bkshController() {
     lockedMonth: () => null /* a closed month is the server's answer, shown on the line */,
     statementCurrency: () => BKB.stmtCur || null,
     postable: CBBankPost.POSTABLE,
-    taxRegistered: BKSH.taxRegistered,
+    taxRegistered: BKSH.taxRegistered === true || BKSH.taxRegistered === 'unread' ? true : BKSH.taxRegistered,
     suggestOpts: { country, learned: bkbRules(), parties: bkshParties() },
     parseOpts: { country, currency: BKB.stmtCur || undefined, preset: BKB.preset || undefined }
   });
@@ -121,6 +121,7 @@ async function bankSheetOpen() {
   if (!bkbBound()) return;
   if (!BKB.text || !bkshEngine() || typeof CBBankPreview === 'undefined' || typeof CBBankPreviewUI === 'undefined' || typeof CBBankPost === 'undefined') return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
+  const unread = BKSH.taxRegistered === 'unread';
   BKSH.ctl = bkshController();
   ui.dialog({
     mount: 'BKS014-U03', pop: 'POP092', titleTestid: 'bank-sheet-title',
@@ -136,6 +137,7 @@ async function bankSheetOpen() {
   });
   const said = BKSH.ctl.load(BKB.text, BKB.file && BKB.file.name);
   if (!said.ok) bkshEl('bks_say').textContent = said.why;
+  else if (unread) bkshEl('bks_say').textContent = tx('Could not check whether the shop is registered for GST, so each charge asks what GST it carries.');
   bkshPaint();
 }
 /** the Add button over the lines (owner only: POST /events is the owner's); the sheet then shows every line with what it needs */

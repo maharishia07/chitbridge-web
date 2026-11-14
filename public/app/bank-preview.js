@@ -191,7 +191,8 @@
   function holdProposal_(proposal, opts) {
     var type = proposal && proposal.event && proposal.event.type;
     if (!type || proposal.needs) return proposal;
-    if (opts.postable && opts.postable.indexOf(type) < 0) return Object.assign({}, proposal, { needs: 'not_here' });
+    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0; /* the engine splits a taxed receipt into net + output tax; POST /events carries input tax only, so the bank leg would be short */
+    if ((opts.postable && opts.postable.indexOf(type) < 0) || outputTax) return Object.assign({}, proposal, { needs: 'not_here' });
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
   }
