@@ -25,7 +25,7 @@ W.run('books-grant', async (w) => {
   const reset = () => { S.given = [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, preset: 'auditor', can_see_costs: true, purpose: 'Year-end audit', granted_at: DAY(-5), expires_at: DAY(200), revoked_at: null, state: 'live' }]; };
   reset();
   const J = (r, status, body) => C.json(r, status, body);
-  const example = (key) => JSON.parse(JSON.stringify(C.load().filter((e) => e.key === key)[0].example));   /* the api's own answer shape, then our figures over it */
+  const example = (key) => { const hit = C.load().filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };   /* the api's own answer shape, then our figures over it */
   const line = (ex, over) => Object.assign({}, ex, over);
 
   await ctx.route(base + '/api/**', async (r) => {

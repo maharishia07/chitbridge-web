@@ -90,7 +90,7 @@
 
   /* ── the reads ── */
   /** read the list or the log, whichever view is on; a refusal becomes the sentence shown above the list */
-  function load() {
+  function readView() {
     var read = panel.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
     return read.then(
       function (answer) {
@@ -362,7 +362,7 @@
   }
   /** read the current view from the server and paint it */
   function reload() {
-    return load().then(paint, paintFail);
+    return readView().then(paint, paintFail);
   }
   /** start the screen in the host the page gives */
   function mount(host, o) {
