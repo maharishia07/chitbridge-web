@@ -1,7 +1,7 @@
 /**
  * OWNS  the register of standards (STANDARDS and its area, kind, country and status lists) and the sheets that argue for it (stdWhyHTML, stdRecordHTML); STD001-B06 (the fold bar)
- * CALLED BY  standards.html by <script src> (the only page: grep -lE 'src="/?app/cap-standards.js' public/*.html); its functions are called by standards.html (5 sites), the Legend
- *            screen (3) and the Settings admin screen (1): grep -nE 'std(RowFor|Counts|CompatRows|CompareRows|WhyHTML|RecordHTML|Goto)\(' public
+ * CALLED BY  standards.html by <script src> (the only page: grep -lE 'src="/?app/cap-standards.js' public/*.html); its functions are called by standards.html (stdCompatRows · stdCompareRows · stdWhyHTML · stdRecordHTML · stdGoto), app/cap-legend.js
+ *            (stdCounts · stdWhyHTML · stdRecordHTML) and app/cap-admin.js (stdCounts): grep -lE 'std(Counts|CompatRows|CompareRows|WhyHTML|RecordHTML|Goto)\(' public/*.html public/app/*.js (14 Nov 2026; stdRowFor is called inside this file only; app.html loads it lazily: specStandards runs ensureCap('standards') at app.html:10624, before the Legend and Settings calls use it)
  * FLOW  the register (STANDARDS) → stdRowFor · stdCounts · stdCompatRows · stdCompareRows → the Standards page and the Legend paint what they read here
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/standards-register
  * cap-standards.js — THE REGISTER OF STANDARDS, and the argument for following them.

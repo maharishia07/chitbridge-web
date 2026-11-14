@@ -5,9 +5,10 @@
  *
  * OWNS       ui.progress (CMP020 progress, CMP021 bar, CMP022 spinner: three levels, see PROGRESS; CMP026 batch progress: ui.progress.batch, a block bar with done, left and failed counts; CMP027 batch tray: its corner placement for a long batch; CMP032 batch job note: the state of a saved job in words, and how it ended) · ui.action(name, options) -> the button's HTML string · ui.dialog(options) -> opens through modal() ·
  *            ACTION_SET (the components: code, label key, verb, effect, tones) · the one delegated press listener.
- * CALLED BY  27 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html): the small apps, the labs, the shop pages, app.html, till.html, standards.html (not index.html).
- *            Callers of ui.action / ui.dialog / ui.progress (grep -nE 'ui\.(action|dialog|progress)' public): app.html, offer-lab-next.html, standards.html,
- *            the UI standard page's script, the six CRM screens, Settings policy, Print setup, the chit sheet, the shell and the screen-id chip.
+ * CALLED BY  28 pages by <script src> (grep -lE 'src="/?app/ui.js' public/*.html; 14 Nov 2026): the small apps, the labs, the shop pages, app.html, standards.html (not index.html, not till.html).
+ *            Callers of ui.action / ui.dialog / ui.progress (grep -lE 'ui\.(action|dialog|progress)\b' public/*.html public/app/*.js): the pages accounts, app, cart-design, crm, finance,
+ *            offer-lab-next, settings, shop, standards, tasks and ui-standard; the scripts cap-books, cap-categories, the six CRM screens (cap-crm, -calls, -groups, -leads, -privacy, -record),
+ *            cap-print, cap-settings, chit-price-moved, chit-sheet, screen-id, shell and ui-standard.
  * WIDENS     CBAction.run (accounts-shell.js: busy, one press one write, confirm:) for the press, and modal()/closeModal()
  *            (app.html) for the dialog. It adds no second confirm dialog and no second dialog path.
  * KEYBOARD   a native <button>: Tab reaches it, Enter and Space press it, the focus ring is the theme's; Esc closes a dialog (modal()) and so
