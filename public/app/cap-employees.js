@@ -686,7 +686,7 @@
       '<h2>' +
         esc(T('Add a person')) +
         '</h2><div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
-        '<div class="emp-form">' +
+        '<form class="emp-form" novalidate onsubmit="return false">' +
         '<label for="emp_n">' +
         esc(T('Name')) +
         '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off" required data-required-msg="' + esc(T('Type their name.')) + '">' +
@@ -708,9 +708,9 @@
         '<label for="emp_e">' +
         esc(T('E-mail')) +
         '</label><input data-cbsid="EMP001-I07" class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
-        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go" data-sheet-save>' +
+        '<button data-cbsid="EMP001-B12" type="submit" class="act" id="emp_add_go" data-testid="emp-add-go" data-sheet-save>' +
         esc(T('Add')) +
-        '</button></div>'
+        '</button></form>'
     );
     var typedKey = false,
       tm = null;
