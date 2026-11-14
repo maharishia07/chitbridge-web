@@ -25103,7 +25103,8 @@ const LISTCOLS = [
             ? '<span class="rflag ok" title="Dispute resolved">' + tx('⚑ resolved') + '</span>'
             : '') +
         attnFlag(c) +
-        cancelFlag(c);
+        cancelFlag(c) +
+        billChipHTML(c.billTotal); /* ACC-348b: always on the row, whether or not the Amount column is picked */
       return (
         '<div class="subjwrap">' +
         (lead ? '<span class="lead">' + lead + '</span>' : '') +
@@ -25135,7 +25136,7 @@ const LISTCOLS = [
     w: '112px',
     align: 'right',
     cell: function (c) {
-      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>' + billChipHTML(c.billTotal);
+      return '<span style="font-family:\'Space Mono\'">' + (c.costHidden ? tx('hidden') : c.amt ? fmtMoney(c.amt, c.currency) : '—') + '</span>';
     }
   },
   /* the rest of the money, off until someone picks them in ⚙ columns. A missing figure is "—", never 0. */
