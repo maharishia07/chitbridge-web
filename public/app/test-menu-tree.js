@@ -1,5 +1,9 @@
 /* app/test-menu-tree.js — the product as a menu. ONE shape, two surfaces.
  *
+ * OWNS      testMenuTree(cases, last): the product as a menu (groups, doors, counts), the one shape both the Report and the lab draw
+ * FLOW      cases + last run -> testMenuTree -> groups/doors/counts -> each surface draws them in its own shell
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/test-board
+ *
  * ── ⭐⭐ WHY THIS IS ITS OWN FILE ────────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-12: *"yes, give the lab its own tree as well."*

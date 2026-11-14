@@ -1,6 +1,9 @@
 /** · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions
  * edition.js — CBEdition: WHICH DOORS THIS SHOWING OPENS (round AX1, 2026-10-13). The one helper Home, the shell's switcher and the small apps ask.
  *
+ * OWNS      CBEdition: which entries an edition shows (key, use, load, list, info, shows, view, hidesHref); an edition hides, never grants
+ * FLOW      page load -> use(manifest) or load() -> key() from ?edition, saved pref, full -> shows(id) filters the entries a page draws
+ *
  * An EDITION is data, not a second Home: public/app/manifest.json › `editions` = { <key>: { name, chip, line, entries: '*' | [ids] } }.
  * 'full' is every entry. The auditor edition lists only what an auditor looks at. An id with no entry yet (the parallel-run compare before PR1) draws nothing.
  * ⭐ AN EDITION HIDES, IT NEVER GRANTS: no route reads it; the server still answers may/why on every page an edition leaves visible.
