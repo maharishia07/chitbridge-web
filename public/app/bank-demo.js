@@ -9,7 +9,7 @@
  */
 (function (root) {
   'use strict';
-  var P = root.CBBankPreview,
+  var preview = root.CBBankPreview,
     doc = root.document;
   var CURRENCY = 'AUD',
     ACCOUNT = 'Demo bank account';
@@ -51,7 +51,7 @@
 
   var books = { opening_minor: 1000000, lines: [] },
     parties = [],
-    ctl = null,
+    controller = null,
     view = 'lines',
     posted = 0;
 
@@ -62,23 +62,23 @@
     posted = 0;
     parties = [];
     books.lines = SAMPLE_BOOKS.map(function (row, index) {
-      return { id: 'L' + (index + 1), date: row[0], dr_minor: row[1], cr_minor: row[2], ref: '', narration: row[3], entry_no: 'MJ-' + (index + 1) };
+      return { id: 'L' + (index + 1), currency: CURRENCY, date: row[0], dr_minor: row[1], cr_minor: row[2], ref: '', narration: row[3], entry_no: 'MJ-' + (index + 1) };
     });
   }
   /** the DEMO adapter: no server, no storage. A new party joins the on-screen list; the entry joins the on-screen books as the statement line's own side. */
   async function demoPost(item) {
     if (item.party && item.party.status === 'new') parties.push({ name: item.party.name, kind: item.party.kind });
     posted += 1;
-    books.lines.push({ id: 'D' + posted, date: item.line.date, dr_minor: item.line.credit_minor || 0, cr_minor: item.line.debit_minor || 0, ref: item.ref, narration: item.line.narration, entry_no: 'DEMO-' + posted });
+    books.lines.push({ id: 'D' + posted, currency: CURRENCY, date: item.line.date, dr_minor: item.line.credit_minor || 0, cr_minor: item.line.debit_minor || 0, ref: item.ref, narration: item.line.narration, entry_no: 'DEMO-' + posted });
     return { ok: true, entry_no: 'DEMO-' + posted };
   }
   function makeController() {
-    ctl = P.create({
+    controller = preview.create({
       engine: { recon: root.CBBankRecon, project: root.CBBankProject },
       currency: CURRENCY,
       account: ACCOUNT,
       ledger: function () {
-        return { lines: books.lines.slice(), opening_minor: books.opening_minor };
+        return { lines: books.lines.slice(), opening_minor: books.opening_minor, posted_refs: books.lines.map(function (line) { return line.ref; }).filter(Boolean) };
       },
       post: demoPost,
       lockedMonth: function () {
@@ -88,8 +88,8 @@
       parseOpts: { country: 'AU', currency: CURRENCY }
     });
   }
-  function money(value) {
-    return P.moneyText(value, CURRENCY);
+  function amountText(value) {
+    return preview.moneyText(value, CURRENCY);
   }
   function tag(kind, words) {
     return '<span class="bd-tag bd-' + kind + '">' + esc(words) + '</span>';
@@ -99,7 +99,7 @@
   function lineNote(item, result) {
     if (result) return result.ok ? tag('ok', 'Added in the demo books') : tag('bad', 'Not added: ' + result.why);
     if (item.needs === 'gst_basis') return gstQuestion();
-    if (item.state === 'needs_you') return item.needs ? tag('ask', P.NEEDS_WORDS[item.needs] || 'Needs you') : '<span class="bd-why">' + esc(item.why || 'Nothing here says who or what this is.') + '</span>';
+    if (item.state === 'needs_you') return item.needs ? tag('ask', preview.NEEDS_WORDS[item.needs] || 'Needs you') : '<span class="bd-why">' + esc(item.why || 'Nothing here says who or what this is.') + '</span>';
     return item.state === 'closed' ? tag('bad', item.why) : '';
   }
   function gstQuestion() {
@@ -129,9 +129,9 @@
       result = results[item.key];
     var stateKey = result ? (result.ok ? 'posted' : 'failed') : item.state;
     return (
-      '<tr class="bd-row bd-s-' + esc(stateKey) + '"><td class="bd-d">' + esc(P.dateText(line.date)) + '</td><td class="bd-n">' + esc(line.narration) + '</td>' +
-      '<td class="bd-m">' + (line.debit_minor ? esc(money(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? esc(money(line.credit_minor)) : '') + '</td>' +
-      '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', P.STATE_WORDS[stateKey] || 'Needs you') +
+      '<tr class="bd-row bd-s-' + esc(stateKey) + '"><td class="bd-d">' + esc(preview.dateText(line.date)) + '</td><td class="bd-n">' + esc(line.narration) + '</td>' +
+      '<td class="bd-m">' + (line.debit_minor ? esc(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? esc(amountText(line.credit_minor)) : '') + '</td>' +
+      '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
       '<div class="bd-sub">' + partyBox(item) + lineNote(item, result) + '</div></td></tr>'
     );
   }
@@ -147,22 +147,22 @@
       '<table class="bd-table"><thead><tr><th>Date</th><th>What</th><th>In</th><th>Out</th><th>Balance</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var proposed = r.state === 'proposed';
-        return '<tr class="' + (proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(P.dateText(r.date)) + '</td><td class="bd-n">' + esc(r.narration) + (proposed ? ' ' + tag('go', 'to add') : '') + '</td><td class="bd-m">' + (P.minorOf(r.dr) ? esc(money(r.dr)) : '') + '</td><td class="bd-m">' + (P.minorOf(r.cr) ? esc(money(r.cr)) : '') + '</td><td class="bd-m">' + esc(money(r.balance)) + '</td></tr>';
+        return '<tr class="' + (proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(preview.dateText(r.date)) + '</td><td class="bd-n">' + esc(r.narration) + (proposed ? ' ' + tag('go', 'to add') : '') + '</td><td class="bd-m">' + (preview.minorOf(r.dr) ? esc(amountText(r.dr)) : '') + '</td><td class="bd-m">' + (preview.minorOf(r.cr) ? esc(amountText(r.cr)) : '') + '</td><td class="bd-m">' + esc(amountText(r.balance)) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
   function paintBrs(model) {
     var b = model.projection && model.projection.brs;
     if (!b) return void (el('bd_brs').innerHTML = '');
-    var open = (b.open_lines || []).map(function (o) { return '<li>' + esc(P.dateText(o.date)) + ' · ' + esc(o.narration) + ' · ' + esc(money(o.amount)) + ' ' + esc(o.side === 'in' ? 'in' : 'out') + '</li>'; }).join('');
+    var open = (b.open_lines || []).map(function (o) { return '<li>' + esc(preview.dateText(o.date)) + ' · ' + esc(o.narration) + ' · ' + esc(amountText(o.amount)) + ' ' + esc(o.side === 'in' ? 'in' : 'out') + '</li>'; }).join('');
     el('bd_brs').innerHTML =
-      '<dl class="bd-brs"><dt>Statement closing</dt><dd>' + esc(money(b.closing_statement)) + '</dd><dt>Your books now</dt><dd>' + esc(money(b.closing_books_before)) + '</dd><dt>Your books after the ready lines</dt><dd>' + esc(money(b.closing_books_after)) +
-      '</dd><dt>Difference after</dt><dd class="' + (b.tied ? 'bd-zero' : 'bd-diff') + '">' + esc(money(b.difference_after)) + '</dd></dl>' +
+      '<dl class="bd-brs"><dt>Statement closing</dt><dd>' + esc(amountText(b.closing_statement)) + '</dd><dt>Your books now</dt><dd>' + esc(amountText(b.closing_books_before)) + '</dd><dt>Your books after the ready lines</dt><dd>' + esc(amountText(b.closing_books_after)) +
+      '</dd><dt>Difference after</dt><dd class="' + (b.tied ? 'bd-zero' : 'bd-diff') + '">' + esc(amountText(b.difference_after)) + '</dd></dl>' +
       (open ? '<p class="bd-note">Still open:</p><ul class="bd-open">' + open + '</ul>' : '<p class="bd-note">Every line is in the books.</p>');
   }
   function paintStrip(model) {
     var b = model.projection && model.projection.brs,
-      n = ctl.readyCount();
-    el('bd_sum').textContent = b ? 'Statement ' + money(b.closing_statement) + ' · Books now ' + money(b.closing_books_before) + ' · Difference now ' + money(b.difference_before) : '';
+      n = controller.readyCount();
+    el('bd_sum').textContent = b ? 'Statement ' + amountText(b.closing_statement) + ' · Books now ' + amountText(b.closing_books_before) + ' · Difference now ' + amountText(b.difference_before) : '';
     var go = el('bd_add');
     go.disabled = !n;
     go.textContent = n ? 'Add ' + n + (n === 1 ? ' line' : ' lines') + ' to the demo books' : 'Nothing ready to add';
@@ -174,7 +174,7 @@
     });
   }
   function paint() {
-    var model = ctl.view();
+    var model = controller.view();
     el('bd_msg').textContent = model.refusal || '';
     if (!model.parsed) return;
     paintLines(model);
@@ -185,8 +185,8 @@
   }
 
   /* ── actions ── */
-  function load(text, name) {
-    var said = ctl.load(text, name);
+  function loadStatement(text, name) {
+    var said = controller.load(text, name);
     el('bd_msg').textContent = said.ok ? '' : said.why;
     if (said.ok) paint();
     return said;
@@ -194,14 +194,14 @@
   function startAgain() {
     resetBooks();
     makeController();
-    load(SAMPLE_CSV, 'Sample statement');
+    loadStatement(SAMPLE_CSV, 'Sample statement');
   }
   function askToPost() {
-    var text = ctl.confirmText();
+    var text = controller.confirmText();
     if (!text) return void (el('bd_msg').textContent = 'The engine sent no figures for this press, so nothing was added.');
     var body = text.lines.map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('') + '<p class="bd-note">Demo: only the books on this page change.</p>';
     root.CBLabKit.confirm(text.title, body, function () {
-      ctl.postReady().then(function () { view = 'brs'; paint(); });
+      controller.postReady().then(function () { view = 'brs'; paint(); });
     }, { okLabel: 'Add to the demo books' });
   }
   function onFile(event) {
@@ -211,15 +211,15 @@
     file.text().then(function (text) {
       resetBooks();
       makeController();
-      load(text, file.name);
+      loadStatement(text, file.name);
     });
   }
   function onClick(event) {
     var t = event.target.closest('[data-act]');
     if (!t) return;
     var act = t.getAttribute('data-act');
-    if (act === 'gst') ctl.answer('gst_basis', t.getAttribute('data-v'));
-    else if (act === 'meant') ctl.editParty(t.getAttribute('data-key'), { status: 'existing', id: t.getAttribute('data-id'), name: t.getAttribute('data-name') });
+    if (act === 'gst') controller.answer('gst_basis', t.getAttribute('data-v'));
+    else if (act === 'meant') controller.editParty(t.getAttribute('data-key'), { status: 'existing', id: t.getAttribute('data-id'), name: t.getAttribute('data-name') });
     else if (act === 'view') view = t.getAttribute('data-v');
     paint();
   }
@@ -228,8 +228,8 @@
       act = t.getAttribute && t.getAttribute('data-act'),
       key = t.getAttribute && t.getAttribute('data-key');
     if (act !== 'pname' && act !== 'pkind') return;
-    var party = ctl.view().items.filter(function (i) { return i.key === key; })[0].party;
-    var said = ctl.editParty(key, { name: act === 'pname' ? t.value : party.name, kind: act === 'pkind' ? t.value : party.kind });
+    var party = controller.view().items.filter(function (i) { return i.key === key; })[0].party;
+    var said = controller.editParty(key, { name: act === 'pname' ? t.value : party.name, kind: act === 'pkind' ? t.value : party.kind });
     if (!said.ok) el('bd_msg').textContent = said.why;
     paint();
   }

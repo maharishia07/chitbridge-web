@@ -9,6 +9,8 @@
  *           it; that public/app/cap-bank-post.js makes a new party FIRST, then posts with the party id and client_ref bank:<fp>, and says an owner-only refusal once;
  *           and that public/bank-demo.html is public and inert: strict CSP, noindex, no config.js / device-id.js, no network call and no storage in its files.
  *           The engines are stand-ins here (their contract is read through one door, projectionOf_); the real engines are proven by the SIT walk.
+ * SCREEN    public/app/cap-bank-post.js (the adapter) has no screen of its own: what it could not do is said in words on the line ("Could not add ...", tested here); the
+ *           light and dark theme at 1366 and 390, AA contrast and the locale (string layer) of the page that shows it are walked by e2e/walk-bank-demo.cjs.
  * CALLED BY ci.yml (the unit checks): node e2e/bank-preview.test.cjs
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  */

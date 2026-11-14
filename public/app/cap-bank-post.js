@@ -42,6 +42,18 @@
     if (modeOf) body = modeOf(body);
     return body;
   }
+  /** the id of the party this line's entry names: an existing one as picked, a new one made FIRST (once per name and kind in this run); { ok, id } or the reason it could not be made */
+  async function partyOf(deps, made, party) {
+    if (!party) return { ok: true, id: null };
+    if (party.status !== 'new') return { ok: true, id: party.status === 'existing' ? party.id : null };
+    var tag = String(party.name).toLowerCase() + '|' + party.kind;
+    if (!made[tag]) {
+      var step = await makeParty(deps.api, party);
+      if (!step.ok) return step;
+      made[tag] = step.id;
+    }
+    return { ok: true, id: made[tag] };
+  }
   /**
    * adapter({ api, who?, modeOf? }) → async post(item)
    *   api     the page's api(key, { body }) (core.js)            who  { role } of the signed-in person
@@ -52,18 +64,10 @@
     return async function post(item) {
       var refused = ownerRefusal(deps.who);
       if (refused) return { ok: false, why: refused };
-      var partyId = item.party && item.party.status === 'existing' ? item.party.id : null;
-      if (item.party && item.party.status === 'new') {
-        var tag = String(item.party.name).toLowerCase() + '|' + item.party.kind;
-        if (!made[tag]) {
-          var step = await makeParty(deps.api, item.party);
-          if (!step.ok) return step;
-          made[tag] = step.id;
-        }
-        partyId = made[tag];
-      }
+      var party = await partyOf(deps, made, item.party);
+      if (!party.ok) return party;
       try {
-        var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+        var reply = await deps.api('booksEventPost', { body: bodyOf(item, party.id, deps.modeOf) });
         return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null };
       } catch (failure) {
         return { ok: false, why: (failure && failure.message) || 'Could not add this entry.' };
