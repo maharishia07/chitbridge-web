@@ -105,7 +105,8 @@
       entry = opts.engine.entry;
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return proposal;
-    var resolved = entry.resolve(line, { party: asked.party.id, party_name: asked.party.name }, suggestOpts);
+    var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
+    var resolved = entry.resolve(line, answers, suggestOpts);
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
       return proposal;
@@ -129,7 +130,7 @@
   /** the owner's edit of a line's party (a new name or kind, or an existing party picked from did-you-mean) laid over what the engine said */
   function withPartyEdit(item, edit, asked) {
     if (edit && item.party) item.party = Object.assign({}, item.party, edit);
-    if (asked) item.party = Object.assign({}, asked.party, { status: asked.party.status });
+    if (asked && asked.party) item.party = Object.assign({}, asked.party);
     return item;
   }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
@@ -143,6 +144,7 @@
     preview.refusal = null;
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
+      item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
@@ -245,20 +247,36 @@
     var clean = picked ? { status: 'existing', id: edit.id, name: edit.name } : { status: 'new', name: String((edit && edit.name) || '').trim(), kind: edit && edit.kind };
     if (clean.status === 'new' && !clean.name) return { ok: false, why: 'Give the new party a name.' };
     preview.partyEdits[key] = clean;
+    delete preview.resolveRefusal[key]; /* the owner changed this line: the old refusal no longer applies */
     projectAgain(opts, preview);
     return { ok: true };
   }
-  /** the owner has said who a "needs you" line is (the party box): the line is composed again through CBBankEntry.resolve. A NEW party keeps its placeholder id until the adapter makes it. */
-  function resolveLine(opts, preview, key) {
+  /** the answers the owner gave for a line, as resolve() takes them: the party (new or existing), or an account from the chart (+ the tax kind on money out); or the words for what is missing */
+  function answersOf(item, key, given) {
+    if (given && given.account) return { answers: { account: given.account, tax_kind: given.tax_kind || undefined } };
+    if (given) return { why: 'Pick an account from the list first.' };
+    if (!item.party) return { why: 'Say who this is first.' };
+    var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
+    return { answers: { party: party } };
+  }
+  /**
+   * the owner has answered a "needs you" line (who it is, or which account and tax kind): the line is composed again through CBBankEntry.resolve, the one path.
+   * A refusal (ours or the engine's) is kept against THAT line, in preview.resolveRefusal, until the owner changes the line: it survives every repaint.
+   * A NEW party keeps its placeholder id until the adapter makes it. No new chart account: the account is one the chart already has.
+   */
+  function resolveLine(opts, preview, key, given) {
     var item = preview.items.filter(function (one) {
       return one.key === key;
     })[0];
-    if (!item || !item.party) return { ok: false, why: 'Say who this is first.' };
-    var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
-    preview.resolved[key] = { party: party };
-    projectAgain(opts, preview);
+    var read = item ? answersOf(item, key, given) : { why: 'This line is not on the statement.' };
+    delete preview.resolveRefusal[key];
+    if (read.answers) {
+      preview.resolved[key] = read.answers;
+      projectAgain(opts, preview);
+    } else preview.resolveRefusal[key] = read.why;
     var refusalWords = preview.resolveRefusal[key];
     if (refusalWords) delete preview.resolved[key];
+    if (refusalWords) projectAgain(opts, preview);
     return refusalWords ? { ok: false, why: refusalWords } : { ok: true };
   }
   /**
@@ -288,8 +306,8 @@
       editParty: function (key, edit) {
         return editParty(opts, preview, key, edit);
       },
-      resolveLine: function (key) {
-        return resolveLine(opts, preview, key);
+      resolveLine: function (key, given) {
+        return resolveLine(opts, preview, key, given);
       },
       answer: function (name, value) {
         preview.answers[name] = value;

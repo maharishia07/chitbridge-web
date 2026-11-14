@@ -23,7 +23,7 @@ of file each thing is; this says what already does the job.
 | 77 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
 | 75 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
-| 72 | `list` | `cap-settings.js` |  |
+| 73 | `list` | `cap-settings.js` |  |
 | 70 | `lines` | `catalogue-read.js` | own products are the ones they maintain, and an arbitrary interleave would put a rule where a decision belongs |
 | 70 | `register` | `regulation.js` | register(pack) → the pack — |
 | 68 | `entry` | `books-store.js` |  |
@@ -161,6 +161,7 @@ of file each thing is; this says what already does the job.
 | 18 | `today` | `kural.js` |  |
 | 18 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 18 | `more` | `lab-kit.js` | idKey: |
+| 18 | `resolve` | `page.js` |  |
 | 18 | `round` | `convert.js` | round HALF UP at a fixed dp, not toFixed's binary surprise — |
 | 18 | `notMigrated` | `crm-followups.js` |  |
 | 18 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
@@ -179,7 +180,6 @@ of file each thing is; this says what already does the job.
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
 | 16 | `confirm` | `lab-kit.js` | opts: |
-| 16 | `resolve` | `page.js` |  |
 | 16 | `verdict` | `rail-thread.js` |  |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 16 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |

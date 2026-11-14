@@ -157,6 +157,19 @@ const make = (over) => {
   assert.strictEqual(e.ctl.view().items[1].party.status, 'existing');
   ok('a new party needs a name; an existing party can be picked from did-you-mean');
 
+  /* answering a needs-you line: a refusal stays on ITS line until the owner changes that line */
+  const g = make({ engine: Object.assign(engines({ suggest: [], project: 0 }), {}) });
+  g.ctl.load('ok');
+  g.ctl.answer('x', 1);
+  const stuck = g.ctl.view().items[2].key;
+  const none = g.ctl.resolveLine(stuck, { account: '' });
+  assert.strictEqual(none.ok, false);
+  g.ctl.answer('y', 2);
+  assert.strictEqual(g.ctl.view().items[2].resolveWhy, 'Pick an account from the list first.');
+  g.ctl.editParty(stuck, { name: 'ATO', kind: 'supplier' });
+  assert.strictEqual(g.ctl.view().items[2].resolveWhy, null);
+  ok('a refused answer stays on its line through repaints and goes when the owner changes the line');
+
   /* in-app adapter */
   const calls = [];
   const api = async (key, o) => {
