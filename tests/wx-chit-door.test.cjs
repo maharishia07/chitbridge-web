@@ -18,7 +18,7 @@ ok(!here({ sel: 'other-folder', _byId: 'bill-old', rows }), 'a selection from an
 ok(here({ sel: 'bill-new', rows }), 'a listed selection stays');
 
 /* …and the door-opened chit wears MY copy's status (participants[] row of the header's entity), not a fixed 'delivered' (it read OPEN after Close) */
-const base = /current_status:(\(\(r\.participants\|\|\[\]\)\.find\(\(x\)=>x&&x\.entity_id===h\.entity_id\)\|\|\{\}\)\.current_status\|\|'delivered'),open_dispute_count:0\}\);/.exec(flatHtml);
+const base = /current_status:(\(\(r\.participants\|\|\[\]\)\.find\(\(x\)=>x&&x\.entity_id===h\.entity_id\)\|\|\{\}\)\.current_status\|\|'delivered'),open_dispute_count:0,bill_total:r\.bill_total\}\);/.exec(flatHtml);
 ok(base, 'openChit builds an unlisted chit from my participant row');
 const mine = (r, h) => Function('r', 'h', 'return ' + base[1])(r, h);
 ok(mine({ participants: [{ entity_id: 'buyer', current_status: 'delivered' }, { entity_id: 'shop', current_status: 'completed' }] }, { entity_id: 'shop' }) === 'completed', 'the shop sees its own completed, not the buyer\'s delivered');

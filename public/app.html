@@ -25828,7 +25828,7 @@ async function openChit(id, silent) {
           manual_subject: h.manual_subject,
           auto_subject: h.auto_subject,
           current_status: ((r.participants || []).find((x) => x && x.entity_id === h.entity_id) || {}).current_status || 'delivered',
-          open_dispute_count: 0, bill_total: r.bill_total /* ACC-348b: a chit opened by its door has no list row: its amount comes from the detail's bill_total */
+          open_dispute_count: 0, bill_total: r.bill_total
         });
       /* ⚠️ WX-O2C (2026-10-13): MY copy's status (participants[] row of my entity — the header is my copy) — a chit opened by its door, not on the
              list's page, was painted with a fixed 'delivered' and read OPEN after it was accepted or completed. */
