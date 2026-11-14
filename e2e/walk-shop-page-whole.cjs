@@ -58,8 +58,9 @@ W.run('shop-page-whole', async (w) => {
       return { ok: m.scrolled > 0 && m.shell === before && m.band <= 1, saw: 'pane scrolled ' + m.scrolled + ' px · bar top ' + m.shell + ' (was ' + before + ') · band ' + m.band + ' px under the pane top' };
     });
     await w.step('F4·' + width, 'the search box has an accessible name of its own', async () => {
-      const name = await page.evaluate(() => document.getElementById('p_search').getAttribute('aria-label'));
-      return { ok: !!name, saw: 'aria-label "' + name + '"' };
+      /* field-2: the search box is a ui.field, its name is a visible <label for>, never the placeholder */
+      const name = await page.evaluate(() => { const l = document.querySelector('label[for="p_search"]'); return l ? l.textContent.trim() : document.getElementById('p_search').getAttribute('aria-label'); });
+      return { ok: !!name, saw: 'name "' + name + '"' };
     });
     await w.step('F7a·' + width, 'axe finds nothing at ' + width + ' px', async () => {
       const r = await A.check(page);

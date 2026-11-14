@@ -108,6 +108,32 @@ const measure = (page, table) => page.evaluate(([pairs, SCREEN_]) => {
         await page.close();
       }
     }
+    /* NARROW AND LONG: the daybook head on a 375 px phone, and with a long translated title, a long period and a 3-digit notices count (the words are swapped after the paint:
+       it is the drawn width that counts); the same budget as above, 30% at text S and M, HEAD_PHONE_LARGE_TEXT at L and XL */
+    for (const [label, vw, longWords] of [['phone 375x740', 375, false], ['phone 390x740 long words', 390, true], ['phone 375x740 long words', 375, true]]) {
+      for (const [sz, k] of SIZES.filter((s2) => s2[0] === 'm' || s2[0] === 'l')) {
+        const page = await browser.newPage({ viewport: { width: vw, height: 740 } });
+        await page.goto(S.url('/list-lab.html')); await page.waitForSelector('[data-plist]');
+        await page.evaluate((kk) => { document.documentElement.style.setProperty('--k', String(kk)); }, k);
+        await page.click('[data-plist="daybook"]'); await page.waitForTimeout(150);
+        if (longWords) {
+          await page.evaluate(() => {
+            const set = (sel, txt) => { const e = document.querySelector(sel); if (e) e.firstChild.textContent = txt; };
+            set('.cbl-title h1', 'Journal des écritures comptables');
+            set('.cbl-chip.period', '1 avr. 2025 – 2 oct. 2026 ▾');
+            set('[data-cbl-pop="notes"]', '1 avr. 2025 – 2 oct. 2026 · 128 notifications ▾');
+          });
+        }
+        const m = await measure(page, CODE_OF);
+        const limit = sz === 'l' || sz === 'xl' ? HEAD_PHONE_LARGE_TEXT : HEAD_PHONE;
+        const pct = Math.round((m.head / m.ih) * 100);
+        ok(pct <= limit, label + ' · ' + sz + ' · daybook: the head is ' + pct + '% of the window (<= ' + limit + '%) (' + Math.round(m.head) + ' px)');
+        ok(m.sideways <= 0, label + ' · ' + sz + ' · daybook: no sideways scroll (' + m.sideways + ')');
+        if (!longWords) ok(/Apr/.test(await page.$eval('[data-cbl-pop="notes"]', (e) => e.textContent)), label + ' · ' + sz + ' · daybook: the folded chip names the period');
+        if (!longWords) ok(!(await page.$('.cbl-chip.period')), label + ' · ' + sz + ' · daybook: no second period chip beside the folded one');
+        await page.close();
+      }
+    }
     /* forced colours (Windows high contrast): the drawn tick keeps a visible checked state */
     try {
       const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, forcedColors: 'active' });

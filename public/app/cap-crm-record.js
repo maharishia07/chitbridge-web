@@ -1054,8 +1054,7 @@ function crmRecordPaint(p, rec) {
   if (typeof crmConsentHTML === 'function') secs.push(crmConsentHTML(p, rec));
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
-    var kind = cu ? 'customer' : 'supplier',
-      pid = p.party_id;
+    var kind = cu ? 'customer' : 'supplier';
     if (CRM.ledger)
       secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
     else
@@ -1141,11 +1140,11 @@ function crmRecordPaint(p, rec) {
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec), true);
   var rwSec = document.querySelector('[data-testid="crm-sec-rewards"]');
-  if (rwSec && typeof CBRewards !== 'undefined') {
+  if (rwSec && typeof CBRewardsPane !== 'undefined') {
     var rwOnce = function () {
       if (rwSec.open && !rwSec.getAttribute('data-read')) {
         rwSec.setAttribute('data-read', '1');
-        CBRewards.load('crm_rw', {
+        CBRewardsPane.load('crm_rw', {
           id: p.party_id,
           api: api,
           t: tx,

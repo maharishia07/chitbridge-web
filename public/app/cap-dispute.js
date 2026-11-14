@@ -14,6 +14,7 @@
  *
  * OWNS      the Disputes list (Tasks › Disputes), the sheet's dispute section (raise · talk · resolve), the on-record banner.
  * CALLED BY tasks.html (CBDispute.mount · CBDispute.open for ?view=disputes&chit=), chit-sheet.js (the section), app.html (the workshop's screen).
+ * FLOW      CBDispute.mount(el) → listLoad reads the disputeQueue a page at a time → the list draws on CBList and the pager; a row opens the chit sheet (open) → inSheet reads and paints the chit's disputes (sheetRead · sheetPaint) → raise asks for a reason of 10 letters or more and sends it through CBAction.run → resolveAsk takes the resolution note and the list is read again.
  * CARD 03-disputes-service-and-register/disputes-per-party-confidential
  */
 

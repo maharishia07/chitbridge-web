@@ -16,6 +16,8 @@
  * booksTermsSet) · fqRemindMe (Remind me: the follow-up's body comes from the cheque the server listed — party, day, sum — so there is nothing to type;
  * CRM's sheet lives in cap-crm.js, which this page does not load).
  * ⚠️ Never error.message on a screen: a failure says what happened and offers Try again. Finance SUGGESTS: the steps are the owner's to press.
+ * OWNS      the Cheques tab of CB Finance: the cheques in hand and the steps the server offers each (fqLoad · fqMount), the post-dated reminder switch (fqReminderSheet · fqSave) and Remind me (fqRemindMe)
+ * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (fqLoad · fqMount). The workshop's Ledger › Cheques shares the cap-books.js functions, not this file
  * FLOW  finance.html opens Cheques -> api(booksCheques) -> the list and the reminder switch -> a step, Remind me or Save asks the server and repaints
  * CARD 16-finance/cheques
  */

@@ -16,7 +16,11 @@
  *
  * ⚠️ Declares only `var` / function names the app does not declare with let/const (EP, CFG, SESSION, UI are the host
  * page's own). ⚠️ NEVER the banned words on a screen — it is the Ledger / CB Accounts.
- * FLOW  loaded right after core.js → tx / friendlyErr / toast → CBAction → CBUnsaved → CBLedger → the page's own script      CARD 29-qa-test-tooling-ux-locale-and-design-system/accounts-shell
+ * OWNS      the shared floor: tx · txf · txn · cbLang · CBSTR (strings) · friendlyErr · toast · toastHost · CBConfirm (the question box) · CBAction · CBUnsaved · CBLedger · CB_HOMES · the CB_*_EP endpoint maps · billUseChoiceHTML
+ * CALLED BY every page with <script src="/app/accounts-shell.js">: public/accounts.html · app.html · authority-forms.html · catalogue.html · crm.html · employees.html · finance.html · know-your-business.html · network.html ·
+ *           operations.html · settings.html · shop.html · store.html · tasks.html · ui-standard.html · index.html (repo root)
+ * FLOW      loaded right after core.js → tx / friendlyErr / toast → CBAction → CBUnsaved → CBLedger → the page's own script
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/small-app-shell-page-frame-cblist-list-controls
  */
 'use strict';
 
@@ -203,7 +207,7 @@ function billUseChoiceHTML(rows, pick) {
         item[0] +
         '" onclick="' +
         (pick || 'pickBillUse') +
-        '(this.dataset.use)">' +
+        '(this.dataset.use)" data-cbsid="SCR045-B01">' +
         tx(item[1]) +
         '</button>'
       );
@@ -397,7 +401,7 @@ function toast(msg, undo) {
   const _lvl = toastLevel(msg);
   if (typeof cblog === 'function') cblog(_lvl, msg);
   const node = toastHost(_lvl === 'error');
-  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn">' + tx('Undo') + '</button>' : ''}</div>`;
+  node.innerHTML = `<div class="toast ${_lvl === 'error' ? 'err' : _lvl === 'warn' ? 'warn' : ''}">${esc(msg)}${undo ? '<button id="undoBtn" data-cbsid="SCR045-B02">' + tx('Undo') + '</button>' : ''}</div>`;
   if (undo) {
     document.getElementById('undoBtn').onclick = () => {
       undo();
@@ -554,6 +558,7 @@ var CBAction = (function () {
     var m = String((e && e.message) || '');
     if (/Already working/i.test(m)) return tx('Still finishing the last one — one moment');
     if (/session expired|sign in again/i.test(m)) return tx('Your session expired — please sign in again');
+    if (typeof isKeptKeyWords === 'function' && isKeptKeyWords(m)) return m; /* core.js: a 5xx or a 90 s abort on a kept key says check first; never "nothing was sent" */
     if (/offline|Failed to fetch|network|No answer from the server/i.test(m)) return tx('No connection — nothing was sent. Try again');
     var st = e && e.status;
     if (st >= 400 && st < 500 && st !== 404 && m && !/^API \d/.test(m)) return m;
@@ -781,7 +786,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     '<button data-cbsid="CMP003" type="button" data-testid="confirm-cancel" style="min-height:44px;padding:0 16px;border:1px solid var(--line,#DDD6C6);border-radius:9px;background:transparent;color:inherit;font:inherit;font-weight:600;cursor:pointer">' +
     esc(tx('Cancel')) +
     '</button>' +
-    '<button type="button" data-testid="confirm-ok" style="min-height:44px;padding:0 18px;border:1px solid ' +
+    '<button type="button" data-testid="confirm-ok" data-cbsid="SCR045-B03" style="min-height:44px;padding:0 18px;border:1px solid ' +
     (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') +
     ';border-radius:9px;background:' +
     (danger ? 'var(--red-i,#8E3517)' : 'var(--green,#16693F)') +
@@ -816,6 +821,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   node.addEventListener('click', function (ev) {
     if (ev.target === node && Date.now() - openedAt >= CONFIRM_BACKDROP_GRACE_MS) close(false);
   });
+  node.setAttribute('data-pop', 'POP121');
   node.showModal();
   openedAt = Date.now();
 }

@@ -358,7 +358,7 @@ async function run() {
       ok(/rows = /.test(man._) && /phase = /.test(man._) && /fits = /.test(man._) && /Sign-in Lab Roadmap/.test(man._), 'manifest · the keys (rows · phase · fits) are in the manifest\'s own dictionary, read by the Sign-in Lab Roadmap tab');
       const { ctx } = await profile(1366, 800, { signedOut: true }), pg = await open(ctx);
       let routesOk = true;
-      for (const e of BUILT) { const r = await ctx.request.get(base + e.route); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
+      for (const e of BUILT) { if (/^https?:/.test(e.route)) continue; /* an external dev card (UX-141) is not a page we serve */ const r = await ctx.request.get(base + e.route.replace('{bridge_id}', 'CBTEST1234')); if (r.status() !== 200) { routesOk = false; console.log('      ' + e.route + ' → ' + r.status()); } }
       ok(routesOk, 'every built entry\'s route returns 200');
       const txt = await pg.evaluate(() => document.body.innerText);
       ok(!/\d+ (bills|customers|suppliers)|₹/.test(txt), 'signed out · no per-shop figure (no bills, customers, rupees)');
@@ -371,6 +371,14 @@ async function run() {
       /* every "Your work" number is a door to the folder it counts */
       const hrefs = await pg.evaluate(() => { const o = {}; ['work-new', 'work-in', 'work-out', 'work-mine', 'work-done'].forEach((k) => { const n = document.querySelector('[data-testid="' + k + '-open"]'); o[k] = n && n.getAttribute('href'); }); return o; });
       ok(hrefs['work-new'] === '/tasks.html?view=orders_in' && hrefs['work-in'] === '/tasks.html?view=orders_in' && hrefs['work-out'] === '/tasks.html?view=orders_out' && hrefs['work-mine'] === '/tasks.html?view=tasks' && hrefs['work-done'] === '/tasks.html?view=done', 'work · each number opens its folder (' + JSON.stringify(hrefs) + ')');
+      await ctx.close();
+    }
+    {
+      /* SIGNED IN, a manifest whose rail has no read behind it: nothing is drawn, never a made-up number (index-page-breaks "the rail invents a number") */
+      const { ctx } = await profile(1366, 800, { manifest: Object.assign({}, PLANTED, { rail: { route: '/tasks.html', facts: null } }) }), pg = await open(ctx);
+      await pg.waitForSelector('.cbsh-box', { timeout: 8000 }).catch(() => {});
+      await pg.waitForTimeout(800);
+      ok(await pg.locator('[data-testid="rail"]').count() === 0, 'signed in · a rail with no read behind it draws nothing (never an invented number)');
       await ctx.close();
     }
 

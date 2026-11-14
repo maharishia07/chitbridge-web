@@ -1,4 +1,8 @@
 /* app/attach-ui.js — ATTACH + VIEW, as a helper any screen can reuse.  (classic script, shared global scope)
+ * OWNS       the attachment list, the Attach a file button and the upload / open calls (cbAttachList · cbAttachButton · cbAttachPick · cbAttachOpen); SCR040-C01, SCR040-B01
+ * CALLED BY  4 pages by <script src> (grep -lE 'src="/?app/attach-ui.js' public/*.html): accounts, app, crm, finance. cbAttach* is called in app.html (6 sites) and the chit thread script (2)
+ * FLOW       a screen calls cbAttachList / cbAttachButton while it paints → a press runs cbAttachPick (file → base64 → POST → toast) → cbAttachOpen fetches the bytes with the session
+ * CARD       29-qa-test-tooling-ux-locale-and-design-system/attach
  *
  * WHY THIS FILE EXISTS
  * ────────────────────
@@ -160,7 +164,7 @@ function cbAttachList(atts, opts) {
       var short = item.name.length > 26 ? item.name.slice(0, 26) + '…' : item.name;
       var meta = (item.t || 'file').toUpperCase() + (item.size ? ' · ' + cbAttachSize(item.size) : '');
       return (
-        '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' +
+        '<span data-cbsid="SCR040-C01" data-testid="cb-attach-item" onclick="cbAttachOpen(\'' +
         cbAttachSafe(item.id) +
         '\')"' +
         ' title="' +
@@ -219,7 +223,7 @@ function cbAttachButton(ctx) {
   var arg = esc(JSON.stringify(payload));
 
   return (
-    '<button type="button" class="btn" data-testid="cb-attach-btn"' +
+    '<button data-cbsid="SCR040-B01" type="button" class="btn" data-testid="cb-attach-btn"' +
     ' onclick="cbAttachPick(\'' +
     arg +
     '\')"' +

@@ -250,11 +250,6 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
   /* the party table (1300 / 2100): one line a party — name · balance */
-  #bk_body table.bkparty tr{display:flex;align-items:baseline;gap:10px}
-  #bk_body table.bkparty td{width:auto}
-  #bk_body table.bkparty td.opt{display:none}
-  #bk_body table.bkparty td:nth-child(2){flex:1;text-align:left}
-  #bk_body table.bkparty td[data-l]::before{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
@@ -286,7 +281,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   </main>
 </div>
 <div id="toast"></div>
-<dialog class="sheet" id="acc_sheet" data-testid="acc-sheet"></dialog>   <!-- the Pay / Remind sheet (M28): the app's modal(html) signature, as crm.html -->
+<dialog class="sheet" id="acc_sheet" data-testid="acc-sheet" data-pop="POP047"></dialog>   <!-- the Pay / Remind sheet (M28): the app's modal(html) signature, as crm.html -->
 
 <script>
 'use strict';
@@ -811,14 +806,20 @@ function todoGo(i) {
   if (tab) show(tab);
   else toast(tx('This starts after an update'));
 }
-function todoRow(it, i) {
-  const off = todoOff(it),
-    a = it.action || {};
-  return `<div class="todo-row${off ? ' off' : ''}" data-testid="todo-row-${esc(it.kind)}" data-kind="${esc(it.kind)}">
-    <span class="todo-sym" aria-hidden="true">${off ? '⏳' : '⚠'}</span>
-    <span class="todo-n mono" data-testid="todo-n-${esc(it.kind)}">${off ? '' : Number(it.count) || 0}</span>
-    <span class="todo-words" data-testid="todo-words-${esc(it.kind)}">${esc(off ? tx('Starts after an update') : it.words)}</span>
-    <button data-cbsid="BKS001-B05" type="button" class="act todo-go" data-testid="todo-go-${esc(it.kind)}" data-i="${i}"${off ? ' disabled' : ''}>${esc(a.label || tx('Open'))}</button>
+/* the row's one button — only when the server named an action; a row with none (bills not in the books) is a count and a sentence, no dead button */
+function todoButton(item, index, notChecked) {
+  const action = item.action || {};
+  if (!action.screen && !action.label) return '';
+  return `<button data-cbsid="BKS001-B05" type="button" class="act todo-go" data-testid="todo-go-${esc(item.kind)}" data-i="${index}"${notChecked ? ' disabled' : ''}>${esc(action.label || tx('Open'))}</button>`;
+}
+/* one To do row: symbol · count · sentence · the button when there is one */
+function todoRow(item, index) {
+  const notChecked = todoOff(item);
+  return `<div class="todo-row${notChecked ? ' off' : ''}" data-testid="todo-row-${esc(item.kind)}" data-kind="${esc(item.kind)}">
+    <span class="todo-sym" aria-hidden="true">${notChecked ? '⏳' : '⚠'}</span>
+    <span class="todo-n mono" data-testid="todo-n-${esc(item.kind)}">${notChecked ? '' : Number(item.count) || 0}</span>
+    <span class="todo-words" data-testid="todo-words-${esc(item.kind)}">${esc(notChecked ? tx('Starts after an update') : item.words)}</span>
+    ${todoButton(item, index, notChecked)}
   </div>`;
 }
 async function accTodo(body) {

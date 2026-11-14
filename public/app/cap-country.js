@@ -377,9 +377,24 @@ function csuMoneyTag(currency) {
 function csuLogExample(what, failure) {
   if (typeof cblog === 'function') cblog('error', 'country setup: ' + what + ': ' + ((failure && failure.message) || failure));
 }
+/** lakh · crore words for an amount from one lakh up, or '' below it. NOT Intl: a browser's ICU decides whether en-IN compact says "crore" (Chromium 129,
+    CLDR 45, says "1.2 billion"), and an Indian shop that chose lakh · crore must read lakh · crore whatever browser it opens (SET-93, found 13 Nov on sit-au). */
+function csuLakhWords(amount) {
+  var size = Math.abs(Number(amount)),
+    unit = size >= 1e7 ? [1e7, 'crore'] : size >= 1e5 ? [1e5, 'lakh'] : null;
+  if (!unit) return '';
+  try {
+    return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 }).format(Number(amount) / unit[0]) + ' ' + unit[1];
+  } catch (failure) {
+    csuLogExample('lakh words', failure);
+    return '';
+  }
+}
 /** the words for a big number under a tag — Intl's compact notation (en-IN: "12 lakh" · en-US: "1.2 million"); the engine's own tag table decides which */
 function csuBigWords(amount, wordsChoice, currency) {
   var tag = wordsChoice === 'lakh' ? 'en-IN' : wordsChoice === 'million' ? 'en-US' : csuMoneyTag(currency);
+  var lakh = tag === 'en-IN' ? csuLakhWords(amount) : '';
+  if (lakh) return lakh;
   try {
     return new Intl.NumberFormat(tag, { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 }).format(amount);
   } catch (failure) {

@@ -49,7 +49,7 @@ ctx.window = ctx;
 vm.createContext(ctx);
 ['app/ui.js', 'app/strings-ta.js', 'app/strings-hi.js', 'app/strings-ar.js', 'app/strings-fr.js', 'app/strings-ui-standard.js', 'app/ui-standard.js'].forEach((file) => vm.runInContext(read(file), ctx, { filename: file }));
 const model = vm.runInContext('CBUiStandard', ctx), components = ctx.ui.components;
-const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'listfield', 'listopener', 'listtoggle', 'listselect', 'listtab', 'listcommand', 'listrowaction', 'listcolumn', 'batchnote', 'bookfield', 'bookselect', 'bookaction', 'booktab', 'booklink')); /* CMP045..CMP039 are drawn by the list row (listRows), the list control writes the elements itself */ /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
+const used = new Set(model.ROWS.concat(model.SHELL_ROWS).map((row) => row.name).concat('dialog', 'progress', 'progressbar', 'spinner', 'choice', 'batch', 'batchtray', 'listfield', 'listopener', 'listtoggle', 'listselect', 'listtab', 'listcommand', 'listrowaction', 'listcolumn', 'batchnote', 'bookfield', 'bookselect', 'bookaction', 'booktab', 'booklink', 'field')); /* CMP045..CMP039 are drawn by the list row (listRows), the list control writes the elements itself */ /* CMP020..CMP027 are drawn by their own rows, not by ui.action */
 check(Object.keys(components).every((name) => used.has(name)), 'rows cover all ' + Object.keys(components).length + ' components (CMP001..CMP010)');
 check(model.CENSUS.every((entry) => components[entry.name]), 'every census entry names a real component');
 

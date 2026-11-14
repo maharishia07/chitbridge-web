@@ -11,7 +11,8 @@
  * Better than the usual "sales vs last year" report because a part period is never compared as if whole: the engine refuses the change, and the
  *   bar says why in its own note, instead of printing "↓ 60%" for a shop's first, short year.
  * Host globals (finance.html): api · EP (CB_MIS_EP tillTrend) · esc · tx · txn · bkMoney · CBList · CBLocale · CBDraw · ftNav · fmViews.
- * Owns: TR (this view's state) and the Trend view. Called by: app/cap-mis.js (fmMount · fmLoad hand #/reports/trend here).
+ * OWNS      TR (this view's state) and the Trend view of CB Finance › Reports (trMount · trLoad · trPaint · trPaintChart)
+ * CALLED BY public/finance.html (script tag) · public/app/cap-mis.js (trOn · trLoad · trMount: fmMount and fmLoad hand #/reports/trend here)
  * FLOW  #/reports/trend[/week|month|quarter|year] → trMount() → trLoad() → GET /api/till/summary?compare=1&period= → trPaintTop() + trPaintChart() + CBList rows
  * Flow step: R2R · reports (docs/process/flows.json).
  */
