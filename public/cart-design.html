@@ -312,7 +312,7 @@ function stepDetails() {
     (S.files.length
       ? S.files
           .map(function (item, index) {
-            return '<span data-cbsid="OWN004-C04" class="chip">📎 ' + esc(item) + '<span class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
+            return '<span class="chip">📎 ' + esc(item) + '<span data-cbsid="OWN004-C04" class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
           })
           .join('')
       : '<div style="font-size:12px;color:var(--grey)">Nothing attached — optional.</div>') +

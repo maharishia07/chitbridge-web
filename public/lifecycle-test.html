@@ -42,10 +42,10 @@
   <div class="sub">Runs the full connector<span class=arw>→</span>device<span class=arw>→</span>exception<span class=arw>→</span>folder lifecycle against the live API and asserts the desired result at each step, including the RLS isolation proof. Nothing is mocked.</div>
 
   <div class="cfg">
-    <div class="f1"><label>API base</label><input id="api" value=""><script>document.getElementById('api').value = window.CB_API || '';</script></div>
-    <div class="f2"><label>Entity (dev login)</label><input id="entity" value="Alpha Timbers"></div>
-    <div class="f2"><label>Counterparty (CC) — 2nd entity</label><input id="beta" value="Beta Traders"></div>
-    <button class="run" id="runbtn" onclick="runAll()">▶ Run lifecycle</button>
+    <div class="f1"><label>API base</label><input data-cbsid="OWN009-I01" id="api" value=""><script>document.getElementById('api').value = window.CB_API || '';</script></div>
+    <div class="f2"><label>Entity (dev login)</label><input data-cbsid="OWN009-I02" id="entity" value="Alpha Timbers"></div>
+    <div class="f2"><label>Counterparty (CC) — 2nd entity</label><input data-cbsid="OWN009-I03" id="beta" value="Beta Traders"></div>
+    <button data-cbsid="OWN009-B01" class="run" id="runbtn" onclick="runAll()">▶ Run lifecycle</button>
   </div>
   <div class="warn">Test tool. It signs in via the dev one-time code, so it only works for <b>dev-mode test entities</b> (a real entity won't hand back a code). It creates disposable test connectors/chits.</div>
 
