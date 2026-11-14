@@ -1,6 +1,6 @@
 /* app/attach-ui.js — ATTACH + VIEW, as a helper any screen can reuse.  (classic script, shared global scope)
  * OWNS       the attachment list, the Attach a file button and the upload / open calls (cbAttachList · cbAttachButton · cbAttachPick · cbAttachOpen); SCR040-C01, SCR040-B01
- * CALLED BY  4 pages by <script src> (grep -lE 'src="/?app/attach-ui.js' public/*.html): accounts, app, crm, finance. cbAttach* is called in app.html (5 sites: cbAttachType x4, cbAttachAccept x1) and app/rail-thread.js, the chit thread script (cbAttachList, cbAttachButton)
+ * CALLED BY  4 pages by <script src> (grep -lE 'src="/?app/attach-ui.js' public/*.html): accounts, app, crm, finance. cbAttach* is called in app.html (6 sites: cbAttachType x3 at 9051, 9561, 29181; cbAttachAccept 9543; cbAttachIcon and cbAttachSize both on 29233) and app/rail-thread.js:297,300 (cbAttachList, cbAttachButton)
  * FLOW       a screen calls cbAttachList / cbAttachButton while it paints → a press runs cbAttachPick (file → base64 → POST → toast) → cbAttachOpen fetches the bytes with the session
  * CARD       29-qa-test-tooling-ux-locale-and-design-system/attach
  *
