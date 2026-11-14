@@ -86,4 +86,34 @@ ok('NET-19 shop/store/embed/network read the session only to show the login stat
   assert(/function _ownerToken\(\)\s*\{\s*try \{\s*var parsed = JSON\.parse\(localStorage\.getItem\('cb_sess'\)/.test(pages['shop.html']), 'and that read is _ownerToken()');
 });
 
+ok('CAT-154 / CAT-155 a category offers no members field (the relationship lives on the product)', () => {
+  const src = read('app/cap-definitions.js');
+  const f = fnText(src, 'function cbDefRuleFields(', '\n}\n');
+  const rules = run(f, { cbDefRuleFields: null }).cbDefRuleFields('category');
+  assert.strictEqual(JSON.stringify(rules), '[]', 'category has no rule fields at all');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  assert(!/key\s*:\s*['"]members['"]/.test(code), 'no field keyed members is declared in cap-definitions.js');
+});
+
+ok('OPS-29 the supplier list splits Trade (things we sell) and Other (things we use) by supply_kind, with a count on each tab', () => {
+  const kinds = fnText(read('app/cap-suppliers.js'), 'function supKindOf(', '\n}\n');
+  const app = read('app.html');
+  const code = [fnText(app, 'function supKind(', '\n}\n'), fnText(app, 'function supKindCount(', '\n}\n'), fnText(app, 'function supKindTabsHTML(', '\n}\n')].join('\n');
+  const ctx = run(kinds + '\n' + code, { UI: { supKind: 'resale', sups: [{ supply_kind: 'resale' }, { supply_kind: 'own_use' }, { supply_kind: 'own_use' }, {}] }, tx: (s) => s });
+  assert.strictEqual(ctx.supKindCount('resale'), 2, 'an unset kind counts as Trade');
+  assert.strictEqual(ctx.supKindCount('own_use'), 2);
+  const html = ctx.supKindTabsHTML();
+  assert(/data-testid="sup-tab-trade"[^>]*>[^<]*Trade <span[^>]*>2</.test(html) && /data-testid="sup-tab-other"[^>]*>[^<]*Other <span[^>]*>2</.test(html), 'two tabs, each with its count');
+  ctx.UI.supKind = 'own_use';
+  assert(/class="on" data-testid="sup-tab-other"/.test(ctx.supKindTabsHTML()), 'the selected kind is the one marked on');
+  assert(/Things we sell/.test(app) && /Things we use/.test(app), 'the per-supplier switch names both kinds in words');
+});
+
+ok('OPS-34 required certificates sit beside suppliers: the Suppliers tab strip carries Required certificates and opens supReqOpen', () => {
+  const app = read('app.html');
+  assert(/data-testid="sup-tab-req" onclick="supReqOpen\(\)">[^<]*Required certificates<\/button>/.test(app));
+  assert(/function supReqOpen\(\)/.test(app));
+  assert(/function supRequiredScope\(/.test(app), 'and the match reads the same list (proved in chunk0-proofs.test.cjs)');
+});
+
 Promise.all(jobs).then(() => console.log(n + ' passed'), (e) => { console.error('FAIL', e.message); process.exit(1); });
