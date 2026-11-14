@@ -1,6 +1,6 @@
 /* app/attach-ui.js — ATTACH + VIEW, as a helper any screen can reuse.  (classic script, shared global scope)
  * OWNS       the attachment list, the Attach a file button and the upload / open calls (cbAttachList · cbAttachButton · cbAttachPick · cbAttachOpen); SCR040-C01, SCR040-B01
- * CALLED BY  4 pages by <script src> (grep -lE 'src="/?app/attach-ui.js' public/*.html): accounts, app, crm, finance. cbAttach* is called in app.html (6 sites) and the chit thread script (2)
+ * CALLED BY  4 pages by <script src> (grep -lE 'src="/?app/attach-ui.js' public/*.html): accounts, app, crm, finance. cbAttach* is called in app.html (6 sites: cbAttachType x3 at 9051, 9561, 29181; cbAttachAccept 9543; cbAttachIcon and cbAttachSize both on 29233) and app/rail-thread.js:297,300 (cbAttachList, cbAttachButton)
  * FLOW       a screen calls cbAttachList / cbAttachButton while it paints → a press runs cbAttachPick (file → base64 → POST → toast) → cbAttachOpen fetches the bytes with the session
  * CARD       29-qa-test-tooling-ux-locale-and-design-system/attach
  *
@@ -293,7 +293,7 @@ function cbAttachUnstage(bucket, key) {
   });
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 /**
@@ -358,7 +358,7 @@ async function cbAttachStage(bucket, opts) {
      one at a time. */
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   return entry;
 }
 
@@ -413,7 +413,7 @@ async function cbAttachFlush(bucket, chit_id, opts) {
   }
   try {
     document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } }));
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   return { uploaded: uploaded, failed: failed };
 }
 
@@ -494,11 +494,11 @@ async function cbAttachPick(ctxJson) {
        function NAME through the attribute, and anything holding real elements can listen for the event. */
     try {
       document.dispatchEvent(new CustomEvent('cb-attach-added', { detail: { ctx: ctx, attachment: reply } }));
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     if (ctx.after && typeof window[ctx.after] === 'function') {
       try {
         window[ctx.after]();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     return reply;
   } catch (e) {
@@ -530,7 +530,7 @@ function cbAttachChoose() {
       done = true;
       try {
         input.remove();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       resolve(f || null);
     }
     input.addEventListener('change', function () {
@@ -592,7 +592,7 @@ async function cbAttachOpen(id) {
     node.click();
     try {
       node.remove();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   } catch (e) {
     toast((e && e.message) || 'Could not open that file');
   }
@@ -636,11 +636,11 @@ var CBAttach = (function () {
       if (!att) return;
       try {
         el.dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'attach', chit_id: chit, result: att } }));
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       if (typeof o.onDone === 'function') {
         try {
           o.onDone(att);
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
     function press(event) {

@@ -502,12 +502,12 @@ function finQueueSheet() {
     left = list.filter(function (x) {
       return !x.done;
     }).length;
-  modal(
-    '<div class="mhd"><div class="t" data-testid="fin-queue-title">' +
-      esc(tx('Remind')) +
-      ' · ' +
-      esc(txn('{count} party', '{count} parties', list.length)) +
-      '</div></div><div class="mbody">' +
+  ui.dialog({
+    mount: 'FIN001-U01',
+    pop: 'POP107',
+    titleText: tx('Remind') + ' · ' + txn('{count} party', '{count} parties', list.length),
+    titleTestid: 'fin-queue-title',
+    body:
       list
         .map(function (x, index) {
           return (
@@ -530,11 +530,9 @@ function finQueueSheet() {
             '</div>'
           );
         })
-        .join('') +
-      '</div><div class="mfoot"><button data-cbsid="FIN001-B05" type="button" onclick="closeModal()">' +
-      esc(left ? tx('Close') : tx('Done')) +
-      '</button></div>'
-  );
+        .join(''),
+    footerHtml: '<button data-cbsid="FIN001-B05" type="button" onclick="closeModal()">' + esc(left ? tx('Close') : tx('Done')) + '</button>'
+  });
 }
 function finRemindOne(i, btn) {
   var x = (FIN.queue || [])[i];

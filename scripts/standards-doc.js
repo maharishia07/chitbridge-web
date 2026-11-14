@@ -11,6 +11,12 @@
  *
  *   node scripts/standards-doc.js
  */
+/*
+ * OWNS      the printout of the catalogue standards table (C:/dev/CATALOGUE-STANDARDS.md) from CBCatalogue
+ * CALLED BY by hand only: no package.json script or CI line runs it
+ * FLOW      read the CBCatalogue global -> print the table -> write the markdown
+ * CARD      06-catalogue-pim/categories-and-fields
+ */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 

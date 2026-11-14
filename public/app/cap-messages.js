@@ -19,6 +19,12 @@
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      the Replies inbox: every external conversation that still wants you, threaded by line across all chits
+ * CALLED BY public/app.html:22169 (messagesScreen() on nav 'messages'); loaded lazily by _capOne as /app/cap-messages.js
+ * FLOW      inbox query -> threads by line -> open a thread (fetches the whole line thread from the per-chit route) -> reply
+ * CARD      22-channels-capture-and-messaging/messages-replies-list
+ */
 var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {} };
 
 /**
@@ -226,7 +232,6 @@ function messagesScreen() {
           var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
           var what = m.particulars ? esc(m.particulars) : esc(m.manual_subject || m.auto_subject || 'this order');
           var sub = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
-          var rid = item.key.replace(/[^a-z0-9]/gi, '');
           return (
             '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' +
             (isNew ? 'background:var(--blue-tint-bg);' : '') +

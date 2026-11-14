@@ -41,6 +41,8 @@ jobs:
         run: node e2e/guard-walk-today.cjs
       - name: Static guards
         run: node e2e/guard-static.cjs
+      - name: The keyboard-shortcut register is well formed (MNT-63)
+        run: node e2e/shortcuts-guard.cjs
       - name: Every standard cited is a register row or a named exclusion (CMP-24; the sibling repos are scanned locally, skipped here)
         run: node tools/standards-scan.cjs
       - name: Every page that holds a session sends X-Device-Id (K-SEC PR A, e2e/device-id.cjs)
@@ -104,11 +106,13 @@ jobs:
           node e2e/cart-api.cjs
           node e2e/cart-page-needs.cjs
           node e2e/chart-smoke.cjs
+          node e2e/crm-groups-guard.cjs
           node e2e/currency-distinct.cjs
           node e2e/defs-batch.test.cjs
           node e2e/developer-words.cjs
           node e2e/double-fire.cjs
           node e2e/employees-guard.cjs
+          node e2e/folders-guard.cjs
           node e2e/group-sum.cjs
           node e2e/guard-static.test.cjs
           node e2e/helper-scope.cjs
@@ -183,11 +187,15 @@ jobs:
           # ACC proofs (2026-11-14, P2 PROOF pass): CSS / vm-sandbox checks on the real Accounts and CRM pages; each is red when its cited line is mutated
           node e2e/acc-24-54-no-width-cap.test.cjs
           node e2e/acc-104-accounts-icon-family.test.cjs
+          node e2e/rail-233-dispute-404-words.test.cjs
+          node e2e/ppl-49-actors-non-array.test.cjs
           # REP / UX / CTRY proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
           node e2e/rep-13-14-15-till-drain-words.test.cjs
           node e2e/rep-19-mis-overdue-words.test.cjs
           node e2e/ux-65-66-attach-call-sites.test.cjs
           node e2e/ux-122-timeline-status-words.test.cjs
+          node e2e/net-19-one-session-keeper.test.cjs
+          node e2e/net-24-shop-no-fx-table.test.cjs
           node e2e/ux-109-reach-sweep.test.cjs
           node e2e/ux-109-categories-attach-confirm.test.cjs
           node e2e/ctry-18-starter-price-follows-country.test.cjs
@@ -258,6 +266,7 @@ jobs:
           node e2e/ui-codes-cart.test.cjs
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
+          node e2e/ui-codes-refpages.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
           node e2e/ui-codes-promo.test.cjs
@@ -329,6 +338,11 @@ jobs:
       # built fresh from KG1), a file scoring worse than readability.ratchet.json. Today's backlog blocks nobody: untouched code is not judged.
       - name: The §6 readability guard bites on its fixtures (e2e/readability-guard.cjs)
         run: node e2e/readability-guard.cjs
+      # MNT-58 (14 Nov): the FILE-SIZE ratchet — no file grows past filesize.baseline.json, a new file is at most 500 lines (customer ceiling 1,000: --ceiling). The baseline is regenerated at the batch stamp.
+      - name: The file-size ratchet bites on its fixtures (e2e/filesize-ratchet.cjs)
+        run: node e2e/filesize-ratchet.cjs
+      - name: No file grew past its baseline; a new file is at most 500 lines (tools/readability/filesize.cjs)
+        run: node tools/readability/filesize.cjs
       - name: Only the code this change touched is judged (readability --changed --ratchet; the checklist numbers are printed)
         env:
           HEAD_REF: ${{ github.head_ref || github.ref_name }}

@@ -54,6 +54,10 @@ for (const f of FILES) {
   ok(r.length === 0, f + ': no composer of its own' + (r.length ? '\n' + r.map((x) => '        line ' + x.line + ' · ' + x.why + ' · ' + x.text).join('\n') : ''));
 }
 
+/* the Replies inbox says in words that it could not read the messages (never a silent empty list) */
+ok(/Could not read your messages./.test(fs.readFileSync(path.join(PUB, 'app/cap-messages.js'), 'utf8')),
+  'cap-messages: when the inbox cannot be read it says "Could not read your messages." (the could-not-read words)');
+
 /* the guard proves itself */
 const planted = "var EP2 = { mine: { m: 'POST', p: '/api/chits/:id/messages', ok: 'y' } };\n"
   + "async function x(id){ await api('sendMsg', { params: { id } }); }\n"

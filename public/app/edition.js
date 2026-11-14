@@ -1,4 +1,4 @@
-/**
+/** · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions
  * edition.js — CBEdition: WHICH DOORS THIS SHOWING OPENS (round AX1, 2026-10-13). The one helper Home, the shell's switcher and the small apps ask.
  *
  * An EDITION is data, not a second Home: public/app/manifest.json › `editions` = { <key>: { name, chip, line, entries: '*' | [ids] } }.
@@ -19,6 +19,7 @@
  *   CBEdition.prune(el, m)          hide every such link under `el` (a page's nav, Home's alert rows); returns how many
  
  * CALLED BY public/app/avatar.js, public/app/rail-bell.js, public/app/shell.js, public/standards.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/editions
  */
 (function (root) {
   'use strict';
@@ -34,7 +35,7 @@
       if (v === undefined) return root.sessionStorage.getItem(k);
       if (v === null) root.sessionStorage.removeItem(k);
       else root.sessionStorage.setItem(k, v);
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
     return null;
   }
   function ls(k) {
@@ -50,7 +51,7 @@
     try {
       var q = new URLSearchParams(root.location.search).get('edition');
       if (q && SLUG.test(q)) ss(TAB, q);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   })();
 
   function key() {

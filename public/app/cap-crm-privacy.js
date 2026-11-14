@@ -233,7 +233,7 @@ async function crmConsentOpen(p) {
   if (CRMR.consentApi) {
     try {
       CRMR.consentApi.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   CRMR.consentApi = CBList.mount(hist, {
     key: 'crm-consent-hist',
@@ -372,7 +372,7 @@ function crmPrivacy(frame, params) {
   if (PRV.api && PRV.api.destroy) {
     try {
       PRV.api.destroy();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   var el = document.getElementById('crm_prv');
   var due = function (r) {

@@ -1538,7 +1538,7 @@ function catsetBlueprint() {
   try {
     UI.cw = UI.cw || {};
     UI.cw.step = 1;
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   renderApp();
 }
 
@@ -2486,7 +2486,7 @@ async function catsetPlanCreate(rows, err) {
     if (typeof cbDefAfterChange === 'function') {
       try {
         await cbDefAfterChange('offer');
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     await catsetDefsLoad('offer', true);
     catsetPaintDetail();

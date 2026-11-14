@@ -34,6 +34,12 @@
  
  * CALLED BY public/accounts.html, public/app.html, public/app/cap-admin.js, public/app/page-frame.js, public/app/signin-ui.js (+6 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      CBOnePerson: the one-browser-one-shop check (traces() and the clear-out), logic only, no painting
+ * CALLED BY <script src="/app/one-person.js"> on 26 pages (grep -l one-person.js public/*.html), incl. public/app.html:1580 where route() asks it
+ * FLOW      page load -> traces() looks for another shop's fingerprint -> clear-out, or the shop does not open
+ * CARD      18-identity-sign-in-and-access/sessions-and-devices
+ */
 (function (root) {
   'use strict';
   var CHANNEL = 'cb-one-person',
@@ -54,18 +60,18 @@
   function lsSet(k, v) {
     try {
       root.localStorage.setItem(k, v);
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
   function lsDel(k) {
     try {
       root.localStorage.removeItem(k);
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
   function lsKeys() {
     var out = [];
     try {
       for (var index = 0; index < root.localStorage.length; index++) out.push(root.localStorage.key(index));
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
     return out;
   }
   function json(k) {
@@ -145,7 +151,7 @@
         rq.onupgradeneeded = function () {
           try {
             rq.transaction.abort();
-          } catch (_) {}
+          } catch (_) { /* best effort: failing here changes nothing the user sees */ }
           fin(null);
         };
         rq.onerror = function () {
@@ -173,7 +179,7 @@
           } catch (_) {
             try {
               db.close();
-            } catch (_e) {}
+            } catch (_e) { /* best effort: failing here changes nothing the user sees */ }
             fin(null);
           }
         };
@@ -507,7 +513,7 @@
           (the counter page cannot be told: it is the counter's own) → named, and the keys are left as they are
        4  every cb* key in localStorage and sessionStorage, every cache, every service worker
      Resolves { ok:true, counter:'Counter 1' | '', kept:{ name, unsent } | null } or { ok:false, unsent:n | silent:[labels] | blocked:[labels] } */
-  var CB_KEY = /^cb[_.\-]/; /* cb_sess, cb_till_*, cb_nav@<id>, cb.draft.*, cb.outbox.v1, cb-till-*-queue-* … */
+  var CB_KEY = /^cb[_.-]/; /* cb_sess, cb_till_*, cb_nav@<id>, cb.draft.*, cb.outbox.v1, cb-till-*-queue-* … */
   function cbKeys(store) {
     var out = [];
     try {
@@ -515,7 +521,7 @@
         var k = store.key(index);
         if (k && CB_KEY.test(k)) out.push(k);
       }
-    } catch (_) {}
+    } catch (_) { /* preference not saved: the choice still applies on this page */ }
     return out;
   }
   function dbLabel(n) {
@@ -606,7 +612,7 @@
                 cbKeys(root.sessionStorage).forEach(function (item) {
                   root.sessionStorage.removeItem(item);
                 });
-              } catch (_) {}
+              } catch (_) { /* storage blocked or full: the page works without it */ }
               var caches = root.caches
                 ? root.caches
                     .keys()

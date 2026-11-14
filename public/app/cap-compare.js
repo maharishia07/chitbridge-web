@@ -462,7 +462,7 @@ function cmpCsv(btn) {
             try {
               URL.revokeObjectURL(node.href);
               node.remove();
-            } catch (_) {}
+            } catch (_) { /* best effort: failing here changes nothing the user sees */ }
           }, 1500);
           return true;
         });

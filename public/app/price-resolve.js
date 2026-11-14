@@ -27,6 +27,12 @@
  
  * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-crm.js, public/app/cap-testing.js, public/app/pick.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      which price applies and why: tiered, regional, time-boxed pricing resolved to one answer
+ * CALLED BY <script src="/app/price-resolve.js"> at public/app.html:1630; scripts/price-resolve.test.mjs (run by .github/workflows/ci.yml)
+ * FLOW      pricing[] entries -> filter by region and dates -> the one price that applies, with the reason
+ * CARD      07-offers-pricing-and-combos/pricing-structure-price-lists
+ */
 (function (root) {
   'use strict';
 
