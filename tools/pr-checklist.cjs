@@ -2,7 +2,7 @@
 /* tools/pr-checklist.cjs — a PR body must carry the §6 checklist WITH NUMBERS (READ-GUARD, DISCIPLINES §6 · 15 Oct).
  *
  * OWNS      the one reading of a PR body: are the five checklist lines there, are the numbers filled, is any placeholder left;
- *           and the two skips the brief allows — a dependency bot's PR and a docs-only PR.
+ *           and the Gate record heading (REL-22); and the two skips the brief allows — a dependency bot's PR and a docs-only PR.
  * CALLED BY .github/workflows/ci.yml `pr-checklist` job in the web AND the api (the api runs this file from its web checkout:
  *           one reader, never a copy).
  * FLOW      body (PR_BODY env | --body-file) + author + changed files (git diff --name-only base...HEAD | --files-file)
@@ -49,6 +49,9 @@ const LINES = [
   }
 ];
 const PLACEHOLDER = /<(before → after[^>]*|word|name|doc|file|files|n)>/i;
+/** the Gate record heading (PM/GATE-AUDIT-2026-11-08.md section 2, REL-22): made by the docs repo's toolset/gate-evidence.cjs <repo> <pr> */
+const GATE_HEADING = /^#{1,6}[ \t]*Gate record\b/im;
+const GATE_HINT = 'a "### Gate record" block, one line per gate G0-G7 (docs repo: node toolset/gate-evidence.cjs <repo> <pr> --write-body)';
 const EXIT_FAIL = 1;
 
 const args = process.argv.slice(2);
@@ -106,6 +109,11 @@ function problems(body) {
   return found;
 }
 
+/** the Gate record heading is missing: one sentence, or null (the block's content is judged by gate-evidence.cjs, not here) */
+function gateRecordProblem(body) {
+  return GATE_HEADING.test(body) ? null : 'Gate record: the heading is missing (' + GATE_HINT + ')';
+}
+
 /** read the body, decide the skips, print the problems; the exit code is the verdict */
 function main() {
   const body = readBody(),
@@ -117,8 +125,10 @@ function main() {
     return 0;
   }
   const found = problems(body);
+  const gate = gateRecordProblem(body);
+  if (gate) found.push(gate);
   if (!found.length) {
-    console.log('  pr-checklist: the §6 checklist is there with its numbers' + (files ? ' (' + files.length + ' file(s) changed)' : ''));
+    console.log('  pr-checklist: the §6 checklist is there with its numbers and the Gate record' + (files ? ' (' + files.length + ' file(s) changed)' : ''));
     return 0;
   }
   console.log('  ✗ pr-checklist: the PR body lacks the §6 checklist with numbers (DISCIPLINES §6; template: .github/pull_request_template.md)');
@@ -130,4 +140,4 @@ function main() {
 }
 
 if (require.main === module) process.exit(main());
-module.exports = { problems, checklistBlock, skipReason, LINES, DEPENDENCY_BOTS, DOCS_ONLY };
+module.exports = { gateRecordProblem, problems, checklistBlock, skipReason, LINES, DEPENDENCY_BOTS, DOCS_ONLY };
