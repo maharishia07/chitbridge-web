@@ -1183,7 +1183,7 @@ function wlPaintCard(loading) {
      stopped being reachable the moment modal() started making every panel movable itself — makeMovable is
      idempotent on data-movable, so the second call would have returned silently and taken the minimise button
      and this card's own remembered size with it. Nothing about the card changed; where it asks did. */
-  modal(wlLineHTML(loading), !mob, { key: 'cb_wl_line', minW: 320, minH: 240, minimise: true }); // `wide` on a laptop — 360px is what folded "0 kg left" in two
+  modal(wlLineHTML(loading), !mob, { pop: 'POP084', key: 'cb_wl_line', minW: 320, minH: 240, minimise: true }); // `wide` on a laptop — 360px is what folded "0 kg left" in two
   try {
     var node = document.querySelector('#modalhost .modal');
     if (node && cap) node.style.maxWidth = cap + 'px';

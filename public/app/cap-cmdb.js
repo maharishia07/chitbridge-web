@@ -154,7 +154,7 @@ function cmdbOpen() {
   var host = document.createElement('div');
   host.id = 'cbcmdbhost';
   host.innerHTML =
-    '<div id="cbcmdbpanel" role="dialog" aria-label="Configuration register" style="position:fixed;right:16px;' +
+    '<div id="cbcmdbpanel" role="dialog" data-pop="POP206" aria-label="Configuration register" style="position:fixed;right:16px;' +
     'bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(70vh,640px);display:flex;' +
     'flex-direction:column;background:var(--card,#fff);border:1px solid var(--line,#e7e3d8);border-radius:12px;' +
     'box-shadow:var(--shadow);z-index:4000;overflow:hidden">' +

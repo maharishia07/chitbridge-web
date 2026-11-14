@@ -31,7 +31,7 @@ var ADO = { chit_id: null, data: null, edits: {} };
  */
 async function adoptOpen(chit_id) {
   ADO = { chit_id: chit_id, data: null, edits: {} };
-  modal('<div style="padding:24px;text-align:center;color:var(--grey)"><span class="spin"></span> ' + tx('Reading the delivery…') + '</div>', false);
+  modal('<div style="padding:24px;text-align:center;color:var(--grey)"><span class="spin"></span> ' + tx('Reading the delivery…') + '</div>', false, { pop: 'POP012' });
   try {
     ADO.data = await api('adoptRead', { params: { id: chit_id } });
     adoptPaint();
@@ -46,7 +46,7 @@ async function adoptOpen(chit_id) {
         '<div style="display:flex;margin-top:16px"><button data-cbsid="CMP005" class="composebtn pri" style="flex:1" onclick="closeModal()">' +
         tx('Close') +
         '</button></div></div>',
-      false
+      false, { pop: 'POP012' }
     );
   }
 }

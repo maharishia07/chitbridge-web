@@ -699,7 +699,7 @@ function c2RepriceScope(v) {
 function c2RepricePaint() {
   if (C2R.busy && !C2R.plan)
     return modal(
-      '<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking the catalogue…</div>'
+      '<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking the catalogue…</div>', false, { pop: 'POP020' }
     );
   var p = C2R.plan || {};
   if (p.error)
@@ -708,7 +708,7 @@ function c2RepricePaint() {
         esc(p.error) +
         '</div><button data-cbsid="CMP005" class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP020' }
     );
 
   if (!p.has_catalogue) {
@@ -719,7 +719,7 @@ function c2RepricePaint() {
         ' and this will fill them in.</div>' +
         '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP020' }
     );
   }
 
@@ -803,7 +803,7 @@ function c2RepricePaint() {
       tx('Cancel') +
       '</button>' +
       (will.length ? '<button class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '') +
-      '</div>'
+      '</div>', false, { pop: 'POP020' }
   );
 }
 
@@ -1505,7 +1505,7 @@ function c2AssignOpen(line_id) {
         '</div>' +
         '<button data-cbsid="CMP005" class="btn" style="width:100%" onclick="closeModal()">' +
         tx('Close') +
-        '</button>'
+        '</button>', false, { pop: 'POP019' }
     );
   }
   var opts = roster
@@ -1567,7 +1567,7 @@ function c2AssignOpen(line_id) {
       line_id +
       '\')">' +
       tx('Assign') +
-      '</button></div>'
+      '</button></div>', false, { pop: 'POP019' }
   );
 }
 /**
