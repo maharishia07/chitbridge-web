@@ -850,11 +850,11 @@
             E.el.innerHTML = '<div class="empty" data-testid="emp-refused"><div class="t">' + esc(E.may.add.why || '') + '</div></div>';
             return;
           }
-          E.el.innerHTML = '<dialog class="sheet" id="emp_sheet" data-testid="emp-sheet"></dialog>';
+          E.el.innerHTML = '<dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
           return openAdd();
         }
         E.el.innerHTML =
-          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-testid="emp-sheet"></dialog>';
+          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
         var node = $('emp_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

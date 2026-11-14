@@ -791,7 +791,7 @@
         '</div>';
     }
     return (
-      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
+      '<div class="cbav-pop" role="dialog" data-pop="POP114" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
       '<div class="cbav-who"><span class="l">' +
       esc(letter(P)) +
       '</span><div><b>' +
