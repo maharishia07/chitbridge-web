@@ -131,7 +131,7 @@
     return (
       '<tr class="bd-row bd-s-' + esc(stateKey) + '"><td class="bd-d">' + esc(P.dateText(line.date)) + '</td><td class="bd-n">' + esc(line.narration) + '</td>' +
       '<td class="bd-m">' + (line.debit_minor ? esc(money(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? esc(money(line.credit_minor)) : '') + '</td>' +
-      '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'diff' : 'ask', P.STATE_WORDS[stateKey] || 'Needs you') +
+      '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', P.STATE_WORDS[stateKey] || 'Needs you') +
       '<div class="bd-sub">' + partyBox(item) + lineNote(item, result) + '</div></td></tr>'
     );
   }

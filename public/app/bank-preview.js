@@ -190,9 +190,9 @@
           'Money out: ' + money(r.out),
           'Dated: ' + dateText(r.from) + (r.to && r.to !== r.from ? ' to ' + dateText(r.to) : ''),
           'Currency: ' + r.currency,
-          r.newParties + (r.newParties === 1 ? ' new party' : ' new parties') + ' made first',
+          r.newParties ? r.newParties + (r.newParties === 1 ? ' new party' : ' new parties') + ' made first' : null,
           r.needs_you + ' still need you. They are not added.' + (r.closed ? ' ' + r.closed + ' in a closed month are held back.' : '')
-        ]
+        ].filter(Boolean)
       };
     }
     /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
