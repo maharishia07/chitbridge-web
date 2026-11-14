@@ -1,4 +1,4 @@
-/* app/pick.js — CBPick: open the catalogue over any screen and hand the selection back.
+/* app/pick.js — CBPick: open the catalogue over any screen and hand the selection back. · CARD 06-catalogue-pim/catalogue-picker
  *
  *
  * Athi, 2026-08-23: *"if it is a module, we should be able to call it on top of any other screen on its own and

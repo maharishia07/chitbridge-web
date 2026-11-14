@@ -1,4 +1,4 @@
-/* app/cap-legend.js — the 🔑 LEGEND capability: a live map of "what we serve".
+/* app/cap-legend.js — the 🔑 LEGEND capability: a live map of "what we serve". · CARD 20-settings-governance-and-plan/capability-legend
  * Loaded lazily by ensureCap('legend') on first 🔑 click (rarely opened → dogfoods on-demand loading).
  * CAP_CATALOGUE = the capability → features catalogue (keep TRUE to what's built; honesty rule). The panel
  * shows each capability's LOAD kind (eager / lazy / planned) with LIVE state from Core's CAP_LOADED, and every
