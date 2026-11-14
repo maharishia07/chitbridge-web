@@ -183,6 +183,8 @@ jobs:
           # ACC proofs (2026-11-14, P2 PROOF pass): CSS / vm-sandbox checks on the real Accounts and CRM pages; each is red when its cited line is mutated
           node e2e/acc-24-54-no-width-cap.test.cjs
           node e2e/acc-104-accounts-icon-family.test.cjs
+          node e2e/rail-233-dispute-404-words.test.cjs
+          node e2e/ppl-49-actors-non-array.test.cjs
           # REP / UX / CTRY proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
           node e2e/rep-13-14-15-till-drain-words.test.cjs
           node e2e/rep-19-mis-overdue-words.test.cjs
