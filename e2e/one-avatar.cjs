@@ -51,7 +51,7 @@ async function run(site, o) {
   const { standIn, route: booksRoute } = require('./books-web.cjs');
   const { serve } = require('./lib/serve.cjs');
   const out = { pass: 0, fail: 0, lines: [] };
-  const ok = (c, m) => { if (c) { out.pass++; out.lines.push('  ok  ' + m); } else { out.fail++; out.lines.push('  XX  ' + m); } if (!o.quiet) console.log(out.lines[out.lines.length - 1]); };
+  const ok = (c, m) => { if (c) { out.pass++; out.lines.push('  ok  ' + m); } else { out.fail++; out.lines.push('  XX  FAIL · ' + m); } if (!o.quiet) console.log(out.lines[out.lines.length - 1]); };
 
   /* ── 10 · static: nothing but avatar.js builds an avatar ── */
   if (want('static')) {

@@ -8,7 +8,13 @@
 // for LIVE data (a just-created chit wouldn't appear). The page's own fetch works on every engine, so we stay out of its
 // way. (Offline API read-cache is dropped for now — it only ever worked on Chromium; re-add later via a SAME-ORIGIN API
 // proxy the SW can actually cache, and restore the logout cache-clear hook then.)
-const CB_SW_VERSION = 'v3';
+/*
+ * OWNS      the offline app-shell service worker: network-first with cache fallback, same-origin only
+ * CALLED BY CBOffline.registerSW('/cb-sw.js') at public/app.html:30369 and public/shop.html:576; the default path in public/cb-offline.js:516
+ * FLOW      install -> network-first fetch -> cache answers only when the network fails; non-GET never touched
+ * CARD      28-platform-and-operations/offline
+ */
+const CB_SW_VERSION = 'v5';
 const SHELL = 'cb-shell-' + CB_SW_VERSION; // same-origin app shell + static JS
 const EXT = 'cb-ext-' + CB_SW_VERSION; // cross-origin static (fonts)
 const KEEP = [SHELL, EXT];

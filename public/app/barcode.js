@@ -14,6 +14,7 @@
  * by the symbology's own invariants (11 modules, even bar parity) so a transcription slip cannot ship silently.
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD      09-counter/scale-weigh-scan
  */
 (function (root) {
   'use strict';

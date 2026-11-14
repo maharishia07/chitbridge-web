@@ -120,7 +120,7 @@
     try {
       if (typeof root.shopDateTime === 'function') return root.shopDateTime(ts); /* UX-123: the shop's zone */
       if (root.CBLocale) return root.CBLocale.datetime(ts);
-    } catch (_) {} /* CU4: the one date-time stamp */
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ } /* CU4: the one date-time stamp */
     return String(ts).replace('T', ' ').slice(0, 16);
   }
   /** the sentence for an engine refusal word — the engine's own (CBRail.WHY) when the page loads /engine/rail.js, else the server's words */
@@ -128,7 +128,7 @@
     try {
       var R = root.CBRail;
       if (R && R.WHY && Object.prototype.hasOwnProperty.call(R.WHY, word)) return R.WHY[word];
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     return fallback || T(W.viewOnly);
   }
 
@@ -180,7 +180,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.loadDraft) return C.loadDraft(k) || '';
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     return '';
   }
   function draftSet(o, v) {
@@ -189,7 +189,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.saveDraft) C.saveDraft(k, v);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   function draftClear(o) {
     var k = dkey(o);
@@ -197,7 +197,7 @@
     try {
       var C = root.CBOffline;
       if (C && C.clearDraft) C.clearDraft(k);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ── eligibility: the engine's verdict per channel ── */
@@ -253,7 +253,7 @@
     if (typeof o.onList === 'function' && m.rows) {
       try {
         o.onList(m.rows.slice(), o);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
   }
   /** the chit's actions when the host did not hand them over — one GET through the page's `chit` row, deduped by core */
@@ -265,7 +265,7 @@
         m.actions = reply.actions;
         paint(m);
       }
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ── paint ── */
@@ -275,7 +275,7 @@
     if (x.is_dispute && typeof o.decorate === 'function') {
       try {
         dec = o.decorate(x.message_text || '');
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var body = dec && dec.body != null ? dec.body : x.message_text || '';
     var mine =
@@ -486,7 +486,7 @@
   function emit(el, chit_id, result) {
     try {
       (el || doc).dispatchEvent(new CustomEvent('cb:rail', { bubbles: true, detail: { module: 'thread', chit_id: chit_id, result: result } }));
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
   /** post ONE message through CBAction (busy · one press one write · outcome). btn may be null (a host's own control, or none). */
   function post(btn, o, body, say) {
@@ -618,7 +618,7 @@
           if (typeof o.onDone === 'function') {
             try {
               o.onDone(m.sent, o);
-            } catch (_) {}
+            } catch (_) { /* best effort: failing here changes nothing the user sees */ }
           }
           load(m).then(function () {
             var target = out();
@@ -678,7 +678,7 @@
             if (typeof o.onDone === 'function') {
               try {
                 o.onDone(v, o);
-              } catch (_) {}
+              } catch (_) { /* best effort: failing here changes nothing the user sees */ }
             }
           },
           onFail: function (words, e) {

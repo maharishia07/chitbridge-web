@@ -1385,7 +1385,7 @@
           ' title="' + esc(translated('Clear the cart')) + '" aria-label="' + esc(translated('Clear the cart')) + '"' + KBD_PRESS + '>✕</span>'
         : '') +
       '</div>' +
-      (on && T.partial ? '<div class="cbcart-partial">Some lines have no price — the total covers only the priced ones.</div>' : '')
+      (on && T.partial ? '<div class="cbcart-partial">Total skips unpriced lines</div>' : '')
     );
   }
 
@@ -1519,7 +1519,7 @@
         col +
         '">· avl ' +
         esc(a.qty) +
-        '</span><span style="font-size:var(--fs-1);color:var(--warn-2)"> dt ?</span>'
+        '</span><span style="font-size:var(--fs-1);color:var(--warn-2)"> no date</span>'
       );
     // Older than the staleness window gets an amber date and a marker — a word would cost a line it does not have.
     var days = (new Date() - new Date(a.as_of)) / 864e5;
@@ -1768,9 +1768,9 @@
               '</span></div>'
             );
           })() +
-          (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">Some lines have no price — the total covers only the priced ones.</div>' : '')
+          (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">Total skips unpriced lines</div>' : '')
         : // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
-          '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Nothing in the cart yet.</div>') +
+          '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Cart is empty</div>') +
       '<div style="display:flex;gap:9px;margin-top:15px">' +
       '<button data-cbsid="SCR037-B07" style="' +
       btn +
@@ -2303,7 +2303,7 @@
           (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') +
           '</span></div>' +
           (T.partial
-            ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Some lines have no price — the total covers only the priced ones.</div>'
+            ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Total skips unpriced lines</div>'
             : '') +
           moneyWhyHTML(ns)
         );
@@ -3800,7 +3800,7 @@
       (n === 1 ? '' : 's') +
       '</b> ready' +
       (amt ? ' · ' + esc(amt) : '') +
-      ' — <b>not on the chit yet</b></span>' +
+      ' — <b>not on chit</b></span>' +
       '<button data-cbsid="SCR037-B15" type="button" data-testid="cbcat-checkout-' +
       esc(cart.ns) +
       '"' +
@@ -3870,7 +3870,7 @@
     } catch (e) {
       /* ⚠️ A PRICING ENGINE THAT THROWS MUST NOT TAKE THE ORDER DOWN. The lines and their prices are already
          correct without it; an offer failing to evaluate costs a discount, not the ability to order. */
-      return '<div class="cbcat-offnote">Offers could not be applied just now — the prices above stand.</div>';
+      return '<div class="cbcat-offnote">Offers not applied</div>';
     }
     /* ⚠️ `opt.subtotal` KEEPS THE BLOCK EVEN WHEN NOTHING FIRED. On the product page "at qty 1 this offer changes
        nothing" IS the outcome being verified, and an empty space there reads as a screen that failed to load. */

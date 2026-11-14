@@ -6,8 +6,7 @@
  * OWNS      the proof that every control of public/till.html (the census tag rule: button, input, select, textarea, a role-tab / menuitem / button, and any tag with
  *           onclick or data-act) carries a data-cbsid code, that no screen code is written twice (a component code CMP### is reused by design), that inside one screen
  *           and one kind the numbers run in reading order (a swap of two codes breaks the order), and that every code is in the register and none is retired.
- *           The 83 popup openers the census sees (the <dialog> and role=dialog elements and their showModal calls) are NOT counted here: the register only knows a popup opened by modal() or ui.dialog, so a hand-built
- *           dialog cannot carry a countable code without a behaviour change; the test prints their number so a new one is seen.
+ *           Every <dialog> of the till carries data-pop="POPnnn" (one code per dialog, 14 Nov) and the register holds a live Popup row for it; a showModal() reads the code of its dialog.
  * CALLED BY by hand and the QA gate: node e2e/ui-codes-till.test.cjs   (TILL_ID_MUTATE=swap or remove must fail it)
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/design-system
  * Register  codes are looked up in UIID_REG, else ../chitbridge-docs/SCREENS.json, else C:/dev/SCREENS.json: a code not there yet is printed as pending
@@ -75,7 +74,15 @@ if (regPath) {
   console.log('  info ' + pending.length + ' of ' + mine.length + ' codes not in ' + regPath + ' yet (pending: the docs PR lands the rows)');
 } else console.log('  info no register file found: codes not checked against it');
 
-const dlg = (src.match(/<dialog\b/g) || []).length + (src.match(/role=["']dialog["']/g) || []).length;
-console.log('  info popups not counted (hand-built, opener not in the register): ' + dlg + ' <dialog> / role=dialog elements; the census counts 83 openers with their showModal calls');
+/* the popups: every <dialog> tag wears its data-pop, and the register knows the code */
+const dialogs = text.match(/<dialog\b[^>]*>/g) || [], pops = dialogs.map((d) => (d.match(/data-pop="(POP[0-9]{3})"/) || [])[1]);
+check(dialogs.length > 30, 'the scan sees the till dialogs: ' + dialogs.length);
+check(pops.every(Boolean), 'every <dialog> carries a data-pop: ' + pops.filter((x) => !x).length + ' without');
+const popDup = pops.filter((x, i) => x && pops.indexOf(x) !== i);
+check(popDup.length === 0, 'no popup code is written twice' + (popDup.length ? ': ' + popDup.slice(0, 5).join(', ') : ''));
+if (regPath) {
+  const popRows = new Set(Object.entries(JSON.parse(fs.readFileSync(regPath, 'utf8')).screens).filter(([k, s]) => k.indexOf('Popup') === 0 && !s.retired).map(([, s]) => s.code));
+  console.log('  info ' + pops.filter((x) => !popRows.has(x)).length + ' of ' + pops.length + ' popup codes not in ' + regPath + ' yet (pending: the docs PR lands the rows)');
+}
 console.log(failures ? '\nFAILED: ' + failures : '\n' + found.length + ' controls checked, all carry a code');
 process.exit(failures ? 1 : 0);

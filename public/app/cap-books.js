@@ -1164,7 +1164,7 @@ function payOpen(kind, partyId, pre) {
       '<label>' +
       tx('Amount') +
       '' +
-      bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null }) +
+      bkMoneyInput({ id: 'pay_amt', on: 'payPreviewSoon()', minor: offer ? offer.pay_minor : null, extra: 'required data-required-msg="' + esc(tx('Type the amount')) + '"' }) +
       '</label>' +
       (offer ? '<div data-testid="pay_offer" style="font-size:var(--fs-1);color:var(--grey)">' + esc(offer.words) + '</div>' : '') +
       '<label>' +
@@ -1198,7 +1198,7 @@ function payOpen(kind, partyId, pre) {
       '',
     footId: 'pay_foot', footerHtml: '<button data-cbsid="CMP003-B01"' + bkMountAttribute('CMP003') + ' onclick="closeModal()">' +
       tx('Cancel') +
-      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" onclick="payRecord()">' +
+      '</button><button data-cbsid="CMP042-B02"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' class="pri" data-testid="pay_record" data-sheet-save onclick="payRecord()">' +
       tx('Record') +
       '</button>' +
       (kind === 'supplier' ? '' : '<button data-cbsid="CMP042-B03"' + bkMountAttribute('CMP042') + bkTapAttribute() + ' data-testid="pay_remind" onclick="payRemind()">' + tx('Not paid yet — remind me') + '</button>')

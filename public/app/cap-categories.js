@@ -339,7 +339,7 @@ function cbcatRetire(id) {
           '</b> currently cite it. ' +
           'They keep the citation and will say the category is no longer live — nothing is unlinked and nothing ' +
           'is deleted.</div>'
-        : '<div style="margin-top:7px">Nothing cites it, so nothing changes elsewhere.</div>'),
+        : '<div style="margin-top:7px">Nothing else changes</div>'),
     'Retire',
     function () {
       _cbcatRetire(id);
@@ -421,7 +421,7 @@ function cbcatSeedAsk() {
     body:
       '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
       'Pick the trade you are in and its usual categories are added, nested as the standard nests them. ' +
-      '<b>Nothing you already have is changed</b> — names that already exist are skipped.' +
+      '<b>Existing ones unchanged</b> — same names skipped.' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a ' +
       'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they ' +
       'land.</div></div>' +
@@ -1057,7 +1057,7 @@ function cbcatDetailHTML() {
             ' more in this category, not loaded on this screen — open ' +
             '<span data-cbsid="CTG002-C02" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
             tx('Catalogue') +
-            '</span> to search them.</div>'
+            '</span> to search them</div>'
           : '') +
         '</div>'
       : n > 0
@@ -1071,10 +1071,10 @@ function cbcatDetailHTML() {
           ' filed here. None of them are loaded on this screen — open ' +
           '<span data-cbsid="CTG002-C03" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
-          '</span> to see them.</div>'
-        : '<div class="cbcat-none">Nothing here yet. Attach products from <span data-cbsid="CTG002-C04" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+          '</span> to see them</div>'
+        : '<div class="cbcat-none">None yet, attach from <span data-cbsid="CTG002-C04" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
-          '</span> — tick them and press <b>' +
+          '</span> — tick, then press <b>' +
           tx('Categorise') +
           '</b>.</div>') +
     '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' +
@@ -1717,7 +1717,7 @@ function cbcatSchemesHTML() {
 function cbcatParentPickHTML(f) {
   var opts = cbcatParentOptions(f.id);
   if (!opts.length)
-    return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
+    return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Becomes a top-level category</div>';
   return (
     '<select data-cbsid="CTG002-S02" class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">' +
     '<option value="">— top level —</option>' +

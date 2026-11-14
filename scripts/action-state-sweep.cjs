@@ -13,6 +13,11 @@
  *   node scripts/action-state-sweep.cjs            → writes docs/ACTION-STATE-SWEEP.md
  *   node scripts/action-state-sweep.cjs --check    → prints the totals only
  */
+/*
+ * OWNS      the sweep of writing controls and whether each goes through CBAction (docs/ACTION-STATE-SWEEP.md)
+ * CALLED BY package.json:72 (npm run sweep:actions)
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/ui-action-set
+ */
 'use strict';
 const fs = require('fs'),
   path = require('path');

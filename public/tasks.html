@@ -122,6 +122,8 @@ function go() {
 <script src="/app/rail-thread.js"></script>   <!-- CBThread: the ONE composer + list for a chit's messages -->
 <script src="/engine/tax.js"></script>   <!-- CBTax.moneyOf: the chit sheet reads a frozen invoice through it (never a sum here) -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
+<script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
+<script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
 <script src="/app/cap-books.js"></script>   <!-- bkMoney (M36): minor units → the shop's figure; nothing here does money arithmetic -->
 <script src="/app/chit-sheet.js"></script>   <!-- CBSheet: THE chit popup — a dispute row opens its chit here, with the dispute section (T3) -->
 <script src="/app/cap-quotes.js"></script>   <!-- CBQuotes (RAIL-117 · F8): the Rounds section of a quotation, mounted by the chit sheet -->

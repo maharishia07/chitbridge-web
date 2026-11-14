@@ -47,7 +47,7 @@ function tblWidths() {
 function tblSave(all) {
   try {
     localStorage.setItem(TBL_STORE, JSON.stringify(all));
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
 }
 
 /** ⭐ a table's identity is what its columns are CALLED — see the note above */

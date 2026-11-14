@@ -15,6 +15,12 @@
  * Usage:  node scripts/check-app-parses.cjs [file ...]     (defaults to public/app.html and public/app/*.js)
  * Exit 1 on any parse failure, so it can gate a commit.
  */
+/*
+ * OWNS      the parse check that app.html's inline script and the app modules actually run
+ * CALLED BY package.json:37 (parsecheck); .github/workflows/ci.yml:35
+ * FLOW      read app.html and app/*.js -> extract the inline scripts -> compile each -> exit 1 on a failure
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/walks-and-the-e2e-harness
+ */
 'use strict';
 const fs = require('fs');
 const path = require('path');

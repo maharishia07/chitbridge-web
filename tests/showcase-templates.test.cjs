@@ -64,7 +64,7 @@ ok('mix: a chosen subset drops sections but the range stays', (() => { const l =
 ok('mix: unknown section keys are ignored; empty = the template\'s own', SC.assemble('showcase.food.menu@1.0', ['nope']).indexOf('menu') >= 0 && SC.assemble('showcase.food.menu@1.0', []).length === SC.TEMPLATES['showcase.food.menu@1.0'].sections.length);
 ok('an unregistered choice falls back to the vertical\'s seed, else gallery', SC.pick('showcase.x.y@9.9', 'services') === 'showcase.services.booking@1.0' && SC.pick('', '') === SC.DEFAULT);
 ok('render() honours the shop\'s own choice from shop.showcase', SC.render(SC.contractOf({ shop: { display_name: 'S', showcase: { template: 'showcase.paint.specs@1.0', sections: [] } }, items: [] }), {}).indexOf('data-template="showcase.paint.specs@1.0"') > 0);
-ok('an empty shop says one short line, never a cart', /Nothing on display yet/.test(SC.render(SC.contractOf({ shop: { display_name: 'S' }, items: [] }), {})));
+ok('an empty shop says one short line, never a cart', /Nothing on display/.test(SC.render(SC.contractOf({ shop: { display_name: 'S' }, items: [] }), {})));
 
 const shop = fs.readFileSync(path.join(PUB, 'shop.html'), 'utf8');
 ok('shop.html loads the module and routes through CBShowcase', /<script src="app\/showcase-templates\.js">/.test(shop) && /CBShowcase\.render\(/.test(shop));

@@ -8,7 +8,13 @@
  *   (Co-assists · Transact · Trade-ready · Dispute — checkboxes now; their expansions come in later slices.)
  * Draft persists per-entity (localStorage + server, b111), survives reopen. "Build" is a dry-run (mints nothing);
  * real mint wiring is Phase B (through the real API / capability modules), added when that step is built.
- * CALLED BY public/app.html, public/app/cap-network-member.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      the DESIGN-first network builder: a draft tree under your own entity (nodes, the capabilities each holds, per-node config), its draft store
+ *           (localStorage + /api/network-design) and the dry-run Build. Draws only inside app.html (the workshop), never on a customer page.
+ * CALLED BY public/app.html (ensureCap('network'); loadNetwork() at :6493, _netFlush() at :5609, capScreen('networkScreen') at :22202) and
+ *           public/app/cap-network-member.js (_netByName as the sort callback, :35). No customer page loads it by <script src>; network-app.js (network.html) calls none of its symbols.
+ * FLOW      ensureCap('network') -> loadNetwork -> _netInit -> netWhereAmI (operator | member | standalone) -> the tree paints -> netSelect / netCapYes / netCapNo edit the draft -> Build (dry run).
+ * CARD      04-network/network-design-builder
+ * IDS       SUPPORT file (reached only through app.html, Athi: back office later): no data-cbsid here yet, header only (14 Nov).
  */
 
 /* ---- capabilities a node can HOLD (checkboxes) ---- */
@@ -176,7 +182,7 @@ function _netSetDirty(on) {
   try {
     if (on) localStorage.setItem(_netDirtyKey(), '1');
     else localStorage.removeItem(_netDirtyKey());
-  } catch (e) {}
+  } catch (e) { /* storage blocked or full: the page works without it */ }
 }
 function _netStripView(net) {
   try {
@@ -203,7 +209,7 @@ function _netPushServer() {
         _netQueuePush(); // retry the latest state after an in-flight push / transient failure
         if (typeof toast === 'function' && !/Already working/.test((err && err.message) || '')) toast('Design saved on this device — not synced yet');
       });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
 }
 function _netQueuePush() {
   if (!_netLoggedIn()) return;
@@ -220,7 +226,7 @@ function _netFlush() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
       body: JSON.stringify({ draft: _netStripView(UI.net) })
     });
-  } catch (e) {}
+  } catch (e) { /* best effort: failing here changes nothing the user sees */ }
 }
 function _netPullServer() {
   if (!_netLoggedIn() || UI._netPulled || UI._netPulling) return;
@@ -240,7 +246,7 @@ function _netPullServer() {
           _netInit();
           try {
             localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net));
-          } catch (e) {}
+          } catch (e) { /* storage blocked or full: the page works without it */ }
           if (typeof renderApp === 'function') renderApp();
         } else if (UI.net && UI.net.nodes) {
           // server empty but this device has a design → migrate it up once
@@ -265,7 +271,7 @@ if (typeof window !== 'undefined' && !window._netFlushBound) {
 function _netSave() {
   try {
     if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net));
-  } catch (e) {}
+  } catch (e) { /* storage blocked or full: the page works without it */ }
   _netSetDirty(true);
   _netQueuePush();
 }
@@ -384,7 +390,7 @@ async function netWhereAmI() {
           SESSION.bridgeId = e0.bridge_id;
           if (typeof setSession === 'function') setSession({ bridgeId: e0.bridge_id });
         }
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     if (!SESSION.bridgeId) {
       UI._netRole = null;
@@ -1472,7 +1478,7 @@ function netStartOver() {
   var go = function () {
     try {
       localStorage.removeItem(_netDraftKey());
-    } catch (e) {}
+    } catch (e) { /* storage blocked or full: the page works without it */ }
     UI.net = null;
     _netRerender();
   };
@@ -4695,7 +4701,7 @@ function _netRootHandle() {
           _netRerender();
         })
         .catch(function () {});
-    } catch (e) {}
+    } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   }
   return _netSlug((typeof SESSION !== 'undefined' && SESSION.entity) || '') || 'your-network';
 }

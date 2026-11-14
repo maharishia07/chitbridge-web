@@ -108,7 +108,7 @@
 <div class="wrap">
   <div class="left">
     <div class="lh"><div class="t">🏭 Suppliers</div>
-      <input class="lsrch" placeholder="Search suppliers…" oninput="supSearch(this.value)"></div>
+      <input data-cbsid="OWN006-I01" class="lsrch" placeholder="Search suppliers…" oninput="supSearch(this.value)"></div>
     <div class="llist" id="supList"></div>
   </div>
   <div class="right">
@@ -118,8 +118,8 @@
     <div class="rfoot" id="rfoot"></div>
   </div>
 </div>
-<div class="ov" id="ov" onclick="if(event.target===this)closeOv()"><div class="ovc" id="ovc"></div></div>
-<div class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('sup')"><div class="ovc" id="cartovc"></div></div>
+<div data-cbsid="OWN006-C01" class="ov" id="ov" onclick="if(event.target===this)closeOv()"><div class="ovc" id="ovc"></div></div>
+<div data-cbsid="OWN006-C02" class="cbcart-ov" id="cartov" onclick="if(event.target===this)CBCart.close('sup')"><div class="ovc" id="cartovc"></div></div>
 
 <script>
 var SUPS = [
@@ -238,7 +238,7 @@ function paintList() {
     ? list
         .map(function (item) {
           return (
-            '<div role="button" tabindex="0" class="sup' +
+            '<div data-cbsid="OWN006-B01" role="button" tabindex="0" class="sup' +
             (S.sup && S.sup.id === item.id ? ' on' : '') +
             '" onclick="pick(\'' +
             item.id +
@@ -260,7 +260,7 @@ function chipHTML() {
   var c = S.sup.clear,
     bad = c && c.out > c.met;
   return (
-    '<div class="chipbar"><div class="chip" onclick="openOv()"><b>' +
+    '<div class="chipbar"><div data-cbsid="OWN006-C03" class="chip" onclick="openOv()"><b>' +
     esc(S.sup.name) +
     '</b>' +
     '<span class="id">' +
@@ -276,7 +276,7 @@ function stepsHTML() {
     '<div class="steps">' +
     STEPS.map(function (item, index) {
       var cls = index === S.step ? 'st now' : index < S.step ? 'st done' : 'st';
-      return '<div class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')" role="button" tabindex="0"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
+      return '<div data-cbsid="OWN006-B02" class="' + cls + '"' + (index < S.step ? ' onclick="go(' + index + ')" role="button" tabindex="0"' : '') + '>' + (index < S.step ? '✓ ' : '') + item.n + '</div>';
     }).join('') +
     '</div>'
   );
@@ -286,7 +286,7 @@ function stepItems() {
     '<div id="cartbar">' +
     CBCart.barHTML('sup') +
     '</div>' +
-    '<input class="srch" placeholder="Search their catalogue…" value="' +
+    '<input data-cbsid="OWN006-I02" class="srch" placeholder="Search their catalogue…" value="' +
     esc((CBCart.state('sup') || {}).q || '') +
     '"' +
     ' oninput="CBCart.search(\'sup\',this.value)">' +
@@ -300,13 +300,13 @@ function stepDetails() {
     '<div class="sec">Your order to ' +
     esc(S.sup.name) +
     '</div>' +
-    '<div class="two"><div><label class="fl">Needed by</label><input class="inp" type="date" value="' +
+    '<div class="two"><div><label class="fl">Needed by</label><input data-cbsid="OWN006-I03" class="inp" type="date" value="' +
     esc(S.by) +
     '" oninput="S.by=this.value"></div>' +
-    '<div><label class="fl">Deliver to</label><input class="inp" value="' +
+    '<div><label class="fl">Deliver to</label><input data-cbsid="OWN006-I04" class="inp" value="' +
     esc(S.addr) +
     '" placeholder="site / address" oninput="S.addr=this.value"></div></div>' +
-    '<label class="fl">Note</label><input class="inp" value="' +
+    '<label class="fl">Note</label><input data-cbsid="OWN006-I05" class="inp" value="' +
     esc(S.note) +
     '" placeholder="instructions" oninput="S.note=this.value">' +
     '<div class="note">Asked for, not agreed — ' +
@@ -326,7 +326,7 @@ function stepReview() {
     '</span></div></div>' +
     '<div class="rev"><div class="h">Items · ' +
     list.length +
-    '<span class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
+    '<span data-cbsid="OWN006-B03" class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
     /* ⚠️ line_total comes FROM THE HELPER. This screen used to recompute it from the catalogue price and so
        ignored the buyer's offer entirely — the review showed the seller's ask on a line that had been offered
        against. Anything that shows money asks cart-ui which price counts. */
@@ -361,7 +361,7 @@ function stepReview() {
     (T.amount ? CBCart.fmt('sup', T.amount) + (T.partial ? '+' : '') : '—') +
     '</span></div></div>' +
     (T.offered ? '<div class="note">This contains an OFFER — your price, not theirs. They accept or counter; nothing is agreed yet.</div>' : '') +
-    '<div class="rev"><div class="h">Details<span class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(1)">Change</span></div>' +
+    '<div class="rev"><div class="h">Details<span data-cbsid="OWN006-B04" class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(1)">Change</span></div>' +
     '<div class="r"><span class="k">Needed by</span><span>' +
     (S.by ? esc(S.by) : '—') +
     '</span></div>' +
@@ -382,7 +382,7 @@ function ovHTML() {
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><b style="font-size:17px;flex:1">' +
     esc(s.name) +
     '</b>' +
-    '<button onclick="closeOv()" style="border:0;background:none;font-size:22px;color:var(--grey);cursor:pointer">×</button></div>' +
+    '<button data-cbsid="OWN006-B05" onclick="closeOv()" style="border:0;background:none;font-size:22px;color:var(--grey);cursor:pointer">×</button></div>' +
     (bad
       ? '<div class="note">⚠ ' + c.out + ' clearance(s) outstanding · ' + c.met + '/' + c.out + ' met — status only, their evidence stays theirs.</div>'
       : '') +
@@ -414,9 +414,9 @@ function paintFoot() {
   var last = S.step === STEPS.length - 1,
     why = blockedBecause();
   document.getElementById('rfoot').innerHTML =
-    (S.step ? '<button onclick="go(' + (S.step - 1) + ')"><span class=arw>←</span> Back</button>' : '<button onclick="openOv()">Their details</button>') +
-    '<button>Save draft</button>' +
-    '<button class="pri"' +
+    (S.step ? '<button data-cbsid="OWN006-B06" onclick="go(' + (S.step - 1) + ')"><span class=arw>←</span> Back</button>' : '<button data-cbsid="OWN006-B07" onclick="openOv()">Their details</button>') +
+    '<button data-cbsid="OWN006-B08">Save draft</button>' +
+    '<button data-cbsid="OWN006-B09" class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +
     ' onclick="' +
     (last ? "alert('(mock) order sent')" : 'go(' + (S.step + 1) + ')') +

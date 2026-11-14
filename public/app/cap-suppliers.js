@@ -334,6 +334,7 @@ var CBSuppliers = (function () {
     if (!node) {
       node = S.dlg = document.createElement('dialog');
       node.className = 'sheet';
+      node.setAttribute('data-pop', 'POP147');
       node.setAttribute('data-testid', 'sup-add-dlg');
       document.body.appendChild(node);
     }

@@ -306,7 +306,7 @@ async function downloadCatalogueTemplate(btn) {
     var body =
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' +
       esc(reply.filename || '') +
-      '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>' +
+      '</b> — dashed columns optional</div>' +
       '<div style="margin-bottom:10px">' +
       cols +
       '</div>' +
@@ -375,7 +375,7 @@ async function _cfRun(btn) {
   var out = document.getElementById('cf_out');
   if (!out) return;
   if (!text.trim() && !UI._cfXlsx) {
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Choose a file or paste some rows first.</div>';
+    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Add file or rows</div>';
     return;
   }
   var was = btn ? btn.textContent : null;
@@ -567,7 +567,7 @@ function _cfImport(btn) {
   }
   confirmAsk(
     'Import using ' + using + ' column' + (using === 1 ? '' : 's') + '?',
-    (creating ? 'It also adds <b>' + creating + ' new column' + (creating === 1 ? '' : 's') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>') +
+    (creating ? 'It also adds <b>' + creating + ' new column' + (creating === 1 ? '' : 's') + '</b> to your catalogue<div style="margin-top:7px">' : '<div>') +
       txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) +
       '</div>',
     'Import',
@@ -782,7 +782,7 @@ var CBCatalogueApp = (function () {
       esc(T('New item')) +
       '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out"></div></div></div>' +
       '<div class="cat-list" id="cat_items" data-testid="cat-items"></div>' +
-      '<dialog class="sheet" id="cat_sheet" data-testid="cat-sheet"></dialog>'
+      '<dialog class="sheet" id="cat_sheet" data-pop="POP127" data-testid="cat-sheet"></dialog>'
     );
   }
   function paintCount() {
@@ -1193,7 +1193,7 @@ var CBCatalogueApp = (function () {
   }
   function formHTML(d) {
     return (
-      ctField('name', esc(T('Name')), d.name || '') +
+      ctField('name', esc(T('Name')), d.name || '', 'required data-required-msg="' + esc(T('A name is needed.')) + '"') +
       '<div class="cat-two"><div>' +
       ctField('unit', esc(T('Unit')), d.unit || '', 'placeholder="' + esc(T('piece / kg / litre')) + '"') +
       '</div><div>' +
@@ -1311,7 +1311,7 @@ var CBCatalogueApp = (function () {
       head +
       '<form id="cat_form" onsubmit="return false">' +
       formHTML(S.mode === 'new' ? {} : d) +
-      '<div class="cat-sheet-acts"><button data-cbsid="CTG001-B05" type="button" class="act" data-testid="cat-save" id="cat_save">' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG001-B05" type="button" class="act" data-testid="cat-save" id="cat_save" data-sheet-save>' +
       esc(S.mode === 'new' ? T('Add item') : T('Save')) +
       '</button>' +
       '<button data-cbsid="CMP003" data-cbmount="CTG001-U103" type="button" class="act quiet" data-testid="cat-cancel" id="cat_cancel">' +
@@ -1463,7 +1463,7 @@ var CBCatalogueApp = (function () {
       esc(T('New category')) +
       '</button><div class="cat-out" id="catg_out" data-testid="catg-out"></div></div></div>' +
       '<div class="cat-list" id="cat_catgs" data-testid="cat-categories"></div>' +
-      '<dialog class="sheet" id="catg_sheet" data-testid="catg-sheet"></dialog>'
+      '<dialog class="sheet" id="catg_sheet" data-pop="POP128" data-testid="catg-sheet"></dialog>'
     );
   }
   function catgRows() {

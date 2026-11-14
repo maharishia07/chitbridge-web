@@ -37,7 +37,7 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
 function readRegister(file) {
   const ctx = { tx: (s) => s, esc: (s) => String(s) };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, PA: STD_PRODUCT_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD, compat: stdCompatRows, abbrs: stdAbbrs, gl: stdGlossary, GL: STD_GLOSSARY };', ctx);
+  vm.runInContext(fs.readFileSync(file, 'utf8') + fs.readFileSync(path.join(path.dirname(file), 'cap-standards-build.js'), 'utf8') /* CAP-STD-1: the register's build rows, loaded after it as the page does */ + ';this.R = { S: STANDARDS, A: STD_AREAS, PA: STD_PRODUCT_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD, compat: stdCompatRows, abbrs: stdAbbrs, gl: stdGlossary, GL: STD_GLOSSARY };', ctx);
   return ctx.R;
 }
 const REG = readRegister(path.join(PUB, 'app', 'cap-standards.js'));
@@ -61,7 +61,7 @@ const ALL = REG.S.concat(CROWS), N = ALL.length;
 const CA = { live: 0, part: 0, plan: 0 }; ALL.forEach((r) => { CA[r.s]++; });
 const shownAll = () => new RegExp('^' + N + ' shown');
 /* the design's data.js is DERIVED from the register (STDREG1): load it the way its index.html does — data.js, then the register — and read what it built */
-const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
+const DESIGN_DERIVED = (() => { const g = {}; g.window = g; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8') + fs.readFileSync(path.join(PUB, 'app', 'cap-standards-build.js'), 'utf8'), g); return vm.runInContext('window.STD_PAGE', g); })();
 const CHECKED = new Date(REG.CH + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });   /* "14 Oct 2026" — as the page says it */
 
 /* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
@@ -283,7 +283,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.screenshot({ path: path.join(SHOTS, 'standards-country.png') });
     await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(250);
     const krows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|Compatibilityworks with|All', 'Count by Kind: Law, Standard, Practice, Compatibility (with what each means), All');
+    ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|Compatibilityworks with|Build rulewe hold ourselves to it|All', 'Count by Kind: Law, Standard, Practice, Compatibility, Build rule (with what each means), All');
     ok(shownAll().test(await count(p)) && (await chips(p)).length === 0, 'ONE choice: the Group by in the toolbar moved the left table (Counted by Kind); it cleared the cell choice (a cell of one view means nothing in another)');
     ok(/Counted by Kind/.test(await p.textContent('[data-testid="std-mx-by"]')) && await p.locator('[data-dim]').count() === 0, 'there is no second Count by control — the table follows Group by');
     await p.click('[data-testid="cbl-group-standards"] [data-group="none"]'); await p.waitForTimeout(250);
@@ -320,7 +320,7 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300);
     const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     console.log('     groups: ' + JSON.stringify(gk));
-    ok(gk.length === 4 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]), 'Group by Kind: Law · Standard · Practice · Compatibility, in that order, each with its count: ' + gk[0]);
+    ok(gk.length === 5 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]) && /Compatibility/.test(gk[3]) && /Build rule/.test(gk[4]), 'Group by Kind: Law · Standard · Practice · Compatibility · Build rule, in that order, each with its count: ' + gk[0]);
     await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
     /* the unit draws 50 rows at a time: scroll until every row is drawn, so the last group's head is there (STDREG1: more rows than two pages) */
     for (let k = 0; k < Math.ceil(N / 50) + 1; k++) { await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300); }

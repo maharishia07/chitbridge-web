@@ -626,7 +626,7 @@ ok('⚠️ a search matching nothing leaves BOTH headings and the controls', () 
   paint();
   assert.deepStrictEqual(secCounts(), { mine: 0, other: 0 });
   assert.ok(/listctl-search-disputes/.test(painted), 'the dbox to undo it must still be there');
-  assert.ok(/None\./.test(painted), 'and each section says None.');
+  assert.ok(/>None</.test(painted), 'and each section says None (the copy budget, #687, dropped the full stop).');
   drun("listCtlSetQ('disputes', '')");
 });
 

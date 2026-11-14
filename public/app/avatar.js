@@ -83,9 +83,11 @@
     motion: 'cb_motion',
     stripes: 'cb_stripes',
     edition: 'cb_edition',
-    kural: 'cb_kural'
+    kural: 'cb_kural',
+    keys: 'cb_keys'
   };
-  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto' };
+  var DEFAULTS = { theme: 'device', font: 'default', fs: 'm', weight: 'normal', motion: 'auto', stripes: 'strong', edition: 'full', kural: 'auto', keys: 'on' };
+  var DEVICE_ONLY = ['keys']; /* held on this device: the server's ui.keys list has no 'keys' yet, so hydrate and push leave it alone */
   /* SET-WALK1 · W7: the Thirukkural band — auto (on only where the shop reads Tamil: CBLocale.langs has 'ta') · on · off; the owner's choice, synced like the rest */
   var KURAL = [
     ['auto', 'Where Tamil is read'],
@@ -144,7 +146,8 @@
       motion: pref('motion'),
       stripes: pref('stripes'),
       edition: pref('edition'),
-      kural: pref('kural')
+      kural: pref('kural'),
+      keys: pref('keys')
     };
   }
 
@@ -450,6 +453,7 @@
       return STRIPES.some(function (x) {
         return x[0] === v;
       });
+    if (kind === 'keys') return v === 'on' || v === 'off';
     if (kind === 'edition') return EDITION.test(String(v));
     if (kind === 'kural')
       return KURAL.some(function (x) {
@@ -472,6 +476,7 @@
       again = false;
     try {
       Object.keys(KEY).forEach(function (item) {
+        if (DEVICE_ONLY.indexOf(item) >= 0) return;
         var v = prefs[item],
           held = v != null && v !== '';
         if (has(pend, item)) {
@@ -554,8 +559,9 @@
     if (!has(KEY, kind) || !valid(kind, value)) return;
     if (OVERRIDE) return setFixed(kind, value);
     lsSet(KEY[kind], value);
-    pendMark(kind); /* held against a server reset until a push lands (F9) */
+    if (DEVICE_ONLY.indexOf(kind) < 0) pendMark(kind); /* held against a server reset until a push lands (F9) */
     apply();
+    if (kind === 'keys' && root.CBShortcuts) root.CBShortcuts.stamp(); /* the rail and cards say their keys only while the switch is on */
     if (kind === 'edition') {
       push(true);
       if (root.CBEdition) root.CBEdition.clearTab();
@@ -610,7 +616,7 @@
     '.cbav-items.last{border-bottom:0;border-top:1px solid var(--av-soft);margin-top:8px}' +
     '.cbav-items button,.cbav-items a{display:flex;justify-content:space-between;align-items:center;text-align:start;border:0;background:none;border-radius:7px;padding:7px 8px;text-decoration:none;font-size:calc(14px * var(--k,1))}' +
     '.cbav-items button:hover,.cbav-items a:hover{background:var(--av-panel)}' +
-    '.cbav h4{margin:10px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--av-faint);font-weight:700}' +
+    '.cbav h4{clear:left;margin:10px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--av-faint);font-weight:700}' +
     '.cbav-sw{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 8px}' +
     '.cbav-sw button{display:grid;gap:3px;justify-items:center;border:1px solid transparent;background:none;border-radius:9px;padding:4px 2px;font-size:calc(10.5px * var(--k,1));color:var(--av-muted);line-height:1.15;text-align:center}' +
     '.cbav-sw .dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--av-line);display:grid;grid-template-rows:1fr 1fr;overflow:hidden}' +
@@ -619,7 +625,7 @@
     '.cbav-sizes button,.cbav-weights button{flex:1;border:1px solid var(--av-line);background:var(--av-card);border-radius:9px;display:grid;place-items:center;color:var(--av-ink);padding:0;font-family:inherit}' +
     '.cbav-sizes button{height:42px}.cbav-weights{display:flex;gap:4px;margin:0 0 8px}.cbav-weights button{height:36px;font-size:17px}' +
     '.cbav-sizes button[aria-pressed="true"],.cbav-weights button[aria-pressed="true"]{border-color:var(--av-blue);background:var(--av-blue-t);color:var(--av-blue-i)}' +
-    '.cbav-motion{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
+    '.cbav-motion{display:flex;float:left;box-sizing:border-box;width:50%;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
     '.cbav-toggle{width:40px;height:22px;border-radius:999px;border:1px solid var(--av-line);background:var(--av-panel);position:relative;padding:0}' +
     '.cbav-toggle::after{content:"";position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;background:var(--av-faint);transition:inset-inline-start .15s}' +
     '.cbav-toggle[aria-checked="true"]{background:var(--av-blue-t);border-color:var(--av-blue)}' +
@@ -695,6 +701,10 @@
   }
 
   /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
+  /** one on/off switch of the menu, two to a line (Less motion · Shortcuts = the keyboard shortcuts, MNT-63, WCAG 2.2 SC 2.1.4): a label and a switch whose click picks the other value of its kind */
+  function switchRow(label, kind, on, offValue, onValue) {
+    return '<div class="cbav-motion"><span>' + label + '</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="' + kind + '-switch" data-av-' + kind + '="' + (on ? offValue : onValue) + '" aria-checked="' + on + '" aria-label="' + label + '"></button></div>';
+  }
   function choiceGroup(heading, kind, choices) {
     return (
       '<h4>' +
@@ -791,7 +801,7 @@
         '</div>';
     }
     return (
-      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
+      '<div class="cbav-pop" role="dialog" data-pop="POP114" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
       '<div class="cbav-who"><span class="l">' +
       esc(letter(P)) +
       '</span><div><b>' +
@@ -805,7 +815,6 @@
       '</div>' +
       editionsHtml() +
       choiceGroup('Row stripes', 'stripes', STRIPES) +
-      /* W7: the Thirukkural band — the stripes look, never a new one */
       choiceGroup('Thirukkural', 'kural', KURAL) +
       '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
@@ -836,9 +845,8 @@
       '<button type="button" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="weight-bold" data-av-weight="bold" aria-pressed="' +
       (w === 'bold') +
       '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
-      '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="motion-switch" data-av-motion="1" aria-checked="' +
-      (pref('motion') === 'reduce') +
-      '" aria-label="Less motion"></button></div>' +
+      switchRow('Less motion', 'motion', pref('motion') === 'reduce', 'auto', 'reduce') +
+      switchRow('Shortcuts', 'keys', pref('keys') !== 'off', 'off', 'on') +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
@@ -1030,7 +1038,7 @@
   }
 
   /** the saved looks a menu button sets by its data-av-<kind> attribute */
-  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font', 'motion', 'keys'];
   /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
   function onMenuAction(e, action, o) {
     var closeThen = function (callback) {
@@ -1071,7 +1079,6 @@
       return target.closest('[data-av-' + kind + ']');
     })[0];
     if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
-    if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
     if ((button = target.closest('[data-av-lang]'))) {
       if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang'));
       return;

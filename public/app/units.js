@@ -1,4 +1,10 @@
 /* app/units.js — vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC). */
+/*
+ * OWNS      CBUnits: one unit, three names (ours, UN/ECE Rec 20, GST UQC); never converts
+ * CALLED BY <script src="/app/units.js"> at public/app.html:1626; used by public/app/product-lab-rows.js; e2e/guard-static.cjs
+ * FLOW      a name in -> unitOf() the one unit it means -> rec20Of() / uqcOf() codes out
+ * CARD      06-catalogue-pim/units-conversion-codes
+ */
 (function (root) {
   'use strict';
   const UNITS = {

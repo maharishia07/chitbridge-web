@@ -12,6 +12,12 @@
  *
  * ⚠️ TAMIL IS THE LANGUAGE ATHI CAN JUDGE FASTEST. It wants his eye before anyone else's.
  */
+/*
+ * OWNS      the Tamil label pack (CBSTR.ta), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176; read by public/app/strings-ui-standard.js
+ * FLOW      language chosen -> CBLocale.pack('ta') injects this file -> tx() reads CBSTR.ta
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var ta = CBSTR.ta || (CBSTR.ta = {});

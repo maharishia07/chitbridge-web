@@ -105,10 +105,13 @@ function fqReminderSheet() {
   var rm = fqRemind(),
     off = !rm.may_set,
     why = rm.may_set ? '' : rm.why_not || '';
-  modal(
-    '<div class="mhd"><div class="t" data-testid="fq-sheet-title">' +
-      esc(tx('Cheque reminders')) +
-      '</div></div><div class="mbody" data-testid="fq-sheet">' +
+  ui.dialog({
+    mount: 'FIN006-U01',
+    pop: 'POP108',
+    titleText: tx('Cheque reminders'),
+    titleTestid: 'fq-sheet-title',
+    testid: 'fq-sheet',
+    body:
       '<label style="flex-direction:row;align-items:center;gap:8px"><input data-cbsid="FIN006-I01" type="checkbox" id="fq_on" data-testid="fq-on"' +
       (rm.on ? ' checked' : '') +
       (off ? ' disabled' : '') +
@@ -127,15 +130,21 @@ function fqReminderSheet() {
       '</p>' +
       '<div id="fq_why" class="hint" role="status" data-testid="fq-why">' +
       esc(why) +
-      '</div></div>' +
-      '<div class="mfoot"><button data-cbsid="FIN006-B02" type="button" onclick="closeModal()">' +
-      esc(tx('Cancel')) +
-      '</button>' +
-      '<button data-cbsid="FIN006-B03" type="button" class="pri" data-testid="fq-save"' +
-      (off ? ' disabled aria-disabled="true"' : '') +
-      ' onclick="fqSave(this)">' +
-      esc(tx('Save')) +
-      '</button></div>'
+      '</div>',
+    footerHtml: fqSheetFoot(off)
+  });
+}
+/** the sheet's footer: Cancel, and Save (greyed with the server's sentence when the shop may not set it) */
+function fqSheetFoot(locked) {
+  return (
+    '<button data-cbsid="FIN006-B02" type="button" onclick="closeModal()">' +
+    esc(tx('Cancel')) +
+    '</button>' +
+    '<button data-cbsid="FIN006-B03" type="button" class="pri" data-testid="fq-save"' +
+    (locked ? ' disabled aria-disabled="true"' : '') +
+    ' onclick="fqSave(this)">' +
+    esc(tx('Save')) +
+    '</button>'
   );
 }
 function fqSave(btn) {

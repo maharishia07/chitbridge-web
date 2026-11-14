@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (66)
+## Capabilities (68)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -23,8 +23,6 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
 | `cap-assist.js` | — |  |
 | `cap-attach.js` | — |  |
-| `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ), after its NEW |
-| `cap-bank-store.js` | — | cap-bank-store.js — the SERVER STORE of the Bank view's marks (FIN-70, web half; api: POST /bank/marks, POST /bank/statements, GET /bank/log) |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
 | `cap-books.js` | lazy · ledger | cap-books.js — THE LEDGER: parties, statements, payments, day book, trial balance, P&L, balance sheet, dues, month |
 | `cap-catalogue.js` | eager | THE CATALOGUE'S PRIMITIVES, ONE COPY, and the catalogue as a small app (T3-CATALOGUE, 2026-10-14) |
@@ -37,6 +35,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-country.js` | lazy · on demand | cap-country.js — COUNTRY SETUP (CS1, 2026-10-12): the step after registration, before the books open (lazy; ensureCap('country') → #/country) |
 | `cap-crm-calls.js` | — | cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons |
 | `cap-crm-chits.js` | — | cap-crm-chits.js — THE CHITS BEHIND THE HOME RAIL: In · Out · Stuck, stuck first (black-box H1 · H4 · H10) |
+| `cap-crm-groups-send.js` | — | cap-crm-groups-send.js — PART of cap-crm-groups.js (MNT-59): the Send-to-group sheet, who may be sent first (the server's dry answer, by code), then t |
+| `cap-crm-groups-sheet.js` | — | cap-crm-groups-sheet.js — PART of cap-crm-groups.js (MNT-59): the New group / Members sheet, ticking the customers of a named group, saving it and del |
+| `cap-crm-groups-window.js` | — | cap-crm-groups-window.js — PART of cap-crm-groups.js (MNT-59): the Shop window screen (#/showcase), the template chooser, the preview of the shop's ow |
 | `cap-crm-groups.js` | — | cap-crm-groups.js — CB CRM: GROUPS & SEGMENTS and the SHOP WINDOW (T3-P2-CRM, 2026-10-14; docs/design/crm/REQUIREMENT-segments.md) |
 | `cap-crm-leads.js` | — | cap-crm-leads.js — CB CRM L1: LEADS AS PARTIES (+ L3: Import from a CSV, at the foot of this file) |
 | `cap-crm-privacy.js` | — | cap-crm-privacy.js — CB CRM: a party's CONSENT (the record's Consent block) and the shop's PRIVACY REQUESTS register (#/privacy) |
@@ -55,8 +56,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
 | `cap-fx.js` | — | cap-fx.js — FOREIGN CURRENCY (FX1, 2026-10-14): CB Accounts › Setup › Rates, and Month lock's "Foreign balances" line |
 | `cap-iddocs.js` | lazy · on demand |  |
-| `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
-| `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
+| `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen |
+| `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve". · CARD 20-settings-governance-and-plan/capability-legend |
 | `cap-marketing.js` | — | cap-marketing.js - THE MARKETING FACE of the CRM small app (MKT first slice, 22 Oct 2026; critic MKT-critic-2026-10-22 change 1) |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
@@ -76,7 +77,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
-| `cap-standards.js` | lazy · on demand | .html); its functions are called by standards.html (5 sites), the Legend |
+| `cap-standards-build.js` | — |  |
+| `cap-standards.js` | lazy · on demand | .html); its functions are called by standards.html (stdCompatRows · stdCompareRows · stdWhyHTML · stdRecordHTML · stdGoto), app/cap-legend.js |
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
 | `cap-supplies.js` | lazy · on demand | SUPPLIES: what the shop buys to USE, never to sell |
@@ -86,7 +88,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (62)
+## Shared (64)
 
 | file | loading | what it is |
 |---|---|---|
@@ -94,8 +96,6 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `assets.js` | eager | GENERATED by assets.cjs — DO NOT EDIT. Run `node assets.cjs` and commit |
 | `attach-ui.js` | eager | ATTACH + VIEW, as a helper any screen can reuse. (classic script, shared global scope) |
 | `avatar.js` | eager |  |
-| `bank-demo.js` | — | bank-demo.js — the page script of public/bank-demo.html (the no-login Bank-to-books showcase). External, because the page's CSP allows no inline scrip |
-| `bank-preview.js` | — | bank-preview.js — BANK STATEMENT → BOOKS, the ONE module: load → match → proposals → preview → confirm with reach → post |
 | `barcode.js` | eager | CBBarcode — Code 128 as inline SVG, no dependency, no network |
 | `cart.js` | eager |  |
 | `catalogue-lines.js` | eager |  |
@@ -108,7 +108,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
 | `country-ready.js` | — |  |
 | `device-id.js` | eager | device-id.js — CBDevice: THIS BROWSER'S DEVICE ID, AND X-Device-Id ON EVERY CALL TO THE API (K-SEC PR A, 2026-10-21) |
-| `edition.js` | — |  |
+| `edition.js` | — | · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions |
 | `embed-host.js` | — | .html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public) |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
@@ -120,7 +120,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
-| `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
+| `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back. · CARD 06-catalogue-pim/catalogue-picker |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
@@ -129,12 +129,16 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `register-form.js` | eager | register-form.js — THE REGISTER FORM: a new shop's User ID · e-mail → the code · the gov panel (reg-agree) → verify (FX-UX2, 2026-10-14) |
 | `screen-id.js` | — | .html index.html); CBScreenId.here / chip / popupChip / mountAttr are called by the shell, |
 | `screens.js` | eager | GENERATED by screens.cjs — DO NOT EDIT. Run `node screens.cjs` and commit |
+| `sheet-dialog.js` | — |  |
 | `sheet-keys.js` | — |  |
-| `shell.js` | — |  |
+| `shell.js` | — | .html public/app/ |
 | `shop-privacy.js` | — |  |
+| `shortcuts-register.js` | — |  |
+| `shortcuts.js` | — |  |
 | `showcase-templates.js` | eager |  |
 | `sides.js` | — |  |
 | `signin-ui.js` | — | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
+| `std-build-view.js` | — |  |
 | `step-flow.js` | eager | .html): accounts, app, crm, finance, shop. CBSteps.create is called in app.html (3 sites), |
 | `strings-ar.js` | — |  |
 | `strings-fr.js` | — |  |
@@ -155,4 +159,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*128 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*132 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

@@ -68,7 +68,7 @@
     if (!E.o.embed || !root.parent || root.parent === root) return;
     try {
       root.parent.postMessage({ cb: 'employees', event: event, person: person || null }, root.location.origin);
-    } catch (_) {}
+    } catch (_) { /* no host window to tell: standalone page */ }
   }
 
   function say(msg) {
@@ -260,7 +260,7 @@
     if (E.list) {
       try {
         E.list.destroy();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     root.CBList.reset && root.CBList.reset('employees');
     E.list = root.CBList.mount(host, {
@@ -686,10 +686,10 @@
       '<h2>' +
         esc(T('Add a person')) +
         '</h2><div id="emp_out" class="emp-out" role="status" data-testid="emp-out"></div>' +
-        '<div class="emp-form">' +
+        '<form class="emp-form" novalidate onsubmit="return false">' +
         '<label for="emp_n">' +
         esc(T('Name')) +
-        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off" required data-required-msg="' + esc(T('Type their name.')) + '">' +
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
@@ -708,9 +708,9 @@
         '<label for="emp_e">' +
         esc(T('E-mail')) +
         '</label><input data-cbsid="EMP001-I07" class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
-        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go">' +
+        '<button data-cbsid="EMP001-B12" type="submit" class="act" id="emp_add_go" data-testid="emp-add-go" data-sheet-save>' +
         esc(T('Add')) +
-        '</button></div>'
+        '</button></form>'
     );
     var typedKey = false,
       tm = null;
@@ -850,11 +850,11 @@
             E.el.innerHTML = '<div class="empty" data-testid="emp-refused"><div class="t">' + esc(E.may.add.why || '') + '</div></div>';
             return;
           }
-          E.el.innerHTML = '<dialog class="sheet" id="emp_sheet" data-testid="emp-sheet"></dialog>';
+          E.el.innerHTML = '<dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
           return openAdd();
         }
         E.el.innerHTML =
-          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-testid="emp-sheet"></dialog>';
+          '<div class="emp-top" id="emp_bar" data-testid="emp-bar"></div><div class="emp-list" id="emp_list" data-testid="emp-list"></div><dialog class="sheet" id="emp_sheet" data-pop="POP129" data-testid="emp-sheet"></dialog>';
         var node = $('emp_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

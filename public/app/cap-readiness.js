@@ -179,7 +179,7 @@ function _aiCopy(btn) {
     var t = decodeURIComponent(btn.getAttribute('data-draft') || '');
     if (navigator.clipboard) navigator.clipboard.writeText(t);
     if (typeof toast === 'function') toast('Draft copied ✓');
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 // close the loop: a confirmed DOCUMENT draft becomes the clearance's evidence — a self-chit on the rail carrying the
 // document, then gather (identical to a manually-uploaded cert). AI goes from advisor → producer on the rail.
@@ -200,7 +200,7 @@ async function _aiAccept() {
       try {
         var f = new File([d.draft], String(at.skill || 'draft') + '.md', { type: 'text/markdown' });
         await attUpload(chitId, f);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var date = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
     await api('readinessGather', {
@@ -262,7 +262,7 @@ function _aiPdf() {
   setTimeout(function () {
     try {
       node.print();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }, 350);
 }
 // the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
@@ -300,7 +300,7 @@ async function rdLoadDeclaration() {
         UI.laneRd = undefined;
       }
     }
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
   // ORIGIN = the entity's registered country (not a choice) — fixed home jurisdiction
   /* ⭐ meNow() — the entity's country is almost always already in UI._me by the time the readiness screen
      opens, and this only wants that one field. */
@@ -356,7 +356,7 @@ function saveLane() {
     origin = _laneOrigin();
   try {
     localStorage.setItem('cb_rd_lane', JSON.stringify({ vert: vert, dest: dest, origin: origin }));
-  } catch (_) {}
+  } catch (_) { /* storage blocked or full: the page works without it */ }
   try {
     api('profilePut', {
       body: {
@@ -370,7 +370,7 @@ function saveLane() {
         UI.profile = reply;
       })
       .catch(function () {});
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 function _rdStatus(st) {
   if (st === 'gathered') return { col: 'var(--ok-3)', ic: '✓', lbl: 'gathered' };
@@ -985,7 +985,7 @@ async function openSectorMatrix() {
         if (!rows[item.standard]) rows[item.standard] = { std: item.standard, sectors: {} };
         rows[item.standard].sectors[secs[index][0]] = true;
       });
-    } catch (e) {}
+    } catch (e) { /* best effort: failing here changes nothing the user sees */ }
   }
   var list = Object.keys(rows).map(function (item) {
     var on = secs.map(function (s) {
@@ -1558,7 +1558,7 @@ async function submitGather() {
     if (chitId && file && typeof attUpload === 'function') {
       try {
         await attUpload(chitId, file);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     // 3 · record the clearance, pointing at its evidence chit
     await api('readinessGather', {

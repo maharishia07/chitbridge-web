@@ -7,7 +7,7 @@
  *     cls / clsOn: the host's button classes (the workshop's `btn` / `btn primary`; CB CRM's `act sm ghost` / `act sm`)
  *     why: a sentence → every button is shown greyed with it (the server's or the level's may/why), never hidden
  * OWNS      CBShowcasePick.html (the template buttons and the preview frame; the host saves the choice)
- * CALLED BY app/cap-crm-groups.js (the Shop window tab, line 859) · app/cap-admin.js (Settings › Policy, line 9776) · loaded by crm.html and app.html (<script src>)
+ * CALLED BY app/cap-crm-groups.js family, its part cap-crm-groups-window.js (crmShowcasePick, the Shop window tab) · app/cap-admin.js (Settings › Policy, line 9776) · loaded by crm.html and app.html (<script src>)
  * FLOW      a host calls CBShowcasePick.html({ current, shopId, … }) → one button per CBShowcase.TEMPLATES entry (app/showcase-templates.js) → the host's click saves PATCH /api/entities/policy → the frame reloads shop.html?preview=1
  * CARD      11-crm-and-marketing/showcase
  */

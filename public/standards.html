@@ -71,7 +71,12 @@ button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-
 .sn{font-family:var(--f-num,'IBM Plex Mono',monospace);font-size:calc(13px * var(--k,1));font-weight:500}
 .kind{display:inline-block;max-width:100%;overflow-wrap:break-word;font-weight:600;font-size:calc(11px * var(--k,1));line-height:1.5;letter-spacing:.05em;text-transform:uppercase;
   border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-inline-start:2px;color:var(--muted);vertical-align:1px;white-space:normal}
-.kind.k-law{border-color:var(--ink);color:var(--ink)}
+.kind.k-law,.kind.k-build-rule{border-color:var(--ink);color:var(--ink)}
+.sbn{font:inherit;font-weight:600;min-width:44px;min-height:44px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
+.sbn:disabled{color:var(--muted);cursor:default}
+.sbn-fail:not(:disabled){border-color:var(--ink);text-decoration:underline}
+.sbl-box{max-height:60vh;overflow:auto}
+.sbl{margin:6px 0 0;padding-inline-start:1.2em;line-height:1.7;overflow-wrap:anywhere}
 .st{font-weight:600;white-space:nowrap}
 .stm{color:var(--muted);font-weight:400;font-family:inherit}
 /* ONE LINE per row on a laptop: the columns share the width (weights, set by fit()), a long cell ends in … and the full words are the tooltip and the opened row */
@@ -144,6 +149,10 @@ dialog.sheet::backdrop{background:color-mix(in srgb,var(--ink) 40%,transparent)}
 .sh-head h2{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-weight:800;font-size:calc(20px * var(--k,1));line-height:1.2}
 .sh-head [data-cbname="close"]{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;min-width:44px;min-height:44px;font-size:18px;cursor:pointer}
 .sh-body{flex:1;overflow:auto;padding:14px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet .mhd{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:14px 20px 10px;border-bottom:1px solid var(--line-soft)}
+.sheet .mhd .t{font-family:var(--f-display,"Bricolage Grotesque",sans-serif);font-weight:800;font-size:calc(20px * var(--k,1));line-height:1.2;flex:1 1 60%}
+.sheet .mbody{flex:1;overflow:auto;padding:14px 20px}
+.sheet .mfoot{display:flex;justify-content:flex-end;gap:8px;padding:10px 20px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line-soft)}
 .sh-lead{margin:0 0 12px;line-height:1.55;color:var(--muted);font-size:calc(14px * var(--k,1))}
 
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--page);padding:10px 16px;border-radius:10px;font-size:calc(14px * var(--k,1))}
@@ -194,7 +203,7 @@ abbr.gl:focus-visible{outline:2px solid var(--blue,#3F66A6);outline-offset:1px}
     <main class="main" id="main"><p class="mx-note" id="std_nocountry" data-testid="std-nocountry-line" hidden></p><div id="std_list" data-testid="std-list"></div></main>
   </div>
 </div>
-<dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
+<dialog class="sheet" id="sheet" data-pop="host" data-testid="std-sheet" aria-label="Detail"></dialog>
 <div id="toast" role="status" hidden></div>
 
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
@@ -237,6 +246,8 @@ function setSetSec() {}
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears -->
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural band, ONE place below the page, the same on every page -->
 <script src="/app/cap-standards.js"></script>   <!-- the register, its vocabularies, the two sheets, stdGoto -->
+<script src="/app/cap-standards-build.js"></script>   <!-- CAP-STD-1: the register's "build" kind (how we build), pushed onto STANDARDS -->
+<script src="/app/std-build-view.js"></script>   <!-- CAP-STD-1: the How we build tab, its counts and the CIs behind each -->
 <script src="/app/country-ready.js"></script>   <!-- CBCountryReady (W28c): the Country readiness sheet (?ready=<cc>) — the one unit the Country lab paints too -->
 <script>
 'use strict';
@@ -429,6 +440,10 @@ const COMPARED = {
 function comparedOn() {
   return nowFilt().kind === 'compare';
 }
+/* CAP-STD-1: the "How we build" tab — Kind = build, the rows of cap-standards-build.js, the three counts of data/build-standards.json */
+function buildOn() {
+  return CBStdBuild.on(nowFilt());
+}
 /* the status of a comparison: a symbol AND a word, never colour alone (STD_COMPARE_STATUS); a claim from memory says "to confirm" beside it */
 function cmpStatusCell(x) {
   var status = STD_COMPARE_STATUS[x.r.cs] || STD_COMPARE_STATUS['n/a'],
@@ -468,6 +483,7 @@ function compareCols() {
 }
 function cols() {
   if (comparedOn()) return compareCols();
+  if (buildOn()) return CBStdBuild.cols(); /* CAP-STD-1: the How we build tab */
   return [
     {
       key: 'what',
@@ -538,7 +554,7 @@ function cols() {
     ]);
 }
 const byText = (f) => (a, b) => String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
-const SORTS = [
+const SORTS = CBStdBuild.sorts.concat([
   { key: 'status', label: 'Status', cmp: (a, b) => SORD[a.r.s] - SORD[b.r.s] || byText((x) => x.r.p)(a, b) },
   { key: 'what', label: 'What it does for you', cmp: byText((x) => x.r.p) },
   { key: 'std', label: 'Reference', cmp: byText((x) => x.r.n) },
@@ -555,7 +571,7 @@ const SORTS = [
     label: 'Compared',
     cmp: (left, right) => (CMP_STATUS_ORDER[left.r.cs] || 0) - (CMP_STATUS_ORDER[right.r.cs] || 0) || byText((x) => x.r.pkg || '~')(left, right)
   }
-];
+]);
 
 /* ⭐ STD-COMPARE: what a comparison row opens to — theirs · ours · better · the status in words · verified · every source (a link, a document on this web
    checkout, or a document in the docs library said in words — never a dead link) */
@@ -642,6 +658,7 @@ function codeRowsHTML(entry, index) {
   );
 }
 function openNext(x) {
+  if (x.r.k === 'build-rule') return CBStdBuild.next(x); /* CAP-STD-1 */
   return x.r.cmp ? compareNext(x) : nextOf(x);
 }
 /* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
@@ -843,7 +860,9 @@ function copyText(t) {
   var done = () => toast('Copied. Paste it where you need it.');
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done));
-  } catch (_) {}
+  } catch (err) {
+    if (window.cbQuiet) cbQuiet('standards:best-effort', err);
+  }
   fallbackCopy(t, done);
 }
 function fallbackCopy(t, done) {
@@ -856,7 +875,9 @@ function fallbackCopy(t, done) {
   var ok = false;
   try {
     ok = document.execCommand('copy');
-  } catch (_) {}
+  } catch (err) {
+    if (window.cbQuiet) cbQuiet('standards:best-effort', err);
+  }
   node.remove();
   if (ok) done();
   else toast('Could not copy. Select the text in the row and copy it.');
@@ -900,7 +921,7 @@ function mountList() {
     rowTid: (x) => (x.r.cmp ? 'std-cmp-' : 'std-row-') + x.ix,
     fill: false,
     columns: cols,
-    defaultCols: () => (comparedOn() ? CMP_DEFAULT_COLS : DEFAULT_COLS),
+    defaultCols: () => (comparedOn() ? CMP_DEFAULT_COLS : buildOn() ? CBStdBuild.defaultCols : DEFAULT_COLS),
     cardMax: 3,
     store: choices,
     head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
@@ -934,7 +955,7 @@ function mountList() {
     views: {
       tid: 'std-view',
       inTitle: true,
-      items: [{ key: 'all', label: 'All', filt: {}, tip: 'Every standard and every system we work with' }, WORKS, COMPARED]
+      items: [{ key: 'all', label: 'All', filt: {}, tip: 'Every standard and every system we work with' }, WORKS, COMPARED, CBStdBuild.tab]
     },
     group: {
       options: [
@@ -1302,7 +1323,7 @@ function openSheet(which) {
     '</div>';
   if (!node.open) {
     try {
-      node.showModal();
+      node.setAttribute('data-pop', 'POP117'); node.showModal();
     } catch (_) {
       node.setAttribute('open', '');
     }
@@ -1310,6 +1331,21 @@ function openSheet(which) {
   try {
     history.replaceState(null, '', '?sheet=' + which + location.hash);
   } catch (_) {}
+}
+/* the one modal() ui.dialog asks its page for (CAP-STD-1): the page's own sheet, closed by closeSheet */
+function modal(html) {
+  var node = $('sheet');
+  node.innerHTML = html;
+  if (!node.open) {
+    try {
+      node.showModal();
+    } catch (_) {
+      node.setAttribute('open', '');
+    }
+  }
+}
+function closeModal() {
+  closeSheet();
 }
 function closeSheet() {
   var node = $('sheet');
@@ -1446,7 +1482,7 @@ function openReady(countryCode) {
     '<div class="sh-body" data-testid="std-sheet-ready"><div class="hint" data-testid="std-ready-loading">Reading…</div></div>';
   if (!sheet.open) {
     try {
-      sheet.showModal();
+      sheet.setAttribute('data-pop', 'POP118'); sheet.showModal();
     } catch (_) {
       sheet.setAttribute('open', '');
     }
@@ -1520,6 +1556,7 @@ Promise.all([
         CMP_ERR = 'The country comparison could not be read (data/compare.json) — the standards are complete; reload to try again.';
       }
     ),
+  CBStdBuild.load(), /* CAP-STD-1: the three counts per standard, from the CMDB */
   fetch('/data/country-matrix.json', { cache: 'no-store' })
     .then((reply) => {
       if (!reply.ok) throw new Error('HTTP ' + reply.status);

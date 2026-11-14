@@ -8,6 +8,12 @@
  
  * CALLED BY public/app/cap-network.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      the member half of the Network panel: the read-only live network, where-is-it, a sibling's catalogue and the request
+ * CALLED BY ensureCap('network') pulls it in first through CAP_WITH (public/app.html:6098); scripts/cap-network-render.test.mjs:154
+ * FLOW      ensureCap('network') -> this half loads -> networkScreen() in cap-network.js calls it in the shared global scope
+ * CARD      04-network/network-app-member-view
+ */
 /**
  * A MEMBER'S VIEW — the same network, read-only.
  *

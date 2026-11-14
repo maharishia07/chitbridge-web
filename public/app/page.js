@@ -20,6 +20,11 @@
  
  * CALLED BY public/app.html, public/app/attach-ui.js, public/app/cap-chit2.js, public/app/cap-crm.js, public/app/cap-testing.js (+2 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      CBPage: which detail page opens a chit (business_json.page, the registry /app/pages.json)
+ * CALLED BY <script src="/app/page.js"> at public/app.html:1581 and public/crm.html:379; used by public/app/cap-chit2.js:2177 and chit-sheet.js
+ * CARD      01-rail-core-the-chit/send-mint-a-chit
+ */
 (function (root) {
   'use strict';
   var BUILTIN = {

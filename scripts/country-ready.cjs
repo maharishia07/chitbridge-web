@@ -16,6 +16,11 @@
  *   (else the first ⚠️), its label with code, paths and asides taken out — the document's own words, made short.
  * When the md is absent, --check verifies the matrix half and says the areas were last read from `coverage.sha`.
  */
+/*
+ * OWNS      public/data/country-ready.json, generated from the engines country matrix and COUNTRY-COVERAGE
+ * CALLED BY by hand to write public/data/country-ready.json; its --check is run by e2e/docs-guard.cjs:31
+ * CARD      15-tax-and-country-packs/country-setup-and-country-lab
+ */
 'use strict';
 const fs = require('fs'),
   path = require('path'),

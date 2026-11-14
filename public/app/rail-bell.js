@@ -272,7 +272,7 @@
           (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
         : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
     return (
-      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
+      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" data-pop="POP113" aria-label="' +
       esc(T(W.title)) +
       '"><div class="cbb-hd">' + bellChip('POP113', 'margin-inline-end:8px') +
       esc(T(W.title)) +

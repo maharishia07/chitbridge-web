@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures).
-     CALLED BY Home's Accounts card (manifest /accounts.html), CB Finance and CRM links to a party's statement.
+     CALLED BY Home's Accounts card (manifest ids accounts and compare, /accounts.html#compare), the doors in cap-crm.js (#dues) and cap-finance-returns.js (#gstclose), and the other pages' links (grep -ln 'accounts.html' public/*.html public/app/*.js).
      FLOW  load → whoPaint (CBFrame) → the section's read (GET /api/books/…) → paint; a 401 ends the session
      CARD 16-finance/cb-accounts -->
 <head>
@@ -281,7 +281,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
   </main>
 </div>
 <div id="toast"></div>
-<dialog class="sheet" id="acc_sheet" data-testid="acc-sheet"></dialog>   <!-- the Pay / Remind sheet (M28): the app's modal(html) signature, as crm.html -->
+<dialog class="sheet" id="acc_sheet" data-pop="POP047" data-testid="acc-sheet"></dialog>   <!-- the Pay / Remind sheet (M28): the app's modal(html) signature, as crm.html -->
 
 <script>
 'use strict';

@@ -1041,7 +1041,7 @@
       '</button></div>';
     $('tk_dq').focus();
     $('tk_dq_go').onclick = function () {
-      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.\-]/g, ''));
+      var typed = parseFloat(String($('tk_dq').value).replace(/[^0-9.-]/g, ''));
       if (!isFinite(typed) || typed === 0) {
         $('tk_out').textContent = T('Type a quantity first.');
         return;
@@ -1082,8 +1082,8 @@
         '<div class="tk-panel"><label class="sub" for="tk_new_what">' +
         esc(T('What needs doing?')) +
         '</label>' +
-        '<input data-cbsid="TSK003-I03" class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off">' +
-        '<button data-cbsid="TSK003-B14" type="button" class="act" id="tk_new_go" data-testid="tk-new-go">' +
+        '<input data-cbsid="TSK003-I03" class="inp" id="tk_new_what" data-testid="tk-new-what" maxlength="200" autocomplete="off" required data-required-msg="' + esc(T('Type what needs doing first.')) + '">' +
+        '<button data-cbsid="TSK003-B14" type="button" class="act" id="tk_new_go" data-testid="tk-new-go" data-sheet-save>' +
         esc(T('Add task')) +
         '</button></div>' +
         '<div id="tk_out" class="tk-out" role="status" data-testid="tk-out"></div>'
@@ -1142,7 +1142,7 @@
     return load().then(
       function () {
         board.el.innerHTML =
-          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-testid="tk-sheet"></dialog>';
+          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-pop="POP130" data-testid="tk-sheet"></dialog>';
         var node = $('tk_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

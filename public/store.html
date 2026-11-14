@@ -153,7 +153,7 @@ function placeOrder() {
   var buyer = { name: '', email: '' };
   CBConfirm(
     'Place this order?',
-    '<div>This sends an order to the store <b>' + esc(NET) + '</b>.</div><div class="po-ask">' + orderLinesHtml(list) + '<div><b>Total ' + esc(rs(total)) + '</b></div>' +
+    '<div>Order goes to <b>' + esc(NET) + '</b>.</div><div class="po-ask">' + orderLinesHtml(list) + '<div><b>Total ' + esc(rs(total)) + '</b></div>' +
       '<label for="po_name">Your name</label><input data-cbsid="STR001-I02" id="po_name" data-testid="po-name" autocomplete="name" placeholder="Customer">' +
       '<label for="po_email">Your email (optional)</label><input data-cbsid="STR001-I03" id="po_email" data-testid="po-email" type="email" autocomplete="email"></div>',
     'Place order',
@@ -273,7 +273,7 @@ document.getElementById('q').addEventListener('input', function (e) {
 function load() {
   if (!NET) {
     document.getElementById('body').innerHTML =
-      '<div class="msg"><div class="big">🛍️</div>No store specified. Open with <code>?net=&lt;network id&gt;</code>.</div>';
+      '<div class="msg"><div class="big">🛍️</div>Link needs <code>?net=&lt;network id&gt;</code>.</div>';
     return;
   }
   document.getElementById('netlabel').textContent = NET;
@@ -291,7 +291,7 @@ function load() {
         "One storefront across every line of business. You see products — never the network's internal departments, locations, or supply. Powered by Chit &amp; Bridge.";
     })
     .catch(function () {
-      document.getElementById('body').innerHTML = '<div class="msg"><div class="big">⚠️</div>Could not load the store. Try again.</div>';
+      document.getElementById('body').innerHTML = '<div class="msg"><div class="big">⚠️</div>Not loaded, try again</div>';
     });
 }
 load();

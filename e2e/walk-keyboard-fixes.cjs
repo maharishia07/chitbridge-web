@@ -39,7 +39,7 @@ const unreachable = (page) => page.evaluate(() => Array.from(document.querySelec
       console.log('\n-- ' + w + 'x' + h + ' (1) the list search has its own focus ring');
       await page.goto(s.url('/list-lab.html')); await page.waitForSelector('[data-cbl-q]', { timeout: 15000 });
       await page.focus('[data-cbl-q]');
-      const ring = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('[data-cbl-q]').closest('.cbl-search')); return { style: c.outlineStyle, width: parseFloat(c.outlineWidth), color: c.outlineColor }; });
+      const ring = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('[data-cbl-q]')); /* the ring is the input's own (list-ctl.js, 870bd20b: a ring on the pill around it did not count as the focused element's) */ return { style: c.outlineStyle, width: parseFloat(c.outlineWidth), color: c.outlineColor }; });
       ok(ring.style !== 'none' && ring.width >= 2 && !/rgba\(0, 0, 0, 0\)|transparent/.test(ring.color), 'focused search box draws a ' + ring.width + 'px ' + ring.style + ' ring (' + ring.color + ')');
 
       console.log('\n-- ' + w + 'x' + h + ' (2) the step-flow labs: handlers are keyboard-reachable');

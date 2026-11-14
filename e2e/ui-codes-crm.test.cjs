@@ -22,7 +22,10 @@ const SET = {
   'app/cap-crm-privacy.js': 'CRM010-B01 CRM010-B02 CRM010-B03 CRM010-B04 CRM010-B05 CRM010-I01 CRM010-S01 CRM010-I02 CRM010-B06 CRM010-S02 CRM010-T01 CRM010-B07',
   'app/cap-crm-calls.js': 'CRM005-B01 CRM005-B02 CRM005-I01',
   'app/cap-crm-leads.js': 'CRM004-B01 CRM004-I01 CRM004-I02 CRM004-S01 CRM004-B02 CRM004-B03 CRM004-B04 CRM004-I03 CRM004-S02',
-  'app/cap-crm-groups.js': 'CRM008-B01 CRM008-I01 CRM008-I02 CRM008-I03 CRM008-T01 CRM008-B02 CRM008-B03 CRM008-B04 CRM008-B05 CRM008-I04 CRM008-B06 CRM008-B07 CRM008-B08',
+  'app/cap-crm-groups.js': 'CRM008-B01',
+  'app/cap-crm-groups-sheet.js': 'CRM008-I01 CRM008-I02 CRM008-I03',
+  'app/cap-crm-groups-send.js': 'CRM008-T01 CRM008-B02 CRM008-B03',
+  'app/cap-crm-groups-window.js': 'CRM008-B04 CRM008-B05 CRM008-I04 CRM008-B06 CRM008-B07 CRM008-B08',
   'app/cap-marketing.js': 'MKT003-B01 MKT003-B02'
 };
 /** [file, marker the tag carries within 6 lines of its code, the code it must wear] */
@@ -35,7 +38,7 @@ const NEAR = [
   ['app/cap-crm-privacy.js', 'id="crm_prv_who"', 'CRM010-I01'], ['app/cap-crm-privacy.js', 'id="crm_prv_out"', 'CRM010-S02'], ['app/cap-crm-privacy.js', 'crm-prv-prev', 'CRM010-B04'],
   ['app/cap-crm-calls.js', 'id="crm_call_day"', 'CRM005-I01'],
   ['app/cap-crm-leads.js', 'id="crm_lead_stage"', 'CRM004-S01'], ['app/cap-crm-leads.js', 'crm-lead-import', 'CRM004-B04'],
-  ['app/cap-crm-groups.js', 'id="crm_grp_name"', 'CRM008-I01'], ['app/cap-crm-groups.js', 'id="crm_send_text"', 'CRM008-T01'], ['app/cap-crm-groups.js', 'crm-sc-copy', 'CRM008-B04'],
+  ['app/cap-crm-groups-sheet.js', 'id="crm_grp_name"', 'CRM008-I01'], ['app/cap-crm-groups-send.js', 'id="crm_send_text"', 'CRM008-T01'], ['app/cap-crm-groups-window.js', 'crm-sc-copy', 'CRM008-B04'],
   ['app/cap-marketing.js', 'data-crm="mktpage"', 'MKT003-B01']
 ];
 const read = (f) => {

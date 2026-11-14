@@ -193,7 +193,7 @@ function rgWiden() {
 function rgSyncFields() {
   try {
     if (document.getElementById('rgKind')) rgKindChanged();
-  } catch (_) {}
+  } catch (_) { /* best effort: failing here changes nothing the user sees */ }
 }
 
 function rgPaint() {
@@ -1021,7 +1021,7 @@ async function rgSaveOnChit() {
     if (c.onSaved && typeof window[c.onSaved] === 'function') {
       try {
         window[c.onSaved]();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     RG.ctx = null;
     /* If the register screen is behind this, it is now stale. */

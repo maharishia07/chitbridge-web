@@ -801,7 +801,7 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
     done = true;
     try {
       node.close();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     node.remove();
     if (yes) onOk();
     else if (onCancel) onCancel();
@@ -821,6 +821,6 @@ function CBConfirm(title, bodyHtml, okLabel, onOk, danger, onCancel) {
   node.addEventListener('click', function (ev) {
     if (ev.target === node && Date.now() - openedAt >= CONFIRM_BACKDROP_GRACE_MS) close(false);
   });
-  node.showModal();
+  node.setAttribute('data-pop', 'POP121'); node.showModal();
   openedAt = Date.now();
 }

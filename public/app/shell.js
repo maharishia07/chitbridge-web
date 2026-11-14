@@ -3,7 +3,7 @@
  * ID        HOM001 (Home's own controls); the header's popups are POP113-POP116 and its controls wear CMP codes with a mount
  * OWNER     cb-ux-locale
  * OWNS      the header and the shop sheet, the area switcher, Home's rail and tiles, the licence and edition chips
- * CALLED BY index.html (Home: CBShell.mount) and app/page-frame.js (every other page's header, SHELL-ONE); the avatar, the bell and the screen chip mount into its slots.
+ * CALLED BY index.html (Home: CBShell.mount), shell-lab.html (the bare page) and app/page-frame.js (every other page's header, SHELL-ONE; grep -ln 'CBShell.mount' index.html public/*.html public/app/*.js); 26 pages load the script by <script src>; the avatar, the bell and the screen chip mount into its slots.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/shell
  * RISK      personal-data
  * FLOW      mount(el, opts) → headerHTML → workHTML → slots (bell · avatar · screen chip · kural) → work into the slot
@@ -1626,9 +1626,8 @@
         return S.open;
       },
       go: go,
-      area: function () {
-        return S.area;
-      },
+      route: routeOf,
+      area: function () { return S.area; },
       header: function () {
         return S.header;
       },
@@ -1644,7 +1643,25 @@
         return api;
       })
     };
-    return api;
+    return loadShortcuts(api);
+  }
+
+  /** MNT-63: the keyboard-shortcut unit rides with the frame, so every page has it: the register first, then the unit, which mounts on this shell */
+  function loadShortcuts(shell) {
+    var appendScript = function (src, next) {
+      var tag = doc.createElement('script');
+      tag.src = src;
+      tag.onload = next;
+      doc.head.appendChild(tag);
+    };
+    if (root.CBShortcuts) root.CBShortcuts.mount(shell);
+    else
+      appendScript('/app/shortcuts-register.js', function () {
+        appendScript('/app/shortcuts.js', function () {
+          root.CBShortcuts.mount(shell);
+        });
+      });
+    return shell;
   }
 
   root.CBShell = {

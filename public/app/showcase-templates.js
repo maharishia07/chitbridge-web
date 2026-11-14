@@ -144,7 +144,7 @@
         ? '<aside class="sc-found" data-sc="found"><code>' +
             esc(c.shop.url || '') +
             '</code><button data-cbsid="SCR062-B03" type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>' +
-            '<div class="sc-guide">Google › your Business Profile › Website — paste this link</div><div class="sc-guide">Facebook page › About › Website — paste this link</div></aside>'
+            '<div class="sc-guide">Google Profile: paste link</div><div class="sc-guide">Facebook About: paste link</div></aside>'
         : '';
     }
   };
@@ -176,7 +176,7 @@
     '.sc-found{margin:16px 0;padding:12px;border:1px dashed var(--line,#dfe3e8);border-radius:12px;font-size:13px}.sc-empty{padding:24px 0;color:var(--grey,#5f6b7a)}';
 
   function emptyLine(c) {
-    return c.items.length ? '' : '<div class="sc-empty">Nothing on display yet.</div>';
+    return c.items.length ? '' : '<div class="sc-empty">Nothing on display</div>';
   }
   function byCategory(c) {
     var names = {},

@@ -19,6 +19,12 @@
  * product, and careful — but not reviewed by someone who sells in Arabic every day. The STRUCTURE is proven
  * (e2e/arabic-catalogue.test.cjs); the nouns want a native commercial reader before this goes near a customer.
  */
+/*
+ * OWNS      the Arabic label pack (CBSTR.ar), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('ar') injects this file -> tx() reads CBSTR.ar
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var ar = CBSTR.ar || (CBSTR.ar = {});

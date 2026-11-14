@@ -181,7 +181,7 @@ var CBUiStandard = (function () {
   function modal(html, wide) {
     var host = document.getElementById('modalhost');
     host.innerHTML =
-      '<div class="mover" data-testid="gal-mover"><div class="modal' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true">' +
+      '<div class="mover" data-testid="gal-mover"><div class="modal' + (wide ? ' wide' : '') + '" role="dialog" data-pop="POP142" aria-modal="true">' +
       '<div class="mxrow">' + ui.action('close', { mount: SCREEN + '-D01-U01', onPress: closeModal, testid: 'gal-dialog-x' }) + '</div>' + html + '</div></div>';
     host.querySelector('.mover').addEventListener('click', function (event) {
       if (event.target.classList.contains('mover')) closeModal();
@@ -189,6 +189,7 @@ var CBUiStandard = (function () {
   }
   function openExampleDialog() {
     ui.dialog({
+      pop: 'POP151',
       mount: SCREEN + '-D01-U02',
       title: 'Example dialog',
       body: '<p>' + esc(words('This is the one dialog shell. Its buttons are the standard set.')) + '</p>',

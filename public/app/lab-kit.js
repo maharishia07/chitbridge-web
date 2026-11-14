@@ -129,7 +129,7 @@
     var back = root.document.createElement('div');
     back.className = 'lk-pop-back';
     back.innerHTML =
-      '<div class="lk-pop' + (extraClass ? ' ' + extraClass : '') + '" role="dialog" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
+      '<div class="lk-pop' + (extraClass ? ' ' + extraClass : '') + '" role="dialog" data-pop="POP141" aria-modal="true" aria-label="' + escapeText(title) + '" data-testid="lk-pop"><header><b>' + escapeText(title) +
       '</b><button data-cbsid="CMP005" type="button" class="lk-pop-x" aria-label="Close" data-testid="lk-pop-close">×</button></header><div class="lk-pop-body"></div></div>';
     function close() {
       root.document.removeEventListener('keydown', onKey);

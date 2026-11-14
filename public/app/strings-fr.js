@@ -13,6 +13,12 @@
  * ⚠️ NOT REVIEWED BY A NATIVE COMMERCIAL SPEAKER. Careful trade French, but the nouns want a second pair of eyes
  * before this reaches a customer. The structure is what is proven.
  */
+/*
+ * OWNS      the French label pack (CBSTR.fr), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('fr') injects this file -> tx() reads CBSTR.fr
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var fr = CBSTR.fr || (CBSTR.fr = {});

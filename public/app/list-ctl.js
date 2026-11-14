@@ -91,7 +91,7 @@
     MEM[k] = v;
     try {
       root.localStorage.setItem(k, JSON.stringify(v));
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
 
   /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
@@ -122,7 +122,8 @@
     '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
     '.cbl .cbl-search{flex:1 1 200px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
     '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
-    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue);outline:2px solid var(--cl-blue);outline-offset:2px}', /* the input draws no ring of its own inside the pill, so the pill carries it (WCAG 2.4.7) */
+    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}', /* the pill border follows the focus; the ring is the input's own (next line), so the focused element itself shows it (WCAG 2.4.7, 2.4.11) */
+    '.cbl .cbl-search input:focus-visible{outline:2px solid var(--cl-blue);outline-offset:1px;border-radius:4px}',
     '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
     '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
     '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
@@ -307,8 +308,8 @@
     }
   }
   function cmpVals(a, b) {
-    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')),
-      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.-]/g, '')),
+      nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.-]/g, ''));
     if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) {
       return (na || 0) - (nb || 0);
     }
@@ -333,16 +334,16 @@
     I.dead = true;
     try {
       if (I.io) I.io.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     clearTimeout(I.qt);
     try {
       var node = I.el.querySelector(':scope > .cbl-list');
       if (node && node.__cblRO) node.__cblRO.disconnect();
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     (I.off || []).forEach(function (x) {
       try {
         I.el.removeEventListener(x[0], x[1]);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     });
     I.off = [];
   }
@@ -886,7 +887,7 @@
       esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + foldedCount(list, chips, notes, true) : foldedLabel(list, chips, notes)) +
       ' ▾</button>' +
       (list.pop === 'notes'
-        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP133" aria-label="' +
           esc(T(list, foldPeriod ? 'Period and notices' : 'Notices')) +
           '" data-testid="cbl-notes-pop-' +
           esc(list.key) +
@@ -949,7 +950,7 @@
   /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP134" aria-label="' +
       esc(T(I, 'Period')) +
       '">' +
       periodInner(I, p) +
@@ -1084,7 +1085,7 @@
       esc(T(list, 'View')) +
       ' ▾</button>' +
       (list.pop === 'view'
-        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' + esc(T(list, 'View')) + '" data-testid="cbl-view-pop-' + keyText + '"><div class="cbl-viewpop">' + inner + '</div></div>'
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP135" aria-label="' + esc(T(list, 'View')) + '" data-testid="cbl-view-pop-' + keyText + '"><div class="cbl-viewpop">' + inner + '</div></div>'
         : '') +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>'
@@ -1327,7 +1328,7 @@
       try {
         ss = ae.selectionStart;
         se = ae.selectionEnd;
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     box.innerHTML = h;
     if (keepId) {
@@ -1337,7 +1338,7 @@
         if (ss != null) {
           try {
             back.setSelectionRange(ss, se);
-          } catch (_) {}
+          } catch (_) { /* best effort: failing here changes nothing the user sees */ }
         }
       }
     }
@@ -1505,7 +1506,7 @@
       st = I.s.sort,
       cur = st ? st.key : (I.o.sorts || [])[0] && I.o.sorts[0].key;
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP136" aria-label="' +
       esc(T(I, 'Filters')) +
       '" data-testid="cbl-filters-pop-' +
       esc(I.key) +
@@ -1628,7 +1629,7 @@
       );
     }
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" data-pop="POP137" aria-label="' +
       esc(T(I, 'Choose columns')) +
       '" data-testid="cols-menu-' +
       k +
@@ -1694,7 +1695,7 @@
       });
       try {
         box.__cblRO.observe(box);
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     }
     var keepTop = box.scrollTop,
       o = I.o,
@@ -1705,7 +1706,7 @@
     if (I.io) {
       try {
         I.io.disconnect();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       I.io = null;
     }
     I.el.classList.toggle('tbllines', s.view === 'lines');
@@ -1870,7 +1871,7 @@
             { root: box, rootMargin: '0px' }
           );
           I.io.observe(sent);
-        } catch (_) {}
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       }
     }
     var node = $(I, '.cbl-count');
@@ -1989,7 +1990,7 @@
         : null;
     if (at)
       Object.keys(at).forEach(function (item) {
-        if (/^[a-z][a-z0-9\-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
+        if (/^[a-z][a-z0-9-]*$/i.test(item) && !/^on/i.test(item)) a += ' ' + item + '="' + esc(at[item]) + '"';
       });
     var tid = o.rowTid
       ? safe(function () {
@@ -2435,7 +2436,7 @@
       setTimeout(function () {
         root.URL.revokeObjectURL(u);
       }, 2000);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
   }
 
   /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
@@ -2820,7 +2821,7 @@
     }
   }
   function cssId(s) {
-    return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&');
+    return String(s).replace(/[^A-Za-z0-9_-]/g, '\\$&');
   }
   function refocusCol(I, k) {
     var node = I.el.querySelector('[data-col="' + k + '"]');
@@ -2912,7 +2913,7 @@
     node.classList.add('drag');
     try {
       node.setPointerCapture(event.pointerId);
-    } catch (_) {}
+    } catch (_) { /* best effort: failing here changes nothing the user sees */ }
     root.document.addEventListener('pointermove', onPointerMove);
     root.document.addEventListener('pointerup', onPointerUp);
     root.document.addEventListener('pointercancel', onPointerUp);

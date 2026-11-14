@@ -61,7 +61,7 @@
   function lsSet(k, v) {
     try {
       root.localStorage.setItem(k, v);
-    } catch (_) {}
+    } catch (_) { /* storage blocked or full: the page works without it */ }
   }
   function today() {
     var date = new Date();
@@ -266,7 +266,7 @@
     if (RES) {
       try {
         RES.remove();
-      } catch (_) {}
+      } catch (_) { /* best effort: failing here changes nothing the user sees */ }
       RES = null;
     }
   }
