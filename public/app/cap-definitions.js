@@ -1069,7 +1069,7 @@ function cbDefPickHTML(x, v) {
   if (Array.isArray(x.pick)) {
     var cur = v === undefined || v === null || v === '' ? String(x.pick[0][0]) : String(v);
     return (
-      '<select class="inp" data-testid="cbdef-pick-' +
+      '<select data-cbsid="SCR003-S01" class="inp" data-testid="cbdef-pick-' +
       esc(x.k) +
       '"' +
       ' onchange="cbDefSetRule(\'' +
@@ -1100,7 +1100,7 @@ function cbDefPickHTML(x, v) {
     );
   }
   return (
-    '<select class="inp" data-testid="cbdef-pick-' +
+    '<select data-cbsid="SCR003-S02" class="inp" data-testid="cbdef-pick-' +
     esc(x.k) +
     '"' +
     ' onchange="cbDefSetRule(\'' +
@@ -1162,7 +1162,7 @@ function cbDefPickProductHTML(x, v) {
     return '<div class="cbdef-hint">Your catalogue is empty, so there is nothing to give away yet.</div>';
   }
   return (
-    '<select class="inp" data-testid="cbdef-pick-' +
+    '<select data-cbsid="SCR003-S03" class="inp" data-testid="cbdef-pick-' +
     esc(x.k) +
     '"' +
     ' onchange="cbDefSetReward(this.value)">' +
@@ -1189,7 +1189,7 @@ function cbDefTestAsHTML() {
   if (!r.customer_group) return '';
   var who = r.customer_name || String(r.customer_group).replace(/^customer:/, '');
   return (
-    '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-2)"><input type="checkbox" data-testid="cbdef-test-as"' +
+    '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-2)"><input data-cbsid="SCR003-I01" type="checkbox" data-testid="cbdef-test-as"' +
     (CBDEF_TEST.asCustomer !== false ? ' checked' : '') +
     ' onchange="CBDEF_TEST.asCustomer=this.checked;cbDefTestRun()"> ' +
     tx('test as') +
@@ -1246,7 +1246,7 @@ function cbDefPickCustomerHTML(x, v) {
   if (_CBDEF_CUSTS === undefined || _CBDEF_CUSTS === null) return '<div class="cbdef-hint">' + tx('reading your customers…') + '</div>';
   var cur = String(v || '');
   return (
-    '<select class="inp" data-testid="cbdef-pick-' +
+    '<select data-cbsid="SCR003-S04" class="inp" data-testid="cbdef-pick-' +
     esc(x.k) +
     '" onchange="cbDefSetCustomer(this.value)">' +
     '<option value="">' +
@@ -1386,7 +1386,7 @@ function cbDefFieldHTML(x, v) {
   };
   if (x.check) {
     return (
-      '<label class="cbdef-check"><input type="checkbox" data-testid="' +
+      '<label class="cbdef-check"><input data-cbsid="SCR003-I02" type="checkbox" data-testid="' +
       id +
       '"' +
       (v ? ' checked' : '') +
@@ -1399,7 +1399,7 @@ function cbDefFieldHTML(x, v) {
   }
   if (x.sel) {
     return (
-      '<select class="inp" data-testid="' +
+      '<select data-cbsid="SCR003-S05" class="inp" data-testid="' +
       id +
       '" onchange="cbDefSetRule(\'' +
       x.k +
@@ -1414,7 +1414,7 @@ function cbDefFieldHTML(x, v) {
   }
   if (x.tiers) {
     return (
-      '<textarea class="inp" rows="3" data-testid="' +
+      '<textarea data-cbsid="SCR003-T01" class="inp" rows="3" data-testid="' +
       id +
       '" placeholder="' +
       esc(x.ph || '') +
@@ -1426,7 +1426,7 @@ function cbDefFieldHTML(x, v) {
   }
   if (x.area) {
     return (
-      '<textarea class="inp" rows="4" data-testid="' +
+      '<textarea data-cbsid="SCR003-T02" class="inp" rows="4" data-testid="' +
       id +
       '" placeholder="' +
       esc(x.ph || '') +
@@ -1442,7 +1442,7 @@ function cbDefFieldHTML(x, v) {
   var type = x.date ? ' type="date"' : x.num ? ' inputmode="decimal"' : '';
   var val = x.date ? String(v || '').slice(0, 10) : v;
   var box =
-    '<input class="inp"' +
+    '<input data-cbsid="SCR003-I03" class="inp"' +
     type +
     ' data-testid="' +
     id +
@@ -1512,7 +1512,7 @@ function cbDefFormHTML() {
       ? '<label class="fl cbdef-w2">' +
         tx('Kind') +
         '</label>' +
-        '<select class="inp cbdef-w2" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">' +
+        '<select data-cbsid="SCR003-S06" class="inp cbdef-w2" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">' +
         subs
           .map(function (item) {
             return '<option value="' + esc(item) + '"' + (item === f.sub ? ' selected' : '') + '>' + esc(cbDefSubHead(f.kind, item)) + '</option>';
@@ -1531,7 +1531,7 @@ function cbDefFormHTML() {
     tx('Name') +
     '</label>' +
     '<div class="cbdef-f cbdef-w2">' +
-    '<input class="inp" data-testid="cbdef-name" value="' +
+    '<input data-cbsid="SCR003-I04" class="inp" data-testid="cbdef-name" value="' +
     esc(f.name) +
     '"' +
     /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
@@ -1591,7 +1591,7 @@ function cbDefFormHTML() {
     tx('Note to yourself') +
     '</label>' +
     '<div class="cbdef-f cbdef-w2">' +
-    '<input class="inp" value="' +
+    '<input data-cbsid="SCR003-I05" class="inp" value="' +
     esc(f.note) +
     '" placeholder="' +
     tx('optional') +
@@ -1686,7 +1686,7 @@ function cbDefStdChipsHTML() {
       .map(function (item) {
         var on = !!chosen[item.key];
         return (
-          '<button type="button" class="cbdef-stdchip' +
+          '<button data-cbsid="SCR003-B01" type="button" class="cbdef-stdchip' +
           (on ? ' on' : '') +
           '"' +
           ' title="' +
@@ -2063,13 +2063,13 @@ async function cbDefTakeoverAsk(id, why) {
       '<div class="mbody"><div style="margin-bottom:8px">' +
       esc(why) +
       '</div>' +
-      '<select class="inp" id="cbdef_takeover" data-testid="cbdef-takeover" style="width:100%">' +
+      '<select data-cbsid="SCR003-S07" class="inp" id="cbdef_takeover" data-testid="cbdef-takeover" style="width:100%">' +
       opts +
       '</select>' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
       tx('Every product and category that cites the retiring slab is re-pointed first, with the new rate travelling onto each product.') +
       '</div></div>' +
-      '<div class="mfoot"><button class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' +
+      '<div class="mfoot"><button data-cbsid="SCR003-B02" class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' +
       esc(id) +
       '\')">' +
       tx('Retire and hand over') +
@@ -2197,7 +2197,7 @@ function cbDefSectionHTML(s) {
   var open = !!CBDEF.open[s.key];
   var count = s.rows ? s.rows.length : 0;
   var head =
-    '<div class="cbdef-head" data-testid="cbdef-' +
+    '<div data-cbsid="SCR003-C01" class="cbdef-head" data-testid="cbdef-' +
     esc(s.key) +
     '"' +
     ' onclick="cbDefToggle(\'' +
@@ -2361,14 +2361,14 @@ function cbDefMineHTML() {
             '\')">' +
             tx('Edit') +
             '</span>' +
-            '<span onclick="cbDefSetStatus(\'' +
+            '<span data-cbsid="SCR003-C02" onclick="cbDefSetStatus(\'' +
             esc(item.definition_id) +
             "','" +
             (live ? 'draft' : 'live') +
             '\')">' +
             (live ? 'Unpublish' : 'Publish') +
             '</span>' +
-            '<span onclick="cbDefRetire(\'' +
+            '<span data-cbsid="SCR003-C03" onclick="cbDefRetire(\'' +
             esc(item.definition_id) +
             "','" +
             esc(item.name) +
@@ -2401,7 +2401,7 @@ function cbDefMineHTML() {
       var mopen = !!CBDEF.open[mkey];
       return (
         '<div class="cbdef-sec">' +
-        '<div class="cbdef-head cbdef-head-mine" data-testid="cbdef-mine-head-' +
+        '<div data-cbsid="SCR003-C04" class="cbdef-head cbdef-head-mine" data-testid="cbdef-mine-head-' +
         kind +
         '"' +
         ' onclick="cbDefToggle(\'' +
@@ -2421,7 +2421,7 @@ function cbDefMineHTML() {
          ⚠️ A kind with a `home` is authored on ITS OWN SCREEN, so this offers the door rather than a second
          Create form. Two places to author one thing is the duplication this screen exists to have removed. */
         (A.home
-          ? '<button class="cbdef-new" data-testid="cbdef-home-' +
+          ? '<button data-cbsid="SCR003-B03" class="cbdef-new" data-testid="cbdef-home-' +
             kind +
             '" onclick="event.stopPropagation();cbDefGoHome(\'' +
             A.home.nav +
@@ -2430,7 +2430,7 @@ function cbDefMineHTML() {
             '\')">' +
             esc(A.home.label) +
             '</button>'
-          : '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>') +
+          : '<button data-cbsid="SCR003-B04" class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>') +
         '<span class="cbdef-caret">' +
         (mopen ? '▾' : '<span class=arw>▸</span>') +
         '</span>' +
@@ -2677,13 +2677,13 @@ function cbDefTestHTML(f) {
     tx('Test this offer') +
     '</div>' +
     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-    '<select class="inp" data-testid="cbdef-test-product" style="flex:1 1 180px;margin:0" onfocus="cbDefTestLoad()" onchange="CBDEF_TEST.pid=this.value;cbDefTestRun()">' +
+    '<select data-cbsid="SCR003-S08" class="inp" data-testid="cbdef-test-product" style="flex:1 1 180px;margin:0" onfocus="cbDefTestLoad()" onchange="CBDEF_TEST.pid=this.value;cbDefTestRun()">' +
     cbDefTestOptions() +
     '</select>' +
-    '<input class="inp" data-testid="cbdef-test-qty" type="number" min="1" step="1" value="' +
+    '<input data-cbsid="SCR003-I06" class="inp" data-testid="cbdef-test-qty" type="number" min="1" step="1" value="' +
     CBDEF_TEST.qty +
     '" style="width:76px;margin:0" oninput="CBDEF_TEST.qty=Math.max(1,parseInt(this.value)||1);cbDefTestRun()">' +
-    '<button type="button" data-testid="cbdef-test-run" onclick="cbDefTestRun()" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:6px 12px;cursor:pointer">' +
+    '<button data-cbsid="SCR003-B05" type="button" data-testid="cbdef-test-run" onclick="cbDefTestRun()" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:6px 12px;cursor:pointer">' +
     tx('Test') +
     '</button>' +
     '</div>' +

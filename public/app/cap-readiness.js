@@ -121,7 +121,7 @@ async function _aiDraft(skill, label, ctx, attach) {
     // a DOCUMENT (the actual cert/declaration) can become the clearance's evidence; aids (classify/summarize) cannot.
     var acceptBtn =
       attach && reply && reply.kind === 'document'
-        ? '<button onclick="_aiAccept()" title="File as evidence for ' +
+        ? '<button data-cbsid="SCR033-B01" onclick="_aiAccept()" title="File as evidence for ' +
           esc(attach.title || attach.doc) +
           '" style="' +
           bs +
@@ -140,7 +140,7 @@ async function _aiDraft(skill, label, ctx, attach) {
       '</div>' +
       '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">' +
       acceptBtn +
-      '<button onclick="_aiPdf()" style="' +
+      '<button data-cbsid="SCR033-B02" onclick="_aiPdf()" style="' +
       bs +
       ';flex:' +
       (acceptBtn ? '0 0 auto' : '1') +
@@ -149,7 +149,7 @@ async function _aiDraft(skill, label, ctx, attach) {
       ';color:' +
       (acceptBtn ? 'var(--purple)' : 'var(--on-accent)') +
       '">⬇ PDF</button>' +
-      '<button onclick="_aiCopy(this)" data-draft="' +
+      '<button data-cbsid="SCR033-B03" onclick="_aiCopy(this)" data-draft="' +
       esc(encodeURIComponent(draft)) +
       '" style="' +
       bs +
@@ -544,7 +544,7 @@ function _rdExpand(it) {
       tx('Or hand it to a partner') +
       '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">' +
       esc(L.partner) +
-      '</div></div><button onclick="aiSuggestPartner(\'' +
+      '</div></div><button data-cbsid="SCR033-B04" onclick="aiSuggestPartner(\'' +
       esc(it.standard) +
       "','" +
       esc(it.doc) +
@@ -594,7 +594,7 @@ function _rdRow(it, selKey) {
     on = k === selKey;
   var held = _rdHeld(it); // green ONLY with real (documented/verified), valid evidence — a bare 'declared' claim is NOT held
   var box =
-    '<span onclick="event.stopPropagation();' +
+    '<span data-cbsid="SCR033-C01" onclick="event.stopPropagation();' +
     (held ? '_rdSelect' : 'gatherReadiness') +
     "('" +
     esc(it.standard) +
@@ -610,7 +610,7 @@ function _rdRow(it, selKey) {
     (held ? '✓' : '') +
     '</span>';
   return (
-    '<div onclick="_rdSelect(\'' +
+    '<div data-cbsid="SCR033-C02" onclick="_rdSelect(\'' +
     esc(it.standard) +
     "','" +
     esc(it.doc) +
@@ -640,7 +640,7 @@ function _rdDetailPane(it) {
   var idType = _rdIdType(it);
   var verifyBtn =
     idType && it.rung !== 'verified'
-      ? '<button onclick="verifyReadiness(\'' +
+      ? '<button data-cbsid="SCR033-B05" onclick="verifyReadiness(\'' +
         esc(it.standard) +
         "','" +
         esc(it.doc) +
@@ -652,7 +652,7 @@ function _rdDetailPane(it) {
       : '';
   var skill = _rdSkill(it);
   var draftBtn = skill
-    ? '<button onclick="aiDraftReadiness(\'' +
+    ? '<button data-cbsid="SCR033-B06" onclick="aiDraftReadiness(\'' +
       esc(it.standard) +
       "','" +
       esc(it.doc) +
@@ -665,7 +665,7 @@ function _rdDetailPane(it) {
   var actBtn =
     it.status === 'gathered'
       ? '<span style="font-size:var(--fs-2);color:' + m.col + ';font-weight:700">' + m.lbl + '</span>'
-      : '<button onclick="gatherReadiness(\'' +
+      : '<button data-cbsid="SCR033-B07" onclick="gatherReadiness(\'' +
         esc(it.standard) +
         "','" +
         esc(it.doc) +
@@ -852,7 +852,7 @@ function _rdDestSelectors() {
         ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + (s.met || 0) + ' of ' + (s.total || 0) + ' met</span>'
         : '';
   return (
-    '<span style="font-size:var(--fs-1);color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="' +
+    '<span style="font-size:var(--fs-1);color:var(--grey)">sector</span><select data-cbsid="SCR033-S01" onchange="setLaneVertical(this.value)" style="' +
     ss +
     '">' +
     opt(vOpts, vert) +
@@ -860,7 +860,7 @@ function _rdDestSelectors() {
     '<span style="font-size:var(--fs-1);color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">' +
     esc(oName) +
     '</b></span>' +
-    '<span style="font-size:var(--fs-1);color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="' +
+    '<span style="font-size:var(--fs-1);color:var(--grey)">ship to</span><select data-cbsid="SCR033-S02" onchange="setLaneDest(this.value)" style="' +
     ss +
     '">' +
     opt(dOpts, dest) +
@@ -873,7 +873,7 @@ function _rdHeader() {
   var tab = UI.rdTab || 'certification';
   var tb = function (k, lbl) {
     return (
-      '<div onclick="UI.rdTab=\'' +
+      '<div data-cbsid="SCR033-C03" onclick="UI.rdTab=\'' +
       k +
       "';if(typeof renderApp==='function')renderApp()\" style=\"padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid " +
       (tab === k ? 'var(--blue)' : 'transparent') +
@@ -893,10 +893,10 @@ function _rdHeader() {
     '</div>' +
     '<div style="margin-inline-start:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">' +
     (tab !== 'commercial' ? _rdDestSelectors() : '') +
-    '<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">' +
+    '<button data-cbsid="SCR033-B08" onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">' +
     tx('✨ Standards') +
     '</button>' +
-    '<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">' +
+    '<button data-cbsid="SCR033-B09" onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">' +
     tx('🧮 Matrix') +
     '</button></div>' +
     '</div>'
@@ -1191,7 +1191,7 @@ function _rdComRow(g, i, sel) {
     ? '<span title="already evidenced on the rail" style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;flex:0 0 auto">' + tx('● rail') + '</span>'
     : '';
   return (
-    '<div onclick="_rdComSelect(' +
+    '<div data-cbsid="SCR033-C04" onclick="_rdComSelect(' +
     i +
     ')" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:' +
     (on ? 'var(--blue-tint)' : 'transparent') +
@@ -1274,7 +1274,7 @@ function _rdComDetail(g) {
     .join(' · ');
   var draftBtn =
     m.ai && m.ai.skill
-      ? '<button onclick="aiDraftCommerce(\'' +
+      ? '<button data-cbsid="SCR033-B10" onclick="aiDraftCommerce(\'' +
         m.ai.skill +
         "','" +
         esc(g.label) +
@@ -1449,13 +1449,13 @@ function verifyReadiness(standard, doc, id_type) {
     '<label style="font-size:var(--fs-1);font-weight:700;color:var(--grey)">' +
     id_type.toUpperCase() +
     ' number</label>' +
-    '<input id="vf_id" placeholder="' +
+    '<input data-cbsid="SCR033-I01" id="vf_id" placeholder="' +
     (id_type === 'iec' ? 'e.g. AAACR1234B' : id_type.toUpperCase() + ' number') +
     '" style="' +
     inS +
     '">' +
     '<div id="vf_err" style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px"></div>' +
-    '<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:var(--ok-3);color:var(--on-ok);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
+    '<button data-cbsid="SCR033-B11" id="vf_btn" onclick="submitVerify()" style="width:100%;background:var(--ok-3);color:var(--on-ok);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
     tx('🔗 Verify ID') +
     '</button>' +
     '</div>';
@@ -1505,7 +1505,7 @@ function gatherReadiness(standard, doc) {
     '">' +
     tx('Document (PDF/image · ≤ 6 MB)') +
     '</label>' +
-    '<input id="gd_file" type="file" style="' +
+    '<input data-cbsid="SCR033-I02" id="gd_file" type="file" style="' +
     inS +
     '">' +
     '<label style="' +
@@ -1513,7 +1513,7 @@ function gatherReadiness(standard, doc) {
     '">' +
     tx('Reference / number (optional)') +
     '</label>' +
-    '<input id="gd_ref" placeholder="e.g. certificate no." style="' +
+    '<input data-cbsid="SCR033-I03" id="gd_ref" placeholder="e.g. certificate no." style="' +
     inS +
     '">' +
     '<label style="' +
@@ -1521,13 +1521,13 @@ function gatherReadiness(standard, doc) {
     '">' +
     tx('Valid until') +
     '</label>' +
-    '<input id="gd_valid" type="date" value="' +
+    '<input data-cbsid="SCR033-I04" id="gd_valid" type="date" value="' +
     date +
     '" style="' +
     inS +
     '">' +
     '<div id="gd_err" style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px"></div>' +
-    '<button id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
+    '<button data-cbsid="SCR033-B12" id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' +
     tx('Record clearance on the rail') +
     '</button>' +
     '</div>';

@@ -191,7 +191,7 @@ function catsetDefListHTML(kind, one) {
       /* ⭐ REINSTATE. Athi, 2026-09-05: "only option to retire is there, but there is no way to reinstate" — a retired
          row goes back to live from here; products that still cite it resolve again on the next paint. */
       (d.status === 'retired'
-        ? '<span class="da" data-testid="catset-' +
+        ? '<span data-cbsid="CAT004-C01" class="da" data-testid="catset-' +
           kind +
           '-reinstate-' +
           esc(d.id) +
@@ -203,7 +203,7 @@ function catsetDefListHTML(kind, one) {
         : /* ⭐ THE STATUS SWITCH, HERE TOO. Athi, 2026-09-03: *"how will you attach to a product?"* — a product's
              Offers tab lists LIVE offers only, and this list had Edit and Retire but no way to go live, so a
              draft authored here could never reach a product without a detour through Definitions. */
-          '<span class="da" data-testid="catset-' +
+          '<span data-cbsid="CAT004-C02" class="da" data-testid="catset-' +
           kind +
           '-live-' +
           esc(d.id) +
@@ -221,7 +221,7 @@ function catsetDefListHTML(kind, one) {
           '\')">' +
           tx('Edit') +
           '</span>' +
-          '<span class="da" onclick="catsetDefRetire(\'' +
+          '<span data-cbsid="CAT004-C03" class="da" onclick="catsetDefRetire(\'' +
           kind +
           "','" +
           esc(d.id) +
@@ -410,7 +410,7 @@ function catsetRegistry(keys) {
                   '">' +
                   '<div class="rr1">' +
                   (flag
-                    ? '<input type="checkbox" ' +
+                    ? '<input data-cbsid="CAT004-I01" type="checkbox" ' +
                       (on ? 'checked' : '') +
                       ' onchange="catsetSelToggle(\'' +
                       esc(flag) +
@@ -588,7 +588,7 @@ function catsetLangBar() {
     var on = _LANGSEL.indexOf(l.code) >= 0,
       fixed = l.code === 'en';
     return (
-      '<span class="lang-chip' +
+      '<span data-cbsid="CAT004-C04" class="lang-chip' +
       (on ? ' on' : '') +
       (fixed ? ' fixed' : '') +
       '"' +
@@ -656,7 +656,7 @@ function catsetUomRuleHTML(u) {
     id = 'uomr_' + u;
   return (
     '<div class="uom-rule">' +
-    '<label class="urk"><input type="checkbox" ' +
+    '<label class="urk"><input data-cbsid="CAT004-I02" type="checkbox" ' +
     (r.decimals ? 'checked' : '') +
     ' onchange="catsetUomRuleSet(\'' +
     esc(u) +
@@ -669,7 +669,7 @@ function catsetUomRuleHTML(u) {
         '_t">' +
         tx('Round down within') +
         '</label>' +
-        '<input id="' +
+        '<input data-cbsid="CAT004-I03" id="' +
         id +
         '_t" type="number" min="0" step="0.001" inputmode="decimal" value="' +
         esc(String(r.tol)) +
@@ -686,7 +686,7 @@ function catsetUomRuleHTML(u) {
         '_m">' +
         tx('from') +
         '</label>' +
-        '<input id="' +
+        '<input data-cbsid="CAT004-I04" id="' +
         id +
         '_m" type="number" min="0" step="0.001" inputmode="decimal" value="' +
         esc(String(r.min_qty)) +
@@ -778,7 +778,7 @@ function catsetUnitsHTML() {
           (on ? '' : ' off') +
           '">' +
           '<div class="ur1">' +
-          '<input type="checkbox" ' +
+          '<input data-cbsid="CAT004-I05" type="checkbox" ' +
           (on ? 'checked' : '') +
           ' onchange="catsetUnitToggle(\'' +
           esc(entry) +
@@ -885,7 +885,7 @@ function catsetRecheckCard() {
   if (CATSET_RECHECK === undefined) catsetRecheckLoad();
   var state = CATSET_RECHECK === 'on' ? tx('Yes, every bill') : CATSET_RECHECK === 'off' ? tx('No, only old parked bills') : tx('Not answered yet');
   var pick = function (value, label) {
-    return '<button class="composebtn' + (CATSET_RECHECK === value ? ' pri' : '') + '" data-testid="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" data-ui-id="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" aria-pressed="' + (CATSET_RECHECK === value) + '" onclick="catsetRecheckSet(this,\'' + value + '\')">' + tx(label) + '</button>';
+    return '<button data-cbsid="CAT004-B01" class="composebtn' + (CATSET_RECHECK === value ? ' pri' : '') + '" data-testid="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" data-ui-id="catset-recheck-' + (value === 'on' ? 'yes' : 'no') + '" aria-pressed="' + (CATSET_RECHECK === value) + '" onclick="catsetRecheckSet(this,\'' + value + '\')">' + tx(label) + '</button>';
   };
   return catsetCard(
     tx('Check prices before each bill'),
@@ -992,7 +992,7 @@ function catsetVariantStateHTML() {
     esc(id.group) +
     '</b></span>' +
     (opts.length ? '<code class="dk">told apart by ' + esc(opts.join(', ')) + '</code>' : '<code class="dk">no distinguishing column yet</code>') +
-    '<span class="da" onclick="declareVariants()">' +
+    '<span data-cbsid="CAT004-C05" class="da" onclick="declareVariants()">' +
     tx('Change') +
     '</span></div>'
   );
@@ -1042,7 +1042,7 @@ function catsetBody(k) {
           '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the ' +
           'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step ' +
           'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
-        '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">' + tx('📋 See the catalogues you can follow') + '</button>'
+        '<button data-cbsid="CAT004-B02" class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">' + tx('📋 See the catalogues you can follow') + '</button>'
       ) + catsetCard('What you have adopted', catsetAdoptedHTML(), '')
     );
   }
@@ -1056,7 +1056,7 @@ function catsetBody(k) {
           '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. ' +
           '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different ' +
           'mechanisms, which is why categories live on their own screen.</div>',
-        '<button class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>'
+        '<button data-cbsid="CAT004-B03" class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>'
       ) +
       /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
       /* ⭐ WHAT IT RECORDS TODAY, before what it could record — the question a reader arrives with. */
@@ -1093,7 +1093,7 @@ function catsetBody(k) {
           'shop then shows one product with its options instead of three unrelated rows.' +
           '<div class="catset-std">In PIM terms this is the <b>product model</b> and its <b>variant axis</b>: which ' +
           'attribute varies, and which stay common across the group.</div>',
-        '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">' + tx('🔗 Declare variants') + '</button>'
+        '<button data-cbsid="CAT004-B04" class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">' + tx('🔗 Declare variants') + '</button>'
       ) + catsetCard('What you have declared', catsetVariantStateHTML(), '')
     );
   }
@@ -1128,12 +1128,12 @@ function catsetBody(k) {
           '<a class="composebtn" data-testid="catset-combo-lab" href="offer-lab-next.html?mode=combo" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' +
           tx('Combo lab') +
           '</a>' +
-          '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>'
+          '<button data-cbsid="CAT004-B05" class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>'
       ) +
       catsetCard(
         'The next six months',
         catsetOfferPlanHTML(),
-        '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>'
+        '<button data-cbsid="CAT004-B06" class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>'
       ) +
       catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '') +
       catsetRegistry(['offer'])
@@ -1149,7 +1149,7 @@ function catsetBody(k) {
           '<div class="catset-std">⚠️ Change “Carton of 6” to 12 and <b>every product using it moves</b> — ' +
           'which is either exactly what you want or a catastrophe. Chits already stamped keep the version they ' +
           'froze, which is why adoption freezes at the mint.</div>',
-        '<button class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>'
+        '<button data-cbsid="CAT004-B07" class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>'
       ) +
       catsetCard('Your order models', catsetDefListHTML('ordermodel', 'order model'), '') +
       catsetRegistry(['ordermodel'])
@@ -1163,15 +1163,15 @@ function catsetBody(k) {
           'or updated by their code — re-importing the same sheet updates rather than duplicates.' +
           '<div class="catset-std">⚠️ Nothing is imported until you confirm the column mapping. The check step is ' +
           'not a formality: it is the only place a wrong column is cheap to fix.</div>',
-        '<button class="composebtn pri" data-testid="catset-import" onclick="checkCatalogueFile()">🔍 Check &amp; import</button>' +
-          '<button class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">' +
+        '<button data-cbsid="CAT004-B08" class="composebtn pri" data-testid="catset-import" onclick="checkCatalogueFile()">🔍 Check &amp; import</button>' +
+          '<button data-cbsid="CAT004-B09" class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">' +
           tx('📄 Blank template') +
           '</button>'
       ) +
       catsetCard(
         'Take it back out',
         'Every product as a spreadsheet, in your catalogue’s own columns — for a backup, an accountant, or another ' + 'system.',
-        '<button class="composebtn" data-testid="catset-export" onclick="exportCatalogueCSV(this)">⬇ Export CSV</button>'
+        '<button data-cbsid="CAT004-B10" class="composebtn" data-testid="catset-export" onclick="exportCatalogueCSV(this)">⬇ Export CSV</button>'
       )
     );
   }
@@ -1225,7 +1225,7 @@ function catsetBody(k) {
         '<a class="composebtn" data-testid="catset-country-lab" href="country-lab.html" target="cb_country_lab" rel="noopener" title="What changes when the shop\'s country changes — every row read from the regulation packs, the cart billed under both" style="text-decoration:none;margin-right:6px">🌍 ' +
           tx('Country lab') +
           '</a>' +
-          '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>'
+          '<button data-cbsid="CAT004-B11" class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>'
       ) +
       catsetCard('Your slabs', catsetTaxCountsHTML() + catsetDefListHTML('tax', 'tax slab'), '') +
       catsetCard('Falls back to', catsetTaxHTML(), '') +
@@ -1303,7 +1303,7 @@ async function catcolPick() {
       '<label class="fl">' +
       tx('Trade') +
       '</label>' +
-      '<select class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">' +
+      '<select data-cbsid="CAT004-S01" class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">' +
       verts
         .map(function (item) {
           return '<option value="' + esc(item.key) + '">' + esc(item.title) + ' — ' + item.field_count + ' ' + tx('columns') + '</option>';
@@ -1316,11 +1316,11 @@ async function catcolPick() {
       '<div style="margin-top:11px"><label class="fl">' +
       tx('Add your own as well') +
       '</label>' +
-      '<div style="display:flex;gap:6px"><input class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"' +
+      '<div style="display:flex;gap:6px"><input data-cbsid="CAT004-I06" class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"' +
       ' placeholder="' +
       esc(tx('column name')) +
       '">' +
-      '<select class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">' +
+      '<select data-cbsid="CAT004-S02" class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">' +
       ['text', 'number', 'boolean', 'date', 'choice']
         .map(function (item) {
           return '<option>' + item + '</option>';
@@ -1334,7 +1334,7 @@ async function catcolPick() {
       '<div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' +
+      '<button data-cbsid="CAT004-B12" class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' +
       tx('Add columns') +
       '</button></div>',
     true
@@ -1372,10 +1372,10 @@ async function catcolLoad(v) {
   if (body) {
     body.innerHTML =
       '<div style="display:flex;gap:7px;align-items:center;margin-bottom:7px">' +
-      '<button type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      '<button data-cbsid="CAT004-B13" type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
       tx('All') +
       '</button>' +
-      '<button type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
+      '<button data-cbsid="CAT004-B14" type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' +
       tx('None') +
       '</button>' +
       '<span id="catcol_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap"></span></div>' +
@@ -1388,7 +1388,7 @@ async function catcolLoad(v) {
             (already ? 'default' : 'pointer') +
             (already ? ';opacity:.6' : '') +
             '">' +
-            '<input type="checkbox" ' +
+            '<input data-cbsid="CAT004-I07" type="checkbox" ' +
             (already ? 'checked disabled' : 'checked') +
             ' data-colkey="' +
             esc(item.field_key) +
@@ -1621,7 +1621,7 @@ function catsetColTabsHTML() {
     tabs
       .map(function (item) {
         return (
-          '<button type="button" data-testid="catset-coltab-' +
+          '<button data-cbsid="CAT004-B15" type="button" data-testid="catset-coltab-' +
           item[0] +
           '" class="' +
           (catsetColTab() === item[0] ? 'on' : '') +
@@ -1669,7 +1669,7 @@ function catsetColRow(c, i, n) {
       '<span class="bn">' +
       name +
       '</span>' +
-      '<select data-testid="catset-type-' +
+      '<select data-cbsid="CAT004-S03" data-testid="catset-type-' +
       key +
       '"' +
       (lockedType ? ' disabled' : '') +
@@ -1686,7 +1686,7 @@ function catsetColRow(c, i, n) {
         .join('') +
       (types.indexOf(c.field_type) < 0 && c.field_type ? '<option value="' + esc(c.field_type) + '" selected>' + esc(c.field_type) + '</option>' : '') +
       '</select>' +
-      '<input list="cb-rec20" data-testid="catset-unit-' +
+      '<input data-cbsid="CAT004-I08" list="cb-rec20" data-testid="catset-unit-' +
       key +
       '" value="' +
       esc(c.unit || '') +
@@ -1700,7 +1700,7 @@ function catsetColRow(c, i, n) {
       '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="' +
       esc(lockedReq ? tx('Every catalogue requires this') : tx('Refuse a product that leaves this empty')) +
       '">' +
-      '<input type="checkbox" data-testid="catset-req-' +
+      '<input data-cbsid="CAT004-I09" type="checkbox" data-testid="catset-req-' +
       key +
       '"' +
       (c.required ? ' checked' : '') +
@@ -1728,7 +1728,7 @@ function catsetColRow(c, i, n) {
       tx('in the upload template') +
       (erp ? ' · ERP: <span class="mono">' + esc(erp) + '</span>' : '') +
       '</span>' +
-      '<button type="button" class="badd" data-testid="catset-rm-' +
+      '<button data-cbsid="CAT004-B16" type="button" class="badd" data-testid="catset-rm-' +
       key +
       '"' +
       (can ? '' : ' disabled') +
@@ -1748,7 +1748,7 @@ function catsetColRow(c, i, n) {
     '<div class="bulkrow" data-testid="catset-col-' +
     key +
     '">' +
-    '<input class="bn" data-testid="catset-name-' +
+    '<input data-cbsid="CAT004-I10" class="bn" data-testid="catset-name-' +
     key +
     '" value="' +
     name +
@@ -1761,7 +1761,7 @@ function catsetColRow(c, i, n) {
     '<span class="bh">' +
     (c.required ? tx('required') : '') +
     '</span>' +
-    '<button type="button" title="' +
+    '<button data-cbsid="CAT004-B17" type="button" title="' +
     esc(tx('Move up')) +
     '" data-testid="catset-up-' +
     key +
@@ -1770,7 +1770,7 @@ function catsetColRow(c, i, n) {
     ' onclick="catsetMove(\'' +
     key +
     '\',-1)">↑</button>' +
-    '<button type="button" title="' +
+    '<button data-cbsid="CAT004-B18" type="button" title="' +
     esc(tx('Move down')) +
     '" data-testid="catset-dn-' +
     key +
@@ -1779,7 +1779,7 @@ function catsetColRow(c, i, n) {
     ' onclick="catsetMove(\'' +
     key +
     '\',1)">↓</button>' +
-    (can ? '' : '<button type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>') +
+    (can ? '' : '<button data-cbsid="CAT004-B19" type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>') +
     '</div>'
   );
 }
@@ -1834,7 +1834,7 @@ function catsetColsHTML() {
         '<span class="bh">' +
         esc(item.field_type) +
         '</span>' +
-        '<button type="button" class="badd" disabled title="' +
+        '<button data-cbsid="CAT004-B20" type="button" class="badd" disabled title="' +
         esc(tx('Set in ') + (item.managed_by || '')) +
         '">🔒</button>' +
         '</div>'
@@ -2059,7 +2059,7 @@ function catsetErpHTML() {
           '<span class="bn">' +
           esc(item.field_name || item.field_key) +
           '</span>' +
-          '<select data-testid="catset-erpsys-' +
+          '<select data-cbsid="CAT004-S04" data-testid="catset-erpsys-' +
           esc(item.field_key) +
           '"' +
           ' onchange="catsetErpSet(\'' +
@@ -2073,7 +2073,7 @@ function catsetErpHTML() {
           /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
          a question with no context, and an answer typed against "—" would be stored against nothing. */
           (sys !== '—'
-            ? '<input class="inp" data-testid="catset-erpref-' +
+            ? '<input data-cbsid="CAT004-I11" class="inp" data-testid="catset-erpref-' +
               esc(item.field_key) +
               '" style="width:170px;padding:3px 7px"' +
               ' value="' +
@@ -2286,7 +2286,7 @@ function catsetOfferPlanHTML() {
           ? on
               .map(function (entry) {
                 return (
-                  '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' +
+                  '<div data-cbsid="CAT004-C06" style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' +
                   esc(entry.id) +
                   '\')">' +
                   esc(entry.name) +
@@ -2332,7 +2332,7 @@ function catsetPlanPaint() {
   var rowsHtml = CATSET_PLAN.map(function (item, index) {
     return (
       '<div data-testid="catset-plan-row" style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;align-items:center;margin-bottom:6px">' +
-      '<input class="inp" data-testid="plan-name-' +
+      '<input data-cbsid="CAT004-I12" class="inp" data-testid="plan-name-' +
       index +
       '" placeholder="' +
       esc(tx('Name buyers see')) +
@@ -2341,7 +2341,7 @@ function catsetPlanPaint() {
       '" oninput="CATSET_PLAN[' +
       index +
       '].name=this.value">' +
-      '<select class="inp" data-testid="plan-kind-' +
+      '<select data-cbsid="CAT004-S05" class="inp" data-testid="plan-kind-' +
       index +
       '" onchange="CATSET_PLAN[' +
       index +
@@ -2352,14 +2352,14 @@ function catsetPlanPaint() {
         })
         .join('') +
       '</select>' +
-      '<input class="inp" data-testid="plan-value-' +
+      '<input data-cbsid="CAT004-I13" class="inp" data-testid="plan-value-' +
       index +
       '" inputmode="decimal" placeholder="10" value="' +
       esc(item.value) +
       '" oninput="CATSET_PLAN[' +
       index +
       '].value=this.value">' +
-      '<select class="inp" data-testid="plan-product-' +
+      '<select data-cbsid="CAT004-S06" class="inp" data-testid="plan-product-' +
       index +
       '" onchange="CATSET_PLAN[' +
       index +
@@ -2373,14 +2373,14 @@ function catsetPlanPaint() {
         })
         .join('') +
       '</select>' +
-      '<input class="inp" type="date" data-testid="plan-from-' +
+      '<input data-cbsid="CAT004-I14" class="inp" type="date" data-testid="plan-from-' +
       index +
       '" value="' +
       esc(item.from) +
       '" onchange="CATSET_PLAN[' +
       index +
       '].from=this.value">' +
-      '<input class="inp" type="date" data-testid="plan-to-' +
+      '<input data-cbsid="CAT004-I15" class="inp" type="date" data-testid="plan-to-' +
       index +
       '" value="' +
       esc(item.to) +
@@ -2416,11 +2416,11 @@ function catsetPlanPaint() {
       tx('To') +
       '</span><span></span></div>' +
       rowsHtml +
-      '<button class="composebtn" data-testid="plan-add" onclick="CATSET_PLAN.push(catsetPlanRow(CATSET_PLAN.length));catsetPlanPaint()">+ ' +
+      '<button data-cbsid="CAT004-B21" class="composebtn" data-testid="plan-add" onclick="CATSET_PLAN.push(catsetPlanRow(CATSET_PLAN.length));catsetPlanPaint()">+ ' +
       tx('Another month') +
       '</button>' +
       '<div id="plan_err" class="err" style="margin-top:6px"></div></div>' +
-      '<div class="mfoot"><button class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' +
+      '<div class="mfoot"><button data-cbsid="CAT004-B22" class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' +
       tx('Create all as live') +
       '</button><button data-cbsid="CMP003" onclick="closeModal()">' +
       tx('Cancel') +
@@ -2591,7 +2591,7 @@ function catsetTaxCatgChipsHTML(rows) {
   var chip = function (id, name, n) {
     var on = CATSET_TAX_CATG === id;
     return (
-      '<span class="pill" data-testid="catset-tax-catg-' +
+      '<span data-cbsid="CAT004-C07" class="pill" data-testid="catset-tax-catg-' +
       esc(id || 'all') +
       '" onclick="catsetTaxCatg(\'' +
       esc(id) +
@@ -2785,7 +2785,7 @@ function catsetTaxHTML() {
      form follows. "You have no live slabs" and "this catalogue cannot have a default" look identical otherwise. */
   var body = !live.length
     ? '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No live slab yet — author one above and make it live.') + '</div>'
-    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxPick(this.value)"' +
+    : '<select data-cbsid="CAT004-S07" class="inp" data-testid="catset-tax-default" onchange="catsetTaxPick(this.value)"' +
       (verdict.ok ? '' : ' disabled title="' + esc(verdict.why) + '"') +
       '>' +
       '<option value="">— ' +
@@ -2929,7 +2929,7 @@ function catsetDetailHTML() {
       return x.key === k;
     })[0] || CATSET_SECS[0];
   return (
-    '<div class="dh"><button class="dback" onclick="catsetBack()">‹ Catalogue setup</button>' +
+    '<div class="dh"><button data-cbsid="CAT004-B23" class="dback" onclick="catsetBack()">‹ Catalogue setup</button>' +
     '<div class="dt">' +
     s.icon +
     ' ' +
@@ -2971,7 +2971,7 @@ function catsetRowsHTML() {
   var cur = catsetSec();
   return CATSET_SECS.map(function (item) {
     return (
-      '<div class="row' +
+      '<div data-cbsid="CAT004-C08" class="row' +
       (item.key === cur ? ' sel' : '') +
       '" data-testid="catset-sec-' +
       item.key +
@@ -3002,10 +3002,10 @@ function catalogueSetupHubScreen() {
     tx('⚙️ Catalogue setup') +
     '</span></div>' +
     '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. ' +
-    'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+    'The products themselves live in <span data-cbsid="CAT004-C09" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
     tx('Catalogue') +
     '</span>, ' +
-    'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+    'and how they are sorted in <span data-cbsid="CAT004-C10" onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
     tx('Categories') +
     '</span>.</div>' +
     /* ⭐ WHERE AND HOW THE CATALOGUE STANDARDS ARE IMPLEMENTED — read from the STANDARDS register, so this
@@ -3214,7 +3214,7 @@ function catsetSfHTML() {
   var methods = (P.METHODS || [])
     .map(function (item) {
       return (
-        '<div class="bulkrow' +
+        '<div data-cbsid="CAT004-C11" class="bulkrow' +
         (method === item.k ? ' on' : '') +
         '" data-testid="catset-sf-method-' +
         esc(item.k) +
@@ -3241,7 +3241,7 @@ function catsetSfHTML() {
     .map(function (item) {
       var on = units.indexOf(item) >= 0;
       return (
-        '<button type="button" class="cbpick-chip' +
+        '<button data-cbsid="CAT004-B24" type="button" class="cbpick-chip' +
         (on ? ' on' : '') +
         '"' +
         ' data-testid="catset-sf-unit-' +
@@ -3269,7 +3269,7 @@ function catsetSfHTML() {
       units
         .map(function (item) {
           return (
-            '<button type="button" class="cbpick-chip' +
+            '<button data-cbsid="CAT004-B25" type="button" class="cbpick-chip' +
             (defUnit === item ? ' on' : '') +
             '"' +
             ' data-testid="catset-sf-def-' +
@@ -3294,7 +3294,7 @@ function catsetSfHTML() {
     .map(function (item) {
       var on = !!facets[item];
       return (
-        '<button type="button" class="cbpick-chip' +
+        '<button data-cbsid="CAT004-B26" type="button" class="cbpick-chip' +
         (on ? ' on' : '') +
         '"' +
         ' data-testid="catset-sf-facet-' +
