@@ -2084,8 +2084,19 @@ function crmAddOpen(q) {
   if (node) {
     node.focus();
     node.addEventListener('input', crmAddType);
+    node.addEventListener('keydown', crmAddEnter);
   }
   crmAddResults();
+}
+/** Enter in the one field (rule 4): read what was typed now, not after the pause, then press the one way forward when there is exactly one (Add as local); with matches to choose from nothing is added for them */
+function crmAddEnter(ev) {
+  if (ev.key !== 'Enter' || ev.isComposing) return;
+  ev.preventDefault();
+  clearTimeout(_addT);
+  crmAddSearch().then(function () {
+    var only = document.querySelector('#crm_addres [data-sheet-save]');
+    if (only) only.click();
+  });
 }
 var _addT = null;
 function crmAddType(ev) {
@@ -2178,7 +2189,7 @@ function crmAddResults() {
       '</b><br><span class="hint">' +
       esc(tx('Bills are yours only until they join.')) +
       '</span></span>' +
-      '<button data-cbsid="CRM001-B11" type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go">' +
+      '<button data-cbsid="CRM001-B11" type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go"' + (mine.length || (ADD.found || []).length ? '' : ' data-sheet-save') + '>' +
       esc(tx('Add as local')) +
       '</button></div>';
   box.innerHTML = h;

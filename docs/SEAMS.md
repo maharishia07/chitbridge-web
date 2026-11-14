@@ -74,10 +74,10 @@ of file each thing is; this says what already does the job.
 | 37 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 37 | `rate` | `convert.js` | A rate, with its evidence. |
 | 36 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
+| 36 | `shell` | `pick.js` |  |
 | 36 | `ledger` | `tax-lines.js` | ITC only when I am a regular taxpayer AND the seller charged tax (regular seller, not zero-rated to me). |
 | 35 | `closeModal` | `app.html` |  |
 | 35 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
-| 35 | `shell` | `pick.js` |  |
 | 34 | `changes` | `books-store.js` |  |
 | 34 | `hold` | `orders.js` |  |
 | 33 | `lines` | `cart.js` |  |
@@ -92,18 +92,18 @@ of file each thing is; this says what already does the job.
 | 32 | `packs` | `books-engines.js` | let packsDoor = null; /* { raw, mod } — |
 | 32 | `refuse` | `books-pack.js` | const sha = (text) => |
 | 31 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
+| 31 | `sheet` | `cap-employees.js` |  |
 | 31 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 31 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
-| 30 | `sheet` | `cap-employees.js` |  |
 | 30 | `account` | `home-facts.js` | OMITTED: |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 29 | `paint` | `attach-ui.js` | atts = o.atts ·· null; |
+| 29 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 29 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 29 | `owner` | `books.js` |  |
 | 28 | `money` | `cart.js` |  |
-| 28 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 28 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 27 | `opts` | `cap-stock.js` |  |
 | 27 | `guard` | `amend.js` | would disturb what has gone out. |
@@ -112,12 +112,12 @@ of file each thing is; this says what already does the job.
 | 27 | `group` | `identity.js` | again in a different costume. |
 | 26 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 25 | `load` | `cap-assist.js` |  |
+| 25 | `shown` | `country-compare.js` | one side's value for the line: |
 | 25 | `view` | `country-ready.js` |  |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 24 | `form` | `accounts-shell.js` |  |
 | 24 | `call` | `cap-assist.js` |  |
-| 24 | `shown` | `country-compare.js` | one side's value for the line: |
 | 24 | `carry` | `catalogue-blueprint.js` | AN ARRAY IS NOT A STRING — |
 | 24 | `update` | `folder-rules.js` |  |
 | 24 | `governance` | `home-facts.js` |  |
@@ -149,6 +149,7 @@ of file each thing is; this says what already does the job.
 | 19 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 19 | `card` | `cap-shop.js` |  |
 | 19 | `later` | `signin-ui.js` |  |
+| 19 | `field` | `ui-field.js` | the part: |
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 19 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 19 | `connectors` | `home-facts.js` | declare (said in words — |
@@ -169,7 +170,6 @@ of file each thing is; this says what already does the job.
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `head` | `list-ctl.js` |  |
 | 17 | `label` | `screen-id.js` |  |
-| 17 | `field` | `ui-field.js` | the part: |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
 | 17 | `asks` | `readiness.js` | asks(origin, vertical) → { asked: |
@@ -197,15 +197,15 @@ of file each thing is; this says what already does the job.
 | 15 | `applies` | `credit-cap.js` | does the cap judge this send? a counter credit note (a till, an against) that is not a draft |
 | 15 | `decimals` | `money.js` | decimals(currency) → how many minor-unit digits it has: |
 | 15 | `heads` | `tax-lines.js` | The heads, summed. |
+| 14 | `save` | `app.html` |  |
 | 14 | `cols` | `cap-catalogue.js` |  |
 | 14 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 14 | `link` | `chit-sheet.js` |  |
 | 14 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 14 | `check` | `network-app.js` |  |
+| 14 | `dialog` | `ui.js` | caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialo |
 | 14 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
 | 14 | `refuse_` | `bookpack.js` | an Error with status 422 — |
 | 14 | `payment` | `books-store.js` |  |
 | 14 | `minor` | `bounds.js` | B.minor({ column, signed }) → whole minor units (a fraction of a minor unit is refused), at least 0 unless a c |
 | 14 | `outcome` | `crm-calls.js` | Body { outcome, followup_id?, after? · due_at? }. |
-| 14 | `members` | `crm-groups.js` | the customers (never a lead) in a segment or a group, from the list's own rows |
-| 14 | `apply` | `ctpreturn.js` | Apply one event the door has already verified (peer known, signature, membership, crossing). |
