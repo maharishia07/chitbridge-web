@@ -616,7 +616,7 @@
     '.cbav-items.last{border-bottom:0;border-top:1px solid var(--av-soft);margin-top:8px}' +
     '.cbav-items button,.cbav-items a{display:flex;justify-content:space-between;align-items:center;text-align:start;border:0;background:none;border-radius:7px;padding:7px 8px;text-decoration:none;font-size:calc(14px * var(--k,1))}' +
     '.cbav-items button:hover,.cbav-items a:hover{background:var(--av-panel)}' +
-    '.cbav h4{margin:10px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--av-faint);font-weight:700}' +
+    '.cbav h4{clear:left;margin:10px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--av-faint);font-weight:700}' +
     '.cbav-sw{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 8px}' +
     '.cbav-sw button{display:grid;gap:3px;justify-items:center;border:1px solid transparent;background:none;border-radius:9px;padding:4px 2px;font-size:calc(10.5px * var(--k,1));color:var(--av-muted);line-height:1.15;text-align:center}' +
     '.cbav-sw .dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--av-line);display:grid;grid-template-rows:1fr 1fr;overflow:hidden}' +
@@ -625,7 +625,7 @@
     '.cbav-sizes button,.cbav-weights button{flex:1;border:1px solid var(--av-line);background:var(--av-card);border-radius:9px;display:grid;place-items:center;color:var(--av-ink);padding:0;font-family:inherit}' +
     '.cbav-sizes button{height:42px}.cbav-weights{display:flex;gap:4px;margin:0 0 8px}.cbav-weights button{height:36px;font-size:17px}' +
     '.cbav-sizes button[aria-pressed="true"],.cbav-weights button[aria-pressed="true"]{border-color:var(--av-blue);background:var(--av-blue-t);color:var(--av-blue-i)}' +
-    '.cbav-motion{display:inline-flex;box-sizing:border-box;width:50%;vertical-align:top;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
+    '.cbav-motion{display:flex;float:left;box-sizing:border-box;width:50%;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
     '.cbav-toggle{width:40px;height:22px;border-radius:999px;border:1px solid var(--av-line);background:var(--av-panel);position:relative;padding:0}' +
     '.cbav-toggle::after{content:"";position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;background:var(--av-faint);transition:inset-inline-start .15s}' +
     '.cbav-toggle[aria-checked="true"]{background:var(--av-blue-t);border-color:var(--av-blue)}' +
