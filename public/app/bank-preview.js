@@ -337,16 +337,8 @@
     projectAgain(opts, preview);
     return { ok: true };
   }
-  /**
-   * create(opts) → the preview controller.
-   *   opts.engine   { recon: CBBankRecon, project: CBBankProject, entry: CBBankEntry }      opts.currency  the ACCOUNT's currency (from the shop, never the file)
-   *   opts.account  the bank account's name (in every ref)               opts.ledger()  → { lines (each with its currency), opening_minor, posted_refs }, read again after posting
-   *   opts.post(item) → Promise<{ ok, duplicate?, entry_no?, why? }>      opts.lockedMonth(date) → null | { month, words }
-   *   opts.statementCurrency()  the currency the STATEMENT says it is in (the engine refuses a mismatch with the account); the file's own when it says, else NONE: it is never taken from the account (B5-05), the engine refuses with "say which currency"
-   *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
-   */
-  function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
+  /** the person's answers on one line, as controller methods: the tick (B5-01) · the word on the tax invoice (B5-03) · a pair with a books entry, or "it is new" (B5-02); each asks the engine again through answerLine */
+  function answerMethods(opts, preview) {
     return {
       /** the person's tick: "yes, this is right" for a line only the bank's words proposed (B5-01) */
       tick: function (key) {
@@ -370,7 +362,20 @@
         return answerLine(opts, preview, key, function () {
           preview.notMatch[key] = true;
         });
-      },
+      }
+    };
+  }
+  /**
+   * create(opts) → the preview controller.
+   *   opts.engine   { recon: CBBankRecon, project: CBBankProject, entry: CBBankEntry }      opts.currency  the ACCOUNT's currency (from the shop, never the file)
+   *   opts.account  the bank account's name (in every ref)               opts.ledger()  → { lines (each with its currency), opening_minor, posted_refs }, read again after posting
+   *   opts.post(item) → Promise<{ ok, duplicate?, entry_no?, why? }>      opts.lockedMonth(date) → null | { month, words }
+   *   opts.statementCurrency()  the currency the STATEMENT says it is in (the engine refuses a mismatch with the account); the file's own when it says, else NONE: it is never taken from the account (B5-05), the engine refuses with "say which currency"
+   *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
+   */
+  function create(opts) {
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
+    return Object.assign(answerMethods(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
       },
@@ -400,7 +405,7 @@
       view: function () {
         return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal };
       }
-    };
+    });
   }
 
   root.CBBankPreview = { create: create, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
