@@ -1,4 +1,4 @@
-/**
+/** · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions
  * edition.js — CBEdition: WHICH DOORS THIS SHOWING OPENS (round AX1, 2026-10-13). The one helper Home, the shell's switcher and the small apps ask.
  *
  * An EDITION is data, not a second Home: public/app/manifest.json › `editions` = { <key>: { name, chip, line, entries: '*' | [ids] } }.
