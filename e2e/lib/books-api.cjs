@@ -26,7 +26,8 @@ const health = (o) => { const h = only({ enabled: true, currency: 'INR', country
 /* M29: every line also names its entry (entry_id · entry_no · event_type), its reversal (reverses_entry_id · reversed_by · reversed_why) and, on a payment line, payment_id · unapplied_minor · advice — null = not a payment / not reversed */
 const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {}); s.lines = s.lines.map((l) => Object.assign({ ref: null, source_chit_id: null, entry_id: null, entry_no: null, event_type: null, reverses_entry_id: null, reversed_by: null, reversed_why: null, payment_id: null, unapplied_minor: null, advice: null }, l, { source: l.source ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, l.source) : null })); return s; };
 /** one row of GET /api/books/dues (balance_minor: + they owe you) */
-const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) });
+/* balance_words: the api adds the standing in words to each row (routes/books.js withBalanceWords → owesWords); a row that names its own keeps it */
+const dueRow = (o) => { const row = Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) }); if (row.balance_words === undefined) row.balance_words = owesWords(row.balance_minor); return row; };
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
 /** one row of GET /api/books/periods */
@@ -98,6 +99,8 @@ Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accoun
 
 /* ── payments (M26, chitbridge-api #57): the preview, the one-call record, the 409 ── */
 const rs = (minor) => { const v = minor / 100; return '₹' + v.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(v) ? 0 : 2, maximumFractionDigits: 2 }); };
+/** the api's owesWords (lib/books.js), in the stand-in's rupee format */
+const owesWords = (minor) => (!minor ? 'settled' : (minor > 0 ? 'they owe you ' + rs(minor) : 'you owe ' + rs(-minor)));
 /** the oldest-due-first proposal: bills = [{ against_ref, bill_no, due_date, open_minor, disputed }] (open ones), amount_minor → { proposal, apply_minor, on_account_minor, open_minor } */
 const payProposal = (bills, amount_minor) => {
   let left = amount_minor;

@@ -20,12 +20,12 @@ const ROOT = path.join(__dirname, '..', '..');
 const norm = (l) => l.replace(/\s+—\s+not:.*$/, '').trim();
 
 function child(script, opts) {
-  const re = opts.re || /^\s+XX/, base = opts.base ? new Set(opts.base) : null, t0 = Date.now(), seen = []; // clock-ok: elapsed-time stopwatch, no business date
+  const re = opts.re || /^\s+XX/, base = opts.base ? new Set(opts.base) : null, t0 = Date.now(), seen = []; // clock-ok: elapsed-time timer for the run, not a business date
   let summed = false;   /* the check printed its "N passed" summary: it ran to the end */
   const p = cp.spawn(process.execPath, [script], { cwd: opts.cwd || ROOT, env: opts.env || process.env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32' });
   let buf = '', err = '', early = false, done = false;
   const killTree = () => { try { if (process.platform === 'win32') cp.spawnSync('taskkill', ['/pid', String(p.pid), '/T', '/F'], { stdio: 'ignore' }); else process.kill(-p.pid, 'SIGKILL'); } catch (_) {} };
-  const finish = (status) => { if (done) return; done = true; clearTimeout(timer); console.log('BREAKRUN ' + JSON.stringify({ status, summed, xx: seen, early, secs: Math.round((Date.now() - t0) / 1000), stderr: err.split('\n').filter(Boolean).slice(0, 3).join(' | ').slice(0, 300) })); process.exit(0); }; // clock-ok: elapsed-time stopwatch
+  const finish = (status) => { if (done) return; done = true; clearTimeout(timer); console.log('BREAKRUN ' + JSON.stringify({ status, summed, xx: seen, early, secs: Math.round((Date.now() - t0) / 1000), stderr: err.split('\n').filter(Boolean).slice(0, 3).join(' | ').slice(0, 300) })); process.exit(0); }; // clock-ok: elapsed time in the result line
   const timer = setTimeout(() => { killTree(); finish(-1); }, opts.timeout || 600000);
   p.stdout.on('data', (d) => {
     buf += d; let i;
@@ -78,10 +78,10 @@ function disposeDir(dir) {
 }
 function site(W) {
   const fs = require('fs');
-  const root = path.dirname(W), dir = path.join(root, 'web-brk-' + process.pid + '-' + Date.now().toString(36)); // clock-ok: unique temp-dir suffix
+  const root = path.dirname(W), dir = path.join(root, 'web-brk-' + process.pid + '-' + Date.now().toString(36)); // clock-ok: unique temp folder name
   for (const n of fs.readdirSync(root)) {
     if (!/^web-brk-/.test(n)) continue;
-    try { const d = path.join(root, n); if (Date.now() - fs.statSync(d).mtimeMs > 3 * 3600e3) disposeDir(d); } catch (_) {} // clock-ok: age of a temp dir against the real file clock
+    try { const d = path.join(root, n); if (Date.now() - fs.statSync(d).mtimeMs > 3 * 3600e3) disposeDir(d); } catch (_) {} // clock-ok: age of an old temp folder for cleanup
   }
   fs.mkdirSync(dir);
   const COPY = new Set(['public', 'index.html', 'e2e', 'package.json']);
