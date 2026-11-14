@@ -66,25 +66,28 @@ function crmNoDate(text) {
     .replace(/[\s\u00b7,\-\u2013\u2014]+$/, '');
   return u || text;
 }
-/** bills only, and the orders that have not been billed yet - from the entries the page already holds (C18/C22) */
+/** an order entry that is not cancelled, rejected or declined */
+function crmIsOpenOrder(e) {
+  return e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '');
+}
+/** bills only (count + last date) from the entries the page already holds (C18/C22); `orders` is the count of open orders when the server's figure is absent. NO money is added here: the unbilled money is the server's (CRM-D7) */
 function crmBillFacts(entries) {
   var chitBills = 0,
     ledBills = 0,
     lastBill = '',
-    un = { n: 0, minor: 0, currency: null, hidden: 0 };
+    orders = 0;
   (entries || []).forEach(function (e) {
     if (e.kind === 'bill') {
       if (e.src === 'ledger') ledBills++;
       else chitBills++;
       if (!lastBill || e.at > lastBill) lastBill = e.at;
-    } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
-      un.n++;
-      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the sum (an unpriced order, null without the flag, still adds 0)
-      else un.minor += Number(e.amount_minor || 0);
-      un.currency = un.currency || e.currency;
-    }
+    } else if (crmIsOpenOrder(e)) orders++;
   });
-  return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, unbilled: un };
+  return { bills: Math.max(chitBills, ledBills), lastBill: lastBill, orders: orders };
+}
+/** the record's unbilled figure: the one the api carries (GET /parties/:id, else the list row's); an older api: the count of orders alone, money left out (absent, never a wrong 0) */
+function crmUnbilledOf(R, entries) {
+  return R.unbilled || { n: crmBillFacts(entries).orders };
 }
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
 
@@ -438,7 +441,7 @@ async function crmRecordFold(route, tok) {
     '</a></div></div>';
 }
 function crmDueChip(p) {
-  var said = crmUnbilledSaid(p.billFacts && p.billFacts.unbilled, CRM.currency);
+  var said = crmUnbilledSaid(p.unbilled, CRM.currency);
   if (!CRM.ledger || p.balance_minor == null) return said ? '<span class="tag amber" data-testid="crm-unbilled">' + esc(said) + '</span>' : '';
   if (!Number(p.balance_minor || 0) && said)
     return (
@@ -909,7 +912,7 @@ function crmKV(l, v) {
 }
 function crmRecordPaint(p, rec) {
   var R = Object.assign({}, p, rec, { billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) });
-  R.unbilled = R.billFacts.unbilled;
+  R.unbilled = crmUnbilledOf(R, rec.timeline_all || rec.timeline_head);
   var node = document.getElementById('screen'),
     c = rec.contacts || {},
     one = R.roles.length === 1,
@@ -990,9 +993,7 @@ function crmRecordPaint(p, rec) {
   );
   /* Customer · Supplier */
   var bf = R.billFacts || crmBillFacts([]);
-  var ufact = bf.unbilled.n
-    ? crmPlural(bf.unbilled.n, 'order not billed yet', 'orders not billed yet') + ' \u00b7 ' + crmUnbilledMoney(bf.unbilled)
-    : '';
+  var ufact = crmUnbilledSaid(R.unbilled, CRM.currency);
   if (cu)
     secs.push(
       crmSec(
@@ -1223,7 +1224,7 @@ function crmLedgerRepaint(pid) {
       crmRailChip(R) +
       (crmIsLead(R) && !Number(p.balance_minor || 0)
         ? ''
-        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, billFacts: crmBillFacts(rec.timeline_all || rec.timeline_head) }))) +
+        : crmDueChip(Object.assign({}, R, { balance_minor: p.balance_minor, unbilled: crmUnbilledOf(R, rec.timeline_all || rec.timeline_head) }))) +
       crmSegChip(R) +
       crmStageChip(R.lead);
   var fact = document.querySelector('[data-testid="crm-sec-fact-ledger"]');

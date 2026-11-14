@@ -206,7 +206,16 @@ async function route(S, r) {
     ok(!/role=\\?["']columnheader|<thead|class=\\?["'][^"']*\blhead\b/.test(all), 'no column header is drawn by hand — every list is a CBList mount');
     ok((js.match(/CBList\.mount\(/g) || []).length >= 4, 'home, follow-ups and both timeline views are CBList mounts (' + (js.match(/CBList\.mount\(/g) || []).length + ')');
     const code = js.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    ok(!/balance_minor\s*[-+*\/]|\.reduce\s*\(|amount_minor\s*[-+*\/]|\bsum\s*\(/.test(code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '')), 'the page computes no money: balance_minor / amount_minor are only painted and ordered, never summed');
+    /* CRM-D7: the page computes no money. The scan covers both CRM files whole and the two places that SAY the unbilled money elsewhere (helpers.js cbUnbilled*, cap-finance.js finUnbilledWords);
+       cap-finance.js's dues total is a separate money item (no per-currency split yet) and is out of this guard. Each variant of a re-added sum below must trip the pattern. */
+    const NO_SUM = new RegExp([String.raw`balance_minor\s*[-+*\/]`, String.raw`\.reduce\s*\(`, String.raw`amount_minor\s*[-+*\/]`, String.raw`\bsum\s*\(`, String.raw`\+=[^;\n]*minor`, String.raw`minor\s*\+=`, String.raw`minor\s*\+\+`, String.raw`minor\s*=[^;\n]*\+[^;\n]*minor`, String.raw`\+\s*(?:Number\()?[\w.\[\]]*minor\b`].join('|'));
+    const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const fnOf = (file, name) => { const s = strip(fs.readFileSync(path.join(PUB, 'app', file), 'utf8')), at = s.indexOf('function ' + name + '('); return at < 0 ? '' : s.slice(at, s.indexOf('\n}\n', at) + 2); };
+    const moneyScan = code.replace(/Math\.abs\(p\.balance_minor \|\| 0\)/g, '') + ['cbUnbilledNotes', 'cbUnbilledFigs', 'cbUnbilledTail'].map((n) => fnOf('helpers.js', n)).join('\n') + fnOf('cap-finance.js', 'finUnbilledWords');
+    ok(/function cbUnbilledTail\(/.test(moneyScan) && /function finUnbilledWords\(/.test(moneyScan), 'the money scan reaches the shared reader (helpers.js) and the Finance words');
+    ok(!NO_SUM.test(moneyScan), 'the page computes no money: balance_minor / amount_minor / minor are only painted and ordered, never summed (CRM files, helpers.js cbUnbilled*, finUnbilledWords)');
+    for (const v of ['t += r.minor;', 'x.minor = x.minor + r.minor;', 's = s + Number(r.amount_minor);', 'sum += r.unbilled_minor;', 'by[c].minor++;', 'un.minor += Number(e.amount_minor || 0);', 'un.minor += e.amount_minor;', 'rows.reduce(function (a, r) { return a + r.minor; }, 0);', 'var t = r.minor + q.minor;'])
+      ok(NO_SUM.test(v), 'the no-money guard trips on a re-added sum: ' + v);
   }
 
   /* ── 2 · HOME ───────────────────────────────────────────────────────────────────────────────────────────── */
@@ -909,6 +918,7 @@ async function route(S, r) {
       S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
       const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [] });
       record.customer = Object.assign({}, record.customer, { added_via: 'catalogue', segment: 'new', txn_count: 1 });
+      record.unbilled = { n: 1, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 0, unpriced: 0 }; /* CRM-D7: the server's figure on the record; the page adds nothing */
       const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
         { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order · 09 Oct', value: 90, currency: 'INR', open_disputes: 0 },
         { kind: 'ledger', at: new Date(now - 7200e3).toISOString(), ref: 'pay:0d102689-e69d-41be-b175-08762c7afbdc', ledger_kind: 'receipt', source: null, amount_minor: 100, currency: 'INR', doc_date: '2026-10-03' }] };
@@ -963,6 +973,27 @@ async function route(S, r) {
       await o2.p.click('[data-testid="crm-act-pay"]'); await o2.p.waitForTimeout(500);
       ok(await o2.p.evaluate(() => !!document.querySelector('.modal, #modal, [role="dialog"], dialog[open]')) || true, 'C16: Receive opens the same Pay / Receive popup the list uses');
       await o2.ctx.close();
+    }
+    /* CRM-D7: the record paints the SERVER's unbilled figure - one per currency, nothing added in the browser (the timeline below holds INR 90 + 150 on purpose: summed it would say 240) */
+    for (const [name, un, want, never] of [
+      ['two currencies', { n: 2, minor: null, currency: null, by_currency: [{ currency: 'INR', minor: 9000, n: 1 }, { currency: 'AUD', minor: 15000, n: 1 }], no_currency: 0, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s\+\sA\$150\.00\s·\snot added together/, /240|₹150/],
+      ['one without a currency', { n: 2, minor: 9000, currency: 'INR', by_currency: [{ currency: 'INR', minor: 9000, n: 1 }], no_currency: 1, unpriced: 0 }, /2 orders not billed yet\s*₹90\.00\s·\s1 without a currency/, /not added together|240/],
+      ['one not priced', { n: 1, minor: null, currency: null, by_currency: [], no_currency: 0, unpriced: 1 }, /1 order not billed yet · 1 not priced yet/, /₹0|₹/],
+      ['a cost-blind reader (as the api sends it, no by_currency)', { n: 2, minor: null, currency: 'INR', cost_hidden: true }, /2 orders not billed yet hidden/, /AUD|₹\d/],
+      ['an older api (one figure, no split)', { n: 1, minor: 9000, currency: 'INR' }, /1 order not billed yet\s*₹90\.00/, /not added together|without|hidden/],
+    ]) {
+      const S = standIn();
+      S.list.forEach((q) => { if (q.party_no === 'P-0004') Object.assign(q, { kind: 'person', bridge_id: 'CBC3TQ3NEX', user_id: null, on_chitbridge: false, why_not: 'shopper', segment: 'new', balance_minor: 0, display_name: 'athi', phone: '+91 98940 55621' }); });
+      const record = Object.assign(crmApi.record(S.list, 'pid-0004', S.fx.records['pid-0004'], []), { tax_ids: [], unbilled: un });
+      const now = Date.now(), timeline = { party_id: 'pid-0004', next_before: null, migrated: true, total: 0, page: 1, limit: 100, entries: [
+        { kind: 'chit', at: new Date(now - 3600e3).toISOString(), chit_id: 'ch-o1', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order', value: 90, currency: 'INR', open_disputes: 0 },
+        { kind: 'chit', at: new Date(now - 7200e3).toISOString(), chit_id: 'ch-o2', direction: 'in', status: 'pending', purpose: 'order', doc_kind: null, title: 'Online order', value: 150, currency: 'AUD', open_disputes: 0 }] };
+      S.live = { record, timeline };
+      const { ctx, p } = await open(S, { hash: '#/party/P-0004' }); await recReady(p); await openAll(p); await p.waitForTimeout(400);
+      const chip = await text(p, '.rchips'), cs = await text(p, '[data-testid="crm-sec-customer"]');
+      ok(want.test(chip) && want.test(cs), 'CRM-D7 ' + name + ': the chip and the Customer section say the carried figure (' + chip + ' || ' + cs.slice(0, 300) + ')');
+      ok(!never.test(chip.replace(/d{1,2} w{3}/g, '')) , 'CRM-D7 ' + name + ': nothing summed, no reader currency borrowed (' + chip + ')');
+      await ctx.close();
     }
     /* the Chits list (stop-gap home): only chits with another party by default; the advice reads To the counterparty with ITS amount; age on one line */
     {

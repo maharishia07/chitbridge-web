@@ -176,19 +176,10 @@ function crmLocalISO(date) {
 function crmPlural(n, one, many) {
   return n + ' ' + (n === 1 ? tx(one) : tx(many));
 }
-/** the unbilled orders' sum as said: the figure; "hidden" when every one was hidden; the figure and "some hidden" when only some were (RAIL-146h) */
-function crmUnbilledMoney(unbilled, currency) {
-  if (unbilled.cost_hidden && unbilled.minor == null) return tx('hidden'); // the server's own shape for a cost-blind reader: { n, minor: null, currency, cost_hidden: true }
-  if (unbilled.hidden && !unbilled.minor) return tx('hidden');
-  return bkMoney(unbilled.minor, unbilled.currency || currency || CRM.currency) + (unbilled.hidden ? ' · ' + tx('some hidden') : '');
-}
-/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency } (the record's chip says the same words); '' when nothing is waiting. minor is null across two currencies: the count alone. */
+/** "2 orders not billed yet ₹840" - the ONE sentence for the server's { n, minor, currency, by_currency, no_currency, unpriced } (the record's chip says the same words); '' when nothing is waiting. The money is cbUnbilledTail's (helpers.js), the one reader Finance uses too. */
 function crmUnbilledSaid(unbilled, currency) {
   if (!unbilled || !unbilled.n) return '';
-  return (
-    crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') +
-    (unbilled.minor == null && !unbilled.hidden && !unbilled.cost_hidden ? '' : ' ' + crmUnbilledMoney(unbilled, currency))
-  );
+  return crmPlural(unbilled.n, 'order not billed yet', 'orders not billed yet') + cbUnbilledTail(unbilled, currency || CRM.currency);
 }
 
 var CRM_ICON = {

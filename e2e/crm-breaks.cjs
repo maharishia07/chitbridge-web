@@ -18,6 +18,16 @@ const BREAKS = [
   /* money is read, never computed */
   ['the page works out a tax on the dues', HOME, `  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';`, `  if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';\n  var _gst = p.balance_minor * 1.18;`, H],
   ['the page sums the dues of every party', HOME, `function crmNotices() {\n`, `function crmNotices() {\n  var _tot = CRM.rows.reduce(function (a, p) { return a + (p.balance_minor || 0); }, 0);\n`, H],
+  ['the record sums the orders in the browser again (CRM-D7)', REC, `    orders = 0;
+  (entries || []).forEach(function (e) {
+    if (e.kind === 'bill') {`, `    orders = 0, un = { minor: 0 };
+  (entries || []).forEach(function (e) { un.minor += Number(e.amount_minor || 0); });
+  (entries || []).forEach(function (e) {
+    if (e.kind === 'bill') {`, H],
+  ['the shared unbilled reader adds the currencies together (CRM-D7)', 'public/app/helpers.js', `  var buckets = unbilled.by_currency;
+`, `  var buckets = unbilled.by_currency;
+  var _all = 0; (buckets || []).forEach(function (b) { _all += b.minor; });
+`, H],
   /* the frozen look */
   ['a column header is drawn by hand', HOME, `function crmHome(frame) {\n`, `function crmHome(frame) {\n  var _h = '<thead><tr><th>Party</th></tr></thead>';\n`, H],
   ['a banner row sits above the list (the head grows past 20%)', HOME, `  s.innerHTML = '<div id="crm_list" data-testid="crm-list"></div>';`, `  s.innerHTML = '<div style="height:90px">banner</div><div id="crm_list" data-testid="crm-list"></div>';`, H],

@@ -132,6 +132,7 @@ function record(rows, id, rec, fus, now) {
     merged_from: merged ? { party_id: merged.party_id, party_no: merged.party_no } : null,
     relationship: row.kind === 'local' ? null : { relationship: { first_at: (r.scorecard && r.scorecard.first_at) || null, last_at: (r.scorecard && r.scorecard.last_at) || null, you_sent: (r.scorecard && r.scorecard.you_sent) || 0, you_received: (r.scorecard && r.scorecard.you_received) || 0, shape: 'both ways' },
       completion: { closed: 0, completed: 0, rejected_or_cancelled: 0, completion_rate_pct: (r.scorecard && r.scorecard.completion_rate_pct) || null } },
+    unbilled: row.unbilled || r.unbilled || { n: 0, minor: 0, currency: null, by_currency: [], no_currency: 0, unpriced: 0 }, /* CRM-D7: the record carries the server's figure, the list row's own (api: lib/crm withUnbilled over work-rows.sumUnbilled) */
     points: pts ? { programme: pts.programme || 'Rewards', points: pts.balance != null ? pts.balance : pts.points, worth: 0 } : null,
     migrated: true,
     contact_prefs: prefsBefore(),
