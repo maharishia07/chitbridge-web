@@ -12,6 +12,12 @@
  
  * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      a chit as a service request: the screen that shows both elapsed numbers when a pause is disputed
+ * CALLED BY ensureCap('service') in public/app.html:29755
+ * FLOW      svcOpen(chit_id) -> load the service view -> both numbers side by side, the disagreement named, nothing decided
+ * CARD      03-disputes-service-and-register/service-request-sla-pause
+ */
 var SVC = { id: null, data: null, busy: false, err: null, view: 'main' };
 
 async function svcOpen(chit_id) {

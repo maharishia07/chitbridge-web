@@ -34,6 +34,12 @@
  
  * CALLED BY public/accounts.html, public/app.html, public/app/cap-admin.js, public/app/page-frame.js, public/app/signin-ui.js (+6 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      CBOnePerson: the one-browser-one-shop check (traces() and the clear-out), logic only, no painting
+ * CALLED BY <script src="/app/one-person.js"> on 26 pages (grep -l one-person.js public/*.html), incl. public/app.html:1580 where route() asks it
+ * FLOW      page load -> traces() looks for another shop's fingerprint -> clear-out, or the shop does not open
+ * CARD      18-identity-sign-in-and-access/sessions-and-devices
+ */
 (function (root) {
   'use strict';
   var CHANNEL = 'cb-one-person',

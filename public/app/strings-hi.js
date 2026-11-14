@@ -14,6 +14,12 @@
  *
  * ⚠️ NOT REVIEWED BY A NATIVE COMMERCIAL SPEAKER. Athi reads Hindi — this wants his eye more than most.
  */
+/*
+ * OWNS      the Hindi label pack (CBSTR.hi), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('hi') injects this file -> tx() reads CBSTR.hi
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var hi = CBSTR.hi || (CBSTR.hi = {});

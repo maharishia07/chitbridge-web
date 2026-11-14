@@ -1,6 +1,12 @@
 // check-syntax.js — validate the inline JS in public/app.html + the public/app/*.js modules.
 // app.html is a monolith with one big inline <script>; node --check can't see it, so we extract + vm.Script it.
 // Run:  node scripts/check-syntax.js   (exit 1 on any syntax error)
+/*
+ * OWNS      the syntax check of the inline JS in public/app.html and the public/app/*.js modules
+ * CALLED BY package.json:10 (check:syntax); .github/workflows/ci.yml:33
+ * FLOW      extract the inline scripts -> vm.Script each -> exit 1 on any syntax error
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/walks-and-the-e2e-harness
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
