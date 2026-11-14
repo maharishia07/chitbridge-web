@@ -53,8 +53,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
 | `cap-fx.js` | — | cap-fx.js — FOREIGN CURRENCY (FX1, 2026-10-14): CB Accounts › Setup › Rates, and Month lock's "Foreign balances" line |
 | `cap-iddocs.js` | lazy · on demand |  |
-| `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
-| `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve" |
+| `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen |
+| `cap-legend.js` | lazy · on demand | the 🔑 LEGEND capability: a live map of "what we serve". · CARD 20-settings-governance-and-plan/capability-legend |
 | `cap-marketing.js` | — | cap-marketing.js - THE MARKETING FACE of the CRM small app (MKT first slice, 22 Oct 2026; critic MKT-critic-2026-10-22 change 1) |
 | `cap-match.js` | lazy · match | THE THREE-WAY MATCH (lazy; ensureCap('match')) |
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
@@ -104,7 +104,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `country-profiles.js` | — | OWNS the Country lab's "Countries" view: every registered country on the left, everything its engine says on the right — money · tax · tax I |
 | `country-ready.js` | — |  |
 | `device-id.js` | eager | device-id.js — CBDevice: THIS BROWSER'S DEVICE ID, AND X-Device-Id ON EVERY CALL TO THE API (K-SEC PR A, 2026-10-21) |
-| `edition.js` | — |  |
+| `edition.js` | — | · CARD 29-qa-test-tooling-ux-locale-and-design-system/editions |
 | `embed-host.js` | — | .html); CBEmbed.open is called in till.html only (Add a person: grep -n 'CBEmbed\.open' public) |
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `kbd-press.js` | eager | ONE keyboard rule for a control that is not a native button: Enter or Space presses it. Register code CMP053 |
@@ -116,7 +116,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `one-person.js` | eager | one-person.js — ONE BROWSER, ONE SHOP AT A TIME |
 | `page-frame.js` | — |  |
 | `page.js` | eager | CBPage: WHICH DETAIL PAGE OPENS A CHIT (N03, 2026-10-07 · decisions M-D6 / M-D7) |
-| `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
+| `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back. · CARD 06-catalogue-pim/catalogue-picker |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `product-lab-rows.js` | — |  |
 | `rail-advice.js` | eager | rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09) |
