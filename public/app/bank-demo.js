@@ -5,7 +5,7 @@
  * FLOW      load → CBBankPreview.create({ engine, post: demoPost }) → load(text) → paint → "Add N" → CBLabKit.confirm(reach) → postReady → paint again
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B01 load the sample · BKS017-I01 load your own CSV · BKS017-B02 add the ready lines · BKS017-S01..S03 the three views · BKS017-I02 new party name
- *           BKS017-S04 new party kind · BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B06 start again
+ *           BKS017-S04 new party kind · BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B06 start again · BKS017-B07 use this party
  */
 (function (root) {
   'use strict';
@@ -74,7 +74,7 @@
   }
   function makeController() {
     controller = preview.create({
-      engine: { recon: root.CBBankRecon, project: root.CBBankProject },
+      engine: { recon: root.CBBankRecon, project: root.CBBankProject, entry: root.CBBankEntry },
       currency: CURRENCY,
       account: ACCOUNT,
       ledger: function () {
@@ -121,7 +121,7 @@
       '<span class="bd-party"><b>New party:</b> <input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="New party name" data-act="pname" data-key="' + esc(item.key) + '" value="' + esc(party.name) + '"> ' +
       '<select data-cbsid="BKS017-S04" class="bd-inp" aria-label="New party kind" data-act="pkind" data-key="' + esc(item.key) + '">' +
       ['supplier', 'customer'].map(function (kind) { return '<option value="' + kind + '"' + (party.kind === kind ? ' selected' : '') + '>' + kind + '</option>'; }).join('') +
-      '</select> ' + (meant ? '<span class="bd-why">Did you mean</span> ' + meant : '') + '</span>'
+      '</select> <button data-cbsid="BKS017-B07" type="button" class="bd-btn" data-act="resolve" data-key="' + esc(item.key) + '">Use this party</button> ' + (meant ? '<span class="bd-why">Did you mean</span> ' + meant : '') + '</span>'
     );
   }
   function lineRow(item, results) {
@@ -215,12 +215,15 @@
     });
   }
   function onClick(event) {
-    var t = event.target.closest('[data-act]');
-    if (!t) return;
-    var act = t.getAttribute('data-act');
-    if (act === 'gst') controller.answer('gst_basis', t.getAttribute('data-v'));
-    else if (act === 'meant') controller.editParty(t.getAttribute('data-key'), { status: 'existing', id: t.getAttribute('data-id'), name: t.getAttribute('data-name') });
-    else if (act === 'view') view = t.getAttribute('data-v');
+    var target = event.target.closest('[data-act]');
+    if (!target) return;
+    var action = target.getAttribute('data-act'),
+      said = null;
+    if (action === 'gst') controller.answer('gst_basis', target.getAttribute('data-v'));
+    else if (action === 'meant') controller.editParty(target.getAttribute('data-key'), { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') });
+    else if (action === 'resolve') said = controller.resolveLine(target.getAttribute('data-key'));
+    else if (action === 'view') view = target.getAttribute('data-v');
+    if (said && !said.ok) el('bd_msg').textContent = said.why;
     paint();
   }
   function onChange(event) {

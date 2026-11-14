@@ -98,21 +98,38 @@
     });
     return held;
   }
+  /** the proposal for one line the books lack: what suggest() says, or, once the owner has answered the line, what CBBankEntry.resolve() composes from the answer (the same path, one taught rule) */
+  function proposalFor(opts, preview, line, ref) {
+    var suggestOpts = Object.assign({}, opts.suggestOpts, preview.answers),
+      asked = preview.resolved[ref],
+      entry = opts.engine.entry;
+    var proposal = opts.engine.recon.suggest(line, suggestOpts);
+    if (!asked || !entry || !entry.resolve) return proposal;
+    var resolved = entry.resolve(line, { party: asked.party.id, party_name: asked.party.name }, suggestOpts);
+    if (resolved.ok === false) {
+      preview.resolveRefusal[ref] = resolved.why;
+      return proposal;
+    }
+    delete preview.resolveRefusal[ref];
+    return resolved;
+  }
   /** match against the books, a proposal for each line the books lack (null for a line already there), then the engine's preview of it all */
   function projectNow(opts, preview) {
     var books = opts.ledger(),
       lines = preview.parsed.lines,
       held = indexesInBooks(opts, lines, books.lines);
+    var refs = opts.engine.project.refsOf(lines, opts.account, lines);
     preview.proposals = lines.map(function (line, index) {
-      return held[index] ? null : opts.engine.recon.suggest(line, Object.assign({}, opts.suggestOpts, preview.answers));
+      return held[index] ? null : proposalFor(opts, preview, line, refs[index]);
     });
     var stated = (opts.statementCurrency && opts.statementCurrency()) || preview.parsed.currency || opts.currency;
     var statement = { currency: stated, opening_minor: preview.parsed.opening_minor, closing_minor: preview.parsed.closing_minor };
     return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: opts.account, posted_refs: books.posted_refs || [], period_lines: lines });
   }
   /** the owner's edit of a line's party (a new name or kind, or an existing party picked from did-you-mean) laid over what the engine said */
-  function withPartyEdit(item, edit) {
+  function withPartyEdit(item, edit, asked) {
     if (edit && item.party) item.party = Object.assign({}, item.party, edit);
+    if (asked) item.party = Object.assign({}, asked.party, { status: asked.party.status });
     return item;
   }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
@@ -126,7 +143,7 @@
     preview.refusal = null;
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
-      return withPartyEdit(item, preview.partyEdits[projected.ref]);
+      return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
   }
@@ -210,7 +227,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {} });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {} });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -231,16 +248,29 @@
     projectAgain(opts, preview);
     return { ok: true };
   }
+  /** the owner has said who a "needs you" line is (the party box): the line is composed again through CBBankEntry.resolve. A NEW party keeps its placeholder id until the adapter makes it. */
+  function resolveLine(opts, preview, key) {
+    var item = preview.items.filter(function (one) {
+      return one.key === key;
+    })[0];
+    if (!item || !item.party) return { ok: false, why: 'Say who this is first.' };
+    var party = item.party.status === 'existing' ? item.party : { status: 'new', name: item.party.name, kind: item.party.kind, id: 'new:' + key };
+    preview.resolved[key] = { party: party };
+    projectAgain(opts, preview);
+    var refusalWords = preview.resolveRefusal[key];
+    if (refusalWords) delete preview.resolved[key];
+    return refusalWords ? { ok: false, why: refusalWords } : { ok: true };
+  }
   /**
    * create(opts) → the preview controller.
-   *   opts.engine   { recon: CBBankRecon, project: CBBankProject }      opts.currency  the ACCOUNT's currency (from the shop, never the file)
+   *   opts.engine   { recon: CBBankRecon, project: CBBankProject, entry: CBBankEntry }      opts.currency  the ACCOUNT's currency (from the shop, never the file)
    *   opts.account  the bank account's name (in every ref)               opts.ledger()  → { lines (each with its currency), opening_minor, posted_refs }, read again after posting
    *   opts.post(item) → Promise<{ ok, duplicate?, entry_no?, why? }>      opts.lockedMonth(date) → null | { month, words }
    *   opts.statementCurrency()  the currency the STATEMENT says it is in (the engine refuses a mismatch with the account); default the file's own, else the account's
    *   opts.suggestOpts / parseOpts   the pack, country, learned rules, parties — passed to the engine as given
    */
   function create(opts) {
-    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {} };
+    var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {} };
     return {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
@@ -257,6 +287,9 @@
       },
       editParty: function (key, edit) {
         return editParty(opts, preview, key, edit);
+      },
+      resolveLine: function (key) {
+        return resolveLine(opts, preview, key);
       },
       answer: function (name, value) {
         preview.answers[name] = value;

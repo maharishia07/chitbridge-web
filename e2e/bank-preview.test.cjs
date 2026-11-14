@@ -41,6 +41,7 @@ function engines(seen) {
       suggest: (line, o) => (seen.suggest.push(o), { event: { type: 'expense', date: line.date, amount: 1 } })
     },
     project: {
+      refsOf: (lines) => lines.map((l, i) => "bank:" + "a".repeat(23) + i + "-1"),
       project: (lines, proposals, books) => {
         seen.project++;
         seen.args = { lines, proposals, books };
