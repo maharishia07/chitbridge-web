@@ -7243,7 +7243,7 @@ function netOffersHTML() {
     var pol = b.policy || 'opt_in';
     var polBtn = function (k, label, hint) {
       return (
-        '<button data-cbsid="BUS004-B01" class="' +
+        '<button data-cbsid="BUS004-B23" class="' +
         (pol === k ? 'pri' : '') +
         '" data-testid="neto-policy-' +
         k +
@@ -7286,14 +7286,14 @@ function netOffersHTML() {
             : '') +
           '</div></span>' +
           (live && (!running || item.changed)
-            ? '<button data-cbsid="BUS004-B02" class="pri" data-testid="neto-release-' +
+            ? '<button data-cbsid="BUS004-B24" class="pri" data-testid="neto-release-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
               esc(item.id) +
               '\',false)">' +
               tx('Release at next opening') +
               '</button>' +
-              '<button data-cbsid="BUS004-B03" data-testid="neto-release-now-' +
+              '<button data-cbsid="BUS004-B25" data-testid="neto-release-now-' +
               esc(item.id) +
               '" onclick="netoRelease(\'' +
               esc(item.id) +
@@ -7302,7 +7302,7 @@ function netOffersHTML() {
               '</button>'
             : '') +
           (running
-            ? '<button data-cbsid="BUS004-B04" class="warn" data-testid="neto-withdraw-' +
+            ? '<button data-cbsid="BUS004-B26" class="warn" data-testid="neto-withdraw-' +
               esc(item.id) +
               '" onclick="netoWithdraw(\'' +
               esc(item.id) +
@@ -7352,7 +7352,7 @@ function netOffersHTML() {
     var lines = (item.offers || [])
       .map(function (entry) {
         var btn = entry.applies
-          ? '<button data-cbsid="BUS004-B05" data-testid="neto-out-' +
+          ? '<button data-cbsid="BUS004-B27" data-testid="neto-out-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
             esc(entry.id) +
@@ -7361,7 +7361,7 @@ function netOffersHTML() {
             '\')">' +
             tx(optIn ? 'Stop taking it' : 'Decline') +
             '</button>'
-          : '<button data-cbsid="BUS004-B06" class="pri" data-testid="neto-in-' +
+          : '<button data-cbsid="BUS004-B28" class="pri" data-testid="neto-in-' +
             esc(entry.id) +
             '" onclick="netoChoice(\'' +
             esc(entry.id) +
@@ -7483,7 +7483,7 @@ function netCatBrandHTML(c, stores) {
         '<label data-testid="netc-add-' +
         esc(item.item_id) +
         '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">' +
-        '<input data-cbsid="BUS004-I01" type="checkbox" ' +
+        '<input data-cbsid="BUS004-I45" type="checkbox" ' +
         (sel[item.item_id] ? 'checked ' : '') +
         'onchange="netcTick(\'' +
         esc(key) +
@@ -7534,7 +7534,7 @@ function netCatBrandHTML(c, stores) {
         index +
         '" style="padding:3px 0;font-size:var(--fs-2)">' +
         '<label style="display:flex;gap:8px;align-items:center">' +
-        '<input data-cbsid="BUS004-I02" type="checkbox" ' +
+        '<input data-cbsid="BUS004-I46" type="checkbox" ' +
         (outSel[item] ? 'checked ' : '') +
         'onchange="netcOut(\'' +
         esc(key) +
@@ -7549,7 +7549,7 @@ function netCatBrandHTML(c, stores) {
         (missing[item] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '') +
         (outSel[item] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '') +
         (!outSel[item] && storeList.length
-          ? ' <span data-cbsid="BUS004-B07" role="button" tabindex="0" data-testid="netc-at-open-' +
+          ? ' <span data-cbsid="BUS004-B29" role="button" tabindex="0" data-testid="netc-at-open-' +
             index +
             '" onclick="event.preventDefault();netcAtOpen(\'' +
             esc(key) +
@@ -7576,7 +7576,7 @@ function netCatBrandHTML(c, stores) {
                   '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' +
                   (changed ? ';font-weight:700' : '') +
                   '">' +
-                  '<input data-cbsid="BUS004-I03" type="checkbox" ' +
+                  '<input data-cbsid="BUS004-I47" type="checkbox" ' +
                   (isOut(entry.id) ? 'checked ' : '') +
                   'onchange="netcAt(\'' +
                   esc(key) +
@@ -7648,12 +7648,12 @@ function netCatBrandHTML(c, stores) {
       : '') +
     (any
       ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-        '<button data-cbsid="BUS004-B08" class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
+        '<button data-cbsid="BUS004-B30" class="pri" data-testid="netc-publish" onclick="netcPublish(\'' +
         esc(key) +
         '\',false)">' +
         tx('Publish at next opening') +
         '</button>' +
-        '<button data-cbsid="BUS004-B09" data-testid="netc-publish-now" onclick="netcPublish(\'' +
+        '<button data-cbsid="BUS004-B31" data-testid="netc-publish-now" onclick="netcPublish(\'' +
         esc(key) +
         '\',true)">' +
         (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) +
@@ -7855,14 +7855,14 @@ function netCatNoticesHTML(notes) {
               _netMoney(item.yours)
           ) +
           '</div></span>' +
-          '<button data-cbsid="BUS004-B10" class="pri" data-testid="netc-use-' +
+          '<button data-cbsid="BUS004-B32" class="pri" data-testid="netc-use-' +
           index +
           '" onclick="netcAnswer(' +
           index +
           ",'use')\">" +
           esc(tx('Use') + ' ' + _netMoney(item.suggested)) +
           '</button>' +
-          '<button data-cbsid="BUS004-B11" data-testid="netc-keep-' +
+          '<button data-cbsid="BUS004-B33" data-testid="netc-keep-' +
           index +
           '" onclick="netcAnswer(' +
           index +
@@ -7935,14 +7935,14 @@ function netMembersHTML(list) {
       var btns = '';
       if (item.state === 'requested' && item.asked_by === 'store')
         btns =
-          '<button data-cbsid="BUS004-B12" class="pri" data-testid="netm-approve-' +
+          '<button data-cbsid="BUS004-B34" class="pri" data-testid="netm-approve-' +
           index +
           "\" onclick=\"netmAct('netApprove','" +
           esc(item.edge_id) +
           '\')">' +
           tx('Approve') +
           '</button>' +
-          '<button data-cbsid="BUS004-B13" data-testid="netm-decline-' +
+          '<button data-cbsid="BUS004-B35" data-testid="netm-decline-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
           esc(item.edge_id) +
@@ -7951,7 +7951,7 @@ function netMembersHTML(list) {
           '</button>';
       else if (item.state === 'requested')
         btns =
-          '<button data-cbsid="BUS004-B14" data-testid="netm-cancel-' +
+          '<button data-cbsid="BUS004-B36" data-testid="netm-cancel-' +
           index +
           "\" onclick=\"netmAct('netDecline','" +
           esc(item.edge_id) +
@@ -7960,7 +7960,7 @@ function netMembersHTML(list) {
           '</button>';
       else if (item.state === 'suspended' && item.edge_id)
         btns =
-          '<button data-cbsid="BUS004-B15" class="pri" data-testid="netm-resume-' +
+          '<button data-cbsid="BUS004-B37" class="pri" data-testid="netm-resume-' +
           index +
           "\" onclick=\"netmAct('netResume','" +
           esc(item.edge_id) +
@@ -7970,7 +7970,7 @@ function netMembersHTML(list) {
       else if (item.state === 'active' && item.via === 'joined')
         btns =
           _NETO_ARMED === 'rm:' + item.edge_id
-            ? '<button data-cbsid="BUS004-B16" class="warn" data-testid="netm-remove-' +
+            ? '<button data-cbsid="BUS004-B38" class="warn" data-testid="netm-remove-' +
               index +
               "\" onclick=\"netmAct('netDisconnect','" +
               esc(item.edge_id) +
@@ -7985,7 +7985,7 @@ function netMembersHTML(list) {
               tx('Remove') +
               '</button>';
       else if (item.state === 'active' && item.edge_id)
-        btns = '<button data-cbsid="BUS004-B17" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
+        btns = '<button data-cbsid="BUS004-B39" data-testid="netm-pause-' + index + "\" onclick=\"netmAct('netSuspend','" + esc(item.edge_id) + '\')">' + tx('Pause') + '</button>';
       var words =
         item.state === 'requested'
           ? item.asked_by === 'store'
@@ -8013,10 +8013,10 @@ function netMembersHTML(list) {
     '<div data-testid="neto-members" style="margin-bottom:8px">' +
     rows +
     '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">' +
-    '<input data-cbsid="BUS004-I04" id="netm_handle" data-testid="netm-handle" placeholder="' +
+    '<input data-cbsid="BUS004-I48" id="netm_handle" data-testid="netm-handle" placeholder="' +
     esc(tx('Invite a store by its handle')) +
     '" style="flex:1;min-width:0">' +
-    '<button data-cbsid="BUS004-B18" data-testid="netm-invite" onclick="netmInvite()">' +
+    '<button data-cbsid="BUS004-B40" data-testid="netm-invite" onclick="netmInvite()">' +
     tx('Invite') +
     '</button></div></div>'
   );
@@ -8043,7 +8043,7 @@ function netStandingHTML(nw) {
   if (m.state === 'invited')
     return note(
       esc(tx('invited your store to its network')),
-      '<button data-cbsid="BUS004-B19" class="pri" data-testid="neto-accept-' +
+      '<button data-cbsid="BUS004-B41" class="pri" data-testid="neto-accept-' +
         esc(nw.brand_id) +
         "\" onclick=\"netmAct('netApprove','" +
         esc(m.edge_id) +
@@ -9906,14 +9906,14 @@ async function loadGaps() {
       '</div>' +
       '<label class="fl">' +
       tx('Question') +
-      '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">' +
+      '</label><input data-cbsid="BUS015-I01" class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">' +
       '<label class="fl">' +
       tx('Answer') +
-      '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>' +
-      '<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">' +
-      '<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' +
+      '</label><textarea data-cbsid="BUS015-T01" class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>' +
+      '<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input data-cbsid="BUS015-I02" class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">' +
+      '<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button data-cbsid="BUS015-B01" class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' +
       tx('📣 Publish to catalogue') +
-      '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>' +
+      '</button><button data-cbsid="BUS015-B02" class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
       txf('Add a new answer, or press {edit} on one below to refine it.', {
         edit: '<b>' + tx('Edit') + '</b>'
