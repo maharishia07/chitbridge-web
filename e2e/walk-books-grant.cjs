@@ -25,7 +25,7 @@ W.run('books-grant', async (w) => {
   const reset = () => { S.given = [{ grant_id: GRANT, grantor_entity: MEMBER, grantee_entity: BRAND, preset: 'auditor', can_see_costs: true, purpose: 'Year-end audit', granted_at: DAY(-5), expires_at: DAY(200), revoked_at: null, state: 'live' }]; };
   reset();
   const J = (r, status, body) => C.json(r, status, body);
-  const example = (key) => { const hit = C.load().filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };   /* the api's own answer shape, then our figures over it */
+  const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };   /* the api's own answer shape, then our figures over it */
   const line = (ex, over) => Object.assign({}, ex, over);
 
   await ctx.route(base + '/api/**', async (r) => {
@@ -53,7 +53,7 @@ W.run('books-grant', async (w) => {
   const has = (sel) => page.locator(sel).count().then((n) => n > 0);
   const noScroll = () => page.evaluate(() => ({ y: document.documentElement.scrollHeight <= window.innerHeight + 1, x: document.documentElement.scrollWidth <= window.innerWidth + 1 }));
   const openNetwork = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + MEMBER), { timeout: 20000 }); await page.waitForTimeout(300); };
-  const booksSection = async () => { await page.getByText('My books', { exact: true }).first().click(); await page.waitForSelector(T('bg-give'), { timeout: 10000 }); await page.waitForTimeout(300); };
+  const booksSection = async () => { await page.click(T('nw-books-door')); await page.waitForSelector(T('bg-give'), { timeout: 10000 }); await page.waitForTimeout(300); };
 
   /* ═══ the auditor ═══ */
   await page.setViewportSize(WIDE);

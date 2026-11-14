@@ -22,8 +22,8 @@ if (mutate === 'header') view = view.replace(/headers: headerOf\(\)/, 'headers: 
 
 /* (1) codes and ids */
 const tagsWithCode = (src) => [...src.matchAll(/<(button|input|select|textarea)\b[^<]*?data-cbsid="([A-Z]{3}\d{3}-[A-Z]\d{2})"[^<]*?>/g)].map((m) => ({ tag: m[0], code: m[2] }));
-const coded = [].concat(tagsWithCode(member), tagsWithCode(view), tagsWithCode(net).filter((t) => /NET001-B04/.test(t.code)));
-check(coded.length >= 16, coded.length + ' coded controls found (member, view, Open books)');
+const coded = [].concat(tagsWithCode(member), tagsWithCode(view), tagsWithCode(net).filter((t) => /NET001-B0[45]/.test(t.code)));
+check(coded.length >= 18, coded.length + ' coded controls found (member, view, Open books)');
 check(coded.every((t) => /\sid="/.test(t.tag)), 'every coded control carries an id' + (coded.filter((t) => !/\sid="/.test(t.tag)).map((t) => ' - missing: ' + t.code).join('')));
 const codes = coded.map((t) => t.code);
 check(new Set(codes).size === codes.length - 5 + 0 || new Set(codes).size <= codes.length, 'codes are NET004 (member), NET005 (view), NET001-B04 (Open books)');

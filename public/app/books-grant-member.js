@@ -123,7 +123,7 @@
   /** the screen: the two views, Give access, the server's sentence if the list was refused, and the list */
   function paint() {
     panel.host.innerHTML =
-      '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
+      backButton() + '<div class="nw-acts" data-testid="bg-head"><div class="bg-seg" role="group" aria-label="' + esc(words('Who can see my books')) + '">' + segButtons() + '</div>' +
       '<button data-cbsid="NET004-B03" type="button" class="act" id="bg_give" data-testid="bg-give">' + esc(words('Give access')) + '</button></div>' +
       '<div class="sub" data-testid="bg-note">' + esc(words('Read only. You choose who and until when; every look is recorded.')) + '</div>' +
       (panel.why ? '<div class="nw-why" id="bg_why" role="status" data-testid="bg-why">' + esc(panel.why) + '</div>' : '') +
@@ -134,9 +134,14 @@
         reload();
       };
     });
+    if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
     $('bg_give').onclick = openGive;
     (panel.view === 'looks' ? paintLooks : paintGiven)($('bg_list'));
+  }
+  /** a way back to My network, when the page gives one */
+  function backButton() {
+    return panel.o.onBack ? '<div class="nw-acts"><button data-cbsid="NET004-B09" type="button" class="act quiet" id="bg_back" data-testid="bg-back">← ' + esc(words('Back to My network')) + '</button></div>' : '';
   }
   /** Give access is always shown; when the server refused the list (not the owner) it is greyed WITH that sentence */
   function greyGive() {
@@ -356,8 +361,8 @@
   /** the list could not be read: say so and offer Try again */
   function paintFail() {
     panel.host.innerHTML =
-      '<div class="empty" data-testid="bg-fail"><div class="t">' + esc(words("Couldn't read who can see your books")) + '</div>' +
-      '<button data-cbsid="NET004-B08" type="button" class="act" id="bg_retry" data-testid="bg-retry">' + esc(words('Try again')) + '</button></div>';
+      emptyState('⚠️', words("Couldn't read who can see your books")) +
+      '<button data-cbsid="NET004-B08" type="button" class="act" id="bg_retry" data-testid="bg-retry">' + esc(words('Try again')) + '</button>';
     $('bg_retry').onclick = reload;
   }
   /** read the current view from the server and paint it */

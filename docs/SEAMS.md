@@ -109,11 +109,11 @@ of file each thing is; this says what already does the job.
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
 | 28 | `group` | `identity.js` | again in a different costume. |
 | 28 | `guess` | `move-in.js` | `table` (optional, PR1): |
-| 27 | `load` | `books-grant-member.js` | read the list or the log, whichever view is on; a refusal becomes the sentence shown above the list |
 | 27 | `call` | `cap-assist.js` |  |
 | 27 | `opts` | `cap-stock.js` |  |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 27 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
+| 26 | `load` | `books-grant-view.js` |  |
 | 26 | `customer` | `mintuserid.js` | silently becomes a second identity. |
 | 25 | `profile` | `country-setup.js` | row FOR UPDATE in the same statement, so two saves of one shop merge over each other's answer, never over a st |
 | 25 | `copies` | `work-rows.js` | receipt, an expense, is left out by the SAME list the inbox uses), one per chit (a note to self holds two copi |

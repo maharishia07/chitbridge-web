@@ -183,8 +183,19 @@
         '</div></div>';
       return;
     }
-    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div><div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
+    host.innerHTML = '<div class="nw-nets" data-testid="nw-nets">' + N.networks.map(netCard).join('') + '</div>' + booksDoor() + '<div class="nw-list" id="nw_stores" data-testid="nw-stores"></div>';
     mountStores();
+    if ($('nw_books_door')) $('nw_books_door').onclick = openBooksDoor;
+  }
+  function openBooksDoor() {
+    N.tab = 'books';
+    paint();
+  }
+  /** the door to the member's own screen, "Who can see my books": shown when this store sits in a network */
+  function booksDoor() {
+    return N.networks.length
+      ? '<div class="nw-acts"><button data-cbsid="NET001-B05" type="button" class="act quiet" id="nw_books_door" data-testid="nw-books-door">' + esc(T('Who can see my books')) + '</button></div>'
+      : '';
   }
   /** one network this store sits in: the brand, where this store stands, who its parent is */
   function netCard(item) {
@@ -366,7 +377,10 @@
       });
   }
   function paintBooks(host) {
-    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList });
+    root.CBBooksGrantMember.mount(host, { call: call, parents: parentsOf, sheet: sheet, closeSheet: closeSheet, mountList: mountList, onBack: function () {
+        N.tab = 'mine';
+        paint();
+      } });
   }
 
   /* ── OFFERS ── */
