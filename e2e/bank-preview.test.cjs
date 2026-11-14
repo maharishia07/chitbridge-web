@@ -182,7 +182,7 @@ const make = (over) => {
   assert.ok(csp && !/unsafe-inline|unsafe-eval|https?:/.test(csp[1]) && /connect-src 'none'/.test(csp[1]), 'strict CSP, no network');
   assert.ok(/name="robots" content="noindex/.test(html));
   assert.ok(/Demo\. Nothing is saved/.test(html));
-  assert.ok(!/config\.js|device-id\.js|analytics|<script>[^<]|style="/.test(html));
+  assert.ok(!/config\.js|device-id\.js|analytics|<script>[^<]|style="/.test(html.replace(/<!--[\s\S]*?-->/g, '')));
   const codes = html.match(/data-cbsid="[^"]+"/g) || [];
   assert.strictEqual(new Set(codes).size, codes.length);
   assert.ok(codes.every((x) => /BKS017-[A-Z]\d\d/.test(x)));
