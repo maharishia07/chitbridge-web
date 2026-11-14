@@ -1626,9 +1626,8 @@
         return S.open;
       },
       go: go,
-      area: function () {
-        return S.area;
-      },
+      route: routeOf,
+      area: function () { return S.area; },
       header: function () {
         return S.header;
       },
@@ -1644,7 +1643,25 @@
         return api;
       })
     };
-    return api;
+    return loadShortcuts(api);
+  }
+
+  /** MNT-63: the keyboard-shortcut unit rides with the frame, so every page has it: the register first, then the unit, which mounts on this shell */
+  function loadShortcuts(shell) {
+    var appendScript = function (src, next) {
+      var tag = doc.createElement('script');
+      tag.src = src;
+      tag.onload = next;
+      doc.head.appendChild(tag);
+    };
+    if (root.CBShortcuts) root.CBShortcuts.mount(shell);
+    else
+      appendScript('/app/shortcuts-register.js', function () {
+        appendScript('/app/shortcuts.js', function () {
+          root.CBShortcuts.mount(shell);
+        });
+      });
+    return shell;
   }
 
   root.CBShell = {

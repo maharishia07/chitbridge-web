@@ -41,6 +41,8 @@ jobs:
         run: node e2e/guard-walk-today.cjs
       - name: Static guards
         run: node e2e/guard-static.cjs
+      - name: The keyboard-shortcut register is well formed (MNT-63)
+        run: node e2e/shortcuts-guard.cjs
       - name: Every standard cited is a register row or a named exclusion (CMP-24; the sibling repos are scanned locally, skipped here)
         run: node tools/standards-scan.cjs
       - name: Every page that holds a session sends X-Device-Id (K-SEC PR A, e2e/device-id.cjs)
