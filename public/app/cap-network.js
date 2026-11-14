@@ -8,7 +8,13 @@
  *   (Co-assists · Transact · Trade-ready · Dispute — checkboxes now; their expansions come in later slices.)
  * Draft persists per-entity (localStorage + server, b111), survives reopen. "Build" is a dry-run (mints nothing);
  * real mint wiring is Phase B (through the real API / capability modules), added when that step is built.
- * CALLED BY public/app.html, public/app/cap-network-member.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * OWNS      the DESIGN-first network builder: a draft tree under your own entity (nodes, the capabilities each holds, per-node config), its draft store
+ *           (localStorage + /api/network-design) and the dry-run Build. Draws only inside app.html (the workshop), never on a customer page.
+ * CALLED BY public/app.html (ensureCap('network'), nav key network: loadNetwork) and no other page; its member half cap-network-member.js is pulled in
+ *           beside it through CAP_WITH in app.html. network.html loads network-app.js, which only READS the draft and links here.
+ * FLOW      ensureCap('network') -> loadNetwork -> _netInit -> netWhereAmI (operator | member | standalone) -> the tree paints -> netSelect / netCapYes / netCapNo edit the draft -> Build (dry run).
+ * CARD      04-network/network-design-builder
+ * IDS       SUPPORT file (reached only through app.html, Athi: back office later): no data-cbsid here yet, header only (14 Nov).
  */
 
 /* ---- capabilities a node can HOLD (checkboxes) ---- */
