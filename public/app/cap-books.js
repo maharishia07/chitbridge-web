@@ -705,6 +705,7 @@ function bkRecordedHTML(e, tid) {
 function bkCanReverse(l) {
   return !!(l && l.entry_id && !l.reversed_by && !l.reverses_entry_id && l.event_type !== 'reversal');
 }
+function bkEntryWhy(e) { return e && e.may_reverse === false && e.why ? String(e.why.words || '') : ''; } /* R1-03 (DEC-267): the SERVER answers may/why (day book: may_reverse + why { code, words }); a live bill's Reverse is greyed with ITS sentence, never composed here; '' = allowed */
 /* reverse one statement line through the shared reverse dialog, then show the reversal on that line */
 function bkReverseLine(l, partyId) {
   if (!bkCanReverse(l) || typeof enReverse !== 'function') return;
@@ -2804,9 +2805,8 @@ function bkDvMount(el) {
               icon: '↩',
               label: 'Reverse this entry',
               tid: 'db-reverse',
-              when: function (e) {
-                return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal';
-              },
+              when: bkCanReverse /* the one predicate (bkCanReverse), same test as before */,
+              why: bkEntryWhy /* a bill still live: greyed with the server's sentence (the route refuses it too) */,
               run: function (e) {
                 enReverse(e.entry_id, e.entry_no);
               }
@@ -3821,22 +3821,22 @@ function bkLgMount(el) {
               when: function (l) {
                 return l.entry_id ? bkCanReverse(l) : !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id));
               },
+              why: function (l) { return bkEntryWhy(bkLgEntry(l)); } /* the journal read of the opened line carries the server's may/why; before it, the route's 409 answers in the same words */,
               run: function (l) {
-                if (l.entry_id) return bkReverseLine(l, BK.lt.sel && BK.lt.sel.party);
-                bkLgJournal(l).then(function () {
-                  var e = bkLgEntry(l);
-                  if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') {
-                    if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.'));
-                    return;
-                  }
-                  enReverse(e.entry_id, e.entry_no);
-                });
+                return l.entry_id ? bkReverseLine(l, BK.lt.sel && BK.lt.sel.party) : bkLgReverseViaJournal(l);
               }
             }
           ]
         : undefined,
     tids: { expand: 'lg-expand-all', collapse: 'lg-collapse-all', csv: 'lg-csv', count: 'lg-count' },
     empty: { title: tx('No entries in these dates') }
+  });
+}
+function bkLgReverseViaJournal(l) { /* a ledger line that does not name its entry: read its journal, then ask (cap-entry.js), or say it cannot be reversed here */
+  bkLgJournal(l).then(function () {
+    var e = bkLgEntry(l);
+    if (bkCanReverse(e)) return enReverse(e.entry_id, e.entry_no);
+    if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.'));
   });
 }
 /** a ledger line's journal: the day-book entry it belongs to (by its entry number, else its chit and date) — read once, on the first open */
