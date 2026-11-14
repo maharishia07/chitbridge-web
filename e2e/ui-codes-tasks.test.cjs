@@ -56,7 +56,7 @@ for (const f of FILES) {
 const dup = Object.keys(all).filter((c) => all[c].length > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
 check(Object.keys(all).length === 59, 'the page has 59 tagged elements, counted by code (the disputes Try again is the library CMP009, mount TSK006-U01): ' + Object.keys(all).length);
-check(/ui.action('reload', { mount: 'TSK006-U01'[^}]*testid: 'dp-retry'/.test(src['cap-dispute.js']), 'the disputes Try again is drawn by ui.action reload at mount TSK006-U01');
+check(src['cap-dispute.js'].indexOf("ui.action('reload', { mount: 'TSK006-U01', surface: 'page', tone: 'primary', id: 'dp_retry', testid: 'dp-retry' })") >= 0, 'the disputes Try again is drawn by ui.action reload at mount TSK006-U01');
 check(src['cap-tasks.js'].indexOf('function actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
 check(src['cap-dispute.js'].indexOf('root.CBTasks.actRow(id, label, verdict, extra, className, stampCode)') >= 0, 'the dispute wrapper hands the code on');
 
