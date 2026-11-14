@@ -48,18 +48,52 @@ function crmSendOpen(group, prefill) {
   var node = document.getElementById('crm_send_text');
   if (node) node.focus();
 }
-function crmSendWords(e) {
-  var code = e && e.data && e.data.code,
-    words = e && e.data && (e.data.why || e.data.message);
-  if (e && e.status === 403) return words || tx('Your login can only view.');
+/** the server's own words on a refusal: its why, else its message, else nothing */
+function crmSendServerWords(error) {
+  return (error && error.data && (error.data.why || error.data.message)) || '';
+}
+/** the shop's sentence for each fixed refusal code of the sender; nothing for a code it does not know */
+function crmSendCodeWords(code) {
   if (code === 'NO_TEXT') return tx('Write the message.');
   if (code === 'TOO_LONG') return tx('Keep the message under 1000 characters.');
-  if (code === 'TOO_MANY') return words || tx('Send to at most 100 at a time. Make a smaller group.');
   if (code === 'CHANNEL_NOT_SENDABLE') return tx('Only WhatsApp can be sent from here today.');
-  return tx("Couldn't send. Try again.");
+  return '';
+}
+/** what a refused check or send says: a view-only login, the server's words for too many, the code's sentence, else try again */
+function crmSendWords(error) {
+  var code = error && error.data && error.data.code,
+    words = crmSendServerWords(error);
+  if (error && error.status === 403) return words || tx('Your login can only view.');
+  if (code === 'TOO_MANY') return words || tx('Send to at most 100 at a time. Make a smaller group.');
+  return crmSendCodeWords(code) || tx("Couldn't send. Try again.");
 }
 function crmSendBody(dryRun) {
   return { channel: GROUPS.channel, purpose: GROUPS.purpose, text: String((document.getElementById('crm_send_text') || {}).value || '').trim(), dry: !!dryRun };
+}
+/** the customers a dry run left out: five lines at most, each with the server's reason; empty when nobody was left out */
+function crmSendRefusedHtml(refused) {
+  if (!(refused && refused.length)) return '';
+  return (
+    '<div class="sub" data-testid="crm-send-refused">' +
+    refused
+      .slice(0, 5)
+      .map(function (customer) {
+        return esc(customer.name) + ' — ' + esc(customer.why);
+      })
+      .join('<br>') +
+    (refused.length > 5 ? '<br>…' : '') +
+    '</div>'
+  );
+}
+/** show a dry run's answer: the count in the shop's words, who is left out, and the Send button's state */
+function crmSendDryShown(reply, node, goButton) {
+  var words = crmReachWords({ may: reply.may, not: reply.refused_n, refused_by: reply.refused_by });
+  node.innerHTML = '<b data-testid="crm-send-may">' + esc(words.may) + '</b>' + (words.not ? ' · ' + esc(words.not) : '') + crmSendRefusedHtml(reply.refused);
+  if (goButton) {
+    goButton.disabled = !(reply.may > 0);
+    goButton.title = reply.may > 0 ? '' : tx('Nobody may be sent this');
+    goButton.textContent = reply.may > 0 ? txf('Send to {n}', { n: reply.may }) : tx('Send');
+  }
 }
 /** the dry run: ask the server who may be sent this message and show the count before anything is sent */
 function crmSendCheck(btn) {
@@ -83,31 +117,51 @@ function crmSendCheck(btn) {
       },
       outcome: function (reply) {
         SEND.dry = reply;
-        var words = crmReachWords({ may: reply.may, not: reply.refused_n, refused_by: reply.refused_by });
-        node.innerHTML =
-          '<b data-testid="crm-send-may">' +
-          esc(words.may) +
-          '</b>' +
-          (words.not ? ' · ' + esc(words.not) : '') +
-          (reply.refused && reply.refused.length
-            ? '<div class="sub" data-testid="crm-send-refused">' +
-              reply.refused
-                .slice(0, 5)
-                .map(function (x) {
-                  return esc(x.name) + ' — ' + esc(x.why);
-                })
-                .join('<br>') +
-              (reply.refused.length > 5 ? '<br>…' : '') +
-              '</div>'
-            : '');
-        if (goButton) {
-          goButton.disabled = !(reply.may > 0);
-          goButton.title = reply.may > 0 ? '' : tx('Nobody may be sent this');
-          goButton.textContent = reply.may > 0 ? txf('Send to {n}', { n: reply.may }) : tx('Send');
-        }
+        crmSendDryShown(reply, node, goButton);
       }
     }
   );
+}
+/** the three facts of a finished send in one line, never one number: sent · not sent (the sender refused or failed; its reason is on each line) · not asked (no consent, the server's codes) */
+function crmSendDoneLine(reply) {
+  var notSent = (reply.sent || []).filter(function (line) {
+      return line.status !== 'sent';
+    }).length,
+    notAsked = (reply.refused_by || []).reduce(function (total, group) {
+      return total + (Number(group.n) || 0);
+    }, 0);
+  return [
+    txf('{n} sent', { n: reply.sent_n || 0 }),
+    notSent ? txf('{n} not sent', { n: notSent }) : '',
+    notAsked ? txf('{n} not asked — no consent', { n: notAsked }) : ''
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+/** one line per customer a send went to, eight at most, with the sender's status and reason; empty when it went to nobody */
+function crmSendLinesHtml(sent) {
+  if (!(sent || []).length) return '';
+  return (
+    '<div class="sub" data-testid="crm-send-lines">' +
+    sent
+      .slice(0, 8)
+      .map(function (line) {
+        return esc(line.name || line.party_id) + ' — ' + esc(tx(line.status)) + (line.reason ? ': ' + esc(line.reason) : '');
+      })
+      .join('<br>') +
+    (sent.length > 8 ? '<br>…' : '') +
+    '</div>'
+  );
+}
+/** show a finished send: the outcome line, the customers' lines, and the Send button put away */
+function crmSendDoneShown(reply, out) {
+  out.innerHTML =
+    '<div class="result" data-testid="crm-send-done"><span><span class="k">' + esc(tx('Outcome')) + '</span><b>' + esc(crmSendDoneLine(reply)) + '</b></span></div>' + crmSendLinesHtml(reply.sent);
+  var node = document.querySelector('[data-testid="crm-send-go"]');
+  if (node) {
+    node.disabled = true;
+    node.title = tx('Sent');
+  }
 }
 /** send the message through CBAction, only after a dry run found someone who may be sent it */
 function crmSendGo(btn) {
@@ -138,42 +192,7 @@ function crmSendGo(btn) {
       outcome: function (reply) {
         SEND.done = reply;
         document.dispatchEvent(new CustomEvent('crm-send-done', { detail: reply })); /* MKT (cap-marketing.js): Offers sent says when this send's refusals were not recorded */
-        /* three facts, never one number: sent · not sent (the sender refused or failed — its reason is on each line) · not asked (no consent — the server's codes) */
-        var notSent = (reply.sent || []).filter(function (x) {
-            return x.status !== 'sent';
-          }).length,
-          notAsked = (reply.refused_by || []).reduce(function (total, x) {
-            return total + (Number(x.n) || 0);
-          }, 0);
-        var line = [
-          txf('{n} sent', { n: reply.sent_n || 0 }),
-          notSent ? txf('{n} not sent', { n: notSent }) : '',
-          notAsked ? txf('{n} not asked — no consent', { n: notAsked }) : ''
-        ]
-          .filter(Boolean)
-          .join(' · ');
-        out.innerHTML =
-          '<div class="result" data-testid="crm-send-done"><span><span class="k">' +
-          esc(tx('Outcome')) +
-          '</span><b>' +
-          esc(line) +
-          '</b></span></div>' +
-          ((reply.sent || []).length
-            ? '<div class="sub" data-testid="crm-send-lines">' +
-              reply.sent
-                .slice(0, 8)
-                .map(function (x) {
-                  return esc(x.name || x.party_id) + ' — ' + esc(tx(x.status)) + (x.reason ? ': ' + esc(x.reason) : '');
-                })
-                .join('<br>') +
-              (reply.sent.length > 8 ? '<br>…' : '') +
-              '</div>'
-            : '');
-        var node = document.querySelector('[data-testid="crm-send-go"]');
-        if (node) {
-          node.disabled = true;
-          node.title = tx('Sent');
-        }
+        crmSendDoneShown(reply, out);
       }
     }
   );

@@ -108,6 +108,10 @@
   "warnings": 1,
   "prettierOk": false
  },
+ "public/app/cap-crm-groups-sheet.js": {
+  "warnings": 0,
+  "prettierOk": false
+ },
  "public/app/cap-crm-groups-send.js": {
   "warnings": 0,
   "prettierOk": false
