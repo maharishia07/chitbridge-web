@@ -138,7 +138,7 @@ function moneyCellRead(cell) {
  * sum is there; what I want is a single group sum, gold standard."*
  *
  * ⚠⚠ THE PLATFORM ALREADY HAD THIS RULE IN TWO PLACES AND BROKE IT IN A THIRD. `lib/money.js` THROWS on mixed
- * currencies rather than adding them; `_gsMoney` in cap-folders-groupsum renders them side by side and says *"a figure
+ * currencies rather than adding them; `_gsMoney` in cap-folders renders them side by side and says *"a figure
  * spanning two currencies means nothing, most convincingly when it looks tidy"*. The select bar did
  * `rows.reduce((a,c) => a + c.amt, 0)` and labelled the result with the READER's currency — so ticking a
  * ₹500 chit and a $2,000 chit read as one tidy total in a currency belonging to neither.

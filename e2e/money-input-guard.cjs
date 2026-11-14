@@ -12,7 +12,7 @@
  */
 const fs = require('fs'), path = require('path');
 const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public');
-const FILES = ['app/cap-books.js', 'app/cap-entry.js', 'app/cap-period.js', 'app/cap-bank.js', 'app/cap-crm.js', 'app/cap-crm-record.js', 'app/cap-folders.js', 'app/cap-folders-rules.js', 'app/cap-folders-groupsum.js', 'app/accounts-shell.js', 'accounts.html', 'crm.html'];
+const FILES = ['app/cap-books.js', 'app/cap-entry.js', 'app/cap-period.js', 'app/cap-bank.js', 'app/cap-crm.js', 'app/cap-crm-record.js', 'app/cap-folders.js', 'app/accounts-shell.js', 'accounts.html', 'crm.html'];
 
 /** every finding in one source text: [{ line, why, text }] */
 function scan(src) {

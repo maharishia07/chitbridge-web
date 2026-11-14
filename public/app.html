@@ -6098,8 +6098,7 @@ const _capPromise = {},
 const CAP_WITH = {
   network: ['network-member'],
   admin: ['shop', 'settings', 'mis'],
-  country: ['shop'],
-  folders: ['folders-rules', 'folders-groupsum'] /* the Rules tab and the Group-sum pane live in their own files (MNT-59) */
+  country: ['shop']
 }; /* country: its supplies row reads SHOP_SUPPLIES from cap-shop.js (INT7c: the first-run step had no shop half) */ /* mis: misWindow (the one period → since rule) lives in cap-mis.js (T3-P4-ACCOUNT) */ /* admin: the Profile's Business section and the vault live in cap-shop.js (SET1); polDefsOf and the counters/keys/kit helpers in cap-settings.js (T3-SETTINGS) — CB Settings paints both */
 function ensureCap(name) {
   if (CAP_LOADED[name]) return Promise.resolve();

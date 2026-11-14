@@ -44,7 +44,6 @@ const LAYER_RULES = [
   { repo: 'api', test: /^tools\/tally-connector\//, layer: 'counter' },
   { repo: 'api', test: /^(tools|scripts)\//, layer: 'tool' },
   { repo: 'api', test: /./, layer: 'lib' },
-  { repo: 'web', test: /^public\/cb-sw\.js$/, layer: 'tool' } /* the service worker draws nothing: its tests are the offline reload, not a screen walk */,
   { repo: 'web', test: /^public\//, layer: 'ui' },
   { repo: 'web', test: /./, layer: 'tool' },
   { repo: 'engines', test: /^src\//, layer: 'engine' },
