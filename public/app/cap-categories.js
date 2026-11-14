@@ -19,7 +19,7 @@
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
  * OWNS the Categories panel (the tree list, create/edit sheet, sort, retire) and the two start-from-a-standard-set popups (pick a trade, untick and add your own)
  * CALLED BY public/catalogue.html (<script src>, the customer door: card catalogue), public/app.html (CAP_OF categories, ensureCap('categories'); cbcatLoad at app.html:6541 and :16844), public/app/cap-catalogue.js (cbcatLoad, CBCAT_UI), public/app/tax-slab-ui.js (CBCAT_UI, cbcatPaint); each claim grepped 2026-11-14
- * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction (Cancel on the library, ui.action/footerAction CTG002-U23..U25); the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
+ * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction (its Cancel buttons are library mounts); the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
  * CARD 06-catalogue-pim/categories-and-fields
  */
 var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view', form: null, counts: null };
