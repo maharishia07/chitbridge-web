@@ -121,6 +121,7 @@ jobs:
           node e2e/html-syntax.cjs
           node e2e/legend-complete.cjs
           node e2e/network-guard.cjs
+          node e2e/acc-176-books-grant-ui.test.cjs
           node e2e/offer-nudge-gap.cjs
           node e2e/offers-combined.test.cjs
           node e2e/offers-kinds.test.cjs
