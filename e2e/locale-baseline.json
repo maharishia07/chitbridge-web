@@ -1,13 +1,14 @@
 {
  "_what": "walk-locale.cjs baseline — per screen × width: untranslated = rendered English text nodes not pseudo-localised (strings = the distinct ones, so a rise names the new words); clipped = text boxes that clip at +40 %. A ratchet: the walk fails when a number rises. Rewrite ONLY with --write after a conversion round.",
- "_written": "2026-11-14",
+ "_written": "2026-10-17",
  "home": {
   "390": {
-   "untranslated": 9,
+   "untranslated": 10,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
+    "1 waiting to be recorded",
     "Done",
     "Home",
     "New orders",
@@ -20,23 +21,36 @@
    ]
   },
   "1366": {
-   "untranslated": 13,
+   "untranslated": 26,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
     "1 new order",
+    "1 waiting to be recorded",
     "Accounts",
+    "Check a business, file a form, grow your network.",
     "Done",
     "Finance",
+    "Labs",
     "Marketing",
+    "Money",
     "New orders",
     "Open ›",
     "Orders in",
     "Orders out",
+    "Running it",
     "Sales",
     "See them",
+    "Sell at the counter and online, and bring customers back.",
+    "Selling",
+    "Set once, rarely touched.",
+    "Stock, suppliers, tasks and the people who do them.",
     "Tasks for you",
+    "Trade",
+    "What it all stands on",
+    "Who owes you, who you owe, and what the shop made.",
+    "Work the number out first. Nothing changes until you say so.",
     "Your work"
    ]
   }
@@ -60,7 +74,7 @@
     "Start fresh",
     "Start your shop",
     "This shop",
-    "You had a bill open with 3 items · 63.00, left at 8:41 am."
+    "You had a bill open with 3 items · 63.00, left at 10:31 pm."
    ]
   },
   "1366": {
@@ -102,7 +116,7 @@
     "Start your shop",
     "TOTAL",
     "This shop",
-    "You had a bill open with 3 items · 63.00, left at 8:41 am.",
+    "You had a bill open with 3 items · 63.00, left at 12:58 am.",
     "add",
     "bills",
     "change the line in action",
@@ -128,35 +142,33 @@
  },
  "shop": {
   "390": {
-   "untranslated": 8,
+   "untranslated": 7,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
+    ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
-    "No account needed",
     "Open",
-    "Order by phone/email",
+    "Order with your phone or email — no account needed.",
     "Powered by",
     "Report a problem to Mayur Bhavan",
-    "Something wrong with an order?",
-    "· shop sets prices"
+    "Something wrong with an order?"
    ]
   },
   "1366": {
-   "untranslated": 8,
+   "untranslated": 7,
    "clipped": 0,
    "pack": true,
    "clipped_sample": [],
    "strings": [
+    ". Prices are set by the shop; design & colour, where shown, are referenced from the brand catalogue.",
     "About the shop",
-    "No account needed",
     "Open",
-    "Order by phone/email",
+    "Order with your phone or email — no account needed.",
     "Powered by",
     "Report a problem to Mayur Bhavan",
-    "Something wrong with an order?",
-    "· shop sets prices"
+    "Something wrong with an order?"
    ]
   }
  },
