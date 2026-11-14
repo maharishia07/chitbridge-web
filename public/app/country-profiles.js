@@ -1108,6 +1108,7 @@
     if (!box) {
       box = document.createElement('dialog');
       box.className = 'cp-more';
+      box.setAttribute('data-pop', 'POP149');
       box.setAttribute('data-testid', 'cp-more');
       ALL.host.appendChild(box);
       box.addEventListener('click', function (event) {
