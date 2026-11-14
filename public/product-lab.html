@@ -68,6 +68,8 @@ html,#labwork{scroll-padding-bottom:140px}   /* the footer never covers a field 
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 button{font:inherit;color:inherit;cursor:pointer}
 .pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--dim)}
+.pill.has-sub{border-radius:14px;text-align:left}
+.pill .sub{display:block;font-size:.75em;font-weight:400;color:var(--dim)}
 .pill.on{border-color:var(--ok);background:var(--ok-t);color:var(--ok);font-weight:700}
 input[type=search],input[type=number],select{font:inherit;color:inherit;padding:8px 10px;
   border:1px solid var(--line);border-radius:8px;background:var(--card);min-width:0}
@@ -204,6 +206,17 @@ async function load(keepStep) {
   pickList((LIST && LIST.key) || DATA.pick || DATA.lists[0].key, keepStep);
 }
 
+/** CAT-124 C2: each list is a card of its own reference store; the store's name (store_name; null = the built-in list, nothing shown) is a visible line inside the tile, so keyboard and touch users read it too. */
+function storeLine(item) {
+  return item.store_name ? '<span class="sub" data-testid="pl-store-' + esc(item.key) + '">' + esc(item.store_name) + '</span>' : '';
+}
+/** One list's tile: its name, its size, and (CAT-124) the reference store it comes from, written under the name. */
+function listPill(item) {
+  return (
+    '<button data-cbsid="PLB001-B02" class="pill ' + (item.key === LIST.key ? 'on' : '') + (item.store_name ? ' has-sub' : '') + '" data-testid="pl-list-' + esc(item.key) + '"' +
+    ' onclick="pickList(\'' + esc(item.key) + '\')">' + esc(item.label) + ' <b>' + item.count + '</b>' + storeLine(item) + '</button>'
+  );
+}
 function pickList(k, keep) {
   LIST =
     DATA.lists.filter(function (item) {
@@ -395,23 +408,7 @@ function buildChoose() {
     });
   document.getElementById('stage').innerHTML =
     '<div class="row" id="lists" data-testid="pl-lists">' +
-    DATA.lists
-      .map(function (item) {
-        return (
-          '<button data-cbsid="PLB001-B02" class="pill ' +
-          (item.key === LIST.key ? 'on' : '') +
-          '" data-testid="pl-list-' +
-          esc(item.key) +
-          '" onclick="pickList(\'' +
-          esc(item.key) +
-          '\')">' +
-          esc(item.label) +
-          ' <b>' +
-          item.count +
-          '</b></button>'
-        );
-      })
-      .join('') +
+    DATA.lists.map(listPill).join('') +
     '</div>' +
     '<div class="row" id="langs" data-testid="pl-langs">' +
     (!tableFits()
