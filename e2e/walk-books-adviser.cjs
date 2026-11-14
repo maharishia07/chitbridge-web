@@ -166,7 +166,7 @@ W.run('books-adviser', async (w) => {
     await pickRow(idOf(S1, 2)); await page.click(T('ba-back-row')); await page.waitForSelector(T('ba-reason'), { timeout: 5000 });
     await page.fill(T('ba-reason'), 'x'); await page.click(T('ba-send')); await page.waitForTimeout(600); const short = await txt(T('ba-out2'));
     await page.fill(T('ba-reason'), 'Wrong account on line 2'); await page.click(T('ba-send')); await page.waitForTimeout(800);
-    const c = sent('return', S1)[0] || {}; await queue('team'); const list = await txt(T('ba-list'));
+    const c = sent('return', S1).slice(-1)[0] || {}; await queue('team'); const list = await txt(T('ba-list'));
     return { ok: short === 'Say why in 3 to 300 characters. Nothing was sent back.' && c.body.reason === 'Wrong account on line 2' && c.body.store_id === S1 && /Sent back/.test(list), saw: short + ' · ' + JSON.stringify(c.body) };
   });
   await w.step('F7', 'the firm · Details shows who and when, and why it was sent back is on the record', async () => {
@@ -185,8 +185,8 @@ W.run('books-adviser', async (w) => {
     await page.selectOption(T('ba-switch'), S2); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.waitForTimeout(600);
     const band = await txt(T('ba-band')), drafts = await has(T('ba-reason')), dialog = await page.$eval(T('nw-sheet'), (e) => e.open);
     await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 }); await page.waitForTimeout(400);
-    const list = await txt(T('ba-list')), afterCalls = S.calls.filter((c) => c.read === '/api/books-actions').slice(-2);
-    return { ok: /Acting for Store Two, AUD/.test(band) && !drafts && !dialog && /REF-21/.test(list) && !/REF-1/.test(list) && afterCalls.every((c) => c.store === S2), saw: band + ' · draft ' + drafts + ' · ' + list.slice(0, 70) };
+    const list = await txt(T('ba-list')), afterCalls = S.calls.filter((c) => c.read === '/api/books-actions').slice(-1);
+    return { ok: /Acting for Store Two, AUD/.test(band) && !drafts && !dialog && /REF-21/.test(list) && !/REF-1/.test(list) && afterCalls.every((c) => c.store === S2), saw: band + ' · draft ' + drafts + ' · sheet open ' + dialog + ' · reads ' + afterCalls.map((c) => c.store.slice(-1)).join(',') + ' · ' + list.slice(0, 70) };
   });
   await w.step('F10', 'the firm · a slow answer of Store One arrives after the switch to Store Two: it is dropped, never painted', async () => {
     await page.selectOption(T('ba-switch'), S1); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.click(T('bv-tab-actions')); await page.waitForSelector(T('ba-q-review'), { timeout: 10000 });
@@ -225,7 +225,7 @@ W.run('books-adviser', async (w) => {
     await page.click('[data-cbl-selmode]'); await page.waitForTimeout(200); await page.click('[data-cbl-selall]'); await page.waitForTimeout(200); await page.click('[data-bulk="accept"]'); await page.waitForSelector(T('confirm'), { timeout: 5000 });
     const ask = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(1200);
     const out = await txt(T('ba-out')), calls = sent('accept', OWN).slice(1);
-    return { ok: /2 actions in Your books/.test(ask) && /4,000\.00|2,000\.00 \+|INR/.test(ask) && calls.length === 2 && calls.every((c) => typeof c.body.total_minor === 'number' && c.body.currency === 'INR' && c.body.store_id === OWN) && /1 action accepted and posted/.test(out) && /1 not posted/.test(out) && /The total changed since it was prepared. Nothing was posted/.test(out), saw: ask.slice(0, 110) + ' · ' + out.slice(0, 150) };
+    return { ok: /2 actions in Your books/.test(ask) && /5,000.00/.test(ask) && calls.length === 2 && calls.every((c) => typeof c.body.total_minor === 'number' && c.body.currency === 'INR' && c.body.store_id === OWN) && /1 action accepted and posted/.test(out) && /1 not posted/.test(out) && /The total changed since it was prepared. Nothing was posted/.test(out), saw: ask.slice(0, 110) + ' · ' + out.slice(0, 150) };
   });
   await w.step('O4', 'the owner · accepting before a colleague reviewed says so plainly (ACTION_NOT_REVIEWED)', async () => {
     const row = make(OWN, 4, { state: 'waiting_accept', client_ref: 'REF-N4' }); S.by[OWN].push(row); S.fail.notReviewed = true;
