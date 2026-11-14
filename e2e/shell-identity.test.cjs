@@ -34,7 +34,7 @@ const WANT = {
   },
   'avatar.js': { 'signin-door': 'CMP052-B01' }
 };
-const MENU_WANT = [[/^(nav-profile|nav-settings|av-support|nav-signout)$/, 'CMP033-M01'], [/^(theme-|fs-|weight-|font-|lang-|motion-switch|stripes-|kural-|edition-)/, 'CMP025-B01']];
+const MENU_WANT = [[/^(nav-profile|nav-settings|av-support|nav-signout)$/, 'CMP033-M01'], [/^(theme-|fs-|weight-|font-|lang-|motion-switch|stripes-|kural-|keys-|edition-)/, 'CMP025-B01']];
 
 /** the register copy the census reads, when this machine has one */
 function register() {
