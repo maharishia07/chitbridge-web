@@ -25,12 +25,12 @@ var STD_BUILD_TABLE = [
   ['build-rfc9457', 'rfc9457', 'RFC 9457 problem details', 'https://www.rfc-editor.org/rfc/rfc9457.html',
     'Every api refusal is one problem+json answer: type, title, status, detail and a registered error code.',
     'api register column error_shape (chitbridge-api docs/api-register.json)', 'api-error-shape', ['route']],
-  ['build-asvs-l1', 'owasp-asvs-l2', 'Application security verification, level 1 (the parts we check)', 'https://owasp.org/www-project-application-security-verification-standard/',
+  ['build-asvs-l1', '', 'Application security verification, level 1 (the parts we check)', 'https://asvs.owasp.org',
     'Input is validated strictly, a foreign id answers 404, and the answer carries only its allow-listed fields.',
     'api register columns strict_input · foreign_id_404 · output_allowlist, where each applies', 'api-asvs', ['route']],
   ['build-iso4217', 'iso4217', 'ISO 4217 currency on every money value', 'https://www.iso.org/iso-4217-currency-codes.html',
     'Money carries its currency; an operator refuses a mismatch. A route that moves money names the currency it answers in.',
-    'no route-level currency check yet: the register only says money: true', 'none', ['route']],
+    'no route-level currency check yet: the register only says money: true', 'none', ['route'], 'https://www.six-group.com/en/products-services/financial-information/data-standards.html'],
   ['build-iso8601', 'iso8601', 'ISO 8601 dates and times', 'https://www.iso.org/iso-8601-date-and-time-format.html',
     'A date or time on the wire is ISO 8601, with its offset.',
     'no route-level date check yet', 'none', ['route']],
@@ -38,27 +38,27 @@ var STD_BUILD_TABLE = [
     'Every shop-scoped table has row level security on and a policy; a read as another shop returns nothing.',
     'RLS isolation tests (cb-db); there are no table CIs in the CMDB yet', 'none', ['table']],
   ['build-fn-size', '', 'Function size: no function over 40 lines', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
-    'No function is longer than 40 lines.', 'tools/readability.cjs ratchet, counter long40 = 0 on the CI\'s files', 'ratchet:long40', ['screen', 'component', 'route']],
+    'No function is longer than 40 lines.', 'tools/readability.cjs ratchet, counter long40 = 0 on the CI\'s files', 'ratchet:long40', ['module']],
   ['build-complexity', '', 'Complexity: no function above 10', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
-    'No function has a cyclomatic complexity above 10.', 'readability ratchet, counter complex10 = 0 on the CI\'s files', 'ratchet:complex10', ['screen', 'component', 'route']],
+    'No function has a cyclomatic complexity above 10.', 'readability ratchet, counter complex10 = 0 on the CI\'s files', 'ratchet:complex10', ['module']],
   ['build-nesting', '', 'Nesting: no function deeper than 3', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
-    'No function nests blocks deeper than 3 levels.', 'readability ratchet, counter deep3 = 0 on the CI\'s files', 'ratchet:deep3', ['screen', 'component', 'route']],
+    'No function nests blocks deeper than 3 levels.', 'readability ratchet, counter deep3 = 0 on the CI\'s files', 'ratchet:deep3', ['module']],
   ['build-file-size', '', 'File size: no file grows past its baseline', 'PM/CODE-STANDARD.md · MNT-58',
-    'No file grows past its filesize baseline.', 'the filesize baseline (MNT-58) is not built yet', 'none', ['screen', 'component', 'route']],
+    'No file grows past its filesize baseline.', 'the filesize baseline (MNT-58) is not built yet', 'none', ['module']],
   ['build-header', '', 'Module header: what it owns, who calls it, its card', 'PM/CODE-STANDARD.md · DISCIPLINES.md §6',
-    'Every module opens with a header that says what it owns, who calls it and which card it belongs to.', 'readability ratchet, counter noHeader = 0 on the CI\'s files', 'ratchet:noHeader', ['screen', 'component', 'route']],
+    'Every module opens with a header that says what it owns, who calls it and which card it belongs to.', 'readability ratchet, counter noHeader = 0 on the CI\'s files', 'ratchet:noHeader', ['module']],
   ['build-readability-touch', '', 'Readability: a touched file comes out better or zero', 'DISCIPLINES.md §6 · rule 2 (Athi 14 Nov 2026)',
-    'A file a change touches ends with a lower readability score, or zero.', 'tools/readability/touch.cjs runs on the PR diff; it leaves nothing the CMDB can read yet', 'none', ['screen', 'component', 'route']],
+    'A file a change touches ends with a lower readability score, or zero.', 'tools/readability/touch.cjs runs on the PR diff; it leaves nothing the CMDB can read yet', 'none', ['module']],
   ['build-element-id', '', 'Every UI element has a code on the element (data-cbsid)', 'DISCIPLINES.md §3a · SCREENS.json _scheme (Athi 2 Nov 2026)',
     'Each control carries its register code on the element and is named in the CMDB.', 'ui-cmdb.cjs: the element\'s code is found in the page\'s own files; a failing SWEEP control overrides', 'element-code', ['screen', 'component']]
 ];
-var STD_BUILD_SCOPES = [['screen', 'Screen'], ['component', 'UI component'], ['route', 'Api route'], ['table', 'Database table']];
+var STD_BUILD_SCOPES = [['screen', 'Screen'], ['component', 'UI component'], ['route', 'Api route'], ['module', 'Source file'], ['table', 'Database table']];
 /** one register row from one table line: the shape the page and the other readers already know */
 function stdBuildRow(line) {
   var checked = line[6] !== 'none';
   return {
     id: line[0], std: line[1], pa: 'testing', a: 'build', k: 'build-rule', c: ['GLOBAL'],
-    p: line[2], g: 'How we build', n: line[2], w: line[4], ex: line[3], src: line[3], rule: line[4], chk: line[5], ck: line[6], sc: line[7],
+    p: line[2], g: 'How we build', n: line[2], w: line[4], ex: line[3], src: line[3], src2: line[8] || '', rule: line[4], chk: line[5], ck: line[6], sc: line[7],
     s: checked ? 'live' : 'part', m: checked ? '' : 'No check yet: the CMDB shows "not checked", never pass',
     note: '', at: 'Standards › How we build', go: '',
     why: 'A claim of "we follow it" without a check goes stale; the CMDB row for each item is rewritten from the check\'s own output on every run.', added: '2026-11-14'

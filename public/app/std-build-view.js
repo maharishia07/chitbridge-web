@@ -3,9 +3,10 @@
  *           behind each number. The numbers are read, never computed here: public/data/build-standards.json, written by the docs generator std-cmdb.cjs from the CMDB.
  * CALLED BY public/standards.html (the view item, cols(), the opened row, the sorts, the one fetch before the first paint).
  * FLOW      CBStdBuild.load() → BUILD → cols() paints the three counts (each a button with its own code) → a press opens the page's own #sheet with the CIs of that number.
+ *           The popup is the library's ui.dialog (POP145); the page gives it modal() over its own <dialog>.
  *           The rows are the register's (cap-standards-build.js, kind 'build'); a standard the file does not know yet reads "not checked" everywhere.
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/standards-register
- * Codes     STD001-B01 pass · STD001-B02 fail · STD001-B03 not checked (one code per column, like a list's header button); STD001-U04 the sheet's close.
+ * Codes     STD001-B01 pass · STD001-B02 fail · STD001-B03 not checked (one code per column, like a list's header button); STD001-U05 the popup's mount.
  */
 var CBStdBuild = (function () {
   var BUILD = null,
@@ -78,6 +79,7 @@ var CBStdBuild = (function () {
     var r = x.r, line = countsOf(r.id), h = '<dl class="sd" data-testid="std-build-detail-' + esc(r.id) + '">';
     h += '<dt>The rule</dt><dd>' + esc(r.rule) + '</dd>';
     h += '<dt>Source</dt><dd>' + (/^https?:\/\//.test(r.src) ? '<a href="' + esc(r.src) + '" target="_blank" rel="noopener">' + esc(r.src) + '</a>' : esc(r.src)) + '</dd>';
+    if (r.src2) h += '<dt>Also</dt><dd><a href="' + esc(r.src2) + '" target="_blank" rel="noopener">' + esc(r.src2) + '</a></dd>';
     h += '<dt>The check</dt><dd>' + esc(r.chk) + '</dd>';
     h += '<dt>Applies to</dt><dd>' + esc(scopeWords(r)) + '</dd>';
     h += '<dt>In the CMDB</dt><dd data-testid="std-build-counts">' + (line ? KINDS.map(function (kind) { return line[kind[0]].length + ' ' + kind[1].toLowerCase(); }).join(' · ') + (line.na ? ' · ' + line.na + ' not applicable' : '') + ' · read ' + esc(BUILD.generated) : 'no count yet for this standard') + '</dd>';
@@ -86,19 +88,20 @@ var CBStdBuild = (function () {
   function ciRows(line, key) {
     return line[key].map(function (index) { return BUILD.cis[index]; });
   }
-  /** the CIs behind one number, in the page's own sheet */
+  /** the CIs behind one number, in the library dialog (POP145) */
   function openList(code, key) {
-    var line = countsOf(code), row = STANDARDS.filter(function (item) { return item.id === code; })[0], kind = KINDS.filter(function (item) { return item[0] === key; })[0], sheet = document.getElementById('sheet');
-    if (!line || !row || !sheet) return;
+    var line = countsOf(code), row = STANDARDS.filter(function (item) { return item.id === code; })[0], kind = KINDS.filter(function (item) { return item[0] === key; })[0], host = document.getElementById('sheet');
+    if (!line || !row || !host) return;
     var list = ciRows(line, key);
-    sheet.innerHTML =
-      '<div class="sh-head"><h2 data-testid="std-build-sheet-title">' + esc(row.n) + ' · ' + esc(kind[1]) + ' (' + list.length + ')</h2>' +
-      ui.action('close', { mount: 'STD001-U04', display: 'icon', surface: 'dialog', data: { act: 'sheetx' }, testid: 'std-sheet-x' }) + '</div>' +
-      '<div class="sh-body" tabindex="0" role="region" aria-label="' + esc(row.n + ' · ' + kind[1]) + '" data-testid="std-sheet-build"><p class="hint">' + esc(row.chk) + '</p><ul class="sbl" data-testid="std-build-cis">' +
-      list.map(function (item) { return '<li><code>' + esc(item[0]) + '</code> <span class="hint">' + esc(item[1]) + '</span></li>'; }).join('') + '</ul></div>';
-    if (!sheet.open) {
-      try { sheet.showModal(); } catch (_) { sheet.setAttribute('open', ''); }
-    }
+    ui.dialog({
+      mount: 'STD001-U05',
+      pop: 'POP145',
+      titleText: row.n + ' · ' + kind[1] + ' (' + list.length + ')',
+      testid: 'std-sheet-build',
+      body: '<div class="sbl-box" tabindex="0" role="region" aria-label="' + esc(row.n + ' · ' + kind[1]) + '"><p class="hint">' + esc(row.chk) + '</p><ul class="sbl" data-testid="std-build-cis">' +
+        list.map(function (item) { return '<li><code>' + esc(item[0]) + '</code> <span class="hint">' + esc(item[1]) + '</span></li>'; }).join('') + '</ul></div>',
+      actions: [{ name: 'close', options: { mount: 'STD001-U05' } }]
+    });
   }
   document.addEventListener('click', function (event) {
     var node = event.target.closest && event.target.closest('[data-sbk]');
