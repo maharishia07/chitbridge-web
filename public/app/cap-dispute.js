@@ -726,9 +726,7 @@ async function quickDispute(idArg, opt) {
     disputeLogFailure('the parties to tick could not be read, the form opens without them', failure); // it then raises against everyone involved
   }
   ui.dialog({
-    mount: 'TSK006-U01',
-    pop: 'POP189',
-    titleText: tx('⚑ Raise dispute'),
+    mount: 'TSK006-U01', pop: 'POP189', titleText: tx('⚑ Raise dispute'),
     body:
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Category, reason (10+ characters)<br>Parties get notified</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
       tx('Quality') +
@@ -749,8 +747,7 @@ async function quickDispute(idArg, opt) {
       '\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.reason.' + id)) || '') +
       '</textarea>',
-    footerHtml:
-      '<button data-cbsid="TSK006-B09" onclick="closeModal()">' +
+    footerHtml: '<button data-cbsid="TSK006-B09" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="TSK006-B10" class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' +
       tx('Raise dispute') +
@@ -810,11 +807,8 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       '</b>; others stay open</div>'
     : '';
   ui.dialog({
-    mount: 'TSK006-U02',
-    pop: 'POP065',
-    titleText: 'Resolve dispute' + (partyName ? ' — ' + partyName : ''),
-    body:
-      withParty +
+    mount: 'TSK006-U02', pop: 'POP065', titleText: 'Resolve dispute' + (partyName ? ' — ' + partyName : ''),
+    body: withParty +
       '<label class="fl">' +
       tx('Resolution note (required)') +
       '</label><textarea data-cbsid="TSK006-T02" id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.' +
@@ -822,8 +816,7 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       '\',this.value)" placeholder="How was this resolved…">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.resolve.' + disputeId)) || '') +
       '</textarea><div class="err" id="res_err"></div>',
-    footerHtml:
-      '<button data-cbsid="TSK006-B11" onclick="closeModal()">' +
+    footerHtml: '<button data-cbsid="TSK006-B11" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="TSK006-B12" class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\'' +
       chitId +

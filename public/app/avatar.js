@@ -94,11 +94,6 @@
     ['on', 'On'],
     ['off', 'Off']
   ];
-  /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off */
-  var KEYS = [
-    ['on', 'On'],
-    ['off', 'Off']
-  ];
   var EDITION = /^[a-z][a-z0-9-]{0,23}$/;
   var STRIPES = [
     ['off', 'Off'],
@@ -817,7 +812,10 @@
       editionsHtml() +
       choiceGroup('Row stripes', 'stripes', STRIPES) +
       choiceGroup('Thirukkural', 'kural', KURAL) +
-      choiceGroup('Keyboard shortcuts', 'keys', KEYS) +
+      /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — a switch, on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off. A switch, not a third button row: the menu still fits a 1280×800 window with no inner scroll */
+      '<div class="cbav-motion"><span>Keyboard shortcuts</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="keys-switch" data-av-keysw="1" aria-checked="' +
+      (pref('keys') !== 'off') +
+      '" aria-label="Keyboard shortcuts"></button></div>' +
       '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
       TEXT_SIZES.map(function (x, index) {
@@ -1041,7 +1039,7 @@
   }
 
   /** the saved looks a menu button sets by its data-av-<kind> attribute */
-  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font', 'keys'];
+  var PICK_KINDS = ['theme', 'fs', 'weight', 'stripes', 'kural', 'edition', 'font'];
   /** the menu's `data-av` actions: sign out · sign in · profile · settings · support (each only when the page gave its callback) */
   function onMenuAction(e, action, o) {
     var closeThen = function (callback) {
@@ -1083,6 +1081,7 @@
     })[0];
     if (picked) return set(picked, target.closest('[data-av-' + picked + ']').getAttribute('data-av-' + picked));
     if (target.closest('[data-av-motion]')) return set('motion', pref('motion') === 'reduce' ? 'auto' : 'reduce');
+    if (target.closest('[data-av-keysw]')) return set('keys', pref('keys') === 'off' ? 'on' : 'off');
     if ((button = target.closest('[data-av-lang]'))) {
       if (options.languages && options.languages.onPick) options.languages.onPick(button.getAttribute('data-av-lang'));
       return;

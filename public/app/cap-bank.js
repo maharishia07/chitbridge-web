@@ -698,20 +698,17 @@ function bankRecord(r) {
 }
 function bankNote(r) {
   ui.dialog({
-    mount: 'BKS014-U01',
-    pop: 'POP092',
+    mount: 'BKS014-U01', pop: 'POP092',
     titleText: tx('Note on this line'),
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
-    body:
-      '<div class="pe-note">' +
+    body: '<div class="pe-note">' +
       bkbE(bkDate(r.date) + ' · ' + tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor)) +
       '</div>' +
       '<textarea data-cbsid="BKS014-T01" class="inp" id="bk_note" data-testid="bank-note-text" rows="3" style="width:100%" maxlength="500"></textarea>' +
       '<div class="pe-note">' +
       bkbE(tx('Kept on this device. A note never stops you accepting.')) +
       '</div>',
-    footerHtml:
-      '<button data-cbsid="BKS014-B03" type="button" onclick="closeModal()">' +
+    footerHtml: '<button data-cbsid="BKS014-B03" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
       '</button><button data-cbsid="BKS014-B04" type="button" class="pri" data-testid="bank-note-save" onclick="bankNoteSave(\'' +
       bkbE(r.id) +
@@ -735,13 +732,10 @@ function bankAsk(r) {
     pre = (r.sugg && r.sugg.event && r.sugg.event.party) || '';
   BKB.asking = r.id;
   ui.dialog({
-    mount: 'BKS014-U02',
-    pop: 'POP091',
+    mount: 'BKS014-U02', pop: 'POP091', titleTestid: 'bank-ask-title',
     titleText: tx('Ask the party about this line'),
-    titleTestid: 'bank-ask-title',
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
-    body:
-      peField(
+    body: peField(
         'bk_askto',
         'Who to ask',
         peSel(
@@ -755,8 +749,7 @@ function bankAsk(r) {
       '<div class="pe-note">' +
       bkbE(tx('Only the date, the amount and the reference are sent. Their payment advice settles it in both books.')) +
       '</div><div id="bk_askout" class="pe-slot"></div>',
-    footerHtml:
-      '<button data-cbsid="BKS014-B05" type="button" onclick="closeModal()">' +
+    footerHtml: '<button data-cbsid="BKS014-B05" type="button" onclick="closeModal()">' +
       bkbE(tx('Cancel')) +
       '</button><button data-cbsid="BKS014-B06" type="button" class="pri" data-testid="bank-ask-send" onclick="bankAskSend(this)">' +
       bkbE(tx('Send')) +

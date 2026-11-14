@@ -157,11 +157,13 @@ function crmSendLinesHtml(sent) {
 function crmSendDoneShown(reply, out) {
   out.innerHTML =
     '<div class="result" data-testid="crm-send-done"><span><span class="k">' + esc(tx('Outcome')) + '</span><b>' + esc(crmSendDoneLine(reply)) + '</b></span></div>' + crmSendLinesHtml(reply.sent);
-  var node = document.querySelector('[data-testid="crm-send-go"]');
+  var node = document.querySelector('[data-testid="crm-send-go"]'),
+    text = document.getElementById('crm_send_text');
   if (node) {
     node.disabled = true;
     node.title = tx('Sent');
   }
+  if (text) text.defaultValue = text.value; /* the words are sent, not unsaved: Escape closes the sheet without "Discard it?" (sheet-dialog.js 8) */
 }
 /** send the message through CBAction, only after a dry run found someone who may be sent it */
 function crmSendGo(btn) {

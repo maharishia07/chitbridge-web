@@ -39,7 +39,7 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
     const body = await page.evaluate(() => document.body.innerText);
     ok(!errs.length, 'no page errors ' + errs.join(' | ').slice(0, 200));
     ok(!/\b1 pictures?\b|\bpictures?\b/i.test(body), 'no "picture" admin word');
-    ok((body.match(/prices are set by the shop/gi) || []).length === 1, 'footer says "prices are set by the shop" once');
+    ok((body.match(/shop sets prices/gi) || []).length === 1, 'footer says "shop sets prices" once (copy budget, 14 Nov)');
     const secs = await page.locator('[data-testid="shop-cat-head"]').allInnerTexts();
     ok(secs.length >= 3 && /tiffin/i.test(secs.join()) && /rice/i.test(secs.join()), 'categories render as headings: ' + secs.map((s) => s.replace(/\s+/g, ' ')).join(' | ').slice(0, 120));
     await page.locator('[data-testid="shop-cat-btn"]').click().catch(() => {});   /* the categories are an overlay panel — open it */
