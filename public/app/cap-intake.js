@@ -1,5 +1,9 @@
 /* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake'). · CARD 22-channels-capture-and-messaging/intake-screen
  *
+ * OWNS      intakeScreen / paintIntake: the Intake inbox face (pending captures, structure, dismiss, make-a-chit confirm); no pipeline logic
+ * FLOW      ensureCap(intake) -> intakeScreen paints -> read pending captures -> human confirm -> chit on the rail (server side)
+ * CARD      22-channels-capture-and-messaging/intake-screen
+ *
  * Athi, 2026-07-12: someone is chatting on WhatsApp or emailing, and they want it to become a chit on the rail.
  *
  * ── THE ONE PIPELINE (every channel is just an adapter) ──────────────────────────────────────────────────────────

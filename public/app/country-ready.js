@@ -1,6 +1,9 @@
 /**
  * country-ready.js — CBCountryReady: "WHERE CHITBRIDGE IS FOR <COUNTRY>" (CL3, 2026-10-13). Read, never typed.
  *
+ * OWNS      CBCountryReady.load / .view / .SYM: the read-only "where ChitBridge is for <country>" rows from /data/country-ready.json
+ * FLOW      load() fetches the JSON once -> view(data, cc) -> rows of words -> country-lab.html / standards.html paint them
+ *
  * Owner, 13 Oct: "when we register, each country is supposed to showcase what is specific to your country which is applicable and where we
  * are with it — is it fulfilling here?" The Country lab (beside the TO side) and the Country setup step (cap-country.js) both show it.
  *
