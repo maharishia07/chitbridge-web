@@ -149,7 +149,9 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   ok('F2', S.marks.length === 2 && S.marks[1].act === 'undo', 'an undo is a NEW mark (the log keeps both: ' + S.marks.map((x) => x.act).join(', ') + ')');
 
   /* ── F3 · a note ── */
-  await p.click('[data-next="s0"] [data-testid="bank-note"]').catch(() => {});
+  if (!(await p.locator('[data-testid="bank-next-s0"]').count())) await p.click('[data-testid="bank-row-s0"] [data-caret]');
+  await p.waitForSelector('[data-testid="bank-next-s0"]');
+  await p.click('[data-next="s0"] [data-testid="bank-note"]');
   await p.waitForSelector('[data-testid="bank-note-text"]', { timeout: 3000 }).catch(() => {});
   ok('F3', /shared record/.test(await p.textContent('.mbody').catch(() => '')), 'the note box says the note is kept on the shared record');
   await p.fill('[data-testid="bank-note-text"]', 'Cheque seen at the branch').catch(() => {});
