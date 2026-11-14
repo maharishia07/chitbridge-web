@@ -725,10 +725,12 @@ async function quickDispute(idArg, opt) {
   } catch (failure) {
     disputeLogFailure('the parties to tick could not be read, the form opens without them', failure); // it then raises against everyone involved
   }
-  modal(
-    '<div class="mhd"><div class="t">' +
-      tx('⚑ Raise dispute') +
-      '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Category, reason (10+ characters)<br>Parties get notified</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
+  ui.dialog({
+    mount: 'TSK006-U01',
+    pop: 'POP189',
+    titleText: tx('⚑ Raise dispute'),
+    body:
+      '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Category, reason (10+ characters)<br>Parties get notified</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
       tx('Quality') +
       '</option><option value="quantity">' +
       tx('Quantity') +
@@ -746,12 +748,14 @@ async function quickDispute(idArg, opt) {
       id +
       '\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.reason.' + id)) || '') +
-      '</textarea></div><div class="mfoot"><button data-cbsid="TSK006-B09" onclick="closeModal()">' +
+      '</textarea>',
+    footerHtml:
+      '<button data-cbsid="TSK006-B09" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="TSK006-B10" class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' +
       tx('Raise dispute') +
-      '</button></div>'
-  );
+      '</button>'
+  });
 }
 /** raise the dispute from the sheet: a reason of at least 10 characters and a category, then POST it */
 async function confirmDispute() {
@@ -805,10 +809,11 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       esc(partyName) +
       '</b>; others stay open</div>'
     : '';
-  modal(
-    '<div class="mhd"><div class="t">Resolve dispute' +
-      (partyName ? ' — ' + esc(partyName) : '') +
-      '</div></div><div class="mbody">' +
+  ui.dialog({
+    mount: 'TSK006-U02',
+    pop: 'POP065',
+    titleText: 'Resolve dispute' + (partyName ? ' — ' + partyName : ''),
+    body:
       withParty +
       '<label class="fl">' +
       tx('Resolution note (required)') +
@@ -816,7 +821,9 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       disputeId +
       '\',this.value)" placeholder="How was this resolved…">' +
       esc((window.CBOffline && CBOffline.loadDraft('disp.resolve.' + disputeId)) || '') +
-      '</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button data-cbsid="TSK006-B11" onclick="closeModal()">' +
+      '</textarea><div class="err" id="res_err"></div>',
+    footerHtml:
+      '<button data-cbsid="TSK006-B11" onclick="closeModal()">' +
       tx('Cancel') +
       '</button><button data-cbsid="TSK006-B12" class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\'' +
       chitId +
@@ -826,8 +833,8 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
       (partyId || '') +
       '\')">' +
       tx('Resolve') +
-      '</button></div>'
-  );
+      '</button>'
+  });
 }
 /** resolve a dispute: a resolution note is required, then POST it and say so */
 async function submitResolve(chitId, disputeId, partyId) {
