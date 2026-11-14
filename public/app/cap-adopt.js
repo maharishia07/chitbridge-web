@@ -17,6 +17,12 @@
  
  * CALLED BY public/app/cap-chit2.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      the adopt-a-delivery step: a supplier's delivery taken into YOUR catalogue, with the confirmation and the own-vertical check
+ * CALLED BY ensureCap('adopt') in public/app/cap-chit2.js:638 (opened from a delivery chit, never from a menu)
+ * FLOW      delivery chit -> Adopt -> confirmation (another vertical refused unless overridden) -> product and SKU in your own catalogue
+ * CARD      06-catalogue-pim/adopt-a-supplier-s-delivery-into-my-catalogue
+ */
 
 var ADO = { chit_id: null, data: null, edits: {} };
 
