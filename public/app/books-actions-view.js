@@ -52,7 +52,7 @@
     return words(STATE[row.state] || row.state) + (row.access_ended && OPEN[row.state] ? ' (' + words('access ended') + ')' : '');
   }
   /** where the action stands and who prepared it, in one cell (the row says both without a fourth column) */
-  function stepWords(row) {
+  function standsWords(row) {
     return stateWords(row) + ' · ' + (row.prepared ? row.prepared.name : '—');
   }
   function byWords(stamp) {
@@ -144,7 +144,7 @@
       col('what', words('What'), 1, 200, kindWords),
       col('total', words('Total'), 1, 140, figure, function (row) { return row.total_minor == null ? 0 : Number(row.total_minor); }),
       col('at', words('When'), 2, 150, function (row) { return dayWords(row.prepared && row.prepared.at); }, function (row) { return (row.prepared && row.prepared.at) || ''; }),
-      col('state', words('Step and who'), 1, 300, stepWords)
+      col('state', words('Step and who'), 1, 300, standsWords)
     ];
   }
   /** which row buttons a role is offered in a queue: the firm reviews, the owner accepts, both send back; the server still decides */
