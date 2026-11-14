@@ -253,6 +253,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 /* The Add to your books sheet (app/cap-bank-sheet.js, lines painted by app/bank-preview-ui.js): the lines are rows that stack at phone width — tokens only */
+#bks_say:empty{display:none}
 .bks-lines{min-height:0;max-height:60vh;overflow:auto}
 .bks-lines .bd-table{width:100%;border-collapse:collapse;font-size:13px}
 .bks-lines .bd-table th{position:sticky;top:0;background:var(--sub);text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
