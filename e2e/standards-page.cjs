@@ -469,7 +469,8 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
   {
     /* Settings › Standards: run the function as the app does, with the helpers it needs */
     const src = fs.readFileSync(path.join(PUB, 'app', 'cap-admin.js'), 'utf8');
-    const a = src.indexOf('function standardsSettingsHTML(){'), z = src.indexOf('function appearanceSettingsHTML(){');
+    const fnStart = (name) => src.search(new RegExp('function ' + name + '[(][)] ?[{]')); /* either spacing: `(){` or `() {` */
+    const a = fnStart('standardsSettingsHTML'), z = fnStart('appearanceSettingsHTML');
     const fnSrc = src.slice(a, z);
     ok(a > 0 && z > a, 'cap-admin.js still has standardsSettingsHTML');
     ok(!/setStdTab|std-tab-|groupsOf|BADGE/.test(fnSrc) && !/function stdTab\(|function setStdTab\(/.test(src), 'Settings no longer lists the register: its tabs, rows and badges are gone from cap-admin.js');
