@@ -1142,7 +1142,7 @@
     return load().then(
       function () {
         board.el.innerHTML =
-          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-testid="tk-sheet"></dialog>';
+          '<div class="tk-top" id="tk_bar" data-testid="tk-bar"></div><div class="tk-list" id="tk_list" data-testid="tk-list"></div><dialog class="sheet tk-sheet" id="tk_sheet" data-pop="POP130" data-testid="tk-sheet"></dialog>';
         var node = $('tk_sheet');
         node.addEventListener('cancel', function (e) {
           e.preventDefault();

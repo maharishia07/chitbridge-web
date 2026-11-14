@@ -887,7 +887,7 @@
       esc(foldPeriod ? (headSpec.period.label || '') + ' · ' + foldedCount(list, chips, notes, true) : foldedLabel(list, chips, notes)) +
       ' ▾</button>' +
       (list.pop === 'notes'
-        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP133" aria-label="' +
           esc(T(list, foldPeriod ? 'Period and notices' : 'Notices')) +
           '" data-testid="cbl-notes-pop-' +
           esc(list.key) +
@@ -950,7 +950,7 @@
   /** the period's own popover; its words and controls (periodInner) also sit in the folded chip's popover on a tiny phone */
   function periodPop(I, p) {
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP134" aria-label="' +
       esc(T(I, 'Period')) +
       '">' +
       periodInner(I, p) +
@@ -1085,7 +1085,7 @@
       esc(T(list, 'View')) +
       ' ▾</button>' +
       (list.pop === 'view'
-        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' + esc(T(list, 'View')) + '" data-testid="cbl-view-pop-' + keyText + '"><div class="cbl-viewpop">' + inner + '</div></div>'
+        ? '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP135" aria-label="' + esc(T(list, 'View')) + '" data-testid="cbl-view-pop-' + keyText + '"><div class="cbl-viewpop">' + inner + '</div></div>'
         : '') +
       (list.pop === 'cols' ? colsPop(list) : '') +
       '</span>'
@@ -1506,7 +1506,7 @@
       st = I.s.sort,
       cur = st ? st.key : (I.o.sorts || [])[0] && I.o.sorts[0].key;
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop left" role="dialog" data-pop="POP136" aria-label="' +
       esc(T(I, 'Filters')) +
       '" data-testid="cbl-filters-pop-' +
       esc(I.key) +
@@ -1629,7 +1629,7 @@
       );
     }
     return (
-      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" aria-label="' +
+      '<div data-cbsid="CMP033-D01"' + mountAttribute('CMP033') + ' class="cbl-pop" role="dialog" data-pop="POP137" aria-label="' +
       esc(T(I, 'Choose columns')) +
       '" data-testid="cols-menu-' +
       k +

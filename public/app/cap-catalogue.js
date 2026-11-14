@@ -782,7 +782,7 @@ var CBCatalogueApp = (function () {
       esc(T('New item')) +
       '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out"></div></div></div>' +
       '<div class="cat-list" id="cat_items" data-testid="cat-items"></div>' +
-      '<dialog class="sheet" id="cat_sheet" data-testid="cat-sheet"></dialog>'
+      '<dialog class="sheet" id="cat_sheet" data-pop="POP127" data-testid="cat-sheet"></dialog>'
     );
   }
   function paintCount() {
@@ -1463,7 +1463,7 @@ var CBCatalogueApp = (function () {
       esc(T('New category')) +
       '</button><div class="cat-out" id="catg_out" data-testid="catg-out"></div></div></div>' +
       '<div class="cat-list" id="cat_catgs" data-testid="cat-categories"></div>' +
-      '<dialog class="sheet" id="catg_sheet" data-testid="catg-sheet"></dialog>'
+      '<dialog class="sheet" id="catg_sheet" data-pop="POP128" data-testid="catg-sheet"></dialog>'
     );
   }
   function catgRows() {
