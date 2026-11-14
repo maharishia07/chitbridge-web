@@ -258,6 +258,7 @@ jobs:
           node e2e/ui-codes-cart.test.cjs
           node e2e/ui-codes-pass-cat.test.cjs
           node e2e/ui-codes-labs.test.cjs
+          node e2e/bank-preview.test.cjs
           node e2e/ui-codes-w2-lib.test.cjs
           node e2e/ui-codes-till.test.cjs
           node e2e/ui-codes-promo.test.cjs
