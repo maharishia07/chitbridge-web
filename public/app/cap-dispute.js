@@ -928,6 +928,7 @@ async function submitResolve(chitId, disputeId, partyId) {
   }
   function failWords(e, what) {
     if (e && e.status === 403) return T('This sign-in cannot open disputes');
+    if (e && e.status === 404) return T('That dispute is no longer there.');
     return T("Couldn't read") + ' ' + T(what) + '. ' + T('Check the connection and try again.');
   }
 
