@@ -81,8 +81,9 @@ const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');
 const J = C.json;
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
 const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
-/* "today" the way the page computes it (bkToday: toISOString) — the strip reads the range's last day */
-const TODAY = new Date().toISOString().slice(0, 10);
+/* "today" the way the page computes it: bkToday reads the browser's LOCAL date, and the walk's browser runs in Asia/Kolkata (newContext below) —
+   not the UTC date, which is a day behind from 18:30 to midnight UTC and left the strip with no entries for "today" (the strip reads the range's last day) */
+const TODAY = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -96,7 +97,7 @@ async function route(S, r) {
     if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, todo: w.todo || 'record', name: w.name || null })) }));   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
     if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; /* 2026-10-02: a cheque recorded in the APP is held on the server too, and CB Accounts (a fresh page, no session memory) lists it from there */
     const held = Object.keys(S.payments).filter((k) => S.payments[k].mode === 'cheque' && !S.chequeSteps.some((x) => x.id === k && x.body.status === 'cleared')).map((k) => ({ payment_id: k, party_id: S.payments[k].party_id, name: 'Ravi Stores', amount_minor: Math.round(Number(S.payments[k].amount || 0) * 100), cheque_no: S.payments[k].cheque_no, cheque_bank: S.payments[k].cheque_bank, status: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? 'cheque_deposited' : 'cheque_received', next: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? ['cleared'] : ['deposited'] }));
-      return J(r, 200, { currency: 'INR', cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
+      return J(r, 200, books.cheques({ cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) })); }   /* the contract's keys beside them: asOf · pdc_reminders · remind */   /* GET /cheques: the held ones, each with the steps the engine accepts now */
     if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries++; const n = S.waiting.length; S.waiting = S.waiting.filter((w) => w.stuck); return J(r, 200, { ok: true, tried: n, posted: n - S.waiting.length }); }
     if ((x = p.match(/^\/api\/books\/cheques\/([^/]+)\/status$/)) && m === 'POST') {
       S.chequeSteps.push({ id: x[1], body });
@@ -112,7 +113,7 @@ async function route(S, r) {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
       if (S.slowRecord) await new Promise((res) => setTimeout(res, S.slowRecord));
       const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
-      if (S.locked[per]) return J(r, 409, books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'));
+      if (S.locked[per]) return J(r, 409, Object.assign(books.refusal('That month is locked. Open it again (with a reason) to record this.', 'PERIOD_LOCKED'), { type: 'about:blank', title: 'Conflict', status: 409, detail: 'That month is locked. Open it again (with a reason) to record this.', hint: 'Open the month again, then record this.', request_id: 'req-bw-0001' }));   /* RFC 9457 problem details, as the API's one error shape */
       /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
       if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { ok: true, payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true }, posted: { ok: true, duplicate: true, entry_id: 'e-' + was, entry_no: 'PY/2026-27/000001', posting_date: '2026-09-29' } }); }
       const id = 'pay' + (Object.keys(S.payments).length + 1); S.payments[id] = body;
@@ -168,7 +169,12 @@ async function route(S, r) {
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/accounts' && m === 'POST') { const a = { code: '6011', name: body.name, parent_code: body.parent_code, is_group: false }; S.accounts.push(a); S.addedAccount = body; return J(r, 200, { account: a }); }
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: x[1], currency: 'INR', opening_minor: 0, lines: [], closing_minor: 0 });
-    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, books.periods([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => books.periodRow(FYNOW, n, S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open'))));
+    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, books.periods([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => {
+      const row = books.periodRow(FYNOW, n, S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open');
+      /* M157: the server says which month may open again (a soft-locked one, with a reason); the Reason box is drawn only while one may — a closed-for-good month never */
+      if (row.status === 'soft_locked') row.reopen = { may: true, why: null };
+      return row;
+    })));
     if ((x = p.match(/^\/api\/books\/periods\/([^/]+)\/(\d+)\/(lock|unlock)$/))) {
       if (x[3] === 'unlock' && !String(body.reason || '').trim()) return J(r, 422, { error: 'A reason is needed' });
       S.locked[+x[2]] = x[3] === 'lock'; S.hard = S.hard || {}; S.hard[+x[2]] = x[3] === 'lock' && !!body.hard; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
@@ -214,6 +220,11 @@ async function route(S, r) {
     if (dup && !body.confirm_duplicate) return J(r, 409, { code: 'DUPLICATE_PARTY', error: 'Another party already has this tax id.' });
     return J(r, 200, { ok: true });
   }
+  /* the two system folders the Bills view reads (GET /api/folders → _foldersFrom → UI.sysFolders; each folder's chits): without them Bills says "No bills folders" and has no Received tab */
+  if (p === '/api/folders' && m === 'GET') return J(r, 200, { folders: [
+    { folder_id: 'f-b2100', parent_id: null, name: 'Bills · Received', code: 'B-2100', kind: 'view', system: true, scope: null, side: 'received', count: 0, total: 0 },
+    { folder_id: 'f-b1300', parent_id: null, name: 'Bills · Issued', code: 'B-1300', kind: 'view', system: true, scope: null, side: 'issued', count: 0, total: 0 }] });
+  if (/^\/api\/folders\/[^/]+\/chits$/.test(p) && m === 'GET') return J(r, 200, { chits: [] });
   if (m === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
 }
@@ -315,14 +326,14 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(await p.locator('[data-testid="cols-menu-customers"] input[type=checkbox]').count() === 7 && await p.locator('[data-testid="cols-customers-name"]').isDisabled() && await p.locator('[data-testid="cols-customers-name"]').isChecked(), 'the chooser lists ALL seven columns; the top-priority one (Name) is ticked and cannot be unticked');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-columns-open.png') });
   await p.click('[data-testid="cols-customers-gstin"]');
-  ok(await p.locator('#tbl_customers .lhead .lhcell').count() === 4 && /GSTIN/.test(await p.textContent('#tbl_customers .lhead')), 'ticking GSTIN shows it at once (a 4th column)');
+  ok(await p.locator('#tbl_customers .lhead .lhcell').count() === 4 && /Tax number/.test(await p.textContent('#tbl_customers .lhead')), 'ticking the tax-id column shows it at once (a 4th column; CX0: the pack\'s word, "Tax number" with no country pack loaded)');
   ok(/cblist\.customers/.test(await p.evaluate(() => Object.keys(localStorage).join())) && JSON.parse(await p.evaluate(() => localStorage.getItem('cblist.customers'))).cols.indexOf('gstin') >= 0, 'the choice is remembered for this list (cblist.customers)');
   await p.click('[data-testid="cols-customers-gstin"]');
   for (const k of ['cbid', 'oldest', 'credit', 'gstin']) await p.click('[data-testid="cols-customers-' + k + '"]');
   await p.click('[data-testid="cols-btn-customers"]');
   /* the rest of this section reads every column, so they are all ticked now */
   const crmHeads = await p.$$eval('#tbl_customers .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
-  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'Network ID', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
+  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'Network ID', 'Oldest due', 'Credit terms', 'Tax number']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
   const crmRow = async (id) => (await p.$$eval('[data-testid="cust-row-' + id + '"] .lcell', (els) => els.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
   const r1 = await crmRow('c1'), r2 = await crmRow('c2');
   for (const r of [r1, r2]) r[0] = r[0].replace(/^▸\s*/, '');   /* the unit draws the row's caret in its first cell */
@@ -703,6 +714,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' recorded 01 Oct' && l1 === 'Payment received JV/2026-27/000003', 'ledger: Details says the kind and its bill once ("' + l0 + '" · "' + l1 + '"); tender, counter and who rang it are their own columns in ⚙');
   /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
   {
+    /* the Ledgers head keeps the figures inline on a laptop and folds two or more notices into ONE chip (foldHead); on a phone the figures are in its popover */
+    if (!(await p.locator('[data-testid="lg-sum"]').count())) await p.click('[data-testid^="cbl-notes-ledger-"]').catch(() => {});
     const lg = await p.evaluate(() => { const o = document.getElementById('lg_out'), l = o.querySelector('.cbl-list'), s = o.querySelectorAll('[data-testid="lg-sum"]');
       return { text: o.textContent, tree: document.getElementById('lt_tree').textContent, sums: s.length, sum: s[0] ? s[0].textContent.replace(/\s+/g, ' ').trim() : '', sw: l ? l.scrollWidth : 0, cw: l ? l.clientWidth : 0 }; });
     ok(!/Expense · Expense/.test(lg.text), 'ledger: the kind word is said once (Expense · Expense never appears)');
@@ -957,9 +970,15 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
     ok(pd.sw === 390 && pd.row === 'flex' && pd.head === 'none', 'phone: Dues is one card per party, its next level under it, scrollWidth === ' + pd.sw);
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-phone.png') });
     /* the CRM on a phone: the same three columns, drawn as a card (label : value lines); lines are forced, grid is off */
+    /* p2 is on CB Accounts here, and there navTo('customers') leaves for crm.html (IX0: CB_HOMES — a utility page never opens the workshop); the list this
+       step measures is the workshop's Customers list, so open the workshop for it */
+    await p2.goto(new URL('/app.html#/app', p2.url()).href); await p2.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 });
     await p2.evaluate(() => navTo('customers')); await p2.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 8000 });
+    /* a phone's list bar keeps ONE View button; Grid / Lines live inside its popover (list-ctl viewMenuHTML), so open it to read them, then close it */
+    await p2.click('[data-testid="cbl-view-menu-customers"]'); await p2.waitForSelector('[data-testid="view-grid-customers"]', { timeout: 5000 });
     const pc = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, row: getComputedStyle(document.querySelector('[data-testid="cust-row-c1"]')).display, labelled: document.querySelectorAll('[data-testid="cust-row-c1"] .lcell[data-l]').length, gridOff: document.querySelector('[data-testid="view-grid-customers"]').disabled, linesOn: document.querySelector('[data-testid="view-lines-customers"]').getAttribute('aria-pressed') }));
     ok(pc.sw === 390 && pc.row === 'flex' && pc.labelled === 3, 'phone: the CRM shows its three columns as label : value lines in a card (a container query, not the page width), scrollWidth === ' + pc.sw + ', ' + pc.labelled + ' labelled');
+    await p2.click('[data-testid="cbl-view-menu-customers"]');
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-phone.png') });
     await c2.close();
   }

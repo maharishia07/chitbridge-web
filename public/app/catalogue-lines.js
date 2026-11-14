@@ -1,6 +1,11 @@
 /**
  * catalogue-lines.js — ONE walk from a catalogue payload to a list of display rows.
  *
+ * OWNS      the one walk from a catalogue payload to display rows (cbLineRows), the media embed and gallery (cbMediaGallery), and the category ancestors (cbCatgAncestors)
+ * CALLED BY public/shop.html (cbLineRows, cbMediaGallery, cbCatgAncestors), public/app.html (cbMediaGallery only), public/app/cart.js (cbLineRows), public/app/core.js (cbCatgAncestors); loaded by script tag on shop, app, cart-design, network-design, storefront-design, supplier-design
+ * FLOW      a catalogue payload { items, groups } ──▶ cbLineRows() ──▶ ordered rows [product heading | line] ──▶ each surface styles them in its own CSS
+ * CARD      06-catalogue-pim/items-create-edit-bulk-status
+ *
  * Athi, 2026-08-06: *"fix the supplier view as well — this should not be a separate code, it is another entry point
  * for the same view."*
  *
@@ -26,8 +31,6 @@
  *      would be the silent-drop failure that keeps recurring in this codebase.
  *   4. Order is the server's. It decided lines-in-listed-order and products-newest-first deliberately; re-sorting
  *      here would take that decision away from it and put it back in the hands of whatever order the array arrived.
- 
- * CALLED BY public/app.html, public/app/cart.js, public/app/core.js, public/shop.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -151,7 +154,7 @@
           esc(x.name || '') +
           '</div>';
       var del = o.onRemove
-        ? '<button type="button" data-testid="prod-media-del-' +
+        ? '<button data-cbsid="SCR055-B01" type="button" data-testid="prod-media-del-' +
           esc(x.id) +
           '" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer" onclick="' +
           esc(o.onRemove.replace('{id}', String(x.id))) +

@@ -1,6 +1,10 @@
 /* cap-period.js — MONTH & YEAR END on CB Accounts: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close.
- * FLOW  a tab opens → the period's read (GET /api/books/… · /returns) → paint → an action (close · pay · year close) → the server's answer painted in its slot
- * CARD 16-finance/month-and-year-end
+ * OWNS      the five Month & year end views of CB Accounts: Closing stock (peStockView) · Assets & depreciation (peAssetsView) · Accruals & recurring (peAccrualsView) · GST close & pay
+ *           (peGstView · peReturnWord) · Year close (peYearView), and the small form helpers cap-bank.js reuses (peBad · peVal · peField · peSel · peAmt · peBtn · peOwner)
+ * CALLED BY public/accounts.html (script tag; BK.views closingstock · assets · accruals · gstclose · yearclose, and the PE_RET.word it reads for the return's name) · public/app/cap-bank.js (peBad · peVal · peField · peSel · peAmt · peBtn · peOwner).
+ *           Not loaded by app.html (no ensureCap name)
+ * FLOW      a tab opens → the period's read (GET /api/books/… · /returns) → paint → an action (close · pay · year close) → the server's answer painted in its slot
+ * CARD      14-accounting/periods-month-lock-year-close
  * Contract: docs/design/cb-accounts-ia/REQUIREMENT.md ("Month & year end"); the server's shapes: chitbridge-api routes/books.js (the period-end routes),
  * lib/books-period.js, lib/books-recurring.js and GET /year/:fy/status. Loaded by accounts.html after cap-books.js, which owns the helpers used here
  * (bkMoney · bkToMinor · bkOnce · bkRef · bkWhy · bkPeriodsLoad · bkIsOwner · CBList mounting).

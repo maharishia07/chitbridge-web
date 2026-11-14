@@ -17,6 +17,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const { parseFields } = require('./header-grammar.cjs');
 
 const acorn = loadAcorn();
 
@@ -607,6 +608,7 @@ function readHeader(syntaxTree, comments, relPath, text) {
     callers: CALLERS_WORDS.test(header),
     flow: FLOW_WORDS.test(header),
     card: card ? card[1] : null,
+    template: parseFields(header, relPath),
     loc: body.length ? body[body.length - 1].loc.end.line : 0
   };
 }

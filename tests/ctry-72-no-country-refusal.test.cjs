@@ -55,7 +55,7 @@ const run = (cx, src) => vm.runInContext(src, cx);
 {
   const html = read('bill-print.html');
   const { cx, el } = sandbox();
-  for (const f of ['app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(cx, read(f));
+  for (const f of ['engine/money.js', 'app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(cx, read(f));
   el('kind').value = 'tax'; el('w').value = '80';
   run(cx, inline(html));
   const slip = () => el('slip').innerHTML;
@@ -74,7 +74,7 @@ const run = (cx, src) => vm.runInContext(src, cx);
   ok(!/currency:\s*'INR'/.test(stripComments(inline(html))), 'bill-print.html: the sample money does not start as INR');
   const lone = sandbox(); /* the page opened on its own (no ?preview=1, no message): the print test is gone, the sample needs a shop */
   lone.cx.location.search = '';
-  for (const f of ['app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(lone.cx, read(f));
+  for (const f of ['engine/money.js', 'app/helpers.js', 'engine/locale.js', 'engine/tax.js', 'engine/docnumber.js', 'engine/profilemap.js']) run(lone.cx, read(f));
   lone.el('kind').value = 'tax';
   lone.el('w').value = '80';
   run(lone.cx, inline(html));

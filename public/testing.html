@@ -204,14 +204,8 @@
   #notice .x:hover{ color:var(--ink); }
   main{ padding:12px 18px 80px; max-width:1760px; margin:0 auto; }
   /* ⭐ the reading measure, kept for prose only — see above */
-  .modhead .intro, .note, .lede, .prose{ max-width:var(--prose); }
+   .note, .lede, .prose{ max-width:var(--prose); }
   .mod{ margin:0 0 18px; }
-  .modhead{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:0 0 7px; }
-  .modhead h2{ font-size:var(--fs-3); margin:0; letter-spacing:.02em; }
-  .modhead .k{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:#fff; background:var(--grey-2);
-        border-radius:5px; padding:1px 6px; }
-  .modhead .intro{ flex:1 1 100%; color:var(--grey-2); font-size:var(--fs-1); line-height:1.5; }
-
   .case{ background:var(--card); border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
   .case.pass{ border-left:4px solid var(--ok); }
   .case.fail{ border-left:4px solid var(--bad); }
@@ -555,13 +549,8 @@
   .pivotbar{ gap:7px; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
-  .modhead{ cursor:pointer; user-select:none; border-radius:6px; padding:3px 5px; margin-inline-start:-5px; }
-  .modhead:hover{ background:var(--neutral-tint); }
-  .modhead:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
   .caret{ font-size:var(--fs-2); color:var(--grey-2); width:.9em; display:inline-block; }
   /* ⭐ the counts on the header are what make a FOLDED section still worth looking at */
-  .modn{ margin-inline-start:auto; font-size:var(--fs-1); color:var(--grey-2); white-space:nowrap; }
-  .modn b{ font-variant-numeric:tabular-nums; }
   .mod.shut{ margin-bottom:4px; }
   .grp{ display:inline-block; font-size:var(--fs-1); font-weight:600; color:var(--ink-2);
         background:var(--neutral-tint); border-radius:99px; padding:1px 8px; margin-inline-end:4px;

@@ -198,7 +198,7 @@ function recordRegisterRow(ctx, stats, regOwner, scanned, row) {
 
 /** source 1: api docs/api-register.json → `reg` on each route node ; returns Map(register key → route) for the sources after it */
 function feedRegister(ctx, stats) {
-  const { node, routes, meta } = ctx;
+  const { routes, meta } = ctx;
   const joined = new Map();
   const regOwner = new Map();
   const register = readJson(path.join(ctx.apiRoot, 'docs', 'api-register.json'), (text) => meta.notes.push(text));

@@ -1,5 +1,11 @@
 /**
  * ── list-legacy.js — THE THIN LEGACY NAMES, kept ONLY while their callers move to CBList (public/app/list-ctl.js) ───────
+ * OWNS       listCtl* (search, filter, sort, count for a browser-held card list) and lazyWrap / lazyReveal (50 at a time); SCR041-I01, S01, S02, B01, B02
+ * CALLED BY  2 pages by <script src> (grep -lE 'src="/?app/list-legacy.js' public/*.html): accounts.html, app.html. Callers of listCtl / lazyWrap (grep -lE 'listCtl|lazyWrap' public/app):
+ *            the Categories, Disputes, Intake and Workforce screens' scripts, all lazy-loaded in app.html
+ * FLOW       a screen calls listCtl(key, cfg) → draws its search / filter / sort → listCtlView(key).matched feeds its rows → lazyWrap reveals them in chunks
+ * CARD       29-qa-test-tooling-ux-locale-and-design-system/list-control
+ *
  *
  * 2026-10-02: list-ctl.js became CBList, a self-sustaining unit that reads nothing from its page. What stayed behind is what
  * the two CARD lists (Intake, Disputes) and the non-column lists (catalogue, messages, the activity feeds) still call:
@@ -104,7 +110,7 @@ function listCtlToolbarHTML(key) {
   /* ⚠️ oninput, NOT onkeydown. Enter-only is how "search is broken" happens: the box takes typing and the list
      does not move, with nothing on screen saying why. The watcher checks for exactly this. */
   var search =
-    '<div class="srch" style="flex:1 1 150px;min-width:130px">🔍 <input data-testid="listctl-search-' +
+    '<div class="srch" style="flex:1 1 150px;min-width:130px">🔍 <input data-cbsid="SCR041-I01" data-testid="listctl-search-' +
     esc(key) +
     '"' +
     ' placeholder="' +
@@ -128,7 +134,7 @@ function listCtlToolbarHTML(key) {
           })
           .join('');
       return (
-        '<select class="inp" data-testid="listctl-filter-' +
+        '<select data-cbsid="SCR041-S01" class="inp" data-testid="listctl-filter-' +
         esc(item.key) +
         '" title="' +
         esc(item.label) +
@@ -147,7 +153,7 @@ function listCtlToolbarHTML(key) {
 
   var sorts =
     (c.sorts || []).length > 1
-      ? '<select class="inp" data-testid="listctl-sort-' +
+      ? '<select data-cbsid="SCR041-S02" class="inp" data-testid="listctl-sort-' +
         esc(key) +
         '" title="' +
         esc(tx('Sort order')) +
@@ -282,7 +288,7 @@ function lazyBar(id) {
   const inner =
     left <= 0
       ? '<div class="listend">' + s.total + ' total · end of list</div>'
-      : '<div class="listend"><button class="composebtn" onclick="lazyReveal(\'' +
+      : '<div class="listend"><button data-cbsid="SCR041-B01" class="composebtn" onclick="lazyReveal(\'' +
         id +
         '\')">↓ Show ' +
         Math.min(s.chunk, left) +
@@ -314,7 +320,7 @@ function lazyReveal(id) {
     }
   } else
     sent.innerHTML =
-      '<div class="listend"><button class="composebtn" onclick="lazyReveal(\'' +
+      '<div class="listend"><button data-cbsid="SCR041-B02" class="composebtn" onclick="lazyReveal(\'' +
       id +
       '\')">↓ Show ' +
       Math.min(s.chunk, left) +

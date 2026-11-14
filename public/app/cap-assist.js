@@ -1,4 +1,8 @@
 /**
+ * OWNS      CBAssistReview.mount: the CB Assist review in a small app (draft, accept = publish, reject, the answers list); it decides nothing about who may publish
+ * CALLED BY public/tasks.html (script tag tasks.html:130; CBAssistReview.mount at tasks.html:203 for ?view=assist)
+ * FLOW      mount(el) ──▶ GET /api/assist/whoami and /api/assist/questions ──▶ CBList rows ──▶ Draft (POST /api/governance/ai-draft) ──▶ Publish (POST /api/assist/publish) or Reject (no write)
+ * CARD      25-ai-cb-assist-and-support-desks/cb-assist-knowledge-base
  * cap-assist.js — CB ASSIST REVIEW in a small app (T3-DISPUTES-ASSIST, 14 Oct: CB Tasks & Orders › CB Assist).
  * Naming: "CB Assist" is the assistant (feedback-coassist-terminology); a co-assist is a person or device acting for the shop (Employees).
  *
@@ -18,8 +22,6 @@
  *   ~150 lines a small app needs, on the same three routes. Moving app.html's #/assistreview onto it is the next step (named in the PR).
  *
  *   CBAssistReview.mount(el) → { reload }
- * CALLED BY tasks.html (?view=assist) · accounts-shell.js (the tile's door)
- * // CARD 25-ai-cb-assist-and-support-desks/cb-assist-knowledge-base
  */
 (function (root) {
   'use strict';

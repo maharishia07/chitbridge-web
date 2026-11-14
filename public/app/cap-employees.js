@@ -13,9 +13,14 @@
  * host what happened: window.parent.postMessage({ cb: 'employees', event: 'added' | 'changed' | 'close', person? }, location.origin).
  *
  *   CBEmployees.mount(el, { token, base, embed, view, onEnded }) → { reload }
- 
- * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in
- * CALLED BY public/app/cap-finance.js, public/app/their-bill.js, public/employees.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ *
+ * OWNS       the People list (mountList · cols · actRow), the person sheet (openPerson · accessPanel · emailPanel · coverPanel · resetPin · switchIt) and the Add person
+ *            sheet (openAdd · createPerson · added), plus the on-duty view; no rule of who may do what (the server's may/why answers).
+ * CALLED BY public/employees.html (CBEmployees.mount, a <script> tag) · public/till.html (+ Add a person, through app/embed-host.js: employees.html?embed=1&view=add in a dialog).
+ * FLOW       employees.html → CBEmployees.mount(el, o) → start → load (GET /api/people → may/why) → mountList (CBList) → a row → openPerson(id) → a panel → CBAction write
+ *            → changed → reload; view=add → openAdd → createPerson → added; embed=1 tells the host page by postMessage.
+ * IDS        every control carries its register code (data-cbsid, UX-137): EMP001, the People screen; the row action builder actRow takes its code from each call.
+ * CARD 17-people-employees-hr-and-payroll/pin-otp-first-sign-in   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';

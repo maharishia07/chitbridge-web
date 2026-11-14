@@ -50,17 +50,27 @@ W.run('bill', async (w) => {
     const total = await page.locator('[data-testid="till-total"]').first().innerText().catch(() => '');
     return { ok: c.length === 1 && c[0].name === 'Masala Dosa' && c[0].price === 70, saw: JSON.stringify(c) + ' - total on screen: ' + (total || 'not drawn') };
   });
-  /* M40 (walk 2026-10-10): ONE line on the bill with a count and Fix ›; the name sits behind Fix › (billWarnFix) — the same shape till-bill-checks proves */
-  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the bill says "1 item has no tax rate · Fix ›" -> Fix › names Poori', async () => {
+  /* M40 (walk 2026-10-10): ONE line on the bill with a count and Fix ›; the name sits behind Fix › (billWarnFix) — the same shape till-bill-checks proves.
+     F5 W1a (24 Oct, d0f422de) made Fix › the owner's door: a counter that is NOT the owner or a manager sees the same button GREYED with the reason beside it
+     (show the action, enable it by role), and the owner's Fix › opens the rate sheet "Poori: GST?" (rateAskOpen), not the old Close-only dialog. BF1 walks the
+     cashier (this stand-in has no signed-in person), BF1b the owner. */
+  await w.step('BF1', 'Add Poori (the shelf has no tax rate for it) -> the bill says "1 item has no tax rate" with Fix › greyed and the reason beside it (a cashier cannot set a rate)', async () => {
     await type('Poori'); const c = await cart(); const t = await screenText();
-    const line = (t.match(/⚠ 1 item has no tax rate[^⚠]{0,12}Fix ›/) || [''])[0].trim();
+    const said = /⚠ 1 item has no tax rate/.test(t);
+    const fix = await page.evaluate(() => { const b = document.querySelector('[data-testid="till-warn-norate-fix"]'); return b ? { off: b.disabled, why: b.title || '' } : null; });
+    return { ok: c.length === 2 && said && !!fix && fix.off && /Ask the owner/.test(fix.why), saw: 'bill has ' + c.length + ' lines; says ' + (said ? '"1 item has no tax rate"' : 'nothing about a missing rate') + '; Fix › ' + (fix ? (fix.off ? 'greyed' : 'ENABLED') + ' "' + fix.why.slice(0, 60) + '"' : 'not drawn') };
+  });
+  await w.step('BF1b', 'The owner signs in at this counter -> Fix › is enabled and opens the rate sheet naming Poori', async () => {
+    await page.evaluate(() => { CloudHost.person = { token: 'walk-owner', kind: 'entity', name: 'Walk Owner' }; paintTotals(); });
+    const en = await page.evaluate(() => { const b = document.querySelector('[data-testid="till-warn-norate-fix"]'); return !!b && !b.disabled; });
     let named = '';
-    if (line) {
-      await page.click('[data-testid="till-warn-norate-fix"]'); await page.waitForSelector('#askdlg[open]', { timeout: 6000 }).catch(() => null);
-      named = await page.evaluate(() => (document.getElementById('askbody') || {}).textContent || '');
-      await page.click('#askno').catch(() => null); await page.waitForTimeout(250);   /* Close — the walk never opens the catalogue */
+    if (en) {
+      await page.click('[data-testid="till-warn-norate-fix"]'); await page.waitForSelector('#ratedlg[open]', { timeout: 6000 }).catch(() => null);
+      named = await page.evaluate(() => (document.querySelector('[data-testid="till-rate-title"]') || {}).textContent || '');
+      await page.click('[data-testid="till-rate-no"]').catch(() => null); await page.waitForTimeout(250);   /* Not now — the walk never sets a rate */
     }
-    return { ok: c.length === 2 && !!line && /Poori/.test(named), saw: 'bill has ' + c.length + ' lines; the bill says "' + (line || 'nothing about a missing rate') + '"; Fix › says "' + named.replace(/\s+/g, ' ').trim().slice(0, 90) + '"' };
+    await page.evaluate(() => { CloudHost.person = null; paintTotals(); });
+    return { ok: en && /Poori/.test(named), saw: 'Fix › ' + (en ? 'enabled' : 'still greyed') + '; the sheet says "' + named.replace(/\s+/g, ' ').trim().slice(0, 60) + '"' };
   });
   await w.step('BF3', 'Add Chilli Paneer -> the choice sheet opens -> pick Hot, Add -> the bill line carries "Hot" and its price', async () => {
     await page.fill('#q', 'Chilli Paneer'); await page.waitForTimeout(250); await page.press('#q', 'Enter');

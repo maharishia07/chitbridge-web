@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures).
-     CALLED BY Home's Finance card (manifest /finance.html) and CB Accounts.
+     CALLED BY Home's Finance card (app/manifest.json entry finance, route /finance.html) · app/shell.js (the trend link to /finance.html#/reports/trend/week) · app/cap-crm-record.js (the link to /finance.html#/terms).
      FLOW  load → whoPaint (CBFrame) → the section's read → paint
      CARD 16-finance/cb-finance -->
 <head>
