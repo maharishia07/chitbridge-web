@@ -269,6 +269,13 @@ const make = (over) => {
   assert.ok(/Dues/.test(dues.why));
   ok('app adapter body: kind not type, only the closed keys, the tax inside the bank figure as input_tax_minor, a payment between parties is refused before any party is made');
 
+  /* FIN-118: the shared-record line never carries the server's raw sentence (it named a route); and the lines painter is the one both pages use */
+  const store = fs.readFileSync(pub('app/cap-bank-store.js'), 'utf8');
+  assert.ok(!/Saved on this device for now\.'\) \+/.test(store), 'the error line adds nothing from the server');
+  assert.ok(/Could not reach the shared record\. Saved on this device for now\./.test(store));
+  assert.ok(/CBBankPreviewUI\.mount/.test(fs.readFileSync(pub('app/bank-demo.js'), 'utf8')) && /CBBankPreviewUI\.mount/.test(fs.readFileSync(pub('app/cap-bank-sheet.js'), 'utf8')), 'one painter for the demo and the app');
+  ok('FIN-118: the shared-record line says it in our words, never the server\'s route; FIN-117: the demo and the app paint lines through the one painter');
+
   /* the demo page is public and inert */
   const html = read('bank-demo.html');
   const csp = /http-equiv="Content-Security-Policy" content="([^"]+)"/.exec(html);
