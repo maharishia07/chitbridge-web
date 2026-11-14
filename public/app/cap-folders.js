@@ -5,7 +5,8 @@
  * OWNS      the Folders screen and its Chits · Metrics · Rules tabs, the Move-to-folder sheet, the group-sum pane.
  * FLOW      foldersScreen → loadFolders → pick a folder → loadFolderChits → _folderView → (Metrics: loadFolderMetrics · Rules: loadFolderRules)
  * CARD      01-rail-core-the-chit/user-folders-and-auto-file-rules
- * CALLED BY public/accounts.html, public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY public/accounts.html, public/crm.html, public/finance.html (a <script> tag each) · public/app.html (ensureCap('folders'))
+ * IDS       every control carries its register code (data-cbsid, UX-137): SCR004, Folders, on whichever page draws it.
  */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -74,7 +75,7 @@ async function loadFolders() {
  */
 function _folderNode(node) {
   return (
-    '<div' +
+    '<div data-cbsid="SCR004-C01"' +
     (node.cls ? ' class="' + node.cls + '"' : '') +
     (node.tid ? ' data-testid="' + node.tid + '"' : '') +
     ' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:' +
@@ -145,14 +146,14 @@ function foldersScreen() {
     loadFolders();
     return loader('Loading folders…');
   }
-  var tree = _folderTree(null, 0) || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">No folders yet — create one below.</div>';
+  var tree = _folderTree(null, 0) || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">No folders yet</div>';
   var right = UI.folderSel ? _folderView() : emptyState('📁', 'Pick a folder', 'Or create one, then file chits into it with 📁 Move.');
   return _folderPanes(
     '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">' +
       tx('FOLDERS') +
       '</div>' +
       tree +
-      '<div style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div>',
+      '<div data-cbsid="SCR004-C02" style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div>',
     right
   );
 }
@@ -194,7 +195,7 @@ function _folderView() {
   var arch = !!UI.folderArch;
   var tab = function (on, label, onclick) {
     return (
-      '<span onclick="' +
+      '<span data-cbsid="SCR004-C03" onclick="' +
       onclick +
       '" style="cursor:pointer;font-size:var(--fs-2);font-weight:700;padding:5px 13px;border-radius:16px;' +
       (on ? 'background:var(--blue);color:var(--on-accent)' : 'border:1px solid var(--line);color:var(--grey-2)') +
@@ -207,11 +208,11 @@ function _folderView() {
     '<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-4);font-weight:800">📁 ' +
     esc(f.name) +
     '</div>' +
-    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>' +
+    '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">Sender → this folder</div>' +
     '<div style="display:flex;gap:6px;margin-top:11px;align-items:center">' +
     tab(!arch, 'Current', 'setFolderArch(false)') +
     tab(arch, 'Archive', 'setFolderArch(true)') +
-    '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\'' +
+    '<span data-cbsid="SCR004-C04" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\'' +
     UI.folderSel +
     '\')">' +
     tx('Rename') +
@@ -260,7 +261,7 @@ function _folderView() {
         var when = typeof fmtAt === 'function' ? esc(fmtAt(item.created_at)) : '';
         var openA = typeof openChit === 'function' ? "openChit('" + item.chit_id + "')" : '';
         return (
-          '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="' +
+          '<div data-cbsid="SCR004-C05" style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="' +
           openA +
           '"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">' +
           (isDev ? '🛢️ ' : '') +
@@ -269,7 +270,7 @@ function _folderView() {
           line2 +
           '</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">' +
           when +
-          '</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\'' +
+          '</span><span data-cbsid="SCR004-C06" style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\'' +
           item.chit_id +
           '\')">' +
           tx('📁 Move') +
@@ -286,7 +287,7 @@ function _folderView() {
 function _ftab(k, label) {
   var on = (_FLD.tab || 'chits') === k;
   return (
-    '<span data-testid="folder-tab-' +
+    '<span data-cbsid="SCR004-C07" data-testid="folder-tab-' +
     k +
     '" onclick="setFolderTab(\'' +
     k +
@@ -357,7 +358,7 @@ async function moveChit(chitId) {
   var opts = (UI.folders || [])
     .map(function (item) {
       return (
-        '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\'' +
+        '<div data-cbsid="SCR004-C08" style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\'' +
         chitId +
         "','" +
         item.folder_id +
@@ -369,8 +370,8 @@ async function moveChit(chitId) {
     .join('');
   var body =
     '<div style="max-height:320px;overflow:auto">' +
-    (opts || '<div style="padding:12px;color:var(--grey);font-size:var(--fs-2)">No folders yet — create one first.</div>') +
-    '<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\'' +
+    (opts || '<div style="padding:12px;color:var(--grey);font-size:var(--fs-2)">Create a folder first</div>') +
+    '<div data-cbsid="SCR004-C09" style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\'' +
     chitId +
     '\',null)">' +
     tx('↩ Remove from folder (back to mailbox)') +
@@ -664,7 +665,7 @@ function gsToggle(i) {
  * `js` is the click handler body, so the caller keeps its own action and its own stopPropagation decision.
  */
 function mvBtn(glyph, ok, title, js) {
-  return '<button type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"' + ' onclick="' + js + '">' + glyph + '</button>';
+  return '<button data-cbsid="SCR004-B01" type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"' + ' onclick="' + js + '">' + glyph + '</button>';
 }
 /* the Group sum's drill-down block: an indented block on the card colour under its row */
 function _gsNext(inner) {
@@ -685,7 +686,7 @@ function _groupSumPane() {
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
   if (_FLD.err) return '<div style="padding:18px;color:var(--disp);font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
   var g = _FLD.gs;
-  if (!g) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">Nothing to add up.</div>';
+  if (!g) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">Nothing to add up</div>';
   var out = '<div style="padding:14px 18px">';
 
   /* ⚠️ A SELECTION MUST SAY SO, AND SAY IF IT LOST ANY. The scope toggle below is hidden here because neither
@@ -720,7 +721,7 @@ function _groupSumPane() {
   } else if (UI.folderSel) {
     var b = function (on, lbl, arg) {
       return (
-        '<span onclick="gsScope(' +
+        '<span data-cbsid="SCR004-C10" onclick="gsScope(' +
         arg +
         ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:var(--fs-1);margin-inline-end:6px;' +
         (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') +
@@ -769,7 +770,7 @@ function _groupSumPane() {
     (g.chits_without_lines ? ' · <span style="color:var(--warn-2)">' + g.chits_without_lines + ' have none and contribute nothing</span>' : '') +
     (g.has_catalogue
       ? ''
-      : '<div style="color:var(--warn-2);margin-top:3px">⚠️ No catalogue on this entity — items are grouped by the words used, so two spellings of the same thing stay apart.</div>') +
+      : '<div style="color:var(--warn-2);margin-top:3px">⚠️ Spellings count separately</div>') +
     '</div>';
 
   var req = g.requirement || [];
@@ -789,7 +790,7 @@ function _groupSumPane() {
         var open = !!(_FLD.gsOpen || {})[index];
         var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
         var head =
-          '<div onclick="gsToggle(' +
+          '<div data-cbsid="SCR004-C11" onclick="gsToggle(' +
           index +
           ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">' +
           '<span style="flex:1;min-width:0">' +
@@ -970,7 +971,7 @@ function _groupSumPane() {
             );
           })
           .join('')
-      : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>') +
+      : '<span style="font-size:var(--fs-2);color:var(--grey)">no agreed value</span>') +
     ((mo.excluded || {}).awaiting_agreement
       ? '<div style="font-size:var(--fs-1);color:var(--grey)">' +
         mo.excluded.awaiting_agreement +
@@ -1056,11 +1057,11 @@ function _reconStrip() {
           );
         })
         .join('')
-    : '<div style="font-size:var(--fs-1);color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
+    : '<div style="font-size:var(--fs-1);color:var(--grey);padding:5px 0">No folders, all unfiled</div>';
 
   return (
     '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card);color:var(--on-card)">' +
-    '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>' +
+    '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Do totals match</div>' +
     '<div style="font-size:var(--fs-2);margin-top:3px">' +
     sums +
     ' &nbsp; ' +
@@ -1076,7 +1077,7 @@ function _reconStrip() {
     '</div>' +
     (r.reconciles
       ? ''
-      : '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>') +
+      : '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:7px">⚠️ Totals differ<br>Folder hidden from you</div>') +
     '</div>'
   );
 }
@@ -1084,7 +1085,7 @@ function _reconStrip() {
 function _folderMetricsPane() {
   if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> measuring…</div>';
   var m = _FLD.metrics;
-  if (!m) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">No metrics yet.</div>';
+  if (!m) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">No metrics yet</div>';
   var c = m.clock || {},
     d = m.disputes || {},
     mo = m.money || {};
@@ -1108,7 +1109,7 @@ function _folderMetricsPane() {
           );
         })
         .join('')
-    : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>';
+    : '<span style="font-size:var(--fs-2);color:var(--grey)">no agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
   var moneyNote =
     (mo.mixed
@@ -1261,7 +1262,7 @@ async function ruleToggle(id, on) {
 function ruleDelete(id) {
   confirmAsk(
     'Delete this rule?',
-    'Chits already filed <b>stay where they are</b> — a rule only decides what happens next.',
+    'Chits already filed <b>stay put</b> — a rule only decides what happens next.',
     'Delete',
     function () {
       _ruleDelete(id);
@@ -1315,7 +1316,7 @@ function _ruleRow(r, i, n) {
         mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one', "ruleMove('" + esc(r.rule_id) + "',1)") +
         '</span>'
       : '') +
-    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' +
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input data-cbsid="SCR004-I01" type="checkbox" data-testid="rule-enabled" ' +
     (r.enabled ? 'checked' : '') +
     ' onchange="ruleToggle(\'' +
     esc(r.rule_id) +
@@ -1381,16 +1382,16 @@ function _folderRulesPane() {
           return _ruleRow(item, index, rules.length);
         })
         .join('')
-    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
+    : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules, all unfiled</div>';
 
   /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
      button here would mean inventing a target folder on the user's behalf. Say where it lives instead. */
   if (_trk) {
     out +=
-      '<div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0 2px">To add one, open the folder it should file into — a rule is defined by its destination, so there is nothing to write down from here.</div>';
+      '<div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0 2px">Add rules inside folders</div>';
   } else if (!d) {
-    out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
+    out += '<button data-cbsid="SCR004-B02" class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
     var opts = Object.keys(_RULE_HELP)
       .map(function (item) {
@@ -1402,17 +1403,17 @@ function _folderRulesPane() {
       '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">' +
       tx('New rule') +
       '</div>' +
-      '<input class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' +
+      '<input data-cbsid="SCR004-I02" class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' +
       esc(d.name || '') +
       '" oninput="ruleDraftSet(\'name\',this.value)" style="margin-bottom:8px">' +
       '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">' +
       '<span style="font-size:var(--fs-2)">' +
       tx('When') +
       '</span>' +
-      '<select class="inp" data-testid="rule-term" style="max-width:150px" onchange="ruleDraftSet(\'term\',this.value);_fldPaint()">' +
+      '<select data-cbsid="SCR004-S01" class="inp" data-testid="rule-term" style="max-width:150px" onchange="ruleDraftSet(\'term\',this.value);_fldPaint()">' +
       opts +
       '</select>' +
-      '<input class="inp" data-testid="rule-value" style="flex:1;min-width:130px" placeholder="' +
+      '<input data-cbsid="SCR004-I03" class="inp" data-testid="rule-value" style="flex:1;min-width:130px" placeholder="' +
       esc(_RULE_HELP[d.term] || '') +
       '" value="' +
       esc(d.val || '') +
@@ -1424,10 +1425,10 @@ function _folderRulesPane() {
       /* ⚠️ ONE TERM PER RULE, ON PURPOSE. Mixed AND/OR is what makes Outlook rules unpredictable past a handful:
          nobody can hold the precedence in their head, so the rule that fires is not the rule that was meant.
          Two conditions = two rules, in order — which is legible. */
-      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>' +
+      '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule<br>First match wins</div>' +
       '<div style="display:flex;gap:8px;margin-top:10px">' +
-      '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--on-card)">🔎 What would this catch?</button>' +
-      '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">' +
+      '<button data-cbsid="SCR004-B03" data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--on-card)">🔎 Preview matches</button>' +
+      '<button data-cbsid="SCR004-B04" class="composebtn" data-testid="rule-save" onclick="ruleSave()">' +
       tx('Save rule') +
       '</button>' +
       '<button data-cbsid="CMP003" onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);cursor:pointer;color:var(--grey)">' +
@@ -1462,7 +1463,7 @@ function _folderRulesPane() {
               ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>'
               : '') +
             '</div>'
-          : '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>') +
+          : '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ Nothing matched<br>Check the term</div>') +
         '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' +
         txf('This is a preview only. Saving affects {new}; nothing already filed moves.', { new: '<b>' + tx('new arrivals') + '</b>' }) +
         '</div></div>';

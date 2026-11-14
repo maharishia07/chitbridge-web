@@ -1288,16 +1288,41 @@ function cbIdemKey(endpoint, outboxSafe, CB, requestId, attempt, stepKey) {
 /* ⭐ FIN-63 · ONE KEY PER ATTEMPT for a money write (EP row idem:'attempt'), the same rule as shop.html attemptKey (API-3 S36).
    The SAME key goes with every send of the same body (a second tap, a retry after a lost answer or the 90 s deadline), so the
    server records the payment once and answers the retry with the FIRST answer (middleware/idempotency.js). A settled answer
-   (any 2xx, or any refusal except 409 IDEMPOTENCY_IN_PROGRESS) ends the attempt, so the next press is a new payment.
-   A network failure or a timeout keeps the key: that is exactly the case where the payment may already be recorded. */
+   (status under 500, except 409 IDEMPOTENCY_IN_PROGRESS) ends the attempt, so the next press is a new payment.
+   A network failure, a timeout or a 5xx keeps the key: a gateway or deadline 5xx can follow a committed payment, and the
+   server never stores a 5xx, so the same key on the retry cannot replay an error (it re-runs, or replays the real answer). */
 const _attempts = {};
 /** attemptOf(key, params, body) → the attempt id: one door, one target, one body */
 function attemptOf(key, params, body) {
   return key + ':' + JSON.stringify(params || {}) + ':' + JSON.stringify(body == null ? null : body);
 }
+/**
+ * ⭐ OPS-89 · postDeliverLines(epKey, chitId, rows) — the ONE deliver-lines write: every row carries client_ref = <ref>:<position>, the key
+ * lib/deliverline.js replays a row by (it replays only when a ref is named, so a double tap or a retry used to record twice).
+ * The ref is the FIN-63 attempt for this chit + these rows (attemptOf, minted by cbIdemKey, held in _attempts): the SAME ref goes with every
+ * send of the same action, a network failure keeps it, an answer (a 2xx or a refusal other than 409) ends it, so the next press is a new delivery.
+ * A different chit, line or quantity is a different action. Callers: cap-chit2.js (deliver, take material), cap-tasks.js (tkDeliver).
+ * ⚠️ RESIDUAL GAP: _attempts lives in memory only, so a page reload between a lost answer and the retry mints a new ref and can still record
+ * twice; attemptOf does not persist (the same limit as the payment attempts). Persisting is a separate change to _attempts for every door.
+ */
+async function postDeliverLines(epKey, chitId, rows) {
+  const attempt = attemptOf('deliver-lines', { id: chitId }, rows);
+  const ref = cbIdemKey({ idem: 'attempt', m: 'POST' }, false, typeof window !== 'undefined' ? window.CBOffline : null, Math.random().toString(36).slice(2), attempt);
+  const stamped = rows.map((row, position) => Object.assign({}, row, { client_ref: ref + ':' + position }));
+  try {
+    const reply = await api(epKey, { params: { id: chitId }, body: { rows: stamped } });
+    delete _attempts[attempt];
+    return reply;
+  } catch (failure) {
+    /* 409 (in progress) and 5xx (a gateway timeout can follow a committed write) keep the ref; only a 4xx refusal ends the action */
+    if (failure && failure.status && failure.status !== 409 && failure.status < 500) delete _attempts[attempt];
+    throw failure;
+  }
+}
 /** settleAttempt(endpoint, attempt, res) → res, unchanged; ends an idem:'attempt' attempt on a settled answer, keeps it while the first send runs */
 async function settleAttempt(endpoint, attempt, res) {
   if (endpoint.idem !== 'attempt' || !res) return res;
+  if (res.status >= 500) return res;
   if (res.status === 409) {
     let code = '';
     try {
@@ -1309,6 +1334,20 @@ async function settleAttempt(endpoint, attempt, res) {
   }
   delete _attempts[attempt];
   return res;
+}
+/** serverErrorWords(endpoint) → the words for a 5xx: a write kept on one key (idem:'attempt') may have landed, so it says check first */
+function serverErrorWords(endpoint) {
+  if (endpoint.idem === 'attempt') return 'Something went wrong on our side. This may already be saved: check before you try again.';
+  return 'Server error — please try again.';
+}
+/** isKeptKeyWords(text) → true for the words above: a screen-level words filter (accounts-shell actWords) lets them through unchanged */
+function isKeptKeyWords(text) {
+  return /may already be saved/i.test(String(text || ''));
+}
+/** deadlineWords(endpoint) → the words for the 90 s abort: the same meaning as a 5xx when the key is kept */
+function deadlineWords(endpoint) {
+  if (endpoint.idem === 'attempt') return 'No answer in 90 s. This may already be saved: check before you try again.';
+  return 'No answer from the server in 90 s — try again.';
 }
 /* errWords(v) → plain words from whatever an answer carries in a message slot: a string as is; an object (RFC 9457 problem, or {code,message}) by its detail, message, title, error; else ''.
    Never String(object): that is how a screen came to say "[object Object]" (SIT crawl 11 Nov, Work > Intake). */
@@ -1410,7 +1449,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
       /* a DEADLINE is not "offline": never queue it, say what happened */
       if (netErr && netErr.name === 'AbortError') {
         cblog('error', ep.m + ' ' + key + ' → no answer in 90 s [' + _rid + ']');
-        throw new Error('No answer from the server in 90 s — try again.');
+        throw new Error(deadlineWords(ep));
       }
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
       if (outboxSafe && CB) {
@@ -1487,7 +1526,7 @@ async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
         throw _fail(msg || 'Please check the form and try again.');
       } // validation
       if (res.status >= 500) {
-        throw _fail(msg || 'Server error — please try again.');
+        throw _fail(msg || serverErrorWords(ep));
       } // generic
       throw _fail(msg || 'API ' + res.status + ' ' + ep.m + ' ' + ep.p);
     }

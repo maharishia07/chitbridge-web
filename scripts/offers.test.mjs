@@ -125,7 +125,30 @@ console.log('\n2 · ⚠️ the refusals — never apply what was not earned');
   r = ladder([{ qty: 3, percent: 10 }, { qty: 5, percent: 15 }]);
   ok('R44 a {qty, percent} ladder takes 15% off 5 x 40 (Rs30)', Math.abs(r.total - 170) < 0.01, r.total);
   r = ladder([{ qty: 3, pct: 10 }, { qty: 5, pct: 15 }]);
-  ok('R44 a legacy {qty, pct} ladder discounts nothing here (the engine reads percent only) - the lab never saves it now', r.total === 200, r.total);
+  /* engines 1.72+ reads the legacy 'pct' as an alias of 'percent' (tierPercentOf; 'percent' wins): 5 x 40 = 200.00, 15% off = 170.00. This line said 200 and was stale for
+     weeks because the script was in no CI step (found 2026-10-29, web #425); it is enrolled now. */
+  ok('R44 a legacy {qty, pct} ladder is read as percent (alias): 5 x 40 less 15% = 170.00', Math.abs(r.total - 170) < 0.01, r.total);
+
+  /* M4a (engines v1.89.0, CAT-252/253/233): the SAME product on two lines counts together; different products never do. Hand figures, INR. */
+  const two = (a, b) => [{ key: 'p', item_id: a, qty: 3, unitPrice: 100 }, { key: 'q', item_id: b, qty: 2, unitPrice: 100 }];
+  const min5 = [{ id: 'm5', kind: 'percent_off', percent: 10, applies_to: { min_qty: 5 }, label: '10% from 5' }];
+  r = CBOffers.evaluate({ lines: two('a', 'a'), offers: min5, money });
+  ok('M4a min_qty 5: a:3 + a:2 of ONE item meets it: 500.00 less 10% = 450.00', Math.abs(r.total - 450) < 0.01, r.total);
+  r = CBOffers.evaluate({ lines: two('a', 'b'), offers: min5, money });
+  ok('M4a min_qty 5: a:3 + b:2 are DIFFERENT items, 3 and 2 do not make 5: total stays 500.00', Math.abs(r.total - 500) < 0.01, r.total);
+  const bundle = [{ id: 'b1', kind: 'bundle_price', bundle_items: ['A', 'B'], bundle_price: 150, label: 'A+B' }];
+  r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'A', qty: 1, unitPrice: 100 }, { key: '1', item_id: 'B', qty: 1, unitPrice: 80 }], offers: bundle, money });
+  ok('M4a a declared bundle A 100.00 + B 80.00 for 150.00 prices as the bundle: 150.00', Math.abs(r.total - 150) < 0.01, r.total);
+  /* M4a critic round - tier, buy-x (either line order) and the opt-out, on the till's copy. Hand figures, INR. */
+  const tier = [{ id: 't1', kind: 'tier_price', tiers: [{ qty: 10, price: 80 }], label: '10+ at 80' }];
+  r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'a', qty: 5, unitPrice: 100 }, { key: '1', item_id: 'a', qty: 5, unitPrice: 100 }], offers: tier, money });
+  ok('M4a tier 10 at 80.00: a:5 + a:5 of ONE item = 10 x 80.00 = 800.00', Math.abs(r.total - 800) < 0.01, r.total);
+  const bogo = [{ id: 'g1', kind: 'buy_x_get_y', buy: 2, get: 1, label: 'buy 2 get 1' }];
+  const dear = { key: '0', item_id: 'a', qty: 1, unitPrice: 100 }, cheap = { key: '1', item_id: 'a', qty: 2, unitPrice: 80 };
+  const bogoBoth = [[dear, cheap], [cheap, dear]].map((lines) => CBOffers.evaluate({ lines, offers: bogo, money }).total);
+  ok('M4a buy 2 get 1: a:1 at 100.00 + a:2 at 80.00, the cheapest unit is free: 260.00 - 80.00 = 180.00 in BOTH line orders', bogoBoth.every((t) => Math.abs(t - 180) < 0.01), bogoBoth);
+  r = CBOffers.evaluate({ lines: [{ key: '0', item_id: 'a', qty: 3, unitPrice: 100 }, { key: '1', item_id: 'a', qty: 2, unitPrice: 100, excluded: ['m5'] }], offers: min5, money });
+  ok('M4a min_qty 5: a line opted out of the offer is not counted (3 only): total stays 500.00', Math.abs(r.total - 500) < 0.01, r.total);
 
   r = run([{ id: 'x8', kind: 'price_range', min: 200, max: 250,
              applies_to: { skus: ['OIL-5'] }, label: 'oil band' }]);

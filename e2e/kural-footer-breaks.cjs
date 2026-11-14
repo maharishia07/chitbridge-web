@@ -6,23 +6,27 @@
  * once (fast — nothing is run). Exit 0 only when every break was caught. */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
+const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const K = 'public/app/kural.js', DATA = 'public/app/kurals.json', ACC = 'public/accounts.html', CRM = 'public/crm.html', IDX = 'index.html', MSG = 'public/app/cap-messages.js', CRMJS = 'public/app/cap-crm.js';
 const H = 'e2e/kural-footer.cjs';
 const BREAKS = [
   /* the decision's own rules */
   ['a Tamil prose line is shown beside the English', K, `esc(m.text) + '</span>'`, `esc(m.text) + ' · இதன் பொருள் தமிழில்</span>'`, H],
-  ['the band is drawn inside the page head', K, `(HOST || doc.body).appendChild(EL);`, `(HOST || doc.querySelector('.top,.bar,.wrap') || doc.body).appendChild(EL);`, H],
+  /* two layers keep it out (createBand's host, and paint()'s own move-out-of-head repair), so the break replaces the repair with a move INTO the head */
+  ['the band is drawn inside the page head', K, `    if (EL.closest(HEAD_SEL)) (HOST && !HOST.closest(HEAD_SEL) ? HOST : doc.body).appendChild(EL);`, `    var _hd = doc.querySelector(HEAD_SEL); if (_hd) _hd.appendChild(EL);`, H],
   ['the band stays beside a warning (amber / red chips are not looked for)', K, `var BLOCK_SEL = '.cbl-chip.warn,.cbl-chip.bad,[role="alert"],`, `var BLOCK_SEL = '[role="alert"],`, H],
   ['the band stays in a dialog', K, `.pe-bad,.pe-warn,dialog[open],.modalback,#modal.on'`, `.pe-bad,.pe-warn,.modalback,#modal.on'`, H],
-  ['✕ closes nothing for the day', K, `lsSet('kural.hidden', today()); paint();`, `paint();`, H],
-  ['a hidden kural is back after a reload (the day is not kept)', K, `function hiddenToday() { return lsGet('kural.hidden') === today(); }`, `function hiddenToday() { return false; }`, H],
+  ['✕ closes nothing for the day', K, `      lsSet('kural.hidden', today());\n      paint();`, `      paint();`, H],
+  ['a hidden kural is back after a reload (the day is not kept)', K, `    return lsGet('kural.hidden') === today();`, `    return false;`, H],
   ['a kural is written into an outgoing message', MSG, `/* app/cap-messages.js — REPLIES:`, `/* kural: every message ends with a verse. app/cap-messages.js — REPLIES:`, H],
   /* by space */
   ['wide: the meaning drops below even when there is room', K, `display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 22px;min-width:0;cursor:default}`, `display:flex;flex-direction:column;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 22px;min-width:0;cursor:default}`, H],
   ['a narrow laptop keeps them side by side', K, `@container cbk (max-width:1100px){`, `@container cbk (max-width:10px){`, H],
   ['the phone never takes turns', K, `}, 7000);`, `}, 70000000);`, H],
-  ['Less motion still moves it by itself', K, `if (phone && !still() && !PAUSED)`, `if (phone && !PAUSED)`, H],
-  ['a tap does not switch', K, `function swap() { if (!EL ||`, `function swap() { return; if (!EL ||`, H],
+  ['Less motion still moves it by itself', K, `if (!(phone && !still() && !PAUSED)) {`, `if (!(phone && !PAUSED)) {`, H],
+  ['a tap does not switch', K, `  function swap() {\n    if (!EL ||`, `  function swap() {\n    return;\n    if (!EL ||`, H],
   ['the band takes no room off the window (the page overflows)', K, `doc.documentElement.style.setProperty('--cbk-h', h + 'px');`, `void h;`, H],
   /* the look */
   ['an italic meaning', K, `'.cbk .cbk-m{font-size:calc(15px * var(--k,1));`, `'.cbk .cbk-m{font-style:italic;font-size:calc(15px * var(--k,1));`, H],
@@ -33,9 +37,9 @@ const BREAKS = [
   ['the excluded list loses 552', DATA, `"no": 552,`, `"no": 553,`, H],
   ['Accounts does not mount the footer', ACC, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->`, ``, H],
   ['CRM does not mount the footer', CRM, `<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->`, ``, H],
-  ['the index page does not mount the footer', IDX, `if (window.CBKural) CBKural.mount({ route: 'planning' });`, ``, H],
+  ['the index page does not mount the footer', IDX, `<script src="/app/kural.js"></script>       <!-- CBKural: the kural band; the shell gives it its place -->`, ``, H],
   ['every Accounts view shows the same kural', ACC, `if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');`, `if (window.CBKural) CBKural.set('accounts');`, H],
-  ['the CRM follow-ups page shares the parties kural', CRMJS, `seg[0] === 'followups' ? 'crm-party' : 'crm-parties'`, `seg[0] === 'followups' ? 'crm-parties' : 'crm-parties'`, H],
+  ['the CRM follow-ups page shares the parties kural', CRMJS, `segments[0] === 'followups' ? 'crm-party' : 'crm-parties'`, `segments[0] === 'followups' ? 'crm-parties' : 'crm-parties'`, H],
 ];
 const ONLY = process.env.BREAK_ONLY || '';
 if (process.env.BREAK_CHECK) {
@@ -47,20 +51,19 @@ let good = 0, ran = 0, unanchored = 0;
 for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
-  const f = path.join(W, rel), bak = f + '.bak';
+  const f = path.join(SITE.dir, rel);
   const s = fs.readFileSync(f, 'utf8');
   if (/\r\n/.test(s)) { a = a.replace(/\r?\n/g, '\r\n'); b = b.replace(/\r?\n/g, '\r\n'); }
   const n = s.split(a).length - 1;
   if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n + ' — this break measured NOTHING'); unanchored++; continue; }
-  fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));
-    const r = cp.spawnSync(process.execPath, [harness], { cwd: W, encoding: 'utf8', timeout: 400000, env: Object.assign({}, process.env, { KURAL_SHOTS: process.env.KURAL_SHOTS || require('os').tmpdir() }) });
+    const r = cp.spawnSync(process.execPath, [harness], { cwd: SITE.dir, encoding: 'utf8', timeout: 400000, env: Object.assign({}, process.env, { KURAL_SHOTS: process.env.KURAL_SHOTS || require('os').tmpdir() }) });
     const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
     const caught = r.status !== 0 && xx.length > 0;
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + xx[0].trim().slice(0, 150) : 'NOT caught (exit ' + r.status + ')'));
-  } finally { fs.copyFileSync(bak, f); fs.unlinkSync(bak); }
+  } finally { fs.writeFileSync(f, s); }   /* back to the original inside the copy for the next break */
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught' + (unanchored ? ', ' + unanchored + ' unanchored' : ''));
 process.exitCode = good === ran && !unanchored ? 0 : 1;

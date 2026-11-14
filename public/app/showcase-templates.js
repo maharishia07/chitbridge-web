@@ -16,8 +16,11 @@
  * Reuse: the cart engine and its FACES stay in app/cart.js — FACE below is only the words a face wears (DECISIONS: enquiry ·
  * order · quote · booking); money is painted through the host's formatter (CBLocale.money), never computed here.
  * Pure string functions, no DOM access — the shop page and the owner preview both call render().
- 
- * CALLED BY public/app.html, public/app/cap-admin.js, public/app/cap-definitions.js, public/app/cap-mis-trend.js, public/shop.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ *
+ * OWNS      CBShowcase: TEMPLATES · DEFAULT · contractOf (the one data contract) · assemble (section mix) · render (the page's HTML)
+ * CALLED BY shop.html (contractOf + render on the shop page and the owner preview) · app/cap-showcase.js (TEMPLATES, DEFAULT) · app/cap-admin.js (DEFAULT) · loaded by shop.html, crm.html and app.html (<script src>)
+ * FLOW      shop.html reads the public catalogue → contractOf(data) → render(contract, opts) → the template's sections → the page paints; cap-showcase draws one button per TEMPLATES entry
+ * CARD      11-crm-and-marketing/showcase
  */
 (function (root) {
   'use strict';
@@ -38,7 +41,7 @@
         (c.shop.logo ? '<img src="' + esc(c.shop.logo) + '" alt="" width="36" height="36">' : esc(c.shop.name.charAt(0).toUpperCase())) +
         '</span><h1 class="sc-name">' +
         esc(c.shop.name) +
-        '</h1><button type="button" class="sc-ic" data-sc="share" aria-label="Share" title="Share">⤴ Share</button></header>'
+        '</h1><button data-cbsid="SCR062-B01" type="button" class="sc-ic" data-sc="share" aria-label="Share" title="Share">⤴ Share</button></header>'
       );
     },
     facts: function (c) {
@@ -57,12 +60,12 @@
     },
     find: function (c) {
       return (
-        '<div class="sc-find"><input type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' +
+        '<div class="sc-find"><input data-cbsid="SCR062-I01" type="search" class="sc-q" data-sc="search" aria-label="Search" placeholder="🔍">' +
         (c.categories.length
           ? '<div class="sc-chips">' +
             c.categories
               .map(function (item) {
-                return '<button type="button" class="sc-chip" data-sc-cat="' + esc(item.id) + '">' + esc(item.name) + '</button>';
+                return '<button data-cbsid="SCR062-B02" type="button" class="sc-chip" data-sc-cat="' + esc(item.id) + '">' + esc(item.name) + '</button>';
               })
               .join('') +
             '</div>'
@@ -140,8 +143,8 @@
       return c.owner
         ? '<aside class="sc-found" data-sc="found"><code>' +
             esc(c.shop.url || '') +
-            '</code><button type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>' +
-            '<div class="sc-guide">Google › your Business Profile › Website — paste this link</div><div class="sc-guide">Facebook page › About › Website — paste this link</div></aside>'
+            '</code><button data-cbsid="SCR062-B03" type="button" class="sc-ic" data-sc="copy" aria-label="Copy" title="Copy">⧉</button>' +
+            '<div class="sc-guide">Google Profile: paste link</div><div class="sc-guide">Facebook About: paste link</div></aside>'
         : '';
     }
   };
@@ -173,7 +176,7 @@
     '.sc-found{margin:16px 0;padding:12px;border:1px dashed var(--line,#dfe3e8);border-radius:12px;font-size:13px}.sc-empty{padding:24px 0;color:var(--grey,#5f6b7a)}';
 
   function emptyLine(c) {
-    return c.items.length ? '' : '<div class="sc-empty">Nothing on display yet.</div>';
+    return c.items.length ? '' : '<div class="sc-empty">Nothing on display</div>';
   }
   function byCategory(c) {
     var names = {},
@@ -200,7 +203,7 @@
   }
   function act(i, t) {
     var f = FACE[t.face];
-    return '<button type="button" class="sc-add" data-sc-add="' + esc(i.id) + '" aria-label="' + esc(f.title) + '">' + f.item + '</button>';
+    return '<button data-cbsid="SCR062-B04" type="button" class="sc-add" data-sc-add="' + esc(i.id) + '" aria-label="' + esc(f.title) + '">' + f.item + '</button>';
   }
   function photo(i, cls) {
     return i.photo

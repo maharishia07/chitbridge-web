@@ -81,7 +81,7 @@ W.run('shop-confirm-sheets', async (w) => {
   await page.fill('[data-testid="shop-otp"]', '123456');
 
   await w.step('K3', 'the order sheet is a dialog with a name, and its x button has a name', async () => {
-    const m = await page.evaluate(() => { const d = document.querySelector('[role="dialog"]'); const x = d && d.querySelector('[data-cbsid="SHP001-B15"]');
+    const m = await page.evaluate(() => { const d = document.querySelector('[role="dialog"]'); const x = d && d.querySelector('[data-cbmount="SHP001-U02"]');
       return { role: !!d, modal: d && d.getAttribute('aria-modal'), name: d && d.getAttribute('aria-label'), x: x && x.getAttribute('aria-label') }; });
     return { ok: m.role && m.modal === 'true' && /Sim Confirm Store/.test(m.name || '') && m.x === 'Close', saw: JSON.stringify(m) };
   });

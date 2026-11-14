@@ -14,6 +14,7 @@
  *
  * OWNS      the Disputes list (Tasks › Disputes), the sheet's dispute section (raise · talk · resolve), the on-record banner.
  * CALLED BY tasks.html (CBDispute.mount · CBDispute.open for ?view=disputes&chit=), chit-sheet.js (the section), app.html (the workshop's screen).
+ * FLOW      CBDispute.mount(el) → listLoad reads the disputeQueue a page at a time → the list draws on CBList and the pager; a row opens the chit sheet (open) → inSheet reads and paints the chit's disputes (sheetRead · sheetPaint) → raise asks for a reason of 10 letters or more and sends it through CBAction.run → resolveAsk takes the resolution note and the list is read again.
  * CARD 03-disputes-service-and-register/disputes-per-party-confidential
  */
 
@@ -232,7 +233,7 @@ function disputeBanner(chit) {
     '</div>';
   var dropdown =
     '<select data-cbsid="TSK006-S01" aria-label="' + esc(tx('Dispute')) + '" onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">' +
-    '<option value="">— select a dispute to open —</option>' +
+    '<option value="">— pick one —</option>' +
     dispOptGroup(open, 'OPEN') +
     dispOptGroup(closed, 'CLOSED') +
     '</select>';
@@ -302,7 +303,7 @@ async function aiDisputeSummary(chitId, disputeId) {
   modal(
     '<div class="mhd"><div class="t">' +
       tx('✨ Summarize dispute') +
-      '</div></div><div class="mbody" style="padding:16px"><div id="adbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Summarizing — neutral &amp; factual…</div></div>',
+      '</div></div><div class="mbody" style="padding:16px"><div id="adbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Summarizing…</div></div>',
     true
   );
   try {
@@ -317,7 +318,7 @@ async function aiDisputeSummary(chitId, disputeId) {
       '<style>' +
       (typeof _AI_MDCSS !== 'undefined' ? _AI_MDCSS : '') +
       '</style>' +
-      '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. ' +
+      '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary</b> — it does not decide the dispute. ' +
       (payload.usage ? '<span style="color:var(--grey)">· $' + payload.usage.est_cost_usd + '</span>' : '') +
       '</div>' +
       '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto;color:var(--on-card)">' +
@@ -625,7 +626,7 @@ function paintDisputes() {
   };
   mine.sort(byOrder);
   other.sort(byOrder);
-  var none = '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>';
+  var none = '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None</div>';
   host.innerHTML =
     menuAssist('disputes') +
     '<div style="margin:2px 0 4px;font-size:var(--fs-1);color:var(--grey)" id="disp_count">' +
@@ -706,7 +707,7 @@ async function quickDispute(idArg, opt) {
     MODALS.disp.parties = parties;
     if (parties.length) {
       partyRows =
-        '<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>' +
+        '<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Which parties <span style="color:#9aa3ad">(none = all involved)</span></div>' +
         parties
           .map(function (item) {
             return (
@@ -727,7 +728,7 @@ async function quickDispute(idArg, opt) {
   modal(
     '<div class="mhd"><div class="t">' +
       tx('⚑ Raise dispute') +
-      '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
+      '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Category, reason (10+ characters)<br>Parties get notified</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +
       tx('Quality') +
       '</option><option value="quantity">' +
       tx('Quantity') +
@@ -802,7 +803,7 @@ function resolveDispute(chitId, disputeId, partyId, partyNameEnc) {
   var withParty = partyName
     ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">Resolving with <b>' +
       esc(partyName) +
-      '</b>. Any other parties stay open until you resolve them too.</div>'
+      '</b>; others stay open</div>'
     : '';
   modal(
     '<div class="mhd"><div class="t">Resolve dispute' +
@@ -927,6 +928,7 @@ async function submitResolve(chitId, disputeId, partyId) {
   }
   function failWords(e, what) {
     if (e && e.status === 403) return T('This sign-in cannot open disputes');
+    if (e && e.status === 404) return T("Couldn't find") + ' ' + T(what);
     return T("Couldn't read") + ' ' + T(what) + '. ' + T('Check the connection and try again.');
   }
 

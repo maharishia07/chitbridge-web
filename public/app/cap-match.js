@@ -13,11 +13,10 @@
  * Backend: GET /api/till/match (routes/till.js — deliberately outside the till key scope: a counter records what it sees and must
  * never read what the shop pays its suppliers).
  
- * FLOW      matchScreen → matchLoad (GET /api/till/match) → matchCard → matchDetail (matchReceivedFig · matchGapNote) → matchDispute
- * CARD      12-suppliers-and-procurement/purchase-order-and-goods-receipt
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
- * FLOW      GET /api/till/match ──▶ matchLoad ──▶ matchDetail (lines · Difference cell) ──▶ matchDispute (draft) ──▶ POST /api/chits/:chit_id/disputes
- * CARD 03-disputes-service-and-register/three-way-match
+ * OWNS      the Match screen of the workshop: the three-way match of order · receipt · invoice across parties (matchScreen · matchLoad · matchCard · matchDetail) and raising a dispute from a difference (matchDispute · matchDisputeSend)
+ * CALLED BY public/app.html only (CAP_OF match → ensureCap('match'), and capScreen('matchScreen') for UI.nav 'match'): no other page loads it, so it is app.html-only (SUPPORT)
+ * FLOW      matchScreen → matchLoad (GET /api/till/match) → matchCard → matchDetail (matchReceivedFig · matchGapNote) → matchDispute (draft) → matchDisputeSend → POST /api/chits/:chit_id/disputes
+ * CARD      03-disputes-service-and-register/three-way-match
  */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -180,7 +179,37 @@ function matchDiffWords(item) {
   else if (item.difference > 0) parts.push(txf('excess {n}', { n: String(item.difference) }));
   var other = matchOtherUnits(item);
   if (other) parts.push(other);
+  if (item.billed_more) parts.push(tx('Billed more than received'));
   return parts.join(' · ');
+}
+
+/**
+ * OPS-100/351 (api #1243): the quantity the supplier BILLED, painted beside Received. Unknown stays unknown: a null billed with a unit says "billed in <unit>" (their bill is in
+ * another unit, no conversion guessed); a missing field (api not landed) or no figure at all says nothing, never 0.
+ */
+function matchBilledWords(item) {
+  if (item.billed != null) return txf('billed {n}', { n: String(item.billed) }) + (item.billed_unit ? ' ' + item.billed_unit : '');
+  return item.billed_unit ? txf('billed in {unit}', { unit: item.billed_unit }) : '';
+}
+
+/** the Received cell of one line: the count, then the billed words small and grey beneath it when there are any */
+function matchReceivedCell(item) {
+  var billed = matchBilledWords(item);
+  return (
+    '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' +
+    item.received +
+    (billed ? '<div style="color:var(--grey);font-size:var(--fs-1)" data-testid="match-billed">' + esc(billed) + '</div>' : '') +
+    '</td>'
+  );
+}
+
+/** the small count of their billed lines that match nothing we ordered, under the money note; '' when none (or the api has not said) */
+function matchBilledUnmatched(order) {
+  return order.billed_unmatched > 0
+    ? '<div style="color:var(--warn);font-size:var(--fs-1);margin-bottom:12px" data-testid="match-billed-unmatched">' +
+        esc(txf('Billed lines not on your order: {n}', { n: String(order.billed_unmatched) })) +
+        '</div>'
+    : '';
 }
 
 /** the Difference cell of one line: the words, warn-coloured when there are any, else "agrees" in ok-colour; the door's reason after */
@@ -211,9 +240,7 @@ function matchDetail(o) {
         ' ' +
         esc(item.unit) +
         '</td>' +
-        '<td style="padding:6px 8px;text-align:right;font-variant-numeric:tabular-nums">' +
-        item.received +
-        '</td>' +
+        matchReceivedCell(item) +
         matchDiffCell(item) +
         '</tr>'
       );
@@ -232,6 +259,7 @@ function matchDetail(o) {
     matchFig(tx('Invoiced'), fmtMoney(o.invoiced_total, myCur(), '—'), o.invoiced_from ? esc(o.invoiced_from) : tx('no bill of theirs yet')) +
     '</div>' +
     matchGapNote(o) +
+    matchBilledUnmatched(o) +
     '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">' +
     '<thead><tr style="color:var(--grey);text-align:left">' +
     '<th style="padding:4px 8px">' +
@@ -362,6 +390,7 @@ function matchDispute(chit_id) {
         item.unit +
         ', received ' +
         item.received +
+        (matchBilledWords(item) ? ', ' + matchBilledWords(item) : '') +
         ' (' +
         matchDiffWords(item) +
         ')' +

@@ -13,6 +13,12 @@
  * ⚠️ NOT REVIEWED BY A NATIVE COMMERCIAL SPEAKER. Careful trade French, but the nouns want a second pair of eyes
  * before this reaches a customer. The structure is what is proven.
  */
+/*
+ * OWNS      the French label pack (CBSTR.fr), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('fr') injects this file -> tx() reads CBSTR.fr
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var fr = CBSTR.fr || (CBSTR.fr = {});
@@ -773,6 +779,16 @@
     'CMP039.label': 'En-tête de colonne de liste',
     'List column header': 'En-tête de colonne de liste',
     'CMP040.label': 'Champ des livres',
+    'CMP055.label': 'Champ',
+    'Field': 'Champ',
+    'CMP055.required': 'Obligatoire',
+    'Required': 'Obligatoire',
+    'CMP055.badnumber': 'Ce n\'est pas un nombre. Tapez des chiffres seulement, comme 1234.5',
+    'That is not a number. Type digits only, like 1234.5': 'Ce n\'est pas un nombre. Tapez des chiffres seulement, comme 1234.5',
+    'CMP055.wrongmark': 'Utilisez « {mark} » avant les décimales, comme 1{mark}5',
+    'Use a {mark} before the decimals, like 1{mark}5': 'Utilisez « {mark} » avant les décimales, comme 1{mark}5',
+    'CMP055.badgroup': 'Vérifiez les virgules de ce nombre',
+    'Check the commas in that number': 'Vérifiez les virgules de ce nombre',
     'Books field': 'Champ des livres',
     'CMP041.label': 'Sélecteur des livres',
     'Books select': 'Sélecteur des livres',

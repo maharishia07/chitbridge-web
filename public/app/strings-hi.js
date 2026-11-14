@@ -14,6 +14,12 @@
  *
  * ⚠️ NOT REVIEWED BY A NATIVE COMMERCIAL SPEAKER. Athi reads Hindi — this wants his eye more than most.
  */
+/*
+ * OWNS      the Hindi label pack (CBSTR.hi), labels only
+ * CALLED BY public/engine/locale.js:717 (CBLocale.pack injects app/strings-<lang>.js on demand); <script src> at public/ui-standard.html:173-176
+ * FLOW      language chosen -> CBLocale.pack('hi') injects this file -> tx() reads CBSTR.hi
+ * CARD      29-qa-test-tooling-ux-locale-and-design-system/strings-and-translations
+ */
 (function () {
   if (typeof CBSTR === 'undefined') return;
   var hi = CBSTR.hi || (CBSTR.hi = {});
@@ -774,6 +780,16 @@
     'CMP039.label': 'सूची स्तंभ शीर्षक',
     'List column header': 'सूची स्तंभ शीर्षक',
     'CMP040.label': 'बही क्षेत्र',
+    'CMP055.label': 'क्षेत्र',
+    'Field': 'क्षेत्र',
+    'CMP055.required': 'आवश्यक',
+    'Required': 'आवश्यक',
+    'CMP055.badnumber': 'यह संख्या नहीं है। केवल अंक लिखें, जैसे 1234.5',
+    'That is not a number. Type digits only, like 1234.5': 'यह संख्या नहीं है। केवल अंक लिखें, जैसे 1234.5',
+    'CMP055.wrongmark': 'दशमलव से पहले {mark} लगाएँ, जैसे 1{mark}5',
+    'Use a {mark} before the decimals, like 1{mark}5': 'दशमलव से पहले {mark} लगाएँ, जैसे 1{mark}5',
+    'CMP055.badgroup': 'इस संख्या के कॉमा जाँचें',
+    'Check the commas in that number': 'इस संख्या के कॉमा जाँचें',
     'Books field': 'बही क्षेत्र',
     'CMP041.label': 'बही चयन',
     'Books select': 'बही चयन',

@@ -1,5 +1,5 @@
 /* app/cap-mis.js — CB FINANCE › REPORTS: the rail measured, by the server, as one list (T3-P4-ACCOUNT, 2026-10-14).
- * CARD 16-finance/reports
+ * CARD 26-reporting-mis-and-bi/mis
  *
  * Owner, 14 Oct: "follow the same design standards or better … much simpler". The workshop's MIS (cap-admin.js misScreen · _loadMIS) draws seven
  * bands over TWO answers: the server's one measurement (GET /api/folders/mis → lib/measure, the engine the folder pane, the scorecard and Home's rail
@@ -12,9 +12,10 @@
  * Dropped from the workshop MIS, and why: Position · Flow · Friction · Trust · Plan · Tax bands (browser sums, a second answer), the sparkline,
  *   "✨ Explain" (AI narration over a client sum), the two-pane rail. A statutory tax figure is CB Accounts' GST close, not a report tile.
  * Host globals (finance.html, as cap-finance-cash.js): api · EP (CB_MIS_EP misMetrics) · esc · tx · txn · CBList · CBLocale · ftNav · FIN.
- * Owns: the Reports tab's state (FM) and the two MIS rules both surfaces share — misWindow (period → since) and misReadAt (the read stamp).
+ * OWNS      the Reports tab's state (FM) and the two MIS rules both surfaces share — misWindow (period → since) and misReadAt (the read stamp)
  * RPT2: #/reports/trend hands fmMount/fmLoad to app/cap-mis-trend.js (trMount/trLoad); fmViews links the two views.
- * Called by: finance.html (fmMount) · app/cap-admin.js (misWindow · misReadAt — the workshop's MIS, loaded with this file: app.html CAP_WITH admin).
+ * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (fmLoad · fmMount) · public/app/cap-mis-trend.js (fmLoad · fmViews · fmMount) · public/app/cap-admin.js (misWindow · misReadAt, at 1112 and 1323;
+ *           app.html only loads this file through ensureCap, CAP_WITH admin: shop · settings · mis)
  * FLOW  Reports tab → fmMount() → fmLoad() → GET /api/folders/mis?since=misWindow(period) → fmPaintTop() (misReadAt) + CBList rows (fmRows) → a figure → ftNav(list)
  * Flow step: R2R · reports (docs/process/flows.json).
  */

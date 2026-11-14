@@ -17,9 +17,10 @@
  *
  * ⚠️ RETIRE, NEVER DELETE. The API has no delete for a definition and should not: a chit that cited a category
  * stays explainable. Retiring takes it off the shelf; products that cite it keep the citation and say so.
- * CARD 06-catalogue-pim/categories-and-fields
- 
+ * OWNS the Categories panel (the tree list, create/edit sheet, sort, retire) and the two start-from-a-standard-set popups (pick a trade, untick and add your own)
  * CALLED BY public/app.html, public/app/cap-catalogue.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * FLOW ensureCap('categories') -> cbcatLoad reads the definitions of kind category (all=1) -> CBList paints the tree -> a sheet writes through CBAction; the seed popups read CB_STARTER_CATEGORIES and create the ticked nodes
+ * CARD 06-catalogue-pim/categories-and-fields
  */
 var CBCAT_UI = { list: null, sel: null, busy: false, err: '', q: '', mode: 'view', form: null, counts: null };
 
@@ -338,7 +339,7 @@ function cbcatRetire(id) {
           '</b> currently cite it. ' +
           'They keep the citation and will say the category is no longer live — nothing is unlinked and nothing ' +
           'is deleted.</div>'
-        : '<div style="margin-top:7px">Nothing cites it, so nothing changes elsewhere.</div>'),
+        : '<div style="margin-top:7px">Nothing else changes</div>'),
     'Retire',
     function () {
       _cbcatRetire(id);
@@ -411,24 +412,24 @@ function cbcatSeedAsk() {
       );
     })
     .join('');
-  modal(
-    '<div class="mhd"><div class="t">' +
-      tx('Start from a standard set') +
-      '</div>' +
-      '<div class="s">real categories from the Google Product Taxonomy</div></div>' +
-      '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
+  ui.dialog({
+    mount: 'CTG002-U21',
+    pop: 'POP027',
+    subClass: 's', /* app.html styles .modal .mhd .s, not .sub */
+    titleText: tx('Start from a standard set'),
+    subText: 'real categories from the Google Product Taxonomy',
+    body:
+      '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">' +
       'Pick the trade you are in and its usual categories are added, nested as the standard nests them. ' +
-      '<b>Nothing you already have is changed</b> — names that already exist are skipped.' +
+      '<b>Existing ones unchanged</b> — same names skipped.' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a ' +
       'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they ' +
       'land.</div></div>' +
       '<div class="bulklist">' +
       opts +
-      '</div></div>' +
-      '<div class="mfoot"><button data-cbsid="CTG002-B02" onclick="closeModal()">' +
-      tx('Cancel') +
-      '</button></div>'
-  );
+      '</div>',
+    footerHtml: '<button data-cbsid="CTG002-B02" onclick="closeModal()">' + tx('Cancel') + '</button>'
+  });
 }
 /**
  * ── ⭐⭐ SEE WHAT IS IN A SET, AND TAKE THE PART YOU WANT ──────────────────────────────────────────────────────
@@ -524,14 +525,14 @@ function cbcatSeedPick(v) {
     })
     .join('');
 
-  modal(
-    '<div class="mhd"><div class="t">' +
-      esc(set.title) +
-      '</div>' +
-      '<div class="s">' +
-      tx('real categories from the Google Product Taxonomy') +
-      '</div></div>' +
-      '<div class="mbody">' +
+  ui.dialog({
+    mount: 'CTG002-U22',
+    pop: 'POP028',
+    subClass: 's',
+    titleText: set.title,
+    subText: tx('real categories from the Google Product Taxonomy'),
+    wide: true,
+    body:
       '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:8px">' +
       tx('Untick anything you do not want. A child needs its parent, so those two travel together.') +
       '</div>' +
@@ -568,14 +569,13 @@ function cbcatSeedPick(v) {
       '">' +
       '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' +
       tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.') +
-      '</div></div>' +
-      '</div>' +
-      '<div class="mfoot"><button data-cbsid="CTG002-B05" onclick="closeModal()">' +
+      '</div></div>',
+    footerHtml:
+      '<button data-cbsid="CTG002-B05" onclick="closeModal()">' +
       tx('Cancel') +
       '</button>' +
-      '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>',
-    true
-  );
+      '<button data-cbsid="CTG002-B06" class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button>'
+  });
   cbcatSeedCount();
 }
 
@@ -1057,7 +1057,7 @@ function cbcatDetailHTML() {
             ' more in this category, not loaded on this screen — open ' +
             '<span data-cbsid="CTG002-C02" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
             tx('Catalogue') +
-            '</span> to search them.</div>'
+            '</span> to search them</div>'
           : '') +
         '</div>'
       : n > 0
@@ -1071,10 +1071,10 @@ function cbcatDetailHTML() {
           ' filed here. None of them are loaded on this screen — open ' +
           '<span data-cbsid="CTG002-C03" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
-          '</span> to see them.</div>'
-        : '<div class="cbcat-none">Nothing here yet. Attach products from <span data-cbsid="CTG002-C04" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
+          '</span> to see them</div>'
+        : '<div class="cbcat-none">None yet, attach from <span data-cbsid="CTG002-C04" onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' +
           tx('Catalogue') +
-          '</span> — tick them and press <b>' +
+          '</span> — tick, then press <b>' +
           tx('Categorise') +
           '</b>.</div>') +
     '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' +
@@ -1370,41 +1370,76 @@ function cbcatOfferTicksHTML(cid) {
     '</div>'
   );
 }
-async function cbcatOfferToggle(cid, offerId, btn) {
-  var on = btn && btn.className.indexOf('on') >= 0;
+/**
+ * ⭐ ATTACHING AN OFFER TO A WHOLE CATEGORY IS A MONEY PROMISE (UX-109, Athi's "money promise = deliberate confirm"):
+ * the first press asks, in the shared confirmAsk popup, and says the reach — the category and how many products it holds
+ * (the server's tally, CBCAT_UI.counts; no number is claimed when the tally is not loaded or is only a page). Nothing is
+ * written until yes; Cancel leaves the offer exactly as it was. Taking an offer OFF a category narrows the reach, so it
+ * does not ask.
+ */
+function cbcatOfferToggle(categoryId, offerId, btn) {
+  var removing = btn && btn.className.indexOf('on') >= 0;
+  if (removing) return _cbcatOfferSave(categoryId, offerId, btn, removing);
+  var category = (CBCAT_UI.list || []).filter(function (x) {
+    return x.id === categoryId;
+  })[0];
+  confirmAsk(
+    tx('Apply this offer to') + ' “' + ((category && category.name) || tx('this category')) + '”?',
+    cbcatOfferReach(categoryId) + ' ' + tx('and under it will get this offer at the till and in the shop, from now on.'),
+    tx('Apply to category'),
+    function () {
+      return _cbcatOfferSave(categoryId, offerId, btn, removing);
+    }
+  );
+}
+/** The reach in words: the server's product count for the category, or no number at all when the tally is not loaded or only a page. */
+function cbcatOfferReach(categoryId) {
+  if (!CBCAT_UI.counts || CBCAT_UI.counts.partial) return tx('Every product in this category');
+  var count = cbcatCount(categoryId);
+  return '<b>' + count + ' ' + (count === 1 ? tx('product') : tx('products')) + '</b> ' + tx('in this category');
+}
+/** The offer's current rules, read from its definition; null when it has no kind (the caller says so and changes nothing). */
+async function cbcatOfferRulesOf(offerId) {
+  const reply = await api('defGet', { params: { id: offerId } });
+  const d = (reply && reply.definition) || {};
+  const vers = (reply && reply.versions) || [];
+  const curV =
+    vers.filter(function (item) {
+      return item.version === d.current_version;
+    })[0] ||
+    vers[0] ||
+    {};
+  const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
+  return rules.kind ? rules : null;
+}
+/** The rules with this category added to (or taken off) applies_to.category_ids; the form's single `category` joins the array on first touch, so nothing is lost and one shape remains. */
+function cbcatRulesWithCategory(rules, categoryId, removing) {
+  const at = Object.assign({}, rules.applies_to || {});
+  var ids = cbcatOfferCats(rules).filter(function (x, index, arr) {
+    return arr.indexOf(x) === index;
+  });
+  delete at.category;
+  ids = removing
+    ? ids.filter(function (x) {
+        return x !== String(categoryId);
+      })
+    : ids.concat(ids.indexOf(String(categoryId)) >= 0 ? [] : [String(categoryId)]);
+  if (ids.length) at.category_ids = ids;
+  else delete at.category_ids;
+  if (Object.keys(at).length) rules.applies_to = at;
+  else delete rules.applies_to;
+  return rules;
+}
+async function _cbcatOfferSave(categoryId, offerId, btn, removing) {
   if (btn) btn.disabled = true;
   try {
-    const reply = await api('defGet', { params: { id: offerId } });
-    const d = (reply && reply.definition) || {};
-    const vers = (reply && reply.versions) || [];
-    const curV =
-      vers.filter(function (item) {
-        return item.version === d.current_version;
-      })[0] ||
-      vers[0] ||
-      {};
-    const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
-    if (!rules.kind) {
+    const rules = await cbcatOfferRulesOf(offerId);
+    if (!rules) {
       toast(tx("Could not read that offer's terms, so nothing was changed. Open it in Catalogue setup first."), true);
       return;
     }
-    const at = Object.assign({}, rules.applies_to || {});
-    /* the form's single `category` joins the array on first touch, so nothing is lost and one shape remains */
-    var ids = cbcatOfferCats(rules).filter(function (x, index, arr) {
-      return arr.indexOf(x) === index;
-    });
-    delete at.category;
-    ids = on
-      ? ids.filter(function (x) {
-          return x !== String(cid);
-        })
-      : ids.concat(ids.indexOf(String(cid)) >= 0 ? [] : [String(cid)]);
-    if (ids.length) at.category_ids = ids;
-    else delete at.category_ids;
-    if (Object.keys(at).length) rules.applies_to = at;
-    else delete rules.applies_to;
-    await api('defSave', { params: { id: offerId }, body: { rules: rules } });
-    toast(on ? tx('Offer removed from this category') : tx('Offer applies to this category ✓'));
+    await api('defSave', { params: { id: offerId }, body: { rules: cbcatRulesWithCategory(rules, categoryId, removing) } });
+    toast(removing ? tx('Offer removed from this category') : tx('Offer applies to this category ✓'));
   } catch (e) {
     toast((e && e.message) || tx('Could not change that offer'), true);
   } finally {
@@ -1682,7 +1717,7 @@ function cbcatSchemesHTML() {
 function cbcatParentPickHTML(f) {
   var opts = cbcatParentOptions(f.id);
   if (!opts.length)
-    return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
+    return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Becomes a top-level category</div>';
   return (
     '<select data-cbsid="CTG002-S02" class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">' +
     '<option value="">— top level —</option>' +

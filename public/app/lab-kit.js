@@ -5,8 +5,10 @@
  * CONFIRM  confirm(title, bodyHtml, onOk, opts): the one popup that asks before a money promise is made (the Offer Lab shelf buttons, UX-109).
  * PROMISE  promise(parts) -> {title, ok, danger, html, text}: the ONE sentence (what, on what, for whom, from when) that the confirm body, the draft line
  *          and any pane show; a lab supplies the parts (its name, reach and group label), never its own wording (Offer Lab v2 PR-a0).
- * CALLED BY app/page-frame.js (CBFrame.lab → the switcher) and every lab page; Country Lab (PR 2) and Offer Lab (PR 3) use the rest.
+ * CALLED BY 9 pages by <script src> (grep -lE 'src="/?app/lab-kit.js' public/*.html): the Conversion, Country, Network, Offer and Product labs, List Lab, Shell Lab, Sign-in Lab and the
+ *           UI standard page; CBLabKit is called by the page frame (the switcher), the Definitions screen, country-lab.html and offer-lab-next.html (grep -n 'CBLabKit\.' public)
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/lab-kit
+ * CONTROLS  SCR042-B01 (the confirm popup's Confirm) and SCR042-B02 (and N more); the Cancel beside Confirm is CMP003
  * FLOW  page loads → CBLabKit.LABS feeds the switcher → a lab paints rows through plain · notSetUp · reason · more · progress · groups
  *
  * NOT a second frame (the frame is CBFrame + page-skeleton.css) and NOT a second list (the popup mounts CBList, app/list-ctl.js).
@@ -159,7 +161,7 @@
         body.innerHTML =
           '<div class="lk-confirm-text" data-testid="lk-confirm-text">' + bodyHtml + '</div>' +
           '<div class="lk-confirm-acts"><button data-cbsid="CMP003" type="button" class="lk-btn" data-testid="lk-confirm-cancel">Cancel</button>' +
-          '<button type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
+          '<button data-cbsid="SCR042-B01" type="button" class="lk-btn lk-btn-go' + (opts.danger ? ' lk-btn-danger' : '') + '" data-testid="lk-confirm-ok">' + escapeText(opts.okLabel || 'Confirm') + '</button></div>';
         body.querySelector('[data-testid="lk-confirm-cancel"]').onclick = function () { shown.close(); };
         body.querySelector('[data-testid="lk-confirm-ok"]').onclick = function () { shown.close(); onOk(); };
       },
@@ -259,7 +261,7 @@
       line = opts.line || function (item) { return escapeText(item[opts.columns[0].key]); };
     var html = '<ul class="lk-lines">' + items.slice(0, max).map(function (item) { return '<li>' + line(item) + '</li>'; }).join('') + '</ul>';
     if (items.length > max) {
-      html += '<button type="button" class="lk-more" data-testid="lk-more-' + escapeText(opts.id) + '">and ' + (items.length - max) + ' more</button>';
+      html += '<button data-cbsid="SCR042-B02" type="button" class="lk-more" data-testid="lk-more-' + escapeText(opts.id) + '">and ' + (items.length - max) + ' more</button>';
     }
     host.innerHTML = html;
     var button = host.querySelector('.lk-more');

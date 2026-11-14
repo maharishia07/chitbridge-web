@@ -1,6 +1,6 @@
 /* app/cap-quotes.js — QUOTES: the rounds of a chit that is a quotation (RAIL-117). ONE painter, mounted wherever a chit is shown.
  * OWNS      CBQuotes.mount(host, chitId) · refresh(chitId) · steps(host, ...) · askCross(party, onYes) · crossOf(chit) · CB_QUOTE_EP
- * CALLED BY app.html (the chit pane's Rounds section, the first-send confirm, the compose switch) · app/chit-sheet.js quotesMount (crm.html#/chit, tasks.html — F8) · tasks.html?view=quotes is ORD-68, not built yet
+ * CALLED BY app.html (ensureCap('quotes') then CBQuotes in the chit pane's Rounds section mount and the first-send confirm, CBQuotes.askCross) · app/chit-sheet.js quotesMount (the chit sheet on crm.html and tasks.html — F8) · loaded by crm.html and tasks.html (<script src>) · tasks.html?view=quotes is ORD-68, not built (no such view in app/cap-tasks.js)
  * FLOW      mount(host, chitId) ──▶ load: GET chit + GET proposals ──▶ paint (banner · tracker · rounds · buttons · form) ──▶ accept / reject / send ──▶ writeRound: confirm ──▶ steps ──▶ load again ──▶ paint
  * CARD      01-rail-core-the-chit/chit-proposal
  *
@@ -20,10 +20,10 @@
 
   var CB_QUOTE_EP = {
     quoteList: { m: 'GET', p: '/api/chits/:id/proposals', ok: 'y' }, // { proposals[], migrated } — my copy's rounds, newest last
-    quotePropose: { m: 'POST', p: '/api/chits/:id/proposals', ok: 'y', idem: true }, // the seller prices · anyone else asks
-    quoteAccept: { m: 'POST', p: '/api/chits/:id/proposals/:pid/accept', ok: 'y', idem: true },
-    quoteReject: { m: 'POST', p: '/api/chits/:id/proposals/:pid/reject', ok: 'y', idem: true },
-    quoteCounter: { m: 'POST', p: '/api/chits/:id/proposals/:pid/counter', ok: 'y', idem: true }
+    quotePropose: { m: 'POST', p: '/api/chits/:id/proposals', ok: 'y', idem: 'attempt' }, // the seller prices · anyone else asks
+    quoteAccept: { m: 'POST', p: '/api/chits/:id/proposals/:pid/accept', ok: 'y', idem: 'attempt' },
+    quoteReject: { m: 'POST', p: '/api/chits/:id/proposals/:pid/reject', ok: 'y', idem: 'attempt' },
+    quoteCounter: { m: 'POST', p: '/api/chits/:id/proposals/:pid/counter', ok: 'y', idem: 'attempt' }
   };
   root.CB_QUOTE_EP = CB_QUOTE_EP;
 
@@ -249,7 +249,7 @@
       .catch(function (e) {
         if (root.console) console.warn('quotes: could not read the rounds', e && e.message);
         if (STATE[id] && el.isConnected)
-          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.esc(id) + '\')">' + root.esc(translate('Try again')) + '</button></div>';
+          el.innerHTML = '<div class="sec">' + root.esc(translate('Rounds')) + '</div><div data-tone="error" data-testid="quotes-error">' + root.esc(translate('Could not read the rounds.')) + ' <button type="button" data-testid="quotes-retry" onclick="CBQuotes.mount(this.parentNode.parentNode,\'' + root.esc(id) + '\')" data-cbsid="CMP009">' + root.esc(translate('Try again')) + '</button></div>';
         return null;
       });
   }
@@ -290,9 +290,9 @@
     if (round.awaiting_me) {
       acts =
         '<div class="cq-acts" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">' +
-        (round.kind !== 'request' ? '<button type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Accept')) + '</button>' : '') +
-        '<button type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\')">' + root.esc(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
-        '<button type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Reject')) + '</button></div>';
+        (round.kind !== 'request' ? '<button data-cbsid="SCR060-B01" type="button" class="pri" data-testid="quote-accept-' + round.round + '" data-action-state="idle" onclick="CBQuotes.accept(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Accept')) + '</button>' : '') +
+        '<button data-cbsid="SCR060-B02" type="button" data-testid="quote-counter-' + round.round + '" onclick="CBQuotes.openForm(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\')">' + root.esc(view.chit.seller ? translate('Price it') : translate('Counter')) + '</button>' +
+        '<button data-cbsid="SCR060-B03" type="button" class="warn" data-testid="quote-reject-' + round.round + '" onclick="CBQuotes.reject(\'' + root.esc(view.chit.id) + '\',\'' + root.esc(round.proposal_id) + '\',this)">' + root.esc(translate('Reject')) + '</button></div>';
     }
     return '<div class="itab" data-testid="quote-round-' + round.round + '" data-status="' + root.esc(round.status) + '" style="padding:9px;margin-top:7px">' +
       '<div style="display:flex;justify-content:space-between;gap:8px"><span><b>' + root.esc(fill(translate('Round {n}'), { n: round.round })) + '</b> · ' + root.esc(speaker) + ' · ' + root.esc(label) + '</span>' +
@@ -304,15 +304,15 @@
     var rows = (view.chit.lines || []).filter(function (line) { return !line.removed; }).map(function (line) {
       return '<div class="cq-line" style="display:grid;grid-template-columns:minmax(0,1fr) 84px 110px;gap:6px;align-items:center;margin-top:5px">' +
         '<span>' + root.esc(line.name) + '</span>' +
-        '<input class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + line.index + '" data-line="' + line.index + '" data-f="quantity" value="' + root.esc(line.quantity != null ? line.quantity : '') + '" aria-label="' + root.esc(fill(translate('Quantity of {name}'), { name: line.name })) + '">' +
-        '<input class="inp" type="text" inputmode="text" data-testid="quote-price-' + line.index + '" data-line="' + line.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? root.esc(line.price != null ? line.price : '') : '') + '" placeholder="' + root.esc(seller ? view.chit.currency || '' : translate('price you want')) + '" aria-label="' + root.esc(seller ? fill(translate('Price of {name}'), { name: line.name }) : fill(translate('Price you want for {name}'), { name: line.name })) + '"></div>';
+        '<input data-cbsid="SCR060-I01" class="inp" type="text" inputmode="numeric" data-testid="quote-qty-' + line.index + '" data-line="' + line.index + '" data-f="quantity" value="' + root.esc(line.quantity != null ? line.quantity : '') + '" aria-label="' + root.esc(fill(translate('Quantity of {name}'), { name: line.name })) + '">' +
+        '<input data-cbsid="SCR060-I02" class="inp" type="text" inputmode="text" data-testid="quote-price-' + line.index + '" data-line="' + line.index + '" data-f="' + (seller ? 'price' : 'requested_price') + '" value="' + (seller ? root.esc(line.price != null ? line.price : '') : '') + '" placeholder="' + root.esc(seller ? view.chit.currency || '' : translate('price you want')) + '" aria-label="' + root.esc(seller ? fill(translate('Price of {name}'), { name: line.name }) : fill(translate('Price you want for {name}'), { name: line.name })) + '"></div>';
     }).join('');
     return '<div data-quote-form="1" data-testid="quote-form" class="itab" style="padding:9px;margin-top:8px"><div class="sec" style="margin:0">' + root.esc(seller ? translate('Your price') : translate('Your counter')) + '</div>' +
       '<div style="color:var(--grey);font-size:var(--fs-1)">' + root.esc(seller ? fill(translate('Prices in {cur}. Tax is added when you send.'), { cur: view.chit.currency || '' }) : translate('Say how many and the price you want. {name} sets the price.').replace('{name}', view.chit.other)) + '</div>' +
       rows +
-      '<textarea class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + root.esc(translate('A note (optional)')) + '"></textarea>' +
-      '<div style="margin-top:7px;display:flex;gap:8px"><button type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + root.esc(view.chit.id) + '\',this)">' + root.esc(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
-      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + root.esc(view.chit.id) + '\')">' + root.esc(translate('Cancel')) + '</button></div>' +
+      '<textarea data-cbsid="SCR060-T01" class="inp" data-testid="quote-note" rows="2" style="width:100%;margin-top:7px" placeholder="' + root.esc(translate('A note (optional)')) + '"></textarea>' +
+      '<div style="margin-top:7px;display:flex;gap:8px"><button data-cbsid="SCR060-B04" type="button" class="pri" data-testid="quote-send" data-action-state="idle" onclick="CBQuotes.send(\'' + root.esc(view.chit.id) + '\',this)">' + root.esc(seller ? translate('Send price') : translate('Send counter')) + '</button>' +
+      '<button type="button" data-testid="quote-cancel" onclick="CBQuotes.closeForm(\'' + root.esc(view.chit.id) + '\')" data-cbsid="CMP003">' + root.esc(translate('Cancel')) + '</button></div>' +
       '<div data-testid="quote-out" role="status" style="margin-top:5px"></div>' + '</div>';
   }
   /** the jurisdiction banner (Quotation only … / Pro-forma …), or nothing */
@@ -338,11 +338,11 @@
   function startButtonsHTML(view) {
     var chit = view.chit;
     var openNew = !view.rounds.length && chit.seller
-      ? '<button type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Price this request')) + '</button>'
+      ? '<button data-cbsid="SCR060-B05" type="button" class="pri" data-testid="quote-price-new" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Price this request')) + '</button>'
       : '';
     var live = view.rounds.some(function (round) { return round.status === 'proposed'; });
     var again = view.rounds.length && !live && !chit.seller && view.rounds.some(function (round) { return round.status !== 'accepted'; })
-      ? '<button type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Ask again')) + '</button>' : '';
+      ? '<button data-cbsid="SCR060-B06" type="button" data-testid="quote-ask-again" onclick="CBQuotes.openForm(\'' + root.esc(chit.id) + '\',\'\')">' + root.esc(translate('Ask again')) + '</button>' : '';
     return '<div style="margin-top:7px">' + openNew + again + '</div>';
   }
   function html(view) {
