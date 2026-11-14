@@ -56,10 +56,7 @@ const swap = (text, from, to) => { if (!text.includes(from)) throw new Error('se
 function selfTests(world) {
   const tests = [];
   const red = (why, mutate, pattern) => tests.push({ why, mutate, pattern });
-  const part = Object.keys(world.family).find((file) => file !== 'cap-folders.js') || 'cap-folders-rules.js';
-  /* before the split this builds a split state by moving one real unit out; after it, the live files already are one */
   const split = (made) => {
-    if (Object.keys(world.family).length > 1) return made;
     const base = world.family['cap-folders.js'].replace(/^(?:async )?function ruleDraftCancel[^]*?^\}\n/m, '');
     made.family['cap-folders.js'] = base;
     made.family['cap-folders-rules.js'] = world.family['cap-folders.js'].match(/^function ruleDraftCancel[^]*?^\}\n/m)[0];
@@ -72,8 +69,8 @@ function selfTests(world) {
   red('a name defined in two files', (made) => { made.family['cap-folders-x.js'] = 'function loadFolders() {}\n'; }, /name loadFolders .*exactly one/);
   red('PRECACHE URL dropped', (made) => { made.sw = swap(made.sw, "'/app/cap-folders.js',", ''); }, /PRECACHE must list/);
   tests.push({ why: 'the simulated split is green', mutate: (made) => { Object.assign(made, split(made)); }, pattern: null });
-  red('CAP_WITH.folders dropped on a split', (made) => { split(made); made.app = swap(made.app, /folders: \[[^\]]*\]/.exec(made.app)[0], 'folders: []'); }, /CAP_WITH\.folders must name folders-/);
-  red('a part tag removed on a split page', (made) => { split(made); made.pages['finance.html'] = swap(made.pages['finance.html'], '<script src="/app/' + part + '"></script>', ''); }, /finance\.html must carry the tag for cap-folders-/);
+  red('CAP_WITH.folders dropped on a split', (made) => { split(made); made.app = swap(made.app, "folders: ['folders-rules'],", ''); }, /CAP_WITH\.folders must name folders-rules/);
+  red('a part tag removed on a split page', (made) => { split(made); made.pages['finance.html'] = swap(made.pages['finance.html'], '<script src="/app/cap-folders-rules.js"></script>', ''); }, /finance\.html must carry the tag for cap-folders-rules/);
   red('CB_BUILD not bumped on a split', (made) => { split(made); made.app = made.app.replace(/(const CB_BUILD =\s*')[^']+/, '$1' + snapshot.cbBuild); }, /CB_BUILD is still/);
   red('CB_SW_VERSION not bumped on a split', (made) => { split(made); made.sw = made.sw.replace(/CB_SW_VERSION = '[^']+'/, "CB_SW_VERSION = '" + snapshot.swVersion + "'"); }, /CB_SW_VERSION is still/);
   return tests.map((test) => {

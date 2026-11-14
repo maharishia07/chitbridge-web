@@ -29,8 +29,6 @@ const PRECACHE = [
   '/app/cap-connector.js',
   '/app/cap-workforce.js',
   '/app/cap-folders.js',
-  '/app/cap-folders-rules.js',
-  '/app/cap-folders-groupsum.js',
   '/app/cap-readiness.js',
   '/app/cap-legend.js',
   '/cb-offline.js',
