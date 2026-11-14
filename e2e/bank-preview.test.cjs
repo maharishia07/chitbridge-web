@@ -22,49 +22,58 @@ const P = require(pub('app/bank-preview.js')),
 let ran = 0;
 const ok = (name) => console.log('ok  ' + name) || ran++;
 
-/* ── stand-in engines ── */
+/* ── stand-in engines, shaped as the engines contract says (project(lines, proposals, books); amounts are { amount_minor, currency }) ── */
 const LINES = [
   { date: '2026-10-23', narration: 'Account fee', debit_minor: 2200, credit_minor: 0 },
   { date: '2026-10-28', narration: 'Credit interest', debit_minor: 0, credit_minor: 1250 },
   { date: '2026-11-02', narration: 'ATO payment', debit_minor: 120000, credit_minor: 0 },
-  { date: '2026-11-05', narration: 'Telstra', debit_minor: 11000, credit_minor: 0 }
+  { date: '2026-11-05', narration: 'Telstra', debit_minor: 11000, credit_minor: 0 },
+  { date: '2026-11-06', narration: 'EFT customer', debit_minor: 0, credit_minor: 55000 }
 ];
+const money = (minor) => ({ amount_minor: minor, currency: 'AUD' });
 function engines(seen) {
-  const rows = LINES.map((l, i) => ({ i, key: 'k' + i, suggestion: i === 2 ? { event: null, why: 'no rule matched' } : { event: { type: 'expense', date: l.date, amount: 1 } } }));
   return {
     recon: {
-      parse: (text, o) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], currency: text === 'usd' ? 'USD' : undefined, o }),
-      explain: (lines, ledger, rail, o) => (seen.explain.push(o), { rows, counts: {} })
+      parse: (text) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], opening_minor: 1000000, closing_minor: 1750850 }),
+      match: () => ({ matched: [{ stmt: [4], ledger: ['L1'], how: 'amount+date' }] }),
+      suggest: (line, o) => (seen.suggest.push(o), { event: { type: 'expense', date: line.date, amount: 1 } })
     },
     project: {
-      project: () => {
+      project: (lines, proposals, books) => {
         seen.project++;
-        const needs = seen.explain[seen.explain.length - 1].gst_basis ? null : 'gst_basis';
+        seen.args = { lines, proposals, books };
+        if (books.statement.currency !== books.currency) return { ok: false, code: 'currency_mismatch', why: 'This statement is in ' + books.statement.currency + ' but the bank account is in ' + books.currency + '. Nothing is converted in this version.' };
+        const gst = seen.suggest[seen.suggest.length - 1].gst_basis ? [] : ['gst_basis'];
+        const row = (i, state, ready, blockers, party) => ({ i, state, ready, blockers, ref: 'bank:' + 'a'.repeat(23) + i + '-1', entry: ready || blockers.length ? { lines: [] } : null, party: party || null });
         return {
+          ok: true,
           currency: 'AUD',
           lines: [
-            { state: 'proposed', entry: { lines: [] }, needs: null },
-            { state: 'proposed', entry: { lines: [] }, needs: null, party: { status: 'new', name: 'Origin Energy', kind: 'supplier' } },
-            { state: 'needs_you', entry: null, needs: null },
-            { state: 'proposed', entry: { lines: [] }, needs, party: { status: 'new', name: 'origin energy', kind: 'supplier' } }
+            row(0, 'proposed', true, []),
+            row(1, 'proposed', true, [], { status: 'new', name: 'Origin Energy', kind: 'supplier' }),
+            row(2, 'needs_you', false, ['no_entry'], { status: 'new', name: 'ATO', kind: 'supplier' }),
+            row(3, 'proposed', !gst.length, gst, { status: 'new', name: 'origin energy', kind: 'supplier' }),
+            row(4, 'in_books', false, [])
           ],
           ledger: [],
           brs: null,
-          reach: seen.noReach ? null : { count: 3, in_minor: 1250, out_minor: 13200, from: '2026-10-23', to: '2026-11-05', needs_you: 1 }
+          totals: seen.noTotals ? null : { entries: 3, in: money(1250), out: money(13200), tax: money(0), from: '2026-10-23', to: '2026-11-05' },
+          counts: { lines: 5, in_books: 1, proposed: 3, ready: 3, needs_you: 1 },
+          parties_to_create: [{ key: 'party:1', name: 'ATO', kind: 'supplier', lines: [2], did_you_mean: [{ id: 'p1', name: 'Australian Taxation Office', kind: 'supplier', score: 0.7 }] }]
         };
       }
     }
   };
 }
 const make = (over) => {
-  const seen = { explain: [], project: 0, posted: [] };
+  const seen = { suggest: [], project: 0, posted: [] };
   const ctl = P.create(
     Object.assign(
       {
         engine: engines(seen),
         currency: 'AUD',
         account: 'Demo',
-        ledger: () => ({ lines: [] }),
+        ledger: () => ({ lines: [], opening_minor: 1000000 }),
         post: async (item) => (seen.posted.push(item.ref), { ok: true, entry_no: 'E' + seen.posted.length }),
         lockedMonth: () => null
       },
@@ -75,32 +84,24 @@ const make = (over) => {
 };
 
 (async () => {
-  /* fingerprint */
-  const a = P.fingerprint('Demo', '2026-10-23|out|2200|');
-  assert.ok(/^[0-9a-f]{24}$/.test(a));
-  assert.strictEqual(a, P.fingerprint('Demo', '2026-10-23|out|2200|'));
-  assert.notStrictEqual(a, P.fingerprint('Demo', '2026-10-23|out|2200|#1'));
-  assert.notStrictEqual(a, P.fingerprint('Other', '2026-10-23|out|2200|'));
-  ok('fingerprint: 24 hex, stable, tells two equal lines and two accounts apart');
-
   /* currency */
-  const usd = make();
-  const refused = usd.ctl.load('usd', 'x.csv');
+  const usd = make({ statementCurrency: () => 'USD' });
+  const refused = usd.ctl.load('ok', 'x.csv');
   assert.strictEqual(refused.ok, false);
   assert.ok(/USD/.test(refused.why) && /AUD/.test(refused.why));
-  assert.strictEqual(usd.seen.project, 0);
+  assert.deepStrictEqual(usd.ctl.view().items, []);
   assert.strictEqual(make().ctl.load('bad').ok, false);
-  ok('a statement in another currency is refused before the preview, naming both');
+  ok('a statement in another currency is refused (the engine words, naming both) and no line is shown');
 
   /* never offered: needs-you, gst question; ready count */
   const m = make();
   assert.strictEqual(m.ctl.load('ok', 'f.csv').ok, true);
   const items = m.ctl.view().items;
-  assert.deepStrictEqual(items.map((i) => i.ready), [true, true, false, false]);
+  assert.deepStrictEqual(items.map((i) => i.ready), [true, true, false, false, false]);
   assert.strictEqual(items[3].needs, 'gst_basis');
   ok('a line with no proposal, and a line waiting on the GST basis, are not ready');
   m.ctl.answer('gst_basis', 'cash');
-  assert.strictEqual(m.seen.explain[m.seen.explain.length - 1].gst_basis, 'cash');
+  assert.strictEqual(m.seen.suggest[m.seen.suggest.length - 1].gst_basis, 'cash');
   assert.strictEqual(m.ctl.readyCount(), 3);
   ok('the GST basis is passed to the engine and the proposals are read again');
 
@@ -109,7 +110,7 @@ const make = (over) => {
   const all = text.title + text.lines.join('|');
   ['Add 3 entries', 'AUD 12.50', 'AUD 132.00', '23 Oct 2026 to 5 Nov 2026', 'AUD', '1 new party', '1 still need you'].forEach((w) => assert.ok(all.includes(w), w + ' in ' + all));
   ok('the popup says count, in, out, range, currency, new parties and who still needs you; two lines naming one payee make one party');
-  m.seen.noReach = true;
+  m.seen.noTotals = true;
   m.ctl.answer('x', 1);
   assert.strictEqual(m.ctl.confirmText(), null);
   ok('with no carried figures from the engine the popup is not made up');
@@ -117,19 +118,19 @@ const make = (over) => {
   /* one at a time: a failure shows on its line, the rest go on */
   const f = make({
     post: async (item) => {
-      if (item.key === 'k1') return { ok: false, why: 'The server said no.' };
-      if (item.key === 'k3') throw new Error('Network down');
+      if (item.i === 1) return { ok: false, why: 'The server said no.' };
+      if (item.i === 3) throw new Error('Network down');
       return { ok: true, entry_no: 'E1' };
     }
   });
   f.ctl.load('ok', 'f.csv');
   f.ctl.answer('gst_basis', 'cash');
   const told = [];
-  const sum = await f.ctl.postReady((item, r) => told.push(item.key + ':' + r.ok));
+  const sum = await f.ctl.postReady((item, r) => told.push(item.i + ':' + r.ok));
   assert.deepStrictEqual(sum, { tried: 3, added: 1, failed: 2 });
-  assert.deepStrictEqual(told, ['k0:true', 'k1:false', 'k3:false']);
-  assert.strictEqual(f.ctl.view().results.k1.why, 'The server said no.');
-  assert.strictEqual(f.ctl.view().results.k3.why, 'Network down');
+  assert.deepStrictEqual(told, ['0:true', '1:false', '3:false']);
+  assert.strictEqual(f.ctl.view().results[f.ctl.view().items[1].key].why, 'The server said no.');
+  assert.strictEqual(f.ctl.view().results[f.ctl.view().items[3].key].why, 'Network down');
   assert.ok(f.seen.project >= 3, 'the books are read and projected again after the press');
   ok('posting is one line at a time: a failure (answer or throw) is that line\'s reason and the others continue');
 
@@ -137,7 +138,7 @@ const make = (over) => {
   const c = make({ lockedMonth: (d) => (d.startsWith('2026-10') ? { month: 'Oct 2026', words: 'Oct 2026 is closed.' } : null) });
   c.ctl.load('ok', 'f.csv');
   c.ctl.answer('gst_basis', 'cash');
-  assert.deepStrictEqual(c.ctl.view().items.map((i) => i.state), ['closed', 'closed', 'needs_you', 'proposed']);
+  assert.deepStrictEqual(c.ctl.view().items.map((i) => i.state), ['closed', 'closed', 'needs_you', 'proposed', 'in_books']);
   assert.strictEqual(c.ctl.view().items[0].why, 'Oct 2026 is closed.');
   assert.ok(c.ctl.confirmText().lines.join('|').includes('2 in a closed month'));
   await c.ctl.postReady();
@@ -147,8 +148,9 @@ const make = (over) => {
   /* party edit */
   const e = make();
   e.ctl.load('ok');
-  assert.strictEqual(e.ctl.editParty('k1', { name: '  ', kind: 'supplier' }).ok, false);
-  e.ctl.editParty('k1', { status: 'existing', id: 'p9', name: 'Origin Energy Pty' });
+  const k1 = e.ctl.view().items[1].key;
+  assert.strictEqual(e.ctl.editParty(k1, { name: '  ', kind: 'supplier' }).ok, false);
+  e.ctl.editParty(k1, { status: 'existing', id: 'p9', name: 'Origin Energy Pty' });
   assert.strictEqual(e.ctl.view().items[1].party.status, 'existing');
   ok('a new party needs a name; an existing party can be picked from did-you-mean');
 

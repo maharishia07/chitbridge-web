@@ -84,12 +84,12 @@
       lockedMonth: function () {
         return null;
       },
-      explainOpts: { learned: LEARNED, country: 'AU', parties: parties },
+      suggestOpts: { learned: LEARNED, country: 'AU', parties: parties },
       parseOpts: { country: 'AU', currency: CURRENCY }
     });
   }
-  function money(minor) {
-    return P.moneyText(minor, CURRENCY);
+  function money(value) {
+    return P.moneyText(value, CURRENCY);
   }
   function tag(kind, words) {
     return '<span class="bd-tag bd-' + kind + '">' + esc(words) + '</span>';
@@ -104,7 +104,7 @@
   }
   function gstQuestion() {
     return (
-      '<span class="bd-ask">' + esc(P.NEEDS_WORDS.gst_basis) + ' Do you account for GST on:</span> ' +
+      '<span class="bd-ask">' + esc('Is your GST on a cash or an accrual basis?') + '</span> ' +
       '<button data-cbsid="BKS017-B04" id="bd_gst_cash" type="button" class="bd-btn" data-act="gst" data-v="cash">Cash</button> ' +
       '<button data-cbsid="BKS017-B05" id="bd_gst_accrual" type="button" class="bd-btn" data-act="gst" data-v="accrual">Accrual</button>'
     );
@@ -146,22 +146,23 @@
       '<p class="bd-note">Your bank account as it will read once the ready lines are in. Preview: not yet in your books.</p>' +
       '<table class="bd-table"><thead><tr><th>Date</th><th>What</th><th>In</th><th>Out</th><th>Balance</th></tr></thead><tbody>' +
       rows.map(function (r) {
-        return '<tr class="' + (r.proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(P.dateText(r.date)) + '</td><td class="bd-n">' + esc(r.narration) + (r.proposed ? ' ' + tag('go', 'to add') : '') + '</td><td class="bd-m">' + (r.dr_minor ? esc(money(r.dr_minor)) : '') + '</td><td class="bd-m">' + (r.cr_minor ? esc(money(r.cr_minor)) : '') + '</td><td class="bd-m">' + esc(money(r.balance_minor)) + '</td></tr>';
+        var proposed = r.state === 'proposed';
+        return '<tr class="' + (proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(P.dateText(r.date)) + '</td><td class="bd-n">' + esc(r.narration) + (proposed ? ' ' + tag('go', 'to add') : '') + '</td><td class="bd-m">' + (P.minorOf(r.dr) ? esc(money(r.dr)) : '') + '</td><td class="bd-m">' + (P.minorOf(r.cr) ? esc(money(r.cr)) : '') + '</td><td class="bd-m">' + esc(money(r.balance)) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
   function paintBrs(model) {
     var b = model.projection && model.projection.brs;
     if (!b) return void (el('bd_brs').innerHTML = '');
-    var open = (b.open || []).map(function (o) { return '<li>' + esc(P.dateText(o.date)) + ' · ' + esc(o.narration) + ' · ' + esc(money(o.amount_minor)) + '</li>'; }).join('');
+    var open = (b.open_lines || []).map(function (o) { return '<li>' + esc(P.dateText(o.date)) + ' · ' + esc(o.narration) + ' · ' + esc(money(o.amount)) + ' ' + esc(o.side === 'in' ? 'in' : 'out') + '</li>'; }).join('');
     el('bd_brs').innerHTML =
-      '<dl class="bd-brs"><dt>Statement closing</dt><dd>' + esc(money(b.statement_closing_minor)) + '</dd><dt>Your books</dt><dd>' + esc(money(b.books_closing_minor)) +
-      '</dd><dt>Difference</dt><dd class="' + (b.difference_minor === 0 ? 'bd-zero' : 'bd-diff') + '">' + esc(money(b.difference_minor)) + '</dd></dl>' +
+      '<dl class="bd-brs"><dt>Statement closing</dt><dd>' + esc(money(b.closing_statement)) + '</dd><dt>Your books now</dt><dd>' + esc(money(b.closing_books_before)) + '</dd><dt>Your books after the ready lines</dt><dd>' + esc(money(b.closing_books_after)) +
+      '</dd><dt>Difference after</dt><dd class="' + (b.tied ? 'bd-zero' : 'bd-diff') + '">' + esc(money(b.difference_after)) + '</dd></dl>' +
       (open ? '<p class="bd-note">Still open:</p><ul class="bd-open">' + open + '</ul>' : '<p class="bd-note">Every line is in the books.</p>');
   }
   function paintStrip(model) {
     var b = model.projection && model.projection.brs,
       n = ctl.readyCount();
-    el('bd_sum').textContent = b ? 'Statement ' + money(b.statement_closing_minor) + ' · Books ' + money(b.books_closing_minor) + ' · Difference ' + money(b.difference_minor) : '';
+    el('bd_sum').textContent = b ? 'Statement ' + money(b.closing_statement) + ' · Books now ' + money(b.closing_books_before) + ' · Difference now ' + money(b.difference_before) : '';
     var go = el('bd_add');
     go.disabled = !n;
     go.textContent = n ? 'Add ' + n + (n === 1 ? ' line' : ' lines') + ' to the demo books' : 'Nothing ready to add';
