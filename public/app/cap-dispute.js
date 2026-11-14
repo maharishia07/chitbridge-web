@@ -13,7 +13,7 @@
  * resolves to its parent entity), and the EP rows dispute/disputes/resolveDispute/disputeQueue.
  *
  * OWNS      the Disputes list (Tasks › Disputes), the sheet's dispute section (raise · talk · resolve), the on-record banner.
- * CALLED BY tasks.html (CBDispute.mount · CBDispute.open for ?view=disputes&chit=), chit-sheet.js (the section), app.html (the workshop's screen).
+ * CALLED BY tasks.html (CBDispute.mount · CBDispute.open for ?view=disputes&chit=), chit-sheet.js (CBDispute.sheet · inSheet · raise), app.html (the workshop's screen, ensureCap('dispute')); accounts-shell.js and cap-tasks.js only name it in comments (grepped 14 Nov).
  * FLOW      CBDispute.mount(el) → listLoad reads the disputeQueue a page at a time → the list draws on CBList and the pager; a row opens the chit sheet (open) → inSheet reads and paints the chit's disputes (sheetRead · sheetPaint) → raise asks for a reason of 10 letters or more and sends it through CBAction.run → resolveAsk takes the resolution note and the list is read again.
  * CARD 03-disputes-service-and-register/disputes-per-party-confidential
  */
@@ -975,9 +975,8 @@ async function submitResolve(chitId, disputeId, partyId) {
       '<div class="empty" data-testid="dp-fail"><div class="t">' +
       esc(words || failWords(e, 'the disputes')) +
       '</div>' +
-      '<button data-cbsid="TSK006-B13" type="button" class="act" id="dp_retry" data-testid="dp-retry">' +
-      esc(T('Try again')) +
-      '</button></div>';
+      ui.action('reload', { mount: 'TSK006-U01', surface: 'page', tone: 'primary', id: 'dp_retry', testid: 'dp-retry' }) +
+      '</div>';
     $('dp_retry').onclick = function () {
       mount(node.el);
     };

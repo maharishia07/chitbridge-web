@@ -168,6 +168,7 @@ of file each thing is; this says what already does the job.
 | 18 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 17 | `send` | `cap-quotes.js` |  |
 | 17 | `head` | `list-ctl.js` |  |
+| 17 | `resolve` | `page.js` |  |
 | 17 | `label` | `screen-id.js` |  |
 | 17 | `field` | `ui-field.js` | the part: |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
@@ -178,7 +179,6 @@ of file each thing is; this says what already does the job.
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
 | 16 | `confirm` | `lab-kit.js` | opts: |
-| 16 | `resolve` | `page.js` |  |
 | 16 | `verdict` | `rail-thread.js` |  |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 16 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |

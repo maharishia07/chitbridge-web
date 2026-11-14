@@ -8,7 +8,8 @@
  * addActorModal/submitActor/actorInviteModal/actorCleanupModal/confirmAsk, scr, esc, val, opt, toast,
  * modal/closeModal, announce, coId/acIdPrev, startDrag, openHelp, UI/SESSION/STORE.
  * Spec: chitbridge-api/docs/COASSIST-USECASES.md . Tests: COASSIST-REGRESSION.md.
- * CALLED BY public/app.html, public/app/cap-connector.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY public/app.html (CAP_OF coassists → 'workforce'), public/app/cap-connector.js. SUPPORT: no customer page loads it (grepped 14 Nov: only app.html has the loader).
+ * FLOW      ensureCap('workforce') on opening Co-assists → loadCoassists reads the actor list → the screen paints list, filters, sort and detail → an action (create/invite/PIN/cover/shift/deactivate) opens its modal and writes through api, then loadCoassists repaints
  */
 /* ═══ ACTOR TYPE REGISTRY — build-one-add-more. The SINGLE list the core reads (filter · picker · detail · dispatch).
  *     Seeded built-in; DESIGNED to be fed by the GOVERNANCE layer later (merge via acMergeTypes) with zero core change.
