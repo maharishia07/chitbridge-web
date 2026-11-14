@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (64)
+## Capabilities (66)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -50,9 +50,9 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-finance-returns.js` | — | cap-finance-returns.js — CB Finance · Returns (round T3-P1-MONEY): COUNTRY-FIRST. An Indian shop downloads the GSTR-1 / GSTR-3B files the server |
 | `cap-finance-terms.js` | — | cap-finance-terms.js — CB Finance · Terms (round F2): the shop's DEFAULT credit terms and each party's OWN, set in ONE place |
 | `cap-finance.js` | — | cap-finance.js — CB Finance · Collections (round F1): who owes you, how old, the limit, the interest it has earned, Remind, Receive |
+| `cap-folders-groupsum.js` | — | the Group-sum pane of the FOLDERS capability. PART OF cap-folders.js: plain globals, no module, no call site changed |
+| `cap-folders-rules.js` | — | the Rules tab of the FOLDERS capability. PART OF cap-folders.js: plain globals, no module, no call site changed |
 | `cap-folders.js` | lazy · folders | FOLDERS capability (lazy; loaded via ensureCap('folders')) |
-| `cap-folders-rules.js` | lazy · folders (part) | the Rules tab of FOLDERS, loaded with it through CAP_WITH |
-| `cap-folders-groupsum.js` | lazy · folders (part) | the Group-sum pane of FOLDERS, loaded with it through CAP_WITH |
 | `cap-fx.js` | — | cap-fx.js — FOREIGN CURRENCY (FX1, 2026-10-14): CB Accounts › Setup › Rates, and Month lock's "Foreign balances" line |
 | `cap-iddocs.js` | lazy · on demand |  |
 | `cap-intake.js` | lazy · intake | THE INTAKE INBOX. Lazy via ensureCap('intake') |
@@ -153,4 +153,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*124 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*126 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
