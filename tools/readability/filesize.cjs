@@ -14,7 +14,8 @@
  *   node tools/readability/filesize.cjs ... --write         lower rows to today's size, drop rows now at or under 500; refuses to raise or add one
  *   node tools/readability/filesize.cjs ... --rebaseline    reset every row to today's size: ONLY on a stamp (CB_FILESIZE_STAMP=1 set by the batch
  *                                                           tool, never in a change that edits a workflow; or a batch/* branch whose diff
- *                                                           changes the CB_BUILD assignment); refused anywhere else
+ *                                                           changes the CB_BUILD assignment, or adds the one line "<branch> <YYYY-MM-DD>" to the
+ *                                                           committed filesize.stamp: api/engines have no CB_BUILD); refused anywhere else
  *   node tools/readability/filesize.cjs ... --ceiling       the customer-facing files still over 1,000 (exit 1 while any is)
  *
  * SCOPE: every tracked .js .cjs .mjs .html .css file, TESTS INCLUDED (a test file may not grow either). Not counted, each judged where it is made:
@@ -32,6 +33,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { ADOPTED_HEAD, HEAD_BYTES, VENDOR_DIR } = require('./measure.cjs');
 
+const STAMP_FILE = 'filesize.stamp';
 const BASELINE_FILE = 'filesize.baseline.json';
 const NEW_FILE_MAX = 500;
 const CEILING = 1000;
@@ -159,12 +161,34 @@ function baseBaseline(root, ref) {
   return { rows: shown.status === 0 ? readRows(shown.stdout) : null };
 }
 
-/** the batch stamp is the CB_BUILD assignment itself changing on a batch/* branch (a comment line or a quoted date elsewhere does not count) */
-function batchStamp(root, ref) {
-  const branch = process.env.GITHUB_HEAD_REF || gitIn(root, ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
-  if (!/^batch\//.test(branch)) return false;
+/** the current branch: the PR head in CI, else the checked-out branch */
+function headBranch(root) {
+  return process.env.GITHUB_HEAD_REF || gitIn(root, ['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
+}
+
+/** the web batch stamp is the CB_BUILD assignment itself changing on a batch/* branch (a comment line or a quoted date elsewhere does not count) */
+function buildStamp(root, ref) {
+  if (!/^batch\//.test(headBranch(root))) return false;
   const diff = gitIn(root, ['diff', '-U1', ref + '...HEAD', '--', 'public/app.html']).stdout;
   return /^[ +]const CB_BUILD =\r?\n(?:-.*\r?\n)?\+\s*'\d{4}-\d\d-\d\d[a-z]*';/m.test(diff);
+}
+
+/**
+ * the api/engines batch stamp (they have no CB_BUILD): a committed <repo>/filesize.stamp whose ONE added line is "<this batch branch> <YYYY-MM-DD>".
+ * It sits in the PR diff for the reviewer, names the branch (a stamp carried from an old batch, or copied to a feature branch, does not match),
+ * and must be CHANGED against the base, so every batch writes its own line. Never read from the environment, never from another branch.
+ */
+function fileStamp(root, ref) {
+  const branch = headBranch(root);
+  if (!/^batch\//.test(branch)) return false;
+  const diff = gitIn(root, ['diff', '-U0', ref + '...HEAD', '--', STAMP_FILE]).stdout;
+  const added = diff.split(/\r?\n/).filter((line) => line.startsWith('+') && !line.startsWith('+++ ')).map((line) => line.slice(1).trim());
+  return added.length === 1 && added[0].startsWith(branch + ' ') && /^\d{4}-\d\d-\d\d$/.test(added[0].slice(branch.length + 1));
+}
+
+/** the batch stamp: web's CB_BUILD change, or the committed filesize.stamp line */
+function batchStamp(root, ref) {
+  return buildStamp(root, ref) || fileStamp(root, ref);
 }
 
 /** a stamp: the batch tool's env (never in a PR that changes a workflow file), or the batch stamp; returns its name or null */
