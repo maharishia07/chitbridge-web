@@ -1,6 +1,6 @@
 /**
  * public/app/shortcuts-register.js: THE SHORTCUT REGISTER (MNT-63). One row per element code that has a keyboard shortcut: code -> key.
- * ID        HOM001 (rail and cards) · POP095-POP106 (popup main actions) · POP144 (the shortcut sheet)
+ * ID        HOM001 (rail and cards) · POP065, POP091, POP092, POP095-POP106, POP108 (popup main actions) · POP144 (the shortcut sheet)
  * OWNER     cb-ux-locale
  * OWNS      the key of every nav entry and popup main action; nothing else holds a key (the guard e2e/shortcuts-guard.cjs refuses a literal key anywhere else).
  * CALLED BY public/app/shell.js (loads it beside the frame, then shortcuts.js); e2e/shortcuts-guard.cjs and tools/shortcuts-count.cjs read it by name.
@@ -66,6 +66,9 @@
       'HOM001-B01#connectors': 'Alt+Shift+K',
       'HOM001-B01#governance': 'Alt+Shift+G',
       /* a popup's main action (Alt+Shift+D; Chrome owns Alt+Shift+A) (the popups that open through ui.dialog with their code) */
+      POP065: 'Alt+Shift+D',
+      POP091: 'Alt+Shift+D',
+      POP092: 'Alt+Shift+D',
       POP095: 'Alt+Shift+D',
       POP096: 'Alt+Shift+D',
       POP097: 'Alt+Shift+D',
@@ -78,6 +81,7 @@
       POP104: 'Alt+Shift+D',
       POP105: 'Alt+Shift+D',
       POP106: 'Alt+Shift+D',
+      POP108: 'Alt+Shift+D',
       POP144: 'Alt+Shift+D'
     }
   };
