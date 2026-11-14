@@ -214,7 +214,11 @@ async function route(S, r) {
     ok(/Books Shop \(owner\)/.test(head1), 'by == the shop\'s own name → "Books Shop (owner)" in the source line');
     ok(!/Mani \(owner\)/.test(await p.textContent('[data-testid="db-head-JV/2026-27/000002"]')), 'another person is not marked (owner)');
     const row2 = await p.textContent('[data-testid="db-entry-JV/2026-27/000002"]');
-    ok(/Mani/.test(row2) && !/[(]owner[)]/.test(row2), 'the Rung by column names Mani and does not mark him (owner)');
+    /* the Rung by column only shows on a wide screen: open it wide and read the person cell of both rows */
+    const wide = await open(standIn(), 2200);
+    const w1 = await wide.p.textContent('[data-testid="db-entry-JV/2026-27/000001"]'), w2 = await wide.p.textContent('[data-testid="db-entry-JV/2026-27/000002"]');
+    ok(/Books Shop \(owner\)/.test(w1) && /Mani/.test(w2) && !/[(]owner[)]/.test(w2), 'the Rung by column marks the shop owner (owner) and names Mani without it — got ' + w2.replace(/\s+/g, ' ').slice(0, 100));
+    await wide.ctx.close();
     /* scroll the page down to a row far from the top, remember where */
     const scroller = await p.evaluateHandle(() => { let e = document.querySelector('[data-testid="db-entry-JV/2026-27/000001"]'); while (e && e !== document.documentElement) { if (e.scrollHeight > e.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return e; e = e.parentElement; } return document.scrollingElement; });
     await scroller.evaluate((e) => { e.scrollTop = 120; });
