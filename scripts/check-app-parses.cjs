@@ -24,7 +24,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const scriptVm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
@@ -40,13 +40,14 @@ function inlineScripts(html) {
   return out;
 }
 
+/** parse every inline script of one page; returns how many failed */
 function checkHtml(file) {
   const html = fs.readFileSync(file, 'utf8');
   const blocks = inlineScripts(html);
   let count = 0;
   blocks.forEach((item, index) => {
     try {
-      new vm.Script(item.code, { filename: file });
+      new scriptVm.Script(item.code, { filename: file });
     } catch (e) {
       count++;
       // The offset makes the message point at a line in the FILE, not in the extracted fragment.
@@ -60,7 +61,7 @@ function checkHtml(file) {
 
 function checkJs(file) {
   try {
-    new vm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
+    new scriptVm.Script(fs.readFileSync(file, 'utf8'), { filename: file });
     console.log(`  ✓ ${path.relative(ROOT, file)}`);
     return 0;
   } catch (e) {
@@ -80,13 +81,13 @@ const files = args.length
     ];
 
 console.log('\nparse check');
-let bad = 0;
+let failedFiles = 0;
 for (const text of files) {
   if (!fs.existsSync(text)) {
     console.log(`  ? ${text} — not found`);
     continue;
   }
-  bad += text.endsWith('.html') ? checkHtml(text) : checkJs(text);
+  failedFiles += text.endsWith('.html') ? checkHtml(text) : checkJs(text);
 }
-console.log(bad ? `\n  ${bad} FAILED — this would be a blank page\n` : '\n  all parse\n');
-process.exit(bad ? 1 : 0);
+console.log(failedFiles ? `\n  ${failedFiles} FAILED — this would be a blank page\n` : '\n  all parse\n');
+process.exit(failedFiles ? 1 : 0);

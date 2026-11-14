@@ -49,11 +49,11 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.lab: the Finance frame -->
 <script>
 (function () {
-  var q = new URLSearchParams(location.search),
-    mode = q.get('mode');
+  var query = new URLSearchParams(location.search),
+    mode = query.get('mode');
   /* UX-90: framed like every lab. ?harness=1 is the unit's pass mark (e2e/shell.cjs, cb-sides.cjs): the bare gallery, CBShell mounted by hand in
      the mode asked for, so it measures the shell alone and not the frame around it. */
-  if (q.get('harness') !== '1' && window.CBFrame) {
+  if (query.get('harness') !== '1' && window.CBFrame) {
     CBFrame.lab({ app: 'shell-lab', name: 'Shell Lab', icon: '▭' });
     var note = document.createElement('div');
     note.className = 'lab-note';
@@ -62,7 +62,7 @@ body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-ui,'IB
     document.body.appendChild(note); /* the frame moves it into the main pane once the page has loaded */
     return;
   }
-  var host = mode === 'bar' ? { bar: true } : mode === 'app' ? { app: q.get('app') || 'accounts' } : null;
+  var host = mode === 'bar' ? { bar: true } : mode === 'app' ? { app: query.get('app') || 'accounts' } : null;
   window.SHELL = CBShell.mount(document.getElementById('shell'), { host: host });
   /* inside an app, the app draws in the work slot — here, one line standing in for it */
   if (SHELL.slots.work) SHELL.slots.work.innerHTML = '<div class="lab-app" data-testid="lab-app">The app draws here.</div>';

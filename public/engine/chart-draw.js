@@ -43,28 +43,32 @@
     return { high: high, low: lowest, span: high - lowest || 1 };
   }
 
+  /** the empty tick drawn where a period has no record: a dashed stub on the baseline */
+  function missingBarOf(left, barTestId, title, layout) {
+    return (
+      '<g data-testid="' +
+      barTestId +
+      '" data-state="missing">' +
+      title +
+      '<rect x="' +
+      left.toFixed(1) +
+      '" y="' +
+      (layout.zero - 4).toFixed(1) +
+      '" width="' +
+      layout.width +
+      '" height="4" style="fill:none;stroke:' +
+      BASELINE +
+      ';stroke-width:1;stroke-dasharray:2 2"/></g>'
+    );
+  }
+
   /** one bar: a filled rect, a hatched outline (part of a period) or an empty tick (no record) — its <title> is the caller's words */
   function barOf(point, index, layout, testId) {
     var value = figure(point.value),
       left = index * layout.step + (layout.step - layout.width) / 2,
       barTestId = escape(testId + '-bar-' + point.key),
       title = '<title>' + escape(point.title || '') + '</title>';
-    if (value === null)
-      return (
-        '<g data-testid="' +
-        barTestId +
-        '" data-state="missing">' +
-        title +
-        '<rect x="' +
-        left.toFixed(1) +
-        '" y="' +
-        (layout.zero - 4).toFixed(1) +
-        '" width="' +
-        layout.width +
-        '" height="4" style="fill:none;stroke:' +
-        BASELINE +
-        ';stroke-width:1;stroke-dasharray:2 2"/></g>'
-      );
+    if (value === null) return missingBarOf(left, barTestId, title, layout);
     var height = Math.max(1, Math.abs(layout.yOf(value) - layout.zero)),
       top = value >= 0 ? layout.zero - height : layout.zero;
     var look = point.hatch ? 'fill:url(#' + layout.id + '-hatch);stroke:' + BAR + ';stroke-width:1.5' : 'fill:' + BAR;
@@ -161,6 +165,32 @@
     return layout;
   }
 
+  /** the diagonal-hatch pattern that fills a part-period bar (its id is unique per chart) */
+  function hatchDefs(id) {
+    return (
+      '<defs><pattern id="' +
+      id +
+      '-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:' +
+      BAR +
+      ';stroke-width:1.5"/></pattern></defs>'
+    );
+  }
+
+  /** the horizontal rule at zero that every bar stands on */
+  function zeroLineOf(width, layout) {
+    return (
+      '<line x1="0" x2="' +
+      width +
+      '" y1="' +
+      layout.zero.toFixed(1) +
+      '" y2="' +
+      layout.zero.toFixed(1) +
+      '" style="stroke:' +
+      BASELINE +
+      ';stroke-width:1"/>'
+    );
+  }
+
   /**
    * bars(points, opts) → '<svg …>' — points [{ key, label, value|null, line|null, hatch, title, lineTitle }] oldest first;
    * opts { width, height, id (unique per page: the hatch pattern's id), aria (the sentence a screen reader hears), tid, top (words at the top-left: the scale) }.
@@ -175,12 +205,7 @@
       id = escape(options.id || 'cd'),
       testId = options.tid || 'cd';
     var layout = geometryOf(list, width, height, id);
-    var hatch =
-      '<defs><pattern id="' +
-      id +
-      '-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:' +
-      BAR +
-      ';stroke-width:1.5"/></pattern></defs>';
+    var hatch = hatchDefs(id);
     var scaleWords = options.top ? '<text x="0" y="10" style="font:10px var(--mono,monospace);fill:' + LABEL + '">' + escape(options.top) + '</text>' : '';
     return (
       '<svg viewBox="0 0 ' +
@@ -196,15 +221,7 @@
       'px;overflow:visible;stroke:none;fill:none">' +
       hatch +
       scaleWords +
-      '<line x1="0" x2="' +
-      width +
-      '" y1="' +
-      layout.zero.toFixed(1) +
-      '" y2="' +
-      layout.zero.toFixed(1) +
-      '" style="stroke:' +
-      BASELINE +
-      ';stroke-width:1"/>' +
+      zeroLineOf(width, layout) +
       list
         .map(function (point, index) {
           return barOf(point, index, layout, testId);
@@ -250,6 +267,11 @@
       penDown = true;
       last = at;
     });
+    return sparkSvg(width, height, options, path, last, stroke);
+  }
+
+  /** the sparkline's svg wrapper: its path and the dot on the last point */
+  function sparkSvg(width, height, options, path, last, stroke) {
     return (
       '<svg viewBox="0 0 ' +
       width +

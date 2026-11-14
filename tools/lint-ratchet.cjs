@@ -34,6 +34,7 @@ const CODE_FILE = /\.(js|cjs|mjs|html)$/;
 const VENDORED_HEAD = /ADOPTED from chitbridge-engines/;
 const NEVER_FILES = new Set(['public/till.html', 'public/promo.html']);
 
+/** require a lint tool package from the first tool folder that has it; stop with a hint when none does */
 function load(name) {
   for (const dir of TOOL_DIRS) {
     try {
