@@ -1587,7 +1587,7 @@ function render(data) {
   }
   var prods = data.items || [];
   var prodHtml = productListHtml(data, cur);
-  var enq = '<div class="enq">Order by phone/email<br>No account needed</div>';
+  var enq = '<div class="enq">' + tx('Order by phone/email') + '<br>' + tx('No account needed') + '</div>';
   var previewBar =
     data.preview && data.preview.visibility !== 'public'
       ? '<div class="msg" data-testid="shop-private" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">🔒 Private · catalogue <b>' +
@@ -1611,7 +1611,7 @@ function render(data) {
        person reading this is the one with a problem. */
     supLinkHtml() +
     shopAboutHtml(s) +
-    '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · shop sets prices</div>';
+    '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · ' + tx('shop sets prices') + '</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop) {
@@ -2415,7 +2415,7 @@ function _cartStepWho() {
       ? ui.field({ mount: 'SHP001-U15', kind: 'text', id: 'o_otp', testid: 'shop-otp', label: '6-digit code', hint: 'Sent to you', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _ord.otp || '', onInput: function (value) { _cartSet('otp', value); } })
       : '') +
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
-    '<div class="meta">No account needed</div>' +
+    '<div class="meta">' + tx('No account needed') + '</div>' +
     (_ord._err ? '<div style="color:#b4453f;font-size:12.5px;margin-top:8px">' + esc(_ord._err) + '</div>' : '') +
     (_ord._msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-top:8px">' + esc(_ord._msg) + '</div>' : '')
   );

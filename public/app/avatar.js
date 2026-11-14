@@ -812,10 +812,6 @@
       editionsHtml() +
       choiceGroup('Row stripes', 'stripes', STRIPES) +
       choiceGroup('Thirukkural', 'kural', KURAL) +
-      /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — a switch, on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off. A switch, not a third button row: the menu still fits a 1280×800 window with no inner scroll */
-      '<div class="cbav-motion"><span>Keyboard shortcuts</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="keys-switch" data-av-keysw="1" aria-checked="' +
-      (pref('keys') !== 'off') +
-      '" aria-label="Keyboard shortcuts"></button></div>' +
       '</div>' +
       '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' +
       TEXT_SIZES.map(function (x, index) {
@@ -848,6 +844,10 @@
       '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="motion-switch" data-av-motion="1" aria-checked="' +
       (pref('motion') === 'reduce') +
       '" aria-label="Less motion"></button></div>' +
+      /* MNT-63: the keyboard shortcuts (public/app/shortcuts.js) — a switch, on · off; WCAG 2.2 SC 2.1.4 asks for a way to turn character-key shortcuts off. A switch under Less motion in the shorter column: the menu still fits a 1280×800 window with no inner scroll */
+      '<div class="cbav-motion"><span>Keyboard shortcuts</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="keys-switch" data-av-keysw="1" aria-checked="' +
+      (pref('keys') !== 'off') +
+      '" aria-label="Keyboard shortcuts"></button></div>' +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
