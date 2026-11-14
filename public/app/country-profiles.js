@@ -655,7 +655,7 @@
   }
   /** the right side: the country's head and its cards */
   function detailHTML(pack) {
-    if (!pack) return '<div class="card nopack" data-testid="cp-none">No country pack is loaded.</div>';
+    if (!pack) return '<div class="card nopack" data-testid="cp-none">No country pack loaded</div>';
     return (
       '<div class="cp-head" data-testid="cp-head"><span class="cp-bigflag" aria-hidden="true">' +
       flagOf(pack.id) +
@@ -851,7 +851,7 @@
   }
   /** a sample tax invoice, billed live by the real tax engine under the country's own pack (its currency, rates and kinds) */
   function invoiceHTML(pack, asReceipt) {
-    if (!root.CBTax || !CBTax.determine) return '<span class="hint">The tax engine is not loaded.</span>';
+    if (!root.CBTax || !CBTax.determine) return '<span class="hint">Tax engine not loaded</span>';
     var lines = sampleLines(pack),
       invoice = billSample(pack, lines),
       totals = invoice.ValDtls || {};
@@ -958,7 +958,7 @@
           return '<div class="hint">' + safe(row[0]) + ' · ' + safe(row[1]) + '</div>';
         })
         .join('') +
-      '<div class="cp-rc-thanks">Thank you · please keep this receipt</div></div></div>'
+      '<div class="cp-rc-thanks">Thank you</div></div></div>'
     );
   }
   /** the tax's own word (Consumption tax · GST · SST) */
@@ -1005,7 +1005,7 @@
       return panelHTML(
         name + ' · supply kinds',
         taxWord(pack),
-        kindsTable(pack) || '<span class="hint">Rates by slab (HSN), no supply kinds.</span>',
+        kindsTable(pack) || '<span class="hint">Slab rates (HSN) only</span>',
         'cp-opened'
       );
     },
@@ -1255,7 +1255,7 @@
     var host = ALL.host;
     if (!host) return;
     if (!root.CBCountries || typeof CBCountries.rulesTable !== 'function') {
-      host.innerHTML = '<div class="card nopack" data-testid="cp-all-none">The rules table needs engines v1.60.0.</div>';
+      host.innerHTML = '<div class="card nopack" data-testid="cp-all-none">Needs engines v1.60.0</div>';
       return;
     }
     var table = CBCountries.rulesTable({ year: new Date().getFullYear() });
