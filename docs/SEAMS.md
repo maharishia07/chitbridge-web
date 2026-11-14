@@ -50,7 +50,7 @@ of file each thing is; this says what already does the job.
 | 52 | `view` | `books-payables.js` | group: |
 | 52 | `count` | `money-check.js` | the count /health reads |
 | 51 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
-| 48 | `read` | `cap-print.js` |  |
+| 49 | `read` | `cap-print.js` |  |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 47 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 46 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
@@ -103,7 +103,7 @@ of file each thing is; this says what already does the job.
 | 30 | `owner` | `books.js` |  |
 | 29 | `mount` | `attach-ui.js` | var CBAttach = (function () { |
 | 29 | `money` | `cart.js` |  |
-| 29 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
+| 30 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 29 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 28 | `load` | `cap-assist.js` |  |
 | 28 | `opts` | `cap-stock.js` |  |

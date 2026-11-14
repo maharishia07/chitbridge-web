@@ -137,13 +137,13 @@ async function fableChecks(page, base) {
   check((await text('#bd_lines')) === '' && (await text('#bd_cur')).includes('Which currency'), 'B5-05: a file of your own is not read until its currency is asked; the last statement is cleared');
   await page.click('#bd_cur_go');
   check((await text('#bd_msg')).includes('Say which currency'), 'B5-05: no answer, no reading');
-  await page.selectOption('#bd_cur_sel', 'USD');
+  await page.fill('#bd_cur_sel', 'USD');
   await page.click('#bd_cur_go');
   const refused = await text('#bd_msg');
   check(refused.includes('USD') && refused.includes('AUD') && (await text('#bd_lines')) === '', 'B5-05: a USD file is refused naming both currencies and shows no lines (' + refused.slice(0, 80) + ')');
   await upload(page, 'skip.csv', CSV_HEAD + '05/11/2026,Receipt A,,100.00,1100.00\n06/11/2026 09:14,Receipt B,,22.00,1122.00\n07/11/2026,Receipt C,,50.00,1172.00\n,Orphan narration,10.00,,1162.00');
   await page.waitForSelector('#bd_cur_sel');
-  await page.selectOption('#bd_cur_sel', 'AUD');
+  await page.fill('#bd_cur_sel', 'AUD');
   await page.click('#bd_cur_go');
   const skipped = await text('[data-testid=bd-skip]');
   check(skipped.includes('2 rows') && skipped.includes('Row 3') && skipped.includes('Row 5'), 'B5-06: both skipped rows are listed by row number on the lines view (' + skipped.slice(0, 90) + ')');

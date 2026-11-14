@@ -50,7 +50,6 @@
   ];
 
   /* B5-05: the currency the STATEMENT says it is in. The sample says AUD itself; a file the visitor loads says nothing until they are asked (askedFile), and the account's AUD is never read as the file's. */
-  var CURRENCIES = ['AUD', 'USD', 'NZD', 'GBP', 'EUR', 'INR', 'AED', 'SGD', 'CAD'];
   var books = { opening_minor: 1000000, lines: [] },
     parties = [],
     controller = null,
@@ -344,13 +343,14 @@
     box.hidden = !askedFile;
     box.innerHTML = askedFile
       ? '<span class="bd-ask">' + esc('Which currency is ' + askedFile.name + ' in? The demo account is in ' + CURRENCY + '. Nothing is converted.') + '</span> ' +
-        '<select data-cbsid="BKS017-S07" id="bd_cur_sel" class="bd-inp" aria-label="Statement currency" data-testid="bd-cur-sel">' + optionsOf(CURRENCIES, '', function (one) { return one; }, function (one) { return one; }) + '</select> ' +
+        '<input data-cbsid="BKS017-S07" id="bd_cur_sel" class="bd-inp" type="text" maxlength="3" size="4" autocomplete="off" aria-label="Statement currency, three capital letters" data-testid="bd-cur-sel"> ' +
         '<button data-cbsid="BKS017-B14" id="bd_cur_go" type="button" class="bd-btn" data-act="curuse" data-testid="bd-cur-go">Read this file</button>'
       : '';
   }
   function readAskedFile() {
-    var chosen = el('bd_cur_sel').value;
+    var chosen = el('bd_cur_sel').value.trim().toUpperCase();
     if (!chosen) return void (el('bd_msg').textContent = 'Say which currency the file is in first.');
+    if (root.CBMoney && root.CBMoney.isIsoCurrency && !root.CBMoney.isIsoCurrency(chosen)) return void (el('bd_msg').textContent = 'That is not a currency code. Use three capital letters.');
     statementCur = chosen;
     var file = askedFile;
     askedFile = null;
