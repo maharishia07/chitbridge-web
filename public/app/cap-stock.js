@@ -17,6 +17,8 @@
  * Loaded by operations.html. Flow step: INV step 2 · stock (docs/process/flows.json).
  * OWNS the Stock screen of Operations: on hand per product, batches and expiry, painted from the one stock reader
  * // CARD 13-inventory-stock-and-traceability/on-hand-and-movements
+ * CALLED BY public/operations.html; tests/stock-pane.test.cjs
+ * FLOW      operations.html Stock tab -> CBStock.mount(host) -> GET /api/till/stock?detail=1 -> CBList rows (least on hand first)
  */
 'use strict';
 var CBStock = (function () {

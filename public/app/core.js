@@ -2,6 +2,7 @@
  * OWNS  the envelope: unwrap() (the {ok,data,error} answer, its list siblings kept), api() (auth · 401/422/500 branching), fill().
  * FLOW  api(key) → EP[key] → fetch → unwrap → the panel paints; a 401 ends the session (CBFrame.ended)
  * CARD 01-rail-core-the-chit/task-panel-core
+ * CALLED BY public/app.html, accounts.html, catalogue.html, crm.html, finance.html, operations.html, settings.html, tasks.html (script tag); e2e tests lift cbOrderLive/cbOrderDecl/catg* from it
  * Loaded by /app.html BEFORE its main inline script (classic script, shared global scope).
  * Exposes: fill(), unwrap() (the {ok,data,error} envelope), api() (auth + 401/422/500 branching).
  * Depends on host globals defined in app.html: EP, CFG, SESSION, demoApi, go.
