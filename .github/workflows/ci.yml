@@ -106,6 +106,7 @@ jobs:
           node e2e/cart-api.cjs
           node e2e/cart-page-needs.cjs
           node e2e/chart-smoke.cjs
+          node e2e/crm-groups-guard.cjs
           node e2e/currency-distinct.cjs
           node e2e/defs-batch.test.cjs
           node e2e/developer-words.cjs
