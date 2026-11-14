@@ -689,7 +689,7 @@
         '<div class="emp-form">' +
         '<label for="emp_n">' +
         esc(T('Name')) +
-        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off">' +
+        '</label><input data-cbsid="EMP001-I03" class="inp" id="emp_n" data-testid="emp-add-name" autocomplete="off" required data-required-msg="' + esc(T('Type their name.')) + '">' +
         '<label for="emp_k">' +
         esc(T('Sign-in name')) +
         '</label><input data-cbsid="EMP001-I04" class="inp mono" id="emp_k" data-testid="emp-add-key" autocomplete="off" maxlength="12">' +
@@ -708,7 +708,7 @@
         '<label for="emp_e">' +
         esc(T('E-mail')) +
         '</label><input data-cbsid="EMP001-I07" class="inp" id="emp_e" data-testid="emp-add-email" type="email" autocomplete="off">' +
-        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go">' +
+        '<button data-cbsid="EMP001-B12" type="button" class="act" id="emp_add_go" data-testid="emp-add-go" data-sheet-save>' +
         esc(T('Add')) +
         '</button></div>'
     );

@@ -63,8 +63,8 @@ body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--f-ui,
 .stp.on .n{background:var(--ok);color:#fff}
 .stp.done .n{background:var(--ok-t);color:var(--ok)}
 .stp:disabled{cursor:default;opacity:.6}
-html{scroll-padding-bottom:110px}   /* the fixed footer never covers a field scrolled into view */
-.wrap{padding:14px 16px 120px;max-width:1100px;margin:0 auto}
+html,#labwork{scroll-padding-bottom:140px}   /* the footer never covers a field scrolled into view: the pane that scrolls is #labwork (the frame moves the page body into it) */
+.wrap{padding:14px 16px 24px;max-width:1100px;margin:0 auto}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 button{font:inherit;color:inherit;cursor:pointer}
 .pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--dim)}
@@ -84,7 +84,7 @@ td.loc{color:var(--dim)}
 .whose{font-size:.72em;color:var(--dim);font-weight:400;letter-spacing:.03em}
 tr.has .whose{color:var(--ok)}
 .catrow td{background:var(--hair);font-weight:700;font-size:.85em}
-.foot{position:fixed;inset-inline:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+.foot{position:sticky;bottom:0;z-index:1;background:var(--card);border-top:1px solid var(--line);
   padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .go{padding:11px 20px;border:1px solid var(--ok);border-radius:10px;background:var(--ok);color:#fff;font-weight:700}
 .go:disabled{opacity:.45;cursor:not-allowed;background:var(--card);color:var(--dim);border-color:var(--line)}

@@ -1193,7 +1193,7 @@ var CBCatalogueApp = (function () {
   }
   function formHTML(d) {
     return (
-      ctField('name', esc(T('Name')), d.name || '') +
+      ctField('name', esc(T('Name')), d.name || '', 'required data-required-msg="' + esc(T('A name is needed.')) + '"') +
       '<div class="cat-two"><div>' +
       ctField('unit', esc(T('Unit')), d.unit || '', 'placeholder="' + esc(T('piece / kg / litre')) + '"') +
       '</div><div>' +
@@ -1311,7 +1311,7 @@ var CBCatalogueApp = (function () {
       head +
       '<form id="cat_form" onsubmit="return false">' +
       formHTML(S.mode === 'new' ? {} : d) +
-      '<div class="cat-sheet-acts"><button data-cbsid="CTG001-B05" type="button" class="act" data-testid="cat-save" id="cat_save">' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG001-B05" type="button" class="act" data-testid="cat-save" id="cat_save" data-sheet-save>' +
       esc(S.mode === 'new' ? T('Add item') : T('Save')) +
       '</button>' +
       '<button data-cbsid="CMP003" data-cbmount="CTG001-U103" type="button" class="act quiet" data-testid="cat-cancel" id="cat_cancel">' +

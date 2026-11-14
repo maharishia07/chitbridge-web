@@ -348,6 +348,8 @@ function go() {
 <script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
+<script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
+<script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
 <script src="/app/chit-sheet.js"></script>
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>   <!-- payOpen · bkRemind · bkMoney · bkOwes — the Dues pieces Collections reuses -->
