@@ -137,11 +137,11 @@
   }
   function columns() {
     return [
-      col('what', words('What'), 1, 220, kindWords),
+      col('what', words('What'), 1, 200, kindWords),
       col('total', words('Total'), 1, 140, figure, function (row) { return row.total_minor == null ? 0 : Number(row.total_minor); }),
-      col('by', words('Prepared by'), 2, 200, function (row) { return byWords(row.prepared); }),
-      col('at', words('When'), 3, 150, function (row) { return dayWords(row.prepared && row.prepared.at); }, function (row) { return (row.prepared && row.prepared.at) || ''; }),
-      col('state', words('State'), 1, 200, stateWords)
+      col('by', words('Prepared by'), 1, 190, function (row) { return byWords(row.prepared); }),
+      col('at', words('When'), 2, 150, function (row) { return dayWords(row.prepared && row.prepared.at); }, function (row) { return (row.prepared && row.prepared.at) || ''; }),
+      col('state', words('State'), 1, 190, stateWords)
     ];
   }
   /** which row buttons a role is offered in a queue: the firm reviews, the owner accepts, both send back; the server still decides */

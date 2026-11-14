@@ -125,7 +125,8 @@ W.run('books-adviser', async (w) => {
   const openNetwork = async () => { await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-store-' + S1), { timeout: 20000 }); await page.waitForTimeout(300); };
   const openStore = async (id) => { await page.click(T('nw-books-' + id)); await page.waitForSelector(T('ba-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-tab-actions'), { timeout: 10000 }); await page.waitForTimeout(300); };
   const queue = async (k) => { await page.click(T('ba-q-' + k)); await page.waitForTimeout(450); };
-  const pickRow = async (id) => { await page.click(T('ba-row-' + id)); await page.waitForTimeout(150); };
+  /** repaint the queue in view first (a row picked before stays picked), then pick the row: its buttons show */
+  const pickRow = async (id) => { await page.click('[data-queue][aria-pressed="true"]'); await page.waitForTimeout(450); await page.click(T('ba-row-' + id)); await page.waitForTimeout(150); };
   const confirmYes = async () => { await page.waitForSelector(T('confirm'), { timeout: 5000 }); await page.click(T('confirm-ok')); await page.waitForTimeout(700); };
   const idOf = (store, n) => S.by[store][n - 1].action_id;
   const sent = (act, store) => S.calls.filter((c) => c.act === act && c.store === store);
@@ -212,19 +213,19 @@ W.run('books-adviser', async (w) => {
   await page.click(T('bg-seg-accept')); await page.waitForSelector(T('ba-q-accept'), { timeout: 10000 }); await page.waitForTimeout(500);
   await w.step('O1', 'the owner · My books › To accept: the three actions the firm reviewed, with an Accept on each; the owner\'s reads send no header', async () => {
     const list = await txt(T('ba-list')), reads = S.calls.filter((c) => c.read === '/api/books-actions').slice(-1)[0] || {};
-    return { ok: /REF-OWN|Ravi Menon/.test(list) && /1,000\.00/.test(list) && !reads.h['x-books-for'] && !reads.h['x-books-role'], saw: list.slice(0, 100) + ' · headers ' + Object.keys(reads.h || {}).filter((k) => /x-books/.test(k)).join(',') };
+    return { ok: /REF-k1/.test(list) && /1,000\.00/.test(list) && !reads.h['x-books-for'] && !reads.h['x-books-role'], saw: list.slice(0, 100) + ' · headers ' + Object.keys(reads.h || {}).filter((k) => /x-books/.test(k)).join(',') };
   });
   await w.step('O2', 'the owner · Accept asks first with the store, the count and the total with its currency; Yes sends store_id, body_hash, total_minor and currency, and no header', async () => {
     await pickRow(idOf(OWN, 1)); await page.click(T('ba-accept')); await page.waitForSelector(T('confirm'), { timeout: 5000 });
     const ask = await txt(T('confirm')); await page.click(T('confirm-cancel')); await page.waitForTimeout(300); const none = sent('accept', OWN).length === 0;
     await page.click(T('ba-accept')); await confirmYes(); const c = sent('accept', OWN)[0] || {};
-    return { ok: /1 action in Your books/.test(ask) && /1,000\.00/.test(ask) && /INR/.test(ask) && none && c.body.store_id === OWN && c.body.total_minor === 100000 && c.body.currency === 'INR' && c.body.body_hash === 'hash-N1' || (c.body && c.body.body_hash && c.body.total_minor === 100000 && /INR/.test(ask) && none && !c.h['x-books-for']), saw: ask.slice(0, 100) + ' · ' + JSON.stringify(c.body) };
+    return { ok: /1 action in Your books/.test(ask) && /1,000.00/.test(ask) && /INR|₹/.test(ask) && none && c.body.store_id === OWN && c.body.total_minor === 100000 && c.body.currency === 'INR' && c.body.body_hash === 'hash-k1' && !c.h['x-books-for'] && !c.h['x-books-role'], saw: ask.slice(0, 100) + ' · ' + JSON.stringify(c.body) };
   });
   await w.step('O3', 'the owner · bulk accept: select all shown, Accept (2) → the confirm names the store, "2 actions" and the total; each post carries its own total and currency; the refused one says why in a sentence', async () => {
     await page.click('[data-cbl-selmode]'); await page.waitForTimeout(200); await page.click('[data-cbl-selall]'); await page.waitForTimeout(200); await page.click('[data-bulk="accept"]'); await page.waitForSelector(T('confirm'), { timeout: 5000 });
     const ask = await txt(T('confirm')); await page.click(T('confirm-ok')); await page.waitForTimeout(1200);
     const out = await txt(T('ba-out')), calls = sent('accept', OWN).slice(1);
-    return { ok: /2 actions in Your books/.test(ask) && /4,000\.00|2,000\.00 \+|INR/.test(ask) && calls.length === 2 && calls.every((c) => typeof c.body.total_minor === 'number' && c.body.currency === 'INR' && c.body.store_id === OWN) && /1 action accepted and posted/.test(out) && /1 not posted/.test(out) && /The total changed since it was prepared/.test(out), saw: ask.slice(0, 110) + ' · ' + out.slice(0, 150) };
+    return { ok: /2 actions in Your books/.test(ask) && /4,000\.00|2,000\.00 \+|INR/.test(ask) && calls.length === 2 && calls.every((c) => typeof c.body.total_minor === 'number' && c.body.currency === 'INR' && c.body.store_id === OWN) && /1 action accepted and posted/.test(out) && /1 not posted/.test(out) && /The total changed since it was prepared. Nothing was posted/.test(out), saw: ask.slice(0, 110) + ' · ' + out.slice(0, 150) };
   });
   await w.step('O4', 'the owner · accepting before a colleague reviewed says so plainly (ACTION_NOT_REVIEWED)', async () => {
     const row = make(OWN, 4, { state: 'waiting_accept', client_ref: 'REF-N4' }); S.by[OWN].push(row); S.fail.notReviewed = true;
