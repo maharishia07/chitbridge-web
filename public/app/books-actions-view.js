@@ -76,7 +76,7 @@
 
   /* ── the read ── */
   /** read the queue on show; an answer that arrives after the store changed is dropped, so one store's rows never land on another's screen */
-  function load() {
+  function readQueue() {
     var asked = root.CBBooksActing.current().store.id;
     return api('actionsList', { query: Object.assign({ limit: LIMIT, page: 1 }, queueOf(view.queue).query) }).then(
       function (answer) {
@@ -94,7 +94,7 @@
     );
   }
   function reload() {
-    return load().then(function (kept) {
+    return readQueue().then(function (kept) {
       if (kept !== false) paint();
     });
   }
