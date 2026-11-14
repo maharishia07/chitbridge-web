@@ -8,6 +8,7 @@
  * IDS       BKS014-U03 (the sheet) · BKS014-B16 (Add) · BKS014-B17 (Close) · BKS014-B18 (the Add button over the lines). CARD 16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
+if (typeof EP !== 'undefined') Object.assign(EP, { bankSheetCountry: { m: 'GET', p: '/api/governance/country-setup' } });
 const BKSH = { ctl: null, ui: null, taxRegistered: null, posting: false };
 /** the engine parts the sheet needs, or null when the page did not load them */
 function bkshEngine() {
@@ -28,7 +29,7 @@ function bkshParties() {
 /** true / false as the shop said, null when it did not or the read failed (SET-49: unknown is not false, and nothing is claimed on unknown) */
 async function bkshRegistered() {
   try {
-    const answer = (await api('countrySetup')) || {};
+    const answer = (await api('bankSheetCountry')) || {};
     return answer.tax && typeof answer.tax.registered === 'boolean' ? answer.tax.registered : null;
   } catch (failure) {
     bkQuiet('bank-sheet-registration', failure);
