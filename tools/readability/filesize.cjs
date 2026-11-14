@@ -182,7 +182,7 @@ function fileStamp(root, ref) {
   const branch = headBranch(root);
   if (!/^batch\//.test(branch)) return false;
   const diff = gitIn(root, ['diff', '-U0', ref + '...HEAD', '--', STAMP_FILE]).stdout;
-  const added = diff.split(/\r?\n/).filter((line) => /^\+[^+]/.test(line)).map((line) => line.slice(1).trim());
+  const added = diff.split(/\r?\n/).filter((line) => line.startsWith('+') && !line.startsWith('+++ ')).map((line) => line.slice(1).trim());
   return added.length === 1 && added[0].startsWith(branch + ' ') && /^\d{4}-\d\d-\d\d$/.test(added[0].slice(branch.length + 1));
 }
 
