@@ -5,6 +5,7 @@
  * CARD      11-crm-and-marketing/marketing-app
  * Moved byte for byte out of cap-crm-groups.js; no behaviour changed. Needs the base's GROUPS and crmSendOpen (cap-crm-groups-send.js), CBShowcase (cap-showcase.js) and the host globals of cap-crm.js. */
 'use strict';
+var CRM, GROUPS; /* the host's globals (cap-crm.js, cap-crm-groups.js load first): a bare var declares the name here and keeps the value */
 /* ═══ THE SHOP WINDOW — pick a template, preview the shop's own page, share the link through the consented channel ═══ */
 var SHOW = { flags: null, state: 'loading', err: null, gen: 0, party: null, rec: null, busy: false };
 function crmShopUrl() {
