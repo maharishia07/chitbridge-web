@@ -96,7 +96,7 @@ var TOK = null,
 /* K3: nobody knows a chit id - the shop's own recent orders (the existing chits reads: orders that came in, orders that went out) are PICKED, not typed. */
 function orderLabel(c) {
   var sj = c.summary_json || {},
-    v = sj.total_value != null ? Number(sj.total_value) : null,
+    v = billTotalOf(sj), /* ACC-206 D1: helpers.js, money.total first */
     cur = sj.currency_code;
   var who =
     c.sender_entity_display_name ||

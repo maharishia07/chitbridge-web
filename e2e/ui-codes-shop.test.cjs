@@ -3,7 +3,7 @@
 /**
  * ui-codes-shop.test.cjs - the customer Shop page (SHP001) wears its identity codes (UX-137 slice 5, 2026-11-12).
  *
- * OWNS      the proof that shop.html tags its 65 controls with SHP001-<kind><nn> (B button, I input, S select, T textarea, C chip), that the letter is the
+ * OWNS      the proof that shop.html tags its 61 own controls (the four sheet closers SHP001-B11 B15 B17 B26 are the library close, WEB-ICONS-1) with SHP001-<kind><nn> (B button, I input, S select, T textarea, C chip), that the letter is the
  *           tag's own kind, that no code is on two tags, that named controls wear THEIR code (a swap fails), that no control tag is left without a code
  *           (a new raw control fails), that the three privacy buttons drawn by the shared builder in shop-privacy.js take their codes from their call
  *           sites, and that the stamp only added attributes (strip them: no code is left).
@@ -19,8 +19,8 @@ const SCREEN = 'SHP001';
 const KIND = { button: 'B', input: 'I', select: 'S', textarea: 'T', a: 'C', div: 'C', span: 'C' };
 /** the attribute text each named control is found by -> the code its tag must wear */
 const WANT = [
-  ['id="p_search"', 'SHP001-I04'], ['onclick="shopCatToggle()"', 'SHP001-B05'], ['id="lg_contact"', 'SHP001-I05'], ['onclick="supOpen();return false"', 'SHP001-C02'],
-  ['id="sup_what"', 'SHP001-T02'], ['onclick="supSendCode()"', 'SHP001-B09'], ['onclick="supSubmit()"', 'SHP001-B10'], ['id="o_qty"', 'SHP001-I17'],
+  ['onclick="shopCatToggle()"', 'SHP001-B05'], ['onclick="supOpen();return false"', 'SHP001-C02'],
+  ['onclick="supSendCode()"', 'SHP001-B09'], ['onclick="supSubmit()"', 'SHP001-B10'], 
   ['onclick="orderConfirm()"', 'SHP001-B19'], ['onclick="orderStart()"', 'SHP001-B20'], ['onclick="shopPrivacy()"', 'SHP001-B21'], ['data-testid="shop-orders-more"', 'SHP001-B23'],
   ['onclick="shopMyOrders()"', 'SHP001-B24'], ['onclick="vizToOrder()"', 'SHP001-B27']
 ];
@@ -30,13 +30,13 @@ const check = (c, m) => { console.log((c ? '  ok ' : '  FAIL ') + m); if (!c) fa
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', 'public', file), 'utf8').split('\r\n').join('\n');
 
 let src = read('shop.html');
-const first = 'SHP001-I04', second = 'SHP001-B05';
+const first = 'SHP001-I07', second = 'SHP001-B05';
 if (mutate === 'remove') src = src.split(' data-cbsid="' + first + '"').join('');
 if (mutate === 'swap') src = src.split(first).join('SWAPX').split(second).join(first).split('SWAPX').join(second);
 const tags = [...src.matchAll(/<(button|input|select|textarea|a|div|span)\b([^>]*?data-cbsid="([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2})"[^>]*)>/g)];
 const codes = tags.map((t) => t[3]);
 console.log('shop.html');
-check(codes.length === 65, 'shop.html has 65 tagged elements, found ' + codes.length);
+check(codes.length === 37, 'shop.html has 37 tagged elements (four closers moved to ui.action close, the other 24 inputs are ui.field mounts, CMP055), found ' + codes.length);
 check(new Set(codes).size === codes.length, 'no code is on two tags');
 check(codes.every((c) => c.indexOf(SCREEN + '-') === 0), 'every code is under ' + SCREEN);
 const wrong = tags.filter((t) => KIND[t[1]] !== t[3].charAt(7));
@@ -45,6 +45,17 @@ for (const [needle, code] of WANT) {
   const tag = tags.filter((t) => t[2].indexOf(needle) >= 0)[0];
   check(!!tag && tag[3] === code, needle + ' wears ' + code);
 }
+/** field-2: every converted input is a ui.field mount SHP001-U01..U22 (literal, so the census reads it), and the old element codes are gone from the page */
+const mounts = [...src.matchAll(/ui\.field\(\{\s*mount: '(SHP001-U\d\d)'/g)].map((t) => t[1]);
+check(new Set(mounts).size === 22, 'shop.html mounts 22 distinct ui.field mounts, found ' + new Set(mounts).size);
+/** field-2: each mount code sits on exactly its input (id literal as written in the call; 'none' = a file picker with no id), so swapping two codes fails */
+const MOUNT_ID = { U01: "'f_' + item", U02: 'none', U03: "'p_search'", U04: "'lg_contact'", U05: "'lg_otp'", U06: "'sup_what'", U07: "'sup_contact'", U08: "'sup_otp'", U09: "'o_loc'", U10: "'o_date'", U11: "'o_time'", U12: "'o_remark'", U13: "'o_name'", U14: "'o_contact'", U15: "'o_otp'", U16: "'o_qty'", U17: "'o_name'", U18: "'o_loc'", U19: "'o_contact'", U20: "'o_otp'", U21: 'none', U22: 'none' };
+const callOf = (at) => { let d = 0, i = src.indexOf('{', at); const from = i; for (; i < src.length; i++) { if (src[i] === '{') d++; else if (src[i] === '}' && --d === 0) break; } return src.slice(from, i + 1); };
+const found = {};
+for (const m of src.matchAll(/ui\.field\(/g)) { const body = callOf(m.index); const mt = /mount: 'SHP001-(U\d\d)'/.exec(body); const idm = /(?:^|[\s,{])id: ('[^']*'(?: \+ item)?)/.exec(body); if (mt) found[mt[1]] = idm ? idm[1] : 'none'; }
+for (const [u, id] of Object.entries(MOUNT_ID)) check(found[u] === id, 'SHP001-' + u + ' is on the field ' + (id === 'none' ? 'with no id (file picker)' : 'id ' + id) + (found[u] === id ? '' : ' (found ' + found[u] + ')'));
+check(!/SHP001-I(0[1-6]|0[89]|1[0-7]|19|2\d)"/.test(src) && !/SHP001-T0[12]"/.test(src), 'the converted element codes are not on the page any more (radio I07 and the money offer I18 keep theirs)');
+check(src.indexOf('src="/app/ui-field.js"') > src.indexOf('src="/app/ui.js"') && src.indexOf('src="/app/ui.js"') > 0, 'ui-field.js is loaded after ui.js');
 /** the census counts every control tag; each must carry a code (a new raw control fails here) */
 const census = [...src.matchAll(/<(button|input|select|textarea)\b([^>]*)>/g)].filter((t) => !/type=["']hidden["']/.test(t[2]));
 const chips = [...src.matchAll(/<(a|div|span)\b([^>]*\sonclick=[^>]*)>/g)];
@@ -67,6 +78,7 @@ if (reg) {
   const all = codes.concat(PRIVACY_CALLS.map((c) => c[1]));
   const missing = all.filter((c) => !rows[c]), retired = all.filter((c) => rows[c] && rows[c].retired);
   console.log('  register: ' + (all.length - missing.length) + ' of ' + all.length + ' codes found' + (missing.length ? ' (pending until the docs PR lands: ' + missing.length + ')' : ''));
+  if (process.env.UIID_REG) check(!missing.length, "every code is in the register UIID_REG names (" + missing.length + " missing)"); /* a set register: a missing code FAILS, no pending */
   check(retired.length === 0, 'no code is retired in the register');
 }
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');

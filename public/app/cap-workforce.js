@@ -1612,7 +1612,8 @@ async function loadCoassists() {
   const node = document.getElementById('ac_rows');
   if (node) node.innerHTML = '<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try {
-    const actors = ((await api('actors', { query: { status: 'all' } })) || []).map(mapApiActor);
+    const actorRows = await api('actors', { query: { status: 'all' } });
+    const actors = (Array.isArray(actorRows) ? actorRows : []).map(mapApiActor);
     UI.acts = actors;
     STORE.actors = actors;
     UI._acLoading = false;

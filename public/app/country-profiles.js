@@ -93,7 +93,7 @@
     return (
       '<div class="kv"><span>' +
       safe(label) +
-      (cite ? ' <button class="btn x cp-i" type="button" title="' + safe(cite) + '" aria-label="' + safe(cite) + '">ⓘ</button>' : '') +
+      (cite ? ' <button data-cbsid="CLB001-B06" class="btn x cp-i" type="button" title="' + safe(cite) + '" aria-label="' + safe(cite) + '">ⓘ</button>' : '') +
       '</span><span>' +
       (value == null || value === '' ? notInPack() : value) +
       '</span></div>'
@@ -124,7 +124,7 @@
   function pickButton(pack) {
     var on = pack.id === STATE.code;
     return (
-      '<button type="button" class="cp-pick' +
+      '<button data-cbsid="CLB001-B07" type="button" class="cp-pick' +
       (on ? ' on' : '') +
       '" data-cc="' +
       safe(pack.id) +
@@ -149,7 +149,7 @@
   function sideHTML(packs) {
     var buttons = packs.map(pickButton).join('');
     var picker =
-      '<select class="cp-select" data-testid="cp-select" aria-label="Country">' +
+      '<select data-cbsid="CLB001-S05" class="cp-select" data-testid="cp-select" aria-label="Country">' +
       packs
         .map(function (pack) {
           return (
@@ -261,7 +261,7 @@
       'Tax ID',
       rowHTML('Called', taxId.word ? '<b>' + safe(taxId.word) + '</b>' : null) +
         rowHTML('Looks like', taxId.hint ? '<span class="mono">' + safe(taxId.hint) + '</span>' : null) +
-        '<div class="idck"><input class="cp-idbox" data-testid="cp-idbox" aria-label="Try a number" placeholder="' +
+        '<div class="idck"><input data-cbsid="CLB001-I09" class="cp-idbox" data-testid="cp-idbox" aria-label="Try a number" placeholder="' +
         safe(taxId.hint || '') +
         '"><span class="cp-idverdict" data-testid="cp-idverdict" role="status">' +
         (taxId.check ? '' : '<span class="chip warn">checked on save</span>') +
@@ -449,7 +449,7 @@
           return x.period === pick;
         })[0] || periods[0];
     var picker =
-      '<select class="cp-periodpick" data-testid="cp-periodpick" aria-label="Period">' +
+      '<select data-cbsid="CLB001-S06" class="cp-periodpick" data-testid="cp-periodpick" aria-label="Period">' +
       periods
         .map(function (x) {
           return '<option value="' + safe(x.period) + '"' + (x.period === chosen.period ? ' selected' : '') + '>' + safe(x.label) + '</option>';
@@ -519,7 +519,7 @@
         .join('') +
       '</ul>';
     var downloads =
-      '<div class="idck"><button class="btn" type="button" data-dl="return" data-testid="cp-dl-return">⬇ Return (CSV)</button><button class="btn" type="button" data-dl="statements" data-testid="cp-dl-statements">⬇ Statements (CSV)</button><button class="btn" type="button" data-dl="print" data-testid="cp-dl-print">⎙ Print / PDF</button></div>';
+      '<div class="idck"><button data-cbsid="CLB001-B08" class="btn" type="button" data-dl="return" data-testid="cp-dl-return">⬇ Return (CSV)</button><button data-cbsid="CLB001-B09" class="btn" type="button" data-dl="statements" data-testid="cp-dl-statements">⬇ Statements (CSV)</button><button data-cbsid="CLB001-B10" class="btn" type="button" data-dl="print" data-testid="cp-dl-print">⎙ Print / PDF</button></div>';
     return cardHTML(
       'Books — a sample year',
       '<div class="hint">A simulated shop, ' +
@@ -754,7 +754,7 @@
   function cellValue(ruleKey, code, value) {
     var opens = OPENS[ruleKey];
     return opens
-      ? '<button class="cp-link" type="button" data-open="' +
+      ? '<button data-cbsid="CLB001-B11" class="cp-link" type="button" data-open="' +
           opens +
           '" data-cc="' +
           safe(code) +
@@ -1089,7 +1089,7 @@
     if (items.length < 4 || String(value).length <= 90) return safe(value);
     return (
       safe(items.slice(0, 3).join(', ')) +
-      ' <button class="cp-link" type="button" data-more="' +
+      ' <button data-cbsid="CLB001-B12" class="cp-link" type="button" data-more="' +
       safe(ruleKey) +
       '" data-cc="' +
       safe(code) +
@@ -1233,7 +1233,7 @@
       table.countries
         .map(function (country) {
           return (
-            '<label class="cp-show-item"><input type="checkbox" class="cp-show-box" data-show="' +
+            '<label class="cp-show-item"><input data-cbsid="CLB001-I10" type="checkbox" class="cp-show-box" data-show="' +
             safe(country.id) +
             '" data-testid="cp-show-' +
             safe(country.id) +
@@ -1263,7 +1263,7 @@
     if (!ALL.code && table.countries.length) ALL.code = table.countries[0].id;
     var shown = shownCodes(table);
     var picker =
-      '<select class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' +
+      '<select data-cbsid="CLB001-S07" class="cp-select cp-all-pick" data-testid="cp-all-select" aria-label="Country">' +
       table.countries
         .map(function (country) {
           return (

@@ -22,8 +22,12 @@
  * ⭐ ON THIS DEVICE: the accept marks, notes and the rules learned from what a person confirmed (CBBankRecon.step / learn) live in localStorage,
  *   beside the statement — undo takes an accept back and keeps the notes; a note never blocks accepting; a learned rule is only ever a suggestion,
  *   shown with where it came from. The count of lines that need a person rides to Accounts Home (bankTodoItem) in the same words.
- * CALLED BY accounts.html (Daily › Bank) · app.html (the workshop)
- * // CARD 16-finance/bank-reconciliation-and-bank-rail
+ * OWNS      the Bank view of CB Accounts (Daily › Bank): the statement read on the device (bankView · bankRun · bkbLoad), each line's state (bankRail · bankExplain · bankList),
+ *           accept · undo · forget · note · record · ask (bankAccept · bankUndo · bankForget · bankNote · bankRecord · bankAsk), the BRS and its CSV (bankBrsPaint · bankBrsCsv ·
+ *           bankBrsDownload) and the count of lines that need a person (bankTodoItem)
+ * CALLED BY public/accounts.html (script tag; BK.views bank: bankView, and the Home to-do reads bankTodoItem). Nothing else loads it: app.html has no ensureCap name for it (so it is a customer file, not app.html-only)
+ * FLOW      pick a statement file → parsed in the browser (CBBankRecon) → the shop's bank ledger + GET /api/books/bank/rail → lines painted by state → accept · record (enOpen) · ask (bankAsk) → ledger read again
+ * CARD      16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
 const BKB = { acct: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
@@ -92,7 +96,7 @@ const bkbRec = () => (BKB.rec = BKB.rec || bkbLoad('marks:' + BKB.acct, {}));
 const bkbRules = () => (BKB.rules = BKB.rules || bkbLoad('rules', []));
 const bkbBy = () => {
   try {
-    return (typeof SESSION !== 'undefined' && SESSION && (SESSION.name || SESSION.display_name)) || null;
+    return (typeof SESSION !== 'undefined' && SESSION && SESSION.name) || null;
   } catch (_) {
     return null;
   }

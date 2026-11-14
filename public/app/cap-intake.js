@@ -26,7 +26,7 @@
  * the webhook calls, driven by hand. That is the test surface the spec asked for, not a mock: it exercises the real
  * queue, the real AI structuring and the real convert.
  
- * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CALLED BY public/app.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]  · CARD 22-channels-capture-and-messaging/intake-screen
  */
 
 /* ── state ──────────────────────────────────────────────────────────────────────────────────────────────────── */

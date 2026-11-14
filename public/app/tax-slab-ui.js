@@ -8,11 +8,13 @@
  *           four words of source, or the amber "No GST rate" + the host's one action) · cbSlabMenu and cbSlabMenuHTML (the ask-once menu: the shop's
  *           live slabs whose rate is on the pack's menu TODAY, the pack's suggestion for the item's code first with "Use", its citation behind ⓘ; the
  *           shop's 0% exempt slab reads "No GST (exempt)").
- * CALLED BY app.html (prodTaxHTML · prodTaxAttachHTML), cap-categories.js (cbcatPaint), cap-catsetup.js (the catalogue default), cap-definitions.js
- *           (the takeover picker), cap-catalogue.js (the item sheet's rate row), till.html (the bill's "No tax rate · Fix" ask-once sheet).
+ * CALLED BY the three pages that load it by <script src> (grep -lE 'src="/?app/tax-slab-ui.js' public/*.html: app, catalogue, till) and the scripts that call its functions (grep -lw <name> public/*.html public/app/*.js, 14 Nov 2026):
+ *           app.html (prodTaxHTML 21451,21564 · prodTaxAttachHTML 21513 · cbSlabOptionsHTML 21506,21530), cap-categories.js:935 (cbcatSlabPickHTML), cap-catsetup.js (cbSlabOptionsHTML 2794 · cbRateMay 2779, the catalogue default),
+ *           cap-definitions.js:2052 (cbSlabOptionsHTML, the takeover picker), cap-catalogue.js (cbSlabChipHTML 1083 · cbRateButtonHTML 1086 · cbSlabMenu 1109 · cbRateMay 1064 · cbTaxCharges 1039 · cbRateColumnKeys 118 · cbcatSlabPickHTML 1734),
+ *           till.html (cbRateMay 18766 · cbSlabMenu 18773, the bill's "No tax rate · Fix" ask-once sheet). Line numbers are base 79efe87f call sites, comments excluded.
  * FLOW      resolve() → cbSlabChipHTML → Set rate → cbSlabMenu(slabs, pack, code) → cbSlabMenuHTML → the HOST confirms and writes (PATCH /products/:id
  *           on the catalogue, POST /api/till/rate at the counter) → the host repaints the row in place
- * CARD      06-catalogue-pim/items
+ * CARD      15-tax-and-country-packs/tax-compute-rate-invoice-tax
  *
  * ⚠️ NOTHING HERE DECIDES A RATE. The engine resolves (CBTaxSlab.resolve), the pack suggests (CBTaxPacks.suggestFor) and the shop taps; a rate is
  * written only by the host through the engine's one writer (CBTaxSlab.setOn, on the server too). The words are the pack's (describe({short}) says
@@ -102,7 +104,7 @@ function cbcatSlabPickHTML(form, opts) {
 /** the picker itself: the <select> (greyed with the reason in its title when `greyedWhy` is given) and the one line under it — the reason, or what the picker does */
 function slabPickSelect_(slabs, chosen, greyedWhy) {
   return (
-    '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)"' +
+    '<select class="inp" data-testid="catg-slab" data-cbsid="SCR046-S01" onchange="cbcatField(\'default_slab\',this.value)"' +
     (greyedWhy ? ' disabled title="' + esc(greyedWhy) + '"' : '') +
     '>' +
     '<option value="">— ' +
@@ -175,7 +177,7 @@ function cbRateButtonHTML(verdict, opts) {
   var testId = opts.tid ? ' data-testid="' + esc(opts.tid) + '"' : '';
   var button =
     ' <button type="button" class="' + esc(opts.cls || 'act quiet') + '"' + testId + (allowed ? '' : ' disabled title="' + esc(verdict.why) + '"') +
-    ' onclick="' + esc(opts.onclick || '') + '">' + esc(opts.word || slabT_('Set rate')) + '</button>';
+    ' onclick="' + esc(opts.onclick || '') + '" data-cbsid="SCR046-B01">' + esc(opts.word || slabT_('Set rate')) + '</button>';
   return allowed ? button : button + ' <span class="sub" data-testid="' + esc((opts.tid || 'rate') + '-why') + '">' + esc(verdict.why) + '</span>';
 }
 
@@ -293,7 +295,7 @@ function slabMenuButton_(row, menu, opts) {
   var isSuggested = !!(row.suggested && menu.suggestion);
   var onclick = opts.pick ? opts.pick(row.id) : '';
   return (
-    '<button type="button" class="' + esc(opts.cls || 'choice') + (isSuggested ? ' suggested' : '') + '" data-testid="rate-pick-' + esc(row.id) + '" data-rate="' + esc(row.rate) + '" onclick="' + esc(onclick) + '">' +
+    '<button type="button" class="' + esc(opts.cls || 'choice') + (isSuggested ? ' suggested' : '') + '" data-testid="rate-pick-' + esc(row.id) + '" data-rate="' + esc(row.rate) + '" onclick="' + esc(onclick) + '" data-cbsid="SCR046-B02">' +
     slabMenuFace_(row, menu, opts) +
     '</button>' +
     (isSuggested ? slabCiteHTML_(menu.suggestion) : '')

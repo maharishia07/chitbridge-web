@@ -3,8 +3,11 @@
  * heavy Tier-2 management: the device cockpit, provisioning/connection-string, add-device, regenerate, and the
  * one-drop package installer. It SELF-REGISTERS its renderer into ACTOR_MANAGE, so the generic dispatcher finds it.
  * Backend: routes/connectors.js + migration b62. Nothing ships to entities that never open a connector.
- * OWNS the connector cockpit · CALLED BY app.html's ensureCap('connector') (the Co-assists list opens it) · FLOW  invoke → load → register into ACTOR_MANAGE → paint
- * CARD 28-platform-and-operations/connector-cockpit */
+ * OWNS      the connector cockpit (IoT / ERP management): provisioning, add device, regenerate key, the one-drop installer; it registers itself into ACTOR_MANAGE.
+ * CALLED BY app.html: CAP_OF connectors → 'connector' (and CAP_GATED) · cap-workforce.js (ensureCap('connector'); acLoadDevices · piCockpit · _download · _buildInstaller). The Connectors card opens /settings.html#/connectors, which loads no cap-connector.js: SUPPORT.
+ * FLOW      ensureCap('connector') → registers into ACTOR_MANAGE → acLoadDevices → piCockpit → acAddDevice / acToggleDevice / acRegenKey / acCreatePackage
+ * CARD      28-platform-and-operations/connector-cockpit
+ */
 
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {

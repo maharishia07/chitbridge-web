@@ -99,7 +99,34 @@ check(ui.action('close', { mount: 'TST001-U01' }).includes('aria-label="Close"')
 
 console.log('role gate and busy');
 const gated = ui.action('add', { mount: 'TST001-U01', object: 'counter', role: { ok: false, why: 'Only the owner may add counters' } });
-check(gated.includes(' disabled ') && gated.includes('aria-disabled="true"') && gated.includes('title="Only the owner may add counters"'), 'a refused action stays visible, greyed, with its sentence');
+check(!/ disabled[ >=]/.test(gated) && gated.includes('aria-disabled="true"') && gated.includes('title="Only the owner may add counters"'), 'a refused action stays visible, greyed, with its sentence (aria-disabled, no native disabled: it stays in the Tab order)');
+const whyOf = (html) => { const id = (html.match(/aria-describedby="([^"]+)"/) || [])[1]; return id && new RegExp('<span id="' + id + '" class="cbui-sr">([^<]*)</span>').exec(html); };
+check(whyOf(gated) && whyOf(gated)[1] === 'Only the owner may add counters', 'role {ok:false}: aria-describedby resolves to a hidden element holding the reason');
+const stateOff = ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: 'Needs the owner' });
+check(!/ disabled[ >=]/.test(stateOff) && stateOff.includes('aria-disabled="true"') && stateOff.includes('data-disabled="1"') && whyOf(stateOff) && whyOf(stateOff)[1] === 'Needs the owner', "disabled: 'Needs the owner' draws aria-disabled, data-disabled and a describedby that resolves, and no native disabled");
+check(!/tabindex="-1"/.test(stateOff), 'a disabled action has no tabindex -1: it stays in the Tab order');
+check(refused(() => ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: true })) && refused(() => ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: ' ' })), 'disabled: true (or an empty sentence) is refused: a greyed action says why');
+check(ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: false }).indexOf('aria-disabled') < 0, 'disabled: false draws an ordinary enabled button');
+const hinted = ui.action('save', { mount: 'TST001-U03', effect: 'preference', hint: 'Saves the policy', disabled: 'Needs the owner' });
+check((hinted.match(/ title=/g) || []).length === 1 && hinted.includes('title="Needs the owner"') && !hinted.includes('Saves the policy') && whyOf(hinted)[1] === 'Needs the owner', 'hint + disabled: ONE title attribute and it is the reason; the hidden text is the reason');
+const rowA = ui.action('save', { mount: 'TST001-U04', effect: 'preference', disabled: 'Needs the owner' }), rowB = ui.action('save', { mount: 'TST001-U04', effect: 'preference', disabled: 'Needs the owner' });
+check(rowA.match(/aria-describedby="([^"]+)"/)[1] !== rowB.match(/aria-describedby="([^"]+)"/)[1], 'two disabled rows on one mount without a key get different reason ids');
+const both = ui.action('save', { mount: 'TST001-U02', effect: 'preference', disabled: 'Busy now', role: { ok: false, why: 'Only the owner may save' } });
+check(whyOf(both)[1] === 'Only the owner may save', 'role and disabled together: the permission sentence wins');
+check(/class="cbui-sr"/.test(read('app/ui.js')) && /\[data-cbname\]\[aria-disabled="true"\]\{[^}]*cursor:not-allowed/.test(read('app/ui.js')), 'the stylesheet mutes [aria-disabled] and hides the reason visually only');
+{
+  const calls = [];
+  ui.action('save', { mount: 'TST004-U01', effect: 'preference', disabled: 'Needs the owner', onPress: () => pressed.push('disabled-ran') });
+  const attrs = { 'data-cbmount': 'TST004-U01', 'aria-disabled': 'true', title: 'Needs the owner' };
+  const btn = { disabled: false, getAttribute: (n) => attrs[n] || null, closest: () => btn };
+  const before = pressed.length;
+  listeners.click({ target: btn, preventDefault: () => calls.push('prevent'), stopPropagation: () => calls.push('stop') });
+  check(pressed.length === before && calls.join() === 'prevent,stop', 'a press on a disabled action does not call onPress, and stops the default and the bubble');
+  const sub = [];
+  listeners.submit({ submitter: btn, preventDefault: () => sub.push('prevent') });
+  listeners.submit({ submitter: { getAttribute: () => null }, preventDefault: () => sub.push('wrong') });
+  check(sub.join() === 'prevent', 'a form submit by a disabled submitter is cancelled; an enabled submitter is left alone');
+}
 check(ui.action('done', { mount: 'TST001-U01', busy: true }).includes('aria-busy="true"'), 'busy is aria-busy');
 
 console.log('the one press path');
@@ -158,6 +185,16 @@ check((() => { try { ui.progress.start({ mount: 'TST003-D01-U01', steps: 2, tota
   check(/cbp-spin/.test(button.innerHTML) && /Saving…/.test(button.innerHTML), 'level 2: after the delay the button shows the spinner and its words');
   busy.stop();
   check(button.innerHTML === 'Save' && !button.disabled && !button.attrs['aria-busy'], 'level 2: stop() restores the button');
+  let focused = 0;
+  button.focus = () => { focused++; };
+  sandbox.document.activeElement = button;
+  const busy2 = ui.progress.inline(button, 'Saving…', 30);
+  busy2.stop();
+  check(focused === 1, 'level 2: focus is given back to the button after a busy stop (native disabled had dropped it)');
+  sandbox.document.activeElement = null;
+  const busy3 = ui.progress.inline(button, 'Saving…', 30);
+  busy3.stop();
+  check(focused === 1, 'level 2: a button that did not hold focus is not pulled into focus');
   if (failures) { console.log(failures + ' FAILED'); process.exit(1); }
   console.log('all passed');
 })();

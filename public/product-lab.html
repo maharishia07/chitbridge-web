@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Product Lab: adopt a ready-made list, one row per product with its units as choices (each with its GST unit code), then price and shelf.
-     CALLED BY the labs links on Home and the Catalogue.
+     CALLED BY Home's Labs card (manifest id product-lab), the till's openProductLab (till.html). The Catalogue card only reads its facts (/api/facts/product-lab).
      FLOW  load → CBFrame.lab (the Finance frame) → the engines run on the typed product → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/product-lab -->
 <head>
@@ -63,8 +63,8 @@ body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 var(--f-ui,
 .stp.on .n{background:var(--ok);color:#fff}
 .stp.done .n{background:var(--ok-t);color:var(--ok)}
 .stp:disabled{cursor:default;opacity:.6}
-html{scroll-padding-bottom:110px}   /* the fixed footer never covers a field scrolled into view */
-.wrap{padding:14px 16px 120px;max-width:1100px;margin:0 auto}
+html,#labwork{scroll-padding-bottom:140px}   /* the footer never covers a field scrolled into view: the pane that scrolls is #labwork (the frame moves the page body into it) */
+.wrap{padding:14px 16px 24px;max-width:1100px;margin:0 auto}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 button{font:inherit;color:inherit;cursor:pointer}
 .pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--dim)}
@@ -84,7 +84,7 @@ td.loc{color:var(--dim)}
 .whose{font-size:.72em;color:var(--dim);font-weight:400;letter-spacing:.03em}
 tr.has .whose{color:var(--ok)}
 .catrow td{background:var(--hair);font-weight:700;font-size:.85em}
-.foot{position:fixed;inset-inline:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+.foot{position:sticky;bottom:0;z-index:1;background:var(--card);border-top:1px solid var(--line);
   padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .go{padding:11px 20px;border:1px solid var(--ok);border-radius:10px;background:var(--ok);color:#fff;font-weight:700}
 .go:disabled{opacity:.45;cursor:not-allowed;background:var(--card);color:var(--dim);border-color:var(--line)}
@@ -360,7 +360,7 @@ function paintSteps() {
         on = STEP === at,
         done = STEP > at;
       return (
-        '<button class="stp ' +
+        '<button data-cbsid="PLB001-B01" class="stp ' +
         (on ? 'on' : done ? 'done' : '') +
         '" data-testid="pl-step-' +
         at +
@@ -398,7 +398,7 @@ function buildChoose() {
     DATA.lists
       .map(function (item) {
         return (
-          '<button class="pill ' +
+          '<button data-cbsid="PLB001-B02" class="pill ' +
           (item.key === LIST.key ? 'on' : '') +
           '" data-testid="pl-list-' +
           esc(item.key) +
@@ -421,7 +421,7 @@ function buildChoose() {
           LIST.languages
             .map(function (item) {
               return (
-                '<button class="pill ' +
+                '<button data-cbsid="PLB001-B03" class="pill ' +
                 (LANGS.indexOf(item) >= 0 ? 'on' : '') +
                 '" data-testid="pl-lang-' +
                 esc(item) +
@@ -436,23 +436,23 @@ function buildChoose() {
         : '<span class="note">No local names on this list yet.</span>') +
     '</div>' +
     '<div class="row">' +
-    '<input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
-    '<select id="cat" aria-label="Shelf" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
+    '<input data-cbsid="PLB001-I01" type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">' +
+    '<select id="cat" aria-label="Shelf" data-cbsid="PLB001-S01" onchange="paint()" data-testid="pl-cat"><option value="">Every shelf</option>' +
     LIST.categories
       .map(function (x) {
         return '<option>' + esc(x) + '</option>';
       })
       .join('') +
     '</select>' +
-    '<button class="pill" onclick="pickAll(true)" data-testid="pl-all">Tick all shown</button>' +
-    '<button class="pill" onclick="pickAll(false)">Clear</button>' +
+    '<button data-cbsid="PLB001-B04" class="pill" onclick="pickAll(true)" data-testid="pl-all">Tick all shown</button>' +
+    '<button data-cbsid="PLB001-B05" class="pill" onclick="pickAll(false)">Clear</button>' +
     '</div>' +
     /* ⭐ three states, because "show me only what I do NOT have" is the question somebody adding products has */
     '<div class="row" id="own" data-testid="pl-own">' +
     ['', 'mine', 'new']
       .map(function (item, index) {
         return (
-          '<button class="pill ' +
+          '<button data-cbsid="PLB001-B06" class="pill ' +
           (OWN === item ? 'on' : '') +
           '" data-own="' +
           item +
@@ -475,7 +475,7 @@ function buildChoose() {
         units
           .map(function (item) {
             return (
-              '<button class="pill ' +
+              '<button data-cbsid="PLB001-B07" class="pill ' +
               (OFFUNITS[item] ? '' : 'on') +
               '" data-unit="' +
               esc(item) +
@@ -505,7 +505,7 @@ function unitLine(product, entry) {
   return (
     '<div class="ul ' +
     (got ? 'got' : '') +
-    '" data-testid="pl-unit-line"><input type="checkbox" data-testid="pl-unit-tick" ' +
+    '" data-testid="pl-unit-line"><input data-cbsid="PLB001-I02" type="checkbox" data-testid="pl-unit-tick" ' +
     (PICKED[keyOf(row)] ? 'checked' : '') +
     (got ? ' disabled' : '') +
     ' data-name="' +
@@ -596,7 +596,7 @@ function paintReview() {
     ]
       .map(function (item) {
         return (
-          '<button class="pill ' +
+          '<button data-cbsid="PLB001-B08" class="pill ' +
           (SHELF === item[0] ? 'on' : '') +
           '" data-testid="pl-shelf-' +
           item[0] +
@@ -622,7 +622,7 @@ function paintReview() {
           esc(p.unit) +
           (CBProductLabRows.uqcOf(p.unit) ? ' <span class="uqc" data-testid="pl-review-uqc" title="GST unit code">' + esc(CBProductLabRows.uqcOf(p.unit)) + '</span>' : '') +
           '</td>' +
-          '<td class="num"><input type="number" min="0" step="0.01" value="' +
+          '<td class="num"><input data-cbsid="PLB001-I03" type="number" min="0" step="0.01" value="' +
           (p.price == null ? '' : p.price) +
           '" data-testid="pl-price-' +
           esc(p.name) +
@@ -636,7 +636,7 @@ function paintReview() {
           '<td class="loc">' +
           esc(p.category || '') +
           '</td>' +
-          '<td><button class="pill" data-name="' +
+          '<td><button data-cbsid="PLB001-B09" class="pill" data-name="' +
           esc(p.name) +
           '" data-unit="' +
           esc(p.unit) +
@@ -659,12 +659,12 @@ function paintFoot() {
         '<span class="why" id="nextwhy" data-testid="pl-next-why" role="status">' +
         esc(CBProductLabRows.nextWhy(n)) +
         '</span>' +
-        '<button class="go" id="next" data-testid="pl-next" onclick="toReview()" aria-describedby="nextwhy"' +
+        '<button data-cbsid="PLB001-B10" class="go" id="next" data-testid="pl-next" onclick="toReview()" aria-describedby="nextwhy"' +
         (n ? '' : ' disabled title="' + esc(CBProductLabRows.nextWhy(n)) + '"') +
         '>' +
         (n ? 'Next — price ' + n + ' product' + (n === 1 ? '' : 's') : 'Next') +
         '</button>'
-      : '<button class="back" data-testid="pl-back" onclick="toChoose()">← Back to the list</button>' +
+      : '<button data-cbsid="PLB001-B11" class="back" data-testid="pl-back" onclick="toChoose()">← Back to the list</button>' +
         '<span class="note" id="count">' +
         n +
         ' product' +
@@ -672,7 +672,7 @@ function paintFoot() {
         ' · ' +
         (SHELF === 'available' ? 'on sale immediately' : 'off the shelf until you switch them on') +
         '</span>' +
-        '<button class="go" id="adopt" data-testid="pl-adopt" onclick="adopt()"' +
+        '<button data-cbsid="PLB001-B12" class="go" id="adopt" data-testid="pl-adopt" onclick="adopt()"' +
         (n && !BUSY ? '' : ' disabled') +
         '>' +
         (BUSY ? 'Adding…' : 'Add ' + n + ' to my catalogue') +
