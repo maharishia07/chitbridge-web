@@ -111,8 +111,6 @@ function crmMayRemove() {
 /** the co-assist's hat rides in their signed token (lib/access.js); the session record does not keep it, so it is read from the token's own payload */
 function crmHat() {
   /* the b173 ladder word (access_level: viewer · commenter · editor) is what the server enforces — read FIRST; the old hat only when no level rides (FX-L2C) */
-  if (SESSION.access_level || SESSION.level) return String(SESSION.access_level || SESSION.level);
-  if (SESSION.hat) return String(SESSION.hat);
   /* the level rides in the signed token's own payload (lib/identity-auth issueToken: access_level; pre-b173 tokens: hat / actor_hat) */
   try {
     var b = String(SESSION.token || '')
@@ -1529,7 +1527,7 @@ function crmHome(frame) {
     fill: false,
     views: crmViews(),
     head: function () {
-      return { title: tx('Parties'), notices: CRM.state === 'ready' ? crmNotices() : [] };
+      return { title: tx('Parties'), reserve: true, notices: CRM.state === 'ready' ? crmNotices() : [] };
     },
     state: function () {
       return CRM.state;
@@ -2086,8 +2084,19 @@ function crmAddOpen(q) {
   if (node) {
     node.focus();
     node.addEventListener('input', crmAddType);
+    node.addEventListener('keydown', crmAddEnter);
   }
   crmAddResults();
+}
+/** Enter in the one field (rule 4): read what was typed now, not after the pause, then press the one way forward when there is exactly one (Add as local); with matches to choose from nothing is added for them */
+function crmAddEnter(ev) {
+  if (ev.key !== 'Enter' || ev.isComposing) return;
+  ev.preventDefault();
+  clearTimeout(_addT);
+  crmAddSearch().then(function () {
+    var only = document.querySelector('#crm_addres [data-sheet-save]');
+    if (only) only.click();
+  });
 }
 var _addT = null;
 function crmAddType(ev) {
@@ -2180,7 +2189,7 @@ function crmAddResults() {
       '</b><br><span class="hint">' +
       esc(tx('Bills are yours only until they join.')) +
       '</span></span>' +
-      '<button data-cbsid="CRM001-B11" type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go">' +
+      '<button data-cbsid="CRM001-B11" type="button" class="act sm ghost" data-crm="addlocal" data-testid="crm-add-local-go"' + (mine.length || (ADD.found || []).length ? '' : ' data-sheet-save') + '>' +
       esc(tx('Add as local')) +
       '</button></div>';
   box.innerHTML = h;
@@ -2397,7 +2406,7 @@ var CRM_CLICK = {
   },
   fuassign: function (control, id, value, event) {
     event.stopPropagation();
-    return crmFuAct(id, { assignee_user_id: SESSION.userId || SESSION.name || '' });
+    return crmFuAct(id, { assignee_user_id: SESSION.name || '' });
   },
   fudel: function (control, id, value, event) {
     event.stopPropagation();

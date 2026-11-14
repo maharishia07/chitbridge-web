@@ -56,9 +56,23 @@ jobs:
           node scripts/cart-ui.test.mjs
           node scripts/cap-network-render.test.mjs
           node scripts/step-flow.test.mjs
+          node scripts/offers.test.mjs
+          node scripts/attach-deferred.test.mjs
+          node scripts/price-origin.test.mjs
+          node scripts/price-resolve.test.mjs
           node scripts/check-adoption.js
       - name: One answer to what trade is this shop (vertical-box; REL-7)
         run: node tests/vertical-box.test.cjs
+      - name: Proofs 2026-11-14 (AI-13 promptAsk · DOC-5/68 seams and MODULES · DOC-7 glossary tap · JAN-7 method models · MNT-16 checklist anchor · PM-8 verdict+incident build · PM-53 edition chip)
+        run: |
+          node tests/ai-13-prompt-ask.test.cjs
+          node tests/doc-5-seams-write.test.cjs
+          node tests/doc-7-glossary-tap.test.cjs
+          node tests/jan-7-method-models.test.cjs
+          node tests/mnt-16-checklist-anchor.test.cjs
+          node tests/pm-8-verdict-build.test.cjs
+          node tests/pm-8-incident-build.test.cjs
+          node tests/pm-53-edition-chip.test.cjs
       - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
         run: |
           node e2e/screen-reads.cjs
@@ -112,6 +126,7 @@ jobs:
           node e2e/pe-gst-still.test.cjs
           node e2e/prefetch.cjs
           node e2e/prim-homes.cjs
+          node e2e/quote-attempt-key.test.cjs
           node e2e/rail-thread-guard.cjs
           node e2e/raw-id-words.cjs
           node e2e/register-off.cjs
@@ -132,15 +147,56 @@ jobs:
           node e2e/silent-control.cjs
           node e2e/token-check.cjs
           node e2e/tooltip-length.cjs
+          # SEC/PLT proofs (2026-11-14): vm-sandbox checks on the real sign-in, row and key-watch code; the .red script breaks each cited line in place and demands red. SEC-5's screen matrix is SIT-run (no browser here)
+          node e2e/plt-13-no-hardcoded-otp.test.cjs
+          node e2e/sec-61-row-escaping.test.cjs
+          node e2e/sec-24-key-watch.test.cjs
+          node e2e/sec-proofs.red.cjs
           # QA-153 red fixes (13 Nov): vm-sandbox checks re-pointed at the code they lift (shared e2e/lib/dom-stub.cjs for the four with a document); offline, no sibling repo
           node e2e/locale-map.cjs
           node e2e/prof-dirty.cjs
           node e2e/profile-groups.cjs
           node e2e/render-smoke.cjs
           node e2e/api-dedupe.test.cjs
+          # CAT proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real catalogue code; each is red when its cited line is mutated
+          node e2e/cat-131-def-live.test.cjs
+          node e2e/cat-133-138-item-form-categories.test.cjs
+          node e2e/cat-135-category-chips.test.cjs
+          node e2e/cat-161-162-governance-rows.test.cjs
+          node e2e/cat-34-offer-lab-scope.test.cjs
+          # NET proof (2026-11-14): the supplier-add confirm is plain text and a bridge id searched on another installation is never filed as local (NET-41 web half); red under a mutant
+          node e2e/net-41-supplier-add-confirm.test.cjs
+          # CTR/ORD proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real till and cart code; each is red when its cited line is mutated
+          node e2e/ctr-12-refused-key-reenrols.test.cjs
+          node e2e/ctr-13-hour-group-wording.test.cjs
+          node e2e/ctr-146-counter-name.test.cjs
+          node e2e/ord-41-attach-ui-wired.test.cjs
+          node e2e/ord-43-unresolved-order-ref.test.cjs
+          # CRM proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
+          node e2e/crm-9-standards-fold.test.cjs
+          node e2e/crm-23-dues-columns.test.cjs
+          node e2e/crm-26-sheet-reads-invoice.test.cjs
+          node e2e/crm-30-31-sum-scope.test.cjs
           node e2e/arabic-catalogue.test.cjs
           node e2e/docnumber-continuity.cjs
           node e2e/movable-panels.cjs
+          # ACC proofs (2026-11-14, P2 PROOF pass): CSS / vm-sandbox checks on the real Accounts and CRM pages; each is red when its cited line is mutated
+          node e2e/acc-24-54-no-width-cap.test.cjs
+          node e2e/acc-104-accounts-icon-family.test.cjs
+          node e2e/rail-233-dispute-404-words.test.cjs
+          node e2e/ppl-49-actors-non-array.test.cjs
+          # REP / UX / CTRY proofs (2026-11-14, P2 PROOF pass): vm-sandbox checks on the real code; each is red when its cited line is mutated
+          node e2e/rep-13-14-15-till-drain-words.test.cjs
+          node e2e/rep-19-mis-overdue-words.test.cjs
+          node e2e/ux-65-66-attach-call-sites.test.cjs
+          node e2e/ux-122-timeline-status-words.test.cjs
+          node e2e/net-19-one-session-keeper.test.cjs
+          node e2e/net-24-shop-no-fx-table.test.cjs
+          node e2e/ux-109-reach-sweep.test.cjs
+          node e2e/ux-109-categories-attach-confirm.test.cjs
+          node e2e/ctry-18-starter-price-follows-country.test.cjs
+          node e2e/ctry-23-governance-no-localstorage.test.cjs
+          node e2e/ctry-70-india-compared-with.test.cjs
       # QA-79 (22 Oct): offline scripts that passed and no runner reached (test library, TEST-LIBRARY.md). No browser, no sibling repo.
       - name: Offline guards and unit tests no runner reached (QA-79)
         run: |
@@ -164,14 +220,19 @@ jobs:
           node e2e/screen-id-guard.cjs
           node e2e/screen-help.test.cjs
           node e2e/ui-action-set.test.cjs
+          node e2e/field-edge.test.cjs
+          node e2e/ui-field.test.cjs
           node e2e/ui-dialog-widen.test.cjs
           node e2e/shell-identity.test.cjs
           node e2e/ui-codes.test.cjs
           node e2e/ui-codes-tasks.test.cjs
+          node e2e/ui-codes-listctl-dispute.test.cjs
           node e2e/ui-codes-offer-lab.test.cjs
           node e2e/ui-codes-finance.test.cjs
           node e2e/ui-codes-accounts.test.cjs
+          node e2e/ui-codes-w2-fin.test.cjs
           node e2e/ui-codes-crm.test.cjs
+          node e2e/ui-codes-w2-crm.test.cjs
           node e2e/ui-codes-std-actions.test.cjs
           node e2e/ui-codes-std-glyphs.test.cjs
           node e2e/ui-standard.test.cjs
@@ -183,8 +244,11 @@ jobs:
           node e2e/ui-codes-app-product.test.cjs
           node e2e/group-actions.test.cjs
           node e2e/ui-batch-clock.test.cjs
+          node tests/price-moved-ui.test.cjs
+          node e2e/ui-codes-chit-price-moved.test.cjs
           node e2e/ui-codes-catalogue.test.cjs
           node e2e/ui-codes-shop.test.cjs
+          node e2e/ui-codes-w2-net.test.cjs
           node e2e/ui-codes-intake.test.cjs
           node e2e/intake-page-checks.test.cjs
           node e2e/ui-codes-authority-forms.test.cjs
@@ -195,6 +259,13 @@ jobs:
           node e2e/ui-codes-network-design.test.cjs
           node e2e/ui-codes-testing.test.cjs
           node e2e/ui-codes-cart-design.test.cjs
+          node e2e/ui-codes-cart.test.cjs
+          node e2e/ui-codes-pass-cat.test.cjs
+          node e2e/ui-codes-labs.test.cjs
+          node e2e/ui-codes-refpages.test.cjs
+          node e2e/ui-codes-w2-lib.test.cjs
+          node e2e/ui-codes-till.test.cjs
+          node e2e/ui-codes-promo.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs
@@ -205,6 +276,7 @@ jobs:
           node e2e/shop-t2b.cjs
           node e2e/vault-keys.cjs
           node tests/avatar-hydrate.test.cjs
+          node tests/dead-code-sweep.test.cjs
           node tests/sec131-signout.test.cjs
           node tests/board-trace.test.cjs
           node tests/cart-currency.test.cjs
@@ -216,6 +288,8 @@ jobs:
           node tests/cur1-money-reader.test.cjs
           node tests/chit-sheet-lines.test.cjs
           node tests/match-other-unit.test.cjs
+          node tests/ops-89-deliver-ref.test.cjs
+          node tests/match-billed.test.cjs
           node tests/acc-191-chit-sheet-not-decided.test.cjs
           node tests/crm-groups-reach.test.cjs
           node tests/crm-leads-import.test.cjs
@@ -233,12 +307,14 @@ jobs:
           node tests/sheets-links.test.cjs
           node tests/showcase-templates.test.cjs
           node tests/stock-pane.test.cjs
+          node tests/till-money-grain.test.cjs
           node tests/t2e-cart.test.cjs
           node tests/t2e-pin.test.cjs
           node tests/t2f-backdrop.test.cjs
           node tests/t3a-money.test.cjs
           node tests/tasks-orders-list.test.cjs
           node tests/wx-bills-cols.test.cjs
+          node tests/acc342-todo-no-action.test.cjs
           node tests/wx-chit-door.test.cjs
           node tests/wx-pay-name.test.cjs
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)

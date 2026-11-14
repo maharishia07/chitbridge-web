@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <!-- OWNS  the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above.
-     CALLED BY a shop's public link (/shop.html?…), network-shop.html, the QR on a bill.
+     CALLED BY a shop's public link (/shop.html?s=…; the manifest storefront card, cap-admin.js's link row, cap-crm-groups.js's share link), network-shop.html (its shop links), and the frames that preview it (app.html's Storefront tab, till.html, app/cap-showcase.js).
      FLOW  load → shopFrame (CBFrame bar) → the catalogue read → paint → cart → order (POST /api/orders)
      CARD storefront-and-catalogue/storefront -->
 <head>
@@ -52,7 +52,6 @@
   .price{ font-size:17px; font-weight:800; margin-top:10px; }
   .price small{ font-size:12px; color:var(--grey); font-weight:400; }
   .pmedia{ padding:4px 0 10px; }
-  .pbadges{ padding:2px 0 4px; }
   .prow{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
   .foot{ margin-top:26px; font-size:11px; color:var(--grey-3); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
@@ -60,9 +59,12 @@
   /* ⭐ THE FIRST SCREEN IS THE LIST (T2b, 2026-10-10; M62): one band = search + a "Categories ▾" button; the categories are an OVERLAY panel that takes no space of its own;
      the basket is a bottom dock, so nothing above the list ever moves when the first dish is added (M72). */
   .shopband{ position:sticky; top:0; z-index:20; display:flex; gap:8px; align-items:center; background:var(--paper); padding:6px 0 8px; }
-  .shopband input{ flex:1; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; box-sizing:border-box; background:var(--card,#fff); }
+  .shopband .cbf{ flex:1; min-width:0; margin:0; } .shopband input{ flex:1; min-width:0; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:14px; box-sizing:border-box; background:var(--card,#fff); }
   .catbtn{ flex:none; border:1px solid var(--line); background:var(--card,#fff); color:var(--ink); border-radius:8px; padding:9px 11px; font:600 13px var(--font-ui); cursor:pointer; white-space:nowrap; touch-action:manipulation; }
   .catbtn[aria-expanded="true"]{ border-color:var(--accent); color:var(--accent); }
+  /* the library close icon (ui.action close, 44 px) in a sheet head: ink on the sheet's white, never the old #8a949c grey; the focus ring is the page accent */
+  [data-cbname="close"][data-cbmount^="SHP001-"]{ border:0; background:none; color:var(--ink); font:600 22px/1 var(--font-ui); cursor:pointer; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; }
+  [data-cbname="close"][data-cbmount^="SHP001-"]:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .catpanel{ position:absolute; top:100%; inset-inline:0; max-height:62vh; overflow:auto; background:var(--card,#fff); border:1px solid var(--line); border-radius:12px; box-shadow:0 10px 28px rgba(15,22,32,.18); padding:4px; z-index:21; }
   .catpanel[hidden]{ display:none; }
   .catpick{ display:flex; justify-content:space-between; gap:10px; width:100%; border:0; background:none; padding:12px; font:600 14px var(--font-ui); color:var(--ink); text-align:start; border-radius:8px; cursor:pointer; touch-action:manipulation; -webkit-touch-callout:none; user-select:none; }
@@ -74,7 +76,6 @@
   .shopdock .cbcart-bar{ width:100%; justify-content:center; height:44px; }
   .cbcat-was + .cbcat-offered::before{ content:'→ '; color:var(--grey,#8a949c); font-weight:400; }
   .cbcat-sec{ font:700 15px var(--font-ui); color:var(--ink); padding:12px 2px 6px; border-bottom:2px solid var(--accent); margin-top:4px; scroll-margin-top:64px; }
-.offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--warn-tint,#fff5e0);border:1px solid var(--warn-3,#e8cf9a);color:var(--warn-2,#8a5a12);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -90,7 +91,8 @@
 <script src="/app/avatar.js"></script>      <!-- CBAvatar: the one avatar / Sign in door -->
 <script src="/app/one-person.js"></script>  <!-- CBOnePerson: whose session this browser holds (CBFrame.session) -->
 <script src="/app/screen-id.js"></script>   <!-- CBScreenId: this screen's name · code in the bar -->
-<script src="/app/ui.js"></script>   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
+<script src="/app/ui.js"></script>
+<script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field draws every input on this page (label, hint, error, 44 px, --field-edge) -->   <!-- CMP023 Home: the shell draws its ⌂ Home link from the standard components -->
 <script src="/app/shell.js"></script>       <!-- CBShell: the bar -->
 <script src="/app/page-frame.js"></script>  <!-- CBFrame.mount({ bar: true }): the header only; the page's own body under it -->
 <script src="app/accounts-shell.js"></script>   <!-- INT6a-LOCALE: the string door (CBSTR · cbLang · tx) — the shop had none, so no language pack could load here -->
@@ -180,6 +182,28 @@ function _isPayload() {
 function _submitLabel() {
   return _isPayload() ? (_cur().preset === 'form' ? 'Submit' : 'Send enquiry') : _isNegotiable() ? 'Make an offer' : t('order');
 }
+/* the declared field's kind: the page's own words for a type, the library's names for the part */
+function _schemaKind(declared) {
+  if (declared.type === 'boolean') return 'checkbox';
+  if (declared.maxLength && declared.maxLength > 200) return 'long';
+  return declared.type === 'number' || declared.type === 'integer' ? 'number' : 'text';
+}
+/* CMP055 (ui.field): the label, the Required word, the hint and the 44 px control come from the library; id, testid and value are the page's own, as before.
+   The provenance chip ("from your <document>") is the hint now: a reader hears it with the field. */
+function _schemaField(item, declared, current, required, provenance) {
+  return ui.field({
+    mount: 'SHP001-U01',
+    kind: _schemaKind(declared),
+    id: 'f_' + item,
+    key: item,
+    testid: 'shop-f-' + item,
+    label: item.replace(/_/g, ' '),
+    required: required,
+    hint: provenance ? 'From your ' + provenance.from : undefined,
+    value: declared.type === 'boolean' ? !!current : current,
+    maxlength: declared.maxLength && declared.maxLength <= 200 ? declared.maxLength : undefined
+  });
+}
 // ── render the DECLARED fields — same subset the server validates (type · enum · maxLength · required) ──
 function _schemaFields(schema, vals) {
   var props = (schema && schema.properties) || {},
@@ -218,31 +242,8 @@ function _schemaFields(schema, vals) {
             })
             .join('') +
           '</select>';
-      } else if (p.type === 'boolean') {
-        inp =
-          '<div style="margin:3px 0 11px"><input data-cbsid="SHP001-I01" type="checkbox" id="f_' +
-          esc(item) +
-          '" data-testid="shop-f-' +
-          esc(item) +
-          '"' +
-          (v ? ' checked' : '') +
-          '></div>';
-      } else if (p.maxLength && p.maxLength > 200) {
-        inp = '<textarea data-cbsid="SHP001-T01" id="f_' + esc(item) + '" data-testid="shop-f-' + esc(item) + '" rows="4" ' + fld + '>' + esc(v) + '</textarea>';
       } else {
-        inp =
-          '<input data-cbsid="SHP001-I02" id="f_' +
-          esc(item) +
-          '" data-testid="shop-f-' +
-          esc(item) +
-          '"' +
-          (p.type === 'number' || p.type === 'integer' ? ' inputmode="decimal"' : '') +
-          (p.maxLength ? ' maxlength="' + p.maxLength + '"' : '') +
-          ' value="' +
-          esc(v) +
-          '" ' +
-          fld +
-          '>';
+        return _schemaField(item, p, v, req.indexOf(item) >= 0, src);
       }
       return '<label style="font-size:12px;color:var(--grey-3,#6a707a)">' + label + '</label>' + inp;
     })
@@ -285,21 +286,24 @@ function _docBlock() {
     rows +
     (full
       ? '<div style="font-size:11px;color:#8a949c">Maximum ' + d.max + ' reached.</div>'
-      : '<label style="display:block;border:1.5px dashed #cfc3e8;border-radius:10px;padding:12px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600;font-size:12.5px">📎 Attach ' +
-        esc(d.label.toLowerCase()) +
-        '<input data-cbsid="SHP001-I03" type="file" data-testid="shop-doc" accept="' +
-        esc(d.accept.join(',')) +
-        '" onchange="_docPick(event)" style="display:none"></label>' +
-        '<div style="font-size:10.5px;color:#9aa3a7;margin-top:4px">' +
-        esc(
-          d.accept
-            .join(' · ')
-            .replace(/application\//g, '')
-            .replace(/image\//g, '')
-        ) +
-        ' · up to ' +
-        d.max +
-        ' file(s)</div>') +
+      : ui.field({
+          mount: 'SHP001-U02',
+          kind: 'file',
+          label: 'Attach ' + d.label.toLowerCase(),
+          testid: 'shop-doc',
+          accept: d.accept.join(','),
+          hint:
+            d.accept
+              .join(' · ')
+              .replace(/application\//g, '')
+              .replace(/image\//g, '') +
+            ' · up to ' +
+            d.max +
+            ' file(s)',
+          onChange: function (value, input, event) {
+            _docPick(event);
+          }
+        })) +
     '</div>'
   );
 }
@@ -965,9 +969,7 @@ function productListHtml(data, cur) {
   setTimeout(shopDockSync, 0);
   return (
     '<div class="shopband" id="shop_band" data-testid="shop-band">' +
-    '<input data-cbsid="SHP001-I04" id="p_search" data-testid="shop-search" type="search" aria-label="Search products" placeholder="Search products…" value="' +
-    esc((_CART.state() || {}).q || '') +
-    '" oninput="shopPickSearch(this.value)">' +
+    ui.field({ mount: 'SHP001-U03', kind: 'search', id: 'p_search', testid: 'shop-search', label: 'Search products', placeholder: 'Search products…', value: (_CART.state() || {}).q || '', onInput: function (value) { shopPickSearch(value); } }) +
     shopCatBtnHtml() +
     '</div>' +
     '<div id="p_list">' +
@@ -1613,8 +1615,7 @@ function render(data) {
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop) {
-  var otpStep = _lg.step === 'otp',
-    fld = 'style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:10px;font-size:14px"';
+  var otpStep = _lg.step === 'otp';
   /* SH-MY1: the same gate signs a RETURNING shopper in for My orders (_lg.after='orders') — one sign-in, two doors */
   var forOrders = _lg.after === 'orders';
   el('app').innerHTML =
@@ -1633,19 +1634,9 @@ function renderLoginGate(shop) {
       ? "Use the phone or email you ordered with. We'll send a code."
       : "This shop asks customers to sign in first. Enter your phone or email — we'll text/email a one-time code.") +
     '</div>' +
-    '<input data-cbsid="SHP001-I05" id="lg_contact" placeholder="9876543210 or you@email.com" ' +
-    (otpStep ? 'disabled' : '') +
-    ' value="' +
-    esc(_lg.contact || '') +
-    '" ' +
-    fld +
-    '>' +
+    ui.field({ mount: 'SHP001-U04', kind: 'text', id: 'lg_contact', label: 'Phone or email', placeholder: '9876543210 or you@email.com', autocomplete: 'username', value: _lg.contact || '', readonly: otpStep ? 'The code was sent to this one' : undefined }) +
     (otpStep
-      ? '<input data-cbsid="SHP001-I06" id="lg_otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" placeholder="6-digit code" value="' +
-        esc(_lg.otp || '') +
-        '" ' +
-        fld +
-        '>'
+      ? ui.field({ mount: 'SHP001-U05', kind: 'text', id: 'lg_otp', label: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _lg.otp || '' })
       : '') +
     (_lg.err ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(_lg.err) + '</div>' : '') +
     (_lg.msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(_lg.msg) + '</div>' : '') +
@@ -1896,19 +1887,12 @@ function supRender() {
     supClose();
     return;
   }
-  var fld = 'style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;font-size:14px;box-sizing:border-box"';
   var body;
   if (_sup.step === 'say') {
     /* ⚠️ the urgency words are the SERVER’s; with none, the question is simply not asked rather than asked
        with wording invented here that the shop has never seen. */
     body =
-      '<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin-bottom:4px">What went wrong?</label>' +
-      '<textarea data-cbsid="SHP001-T02" id="sup_what" data-testid="shop-support-what" rows="4" ' +
-      'placeholder="What you ordered, and what happened instead" oninput="supSet(&#39;what&#39;,this.value)" ' +
-      fld +
-      '>' +
-      esc(_sup.what || '') +
-      '</textarea>' +
+      ui.field({ mount: 'SHP001-U06', kind: 'long', id: 'sup_what', testid: 'shop-support-what', rows: 4, label: 'What went wrong?', placeholder: 'What you ordered, and what happened instead', value: _sup.what || '', onInput: function (value) { supSet('what', value); } }) +
       (_sup.urgency
         ? '<div style="font-size:12px;color:var(--grey-3,#6a707a);margin:11px 0 4px">How much is it holding you up?</div>' +
           _sup.urgency
@@ -1931,24 +1915,13 @@ function supRender() {
             })
             .join('')
         : '') +
-      '<label style="font-size:12px;color:var(--grey-3,#6a707a);display:block;margin:11px 0 4px">Your phone or email</label>' +
-      '<input data-cbsid="SHP001-I08" id="sup_contact" data-testid="shop-support-contact" placeholder="so the shop can reply" ' +
-      'value="' +
-      esc(_sup.contact || '') +
-      '" oninput="supSet(&#39;contact&#39;,this.value)" ' +
-      fld +
-      '>';
+      ui.field({ mount: 'SHP001-U07', kind: 'text', id: 'sup_contact', testid: 'shop-support-contact', label: 'Phone or email', hint: 'so the shop can reply', autocomplete: 'username', value: _sup.contact || '', onInput: function (value) { supSet('contact', value); } });
   } else {
     body =
       '<div style="font-size:13px;color:var(--grey-3,#6a707a);margin-bottom:8px">We sent a 6-digit code to ' +
       esc(_sup.contact) +
       '.</div>' +
-      '<input data-cbsid="SHP001-I09" id="sup_otp" data-testid="shop-support-otp" autocomplete="one-time-code" inputmode="numeric" maxlength="64" ' +
-      'placeholder="6-digit code" value="' +
-      esc(_sup.otp || '') +
-      '" oninput="supSet(&#39;otp&#39;,this.value)" ' +
-      fld +
-      '>'; /* SEC2: a sign-in code is never printed on the page — it is sent to the person */
+      ui.field({ mount: 'SHP001-U08', kind: 'text', id: 'sup_otp', testid: 'shop-support-otp', label: '6-digit code', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _sup.otp || '', onInput: function (value) { supSet('otp', value); } }); /* SEC2: a sign-in code is never printed on the page — it is sent to the person */
   }
   var act =
     _sup.step === 'say'
@@ -1968,7 +1941,7 @@ function supRender() {
     '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:18px;max-height:92vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
     '<b class="sg" style="font-size:16px;flex:1">📣 Report a problem</b>' +
-    '<button data-cbsid="SHP001-B11" onclick="supClose()" aria-label="Close" title="Close" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ui.action('close', { mount: 'SHP001-U01', display: 'icon', surface: 'dialog', onPress: supClose, testid: 'shop-sheet-x-support' }) + '</div>' +
     supNoteHtml() +
     (_sup.err && !_sup.dead ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(_sup.err) + '</div>' : '') +
     (_sup.msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(_sup.msg) + '</div>' : '') +
@@ -2348,20 +2321,12 @@ function _cartStepDelivery() {
   );
 }
 function _cartModeFieldsHtml() {
-  var fld = 'style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var m = _ord.mode,
     when = m === 'pickup' ? 'Pickup' : 'Delivery';
   return (
     '' +
     (m === 'delivery'
-      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Delivery address</label>' +
-        '<input data-cbsid="SHP001-I10" id="o_loc" data-testid="shop-area" placeholder="' +
-        esc(_addrExample()) +
-        '" value="' +
-        esc(_ord.loc || '') +
-        '" oninput="_cartSet(&#39;loc&#39;,this.value)" ' +
-        fld +
-        '>'
+      ? ui.field({ mount: 'SHP001-U09', kind: 'text', id: 'o_loc', testid: 'shop-area', label: 'Delivery address', placeholder: _addrExample(), autocomplete: 'street-address', value: _ord.loc || '', onInput: function (value) { _cartSet('loc', value); } })
       : '') +
     (m
       ? /**
@@ -2369,27 +2334,14 @@ function _cartModeFieldsHtml() {
          * ⚠️ Both are the CUSTOMER'S REQUEST, not a promise — the shop has said nothing yet, and a storefront that
          * looks like it confirmed a slot it never saw is the kind of false certainty this codebase keeps refusing.
          */
-        '<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">' +
-        when +
-        ' date <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input data-cbsid="SHP001-I11" id="o_date" type="date" data-testid="shop-date" value="' +
-        esc(_ord.date || '') +
-        '" oninput="_cartSet(&#39;date&#39;,this.value)" ' +
-        fld +
-        '></div>' +
-        '<div style="flex:1"><label style="font-size:12px;color:var(--grey-3,#6a707a)">Time <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input data-cbsid="SHP001-I12" id="o_time" type="time" data-testid="shop-time" value="' +
-        esc(_ord.time || '') +
-        '" oninput="_cartSet(&#39;time&#39;,this.value)" ' +
-        fld +
-        '></div></div>' +
+        '<div style="display:flex;gap:9px"><div style="flex:1">' +
+        ui.field({ mount: 'SHP001-U10', kind: 'date', id: 'o_date', testid: 'shop-date', label: when + ' date', value: _ord.date || '', onInput: function (value) { _cartSet('date', value); } }) +
+        '</div>' +
+        '<div style="flex:1">' +
+        ui.field({ mount: 'SHP001-U11', kind: 'time', id: 'o_time', testid: 'shop-time', label: 'Time', value: _ord.time || '', onInput: function (value) { _cartSet('time', value); } }) +
+        '</div></div>' +
         '<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>' +
-        '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Remark <span style="color:var(--grey,#9aa3a7)">· optional</span></label>' +
-        '<input data-cbsid="SHP001-I13" id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="' +
-        esc(_ord.remark || '') +
-        '" oninput="_cartSet(&#39;remark&#39;,this.value)" ' +
-        fld +
-        '>'
+        ui.field({ mount: 'SHP001-U12', kind: 'text', id: 'o_remark', testid: 'shop-remark', label: 'Remark', hint: 'Anything the shop should know', value: _ord.remark || '', onInput: function (value) { _cartSet('remark', value); } })
       : '<div class="meta">Choose one to go on.</div>')
   );
 }
@@ -2453,31 +2405,14 @@ function _cartStepReview() {
   );
 }
 function _cartStepWho() {
-  var fld = 'style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var otpStep = _ord.step === 'otp';
   return (
     _cartStepReview() +
     '<div class="meta" style="margin:14px 0 8px">Last step — so the shop can reach you about this order.</div>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name <span style="color:#9aa3a7">· optional</span></label>' +
-    '<input data-cbsid="SHP001-I14" id="o_name" data-testid="shop-name" placeholder="optional" value="' +
-    esc(_ord.name || '') +
-    '" oninput="_cartSet(&#39;name&#39;,this.value)" ' +
-    fld +
-    '>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label>' +
-    '<input data-cbsid="SHP001-I15" id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
-    (otpStep ? 'disabled' : '') +
-    ' value="' +
-    esc(_ord.contact || '') +
-    '" oninput="_cartSet(&#39;contact&#39;,this.value)" ' +
-    fld +
-    '>' +
+    ui.field({ mount: 'SHP001-U13', kind: 'text', id: 'o_name', testid: 'shop-name', label: 'Your name', autocomplete: 'name', value: _ord.name || '', onInput: function (value) { _cartSet('name', value); } }) +
+    ui.field({ mount: 'SHP001-U14', kind: 'text', id: 'o_contact', testid: 'shop-contact', label: 'Phone or email', placeholder: '9876543210 or you@email.com', autocomplete: 'username', value: _ord.contact || '', readonly: otpStep ? 'The code was sent to this one' : undefined, onInput: function (value) { _cartSet('contact', value); } }) +
     (otpStep
-      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input data-cbsid="SHP001-I16" id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
-        esc(_ord.otp || '') +
-        '" oninput="_cartSet(&#39;otp&#39;,this.value)" ' +
-        fld +
-        '>'
+      ? ui.field({ mount: 'SHP001-U15', kind: 'text', id: 'o_otp', testid: 'shop-otp', label: '6-digit code', hint: 'Sent to you', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _ord.otp || '', onInput: function (value) { _cartSet('otp', value); } })
       : '') +
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
     '<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>' +
@@ -2509,7 +2444,7 @@ function _cartPanelHtml() {
     '<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 ' +
     esc(shop.display_name || 'Your order') +
     '</b>' +
-    '<button data-cbsid="SHP001-B15" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ui.action('close', { mount: 'SHP001-U02', display: 'icon', surface: 'dialog', onPress: orderClose, testid: 'shop-sheet-x-order' }) + '</div>' +
     '<div id="oc_rail"></div><div id="oc_body"></div>' +
     (_ord.busy
       ? '<div style="margin-top:12px"><button data-cbsid="SHP001-B16" disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
@@ -2560,7 +2495,7 @@ function orderRender(msg, err) {
     esc(_isPayload() ? _submitLabel() : 'Order') +
     ' · ' +
     esc(it.name) +
-    '</b><button data-cbsid="SHP001-B17" type="button" aria-label="Close" onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    '</b>' + ui.action('close', { mount: 'SHP001-U03', display: 'icon', surface: 'dialog', onPress: orderClose, testid: 'shop-sheet-x-order-item' }) + '</div>' +
     (function () {
       var p = itemPrice(it),
         bits = [];
@@ -2584,17 +2519,20 @@ function orderRender(msg, err) {
             comboOpts +
             '</select>'
           : '') +
-        '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Quantity' +
-        (function () {
-          var p = itemPrice(it);
-          return p && p.u ? ' (' + esc(p.u) + ')' : '';
-        })() +
-        (minL ? ' <span style="color:#9aa3a7">· min ' + minL + ' L (set by the brand)</span>' : '') +
-        '</label><input data-cbsid="SHP001-I17" id="o_qty" data-testid="shop-qty" inputmode="decimal" value="' +
-        esc(_ord.qty || String(minL || 1)) +
-        '" ' +
-        fld +
-        '>' +
+        ui.field({
+          mount: 'SHP001-U16',
+          kind: 'number',
+          id: 'o_qty',
+          testid: 'shop-qty',
+          label:
+            'Quantity' +
+            (function () {
+              var p = itemPrice(it);
+              return p && p.u ? ' (' + p.u + ')' : '';
+            })(),
+          hint: minL ? 'Min ' + minL + ' L (set by the brand)' : undefined,
+          value: _ord.qty || String(minL || 1)
+        }) +
         // SPEC-negotiation-position — the buyer's POSITION. The seller's price stays the catalogue's; this rides on the chit.
         (_isNegotiable()
           ? (function () {
@@ -2620,31 +2558,11 @@ function orderRender(msg, err) {
               );
             })()
           : '')) +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your name</label><input data-cbsid="SHP001-I19" id="o_name" data-testid="shop-name" placeholder="optional" value="' +
-    esc(_ord.name || '') +
-    '" ' +
-    fld +
-    '>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Your area — pincode or city <span style="color:var(--grey,#9aa3a7)">· optional</span></label><input data-cbsid="SHP001-I20" id="o_loc" data-testid="shop-area" placeholder="' +
-    esc(_areaExample()) +
-    '" value="' +
-    esc(_ord.loc || '') +
-    '" ' +
-    fld +
-    '>' +
-    '<label style="font-size:12px;color:var(--grey-3,#6a707a)">Phone or email</label><input data-cbsid="SHP001-I21" id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" ' +
-    (otpStep ? 'disabled' : '') +
-    ' value="' +
-    esc(_ord.contact || '') +
-    '" ' +
-    fld +
-    '>' +
+    ui.field({ mount: 'SHP001-U17', kind: 'text', id: 'o_name', testid: 'shop-name', label: 'Your name', autocomplete: 'name', value: _ord.name || '' }) +
+    ui.field({ mount: 'SHP001-U18', kind: 'text', id: 'o_loc', testid: 'shop-area', label: 'Your area', hint: 'Pincode or city', placeholder: _areaExample(), value: _ord.loc || '' }) +
+    ui.field({ mount: 'SHP001-U19', kind: 'text', id: 'o_contact', testid: 'shop-contact', label: 'Phone or email', placeholder: '9876543210 or you@email.com', autocomplete: 'username', value: _ord.contact || '', readonly: otpStep ? 'The code was sent to this one' : undefined }) +
     (otpStep
-      ? '<label style="font-size:12px;color:var(--grey-3,#6a707a)">6-digit code sent to you</label><input data-cbsid="SHP001-I22" id="o_otp" data-testid="shop-otp" inputmode="numeric" autocomplete="one-time-code" maxlength="64" value="' +
-        esc(_ord.otp || '') +
-        '" ' +
-        fld +
-        '>'
+      ? ui.field({ mount: 'SHP001-U20', kind: 'text', id: 'o_otp', testid: 'shop-otp', label: '6-digit code', hint: 'Sent to you', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _ord.otp || '' })
       : '') +
     (err ? '<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">' + esc(err) + '</div>' : '') +
     (msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">' + esc(msg) + '</div>' : '') +
@@ -3132,18 +3050,18 @@ function vizRender() {
     })
     .join('');
   var upload =
-    '<label style="display:block;border:2px dashed #cfc3e8;border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600">📷 Upload a photo of your room<input data-cbsid="SHP001-I23" type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label>';
+    ui.field({ mount: 'SHP001-U21', kind: 'file', label: 'Upload a photo of your room', accept: 'image/*', onChange: function (value, input, event) { vizLoad(event); } });
   vizhost().innerHTML =
     '<div data-cbsid="SHP001-C10" style="position:fixed;inset:0;background:rgba(15,22,32,.6);z-index:950;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)vizClose()">' +
     '<div style="background:#fff;width:100%;max-width:560px;border-radius:16px;padding:16px 16px 20px;max-height:94vh;overflow:auto">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(it.name) +
-    ' on your wall</b><button data-cbsid="SHP001-B26" type="button" aria-label="Close" onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>' +
+    ' on your wall</b>' + ui.action('close', { mount: 'SHP001-U04', display: 'icon', surface: 'dialog', onPress: vizClose, testid: 'shop-sheet-x-wall' }) + '</div>' +
     '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>' +
     (_VIZ.img
       ? '<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">' +
         chips +
-        '</div><div style="display:flex;gap:8px;margin-top:8px"><button data-cbsid="SHP001-B27" onclick="vizToOrder()" style="flex:1;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Order this combination →</button><label style="border:1px solid #e7e3d8;border-radius:10px;padding:12px;cursor:pointer;font-size:13px">Change photo<input data-cbsid="SHP001-I24" type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label></div>'
+        '</div><div style="display:flex;gap:8px;margin-top:8px"><button data-cbsid="SHP001-B27" onclick="vizToOrder()" style="flex:1;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Order this combination →</button><div style="flex:1;min-width:0">' + ui.field({ mount: 'SHP001-U22', kind: 'file', label: 'Change photo', accept: 'image/*', onChange: function (value, input, event) { vizLoad(event); } }) + '</div></div>'
       : upload) +
     '</div></div>';
   if (_VIZ.img) vizDraw(_VIZ.combo);

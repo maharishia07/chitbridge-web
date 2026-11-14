@@ -14,6 +14,11 @@
  
  * CALLED BY public/app/cap-catsetup.js, public/app/cap-definitions.js, public/app/cap-network.js, public/app/cart.js, public/app/price-resolve.js (+4 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
+/*
+ * OWNS      the one catalogue model (CBCatalogue): draft shape, migration and derivations, DOM-free
+ * CALLED BY <script src="/app/catalogue-model.js"> at public/app.html:1588; read as a global by scripts/standards-doc.js; run in a vm by scripts/cap-network-render.test.mjs
+ * CARD      06-catalogue-pim/categories-and-fields
+ */
 (function (root, factory) {
   var M = factory();
   if (typeof module !== 'undefined' && module.exports) module.exports = M; // Node

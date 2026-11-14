@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the CB Finance page: dues · cash position · collections · reports (cap-finance.js · cap-mis.js paint the server's figures).
-     CALLED BY Home's Finance card (manifest /finance.html) and CB Accounts.
+     CALLED BY Home's Finance card (app/manifest.json entry finance, route /finance.html) · app/shell.js (the trend link to /finance.html#/reports/trend/week) · app/cap-crm-record.js (the link to /finance.html#/terms).
      FLOW  load → whoPaint (CBFrame) → the section's read → paint
      CARD 16-finance/cb-finance -->
 <head>
@@ -309,7 +309,7 @@ dialog.sheet::backdrop{background:var(--scrim)}
     <div class="screen" id="screen" data-testid="fin-screen"></div>
   </main>
 </div>
-<dialog class="sheet" id="fin_sheet" data-testid="fin-sheet"></dialog>
+<dialog class="sheet" id="fin_sheet" data-pop="POP047" data-testid="fin-sheet"></dialog>
 <div id="toast"></div>
 
 <script>
@@ -348,6 +348,8 @@ function go() {
 <script src="/app/shell.js"></script>   <!-- CBShell: THE ONE HEADER (SHELL-ONE) — mounted into #shell by CBFrame -->
 <script src="/app/page-frame.js"></script>   <!-- CBFrame.mount({ host }): the frame every page wears; this page's own sidebar stays -->
 <script src="/app/ui.js"></script>   <!-- ui.action: the standard action set (UX-137); chit-sheet.js draws its Try again with it; AFTER accounts-shell (tx, CBAction) and helpers (esc) -->
+<script src="/app/ui-field.js"></script>   <!-- CMP055 Field: ui.field.error draws a sheet's missing-field line (aria-invalid + aria-describedby); AFTER ui.js -->
+<script src="/app/sheet-dialog.js"></script>   <!-- the keyboard contract of every dialog.sheet: first field, focus back, Enter saves, empty save names the field, Esc asks (rules 1b 2c 4 5 8) -->
 <script src="/app/chit-sheet.js"></script>
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>   <!-- payOpen · bkRemind · bkMoney · bkOwes — the Dues pieces Collections reuses -->

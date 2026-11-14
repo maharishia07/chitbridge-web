@@ -143,11 +143,6 @@ var CBUiStandard = (function () {
     counters.mount += 1;
     return SCREEN + '-U' + String(counters.mount).padStart(2, '0');
   }
-  /** the page's own controls (switches, tabs): native buttons with a stable code, UIS001-B01.. in reading order */
-  function controlCode() {
-    counters.control += 1;
-    return SCREEN + '-B' + String(counters.control).padStart(2, '0');
-  }
   /** which of the four packs hold this exact text (the English is the key); a glyph-only name needs none */
   function translatedIn(text) {
     return PACK_LANGS.filter(function (lang) {
@@ -186,7 +181,7 @@ var CBUiStandard = (function () {
   function modal(html, wide) {
     var host = document.getElementById('modalhost');
     host.innerHTML =
-      '<div class="mover" data-testid="gal-mover"><div class="modal' + (wide ? ' wide' : '') + '" role="dialog" aria-modal="true">' +
+      '<div class="mover" data-testid="gal-mover"><div class="modal' + (wide ? ' wide' : '') + '" role="dialog" data-pop="POP142" aria-modal="true">' +
       '<div class="mxrow">' + ui.action('close', { mount: SCREEN + '-D01-U01', onPress: closeModal, testid: 'gal-dialog-x' }) + '</div>' + html + '</div></div>';
     host.querySelector('.mover').addEventListener('click', function (event) {
       if (event.target.classList.contains('mover')) closeModal();
@@ -363,7 +358,8 @@ var CBUiStandard = (function () {
     ['listselect', 'CMP035-S01 select'], ['listtab', 'CMP036-K01 saved-view tab'], ['listcommand', 'CMP037-B01 CSV, B02 reset columns, B03 select all, B04 bulk action, B05 show more'],
     ['listrowaction', 'CMP038-B01 row action'], ['listcolumn', 'CMP039-B01 sort, B02 resize, B03 move column'],
     ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
-    ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal']
+    ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal'],
+    ['field', 'CMP055-I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text (ui.field; CMP040 and CMP045 are aliases)']
   ];
   function listRows() {
     return LIST_ROWS.map(function (entry) {

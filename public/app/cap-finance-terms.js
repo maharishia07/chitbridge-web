@@ -9,6 +9,9 @@
  * ⭐ NEW PATHS (rule 4): FT (this tab's state) · FT_EP (the two /api/books/terms rows + crmParties, which finance.html did not load) · the tab switch
  * (#/terms) — Collections is one list, the nav had no second place to go.
  * ⚠️ Never error.message on a screen: a failure says what happened (CBAction.words) and the button stays.
+ * OWNS      the Terms tab of CB Finance (ftLoad · ftSaveShop · ftSaveParty · ftOpen) and the Finance tab switch every other Finance tab uses (ftNav · finTab · FIN_TABS)
+ * CALLED BY public/finance.html (script tag) · public/app/cap-finance.js (finTab · ftNav · ftMount · ftLoad) · public/app/cap-finance-cash.js · cap-finance-cheques.js · cap-finance-pay.js · cap-finance-returns.js ·
+ *           cap-mis.js · cap-mis-trend.js (ftNav, the tab switch) · public/app/cap-repeat.js (finTab · ftNav)
  * FLOW GET /api/books/terms (+ crmParties) -> FT.t / FT.parties -> the shop form + CBList party rows -> ftOpen (a party's sheet) -> ftSaveShop / ftSaveParty -> POST /api/books/terms -> ftLoad again
  * CARD 16-finance/terms-and-credit
  */

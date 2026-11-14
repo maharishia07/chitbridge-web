@@ -1,7 +1,7 @@
 /* rail-advice.js — CBAdvice.mount: the payment ADVICE, OUT — send it to a party on the rail, share it with one who is not (M30, 2026-10-09).
  *
  * OWNS      the payment-advice panel only: paint the Send / Share buttons from the server's `may`, press them through CBAction, repaint locally.
- * CALLED BY see the knowledge-graph line at the foot of this header.
+ * CALLED BY app/cap-books.js (CBAdvice.mount, the payment outcome and the statement row) and app/cap-bank.js (CBAdvice.sendBody); loaded by script tag on accounts, crm, finance and app.html
  * FLOW      mount ──▶ load (GET advice) ──▶ paint ──▶ sendPress | sharePress ──▶ settle ──▶ cb:rail event on the host
  * CARD 16-finance/cb-finance
  *
@@ -34,7 +34,6 @@
  *
  * Reuse: CBAction (accounts-shell.js) · api/EP (core.js) · tx (accounts-shell.js) · CBLocale (the shared-at moment). ZERO app.html globals.
  
- * CALLED BY public/app/cap-admin.js, public/app/cap-bank.js, public/app/cap-books.js, public/app/cap-settings.js, public/app/their-bill.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 (function (root) {
   'use strict';
@@ -142,7 +141,7 @@
   /** the Send button: always painted; greyed with the server's sentence when this login may not press it */
   function sendButtonHtml(panel, send) {
     return (
-      '<button type="button" class="ra-b pri' +
+      '<button data-cbsid="SCR052-B01" type="button" class="ra-b pri' +
       (send.ok ? '' : ' off') +
       '" data-ra-act="send" data-testid="adv-send"' +
       (panel.failed ? ' data-action-state="failed"' : '') +
@@ -157,7 +156,7 @@
   function shareLinksHtml(block, share) {
     if (share.ok && block.share)
       return (
-        '<button type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
+        '<button data-cbsid="SCR052-B02" type="button" class="ra-b" data-ra-act="copy" data-testid="adv-copy">' +
         esc(T(W.copy)) +
         '</button>' +
         '<a class="ra-b" href="' +
@@ -172,7 +171,7 @@
         '</a>'
       );
     return (
-      '<button type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
+      '<button data-cbsid="SCR052-B03" type="button" class="ra-b off" aria-disabled="true" data-testid="adv-share" title="' +
       esc(share.say || '') +
       '">↗ ' +
       esc(T(W.share)) +

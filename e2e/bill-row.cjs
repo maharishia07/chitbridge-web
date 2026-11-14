@@ -24,6 +24,8 @@ function fnSource(name) {
 }
 const ctx = { fmtMoney: (n, cur, empty) => (empty !== undefined && (n == null || n === '' || !isFinite(Number(n))) ? empty : '₹' + Number(n).toFixed(2)), tx: (s) => s, txf: (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k]) };
 vm.createContext(ctx);
+/* ACC-206 D1: the list row's amount is read through helpers.js billTotalOf (the page loads helpers.js before app.html's script) */
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'helpers.js'), 'utf8'), ctx);
 vm.runInContext("var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];", ctx);
 for (const n of ['billRowOf', 'statusOptsFor', 'statusWordFor', 'mapApiChit', 'billUseChoiceHTML']) {
   const s = fnSource(n);

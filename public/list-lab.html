@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the List Lab: the list control (app/list-ctl.js · CBList) on a sample day book, dues list and stock list, with the prototype switches.
-     CALLED BY the labs switcher; e2e/list-unit.cjs, list-standard.cjs and list-columns.cjs measure it.
+     CALLED BY the labs switcher (the list-lab entry of CBLabKit.LABS); e2e/list-unit.cjs, list-standard.cjs and list-columns.cjs measure it. No home card routes here: OUTSIDE (a lab gallery, reached by the switcher only).
      FLOW  load → CBFrame.lab (the Finance frame) → CBList.mount on the sample rows → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/list-lab -->
 <head>
@@ -747,7 +747,7 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
   function paintProto() {
     document.getElementById('pList').innerHTML = Object.keys(LISTS)
       .map(function (item) {
-        return '<button data-plist="' + item + '" aria-pressed="' + (current === item) + '">' + esc(LISTS[item][0]) + '</button>';
+        return '<button data-cbsid="LLB001-B01" data-plist="' + item + '" aria-pressed="' + (current === item) + '">' + esc(LISTS[item][0]) + '</button>';
       })
       .join('');
     document.getElementById('pState').innerHTML = [
@@ -757,12 +757,12 @@ body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 v
       ['error', 'Could not load']
     ]
       .map(function (x) {
-        return '<button data-pstate="' + x[0] + '" aria-pressed="' + (pstate === x[0]) + '">' + x[1] + '</button>';
+        return '<button data-cbsid="LLB001-B02" data-pstate="' + x[0] + '" aria-pressed="' + (pstate === x[0]) + '">' + x[1] + '</button>';
       })
       .join('');
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
     document.getElementById('pTheme').innerHTML =
-      '<button data-theme="light" aria-pressed="' + !dark + '">Light</button><button data-theme="dark" aria-pressed="' + dark + '">Dark</button>';
+      '<button data-cbsid="LLB001-B03" data-theme="light" aria-pressed="' + !dark + '">Light</button><button data-cbsid="LLB001-B04" data-theme="dark" aria-pressed="' + dark + '">Dark</button>';
   }
   function measure() {
     var list = document.querySelector('.cbl-list'),

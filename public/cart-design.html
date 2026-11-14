@@ -37,6 +37,7 @@
   else is a short form, and short forms are better one at a time than crowded together.
 -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
+<script src="/app/ui.js"></script>   <!-- ui.action: the standard Add, Edit and Back (UX-137, web-mount-1); AFTER helpers (esc) -->
 <script src="/app/kbd-press.js"></script>   <!-- Enter and Space press a role=button span: the rail, Change links, remove marks -->
 <script src="app/catalogue-lines.js"></script>
 <script src="engine/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — as shop.html and the app load it (2026-09-28) -->
@@ -83,6 +84,11 @@
   .rev .h{background:var(--paper);padding:8px 12px;font-size:11px;font-weight:800;color:var(--grey);
           text-transform:uppercase;letter-spacing:.05em;display:flex}
   .rev .h .e{margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px}
+  /* the library's Add, Edit and Back (CMP007, CMP012, CMP006) in this page's own look; the 44 px phone floor is the library's */
+  .two>[data-cbname="add"]{flex:none;border-radius:50%;width:36px;height:36px;padding:0;border:1.5px solid var(--blue);background:var(--blue);color:var(--on-accent,#fff);font-size:18px;font-weight:700;cursor:pointer}
+  .rev .h [data-cbname="edit"]{margin-inline-start:auto;min-width:44px;border:0;background:none;padding:0 4px;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:700;font-family:inherit}
+  .foot [data-cbname="back"],.foot [data-cbname="cancel"]{font-family:inherit}
+  [data-cbname]:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .rev .r{display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px}
   .rev .r .k{min-width:104px;color:var(--grey);font-size:11.5px}
   .tot{display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:14px;font-weight:800}
@@ -241,7 +247,8 @@ function stepItems() {
     '<div class="two"><input data-cbsid="OWN004-I02" class="inp" id="cn" placeholder="Type an item name" style="flex:2">' +
     '<input data-cbsid="OWN004-I03" class="inp" id="cq" value="1" style="max-width:64px">' +
     '<input data-cbsid="OWN004-I04" class="inp" id="cp" placeholder="Price" style="max-width:92px">' +
-    '<button data-cbsid="OWN004-B02" class="rb" onclick="addTyped()">+</button></div>' +
+    ui.action('add', { mount: 'OWN004-U01', object: 'item', display: 'icon', testid: 'cd-add-item', onPress: function () { addTyped(); } }) +
+    '</div>' +
     '<div class="two" style="margin-top:9px"><input data-cbsid="OWN004-I05" class="inp" placeholder="✨ Or describe the order in words — AI fills the lines">' +
     '<button data-cbsid="OWN004-B03" class="rb" style="flex:none">✨</button></div>'
   );
@@ -251,7 +258,8 @@ function stepTo() {
     '<div class="sec">Recipients</div>' +
     '<div class="two"><select data-cbsid="OWN004-S01" class="inp" id="torole" style="max-width:96px"><option>To</option><option>CC</option><option>For</option></select>' +
     '<input data-cbsid="OWN004-I06" class="inp" id="tov" placeholder="Type a name or User ID">' +
-    '<button data-cbsid="OWN004-B04" class="rb" onclick="addTo(document.getElementById(\'torole\').value)">+</button></div>' +
+    ui.action('add', { mount: 'OWN004-U02', object: 'recipient', display: 'icon', testid: 'cd-add-recipient', onPress: function () { addTo(document.getElementById('torole').value); } }) +
+    '</div>' +
     /* A self-addressed chit is a real chit — one copy in Order, one in Task, same thread. */
     '<div style="margin-top:9px"><button data-cbsid="OWN004-B05" class="inp" style="width:auto;padding:8px 14px;font-weight:700;color:var(--blue);cursor:pointer" onclick="addSelf()">+ Self (own record)</button></div>' +
     '<div style="margin-top:12px">' +
@@ -304,7 +312,7 @@ function stepDetails() {
     (S.files.length
       ? S.files
           .map(function (item, index) {
-            return '<span data-cbsid="OWN004-C04" class="chip">📎 ' + esc(item) + '<span class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
+            return '<span class="chip">📎 ' + esc(item) + '<span data-cbsid="OWN004-C04" class="rm" role="button" tabindex="0" aria-label="Remove file" onclick="rmFile(' + index + ')">×</span></span>';
           })
           .join('')
       : '<div style="font-size:12px;color:var(--grey)">Nothing attached — optional.</div>') +
@@ -317,7 +325,7 @@ function stepReview() {
   return (
     '<div class="rev"><div class="h">Lines · ' +
     list.length +
-    '<span data-cbsid="OWN004-C05" class="e" role="button" tabindex="0" aria-label="Change the items" onclick="go(0)">Change</span></div>' +
+    '' + ui.action('edit', { mount: 'OWN004-U03', object: 'items', testid: 'cd-edit-items', onPress: function () { go(0); } }) + '</div>' +
     list
       .map(function (item) {
         return (
@@ -338,7 +346,7 @@ function stepReview() {
     (T.amount ? CBCart.fmt('cc', T.amount) + (T.partial ? '+' : '') : '—') +
     '</span></div></div>' +
     (T.partial ? '<div class="note">Some lines have no price — the total covers only the priced ones.</div>' : '') +
-    '<div data-cbsid="OWN004-C06" class="rev"><div class="h">To<span class="e" role="button" tabindex="0" aria-label="Change the recipients" onclick="go(1)">Change</span></div>' +
+    '<div data-cbsid="OWN004-C06" class="rev"><div class="h">To' + ui.action('edit', { mount: 'OWN004-U04', object: 'recipients', testid: 'cd-edit-recipients', onPress: function () { go(1); } }) + '</div>' +
     '<div class="r">' +
     (S.to.length
       ? S.to
@@ -348,7 +356,7 @@ function stepReview() {
           .join(' · ')
       : '<span style="color:#b4453f">nobody yet</span>') +
     '</div></div>' +
-    '<div data-cbsid="OWN004-C07" class="rev"><div class="h">Details<span class="e" role="button" tabindex="0" aria-label="Change the details" onclick="go(2)">Change</span></div>' +
+    '<div data-cbsid="OWN004-C07" class="rev"><div class="h">Details' + ui.action('edit', { mount: 'OWN004-U05', object: 'details', testid: 'cd-edit-details', onPress: function () { go(2); } }) + '</div>' +
     '<div class="r"><span class="k">Subject</span><span>' +
     (S.subject ? esc(S.subject) : '<span style="color:#b4453f">required</span>') +
     '</span></div>' +
@@ -378,17 +386,17 @@ function blockedBecause() {
   }
   return null;
 }
+/** the footer's left button is the library's Back from step 2 on; on step 1 there is nothing to go back to, so Cancel stays visible and says why it is off (OWN004-U06, U07) */
+function footBack() {
+  var back = S.step - 1;
+  if (!S.step) return ui.action('cancel', { mount: 'OWN004-U07', testid: 'cd-cancel', role: { ok: false, why: 'This is the first step' } });
+  return ui.action('back', { mount: 'OWN004-U06', testid: 'cd-back', onPress: function () { go(back); } });
+}
 function paintFoot() {
   var last = S.step === STEPS.length - 1,
     why = blockedBecause();
   document.getElementById('foot').innerHTML =
-    '<button data-cbsid="OWN004-B07" onclick="' +
-    (S.step ? 'go(' + (S.step - 1) + ')' : '') +
-    '"' +
-    (S.step ? '' : ' disabled') +
-    '>' +
-    (S.step ? '<span class=arw>←</span> Back' : 'Cancel') +
-    '</button>' +
+    footBack() +
     '<button data-cbsid="OWN004-B08">Save draft</button>' +
     '<button data-cbsid="OWN004-B09" class="pri"' +
     (why ? ' disabled title="' + esc(why) + '"' : '') +

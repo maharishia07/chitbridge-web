@@ -817,6 +817,8 @@ async function route(S, r) {
     const S = standIn({ railChits: { items: [it('s1', 'in', true), it('s2', 'out', true), it('i1', 'in', false)], overdue_days: 7, truncated: false } });
     for (const [w, h] of [[1366, 768], [957, 800], [390, 844]]) {
       const { ctx, p } = await open(S, { hash: '#/chits', viewport: { width: w, height: h } });
+      /* a phone (<= 700 px) folds the page's notices into the list's own Notices popover (CBList rail, cbl-notes-rail-chits; Notices ▾ in the head), so the warning is asked of the popover once it is opened */
+      if (w <= 700) { await p.waitForSelector('[data-testid="cbl-notes-rail-chits"]', { timeout: 15000 }); await p.click('[data-testid="cbl-notes-rail-chits"]'); }
       await p.waitForSelector('[data-testid="chits-note"]', { timeout: 15000 }); await p.waitForTimeout(250);
       const g = await p.evaluate(() => { const n = document.querySelector('[data-testid="chits-note"]').getBoundingClientRect(), t = document.querySelector('.cbl-title').getBoundingClientRect(), wh = document.querySelector('.bar .who'), b = wh ? wh.getBoundingClientRect() : null;
         const hit = b && Math.min(n.right, b.right) - Math.max(n.left, b.left) > 2 && Math.min(n.bottom, b.bottom) - Math.max(n.top, b.top) > 2; return { hit, right: Math.round(n.right), tr: Math.round(t.right), sw: document.documentElement.scrollWidth, iw: innerWidth, lines: Math.round(n.height / 18) }; });
@@ -852,6 +854,7 @@ async function route(S, r) {
     /* C12 — the group heading is a HEADING: tinted band, small upper-case title, count + total, rows indented, folds; and the stripe is VISIBLE */
     for (const vp of [{ width: 1366, height: 768 }, { width: 390, height: 844 }]) {
       const { ctx, p } = await open(standIn(), { viewport: vp }); await homeReady(p);
+      if (vp.width <= 700) await p.click('[data-testid^="cbl-view-menu-"]'); /* a phone keeps Group in the View popover (list-ctl.js:1095, 889416f6) */
       await p.selectOption('[data-testid="crm-parties-group"]', 'role'); await p.waitForTimeout(200);
       const g = await p.evaluate(() => {
         const h = document.querySelector('#crm_list .cbl-group'), row = document.querySelector('#crm_list .cbl-row.ing, #crm_list .cbl-lrec.ing'), z = document.querySelector('#crm_list .cbl-row.z, #crm_list .cbl-lrec.z');

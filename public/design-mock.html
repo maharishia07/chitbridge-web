@@ -1,4 +1,10 @@
 <!doctype html>
+<!--
+  OWNS      a paper prototype of the network store page: no API, no build
+  CALLED BY opened by URL /design-mock.html and listed by the workshop in public/app/screen-id.js:263
+  FLOW      edit the file -> refresh -> look; once settled it is wired into the real page
+  CARD      29-qa-test-tooling-ux-locale-and-design-system/design-mocks
+-->
 <meta charset="utf-8">
 <title>Network store — design mock</title>
 <!--
@@ -60,9 +66,9 @@
 
 <div class="bar">
   <b>DESIGN MOCK</b> — nothing saves.
-  <input id="q" placeholder="🔎 find a product across the network — try CR-32 or seal" oninput="doSearch(this.value)"
+  <input data-cbsid="OWN007-I01" id="q" placeholder="🔎 find a product across the network — try CR-32 or seal" oninput="doSearch(this.value)"
          style="flex:1;max-width:430px;padding:5px 10px;border-radius:7px;border:1px solid #2a4f63;background:#123c4d;color:#fff">
-  <span style="margin-inline-start:auto"><a href="#" onclick="view='locate';drawPage();return false" style="color:#8fd0ff">🔎 where is a product?</a> · <a href="#" onclick="view='store';drawPage();return false" style="color:#8fd0ff">back to the store</a></span>
+  <span style="margin-inline-start:auto"><a data-cbsid="OWN007-C01" href="#" onclick="view='locate';drawPage();return false" style="color:#8fd0ff">🔎 where is a product?</a> · <a data-cbsid="OWN007-C02" href="#" onclick="view='store';drawPage();return false" style="color:#8fd0ff">back to the store</a></span>
 </div>
 
 <div class="wrap">
@@ -214,7 +220,7 @@ function catalogueTab(s) {
   var opt = function (k, title, sub) {
     var on = mode === k;
     return (
-      '<div onclick="setMode(\'' +
+      '<div data-cbsid="OWN007-C03" onclick="setMode(\'' +
       k +
       '\')" style="cursor:pointer;flex:1;min-width:230px;padding:11px 13px;' +
       'border:1px solid ' +
@@ -386,7 +392,7 @@ function drawTree() {
       // A store's own currency shows only where it DIFFERS from the network's — the exception, not the rule.
       var cur = item.own && item.own.currency && item.own.currency !== NET.currency ? item.own.currency : '';
       return (
-        '<div class="nd ' +
+        '<div data-cbsid="OWN007-C04" class="nd ' +
         (item.key === sel ? 'on' : '') +
         '" onclick="pick(\'' +
         item.key +
@@ -594,8 +600,8 @@ function drawPage() {
   if (tab === 'general') {
     body =
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">' +
-      '<button>＋ Add owned node</button><button>🤝 Add partner</button><button>✏️ Rename</button>' +
-      '<button>🗑️ Remove</button><button>↑</button><button>↓</button></div>' +
+      '<button data-cbsid="OWN007-B01">＋ Add owned node</button><button data-cbsid="OWN007-B02">🤝 Add partner</button><button data-cbsid="OWN007-B03">✏️ Rename</button>' +
+      '<button data-cbsid="OWN007-B04">🗑️ Remove</button><button data-cbsid="OWN007-B05">↑</button><button data-cbsid="OWN007-B06">↓</button></div>' +
       // Visibility STAYS on General (Athi's call, 2026-08-08). It is the one decision required to build a
       // network, so it belongs on the tab you land on, not one click away behind the shopfront.
       '<div class="box">' +
@@ -617,7 +623,7 @@ function drawPage() {
     body =
       '<div class="box">' +
       '<div class="fld"><div class="lbl">HOW CUSTOMERS ORDER</div>' +
-      '<div class="val"><select><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>' +
+      '<div class="val"><select data-cbsid="OWN007-S01"><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>' +
       '<span class="src inh">FROM NETWORK</span><span class="act">override for this store</span></div></div>' +
       '</div>';
   } else if (tab === 'money') {
@@ -694,7 +700,7 @@ function drawPage() {
     '<div class="tabs">' +
     TABS.map(function (item) {
       return (
-        '<span class="tab ' +
+        '<span data-cbsid="OWN007-C05" class="tab ' +
         (item[0] === tab ? 'on' : 'has') +
         '" onclick="pickTab(\'' +
         item[0] +

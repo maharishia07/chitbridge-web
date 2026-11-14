@@ -1,6 +1,9 @@
 /**
+ * OWNS      the one avatar button and its menu (mount · paint · menuHtml · editionsHtml · signOut), and the person's look: theme, reading font, text size,
+ *            weight, motion and stripes (apply · themeApply · fontApply · sizeApply), kept on the device and synced to the server (hydrate · pull · push).
  * CALLED BY app/shell.js (the frame mounts the one avatar), app/page-frame.js (its options), till.html; the pages read CBAvatar.shopCountry / applyTheme.
  * FLOW  mount(slot) → session → the button and its menu → applyTheme → the one /me read → `cb:me` announced to the page
+ * IDS   every control carries its register code (data-cbsid, UX-137): the shared component codes CMP025 (choice) · CMP033 (menu item) · CMP048 (account menu) · CMP052 (sign in).
  * CARD 29-qa-test-tooling-ux-locale-and-design-system/avatar
  * ── ⭐⭐⭐ CBAvatar — THE AVATAR: ONE CONTROL ON EVERY CHITBRIDGE PAGE ──────────────────────────────────────────────
  *
@@ -788,7 +791,7 @@
         '</div>';
     }
     return (
-      '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
+      '<div class="cbav-pop" role="dialog" data-pop="POP114" aria-label="Your menu" data-testid="avatar-menu">' + avatarChip('POP114', 'position:absolute;inset-inline-end:10px;top:8px') +
       '<div class="cbav-who"><span class="l">' +
       esc(letter(P)) +
       '</span><div><b>' +

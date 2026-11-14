@@ -2,7 +2,7 @@
  * ID        CMP030 (the bell button; its rows are CMP038, its Clear CMP014)
  * OWNER     cb-ux-locale
  * OWNS      the bell's dot and list: one read on mount, one per arrival, the clear and the seen mark
- * CALLED BY every page header, through app/shell.js (CBBell.mount into the bar slot)
+ * CALLED BY app/shell.js (CBBell.mount into the bar slot, shell.js:1531) on the pages that load it by script tag: accounts, authority-forms, catalogue, crm, employees, finance, know-your-business, network, operations, settings, standards, tasks
  * CARD      01-rail-core-the-chit/rail-bell
  * RISK      personal-data
  * FLOW      POST /api/events/ticket -> SSE stream -> the dot and the list -> amounts through fmtMoney in the notice's currency
@@ -272,7 +272,7 @@
           (rest.length ? (mine.length ? '<div class="cbb-sec">' + esc(T(W.rest)) + '</div>' : '') + rest.map(recordHtml).join('') : '')
         : '<div class="cbb-none" data-testid="bell-empty">' + esc(T(W.none)) + '</div>';
     return (
-      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" aria-label="' +
+      '<div class="cbb-panel" data-testid="bell-panel" role="dialog" data-pop="POP113" aria-label="' +
       esc(T(W.title)) +
       '"><div class="cbb-hd">' + bellChip('POP113', 'margin-inline-end:8px') +
       esc(T(W.title)) +

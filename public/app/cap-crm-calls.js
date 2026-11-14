@@ -1,5 +1,8 @@
 /* cap-crm-calls.js — CB CRM L2: THE CALL DESK. The Calls tab (a CBList mount, the Follow-ups list's own look): today's queue, one-tap outcome buttons.
- * CARD 11-crm-and-marketing/crm-calls
+ * OWNS      the Calls tab (#/calls, crmCalls) · the call script and the outcome buttons (crmCallScriptHTML, crmCallActions, crmCallPick, crmCallSend) · Next (crmCallNext)
+ * CALLED BY crm.html (<script src>, after cap-crm-privacy.js) · cap-crm.js (crmRoute → crmCalls on #/calls; the click listener → crmCallClick)
+ * FLOW      #/calls → crmCalls() → crmCallsLoad() → CBList rows · caret → crmCallScriptHTML() → an outcome → crmCallSend() → the following row opens · Next → crmCallNext()
+ * CARD      11-crm-and-marketing/crm-calls
  * ⭐ THE SERVER DECIDES: GET /api/crm/calls sends the queue AND the list of outcomes; the next-follow-up days and the stage moves live in the API's
  *   lib/crm-calls.js (OUTCOMES). This page only gives each outcome its word and its picture (CALL_WORD · CALL_ICO) and sends { outcome, after? | due_at? }.
  * ⚠️ BEFORE the API's b297 runs an outcome that moves a stage answers 503 LEADS_NOT_MIGRATED: the button is greyed WITH its sentence, and the server still refuses.
@@ -8,9 +11,6 @@
  * ⭐ THE CALL SCREEN IS THE ROW'S NEXT LEVEL (W1-CRM, L2C step 2): the caret opens the script for this call's STAGE (CALL_SCRIPT — three lines, this page's copy
  *   keyed by the server's stage, as CALL_WORD is keyed by its outcomes) and a Next button; under it CBList draws the server's outcome buttons. Next writes nothing:
  *   the row that follows opens (CBList open). An outcome saved opens the following row by itself. No new style: the record's `.next` block (crm.html) and `.act`.
- *
- * owns: the Calls tab (#/calls) · called by: cap-crm.js crmRoute (crmCalls) and crmClick (crmCallClick)
- * FLOW  #/calls → crmCalls() → crmCallsLoad() → CBList rows · caret → crmCallScriptHTML() → an outcome → crmCallSend() → the following row opens · Next → crmCallNext()
  */
 'use strict';
 var CALLS = { rows: [], outcomes: [], may: { ok: true }, state: 'loading', err: null, loaded: false, gen: 0, api: null, scope: null, late: 0 };

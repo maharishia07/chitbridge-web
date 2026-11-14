@@ -113,7 +113,14 @@ function measure() {
       }
       ok(m.nameLines <= 1, tag + ': the shop name is on one line');
       if (m.tool && m.tool.hasGroup) ok(m.tool.lab, tag + ': the Group control carries its label');
-      if (name === 'crm') ok(await p.evaluate(() => !!document.querySelector('.cbl-tools .cbl-gsel select') && !document.querySelector('.cbl-tools .cbl-seg[data-testid^="cbl-group"]')), tag + ': Group is ONE labelled dropdown, not a row of buttons');
+      /* On a phone (<= 700 px, list-ctl.js PHONE_MAX) the Group choice lives in the View popover, not the toolbar (UX-137 wave 2, 889416f6,
+         2026-11-11; list-ctl.js:1095). So at 390 the same rule is asked of the popover: still ONE labelled dropdown, still no row of toggles,
+         (the popover button sits in the toolbar; the select is only in the popover). */
+      if (name === 'crm' && w <= 700) {
+        await p.click('[data-testid^="cbl-view-menu-"]').catch(() => {});
+        await p.waitForSelector('[data-testid^="cbl-view-pop-"]', { timeout: 4000 }).catch(() => {});
+        ok(await p.evaluate(() => !!document.querySelector('[data-testid^="cbl-view-pop-"] .cbl-gsel select') && !document.querySelector('.cbl-seg[data-testid^="cbl-group"]')), tag + ': Group is ONE labelled dropdown in the View popover, not a row of buttons');
+      } else if (name === 'crm') ok(await p.evaluate(() => !!document.querySelector('.cbl-tools .cbl-gsel select') && !document.querySelector('.cbl-tools .cbl-seg[data-testid^="cbl-group"]')), tag + ': Group is ONE labelled dropdown, not a row of buttons');
       if (m.tool && w >= 957 && name === 'crm') ok(m.tool.rows === 1, tag + ': the tool row is one line (' + m.tool.rows + ' rows)');
       if (name === 'standards') {   /* Standards tidy (2026-10-09): ONE LINE per row on the laptop, the count table whole, ONE grouping control, no workshop link */
         const sg = await p.evaluate(() => {

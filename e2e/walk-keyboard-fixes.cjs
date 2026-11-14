@@ -67,7 +67,7 @@ const unreachable = (page) => page.evaluate(() => Array.from(document.querySelec
       ok((await page.evaluate(() => S.step)) === 0, 'Enter on the first (finished) step goes back to it');
       await page.evaluate(() => { S.step = 2; go(2); });
       await page.evaluate(() => { document.querySelectorAll('.rev').length; S.step = 3; go(3); });
-      await page.focus('.rev .e'); await page.keyboard.press('Space');
+      await page.focus('.rev [data-cbname="edit"]'); await page.keyboard.press('Space');
       ok((await page.evaluate(() => S.step)) !== 3, 'Space on a Change link goes back to that step');
 
       console.log('\n-- ' + w + 'x' + h + ' (2c) network design: a store row takes Enter');
