@@ -813,7 +813,6 @@
       '</div>' +
       editionsHtml() +
       choiceGroup('Row stripes', 'stripes', STRIPES) +
-      /* W7: the Thirukkural band — the stripes look, never a new one */
       choiceGroup('Thirukkural', 'kural', KURAL) +
       choiceGroup('Keyboard shortcuts', 'keys', KEYS) +
       '</div>' +

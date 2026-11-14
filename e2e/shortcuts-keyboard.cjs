@@ -5,6 +5,8 @@
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/shortcuts
  * Pattern   e2e/shell.cjs: Playwright, the static server on a free port, the api stood in by ctx.route; nothing reaches localhost:3000 or the live site. */
 'use strict';
+const fs = require('fs');
+const path = require('path');
 const { serve } = require('./lib/serve.cjs');
 const C = require('./lib/contract.cjs');
 
@@ -13,7 +15,7 @@ const out = { pass: 0, fail: 0 };
 const ok = (cond, what) => { out[cond ? 'pass' : 'fail']++; console.log((cond ? '  ok  ' : '  XX  ') + what); };
 
 async function context(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, serviceWorkers: 'block' });
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-IN', serviceWorkers: 'block' });
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
   await ctx.route('**/api/**', (route) => {
     const url = new URL(route.request().url());
@@ -33,6 +35,12 @@ async function home(ctx, web, errors) {
 }
 const current = (page) => page.evaluate(() => ((document.querySelector('.cbsh-nv[aria-current]') || {}).dataset || {}).go || '');
 
+async function staticProof() {
+  const unit = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shortcuts.js'), 'utf8');
+  const shell = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'shell.js'), 'utf8');
+  ok(shell.includes('/app/shortcuts-register.js') && shell.includes('/app/shortcuts.js'), 'static: the shell loads the register, then the unit, on every page it frames');
+  ok(unit.includes("'Alt+Shift+'") && !/'(Control|Ctrl|Meta)+/.test(unit), 'static: the unit answers a chord and names no Ctrl or Meta key');
+}
 async function navProof(ctx, web, errors) {
   const page = await home(ctx, web, errors);
   ok((await page.getAttribute('[data-testid="shell-nav-running"]', 'aria-keyshortcuts')) === 'Alt+Shift+R', 'rail: Running says Alt+Shift+R in aria-keyshortcuts');
@@ -53,7 +61,7 @@ async function sheetProof(ctx, web, errors) {
   await page.keyboard.press('?');
   await page.waitForSelector('[data-testid="shortcut-sheet"]', { timeout: 5000 });
   const text = await page.textContent('[data-testid="shortcut-sheet"]');
-  ok(/Alt\+Shift\+R/.test(text) && /g, t/.test(text), 'the ? sheet lists the area chords and the g keys from the register');
+  ok(/Alt\+Shift\+R/.test(text) && /g, t/.test(text), 'keyboard walk: the ? sheet says the area chords and the g keys in words, from the register');
   const chip = await page.locator('dialog[open] [data-testid="popup-code"]').first().textContent().catch(() => '');
   ok(chip.trim() === 'POP144', 'the sheet wears its own popup code POP144');
   await page.keyboard.press('Alt+Shift+A');
@@ -102,7 +110,7 @@ async function axeProof(ctx, web, errors) {
   const page = await home(ctx, web, errors);
   const result = await new AxeBuilder({ page }).analyze();
   const bad = result.violations.filter((item) => item.impact === 'serious' || item.impact === 'critical');
-  ok(bad.length === 0, 'axe: Home, no serious or critical violation' + (bad.length ? ': ' + bad.map((item) => item.id + ' x' + item.nodes.length).join(', ') : ''));
+  ok(bad.length === 0, 'axe (colour contrast included): Home, no serious or critical violation' + (bad.length ? ': ' + bad.map((item) => item.id + ' x' + item.nodes.length).join(', ') : ''));
   await page.close();
 }
 
@@ -111,7 +119,7 @@ async function axeProof(ctx, web, errors) {
   const web = await serve();
   const browser = await chromium.launch();
   const errors = [];
-  for (const proof of [navProof, sheetProof, popupProof, offProof, axeProof]) {
+  for (const proof of [staticProof, navProof, sheetProof, popupProof, offProof, axeProof]) {
     const ctx = await context(browser);
     try { await proof(ctx, web, errors); } catch (error) { ok(false, proof.name + ' threw: ' + error.message); }
     await ctx.close();

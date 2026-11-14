@@ -4,21 +4,22 @@
  * OWNS      the one count: what a customer page can navigate to (the rail's areas + the built Home cards whose page is one of the 19 customer pages) and the popups
  *           (every distinct POP code written in web source), against the rows of public/app/shortcuts-register.js.
  * CALLED BY e2e/shortcuts-guard.cjs (the same lists decide what must have a row); C:/dev/toolset/shortcuts-count.cjs (writes PM/SHORTCUTS.json for the coverage map).
+ * FLOW      register + manifest + pages.json + source -> count() -> { declared, of, nav, popups, missing }
  * CARD      29-qa-test-tooling-ux-locale-and-design-system/shortcuts
  * Usage     node tools/shortcuts-count.cjs [--json]
  * A row counts when its key is well formed (g then a letter, or Alt+Shift+letter); the guard, not the counter, judges duplicates and forbidden keys. */
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const sandbox = require('vm');
 
-const WEB = path.join(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(WEB, file), 'utf8');
+const WEB_DIR = path.join(__dirname, '..');
+const read = (file) => fs.readFileSync(path.join(WEB_DIR, file), 'utf8');
 const KEY_FORM = /^(g [a-z]|Alt\+Shift\+[A-Z])$/;
 
 /** the register as the browser sees it: the file run against a bare window */
 function register() {
   const win = {};
-  vm.runInNewContext(read('public/app/shortcuts-register.js'), { window: win });
+  sandbox.runInNewContext(read('public/app/shortcuts-register.js'), { window: win });
   return win.CB_SHORTCUT_REGISTER;
 }
 /** the pages of the 19 customer pages, as paths (the one list the proof packs share) */
@@ -37,7 +38,7 @@ function cards() {
 /** every distinct POP code written in web source (pages and scripts), the register file left out */
 function popups() {
   const files = [];
-  ['public', 'public/app'].forEach((dir) => fs.readdirSync(path.join(WEB, dir)).filter((name) => /\.(js|html)$/.test(name)).forEach((name) => files.push(dir + '/' + name)));
+  ['public', 'public/app'].forEach((dir) => fs.readdirSync(path.join(WEB_DIR, dir)).filter((name) => /\.(js|html)$/.test(name)).forEach((name) => files.push(dir + '/' + name)));
   const found = new Set();
   files.filter((file) => !file.endsWith('shortcuts-register.js')).forEach((file) => (read(file).match(/\bPOP\d{3}\b/g) || []).forEach((code) => found.add(code)));
   return [...found].sort();

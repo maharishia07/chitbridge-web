@@ -17,7 +17,7 @@
 (function (root) {
   if (root.CBShortcuts) return;
   var doc = root.document;
-  var REG = root.CB_SHORTCUT_REGISTER || { rows: {}, sheet: {} };
+  var REGISTER = root.CB_SHORTCUT_REGISTER || { rows: {}, sheet: {} };
   var SEQUENCE_MS = 1500;
   var POPUP_HOSTS = 'dialog[open], #modalhost';
   var shellRef = null;
@@ -26,14 +26,15 @@
 
   /** the key of a register row, or null: ui.js and the sheet ask here, nothing else holds a key */
   function keyOf(code) {
-    return Object.prototype.hasOwnProperty.call(REG.rows, code) ? REG.rows[code] : null;
+    return Object.prototype.hasOwnProperty.call(REGISTER.rows, code) ? REGISTER.rows[code] : null;
   }
   /** the person's switch: the avatar's 'keys' kind (device-held), on unless it says off */
   function enabled() {
     try {
       if (root.CBAvatar && root.CBAvatar.get) return root.CBAvatar.get().keys !== 'off';
       return root.localStorage.getItem('cb_keys') !== 'off';
-    } catch (_) {
+    } catch (failure) {
+      if (root.cbQuiet) root.cbQuiet('shortcuts:enabled', failure);
       return true;
     }
   }
@@ -41,6 +42,7 @@
   function keyWords(key) {
     return key.indexOf('g ') === 0 ? 'g, ' + key.slice(2) : key;
   }
+  /** a word through the catalogue (English is the key) */
   function tr(text) {
     return typeof root.tx === 'function' ? root.tx(text) : text;
   }
@@ -52,11 +54,12 @@
   }
   /** the register row whose key is this one, within one kind of row (a card or an area for a nav key); '' = none */
   function codeForKey(key, wanted) {
-    var rows = REG.rows;
+    var rows = REGISTER.rows;
     return Object.keys(rows).filter(function (code) {
       return rows[code] === key && (!wanted || code.indexOf(wanted) === 0);
     })[0] || '';
   }
+  /** true when the key went to a place the person types in */
   function editable(node) {
     if (!node || !node.tagName) return false;
     return /^(INPUT|TEXTAREA|SELECT)$/.test(node.tagName) || node.isContentEditable === true;
@@ -69,6 +72,7 @@
     var host = head && head.closest(POPUP_HOSTS);
     return head && host ? { code: head.getAttribute('data-pop'), host: host } : null;
   }
+  /** true while any popup is open, ours or the page own */
   function anyPopupOpen() {
     return !!doc.querySelector('dialog[open], #modalhost .mbody');
   }
@@ -84,6 +88,7 @@
     });
     return (primary.length ? primary : buttons).pop() || null;
   }
+  /** press the open popup main action when it is the popup with this code */
   function pressMain(code) {
     var popup = openPopup();
     if (!popup || popup.code !== code) return false;
@@ -96,6 +101,7 @@
   function goArea(id) {
     if (shellRef && shellRef.go) shellRef.go(id);
   }
+  /** open the page of a built Home card, by its manifest id */
   function goCard(id) {
     var entries = (shellRef && shellRef.manifest() && shellRef.manifest().entries) || [];
     var entry = entries.filter(function (item) {
@@ -103,8 +109,8 @@
     })[0];
     if (entry && shellRef.route) root.location.href = shellRef.route(entry);
   }
-  /** run a nav row: 'HOM001-K01#selling' goes to that area, 'HOM001-B01#finance' opens that card's page; true if it went */
-  function run(code) {
+  /** go to a nav row: 'HOM001-K01#selling' goes to that area, 'HOM001-B01#finance' opens that card's page; true if it went */
+  function goTo(code) {
     var parts = code.split('#');
     if (parts[0] === 'HOM001-K01') goArea(parts[1]);
     else if (parts[0] === 'HOM001-B01') goCard(parts[1]);
@@ -118,7 +124,7 @@
     var chord = chordOf(event);
     if (chord) return onChord(event, chord);
     if (event.altKey || event.ctrlKey || event.metaKey || editable(event.target)) return;
-    if (event.key === REG.sheet.key) {
+    if (event.key === REGISTER.sheet.key) {
       event.preventDefault();
       return toggleSheet();
     }
@@ -134,7 +140,7 @@
   function onChord(event, chord) {
     var popup = openPopup();
     var code = popup || anyPopupOpen() ? '' : codeForKey(chord, 'HOM001');
-    var did = popup ? keyOf(popup.code) === chord && pressMain(popup.code) : code && run(code);
+    var did = popup ? keyOf(popup.code) === chord && pressMain(popup.code) : code && goTo(code);
     if (did) event.preventDefault();
   }
   /** the letter after g: a card, or nothing (any other key just ends the wait) */
@@ -142,7 +148,7 @@
     root.clearTimeout(pending);
     pending = null;
     var code = codeForKey('g ' + event.key, 'HOM001-B01');
-    if (code && run(code)) event.preventDefault();
+    if (code && goTo(code)) event.preventDefault();
   }
 
   /* ── aria-keyshortcuts on the rail and the cards (a card is drawn by the shell, not by ui.js) ── */
@@ -160,6 +166,7 @@
       }
     });
   }
+  /** stamp again whenever the shell redraws its rail or cards */
   function watchShell() {
     if (!root.MutationObserver) return;
     var queued = false;
@@ -181,20 +188,22 @@
     });
     return out;
   }
+  /** the sheet rows as { group: [[name, key]] }, names from the manifest and the shell */
   function sheetRows(entries) {
     var cards = names(entries);
     var areas = (root.CBShell && root.CBShell.WORDS && root.CBShell.WORDS.areas) || {};
     var groups = { Areas: [], Pages: [], Popups: [] };
-    Object.keys(REG.rows).forEach(function (code) {
-      var key = REG.rows[code];
+    Object.keys(REGISTER.rows).forEach(function (code) {
+      var key = REGISTER.rows[code];
       var id = code.split('#')[1];
       if (code.indexOf('HOM001-K01') === 0) groups.Areas.push([areas[id] || id, key]);
       else if (code.indexOf('HOM001-B01') === 0 && cards[id]) groups.Pages.push([cards[id], key]);
     });
     groups.Popups.push([tr('The main action of the open popup'), 'Alt+Shift+A']);
-    groups.Popups.push([tr('This list'), REG.sheet.key]);
+    groups.Popups.push([tr('This list'), REGISTER.sheet.key]);
     return groups;
   }
+  /** the sheet body: a note, then one list per group */
   function sheetHtml(groups) {
     var html = '<p class="cbsc-note">' + esc(tr('Keys work outside a text box. Turn them off in the avatar menu, Keyboard shortcuts.')) + '</p>';
     Object.keys(groups).forEach(function (title) {
@@ -214,16 +223,17 @@
     'dialog.cbsc-d{border:1px solid var(--line,#d8ccb0);border-radius:14px;padding:0;width:min(440px,94vw);max-height:80vh;overflow:auto;color:var(--ink,#1d1b16);background:var(--card,#fff)}' +
     'dialog.cbsc-d .mhd{padding:14px 18px 4px;display:flex;align-items:center;gap:10px}dialog.cbsc-d .t{font-weight:700;font-size:18px;flex:1}' +
     'dialog.cbsc-d .mbody{padding:6px 18px}dialog.cbsc-d .mfoot{padding:10px 18px 14px;display:flex;justify-content:flex-end}';
+  /** the sheet head with its popup-code chip */
   function sheetHead(title) {
-    var chip = root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(REG.sheet.code, 'margin-inline-start:auto') : '';
-    return '<div class="mhd" data-pop="' + REG.sheet.code + '"><div class="t">' + esc(title) + '</div>' + chip + '</div>';
+    var chip = root.CBScreenId && root.CBScreenId.popupChip ? root.CBScreenId.popupChip(REGISTER.sheet.code, 'margin-inline-start:auto') : '';
+    return '<div class="mhd" data-pop="' + REGISTER.sheet.code + '"><div class="t">' + esc(title) + '</div>' + chip + '</div>';
   }
   /** the library way: a page with modal() opens it through ui.dialog; the footer is its own Close (also the main action) */
   function openLibrary(title, body) {
     root.CBUi.dialog({
       mount: 'HOM001-U01',
       title: title,
-      pop: REG.sheet.code,
+      pop: REGISTER.sheet.code,
       body: body,
       actions: [{ name: 'close', options: { mount: 'HOM001-U01' } }]
     });
@@ -248,6 +258,7 @@
     doc.body.appendChild(sheetNode);
     sheetNode.showModal();
   }
+  /** open the sheet, or close it when it is open */
   function toggleSheet() {
     if (sheetNode) return sheetNode.close();
     var done = function (entries) {
@@ -260,6 +271,7 @@
     done((manifest && manifest.entries) || []);
   }
 
+  /** bind the unit to the shell that framed the page, stamp its keys and keep them stamped */
   function mount(shell) {
     shellRef = shell;
     if (!shell || !shell.el) return;
@@ -267,5 +279,5 @@
     watchShell();
   }
   doc.addEventListener('keydown', onKey);
-  root.CBShortcuts = { mount: mount, keyOf: keyOf, mainOf: mainOf, enabled: enabled, stamp: stamp, REGISTER: REG };
+  root.CBShortcuts = { mount: mount, keyOf: keyOf, mainOf: mainOf, enabled: enabled, stamp: stamp, REGISTER: REGISTER };
 })(typeof window !== 'undefined' ? window : this);

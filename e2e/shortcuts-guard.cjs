@@ -44,6 +44,12 @@ const wanted = new Set(counter.areas().map((id) => 'HOM001-K01#' + id).concat(co
 const stray = codes.filter((code) => !wanted.has(code));
 ok('no row names something that is not there: ' + (stray.join(', ') || 'none stray'), !stray.length);
 
+console.log('\n== one listener, one register ==');
+const unit = fs.readFileSync(path.join(WEB, 'public/app/shortcuts.js'), 'utf8');
+const registerText = fs.readFileSync(path.join(WEB, 'public/app/shortcuts-register.js'), 'utf8');
+ok('the unit adds exactly one keydown listener', (unit.match(/addEventListener\('keydown'/g) || []).length === 1);
+ok('the register file only assigns CB_SHORTCUT_REGISTER (no code of its own)', /root\.CB_SHORTCUT_REGISTER = \{/.test(registerText) && !/addEventListener|\bfunction \w/.test(registerText));
+
 console.log('\n== no key written outside the register ==');
 const appDir = path.join(WEB, 'public/app');
 const offenders = fs.readdirSync(appDir).filter((name) => name.endsWith('.js') && !/^shortcuts(-register)?\.js$/.test(name)).filter((name) => {
