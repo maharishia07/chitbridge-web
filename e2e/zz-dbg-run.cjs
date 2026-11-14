@@ -57,14 +57,12 @@ const saved = (p) => p.evaluate(() => window.SAVED.length);
   const r = await p.evaluate(async () => {
     var out = [];
     await nextNumber(); await nextNumber();
-    out.push('store ' + tillStore());
-    out.push('plain ' + JSON.stringify(await DB.get('series')));
-    var real = IDBDatabase.prototype.transaction, left = 1;
-    IDBDatabase.prototype.transaction = function () { if (left-- > 0) throw new DOMException('closing', 'InvalidStateError'); return real.apply(this, arguments); };
-    try { out.push('blip ' + JSON.stringify(await DB.get('series'))); } catch (e) { out.push('threw ' + e.message); }
-    IDBDatabase.prototype.transaction = real;
-    out.push('after ' + JSON.stringify(await DB.get('series')));
-    out.push('mem ' + MEM.on + ' lastErr ' + JSON.stringify(DB.lastErr()));
+    out.push('dbs ' + JSON.stringify((await indexedDB.databases()).map((d) => d.name + '@' + d.version)));
+    await DB.release();
+    out.push('after release ' + JSON.stringify(await DB.get('series')));
+    out.push('dbs ' + JSON.stringify((await indexedDB.databases()).map((d) => d.name + '@' + d.version)));
+    var raw = await new Promise((res, rej) => { var rq = indexedDB.open(tillStore()); rq.onsuccess = () => { var t = rq.result.transaction('kv'); var g = t.objectStore('kv').getAllKeys(); t.oncomplete = () => res(g.result); }; rq.onerror = () => rej(rq.error); });
+    out.push('raw keys ' + JSON.stringify(raw));
     return out;
   });
   console.log(r.join('\n'));
