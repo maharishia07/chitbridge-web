@@ -15,7 +15,7 @@ something needs them before any navigation happens.
 router renders a placeholder until `_capLoading` clears, which is the only reason the
 old duplicate `networkScreen()` in app.html was safe to delete.
 
-## Capabilities (64)
+## Capabilities (65)
 
 | file | loading · nav key | what it is |
 |---|---|---|
@@ -74,6 +74,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-settings.js` | — | CB SETTINGS › Counters & keys · Connectors · Policy · Plan & usage (T3-SETTINGS, 2026-10-14; SET2 of INDEX-NOT-APP.md) |
 | `cap-shop.js` | — | YOUR SHOP: the shop's own particulars, ONE implementation painted in two places (SET1, 2026-10-13) |
 | `cap-showcase.js` | eager | cap-showcase.js — THE SHOP WINDOW CHOOSER, ONE COPY (T3-P2-CRM, 2026-10-14): the registered showcase templates (app/showcase-templates.js, |
+| `cap-standards-build.js` | — |  |
 | `cap-standards.js` | lazy · on demand | .html); its functions are called by standards.html (stdCompatRows · stdCompareRows · stdWhyHTML · stdRecordHTML · stdGoto), app/cap-legend.js |
 | `cap-stock.js` | — | STOCK: what is on the shelf, per product, from the ONE stock reader (T3-OPS, 2026-10-14; CB Operations › Stock) |
 | `cap-suppliers.js` | eager | SUPPLIERS: who you buy from, whether you can order from them, add · link · remove (T3-OPS, 2026-10-14; CB Operations › Suppliers) |
@@ -84,7 +85,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (63)
+## Shared (64)
 
 | file | loading | what it is |
 |---|---|---|
@@ -134,6 +135,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `showcase-templates.js` | eager |  |
 | `sides.js` | — |  |
 | `signin-ui.js` | — | signin-ui.js — CBSignin.mount: THE ONE SIGN-IN WINDOW, for every app (M14, DECISIONS 2026-10-08) |
+| `std-build-view.js` | — |  |
 | `step-flow.js` | eager | .html): accounts, app, crm, finance, shop. CBSteps.create is called in app.html (3 sites), |
 | `strings-ar.js` | — |  |
 | `strings-fr.js` | — |  |
@@ -154,4 +156,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*127 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*129 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
