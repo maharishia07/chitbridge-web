@@ -19,6 +19,7 @@
  * testing.html is a single standalone page. A plain <script> is the only thing both can agree on.
  
  * CALLED BY public/app/cap-testing.js, public/testing.html   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
+ * CARD 29-qa-test-tooling-ux-locale-and-design-system/test-board
  */
 
 /**
@@ -35,7 +36,7 @@
  * @returns {{groups: Array, offMenu: number, total: number, doors: number}}
  */
 function testMenuTree(cases, last) {
-  var L = last || {};
+  var lastRun = last || {};
   var byGroup = {},
     order = [],
     count = 0;
@@ -46,18 +47,18 @@ function testMenuTree(cases, last) {
       return;
     }
     var bits = String(item.menu).split('›');
-    var g = (bits[0] || '').trim() || 'Elsewhere';
-    var d = (bits[1] || '').trim() || g;
-    if (!byGroup[g]) {
-      byGroup[g] = { name: g, doors: {}, order: [] };
-      order.push(g);
+    var group = (bits[0] || '').trim() || 'Elsewhere';
+    var door = (bits[1] || '').trim() || group;
+    if (!byGroup[group]) {
+      byGroup[group] = { name: group, doors: {}, order: [] };
+      order.push(group);
     }
-    var G = byGroup[g];
-    if (!G.doors[d]) {
-      G.doors[d] = { name: d, cases: [] };
-      G.order.push(d);
+    var groupEntry = byGroup[group];
+    if (!groupEntry.doors[door]) {
+      groupEntry.doors[door] = { name: door, cases: [] };
+      groupEntry.order.push(door);
     }
-    G.doors[d].cases.push(item);
+    groupEntry.doors[door].cases.push(item);
   });
 
   /**
@@ -71,7 +72,7 @@ function testMenuTree(cases, last) {
   function evidence(list) {
     var e = { total: list.length, run: 0, bad: 0, gen: 0 };
     list.forEach(function (item) {
-      var l = L[item.case_key];
+      var l = lastRun[item.case_key];
       if (l) e.run++;
       if (l && (l.status === 'fail' || l.status === 'blocked')) e.bad++;
       if (item.generated) e.gen++;
@@ -80,9 +81,9 @@ function testMenuTree(cases, last) {
   }
 
   var groups = order.map(function (item) {
-    var G = byGroup[item];
-    var nestedDoors = G.order.map(function (entry) {
-      var D = G.doors[entry];
+    var groupEntry = byGroup[item];
+    var nestedDoors = groupEntry.order.map(function (entry) {
+      var D = groupEntry.doors[entry];
       var e = evidence(D.cases);
       /* ⭐ sorted by key so a tester walking a door twice walks it in the same order both times */
       D.cases.sort(function (first, second) {
@@ -93,8 +94,8 @@ function testMenuTree(cases, last) {
     var flat = nestedDoors.reduce(function (sum, entry) {
       return sum.concat(entry.cases);
     }, []);
-    var ge = evidence(flat);
-    return { name: G.name, doors: nestedDoors, total: ge.total, run: ge.run, bad: ge.bad, gen: ge.gen };
+    var groupEvidence = evidence(flat);
+    return { name: groupEntry.name, doors: nestedDoors, total: groupEvidence.total, run: groupEvidence.run, bad: groupEvidence.bad, gen: groupEvidence.gen };
   });
 
   var doors = groups.reduce(function (sum, item) {

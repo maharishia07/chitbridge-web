@@ -39,17 +39,18 @@ function fxView(body) {
     '<div data-testid="fx" class="fx"><div id="fx_bar"></div><div id="fx_form"></div><div id="fx_rows" data-testid="fx-rows" style="min-height:240px"></div></div>';
   fxLoad();
 }
+/** read the rate list from the server and repaint, ignoring an answer that a newer read has overtaken */
 function fxLoad() {
-  var g = ++FXV.gen;
+  var generation = ++FXV.gen;
   return api('booksFxRates').then(
     function (reply) {
-      if (g !== FXV.gen) return;
+      if (generation !== FXV.gen) return;
       FXV.r = reply || {};
       FXV.err = '';
       fxPaint();
     },
     function (e) {
-      if (g !== FXV.gen) return;
+      if (generation !== FXV.gen) return;
       FXV.r = null;
       FXV.err = bkWhy(e, tx('Could not be read'));
       fxPaint();
@@ -59,28 +60,29 @@ function fxLoad() {
 function fxMay() {
   return (FXV.r && FXV.r.may && FXV.r.may.add) || { may: false, why: FXV.err || null };
 }
+/** paint the toolbar (add-rate form, disabled with the reason when the viewer may not add rates) */
 function fxPaint() {
   var bar = document.getElementById('fx_bar');
   if (!bar) return;
-  var may = fxMay(),
-    r = FXV.r || {},
-    rule = r.rule || {};
-  var dis = may.may ? '' : ' disabled title="' + esc(may.why || '') + '"';
+  var permission = fxMay(),
+    reply = FXV.r || {},
+    rule = reply.rule || {};
+  var disabledAttr = permission.may ? '' : ' disabled title="' + esc(permission.why || '') + '"';
   bar.innerHTML =
     '<div class="supacts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">' +
     '<button data-cbsid="BKS025-B01" type="button" data-testid="fx-add" onclick="fxAddOpen()"' +
-    dis +
+    disabledAttr +
     '>' +
     esc(tx('Add rate')) +
     '</button>' +
     '<label class="act" data-testid="fx-import-label" style="cursor:pointer' +
-    (may.may ? '' : ';opacity:.6;pointer-events:none') +
+    (permission.may ? '' : ';opacity:.6;pointer-events:none') +
     '">' +
     esc(tx('Import CSV')) +
     '<input data-cbsid="BKS025-I01" type="file" accept=".csv,text/csv" data-testid="fx-import" onchange="fxImport(this)" style="display:none"' +
-    (may.may ? '' : ' disabled') +
+    (permission.may ? '' : ' disabled') +
     '></label></div>' +
-    (!may.may && may.why ? '<div data-testid="fx-why" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px">' + esc(may.why) + '</div>' : '') +
+    (!permission.may && permission.why ? '<div data-testid="fx-why" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:8px">' + esc(permission.why) + '</div>' : '') +
     (rule.official_name
       ? '<div data-testid="fx-rule" title="' +
         esc(rule.tax_rate_rule || '') +
@@ -98,9 +100,9 @@ function fxPaint() {
 function fxList() {
   var el = document.getElementById('fx_rows');
   if (!el) return;
-  var r = FXV.r || {},
-    rows = r.rates || [],
-    cur = r.currency || '';
+  var reply = FXV.r || {},
+    rows = reply.rates || [],
+    currency = reply.currency || '';
   CBList.reset('fx-rates');
   CBList.mount(el, {
     key: 'fx-rates',
@@ -142,7 +144,7 @@ function fxList() {
         num: true,
         w: 170,
         cell: function (x) {
-          return '1 ' + x.from + ' = ' + x.rate + ' ' + (x.to || cur);
+          return '1 ' + x.from + ' = ' + x.rate + ' ' + (x.to || currency);
         }
       },
       {
@@ -245,6 +247,7 @@ function fxVal(id) {
   var el = document.getElementById(id);
   return el ? String(el.value || '').trim() : '';
 }
+/** send the typed rate to the server through the one action runner */
 function fxAddSave(btn) {
   var body = { date: fxVal('fx_date'), currency: fxVal('fx_cur').toUpperCase(), rate: fxVal('fx_rate'), source: fxVal('fx_src') || 'manual' };
   if (fxVal('fx_ref')) body.source_ref = fxVal('fx_ref');
@@ -309,18 +312,19 @@ function fxLockMonth() {
   }
   return null;
 }
+/** the foreign-balance line for the current month: ask the server, then fxLockPaint draws what it said */
 function fxLockLine() {
   var host = document.getElementById('lk_fx'),
-    m = fxLockMonth();
+    month = fxLockMonth();
   if (!host) return;
-  if (!m || !bkIsOwner()) {
+  if (!month || !bkIsOwner()) {
     host.innerHTML = '';
     return;
   }
-  var k = m.fy + '|' + m.p;
+  var k = month.fy + '|' + month.p;
   if (FXV.lk && FXV.lk.k === k && FXV.lk.r) return fxLockPaint(host, FXV.lk.r);
   FXV.lk = { k: k, r: null };
-  api('booksFxRevalue', { query: { fiscal_year: m.fy, period: m.p } }).then(
+  api('booksFxRevalue', { query: { fiscal_year: month.fy, period: month.p } }).then(
     function (reply) {
       if (FXV.lk && FXV.lk.k === k) {
         FXV.lk.r = reply || {};
@@ -332,19 +336,20 @@ function fxLockLine() {
     }
   );
 }
-function fxLockPaint(host, r) {
-  var rows = r.rows || [];
-  if (!r.ready || (!rows.length && !(r.missing || []).length)) {
+/** draw the foreign-balance revaluation line from the server answer (gain or loss, what is missing, who may post) */
+function fxLockPaint(host, lock) {
+  var rows = lock.rows || [];
+  if (!lock.ready || (!rows.length && !(lock.missing || []).length)) {
     host.innerHTML = '';
     return;
   } /* no foreign balance: nothing to say (fine collapses) */
-  var c = r.functional,
-    may = (r.may && r.may.post) || { may: false, why: r.why };
-  var g = Number(r.gain_minor || 0),
-    word = r.posted
-      ? txf('Revalued — {no}', { no: r.posted.entry_no })
-      : g
-        ? txf(g > 0 ? 'Gain {a} at the closing rate' : 'Loss {a} at the closing rate', { a: bkMoney(Math.abs(g), c) })
+  var functionalCurrency = lock.functional,
+    permission = (lock.may && lock.may.post) || { may: false, why: lock.why };
+  var gain = Number(lock.gain_minor || 0),
+    word = lock.posted
+      ? txf('Revalued — {no}', { no: lock.posted.entry_no })
+      : gain
+        ? txf(gain > 0 ? 'Gain {a} at the closing rate' : 'Loss {a} at the closing rate', { a: bkMoney(Math.abs(gain), functionalCurrency) })
         : tx('At the closing rate already');
   host.innerHTML =
     '<div data-testid="lk-fx" style="border:1px solid var(--line,#ddd);border-radius:8px;padding:8px 10px">' +
@@ -357,28 +362,29 @@ function fxLockPaint(host, r) {
     rows
       .map(function (x) {
         return CBList.nextRow(
-          [esc(x.party || x.code || '') + ' · ' + esc(bkMoney(Math.abs(x.balance_txn_minor), x.txn_currency)), esc(bkDrCr(x.diff_minor, c))],
+          [esc(x.party || x.code || '') + ' · ' + esc(bkMoney(Math.abs(x.balance_txn_minor), x.txn_currency)), esc(bkDrCr(x.diff_minor, functionalCurrency))],
           [120]
         );
       })
       .join('') +
-    (!may.may && may.why && !r.posted ? '<div data-testid="lk-fx-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(may.why) + '</div>' : '') +
-    (r.posted
+    (!permission.may && permission.why && !lock.posted ? '<div data-testid="lk-fx-why" style="color:var(--grey);font-size:var(--fs-1)">' + esc(permission.why) + '</div>' : '') +
+    (lock.posted
       ? ''
       : '<button data-cbsid="BKS025-B04" type="button" data-testid="lk-fx-revalue" style="margin-top:6px"' +
-        (may.may ? ' onclick="fxRevalue(this)"' : ' disabled title="' + esc(may.why || '') + '"') +
+        (permission.may ? ' onclick="fxRevalue(this)"' : ' disabled title="' + esc(permission.why || '') + '"') +
         '>' +
         esc(tx('Revalue')) +
         '</button>') +
     '</div>';
 }
+/** post the revaluation for the current month through the one action runner */
 function fxRevalue(btn) {
-  var m = fxLockMonth();
-  if (!m) return;
+  var month = fxLockMonth();
+  if (!month) return;
   CBAction.run(
     btn,
     function () {
-      return api('booksFxRevaluePost', { body: { fiscal_year: m.fy, period: Number(m.p) } });
+      return api('booksFxRevaluePost', { body: { fiscal_year: month.fy, period: Number(month.p) } });
     },
     {
       key: 'fx-revalue',

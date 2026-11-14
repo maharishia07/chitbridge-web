@@ -24,10 +24,10 @@ var CBStock = (function () {
   var DAY = 86400000,
     SOON_DAYS = 30;
 
-  function t(s) {
+  function translate(s) {
     return typeof tx === 'function' ? tx(s) : s;
   }
-  function tf(s, v) {
+  function translateWith(s, v) {
     return typeof txf === 'function'
       ? txf(s, v)
       : String(s).replace(/\{(\w+)\}/g, function (_, k) {
@@ -52,19 +52,20 @@ var CBStock = (function () {
   }
   /** a batch's expiry in words: expired · expires within 30 days · its date — the date is the server's, only the reading is here */
   function expiryWord(d) {
-    if (!d) return { text: t('no expiry kept'), tone: '' };
+    if (!d) return { text: translate('no expiry kept'), tone: '' };
     var left = Math.floor((new Date(d + 'T00:00:00').getTime() - Date.now()) / DAY);
-    if (left < 0) return { text: tf('expired {date}', { date: dateOf(d) }), tone: 'bad' };
-    if (left <= SOON_DAYS) return { text: tf('expires {date}', { date: dateOf(d) }), tone: 'warn' };
-    return { text: tf('expires {date}', { date: dateOf(d) }), tone: '' };
+    if (left < 0) return { text: translateWith('expired {date}', { date: dateOf(d) }), tone: 'bad' };
+    if (left <= SOON_DAYS) return { text: translateWith('expires {date}', { date: dateOf(d) }), tone: 'warn' };
+    return { text: translateWith('expires {date}', { date: dateOf(d) }), tone: '' };
   }
   function stateOf(r) {
     return r.qty < 0 ? 'below' : r.qty === 0 ? 'none' : 'on';
   }
   function nameOf(r) {
-    return r.name || tf('Item {id}', { id: String(r.id).slice(0, 8) });
+    return r.name || translateWith('Item {id}', { id: String(r.id).slice(0, 8) });
   }
 
+  /** read the stock list from the one stock reader and refresh the list */
   function load() {
     if (S.busy) return;
     S.busy = true;
@@ -73,7 +74,7 @@ var CBStock = (function () {
     return api('stockOnHand', { query: { detail: '1' } })
       .then(function (reply) {
         var b = (reply && reply.balances) || {};
-        S.notReady = reply && reply.not_ready ? reply.says || t('Stock is not switched on for this shop yet.') : null;
+        S.notReady = reply && reply.not_ready ? reply.says || translate('Stock is not switched on for this shop yet.') : null;
         S.rows = Object.keys(b).map(function (id) {
           var x = b[id] || {};
           return { id: id, name: x.name || null, unit: x.unit || null, qty: Number(x.qty) || 0, lots: Array.isArray(x.lots) ? x.lots : [] };
@@ -89,11 +90,12 @@ var CBStock = (function () {
       });
   }
 
+  /** the stock list columns */
   function cols() {
     return [
       {
         key: 'name',
-        label: t('Item'),
+        label: translate('Item'),
         prio: 1,
         w: 280,
         sort: 'az',
@@ -104,7 +106,7 @@ var CBStock = (function () {
       },
       {
         key: 'qty',
-        label: t('On hand'),
+        label: translate('On hand'),
         prio: 2,
         w: 230,
         num: true,
@@ -115,23 +117,23 @@ var CBStock = (function () {
         },
         cell: function (r) {
           var q = esc(qtyOf(r.qty)) + (r.unit ? ' <span class="sub">' + esc(r.unit) + '</span>' : '');
-          if (r.qty < 0) return '<span class="tag red" data-testid="stock-below-' + esc(r.id) + '">⚠ ' + q + ' · ' + esc(t('below zero')) + '</span>';
-          if (r.qty === 0) return '<span class="tag amber">' + q + ' · ' + esc(t('none left')) + '</span>';
+          if (r.qty < 0) return '<span class="tag red" data-testid="stock-below-' + esc(r.id) + '">⚠ ' + q + ' · ' + esc(translate('below zero')) + '</span>';
+          if (r.qty === 0) return '<span class="tag amber">' + q + ' · ' + esc(translate('none left')) + '</span>';
           return q;
         }
       },
       {
         key: 'lots',
-        label: t('Batches'),
+        label: translate('Batches'),
         prio: 3,
         w: 220,
         sort: 'expiry',
         html: true,
-        cell: function (r) {
-          if (!r.lots.length) return '<span class="sub">' + esc(t('not kept by batch')) + '</span>';
-          var e = expiryWord(r.lots[0].expires_at);
+        cell: function (stock) {
+          if (!stock.lots.length) return '<span class="sub">' + esc(translate('not kept by batch')) + '</span>';
+          var e = expiryWord(stock.lots[0].expires_at);
           return (
-            esc(tf(r.lots.length === 1 ? '{n} batch' : '{n} batches', { n: r.lots.length })) +
+            esc(translateWith(stock.lots.length === 1 ? '{n} batch' : '{n} batches', { n: stock.lots.length })) +
             ' · <span class="' +
             (e.tone ? 'tag ' + (e.tone === 'bad' ? 'red' : 'amber') : 'sub') +
             '">' +
@@ -143,14 +145,14 @@ var CBStock = (function () {
     ];
   }
   /** the next level: every batch, earliest expiry first (the server's order) */
-  function next(r) {
-    if (!r.lots.length)
-      return '<div class="sub" data-testid="stock-next-' + esc(r.id) + '">' + esc(t('This product is not kept by batch — one count for all of it.')) + '</div>';
+  function next(stock) {
+    if (!stock.lots.length)
+      return '<div class="sub" data-testid="stock-next-' + esc(stock.id) + '">' + esc(translate('This product is not kept by batch — one count for all of it.')) + '</div>';
     return (
       '<div data-testid="stock-next-' +
-      esc(r.id) +
+      esc(stock.id) +
       '">' +
-      r.lots
+      stock.lots
         .map(function (item) {
           var e = expiryWord(item.expires_at);
           return (
@@ -158,7 +160,7 @@ var CBStock = (function () {
             esc(item.lot) +
             '</b> · ' +
             esc(qtyOf(item.qty)) +
-            (r.unit ? ' ' + esc(r.unit) : '') +
+            (stock.unit ? ' ' + esc(stock.unit) : '') +
             ' · <span class="' +
             (e.tone ? 'tag ' + (e.tone === 'bad' ? 'red' : 'amber') : 'sub') +
             '">' +
@@ -174,10 +176,11 @@ var CBStock = (function () {
     return r.lots.length && r.lots[0].expires_at ? r.lots[0].expires_at : '9999-12-31';
   }
 
+  /** the options the stock list is mounted with */
   function opts() {
     return {
       key: 'ops-stock',
-      t: t,
+      t: translate,
       hl: false,
       id: function (r) {
         return r.id;
@@ -194,13 +197,13 @@ var CBStock = (function () {
         return S.err ? 'error' : S.rows === null ? 'loading' : null;
       },
       error: function () {
-        return { title: t('Could not read your stock.'), sub: t('Nothing was changed. Try again in a moment.') };
+        return { title: translate('Could not read your stock.'), sub: translate('Nothing was changed. Try again in a moment.') };
       },
       onRetry: load,
       empty: function () {
         return S.notReady
           ? { title: S.notReady }
-          : { title: t('No stock moved yet.'), sub: t('A product shows here once a delivery is received or a sale is made.') };
+          : { title: translate('No stock moved yet.'), sub: translate('A product shows here once a delivery is received or a sale is made.') };
       },
       head: function () {
         var rows = S.rows || [],
@@ -208,10 +211,10 @@ var CBStock = (function () {
             return item.qty < 0;
           }).length;
         return {
-          title: t(typeof stockWord === 'function' ? stockWord() : 'Stock'),
-          chips: rows.length ? [{ text: tf(rows.length === 1 ? '{n} item' : '{n} items', { n: rows.length }), tid: 'stock-count' }] : [],
+          title: translate(typeof stockWord === 'function' ? stockWord() : 'Stock'),
+          chips: rows.length ? [{ text: translateWith(rows.length === 1 ? '{n} item' : '{n} items', { n: rows.length }), tid: 'stock-count' }] : [],
           notices: below
-            ? [{ text: tf(below === 1 ? '{n} below zero — count it' : '{n} below zero — count them', { n: below }), cls: 'bad', tid: 'stock-below-notice' }]
+            ? [{ text: translateWith(below === 1 ? '{n} below zero — count it' : '{n} below zero — count them', { n: below }), cls: 'bad', tid: 'stock-below-notice' }]
             : []
         };
       },
@@ -228,12 +231,12 @@ var CBStock = (function () {
       filters: [
         {
           key: 'state',
-          label: t('How much'),
-          all: t('Any amount'),
+          label: translate('How much'),
+          all: translate('Any amount'),
           options: [
-            { v: 'below', label: t('Below zero') },
-            { v: 'none', label: t('None left') },
-            { v: 'on', label: t('On the shelf') }
+            { v: 'below', label: translate('Below zero') },
+            { v: 'none', label: translate('None left') },
+            { v: 'on', label: translate('On the shelf') }
           ],
           match: function (r, v) {
             return stateOf(r) === v;
@@ -241,11 +244,11 @@ var CBStock = (function () {
         },
         {
           key: 'exp',
-          label: t('Expiry'),
-          all: t('Any expiry'),
+          label: translate('Expiry'),
+          all: translate('Any expiry'),
           options: [
-            { v: 'gone', label: t('Expired') },
-            { v: 'soon', label: t('Expires within 30 days') }
+            { v: 'gone', label: translate('Expired') },
+            { v: 'soon', label: translate('Expires within 30 days') }
           ],
           match: function (r, v) {
             var e = r.lots.length ? expiryWord(r.lots[0].expires_at).tone : '';
@@ -257,28 +260,28 @@ var CBStock = (function () {
       sorts: [
         {
           key: 'least',
-          label: t('Least on hand first'),
+          label: translate('Least on hand first'),
           cmp: function (a, b) {
             return a.qty - b.qty || nameOf(a).localeCompare(nameOf(b));
           }
         },
         {
           key: 'most',
-          label: t('Most on hand first'),
+          label: translate('Most on hand first'),
           cmp: function (a, b) {
             return b.qty - a.qty || nameOf(a).localeCompare(nameOf(b));
           }
         },
         {
           key: 'expiry',
-          label: t('Expiring first'),
+          label: translate('Expiring first'),
           cmp: function (a, b) {
             return soonest(a).localeCompare(soonest(b)) || a.qty - b.qty;
           }
         },
         {
           key: 'az',
-          label: t('A–Z'),
+          label: translate('A–Z'),
           cmp: function (a, b) {
             return nameOf(a).localeCompare(nameOf(b));
           }
