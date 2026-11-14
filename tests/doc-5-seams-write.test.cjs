@@ -63,6 +63,8 @@ ok(eng.status === 0, 'DOC-68: engines owns no rows and passes with its header');
 // DOC-68: MODULES.md has the same generate-then-check loop
 const site = path.join(base, 'site');
 put(path.join(site, 'tools', 'gen-modules-doc.cjs'), fs.readFileSync(MODULES, 'utf8'));
+// the generator reads the one header grammar, so the scratch site carries it too
+put(path.join(site, 'tools', 'readability', 'header-grammar.cjs'), fs.readFileSync(path.join(path.dirname(MODULES), 'readability', 'header-grammar.cjs'), 'utf8'));
 put(path.join(site, 'public', 'app.html'), '<html></html>\n');
 put(path.join(site, 'public', 'app', 'alpha.js'), '/* alpha — does one thing */\nvar a = 1;\n');
 const gen = tool(path.join(site, 'tools', 'gen-modules-doc.cjs'), [], site);

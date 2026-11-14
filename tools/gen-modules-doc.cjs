@@ -24,7 +24,7 @@ const fs = require('fs');
 const path = require('path');
 const grammar = require('./readability/header-grammar.cjs');
 
-const W =path.join(__dirname, '..', 'public');
+const W = path.join(__dirname, '..', 'public');
 const OUT = path.join(W, 'app', 'MODULES.md');
 
 const files = fs
