@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<!-- OWNS  the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the reconciliation, then "add" into
+           ON-SCREEN books only. Nothing is sent, nothing is saved. The same module (app/bank-preview.js) goes inside the app later; only its post adapter differs.
+     CALLED BY a link from the auditor's pack (not in any menu). A utility page, not app.html: no config.js, no device-id.js, no analytics, no api call, no storage.
+     FLOW  load sample → CBBankRecon.parse/explain → CBBankProject.project → paint → confirm popup → demo post → project again
+     CARD  16-finance/bank-reconciliation-and-bank-rail -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Bank to books demo · ChitBridge</title>
+<link rel="stylesheet" href="/app/lab-kit.css">
+<link rel="stylesheet" href="/app/bank-demo.css">
+</head>
+<body>
+<div class="bd-banner" role="note" data-testid="bd-banner"><b>Demo. Nothing is saved.</b> These are sample books, not yours. A file you load stays on this device.</div>
+<header class="bd-head">
+  <h1>Bank statement to books</h1>
+  <div class="bd-acts">
+    <button data-cbsid="BKS017-B01" id="bd_load" type="button" class="bd-btn" data-testid="bd-load">Load the sample statement</button>
+    <label class="bd-btn bd-file">Load your own CSV <input data-cbsid="BKS017-I01" id="bd_file" type="file" accept=".csv,.txt,text/csv" data-testid="bd-file"></label>
+    <button data-cbsid="BKS017-B06" id="bd_reset" type="button" class="bd-btn" data-testid="bd-reset">Start again</button>
+    <button data-cbsid="BKS017-B02" id="bd_add" type="button" class="bd-btn bd-go" data-testid="bd-add" disabled>Nothing ready to add</button>
+  </div>
+</header>
+<p id="bd_sum" class="bd-sum" data-testid="bd-sum" aria-live="polite"></p>
+<p id="bd_msg" class="bd-msg" data-testid="bd-msg" role="status"></p>
+<nav class="bd-tabs" role="tablist" aria-label="Views">
+  <button data-cbsid="BKS017-S01" id="bd_tab_lines" type="button" role="tab" aria-selected="true" data-act="view" data-v="lines" data-testid="bd-tab-lines">Statement lines</button>
+  <button data-cbsid="BKS017-S02" id="bd_tab_books" type="button" role="tab" aria-selected="false" data-act="view" data-v="books" data-testid="bd-tab-books">Books after</button>
+  <button data-cbsid="BKS017-S03" id="bd_tab_brs" type="button" role="tab" aria-selected="false" data-act="view" data-v="brs" data-testid="bd-tab-brs">Reconciliation</button>
+</nav>
+<main class="bd-main">
+  <section id="bd_lines" class="bd-pane" aria-label="Statement lines"></section>
+  <section id="bd_books" class="bd-pane" aria-label="Books after" hidden></section>
+  <section id="bd_brs" class="bd-pane" aria-label="Reconciliation" hidden></section>
+</main>
+<script src="/app/helpers.js"></script>
+<script src="/engine/money.js"></script>
+<script src="/engine/tax.js"></script>
+<script src="/engine/chart.js"></script>
+<script src="/engine/accounts-packs.js"></script>
+<script src="/engine/posting.js"></script>
+<script src="/engine/bank-entry.js"></script>
+<script src="/engine/bank-recon.js"></script>
+<script src="/engine/bank-project.js"></script>
+<script src="/app/lab-kit.js"></script>
+<script src="/app/bank-preview.js"></script>
+<script src="/app/bank-demo.js"></script>
+</body>
+</html>

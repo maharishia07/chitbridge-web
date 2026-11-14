@@ -37,6 +37,8 @@ const EXCEPTIONS = {
   'app/cap-books.js::bkTable': 'the FINAL ACCOUNTS printout: trial balance, profit and loss and balance sheet are statements with a totals foot, read top to bottom and printed.',
   'app/cap-books.js::statementHTML': 'a party STATEMENT printout (opening … running balance … closing), a printed document.',
   'app/country-profiles.js::invoiceHTML': 'the sample e-invoice a country pack would issue (Item · Qty · Price · Rate · Tax · Total): a printed-document preview of one frozen sample, like the bill slip.',
+  'app/bank-demo.js::paintLines': 'the no-login bank demo (bank-demo.html, CSP script-src self, no list unit loaded): the lines of ONE sample statement, a read-only preview in a fixed order, like a printed statement. Not a list a person sorts or resizes.',
+  'app/bank-demo.js::paintBooks': 'the no-login bank demo: the bank-account ledger the sample statement would produce (Date · What · In · Out · Balance), a read-only statement preview in running-balance order.',
   'app.html::_aiMd': 'the markdown renderer for an AI answer: a table the model wrote is content, not a list of the shop\'s records.',
 };
 
