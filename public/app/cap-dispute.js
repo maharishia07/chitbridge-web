@@ -727,7 +727,7 @@ async function quickDispute(idArg, opt) {
   }
   ui.dialog({
     mount: 'TSK006-U01',
-    pop: 'POP152',
+    pop: 'POP189',
     titleText: tx('⚑ Raise dispute'),
     body:
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Category, reason (10+ characters)<br>Parties get notified</div><select data-cbsid="TSK006-S03" id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' +

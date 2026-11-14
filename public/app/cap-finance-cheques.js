@@ -100,19 +100,6 @@ function fqPaintTop() {
     '</span></div>' +
     '<div id="chq_out" data-testid="chq_out" role="status" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 20px 0;min-height:0"></div>';
 }
-/** the sheet's footer: Cancel, and Save (greyed with the server's sentence when the shop may not set it) */
-function fqSheetFoot(locked) {
-  return (
-    '<button data-cbsid="FIN006-B02" type="button" onclick="closeModal()">' +
-    esc(tx('Cancel')) +
-    '</button>' +
-    '<button data-cbsid="FIN006-B03" type="button" class="pri" data-testid="fq-save"' +
-    (locked ? ' disabled aria-disabled="true"' : '') +
-    ' onclick="fqSave(this)">' +
-    esc(tx('Save')) +
-    '</button>'
-  );
-}
 /** the switch: on/off and the days ahead — the server's may_set greys Save WITH its sentence; before the twin lands, the same, in words */
 function fqReminderSheet() {
   var rm = fqRemind(),
@@ -146,6 +133,19 @@ function fqReminderSheet() {
       '</div>',
     footerHtml: fqSheetFoot(off)
   });
+}
+/** the sheet's footer: Cancel, and Save (greyed with the server's sentence when the shop may not set it) */
+function fqSheetFoot(locked) {
+  return (
+    '<button data-cbsid="FIN006-B02" type="button" onclick="closeModal()">' +
+    esc(tx('Cancel')) +
+    '</button>' +
+    '<button data-cbsid="FIN006-B03" type="button" class="pri" data-testid="fq-save"' +
+    (locked ? ' disabled aria-disabled="true"' : '') +
+    ' onclick="fqSave(this)">' +
+    esc(tx('Save')) +
+    '</button>'
+  );
 }
 function fqSave(btn) {
   var on = !!(document.getElementById('fq_on') || {}).checked,
