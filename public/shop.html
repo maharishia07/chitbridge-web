@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <!-- OWNS  the Storefront: a shop's public front (its items, the cart, the order) — the shop's own name in its brand row, the frame's bar above.
-     CALLED BY a shop's public link (/shop.html?…), network-shop.html, the QR on a bill.
+     CALLED BY a shop's public link (/shop.html?s=…; the manifest storefront card, cap-admin.js's link row, cap-crm-groups.js's share link), network-shop.html (its shop links), and the frames that preview it (app.html's Storefront tab, till.html, app/cap-showcase.js).
      FLOW  load → shopFrame (CBFrame bar) → the catalogue read → paint → cart → order (POST /api/orders)
      CARD storefront-and-catalogue/storefront -->
 <head>
