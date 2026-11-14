@@ -12,6 +12,7 @@
   var preview = root.CBBankPreview,
     doc = root.document;
   var CURRENCY = 'AUD',
+    COUNTRY = 'AU',
     ACCOUNT = 'Demo bank account';
   var SAMPLE_CSV = [
     'Date,Description,Debit,Credit,Balance',
@@ -90,8 +91,8 @@
       statementCurrency: function () {
         return statementCur;
       },
-      suggestOpts: { learned: LEARNED, country: 'AU', parties: parties },
-      parseOpts: { country: 'AU', currency: CURRENCY }
+      suggestOpts: { learned: LEARNED, country: COUNTRY, parties: parties },
+      parseOpts: { country: COUNTRY, currency: CURRENCY }
     });
   }
   function amountText(value) {
@@ -132,13 +133,19 @@
       .join(' · ');
     return '<span class="bd-why bd-entry">' + esc(legs + '.' + taxWordsOf(item.tax)) + '</span> ';
   }
+  /** the pack's own word for its tax (CBCountries.meta(country).words.taxName), so no tax name is written here; plain "tax" when the pack says none */
+  function taxWordOf() {
+    var meta = root.CBCountries && root.CBCountries.meta && root.CBCountries.meta(COUNTRY);
+    return (meta && meta.words && meta.words.taxName) || 'tax';
+  }
   /** the tax a proposal carries, in words: GST collected or paid, the invoice it needs, or that no credit is claimed */
   function taxWordsOf(taxRecord) {
     if (!taxRecord) return '';
-    if (taxRecord.invoice_answer === 'none') return ' No GST credit: you hold no tax invoice.';
+    var taxWord = taxWordOf();
+    if (taxRecord.invoice_answer === 'none') return ' No ' + taxWord + ' credit: you hold no tax invoice.';
     if (!taxRecord.tax_minor) return '';
     var invoice = taxRecord.invoice && taxRecord.invoice.required ? ', tax invoice required' + (taxRecord.invoice_answer === 'held' ? ', you hold it' : '') : '';
-    return ' ' + (taxRecord.direction === 'output' ? 'GST collected ' : 'GST ') + amountText(taxRecord.tax_minor) + ' (' + String(taxRecord.kind).replace(/_/g, ' ') + ')' + invoice + '.';
+    return ' ' + (taxRecord.direction === 'output' ? taxWord + ' collected ' : taxWord + ' ') + amountText(taxRecord.tax_minor) + ' (' + String(taxRecord.kind).replace(/_/g, ' ') + ')' + invoice + '.';
   }
   /** the one question a held-back line asks next: is it already in the books · cash or accrual · do you hold the tax invoice · is this right */
   function askedBox(item) {
@@ -165,9 +172,9 @@
   /** B5-03: a GST credit above the pack's threshold waits for the tax invoice */
   function invoiceQuestion(item) {
     return (
-      '<span class="bd-ask">' + esc('This claims ' + amountText(item.tax.tax_minor) + ' GST and needs a tax invoice. Do you hold it?') + '</span> ' +
+      '<span class="bd-ask">' + esc('This claims ' + amountText(item.tax.tax_minor) + ' ' + taxWordOf() + ' and needs a tax invoice. Do you hold it?') + '</span> ' +
       '<button data-cbsid="BKS017-B10" type="button" class="bd-btn" data-act="inv" data-v="held"' + dataKey(item) + '>Yes, I hold it</button> ' +
-      '<button data-cbsid="BKS017-B11" type="button" class="bd-btn" data-act="inv" data-v="none"' + dataKey(item) + '>No: book it without the GST credit</button>'
+      '<button data-cbsid="BKS017-B11" type="button" class="bd-btn" data-act="inv" data-v="none"' + dataKey(item) + '>No: book it without the ' + taxWordOf() + ' credit</button>'
     );
   }
   /** B5-01: only the words on the bank line proposed this, no rule you taught and no party you know: it is added only when you say it is right */
@@ -198,7 +205,7 @@
   }
   /** the chart the owner may pick from, read from the country pack (never a new account): expense and income classes, and the tax kinds */
   function chartOf() {
-    var pack = root.CBRegulation && root.CBRegulation.resolve({ country: 'AU' });
+    var pack = root.CBRegulation && root.CBRegulation.resolve({ country: COUNTRY });
     if (!pack) return { expense: [], income: [], taxKinds: [] };
     var kinds = (pack.tax && pack.tax.supplyKinds) || {};
     return { expense: pack.expense_classes || [], income: pack.income_classes || [], taxKinds: Object.keys(kinds).map(function (id) { return { id: id, name: kinds[id].name }; }) };
@@ -337,7 +344,7 @@
   function startAgain() {
     askedFile = null;
     showCurrencyAsk();
-    statementCur = 'AUD'; /* the sample statement is ours and says AUD */
+    statementCur = CURRENCY; /* the sample statement is ours and says the demo account's currency */
     resetBooks();
     makeController();
     loadStatement(SAMPLE_CSV, 'Sample statement');
