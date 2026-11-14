@@ -67,7 +67,7 @@ ok('no retired screen is offered' + (leaked.length ? ': ' + leaked.join(' · ') 
   const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
     const f = path.join(dir, e.name);
     if (e.isDirectory()) return walk(f);
-    if (!/.(html|js)$/.test(e.name)) return;
+    if (!/\.(html|js)$/.test(e.name)) return;
     for (const m of fs.readFileSync(f, 'utf8').matchAll(/data-cbsid=["']([A-Z]{3}[0-9]{3}-[A-Z][0-9]{2,3}|CTL[0-9]+)["']/g)) if (retiredControls.has(m[1])) back.push(m[1] + ' in ' + path.relative(process.cwd(), f));
   });
   walk(path.join(__dirname, '..', 'public'));
