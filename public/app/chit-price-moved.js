@@ -132,6 +132,7 @@
     if (old) old.remove();
     var node = root.document.createElement('dialog');
     node.id = DIALOG_ID;
+    node.setAttribute('data-pop', 'POP211');
     node.setAttribute('data-testid', 'price-moved');
     node.style.cssText = 'border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;max-width:min(460px,92vw);width:100%;background:var(--card,#fff);color:var(--ink,#1D1B16);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif';
     node.innerHTML = dialogHtml(data, currency);

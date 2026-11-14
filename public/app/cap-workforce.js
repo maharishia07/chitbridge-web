@@ -463,6 +463,7 @@ function awHost() {
   if (!node) {
     node = document.createElement('div');
     node.id = 'actorwiz';
+    node.setAttribute('data-pop', 'POP018');
     document.body.appendChild(node);
   }
   return node;

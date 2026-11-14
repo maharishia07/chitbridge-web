@@ -8114,7 +8114,7 @@ async function compose(prefill) {
      <div class="err" id="cc_err"></div>
    </div>
    <div class="mfoot" id="cc_foot"></div>`,
-    true
+    true, { pop: 'POP200' }
   );
   UI._ccFlow.paint();
   ccPaintStepParts();
@@ -17978,7 +17978,7 @@ function checkCatalogueFile() {
       '<button data-cbsid="CMP005" onclick="closeModal()">' +
       tx('Close') +
       '</button></div>',
-    true
+    true, { pop: 'POP031' }
   );
 }
 /**
@@ -18018,7 +18018,7 @@ async function declareVariants() {
           tx('🔗 Variants') +
           '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('OK') +
-          '</button></div>'
+          '</button></div>', false, { pop: 'POP201' }
       );
       return;
     }
@@ -18068,7 +18068,7 @@ async function declareVariants() {
         tx('Cancel') +
         '</button><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">' +
         tx('Save grouping') +
-        '</button></div>'
+        '</button></div>', false, { pop: 'POP201' }
     );
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not load your columns.');
@@ -18150,7 +18150,7 @@ async function startFromStandardSet() {
         tx('Add these columns') +
         '</button><button data-cbsid="CMP005" onclick="closeModal()">' +
         tx('Close') +
-        '</button></div>'
+        '</button></div>', false, { pop: 'POP202' }
     );
   } catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not load the standard sets.');
@@ -22558,7 +22558,7 @@ async function chitShowQr(id, amount) {
   }
   if (!upi) {
     modal(
-      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+      `<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP203' }
     );
     return;
   }
@@ -22582,7 +22582,7 @@ async function chitShowQr(id, amount) {
     }
   } catch (_) {}
   modal(
-    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`
+    `<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount ? ' · ' + esc(inr(amount)) : ''} · CB-${esc(String(id).slice(0, 8))}</div></div><div class="mbody" style="text-align:center">${img || esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button data-cbsid="CMP005" onclick="closeModal()">${esc(tx('Close'))}</button></div>`, false, { pop: 'POP204' }
   );
 }
 function toggleListHelp() {
@@ -23153,9 +23153,10 @@ function modalCode() {
   return null;
 }
 /** put it in the dialog's own header, where a reader is already looking for the title */
-function modalStamp(host) {
+function modalStamp(host, popCode) {
   try {
-    var info = modalCode();
+    /* a call that names its own dialog (modal(html, wide, { pop: 'POPnnn' })) is exact; the stack lookup only guesses the opener */
+    var info = popCode ? { code: popCode, fn: '', ambiguous: false } : modalCode();
     if (!info) return;
     var box = host.querySelector('.mhd') || host.querySelector('.modal');
     if (!box || box.querySelector('[data-testid="popup-code"]')) return;
@@ -23202,7 +23203,7 @@ function modal(html, wide, opt) {
   node.style.display = '';
   node.innerHTML = `<div class="mover" onclick="modalBackdrop()"><div class="modal${wide ? ' wide' : ''}" onclick="event.stopPropagation()"><button data-cbsid="CMP005" class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`;
   mvModal(node, wide, opt);
-  modalStamp(node);
+  modalStamp(node, opt && opt.pop);
 }
 function modalBackdrop() {
   if (UI._composeModal) {
@@ -23437,13 +23438,13 @@ function quickDelete() {
           them2: sent.length > 1 ? tx('them') : tx('it'),
           them3: sent.length > 1 ? tx('them') : tx('it')
         }
-      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`
+      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`, false, { pop: 'POP205' }
     );
     return;
   }
   MODALS.del = { ids: drafts };
   modal(
-    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`
+    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`, false, { pop: 'POP062' }
   );
 }
 async function archiveSelected() {
@@ -26769,7 +26770,7 @@ function askAiOrderDoc() {
       tx('✨ Draft a document — from this order') +
       '</div></div><div class="mbody" style="padding:16px"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>' +
       btns +
-      '</div>'
+      '</div>', false, { pop: 'POP017' }
   );
 }
 async function _aiOrderDoc(skill, label) {
@@ -26791,7 +26792,7 @@ async function _aiOrderDoc(skill, label) {
       ' — from this order</div></div><div class="mbody" style="padding:16px"><div id="aoddbody" style="font-size:var(--fs-2);color:var(--grey)">' +
       tx('✨ Drafting from the order…') +
       '</div></div>',
-    true
+    true, { pop: 'POP017' }
   );
   try {
     var res = await fetch(CFG.API_BASE + '/api/governance/ai-draft', {
@@ -27861,7 +27862,7 @@ async function openRaidReport() {
     '<span class="spin"></span> ' +
     tx('opening…') +
     '</div>';
-  if (typeof modal === 'function') modal(loading, true);
+  if (typeof modal === 'function') modal(loading, true, { pop: 'POP072' });
   try {
     await ensureCap('register');
   } catch (e) {
@@ -27873,7 +27874,7 @@ async function openRaidReport() {
           '<div class="mbody" style="padding:16px;color:var(--disp);font-size:var(--fs-2)">' +
           esc((e && e.message) || tx('Could not load the register.')) +
           '</div>',
-        true
+        true, { pop: 'POP072' }
       );
     }
     return;
@@ -30059,7 +30060,7 @@ function amendPaint() {
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
       ${AMD_REASONS.map((item) => `<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:var(--fs-3)" onclick="amendSave(null,'${item[0]}')">${esc(item[1])}</button>`).join('')}
-      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`);
+      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`, false, { pop: 'POP015' });
   }
 
   /* ── the card ───────────────────────────────────────────────────────────────────────────────────────────── */
@@ -30130,7 +30131,7 @@ function amendPaint() {
       ${ic('✓ Save', 'Save', 'amendSave()', 'background:var(--blue);color:var(--on-accent);font-weight:800;font-size:var(--fs-3)')}
       ${ic('🗑 Remove', 'Remove this line', "amdView('remove')", 'color:var(--disp);font-size:var(--fs-3)')}
       ${ic('✕', 'Cancel', 'closeModal()', 'flex:0 0 58px')}
-    </div>`);
+    </div>`, false, { pop: 'POP015' });
 }
 
 async function amendSave(forceNull, reason_code) {

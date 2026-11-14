@@ -327,7 +327,7 @@ async function downloadCatalogueTemplate(btn) {
           body +
           '</div><div class="mfoot"><button data-cbsid="CMP004" class="pri" onclick="closeModal()">' +
           tx('Got it') +
-          '</button></div>'
+          '</button></div>', false, { pop: 'POP126' }
       );
     else if (slot) slot.innerHTML = '<div data-testid="cat-template-cols" style="margin-top:10px">' + body + '</div>';
     else if (typeof toast === 'function') toast(tx('Template downloaded'));
