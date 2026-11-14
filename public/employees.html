@@ -91,10 +91,10 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
 <script>
 'use strict';
 (function () {
-  var q = new URLSearchParams(location.search),
-    embed = q.get('embed') === '1',
-    view = q.get('view') || '';
-  var API = q.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
+  var query = new URLSearchParams(location.search),
+    embed = query.get('embed') === '1',
+    view = query.get('view') || '';
+  var API = query.get('api') || (window.CBShell && CBShell.apiBase && CBShell.apiBase()) || window.CB_API;
   var host = document.getElementById('emp');
   if (embed) document.body.classList.add('embed');
   /* embed: no frame. A host page (the till, signed in under its own shop-scoped store) is asked for its person's token over postMessage -
@@ -131,9 +131,9 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
     );
     return;
   }
-  var own = (CBFrame.session() || {}).token;
+  var ownToken = (CBFrame.session() || {}).token;
   if (!window.parent || window.parent === window) {
-    start(own);
+    start(ownToken);
     return;
   }
   var done = false;
@@ -151,7 +151,7 @@ dialog.sheet .mx{position:absolute;right:8px;top:8px;border:0;background:transpa
   window.addEventListener('message', heard);
   window.parent.postMessage({ cb: 'employees', event: 'need-session' }, location.origin);
   setTimeout(function () {
-    give(own || null);
+    give(ownToken || null);
   }, 2500); /* a host that does not answer: the browser's own saved session, as before */
 })();
 </script>
