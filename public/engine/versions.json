@@ -1,6 +1,6 @@
 {
   "engines": {
-    "bank-recon": "1.44.1",
+    "bank-recon": "1.88.0",
     "chart-draw": "unversioned",
     "convert": "1.5.0",
     "dayopen": "1.5.0",
