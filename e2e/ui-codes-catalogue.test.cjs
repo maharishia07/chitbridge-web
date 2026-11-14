@@ -32,7 +32,7 @@ const all = {};
 for (const m of src.matchAll(/data-cbsid="(CTG002-[A-Z][0-9]{2})"/g)) all[m[1]] = (all[m[1]] || 0) + 1;
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 31, 'the page has 31 tagged elements, counted by code: ' + Object.keys(all).length);
+check(Object.keys(all).length === 28, 'the page has 28 tagged elements, counted by code (31 until the 3 Cancel buttons moved to the library mounts CTG002-U23..U25, std-adm 14 Nov): ' + Object.keys(all).length);
 /** the stamp is the only change: with every data-cbsid attribute taken out, the dynamic testids of the page are all still in the source */
 const bare = src.replace(/ data-cbsid="CTG002-[A-Z][0-9]{2}"/g, '');
 check(bare.indexOf('data-testid="catg-seed-\' +') > 0 && bare.indexOf('data-testid="catg-etab-\' +') > 0 && bare.indexOf('data-testid="catg-offer-\' +') > 0 && bare.indexOf('data-testid="catg-row-\' +') > 0, 'the dynamic testids (seed set, editor tab, offer, row) are unchanged');
@@ -45,6 +45,7 @@ if (reg) {
   const rows = {}; Object.values(reg.screens || {}).forEach((r) => { if (r.code) rows[r.code] = r; });
   const missing = Object.keys(all).filter((c) => !rows[c]), retired = Object.keys(all).filter((c) => rows[c] && rows[c].retired);
   console.log('  register: ' + (Object.keys(all).length - missing.length) + ' of ' + Object.keys(all).length + ' codes found' + (missing.length ? ' (pending until the docs PR lands: ' + missing.length + ')' : ''));
+  if (process.env.UIID_REG) check(!missing.length, "every code is in the register UIID_REG names (" + missing.length + " missing)"); /* a set register: a missing code FAILS, no pending */
   check(retired.length === 0, 'no code is retired in the register');
 }
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');

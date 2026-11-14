@@ -59,7 +59,13 @@ for (const f of specFiles) {
   const lines = src.split(/\r?\n/);
   lines.forEach((line, i) => {
     /* getByTestId('x') and [data-testid="x"] — only the fully literal ones can be checked */
-    const pats = [/getByTestId\(\s*'([^'${]+)'\s*\)/g, /getByTestId\(\s*"([^"${]+)"\s*\)/g, /\[data-testid="([^"${]+)"\]/g];
+    /* ⚠️ A LINE THAT ASSERTS ABSENCE ASKS FOR A NAME THE APP MUST NOT EMIT (standards.spec.js:46 —
+       expect(getByTestId('std-tab-platform')).toHaveCount(0), "the old tabs are gone"). Reporting it as missing
+       would force the spec to drop a true assertion, so the line is skipped. (QA undecided-2, 13 Nov) */
+    if (/toHaveCount\(\s*0\s*\)|\.not\.toBe(Visible|Attached)\(|toBeHidden\(/.test(line)) return;
+    /* ⚠️ AND NO FRAGMENT OF A CONCATENATION: '[data-testid="' + id + '"]' (speed-bar.spec.js:40) is a built
+       selector, the text between its quotes is not a name. A name has no quote or plus sign in it. */
+    const pats = [/getByTestId\(\s*'([^'${]+)'\s*\)/g, /getByTestId\(\s*"([^"${]+)"\s*\)/g, /\[data-testid="([^"${'+]+)"\]/g];
     for (const re of pats) { let m; while ((m = re.exec(line))) asked.push({ f, line: i + 1, id: m[1] }); }
   });
 }
@@ -105,7 +111,37 @@ for (const re of [/'([a-z][a-z0-9-]*-)'\s*\+/g, /"([a-z][a-z0-9-]*-)"\s*\+/g]) {
   let m; while ((m = re.exec(appText))) prefixes.push(m[1]);
 }
 
-const known = (id) => literal.has(id) || asString.has(id) || prefixes.some((p) => id.indexOf(p) === 0);
+/**
+ * ⭐ COMPOSED NAMES, EACH PROVEN BY THE CODE THAT BUILDS IT (QA undecided-2, 13 Nov). Two builders write a testid
+ * from a head the caller passes and a tail the list supplies, so the whole name sits in no single place and the
+ * loose scans above cannot see it:
+ *   · app.html pickBox(o)   — data-testid = o.tid + '-picker' | '-reset' | '-' + item.id   (dact: DACT, dchip: DCHIP)
+ *   · cap-testing.js seg()  — data-testid = (row || 'workf') + '-' + id   (workf-*, workst-* from TEST_WORK)
+ * Each entry names the id and EVERY regex that must still match for it to be emitted: the builder, the head,
+ * and the tail. Rename the head, drop the list item or change the builder and the id is unknown again, so a spec
+ * for it fails here, as it should. An enumerated list, not a wildcard.
+ */
+const PICK_ITEM = /data-testid="'\s*\+\s*esc\(o\.tid\)\s*\+\s*'-'\s*\+\s*esc\(item\.id\)/;
+const PICK_TAIL = (t) => new RegExp('data-testid="\'\\s*\\+\\s*esc\\(o\\.tid\\)\\s*\\+\\s*\'-' + t + '"');
+const SEG = /data-testid="'\s*\+\s*\(row\s*\|\|\s*'workf'\)\s*\+\s*'-'\s*\+\s*id/;
+const COMPOSED = [
+  ['dact-picker', 'app.html', [PICK_TAIL('picker'), /tid:\s*'dact'/]],
+  ['dact-reset', 'app.html', [PICK_TAIL('reset'), /tid:\s*'dact'/]],
+  ['dact-forward', 'app.html', [PICK_ITEM, /tid:\s*'dact'/, /const DACT = \[[\s\S]*?\{\s*id:\s*'forward'/]],
+  ['dchip-picker', 'app.html', [PICK_TAIL('picker'), /tid:\s*'dchip'/]],
+  ['dchip-reset', 'app.html', [PICK_TAIL('reset'), /tid:\s*'dchip'/]],
+  ['dchip-register', 'app.html', [PICK_ITEM, /tid:\s*'dchip'/, /const DCHIP = \[[\s\S]*?\{\s*id:\s*'register'/]],
+  ['workf-live', 'app/cap-testing.js', [SEG, /seg\('live',/]],
+  ['workf-closed', 'app/cap-testing.js', [SEG, /seg\('closed',/]],
+  ['workst-passed', 'app/cap-testing.js', [SEG, /seg\(item,[^)]*'workst'\)/, /TEST_WORK = \{[\s\S]*?\bpassed:\s*\{/]],
+];
+const composed = new Set();
+for (const [id, file, proofs] of COMPOSED) {
+  const text = fs.readFileSync(path.join(W, file), 'utf8');
+  if (proofs.every((re) => re.test(text))) composed.add(id);
+}
+
+const known = (id) => literal.has(id) || asString.has(id) || composed.has(id) || prefixes.some((p) => id.indexOf(p) === 0);
 
 const seen = new Set();
 const missing = [];

@@ -3,6 +3,9 @@
  * the copy is read as LF text and written back in the file's own line endings (the way chit-sheet-breaks.cjs does it). */
 const fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 const W = path.join(__dirname, '..');
+const BR = require('./lib/break-run.cjs');
+/* the checks run from a throw-away copy of the checkout (BR.site): the repo's own public/, index.html and e2e/shots are never touched, so a kill cannot leave them broken */
+const SITE = BR.site(W); process.on('exit', () => SITE.dispose());
 const CAP = 'public/app/cap-books.js', APP = 'public/app.html', ADMIN = 'public/app/cap-admin.js', SHELL = 'public/app/accounts-shell.js', LISTCTL = 'public/app/list-ctl.js';
 const BREAKS = [
   ['switch sends nothing', SHELL, `return on ? host.api('booksEnable', { body: {} })`, `return on ? Promise.resolve({})`],
@@ -112,11 +115,15 @@ const ONLY = process.env.BREAK_ONLY || '';
 if (process.env.BREAK_CHECK) {
   let bad = 0;
   for (const [name, rel, a2] of BREAKS) {
-    const n = fs.readFileSync(path.join(W, rel), 'utf8').replace(/\r\n/g, '\n').split(a2).length - 1;
+    const n = BR.locate(fs.readFileSync(path.join(W, rel), 'utf8'), a2).n;
     if (n !== 1) { bad++; console.log('  ??  ' + name + ': anchor x' + n); }
   }
   console.log('\n  ' + (BREAKS.length - bad) + '/' + BREAKS.length + ' anchors match once'); process.exit(bad ? 1 : 0);
 }
+/* Each break runs the paired check through e2e/lib/break-run.cjs: it stops at the FIRST red line the unbroken check does not already print (a verdict in
+   seconds, not after the whole walk), and a check that is already red on main cannot "catch" anything by its old red lines (2026-11-13). */
+const BASES = {};
+const baseOf = (h) => { if (!BASES[h]) { BASES[h] = BR.baseline(h, { cwd: SITE.dir }); console.log('  baseline ' + h + ' (unbroken): exit ' + BASES[h].status + ', ' + BASES[h].xx.length + ' red line(s) already, ignored, ' + BASES[h].secs + ' s'); BASES[h].xx.forEach((l) => console.log('      red on main: ' + l.slice(0, 120))); } return BASES[h]; };
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
@@ -124,17 +131,16 @@ for (const [name, rel, a, b] of BREAKS) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bkw-'));
   try {
     fs.cpSync(path.join(W, 'public'), path.join(tmp, 'public'), { recursive: true });
-    const f = path.join(tmp, rel), raw = fs.readFileSync(f, 'utf8'), crlf = raw.indexOf('\r\n') >= 0, s = raw.replace(/\r\n/g, '\n'), n = s.split(a).length - 1;
+    const f = path.join(tmp, rel), raw = fs.readFileSync(f, 'utf8'), crlf = raw.indexOf('\r\n') >= 0, s = raw.replace(/\r\n/g, '\n'), loc = BR.locate(s, a), n = loc.n;
     if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
-    const out = s.split(a).join(b);
+    const out = loc.apply(b);
     fs.writeFileSync(f, crlf ? out.replace(/\n/g, '\r\n') : out);
     /* ⚠️ 600s, not 300: a break that strands the harness on its catch-all waits runs long, and on a loaded
        Windows machine 'M10 download not remembered' crossed 300s — reported NOT caught when it was only slow. */
-    const r = cp.spawnSync(process.execPath, ['e2e/books-web.cjs'], { cwd: W, encoding: 'utf8', timeout: 600000, env: Object.assign({}, process.env, { BOOKS_ROOT: path.join(tmp, 'public') }) });
-    const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
-    const caught = r.status !== 0 && xx.length > 0;
+    const H = 'e2e/books-web.cjs'; const base = baseOf(H), v = BR.verdict(H, base, { cwd: SITE.dir, timeout: 600000, env: Object.assign({}, process.env, { BOOKS_ROOT: path.join(tmp, 'public') }) });
+    const caught = BR.caught(v, base);
     if (caught) good++;
-    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + xx[0].trim() : 'NOT caught (exit ' + r.status + ')'));
+    console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught' + (v.early ? ' at once' : '') + (v.rechecked ? ' (crash, confirmed twice)' : '') + ' (' + v.secs + ' s): ' + (v.xx[0] || 'harness crashed: ' + v.stderr).slice(0, 150) : 'NOT caught (exit ' + v.status + ', ' + v.secs + ' s)'));
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught');

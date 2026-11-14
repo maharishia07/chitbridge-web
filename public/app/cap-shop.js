@@ -20,6 +20,13 @@
  * Host globals (as every cap-*.js): api · EP · UI · SESSION · esc · tx · txf · toast · val · _CARD · CBAction · CBLocale (optional) · CBOffline (optional).
  * Loaded by app.html through CAP_WITH.admin (before cap-admin.js) and by settings.html directly.
  * Flow step: Onboarding · country (docs/process/flows.json) and O2C · invoice — the invoice party these rows feed.
+ *
+ * OWNS       the Your shop card (CBShop.mount · shopSave · shopFieldsHTML · profFieldsBody) and the trade documents vault card (vaultCardHTML … saveVaultUI),
+ *             with the vault's own PUT route row (vaultSave).
+ * CALLED BY  public/settings.html (a <script> tag; CBShop.mount paints Your shop) · public/app.html (CAP_WITH.admin loads it before cap-admin.js, which calls the moved names).
+ * FLOW       settings.html → CBShop.mount(host, { me }) → shopFieldsHTML + vaultCardHTML → a person types → shopSave (CBAction) → PATCH /entities/profile
+ *             and saveVaultUI → PUT /governance/profile/vault → the card repaints from the saved answer.
+ * IDS        every control carries its register code (data-cbsid, UX-137): ACC002, the Settings screen.
  * CARD 28-platform-and-operations/know-your-business
  */
 'use strict';
@@ -375,7 +382,7 @@ function vaultRemoveButton(sectionIndex, rowIndex) {
 /** SET-34: a Copy button beside a row's value (a bank number, a tax id) — it copies what is in the box now, and says so on the button */
 function vaultCopyButton(sectionIndex, rowIndex) {
   return (
-    '<button type="button" data-testid="vault-copy" title="' +
+    '<button data-cbsid="ACC002-B25" type="button" data-testid="vault-copy" title="' +
     esc(tx('Copy this detail')) +
     '" onclick="vaultCopyRow(' +
     sectionIndex +

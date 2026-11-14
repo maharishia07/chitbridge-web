@@ -27,10 +27,14 @@ const OFF = MAN.entries.filter((e) => AUD.indexOf(e.id) < 0).map((e) => e.id);
 const walk = async (w) => {
   const { page, ctx, base } = w;
   const patches = [];
+  /* FX-UX2 F9 (14 Oct, 1fe97b56): the server's ui_prefs is the truth — a kind the server holds NONE of sends the device back to its default, so a /me that
+     always answered ui_prefs {} wiped the choice the avatar had just saved whenever its pull landed after the redraw (cb_edition null: E6 red on main, green on
+     a quicker box). The stand-in now keeps what the person PATCHED and answers it, as the real api does. */
+  const prefs = {};
   await ctx.route('**/api/**', (r) => {
     const u = new URL(r.request().url());
-    if (u.pathname === '/api/entities/me/prefs/ui') { try { patches.push(JSON.parse(r.request().postData() || '{}')); } catch (_) {} return J(r, 200, { ok: true }); }
-    if (u.pathname === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR', ui_prefs: {} } });
+    if (u.pathname === '/api/entities/me/prefs/ui') { try { const p = JSON.parse(r.request().postData() || '{}'); patches.push(p); Object.assign(prefs, p); } catch (_) {} return J(r, 200, { ok: true }); }
+    if (u.pathname === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Fixture Shop', currency_code: 'INR', ui_prefs: Object.assign({}, prefs) } });
     if (u.pathname === '/api/facts/rail') return J(r, 200, crmApi.railFacts({ suppliers: 1, customers: 2, in: 3, out: 1, stuck: 0 }));
     return J(r, 404, { error: 'not found' });
   });

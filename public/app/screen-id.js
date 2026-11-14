@@ -1,6 +1,9 @@
 /**
- * CALLED BY app/shell.js (the chip in the bar), app/page-frame.js setActive (a section), every small app's screens and sheets (CBScreenId.here).
- * CARD 29-qa-test-tooling-ux-locale-and-design-system/screen-id
+ * OWNS  CBScreenId: the declared screen and sheet rows of the small apps, merged into the one register, and the one chip that shows a screen's code
+ * CALLED BY  27 pages by <script src> (grep -lE 'src="/?app/screen-id.js' public/*.html index.html); CBScreenId.here / chip / popupChip / mountAttr are called by the shell,
+ *            the page frame, the avatar, the bell, the chit sheet and the action-set library (grep -ln CBScreenId public/app), and by accounts, crm, finance and offer-lab-next pages
+ * FLOW  page loads → DECLARED rows merge into the register → a screen or sheet calls here() → the chip draws "Name · CODE"; a tap copies the code
+ * CARD  29-qa-test-tooling-ux-locale-and-design-system/screen-id
  * screen-id.js — CBScreenId: EVERY SMALL-APP SCREEN AND SHEET NUMBERED, AND THE ONE CHIP THAT SHOWS IT (round SCREEN-ID, 2026-10-14).
  *
  * Athi, 2026-10-14: *"if we have not numbered each screen it has to be numbered … if we are calling the task details from accounts, task

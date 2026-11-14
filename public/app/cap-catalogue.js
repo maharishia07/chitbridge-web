@@ -24,9 +24,16 @@
  *   CBCatalogueApp                                         the small app: items (CBList, server-paged) · the item sheet · categories (CBList over cap-categories' rows + its writers) · import
  * Host globals (as every cap-*.js): api · EP · UI · SESSION · esc · tx · txf · toast · val · cblog · CBMoney · CBLocale · CBList · CBAction · confirmAsk · fmtMoney · packHasHsn · catgIdsOf · cbCatgLive · cap-categories.js.
  * Flow step: O2C step 1 · enquiry — the catalogue the buyer is shown is shaped here (docs/process/flows.json).
+ *
+ * OWNS      the product routes (CB_CATALOGUE_EP), the item and price readers every catalogue screen shares, the catalogue file check and import
+ *            (downloadCatalogueTemplate · _cfRun · _cfImportRun), and CBCatalogueApp: the items list, the item sheet, the categories list and import.
+ * CALLED BY public/catalogue.html (CBCatalogueApp.mount and CB_CATALOGUE_EP, a <script> tag) · public/app.html (the workshop, loaded eagerly) · app/cap-categories.js (pData · prodId) ·
+ *            app/cap-catsetup.js (pName · cbAmount); each found by grepping the symbol, 2026-11-13.
+ * FLOW      catalogue.html → CBCatalogueApp.mount(host) → show(section) → mountItems | mountCatgs | importHTML → CBList over GET /api/products
+ *            → openItem(id) → sheetHTML (read) | formHTML (edit) → prodAdd | prodEdit | prodStatus → CBCatalogueApp.changed() re-reads the list.
+ * IDS      every control carries its register code (data-cbsid, UX-137): CTG001 Items · CTG002 Categories · CTG003 Import; Cancel and Edit wear the
+ *            component codes CMP003 / CMP012 with their mount.
  * CARD 06-catalogue-pim/items
-
- * CALLED BY public/app.html, public/app/cap-categories.js, public/app/cap-catsetup.js, public/app/cap-compare.js, public/app/cap-network-member.js (+3 more)   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */
 'use strict';
 /* ── the product routes — ONE registration (e2e/ep-aliases.cjs); app.html and catalogue.html merge this into EP ── */
@@ -78,7 +85,7 @@ function prodId(p) {
 
 /* ══ MOVED FROM app.html — the declared columns on the product form (FIX-1's other half; the comment is the original) ══ */
 function ctField(k, label, v, extra) {
-  return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v == null ? '' : v)}" ${extra || ''}>`;
+  return `<label class="fl">${label}</label><input data-cbsid="CTG001-I01" class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v == null ? '' : v)}" ${extra || ''}>`;
 }
 /**
  * ── ⭐⭐ THE DECLARED COLUMNS, ON THE PRODUCT ──────────────────────────────────────────────────────────────────
@@ -139,7 +146,7 @@ function ctDeclaredRows(d) {
       if (v != null && typeof v === 'object') {
         return `<label class="fl">${label}</label><div class="inp" style="color:var(--grey)" data-testid="cat-field-${esc(k)}" title="${esc(tx('imported as structured data — edit it through the spreadsheet'))}">${esc(JSON.stringify(v))}</div>`;
       }
-      return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(item.field_type || 'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v == null ? '' : v)}">`;
+      return `<label class="fl">${label}</label><input data-cbsid="CTG001-I02" class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(item.field_type || 'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v == null ? '' : v)}">`;
     })
     .join('');
   return rows;
@@ -179,7 +186,7 @@ function prodDiff(cur, next) {
 /** one chip: ✓ when the item sits in the category; `extra` carries the retired-but-cited state ("gone", kept so a save never strips it unasked) */
 function ctCatgChip_(id, name, on, extra) {
   return (
-    '<button type="button" class="ctcatg' + (on ? ' on' : '') + (extra && extra.cls ? ' ' + extra.cls : '') + '" data-cid="' + esc(id) + '"' +
+    '<button data-cbsid="CTG001-B01" type="button" class="ctcatg' + (on ? ' on' : '') + (extra && extra.cls ? ' ' + extra.cls : '') + '" data-cid="' + esc(id) + '"' +
     (extra && extra.tid ? ' data-testid="' + esc(extra.tid) + '"' : '') + (extra && extra.title ? ' title="' + esc(extra.title) + '"' : '') +
     ' onclick="ctToggleCatg(this)">' + (on ? '✓ ' : '') + esc(name) + '</button>'
   );
@@ -200,7 +207,7 @@ function ctCategoryChips(itemData, live, opts) {
   const orphans = list.filter((id) => !live.some((item) => item.id === id));
   const chips = live.map((item) => ctCatgChip_(item.id, item.name, list.indexOf(item.id) >= 0, { tid: 'cat-catg-' + item.id }));
   const kept = orphans.map((id) => ctCatgChip_(id, names[list.indexOf(id)] || id, true, { cls: 'gone', title: tx('no longer live — tap to detach') }));
-  const newChip = hostDoor ? '<button type="button" class="ctcatg add" data-testid="cat-category-new" onclick="' + esc(hostDoor) + '">＋ ' + esc(tx('New')) + '</button>' : '';
+  const newChip = hostDoor ? '<button data-cbsid="CTG001-B02" type="button" class="ctcatg add" data-testid="cat-category-new" onclick="' + esc(hostDoor) + '">＋ ' + esc(tx('New')) + '</button>' : '';
   const warn = orphans.length
     ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px">⚠ ' + esc(txf('{n} no longer live — tap to detach.', { n: String(orphans.length) })) + '</div>'
     : '';
@@ -413,7 +420,7 @@ async function _cfRun(btn) {
           // that grows a second column meaning the same thing.
           if (!item.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
           control =
-            '<select data-cfcol="' +
+            '<select data-cbsid="CTG003-S01" data-cfcol="' +
             esc(item.incoming || '') +
             '" data-testid="cf-decide-' +
             index +
@@ -577,7 +584,6 @@ async function _cfImportRun(btn, decisions, out) {
     var reply = await api('prodImport', {
       body: Object.assign(UI._cf.xlsx ? { xlsx: UI._cf.xlsx } : { csv: UI._cf.csv }, { decisions: decisions, confirm: true })
     }); /* the SAME file the preflight read */
-    var sum = reply.summary || {};
     out.innerHTML =
       '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">' +
       esc(reply.message || 'Imported') +
@@ -772,7 +778,7 @@ var CBCatalogueApp = (function () {
   function itemsHTML() {
     return (
       '<div class="cat-top" data-testid="cat-items-top"><div class="cat-count" id="cat_count" data-testid="cat-count"></div>' +
-      '<div class="cat-acts"><button type="button" class="act" data-testid="cat-new" id="cat_new">＋ ' +
+      '<div class="cat-acts"><button data-cbsid="CTG001-B03" type="button" class="act" data-testid="cat-new" id="cat_new">＋ ' +
       esc(T('New item')) +
       '</button><div class="cat-out" id="cat_new_out" data-testid="cat-new-out"></div></div></div>' +
       '<div class="cat-list" id="cat_items" data-testid="cat-items"></div>' +
@@ -1177,7 +1183,7 @@ var CBCatalogueApp = (function () {
       '">' +
       esc(sym()) +
       '</span>' +
-      '<input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="decimal" autocomplete="off" value="' +
+      '<input data-cbsid="CTG001-I03" class="inp" id="ct_price" data-testid="cat-field-price" inputmode="decimal" autocomplete="off" value="' +
       esc(may && cbHasPrice(d.price) ? String(cbAmount(d.price)) : '') +
       '"' +
       (may ? '' : ' disabled aria-disabled="true"') +
@@ -1196,7 +1202,7 @@ var CBCatalogueApp = (function () {
       ctField('code', esc(packHasHsn() ? T('Code / HSN') : T('Code')), pCode(d)) +
       '<label class="fl" for="ct_desc">' +
       esc(T('Description')) +
-      '</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" rows="3">' +
+      '</label><textarea data-cbsid="CTG001-T01" class="inp" id="ct_desc" data-testid="cat-field-desc" rows="3">' +
       esc(pDesc(d)) +
       '</textarea>' +
       '<div id="ct_catg_wrap">' + catgChipsHTML(d) + '</div>' /* F5 W1b (R85): the item goes INTO a category here */ +
@@ -1292,10 +1298,10 @@ var CBCatalogueApp = (function () {
         kv(esc(T('Description')), pDesc(d)) +
         ctDeclaredViewRows(d, kv) +
         '</div>' +
-        '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="cat-edit" id="cat_edit">' +
+        '<div class="cat-sheet-acts"><button data-cbsid="CMP012" data-cbmount="CTG001-U112" type="button" class="act" data-testid="cat-edit" id="cat_edit">' +
         esc(T('Edit')) +
         '</button>' +
-        '<button type="button" class="act quiet" data-testid="cat-status" id="cat_status">' +
+        '<button data-cbsid="CTG001-B04" type="button" class="act quiet" data-testid="cat-status" id="cat_status">' +
         esc(statusOf(d) === 'available' ? T('Mark not available') : T('Mark available')) +
         '</button></div>' +
         '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out"></div>'
@@ -1305,10 +1311,10 @@ var CBCatalogueApp = (function () {
       head +
       '<form id="cat_form" onsubmit="return false">' +
       formHTML(S.mode === 'new' ? {} : d) +
-      '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="cat-save" id="cat_save">' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG001-B05" type="button" class="act" data-testid="cat-save" id="cat_save">' +
       esc(S.mode === 'new' ? T('Add item') : T('Save')) +
       '</button>' +
-      '<button type="button" class="act quiet" data-testid="cat-cancel" id="cat_cancel">' +
+      '<button data-cbsid="CMP003" data-cbmount="CTG001-U103" type="button" class="act quiet" data-testid="cat-cancel" id="cat_cancel">' +
       esc(T('Cancel')) +
       '</button></div>' +
       '<div class="cat-out" id="cat_sheet_out" data-testid="cat-sheet-out"></div></form>'
@@ -1453,7 +1459,7 @@ var CBCatalogueApp = (function () {
   function categoriesHTML() {
     return (
       '<div class="cat-top" data-testid="cat-catg-top"><div class="cat-count" id="catg_count" data-testid="catg-count"></div>' +
-      '<div class="cat-acts"><button type="button" class="act" data-testid="catg-new" id="catg_new">＋ ' +
+      '<div class="cat-acts"><button data-cbsid="CTG002-B19" type="button" class="act" data-testid="catg-new" id="catg_new">＋ ' +
       esc(T('New category')) +
       '</button><div class="cat-out" id="catg_out" data-testid="catg-out"></div></div></div>' +
       '<div class="cat-list" id="cat_catgs" data-testid="cat-categories"></div>' +
@@ -1675,25 +1681,25 @@ var CBCatalogueApp = (function () {
       '</h2>' +
       '<label class="fl" for="catg_name">' +
       esc(T('Name')) +
-      '</label><input class="inp" id="catg_name" data-testid="catg-name" value="' +
+      '</label><input data-cbsid="CTG002-I07" class="inp" id="catg_name" data-testid="catg-name" value="' +
       esc(CBCAT_UI.form.name) +
       '" oninput="cbcatField(\'name\', this.value)">' +
       '<label class="fl" for="catg_parent">' +
       esc(T('Under')) +
-      '</label><select class="inp" id="catg_parent" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)"><option value="">' +
+      '</label><select data-cbsid="CTG002-S03" class="inp" id="catg_parent" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)"><option value="">' +
       esc(T('— top level —')) +
       '</option>' +
       opts +
       '</select>' +
       '<label class="fl" for="catg_note">' +
       esc(T('Note')) +
-      '</label><input class="inp" id="catg_note" data-testid="catg-note" value="' +
+      '</label><input data-cbsid="CTG002-I08" class="inp" id="catg_note" data-testid="catg-note" value="' +
       esc(CBCAT_UI.form.note || '') +
       '" oninput="cbcatField(\'note\', this.value)">' +
       catgSlabHTML() /* F5 W1b (R85): the category's rate — the middle rung of resolve(); owner or manager only */ +
-      '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="catg-save" id="catg_save">' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG002-B20" type="button" class="act" data-testid="catg-save" id="catg_save">' +
       esc(c ? T('Save') : T('Add category')) +
-      '</button><button type="button" class="act quiet" data-testid="catg-cancel" id="catg_cancel">' +
+      '</button><button data-cbsid="CMP003" data-cbmount="CTG002-U103" type="button" class="act quiet" data-testid="catg-cancel" id="catg_cancel">' +
       esc(T('Cancel')) +
       '</button></div>' +
       '<div class="cat-out" id="cbcat_err" data-tone="error" data-testid="catg-err"></div>'; /* cbcatSave writes its refusal here, by this id */
@@ -1785,20 +1791,20 @@ var CBCatalogueApp = (function () {
       '<p class="sub">' +
       esc(T('Choose a spreadsheet or paste its rows. We check the headings first; nothing is imported until you say so.')) +
       '</p>' +
-      '<div class="cat-sheet-acts"><button type="button" class="act quiet" data-testid="cat-template" onclick="downloadCatalogueTemplate(this)">📄 ' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG003-B01" type="button" class="act quiet" data-testid="cat-template" onclick="downloadCatalogueTemplate(this)">📄 ' +
       esc(T('Download the template')) +
       '</button></div><div id="cat_tpl_out" data-testid="cat-template-out"></div>' +
       '<label class="fl" for="cf_file">' +
       esc(T('File (.csv or .xlsx)')) +
-      '</label><input type="file" id="cf_file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-testid="cat-check-file" onchange="_cfPick(this)">' +
+      '</label><input data-cbsid="CTG003-I01" type="file" id="cf_file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-testid="cat-check-file" onchange="_cfPick(this)">' +
       '<div class="sub" id="cf_file_name" data-testid="cat-check-filename"></div>' +
       '<label class="fl" for="cf_text">' +
       esc(T('…or paste the rows here, heading row first')) +
-      '</label><textarea class="inp mono" id="cf_text" data-testid="cat-check-text" rows="6"></textarea>' +
-      '<div class="cat-sheet-acts"><button type="button" class="act" data-testid="cat-check-run" onclick="_cfRun(this)">' +
+      '</label><textarea data-cbsid="CTG003-T01" class="inp mono" id="cf_text" data-testid="cat-check-text" rows="6"></textarea>' +
+      '<div class="cat-sheet-acts"><button data-cbsid="CTG003-B02" type="button" class="act" data-testid="cat-check-run" onclick="_cfRun(this)">' +
       esc(T('Check')) +
       '</button>' +
-      '<button type="button" class="act quiet" id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="' +
+      '<button data-cbsid="CTG003-B03" type="button" class="act quiet" id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="' +
       esc(T('Check a file first')) +
       '">' +
       esc(T('Import')) +

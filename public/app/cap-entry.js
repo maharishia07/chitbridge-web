@@ -10,6 +10,14 @@
  * (bkOnce) — the same two halves cap-books.js uses for payments.
  * ⭐ Never "accounting" on a screen. Insert-only: a saved entry is never edited — Reverse adds the mirror.
  * Look: the chit sheet's own popup (a <dialog>, same tokens), the Day book's own line rows (CBList.nextRow). No new style of list.
+ *
+ * OWNS       the ＋ Entry sheet: the event tiles, the step fields, the journal preview, Save and Reverse (enOpen · enPick · enNext · enBack · enSet ·
+ *             enPreview · enSave · enSaveWrite · enPaintSaved · enReverse · enClose). It owns no rule and no figure: the server's events and preview answer.
+ * CALLED BY  public/accounts.html and public/finance.html (a <script> tag each) · cap-books.js:2640-2649 (the Day book's ＋ Entry door) · cap-bank.js:943 (enOpen from a bank line) ·
+ *            cap-finance-pay.js:413 (a debit note is opened through enOpen with a preset).
+ * FLOW       enOpen(preset) → GET /api/books/events → tiles → enPick(event) → fields (enSet) → enNext → enPreview (POST /preview) → enSave →
+ *            enSaveWrite (POST /events, one client_ref) → enPaintSaved → enReverse (POST /entries/:id/reverse) → enClose.
+ * IDS        every control carries its register code (data-cbsid, UX-137): SCR022 (Inside a screen › Entry), whichever page opens the sheet; Back wears CMP006.
  * CARD      14-accounting/ledger-accounts-day-book-entries-reverse
  */
 'use strict';
@@ -296,15 +304,14 @@ function enPaint() {
 function enActs() {
   var acts = document.getElementById('en_acts'),
     last = EN.step === 4,
-    pv = EN.pv,
     can = enCanSave();
   acts.innerHTML =
-    '<button class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' +
+    '<button data-cbsid="CMP006" data-cbmount="SCR022-U106" class="en-btn" data-testid="en-back" onclick="enBack()">‹ ' +
     esc(tx('Back')) +
     '</button>' +
     (last
       ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
-      : '<button class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
+      : '<button data-cbsid="SCR022-B01" class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
         (enStepReady(EN.step) ? '' : ' disabled') +
         '>' +
         esc(tx('Next')) +
@@ -360,7 +367,7 @@ function enGridHTML() {
         tiles
           .map(function (entry) {
             return (
-              '<button type="button" class="en-tile" data-testid="en-event-' +
+              '<button data-cbsid="SCR022-B02" type="button" class="en-tile" data-testid="en-event-' +
               esc(entry.id) +
               '" onclick="enPick(\'' +
               esc(entry.id) +
@@ -471,8 +478,8 @@ function enShopLedger(code) {
   })[0];
   return !!a && !a.role;
 }
-/** a ledger-account select built from the books accounts, banded and optionally limited to one group */
-function enLedgerSelect(id, cur, onch, onlyGroup) {
+/** a ledger-account select built from the books accounts, banded and optionally limited to one group; testid (optional) is drawn on the select itself */
+function enLedgerSelect(id, cur, onch, onlyGroup, testid) {
   var bands = bkLtModel(EN.accounts || []),
     h = '<option value="">' + esc(tx('Choose…')) + '</option>';
   bands.forEach(function (item) {
@@ -496,7 +503,7 @@ function enLedgerSelect(id, cur, onch, onlyGroup) {
     });
     if (inner) h += '<optgroup label="' + esc(tx(item.title)) + '">' + inner + '</optgroup>';
   });
-  return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
+  return '<select data-cbsid="SCR022-S01"' + (testid ? ' data-testid="' + testid + '"' : '') + ' id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
@@ -531,13 +538,13 @@ function enFieldHTML(f) {
       '<label class="en-f"><span>' +
       esc(lab) +
       '</span>' +
-      enLedgerSelect(tid, v, on, 'Stock & advances').replace('<select ', '<select data-testid="' + tid + '" ') +
+      enLedgerSelect(tid, v, on, 'Stock & advances', tid) +
       '</label>'
     );
   if (f.kind === 'pick') return wrap(enSelect(tid, enOptions(f), v, on));
   if (f.kind === 'ledger')
     return (
-      '<label class="en-f"><span>' + esc(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>'
+      '<label class="en-f"><span>' + esc(lab) + '</span>' + enLedgerSelect(tid, v, on, undefined, tid) + '</label>'
     );
   if (f.kind === 'bank')
     return (
@@ -546,17 +553,17 @@ function enFieldHTML(f) {
       '</span>' +
       (enOptions(f).length
         ? enSelect(tid, enOptions(f), v, on)
-        : enLedgerSelect(tid, v, on, 'Cash & bank').replace('<select ', '<select data-testid="' + tid + '" ')) +
+        : enLedgerSelect(tid, v, on, 'Cash & bank', tid)) +
       '</label>'
     );
   if (f.kind === 'party' || f.kind === 'asset_class' || f.kind === 'loan' || f.kind === 'choice') {
     var o = enOptions(f);
-    return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
+    return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-cbsid="SCR022-I01" data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
   }
   if (f.kind === 'amount') return wrap(bkMoneyInput({ id: tid, text: v == null ? '' : String(v), on: on, extra: 'onchange="enCheckDate()"' }));
   if (f.kind === 'date')
     return (
-      wrap('<input data-testid="' + tid + '" type="date" value="' + esc(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') +
+      wrap('<input data-cbsid="SCR022-I02" data-testid="' + tid + '" type="date" value="' + esc(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') +
       '<div id="en_dateref">' +
       enRefusalHTML(EN.dateRef) +
       '</div>'
@@ -576,11 +583,11 @@ function enFieldHTML(f) {
       (v === 'cheque'
         ? '<label class="en-f"><span>' +
           esc(tx('Cheque no.')) +
-          '</span><input data-testid="en-f-cheque_no" value="' +
+          '</span><input data-cbsid="SCR022-I03" data-testid="en-f-cheque_no" value="' +
           esc(EN.v.cheque_no || '') +
           '" oninput="enSet(\'cheque_no\',this.value)"></label><label class="en-f"><span>' +
           esc(tx('Cheque date')) +
-          '</span><input data-testid="en-f-cheque_date" type="date" value="' +
+          '</span><input data-cbsid="SCR022-I04" data-testid="en-f-cheque_date" type="date" value="' +
           esc(EN.v.cheque_date || '') +
           '" onchange="enSet(\'cheque_date\',this.value)"></label>'
         : '')
@@ -588,16 +595,16 @@ function enFieldHTML(f) {
   }
   if (f.kind === 'photo')
     return (
-      wrap('<input data-testid="' + tid + '" type="file" accept="image/*,application/pdf" onchange="enPhoto(this)">') +
+      wrap('<input data-cbsid="SCR022-I05" data-testid="' + tid + '" type="file" accept="image/*,application/pdf" onchange="enPhoto(this)">') +
       (EN.photo ? '<div class="en-why" data-testid="en-photo-name">📎 ' + esc(EN.photo.name) + '</div>' : '')
     );
   if (f.kind === 'lines') return enLinesField();
-  return wrap('<input data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
+  return wrap('<input data-cbsid="SCR022-I06" data-testid="' + tid + '" value="' + esc(v) + '" oninput="' + on + '">');
 }
 /** a plain select from a list of options with the current value chosen */
 function enSelect(id, opts, cur, onch) {
   return (
-    '<select data-testid="' +
+    '<select data-cbsid="SCR022-S02" data-testid="' +
     id +
     '" onchange="' +
     onch +
@@ -668,11 +675,8 @@ function enLinesHTML() {
           '<div class="en-ln" data-testid="en-line-' +
           index +
           '">' +
-          enLedgerSelect('en_lc' + index, item.code, 'enLine(' + index + ",'code',this.value)").replace(
-            '<select ',
-            '<select data-testid="en-line-code-' + index + '" '
-          ) +
-          '<select data-testid="en-line-side-' +
+          enLedgerSelect('en_lc' + index, item.code, 'enLine(' + index + ",'code',this.value)", undefined, 'en-line-code-' + index) +
+          '<select data-cbsid="SCR022-S03" data-testid="en-line-side-' +
           index +
           '" onchange="enLine(' +
           index +
@@ -694,7 +698,7 @@ function enLinesHTML() {
         );
       })
       .join('') +
-    '<button type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' +
+    '<button data-cbsid="SCR022-B03" type="button" class="en-btn" data-testid="en-line-add" onclick="enLineAdd()">＋ ' +
     esc(tx('Add a line')) +
     '</button>'
   );
@@ -743,7 +747,7 @@ function enItemFilled(item) {
 /** the item lines as a form: one row per line (item · qty · rate difference · tax %), Remove on each, Add a line below */
 function enItemLinesHTML() {
   var cell = function (index, key, kind) {
-    return '<input data-testid="en-item-' + key + '-' + index + '" ' + kind + ' placeholder="' + esc(tx(EN_ITEM[key])) + '" value="' + esc(String(EN.items[index][key] == null ? '' : EN.items[index][key])) + '" oninput="enItem(' + index + ",'" + key + '\',this.value)">';
+    return '<input data-cbsid="SCR022-I07" data-testid="en-item-' + key + '-' + index + '" ' + kind + ' placeholder="' + esc(tx(EN_ITEM[key])) + '" value="' + esc(String(EN.items[index][key] == null ? '' : EN.items[index][key])) + '" oninput="enItem(' + index + ",'" + key + '\',this.value)">';
   };
   return (
     '<div class="en-sec">' +
@@ -761,7 +765,7 @@ function enItemLinesHTML() {
         );
       })
       .join('') +
-    '<button type="button" class="en-btn" data-testid="en-item-add" onclick="enItemAdd()">＋ ' +
+    '<button data-cbsid="SCR022-B04" type="button" class="en-btn" data-testid="en-item-add" onclick="enItemAdd()">＋ ' +
     esc(tx('Add a line')) +
     '</button>'
   );
@@ -940,7 +944,7 @@ function enRefusalHTML(list, w) {
         esc(x.code || index) +
         '">' +
         esc(x.message) +
-        '<button type="button" data-testid="en-fix-' +
+        '<button data-cbsid="SCR022-B05" type="button" data-testid="en-fix-' +
         esc(x.code || index) +
         '" onclick="enFixGo(' +
         index +
@@ -962,7 +966,7 @@ function enWarnHTML(list) {
         esc(x.code || index) +
         '">' +
         esc(x.message) +
-        '<button type="button" data-testid="en-wfix-' +
+        '<button data-cbsid="SCR022-B06" type="button" data-testid="en-wfix-' +
         esc(x.code || index) +
         '" onclick="enFixGo(' +
         index +
@@ -1089,7 +1093,7 @@ function enPaintSaved(body, acts) {
     esc(tx('It is now in the Day book, Ledgers and Trial balance.')) +
     '</div>';
   acts.innerHTML =
-    '<button class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' +
+    '<button data-cbsid="SCR022-B07" class="en-btn" data-testid="en-reverse-now" onclick="enReverse(\'' +
     esc(s.entry_id || s.id || '') +
     "','" +
     esc(no) +
@@ -1113,7 +1117,7 @@ function enReverse(id, no, fromSheet, done) {
   EN.why = '';
   var body =
     esc(txf('{no} stays as it is. A new entry that cancels it is added.', { no: no || '' })) +
-    '<input class="inp" id="en_reason" data-testid="en-reason" placeholder="' +
+    '<input data-cbsid="SCR022-I08" class="inp" id="en_reason" data-testid="en-reason" placeholder="' +
     esc(tx('Reason')) +
     '" aria-label="' +
     esc(tx('Reason')) +

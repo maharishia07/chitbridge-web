@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <!-- OWNS  the Sign-in Lab: the sign-in window on a practice shop, roles and access, and the Roadmap tab (every manifest entry by state, with its fits line).
-     CALLED BY the Lab links on Home and Settings; a stranger may open it signed out.
+     CALLED BY the Labs menu of app/lab-kit.js (LABS list, lab-kit.js:27); no manifest card, and Home and Settings carry no link to it; a stranger may open it signed out.
      FLOW  load → manifest.json → paintRoadmap(); sign-in window → paintAfter() (the app list for the signed-in role)
      CARD 29-qa-test-tooling-ux-locale-and-design-system/signin-lab -->
 <head>
@@ -85,7 +85,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
   <span>Theme:</span><span class="grp" id="pTheme"></span>
 </div>
 <div class="wrap">
-  <div class="tabs" role="group" aria-label="Views"><button type="button" data-tab="window" aria-pressed="true" data-testid="tab-window">Sign in</button><button type="button" data-tab="roadmap" aria-pressed="false" data-testid="tab-roadmap">Roadmap</button></div>
+  <div class="tabs" role="group" aria-label="Views"><button data-cbsid="SLB001-B01" type="button" data-tab="window" aria-pressed="true" data-testid="tab-window">Sign in</button><button data-cbsid="SLB001-B02" type="button" data-tab="roadmap" aria-pressed="false" data-testid="tab-roadmap">Roadmap</button></div>
   <div id="tabWindow">
     <div class="cols">
       <div>
@@ -497,7 +497,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
     $(id).innerHTML = list
       .map(function (x) {
         return (
-          '<button type="button" data-' +
+          '<button data-cbsid="SLB001-B03" type="button" data-' +
           key +
           '="' +
           esc(x[0]) +
@@ -548,9 +548,9 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
     );
     var dark = document.documentElement.getAttribute('data-theme') === 'dark';
     $('pTheme').innerHTML =
-      '<button type="button" data-theme="light" aria-pressed="' +
+      '<button data-cbsid="SLB001-B04" type="button" data-theme="light" aria-pressed="' +
       !dark +
-      '">Light</button><button type="button" data-theme="dark" aria-pressed="' +
+      '">Light</button><button data-cbsid="SLB001-B05" type="button" data-theme="dark" aria-pressed="' +
       dark +
       '">Dark</button>';
   }

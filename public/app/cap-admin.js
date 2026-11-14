@@ -1,6 +1,6 @@
 /* app/cap-admin.js — the "admin" capability (progressively loaded on demand).
  * OWNS  the workshop's admin screens: MIS · Profile · Settings · governance (the panels, their reads and their paint).
- * CALLED BY app.html ensureCap('admin') the first time one of those screens opens (CAP_OF).
+ * CALLED BY app.html ensureCap('admin') (the only loader: grep of ensureCap('admin') and of <script src> finds no other page; SUPPORT side, 14 Nov boundary) the first time one of those screens opens (CAP_OF).
  * FLOW  ensureCap → the screen opens → api(…) → the panel paints; a write goes through the M64 action state
  * CARD 28-platform-and-operations/admin-screens
  * Injected by ensureCap('admin') the first time an admin screen (CAP_OF) is opened.
@@ -1144,9 +1144,6 @@ async function _loadMIS() {
       chits.push(c);
     });
 
-    /* ⚠️ ONE window, derived once above and reused — the client filter and the server's `since` must be the same
-       boundary or the two halves of this screen describe different fortnights. */
-    const days = _days;
     const cutoff = _since ? Date.parse(_since) : null;
     const inWindow = chits.filter(function (item) {
       return !cutoff || new Date(item.created_at).getTime() >= cutoff;
@@ -9198,8 +9195,6 @@ function paintSettings(s, _daOpts) {
        goes' above it IS read — lib/workroute resolves every ticket through it. */
     const notYetWork =
       '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin:15px 0 11px">⏳ The settings <b>below</b> are saved but <b>not yet active</b> — assignment, limits and breaks don\'t change behaviour yet. <i>Where work goes</i>, above, is live.</div>';
-    const notYet =
-      '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = '';
     if (k === 'business') out = businessSettingsHTML(s);
     else if (k === 'locale') out = localeSettingsHTML();
@@ -9766,7 +9761,7 @@ function showcaseCard() {
   if (typeof CBShowcase === 'undefined') return '';
   /* T3-P2-CRM: the chooser is app/cap-showcase.js (CBShowcasePick) — ONE copy, drawn here and on CB CRM's Shop window; a click on a template saves the flag (scPick) */
   var cur = ((_POL && _POL.flags) || {}).showcase_template || CBShowcase.DEFAULT,
-    id = (SESSION && (SESSION.user_id || SESSION.bridge_id)) || '';
+    id = (SESSION && SESSION.bridgeId) || '';
   return (
     '<div style="' +
     _CARD +

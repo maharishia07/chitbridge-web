@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
 <!-- OWNS  the Country lab: the country packs side by side (tax · fiscal year · tax-ID word · zones), read from the adopted engines.
-     CALLED BY Home's labs links and Country setup's "see the packs".
+     CALLED BY Home's Labs card (manifest id country-lab), Category setup's Country lab link (app/cap-catsetup.js). Loads app/country-profiles.js (the Countries and All countries views), country-compare.js, country-ready.js.
      FLOW  load → CBFrame (bar, public) → the packs read → paint
      CARD 29-qa-test-tooling-ux-locale-and-design-system/country-lab -->
 <head>
@@ -263,9 +263,9 @@
     <div class="sec">Registered in → registering in</div>
     <div class="hint" id="what" data-testid="cl-what"></div>
     <div class="line">
-      <label>registered in <select id="from" data-testid="cl-from" onchange="setSide('from', this.value)"></select></label>
-      <label>registering in <select id="to" data-testid="cl-to" onchange="setSide('to', this.value)"></select></label>
-      <button class="btn" data-testid="cl-swap" onclick="swapSides()" title="swap the two countries">⇄</button>
+      <label>registered in <select data-cbsid="CLB001-S01" id="from" data-testid="cl-from" onchange="setSide('from', this.value)"></select></label>
+      <label>registering in <select data-cbsid="CLB001-S02" id="to" data-testid="cl-to" onchange="setSide('to', this.value)"></select></label>
+      <button data-cbsid="CLB001-B01" class="btn" data-testid="cl-swap" onclick="swapSides()" title="swap the two countries">⇄</button>
     </div>
     <div class="card" id="status-from" data-testid="cl-status-from" style="margin-top:6px"></div>
     <div class="card" id="status-to" data-testid="cl-status-to" style="margin-top:6px"></div>
@@ -274,19 +274,19 @@
     <div class="card" id="ready" data-testid="cl-ready"></div>
     <details class="why hint" style="margin-top:6px"><summary>why these countries</summary><div>The registered packs first (the registry's own list), then the other countries the Country setup step offers — pack-less, in the server's own sentence.</div></details>
 
-    <div class="sec">The cart <button class="btn" style="margin-left:auto" data-testid="cl-add-line" onclick="addLine()">+ a line</button></div>
+    <div class="sec">The cart <button data-cbsid="CLB001-B02" class="btn" style="margin-left:auto" data-testid="cl-add-line" onclick="addLine()">+ a line</button></div>
     <div class="cart"><table class="grid" data-testid="cl-cart">
       <thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Price</th><th class="r" title="the slab rate a product cites — read only by a pack that names no supply kinds (India: per HSN)">Rate %</th><th>Supply kind</th><th></th></tr></thead>
       <tbody id="cart-body"></tbody>
     </table></div>
     <div class="line" style="margin-top:6px">
       <label>the buyer is
-        <select id="buyer" data-testid="cl-buyer" onchange="LAB.buyer=this.value; paintBill()">
+        <select data-cbsid="CLB001-S03" id="buyer" data-testid="cl-buyer" onchange="LAB.buyer=this.value; paintBill()">
           <option value="same">in the shop's state</option>
           <option value="other_state">in another state</option>
           <option value="abroad">in another country</option>
         </select></label>
-      <label><input type="checkbox" id="incl" onchange="LAB.incl=this.checked; paintBill()"> prices include tax</label>
+      <label><input data-cbsid="CLB001-I01" type="checkbox" id="incl" onchange="LAB.incl=this.checked; paintBill()"> prices include tax</label>
     </div>
     <div class="hint" style="margin-top:6px">The same figures, read in each pack's currency: ₹300 here is A$300 there.</div>
     <details class="why hint"><summary>why</summary><div>Converting money is the Conversion lab's job, with a rate and its source; this page shows what the TAX does to one cart. A supply kind is the pack's own word (taxable · GST-free · input-taxed; standard · zero-rated · exempt); a kind the other pack does not know is said by the engine on that side, never guessed. The rate column is read only by a pack that names no kinds (India: the product's slab).</div></details>
@@ -295,8 +295,8 @@
          may still be corrected; after it, a shop in another country is a NEW entity registered there. Nothing here moves a shop. -->
     <div class="sec">This shop</div>
     <div class="line">
-      <label><input type="radio" name="fixed" value="no" checked data-testid="cl-fixed-no" onchange="LAB.fixed=false; paintExisting()"> no product or transaction yet</label>
-      <label><input type="radio" name="fixed" value="yes" data-testid="cl-fixed-yes" onchange="LAB.fixed=true; paintExisting()"> has a product or a transaction</label>
+      <label><input data-cbsid="CLB001-I02" type="radio" name="fixed" value="no" checked data-testid="cl-fixed-no" onchange="LAB.fixed=false; paintExisting()"> no product or transaction yet</label>
+      <label><input data-cbsid="CLB001-I03" type="radio" name="fixed" value="yes" data-testid="cl-fixed-yes" onchange="LAB.fixed=true; paintExisting()"> has a product or a transaction</label>
     </div>
     <div id="existing" style="margin-top:6px"></div>
   </section>
@@ -1034,14 +1034,14 @@ function rowHTML(item, factsFrom, factsTo, verdict) {
     '<td class="v from" data-side="' + esc(countryName(LAB.from)) + '">' + left + '</td>' +
     '<td class="v to" data-side="' + esc(countryName(LAB.to)) + '">' + right + '</td>' +
     '<td class="verdict" data-testid="cl-verdict-' + key + '">' + verdict.chip + '</td>' +
-    '<td class="means"><button type="button" class="btn" data-testid="cl-more-' + key + '" onclick="openRowDetail(\'' + key + '\')" aria-label="Details: ' + esc(item[1]) + '">Details</button></td></tr>'
+    '<td class="means"><button data-cbsid="CLB001-B03" type="button" class="btn" data-testid="cl-more-' + key + '" onclick="openRowDetail(\'' + key + '\')" aria-label="Details: ' + esc(item[1]) + '">Details</button></td></tr>'
   );
 }
 /** CL2 #8 — the same rows collapse under one line, so the eye lands on the changes; the button opens them (and stays open across repaints) */
 function sameFoldHTML(sameNames) {
   if (!sameNames.length) return '';
   return (
-    '<tr class="samefold" data-testid="cl-samefold"><td colspan="5"><button type="button" class="btn" data-testid="cl-samefold-btn" onclick="toggleSame()">' +
+    '<tr class="samefold" data-testid="cl-samefold"><td colspan="5"><button data-cbsid="CLB001-B04" type="button" class="btn" data-testid="cl-samefold-btn" onclick="toggleSame()">' +
     sameNames.length + (sameNames.length === 1 ? ' row is' : ' rows are') + ' the same · ' + (LAB.showSame ? 'hide' : 'show') +
     '</button><span class="hint">' + esc(sameNames.join(' · ')) + '</span></td></tr>'
   );
@@ -1151,7 +1151,7 @@ function idCheckHTML(side) {
     t = taxIdOf(p);
   if (!t || !t.check) return '';
   return (
-    '<div class="idck"><input type="text" placeholder="type a ' +
+    '<div class="idck"><input data-cbsid="CLB001-I04" type="text" placeholder="type a ' +
     esc(t.name) +
     '" value="' +
     esc(IDS[side]) +
@@ -1209,34 +1209,34 @@ function paintCart() {
       return (
         '<tr data-testid="cl-cart-line-' +
         index +
-        '"><td data-l="item"><input type="text" aria-label="item" value="' +
+        '"><td data-l="item"><input data-cbsid="CLB001-I05" type="text" aria-label="item" value="' +
         esc(item.name) +
         '" oninput="setVal(' +
         index +
         ",'name',this.value)\"></td>" +
-        '<td class="r" data-l="qty"><input type="number" aria-label="qty" min="0" step="1" value="' +
+        '<td class="r" data-l="qty"><input data-cbsid="CLB001-I06" type="number" aria-label="qty" min="0" step="1" value="' +
         esc(item.qty) +
         '" oninput="setVal(' +
         index +
         ",'qty',this.value,true)\"></td>" +
-        '<td class="r" data-l="price"><input type="number" aria-label="price" min="0" step="0.01" value="' +
+        '<td class="r" data-l="price"><input data-cbsid="CLB001-I07" type="number" aria-label="price" min="0" step="0.01" value="' +
         esc(item.price) +
         '" oninput="setVal(' +
         index +
         ",'price',this.value,true)\"></td>" +
-        '<td class="r" data-l="rate"><input type="number" aria-label="rate %" min="0" step="0.01" value="' +
+        '<td class="r" data-l="rate"><input data-cbsid="CLB001-I08" type="number" aria-label="rate %" min="0" step="0.01" value="' +
         esc(item.rate) +
         '" oninput="setVal(' +
         index +
         ",'rate',this.value,true)\"></td>" +
-        '<td data-l="kind"><select data-testid="cl-kind-' +
+        '<td data-l="kind"><select data-cbsid="CLB001-S04" data-testid="cl-kind-' +
         index +
         '" aria-label="supply kind" onchange="setVal(' +
         index +
         ",'kind',this.value)\">" +
         kindOptions(item.kind) +
         '</select></td>' +
-        '<td data-l="x"><button class="btn x" onclick="delLine(' +
+        '<td data-l="x"><button data-cbsid="CLB001-B05" class="btn x" onclick="delLine(' +
         index +
         ')" title="remove">×</button></td></tr>'
       );

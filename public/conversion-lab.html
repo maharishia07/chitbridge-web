@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en" data-tokens="list">
-<!-- OWNS  the Conversion lab: the units engine (engine/units.js · convert) on a bare page, so a conversion is seen before it is used.
-     CALLED BY the labs links on Home and the Product lab.
-     FLOW  load → CBFrame.lab (the Finance frame) → the engine runs on the typed values → paint
+<!-- OWNS  the Conversion lab: a quantity valued, or a priced basket converted, by the real engine (engine/convert.js · CBConvert, with CBMoney and CBUnits) on a bare page, so a conversion is seen before it is used. Nothing is saved.
+     CALLED BY Home's Labs card (manifest id conversion-lab), the Country lab's "conversion lab" button (country-lab.html), Category setup's Conversion lab link (app/cap-catsetup.js).
+     FLOW  load → CBFrame.lab (the Finance frame) → the typed lines, prices and rates → paintOutcome → the engine's answer, or its refusal in words
      CARD 29-qa-test-tooling-ux-locale-and-design-system/conversion-lab -->
 <head>
 <meta charset="utf-8">
@@ -119,42 +119,42 @@
 
     <div class="sec">What am I asking</div>
     <div class="line" data-testid="lab-mode">
-      <label><input type="radio" name="mode" value="value" checked onchange="setMode('value')"> what is this <b>quantity</b> worth?</label>
-      <label><input type="radio" name="mode" value="convert" onchange="setMode('convert')"> what is this <b>priced basket</b> in another currency?</label>
+      <label><input data-cbsid="CVL001-I01" type="radio" name="mode" value="value" checked onchange="setMode('value')"> what is this <b>quantity</b> worth?</label>
+      <label><input data-cbsid="CVL001-I02" type="radio" name="mode" value="convert" onchange="setMode('convert')"> what is this <b>priced basket</b> in another currency?</label>
     </div>
     <div class="hint" id="mode-hint" style="margin-top:4px"></div>
 
     <div class="sec">Answer in</div>
     <div class="line">
-      <label>currency <input type="text" id="to" value="INR" style="width:64px" oninput="this.value=this.value.toUpperCase(); paintOutcome()"></label>
-      <label>decimals <input type="number" id="dp" value="2" min="0" max="6" style="width:52px" oninput="paintOutcome()"></label>
-      <label title="a bank's buy and sell are not reciprocal, so 1/rate is arithmetically fine and commercially often wrong"><input type="checkbox" id="invert" onchange="paintOutcome()"> may use 1 ÷ a rate it has</label>
+      <label>currency <input data-cbsid="CVL001-I03" type="text" id="to" value="INR" style="width:64px" oninput="this.value=this.value.toUpperCase(); paintOutcome()"></label>
+      <label>decimals <input data-cbsid="CVL001-I04" type="number" id="dp" value="2" min="0" max="6" style="width:52px" oninput="paintOutcome()"></label>
+      <label title="a bank's buy and sell are not reciprocal, so 1/rate is arithmetically fine and commercially often wrong"><input data-cbsid="CVL001-I05" type="checkbox" id="invert" onchange="paintOutcome()"> may use 1 ÷ a rate it has</label>
     </div>
 
     <div class="sec">The lines
-      <button class="btn" data-testid="lab-load-catalogue" onclick="loadCatalogue()">my catalogue</button>
-      <button class="btn" data-testid="lab-load-chit" onclick="loadChit()">a chit…</button>
-      <button class="btn" onclick="loadSample()">examples</button>
+      <button data-cbsid="CVL001-B01" class="btn" data-testid="lab-load-catalogue" onclick="loadCatalogue()">my catalogue</button>
+      <button data-cbsid="CVL001-B02" class="btn" data-testid="lab-load-chit" onclick="loadChit()">a chit…</button>
+      <button data-cbsid="CVL001-B03" class="btn" onclick="loadSample()">examples</button>
     </div>
     <div class="scroll"><table class="grid" data-testid="lab-lines">
       <thead><tr><th>Item</th><th class="r">Qty</th><th>Unit</th><th class="r" id="th-price">Price</th><th id="th-ccy">Ccy</th><th></th></tr></thead>
       <tbody id="lines-body"></tbody>
     </table></div>
-    <button class="btn" style="margin-top:6px" onclick="addLine()">+ a line</button>
+    <button data-cbsid="CVL001-B04" class="btn" style="margin-top:6px" onclick="addLine()">+ a line</button>
 
     <div class="sec" id="sec-prices">Market prices — what one unit is worth today</div>
     <div class="scroll" id="prices-wrap"><table class="grid" data-testid="lab-prices">
       <thead><tr><th>Item</th><th>Per</th><th class="r">Price</th><th>Ccy</th><th>As of</th><th>Source</th><th>How sure</th><th></th></tr></thead>
       <tbody id="prices-body"></tbody>
     </table></div>
-    <button class="btn" style="margin-top:6px" id="add-price" onclick="addPrice()">+ a price</button>
+    <button data-cbsid="CVL001-B05" class="btn" style="margin-top:6px" id="add-price" onclick="addPrice()">+ a price</button>
 
     <div class="sec">Rates — between two currencies</div>
     <div class="scroll"><table class="grid" data-testid="lab-rates">
       <thead><tr><th>From</th><th>To</th><th class="r">Rate</th><th>As of</th><th>Source</th><th>How sure</th><th></th></tr></thead>
       <tbody id="rates-body"></tbody>
     </table></div>
-    <button class="btn" style="margin-top:6px" onclick="addRate()">+ a rate</button>
+    <button data-cbsid="CVL001-B06" class="btn" style="margin-top:6px" onclick="addRate()">+ a rate</button>
     <div class="hint" style="margin-top:6px">
       ⚠️ There is no price feed behind this page, on purpose — a live market price is somebody's subscription, and a
       hard-coded one is wrong by tomorrow while looking right. Paste the rate you actually hold and say where it came from.
@@ -336,7 +336,7 @@ function setVal(what, i, field, v, nestedNum) {
 function provSelect(what, i, cur) {
   var opts = (window.CBConvert && CBConvert.PROVENANCE) || ['unknown'];
   return (
-    '<select aria-label="' + what + ' provenance" onchange="setVal(\'' +
+    '<select data-cbsid="CVL001-S01" aria-label="' + what + ' provenance" onchange="setVal(\'' +
     what +
     "'," +
     i +
@@ -351,7 +351,7 @@ function provSelect(what, i, cur) {
 }
 function txt(what, i, field, v, w) {
   return (
-    '<input type="text" aria-label="' + what + ' ' + field + '" value="' +
+    '<input data-cbsid="CVL001-I06" type="text" aria-label="' + what + ' ' + field + '" value="' +
     esc(v == null ? '' : v) +
     '"' +
     (w ? ' style="width:' + w + '"' : '') +
@@ -366,11 +366,11 @@ function txt(what, i, field, v, w) {
 }
 function num(what, i, field, v, step) {
   return (
-    '<input type="number" aria-label="' + what + ' ' + field + '" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
+    '<input data-cbsid="CVL001-I07" type="number" aria-label="' + what + ' ' + field + '" step="' + (step || 'any') + '" value="' + esc(v) + '"' + ' oninput="setVal(\'' + what + "'," + i + ",'" + field + '\',this.value,1)">'
   );
 }
 function del(what, i) {
-  return '<button class="btn x" title="remove" onclick="delRow(\'' + what + "'," + i + ')">×</button>';
+  return '<button data-cbsid="CVL001-B07" class="btn x" title="remove" onclick="delRow(\'' + what + "'," + i + ')">×</button>';
 }
 
 function paintInputs() {
@@ -426,7 +426,7 @@ function paintInputs() {
           '<td>' +
           txt('prices', index, 'currency', item.currency, '58px') +
           '</td>' +
-          '<td><input type="date" aria-label="prices as of" value="' +
+          '<td><input data-cbsid="CVL001-I08" type="date" aria-label="prices as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'prices\',' +
           index +
@@ -457,7 +457,7 @@ function paintInputs() {
           '<td class="r">' +
           num('rates', index, 'rate', item.rate) +
           '</td>' +
-          '<td><input type="date" aria-label="rates as of" value="' +
+          '<td><input data-cbsid="CVL001-I09" type="date" aria-label="rates as of" value="' +
           esc(item.as_of || '') +
           '" oninput="setVal(\'rates\',' +
           index +
