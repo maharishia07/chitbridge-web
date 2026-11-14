@@ -107,6 +107,25 @@ const make = (over) => {
   assert.strictEqual(noAsker.seen.args.books.statement.currency, null);
   ok('B5-05: with no statement currency (none said, none in the file) nothing is defaulted to the account\'s: the engine is handed none and refuses');
 
+  /* FIN-116 / FIN-117: what the host cannot post, and a tax kind asked of a registered shop, are held on the line in words; the demo (no options) does not move */
+  const plain = make();
+  plain.ctl.load('ok', 'f.csv');
+  assert.strictEqual(plain.ctl.view().items[0].ready, true);
+  const registered = make({ taxRegistered: true });
+  registered.ctl.load('ok', 'f.csv');
+  const taxed0 = registered.ctl.view().items[0];
+  assert.strictEqual(taxed0.ready, false);
+  assert.strictEqual(taxed0.needs, 'tax_kind');
+  assert.ok(taxed0.blockers.indexOf('tax_kind') >= 0);
+  const unknownReg = make({ taxRegistered: null });
+  unknownReg.ctl.load('ok', 'f.csv');
+  assert.strictEqual(unknownReg.ctl.view().items[0].ready, true, 'registration unknown asks nothing and claims nothing');
+  const onlyContra = make({ postable: ['contra'] });
+  onlyContra.ctl.load('ok', 'f.csv');
+  assert.ok(onlyContra.ctl.view().items[0].blockers.indexOf('not_here') >= 0);
+  assert.strictEqual(onlyContra.ctl.view().items[0].ready, false);
+  ok('FIN-116/117: a registered shop is ASKED the tax kind (held, never defaulted); unknown registration asks nothing; a kind the host cannot post says where it is recorded; the demo is unchanged');
+
   /* B5-06: every skipped row reaches the engine's statement, so "tied" can refuse */
   const skip = make();
   skip.seen.skipped = [{ row: 3, why: 'unreadable date "06/11/2026 09:14"' }];
@@ -226,7 +245,8 @@ const make = (over) => {
   const item = { ref: 'bank:abc', event: { type: 'expense', amount: 1 }, party: { status: 'new', name: 'Origin Energy', kind: 'supplier' } };
   const done = await post(item);
   assert.deepStrictEqual(calls.map((x) => x[0]), ['supAdd', 'booksEventPost']);
-  assert.strictEqual(calls[1][1].party, 'sup-1');
+  assert.strictEqual(calls[1][1].kind, 'expense', 'the server reads kind, never type');
+  assert.ok(!('type' in calls[1][1]) && !('ref' in calls[1][1]) && !('party' in calls[1][1]), 'only keys the closed POST /events body lists');
   assert.strictEqual(calls[1][1].client_ref, 'bank:abc');
   assert.strictEqual(done.ok, true);
   await post(item);
@@ -238,6 +258,16 @@ const make = (over) => {
   const acct = await POST.adapter({ api, who: { role: 'accountant' } })(item);
   assert.strictEqual(acct.ok, false);
   ok('app adapter: the party is made FIRST (once), the entry carries its id and bank:<fp>; a party failure fails that line only; a non-owner is told at once');
+
+  /* FIN-117 / FIN-116: the exact body per kind, and what is refused before anything is made */
+  const taxed = POST.bodyOf({ ref: 'bank:t', event: { type: 'expense', class: 'bank_charges', paid_from: 'bank', date: '2026-10-23', amount: 20, narration: 'Bank statement 2026-10-23: Account fee', currency: 'AUD' }, tax: { tax_minor: 200 } }, null, (b) => Object.assign({}, b, { paid_from: 'card' }));
+  assert.deepStrictEqual(taxed, { kind: 'expense', date: '2026-10-23', amount: 20, narration: 'Bank statement 2026-10-23: Account fee', client_ref: 'bank:t', class: 'bank_charges', paid_from: 'card', input_tax_minor: 200 });
+  const contra = POST.bodyOf({ ref: 'bank:c', event: { type: 'contra', from: 'bank', to: 'cash', date: '2026-10-29', amount: 500, narration: 'ATM' } });
+  assert.deepStrictEqual(Object.keys(contra).sort(), ['amount', 'client_ref', 'date', 'from', 'kind', 'narration', 'to']);
+  const dues = await POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } })({ ref: 'bank:p', event: { type: 'payment_received', amount: 5 }, party: { status: 'new', name: 'Z', kind: 'customer' } });
+  assert.strictEqual(dues.ok, false);
+  assert.ok(/Dues/.test(dues.why));
+  ok('app adapter body: kind not type, only the closed keys, the tax inside the bank figure as input_tax_minor, a payment between parties is refused before any party is made');
 
   /* the demo page is public and inert */
   const html = read('bank-demo.html');

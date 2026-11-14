@@ -103,7 +103,7 @@ const bankStoreLine = () =>
     ? tx('Marks and notes are kept for your accountant too.')
     : bankStoreState.mode === 'device'
       ? tx('Saved on this device until the next update')
-      : tx('Could not reach the shared record. Saved on this device for now.') + (bankStoreState.say ? ' ' + bankStoreState.say : '');
+      : tx('Could not reach the shared record. Saved on this device for now.'); /* FIN-118: never the server's raw sentence (it named a route); the words are ours */
 
 /* ── the sign-off: the figures the Statement tab shows, carried, never worked out again ── */
 /** the statement the page carries: the BRS figures as the Statement tab shows them */
