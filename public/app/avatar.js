@@ -625,7 +625,7 @@
     '.cbav-sizes button,.cbav-weights button{flex:1;border:1px solid var(--av-line);background:var(--av-card);border-radius:9px;display:grid;place-items:center;color:var(--av-ink);padding:0;font-family:inherit}' +
     '.cbav-sizes button{height:42px}.cbav-weights{display:flex;gap:4px;margin:0 0 8px}.cbav-weights button{height:36px;font-size:17px}' +
     '.cbav-sizes button[aria-pressed="true"],.cbav-weights button[aria-pressed="true"]{border-color:var(--av-blue);background:var(--av-blue-t);color:var(--av-blue-i)}' +
-    '.cbav-motion{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
+    '.cbav-motion{display:inline-flex;box-sizing:border-box;width:50%;vertical-align:top;align-items:center;justify-content:space-between;gap:8px;padding:4px 8px}' +
     '.cbav-toggle{width:40px;height:22px;border-radius:999px;border:1px solid var(--av-line);background:var(--av-panel);position:relative;padding:0}' +
     '.cbav-toggle::after{content:"";position:absolute;top:2px;inset-inline-start:2px;width:16px;height:16px;border-radius:50%;background:var(--av-faint);transition:inset-inline-start .15s}' +
     '.cbav-toggle[aria-checked="true"]{background:var(--av-blue-t);border-color:var(--av-blue)}' +
@@ -701,7 +701,7 @@
   }
 
   /** one heading and a row of pressable choices for a saved preference (`kind` names the pref, its data-av-<kind> attribute and its test ids) */
-  /** one on/off row of the menu (Less motion · Keyboard shortcuts, MNT-63, WCAG 2.2 SC 2.1.4): a label and a switch whose click picks the other value of its kind */
+  /** one on/off switch of the menu, two to a line (Less motion · Shortcuts = the keyboard shortcuts, MNT-63, WCAG 2.2 SC 2.1.4): a label and a switch whose click picks the other value of its kind */
   function switchRow(label, kind, on, offValue, onValue) {
     return '<div class="cbav-motion"><span>' + label + '</span><button type="button" class="cbav-toggle" role="switch" data-cbsid="CMP025-B01"' + avatarMount('CMP025') + ' data-testid="' + kind + '-switch" data-av-' + kind + '="' + (on ? offValue : onValue) + '" aria-checked="' + on + '" aria-label="' + label + '"></button></div>';
   }
@@ -846,7 +846,7 @@
       (w === 'bold') +
       '" title="Bold" aria-label="Bold text" style="font-weight:800">A</button></div>' +
       switchRow('Less motion', 'motion', pref('motion') === 'reduce', 'auto', 'reduce') +
-      switchRow('Keyboard shortcuts', 'keys', pref('keys') !== 'off', 'off', 'on') +
+      switchRow('Shortcuts', 'keys', pref('keys') !== 'off', 'off', 'on') +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' +
       FONTS.map(function (x) {
         return (
