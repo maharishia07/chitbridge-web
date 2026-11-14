@@ -291,8 +291,8 @@ function renderRegister() {
     <div class="top">${logo()}<h1>${esc(tx('Register your business'))}</h1></div>
     <div class="body">
       ${form}
-      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
-      <div class="swap">Already registered? <a data-cbsid="SCR053-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
+      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — emailed code via <span class="mono">${EP.register.p}</span>.</div>
+      <div class="swap">Have an account <a data-cbsid="SCR053-C02" onclick="go('#/login')">${tx('Sign in')}</a></div>
     </div>
   </div></div>`;
   const node = document.getElementById('r_go');

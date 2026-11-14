@@ -10,7 +10,7 @@
 <script src="/config.js"></script>   <!-- HX1: window.CB_API — this deploy's one api address -->
 <script src="/app/helpers.js"></script>   <!-- T2-WEBPRIMS: esc · fmtMoney · monthNames — the ONE copy; loads before every script that calls them -->
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shop — Chit &amp; Bridge</title>
+<title>Chit &amp; Bridge shop</title>
 <style>
   :root{ --font-ui:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif); --ink:#20303b; --grey:#5D636A; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3;
     /* ⚠️ THE SHARED CART (app/cart-ui.js) SPEAKS THE APP'S TOKENS. This page defined seven of them; the other twenty-one
@@ -411,7 +411,7 @@ function _readBanner() {
     esc(Object.values(_read)[0].from) +
     '.</b>' +
     (left.length ? ' You still need to fill ' + left.length + '.' : ' Nothing left to fill.') +
-    '<div style="font-size:10.5px;color:var(--grey-3,#6a707a);margin-top:3px">Check them — you can change anything before sending.</div></div>'
+    '<div style="font-size:10.5px;color:var(--grey-3,#6a707a);margin-top:3px">Edit anything before sending</div></div>'
   );
 }
 function _docRemove(i) {
@@ -716,7 +716,7 @@ function regionBar() {
     .join('');
   return (
     '<div style="margin:0 0 16px;padding:11px 13px;background:#f4f6f8;border:1px solid var(--line);border-radius:12px">' +
-    '<div style="font-size:11px;color:var(--grey);margin-bottom:7px">🌐 Spin the globe — see this catalogue for a customer in:</div>' +
+    '<div style="font-size:11px;color:var(--grey);margin-bottom:7px">🌐 Customer in:</div>' +
     '<div style="display:flex;flex-wrap:wrap;align-items:center">' +
     btns +
     '</div>' +
@@ -730,7 +730,7 @@ function regionBar() {
     '</b> · language <b>' +
     esc(rc.language || '') +
     '</b>' +
-    (curOf(null) ? ' · <span style="color:var(--grey-3,#6a707a)">priced by the seller in <b>' + esc(curOf(null)) + '</b></span>' : '') +
+    (curOf(null) ? ' · <span style="color:var(--grey-3,#6a707a)">seller prices in <b>' + esc(curOf(null)) + '</b></span>' : '') +
     (rc.jurisdiction && rc.jurisdiction.compliance ? ' · <span style="color:#b4453f">' + esc(rc.jurisdiction.compliance) + '</span>' : '') +
     '</div>' +
     '</div>'
@@ -935,7 +935,7 @@ function productListHtml(data, cur) {
     cartTitle: 'Your basket',
     checkoutLabel: 'Check out →',
     emptyHint: 'Press + on what you want',
-    noCatalogue: 'This shop has nothing on display yet.',
+    noCatalogue: 'Nothing on display',
     listEl: 'p_list',
     barEl: 'p_cart',
     onCheckout: function () {
@@ -1587,17 +1587,17 @@ function render(data) {
   }
   var prods = data.items || [];
   var prodHtml = productListHtml(data, cur);
-  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
+  var enq = '<div class="enq">Order by phone/email</div>';
   var previewBar =
     data.preview && data.preview.visibility !== 'public'
-      ? '<div class="msg" data-testid="shop-private" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">🔒 Private — only you see this. Your catalogue is <b>' +
+      ? '<div class="msg" data-testid="shop-private" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">🔒 Private · catalogue <b>' +
         esc(data.preview.visibility || 'private') +
-        '</b>; customers cannot see it yet. Profile › Visibility › Public puts it live.</div>'
+        '</b> · hidden from customers<br>Set Visibility › Public</div>'
       : '';
   if (_ONLY) {
     el('app').innerHTML =
       previewBar +
-      (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml() : '<div class="msg">Not on the storefront — hidden, or another shop.</div>');
+      (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml() : '<div class="msg">Not on this storefront</div>');
     return;
   }
   el('app').innerHTML =
@@ -1606,12 +1606,12 @@ function render(data) {
     regionBar() +
     finHtml +
     prodHtml +
-    (finHtml || prodHtml ? enq : '<div class="msg">This shop has nothing on display yet.</div>') +
+    (finHtml || prodHtml ? enq : '<div class="msg">Nothing on display</div>') +
     /* ⚠️ OUTSIDE the ternary. An empty shop still has customers, and the emptier it is the more likely the
        person reading this is the one with a problem. */
     supLinkHtml() +
     shopAboutHtml(s) +
-    '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue.</div>';
+    '<div class="foot">Powered by <b>Chit &amp; Bridge</b>· shop sets prices</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop) {
@@ -1852,14 +1852,14 @@ function supNoteHtml() {
   if (_sup.dead)
     return (
       '<div style="background:#fdeceb;border:1px solid #f0bdb8;border-radius:10px;padding:9px 12px;' +
-      'font-size:12.5px;color:#8a2c25;margin-bottom:10px"><b>This will not reach anyone</b><div>' +
+      'font-size:12.5px;color:#8a2c25;margin-bottom:10px"><b>No one gets this</b><div>' +
       esc(_sup.err || '') +
       '</div></div>'
     );
   if (!_sup.to)
     return (
       '<div style="background:#f6f5f1;border:1px solid #e7e3d8;border-radius:10px;padding:9px 12px;' +
-      'font-size:12.5px;color:var(--grey-3,#6a707a);margin-bottom:10px">Checking where this will go…</div>'
+      'font-size:12.5px;color:var(--grey-3,#6a707a);margin-bottom:10px">Checking where it goes…</div>'
     );
   /* ⚠️ ‘closed’ is SAID, not used to refuse. A complaint about an order already placed must not hit a dead
      end — but promising a quick answer from a shop that is shut would be the other kind of lie. */
@@ -1894,7 +1894,7 @@ function supRender() {
     body =
       ui.field({ mount: 'SHP001-U06', kind: 'long', id: 'sup_what', testid: 'shop-support-what', rows: 4, label: 'What went wrong?', placeholder: 'What you ordered, and what happened instead', value: _sup.what || '', onInput: function (value) { supSet('what', value); } }) +
       (_sup.urgency
-        ? '<div style="font-size:12px;color:var(--grey-3,#6a707a);margin:11px 0 4px">How much is it holding you up?</div>' +
+        ? '<div style="font-size:12px;color:var(--grey-3,#6a707a);margin:11px 0 4px">Impact on you</div>' +
           _sup.urgency
             .map(function (item) {
               return (
@@ -2340,9 +2340,9 @@ function _cartModeFieldsHtml() {
         '<div style="flex:1">' +
         ui.field({ mount: 'SHP001-U11', kind: 'time', id: 'o_time', testid: 'shop-time', label: 'Time', value: _ord.time || '', onInput: function (value) { _cartSet('time', value); } }) +
         '</div></div>' +
-        '<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>' +
+        '<div class="meta" style="margin:-6px 0 11px">Request only, shop confirms</div>' +
         ui.field({ mount: 'SHP001-U12', kind: 'text', id: 'o_remark', testid: 'shop-remark', label: 'Remark', hint: 'Anything the shop should know', value: _ord.remark || '', onInput: function (value) { _cartSet('remark', value); } })
-      : '<div class="meta">Choose one to go on.</div>')
+      : '<div class="meta">Choose one</div>')
   );
 }
 function _cartStepReview() {
@@ -2408,14 +2408,14 @@ function _cartStepWho() {
   var otpStep = _ord.step === 'otp';
   return (
     _cartStepReview() +
-    '<div class="meta" style="margin:14px 0 8px">Last step — so the shop can reach you about this order.</div>' +
+    '<div class="meta" style="margin:14px 0 8px">How to reach you</div>' +
     ui.field({ mount: 'SHP001-U13', kind: 'text', id: 'o_name', testid: 'shop-name', label: 'Your name', autocomplete: 'name', value: _ord.name || '', onInput: function (value) { _cartSet('name', value); } }) +
     ui.field({ mount: 'SHP001-U14', kind: 'text', id: 'o_contact', testid: 'shop-contact', label: 'Phone or email', placeholder: '9876543210 or you@email.com', autocomplete: 'username', value: _ord.contact || '', readonly: otpStep ? 'The code was sent to this one' : undefined, onInput: function (value) { _cartSet('contact', value); } }) +
     (otpStep
       ? ui.field({ mount: 'SHP001-U15', kind: 'text', id: 'o_otp', testid: 'shop-otp', label: '6-digit code', hint: 'Sent to you', autocomplete: 'one-time-code', inputmode: 'numeric', maxlength: 64, value: _ord.otp || '', onInput: function (value) { _cartSet('otp', value); } })
       : '') +
     /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
-    '<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>' +
+    '<div class="meta">No account needed</div>' +
     (_ord._err ? '<div style="color:#b4453f;font-size:12.5px;margin-top:8px">' + esc(_ord._err) + '</div>' : '') +
     (_ord._msg ? '<div style="color:#2e7a45;font-size:12.5px;margin-top:8px">' + esc(_ord._msg) + '</div>' : '')
   );
@@ -2554,7 +2554,7 @@ function orderRender(msg, err) {
                 '" ' +
                 fld +
                 '>' +
-                '<div style="font-size:11px;color:var(--grey-3,#6a707a);margin:-6px 0 11px">This is an <b>offer</b> — the shop accepts or counters. Nothing is charged.</div>'
+                '<div style="font-size:11px;color:var(--grey-3,#6a707a);margin:-6px 0 11px">This is an <b>offer</b> — shop decides<br>Nothing charged</div>'
               );
             })()
           : '')) +
@@ -2763,10 +2763,10 @@ function orderAsk(body) {
   CBConfirm(
     'Place this order?',
     '<div data-testid="shop-confirm-body">' +
-      '<div>This sends your order to <b>' + esc(shop) + '</b>:</div>' +
+      '<div>Order goes to <b>' + esc(shop) + '</b>:</div>' +
       '<ul style="margin:6px 0;padding-inline-start:18px">' + orderPromiseLines().join('') + '</ul>' +
       money +
-      '<div style="margin-top:8px">The shop will reach you on <b>' + esc(contact) + '</b>. Nothing is charged here.</div></div>',
+      '<div style="margin-top:8px">Shop contacts you on <b>' + esc(contact) + '</b>· nothing charged here</div></div>',
     orderPromiseLabel(),
     function () {
       if (_ord) _orderPost(body);
@@ -2866,7 +2866,7 @@ function shopMyOrdersPaint(head) {
     o.err && !list.length
       ? '<div style="color:var(--disp,#b4453f);font-size:13px">' + esc(o.err) + '</div>'
       : !list.length
-        ? '<div class="meta">No orders yet.</div>'
+        ? '<div class="meta">No orders yet</div>'
         : '<div class="meta" data-testid="shop-orders-count">' +
           esc(list.length + ' of ' + o.total) +
           '</div>' +
@@ -3057,7 +3057,7 @@ function vizRender() {
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">' +
     esc(it.name) +
     ' on your wall</b>' + ui.action('close', { mount: 'SHP001-U04', display: 'icon', surface: 'dialog', onPress: vizClose, testid: 'shop-sheet-x-wall' }) + '</div>' +
-    '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>' +
+    '<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a room photo<br>Indicative colour preview</div>' +
     (_VIZ.img
       ? '<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">' +
         chips +
@@ -3173,7 +3173,7 @@ function shopFrame() {
 (function () {
   shopFrame();
   if (!BRIDGE) {
-    el('app').innerHTML = '<div class="msg">No shop specified.</div>';
+    el('app').innerHTML = '<div class="msg">No shop in link</div>';
     return;
   }
   // load the region layers first (for the spin-the-globe switcher), then the shop

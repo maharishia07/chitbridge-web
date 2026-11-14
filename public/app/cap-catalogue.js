@@ -306,7 +306,7 @@ async function downloadCatalogueTemplate(btn) {
     var body =
       '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' +
       esc(reply.filename || '') +
-      '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>' +
+      '</b> — dashed columns optional</div>' +
       '<div style="margin-bottom:10px">' +
       cols +
       '</div>' +
@@ -375,7 +375,7 @@ async function _cfRun(btn) {
   var out = document.getElementById('cf_out');
   if (!out) return;
   if (!text.trim() && !UI._cfXlsx) {
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Choose a file or paste some rows first.</div>';
+    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Add file or rows</div>';
     return;
   }
   var was = btn ? btn.textContent : null;
@@ -567,7 +567,7 @@ function _cfImport(btn) {
   }
   confirmAsk(
     'Import using ' + using + ' column' + (using === 1 ? '' : 's') + '?',
-    (creating ? 'It also adds <b>' + creating + ' new column' + (creating === 1 ? '' : 's') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>') +
+    (creating ? 'It also adds <b>' + creating + ' new column' + (creating === 1 ? '' : 's') + '</b> to your catalogue<div style="margin-top:7px">' : '<div>') +
       txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) +
       '</div>',
     'Import',
