@@ -79,7 +79,7 @@ function crmBillFacts(entries) {
       if (!lastBill || e.at > lastBill) lastBill = e.at;
     } else if (e.src === 'chit' && e.kind === 'chit' && /order/i.test(e.purpose || '') && !/cancel|reject|declin/i.test((e.state && e.state.word) || '')) {
       un.n++;
-      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the sum (an unpriced order, null without the flag, still adds 0)
+      if (e.amount_hidden) un.hidden++; // RAIL-146h: a figure the server hid is left out of the total (an unpriced order, null without the flag, still adds 0)
       else un.minor += Number(e.amount_minor || 0);
       un.currency = un.currency || e.currency;
     }
