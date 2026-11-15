@@ -146,8 +146,22 @@
     });
     return stores.concat(more);
   }
+  /** the clients to list: an ended or ran-out grant is hidden until the firm asks for it (the "Ended" button); nothing is named here */
+  function visible(stores, ended, showEnded) {
+    return showEnded ? stores : stores.filter(function (s) { return !(ended || {})[String(s.entity_id)]; });
+  }
+  /** the "Ended" button above the client list, drawn only when the firm holds an ended grant */
+  function endedToggle(ended, on, tell) {
+    var n = Object.keys(ended || {}).length;
+    return n ? '<div class="nw-acts"><button data-cbsid="NET001-B06" type="button" class="act' + (on ? '' : ' quiet') + '" data-ended-toggle="1" aria-pressed="' + !!on + '" data-testid="nw-ended-toggle">' + tell('Ended') + ' · ' + n + '</button></div>' : '';
+  }
+  /** wire the Ended button just drawn in host: it flips the choice and repaints the page */
+  function wireEnded(host, state, repaint) {
+    var button = host.querySelector('[data-ended-toggle]');
+    if (button) button.onclick = function () { state.showEnded = !state.showEnded; repaint(); };
+  }
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, clientColumns: clientColumns, endedWords: endedWords, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, clientColumns: clientColumns, endedWords: endedWords, visible: visible, endedToggle: endedToggle, wireEnded: wireEnded, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);
