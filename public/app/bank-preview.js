@@ -517,6 +517,27 @@
     if (kind === 'card_settlement') return 'Looks like your card takings paid into the bank.';
     return null;
   }
-  root.CBBankPreview = { create: create, looksLike: looksLike, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
+  /**
+   * ONE standing per statement line (l16-bank-10): 'in' (in the books) · 'ready' · 'wait' (only the GST basis holds it) · 'need' (a person answers) · 'posted' · 'failed' · 'closed'.
+   * The demo's chips and bar, the owner's page rows and the sheet's counts all read THIS, from the controller's own items, so one file never shows two splits.
+   */
+  function standing(item, result) {
+    if (result) return result.ok ? 'posted' : 'failed';
+    if (item.state === 'closed') return 'closed';
+    if (item.state === 'in_books') return 'in';
+    if (item.state === 'proposed') return item.ready ? 'ready' : item.needs === 'gst_basis' ? 'wait' : 'need';
+    return 'need';
+  }
+  /** a new party's name in the statement's own letters (never re-cased): the slice of the bank words the engine's name was made from; the engine's name when the words do not hold it */
+  function asWritten(item) {
+    var name = (item && item.party && item.party.name) || '',
+      words = String((item && item.line && item.line.narration) || ''),
+      at = name ? words.toLowerCase().indexOf(name.toLowerCase()) : -1;
+    if (at >= 0) return words.slice(at, at + name.length);
+    /* the engine left a number out of the name ("EFTPOS BUNNINGS 0450 SYDNEY"): the words it kept, still in the statement's letters */
+    var kept = words.split(/\s+/).filter(function (word) { return name.toLowerCase().split(/\s+/).indexOf(word.toLowerCase()) >= 0; }).join(' ');
+    return kept.toLowerCase() === name.toLowerCase() ? kept : name;
+  }
+  root.CBBankPreview = { create: create, looksLike: looksLike, standing: standing, asWritten: asWritten, moneyText: moneyText, minorOf: minorOf, dateText: dateText, STATE_WORDS: STATE_WORDS, NEEDS_WORDS: NEEDS_WORDS };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankPreview;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

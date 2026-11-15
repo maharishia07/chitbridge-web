@@ -1,5 +1,5 @@
 /* bank-demo-sample.js — the sample of public/bank-demo.html: Harbour Plumbing Pty Ltd, October 2026, twelve statement lines and the books they are checked against.
- * OWNS      SAMPLE_CSV (the 12 lines of Harbour's October statement, the same file the auditor loads in the product), SAMPLE_BOOKS (the two bank entries the clean Harbour books hold, opening 18,500.00), PARTIES (who the books know) and LEARNED (rules the books already learned). Demo seed data only: no rule is computed here.
+ * OWNS      SAMPLE_CSV (the 12 lines of Harbour's October statement, the same file the auditor loads in the product), SAMPLE_BOOKS (the two bank entries the clean Harbour books hold, opening 18,500.00), PARTIES (who the books know). Demo seed data only: no rule is computed here.
  * CALLED BY public/app/bank-demo.js (reads CBBankDemoSample); loaded before it by public/bank-demo.html.
  * FLOW      read once at load → the page puts the statement through the engines against these books
  * FIGURES    from C:/dev/shots/l16-clean-seed/EXPECTED.md, never invented: books 19,963.00 = 18,500.00 - 242.00 + 1,705.00; the statement closes 18,280.75; statement less books = -1,682.25 (10 lines to add). The product shows the same.
@@ -35,13 +35,5 @@
     { id: 'p-coogee', name: 'Coogee Bay Cafe', kind: 'customer' },
     { id: 'p-nguyen', name: 'R and J Nguyen', kind: 'customer' }
   ];
-  /* rules the books already learned, so these lines have a proposal (never a guess: each says who taught it) */
-  var TAUGHT = { date: '2026-09-01', narration: 'taught in the sample books', by: 'sample' };
-  var LEARNED = [
-    { id: 'out:origin_energy', has: 'ORIGIN ENERGY', side: 'out', party: null, party_name: 'Origin Energy', label: 'Electricity', event: { type: 'expense', class: 'electricity', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT },
-    { id: 'out:bunnings', has: 'BUNNINGS', side: 'out', party: null, party_name: 'Bunnings', label: 'Repairs and maintenance', event: { type: 'expense', class: 'repairs', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT },
-    { id: 'out:account_fee', has: 'ACCOUNT FEE', side: 'out', party: null, party_name: 'Bank', label: 'Bank fees', event: { type: 'expense', class: 'bank_charges', paid_from: 'bank' }, source: TAUGHT },
-    { id: 'in:credit_interest', has: 'CREDIT INTEREST', side: 'in', party: null, party_name: 'Bank', label: 'Interest received', event: { type: 'other_income', class: 'interest_received', into: 'bank' }, source: TAUGHT }
-  ];
-  root.CBBankDemoSample = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, OPENING_MINOR: OPENING_MINOR, PARTIES: PARTIES, LEARNED: LEARNED };
+  root.CBBankDemoSample = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, OPENING_MINOR: OPENING_MINOR, PARTIES: PARTIES };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
