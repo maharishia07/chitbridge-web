@@ -703,11 +703,9 @@ function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
   const own = peOwner(),
-    count = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length,
-    need = (BKB.counts || {}).needs_you || 0;
+    count = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
   const may = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
-  if (need) notices.push({ cls: 'warn', tid: 'bank-notice', text: txn('{count} line needs you', '{count} lines need you', need) });
   if (BKB.rail && BKB.rail.failed)
     notices.push({ cls: 'warn', tid: 'bank-rail-failed', text: tx('Could not read what parties told you. Lines are matched to your books only.') });
   CBList.reset && CBList.reset('bank');

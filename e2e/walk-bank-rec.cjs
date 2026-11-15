@@ -134,7 +134,7 @@ function stand() {
   const c = {}; for (const k of ['settled', 'told', 'matched', 'suggested', 'bank-only']) c[k] = await st(p, k);
   ok('B1', c.settled === 1 && c.told === 2 && c.matched === 1 && c.suggested === 1 && c['bank-only'] === 1, 'settled 1 · told 2 · matched 1 · suggested 1 · needs you 1 ' + JSON.stringify(c));
   ok('B1', (await statusOf(p, 0)) === 'settled' && (await statusOf(p, 1)) === 'told' && (await statusOf(p, 2)) === 'told' && (await statusOf(p, 3)) === 'matched', 'Ravi settled · Kumar told (ref) · the cash deposit told by two advices · my cheque matched');
-  ok('B1', /2 lines need you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the head says "2 lines need you" (' + (await p.textContent('[data-testid="bank-notice"]')).trim() + ')');
+  ok('B1', (await p.locator('[data-testid="bank-notice"]').count()) === 0, 'one count: the head carries no second "lines need you" number (the chips and the band count them)');
   await p.screenshot({ path: path.join(SHOTS, 'walk-bank-rec-lines.png') });
 
   /* ── B2 ── */
@@ -198,7 +198,7 @@ function stand() {
   ok('B5', sent.length === 1 && sb.purpose === 'general' && sb.business_json.kind === 'bank_query' && sb.recipients[0].entity_id === 'p-unk' && /^bankask:2026-09-25\|in\|420000\|N99912$/.test(sb.client_ref), 'ONE chit through POST /api/chits/send: kind bank_query, to the party, client_ref bankask:<key>');
   leaks = S.reqs.filter((r) => SECRETS.some((s) => (r.u + r.h + r.d).indexOf(s) >= 0));
   ok('B5', leaks.length === 0, 'the ask carries the date, the amount and the ref — never the narration' + (leaks.length ? ' — ' + leaks[0].u + ' ' + leaks[0].d.slice(0, 120) : ''));
-  ok('B5', (await statusOf(p, 5)) === 'asked' && /1 line needs you/.test(await p.textContent('[data-testid="bank-notice"]')), 'the line is Asked; "1 line needs you" (the bank charge)');
+  ok('B5', (await statusOf(p, 5)) === 'asked', 'the line is Asked');
 
   /* ── B6 ── */
   S.chits.push({ chit_id: 'q-1', direction: 'sent', status: 'delivered', created_at: '2026-10-13T06:00:00.000Z', party: P.unk, business_json: { kind: 'bank_query', currency: 'INR', bank_query: sb.business_json.bank_query }, line_items: [] });

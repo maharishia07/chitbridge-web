@@ -52,7 +52,9 @@
     function legName(leg) {
       var raw = leg.account != null ? leg.account : leg.code != null ? leg.code : leg.ledger,
         own = (cfg.ownAccounts ? cfg.ownAccounts() : []).filter(function (one) { return String(one.code) === String(raw); })[0];
-      return own ? own.name : String(raw == null ? 'account' : raw).replace(/_/g, ' ');
+      var named = !own && cfg.accountName ? cfg.accountName(raw) : '';
+      var plain = String(raw == null ? 'account' : raw).replace(/_/g, ' ');
+      return own ? own.name : named || plain.charAt(0).toUpperCase() + plain.slice(1); /* the chart's own name for the account, never its key */
     }
     function entryNote(item) {
       if (!item.entry) return '';
@@ -218,22 +220,53 @@
   }
   /** one table row, and the box for the rows the file lost; each function lands on the one shared `ctx` */
   function addRows(ctx) {
-    var escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, partyBox = ctx.partyBox, accountBox = ctx.accountBox, kindBox = ctx.kindBox, lineNote = ctx.lineNote;
+    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, amountText = ctx.amountText, tag = ctx.tag, partyBox = ctx.partyBox, accountBox = ctx.accountBox, kindBox = ctx.kindBox, lineNote = ctx.lineNote;
     /** the state a row is painted in: what happened to it when added, else its state; a proposal something still holds back is never painted "Ready to add" */
     function stateKeyOf(item, result) {
       if (result) return result.ok ? 'posted' : 'failed';
       return item.state === 'proposed' && !item.ready ? 'check' : item.state;
     }
-    function lineRow(item, results) {
+    /** a line still waiting for a person: no result yet, not in the books, and not a proposal ready to post */
+    function needsAnswer(item, results) {
+      return !results[item.key] && item.state !== 'in_books' && !(item.state === 'proposed' && item.ready);
+    }
+    /** the ONE row that is open: the person's own choice, else the first line that needs an answer (a line held only for the GST basis waits for that question, not for a row) */
+    function openKeyOf(items, results) {
+      var only = cfg.only ? cfg.only() : '';
+      if (only) return only;
+      if (ctx.shown && items.some(function (item) { return item.key === ctx.shown; })) return ctx.shown;
+      var first = items.filter(function (item) { return needsAnswer(item, results) && item.needs !== 'gst_basis'; })[0];
+      return first ? first.key : '';
+    }
+    /** a row: its figures and state on one line; the questions only while it is the open row */
+    function lineRow(item, results, openKey) {
       var line = item.line,
         result = results[item.key],
-        stateKey = stateKeyOf(item, result);
+        stateKey = stateKeyOf(item, result),
+        open = item.key === openKey,
+        ask = needsAnswer(item, results),
+        toggle = cfg.only && cfg.only() ? '' : ' <button data-cbsid="BKS017-B19" type="button" class="bd-btn bd-open" data-act="open" data-key="' + escapeHtml(item.key) + '" aria-expanded="' + open + '">' + (open ? 'Close' : ask ? 'Answer' : 'Details') + '</button>',
+        sub = open || result ? '<div class="bd-sub">' + (open ? kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') : '') + lineNote(item, result) + '</div>' : '';
       return (
-        '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
+        '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + (open ? ' bd-is-open' : '') + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +
-        '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
-        '<div class="bd-sub">' + kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
+        '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') + toggle + sub + '</td></tr>'
       );
+    }
+    /** the lines in the order a person works them: waiting for an answer, then what just happened, then the ready ones and the ones already in the books, each of those two folded under one row */
+    function rowsHtml(items, results) {
+      var openKey = openKeyOf(items, results), only = cfg.only && cfg.only();
+      var waiting = [], done = [], ready = [], booked = [];
+      items.forEach(function (item) {
+        (only || needsAnswer(item, results) ? waiting : results[item.key] ? done : item.state === 'in_books' ? booked : ready).push(item);
+      });
+      function fold(list, name, words) {
+        if (!list.length) return '';
+        var shown = ctx.groups[name] || list.some(function (item) { return item.key === openKey; });
+        return '<tr class="bd-group"><td colspan="5"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="group" data-g="' + name + '" aria-expanded="' + !!shown + '">' + escapeHtml(words + ' · ' + list.length + (list.length === 1 ? ' line' : ' lines')) + '</button></td></tr>' +
+          (shown ? list.map(function (item) { return lineRow(item, results, openKey); }).join('') : '');
+      }
+      return [waiting, done].map(function (list) { return list.map(function (item) { return lineRow(item, results, openKey); }).join(''); }).join('') + fold(ready, 'ready', 'Ready to add') + fold(booked, 'booked', 'Already in your books');
     }
     /** B5-06: every row the file lost, by its row number, and every other warning the reader made; never hidden */
     function skipBox(model) {
@@ -249,7 +282,7 @@
         (skipped.length ? ' Check them against the bank. The reconciliation cannot say tied while a row is missing.' : '') + '</p><ul>' + rows + '</ul></div>'
       );
     }
-    Object.assign(ctx, { stateKeyOf, lineRow, skipBox });
+    Object.assign(ctx, { stateKeyOf, lineRow, rowsHtml, skipBox });
   }
   /** the statement check, in words: each finding's sentence, a tick on what the owner must confirm, "Use it anyway" on what the owner may override, the account to choose, and the all-done summary */
   function addCheck(ctx) {
@@ -276,7 +309,7 @@
   }
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
-    var ctx = { cfg: cfg, says: {}, opened: {}, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
+    var ctx = { cfg: cfg, says: {}, opened: {}, groups: {}, shown: '', escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
     ctx.amountText = cfg.amountText || function (value) { return preview.moneyText(value, cfg.currency); }; /* a host may draw money its own way (the in-app Bank sheet: the page's symbol form, as the band) */
     ctx.tag = function (kind, words) { return '<span class="bd-tag bd-' + kind + '">' + ctx.escapeHtml(words) + '</span>'; };
     ctx.dataKey = function (item) { return ' data-key="' + ctx.escapeHtml(item.key) + '"'; };
@@ -284,6 +317,7 @@
     return {
       says: ctx.says,
       opened: ctx.opened,
+      state: ctx,
       skipBox: ctx.skipBox,
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
@@ -296,7 +330,7 @@
           (only ? '' : ctx.checkBox(model) + ctx.skipBox(model)) +
           (items.some(function (item) { return item.needs === 'gst_basis'; }) ? '<p class="bd-find bd-confirm" data-testid="bd-gst-basis">' + ctx.basisQuestion() + '</p>' : '') +
           '<table class="bd-table"><thead><tr><th>Date</th><th>What the bank says</th><th>Out</th><th>In</th><th>In your books?</th></tr></thead><tbody>' +
-          items.map(function (item) { return ctx.lineRow(item, model.results); }).join('') + '</tbody></table>'
+          ctx.rowsHtml(items, model.results) + '</tbody></table>'
         );
       }
     };
@@ -308,12 +342,29 @@
     return found ? found.value : '';
   }
   /** what each button does, by its data-act (the answers the controller gives, or { ok, why } when it refuses) */
-  function actionsOf(cfg, chosenFor, taxWordOf, says, opened) {
+  function actionsOf(cfg, chosenFor, taxWordOf, says, opened, ui) {
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
     function useAccount(key) {
       var account = chosenFor('acct', key);
       if (account === NOT_INCOME_OR_EXPENSE) return { ok: false, line: true, why: 'A tax payment, a loan, drawings or a transfer between your own accounts is not an expense or income, so it is added as its own entry.' };
-      return cfg.controller().resolveLine(key, { account: account, tax_kind: chosenFor('taxkind', key) });
+      var answers = { account: account, tax_kind: chosenFor('taxkind', key) },
+        said = cfg.controller().resolveLine(key, answers);
+      if (said && said.ok !== false) sameWords(key).forEach(function (other) { cfg.controller().resolveLine(other.key, answers); }); /* the same words, the same answer: asked once */
+      return said;
+    }
+    /** the other lines that say the same thing as this one (its words without figures), still waiting for an account */
+    function sameWords(key) {
+      var items = cfg.controller().view().items,
+        words = function (item) { return String(item.line.narration || '').toUpperCase().replace(/[^A-Z]+/g, ' ').trim(); },
+        mine = items.filter(function (item) { return item.key === key; })[0];
+      return mine ? items.filter(function (item) { return item.key !== key && item.state === 'needs_you' && !item.entry && words(item) === words(mine); }) : [];
+    }
+    /** the other lines with the same words that now wait on the same tax-invoice question */
+    function sameHeld(key) {
+      var items = cfg.controller().view().items,
+        words = function (item) { return String(item.line.narration || '').toUpperCase().replace(/[^A-Z]+/g, ' ').trim(); },
+        mine = items.filter(function (item) { return item.key === key; })[0];
+      return mine ? items.filter(function (item) { return item.key !== key && item.needs === 'tax_invoice' && words(item) === words(mine); }) : [];
     }
     /** FIN-116: the tax kind for a line the bank's words proposed: its own class (the proposal's, never a literal) with the chosen kind, through resolve() */
     function useTax(key) {
@@ -331,9 +382,11 @@
       useacct: useAccount,
       taxuse: useTax,
       tick: function (key) { return cfg.controller().tick(key); },
-      inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); },
+      inv: function (key, target) { var said = cfg.controller().invoice(key, target.getAttribute('data-v')); sameWords(key).concat(sameHeld(key)).forEach(function (other) { cfg.controller().invoice(other.key, target.getAttribute('data-v')); }); return said; },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },
+      open: function (key) { ui.shown = ui.shown === key ? '' : key; return { ok: true }; } /* one row is open at a time */,
+      group: function (key, target) { var name = target.getAttribute('data-g'); ui.groups[name] = !ui.groups[name]; return { ok: true }; },
       more: function (key) { opened[key] = true; return { ok: true }; } /* the person said it is someone or something else: the party and account boxes open on that line */,
       kind: function (key, target) {
         var id = target.getAttribute('data-kind'),
@@ -376,7 +429,7 @@
     var paintLines = painter(cfg);
     var host = cfg.host;
     var chosenFor = function (action, key) { return chosenIn(host, action, key); };
-    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf, paintLines.says, paintLines.opened);
+    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf, paintLines.says, paintLines.opened, paintLines.state);
     function onClick(event) {
       var target = event.target.closest('[data-act]');
       if (!target) return;
@@ -384,6 +437,7 @@
       if (!act) return;
       var key = target.getAttribute('data-key'),
         said = act(key, target);
+      if (!/^(open|group|more)$/.test(target.getAttribute('data-act'))) paintLines.state.shown = ''; /* an answer was given: the next line that needs one opens */
       if (said && said.ok === false && said.line) {
         paintLines.says[key] = said.why; /* the message stays ON THE LINE with its one step, never at the top of the sheet */
         cfg.say('');
@@ -391,11 +445,18 @@
       else cfg.say('');
       cfg.changed();
     }
+    /** the press a person would make, made for them */
+    function pressing(act, key) {
+      onClick({ target: { closest: function () { return { getAttribute: function (name) { return name === 'data-act' ? act : name === 'data-key' ? key : null; } }; } } });
+    }
     function onChange(event) {
       var field = event.target,
         action = field.getAttribute && field.getAttribute('data-act'),
         key = field.getAttribute && field.getAttribute('data-key');
       if (action === 'acctpick') return pickAccount(cfg, field);
+      var both = (action === 'acct' || action === 'taxkind') && chosenFor('acct', key) && chosenFor('taxkind', key),
+        tax = action === 'taxkind1' && chosenFor('taxkind1', key);
+      if (both || tax) return pressing(both ? 'useacct' : 'taxuse', key); /* everything the answer needs is chosen: no third press */
       if (action !== 'pname' && action !== 'pkind') return;
       var party = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0].party;
       var said = cfg.controller().editParty(key, { name: action === 'pname' ? field.value : party.name, kind: action === 'pkind' ? field.value : party.kind });
