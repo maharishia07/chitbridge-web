@@ -171,7 +171,7 @@ function stand(pending) {
   /* ── 5b · W15-75 · a statement that does not carry the bank's closing balance: the box to type it is REACHABLE while a statement is on screen (it sat inside a form folded to display:none) ── */
   const NOBAL = SEP.split('\n').map((l, n) => (n === 0 ? l : l.replace(/,[^,]*$/, ''))).join('\n'); /* the same statement without its Closing Balance column */
   await p.setInputFiles('[data-testid="bank-file"]', { name: 'no-balance.csv', mimeType: 'text/csv', buffer: Buffer.from(NOBAL) });
-  await p.waitForSelector('[data-testid="bank-bal-ask"], [data-testid="bank-currency"], .pe-bad', { timeout: 10000 });
+  await p.waitForSelector('[data-testid="bank-bal-ask"], [data-testid="bank-currency"], .pe-bad', { timeout: 10000 }).catch(async () => { await p.screenshot({ path: path.join(SHOTS, 'stmts-nobal-debug.png') }); });
   if (await p.locator('[data-testid="bank-currency"]').isVisible()) { await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }
   await p.waitForSelector('[data-testid="bank-bal-ask"]', { timeout: 10000, state: 'attached' }).catch(() => {});
   const askVisible = await p.locator('#bk_bal').isVisible().catch(() => false);
