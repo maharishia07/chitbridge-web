@@ -271,7 +271,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .pe-bank.bk-loaded .pe-card.bks{padding:2px 14px}
 /* ⭐ THE BANK VIEW, a statement on screen (app/cap-bank.js): the load form is ONE line, a band of four figures and ONE primary button, and the lines fill the rest of the screen; nothing scrolls but the rows.
    body.bk-on is set while the Lines view shows (bankLayout); the Statement view scrolls as a page. */
-.pe-bank.bk-loaded:not(.bk-open) .pe-form,.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-private"]{display:none}
+.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-form"] .pe-form,.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-private"]{display:none}
 .bk-line{display:none}
 .pe-bank.bk-loaded .bk-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
 .pe-bank.bk-loaded .bk-name{font-size:15px}

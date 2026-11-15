@@ -168,6 +168,16 @@ function stand(pending) {
   await p.screenshot({ path: path.join(SHOTS, 'stmts-read-laptop.png') });
   const toBooks = S.reqs.filter((r) => r.m === 'POST' && /\/api\/books\/(events|payments|entries)/.test(r.u));
   ok(S.posts.length === 3 && toBooks.length === 0, 'nothing was posted to the books by Read (no entry, event or payment; only the three Add presses went to the box)' + (toBooks.length ? ' — ' + toBooks.map((r) => r.u).join(' ') : ''));
+  /* ── 5b · W15-75 · a statement that does not carry the bank's closing balance: the box to type it is REACHABLE while a statement is on screen (it sat inside a form folded to display:none) ── */
+  const NOBAL = SEP.split('\n').map((l, n) => (n === 0 ? l : l.replace(/,[^,]*$/, ''))).join('\n'); /* the same statement without its Closing Balance column */
+  await p.setInputFiles('[data-testid="bank-file"]', { name: 'no-balance.csv', mimeType: 'text/csv', buffer: Buffer.from(NOBAL) });
+  await p.waitForSelector('[data-testid="bank-bal-ask"], [data-testid="bank-currency"], .pe-bad', { timeout: 10000 });
+  if (await p.locator('[data-testid="bank-currency"]').isVisible()) { await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }
+  await p.waitForSelector('[data-testid="bank-bal-ask"]', { timeout: 10000, state: 'attached' }).catch(() => {});
+  const askVisible = await p.locator('#bk_bal').isVisible().catch(() => false);
+  ok(askVisible, 'W15-75: "Type it from the statement" - the closing balance box is on screen, not hidden in the folded form');
+  if (askVisible) { await p.fill('#bk_bal', '109016.40'); await p.click('[data-testid="bank-bal-go"]'); await p.waitForTimeout(500); ok(await p.locator('[data-testid="bank-bal-ask"]').count() === 0, 'W15-75: typing it and pressing Show the statement gets the difference (the ask is gone)'); }
+  await p.screenshot({ path: path.join(SHOTS, 'stmts-balance-laptop.png') });
   await ctx.close();
 
   /* ── 6 · BEFORE THE SQL RUNS ── */

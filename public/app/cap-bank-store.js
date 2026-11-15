@@ -196,6 +196,7 @@ function bankStoreSignedWords() {
   if (!item) return '';
   const who = bankStoreSignerFull(item),
     date = bkDate(String(item.at || '').slice(0, 10));
+  if (who && item.by_firm) return txf('Reconciled by {who} on {date}', { who, date }); /* W15-75: a bookkeeper signs as the preparer, the firm named; the owner or auditor reviews */
   return who ? txf('Signed off by {who} on {date}', { who, date }) : txf('Signed off on {date}', { date });
 }
 /** the signed statements, newest first, the first few */
