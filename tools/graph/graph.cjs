@@ -108,7 +108,7 @@ const NOT_WEB_CODE = /(^|\/)(vendor|_design|fixture|node_modules)\//; /* over th
 function addWebCode(webRoot, addFile) {
   const publicDir = path.join(webRoot, 'public');
   const isOwnCode = (filePath) => !NOT_WEB_CODE.test(path.relative(webRoot, filePath).split(path.sep).join('/'));
-  walk(publicDir, (filePath) => /\.html$/.test(filePath) && isOwnCode(filePath) && (path.dirname(filePath) === publicDir || /[\\/]cmdb[\\/]/.test(filePath)))
+  walk(publicDir, (filePath) => /\.html$/.test(filePath) && isOwnCode(filePath) && (path.dirname(filePath) === publicDir || /[\\/](cmdb|illustrations)[\\/]/.test(filePath)))
     .sort()
     .forEach((filePath) => addFile('web', filePath, 'page'));
   walk(publicDir, (filePath) => /\.js$/.test(filePath) && !/\.min\.js$/.test(filePath) && isOwnCode(filePath))
@@ -255,7 +255,7 @@ function build() {
   /* api */
   if (meta.present.api) {
     ['lib', 'routes', 'src', 'middleware', 'governance', 'tools', 'scripts'].forEach((item) =>
-      walk(path.join(A, item), (p) => /\.c?js$/.test(p) && !/\.test\.c?js$/.test(p))
+      walk(path.join(A, item), (p) => /\.[cm]?js$/.test(p) && !/\.test\.[cm]?js$/.test(p))
         .sort()
         .forEach((entry) => addFile('api', entry, /[\\/]routes[\\/]/.test(entry) ? 'route-file' : 'api-lib'))
     );
