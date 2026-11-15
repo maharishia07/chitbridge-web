@@ -102,7 +102,6 @@ of file each thing is; this says what already does the job.
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
 | 31 | `modal` | `app.html` |  |
-| 31 | `money` | `cart.js` |  |
 | 31 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
@@ -111,6 +110,7 @@ of file each thing is; this says what already does the job.
 | 30 | `governance` | `home-facts.js` |  |
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 29 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
+| 29 | `money` | `cart.js` |  |
 | 29 | `group` | `identity.js` | again in a different costume. |
 | 28 | `call` | `cap-assist.js` |  |
 | 28 | `names` | `shortcuts.js` |  |
