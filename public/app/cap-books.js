@@ -2553,8 +2553,8 @@ function bkDvHead() {
         bkTab('waiting');
       }
     });
-  bkMarkChips(notices, (reply && reply.entries) || []);
-  if (!n.accept && !n.supplier && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
+  var askWaiting = bkMarkChips(notices, (reply && reply.entries) || []);
+  if (!n.accept && !n.supplier && !n.overdue && !n.cheques && !n.waiting && !askWaiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return {
     period: {
       label: bkDbPeriodLabel(dayRange, period.preset),
@@ -2593,7 +2593,7 @@ function bkDvHead() {
 }
 /** W15-25 (cap-mark.js turn()): the Day book's two filter chips for Queries — "Waiting for you · n" (the owner has not answered) and "Answered · n" (the reviewer has the ball); pressing one shows only those rows, pressing it again shows all */
 function bkMarkChips(notices, entries) {
-  if (!BK.mk || !BK.mk.state().may) return;
+  if (!BK.mk || !BK.mk.state().may) return 0;
   var count = { waiting: 0, answered: 0 };
   entries.forEach(function (e) {
     var turn = BK.mk.turn(e.entry_id);
@@ -2615,6 +2615,7 @@ function bkMarkChips(notices, entries) {
       }
     });
   });
+  return count.waiting;
 }
 /** declare the Day book's list once per read: its columns, grouping, four filters (Kind · Tender · Counter · Person), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
