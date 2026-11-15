@@ -19,5 +19,12 @@ t('bare day, AU', ctx.shopDay('2026-11-15'), '15 Nov 2026');
 t('moment, AU, Sydney', ctx.shopStamp('2026-11-15T02:36:00Z').replace(/\s/g, ' '), '15 Nov 2026, 1:36 pm');
 t('empty is the dash', ctx.shopDay(''), '—');
 t('garbage is kept, not invented', ctx.shopDay('soon'), 'soon');
-console.log('\n  ' + 4 + ' checks · ' + bad + ' failed');
+/* 2001 bug: V8 gives a year-less string the year 2001 (the api sent String(Date).slice(0,10) = "Thu Oct 08") */
+['Thu Oct 08', 'Oct 8', '8 Oct'].forEach((v) => t('year-less "' + v + '" is never a day', ctx.CBLocale.date(v), ''));
+t('ISO day', ctx.CBLocale.date('2026-10-08'), '08 Oct 2026');
+t('ISO moment', ctx.CBLocale.date('2026-10-08T00:00:00.000Z'), '08 Oct 2026');
+t('day with words and year', ctx.CBLocale.date('8 Oct 2026'), '08 Oct 2026');
+t('epoch ms', ctx.CBLocale.date(Date.UTC(2026, 9, 8, 12)), '08 Oct 2026');
+t('shopDay of a year-less string is kept, not 2001', ctx.shopDay('Thu Oct 08').indexOf('2001'), -1);
+console.log('\n  checks · ' + bad + ' failed');
 process.exit(bad ? 1 : 0);

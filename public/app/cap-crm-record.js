@@ -184,7 +184,7 @@ function crmEntryFrom(e, i) {
     o.src = 'ledger';
     o.amount_minor = e.amount_minor;
     o.currency = e.currency;
-    if (e.doc_date) o.doc_date = e.doc_date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(e.doc_date || ''))) o.doc_date = e.doc_date; /* a day the wire cut short ("Thu Oct 08") is not kept: the When cell then shows the entry's own moment */
     var wd = tx(e.ledger_kind === 'bill' ? crmDocWord() : 'Payment'),
       number = cbIsRawId(e.ref) || !e.ref ? '' : e.ref;
     /* the document in its own words: kind (an Invoice to a customer, a Bill from a supplier) + its print number; the date is the document's, in the When column */
