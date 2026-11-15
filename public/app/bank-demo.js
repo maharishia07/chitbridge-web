@@ -23,7 +23,9 @@
     ACCOUNT = 'Demo bank account';
   var SAMPLE_CSV = root.CBBankDemoSample.SAMPLE_CSV,
     SAMPLE_BOOKS = root.CBBankDemoSample.SAMPLE_BOOKS,
-    LEARNED = root.CBBankDemoSample.LEARNED;
+    LEARNED = root.CBBankDemoSample.LEARNED,
+    PARTIES = root.CBBankDemoSample.PARTIES,
+    OPENING_MINOR = root.CBBankDemoSample.OPENING_MINOR;
   var books = { opening_minor: 1000000, lines: [] },
     parties = [],
     controller = null,
@@ -40,7 +42,8 @@
   function resetBooks() {
     posted = 0;
     added = null;
-    parties = [];
+    parties = PARTIES.map(function (one) { return Object.assign({}, one); });
+    books.opening_minor = OPENING_MINOR;
     books.lines = SAMPLE_BOOKS.map(function (row, index) {
       return { id: 'L' + (index + 1), currency: CURRENCY, date: row[0], dr_minor: row[1], cr_minor: row[2], ref: '', narration: row[3], entry_no: 'MJ-' + (index + 1) };
     });
@@ -119,7 +122,7 @@
 
   /* ── one standing per line: the chip, the bar and the popup all read THIS, so the counts cannot disagree ── */
   var CHIPS = {
-    in: ['ok', 'In the books ✓'],
+    in: ['ok', 'In your books ✓'],
     ready: ['go-tag', 'Ready to add'],
     wait: ['ask', 'Waits for your GST answer'],
     need: ['ask', 'Needs you'],
@@ -179,16 +182,14 @@
   function figures(model) {
     var recon = model.projection && model.projection.brs,
       counts = countsOf(model),
-      total = model.items.length,
-      held = counts.in + counts.posted,
-      open = total - held;
+      open = model.items.length - counts.in - counts.posted;
     if (!recon) return void (el('bd_figs').hidden = true);
     var closed = preview.minorOf(recon.difference_before) === 0 && !open;
     el('bd_figs').hidden = false;
     el('bd_figs').innerHTML =
-      labKit.figure({ label: 'Statement balance (' + CURRENCY + '), ' + dateWords(recon.statement_date || lastDate(model)), value: amountText(recon.closing_statement), note: 'Closing balance on the file' }) +
-      labKit.figure({ label: 'Balance in the books (' + CURRENCY + ')', value: amountText(recon.closing_books_before), note: 'In the demo bank account' }) +
-      labKit.figure({ label: 'Difference (' + CURRENCY + ')', value: amountText(recon.difference_before), done: held, total: total, good: closed, note: closed ? 'All ' + total + ' lines are in the books' : plural(open, 'statement line is', 'statement lines are') + ' not in the books' });
+      labKit.figure({ label: 'Statement', value: amountText(recon.closing_statement) }) +
+      labKit.figure({ label: 'Your books', value: amountText(recon.closing_books_before) }) +
+      labKit.figure({ label: 'Difference', value: amountText(recon.difference_before), good: closed, note: closed ? 'Reconciled to the statement of ' + dateWords(recon.statement_date || lastDate(model)) : plural(open, 'line', 'lines') + ' to go' });
   }
   function lastDate(model) {
     var dates = model.items.map(function (item) { return item.line.date; }).sort();
@@ -200,7 +201,7 @@
   function gstStrip(model) {
     var node = el('bd_gst'),
       asking = model.items.some(function (item) { return item.needs === 'gst_basis'; });
-    if (!asking && !gstBasis) return void (node.hidden = true);
+    if (gstFact || (!asking && !gstBasis)) return void (node.hidden = true);
     node.hidden = false;
     node.className = 'bd-gst' + (gstBasis ? ' bd-answered' : '');
     var waiting = countsOf(model).wait;
@@ -219,44 +220,83 @@
     var again = doc.querySelector('#bd_gst [data-choice-value="' + value + '"]');
     if (again && again.focus) again.focus();
   }
-  /** the words of the Account column: what the engine proposed, the ask for a line nothing explains, nothing for a line already in the books */
-  function accountWords(item, state) {
-    if (state === 'in' || state === 'posted') return '';
-    return accountOf(item) || (state === 'need' ? 'Choose what this is' : '');
+  /** the entries of the books the statement does not show yet (the engine's match(), read, never redone) */
+  function ledgerOutside(model) {
+    var recon = root.CBBankRecon;
+    return recon && model.parsed ? recon.match(model.parsed.lines, books.lines, { window_days: 3 }).unmatched_ledger : [];
   }
-  /** one money cell: the carried amount in its currency, or an empty cell; which is 'out' (spent) or 'in' (received) */
-  function moneyCell(minor, which) {
-    return '<span class="bd-m bd-' + which + ' bd-cell' + which + '">' + (minor ? esc(amountText(minor)) : '') + '</span>';
+  /** which entry of the books each statement line was matched to, in the entry's own words: { statementIndex: 'Invoice INV-2: Coogee Bay Cafe' } (the engine's match(), read, never redone) */
+  function matchNames(model) {
+    var recon = root.CBBankRecon,
+      names = {};
+    if (!recon || !model.parsed) return names;
+    recon.match(model.parsed.lines, books.lines, { window_days: 3 }).matched.forEach(function (pair) {
+      var entry = books.lines.filter(function (line) { return line.id === pair.ledger[0]; })[0];
+      pair.stmt.forEach(function (index) { names[index] = entry ? entry.narration : ''; });
+    });
+    return names;
   }
   /** the payee, with the date (shown on a phone only) and the bank's own words under it */
   function whoCell(item) {
     var line = item.line;
     return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span></span>';
   }
-  function lineRow(item, results, opensPanel) {
+  /** the entry a ready line will make, in an accountant's terms: "Dr Trade creditors 880.00 · Cr Business bank account 880.00" (the legs the engine composed) */
+  function entryWords(item) {
+    return ((item.entry && item.entry.lines) || []).map(function (leg) {
+      var debit = (leg.dr_minor || 0) > 0;
+      return (debit ? 'Dr ' : 'Cr ') + nameOf(leg.account) + ' ' + amountText({ amount_minor: debit ? leg.dr_minor : leg.cr_minor, currency: CURRENCY });
+    }).join(' \u00b7 ');
+  }
+  /** the tax the engine says this line claims, in words: "8.80 GST" */
+  function taxWords(item) {
+    return item.tax && item.tax.tax_minor ? amountText({ amount_minor: item.tax.tax_minor, currency: CURRENCY }) + ' GST' : 'GST';
+  }
+  /** what a line that needs you asks, inline: the tax invoice first, then who it is, else a way to say what it is */
+  function questionHtml(item) {
+    var key = esc(item.key),
+      more = '<button type="button" class="bd-link" data-act="open" data-key="' + key + '" data-cbsid="BKS017-R01">Choose what this is</button>';
+    if (item.needs === 'tax_invoice') {
+      return '<span class="bd-question"><span class="bd-q">This claims ' + esc(taxWords(item)) + ' and needs a tax invoice. Do you hold it?</span>' +
+        '<button type="button" class="bd-btn" data-act="taxinvoice" data-v="held" data-cbsid="BKS017-B10">Yes, I hold it</button>' +
+        '<button type="button" class="bd-btn" data-act="taxinvoice" data-v="none" data-cbsid="BKS017-B11">No: book it without the GST credit</button></span>';
+    }
+    if (item.party && item.party.status === 'new') {
+      return '<span class="bd-question"><span class="bd-q">Who is this?</span><button type="button" class="bd-btn" data-act="newparty" data-key="' + key + '" data-cbsid="BKS017-B07">New ' + esc(item.party.kind) + ': ' + esc(item.party.name) + '</button>' + more + '</span>';
+    }
+    return '<span class="bd-question">' + more + '</span>';
+  }
+  /** the right-hand column of a line, under its chip: the entry it matched, the entry it will make, or the question it asks */
+  function detailHtml(item, state, matched) {
+    if (state === 'in') return '<span class="bd-detail">' + esc(matched || '') + '</span>';
+    if (state === 'ready' || state === 'posted') return '<span class="bd-detail">' + esc(entryWords(item)) + '</span>';
+    return state === 'need' ? questionHtml(item) : '';
+  }
+  /** one money cell: the carried amount as digits (the currency is in the column heading), or an empty cell; which is 'out' (spent) or 'in' (received) */
+  function moneyCell(minor, which) {
+    return '<span class="bd-m bd-' + which + ' bd-cell' + which + '">' + (minor ? esc(amountText(minor)) : '') + '</span>';
+  }
+  function lineRow(item, results, matched) {
     var line = item.line,
       result = results[item.key],
       state = standing(item, result),
       chip = CHIPS[state],
       reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
     var inner =
-      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' + whoCell(item) + '<span class="bd-acc">' + esc(accountWords(item, state)) + '</span>' +
+      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' + whoCell(item) +
       moneyCell(line.debit_minor, 'out') + moneyCell(line.credit_minor, 'in') +
-      '<span class="bd-status">' + tag(chip[0], chip[1]) + reason + '</span><span class="bd-chev" aria-hidden="true">' + (opensPanel ? '›' : '') + '</span>';
-    var rowClass = 'bd-row bd-s-' + (state === 'need' ? 'needs_you' : state);
-    if (!opensPanel) return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
-    return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
+      '<span class="bd-status">' + tag(chip[0], chip[1]) + reason + detailHtml(item, state, matched) + '</span>';
+    return '<li><div class="bd-row bd-s-' + (state === 'need' ? 'needs_you' : state) + '">' + inner + '</div></li>';
   }
-  function paintLines(model) {
+  function paintLines(model, names) {
     var rows = model.items
       .map(function (item) {
-        var state = standing(item, model.results[item.key]);
-        return lineRow(item, model.results, state === 'need');
+        return lineRow(item, model.results, names[item.i]);
       })
       .join('');
     el('bd_lines').innerHTML =
       report.successCard(added) +
-      '<div class="bd-colh" role="presentation"><span>Date</span><span>Payee and what the bank says</span><span>Account</span><span class="bd-m">Spent (AUD)</span><span class="bd-m">Received (AUD)</span><span>Status</span><span></span></div>' +
+      '<div class="bd-colh" role="presentation"><span>Date</span><span>Payee and what the bank says</span><span class="bd-m">Spent (AUD)</span><span class="bd-m">Received (AUD)</span><span>In your books?</span></div>' +
       '<ul class="bd-list">' + rows + '</ul>';
   }
   function paintEmpty() {
@@ -279,15 +319,13 @@
     }
     var counts = countsOf(model),
       readyCount = controller.readyCount();
-    var held = counts.in + counts.posted;
-    var parts = ['<b>' + counts.ready + '</b> ready'];
+    var parts = ['<b>' + (counts.in + counts.posted) + '</b> already in your books', '<b>' + counts.ready + '</b> ready to add'];
     if (counts.wait) parts.push('<b>' + counts.wait + '</b> ' + (counts.wait === 1 ? 'waits' : 'wait') + ' for your GST answer');
     parts.push('<b>' + counts.need + '</b> ' + (counts.need === 1 ? 'needs' : 'need') + ' you');
-    parts.push(held + ' in the books');
-    count.innerHTML = parts.join(' · ');
+    count.innerHTML = parts.join(' \u00b7 ');
     addButton.disabled = !readyCount;
     addButton.setAttribute('data-ready', String(readyCount));
-    addButton.textContent = readyCount ? 'Add ' + plural(readyCount, 'line', 'lines') + ' to the demo books' : 'Nothing ready to add';
+    addButton.textContent = readyCount ? 'Add ' + plural(readyCount, 'line', 'lines') + ' to the books' : 'Nothing ready to add';
   }
   function paintView() {
     ['lines', 'books', 'brs'].forEach(function (name) {
@@ -301,13 +339,13 @@
     el('bd_msg').textContent = model.parsed && model.refusal ? plainRefusal(model.refusal) : msg;
     if (!model.parsed) return paintEmpty();
     loadRefusal = null;
-    el('bd_sub').textContent = (model.name || 'Statement') + ' · ' + plural(model.items.length, 'line', 'lines');
+    el('bd_sub').textContent = 'Statement to ' + dateWords(lastDate(model)) + ' \u00b7 all amounts in ' + CURRENCY + (gstFact ? ' \u00b7 tax counted on an accrual basis (sample books)' : '');
     figures(model);
     paintCheck();
     gstStrip(model);
-    paintLines(model);
+    paintLines(model, matchNames(model));
     report.paintBooks(model, posted, books.opening_minor);
-    report.paintBrs(model);
+    report.paintBrs(model, ledgerOutside(model));
     paintBar(model);
     paintView();
   }
@@ -317,7 +355,8 @@
     slot.hidden = !warnings.length;
     slot.innerHTML = warnings.map(function (words) { return '<p>' + esc(typeof words === 'string' ? words : words.why || words.words || 'Check this file.') + '</p>'; }).join('');
   }
-  var warnings = [],
+  var gstFact = false /* the sample books' own basis is a fact of the sample, not a question */,
+    warnings = [],
     msg = '',
     msgOk = false,
     gstBasis = null;
@@ -359,7 +398,9 @@
   function startAgain() {
     resetBooks();
     makeController();
-    gstBasis = null;
+    gstFact = true;
+    gstBasis = 'accrual';
+    controller.answer('gst_basis', gstBasis);
     loadRefusal = null;
     view = 'lines';
     setMessage('');
@@ -368,18 +409,18 @@
   function askToPost() {
     var text = controller.confirmText();
     if (!text) return void (setMessage('The engine sent no figures for this press, so nothing was added.'), paint());
-    var title = 'Add ' + plural(controller.readyCount(), 'line', 'lines') + ' to the demo books?';
+    var title = 'Add ' + plural(controller.readyCount(), 'entry', 'entries') + ' to the sample books?';
     labKit.confirm(title, askPanel.confirmBody(text), function () {
       controller.postReady().then(function (said) {
         var model = controller.view(),
           counts = countsOf(model);
         var recon = model.projection && model.projection.brs;
         added = { count: said.added, balance: recon ? amountWithCurrency(recon.closing_books_before) : '', open: counts.need + counts.wait };
-        setMessage(said.failed ? plural(said.failed, 'line was', 'lines were') + ' not added.' : plural(said.added, 'line', 'lines') + ' added to the demo books.', !said.failed);
-        view = 'lines';
+        setMessage(said.failed ? plural(said.failed, 'line was', 'lines were') + ' not added.' : plural(said.added, 'entry', 'entries') + ' added to the sample books.', !said.failed);
+        view = counts.need + counts.wait ? 'lines' : 'brs';
         paint();
       });
-    }, { okLabel: 'Add to the demo books', cancelLabel: 'Not now', className: 'bd-wide', onClose: function () { return el('bd_add'); } });
+    }, { okLabel: 'Add ' + plural(controller.readyCount(), 'entry', 'entries'), cancelLabel: 'Not now', className: 'bd-wide', onClose: function () { return el('bd_add'); } });
   }
   function readFile(file) {
     if (!file) return;
@@ -393,6 +434,7 @@
     file.text().then(function (text) {
       resetBooks();
       makeController();
+      gstFact = false;
       gstBasis = null;
       loadStatement(text, file.name);
     });
@@ -427,6 +469,16 @@
       return true;
     },
     print: function () { root.print(); return true; },
+    reset: function () { startAgain(); return true; },
+    taxinvoice: function (target) {
+      controller.answer('tax_invoice', target.getAttribute('data-v'));
+      added = null;
+      setMessage('');
+    },
+    newparty: function (target, key) {
+      var said = controller.resolveLine(key);
+      setMessage(said.ok ? '' : said.why);
+    },
     retry: function () {
       loadRefusal = null;
       paintEmpty();
@@ -466,7 +518,7 @@
   /** the one product header: CBFrame bar, signed out ("Sign in" goes to Home); nothing stored is read, nothing is fetched, no font is linked (the page's CSP) */
   function mountHeader() {
     if (!root.CBFrame || !el('shell')) return;
-    root.CBFrame.mount({ app: 'bank-demo', bar: true, signin: false, anonymous: true, manifest: { entries: [] }, fonts: false, host: el('shell'), title: { icon: '⇄', name: 'Bank to books' } });
+    root.CBFrame.mount({ app: 'bank-demo', bar: true, signin: false, anonymous: true, manifest: { entries: [] }, fonts: false, host: el('shell'), title: { icon: '\u21c4', name: 'Harbour Plumbing Pty Ltd \u00b7 sample books' } });
   }
   function start() {
     mountHeader();
