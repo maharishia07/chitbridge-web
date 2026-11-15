@@ -88,10 +88,11 @@
   function heldSplit(call) {
     return callEndpoint(call, 'grantsList').then(
       function (answer) {
-        var out = { live: {}, ended: {} };
+        var out = { live: {}, ended: {}, seats: {} };
         ((answer && answer.received) || []).forEach(function (grant) {
           var id = String(grant.grantor_entity);
           var isLive = grant.state === 'live' && !grant.revoked_at && !grant.ended_at;
+          if (isLive) { out.seats[id] = out.seats[id] || {}; out.seats[id][grant.preset === 'adviser' ? 'adviser' : 'auditor'] = grant; } /* every live grant, by the seat it gives */
           if (isLive && (!out.live[id] || out.live[id].preset !== 'adviser')) out.live[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
           else if (!isLive && grant.state !== 'edge_off') out.ended[id] = grant; /* ended or ran out: listed, quiet, no actions */
         });
