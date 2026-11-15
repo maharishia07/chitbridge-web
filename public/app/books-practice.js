@@ -71,6 +71,7 @@
       ['good', 'Doing well', b.health.good, { status: 'good' }],
       ['queries', 'Clients with open queries', b.queries.clients, { queries: 'open' }, b.queries.on_client + ' ' + tx('waiting on the client') + ' · ' + b.queries.on_us + ' ' + tx('waiting on us')],
       ['bas', 'Clients with a return due in 30 days', b.bas_due_30, { bas: 'soon' }],
+      ['bank', 'Clients with bank not reconciled', b.bank.unexplained, { bank: 'unexplained' }, b.bank.no_statement + ' ' + tx('with no statement signed')],
       ['months', 'Clients with months not locked', b.months_unlocked, { unlocked: 'yes' }],
       ['checked', 'Clients with entries to check', b.checked.clients_behind, { checked: 'behind' }, b.checked.n + ' ' + tx('of') + ' ' + b.checked.of + ' ' + tx('entries checked')],
       ['ending', 'Clients whose access ends in 30 days', b.grants_ending_30, { ending: 'soon' }]
@@ -87,7 +88,6 @@
           '<b>' + esc(t[2]) + '</b><span>' + esc(tx(t[1])) + '</span>' + (t[4] ? '<i>' + esc(t[4]) + '</i>' : '') + '</button>'
         );
       }).join('') +
-      '<div class="bp-tile held" data-testid="practice-tile-bank" title="' + esc(tx('The bank figure waits for the finance owner to agree it may be read across clients.')) + '"><b>—</b><span>' + esc(tx('Bank not reconciled')) + '</span><i>' + esc(tx('Not shown yet')) + '</i></div>' +
       '</div>'
     );
   }
@@ -121,8 +121,10 @@
       line('Sales last month against the 3-month average', esc(trend(r))) +
       line('Gross margin this quarter', h.gross_margin_pct == null ? '—' : esc(h.gross_margin_pct) + '%') +
       line('Cash in bank', esc(money(h.cash_minor, r.currency))) +
-      line('Cash against the next 30 days of bills', esc(held)) +
-      line('Receivables over 60 days', esc(held)) +
+      line('Bills due in the next 30 days', h.bills_due_30_minor == null ? esc(held) : esc(money(h.bills_due_30_minor, r.currency))) +
+      line('Cash against those bills', h.bills_due_30_minor == null ? esc(held) : h.cash_days == null ? esc(tx('Covers them')) : esc(tx('Runs out in')) + ' ' + esc(h.cash_days) + ' ' + esc(tx('days'))) +
+      line('Receivables over 60 days late', h.receivables_over60_minor == null ? esc(held) : esc(money(h.receivables_over60_minor, r.currency)) + (h.receivables_over60_share_pct == null ? '' : ' (' + esc(h.receivables_over60_share_pct) + '%)')) +
+      line('Bank', r.bank.state === 'none' ? esc(tx('No statement')) : r.bank.state === 'reconciled' ? esc(tx('Reconciled')) + ' ' + esc(tx('to')) + ' ' + esc(day(r.bank.reconciled_to)) : esc(money(r.bank.unexplained_minor, r.currency)) + ' ' + esc(tx('unexplained'))) +
       line('Profit this quarter', esc(money(h.profit_quarter_minor, r.currency))) +
       line('Months not locked', esc(r.months_unlocked)) +
       line('Access ends', esc(day(r.grant.expires_at))) +
@@ -130,18 +132,25 @@
       '</div>'
     );
   }
+  /** the bank as the client's signed statements carry it: reconciled to a date, or the amount left unexplained, or no statement signed */
+  function bankCell(r) {
+    var b = r.bank;
+    if (b.state === 'none') return '<span class="sub">' + esc(tx('No statement')) + '</span>';
+    var to = esc(tx('to')) + ' ' + esc(day(b.reconciled_to));
+    return b.state === 'unexplained' ? '<span data-testid="practice-bank-' + esc(r.entity_id) + '">' + esc(money(b.unexplained_minor, r.currency)) + ' ' + esc(tx('unexplained')) + '</span><br><span class="sub">' + to + '</span>' : esc(tx('Reconciled')) + ' <span class="sub">' + to + '</span>';
+  }
   function columns() {
     var num = function (key, label, w, cell, value, extra) {
       return Object.assign({ key: key, label: tx(label), prio: 2, w: w, sort: key, html: true, cell: cell, value: value }, extra || {});
     };
     return [
-      { key: 'name', label: tx('Client'), prio: 1, w: 150, keep: true, stretch: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
+      { key: 'name', label: tx('Client'), prio: 1, w: 150, minw: 110, keep: true, stretch: true, sort: 'name', cell: function (r) { return r.name || r.entity_id.slice(0, 8); }, value: function (r) { return r.name || ''; } },
       num('status', 'Status', 180, statusCell, function (r) { return r.health.words; }, { prio: 1, keep: true, hfilter: 'status', sort: 'urgency' }),
-      num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, { hfilter: 'role' }),
-      num('bank', 'Bank', 70, function () { return '<span class="sub" title="' + esc(tx('Not shown yet')) + '">—</span>'; }, function () { return ''; }, { prio: 3 }),
+      num('role', 'Role', 90, function (r) { return esc(tx(ROLE[r.role] || r.role)); }, function (r) { return r.role; }, {}),
+      num('bank', 'Bank', 150, bankCell, function (r) { return r.bank.state; }, { hfilter: 'bank' }),
       num('queries', 'Queries', 120, queriesCell, function (r) { return r.queries.open; }, { hfilter: 'queries' }),
       num('bas', 'Return due', 120, basCell, function (r) { return r.bas.due_date || ''; }, { hfilter: 'bas' }),
-      num('checked', 'Checked', 100, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, { hfilter: 'checked' }),
+      num('checked', 'Checked', 100, function (r) { return esc(r.checked.n) + '/' + esc(r.checked.of); }, function (r) { return r.checked.n + '/' + r.checked.of; }, {}),
       num('unlocked', 'Unlocked', 90, function (r) { return esc(r.months_unlocked); }, function (r) { return r.months_unlocked; }, { hfilter: 'unlocked', prio: 3 }),
       num('sales', 'Sales trend', 90, function (r) { return esc(trend(r)); }, function (r) { return trend(r); }),
       num('margin', 'Margin', 80, function (r) { return r.health.gross_margin_pct == null ? '—' : esc(r.health.gross_margin_pct) + '%'; }, function (r) { return r.health.gross_margin_pct == null ? '' : r.health.gross_margin_pct; }, { prio: 3 }),
@@ -149,7 +158,7 @@
       num('profit', 'Profit (qtr)', 110, function (r) { return esc(money(r.health.profit_quarter_minor, r.currency)); }, function (r) { return r.health.profit_quarter_minor == null ? '' : r.health.profit_quarter_minor; }, { prio: 3 }),
       num('ending', 'Ends', 100, function (r) { return esc(day(r.grant.expires_at)); }, function (r) { return r.grant.expires_at || ''; }, { hfilter: 'ending', prio: 3 }),
       num('look', 'Last look', 100, function (r) { return esc(day(r.last_look)); }, function (r) { return r.last_look || ''; }),
-      { key: 'books', label: tx('Books'), prio: 1, w: 110, keep: true, html: true, cell: function (r) { return '<button type="button" class="act quiet" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(tx('Open books')) + '</button>'; }, value: function () { return 'open'; } }
+      { key: 'books', label: tx('Books'), prio: 1, w: 110, keep: true, html: true, cell: function (r) { return '<button type="button" class="act quiet" data-cbsid="NET001-B04" data-bp-open="' + esc(r.entity_id) + '" data-testid="practice-open-' + esc(r.entity_id) + '">' + esc(tx('Open books')) + '</button>'; }, value: function () { return 'open'; } }
     ];
   }
   function sorts() {
@@ -157,6 +166,7 @@
     return [
       by('urgency', function (r) { return r._n; }, 'Most to action first'),
       by('name', function (r) { return r.name || ''; }, 'Client'),
+      by('bank', function (r) { return r.bank.unexplained_minor || 0; }, 'Bank unexplained'),
       by('queries', function (r) { return r.queries.open; }, 'Queries open'),
       by('bas', function (r) { return r.bas.due_date || '9999'; }, 'Return due'),
       by('checked', function (r) { return r.checked.of - r.checked.n; }, 'Checked'),
@@ -174,6 +184,7 @@
     return [
       f('status', 'Status', [['good', 'Doing well'], ['watch', 'Watch'], ['help', 'Needs help'], ['none', 'Not enough books yet']], function (r, v) { return r.health.status === v; }),
       f('role', 'Role', [['adviser', 'Adviser'], ['auditor', 'Auditor']], function (r, v) { return r.role === v; }),
+      f('bank', 'Bank', [['unexplained', 'Not reconciled'], ['reconciled', 'Reconciled'], ['none', 'No statement']], function (r, v) { return r.bank.state === v; }),
       f('queries', 'Queries', [['open', 'Open'], ['us', 'Waiting on us'], ['client', 'Waiting on the client'], ['none', 'None']], function (r, v) { return v === 'open' ? r.queries.open > 0 : v === 'us' ? r.queries.on_us > 0 : v === 'client' ? r.queries.on_client > 0 : r.queries.open === 0; }),
       f('bas', 'Return due', [['soon', 'Within 30 days'], ['later', 'Later'], ['none', 'No date']], function (r, v) { return v === 'soon' ? r.bas.due_in_days != null && r.bas.due_in_days <= 30 : v === 'later' ? r.bas.due_in_days != null && r.bas.due_in_days > 30 : r.bas.due_in_days == null; }),
       f('checked', 'Checked', [['behind', 'Entries not all checked'], ['done', 'All checked']], function (r, v) { return v === 'behind' ? r.checked.of > r.checked.n : r.checked.of <= r.checked.n; }),
@@ -203,7 +214,7 @@
     var rows = P.data.clients.map(function (r, n) { r._n = n; return r; });
     P.list = root.CBList.mount(host, {
       key: 'practice-clients', t: tx, rows: function () { return rows; }, id: function (r) { return r.entity_id; }, rowTid: function (r) { return 'practice-row-' + r.entity_id; },
-      columns: columns(), defaultCols: ['name', 'status', 'role', 'bank', 'queries', 'bas', 'checked', 'sales', 'profit', 'look', 'books'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
+      columns: columns(), defaultCols: ['name', 'status', 'role', 'bank', 'queries', 'bas', 'checked', 'sales', 'look', 'books'], next: detailHTML, sorts: sorts(), filters: filters(), preset: P.filter ? { filt: P.filter } : { filt: {} },
       search: function (r) { return [r.name, r.country, r.health.words, r.health.reasons.join(' ')].join(' '); },
       empty: { title: tx('No clients match') }
     });
@@ -239,7 +250,7 @@
     if (door && door.parentNode) door.parentNode.removeChild(door);
     section.innerHTML =
       '<h2>' + esc(tx('Your practice')) + ' · ' + esc(P.data.clients.length) + ' ' + esc(tx('clients')) + '</h2>' + ruleHTML(P.data.rule) + bandHTML(P.data) +
-      (P.filter ? '<button type="button" class="act quiet bp-clear" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +
+      (P.filter ? '<button type="button" class="act quiet bp-clear" data-cbsid="CMP014-B01" data-bp-clear="1" data-testid="practice-clear">' + esc(tx('Show all clients')) + '</button>' : '') +
       (P.data.truncated ? '<p class="sub">' + esc(tx('Only the first clients are shown.')) + '</p>' : '') +
       '<div id="bp_list" data-testid="practice-list"></div>';
     [].forEach.call(section.querySelectorAll('[data-bp-filter]'), function (b) {

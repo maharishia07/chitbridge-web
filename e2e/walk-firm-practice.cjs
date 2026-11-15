@@ -67,12 +67,18 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       const tag = firm + ' ' + vp.tag;
       ok(tag + ' the Practice band and the rule are drawn', (await page.locator('[data-testid="practice-band"]').count()) === 1 && (await page.locator('[data-testid="practice-rule"]').count()) === 1);
       const tiles = await page.locator('[data-testid^="practice-tile-"]').count();
-      ok(tag + ' ten tiles: Needs help, Watch, Doing well, queries, return due, months, checked, access ending, bank (held)', tiles === 9, tiles);
+      ok(tag + ' nine tiles: Needs help, Watch, Doing well, queries, return due, bank, months, checked, access ending', tiles === 9, tiles);
       const shown = await rowCount(page);
       ok(tag + ' the client list shows rows (up to 50 at a time of ' + truth.clients.length + ')', shown > 0 && shown <= Math.min(50, truth.clients.length) + 1, shown);
       const cards = await page.evaluate(() => ['till', 'marketing', 'storefront'].map((id) => document.querySelectorAll('[data-testid="shell-card-' + id + '"]').length));
       ok(tag + ' the shop cards (Till, Marketing, Online shop) are hidden on a firm Home', cards.every((n) => n === 0), JSON.stringify(cards));
       ok(tag + ' no horizontal scroll', await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), await page.evaluate(() => document.documentElement.scrollWidth + ' > ' + window.innerWidth));
+      /* no heading wraps letter by letter: every column heading stays within two lines and no word of it is cut */
+      const heads = await page.evaluate(() => [...document.querySelectorAll('[data-testid="practice-list"] .cbl-hdr > *, [data-testid="practice-list"] .cbl-hdr [role="columnheader"]')].map((h) => ({ t: h.innerText.replace(/\s+/g, ' ').trim(), h: Math.round(h.getBoundingClientRect().height) })).filter((x) => x.t));
+      if (vp.tag === '1366') {
+        console.log(tag + ' headings: ' + JSON.stringify(heads));
+        ok(tag + ' no heading wraps letter by letter (each at most two lines tall)', heads.length > 0 && heads.every((x) => x.h <= 46), JSON.stringify(heads.filter((x) => x.h > 46)));
+      }
       const inline = await page.evaluate(() => { const r = document.querySelector('[data-testid^="practice-row-"]'); return r ? r.innerText.replace(/\s+/g, ' ').slice(0, 400) : ''; });
       console.log(tag + ' first row: ' + inline);
       ok(tag + ' status and Open books are in the first row (never dropped)', /Needs help|Watch|Doing well|Not enough/.test(inline) && /Open books/.test(inline), inline);
@@ -83,7 +89,7 @@ const rowCount = (page) => page.evaluate(() => document.querySelectorAll('[data-
       ok(tag + ' the practice section replaced the Your clients card', (await page.locator('[data-testid="home-your-clients"]').count()) === 0);
       /* a band tile is a filter: its count equals the rows it leaves (when the rows fit one page) */
       if (vp.tag === '1366') {
-        for (const key of ['help', 'queries', 'months', 'ending']) {
+        for (const key of ['help', 'queries', 'bank', 'months', 'ending']) {
           const tile = page.locator('[data-testid="practice-tile-' + key + '"]');
           if (!(await tile.count())) continue;
           const asked = Number((await tile.locator('b').innerText()).trim());
