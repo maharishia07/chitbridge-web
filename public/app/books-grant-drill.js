@@ -83,7 +83,7 @@
   }
   function paintLedger(ctx, state) {
     var answer = state.answer, currency = answer.currency, totals = answer.totals || {};
-    var head = '<h2 data-testid="bd-title">' + esc(answer.account.code + ' ' + answer.account.name) + '</h2><p class="sub">' + esc(answer.from + ' → ' + answer.to) + '</p>';
+    var head = '<h2 data-testid="bd-title">' + esc(answer.account.code + ' ' + answer.account.name) + '</h2><p class="sub">' + esc(root.shopDay(answer.from) + ' → ' + root.shopDay(answer.to)) + '</p>';
     var facts = '<div class="nw-acts" data-testid="bd-facts">' +
       fact('Opening', root.CBBooksActing.figure(answer.opening_minor, currency), 'opening') + (totals.dr_minor != null ? fact('Total debit', root.CBBooksActing.figure(totals.dr_minor, currency), 'dr') + fact('Total credit', root.CBBooksActing.figure(totals.cr_minor, currency), 'cr') : '') + fact('Closing', root.CBBooksActing.figure(answer.closing_minor, currency), 'closing') + '</div>';
     var more = state.next ? '<div class="nw-acts"><button data-cbsid="NET005-B05" type="button" class="act quiet" id="bd_more" data-testid="bd-more">' + esc(words('Show more')) + '</button><span class="sub">' + esc(state.lines.length + ' ' + words('of') + ' ' + answer.total) + '</span></div>' : '';
@@ -103,7 +103,7 @@
       rowTid: function (row) { return 'bd-line-' + row._n; },
       columns: cols.map(function (c, i) {
         return {
-          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, w: c[2] ? 120 : c[0] === 'what' ? 200 : 110, html: c[2] === 'mark',
+          key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, keep: c[2] === 'mark', w: c[2] === 'mark' ? 190 : c[2] ? 120 : c[0] === 'what' ? 200 : 110, html: c[2] === 'mark',
           cell: function (row) { return c[2] === 'mark' ? ctx.mk.chip(row.entry_id) : c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : c[0] === 'date' && row.date ? root.shopDay(row.date) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };

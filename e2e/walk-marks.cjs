@@ -24,7 +24,7 @@ const SHOTS = process.env.MARKS_SHOTS || path.join(__dirname, 'shots');
 
 W.run('marks', async (w) => {
   const { page, ctx, base } = w;
-  const S = { both: false, daybookQueries: [], calls: [], marks: {}, msgs: [], sets: [], replies: [] };
+  const S = { qseq: 0, bellFor: 'owner', both: false, daybookQueries: [], calls: [], marks: {}, msgs: [], sets: [], replies: [] };
   const J = (r, status, body) => C.json(r, status, body);
   const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };
   const VOC = [{ kind: 'checked', label: 'Checked', class: 'clear', note: 'none' }, { kind: 'query', label: 'Query', class: 'open', note: 'required' }, { kind: 'on_hold', label: 'On hold', class: 'hold', note: 'optional' }];
@@ -54,16 +54,23 @@ W.run('marks', async (w) => {
       const b = JSON.parse(q.postData() || '{}'); S.sets.push({ b, h });
       if (!auditor(h)) return J(r, 403, { code: 'MARK_NOT_ALLOWED', message: NOT_AUDITOR });
       if (b.kind === 'query' && !b.note) return J(r, 422, { code: 'MARK_WORDS_REQUIRED', message: 'Write the question first. The owner will read it.' });
+      if (b.kind === 'query') S.qseq += 1; /* the server's thread starts at the latest Query: an older Query's replies stay behind */
       S.marks[b.subject_id] = { mark_id: String(1200 + S.sets.length), adopter: 'acc.audit', subject_id: b.subject_id, thread_id: THREAD, kind: b.kind, class: KIND[b.kind][0], label: KIND[b.kind][1], note: b.note || null, at: DAY(0), by_name: 'A. Auditor', by_firm: 'Harbour Audit', open_since: DAY(-3), altered: false, altered_by: null, recheck_needed: false };
       return J(r, 201, { mark: mark(b.subject_id, h), vocabulary: VOC });
     }
     if (/^\/api\/marks\/[^/]+\/messages$/.test(p)) {
       const id = Object.keys(S.marks).filter((k) => S.marks[k].thread_id === p.split('/')[3])[0], mk = id && mark(id, h);
-      if (m === 'GET') return J(r, 200, { thread_id: THREAD, adopter: 'acc.audit', subject_id: id, subject_label: 'JV-0002', mark: mk, history: [], messages: S.msgs, actions: acts(h) });
+      if (m === 'GET') return J(r, 200, { thread_id: THREAD, adopter: 'acc.audit', subject_id: id, subject_label: 'JV-0002', mark: mk, history: [], messages: S.msgs.filter((x) => x.qseq === S.qseq), actions: acts(h) });
       const b = JSON.parse(q.postData() || '{}'); S.replies.push({ b, h });
       if (auditor(h)) return J(r, 403, { code: 'MARK_REPLY_NOT_ALLOWED', message: 'Only the owner and the adviser answer a question.' });
-      const msg = { message_id: 'm' + S.msgs.length, sender_display_name: 'Fixture Owner', message_text: b.message_text, msg_type: 'info', created_at: DAY(0), mine: true };
+      const msg = { message_id: 'm' + S.msgs.length, sender_display_name: 'Fixture Owner', message_text: b.message_text, msg_type: 'info', created_at: DAY(0), mine: true, qseq: S.qseq };
       S.msgs.push(msg); return J(r, 201, { message: msg, mark: mk });
+    }
+    if (p === '/api/notifications' && m === 'GET') {
+      /* the bell as the api gives it (lib/mark-notices): the owner hears each Query, the auditor each reply; every row names the entry */
+      const entryOf = (id) => { const n = E.indexOf(id); return { entry_no: 'JV-000' + (n + 1), posting_date: '2026-11-0' + (n + 3), currency: 'INR', total_minor: '88000' }; };
+      const rows = S.bellFor === 'owner' ? S.sets.filter((x) => auditor(x.h) && x.b.kind === 'query').map((x, i) => ({ log_id: 'mk:' + i, action: 'mark_query', action_by_display_name: 'Fixture Auditor', detail: x.b.note, created_at: DAY(0), mark_entry: entryOf(x.b.subject_id) })) : S.replies.map((x, i) => ({ log_id: 'mr:' + i, action: 'mark_reply', action_by_display_name: 'Fixture Owner', detail: x.b.message_text, created_at: DAY(0), mark_entry: entryOf(E[1]) }));
+      return J(r, 200, u.searchParams.get('count') ? { count: rows.length, total: rows.length, seen_at: null } : { notifications: rows, count: rows.length, total: rows.length, page: 1, limit: 30, seen_at: null });
     }
     if (p === '/api/books/daybook') {
       if (h['x-books-for']) S.daybookQueries.push(new URL(q.url()).search);
@@ -89,11 +96,23 @@ W.run('marks', async (w) => {
 
   /* ═══ the auditor ═══ */
   await page.setViewportSize(WIDE);
+  await w.step('L1', 'the auditor lands on the Day book: Open books shows it with no extra press', async () => {
+    await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
+    await page.click(T('nw-books-' + MEMBER)); await page.waitForSelector(T('bv-band'), { timeout: 10000 }); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    const on = await page.getAttribute(T('bv-tab-daybook'), 'aria-pressed'), tb = await page.getAttribute(T('bv-tab-tb'), 'aria-pressed');
+    return { ok: on === 'true' && tb === 'false', saw: 'Day book pressed ' + on + ' · trial balance pressed ' + tb };
+  });
   await openDaybook();
   await w.step('A1', 'the auditor · Day book: a chip on each entry and "Checked 0 of 3 entries this period"', async () => {
     const chips = await page.locator('[data-mark] button[data-mk="check"]').count(), bar = await txt(T('mk-count'));
     await shot('01-auditor-daybook-unmarked');
     return { ok: chips === 3 && /Checked 0 of 3/.test(bar), saw: chips + ' check chips · ' + bar };
+  });
+  await w.step('N390', '390×844 · an unmarked entry says what it is in words (Not checked, Query), never a bare symbol, and the page does not scroll', async () => {
+    await page.setViewportSize(NARROW); await page.waitForTimeout(400);
+    const words = await page.evaluate(() => Array.prototype.map.call(document.querySelectorAll('[data-mark]'), (h) => Array.prototype.map.call(h.querySelectorAll('button'), (b) => { const r = b.getBoundingClientRect(); return r.width > 0 ? b.innerText.replace(/s+/g, ' ').trim() : '-'; }).join('|')));
+    const a = await noScroll(); await shot('00b-phone-labels'); await page.setViewportSize(WIDE); await page.waitForTimeout(300);
+    return { ok: words.length === 3 && words.every((x) => /Not checked/.test(x) && /Query/.test(x)) && a.y && a.x, saw: words.join(' // ') + ' · scroll ' + a.y + '/' + a.x };
   });
   await w.step('A0', 'the auditor · the Day book opens non-empty on its own: no day typed, the period shown, the date in words, the kind in words', async () => {
     const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await txt(T('bv-period')), row = await txt(T('bv-row-0'));
@@ -114,6 +133,10 @@ W.run('marks', async (w) => {
     await page.click(T('mk-set-open'), { force: true }); await page.waitForTimeout(300);
     const out = await txt(T('mk-out')), hint = await txt(T('mk-sheet'));
     return { ok: /Write your question first/.test(out) && sets().length === before && /The owner sees this/.test(hint), saw: out + ' · owner-sees-this hint ' + /The owner sees this/.test(hint) };
+  });
+  await w.step('T1', 'the Query sheet is titled by the entry (number · day · amount), never the record id', async () => {
+    const title = await txt(T('mk-title'));
+    return { ok: /^JV-0002 · 4 Nov 2026 · ₹[0-9,]+.[0-9]{2}$/.test(title) && !title.includes(E[1]), saw: title };
   });
   await w.step('A4', 'the auditor · type the question, Ask: ONE write (query + note), the sheet closes, the row says Query', async () => {
     await page.fill(T('mk-note'), 'Why was rent posted to 4100?'); await shot('03-auditor-query-sheet');
@@ -138,6 +161,13 @@ W.run('marks', async (w) => {
     await shot('06-owner-daybook-chips');
     return { ok: /Checked/.test(checked) && /Query/.test(query) && ghosts === 0, saw: checked + ' · ' + query + ' · check chips ' + ghosts };
   });
+  await w.step('B1', 'the owner bell rings for the auditor Query and names the entry (number · day · amount)', async () => {
+    S.bellFor = 'owner'; await page.reload(); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
+    const dot = await txt(T('bell-dot')); await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
+    const row = await txt(T('bell-row')); await shot('06b-owner-bell');
+    await page.keyboard.press('Escape');
+    return { ok: dot === '1' && /asked a question about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
+  });
   await w.step('O2', 'the owner · the Query chip opens the sheet: the question, no set buttons; he replies in the thread (the one composer) and it posts ONCE', async () => {
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector(T('msg-body'), { timeout: 8000 });
     const q = await txt(T('mk-question')), setBtns = await page.locator(T('mk-set-clear')).count(), composers = await page.locator('dialog.mk-sheet [data-rt-act="text"]').count();
@@ -148,6 +178,12 @@ W.run('marks', async (w) => {
   await page.keyboard.press('Escape');
 
   /* ═══ the auditor clears it ═══ */
+  await w.step('B2', 'the auditor bell rings for the owner reply and names the entry', async () => {
+    S.bellFor = 'auditor'; await page.goto(base + '/network.html'); await page.waitForSelector('[data-testid="bell-dot"]', { timeout: 15000 });
+    const dot = await txt(T('bell-dot')); await page.click(T('bell-btn')); await page.waitForSelector(T('bell-row'), { timeout: 8000 });
+    const row = await txt(T('bell-row')); await shot('08b-auditor-bell'); await page.keyboard.press('Escape');
+    return { ok: dot === '1' && /replied about/.test(row) && /JV-0002 · 4 Nov 2026 · .*880/.test(row), saw: 'dot ' + dot + ' · ' + row };
+  });
   await w.step('A6', 'the auditor · opens the Query: the owner\'s reply is in the thread; Mark checked clears it (one write), the bar says 2 of 3, no open queries', async () => {
     await openDaybook();
     await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForSelector('[data-testid="rt-row"]', { timeout: 8000 });
@@ -156,6 +192,14 @@ W.run('marks', async (w) => {
     const bar = await txt(T('mk-count')), f = await txt(T('mk-filter')), c = await txt(chip(1));
     await shot('09-auditor-cleared');
     return { ok: composer === 1 && !/View only/.test(thread) && /lease/.test(thread) && /Checked/.test(c) && /2 of 3/.test(bar) && /All queries · 0/.test(f) && sets().slice(-1)[0].b.kind === 'checked', saw: thread.slice(0, 80) + ' · ' + c + ' · ' + bar + ' · ' + f };
+  });
+  await w.step('Q2', 'a NEW Query on the same entry: the thread opens clean, the old reply stays behind', async () => {
+    await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 });
+    await page.fill(T('mk-note'), 'And the GST on it?'); await page.click(T('mk-set-open')); await page.waitForSelector(T('mk-sheet'), { state: 'detached', timeout: 8000 }); await page.waitForTimeout(400);
+    await page.click(chip(1) + ' button[data-mk="open"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.waitForTimeout(600);
+    const quote = await txt(T('mk-question')), thread = await txt(T('mk-thread')), title = await txt(T('mk-title')); await shot('08c-new-query-clean-thread');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+    return { ok: /GST on it/.test(quote) && !/lease/.test(thread) && /^JV-0002 · /.test(title), saw: quote + ' · thread "' + thread.slice(0, 60) + '" · ' + title };
   });
   await w.step('A7', 'the auditor · On hold takes an optional reason; a changed entry reads "Changed after review"', async () => {
     await page.click(chip(2) + ' button[data-mk="ask"]'); await page.waitForSelector(T('mk-sheet'), { timeout: 5000 }); await page.click(T('mk-set-hold')); await page.waitForSelector(T('mk-sheet'), { state: 'detached', timeout: 8000 }); await page.waitForTimeout(300);
@@ -183,10 +227,11 @@ W.run('marks', async (w) => {
     const back = await page.evaluate((id) => !!document.activeElement.closest('[data-mark*="' + id + '"]'), E[1]);
     return { ok: inSheet && back, saw: 'focus in the sheet ' + inSheet + ' · back on the chip ' + back };
   });
-  await w.step('M1', 'Closed months: month names, the sales as the server sent them, and no month that has not begun', async () => {
+  await w.step('M1', 'Months: the tab says Months, each month shows its state, the sales as the server sent them, and no month that has not begun', async () => {
     await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /November 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
     const list = await txt(T('bv-list')); await shot('13-closed-months');
-    return { ok: list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
+    const tab = await txt(T('bv-tab-periods'));
+    return { ok: tab === 'Months' && /Open/.test(list) && list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
   });
   await w.step('S1', 'two grants on one client: the firm is asked which seat, nothing is picked silently; "Open as auditor" opens read only with no Prepare a journal', async () => {
     S.both = true; await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
