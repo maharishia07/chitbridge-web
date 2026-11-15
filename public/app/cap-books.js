@@ -614,6 +614,11 @@ function bkTime(ts) {
  * The row is the bill's (its date, its time beside the number); when the ledger took it on ANOTHER day — a late bill, a
  * buyer's acceptance days after the invoice — "recorded 01 Oct" follows, muted. Same day → nothing more to say.
  */
+/** the small line under a Day book entry an adviser posted for the client: "Posted by Pat Lee, Bayside Bookkeeping" (the api's posted_by; nothing for an entry nobody posted for the client) */
+function bkPostedByHTML(e) {
+  var words = typeof CBBooksActing !== 'undefined' ? CBBooksActing.postedByWords(e) : '';
+  return words ? '<div class="sub" data-testid="db-posted-by">' + esc(words) + '</div>' : '';
+}
 function bkRecordedHTML(e, tid) {
   if (!e) return '';
   var s = e.source || {},
@@ -2282,8 +2287,8 @@ function bkDvCols(c) {
           return (
             esc(tx('Walk-in day')) + (s.count != null ? ' · ' + bkDayBillsLink(s, t) : '')
           ); /* M132: the count opens the bills list, as the statement rows do */
-        if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t);
-        return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) || dash;
+        if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t) + bkPostedByHTML(e);
+        return esc(s.kind === 'receipt' ? tx('Received') : e.narration || e.what || e.event_type || '') + bkRecordedHTML(e, t) + bkPostedByHTML(e) || dash;
       }
     },
     {

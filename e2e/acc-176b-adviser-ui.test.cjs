@@ -78,7 +78,7 @@ A2.enter({ id: 's1', name: 'One' }, 'adviser', 'adviser_posts');
 check(A2.posts() && ['/api/books/daybook', '/api/books-actions', '/api/books-grants'].every((p) => A2.mayCall(p)) && ['/api/entities', '/api/chits', '/api/crm', '/api/relationships', '/api/tax', '/api/facts'].every((p) => !A2.mayCall(p)), 'acting: only /api/books, /api/books-actions and /api/books-grants may be called under the header');
 const nav = [['todo'], ['daybook'], ['bank'], ['tb'], ['events']], groups = [['', ['todo']], ['Books', ['daybook', 'bank', 'tb']]];
 A2.keepTabs(nav, groups);
-check(nav.map((n) => n[0]).join() === 'daybook,tb' && groups.length === 1 && groups[0][1].join() === 'daybook,tb', 'acting: the menu keeps only the books tabs (no To do, Bank, events)');
+check(nav.map((n) => n[0]).join() === 'daybook,bank,tb' && groups.length === 1 && groups[0][1].join() === 'daybook,bank,tb', 'acting: the menu keeps the books tabs and, for an adviser, the Bank (no To do, events); l16 adviser-bank');
 A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
 check(!A2.posts(), 'an owner_approves grant prepares; only adviser_posts posts');
 const host = { innerHTML: '' }, acts = { innerHTML: '' };
@@ -90,7 +90,7 @@ check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActi
 /* (11) round 2: an acting adviser prepares, hides the bank, is named right; the switch lists every client */
 A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
 check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(r.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
-check(A2.hides('bank') && !A2.hides('tb') && /not open to an adviser/.test(A2.refusedFor()), 'acting: the bank is hidden; the refusal names an adviser');
+check(!A2.hides('bank') && !A2.hides('tb') && A2.hides('compare') && /not open to an adviser/.test(A2.refusedFor()), 'acting: the bank is open to an adviser (the auditor keeps it hidden: e2e/adviser-bank.test.cjs); the refusal names an adviser');
 A2.enter({ id: 's2', name: 'Two' }, 'auditor');
 check(A2.hides('bank') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor');
 const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };

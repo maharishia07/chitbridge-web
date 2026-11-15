@@ -153,8 +153,19 @@ function bankAcctPick(code) {
   if (out) out.innerHTML = '<div class="pe-note" data-testid="bank-acct-changed">' + bkbE(tx('You changed the bank account, so the statement on screen was cleared. Load the statement file for this account.')) + '</div>';
 }
 /** one step action: the engine's step, the device copy, then the shared record */
+/** an acting adviser works the bank page for the client; the owner's own login too. Only the owner's grant decides whether the adviser may POST (the server stays the authority) */
+const bkbActing = () => typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser();
+const bkbMayAct = () => peOwner() || bkbActing();
+/** the sentence for an adviser whose grant does not post straight into these books ('' when the person may act) */
+function bkbActRefusal() {
+  return bkbActing() && !CBBooksActing.posts() ? tx('The owner has not let you post straight into these books. Prepare a journal for the owner to accept instead.') : '';
+}
 function bkbStep(action) {
   if (!bkbBound()) return false;
+  if (bkbActRefusal()) {
+    toast(bkbActRefusal());
+    return false;
+  }
   const next = CBBankRecon.step(bkbRec(), Object.assign({ at: new Date().toISOString(), by: bkbBy() }, action));
   if (next.why) {
     toast(tx(next.why));
@@ -673,7 +684,7 @@ function bankOpeningHtml() {
 }
 /** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
 function bankPrimaryHtml(fig) {
-  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && peOwner();
+  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && bkbMayAct();
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (!canAdd || (fig && !bkbCount('books'))) return '';
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
@@ -730,7 +741,7 @@ function bankBrsDownload() {
 function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
-  const own = peOwner(),
+  const own = bkbMayAct(),
     count = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
   const may = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
@@ -885,7 +896,7 @@ function bankList() {
         icon: bkSymbol(bkCur()) || '¤',
         label: 'Record it in Dues',
         tid: 'bank-dues',
-        when: (r) => own && r.status !== 'told' && bankIsParty(r),
+        when: (r) => peOwner() && r.status !== 'told' && bankIsParty(r),
         run: () => bkTab('dues')
       },
       { id: 'undo', icon: '↶', label: 'Undo', tid: 'bank-undo', when: (r) => r.status === 'accepted', run: (r) => bankUndo(r) },
@@ -1186,6 +1197,7 @@ function bankAddBound(r) {
 /** Add missing (on a line) and the Add button both open the one sheet: every line against the books, each with what it needs (FIN-117; the sheet is cap-bank-sheet.js) */
 function bankAdd(row) {
   if (typeof bankSheetOpen !== 'function') return toast(tx('This starts after an update'));
+  if (bkbActRefusal()) return toast(bkbActRefusal());
   bankSheetOpen(row).catch((failure) => bkQuiet('bank-add', failure));
 }
 /* a saved entry → fetch the bank ledger again, so the line is matched (the guard against posting it twice) */

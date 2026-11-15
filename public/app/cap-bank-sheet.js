@@ -77,6 +77,7 @@ function bkshTaxRegisteredFor(answer) {
 }
 /** who is signed in, as the post adapter reads it: the shop's own login is the owner */
 function bkshSignedIn() {
+  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return { role: 'adviser', posts: CBBooksActing.posts() }; /* the grant's posting, known up front; the server decides */
   return { role: bkshIsOwner() ? 'owner' : 'other' };
 }
 /** the books account the statement is for */
@@ -88,7 +89,7 @@ function bkshStatementAccount() {
 function bkshPostedFeed() {
   const feed = {};
   (bankStoreState.posted || []).forEach((row) => {
-    feed[row.ref] = { at: row.made_at, by: row.made_by, entry_no: row.entry_no };
+    feed[row.ref] = { at: row.made_at, by: bankStoreMadeBy(row), entry_no: row.entry_no, for_client: !!row.for_client };
   });
   return feed;
 }
@@ -119,7 +120,7 @@ function bkshRefAccount() {
 /** the carried figures the statement check compares: this account, the books' balance before the statement (the ledger read, never summed here), the reconciled statements and the posted feed */
 function bkshCheckInput() {
   const acct = bkshStatementAccount(),
-    statements = (bankStoreState.statements || []).map((row) => Object.assign({ made_by: row.by, made_at: row.at }, row));
+    statements = (bankStoreState.statements || []).map((row) => Object.assign({ made_by: bankStoreSignerFull(row) || null, made_at: row.at }, row));
   return {
     today: bkToday(),
     accounts: [{ id: String(acct.code || bkshBook().acct), name: acct.name || null, number: null }],

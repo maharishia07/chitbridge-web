@@ -144,6 +144,7 @@ function bankStoreAsk(body) {
 function bankStoreSignOff(btn) {
   if (!bkbBound()) return;
   if (!bankStoreState.view.brs || !bankStoreState.view.brs.ok || bankStoreState.mode !== 'server') return;
+  if (typeof bkbActRefusal === 'function' && bkbActRefusal()) return toast(bkbActRefusal());
   const body = bankStoreBody();
   return CBAction.run(btn, () => api('booksBankStatements', { body }), {
     key: 'bank-signoff:' + bankStoreState.view.acct,
@@ -164,9 +165,28 @@ const bksRow = (testId, left, right) => '<div class="pe-row" data-testid="' + te
 const bksMore = (count) => (count > bankStoreState_SHOWN ? '<div class="pe-note">' + bksE(txf('and {n} more', { n: count - bankStoreState_SHOWN })) + '</div>' : '');
 /** who signed, in words: the record carries the login's id, so the name is the one on this login (or the record's own by_name); an id nobody can name is left out, never printed */
 function bankStoreSigner(item) {
-  const by = String((item && (item.by_name || item.by)) || '');
+  if (item && item.by_name) return item.by_name; /* the api's own word for who, whoever signed: never the viewer's name for another person */
+  const by = String((item && item.by) || '');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(by)) return by;
-  return (item && item.by_name) || (typeof bkbBy === 'function' && bkbBy()) || '';
+  return bankStoreIsMine(by) && typeof bkbBy === 'function' ? bkbBy() || '' : ''; /* an id of someone else with no name is left out; only this login's own id falls back to its name */
+}
+/** this login's own id (core.js cbMeId); an unknown own id on the owner's own page still reads as the owner's, never while acting for a client */
+function bankStoreIsMine(by) {
+  const me = (typeof cbMeId === 'function' && cbMeId()) || '';
+  if (me) return String(me) === by;
+  return !(typeof CBBooksActing !== 'undefined' && CBBooksActing.current());
+}
+/** who made a line, for the posted feed: an adviser's own page reads "Pat Lee for <client>", the owner reads "Pat Lee, <firm>"; a row with no by_name keeps the plain name the api sent (made_by) */
+function bankStoreMadeBy(row) {
+  const name = (row && (row.by_name || row.made_by)) || '';
+  if (!row || !row.by_name) return name;
+  if (typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser()) return txf('{name} for {client}', { name, client: (CBBooksActing.current().store || {}).name || '' });
+  return row.by_firm ? name + ', ' + row.by_firm : name;
+}
+/** the signer with the firm when an adviser made it: "Pat Lee, Bayside Bookkeeping - demo" */
+function bankStoreSignerFull(item) {
+  const who = bankStoreSigner(item);
+  return who && item && item.by_firm ? who + ', ' + item.by_firm : who;
 }
 /** the sign-off of THIS statement's period, newest first, or null */
 const bankStoreSignedNow = () => bankStoreState.statements.filter((item) => item.period_to && bankStoreState.view && item.period_to === bankStoreState.view.to)[0] || null;
@@ -174,7 +194,7 @@ const bankStoreSignedNow = () => bankStoreState.statements.filter((item) => item
 function bankStoreSignedWords() {
   const item = bankStoreSignedNow();
   if (!item) return '';
-  const who = bankStoreSigner(item),
+  const who = bankStoreSignerFull(item),
     date = bkDate(String(item.at || '').slice(0, 10));
   return who ? txf('Signed off by {who} on {date}', { who, date }) : txf('Signed off on {date}', { date });
 }
@@ -190,7 +210,7 @@ function bankStoreSigned() {
       .map((item) =>
         bksRow(
           'bank-signed-row',
-          bkDate(String(item.at || '').slice(0, 10)) + (bankStoreSigner(item) ? ' · ' + bankStoreSigner(item) : '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
+          bkDate(String(item.at || '').slice(0, 10)) + (bankStoreSignerFull(item) ? ' · ' + bankStoreSignerFull(item) : '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
           (item.tied ? tx('Tied') : tx('Difference') + ' ' + bkMoney(Math.abs(item.difference_minor), item.currency))
         )
       )
