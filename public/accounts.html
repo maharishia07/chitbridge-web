@@ -243,7 +243,8 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .pe-bank.bk-loaded .bk-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
 .pe-bank.bk-loaded .bk-name{font-size:15px}
 .pe-bank.bk-loaded .bk-store{color:var(--muted);font-size:13px}
-.pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 120px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pe-bank.bk-loaded .bk-line .act{flex:none}
 .pe-bank.bk-loaded .pe-card{padding:8px 14px;margin:0;max-width:none;gap:8px}
 .bk-band{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;padding:10px 16px;border:1px solid var(--amber-b,var(--line));border-radius:12px;background:var(--amber-t,var(--surface))}
 .bk-band.bk-ok{border-color:var(--green-b,var(--line));background:var(--green-t,var(--surface))}

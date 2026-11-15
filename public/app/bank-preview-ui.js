@@ -17,7 +17,7 @@
   var NOT_INCOME_OR_EXPENSE = '__other__';
   /** a line already in the books: who put it there and when, in the check's words; '' for any other line */
   function alreadyNote(item, escapeHtml) {
-    return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(item.alreadyWhy) + '</span>' : '';
+    return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(String(item.alreadyWhy).replace(/s*((?:ref )?bank:[^)]*)/g, '')) + '</span>' : ''; /* the line's internal reference is not for the reader */
   }
   /** every other thing holding a line back besides its entry and its one question, as tags */
   function otherNeeds(item, tag) {
