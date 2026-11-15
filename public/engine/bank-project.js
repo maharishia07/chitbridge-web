@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · bank-project · sha256 3af172d780335bdcf46f0f2408dbe23266cf67de3dd659f78ddacb4821f20b5d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.96.0 · bank-project · sha256 8ffe8a46789b167c5f44df91aded79e4fadf06d9037cfd227199828e6cb19892 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /**
  * bank-project.js: THE BANK LEDGER AND THE RECONCILIATION AS THEY WILL READ ONCE THE PROPOSED ENTRIES ARE POSTED. PURE: no I/O, no clock, nothing saved.
  * OWNS project (the preview: bank ledger after posting, the BRS, each line's state) · refsOf / fingerprintOf / readRef (the idempotency key of a statement line) · partyKeyOf.
@@ -176,14 +176,21 @@
         }, 0)
       : null;
   }
-  /** why a proposal is not ready, as codes: nothing proposed · tax basis unsaid · entry not balanced · entry refused · entry's bank leg is not the line's amount */
-  function blockersOf_(res, line, bankAccount) {
+  /** what may make a proposal ready by itself (B5-01): a rule the person taught or a party the narration names. Anything else (the bank's own words) is a guess about the account and waits for the person's tick. */
+  var READY_BASES_ = { taught: true, party: true };
+  /**
+   * why a proposal is not ready, as codes: nothing proposed · tax basis unsaid · tax invoice unanswered (B5-03) · entry not balanced · entry refused · entry's bank leg is not the line's amount
+   * · needs_tick (only the words proposed it, B5-01) · may_be_in_books (an unmatched books entry has this amount and side nearby, B5-02: pair it or say it is new)
+   */
+  function blockersOf_(res, line, bankAccount, near) {
     var codes = [];
-    if (!res || !res.entry) return ['no_entry'];
+    if (!res || !res.entry) return ['no_entry'].concat(near && near.length ? ['may_be_in_books'] : []);
     if (res.needs) codes.push(String(res.needs));
     if (!res.entry.balanced) codes.push('unbalanced');
     if (res.refused) codes.push('refused');
     if (bankLegOf_(res.entry, bankAccount) !== signedOf_(line)) codes.push('bank_leg_mismatch');
+    if (!READY_BASES_[res.basis] && !res.confirmed) codes.push('needs_tick');
+    if (near && near.length) codes.push('may_be_in_books');
     return codes;
   }
   /** the state of one statement line: 'in_books' (no proposal was asked), 'proposed' (an entry is composed; `ready` says nothing blocks it) or 'needs_you' (no entry) */
@@ -202,7 +209,11 @@
       blockers: []
     };
     if (!res) return view;
-    var blockers = blockersOf_(res, line, ctx.bankAccount);
+    var near = ctx.near[index] || [];
+    var blockers = blockersOf_(res, line, ctx.bankAccount, near);
+    view.near = near;
+    view.basis = res.basis || null;
+    view.confirmed = !!res.confirmed;
     view.rule = res.rule || null;
     view.why = res.why || null;
     view.entry = res.entry || null;
@@ -284,6 +295,13 @@
       stated_closing_mismatch: books.statement.closing_minor != null && books.statement.closing_minor !== statementClosing ? money(books.statement.closing_minor) : null
     };
   }
+  /**
+   * B5-06: "tied" says the books agree with the bank, so it is false while ANY statement row was skipped (the computed closing leaves it out) and while the closing the bank PRINTED is not the
+   * closing the lines add up to (stated_closing_mismatch). Both are carried facts, compared, not worked out again.
+   */
+  function tiedOf_(M, figures, skipped) {
+    return M.compareMoney(figures.closing_statement, figures.closing_books_after) === 0 && !skipped.length && !figures.stated_closing_mismatch;
+  }
   /** the totals of what is ready to post: money in, money out, and the tax inside them (carried from each proposal's own tax record, never re-divided) */
   function totalsOf_(M, views, ctx) {
     var ready = views.filter(function (view) {
@@ -354,6 +372,7 @@
    *   proposals  an array PARALLEL to lines: null / undefined = the line is already in the books (match() found it); an object = bank-recon.suggest(line, …) for it
    *   books      { currency, opening_minor, ledger: [{ date, dr_minor, cr_minor, narration?, entry_no? }], statement: { currency, opening_minor?, closing_minor? }, account?, bank_account? ('bank') }
    *              opening_minor = the books' bank balance before the statement's first day. ledger = the bank account's journal lines in the period (what match() ran against).
+   *              near = { <line index>: [books entries] } from bank-recon.nearMatches (B5-02: a line that may already be in the books is never ready); statement.skipped = parse().skipped (B5-06: never "tied").
    * → { ok, currency, account, lines: [view], ledger: [row], brs: {…}, totals, counts, parties_to_create: [party], mismatches: [] }
    * Nothing is saved and nothing is posted: "Preview: not yet in your books".
    */
@@ -370,18 +389,19 @@
     if (refusal) return refusal;
     var refs = refsOf(lines, given.account, given.period_lines),
       posted = postedFlags(lines, refs, given.posted_refs, given.file);
-    var ctx = { currency: given.currency, bankAccount: given.bank_account || 'bank', refs: refs };
+    var ctx = { currency: given.currency, bankAccount: given.bank_account || 'bank', refs: refs, near: given.near || {} };
     var views = (lines || []).map(function (line, at) {
       return lineView_(M, at, line, posted[at] ? null : (proposals || [])[at], ctx, posted[at]);
     });
-    var figures = figuresOf_(M, given, views, ctx);
+    var figures = figuresOf_(M, given, views, ctx),
+      skipped = given.statement.skipped || [];
     return {
       ok: true,
       currency: ctx.currency,
       account: given.account || null,
       lines: views,
       ledger: ledgerAfter_(M, given, views, ctx),
-      brs: Object.assign({ tied: M.compareMoney(figures.closing_statement, figures.closing_books_after) === 0, open_lines: openLines_(views) }, figures),
+      brs: Object.assign({ tied: tiedOf_(M, figures, skipped), skipped: skipped, open_lines: openLines_(views) }, figures),
       totals: totalsOf_(M, views, ctx),
       counts: countsOf_(views),
       parties_to_create: partiesToCreate_(views),

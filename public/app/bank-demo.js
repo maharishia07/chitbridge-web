@@ -5,13 +5,14 @@
  * FLOW      load → CBBankPreview.create({ engine, post: demoPost }) → load(text) → paint → "Add N" → CBLabKit.confirm(reach) → postReady → paint again
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B01 load the sample · BKS017-I01 load your own CSV · BKS017-B02 add the ready lines · BKS017-S01..S03 the three views · BKS017-I02 new party name
- *           BKS017-S04 new party kind · BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B06 start again · BKS017-B07 use this party · BKS017-S05 account · BKS017-S06 tax kind · BKS017-B08 use this account
+ *           BKS017-S04 new party kind · BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B06 start again · BKS017-B07 use this party · BKS017-S05 account · BKS017-S06 tax kind · BKS017-B08 use this account · BKS017-B09 yes this is right (tick) · BKS017-B10 I hold the tax invoice · BKS017-B11 no tax invoice, no credit · BKS017-B12 same payment (pair with a books entry) · BKS017-B13 it is new · BKS017-S07 statement currency · BKS017-B14 read this file
  */
 (function (root) {
   'use strict';
   var preview = root.CBBankPreview,
     doc = root.document;
   var CURRENCY = 'AUD',
+    COUNTRY = 'AU',
     ACCOUNT = 'Demo bank account';
   var SAMPLE_CSV = [
     'Date,Description,Debit,Credit,Balance',
@@ -49,11 +50,14 @@
     { id: 'out:telstra', has: 'TELSTRA', side: 'out', party: null, party_name: 'Telstra', label: 'Telephone', event: { type: 'expense', class: 'telephone', paid_from: 'bank', tax_kind: 'taxable' }, source: TAUGHT }
   ];
 
+  /* B5-05: the currency the STATEMENT says it is in. The sample says AUD itself; a file the visitor loads says nothing until they are asked (askedFile), and the account's AUD is never read as the file's. */
   var books = { opening_minor: 1000000, lines: [] },
     parties = [],
     controller = null,
     view = 'lines',
-    posted = 0;
+    posted = 0,
+    statementCur = null,
+    askedFile = null;
 
   function el(id) {
     return doc.getElementById(id);
@@ -84,8 +88,11 @@
       lockedMonth: function () {
         return null;
       },
-      suggestOpts: { learned: LEARNED, country: 'AU', parties: parties },
-      parseOpts: { country: 'AU', currency: CURRENCY }
+      statementCurrency: function () {
+        return statementCur;
+      },
+      suggestOpts: { learned: LEARNED, country: COUNTRY, parties: parties },
+      parseOpts: { country: COUNTRY, currency: CURRENCY }
     });
   }
   function amountText(value) {
@@ -96,77 +103,10 @@
   }
 
   /* ── painting ── */
-  function lineNote(item, result) {
-    if (result) return result.ok ? tag('ok', 'Added in the demo books') : tag('bad', 'Not added: ' + result.why);
-    if (item.needs === 'gst_basis') return gstQuestion();
-    if (item.state === 'needs_you') return item.needs ? tag('ask', preview.NEEDS_WORDS[item.needs] || 'Needs you') : '<span class="bd-why">' + esc(item.why || 'Nothing here says who or what this is.') + '</span>';
-    return item.state === 'closed' ? tag('bad', item.why) : '';
-  }
-  function gstQuestion() {
-    return (
-      '<span class="bd-ask">' + esc('Is your GST on a cash or an accrual basis?') + '</span> ' +
-      '<button data-cbsid="BKS017-B04" id="bd_gst_cash" type="button" class="bd-btn" data-act="gst" data-v="cash">Cash</button> ' +
-      '<button data-cbsid="BKS017-B05" id="bd_gst_accrual" type="button" class="bd-btn" data-act="gst" data-v="accrual">Accrual</button>'
-    );
-  }
-  function partyBox(item) {
-    var party = item.party;
-    if (!party || party.status !== 'new') return party ? '<span class="bd-why">Party: ' + esc(party.name) + '</span>' : '';
-    var meant = (item.didYouMean || [])
-      .map(function (one) {
-        return '<button data-cbsid="BKS017-B03" type="button" class="bd-btn bd-meant" data-act="meant" data-key="' + esc(item.key) + '" data-id="' + esc(one.id) + '" data-name="' + esc(one.name) + '">Use ' + esc(one.name) + '</button>';
-      })
-      .join(' ');
-    return (
-      '<span class="bd-party"><b>New party:</b> <input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="New party name" data-act="pname" data-key="' + esc(item.key) + '" value="' + esc(party.name) + '"> ' +
-      '<select data-cbsid="BKS017-S04" class="bd-inp" aria-label="New party kind" data-act="pkind" data-key="' + esc(item.key) + '">' +
-      ['supplier', 'customer'].map(function (kind) { return '<option value="' + kind + '"' + (party.kind === kind ? ' selected' : '') + '>' + kind + '</option>'; }).join('') +
-      '</select> <button data-cbsid="BKS017-B07" type="button" class="bd-btn" data-act="resolve" data-key="' + esc(item.key) + '">Use this party</button> ' + (meant ? '<span class="bd-why">Did you mean</span> ' + meant : '') + '</span>'
-    );
-  }
-  /** the chart the owner may pick from, read from the country pack (never a new account): expense and income classes, and the tax kinds */
-  function chartOf() {
-    var pack = root.CBRegulation && root.CBRegulation.resolve({ country: 'AU' });
-    if (!pack) return { expense: [], income: [], taxKinds: [] };
-    var kinds = (pack.tax && pack.tax.supplyKinds) || {};
-    return { expense: pack.expense_classes || [], income: pack.income_classes || [], taxKinds: Object.keys(kinds).map(function (id) { return { id: id, name: kinds[id].name }; }) };
-  }
-  function optionsOf(list, value, valueOf, nameOf) {
-    return '<option value="">Choose</option>' + list.map(function (one) { return '<option value="' + esc(valueOf(one)) + '">' + esc(nameOf(one)) + '</option>'; }).join('');
-  }
-  /** for a line nothing explained: pick an account from the chart (and, on money out, the tax kind), or say who it is above; the answer goes through resolve() */
-  function accountBox(item) {
-    if (item.state !== 'needs_you' || item.entry) return '';
-    var out = item.line.debit_minor > 0,
-      chart = chartOf(),
-      key = esc(item.key);
-    return (
-      '<span class="bd-party"><b>Or an account:</b> <select data-cbsid="BKS017-S05" class="bd-inp" aria-label="Account" data-act="acct" data-key="' + key + '">' +
-      optionsOf(out ? chart.expense : chart.income, '', function (one) { return one.role; }, function (one) { return one.name; }) + '</select> ' +
-      (out ? '<select data-cbsid="BKS017-S06" class="bd-inp" aria-label="Tax kind" data-act="taxkind" data-key="' + key + '">' + optionsOf(chart.taxKinds, '', function (one) { return one.id; }, function (one) { return one.name; }) + '</select> ' : '') +
-      '<button data-cbsid="BKS017-B08" type="button" class="bd-btn" data-act="useacct" data-key="' + key + '">Use this account</button></span>'
-    );
-  }
-  /** what the chosen select of a line says (account or tax kind), read when the button is pressed */
-  function chosenFor(action, key) {
-    var found = Array.prototype.filter.call(doc.querySelectorAll('select[data-act="' + action + '"]'), function (one) { return one.getAttribute('data-key') === key; })[0];
-    return found ? found.value : '';
-  }
-  function lineRow(item, results) {
-    var line = item.line,
-      result = results[item.key];
-    var stateKey = result ? (result.ok ? 'posted' : 'failed') : item.state;
-    return (
-      '<tr class="bd-row bd-s-' + esc(stateKey) + '"><td class="bd-d">' + esc(preview.dateText(line.date)) + '</td><td class="bd-n">' + esc(line.narration) + '</td>' +
-      '<td class="bd-m">' + (line.debit_minor ? esc(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? esc(amountText(line.credit_minor)) : '') + '</td>' +
-      '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
-      '<div class="bd-sub">' + partyBox(item) + accountBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
-    );
-  }
+  /* the lines pane is the shared painter's (bank-preview-ui.js, also the in-app Bank sheet); the demo adds only its own panes and buttons */
+  var linesUi = null;
   function paintLines(model) {
-    el('bd_lines').innerHTML =
-      '<table class="bd-table"><thead><tr><th>Date</th><th>What the bank says</th><th>Out</th><th>In</th><th>In your books?</th></tr></thead><tbody>' +
-      model.items.map(function (item) { return lineRow(item, model.results); }).join('') + '</tbody></table>';
+    linesUi.paint(model);
   }
   function paintBooks(model) {
     var rows = (model.projection && model.projection.ledger) || [];
@@ -183,9 +123,19 @@
     if (!b) return void (el('bd_brs').innerHTML = '');
     var open = (b.open_lines || []).map(function (o) { return '<li>' + esc(preview.dateText(o.date)) + ' · ' + esc(o.narration) + ' · ' + esc(amountText(o.amount)) + ' ' + esc(o.side === 'in' ? 'in' : 'out') + '</li>'; }).join('');
     el('bd_brs').innerHTML =
+      tiedVerdict(b) + linesUi.skipBox(model) +
       '<dl class="bd-brs"><dt>Statement closing</dt><dd>' + esc(amountText(b.closing_statement)) + '</dd><dt>Your books now</dt><dd>' + esc(amountText(b.closing_books_before)) + '</dd><dt>Your books after the ready lines</dt><dd>' + esc(amountText(b.closing_books_after)) +
       '</dd><dt>Difference after</dt><dd class="' + (b.tied ? 'bd-zero' : 'bd-diff') + '">' + esc(amountText(b.difference_after)) + '</dd></dl>' +
-      (open ? '<p class="bd-note">Still open:</p><ul class="bd-open">' + open + '</ul>' : '<p class="bd-note">Every line is in the books.</p>');
+      (open ? '<p class="bd-note">Still open:</p><ul class="bd-open">' + open + '</ul>' : b.tied ? '<p class="bd-note">Every line is in the books.</p>' : '');
+  }
+  /** B5-06: the verdict in words: tied only when the engine says so; otherwise every reason it is not (rows not read, the file's printed closing, lines still open) */
+  function tiedVerdict(b) {
+    if (b.tied) return '<p class="bd-note bd-zero" data-testid="bd-tied">Tied: your books agree with the bank.</p>';
+    var why = [];
+    if ((b.skipped || []).length) why.push(b.skipped.length + (b.skipped.length === 1 ? ' row of the file was' : ' rows of the file were') + ' not read');
+    if (b.stated_closing_mismatch) why.push("the closing balance printed on the file (" + amountText(b.stated_closing_mismatch) + ') is not what its lines add up to (' + amountText(b.closing_statement) + ')');
+    if ((b.open_lines || []).length) why.push((b.open_lines.length === 1 ? '1 line is' : b.open_lines.length + ' lines are') + ' not in your books yet');
+    return '<p class="bd-note bd-diff" data-testid="bd-not-tied">Not tied' + (why.length ? ': ' + esc(why.join('; ')) : ' yet') + '.</p>';
   }
   function paintStrip(model) {
     var b = model.projection && model.projection.brs,
@@ -213,16 +163,49 @@
   }
 
   /* ── actions ── */
+  /** a refused file leaves NOTHING of the last statement on the screen: a stale table beside a refusal would read as the refused file's */
+  function clearPanes() {
+    ['bd_lines', 'bd_books', 'bd_brs'].forEach(function (id) { el(id).innerHTML = ''; });
+    el('bd_sum').textContent = '';
+    el('bd_add').disabled = true;
+    el('bd_add').textContent = 'Nothing ready to add';
+  }
   function loadStatement(text, name) {
     var said = controller.load(text, name);
     el('bd_msg').textContent = said.ok ? '' : said.why;
     if (said.ok) paint();
+    else clearPanes();
     return said;
   }
   function startAgain() {
+    askedFile = null;
+    showCurrencyAsk();
+    statementCur = CURRENCY; /* the sample statement is ours and says the demo account's currency */
     resetBooks();
     makeController();
     loadStatement(SAMPLE_CSV, 'Sample statement');
+  }
+  /** B5-05: a file of the visitor's does not say what currency it is in, so it is ASKED, and the engine refuses one that is not the demo account's (AUD); nothing is converted */
+  function showCurrencyAsk() {
+    var box = el('bd_cur');
+    box.hidden = !askedFile;
+    box.innerHTML = askedFile
+      ? '<span class="bd-ask">' + esc('Which currency is ' + askedFile.name + ' in? The demo account is in ' + CURRENCY + '. Nothing is converted.') + '</span> ' +
+        '<input data-cbsid="BKS017-S07" id="bd_cur_sel" class="bd-inp" type="text" maxlength="3" size="4" autocomplete="off" aria-label="Statement currency, three capital letters" data-testid="bd-cur-sel"> ' +
+        '<button data-cbsid="BKS017-B14" id="bd_cur_go" type="button" class="bd-btn" data-act="curuse" data-testid="bd-cur-go">Read this file</button>'
+      : '';
+  }
+  function readAskedFile() {
+    var chosen = el('bd_cur_sel').value.trim().toUpperCase();
+    if (!chosen) return void (el('bd_msg').textContent = 'Say which currency the file is in first.');
+    if (root.CBMoney && root.CBMoney.isIsoCurrency && !root.CBMoney.isIsoCurrency(chosen)) return void (el('bd_msg').textContent = 'That is not a currency code. Use three capital letters.');
+    statementCur = chosen;
+    var file = askedFile;
+    askedFile = null;
+    showCurrencyAsk();
+    resetBooks();
+    makeController();
+    loadStatement(file.text, file.name);
   }
   function askToPost() {
     var text = controller.confirmText();
@@ -237,40 +220,46 @@
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) return void (el('bd_msg').textContent = 'That file is too big for this page (2 MB at most).');
     file.text().then(function (text) {
-      resetBooks();
-      makeController();
-      loadStatement(text, file.name);
+      statementCur = null;
+      askedFile = { text: text, name: file.name };
+      clearPanes();
+      el('bd_msg').textContent = '';
+      showCurrencyAsk();
     });
   }
+  /** the demo's own buttons: the three tabs and "Read this file" (every answer on a line is the shared painter's, bank-preview-ui.js) */
+  var ACTIONS = {
+    curuse: function () { readAskedFile(); return { cancelled: true }; },
+    view: function (key, target) { view = target.getAttribute('data-v'); }
+  };
   function onClick(event) {
     var target = event.target.closest('[data-act]');
-    if (!target) return;
-    var action = target.getAttribute('data-act'),
-      said = null;
-    if (action === 'gst') controller.answer('gst_basis', target.getAttribute('data-v'));
-    else if (action === 'meant') controller.editParty(target.getAttribute('data-key'), { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') });
-    else if (action === 'resolve') said = controller.resolveLine(target.getAttribute('data-key'));
-    else if (action === 'useacct') said = controller.resolveLine(target.getAttribute('data-key'), { account: chosenFor('acct', target.getAttribute('data-key')), tax_kind: chosenFor('taxkind', target.getAttribute('data-key')) });
-    else if (action === 'view') view = target.getAttribute('data-v');
-    paint();
-  }
-  function onChange(event) {
-    var t = event.target,
-      act = t.getAttribute && t.getAttribute('data-act'),
-      key = t.getAttribute && t.getAttribute('data-key');
-    if (act !== 'pname' && act !== 'pkind') return;
-    var party = controller.view().items.filter(function (i) { return i.key === key; })[0].party;
-    var said = controller.editParty(key, { name: act === 'pname' ? t.value : party.name, kind: act === 'pkind' ? t.value : party.kind });
-    if (!said.ok) el('bd_msg').textContent = said.why;
+    var act = target && ACTIONS[target.getAttribute('data-act')];
+    if (!act) return;
+    var said = act(target.getAttribute('data-key'), target);
+    if (said && said.cancelled) return;
     paint();
   }
   function start() {
+    linesUi = root.CBBankPreviewUI.mount({
+      host: el('bd_lines'),
+      controller: function () {
+        return controller;
+      },
+      currency: CURRENCY,
+      country: COUNTRY,
+      addedWords: 'Added in the demo books',
+      gstIds: true,
+      say: function (words) {
+        el('bd_msg').textContent = words;
+      },
+      changed: paint
+    });
     el('bd_load').addEventListener('click', startAgain);
     el('bd_reset').addEventListener('click', startAgain);
     el('bd_file').addEventListener('change', onFile);
     el('bd_add').addEventListener('click', askToPost);
     doc.addEventListener('click', onClick);
-    doc.addEventListener('change', onChange);
     startAgain();
   }
   if (doc && doc.getElementById('bd_lines')) start();

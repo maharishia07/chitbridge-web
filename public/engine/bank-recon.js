@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · bank-recon · sha256 9b3fdd56313db8a4e044cf7dbfba2f6cf21a12d0decf1ba105a47d24d198fd67 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.96.0 · bank-recon · sha256 7a951d22b4e7efeb6eccbf58a9beb770e018f10af77cb094b528b3c98cae587c — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -369,7 +369,12 @@
     if (!dateText && !cellOf(row, 'narration')) return null;
     var date = dateOf_(dateText);
     if (!date) {
-      if (/^(total|opening|closing|statement|page|\*)/i.test(dateText) || !dateText) return null;
+      if (/^(total|opening|closing|statement|page|\*)/i.test(dateText)) return null;
+      if (!dateText) {
+        /* B5-06: a row that names something but has no date is a transaction the file lost its date for, not a blank; a total / page line is still not one */
+        if (!/^(total|opening|closing|balance|statement|page|\*)/i.test(cellOf(row, 'narration'))) warnings.push('row ' + no + ': no date — row skipped');
+        return null;
+      }
       warnings.push('row ' + no + ': unreadable date "' + dateText + '" — row skipped');
       return null;
     }
@@ -709,9 +714,21 @@
     });
     return opening;
   }
+  /**
+   * B5-06: the rows a reader could not take, as data a screen paints and a reconciliation reads: [{ row, why }] from the warnings that say a row or item was skipped.
+   * A statement with any skipped row is never "tied" (bank-project): its computed closing leaves those rows out.
+   */
+  function skippedOf_(warnings) {
+    return warnings
+      .map(function (warning) {
+        var found = /^(row|item) (\d+): (.*?)\s+—\s+(?:row )?skipped$/.exec(warning);
+        return found ? { row: +found[2], why: found[3] } : null;
+      })
+      .filter(Boolean);
+  }
   /** the parse result: the lines with the statement's account, its first and last day, and its opening and closing balance when known */
   function statementOut_(res, lines, list, opening) {
-    var out = { ok: true, account: res.account || null, lines: lines, warnings: list };
+    var out = { ok: true, account: res.account || null, lines: lines, warnings: list, skipped: skippedOf_(list) };
     if (lines.length) {
       out.from = lines[0].date;
       out.to = lines[lines.length - 1].date;
@@ -984,6 +1001,40 @@
     };
   }
 
+  /**
+   * ⭐ nearMatches(unmatched_stmt, unmatched_ledger, { look_back_days? = 45 }) → { <statement line index>: [{ id, date, entry_no, narration, gap_days }] } (B5-02)
+   * match() pairs only inside its small window and only when a pair is each other's sole candidate, so a books entry that cleared late (a cheque, a card settlement) or one of two equal
+   * amounts is left unmatched, and the statement line would be proposed AGAIN and posted twice. This reads what match() left over (its unmatched_stmt, each carrying its own `i`, and its
+   * unmatched_ledger): a statement line whose amount and side equal an unmatched books entry's within the look-back is listed with those entries, nearest day first, so a screen can say
+   * "may already be in your books" and let the person PAIR them or say it is new. Never pairs anything itself; a ledger line may be offered to several statement lines (two equal amounts).
+   */
+  function nearMatches(unmatchedStmt, unmatchedLedger, opts) {
+    var lookBack = opts && opts.look_back_days != null ? Math.max(0, +opts.look_back_days) : 45,
+      books = ledgerRowsOf_(unmatchedLedger).filter(function (row) {
+        return !row.used;
+      }),
+      found = {};
+    (unmatchedStmt || []).forEach(function (line, at) {
+      var money = lineMoney_(line),
+        out = money.debit > 0,
+        minor = money.debit || money.credit,
+        day = dayNo_(line.date);
+      if (!minor) return;
+      var hits = books
+        .filter(function (row) {
+          return row.side === SIDE_(out) && row.m === minor && Math.abs(row.day - day) <= lookBack;
+        })
+        .sort(function (first, second) {
+          return Math.abs(first.day - day) - Math.abs(second.day - day) || first.k - second.k;
+        });
+      if (hits.length)
+        found[line.i != null ? line.i : at] = hits.map(function (row) {
+          return { id: row.line.id, date: row.line.date, entry_no: row.line.entry_no || null, narration: row.line.narration || '', gap_days: Math.abs(row.day - day) };
+        });
+    });
+    return found;
+  }
+
   /* ═══ suggest ═════════════════════════════════════════════════════════════════════════════════════════════════════ */
   /* RULES — DATA. Keywords are whole words in the narration (upper-cased); `bank` adds that bank's own words to the defaults. */
   /* RULES — the pack's keywords (pack.bank.keywords). Keywords are whole words in the narration (upper-cased); `bank` adds that bank's own words to the defaults. */
@@ -1082,8 +1133,8 @@
       event.amount = minor / Math.pow(10, decimals);
       if (ref) event.ref = String(ref);
       event.narration = 'Bank statement ' + date + ': ' + String(line.narration || '').slice(0, 120);
-      var taxed = bankEntry_().withTax(event, { rule: rule, pack: bankRules.pack, currency: currency, minor: minor, decimals: decimals, basis: options.gst_basis });
-      return finish_(taxed.event, rule, confidence, reason, minor, Object.assign({ tax: taxed.tax }, extra), currency, bankRules.pack);
+      var taxed = bankEntry_().withTax(event, { rule: rule, pack: bankRules.pack, currency: currency, minor: minor, decimals: decimals, basis: options.gst_basis, invoice: options.tax_invoice });
+      return finish_(taxed.event, rule, confidence, reason, minor, Object.assign({ tax: taxed.tax, confirmed: !!options.confirmed }, extra), currency, bankRules.pack);
     };
     return { line: line, pack: bankRules.pack, options: options, rules: rules, debit: debit, credit: credit, out: out, minor: minor, text: text, base: base, none: none };
   }
@@ -1093,9 +1144,12 @@
     if (party) answer.party = party;
     return answer;
   }
-  /** the first rule that fits the line, in order — a rule a person taught, then the bank's own words for the side the money moved, then a named party; null when none fits */
+  /**
+   * the first rule that fits the line, in order — a rule a person taught, then a named party, then the bank's own words for the side the money moved; null when none fits.
+   * B5-01: a PARTY is tried before the words ("SMITH LEGAL PROFESSIONAL FEE" is a payment to Smith, not a bank charge); a proposal that only the words made is never ready on its own (see basisOf_).
+   */
   function ruleSuggestion_(situation) {
-    return learnedSuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation)) || partySuggestion_(situation);
+    return learnedSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation));
   }
   /** BR1: a rule a person taught (learn()) is tried first — still only a PROPOSAL, shown with where it came from */
   function learnedSuggestion_(situation) {
@@ -1196,12 +1250,24 @@
       );
     return null;
   }
+  /**
+   * what made a proposal, in three words (B5-01): 'taught' (a rule the person taught), 'party' (a named party) or 'words' (only the bank's own words in the narration).
+   * Taught and party proposals may be ready; a 'words' proposal is a guess about WHICH account, so it waits for the person's tick (bank-project: needs_tick).
+   */
+  function basisOf_(rule) {
+    return rule === 'learned' ? 'taught' : rule === 'party_credit' || rule === 'party_debit' ? 'party' : 'words';
+  }
+  /** B5-03: a tax credit is claimed on this line, the pack says a tax invoice is required for it, and the person has not said whether they hold one */
+  function taxInvoiceUnanswered_(tax) {
+    return !!(tax.credit && tax.tax_minor > 0 && tax.invoice && tax.invoice.required && !tax.invoice_answer);
+  }
   /** the proposal: the event, composed by posting.post so it carries the entry that would be posted */
   function finish_(event, rule, confidence, reason, minor, extra, currency, pack) {
-    var res = { event: event, confidence: confidence, why: reason, rule: rule, proposal: true, needs_confirm: true, amount_minor: minor, currency: currency };
+    var res = { event: event, confidence: confidence, why: reason, rule: rule, basis: basisOf_(rule), confirmed: !!(extra && extra.confirmed), proposal: true, needs_confirm: true, amount_minor: minor, currency: currency };
     if (extra && extra.tax) {
       res.tax = extra.tax;
       if (extra.tax.tax_minor > 0 && !extra.tax.basis) res.needs = 'gst_basis'; /* cash or accrual is in no pack: the owner says once, never defaulted */
+      else if (taxInvoiceUnanswered_(extra.tax)) res.needs = 'tax_invoice'; /* B5-03: the credit waits for the person's word on the tax invoice */
     }
     if (extra && extra.source !== undefined) {
       res.source = extra.source;
@@ -2014,6 +2080,7 @@
   var EXPORTS = {
     parse: parse,
     match: match,
+    nearMatches: nearMatches,
     suggest: suggest,
     brs: reconciliationStatement,
     PRESETS: PRESETS,

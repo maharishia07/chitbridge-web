@@ -36,8 +36,9 @@ const money = (minor) => ({ amount_minor: minor, currency: 'AUD' });
 function engines(seen) {
   return {
     recon: {
-      parse: (text) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], opening_minor: 1000000, closing_minor: 1750850 }),
-      match: () => ({ matched: [{ stmt: [4], ledger: ['L1'], how: 'amount+date' }] }),
+      parse: (text) => (text === 'bad' ? { ok: false, why: 'Nothing to read: the statement is empty.' } : { ok: true, lines: LINES, warnings: [], skipped: seen.skipped || [], opening_minor: 1000000, closing_minor: 1750850 }),
+      match: () => ({ matched: [{ stmt: [4], ledger: ['L1'], how: 'amount+date' }], unmatched_stmt: LINES.slice(0, 4).map((l, i) => Object.assign({ i }, l)), unmatched_ledger: [{ id: 'L9' }, { id: 'L8' }] }),
+      nearMatches: (open, free) => ((seen.nearArgs = { open, free }), seen.near || {}),
       suggest: (line, o) => (seen.suggest.push(o), { event: { type: 'expense', date: line.date, amount: 1 } })
     },
     project: {
@@ -75,6 +76,7 @@ const make = (over) => {
       {
         engine: engines(seen),
         currency: 'AUD',
+        statementCurrency: () => 'AUD', /* B5-05: the statement's currency is never the account's by default; a test that wants the file silent passes statementCurrency: () => null */
         account: 'Demo',
         ledger: () => ({ lines: [], opening_minor: 1000000 }),
         post: async (item) => (seen.posted.push(item.ref), { ok: true, entry_no: 'E' + seen.posted.length }),
@@ -95,6 +97,64 @@ const make = (over) => {
   assert.deepStrictEqual(usd.ctl.view().items, []);
   assert.strictEqual(make().ctl.load('bad').ok, false);
   ok('a statement in another currency is refused (the engine words, naming both) and no line is shown');
+  /* B5-05: a file that does not say its currency is NOT read as the account's */
+  const silent = make({ statementCurrency: () => null });
+  assert.strictEqual(silent.ctl.load('ok', 'f.csv').ok, false);
+  assert.strictEqual(silent.seen.args.books.statement.currency, null);
+  assert.deepStrictEqual(silent.ctl.view().items, []);
+  const noAsker = make({ statementCurrency: undefined });
+  assert.strictEqual(noAsker.ctl.load('ok', 'f.csv').ok, false);
+  assert.strictEqual(noAsker.seen.args.books.statement.currency, null);
+  ok('B5-05: with no statement currency (none said, none in the file) nothing is defaulted to the account\'s: the engine is handed none and refuses');
+
+  /* FIN-116 / FIN-117: what the host cannot post, and a tax kind asked of a registered shop, ride on the PROPOSAL as the engine's own `needs` (so its counts and totals leave the line out); the demo (no options) does not move */
+  const plain = make();
+  plain.ctl.load('ok', 'f.csv');
+  assert.strictEqual(plain.seen.args.proposals[0].needs, undefined);
+  const registered = make({ taxRegistered: true });
+  registered.ctl.load('ok', 'f.csv');
+  assert.strictEqual(registered.seen.args.proposals[0].needs, 'tax_kind');
+  const unknownReg = make({ taxRegistered: null });
+  unknownReg.ctl.load('ok', 'f.csv');
+  assert.strictEqual(unknownReg.seen.args.proposals[0].needs, undefined, 'registration unknown asks nothing and claims nothing');
+  const onlyContra = make({ postable: ['contra'] });
+  onlyContra.ctl.load('ok', 'f.csv');
+  assert.strictEqual(onlyContra.seen.args.proposals[0].needs, 'not_here');
+  ok('FIN-116/117: a registered shop is ASKED the tax kind (needs tax_kind, never defaulted); unknown registration asks nothing; a kind the host cannot post says where it is recorded; the demo is unchanged');
+
+  /* B5-06: every skipped row reaches the engine's statement, so "tied" can refuse */
+  const skip = make();
+  skip.seen.skipped = [{ row: 3, why: 'unreadable date "06/11/2026 09:14"' }];
+  skip.ctl.load('ok', 'f.csv');
+  assert.deepStrictEqual(skip.seen.args.books.statement.skipped, skip.seen.skipped);
+  ok('B5-06: the skipped rows of the parse ride into project() with the statement');
+
+  /* B5-02: a line that may already be in the books asks; a pair takes the line (and the entry) out of the question */
+  const near = make();
+  near.seen.near = { 0: [{ id: 'L9', date: '2026-10-20', entry_no: 'MJ/1', narration: 'Account fee', gap_days: 3 }] };
+  near.ctl.load('ok', 'f.csv');
+  assert.deepStrictEqual(near.seen.args.books.near, near.seen.near);
+  const nearKey = near.ctl.view().items[0].key;
+  assert.strictEqual(near.ctl.pair(nearKey, 'L9').ok, true);
+  assert.strictEqual(near.seen.args.proposals[0], null, 'a paired line is in the books: no proposal is asked for');
+  assert.deepStrictEqual(near.seen.nearArgs.free.map((x) => x.id), ['L8'], 'the paired entry is out of every other line\'s list');
+  near.ctl.notMatch(near.ctl.view().items[1].key);
+  assert.ok(!near.seen.nearArgs.open.some((x) => x.i === 1), '"it is new" takes the line out of the question');
+  assert.strictEqual(near.ctl.pair('no-such-line', 'L9').ok, false);
+  ok('B5-02: near matches are handed to the engine; a pair makes the line "in your books" and uses its entry up; "it is new" ends the question; an unknown line is refused');
+
+  /* B5-01 / B5-03: the tick and the word on the tax invoice ride into the engine call for THAT line only */
+  const ask = make();
+  ask.ctl.load('ok', 'f.csv');
+  const tickKey = ask.ctl.view().items[3].key;
+  ask.ctl.tick(tickKey);
+  ask.ctl.invoice(tickKey, 'held');
+  const last = ask.seen.suggest.slice(-4);
+  assert.deepStrictEqual(last.map((o) => o.confirmed), [false, false, false, true]);
+  assert.deepStrictEqual(last.map((o) => o.tax_invoice), [undefined, undefined, undefined, 'held']);
+  ask.ctl.invoice(tickKey, 'anything else');
+  assert.strictEqual(ask.seen.suggest.slice(-4)[3].tax_invoice, 'none');
+  ok('B5-01/03: a tick and an invoice answer are per line, and anything but "held" is "none" (no credit), never a default of "held"');
 
   /* never offered: needs-you, gst question; ready count */
   const m = make();
@@ -181,18 +241,36 @@ const make = (over) => {
   const item = { ref: 'bank:abc', event: { type: 'expense', amount: 1 }, party: { status: 'new', name: 'Origin Energy', kind: 'supplier' } };
   const done = await post(item);
   assert.deepStrictEqual(calls.map((x) => x[0]), ['supAdd', 'booksEventPost']);
-  assert.strictEqual(calls[1][1].party, 'sup-1');
+  assert.strictEqual(calls[1][1].kind, 'expense', 'the server reads kind, never type');
+  assert.ok(!('type' in calls[1][1]) && !('ref' in calls[1][1]) && !('party' in calls[1][1]), 'only keys the closed POST /events body lists');
   assert.strictEqual(calls[1][1].client_ref, 'bank:abc');
   assert.strictEqual(done.ok, true);
   await post(item);
   assert.strictEqual(calls.filter((x) => x[0] === 'supAdd').length, 1);
-  const bad = await post({ ref: 'bank:x', event: {}, party: { status: 'new', name: 'Fail Co', kind: 'supplier' } });
+  const bad = await post({ ref: 'bank:x', event: { type: 'expense', amount: 1 }, party: { status: 'new', name: 'Fail Co', kind: 'supplier' } });
   assert.strictEqual(bad.ok, false);
   assert.ok(/Fail Co/.test(bad.why) && /Name taken/.test(bad.why));
   assert.strictEqual(calls.filter((x) => x[1] && x[1].client_ref === 'bank:x').length, 0);
   const acct = await POST.adapter({ api, who: { role: 'accountant' } })(item);
   assert.strictEqual(acct.ok, false);
   ok('app adapter: the party is made FIRST (once), the entry carries its id and bank:<fp>; a party failure fails that line only; a non-owner is told at once');
+
+  /* FIN-117 / FIN-116: the exact body per kind, and what is refused before anything is made */
+  const taxed = POST.bodyOf({ ref: 'bank:t', event: { type: 'expense', class: 'bank_charges', paid_from: 'bank', date: '2026-10-23', amount: 20, narration: 'Bank statement 2026-10-23: Account fee', currency: 'AUD' }, tax: { tax_minor: 200 } }, null, (b) => Object.assign({}, b, { paid_from: 'card' }));
+  assert.deepStrictEqual(taxed, { kind: 'expense', date: '2026-10-23', amount: 20, narration: 'Bank statement 2026-10-23: Account fee', client_ref: 'bank:t', class: 'bank_charges', paid_from: 'card', input_tax_minor: 200 });
+  const contra = POST.bodyOf({ ref: 'bank:c', event: { type: 'contra', from: 'bank', to: 'cash', date: '2026-10-29', amount: 500, narration: 'ATM' } });
+  assert.deepStrictEqual(Object.keys(contra).sort(), ['amount', 'client_ref', 'date', 'from', 'kind', 'narration', 'to']);
+  const dues = await POST.adapter({ api: async () => assert.fail('nothing is sent'), who: { role: 'owner' } })({ ref: 'bank:p', event: { type: 'payment_received', amount: 5 }, party: { status: 'new', name: 'Z', kind: 'customer' } });
+  assert.strictEqual(dues.ok, false);
+  assert.ok(/Dues/.test(dues.why));
+  ok('app adapter body: kind not type, only the closed keys, the tax inside the bank figure as input_tax_minor, a payment between parties is refused before any party is made');
+
+  /* FIN-118: the shared-record line never carries the server's raw sentence (it named a route); and the lines painter is the one both pages use */
+  const store = fs.readFileSync(pub('app/cap-bank-store.js'), 'utf8');
+  assert.ok(!/Saved on this device for now\.'\) \+/.test(store), 'the error line adds nothing from the server');
+  assert.ok(/Could not reach the shared record\. Saved on this device for now\./.test(store));
+  assert.ok(/CBBankPreviewUI\.mount/.test(fs.readFileSync(pub('app/bank-demo.js'), 'utf8')) && /CBBankPreviewUI\.mount/.test(fs.readFileSync(pub('app/cap-bank-sheet.js'), 'utf8')), 'one painter for the demo and the app');
+  ok('FIN-118: the shared-record line says it in our words, never the server\'s route; FIN-117: the demo and the app paint lines through the one painter');
 
   /* the demo page is public and inert */
   const html = read('bank-demo.html');
@@ -204,7 +282,7 @@ const make = (over) => {
   const codes = html.match(/data-cbsid="[^"]+"/g) || [];
   assert.strictEqual(new Set(codes).size, codes.length);
   assert.ok(codes.every((x) => /BKS017-[A-Z]\d\d/.test(x)));
-  ['app/bank-demo.js', 'app/bank-preview.js', 'app/bank-demo.css'].forEach((rel) => {
+  ['app/bank-demo.js', 'app/bank-preview.js', 'app/bank-preview-ui.js', 'app/bank-demo.css'].forEach((rel) => {
     const src = read(rel).replace(/\/\*[\s\S]*?\*\//g, '');
     assert.ok(!/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|localStorage|sessionStorage|indexedDB|document\.cookie|@import|url\(/.test(src), rel + ' is inert');
   });

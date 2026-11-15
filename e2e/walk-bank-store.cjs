@@ -102,6 +102,9 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   const load = async (pg) => {
     await pg.selectOption('#bk_preset', 'hdfc');
     await pg.setInputFiles('[data-testid="bank-file"]', { name: 'statement.csv', mimeType: 'text/csv', buffer: Buffer.from(CSV) });
+    await pg.waitForSelector('[data-testid="bank-currency"]', { timeout: 15000 }); /* B5-05: the file's currency is asked, never the account's */
+    await pg.fill('[data-testid="bank-currency"]', 'INR');
+    await pg.click('[data-testid="bank-currency-go"]');
     await pg.waitForSelector('[data-testid="bank-store-line"]', { timeout: 15000 });
   };
   const status = (pg, i) => pg.getAttribute('[data-testid="bank-chip-s' + i + '"]', 'data-status');
