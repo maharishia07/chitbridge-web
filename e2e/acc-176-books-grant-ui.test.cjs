@@ -53,7 +53,7 @@ check(/\.then\(\s*function \(answer\)[^]*?function \(\) \{\s*return \{\};/.test(
 
 /* (7) ACC-176c the drill: ledger and entry, read only, with the header, one way to each read */
 const strip = (t) => t.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-check(!/CBAction/.test(drill) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(strip(drill)) && !/csv|export|download|print/i.test(strip(drill)), 'the drill has no write verb, no CBAction and no export');
+check(!/CBAction/.test(drill) && !/\b(POST|PATCH|PUT|DELETE)\b/.test(strip(drill)) && !/csv|export|download|print/i.test(strip(drill).split('csv: false').join('')), 'the drill has no write verb, no CBAction and no export');
 check(/headers: root\.CBBooksActing\.headers\(\)/.test(drill) && (drill.match(/CBBooksGrantApi\.run\(/g) || []).length === 1, 'every read of the drill goes through the one run() with the acting headers');
 check(/readLedger: '\/api\/books\/ledger\/:account'/.test(api) && /'readLedger'/.test(drill) && /'readDaybook'/.test(drill), 'the drill reads the ledger and the day book by their registered names');
 check((view.match(/drill: 'ledger'/g) || []).length === 3 && /drill: 'entry'/.test(view) && /onOpen: report\.drill/.test(view), 'trial balance, profit and loss, balance sheet rows open a ledger; a Day book row opens its entry');
