@@ -741,7 +741,7 @@ function bankList() {
       {
         key: 'in',
         label: tx('In'),
-        prio: 4,
+        prio: 3,
         num: true,
         w: 120,
         html: true,
@@ -750,7 +750,7 @@ function bankList() {
       {
         key: 'party',
         label: tx('Told by'),
-        prio: 5,
+        prio: 4,
         w: 170,
         html: true,
         cell: (r) =>
@@ -768,7 +768,7 @@ function bankList() {
       {
         key: 'entry',
         label: tx('In your books'),
-        prio: 6,
+        prio: 5,
         sort: 'entry',
         w: 170,
         html: true,
