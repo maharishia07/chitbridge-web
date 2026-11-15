@@ -508,14 +508,15 @@ function bankChange(btn) {
 const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
 /** the More menu: the Statement view and the file of the reconciliation; one button opens it, Esc and a press outside close it */
 function bankMoreHtml(worked) {
-  const item = (code, tid, label, fn) =>
-    '<button data-cbsid="' + code + '" type="button" role="menuitem" class="bk-mi" data-testid="' + tid + '" onclick="' + fn + '">' + bkbE(tx(label)) + '</button>';
+  const download =
+    worked && worked.ok
+      ? '<button data-cbsid="BKS014-B02" type="button" role="menuitem" class="bk-mi" data-testid="bank-brs-download" onclick="bankMoreToggle(false);bankBrsDownload()">' + bkbE(tx('Download the reconciliation')) + '</button>'
+      : '';
   return (
     '<span class="bk-menu"><button data-cbsid="BKS014-B19" type="button" class="act" id="bk_more" data-testid="bank-more" aria-haspopup="menu" aria-expanded="false" onclick="bankMoreToggle()">' +
     bkbE(tx('More')) + ' ▾</button><div class="bk-pop" id="bk_pop" role="menu" data-testid="bank-more-menu" hidden>' +
-    item('BKS014-B01', 'bank-tab-brs', 'The statement and sign-off', "bankMoreToggle(false);BKB.tab='brs';bankPaint()") +
-    (worked && worked.ok ? item('BKS014-B02', 'bank-brs-download', 'Download the reconciliation', 'bankMoreToggle(false);bankBrsDownload()') : '') +
-    '</div></span>'
+    '<button data-cbsid="BKS014-B01" type="button" role="menuitem" class="bk-mi" data-testid="bank-tab-brs" onclick="bankMoreToggle(false);BKB.tab='brs';bankPaint()">' + bkbE(tx('The statement and sign-off')) + '</button>' +
+    download + '</div></span>'
   );
 }
 function bankMoreToggle(want) {
@@ -562,7 +563,7 @@ function bankPaint() {
     bankFinish() +
     (lines
       ? '<div id="bkl_bank" data-testid="bank-list"></div>'
-      : '<div class="supacts"><button data-cbsid="BKS014-B01" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
+      : '<div class="supacts"><button data-cbsid="BKS014-B22" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
         bkbE(tx('Back to the lines')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
   const line = bkbEl('bk_line');
   if (line) line.innerHTML = bankLineHtml(lines);

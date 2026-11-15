@@ -73,7 +73,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer({ events: [], picks: {} }));
       if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: 10000000, closing_minor: 10700000 }));
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: [], parties: [], may: { ask: { ok: true } } });
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: [], parties: [], may: { ask: { ok: true } } });
       if (/^\/api\/books\/bank\/(log|marks|statements)$/.test(p)) {
         if (m !== 'GET') S.posts.push({ p, body });
         if (!S.ready) return J(r, 503, NOT_YET);

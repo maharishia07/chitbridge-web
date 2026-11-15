@@ -101,7 +101,7 @@ function stand() {
       if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
       if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer(EVENTS));
       if (p === '/api/books/ledger/1500') { const op = 10000000; return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: op, closing_minor: op + S.lines.reduce((t, l) => t + l.dr_minor - l.cr_minor, 0) })); }
-      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', rail_chits: S.chits,
+      if (p === '/api/books/bank/rail') return J(r, 200, { currency: 'INR', from: u.searchParams.get('from'), to: u.searchParams.get('to'), me: 'Mayur Bhavan', books: { parties: [], open_items: [] }, rail_chits: S.chits,
         parties: [P.ravi, P.kumar, P.unk].map((x) => ({ party_id: x.id, name: x.name })), may: { ask: S.who === 'viewer' ? { ok: false, why: 'read_only', say: READ_ONLY } : { ok: true } } });
       if (p === '/api/books/payments/preview') return J(r, 200, books.payPreview(S.bills[body.party_id] || [], body, 'Kumar & Sons'));
       if (p === '/api/books/payments' && m === 'POST') return J(r, 200, books.payRecorded(S.bills[body.party_id] || [], body, 'Kumar & Sons', { entry_no: 'PY/2026-27/000007' }));
