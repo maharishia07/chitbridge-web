@@ -14,7 +14,7 @@
       held = pass.held || {};
     var base = {
       currency: opts.currency,
-      statement: { account: parsed.account, from: parsed.from, to: parsed.to, opening_minor: parsed.opening_minor, closing_minor: parsed.closing_minor, currency: parsed.currency },
+      statement: { account: parsed.account, from: parsed.from, to: parsed.to, opening_minor: parsed.opening_minor, closing_minor: parsed.closing_minor, currency: (opts.statementCurrency && opts.statementCurrency()) || parsed.currency || null }, /* B5-05: the currency the FILE or the person said, never the account's */
       lines: parsed.lines,
       matched: parsed.lines.map(function (line, index) {
         return !!held[index];

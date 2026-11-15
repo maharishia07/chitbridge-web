@@ -74,6 +74,7 @@ function bkshCheckInput() {
   return {
     today: bkToday(),
     accounts: [{ id: String(acct.code || bkshBook().acct), name: acct.name || null, number: null }],
+    saved_account_id: String(acct.code || bkshBook().acct) /* the owner already picked this account for the statement in the Bank view */,
     books: { opening_minor: Number((bkshBook().ledgerRaw || {}).opening_minor) || 0 },
     log: { statements },
     posted: bkshPostedFeed()
