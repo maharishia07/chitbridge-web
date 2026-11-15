@@ -248,6 +248,26 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 /* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
 @media (min-width:761px){body.lg-on .nav-grp{display:none}body.lg-on .nav-sec:has(>.nav-grp)::before{content:"";display:block;height:1px;margin:8px 10px;background:var(--line-3)}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
 
+/* ⭐ THE STATEMENTS BOX (app/cap-bank-statements.js): compact, 32 px rows, toolbar on the table, tokens only; folded while a statement is on screen */
+.pe-card.bks{max-width:none;gap:6px;padding:6px 14px}
+.bks-bar{display:flex;align-items:center;gap:10px;min-height:32px;font-size:14px}
+.bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bks-tog,.bks-btn,.bks-miss{height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
+.bks-miss{border-color:var(--amber-b,var(--line));background:var(--amber-t,var(--surface));color:var(--amber-d,var(--ink,inherit));width:100%;height:28px;padding:0 6px}
+.bks-add{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
+.bks-add .pe-f .inp{min-height:32px;height:32px;padding:0 8px}
+.bks-add .pe-f{flex:1 1 180px}
+.bks-add .supact-pri{height:32px;min-height:32px;align-self:flex-end}
+.bks-wrap{overflow-x:auto}
+.bks-grid,.bks-files{border-collapse:collapse;width:100%;font-size:13px}
+.bks-grid th,.bks-grid td,.bks-files th,.bks-files td{height:32px;padding:0 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.bks-grid thead th,.bks-files thead th{color:var(--muted-2);font-weight:600;position:sticky;top:0;background:var(--surface)}
+.bks-grid td{text-align:center;min-width:92px}
+.bks-grid .bks-have{color:var(--green-d)}
+.bks-flag{font-size:12px;color:var(--amber-d,var(--muted-2));border:1px solid var(--amber-b,var(--line));border-radius:6px;padding:0 4px}
+.bks-name{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.bks-acts{display:flex;gap:6px;justify-content:flex-end}
+.pe-bank.bk-loaded .pe-card.bks{padding:2px 14px}
 /* ⭐ THE BANK VIEW, a statement on screen (app/cap-bank.js): the load form is ONE line, a band of four figures and ONE primary button, and the lines fill the rest of the screen; nothing scrolls but the rows.
    body.bk-on is set while the Lines view shows (bankLayout); the Statement view scrolls as a page. */
 .pe-bank.bk-loaded:not(.bk-open) .pe-form,.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-private"]{display:none}
@@ -432,6 +452,7 @@ function go() {
 <script src="/app/cap-entry.js"></script>   <!-- ＋ Entry on the Day book: four plain steps, the server's events and preview (docs/design/manual-entry) -->
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
+<script src="/app/cap-bank-statements.js"></script>   <!-- Bank Statements box (l16): kept statements by account and month, Read into the one reader; api b872 -->
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
 <script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
