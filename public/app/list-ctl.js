@@ -594,27 +594,28 @@
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
-  /** the column that stretches: the one the page names (stretch: true), else the first that is not a number or the pinned amount */
-  function stretchKey(cols) {
-    var named = cols.filter(function (item) { return item.stretch; })[0];
-    if (named) return named.key;
-    var text = cols.filter(function (item) { return !item.num && item.pin !== 'end'; })[0];
-    return text ? text.key : null;
-  }
-  /** measure the rows once per paint: I.auto = { width per column key, stretch: key } */
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
+   *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows) {
-    var auto = { stretch: stretchKey(cols) };
-    var sample = rows.slice(0, AUTO_SAMPLE);
+    var auto = {},
+      sample = rows.slice(0, AUTO_SAMPLE),
+      chars = {},
+      named = cols.filter(function (item) { return item.stretch; })[0],
+      best = null;
+    cols.forEach(function (c) {
+      var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
+      sample.forEach(function (row) {
+        var len = plainText(cellOf(I, c, row)).trim().length;
+        if (len > n) n = len;
+      });
+      chars[c.key] = n;
+      if (!named && !c.num && c.pin !== 'end' && (!best || n > chars[best.key])) best = c;
+    });
+    auto.stretch = named ? named.key : best ? best.key : null;
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
-      var chars = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
-      sample.forEach(function (row) {
-        var text = plainText(cellOf(I, c, row));
-        var longest = text.trim().length;
-        if (longest > chars) chars = longest;
-      });
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
-      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars * AUTO_CHAR + AUTO_PAD)));
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD)));
     });
     I.auto = sample.length ? auto : null;
   }
