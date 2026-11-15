@@ -97,6 +97,7 @@
       i: projected.i,
       line: statementLine,
       entry: projected.entry || null,
+      against: (proposal && proposal.against) || null, /* the open invoice or bill the engine found this line to be (bank-recon open_item) */
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
       needs: askedNeedOf_(blockers),
       blockers: blockers,

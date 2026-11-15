@@ -330,6 +330,15 @@ const make = (over) => {
     assert.ok(!/\bfetch\s*\(|XMLHttpRequest|sendBeacon|WebSocket|localStorage|sessionStorage|indexedDB|document\.cookie|@import|url\(/.test(src), rel + ' is inert');
   });
   ok('bank-demo.html: strict CSP, noindex, a Demo banner, no config.js / device-id.js, one code per control, and no network or storage in its files');
+  /* M4: a line the engine found to BE an open invoice settles that invoice (allocations), never 'none' */
+  const against = [{ against_ref: 'inv-2-uuid', bill_no: 'HP-INV-2', amount_minor: 275000 }];
+  await payPost(Object.assign({}, recv, { ref: 'bank:r4', party: { status: 'existing', id: 'c-coogee', name: 'Coogee Bay Cafe', kind: 'customer' }, against, line: { date: '2026-10-20', credit_minor: 275000, debit_minor: 0 } }));
+  const settled = paid[paid.length - 1][1];
+  assert.deepStrictEqual(settled.allocations, [{ against_ref: 'inv-2-uuid', amount_minor: 275000 }]);
+  assert.strictEqual(settled.allocate, undefined);
+  assert.strictEqual(settled.amount_minor, 275000);
+  ok('M4: a receipt that is exactly one open invoice is posted AGAINST it (allocations from the against the engine gave, no allocate none)');
+
   console.log(ran + ' checks passed');
 })().catch((err) => {
   console.error('FAIL', err && err.stack ? err.stack : err);

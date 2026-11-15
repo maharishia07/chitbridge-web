@@ -73,6 +73,10 @@
   function paymentBodyOf(item, partyId, modeOf) {
     var line = item.line || {}, event = item.event || {};
     var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: lineFigure(line), mode: statementMode(modeOf, event), received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
+    if (item.against && item.against.length) {
+      body.allocations = item.against.map(function (one) { return { against_ref: one.against_ref, amount_minor: one.amount_minor }; }); /* the engine found the open document this line IS: the receipt settles it, nothing is worked out here */
+      delete body.allocate;
+    }
     if (item.ticked || item.twin) body.acknowledge = ['same_again'];
     return body;
   }

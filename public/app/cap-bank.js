@@ -332,7 +332,7 @@ async function bankLedger() {
 async function bankRail() {
   try {
     const r = (await api('booksBankRail', { query: { from: BKB.from, to: BKB.to } })) || {};
-    return { chits: r.rail_chits || [], parties: r.parties || [], may: r.may || {}, me: r.me || null, currency: r.currency || null };
+    return { chits: r.rail_chits || [], parties: r.parties || [], books: r.books || { parties: [], open_items: [] }, may: r.may || {}, me: r.me || null, currency: r.currency || null };
   } catch (e) {
     return { chits: [], parties: [], may: {}, failed: true };
   }
@@ -355,6 +355,9 @@ async function bankRun() {
   bankBrs();
   bankPaint();
 }
+/** every customer and supplier of the books (not only those on the rail) and every open invoice or bill, as the books sent them (GET /bank/rail books): the engine matches a line to them, the page matches nothing */
+const bkbBookParties = () => ((BKB.rail && BKB.rail.books && BKB.rail.books.parties) || []).slice();
+const bkbOpenItems = () => ((BKB.rail && BKB.rail.books && BKB.rail.books.open_items) || []).slice();
 /** the engine puts every line against the party's chit and the books; the page only names the states (no money is computed here) */
 function bankExplain() {
   const P = BKB.parsed,
@@ -376,7 +379,7 @@ function bankExplain() {
   const asks = chits
     .filter((item) => item.direction === 'sent' && (item.business_json || {}).kind === 'bank_query' && item.business_json.bank_query)
     .map((item) => ({ key: item.business_json.bank_query.key, chit_id: item.chit_id, party: item.party, at: item.created_at }));
-  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, learned: bkbRules(), bank: BKB.preset || undefined, country: bkbCountry() });
+  const M = CBBankRecon.explain(P.lines, BKB.ledger, pays, { window_days: 3, asks, parties: bkbBookParties(), open_items: bkbOpenItems(), learned: bkbRules(), bank: BKB.preset || undefined, country: bkbCountry() });
   BKB.m = {
     unmatched_ledger: M.unmatched_ledger || [],
     unmatched_stmt: M.rows.filter((item) => !item.ledger.length).map((item) => Object.assign({ i: item.i }, P.lines[item.i]))

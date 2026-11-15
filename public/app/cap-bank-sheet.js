@@ -24,8 +24,10 @@ function bkshLedger() {
     lines = (bkshBook().ledger || []).map((item) => Object.assign({}, item, { currency: cur }));
   return { lines, opening_minor: Number((bkshBook().ledgerRaw || {}).opening_minor) || 0, posted_refs: lines.map((item) => item.ref).filter(Boolean) };
 }
-/** the parties the books know, in the shape the engine compares names against */
+/** the parties the books know, in the shape the engine compares names against: every customer and supplier of the shop (GET /bank/rail books), else the rail's own list */
 function bkshParties() {
+  const all = (bkshBook().rail && bkshBook().rail.books && bkshBook().rail.books.parties) || [];
+  if (all.length) return all.filter((item) => item.id && item.name);
   const known = (bkshBook().rail && bkshBook().rail.parties) || [];
   return known.map((item) => ({ id: item.party_id, name: item.name || '', kind: item.kind || item.role || undefined })).filter((item) => item.id && item.name);
 }
@@ -96,7 +98,7 @@ function bkshController() {
     checkInput: bkshCheckInput,
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
-    suggestOpts: { country, learned: bkbRules(), parties: bkshParties() },
+    suggestOpts: { country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems() },
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
