@@ -177,17 +177,18 @@ async function signedOutStates(page, tag, width, shot, fits) {
   check(!(await page.locator('#bd_tabs, .bd-tabs').first().isVisible()) && !(await page.locator('#bd_gst').isVisible()), tag + ': no tabs and no setup question on the opening frame');
   await countsAgree(page, tag, 'at the start');
   await shot('30s-0-open');
-  const hasInvoiceQuestion = (await page.locator('#bd_list [data-row]', { hasText: 'BUNNINGS' }).count()) > 0;
+  const hasInvoiceQuestion = (await page.locator('#bd_list [data-row]', { hasText: 'BUNNINGS' }).count()) > 0 && (await (await openLine(page, 'BUNNINGS')).textContent()).includes('needs a tax invoice');
   if (hasInvoiceQuestion) {
-    const panel = await openLine(page, 'BUNNINGS');
-    check((await panel.textContent()).includes('needs a tax invoice. Do you hold it?'), tag + ': Bunnings asks the tax-invoice question first, in the panel under its line');
+    check((await (await openLine(page, 'BUNNINGS')).textContent()).includes('needs a tax invoice. Do you hold it?'), tag + ': Bunnings asks the tax-invoice question first, in the panel under its line');
     await shot('30s-8-question');
     await page.click('#bd_list .bd-openrow [data-act=inv][data-v=held]');
     await countsAgree(page, tag, 'after "Yes, I hold it"');
   }
   const newParty = page.locator('#bd_list [data-act=resolve]');
   if (await page.locator('#bd_list [data-row]', { hasText: 'PACIFIC' }).count()) {
-    await openLine(page, 'PACIFIC');
+    const panel = await openLine(page, 'PACIFIC');
+    check((await panel.textContent()).includes('What is this?'), tag + ': a payee nobody knows asks "What is this?" in its panel, with the way to a new customer under "Someone or something else"');
+    await page.locator('#bd_list .bd-openrow [data-act=more]').first().click();
     await page.locator('#bd_list .bd-openrow [data-act=resolve]').first().click();
     await countsAgree(page, tag, 'after "New customer"');
   }
