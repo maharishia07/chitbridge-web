@@ -133,7 +133,7 @@
       };
     }
     /* W15-54: a mark notice (a Query asked, a reply) opens that record's thread: the entry id when the feed carries it, else its number (the open list names it) */
-    var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', title: subj } : null;
+    var mark = item.action === 'mark_query' || item.action === 'mark_reply' ? { id: (item.mark_entry && item.mark_entry.entry_id) || item.subject_id || '', no: (item.mark_entry && item.mark_entry.entry_no) || '', day: (item.mark_entry && item.mark_entry.posting_date) || '', title: subj } : null;
     return {
       mark: mark && (mark.id || mark.no) ? mark : null,
       i: kind ? kind[0] : '•',
@@ -251,7 +251,7 @@
   function recordHtml(x) {
     return (
       '<button type="button" class="cbb-row" data-cbsid="CMP038-B01"' + bellMount('CMP038') + ' data-testid="bell-row"' +
-      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
+      (x.chit ? ' data-chit="' + esc(x.chit) + '"' : x.mark && typeof root.CBMark !== 'undefined' ? ' data-mark-id="' + esc(x.mark.id) + '" data-mark-no="' + esc(x.mark.no) + '" data-mark-day="' + esc(x.mark.day) + '" data-mark-title="' + esc(x.mark.title) + '"' : ' disabled') +
       (x.order ? ' data-order="1"' : '') +
       '><span aria-hidden="true">' +
       x.i +
@@ -411,6 +411,9 @@
     function openMark(row) {
       var ctl = bell.mk || (bell.mk = root.CBMark.use({
           adopter: 'acc.audit',
+          period: function () {
+            return bell.mkDay ? { from: bell.mkDay, to: bell.mkDay } : null; /* the open list answers for the CURRENT month unless asked: an older entry's Query is found by its own day */
+          },
           call: function (key, o) {
             markEndpoints();
             return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
@@ -419,6 +422,7 @@
         title = row.getAttribute('data-mark-title') || '',
         id = row.getAttribute('data-mark-id'),
         no = row.getAttribute('data-mark-no');
+      bell.mkDay = String(row.getAttribute('data-mark-day') || '').slice(0, 10);
       var show = function (subject) {
         if (subject) ctl.sheet(subject, { title: title });
         else if (typeof root.toast === 'function') root.toast(T(W.markFail));
