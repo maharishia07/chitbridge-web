@@ -15,9 +15,8 @@
   var preview = root.CBBankPreview;
   /** the choice that says a line is neither an income nor an expense (a tax payment, a loan, drawings, a transfer between own accounts): it has no account here, the owner adds it with + Entry */
   var NOT_INCOME_OR_EXPENSE = '__other__';
-  var ESC = function (value) {
-    return root.esc ? root.esc(value) : String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; });
-  };
+  /* the one escaper: public/app/helpers.js (loaded before this file on accounts.html and bank-demo.html) */
+  var ESC = function (value) { return root.esc(value); };
 
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
