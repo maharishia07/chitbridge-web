@@ -82,7 +82,7 @@
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
       N.may = reply[0].may_design || N.may;
-      N.stores = (reply[1] && reply[1].stores) || [];
+      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], N.held, T);
     });
   }
   function offers() {

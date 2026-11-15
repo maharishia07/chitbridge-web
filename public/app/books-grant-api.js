@@ -7,7 +7,7 @@
  * CARD      04-network/ACC-176-AUDITOR-GRANT · 04-network/ACC-176B-ADVISER-REQUIREMENT
  *
  * Decides nothing: who may grant, who may look, who may prepare, review or accept, and why not, are the server's answers (api PRs #1302, #1313). The web reads a grant's `state` code and a refusal's `code` and says them in words.
- *   CBBooksGrantApi.run · .held · .stateWords · .refusalWords · .HEADER · .ROLE_HEADER
+ *   CBBooksGrantApi.run · .held · .withHeld · .stateWords · .refusalWords · .HEADER · .ROLE_HEADER
  */
 (function (root) {
   'use strict';
@@ -99,8 +99,20 @@
       }
     );
   }
+/**
+   * the client list of a firm comes from the GRANTS it holds (received, live), never from a store's catalogue visibility: a shop that keeps its catalogue private is still its client.
+   * `stores` is the network-design list (kept as it is); every live grant whose shop it does not show is added as a row { entity_id, name } (the name the server keeps with the grant; the short id when it has none).
+   */
+  function withHeld(stores, heldBy, say) {
+    var seen = {};
+    stores.forEach(function (s) { seen[String(s.entity_id)] = true; });
+    var more = Object.keys(heldBy || {}).filter(function (id) { return !seen[id]; }).map(function (id) {
+      return { entity_id: id, name: (heldBy[id] && heldBy[id].grantor_name) || say('Client') + ' ' + id.slice(0, 8), purpose: '' };
+    });
+    return stores.concat(more);
+  }
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);
