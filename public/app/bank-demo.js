@@ -342,6 +342,7 @@
       warnings = said.warnings || [];
       setMessage('');
     } else {
+      view = 'lines';
       loadRefusal = { why: plainRefusal(said.why), text: /header|column|mapping|preset/i.test(said.why) ? text : '', name: name };
       setMessage('');
     }
@@ -383,6 +384,7 @@
   function readFile(file) {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
+      view = 'lines';
       loadRefusal = { why: 'That file is too big for this page (2 MB at most). Export a shorter period.', text: '' };
       resetBooks();
       makeController();
