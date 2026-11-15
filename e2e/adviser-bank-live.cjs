@@ -29,7 +29,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const bondiRow = net.locator('tr, li, [data-testid]', { hasText: /Bondi Electrical/ }).filter({ has: net.locator('button, a', { hasText: /Open book/ }) }).last();
   const open = bondiRow.locator('button, a', { hasText: /Open book/ }).first();
   console.log('   Bondi row: ' + flat(await bondiRow.innerText().catch(() => 'NONE')).slice(0, 200));
-  console.log('   Open books buttons: ' + await net.locator('button, a', { hasText: /Open books/ }).count() + ' | texts: ' + JSON.stringify(await net.locator('button, a', { hasText: /Open books/ }).evaluateAll((els) => els.map((e) => (e.closest('tr,li,.card,div') || e).innerText.replace(/s+/g, ' ').slice(0, 90)))));
+  console.log('   Open books buttons: ' + await net.locator('button, a', { hasText: /Open books/ }).count() + ' | texts: ' + JSON.stringify(await net.locator('button, a', { hasText: /Open books/ }).evaluateAll((els) => els.map((e) => (e.closest('tr,li,.card,div') || e).innerText.replace(/\s+/g, ' ').slice(0, 90)))));
   await net.screenshot({ path: path.join(OUT, 'ab-00-network-1366.png') });
   const hadOpen = await open.count();
   const popup = ctx0.waitForEvent('page', { timeout: 8000 }).catch(() => null);
@@ -78,7 +78,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
     const text = flat(await open1.innerText());
     console.log('   OPEN: ' + text.slice(0, 260));
     const more = open1.locator('button[data-act=more]');
-    const dump = async (what) => { const c = await open1.locator('button, select, input').evaluateAll((els) => els.map((e) => e.tagName + ' ' + (e.getAttribute('data-act') || '') + '=' + (e.getAttribute('data-v') || '') + ' ' + (e.tagName === 'SELECT' ? [...e.options].map((o) => o.value + ':' + o.text).join('|').slice(0, 400) : (e.innerText || '').replace(/s+/g, ' ').slice(0, 60)))); console.log('   CONTROLS ' + what + ': ' + JSON.stringify(c)); };
+    const dump = async (what) => { const c = await open1.locator('button, select, input').evaluateAll((els) => els.map((e) => e.tagName + ' ' + (e.getAttribute('data-act') || '') + '=' + (e.getAttribute('data-v') || '') + ' ' + (e.tagName === 'SELECT' ? [...e.options].map((o) => o.value + ':' + o.text).join('|').slice(0, 400) : (e.innerText || '').replace(/\s+/g, ' ').slice(0, 60)))); console.log('   CONTROLS ' + what + ': ' + JSON.stringify(c)); };
         if (/MONTHLY ACCOUNT FEE/.test(text) && await open1.locator('select[data-act=taxkind1]').count()) await choose(open1.locator('select[data-act=taxkind1]'), { label: 'Input-taxed supply' });
     else if (/KOOKABURRA/.test(text) && ((await more.count()) || (await open1.locator('select[data-act=acct]').count()))) { if (await more.count()) await press(more); await dump('kiosk'); { const opts = await open1.locator('select[data-act=acct]').first().evaluate((e) => [...e.options].map((o) => o.value + ':' + o.text)); console.log('   ACCT OPTIONS ' + JSON.stringify(opts)); const pick = opts.find((o) => /general|sundry|miscellaneous|other expense/i.test(o)) || opts[2]; await choose(open1.locator('select[data-act=acct]'), pick.split(':')[0]); } if (await open1.locator('select[data-act=taxkind]').count()) await choose(open1.locator('select[data-act=taxkind]'), 'gst_free'); }
     else if (await open1.locator('button[data-act=tick]').count()) await press(open1.locator('button[data-act=tick]'));
@@ -147,6 +147,28 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   console.log('   owner trial balance: ' + JSON.stringify(tb));
   ok(JSON.stringify(tb['1500']) === JSON.stringify([1329865, 0]), 'EXPECTED.md: bank 13,298.65 Dr (' + JSON.stringify(tb['1500']) + ')');
   ok(JSON.stringify(tb['1300']) === JSON.stringify([66000, 0]) && JSON.stringify(tb['2100']) === JSON.stringify([0, 55000]), 'EXPECTED.md: receivables 660.00, payables 550.00 (' + JSON.stringify([tb['1300'], tb['2100']]) + ')');
+  /* 6 the grant view's Day book: ONE painter, the Party · ref cell carries a second line "posted by ..." only for an entry the firm posted; both lines at 390 */
+  fs.rmSync(path.join(OUT, 'token.json'), { force: true });
+  const firm2 = await L.signIn(process.env.FIRM_HANDLE || 'bayside-books-au');
+  for (const vp of [{ width: 1366, height: 768, tag: '1366' }, { width: 390, height: 844, tag: '390' }]) {
+    const { ctx: c2, page: g } = await L.open(b, base, firm2, vp, 'Bayside Bookkeeping - demo', '/network.html', 'body');
+    await g.waitForTimeout(4000);
+    const row = g.locator('tr, li, [data-testid]', { hasText: /Bondi Electrical/ }).filter({ has: g.locator('button, a', { hasText: /Open book/ }) }).last();
+    await row.locator('button, a', { hasText: /Open book/ }).first().click();
+    await g.waitForTimeout(3500);
+    await g.locator('#bv_tab_daybook').click();
+    await g.waitForTimeout(1500);
+    await g.locator('#bv_day').fill('2026-10-29');
+    await g.locator('#bv_day').dispatchEvent('change');
+    await g.waitForTimeout(4000);
+    const cells = await g.locator('[data-testid="bv-posted-by"]').evaluateAll((els) => els.map((e) => e.innerText.replace(/\s+/g, ' ')));
+    const vis = await g.locator('[data-testid="bv-posted-by"]').first().isVisible().catch(() => false);
+    console.log('   Day book ' + vp.tag + ' posted-by lines: ' + JSON.stringify(cells) + ' visible ' + vis);
+    ok(cells.length >= 1 && cells[0].replace(/\s+/g, ' ').trim() === 'posted by Bayside Bookkeeping - demo' && vis, 'Day book ' + vp.tag + ': the Party · ref cell shows "posted by Bayside Bookkeeping - demo" as a second line');
+    await g.screenshot({ path: path.join(OUT, 'ab-11-daybook-posted-by-' + vp.tag + '.png') });
+    await c2.close();
+  }
+  fs.rmSync(path.join(OUT, 'token.json'), { force: true });
   await b.close();
   console.log('\n' + pass + ' ok, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);

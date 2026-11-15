@@ -259,10 +259,10 @@
     return text;
   }
   /** who an adviser posted an entry for, as the api stamps it (posted_by { name, firm } | null): the adviser sees "by Pat Lee for <client>", the owner "Posted by Pat Lee, <firm>"; '' for an entry nobody posted for the client */
-  function postedByWords(entry) {
+  function postedByWords(entry, short) {
     var who = entry && entry.posted_by;
     if (!who || !who.name) return '';
-    if (context && context.role === 'adviser') return fill('by {name} for {client}', { name: who.name, client: context.store.name });
+    if (context && context.role === 'adviser') return short ? fill('by {name}', { name: who.name }) : fill('by {name} for {client}', { name: who.name, client: context.store.name });
     return who.firm && who.firm !== who.name ? fill('Posted by {name}, {firm}', { name: who.name, firm: who.firm }) : fill('Posted by {name}', { name: who.name });
   }
   /** a tab this page does not offer while acting for a client (the bank, for an auditor: the api holds bank/log back from it) */

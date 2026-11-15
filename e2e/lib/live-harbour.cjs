@@ -49,7 +49,7 @@ async function serve() {
   return { srv, base: 'http://127.0.0.1:' + srv.address().port };
 }
 /** a signed-in page on the bank view; the session is seeded once per context */
-async function open(browser, base, token, vp, entity, target) {
+async function open(browser, base, token, vp, entity, target, waitSel) {
   const ctx = await browser.newContext({ viewport: vp, locale: 'en-AU', timezoneId: 'Australia/Sydney', serviceWorkers: 'block' });
   await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, { token, role: 'entity', name: entity || 'Harbour Plumbing', entity: entity || 'Harbour Plumbing' });
   /* the app talks to http://localhost:3000 on a dev host: those calls go to the real api, with the CORS answer the browser wants */
@@ -67,7 +67,7 @@ async function open(browser, base, token, vp, entity, target) {
   page.on('requestfailed', (r) => threw.push('FAILED ' + r.url().slice(0, 120)));
   page.on('response', (r) => { if (r.status() >= 400) threw.push(r.status() + ' ' + r.url().slice(-80)); });
   await page.goto(base + (target || '/accounts.html#bank')); /* target: an adviser opens '/accounts.html?acting=<client id>#bank' */
-  try { await page.waitForSelector('[data-testid="bank-file"]', { timeout: 20000 }); } catch (e) { console.log('OPEN-FAILED url', page.url(), 'threw', JSON.stringify(threw), 'body', ((await page.textContent('body').catch(() => '')) || '').replace(/s+/g, ' ').slice(0, 500)); throw e; }
+  try { await page.waitForSelector(waitSel || '[data-testid="bank-file"]', { timeout: 20000 }); } catch (e) { console.log('OPEN-FAILED url', page.url(), 'threw', JSON.stringify(threw), 'body', ((await page.textContent('body').catch(() => '')) || '').replace(/s+/g, ' ').slice(0, 500)); throw e; }
   return { ctx, page };
 }
 module.exports = { serve, open, signIn, call, API };
