@@ -95,7 +95,7 @@
     var item = host.itemOf(key);
     if (!item) return;
     panel = { key: key, step: 1, choice: null, refused: '', focusSel: '', shown: null };
-    var title = host.payeeOf(item) + ' · ' + host.preview.dateText(item.line.date) + ' · ' + host.amountText(item.line.debit_minor ? { amount_minor: item.line.debit_minor, currency: host.CURRENCY } : { amount_minor: item.line.credit_minor, currency: host.CURRENCY });
+    var title = host.payeeOf(item) + ' · ' + host.preview.dateText(item.line.date) + ' · ' + host.CURRENCY + ' ' + host.amountText(item.line.debit_minor ? { amount_minor: item.line.debit_minor, currency: host.CURRENCY } : { amount_minor: item.line.credit_minor, currency: host.CURRENCY });
     panel.shown = host.labKit.popup(title, function () {}, 'lk-side', function () {
       var after = panel && panel.next;
       panel = null;
