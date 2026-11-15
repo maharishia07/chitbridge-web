@@ -270,10 +270,15 @@
     }
   }
   /** a ready line that repeats an earlier ready line of THIS statement (same party, same side, same figure, same day) is marked twin: the bank itself shows two payments, so the host may answer the server's "already paid?" for it */
+  /** who a line is with, as one string: a party the books know by its id, a NEW party (its id is made per line) by kind and name; '' when the line has none */
+  function partySignOf_(item) {
+    var party = item.party || {};
+    return party.status === 'new' ? 'new:' + party.kind + ':' + String(party.name).toLowerCase() : party.id || (item.event && item.event.party) || '';
+  }
   function markTwins_(todo) {
     var seen = {};
     return todo.map(function (item) {
-      var line = item.line || {}, party = item.party && (item.party.id || item.party.name);
+      var line = item.line || {}, party = partySignOf_(item);
       var sign = [party, line.date, line.credit_minor, line.debit_minor].join('|');
       var twin = !!party && !!seen[sign];
       seen[sign] = true;

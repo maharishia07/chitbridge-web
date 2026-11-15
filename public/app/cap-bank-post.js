@@ -105,12 +105,17 @@
       }
     };
   }
+  /** a party the books already know: the engine's proposal names it by id in event.party when the line carries no party record (a taught rule or a name found in the narration) */
+  function namedPartyId(event) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(event.party || '')) ? event.party : null;
+  }
   /** one line: its party first (made once), then its one door: POST /payments for money in from / out to a party, else POST /events */
   async function postLine(deps, made, item) {
     var party = await partyOf(deps, made, item.party);
     if (!party.ok) return party;
     if (!PAYMENT_DIRECTION[item.event.type]) return postEntry(deps, item, party.id);
-    return party.id ? postPayment(deps, item, party.id) : { ok: false, why: 'Pick who this payment is with, then try again.' };
+    var partyId = party.id || namedPartyId(item.event);
+    return partyId ? postPayment(deps, item, partyId) : { ok: false, why: 'Pick who this payment is with, then try again.' };
   }
   /** why this kind of line is not added from here (in words); null when it is */
   function refusalOf(type) {
