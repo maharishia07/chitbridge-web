@@ -173,7 +173,7 @@
   /**
    * options(cfg) → the options of CBList.mount
    *   cfg.key · cfg.rows() → rows (rowOfItem) in the order to show · cfg.panel(row) → html of the open row · cfg.fmt(minor) → money text · cfg.tid(row) → data-testid of a row
-   *   cfg.extra { columns, actions, head, next } what a page adds (the owner's page: the row actions of the rail)
+   *   cfg.extra { columns, actions, head, wrapStatus(row, iconHtml) } what a page adds (the owner's page: the row actions of the rail, and the rail's own state on the icon's cell)
    */
   function options(cfg) {
     var kit = root.CBLabKit,
@@ -195,7 +195,7 @@
         defaultCols: ['status', 'date', 'payee', 'out', 'in'],
         views: viewsOf(cfg),
         columns: [
-          { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { return kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); } },
+          { key: 'status', label: T('Status'), prio: 1, keep: true, w: 44, sort: 'status', html: true, cell: function (row) { var icon = kit.statusIcon({ status: row.status, name: T(STATUS[row.status]) }); return extra.wrapStatus ? extra.wrapStatus(row, icon) : icon; } },
           { key: 'date', label: T('Date'), prio: 2, w: 112, sort: 'date', cell: function (row) { return root.CBBankPreview.dateText(row.date); } },
           { key: 'payee', label: T('Payee as the bank wrote it'), prio: 3, w: 380, html: true, cell: function (row) { return '<span class="bl-pay" data-testid="bank-payee">' + esc(row.narration) + '</span>'; } },
           { key: 'out', label: T('Out'), prio: 4, keep: true, num: true, w: 112, sort: 'amount', html: true, cell: amountCell(true) },

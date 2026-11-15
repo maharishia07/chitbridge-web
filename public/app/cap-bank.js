@@ -792,6 +792,7 @@ function bankList() {
     tid: (r) => 'bank-row-' + r.id,
     extra: {
       head: () => ({ notices }),
+      wrapStatus: (row, icon) => '<span data-testid="bank-chip-' + bkbE(row.id) + '" data-status="' + bkbE(row.raw.status) + '">' + icon + '</span>' /* the rail's own state (Settled by chit · Party told us · …) stays readable on the row; the icon is the line's standing */,
       columns: [
         {
           key: 'party',

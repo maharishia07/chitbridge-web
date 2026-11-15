@@ -370,7 +370,7 @@
     var shape = STATUS_ICONS[opts.status] || STATUS_ICONS.need,
       name = escapeText(opts.name || '');
     return (
-      '<span class="lk-st lk-st-' + escapeText(STATUS_ICONS[opts.status] ? opts.status : 'need') + '" data-cbsid="CMP064-D01" data-status="' + escapeText(opts.status || '') + '" title="' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      '<span class="lk-st lk-st-' + escapeText(STATUS_ICONS[opts.status] ? opts.status : 'need') + '" data-cbsid="CMP064-D01" data-state="' + escapeText(opts.status || '') + '" title="' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
       shape + '</svg><span class="lk-sr">' + name + '</span></span>'
     );
   }
