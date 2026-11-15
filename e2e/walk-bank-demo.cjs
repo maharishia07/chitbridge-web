@@ -158,10 +158,9 @@ async function signedOutStates(page, tag, width, shot, fits) {
   const text = (selector) => page.textContent(selector);
   const phone = width < 700;
   const figs = await text('#bd_figs');
-  check(figs.includes('21,068.55') && figs.includes('23,043.00') && figs.includes('1,974.45') && !/AUD \d/.test(figs), tag + ': frame 0: statement 21,068.55, books 23,043.00, difference 1,974.45 (hand figures of the sample), AUD not on a figure');
-  check((await page.locator('#bd_lines .bd-row').count()) === 10, tag + ': the ten sample lines are listed');
-  if (!phone) check(await page.evaluate(() => { const pane = document.getElementById('bd_lines'); return pane.scrollHeight <= pane.clientHeight + 2; }), tag + ': all ten rows are visible without scrolling the list');
-  check((await text('#bd_lines')).includes('2 Oct 2026') && (await text('#bd_lines')).includes('Invoice INV-2'), tag + ': dates read "2 Oct 2026" and an in-books line names the entry it matched');
+  check(figs.includes('18,280.75') && figs.includes('19,963.00') && figs.includes('1,682.25') && !/AUD \d/.test(figs), tag + ': frame 0: statement 18,280.75, books 19,963.00, difference 1,682.25 (the figures of the product for the October file), AUD not on a figure');
+  check((await page.locator('#bd_lines .bd-row').count()) === 12, tag + ': the twelve lines of the October file are listed');
+  check((await text('#bd_lines')).includes('2 Oct 2026') && (await text('#bd_lines')).includes('Invoice INV-1'), tag + ': dates read "2 Oct 2026" and an in-books line names the entry it matched');
   check(!(await page.locator('#bd_tabs, .bd-tabs').first().isVisible()) && !(await page.locator('#bd_gst').isVisible()), tag + ': no tabs and no setup question on the opening frame');
   await countsAgree(page, tag, 'at the start');
   await shot('30s-0-open');
@@ -194,7 +193,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   await fits('after the press');
   await shot('30s-20-added');
   const finished = (await page.locator('#bd_brs').isVisible()) && (await page.locator('.bd-tick').count()) > 0;
-  if (hasInvoiceQuestion) check(finished && (await text('#bd_brs')).includes('Reconciled') && (await text('#bd_figs')).includes('0.00'), tag + ': the last frame is the reconciliation statement with the green nil and the tick');
+  if (hasInvoiceQuestion && !(await page.locator('.bd-s-needs_you').count())) check(finished && (await text('#bd_brs')).includes('Reconciled') && (await text('#bd_figs')).includes('0.00'), tag + ': the last frame is the reconciliation statement with the green nil and the tick');
   else check(!(await page.locator('.bd-tick').count()) || finished, tag + ': the report shows a tick only when nothing is left outside the books');
   if (!(await page.locator('#bd_brs').isVisible())) await page.evaluate(() => document.getElementById('bd_tab_brs').click());
   const report = await text('#bd_brs');

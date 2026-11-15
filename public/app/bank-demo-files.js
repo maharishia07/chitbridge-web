@@ -20,7 +20,7 @@
     var box = host.el('bd_cur');
     box.hidden = !asked;
     box.innerHTML = asked
-      ? '<label for="bd_cur_sel">Which currency is ' + esc(asked.name) + ' in?</label> <input data-cbsid="BKS017-S07" id="bd_cur_sel" class="bd-inp bd-cur-in" type="text" maxlength="3" size="4" placeholder="' + esc(host.CURRENCY) + '" autocomplete="off" data-testid="bd-cur-sel"> ' +
+      ? '<label for="bd_cur_sel">Which currency is ' + esc(asked.name) + ' in? Type its three letters, for example ' + esc(host.CURRENCY) + '.</label> <input data-cbsid="BKS017-S07" id="bd_cur_sel" class="bd-inp bd-cur-in" type="text" maxlength="3" size="4" autocomplete="off" data-testid="bd-cur-sel"> ' +
         '<button data-cbsid="BKS017-B31" type="button" class="bd-btn" data-act="curuse" data-testid="bd-cur-go">Read this file</button>'
       : '';
     if (asked) host.el('bd_cur_sel').focus();
