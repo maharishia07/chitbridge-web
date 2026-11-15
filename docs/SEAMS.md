@@ -71,9 +71,9 @@ of file each thing is; this says what already does the job.
 | 41 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 40 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 40 | `page` | `cap-catalogue.js` |  |
+| 40 | `shell` | `pick.js` |  |
 | 40 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 40 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
-| 39 | `shell` | `pick.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 38 | `closeModal` | `app.html` |  |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
