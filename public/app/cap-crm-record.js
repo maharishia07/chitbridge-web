@@ -380,7 +380,8 @@ async function crmRecordOpen(route) {
     esc(tx('Reading…')) +
     '</div></div>';
   var rec,
-    head = null;
+    head = null,
+    tlFailed = false;
   try {
     /* a walk-in is a phone that holds points, not a party: the API has no record of it (its party_id is null) - the row is all there is */
     var got =
@@ -389,6 +390,7 @@ async function crmRecordOpen(route) {
         : await Promise.all([
             api('crmParty', { params: { id: p.party_id } }),
             api('crmTimeline', { params: { id: p.party_id }, query: { limit: 100 } }).catch(function () {
+              tlFailed = true; /* R70: a history that could not be read is NOT an empty history: the card says so and offers Try again */
               return null;
             })
           ]);
@@ -403,6 +405,7 @@ async function crmRecordOpen(route) {
     /* the latest five are shown; the same read (up to 100) is what "bills" and "orders not billed yet" are counted from - no new route */
     rec.timeline_all = head ? crmEntriesFrom(head) : [];
     if (!rec.timeline_head) rec.timeline_head = rec.timeline_all.slice(0, 5);
+    rec.timeline_failed = tlFailed && !rec.timeline_head.length;
     CRMR.rec = rec;
     crmRecordPaint(p, CRMR.rec);
   } catch (e) {
@@ -1151,6 +1154,15 @@ function crmRecordPaint(p, rec) {
       },
       onOpen: crmEntryOpen,
       next: crmEntryNext,
+      state: function () {
+        return rec.timeline_failed ? 'error' : null;
+      },
+      error: function () {
+        return { title: tx("Couldn't load the history."), sub: tx('The record’s other sections still show.') };
+      },
+      onRetry: function () {
+        crmRecordOpen(CRM.route);
+      },
       empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') }
     });
   }

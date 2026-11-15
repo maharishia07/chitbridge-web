@@ -306,6 +306,9 @@ dialog.sheet::backdrop{background:var(--scrim)}
   [data-testid="party-statement"] table.bktab td{border:0;padding:3px 0;display:flex;gap:10px;justify-content:space-between;text-align:right;overflow-wrap:anywhere}
   [data-testid="party-statement"] table.bktab td[data-l]::before{content:attr(data-l);font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);text-align:left;flex-shrink:0}
   [data-testid="party-statement"] table.bktab td:empty{display:none}
+  /* the What cell is prose (text + chips + ref): a block under its label, not flex items squeezed into a column */
+  [data-testid="party-statement"] table.bktab td[data-testid^="stmt-what-"]{display:block;text-align:left}
+  [data-testid="party-statement"] table.bktab td[data-testid^="stmt-what-"]::before{display:block;margin-bottom:3px}
 }
 @media (max-width:620px){
   .shop{display:none}
