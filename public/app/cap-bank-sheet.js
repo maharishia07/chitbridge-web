@@ -153,6 +153,21 @@ async function bkshAdd(btn) {
   BKSH.posting = false;
   bkshPaint();
 }
+/** the one step on a line the sheet cannot finish (a tax payment, a loan, a transfer): the ＋ Entry opens for that line, the sheet stays kept behind it. The entry is pre-filled by bankEntryPreset when the bank-match build provides it; else the date, amount and words of the line */
+function bkshEntry(key) {
+  const item = ((BKSH.ctl && BKSH.ctl.view().items) || []).filter((one) => one.key === key)[0];
+  if (!item) return { ok: false, why: tx('That line is gone') };
+  if (typeof enOpen !== 'function') return { ok: false, why: tx('This starts after an update') };
+  const line = item.line || {},
+    minor = line.debit_minor || line.credit_minor || 0,
+    preset =
+      typeof bankEntryPreset === 'function'
+        ? bankEntryPreset(item, bkshBook())
+        : { v: { date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, ref: 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+  closeModal();
+  enOpen(preset);
+  return { ok: true };
+}
 /** the sheet closed: the Bank view reads the books again so the lines that were added show as matched */
 function bkshClose() {
   closeModal();
@@ -188,7 +203,7 @@ async function bankSheetOpen() {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
