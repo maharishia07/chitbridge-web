@@ -156,9 +156,16 @@
     [/card|settlement|eftpos/i, 'card'],
     [/rent/i, 'home']
   ];
+  /** the words a bank prints in capitals, as a person writes them: "Jones Plumbing Supplies" (its prefix and trailing reference left off) */
+  function tidyPayee(narration) {
+    var said = String(narration || '').replace(/^(EFT|CHEQUE|EFTPOS|DIRECT DEBIT|DIRECT CREDIT)\s+/i, '');
+    for (var again = 0; again < 3; again++) said = said.replace(/\s+(INV\s?\d+|J\d+|\d{3,}|SYDNEY)$/i, '');
+    said = said.trim();
+    return said && said === said.toUpperCase() ? said.toLowerCase().replace(/(^|\s)([a-z])/g, function (all, space, letter) { return space + letter.toUpperCase(); }) : said;
+  }
   function payeeOf(item) {
     var named = item.party && item.party.name && item.party.status === 'existing' ? item.party.name : '';
-    var said = named || String(item.line.narration || '').replace(/^(EFT|Cheque)\s+/i, '').trim() || 'This line';
+    var said = named || tidyPayee(item.line.narration) || 'This line';
     return said.charAt(0).toUpperCase() + said.slice(1);
   }
   function badgeOf(item) {

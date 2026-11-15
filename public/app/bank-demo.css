@@ -210,3 +210,22 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-row .bd-status{grid-column:2 / -1}
   .bd-figs .lk-fig-v{font-size:17px}
 }
+
+/* ten rows without a scroll at 1366x768: one line of chip and detail, a smaller badge, tighter cards */
+.bd-figs{padding:2px 24px}
+.bd-figs .lk-fig{padding:4px 16px}
+.bd-figs .lk-fig-v{font-size:26px}
+.bd-bar{padding:3px 24px}
+.bd-bar .bd-btn{min-height:34px}
+.bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(440px,600px);padding:2px 24px}
+.bd-row{min-height:42px}
+.bd-row .lk-bd{width:30px;height:30px;font-size:12px}
+.bd-row .lk-bd svg{width:16px;height:16px}
+.bd-who{gap:10px}
+.bd-status{flex-direction:row;flex-wrap:wrap;align-items:center;gap:2px 10px}
+.bd-tag{padding:1px 9px}
+.bd-head{padding-top:4px;padding-bottom:0}
+@media (max-width:700px){
+  .bd-status{flex-direction:column;align-items:flex-start}
+  .bd-row .lk-bd{width:36px;height:36px}
+}
