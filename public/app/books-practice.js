@@ -98,7 +98,7 @@
     );
   }
   function statusCell(r) {
-    var why = r.health.reasons && r.health.reasons.length ? ' <span class="sub">' + esc(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
+    var why = r.health.reasons && r.health.reasons.length ? ' <span class="sub">· ' + esc(r.health.reasons.slice(0, 2).join(' · ')) + '</span>' : '';
     return '<span class="tag ' + (STATUS_CLASS[r.health.status] || '') + '" data-testid="practice-status-' + esc(r.entity_id) + '">' + esc(tx(r.health.words)) + '</span>' + why;
   }
   function trend(r) {
