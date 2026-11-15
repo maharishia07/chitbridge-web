@@ -1011,13 +1011,13 @@ async function start() {
       shop: SESS.shop
     }
   );
-  whoPaint();
+  whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
   const g = ++ACC.gen;
   /* ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows.
      (The Ledger's answer below can still turn this into the "not switched on" card; nothing here reads or writes.) */
   {
     const f0 = (location.hash || '').replace(/^#\/?/, ''),
-      v0 = NAV.some((item) => item[0] === f0) ? f0 : 'todo';
+      v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
     chrome(v0);
     if (v0 !== 'ledgers')
       $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
@@ -1049,7 +1049,7 @@ async function start() {
   }
   if (!ON) return offCard();
   const first = (location.hash || '').replace(/^#\/?/, '');
-  show(NAV.some((item) => item[0] === first) ? first : 'todo'); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
+  show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */

@@ -101,12 +101,12 @@ of file each thing is; this says what already does the job.
 | 33 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 33 | `internalSpec` | `problem.js` | A route whose catch must not widen into known(err) (a read that always answered 500) calls problem(req, res, i |
 | 32 | `modal` | `app.html` |  |
-| 32 | `money` | `books-grant-drill.js` |  |
 | 32 | `open` | `cap-dispute.js` | a row → the chit sheet, with this dispute's room open (the sheet's dispute section reads the focus) |
 | 32 | `order` | `cap-iddocs.js` | var LIST = null; |
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
 | 31 | `load` | `books-grant-view.js` |  |
+| 31 | `money` | `cart.js` |  |
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
@@ -114,10 +114,10 @@ of file each thing is; this says what already does the job.
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
 | 29 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 29 | `group` | `identity.js` | again in a different costume. |
+| 28 | `call` | `cap-assist.js` |  |
 | 28 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 28 | `names` | `shortcuts.js` |  |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
-| 27 | `call` | `cap-assist.js` |  |
 | 27 | `done` | `dayopen.js` | what the morning settled, in one sentence, for the moment it finishes |
 | 27 | `columns` | `field-ledger.js` | columns(root, tables) → { table: |
 | 27 | `customer` | `mintuserid.js` | silently becomes a second identity. |
@@ -135,6 +135,7 @@ of file each thing is; this says what already does the job.
 | 24 | `rail` | `home-facts.js` | action greyed with `say`; it branches on `why`, never on the words. |
 | 24 | `assist` | `home-facts.js` | The library is the platform's, not the shop's, so it is read without a shop context. |
 | 24 | `match` | `itemmatch.js` | actually state. |
+| 23 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 23 | `entries` | `books-store.js` |  |
 | 23 | `chart` | `fx-rates.js` |  |
 | 23 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
@@ -142,7 +143,6 @@ of file each thing is; this says what already does the job.
 | 23 | `allowed` | `trips.js` | let _idsFrom = null, |
 | 22 | `cblog` | `core.js` | const __cblog = []; |
 | 22 | `note` | `device-id.js` | note(where, problem) — |
-| 22 | `groups` | `lab-kit.js` | items [{ name, done, total, next, blocker }] → { Ready:[…], Nearly:[…], 'Not started':[…] } |
 | 22 | `panel` | `sides.js` |  |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 22 | `keep` | `signin.js` | see. |

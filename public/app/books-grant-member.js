@@ -398,6 +398,7 @@
     $('bg_cancel2').onclick = panel.o.closeSheet;
     /** Save sends the new end day once; the sheet closes and the list is read again */
     $('bg_save').onclick = function () {
+      var switching = pickedPosting('bg_post2') === 'adviser_posts' && grant.posting !== 'adviser_posts'; /* switching to "your adviser posts" removes your approval: the same question as giving it */
       root.CBAction.run(
         $('bg_save'),
         function () {
@@ -405,7 +406,8 @@
         },
         {
           key: 'bg-change-' + grant.grant_id,
-          failed: words("Couldn't change the date"),
+          confirm: switching ? { title: words('Let this firm act in your books?'), body: giveQuestion(nameOf(grant.grantee_entity), true, $('bg_until2').value, 'adviser_posts'), yes: words('Save') } : undefined,
+          failed: words("Couldn't save the change"),
           out: 'bg_out2',
           outcome: function () {
             panel.o.closeSheet();

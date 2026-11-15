@@ -22,12 +22,6 @@
   function $(id) {
     return root.document.getElementById(id);
   }
-  function escapeHtml(text) {
-    return typeof root.esc === 'function' ? root.esc(text) : String(text == null ? '' : text).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; });
-  }
-  function money(minor, currency) {
-    return root.CBBooksActing.figure(minor, currency);
-  }
   /** the Dr side of an entry's carried lines: what the Day book shows as the entry's amount */
   function amountOf(entry) {
     return (entry.lines || []).reduce(function (sum, line) { return sum + Number(line.dr_minor || 0); }, 0);
@@ -50,17 +44,17 @@
   }
   function refusal(ctx, failure) {
     if (failure && failure.status === 401) throw failure;
-    show(ctx, '<h2>' + escapeHtml(words('Not shown')) + '</h2><div class="nw-why" role="status" data-testid="bd-why">' + escapeHtml((failure && failure.message) || words("Couldn't open this. Nothing was changed.")) + '</div>');
+    show(ctx, '<h2>' + esc(words('Not shown')) + '</h2><div class="nw-why" role="status" data-testid="bd-why">' + esc((failure && failure.message) || words("Couldn't open this. Nothing was changed.")) + '</div>');
   }
   function fact(label, text, tid) {
-    return '<span class="tag" data-testid="bd-fact-' + tid + '">' + escapeHtml(words(label)) + ': ' + escapeHtml(text) + '</span>';
+    return '<span class="tag" data-testid="bd-fact-' + tid + '">' + esc(words(label)) + ': ' + esc(text) + '</span>';
   }
 
   /* ── an account's ledger ── */
   /** ctx = { call, sheet, mountList, day } · account = { code, name } */
   function openLedger(ctx, account) {
     var state = { account: account, lines: [], entries: {}, answer: null, next: null };
-    show(ctx, '<h2>' + escapeHtml(account.code + ' ' + account.name) + '</h2><p class="sub" data-testid="bd-loading">' + escapeHtml(words('Opening the ledger…')) + '</p>');
+    show(ctx, '<h2>' + esc(account.code + ' ' + account.name) + '</h2><p class="sub" data-testid="bd-loading">' + esc(words('Opening the ledger…')) + '</p>');
     return page(ctx, state, null).then(function () { paintLedger(ctx, state); }, function (failure) { refusal(ctx, failure); });
   }
   /** one page of the ledger and, for the same entries, the Day book's lines (party names, who made it) */
@@ -88,10 +82,10 @@
   }
   function paintLedger(ctx, state) {
     var answer = state.answer, currency = answer.currency, totals = answer.totals || {};
-    var head = '<h2 data-testid="bd-title">' + escapeHtml(answer.account.code + ' ' + answer.account.name) + '</h2><p class="sub">' + escapeHtml(answer.from + ' → ' + answer.to) + '</p>';
+    var head = '<h2 data-testid="bd-title">' + esc(answer.account.code + ' ' + answer.account.name) + '</h2><p class="sub">' + esc(answer.from + ' → ' + answer.to) + '</p>';
     var facts = '<div class="nw-acts" data-testid="bd-facts">' +
-      fact('Opening', money(answer.opening_minor, currency), 'opening') + (totals.dr_minor != null ? fact('Total debit', money(totals.dr_minor, currency), 'dr') + fact('Total credit', money(totals.cr_minor, currency), 'cr') : '') + fact('Closing', money(answer.closing_minor, currency), 'closing') + '</div>';
-    var more = state.next ? '<div class="nw-acts"><button data-cbsid="NET005-B05" type="button" class="act quiet" id="bd_more" data-testid="bd-more">' + escapeHtml(words('Show more')) + '</button><span class="sub">' + escapeHtml(state.lines.length + ' ' + words('of') + ' ' + answer.total) + '</span></div>' : '';
+      fact('Opening', root.CBBooksActing.figure(answer.opening_minor, currency), 'opening') + (totals.dr_minor != null ? fact('Total debit', root.CBBooksActing.figure(totals.dr_minor, currency), 'dr') + fact('Total credit', root.CBBooksActing.figure(totals.cr_minor, currency), 'cr') : '') + fact('Closing', root.CBBooksActing.figure(answer.closing_minor, currency), 'closing') + '</div>';
+    var more = state.next ? '<div class="nw-acts"><button data-cbsid="NET005-B05" type="button" class="act quiet" id="bd_more" data-testid="bd-more">' + esc(words('Show more')) + '</button><span class="sub">' + esc(state.lines.length + ' ' + words('of') + ' ' + answer.total) + '</span></div>' : '';
     show(ctx, head + facts + '<div class="nw-list bd-list" id="bd_list" data-testid="bd-list"></div>' + more);
     if ($('bd_more')) $('bd_more').onclick = function () {
       page(ctx, state, state.next).then(function () { paintLedger(ctx, state); }, function (failure) { refusal(ctx, failure); });
@@ -108,7 +102,7 @@
       columns: cols.map(function (c, i) {
         return {
           key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, w: c[2] ? 120 : c[0] === 'what' ? 200 : 110,
-          cell: function (row) { return c[2] === MONEY ? money(row[c[0]], currency) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
+          cell: function (row) { return c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };
       }),
@@ -129,13 +123,13 @@
   /** entry = one Day book entry (lines carry code, name, party_name, dr_minor, cr_minor) · back = how to return to the ledger it was opened from (or null) */
   function openEntry(ctx, entry, currency, back) {
     var shown = currency || ctx.currency, debit = amountOf(entry), credit = crOf(entry), madeBy = madeByWords(entry.source || {});
-    var reversal = entry.reversed_by ? '<div class="nw-why" role="status" data-testid="bd-reversed">' + escapeHtml(words('Reversed by') + ' ' + entry.reversed_by) + '</div>' : '';
+    var reversal = entry.reversed_by ? '<div class="nw-why" role="status" data-testid="bd-reversed">' + esc(words('Reversed by') + ' ' + entry.reversed_by) + '</div>' : '';
     show(ctx,
-      (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + escapeHtml(words('Back to the ledger')) + '</button>' : '') +
-      '<h2 data-testid="bd-title">' + escapeHtml(entry.entry_no) + '</h2><p class="sub">' + escapeHtml(entry.posting_date + ' · ' + entry.narration) + '</p>' +
-      (madeBy ? '<p class="sub" data-testid="bd-who">' + escapeHtml(madeBy) + '</p>' : '') + reversal +
-      '<div class="nw-acts" data-testid="bd-facts">' + fact('Amount', money(debit, shown), 'amount') + fact('Total debit', money(debit, shown), 'dr') + fact('Total credit', money(credit, shown), 'cr') +
-      (debit === credit ? '' : '<span class="tag" data-testid="bd-unbalanced">' + escapeHtml(words('Debit and credit differ')) + '</span>') + '</div>' +
+      (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + esc(words('Back to the ledger')) + '</button>' : '') +
+      '<h2 data-testid="bd-title">' + esc(entry.entry_no) + '</h2><p class="sub">' + esc(entry.posting_date + ' · ' + entry.narration) + '</p>' +
+      (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal +
+      '<div class="nw-acts" data-testid="bd-facts">' + fact('Amount', root.CBBooksActing.figure(debit, shown), 'amount') + fact('Total debit', root.CBBooksActing.figure(debit, shown), 'dr') + fact('Total credit', root.CBBooksActing.figure(credit, shown), 'cr') +
+      (debit === credit ? '' : '<span class="tag" data-testid="bd-unbalanced">' + esc(words('Debit and credit differ')) + '</span>') + '</div>' +
       '<div class="nw-list bd-list" id="bd_list" data-testid="bd-list"></div>');
     if ($('bd_back')) $('bd_back').onclick = back;
     var rows = (entry.lines || []).map(function (line, n) { return Object.assign({ _n: n, account: line.code + ' ' + line.name, party: line.party_name || '' }, line); });
@@ -150,7 +144,7 @@
       columns: cols.map(function (c, i) {
         return {
           key: c[0], label: words(c[1]), prio: i === 0 || c[2] ? 1 : 2, w: c[2] ? 120 : 200,
-          cell: function (row) { return c[2] === MONEY ? (Number(row[c[0]]) ? money(row[c[0]], shown) : '') : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
+          cell: function (row) { return c[2] === MONEY ? (Number(row[c[0]]) ? root.CBBooksActing.figure(row[c[0]], shown) : '') : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };
       }),

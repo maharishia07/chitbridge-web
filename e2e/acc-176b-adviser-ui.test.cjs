@@ -72,6 +72,21 @@ check(entry.includes("enActingAdviser() ? await CBBooksActing.prepare(api, tx, b
 check(acting.includes("body({ kind: 'journal', body: journal, client_ref: entry.client_ref, working_month: month })") && acting.includes('if (!entry.date) throw'), 'prepare sends store_id, kind journal, the body, client_ref and working_month, and needs the date');
 check(core.includes("typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}") && core.includes('...actingHeaders()'), 'every request of a page acting for a store carries its headers; other pages send none');
 check(accounts.includes('CBBooksActing.fromAddress(location.search)') && acting.includes("band.id = 'acting-band'") && accounts.includes('CBBooksActing.startPage(') && view.includes("'Prepare a journal'"), 'the books page reads the store from its address and shows the banner; the workspace offers Prepare a journal');
+/* (10) acting: only the /api/books* tabs and calls; one accept key per attempt; a delegated post says it posted */
+const A2 = (() => { const sb = { tx: (x) => x, esc: (x) => String(x), CBBooksGrantApi: { HEADER: 'X-Books-For', ROLE_HEADER: 'X-Books-Role' } }; sb.window = sb; vm.createContext(sb); vm.runInContext(acting, sb); return sb.CBBooksActing; })();
+A2.enter({ id: 's1', name: 'One' }, 'adviser', 'adviser_posts');
+check(A2.posts() && ['/api/books/daybook', '/api/books-actions', '/api/books-grants'].every((p) => A2.mayCall(p)) && ['/api/entities', '/api/chits', '/api/crm', '/api/relationships', '/api/tax', '/api/facts'].every((p) => !A2.mayCall(p)), 'acting: only /api/books, /api/books-actions and /api/books-grants may be called under the header');
+const nav = [['todo'], ['daybook'], ['bank'], ['tb'], ['events']], groups = [['', ['todo']], ['Books', ['daybook', 'bank', 'tb']]];
+A2.keepTabs(nav, groups);
+check(nav.map((n) => n[0]).join() === 'daybook,tb' && groups.length === 1 && groups[0][1].join() === 'daybook,tb', 'acting: the menu keeps only the books tabs (no To do, Bank, events)');
+A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
+check(!A2.posts(), 'an owner_approves grant prepares; only adviser_posts posts');
+const host = { innerHTML: '' }, acts = { innerHTML: '' };
+A2.paintPrepared(host, acts, { posted: true, state: 'accepted', entry_no: 'JV-0007' }, (x) => x, (x) => String(x));
+check(/Posted JV-0007/.test(host.innerHTML.replace(/<[^>]+>/g, '')) && !/Nothing is posted/.test(host.innerHTML), 'a delegated post paints Posted <entry_no>, not Prepared');
+check(actions.includes('attemptKey(row)') && !actions.includes("'accept-' + row.action_id }") && actions.includes('delete row.accept_key'), 'accept: one key per attempt, dropped once an answer under 500 settles it');
+check(entry.includes("p: '/api/books-actions', idem: 'attempt' }") && entry.includes('EN.saved.posted) enSavedTell'), 'prepare is one key per attempt; a delegated post runs the after-save tell');
+check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActing.openPage(') && acting.includes('confirmGrant(base, token)') && acting.includes('keepTabs(menu, groups)') && !acting.includes('actingName'), 'the page enters only on a live adviser grant, the name comes from the grant row, the core refuses a call outside /api/books*');
 /* (8) the header names live in one file */
 check(![acting, actions, member, view].some((src) => /X-Books-(For|Role)/.test(src.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/^ \*.*$/gm, ''))), 'no literal header name outside books-grant-api.js');
 

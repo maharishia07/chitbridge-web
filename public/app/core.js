@@ -1362,9 +1362,9 @@ function answerWords(body) {
   return errWords(answer.message) || errWords(answer.detail) || errWords(answer.error) || errWords(answer.title);
 }
 /** ACC-176b: the headers of a page acting for a store; none on any other page */
-const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {});
+const actingHeaders = () => (typeof CBBooksActing !== 'undefined' ? CBBooksActing.headers() : {}); const actingEp = (ep) => (ep && typeof CBBooksActing !== 'undefined' ? CBBooksActing.guard(ep) : ep); /* the store header never goes outside /api/books*: a call outside it is refused before it is sent */
 async function apiOnce(key, { params, query, body, idemKey: stepKey } = {}) {
-  const ep = epOf(key);
+  const ep = actingEp(epOf(key));
   if (!ep) throw new Error('no endpoint ' + key);
   cblog('debug', ep.m + ' ' + key);
   // Double-fire guard: block a repeat of the SAME in-flight mutation (same endpoint+params). GETs are free.

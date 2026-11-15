@@ -26,7 +26,7 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions' } /* ACC-176b: an adviser PREPARES, nothing is posted */
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });
 }
 
@@ -311,7 +311,7 @@ function enActs() {
     esc(tx('Back')) +
     '</button>' +
     (last
-      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
+      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx(enActingAdviser() ? (CBBooksActing.posts() ? 'Post' : 'Prepare') : 'Save')) + '</button>'
       : '<button data-cbsid="SCR022-B01" class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
         (enStepReady(EN.step) ? '' : ' disabled') +
         '>' +
@@ -1056,7 +1056,7 @@ async function enSaveWrite() {
   try {
     var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
     EN.saved = reply || {}; EN.saving = false; EN.ref = null;
-    if (!EN.saved.prepared) enSavedTell(EN.saved);
+    if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
     EN.saving = false;
@@ -1066,7 +1066,7 @@ async function enSaveWrite() {
     enPaint2();
   }
 }
-/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, it never posts (CBBooksActing is loaded only by the pages that act) */
+/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, or POSTS under the grant's adviser_posts (CBBooksActing is loaded only by the pages that act) */
 function enActingAdviser() { return typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser(); }
 /** after a save: the Day book, the Books to-do and the opener (R106: Payables) are told — a painter that fails is logged, the save stands */
 function enSavedTell(saved) {

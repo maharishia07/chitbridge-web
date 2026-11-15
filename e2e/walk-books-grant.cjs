@@ -102,7 +102,7 @@ W.run('books-grant', async (w) => {
     return { ok: a.y && a.x && !names.some((n) => /csv|export|download|print|save|post|delete|edit|add/i.test(n)), saw: 'no vertical scroll ' + a.y + ' · no sideways ' + a.x + ' · buttons ' + names.join(' / ') };
   });
   await w.step('D5', 'the auditor drill · Day book: each entry shows its amount and opens to its journal lines', async () => {
-    await page.click(T('bv-tab-daybook')); await page.waitForSelector(T('bv-row-0'), { timeout: 10000 });
+    await page.click(T('bv-tab-daybook')); await page.waitForFunction((sel) => { const n = document.querySelector(sel); return n && /JV-/.test(n.textContent); }, T('bv-row-0'), { timeout: 10000 }); /* the Day book's own row, not the tab's previous list still on show */
     const row = await txt(T('bv-row-0'));
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
     const title = await txt(T('bd-title'));

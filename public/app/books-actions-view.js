@@ -257,16 +257,22 @@
       }
     );
   }
+  /** ONE KEY PER ATTEMPT (not per action: the api records a 409 under its key and would replay it for ever): minted at the press, kept on the row only until an answer under 500 settles it */
+  function attemptKey(row) {
+    return row.accept_key || (row.accept_key = 'accept-' + row.action_id + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+  }
   /** one write per action, in turn, each with the total and currency its own row carries; a refusal on one never stops the rest being tried */
   function acceptEach(rows) {
     var done = { ok: 0, failed: [] };
     return rows.reduce(function (chain, row) {
       return chain.then(function () {
-        return api('actionsAccept', { params: { id: row.action_id }, headers: Object.assign({ 'Idempotency-Key': 'accept-' + row.action_id }, root.CBBooksActing.headers()), body: root.CBBooksActing.body({ body_hash: row.body_hash, total_minor: row.total_minor, currency: row.currency }) }).then(
+        return api('actionsAccept', { params: { id: row.action_id }, headers: Object.assign({ 'Idempotency-Key': attemptKey(row) }, root.CBBooksActing.headers()), body: root.CBBooksActing.body({ body_hash: row.body_hash, total_minor: row.total_minor, currency: row.currency }) }).then(
           function () {
+            delete row.accept_key;
             done.ok++;
           },
           function (failure) {
+            if (failure.status && failure.status < 500) delete row.accept_key; /* an answer ends the attempt; a lost answer or a 5xx keeps the key for the retry of THIS press */
             if (failure.status === 401) throw failure;
             done.failed.push(kindWords(row) + ': ' + failure.message);
           }

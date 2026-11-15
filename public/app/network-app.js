@@ -345,7 +345,7 @@
     if (!button) return;
     var id = button.getAttribute('data-open-books');
     var store = N.stores.filter(function (s) { return String(s.entity_id) === id; })[0];
-    N.opened = { id: id, name: (store && store.name) || T('this store'), role: root.CBBooksActing.roleOf(N.held, id) };
+    N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || (store && store.name) || T('this store'), role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting };
     paint();
   }
   function paintOpened(host) {
@@ -355,7 +355,7 @@
       stores: root.CBBooksActing.adviserStores(N.stores, N.held),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: N.o.onEnded,
-      onSwitch: function (id, name) { N.opened = { id: id, name: name, role: 'adviser' }; paint(); },
+      onSwitch: function (id, name) { N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || name, role: 'adviser', posting: (N.held[id] || {}).posting }; paint(); },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;

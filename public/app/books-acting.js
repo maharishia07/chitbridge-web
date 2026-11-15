@@ -8,7 +8,7 @@
  *
  * Why one object: data must never mix between clients. A request is never built from two places (a header from one, a body from another); both come from the same context, and the server refuses a mismatch with STORE_MISMATCH.
  * The owner works in his own books: role 'owner', no header, his own entity as the store. The server decides who may; nothing here grants anything.
- *   CBBooksActing.enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .adviserStores
+ *   CBBooksActing.confirmGrant · .openPage · .firstTab · .posts · .keepTabs · .mayCall · .guard · .enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .adviserStores
  */
 (function (root) {
   'use strict';
@@ -33,9 +33,9 @@
     });
   }
   /** work in this store's books as this role ('adviser' · 'auditor' · 'owner'); another store than the one in hand clears everything of the first, first */
-  function enter(store, role) {
+  function enter(store, role, posting) {
     if (context && String(context.store.id) !== String(store.id)) clearAll();
-    context = { store: { id: String(store.id), name: store.name }, role: role, currency: context && context.store.id === String(store.id) ? context.currency : '' };
+    context = { store: { id: String(store.id), name: store.name }, role: role, posting: posting || '', currency: context && context.store.id === String(store.id) ? context.currency : '' };
     return context;
   }
   function leave() {
@@ -75,13 +75,79 @@
   /* ── acting on another page: the address carries the store, the server checks the grant on every request ── */
   /** the books page of the firm's workspace for one store (optionally straight into preparing a journal) */
   function addressOf(store, doing) {
-    return '/accounts.html?acting=' + encodeURIComponent(store.id) + '&actingName=' + encodeURIComponent(store.name) + (doing ? '&prepare=' + doing : '') + '#/daybook';
+    return '/accounts.html?acting=' + encodeURIComponent(store.id) + (doing ? '&prepare=' + doing : '') + '#/daybook';
   }
   /** read the store from the page address: a page opened with ?acting=<store> works in that store's books as the adviser; null when it carries none */
   function fromAddress(search) {
     var query = new URLSearchParams(search || '');
     var id = query.get('acting');
-    return id ? enter({ id: id, name: query.get('actingName') || '' }, 'adviser') : null;
+    return id ? enter({ id: id, name: '' }, 'adviser') : null;
+  }
+  /** a page call(method, path, body, headers) of its own (token + base): no acting header, the grant list is the firm's own */
+  function grantCall(base, token) {
+    return function (method, path, payload, extra) {
+      return root.fetch(base + path, { method: method, cache: 'no-store', headers: Object.assign({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, extra || {}), body: payload ? JSON.stringify(payload) : undefined }).then(function (reply) {
+        return reply.json().catch(function (e) { return { message: String(e && e.message) }; }).then(function (j) {
+          if (!reply.ok) throw Object.assign(new Error(j.message || 'API ' + reply.status), { status: reply.status, code: j.code });
+          return j;
+        });
+      });
+    };
+  }
+  /** the page opened with ?acting=<id> enters only when the firm holds a LIVE ADVISER grant on that id; the banner's name and the grant's posting come from the grant row, never from the address. false: not entered (context dropped) */
+  function confirmGrant(base, token) {
+    if (!context) return Promise.resolve(false);
+    var id = context.store.id;
+    return root.CBBooksGrantApi.held(grantCall(base, token)).then(function (heldBy) {
+      var grant = heldBy[id];
+      if (!grant || grant.preset !== 'adviser') {
+        context = null;
+        return false;
+      }
+      context.store.name = grant.grantor_name || root.CBBooksGrantApi.withHeld([], heldBy, words)[0].name;
+      context.posting = grant.posting || '';
+      return true;
+    });
+  }
+  /** this store's grant lets the adviser POST (the owner chose adviser_posts); anything else prepares */
+  function posts() {
+    return !!context && context.role === 'adviser' && context.posting === 'adviser_posts';
+  }
+  /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
+  var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
+  function mayCall(path) {
+    return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
+  }
+  /** the page's way in: only on a live adviser grant, then the menu is cut to the books tabs; false = not entered */
+  function openPage(base, token, menu, groups) {
+    if (!context) return Promise.resolve(true);
+    return confirmGrant(base, token).catch(function (e) {
+      if (typeof root.cblog === 'function') root.cblog('error', 'acting: the grant could not be read: ' + ((e && e.message) || e));
+      return false;
+    }).then(function (entered) {
+      if (entered) {
+        keepTabs(menu, groups);
+        return true;
+      }
+      root.location.replace('/network.html');
+      return new Promise(function () {}); /* the page is leaving: nothing after this runs */
+    });
+  }
+  /** a call outside /api/books* is refused here, before it is sent, while the page acts for a store */
+  function guard(endpoint) {
+    if (!mayCall(endpoint.p)) throw new Error(words('This screen shows one client books only. Nothing was sent.'));
+    return endpoint;
+  }
+  function firstTab() {
+    return context && context.role !== 'owner' ? TABS[0] : 'todo';
+  }
+  function keepTabs(menu, groups) {
+    if (!context || context.role === 'owner') return;
+    for (var i = menu.length - 1; i >= 0; i--) if (TABS.indexOf(menu[i][0]) < 0) menu.splice(i, 1);
+    for (var g = groups.length - 1; g >= 0; g--) {
+      groups[g][1] = groups[g][1].filter(function (t) { return TABS.indexOf(t) >= 0; });
+      if (!groups[g][1].length) groups.splice(g, 1);
+    }
   }
 
   /* ── the banner: frozen at the top of every screen that acts for a store ── */
@@ -117,7 +183,7 @@
   function isAdviser() {
     return !!context && context.role === 'adviser';
   }
-  /** an adviser's Save: POST /api/books-actions { store_id, kind: 'journal', body, client_ref, working_month } through the screen's own api; the journal's date is required, the owner accepts and only then it posts */
+  /** an adviser's Save: POST /api/books-actions { store_id, kind: 'journal', body, client_ref, working_month } through the screen's own api; the journal's date is required; under the grant's adviser_posts the server posts it at once (state accepted, with its entry), otherwise it waits for review and the owner's accept */
   async function prepare(api, tx, entry, month) {
     if (entry.event !== 'journal') throw new Error(tx('An adviser prepares journals. Pick Journal.'));
     if (!entry.date) throw new Error(tx('Give the journal its date.'));
@@ -125,14 +191,21 @@
     delete journal.event;
     delete journal.client_ref;
     var made = await api('booksActionPrepare', { body: body({ kind: 'journal', body: journal, client_ref: entry.client_ref, working_month: month }) });
-    return Object.assign({ prepared: true }, made);
+    return Object.assign({ prepared: true, posted: made.state === 'accepted' && !!(made.entry || made.entry_no) }, made);
   }
-  /** the screen after an adviser's Save: prepared, not posted */
-  function paintPrepared(host, acts, saved, tx, esc2) {
+  /** the screen after an adviser's Save: posted (adviser_posts: the answer carries its entry) or prepared and waiting */
+  function paintPrepared(host, acts, saved, tell, esc2) {
+    var done = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc2(tell('Done')) + '</button>';
+    if (saved.posted) {
+      var no = saved.entry_no || (saved.entry && (saved.entry.entry_no || saved.entry.no)) || '';
+      host.innerHTML = '<h3 data-testid="en-posted"><span class="en-ok">✓</span> ' + esc2(tell('Posted')) + ' ' + esc2(no) + '</h3><div class="en-why" style="border:0;margin-top:10px">' + esc2(tell('It is now in the books of')) + ' ' + esc2(context ? context.store.name : '') + '.</div>';
+      acts.innerHTML = done;
+      return;
+    }
     host.innerHTML =
-      '<h3 data-testid="en-prepared"><span class="en-ok">✓</span> ' + esc2(tx('Prepared, waiting for review')) + '</h3><div data-testid="en-prepared-ref" class="en-chip">' + esc2(saved.client_ref || '') + '</div>' +
-      '<div class="en-why" style="border:0;margin-top:10px">' + esc2(tx('A colleague reviews it, then the owner accepts. Nothing is posted yet.')) + '</div>';
-    acts.innerHTML = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc2(tx('Done')) + '</button>';
+      '<h3 data-testid="en-prepared"><span class="en-ok">✓</span> ' + esc2(tell('Prepared, waiting for review')) + '</h3><div data-testid="en-prepared-ref" class="en-chip">' + esc2(saved.client_ref || '') + '</div>' +
+      '<div class="en-why" style="border:0;margin-top:10px">' + esc2(tell('A colleague reviews it, then the owner accepts. It is not posted until then.')) + '</div>';
+    acts.innerHTML = done;
   }
   /** a page opened to act for a store (accounts.html): the frozen banner under the header, the way back, and, when asked (?prepare=journal), the journal sheet that PREPARES; byId is the page's element finder, openSheet its entry opener, currency the shop's */
   function startPage(byId, openSheet, currency) {
@@ -156,5 +229,5 @@
     return stores.filter(function (s) { return roleOf(held, s.entity_id) === 'adviser'; }).map(function (s) { return { id: s.entity_id, name: s.name }; });
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, adviserStores: adviserStores, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
+  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, adviserStores: adviserStores, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);
