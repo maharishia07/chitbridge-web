@@ -65,7 +65,7 @@
       seen.token = t;
       seen.count = 0;
       root.CBBooksGrantApi.held(call).then(function (held) { seen.count = Object.keys(held).length; tick(); }, function (failure) { root.console.warn('books-clients-door', failure); });
-    } else if (seen.count) draw(seen.count);
+    } else if (seen.count && !(root.CBPractice && root.CBPractice.hasData())) draw(seen.count); /* the practice section is the firm's front door once it has answered */
   }
   function start() {
     tick();

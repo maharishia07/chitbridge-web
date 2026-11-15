@@ -1119,7 +1119,10 @@
     /* ── the five areas (Home) ── */
     function shown() {
       var m = root.CBEdition && S.manifest ? root.CBEdition.view(S.manifest) : S.manifest;
-      return (m && m.entries) || [];
+      /* l16 firm-dash: a firm (clients by live grants, no trade of its own, the server's own_trade) is not shown the shop cards: the data decides, not a trade switch */
+      return ((m && m.entries) || []).filter(function (e) {
+        return !(root.CBPractice && root.CBPractice.hidesShopCards(e && e.id));
+      });
     }
     function entriesOf(area) {
       return shown().filter(function (e) {
@@ -1301,6 +1304,12 @@
       placeKural();
     }
 
+    /* l16 firm-dash: the practice answered and says this login is a firm: draw the areas again without the shop cards and read the facts of the cards that remain */
+    root.addEventListener('cb-practice', function () {
+      if (mode !== 'home' || !S.manifest) return;
+      paintAreas();
+      readFacts();
+    });
     /* the header lands after the tiles: a shop tile that was greyed for want of an id opens now */
     function reopenShopTile() {
       if (mode !== 'home' || !S.manifest || !shopIdOf()) return;
