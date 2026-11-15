@@ -145,7 +145,7 @@
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
-    var escapeHtml = ctx.escapeHtml, dataKey = ctx.dataKey, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf;
+    var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, dataKey = ctx.dataKey, chartOf = ctx.chartOf, optionsOf = ctx.optionsOf;
     function partyBox(item) {
       var party = item.party;
       if (!party || party.status !== 'new') return party ? '<span class="bd-why">Party: ' + escapeHtml(party.name) + '</span>' : '';
