@@ -185,7 +185,7 @@
     '.cbl .cbl-noroom{font-size:calc(11.5px * var(--k,1));color:var(--cl-amber-i);margin-inline-start:4px}',
     /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
     '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
-    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines{min-width:0}',
+    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines,.cbl .cbl-grid.cbl-fit{min-width:0}',
     '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
     '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
     '.cbl .cbl-hc.r{justify-content:flex-end}',
@@ -600,7 +600,7 @@
   }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
-  function autoFit(I, cols, rows) {
+  function autoFit(I, cols, rows, avail) {
     var auto = {},
       sample = rows.slice(0, AUTO_SAMPLE),
       chars = {},
@@ -610,7 +610,7 @@
       var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
       sample.forEach(function (row) {
         var cell = cellOf(I, c, row),
-          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[s>]/g) || []).length * 4 : 0); /* a button in the cell is wider than its words: its padding counts */
+          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[\s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
         if (len > n) n = len;
       });
       chars[c.key] = n;
@@ -626,6 +626,29 @@
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
       auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
     });
+    /* R47: a list always fits its box. Over the width: the stretch column gives way first (it wraps), then the others shrink toward their minimum. A width the person dragged is theirs and is not touched. */
+    var fixed = 0, free = [];
+    cols.forEach(function (c) {
+      if (typeof I.s.widths[c.key] === 'number') fixed += widthOf(I, c);
+      else free.push(c);
+    });
+    var need = function () { return free.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var over = avail > 0 ? need() - avail : 0;
+    if (over > 0 && auto.stretch && auto[auto.stretch] != null) {
+      var sc = cols.filter(function (c) { return c.key === auto.stretch; })[0];
+      auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over);
+      over = need() - avail;
+    }
+    for (var pass = 0; over > 0 && pass < 4; pass++) {
+      var room = free.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(I, c)); }, 0);
+      if (room <= 0) break;
+      var cut = Math.min(over, room);
+      free.forEach(function (c) {
+        var share = Math.max(0, auto[c.key] - minW(I, c));
+        auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+      });
+      over = need() - avail;
+    }
     I.auto = sample.length ? auto : null;
   }
   function widthOf(I, c) {
@@ -1747,7 +1770,7 @@
       box.__cblRO = new root.ResizeObserver(function () {
         if (I.dead) return;
         var c = box.clientWidth > 0 && box.clientWidth <= 620;
-        if (c !== I.card) {
+        if (c !== I.card || (I.auto && Math.abs(box.clientWidth - (I.fitW || 0)) > 8)) {
           paintTools(I);
           paintList(I);
         }
@@ -1797,7 +1820,8 @@
     var m = matched(I),
       items = itemsOf(I, m.rows);
     if (m.rows.length && s.view === 'grid') {
-      autoFit(I, cols, m.rows);
+      autoFit(I, cols, m.rows, box.clientWidth - (leadOn(I) ? 34 : 0) - 2);
+      I.fitW = box.clientWidth;
       tpl = template(I, cols);
       hdr = headerHTML(I, cols, tpl, false);
     }
@@ -1907,6 +1931,7 @@
     box.innerHTML =
       '<div class="cbl-grid' +
       (s.view === 'lines' ? ' cbl-lines' : '') +
+      (I.auto ? ' cbl-fit' : '') +
       '" role="' + gridRole(I, items) + '" aria-rowcount="' +
       total +
       '">' +

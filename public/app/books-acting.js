@@ -8,7 +8,7 @@
  *
  * Why one object: data must never mix between clients. A request is never built from two places (a header from one, a body from another); both come from the same context, and the server refuses a mismatch with STORE_MISMATCH.
  * The owner works in his own books: role 'owner', no header, his own entity as the store. The server decides who may; nothing here grants anything.
- *   CBBooksActing.confirmGrant · .openPage · .firstTab · .posts · .keepTabs · .mayCall · .guard · .enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .clientStores · .refusals · .hides · .refusedFor
+ *   CBBooksActing.confirmGrant · .openPage · .firstTab · .posts · .keepTabs · .mayCall · .guard · .enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .postAsk · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .clientStores · .refusals · .hides · .refusedFor
  */
 (function (root) {
   'use strict';
@@ -65,6 +65,17 @@
   function figure(minor, code) {
     if (minor == null || minor === '') return '—';
     return typeof root.fmtMoney === 'function' ? root.fmtMoney({ amount_minor: String(minor), currency: code }) : String(minor) + (code ? ' ' + code : '');
+  }
+  /** the question before an adviser POSTS straight into a client's books (adviser_posts): the amount from the preview (the server's total, in its currency), the client, "straight into", and a danger yes; owner_approves asks nothing */
+  function postAsk(preview) {
+    var who = context ? context.store.name : '';
+    var amount = preview && preview.total_dr_minor != null ? figure(preview.total_dr_minor, preview.currency) : '';
+    return {
+      title: words('Post') + (amount ? ' ' + amount : ' ' + words('this entry')) + ' ' + words('for') + ' ' + who + '?',
+      body: '<b>' + esc(words('This goes straight into')) + ' ' + esc(who) + esc("'s books.") + '</b> ' + esc(words('Nobody approves it first. Every action is recorded.')),
+      yes: words('Post'),
+      danger: true
+    };
   }
   /** this business's own entity, read from the sign-in token: the owner's own books are the store of his queue */
   function ownStore(token, name) {
@@ -250,5 +261,5 @@
     return words(context && context.role === 'adviser' ? 'This part of the books is not open to an adviser.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
+  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, postAsk: postAsk, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

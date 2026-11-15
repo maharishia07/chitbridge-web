@@ -314,7 +314,7 @@
       };
   }
 
-  /* ── CMP059 INITIALS BADGE: a round badge for a named payee (initials on one of six tints, picked from the name) or, for a category (a tax office, a power bill, a bank), a plain line icon.
+  /* ── CMP061 INITIALS BADGE: a round badge for a named payee (initials on one of six tints, picked from the name) or, for a category (a tax office, a power bill, a bank), a plain line icon.
         No logos, never a person's photo; CBAvatar (CMP048) stays the account menu. The six tints are the classes lk-bd-0..5 in lab-kit.css: no style=. ── */
   var BADGE_ICONS = {
     bolt: 'M13 2 4 14h6l-1 8 9-12h-6z',
@@ -338,11 +338,11 @@
   function badge(opts) {
     var icon = opts.icon && BADGE_ICONS[opts.icon];
     if (icon)
-      return '<span class="lk-bd lk-bd-ic" data-cbsid="CMP059-D01" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + icon + '"/></svg></span>';
+      return '<span class="lk-bd lk-bd-ic" data-cbsid="CMP061-D01" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + icon + '"/></svg></span>';
     var letters = String(opts.name || '?').trim().split(/s+/).slice(0, 2).map(function (word) { return word.charAt(0); }).join('').toUpperCase();
-    return '<span class="lk-bd lk-bd-' + tintOf(opts.name) + '" data-cbsid="CMP059-D01" aria-hidden="true">' + escapeText(letters) + '</span>';
+    return '<span class="lk-bd lk-bd-' + tintOf(opts.name) + '" data-cbsid="CMP061-D01" aria-hidden="true">' + escapeText(letters) + '</span>';
   }
-  /* ── CMP058 FIGURE CARD: a label, one big figure and (optional) a progress line. The figure arrives as text the caller made with the ONE money formatter (its currency in it, CUR-1);
+  /* ── CMP060 FIGURE CARD: a label, one big figure and (optional) a progress line. The figure arrives as text the caller made with the ONE money formatter (its currency in it, CUR-1);
         the bar is the existing .lk-bar (CMP021 family), never a second one. opts: { label, value (text), note, done, total, good } ── */
   function figure(opts) {
     var bar = '';
@@ -351,7 +351,7 @@
       bar = '<div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + opts.total + '" aria-valuenow="' + opts.done + '" aria-label="' + escapeText(opts.note || '') + '"><i style="width:' + percent + '%"></i></div>';
     }
     return (
-      '<div class="lk-fig' + (opts.good ? ' lk-fig-good' : '') + '" data-cbsid="CMP058-D01"><span class="lk-fig-l">' + escapeText(opts.label) + '</span><b class="lk-fig-v">' + escapeText(opts.value) + '</b>' +
+      '<div class="lk-fig' + (opts.good ? ' lk-fig-good' : '') + '" data-cbsid="CMP060-D01"><span class="lk-fig-l">' + escapeText(opts.label) + '</span><b class="lk-fig-v">' + escapeText(opts.value) + '</b>' +
       bar + (opts.note ? '<span class="lk-progress-line">' + escapeText(opts.note) + '</span>' : '') + '</div>'
     );
   }

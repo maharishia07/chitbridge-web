@@ -588,6 +588,7 @@ function bankFigures() {
     statement: plain(worked.bank_balance_minor),
     books: plain(worked.book_balance_minor),
     gap: bkMoney(Math.abs(gap)),
+    dir: gap > 0 ? tx('the statement is higher than your books') : gap < 0 ? tx('your books are higher than the statement') : '' /* which side is higher: the two carried figures, set side by side */,
     parts: [
       notIn ? txn('{count} line not yet in your books', '{count} lines not yet in your books', notIn) : '',
       notBank ? txn('{count} line not yet on the statement', '{count} lines not yet on the statement', notBank) : ''
@@ -629,14 +630,14 @@ function bankPrimaryHtml(fig) {
   if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
   if (!canAdd || (fig && !bkbCount('books'))) return '';
   const held = bankOpeningFacts() ? ' disabled title="' + bkbE(tx('Answer the question above first')) + '"' : '';
-  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button>';
+  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books')) + '</button>';
 }
 
 /** FIN-27 · the band over the lines: Statement · Books · Difference (and what it is made of) · Unexplained, then the one primary button and More. Green when nothing is left to do */
 function bankFinish() {
   const fig = bankFigures();
-  const part = (label, text, testId, sub) =>
-    '<div class="bk-fig" data-testid="' + testId + '"><span class="bk-l">' + bkbE(tx(label)) + '</span><b>' + bkbE(text) + '</b>' + (sub ? '<span class="bk-sub">= ' + bkbE(sub) + '</span>' : '') + '</div>';
+  const part = (label, text, testId, sub, dir) =>
+    '<div class="bk-fig" data-testid="' + testId + '"><span class="bk-l">' + bkbE(tx(label)) + '</span><b>' + bkbE(text) + '</b>' + (sub ? '<span class="bk-sub">= ' + bkbE(sub) + '</span>' : '') + (dir ? '<span class="bk-sub" data-testid="bank-finish-dir">' + bkbE(dir) + '</span>' : '') + '</div>';
   const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
     return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
@@ -644,7 +645,7 @@ function bankFinish() {
     '<div class="bk-band' + (fig.nil ? ' bk-ok' : '') + '" data-testid="bank-finish" data-tied="' + fig.nil + '">' +
     part('Statement', fig.statement, 'bank-finish-statement') +
     part('Books', fig.books, 'bank-finish-books') +
-    part('Difference', fig.gap, 'bank-finish-diff', fig.parts) +
+    part('Difference', fig.gap, 'bank-finish-diff', fig.parts, fig.dir) +
     part('Unexplained', fig.unexplained, 'bank-finish-unexplained') +
     acts + '</div>'
   );

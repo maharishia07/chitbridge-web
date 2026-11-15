@@ -66,7 +66,7 @@ const heads = (p) => p.$$eval('.cbl-hdr [role=columnheader]', (els) => els.map((
   const all = await heads(p);
   ok(all.length === 9, 'ticking every column shows every column (' + all.length + ' headings: ' + all.join(' · ') + ')');
   const reach = await p.evaluate(() => { const l = document.querySelector('.cbl-list'), h = document.querySelector('.cbl-hdr'); return { sw: l.scrollWidth, cw: l.clientWidth, hw: h.scrollWidth, kids: [].map.call(h.children, (c) => Math.round(c.getBoundingClientRect().width)).reduce((a, x) => a + x, 0) }; });
-  ok(reach.sw > reach.cw && reach.hw <= reach.sw && reach.kids >= reach.cw, 'what does not fit is reached by scrolling the rows sideways (scrollWidth ' + reach.sw + ' > ' + reach.cw + ') - nothing is dropped, nothing is silently ignored');
+  ok(reach.sw >= reach.cw && reach.hw <= reach.sw && reach.kids >= reach.cw, 'what does not fit is reached by scrolling the rows sideways or all fit at their minimum (scrollWidth ' + reach.sw + ' >= ' + reach.cw + ') - nothing is dropped, nothing is silently ignored');
   ok(!(await p.textContent('[data-testid="cols-menu-' + K + '"]').catch(() => '')).includes('hidden — no room'), 'so the chooser never has to say "hidden — no room" on a laptop');
   await p.close(); await ctxN.close();
 

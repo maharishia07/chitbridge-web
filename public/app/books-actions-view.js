@@ -45,8 +45,13 @@
   function figure(row) {
     return row.total_minor == null ? '—' : root.CBBooksActing.figure(row.total_minor, row.currency);
   }
+  /** R19: a row is named by what a person would call it (the narration or reason it carries), never by the client's own reference */
+  function nameOf(row) {
+    var body = row.body || {};
+    return String(body.narration || body.reason || body.note || '').trim();
+  }
   function kindWords(row) {
-    return words(KIND[row.kind] || row.kind) + (row.client_ref ? ' · ' + row.client_ref : '');
+    return words(KIND[row.kind] || row.kind) + (nameOf(row) ? ' · ' + nameOf(row) : '');
   }
   function stateWords(row) {
     return words(STATE[row.state] || row.state) + (row.access_ended && OPEN[row.state] ? ' (' + words('access ended') + ')' : '');
@@ -59,8 +64,7 @@
     return stamp ? stamp.name + (stamp.firm ? ', ' + stamp.firm : '') : '—';
   }
   function dayWords(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return root.shopStamp(value);
   }
   /** the reach of a write in words: how many actions, in which store, and the total of each currency (never one sum across currencies) */
   function reachWords(rows) {

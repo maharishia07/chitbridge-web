@@ -405,6 +405,24 @@ function shopDateTime(ts, opts) {
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
+/**
+ * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
+ * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
+ */
+function shopDay(value) {
+  var text = String(value == null ? '' : value);
+  if (!text) return '—';
+  var bare = /^(d{4})-(d{2})-(d{2})$/.exec(text);
+  var ts = bare ? Date.UTC(+bare[1], +bare[2] - 1, +bare[3], 12) : value;
+  var opts = { day: 'numeric', month: 'short', year: 'numeric' };
+  if (bare) opts.timeZone = 'UTC';
+  var out = typeof CBLocale !== 'undefined' && !isNaN(new Date(ts).getTime()) ? CBLocale.date(ts, opts) : '';
+  return out || (isNaN(new Date(ts).getTime()) ? text : text.slice(0, 10));
+}
+function shopStamp(value) {
+  if (!value || isNaN(new Date(value).getTime())) return value ? String(value) : '—';
+  return shopDateTime(value, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
 /** CUR-1 slice 5: a money VALUE (an object) carries its own currency, which outranks the caller's code; returns { amount, code }, or { text } (a dash or the caller's empty word) when it cannot be read */
 function moneyValueFor(value, code, empty) {
   var seen = value !== null && typeof value === 'object' && !Array.isArray(value) ? moneyRead(value, { assume: code }) : null;

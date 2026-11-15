@@ -15,8 +15,9 @@
  */
 (function (root) {
   'use strict';
-  var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [] };
+  var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [], posted: [], seeThem: false };
   var ROLE = { auditor: 'Auditor: reads only', adviser: 'Adviser: acts for you' };
+  var ROLE_NAME = { adviser: 'Adviser', auditor: 'Auditor' };
   var LOOKED = {
     allowed: 'Looked',
     no_grant: 'Refused: no access',
@@ -25,24 +26,6 @@
     edge_off: 'Refused: not connected',
     not_listed: 'Refused: not open to an auditor',
     read_only: 'Refused: tried to change'
-  };
-  var WHAT = {
-    '/accounts': 'Chart of accounts',
-    '/daybook': 'Day book',
-    '/ledger/:account': 'A ledger',
-    '/trial-balance': 'Trial balance',
-    '/pl': 'Profit and loss',
-    '/bs': 'Balance sheet',
-    '/dues': 'Who owes whom',
-    '/cashflow': 'Cash flow',
-    '/periods': 'Closed months',
-    '/year/:fy/status': 'Year state',
-    '/terms': 'Payment terms',
-    '/fx-rates': 'Exchange rates',
-    '/health': 'Books health',
-    '/cheques': 'Cheques',
-    '/bank/rail': 'Bank lines',
-    '/returns': 'Tax returns'
   };
 
   function words(s) {
@@ -70,12 +53,10 @@
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return root.shopDay(value);
   }
   function whenWords(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return root.shopStamp(value);
   }
   /** the value a date box takes: the day in the browser's own calendar */
   function dayValue(d) {
@@ -90,18 +71,23 @@
     return dayValue(d);
   }
   function whatWords(pattern) {
-    var route = String(pattern || '').replace(/^[A-Z]+ /, '');
-    return words(WHAT[route] || route || '—');
+    return root.CBBooksGrantWords.route(pattern);
   }
   var POSTING = { adviser_posts: 'Your adviser posts for you', owner_approves: 'You approve each post' };
   function isOpen(grant) {
     return grant.state === 'live' || grant.state === 'edge_off';
+  }
+  /** a firm with one open grant acts on it at once; with two (adviser and auditor) the owner says which, each grant keeping its own date and end */
+  function pickOpen(group, label, run) {
+    if (group.open.length === 1) run(group.open[0]);
+    else root.CBBooksGrantWords.choose(panel.o.sheet, panel.o.closeSheet, group, label, run, function (p) { return words(ROLE_NAME[p] || ROLE_NAME.auditor); });
   }
 
   /* ── the reads ── */
   /** read the list or the log, whichever view is on; a refusal becomes the sentence shown above the list */
   function readView() {
     panel.notice = [];
+    panel.seeThem = false;
     if (panel.view === 'accept') return Promise.resolve(); /* the queue reads itself, as the owner */
     var read = panel.view === 'looks' ? api('grantsLog', { query: { limit: 100 } }) : api('grantsList');
     return read.then(
@@ -123,10 +109,8 @@
     if (panel.view !== 'given' || !(panel.given || []).some(function (g) { return g.preset === 'adviser'; })) return Promise.resolve();
     var since = dayValue(new Date(Date.now() - 7 * 864e5));
     return api('actionsList', { query: { state: 'accepted', delegated: 'true', since: since, limit: 100 } }).then(function (answer) {
-      var n = (answer && answer.total) || 0;
-      var firms = {};
-      ((answer && answer.actions) || []).forEach(function (a) { if (a.prepared && a.prepared.firm) firms[a.prepared.firm] = 1; });
-      if (n) panel.notice = [words('Posted for you this week') + ': ' + n + ' ' + words(n === 1 ? 'entry or action by' : 'entries and actions by') + ' ' + Object.keys(firms).join(', ') + '.'];
+      panel.posted = (answer && answer.actions) || [];
+      if ((answer && answer.total) || panel.posted.length) { panel.notice = [root.CBBooksGrantWords.weekly(panel.posted, answer && answer.total, words)]; panel.seeThem = true; }
     }, function () {});
   }
   /* ── the screen ── */
@@ -163,16 +147,21 @@
     if ($('bg_back')) $('bg_back').onclick = panel.o.onBack;
     greyGive();
     $('bg_give').onclick = openGive;
-    ({ looks: paintLooks, given: paintGiven, accept: paintAccept })[panel.view]($('bg_list'));
+    if ($('bg_seethem')) $('bg_seethem').onclick = function () { panel.view = 'posted'; panel.seeThem = false; reload(); };
+    ({ looks: paintLooks, given: paintGiven, accept: paintAccept, posted: paintPosted })[panel.view]($('bg_list'));
   }
   /** what the server said beside its answer (a warning on a new grant, the actions a revoke withdrew), kept until the next read */
   function noticeHtml() {
-    return panel.notice.length ? '<div class="nw-why" id="bg_notice" role="status" data-testid="bg-notice">' + panel.notice.map(esc).join(' ') + '</div>' : '';
+    return panel.notice.length ? '<div class="nw-why" id="bg_notice" role="status" data-testid="bg-notice">' + panel.notice.map(esc).join(' ') + (panel.seeThem ? ' <button data-cbsid="NET004-B13" type="button" class="act quiet" id="bg_seethem" data-testid="bg-seethem">' + esc(words('See them')) + '</button>' : '') + '</div>' : '';
   }
   /** the owner's queue: the owner works in his own books, so no header and his own entity as the store */
   function paintAccept(host) {
     root.CBBooksActing.enter(panel.o.ownStore, 'owner');
     root.CBBooksActionsView.mount(host, { call: panel.o.call, mode: 'owner', mountList: panel.o.mountList, sheet: panel.o.sheet, closeSheet: panel.o.closeSheet });
+  }
+  /** what the firm posted for the owner this week: the delegated list, the same answer the weekly line read */
+  function paintPosted() {
+    root.CBBooksGrantWords.posted(panel.o.mountList, panel.posted, whenWords, words);
   }
   /** a way back to My network, when the page gives one */
   function backButton() {
@@ -195,7 +184,7 @@
     panel.o.mountList(host, {
       key: 'books-grants-given',
       rows: function () {
-        return panel.given;
+        return root.CBBooksGrantWords.groupGiven(panel.given);
       },
       id: function (g) {
         return g.grant_id;
@@ -205,7 +194,7 @@
       },
       columns: [
         col('who', words('Who'), 1, 200, function (g) { return nameOf(g.grantee_entity); }),
-        col('role', words('Role'), 2, 170, function (g) { return words(ROLE[g.preset] || ROLE.auditor); }),
+        col('role', words('Role'), 2, 170, function (g) { return g.presets.length > 1 ? g.presets.map(function (p) { return words(ROLE_NAME[p]); }).join(' + ') : words(ROLE[g.preset] || ROLE.auditor); }),
         col('purpose', words('Why'), 2, 260, function (g) { return g.purpose || '—'; }),
         col('until', words('Until'), 2, 130, function (g) { return dayWords(g.expires_at); }, function (g) { return g.expires_at || ''; }),
         col('posting', words('Who posts'), 3, 150, function (g) { return g.preset === 'adviser' ? words(POSTING[g.posting] || 'Not chosen: you approve') : '—'; }),
@@ -213,8 +202,8 @@
         col('state', words('State'), 1, 170, function (g) { return root.CBBooksGrantApi.stateWords(g.state); })
       ],
       actions: [
-        { id: 'change', tid: 'bg-change', label: words('Change date'), when: isOpen, run: openChange },
-        { id: 'end', tid: 'bg-end', label: words('End access'), when: isOpen, run: askEnd }
+        { id: 'change', tid: 'bg-change', label: words('Change date'), when: isOpen, run: function (g) { pickOpen(g, 'Change date', openChange); } },
+        { id: 'end', tid: 'bg-end', label: words('End access'), when: isOpen, run: function (g) { pickOpen(g, 'End access', askEnd); } }
       ],
       search: function (g) {
         return [nameOf(g.grantee_entity), g.purpose].join(' ');
@@ -238,7 +227,7 @@
       columns: [
         col('at', words('When'), 1, 170, function (look) { return whenWords(look.at); }, function (look) { return look.at || ''; }),
         col('who', words('Who'), 3, 200, function (look) { return nameOf(look.grantee_entity); }),
-        col('what', words('Looked at'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
+        col('what', words('What they did'), 1, 220, function (look) { return whatWords(look.route_pattern); }),
         col('out', words('Result'), 1, 220, function (look) { return words(LOOKED[look.outcome] || look.outcome || ''); })
       ],
       search: function (look) {

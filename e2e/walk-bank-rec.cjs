@@ -253,6 +253,7 @@ function stand() {
   await p.fill('[data-testid="bank-currency"]', 'INR');
   await p.click('[data-testid="bank-currency-go"]');
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
+  if (!(await p.locator('#bk_acct').isVisible())) await p.click('[data-testid="bank-change"]'); /* the form folds once a statement is on screen: open it to pick another account */
   await p.selectOption('#bk_acct', '1501');
   await p.waitForSelector('[data-testid="bank-acct-changed"]', { timeout: 5000 });
   ok('B10', (await p.locator('[data-testid="bank-list"]').count()) === 0 && (await p.locator('[data-testid="bank-res"] *').count()) === 0, 'B5-07: changing the bank account clears the statement, its marks and the reconciliation, and asks for the file again');

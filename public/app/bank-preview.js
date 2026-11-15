@@ -440,6 +440,10 @@
           preview.pairs[key] = entryId;
         });
       },
+      /** the pairs the person made this session, { line ref → books entry id }: the host's page reads them so its band counts the same lines the sheet does */
+      pairsMade: function () {
+        return Object.assign({}, preview.pairs);
+      },
       notMatch: function (key) {
         return answerLine(opts, preview, key, function () {
           preview.notMatch[key] = true;
