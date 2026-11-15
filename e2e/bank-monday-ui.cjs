@@ -115,6 +115,10 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
     /* CHANGED ON PURPOSE (W15-18): the band now carries Wrong account? Change as well as the file line's Load another statement, the primary and More: four, not three (still 17 before FIN-27) */
     ok(m.above <= 4, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
+    /* Fiori density (Athi 15 Nov): rows about 32 px, the head one line; at least 12 statement lines show at 1366x768 with no page scroll */
+    const rowsShown = await p.evaluate(() => { const l = document.querySelector('[data-testid="bank-list"] .cbl-list'), lr = l.getBoundingClientRect(); return [...l.querySelectorAll('[data-row]')].filter((n) => { const r = n.getBoundingClientRect(); return r.top >= lr.top - 1 && r.bottom <= lr.bottom + 1; }).length; });
+    console.log('  ROWS-VISIBLE ' + tag + ' ' + rowsShown);
+    ok(vp.width > 700 ? rowsShown >= 12 : rowsShown >= 2, tag + ': ' + rowsShown + ' statement lines show without scrolling' + (vp.width > 700 ? ' (target 12, Fiori compact density)' : ''));
     ok(m.sticky === 'sticky', tag + ': the column header stays put');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-lines.png') });
     /* the One menu: Grid / Lines / Columns / CSV / Expand under View */

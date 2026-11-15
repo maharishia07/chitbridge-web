@@ -111,11 +111,19 @@
     return out;
   }
   var MARK = { ok: '✓', bad: '✕', none: '○' };
+  /** the one small button that opens the "Right account?" facts (Fiori: the header stays one line; the detail is a press away). Open at once when any fact differs. */
+  function toggleHtml(items, tid) {
+    if (!items || !items.length) return '';
+    var bad = items.some(function (one) { return one.state === 'bad'; }),
+      agree = items.filter(function (one) { return one.state === 'ok'; }).length,
+      open = items.length - agree;
+    return '<button type="button" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + esc(tid) + '-toggle">' + esc(T('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
+  }
   function rightHtml(items, tid) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.filter(function (one) { return one.state === 'none'; }).length;
     return (
-      '<div class="bb-right' + (items.some(function (one) { return one.state === 'bad'; }) ? ' bb-has-bad' : '') + '" data-cbsid="CMP065-D02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
+      '<div class="bb-right' + (items.some(function (one) { return one.state === 'bad'; }) ? ' bb-has-bad' : '') + '"' + (items.some(function (one) { return one.state === 'bad'; }) ? '' : ' hidden') + ' data-cbsid="CMP065-D02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
       (agree ? '<span class="bb-sum bb-ok" data-testid="' + esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + esc(T('agree')) + '</span>' : '') +
       (open ? '<span class="bb-sum bb-none" data-testid="' + esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + esc(T('not in the file')) + '</span>' : '') +
       items.map(function (one) {
@@ -153,15 +161,23 @@
       '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" data-tied="' + nil + '" aria-label="' + esc(T('Bank statement')) + '">' +
       '<div class="bb-head"><h2 class="bb-name" data-testid="' + esc(tid) + '-account">' + esc(f.account || '') + '</h2>' +
       '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
-      (f.change || '') +
+      (f.change || '') + toggleHtml(f.right, tid) +
       '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>' +
-      '</div>' +
+      (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
       ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right') : '') +
-      tiles +
-      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' : '') +
+      (tiles ? '<div class="bb-row2">' : '') + tiles +
+      (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + '</div></div>' : '') +
       '</section>'
     );
   }
+  if (root.document && !root.CBBankBand) root.document.addEventListener('click', function (event) {
+    var button = event.target.closest && event.target.closest('[data-bb-toggle]');
+    if (!button) return;
+    var panel = button.closest('.bb').querySelector('.bb-right'),
+      open = panel.hidden;
+    panel.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+  });
   root.CBBankBand = { html: html, rightAccount: rightAccount, periodText: periodText, currencyLine: currencyLine, currencyWords: currencyWords, dayText: dayText };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBBankBand;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
