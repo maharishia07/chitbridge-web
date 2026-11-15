@@ -24,11 +24,19 @@
     { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['event_type', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e), kind: root.dayBookKind(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['kind', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY], ['mark', 'Mark', 'mark']], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
-    { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: function (a) { return a.periods || []; }, cols: [['fiscal_year', 'Year'], ['period', 'Month'], ['status', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
+    { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: monthRows, cols: [['month', 'Month'], ['state', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
+  /** the months of the books the way the owner reads them: the month's name, a plain state, no index numbers (the opening balance row, period 0, is not a month) */
+  var MONTH_STATE = { open: 'Open', soft_locked: 'Closed', hard_locked: 'Closed for good' };
+  function monthRows(answer) {
+    return ((answer && answer.periods) || []).filter(function (p) { return Number(p.period) >= 1 && p.start_date; }).map(function (p) {
+      var at = String(p.start_date).slice(0, 10), names = typeof root.monthNames === 'function' ? root.monthNames('long') : [];
+      return Object.assign({}, p, { month: (names[Number(at.slice(5, 7)) - 1] || at.slice(0, 7)) + ' ' + at.slice(0, 4), state: words(MONTH_STATE[p.status] || p.status), sales_minor: Number(p.sales_minor) > 0 ? p.sales_minor : null });
+    });
+  }
   function words(s) {
     return typeof root.tx === 'function' ? root.tx(s) : s;
   }
@@ -59,11 +67,12 @@
     if (column[2] === MONEY) return moneyCell(row, column[0], v);
     if (column[2] === 'mark') return viewState.mk.chip(row.entry_id);
     if (v == null || v === '') return row._total ? '' : '—';
-    if (/(^|_)date$/.test(column[0]) && /^d{4}-d{2}-d{2}$/.test(String(v))) return root.shopDay(v);
-    return column[0] === 'group' ? groupWords(v) : String(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return root.shopDay(v); /* any day, whatever the column is called */
+    return /^[a-z]+(_[a-z]+)+$/.test(String(v)) && column[0] !== 'name' ? groupWords(v) : String(v); /* a key (payment_received, soft_locked) as words */
   }
   /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
   function moneyCell(row, key, v) {
+    if (key === 'sales_minor' && (v == null || v === '')) return words('No sales');
     if ((key === 'dr_minor' || key === 'cr_minor') && (v == null || v === '' || String(v) === '0')) return '';
     return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(v))) : v);
   }
@@ -76,7 +85,7 @@
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
-    if (!viewState.day && report.k === 'daybook' && viewState.month) return { from: viewState.month + '-01', to: viewState.month + '-' + String(new Date(Number(viewState.month.slice(0, 4)), Number(viewState.month.slice(5, 7)), 0).getDate()) };
+    if (!viewState.day && report.k === 'daybook' && viewState.range) return { from: viewState.range.from, to: viewState.range.to };
     if (!viewState.day || !report.day) return {};
     if (report.day === 'both') return { from: viewState.day, to: viewState.day };
     var q = {};
@@ -85,15 +94,14 @@
   }
 
   /* ── the read ── */
-  /** the month of the books: the latest month the server lists, so the Day book does not open on an empty today */
+  /** the period the Day book opens on: the latest month WITH entries (the server's fiscal period rows carry start_date, end_date and entries), so it does not open on an empty today; none → the server's own default */
   function findMonth() {
-    if (viewState.month !== undefined) return Promise.resolve();
+    if (viewState.range !== undefined) return Promise.resolve();
     return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { headers: root.CBBooksActing.headers() }).then(function (a) {
-      var list = ((a && a.periods) || []).map(function (p) { return String(p.period || ''); }).filter(function (p) { return /^[0-9]{4}-[0-9]{2}$/.test(p); }).sort();
-      viewState.month = list.length ? list[list.length - 1] : '';
-      var busy = ((a && a.periods) || []).filter(function (p) { return Number(p.entries) > 0 && /^[0-9]{4}-[0-9]{2}$/.test(String(p.period || '')); }).map(function (p) { return String(p.period); }).sort();
-      if (busy.length) viewState.month = busy[busy.length - 1]; /* R18: the latest month WITH entries, not the latest month */
-    }, function () { viewState.month = ''; });
+      var busy = ((a && a.periods) || []).filter(function (p) { return Number(p.entries) > 0 && Number(p.period) >= 1 && p.start_date && p.end_date; }).sort(function (x, y) { return String(x.end_date) < String(y.end_date) ? -1 : 1; });
+      var last = busy[busy.length - 1];
+      viewState.range = last ? { from: String(last.start_date).slice(0, 10), to: String(last.end_date).slice(0, 10) } : null;
+    }, function () { viewState.range = null; });
   }
   function load() {
     if (onActions()) return Promise.resolve();
@@ -154,7 +162,7 @@
       band() +
       '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
-      (viewState.why ? '' : asAt(report)) +
+      (viewState.why ? '' : asAt(report) + periodLine(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
@@ -203,6 +211,7 @@
     if (!root.CBMark || onActions()) { viewState.mk = null; return; }
     viewState.mk = root.CBMark.use({
       adopter: 'acc.audit',
+      period: function () { return viewState.day ? { from: viewState.day, to: viewState.day } : viewState.range; },
       transport: function (method, path, body) {
         var headers = Object.assign({}, root.CBBooksActing.headers());
         if (method !== 'GET') headers['Idempotency-Key'] = (root.crypto && root.crypto.randomUUID ? root.crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -218,6 +227,11 @@
   function pickDay() {
     viewState.day = $('bv_day').value;
     reload();
+  }
+  /** the period the Day book shows when no day is typed: "1 Oct 2026 – 31 Oct 2026" */
+  function periodLine(report) {
+    if (report.k !== 'daybook' || viewState.day || !viewState.range) return '';
+    return '<h3 class="sub" data-testid="bv-period">' + esc(words('Period')) + ' ' + esc(root.shopDay(viewState.range.from)) + ' – ' + esc(root.shopDay(viewState.range.to)) + '</h3>';
   }
   function facts(report) {
     var items = report.facts
@@ -303,7 +317,7 @@
           .join(' ');
       },
       onOpen: report.drill ? function (row) { drill(report, row); } : undefined,
-      empty: { title: words('Nothing to show here'), body: words('These books have no entries for this day.') }
+      empty: { title: words('Nothing to show here'), body: words(viewState.day || !viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };
   }
   /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */

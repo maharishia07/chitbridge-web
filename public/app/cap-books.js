@@ -2019,18 +2019,6 @@ function bkWaitN(r) {
  * read the SAME shown list (the unit's); nothing here adds to a figure the server did not send.
  */
 var BK_KINDS = ['Sales', 'Receipts', 'Purchases', 'Payments', 'Expenses', 'Returns', 'Other'];
-/* which day-book group an entry belongs to (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
-function bkDvKind(e) {
-  var t = String((e && e.event_type) || ''),
-    k = String((e && e.source && e.source.kind) || '');
-  if (/return|credit_note|debit_note/.test(t) || k === 'credit_note') return 'Returns';
-  if (/purchase/.test(t)) return 'Purchases';
-  if (/expense/.test(t) || k === 'expense') return 'Expenses';
-  if (k === 'day' || /sale|walkin/.test(t)) return 'Sales';
-  if (/received|receipt/.test(t) || k === 'receipt') return 'Receipts';
-  if (/payment/.test(t) || k === 'payment') return 'Payments';
-  return k === 'bill' ? 'Sales' : 'Other';
-}
 /** the same-ledger lines merged, credit side first (Sales · GST · Debtors); GST = the 2200–2212 lines together */
 function bkDvGist(e) {
   var m = {},
@@ -2087,7 +2075,7 @@ var BK_DV_DIMS = [
 ];
 function bkDvVals(e, dim) {
   var s = (e && e.source) || {};
-  if (dim === 'kind') return [bkDvKind(e)];
+  if (dim === 'kind') return [dayBookKind(e)];
   if (dim === 'how') return bkDvTenders(e);
   return s[dim] ? [s[dim]] : [];
 }
@@ -2151,7 +2139,7 @@ function bkDvCsv(list, c) {
     rows.push([
       String(e.posting_date).slice(0, 10),
       e.entry_no,
-      bkDvKind(e),
+      dayBookKind(e),
       bkDvParty(e),
       s.ref || '',
       bkDvTenders(e).join(' · '),
@@ -2188,7 +2176,7 @@ function bkDvDownload(rows) {
 function bkDvText(e, c) {
   var tot = bkDvTotal(e),
     pow = Math.pow(10, bkDec(c));
-  return [e.entry_no, e.source && e.source.ref, e.narration, bkDvParty(e), bkDvKind(e)]
+  return [e.entry_no, e.source && e.source.ref, e.narration, bkDvParty(e), dayBookKind(e)]
     .concat(
       (e.lines || []).map(function (item) {
         return [item.name, item.party_name, bkPartyLabel(item.party_id, item.party_name)].join(' ');
@@ -2210,7 +2198,7 @@ function bkDvGroupSummary(entries, c) {
       dr += Number(item.dr_minor || 0);
       cr += Number(item.cr_minor || 0);
     });
-    if (bkDvKind(e) === 'Sales')
+    if (dayBookKind(e) === 'Sales')
       (e.lines || []).forEach(function (item) {
         if (/^4/.test(String(item.code))) sales += Number(item.cr_minor || 0) - Number(item.dr_minor || 0);
       });
@@ -2260,7 +2248,7 @@ function bkDvCols(c) {
       w: 100,
       html: true,
       cell: function (e) {
-        return esc(tx(bkDvKind(e)));
+        return esc(tx(dayBookKind(e)));
       }
     },
     {
@@ -2723,7 +2711,7 @@ function bkDvMount(el) {
         key: 'kind',
         label: tx('Kind'),
         cmp: by(function (e) {
-          return BK_KINDS.indexOf(bkDvKind(e));
+          return BK_KINDS.indexOf(dayBookKind(e));
         }, true)
       },
       {

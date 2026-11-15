@@ -24,7 +24,7 @@ const SHOTS = process.env.MARKS_SHOTS || path.join(__dirname, 'shots');
 
 W.run('marks', async (w) => {
   const { page, ctx, base } = w;
-  const S = { calls: [], marks: {}, msgs: [], sets: [], replies: [] };
+  const S = { daybookQueries: [], calls: [], marks: {}, msgs: [], sets: [], replies: [] };
   const J = (r, status, body) => C.json(r, status, body);
   const example = (key) => { const hit = C.load().routes.filter((e) => e.key === key)[0]; return hit ? JSON.parse(JSON.stringify(hit.example)) : {}; };
   const VOC = [{ kind: 'checked', label: 'Checked', class: 'clear', note: 'none' }, { kind: 'query', label: 'Query', class: 'open', note: 'required' }, { kind: 'on_hold', label: 'On hold', class: 'hold', note: 'optional' }];
@@ -48,7 +48,7 @@ W.run('marks', async (w) => {
     if (p === '/api/marks' && m === 'GET' && u.searchParams.get('open')) {
       const open = Object.keys(S.marks).map((id) => mark(id, h)).filter((x) => x.open).map((x) => Object.assign(x, { subject_label: 'JV-000' + (E.indexOf(x.subject_id) + 1), posting_date: '2026-11-04' }));
       const checked = Object.keys(S.marks).filter((id) => S.marks[id].class === 'clear' && !S.marks[id].altered).length;
-      return J(r, 200, { adopter: 'acc.audit', from: '2026-11-01', to: '2026-11-15', open, total_open: open.length, checked, of: 3, oldest_age_days: open.length ? 3 : null, vocabulary: VOC, actions: acts(h) });
+      return J(r, 200, { adopter: 'acc.audit', from: '2026-11-01', to: '2026-11-15', open, total_open: open.length, checked, of: u.searchParams.get('from') === '2026-11-01' && u.searchParams.get('to') === '2026-11-30' ? 3 : 0, /* the server counts the period it is asked about; with none it is the current month (empty here) */ oldest_age_days: open.length ? 3 : null, vocabulary: VOC, actions: acts(h) });
     }
     if (p === '/api/marks' && m === 'POST') {
       const b = JSON.parse(q.postData() || '{}'); S.sets.push({ b, h });
@@ -66,9 +66,11 @@ W.run('marks', async (w) => {
       S.msgs.push(msg); return J(r, 201, { message: msg, mark: mk });
     }
     if (p === '/api/books/daybook') {
+      if (h['x-books-for']) S.daybookQueries.push(new URL(q.url()).search);
       const ex = example('GET /api/books/daybook');
       return J(r, 200, Object.assign(ex, { currency: 'INR', entries: [0, 1, 2].map((n) => Object.assign({}, ex.entries[0], entry(n), { mark: mark(E[n], h) })), count: 3, mark_actions: acts(h), mark_vocabulary: VOC }));
     }
+    if (p === '/api/books/periods' && h['x-books-for']) return J(r, 200, { periods: [{ fiscal_year: '2026-27', period: 5, start_date: '2026-11-01', end_date: '2026-11-30', status: 'open', entries: 3, sales_minor: 370200 }, { fiscal_year: '2026-27', period: 6, start_date: '2026-12-01', end_date: '2026-12-31', status: 'open', entries: 0, sales_minor: 0 }] }); /* the real shape: period is the fiscal month number, the dates are the range; the latest month is EMPTY */
     if (/^\/api\/books\/(trial-balance|pl|bs|dues|periods)$/.test(p) && h['x-books-for']) { const ex = example('GET ' + p); return J(r, 200, Object.assign(ex, { entries: [], parties: [], periods: [] })); }
     return J(r, 200, {});
   });
@@ -92,6 +94,11 @@ W.run('marks', async (w) => {
     const chips = await page.locator('[data-mark] button[data-mk="check"]').count(), bar = await txt(T('mk-count'));
     await shot('01-auditor-daybook-unmarked');
     return { ok: chips === 3 && /Checked 0 of 3/.test(bar), saw: chips + ' check chips · ' + bar };
+  });
+  await w.step('A0', 'the auditor · the Day book opens non-empty on its own: no day typed, the period shown, the date in words, the kind in words', async () => {
+    const first = (S.daybookQueries[0] || ''), day = await page.inputValue(T('bv-day')), period = await txt(T('bv-period')), row = await txt(T('bv-row-0'));
+    await shot('00-auditor-daybook-opens-on-its-own');
+    return { ok: first.includes('from=2026-11-01') && first.includes('to=2026-11-30') && day === '' && period.includes('1 Nov 2026 – 30 Nov 2026') && row.includes('Sales') && row.includes('3 Nov 2026') && !row.includes('2026-11') && (await txt(T('mk-count'))).includes('of 3'), saw: first + ' · day "' + day + '" · ' + period + ' · ' + row.slice(0, 80) };
   });
   await w.step('A2', 'the auditor · ONE press on a row\'s Check: one write (checked), the chip says Checked, the bar says 1 of 3', async () => {
     await page.click(chip(0) + ' button[data-mk="check"]'); await page.waitForSelector(chip(0) + ' [data-class="clear"]', { timeout: 8000 });

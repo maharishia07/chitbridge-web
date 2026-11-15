@@ -405,6 +405,18 @@ function shopDateTime(ts, opts) {
   }
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
+/** ONE rule: which day-book group an entry belongs to — the owner Day book (cap-books.js) and the auditor/firm Day book (books-grant-view.js) both read it (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
+function dayBookKind(e) {
+  var t = String((e && e.event_type) || ''),
+    k = String((e && e.source && e.source.kind) || '');
+  if (/return|credit_note|debit_note/.test(t) || k === 'credit_note') return 'Returns';
+  if (/purchase/.test(t)) return 'Purchases';
+  if (/expense/.test(t) || k === 'expense') return 'Expenses';
+  if (k === 'day' || /sale|walkin/.test(t)) return 'Sales';
+  if (/received|receipt/.test(t) || k === 'receipt') return 'Receipts';
+  if (/payment/.test(t) || k === 'payment') return 'Payments';
+  return k === 'bill' ? 'Sales' : 'Other';
+}
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
  * A bare day (YYYY-MM-DD) is a calendar day, read in UTC so no zone moves it; a moment goes through shopDateTime with the year. Unreadable -> the dash.
@@ -412,7 +424,7 @@ function shopDateTime(ts, opts) {
 function shopDay(value) {
   var text = String(value == null ? '' : value);
   if (!text) return '—';
-  var bare = /^(d{4})-(d{2})-(d{2})$/.exec(text);
+  var bare = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
   var ts = bare ? Date.UTC(+bare[1], +bare[2] - 1, +bare[3], 12) : value;
   var opts = { day: 'numeric', month: 'short', year: 'numeric' };
   if (bare) opts.timeZone = 'UTC';

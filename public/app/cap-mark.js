@@ -218,7 +218,8 @@
       sheet: function (id, o) { return openSheet(c, ctl, String(id), o || {}); },
       /** the open list + checked n of m, ONE read */
       summary: function () {
-        return ask(c, 'marksRead', { query: { adopter: c.cfg.adopter, open: 1 } }).then(function (a) {
+        var span = typeof c.cfg.period === 'function' ? c.cfg.period() : null; /* the period the screen shows: the count is of THAT period (the server's default is the current month) */
+        return ask(c, 'marksRead', { query: Object.assign({ adopter: c.cfg.adopter, open: 1 }, span && span.from && span.to ? { from: span.from, to: span.to } : {}) }).then(function (a) {
           var list = (a && a.open) || [];
           c.sum = { open: list, checked: num(a && a.checked), total: num(a && a.of), why: null };
           if (a && a.actions) c.may = a.actions;
