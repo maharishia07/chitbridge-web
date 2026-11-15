@@ -620,6 +620,54 @@
     host.removeChild(probe);
     return out;
   }
+  /** the R47 half of autoFit: squeeze `auto` (width per key) into `avail`; returns the keys left out. */
+  function fitWidths(list, cols, auto, chars, avail) {
+    /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
+       Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
+       3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
+    var fixed = 0, free = [], natural = {}, sc = null;
+    cols.forEach(function (c) {
+      if (typeof list.s.widths[c.key] === 'number') fixed += widthOf(list, c);
+      else { free.push(c); natural[c.key] = auto[c.key]; }
+      if (c.key === auto.stretch) sc = c;
+    });
+    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
+    var live = free.slice(), hide = [];
+    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
+    var squeeze = function (shrink) {
+      live.forEach(function (c) { auto[c.key] = natural[c.key]; });
+      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
+      if (sc && auto[sc.key] != null && over > 0) {
+        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
+        over = need() - avail;
+      }
+      for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
+        var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(list, c)); }, 0);
+        if (room <= 0) break;
+        var cut = Math.min(over, room);
+        others.forEach(function (c) {
+          var share = Math.max(0, auto[c.key] - minW(list, c));
+          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
+        });
+        over = need() - avail;
+      }
+      return over;
+    };
+    var over = squeeze(false);
+    while (over > 0 && !list.card && !list.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
+      var leave = null;
+      live.forEach(function (c) {
+        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
+      });
+      if (!leave) break;
+      hide.push(leave.key);
+      live = live.filter(function (c) { return c !== leave; });
+      over = squeeze(false);
+    }
+    if (over > 0) over = squeeze(true);
+    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(list, sc), auto[sc.key] - over); /* last resort: below its floor */
+    return hide;
+  }
   /** measure the rows once per paint: I.auto = { width per column key, stretch: key }; returns the columns that fit.
    *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows, avail) {
@@ -650,50 +698,7 @@
       auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
       if (c.key !== auto.stretch && c.pin !== 'end' && shortPx[c.key]) auto[c.key] = Math.min(auto[c.key], Math.max(minW(I, c), (String(c.label || c.key).length + 3) * AUTO_CHAR + AUTO_PAD /* the heading with its sort and filter marks stays on one line */, shortPx[c.key] + (c === cols[0] ? AUTO_FIRST : 0))); /* a short column takes its content */
     });
-    /* R47: a list always fits its box, and the stretch column (the name) is the LAST to give way, never the first (l16: Collections wrapped the party name at 86 px while Age kept 225).
-       Order: 1 the stretch column goes down to its floor (its longest value, at most STRETCH_FLOOR characters); 2 the lowest-priority column is left out and 1 runs again;
-       3 only when nothing is left to leave out do the short columns shrink (never the pinned action column), and last the stretch column goes below its floor. A width the person dragged is theirs and is not touched. */
-    var fixed = 0, free = [], natural = {}, sc = null;
-    cols.forEach(function (c) {
-      if (typeof I.s.widths[c.key] === 'number') fixed += widthOf(I, c);
-      else { free.push(c); natural[c.key] = auto[c.key]; }
-      if (c.key === auto.stretch) sc = c;
-    });
-    var floor = sc && natural[sc.key] != null ? Math.min(natural[sc.key], STRETCH_FLOOR_PX, Math.round(Math.min(chars[sc.key], STRETCH_FLOOR) * AUTO_CHAR + AUTO_PAD + (sc === cols[0] ? AUTO_FIRST : 0))) : 0;
-    var live = free.slice(), hide = [];
-    var need = function () { return live.reduce(function (t, c) { return t + auto[c.key]; }, fixed); };
-    var squeeze = function (shrink) {
-      live.forEach(function (c) { auto[c.key] = natural[c.key]; });
-      var over = avail > 0 ? need() - avail : 0, others = live.filter(function (c) { return c !== sc && c.pin !== 'end'; });
-      if (sc && auto[sc.key] != null && over > 0) {
-        auto[sc.key] = Math.max(floor, auto[sc.key] - over);
-        over = need() - avail;
-      }
-      for (var pass = 0; shrink && over > 0 && pass < 4; pass++) {
-        var room = others.reduce(function (t, c) { return t + Math.max(0, auto[c.key] - minW(I, c)); }, 0);
-        if (room <= 0) break;
-        var cut = Math.min(over, room);
-        others.forEach(function (c) {
-          var share = Math.max(0, auto[c.key] - minW(I, c));
-          auto[c.key] = Math.round(auto[c.key] - (cut * share) / room);
-        });
-        over = need() - avail;
-      }
-      return over;
-    };
-    var over = squeeze(false);
-    while (over > 0 && !I.card && !I.s.cols) { /* a card never leaves a field out for width, and a column the person ticked in the chooser stays (it is squeezed instead) */
-      var leave = null;
-      live.forEach(function (c) {
-        if (c !== sc && c.pin !== 'end' && !c.keep && (!leave || (c.prio || 99) >= (leave.prio || 99))) leave = c;
-      });
-      if (!leave) break;
-      hide.push(leave.key);
-      live = live.filter(function (c) { return c !== leave; });
-      over = squeeze(false);
-    }
-    if (over > 0) over = squeeze(true);
-    if (over > 0 && sc && auto[sc.key] != null) auto[sc.key] = Math.max(minW(I, sc), auto[sc.key] - over); /* last resort: below its floor */
+    var hide = fitWidths(I, cols, auto, chars, avail);
     I.auto = sample.length ? auto : null;
     I.leftOut = hide;
     return cols.filter(function (item) { return hide.indexOf(item.key) < 0; });
