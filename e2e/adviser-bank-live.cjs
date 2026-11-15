@@ -117,7 +117,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   }
   const signed = flat(await p.locator('[data-testid="bank-signed-line"]').first().innerText().catch(() => ''));
   console.log('   signed line: ' + signed);
-  ok(/Signed off by .+, Bayside Bookkeeping - demo/.test(signed) && !/[0-9a-f]{8}-[0-9a-f]{4}/.test(signed), 'the sign-off reads "Signed off by <name>, Bayside Bookkeeping - demo" (' + signed + ')');
+  ok(/Signed off by Bayside Bookkeeping - demo on 15 Nov 2026/.test(signed) && !/[0-9a-f]{8}-[0-9a-f]{4}/.test(signed), 'the sign-off reads "Signed off by <name>, Bayside Bookkeeping - demo" (' + signed + ')');
   await p.screenshot({ path: path.join(OUT, 'ab-09-signed-1366.png') });
   await p.setViewportSize({ width: 390, height: 844 });
   await p.waitForTimeout(700);

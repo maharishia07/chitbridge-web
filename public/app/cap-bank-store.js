@@ -186,7 +186,7 @@ function bankStoreMadeBy(row) {
 /** the signer with the firm when an adviser made it: "Pat Lee, Bayside Bookkeeping - demo" */
 function bankStoreSignerFull(item) {
   const who = bankStoreSigner(item);
-  return who && item && item.by_firm ? who + ', ' + item.by_firm : who;
+  return who && item && item.by_firm && item.by_firm !== who ? who + ', ' + item.by_firm : who; /* a firm that signs as itself is said once */
 }
 /** the sign-off of THIS statement's period, newest first, or null */
 const bankStoreSignedNow = () => bankStoreState.statements.filter((item) => item.period_to && bankStoreState.view && item.period_to === bankStoreState.view.to)[0] || null;
