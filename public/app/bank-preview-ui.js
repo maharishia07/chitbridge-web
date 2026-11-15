@@ -211,6 +211,7 @@
           return choice.id !== 'expense' && choice.id !== 'other_income' && (choice.side === 'both' || choice.side === (out ? 'out' : 'in'));
         })
         .map(function (choice) { return choiceHtml(choice, key); });
+      if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
       return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
     Object.assign(ctx, { partyBox, accountBox, kindBox });
@@ -231,7 +232,7 @@
         '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +
         '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
-        '<div class="bd-sub">' + kindBox(item) + partyBox(item) + accountBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
+        '<div class="bd-sub">' + kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
       );
     }
     /** B5-06: every row the file lost, by its row number, and every other warning the reader made; never hidden */
@@ -275,13 +276,14 @@
   }
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
-    var ctx = { cfg: cfg, says: {}, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
+    var ctx = { cfg: cfg, says: {}, opened: {}, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
     ctx.amountText = cfg.amountText || function (value) { return preview.moneyText(value, cfg.currency); }; /* a host may draw money its own way (the in-app Bank sheet: the page's symbol form, as the band) */
     ctx.tag = function (kind, words) { return '<span class="bd-tag bd-' + kind + '">' + ctx.escapeHtml(words) + '</span>'; };
     ctx.dataKey = function (item) { return ' data-key="' + ctx.escapeHtml(item.key) + '"'; };
     addWords(ctx); addQuestions(ctx); addAsks(ctx); addParties(ctx); addRows(ctx); addCheck(ctx);
     return {
       says: ctx.says,
+      opened: ctx.opened,
       skipBox: ctx.skipBox,
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
@@ -306,7 +308,7 @@
     return found ? found.value : '';
   }
   /** what each button does, by its data-act (the answers the controller gives, or { ok, why } when it refuses) */
-  function actionsOf(cfg, chosenFor, taxWordOf, says) {
+  function actionsOf(cfg, chosenFor, taxWordOf, says, opened) {
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
     function useAccount(key) {
       var account = chosenFor('acct', key);
@@ -332,6 +334,7 @@
       inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },
+      more: function (key) { opened[key] = true; return { ok: true }; } /* the person said it is someone or something else: the party and account boxes open on that line */,
       kind: function (key, target) {
         var id = target.getAttribute('data-kind'),
           account = target.getAttribute('data-acct') || chosenFor('kindacct-' + id, key);
@@ -373,7 +376,7 @@
     var paintLines = painter(cfg);
     var host = cfg.host;
     var chosenFor = function (action, key) { return chosenIn(host, action, key); };
-    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf, paintLines.says);
+    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf, paintLines.says, paintLines.opened);
     function onClick(event) {
       var target = event.target.closest('[data-act]');
       if (!target) return;

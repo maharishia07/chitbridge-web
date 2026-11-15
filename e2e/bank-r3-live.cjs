@@ -50,6 +50,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(!/say which account|from the list for/i.test(sheetText) && (sheetText.match(/What is this\?/g) || []).length === 1, 'ITEM 2: one short question, said once: "What is this?"');
   const stacked = await p.$$eval('.bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
   ok(stacked, 'ITEM 2: each choice that has a list carries it right under its own button');
+  ok(await p.locator('[data-testid="bank-sheet-lines"] input[data-act=pname]').count() === 0 && await p.locator('[data-testid="bank-sheet-lines"] select[data-act=acct]').count() === 0, 'ITEM 2: the New party and Or an account boxes are not under the question from the start');
   const asks = await p.locator('[data-testid="bank-sheet-lines"] [data-act=kind]').count();
   console.log('   choices as buttons: ' + asks);
   ok(asks >= 2, 'ITEM 2: the choices are buttons (' + asks + ')');
@@ -76,6 +77,8 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.click('[data-testid="bank-sheet-open"]');
   await p.waitForSelector('[data-testid="bank-sheet-lines"] .bd-row', { timeout: 20000 });
   await p.waitForTimeout(800);
+  /* a line that asks "What is this?" shows the party and account boxes only after "Someone or something else" */
+  const openMore = async (needle) => { const more = p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: needle }).first().locator('button[data-act=more]'); if (await more.count()) { await more.click(); await p.waitForTimeout(300); } };
   const row = (needle) => p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: needle }).first();
   const pause = () => p.waitForTimeout(450);
   const show = async (needle) => console.log('   ' + needle + ' -> ' + flat(await row(needle).innerText()).slice(0, 200));
@@ -85,6 +88,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await row('ATO PAYMENT').locator('button[data-act=kind][data-kind=tax_payment]').click();
   await pause();
   await show('ATO PAYMENT');
+  await openMore('CARD SETTLEMENT');
   await row('CARD SETTLEMENT').locator('select[data-act=acct]').selectOption({ label: 'Sundry income' });
   await row('CARD SETTLEMENT').locator('select[data-act=taxkind]').selectOption({ label: 'Taxable supply' });
   await row('CARD SETTLEMENT').locator('button[data-act=useacct]').click();
@@ -94,6 +98,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await row('MONTHLY ACCOUNT FEE').locator('button[data-act=taxuse]').click();
   await pause();
   await show('MONTHLY ACCOUNT FEE');
+  await openMore('PACIFIC RIM');
   await row('PACIFIC RIM').locator('input[data-act=pname]').fill('Pacific Rim Traders');
   await row('PACIFIC RIM').locator('select[data-act=pkind]').selectOption('customer');
   await row('PACIFIC RIM').locator('button[data-act=resolve]').click();
@@ -101,6 +106,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await show('PACIFIC RIM');
   for (let n = 0; n < 2; n++) {
     const r = p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: 'BUNNINGS' }).nth(n);
+    if (await r.locator('button[data-act=more]').count()) { await r.locator('button[data-act=more]').click(); await p.waitForTimeout(300); }
     await r.locator('select[data-act=acct]').selectOption('repairs');
     await r.locator('select[data-act=taxkind]').selectOption({ index: 1 });
     await r.locator('button[data-act=useacct]').click();
