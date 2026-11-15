@@ -457,7 +457,7 @@
       '" aria-label="' +
       esc(T(W.write)) +
       '" placeholder="' +
-      esc(T(W.write)) +
+      esc(o.reason ? T(o.reason) : o.no_channel && ext ? aud : T(W.write)) + /* a thread that cannot send says WHY in the box (the caller's own reason, else the no-channel sentence), never the generic prompt */
       '">' +
       esc(m.text) +
       '</textarea>' +
