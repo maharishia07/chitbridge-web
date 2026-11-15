@@ -174,9 +174,9 @@ function stand(pending) {
   await p.waitForSelector('[data-testid="bank-bal-ask"], [data-testid="bank-currency"], .pe-bad', { timeout: 10000 }).catch(async () => { await p.screenshot({ path: path.join(SHOTS, 'stmts-nobal-debug.png') }); });
   if (await p.locator('[data-testid="bank-currency"]').isVisible()) { await p.fill('[data-testid="bank-currency"]', 'INR'); await p.click('[data-testid="bank-currency-go"]'); }
   await p.waitForSelector('[data-testid="bank-bal-ask"]', { timeout: 10000, state: 'attached' }).catch(() => {});
-  const askVisible = await p.locator('#bk_bal').isVisible().catch(() => false);
+  const askVisible = await p.locator('#bk_bal_q').isVisible().catch(() => false);
   ok(askVisible, 'W15-75: "Type it from the statement" - the closing balance box is on screen, not hidden in the folded form');
-  if (askVisible) { await p.fill('#bk_bal', '109016.40'); await p.click('[data-testid="bank-bal-go"]'); await p.waitForTimeout(500); ok(await p.locator('[data-testid="bank-bal-ask"]').count() === 0, 'W15-75: typing it and pressing Show the statement gets the difference (the ask is gone)'); }
+  if (askVisible) { await p.fill('#bk_bal_q', '109016.40'); await p.click('[data-testid="bank-bal-quick-go"]'); await p.waitForTimeout(500); ok(await p.locator('[data-testid="bank-finish-ask"]').count() === 0, 'W15-75: typing it in the band and pressing Show the difference works (the ask is gone)'); }
   await p.screenshot({ path: path.join(SHOTS, 'stmts-balance-laptop.png') });
   await ctx.close();
 

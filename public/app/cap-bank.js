@@ -688,7 +688,12 @@ function bankFinish() {
   const fig = bankFigures();
   const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
-    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
+    return (
+      '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("The file does not say the bank's closing balance. Type it from the statement.")) + '</span>' +
+      /* W15-75: the answer is typed HERE, in one step (the same box and button the Statement tab has: the library money input and button) */
+      '<span class="bk-bal-quick" data-testid="bank-bal-quick">' + peAmt('bk_bal_q', BKB.bal) + ' ' + peBtn('bank-bal-quick-go', 'Show the difference', "BKB.bal=peVal('bk_bal_q');bankBrs();bankPaint()") + '</span>' +
+      acts + '</div>'
+    );
   const P = BKB.parsed,
     code = bkCur();
   return CBBankBand.html({
