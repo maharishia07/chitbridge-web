@@ -72,11 +72,11 @@
   function differenceRow(recon, outsideCount, done) {
     var pending = done ? '' : ' <span class="bd-pending">' + esc(host.plural(outsideCount, 'statement line', 'statement lines') + ' not in the books yet') + '</span>';
     var tick = done ? ' <span class="bd-tick" aria-label="Reconciled">\u2713</span>' : '';
-    return '<tr class="bd-res"><td colspan="2">Difference' + pending + '</td><td class="bd-r">' + esc(host.amountText(recon.difference_before)) + tick + '</td></tr>';
+    return '<tr class="bd-res"><td colspan="2">Difference' + pending + '</td><td class="bd-r">' + esc(host.amountText(recon.difference_before).replace(/^-/, '')) + tick + '</td></tr>';
   }
   function reportHead(recon, model) {
     return '<header class="bd-sheet-h"><div><h2>Bank reconciliation</h2><p class="bd-sheet-sub"><b>Demo, sample data</b> \u00b7 ' + esc(host.ACCOUNT) + ' \u00b7 as at ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + ' \u00b7 amounts in ' + host.CURRENCY + '</p></div>' +
-      '<div class="bd-sheet-acts"><button type="button" class="bd-btn" data-act="print" data-cbsid="BKS017-B14">Print</button><button type="button" class="bd-btn" data-act="view" data-v="lines" data-cbsid="BKS017-B29">Back to the lines</button><button type="button" class="bd-btn" data-act="reset" data-cbsid="BKS017-B30">Start again</button></div></header>';
+      '<div class="bd-sheet-acts"><button type="button" class="lk-btn" data-act="print" data-cbsid="BKS017-B14">Print</button><button type="button" class="bd-link" data-act="view" data-v="lines" data-cbsid="BKS017-B29">Back to the lines</button><button type="button" class="bd-link" data-act="reset" data-cbsid="BKS017-B30">Start again</button></div></header>';
   }
   /** the statement lines not yet in the books, as report rows, by side */
   function outsideRows(outside, key) {
