@@ -50,24 +50,24 @@ function traceabilityScreen() {
     '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">Flag a batch to see exactly who it reached; trace any node back to its source. ' +
     'You see topology + product only — <b>commercial terms stay per-party</b>.</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">' +
-    '<input id="traceIdIn" value="' +
+    '<input data-cbsid="INS003-I01" id="traceIdIn" value="' +
     esc(id) +
     '" placeholder="Paste a batch / chit id" ' +
     'oninput="UI.traceId=this.value" onkeydown="if(event.key===\'Enter\')runTrace(\'forward\')" ' +
     'style="flex:1;min-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace">' +
-    '<button class="pri" onclick="runTrace(\'forward\')" style="padding:9px 14px">🚨 Recall set <span class=arw>▸</span></button>' +
-    '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> ' +
+    '<button data-cbsid="INS003-B01" class="pri" onclick="runTrace(\'forward\')" style="padding:9px 14px">🚨 Recall set <span class=arw>▸</span></button>' +
+    '<button data-cbsid="INS003-B02" onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> ' +
     tx('To source') +
     '</button>' +
     '</div>' +
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:var(--fs-1);color:var(--grey)">' +
     '<label>' +
     _traceSym() +
-    ' / node&nbsp;<input value="' +
+    ' / node&nbsp;<input data-cbsid="INS003-I02" value="' +
     cost +
     '" oninput="UI.traceCost=_traceNum(this.value,5000)" ' +
     'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>' +
-    '<label>blanket-recall size&nbsp;<input value="' +
+    '<label>blanket-recall size&nbsp;<input data-cbsid="INS003-I03" value="' +
     blanket +
     '" oninput="UI.traceBlanket=_traceNum(this.value,200)" ' +
     'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>' +
@@ -77,12 +77,12 @@ function traceabilityScreen() {
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)">' +
     '<span style="font-size:var(--fs-2);color:var(--grey)">or reconstruct from shared data (no links):</span>' +
-    '<input id="traceBatchIn" value="' +
+    '<input data-cbsid="INS003-I04" id="traceBatchIn" value="' +
     esc(UI.traceBatchQ || '') +
     '" placeholder="batch number, e.g. FG-PC-6621" ' +
     'oninput="UI.traceBatchQ=this.value" onkeydown="if(event.key===\'Enter\')runTraceByBatch()" ' +
     'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace">' +
-    '<button onclick="runTraceByBatch()" style="padding:8px 13px">' +
+    '<button data-cbsid="INS003-B03" onclick="runTraceByBatch()" style="padding:8px 13px">' +
     tx('🔎 Trace by batch #') +
     '</button>' +
     '</div>' +
@@ -142,7 +142,7 @@ function _traceBatchPicker() {
         .filter(Boolean)
         .join(' · ');
       return (
-        '<div onclick="UI.traceId=\'' +
+        '<div data-cbsid="INS003-C01" onclick="UI.traceId=\'' +
         item.chit_id +
         '\';runTrace(\'forward\')" title="Click to trace this batch" ' +
         'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">' +
