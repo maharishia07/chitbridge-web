@@ -47,7 +47,7 @@ async function bankStmtLoad() {
   if (!bkstEl('bk_stmts')) return;
   try {
     const answer = await api('booksStmtList', { query: { accounts: bkstBanks().map((item) => item.code).join(','), months: BKST_MONTHS }, fresh: true });
-    if (!answer || !Array.isArray(answer.cells) || !Array.isArray(answer.accounts) || !Array.isArray(answer.files)) throw new Error('the statements answer is not the box's');
+    if (!answer || !Array.isArray(answer.cells) || !Array.isArray(answer.accounts) || !Array.isArray(answer.files)) throw new Error('the statements answer is not the statements box answer');
     BKST.data = answer;
     BKST.mode = 'server';
   } catch (failure) {
