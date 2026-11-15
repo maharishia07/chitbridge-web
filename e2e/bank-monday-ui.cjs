@@ -94,7 +94,11 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     /* M3 · ONE truth in the band */
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');
-    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /10 lines not yet in your books/.test(band) && /Unexplained\s*A?\$?0\.00/.test(band), tag + ': Difference 1,682.25 = 10 lines not yet in your books · Unexplained 0.00');
+    /* CHANGED ON PURPOSE (W15-18, W15-27): the band is the shared one (bank-band.js): the Difference tile holds the figure only, the count is its own line under the tiles ("10 lines to go"), "Unexplained" shows only when it is not 0.00 */
+    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /10 lines to go/.test(band) && !/Unexplained/.test(band), tag + ': Difference 1,682.25, "10 lines to go" on its own line, no Unexplained while it is 0.00');
+    ok(/2 of 12 in your books/.test(band) && await p.locator('[data-testid="bank-finish-tiles"] .lk-fig').count() === 3, tag + ': three tiles and the progress "2 of 12 in your books"');
+    ok(/All amounts in Australian dollars \(AUD\)/.test(band) && /Right account\?/.test(band) && /Business bank account/.test(band) && /2 Oct to 31 Oct 2026 · 12 lines/.test(band), tag + ': the band names the account, the period and the lines, says the currency once and asks "Right account?" (W15-20, W15-21)');
+    ok(/Opening 18,500\.00 agrees with your books/.test(band) || tag === 'phone', tag + ': the opening agrees with the books (read from the engine check, not worked again)');
     ok(!/Difference\s*A?\$?0\.00/.test(band), tag + ': the band does not say a difference of 0.00 while 10 lines are missing');
     /* M1 · one primary, sign-off only at nil */
     ok(await p.locator('[data-testid="bank-sheet-open"]').count() === 1 && await p.locator('[data-testid="bank-signoff"]').count() === 0, tag + ': ONE primary button (Add to your books) and no Sign off while the difference is not nil');
@@ -109,7 +113,8 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     });
     ok(m.pageScroll <= 1 && m.mainScroll <= 1, tag + ': the page does not scroll (page +' + m.pageScroll + ', main +' + m.mainScroll + ')');
     ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
-    ok(m.above <= 3, tag + ': ' + m.above + ' controls above the list besides its own toolbar (was 17 in all)');
+    /* CHANGED ON PURPOSE (W15-18): the band now carries Wrong account? Change as well as the file line's Load another statement, the primary and More: four, not three (still 17 before FIN-27) */
+    ok(m.above <= 4, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
     ok(m.sticky === 'sticky', tag + ': the column header stays put');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-lines.png') });
     /* the One menu: Grid / Lines / Columns / CSV / Expand under View */
