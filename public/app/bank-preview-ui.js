@@ -17,7 +17,7 @@
   var NOT_INCOME_OR_EXPENSE = '__other__';
   /** a line already in the books: who put it there and when, in the check's words; '' for any other line */
   function alreadyNote(item, escapeHtml) {
-    return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(String(item.alreadyWhy).replace(/s*((?:ref )?bank:[^)]*)/g, '')) + '</span>' : ''; /* the line's internal reference is not for the reader */
+    return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(String(item.alreadyWhy).replace(/\s*\((?:ref )?bank:[^)]*\)/g, '').replace(/\s*\(\s*\)/g, '')) + '</span>' : ''; /* the line's internal reference is not for the reader */
   }
   /** every other thing holding a line back besides its entry and its one question, as tags */
   function otherNeeds(item, tag) {
@@ -189,22 +189,29 @@
     function addOwnBox(key) {
       return '<input data-cbsid="BKS017-I03" class="bd-inp" type="text" maxlength="60" data-testid="bd-addown-name" aria-label="Name of a new savings account" placeholder="+ add a savings account: name" data-act="addownname" data-key="' + key + '"> <button data-cbsid="BKS017-B20" type="button" class="bd-btn" data-testid="bd-addown" data-act="addown" data-key="' + key + '">Add it</button> ';
     }
+    /** one choice of "What is this?": its button, and (a choice that needs an account) its list right UNDER the button, then the new-account box for a transfer */
+    function choiceHtml(choice, key) {
+      var pick = choice.ask === 'account' && choice.accounts.length > 1,
+        account = choice.ask === 'account' && !pick ? ' data-acct="' + escapeHtml(choice.accounts[0].role || choice.accounts[0].code) + '"' : '',
+        button = '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(choice.id) + '"' + (pick ? ' data-pick="1"' : '') + account + '>' + escapeHtml(choice.words) + '</button>';
+      if (!pick) return '<span class="bd-choice">' + button + '</span>';
+      var chosen = optionsOf(choice.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }).replace('>Choose<', '>Choose the account<'),
+        list = '<select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml('Account for: ' + choice.words) + '" data-act="kindacct-' + escapeHtml(choice.id) + '" data-key="' + key + '">' + chosen + '</select>';
+      return '<span class="bd-choice">' + button + list + (choice.id === 'transfer' && cfg.addOwn ? addOwnBox(key) : '') + '</span>';
+    }
+    /** ONE short question, then the choices as buttons (the engine's own closed list, for this side of the line) */
     function kindBox(item) {
       var engine = root.CBBankEntry;
       if (item.state !== 'needs_you' || item.entry || !engine || !engine.whatIsThis) return '';
       var out = item.line.debit_minor > 0,
         key = escapeHtml(item.key),
         listed = engine.whatIsThis({ country: cfg.country, own_accounts: cfg.ownAccounts ? cfg.ownAccounts() : [] }).items || [];
-      var buttons = listed
-        .filter(function (one) {
-          return one.id !== 'expense' && one.id !== 'other_income' && (one.side === 'both' || one.side === (out ? 'out' : 'in'));
+      var choices = listed
+        .filter(function (choice) {
+          return choice.id !== 'expense' && choice.id !== 'other_income' && (choice.side === 'both' || choice.side === (out ? 'out' : 'in'));
         })
-        .map(function (one) {
-          var pick = one.ask === 'account' && one.accounts.length > 1;
-          if (!pick) return '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '"' + (one.ask === 'account' ? ' data-acct="' + escapeHtml(one.accounts[0].role || one.accounts[0].code) + '"' : '') + '>' + escapeHtml(one.words) + '</button>';
-          return '<span class="bd-party">' + (one.id === 'transfer' && cfg.addOwn ? addOwnBox(key) : '') + '<select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml(one.words) + '" data-act="kindacct-' + escapeHtml(one.id) + '" data-key="' + key + '">' + optionsOf(one.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }) + '</select> <button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '">' + escapeHtml(one.words) + '</button></span>';
-        });
-      return buttons.length ? '<span class="bd-party"><b>What is this?</b> ' + buttons.join(' ') + '</span>' : '';
+        .map(function (choice) { return choiceHtml(choice, key); });
+      return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
     Object.assign(ctx, { partyBox, accountBox, kindBox });
   }
@@ -224,7 +231,7 @@
         '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +
         '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') +
-        '<div class="bd-sub">' + partyBox(item) + accountBox(item) + kindBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
+        '<div class="bd-sub">' + kindBox(item) + partyBox(item) + accountBox(item) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') + lineNote(item, result) + '</div></td></tr>'
       );
     }
     /** B5-06: every row the file lost, by its row number, and every other warning the reader made; never hidden */
@@ -278,12 +285,16 @@
       skipBox: ctx.skipBox,
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
+      /** the statement-lines table (or ONE line of it when the host answers a single line) with the boxes above it */
       linesHtml: function (model) {
+        /* answering ONE line (cfg.only() = its key): that line alone, no statement-wide boxes */
+        var only = cfg.only ? cfg.only() : '',
+          items = only ? model.items.filter(function (item) { return item.key === only; }) : model.items;
         return (
-          ctx.checkBox(model) + ctx.skipBox(model) +
-          (model.items.some(function (item) { return item.needs === 'gst_basis'; }) ? '<p class="bd-find bd-confirm" data-testid="bd-gst-basis">' + ctx.basisQuestion() + '</p>' : '') +
+          (only ? '' : ctx.checkBox(model) + ctx.skipBox(model)) +
+          (items.some(function (item) { return item.needs === 'gst_basis'; }) ? '<p class="bd-find bd-confirm" data-testid="bd-gst-basis">' + ctx.basisQuestion() + '</p>' : '') +
           '<table class="bd-table"><thead><tr><th>Date</th><th>What the bank says</th><th>Out</th><th>In</th><th>In your books?</th></tr></thead><tbody>' +
-          model.items.map(function (item) { return ctx.lineRow(item, model.results); }).join('') + '</tbody></table>'
+          items.map(function (item) { return ctx.lineRow(item, model.results); }).join('') + '</tbody></table>'
         );
       }
     };
@@ -324,6 +335,7 @@
       kind: function (key, target) {
         var id = target.getAttribute('data-kind'),
           account = target.getAttribute('data-acct') || chosenFor('kindacct-' + id, key);
+        if (target.getAttribute('data-pick') && !account) return { ok: false, line: true, why: 'Choose the account in the list under the button.' };
         var said = cfg.controller().resolveLine(key, { kind: id, account: account || undefined });
         return said && said.ok === false ? Object.assign({ line: true }, said) : said; /* a refusal is said on the line, in its words */
       },

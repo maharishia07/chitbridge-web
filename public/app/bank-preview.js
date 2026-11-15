@@ -263,7 +263,7 @@
   /** the lines a press would post: ready, and not already added in this session */
   function readyItems(preview) {
     return preview.items.filter(function (item) {
-      return item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
+      return (!preview.only || item.key === preview.only) && item.ready && !(preview.results[item.key] && preview.results[item.key].ok);
     });
   }
   /** how many NEW parties the press would make: one per distinct name and kind among the ready lines (two lines naming one payee make it once) */
@@ -274,6 +274,11 @@
     });
     return Object.keys(seen).length;
   }
+  /** what the press reaches when ONE line is answered: that line's own carried figures (its amount and its tax record), not the statement's totals */
+  function oneLineReach(preview, item) {
+    var line = item ? item.line : {};
+    return { currency: preview.projection.currency, count: item ? 1 : 0, in: line.credit_minor || 0, out: line.debit_minor || 0, tax: item && item.tax ? item.tax.tax_minor : 0, from: line.date || null, to: line.date || null, needs_you: 0, closed: 0, newParties: newPartyCount(preview), single: true };
+  }
   /** what the press reaches: the engine's carried totals of the READY lines, the lines a closed month holds back, the lines that still need a person; null when the engine sent none */
   function reachOf(preview) {
     var totals = preview.projection && preview.projection.totals,
@@ -282,12 +287,13 @@
     var held = preview.items.filter(function (item) {
       return item.closed;
     }).length;
+    if (preview.only) return oneLineReach(preview, readyItems(preview)[0]);
     return { currency: preview.projection.currency, count: readyItems(preview).length, in: totals.in, out: totals.out, tax: totals.tax, from: totals.from, to: totals.to, needs_you: counts.needs_you, closed: held, newParties: newPartyCount(preview) };
   }
   /** the popup: count · in · out · date range · currency · new parties · how many still need you */
-  function confirmWords(reach) {
+  function confirmWords(reach, amountText) {
     var amountOf = function (value) {
-      return moneyText(value, reach.currency);
+      return amountText ? amountText(value) : moneyText(value, reach.currency); /* a host draws money its own way (the in-app Bank page: plain figures, the currency said once) */
     };
     var parties = reach.newParties ? reach.newParties + (reach.newParties === 1 ? ' new party' : ' new parties') + ' made first' : null;
     var held = reach.closed ? ' ' + reach.closed + ' in a closed month are held back.' : '';
@@ -300,7 +306,7 @@
         'Dated: ' + dateText(reach.from) + (reach.to && reach.to !== reach.from ? ' to ' + dateText(reach.to) : ''),
         'Currency: ' + reach.currency,
         parties,
-        reach.needs_you + ' still need you; they are left out for now.' + held
+        reach.single ? null : reach.needs_you + ' still need you; they are left out for now.' + held
       ].filter(Boolean)
     };
   }
@@ -470,7 +476,7 @@
       },
       confirmText: function () {
         var reach = reachOf(preview);
-        return reach ? confirmWords(reach) : null;
+        return reach ? confirmWords(reach, opts.amountText) : null;
       },
       postReady: function (onLine) {
         return postReady(opts, preview, onLine);
@@ -484,6 +490,11 @@
       answer: function (name, value) {
         preview.answers[name] = value;
         if (preview.parsed) projectAgain(opts, preview);
+      },
+      /** answer ONE line only: its key (or '' for every line); what is ready, the press and its words then reach that line alone */
+      only: function (key) {
+        if (key !== undefined) preview.only = key || '';
+        return preview.only || '';
       },
       readyCount: function () {
         return readyItems(preview).length;

@@ -31,6 +31,17 @@
 /* stmtAcct = the account the statement on screen was read FOR; stmtCur = the currency the person said the file is in (B5-05: never the account's by default) */
 const BKB = { acct: '', stmtAcct: '', stmtCur: '', preset: '', file: null, parsed: null, ledger: null, m: null, rows: [], tab: 'lines', bal: '' };
 const bkbE = (v) => esc(v);
+/** a figure on this page: plain, with no symbol. The currency is said ONCE (the header line, and the confirm's "Currency" line); the page is one account, so one currency. Money stays a value type in code; this is display only.
+ *  A figure whose own currency differs from the page's keeps its code. The grouping and decimals are bkMoney's (the one formatter) with its symbol taken off. */
+function bkbFig(minor, c) {
+  const page = String(bkCur() || '').toUpperCase(),
+    code = String(c || page).toUpperCase(),
+    text = bkMoney(minor, code || undefined);
+  if (!page || code !== page) return text;
+  /* the figure alone: its sign and its digits with their own grouping marks; a symbol or code before or after is dropped. A shape not read this way stays as bkMoney wrote it. */
+  const read = /^(-?)\s*[^\d-]*?\s*(\d[\d.,\s'  ]*)[^\d]*$/.exec(text);
+  return read ? read[1] + read[2].trim() : text;
+}
 const bkbEl = (id) => document.getElementById(id);
 const bkbWords = {
   /* what the engine's proposal means, in the shop's words */
@@ -50,7 +61,7 @@ function bkbEventWord(ev) {
 const bkbStatus = {
   settled: ['green', 'Settled by chit'],
   told: ['blue', 'Party told us'],
-  accepted: ['green', 'Accepted'],
+  accepted: ['green', 'In your books'],
   matched: ['green', 'In your books'],
   suggested: ['amber', 'Ready to add'],
   'bank-only': ['red', 'Needs you'],
@@ -62,9 +73,9 @@ const bkbStatus = {
 /* FIN-27 · THREE GROUPS, one count each: every engine state answers one question — is the pair in both, only in the bank, or only in your books?
    (the states stay on each row's chip; the head and the filter speak the three) */
 const BKB_GROUPS = [
-  { key: 'books', label: 'Missing in your books', states: ['bank-only', 'check', 'suggested', 'told', 'asked'] },
-  { key: 'matched', label: 'Matched', states: ['settled', 'matched', 'accepted'] },
-  { key: 'bank', label: 'Missing in the bank', states: ['missing', 'told-only'] }
+  { key: 'books', label: 'Not in your books', states: ['bank-only', 'check', 'suggested', 'told', 'asked'] },
+  { key: 'matched', label: 'In your books', states: ['settled', 'matched', 'accepted'] },
+  { key: 'bank', label: 'Not on the statement', states: ['missing', 'told-only'] }
 ];
 /** the group a row's state belongs to; a state nobody listed lands in "Missing in your books", where a person looks at it */
 const bkbGroupOf = (status) => (BKB_GROUPS.filter((item) => item.states.indexOf(status) >= 0)[0] || BKB_GROUPS[0]).key;
@@ -131,6 +142,7 @@ function bankAcctPick(code) {
   if (file) file.value = '';
   if (res) res.innerHTML = '';
   bankLayout(false, false);
+  if (bankRestore()) return;
   if (out) out.innerHTML = '<div class="pe-note" data-testid="bank-acct-changed">' + bkbE(tx('You changed the bank account, so the statement on screen was cleared. Load the statement file for this account.')) + '</div>';
 }
 /** one step action: the engine's step, the device copy, then the shared record */
@@ -233,23 +245,34 @@ async function bankView(body) {
       '<input data-cbsid="BKS014-I01" class="inp" type="file" id="bk_file" data-testid="bank-file" accept=".csv,.json,.txt,text/csv,application/json" onchange="bankPick(this)">'
     ) +
     '</div><div class="pe-note" data-testid="bank-private">🔒 ' +
-    bkbE(tx('The file is read on this device and is never uploaded.')) +
+    bkbE(tx('The file is read on this device and is never uploaded. This device keeps the latest one.')) +
     '</div><div id="bk_out" class="pe-slot"></div></div>' +
     '<div id="bk_res" data-testid="bank-res"></div></div>';
   if (BKB.rows.length || BKB.parsed) bankPaint();
+  else bankRestore();
+}
+/** the latest statement of the bank account on screen, kept on this device: the page opens on it (in progress or signed); no file is asked for. Null-safe when nothing is kept. */
+function bankRestore() {
+  const kept = bkbLoad('stmt:' + BKB.acct, null);
+  if (!kept || !kept.text) return false;
+  bankTake(kept.text, kept.name || '', true).catch((failure) => bkQuiet('bank-restore', failure));
+  return true;
 }
 
 async function bankPick(input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  const out = bkbEl('bk_out');
-  out.innerHTML = '';
+  bkbEl('bk_out').innerHTML = '';
   let text;
   try {
     text = await file.text();
   } catch (_) {
     return peBad('bk_out', tx('That file could not be read.'));
   }
+  return bankTake(text, file.name, false);
+}
+/** a statement's text on screen: read, remembered on this device (never uploaded), then the currency and the books. `remembered` = it came back from this device, not from the file picker */
+async function bankTake(text, name, remembered) {
   const hash = await bkbHash(text);
   if (bkbNoCountryWords()) return peBad('bk_out', bkbNoCountryWords());
   const parsed = CBBankRecon.parse(text, { format: 'auto', preset: BKB.preset || undefined, country: bkbCountry() });
@@ -258,16 +281,18 @@ async function bankPick(input) {
     BKB.rows = [];
     bkbEl('bk_res').innerHTML = '';
     bankLayout(false, false);
+    if (remembered) bkbSave('stmt:' + BKB.acct, null);
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
+  if (!remembered) bkbSave('stmt:' + BKB.acct, { name, text }); /* the page opens on the latest statement of this account next time; only this device keeps it */
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
   BKB.postedLocal = {};
   BKB.openingOk = false; /* a new statement asks the opening-balance question afresh */
   if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* a statement read again starts the sheet's answers afresh */
-  BKB.file = { name: file.name, hash: hash.slice(0, 16) };
+  BKB.file = { name, hash: hash.slice(0, 16) };
   BKB.parsed = parsed;
   BKB.stmtAcct = BKB.acct; /* B5-07: this statement belongs to the account picked NOW */
-  BKB.stmtCur = parsed.currency || ''; /* B5-05: the file's own currency, else asked below; never the account's */
+  BKB.stmtCur = parsed.currency || bkbAcctCur(); /* the file's own currency, else the account's when the account has it on record (a known fact), else asked below; nothing is guessed */
   BKB.bal = '';
   const dates = parsed.lines.map((item) => item.date).sort();
   BKB.from = parsed.from || dates[0];
@@ -275,9 +300,14 @@ async function bankPick(input) {
   if (!parsed.lines.length) return peBad('bk_out', tx('There are no transactions in that file.'));
   await bankCurrencyRun();
 }
-/** B5-05: the file does not say its currency, so ask once; the statement is not read against the books until the person answers */
+/** the currency the statement's bank account has on record: the account's own, else the ledger's; '' when neither is known (then the person is asked) */
+function bkbAcctCur() {
+  const ledger = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {};
+  return String(ledger.currency || bkCur() || '').toUpperCase();
+}
+/** B5-05: the file does not say its currency AND the account has none on record, so ask once; the statement is not read against the books until the person answers */
 function bankCurrencyAsk() {
-  const shopCurrency = String(bkCur() || '').toUpperCase(); /* the one fact the shop already states, shown filled in: one press confirms it, the field changes it */
+  const shopCurrency = bkbAcctCur(); /* the one fact the shop already states, shown filled in: one press confirms it, the field changes it */
   bkbEl('bk_res').innerHTML = '';
   bkbEl('bk_out').innerHTML =
     '<div class="pe-note" data-testid="bank-currency-ask">' +
@@ -296,7 +326,7 @@ function bankCurrencyUse() {
 /** the statement's currency, asked when the file did not say: it must be the bank account's (nothing is converted), then the books are read */
 async function bankCurrencyRun() {
   if (!BKB.stmtCur) return bankCurrencyAsk();
-  const accountCurrency = String(bkCur() || '').toUpperCase();
+  const accountCurrency = bkbAcctCur();
   if (accountCurrency && BKB.stmtCur.toUpperCase() !== accountCurrency) {
     BKB.parsed = null;
     BKB.rows = [];
@@ -490,8 +520,8 @@ function bankLineHtml() {
   const acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct))[0] || {};
   return (
     '<span class="bk-name"><b>' + bkbE(tx('Bank')) + '</b> · ' + bkbE(acct.name || BKB.stmtAcct) + '</span><span class="bk-file">' +
-    bkbE((BKB.file && BKB.file.name) || '') + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
-    '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Change statement')) + '</button>'
+    bkbE([bkbAcctCur(), (BKB.file && BKB.file.name) || ''].filter(Boolean).join(' · ')) + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
+    '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>'
   );
 }
 /** the load form opens again over the lines (a different file or account); the list is re-fitted to the room left */
@@ -500,7 +530,7 @@ function bankChange(btn) {
   if (!pane) return;
   const open = pane.classList.toggle('bk-open');
   btn.setAttribute('aria-expanded', String(open));
-  btn.textContent = tx(open ? 'Hide the form' : 'Change statement');
+  btn.textContent = tx(open ? 'Hide the form' : 'Load another statement');
   window.dispatchEvent(new Event('resize'));
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
@@ -580,14 +610,14 @@ function bankPaint() {
 function bankFigures() {
   const worked = BKB.brs;
   if (!worked || !worked.ok) return null;
-  const plain = (minor) => (minor < 0 ? bkMoney(-minor) + ' ' + tx('overdrawn') : bkMoney(minor)),
+  const plain = (minor) => (minor < 0 ? bkbFig(-minor) + ' ' + tx('overdrawn') : bkbFig(minor)),
     gap = worked.bank_balance_minor - worked.book_balance_minor,
     notIn = bkbCount('books'),
     notBank = bkbCount('bank');
   return {
     statement: plain(worked.bank_balance_minor),
     books: plain(worked.book_balance_minor),
-    gap: bkMoney(Math.abs(gap)),
+    gap: bkbFig(Math.abs(gap)),
     dir: gap > 0 ? tx('the statement is higher than your books') : gap < 0 ? tx('your books are higher than the statement') : '' /* which side is higher: the two carried figures, set side by side */,
     parts: [
       notIn ? txn('{count} line not yet in your books', '{count} lines not yet in your books', notIn) : '',
@@ -595,7 +625,7 @@ function bankFigures() {
     ]
       .filter(Boolean)
       .join(' · '),
-    unexplained: bkMoney(Math.abs(worked.difference_minor)),
+    unexplained: bkbFig(Math.abs(worked.difference_minor)),
     nil: gap === 0 && worked.difference_minor === 0
   };
 }
@@ -604,7 +634,7 @@ function bankOpeningFacts() {
   const stated = BKB.parsed && BKB.parsed.opening_minor,
     books = BKB.ledgerRaw && BKB.ledgerRaw.opening_minor;
   if (BKB.openingOk || stated == null || books == null || Number(stated) === Number(books)) return null;
-  return { statement: bkMoney(stated), books: bkMoney(books) };
+  return { statement: bkbFig(stated), books: bkbFig(books) };
 }
 /** "Choose another account": the load form opens again over the lines */
 function bankChangeOpen() {
@@ -787,7 +817,7 @@ function bankList() {
         match: (r, v) => bkbGroupOf(r.status) === v
       }
     ],
-    search: (r) => [r.narration, r.ref, r.date, bkbStatus[r.status][1], bkMoney(r.amount_minor), (r.party && r.party.name) || ''].join(' '),
+    search: (r) => [r.narration, r.ref, r.date, bkbStatus[r.status][1], bkbFig(r.amount_minor), (r.party && r.party.name) || ''].join(' '),
     sorts: [
       { key: 'date', label: tx('Date'), cmp: (a, b) => String(a.date).localeCompare(String(b.date)) },
       { key: 'status', label: tx('Status'), cmp: (a, b) => BKB_ORDER.indexOf(a.status) - BKB_ORDER.indexOf(b.status) },
@@ -853,7 +883,7 @@ function bankList() {
   });
 }
 /** one money cell of the Out | In pair: the amount in the UI face, only in the column its side belongs to */
-const bkbAmountCell = (r, outSide) => (!r.in === outSide ? '<span style="font-family:var(--cl-ui);font-variant-numeric:tabular-nums">' + bkbE(bkMoney(r.amount_minor)) + '</span>' : '');
+const bkbAmountCell = (r, outSide) => (!r.in === outSide ? '<span style="font-family:var(--cl-ui);font-variant-numeric:tabular-nums">' + bkbE(bkbFig(r.amount_minor)) + '</span>' : '');
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */
@@ -912,7 +942,7 @@ function bankNote(r) {
     titleText: tx('Note on this line'),
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body: '<div class="pe-note">' +
-      bkbE(bkDate(r.date) + ' · ' + tx(r.in ? 'In' : 'Out') + ' ' + bkMoney(r.amount_minor)) +
+      bkbE(bkDate(r.date) + ' · ' + tx(r.in ? 'In' : 'Out') + ' ' + bkbFig(r.amount_minor)) +
       '</div>' +
       '<textarea data-cbsid="BKS014-T01" class="inp" id="bk_note" data-testid="bank-note-text" rows="3" style="width:100%" maxlength="500"></textarea>' +
       '<div class="pe-note">' +
@@ -1040,7 +1070,7 @@ function bankNext(r) {
             '</span> · ' +
             bkbE(bkDate(item.date)) +
             ' · ' +
-            bkbE(bkMoney(item.dr_minor || item.cr_minor)) +
+            bkbE(bkbFig(item.dr_minor || item.cr_minor)) +
             ' · ' +
             bkbE(item.narration)
         )
@@ -1072,7 +1102,7 @@ function bankNext(r) {
                       '<span class="mono">' +
                       bkbE(bkBillNo(entry.bill_no, entry.ref_chit_id, entry.date)) +
                       '</span>' +
-                      (entry.applied_minor != null ? ' ' + bkbE(bkMoney(entry.applied_minor)) : '')
+                      (entry.applied_minor != null ? ' ' + bkbE(bkbFig(entry.applied_minor)) : '')
                   )
                   .join(' · ')
               )
@@ -1110,7 +1140,7 @@ function bankNext(r) {
     h +=
       row('Why', bkbE(tx('More than one entry fits this line'))) +
       (r.books || [])
-        .map((item) => row('Could be', '<span class="mono">' + bkbE(item.entry_no) + '</span> · ' + bkbE(bkMoney(item.dr_minor || item.cr_minor))))
+        .map((item) => row('Could be', '<span class="mono">' + bkbE(item.entry_no) + '</span> · ' + bkbE(bkbFig(item.dr_minor || item.cr_minor))))
         .join('');
   else if (r.status === 'missing') h += row('Why', bkbE(tx('In your books but not on this statement yet — a cheque not presented, or a later date')));
   else
@@ -1134,9 +1164,9 @@ function bankAddBound(r) {
   if (bkbBound()) bankAdd(r);
 }
 /** Add missing (on a line) and the Add button both open the one sheet: every line against the books, each with what it needs (FIN-117; the sheet is cap-bank-sheet.js) */
-function bankAdd() {
+function bankAdd(row) {
   if (typeof bankSheetOpen !== 'function') return toast(tx('This starts after an update'));
-  bankSheetOpen().catch((failure) => bkQuiet('bank-add', failure));
+  bankSheetOpen(row).catch((failure) => bkQuiet('bank-add', failure));
 }
 /* a saved entry → fetch the bank ledger again, so the line is matched (the guard against posting it twice) */
 if (typeof BK !== 'undefined')
@@ -1198,7 +1228,7 @@ function bankBrsPaint() {
               bkbE(x.name || '') +
               (x.ref ? ' · ' + bkbE(x.ref) : '') +
               '</span><span class="mono">' +
-              bkbE(bkMoney(x.amount_minor)) +
+              bkbE(bkbFig(x.amount_minor)) +
               '</span></div>'
           )
           .join('') +
@@ -1216,7 +1246,7 @@ function bankBrsPaint() {
           '"><span>' +
           bkbE(tx(x.label)) +
           '</span><span class="mono">' +
-          bkbE(bkMoney(Math.abs(x.minor)) + (x.minor < 0 && x.sign === '' ? ' ' + tx('overdrawn') : '')) +
+          bkbE(bkbFig(Math.abs(x.minor)) + (x.minor < 0 && x.sign === '' ? ' ' + tx('overdrawn') : '')) +
           '</span></div>'
       )
       .join('') +

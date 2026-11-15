@@ -90,7 +90,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const { ctx, p } = await open(vp);
     await load(p);
     const tag = vp.tag;
-    ok(prefill === 'AUD', tag + ': the currency question arrives filled with the shop\'s currency (' + prefill + '), not an empty box');
+    ok(prefill === null, tag + ': the account has its currency on record, so no currency question (' + prefill + ')');
     /* M3 · ONE truth in the band */
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');
@@ -172,7 +172,7 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     const w = await open({ width: 1366, height: 768 });
     await load(w.p);
     const said = await w.p.textContent('[data-testid="bank-opening-check"]').catch(() => '');
-    ok(said.includes('opens at A$18,500.00') && said.includes('show A$10,000.00'), 'wrong account: the page says what the statement opens at and what the books show (' + said.slice(0, 110) + ')');
+    ok(said.includes('opens at 18,500.00') && said.includes('show 10,000.00'), 'wrong account: the page says what the statement opens at and what the books show (' + said.slice(0, 110) + ')');
     ok(await w.p.locator('[data-testid="bank-sheet-open"]').isDisabled(), 'wrong account: Add is held until the question is answered');
     await w.p.screenshot({ path: path.join(ASHOTS, 'bank-laptop-wrong-account.png') });
     await w.p.click('[data-testid="bank-opening-go"]');

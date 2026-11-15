@@ -142,6 +142,7 @@ function bkshController() {
     post: CBBankPost.adapter({ api, who: signedIn, modeOf: bkshModeOf }),
     lockedMonth: () => null /* a closed month is the server's answer, shown on the line */,
     statementCurrency: () => bkshBook().stmtCur || null,
+    amountText: bkshAmountText,
     checkInput: bkshCheckInput,
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
@@ -150,11 +151,13 @@ function bkshController() {
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
+/** a carried amount as the page writes it: plain, the currency is said once on the page (bkbFig, cap-bank.js) */
+const bkshAmountText = (value) => bkbFig(CBBankPreview.minorOf(value), (value && value.currency) || undefined);
 const bkshEl = (id) => document.getElementById(id);
 /** the sheet's own words under the title: the band's ONE truth (bankFigures, cap-bank.js), so the page and the sheet never say two things; nothing here is worked out */
 function bkshStrip() {
   const fig = typeof bankFigures === 'function' ? bankFigures() : null;
-  if (!fig) return '';
+  if (!fig || BKSH.ctl.only()) return ''; /* one line answered: that line alone, the statement's figures stay on the page */
   return txf('Statement {s} · Books {b} · Difference {d}{parts} · Unexplained {u}', {
     s: fig.statement,
     b: fig.books,
@@ -183,7 +186,7 @@ function bkshPaint() {
   if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
   if (addButton) {
     addButton.disabled = !ready || BKSH.posting;
-    addButton.textContent = ready ? txf('Add {n} to your books', { n: ready }) : tx('Nothing ready to add');
+    addButton.textContent = ready ? (BKSH.ctl.only() ? tx('Add this line to your books') : txf('Add {n} to your books', { n: ready })) : tx('Nothing ready to add');
   }
 }
 /** the question the Add press asks first: how many entries, how much, which dates, how many new parties, how many still need you (the engine's own carried totals) */
@@ -276,8 +279,13 @@ function bkshFirstWords(said, unread) {
   if (!said.ok) return said.why;
   return unread ? tx('Could not check whether the shop is registered for GST, so each charge asks what GST it carries.') : '';
 }
-/** open the sheet for the statement on screen */
-async function bankSheetOpen() {
+/** the controller's key of one bank row (its client_ref, one to one by occurrence), '' when the row is not on this statement */
+function bkshKeyOfRow(row) {
+  const parsed = bkshBook().parsed;
+  return row && parsed ? String((bkshPairing(parsed.lines).line_refs || [])[row.i] || '') : '';
+}
+/** open the sheet for the statement on screen, or for ONE line of it (Add missing on a line: that line alone) */
+async function bankSheetOpen(row) {
   if (!bkbBound()) return;
   if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
@@ -287,6 +295,7 @@ async function bankSheetOpen() {
     BKSH.ctl = bkshController();
     BKSH.key = bkshKey();
   }
+  BKSH.ctl.only(bkshKeyOfRow(row));
   ui.dialog({
     mount: 'BKS014-U03', pop: 'POP092', titleTestid: 'bank-sheet-title',
     titleText: tx('Add to your books'), wide: true,
@@ -296,7 +305,7 @@ async function bankSheetOpen() {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, only: () => (BKSH.ctl ? BKSH.ctl.only() : ''), currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: bkshAmountText, addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: () => { bkshPaint(); bkshPageFollows(); }
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
