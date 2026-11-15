@@ -31,8 +31,10 @@ var CBUi = (function () {
   var EFFECTS = ['none', 'preference', 'commit'];
   var ALLOWED_OPTIONS = [
     'mount', 'object', 'tone', 'hidden', 'disabled', 'busy', 'role', 'key', 'effect', 'confirm',
-    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href', 'hint'
+    'confirmedBy', 'onPress', 'id', 'testid', 'data', 'surface', 'expanded', 'display', 'size', 'href', 'hint', 'label', 'verb'
   ];
+  /* CMP057 Command: the closed verb list of the register (docs toolset/ui-identity/ui-stamp.cjs VERBS); the caller picks one, the component never invents a verb */
+  var COMMAND_VERBS = ['SAVE', 'CANCEL', 'CONFIRM', 'OPEN', 'CLOSE', 'ADD', 'REMOVE', 'CHANGE', 'CHOOSE', 'ENTER', 'TICK', 'MOVE', 'RELOAD', 'PREVIEW', 'PRINT', 'INSTALL', 'RENAME', 'CONNECT', 'POST', 'DOWNLOAD'];
   /* ICONS (Athi 10 Nov): one icon per component; the look of a mount is a property, 'icon' (icon alone) or 'icon+label'. Icon alone is allowed only for these seven
      (close, search, add, menu, back, edit, help) and never for a commit (money and data actions always say what they do); it always sits in a 44 px target
      with an aria-label and a tooltip. Everything else shows icon and label. */
@@ -93,6 +95,8 @@ var CBUi = (function () {
     /* a host that already styles its own button family keeps that look: the surface names the family, the component stays one */
     chip: { primary: 'optchip', quiet: 'optchip' },
     list: { primary: 'cbl-btn', quiet: 'cbl-btn' },
+    /* a lab page's own pill (product-lab .pill) */
+    pill: { primary: 'pill', quiet: 'pill' },
     bar: { primary: 'cbsid-help', quiet: 'cbsid-help' },
     /* the shell header's own look (shell.js .cbsh-tohome) and the floating Assistant pill (.cbui-fab, above) */
     shell: { primary: 'cbsh-tohome', quiet: 'cbsh-tohome' },
@@ -166,12 +170,17 @@ var CBUi = (function () {
        balances, cheque step, waiting-bill link, add supplier, accept / reject short, advance, reverse, GST note, resize pane, record discount, pay anyway), P01 row tools; CMP043 K01 tab, K02 ledger tree item;
        CMP044 C01 day bills link, C02 chit link, C03 reversal link. cap-books.js writes them with their codes (data-cbsid); none is drawn by ui.action (nonButton). */
     bookfield: { code: 'CMP040', element: 'CMP040-I01', elements: ['I01', 'I02', 'I03', 'T01'], label: 'Books field', alias_of: 'CMP055', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    bookselect: { code: 'CMP041', element: 'CMP041-S01', elements: ['S01'], label: 'Books select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
-    bookaction: { code: 'CMP042', element: 'CMP042-B01', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'B25', 'P01'], label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookselect: { code: 'CMP041', element: 'CMP041-S01', elements: ['S01'], label: 'Books select', alias_of: 'CMP056', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    bookaction: { code: 'CMP042', element: 'CMP042-B01', alias_of: 'CMP057', elements: ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'B14', 'B15', 'B16', 'B17', 'B18', 'B19', 'B20', 'B21', 'B22', 'B23', 'B24', 'B25', 'P01'], label: 'Books action', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     booktab: { code: 'CMP043', element: 'CMP043-K01', elements: ['K01', 'K02'], label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     /* CMP055 FIELD (UX-137, docs WEB-FIELD-PART): one part for text-like, date, time, checkbox, file and long text, drawn by ui.field (app/ui-field.js). It WIDENS CMP040 and CMP045, which stay valid aliases until their pages convert. Elements: I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text. A field never confirms. */
-    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP056 SELECT (UX-137, plan 6.2): one pick-one list, drawn by ui.select (app/ui-select.js). It takes over CMP035 List select and CMP041 Books select as aliases. A select never confirms. */
+    select: { code: 'CMP056', element: 'CMP056-S01', elements: ['S01'], label: 'Select', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP057 COMMAND (UX-137, plan 6.2): a button with its OWN label and its own verb from the closed list, for the commands the fixed set has no word for (Tick all shown). The mount declares label, verb and effect;
+       a commit confirms first like every other commit. It takes over CMP042 Books action as an alias. */
+    command: { code: 'CMP057', element: 'CMP057-B01', label: 'Command', verb: 'OPEN', effect: null, effectFixed: false, tone: 'quiet', own: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;
@@ -205,7 +214,7 @@ var CBUi = (function () {
   }
   /** the look properties: surface, size and display (icon alone only where the rule allows it) */
   function checkLook(name, component, options) {
-    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, bar, shell, float or topbar');
+    if (options.surface && !TONE_CLASS[options.surface]) refuse(name + ': surface must be page, dialog, chip, list, pill, bar, shell, float or topbar');
     if (options.size && SIZES.indexOf(options.size) < 0) refuse(name + ': size must be standard or compact');
     if (options.display && DISPLAYS.indexOf(options.display) < 0) refuse(name + ': display must be icon or icon+label');
     var iconAlone = options.display === 'icon';
@@ -219,10 +228,21 @@ var CBUi = (function () {
       if (ALLOWED_OPTIONS.indexOf(property) < 0) refuse(name + ': "' + property + '" is not a property of the component');
     });
     if (!MOUNT_CODE.test(options.mount || '')) refuse(name + ': mount must be a screen mount code like ACC002-U01');
+    checkOwnWords(name, component, options);
     checkLook(name, component, options);
     if (options.tone && TONES.indexOf(options.tone) < 0) refuse(name + ': tone must be primary or quiet');
     if (options.effect && EFFECTS.indexOf(options.effect) < 0) refuse(name + ': effect must be none, preference or commit');
     if (options.effect && component.effectFixed && options.effect !== component.effect) refuse(name + ': effect is fixed at ' + component.effect);
+  }
+  /** CMP057 only: its own label and a verb from the closed list; every other component has its label fixed (never silently dropped) */
+  function checkOwnWords(name, component, options) {
+    if (component.own) return checkCommandWords(name, options);
+    if (options.label !== undefined || options.verb !== undefined) refuse(name + ': label and verb are fixed by the component (only command takes its own)');
+  }
+  function checkCommandWords(name, options) {
+    if (!options.label || !String(options.label).trim()) refuse(name + ': give the label the person reads (it names the button)');
+    if (options.display) refuse(name + ': a command shows its label (no icon alone, no icon of its own)');
+    if (COMMAND_VERBS.indexOf(options.verb) < 0) refuse(name + ': verb must be one of ' + COMMAND_VERBS.join(', '));
   }
   /** what the press does for the person: none, a plain preference save, or a commit that asks first */
   function effectOf(name, component, options) {
@@ -279,6 +299,7 @@ var CBUi = (function () {
     return options.display || (component.nameOnly ? 'icon' : null);
   }
   function accessibleName(component, options) {
+    if (component.own) return options.object ? words(options.label) + ' ' + words(options.object) : null;
     if (options.object) return phrase(component.label + ' {object}', textKey(component, 'aria'), { object: words(options.object) });
     if (component.labelClass) return words(component.label, textKey(component, 'label'));
     return displayOf(component, options) === 'icon' ? words(component.label, textKey(component, 'label')) : null;
@@ -307,8 +328,13 @@ var CBUi = (function () {
     ]
       .concat(lookAttributes(component, options))
       .concat(shortcutAttributes(component))
+      .concat(verbAttributes(component, options))
       .concat(gateAttributes(options))
       .concat(dataAttributes(options.data));
+  }
+  /** CMP057 Command carries the verb its mount chose, for the register and the walks */
+  function verbAttributes(component, options) {
+    return [['data-cbverb', component.own ? options.verb : null]];
   }
   /** a component with a keyboard shortcut says so to assistive technology (Run in background: Control+B) */
   function shortcutAttributes(component) {
@@ -328,11 +354,12 @@ var CBUi = (function () {
   function shownText(component, options) {
     var look = displayOf(component, options || {});
     if (look === 'icon') return options && options.display === 'icon' ? iconHtml(component.name) : escapeText(component.shown);
-    if (look === 'icon+label') return withIcon(component, labelText(component));
-    return escapeText(component.nameOnly ? component.shown : labelText(component));
+    if (look === 'icon+label') return withIcon(component, labelText(component, options));
+    return escapeText(component.nameOnly ? component.shown : labelText(component, options));
   }
   /** the words of a component: a glyph-only one says its label, the others their visible text, both through their keys */
-  function labelText(component) {
+  function labelText(component, options) {
+    if (component.own) return words(options.label);
     return component.nameOnly ? words(component.label, textKey(component, 'label')) : words(component.shown, textKey(component, 'shown'));
   }
   /** the icon as markup: an SVG is trusted markup, a glyph is text */
