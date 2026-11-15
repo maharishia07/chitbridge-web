@@ -52,10 +52,6 @@
       }).join('') + '</tbody></table>';
   }
 
-  /** the two short lists under the report: what this demo does not do yet, and what it does that others do not */
-  var EDGES =
-    '<div class="bd-edges"><h3>Not in this demo yet</h3><ul><li>Match to an invoice (find and match several, part payment)</li><li>Split a line</li><li>Undo a posted line</li><li>Bank rules you write yourself</li><li>Bank feeds: CSV only for now, no OFX or QIF</li></ul>' +
-    '<h3>What this does that others do not</h3><ul><li>Shows a preview before anything posts</li><li>Recognises a line seen in an earlier file</li><li>Names a closed month, never skips it silently</li><li>Nothing posts by itself</li></ul></div>';
   function zeroMoney() {
     return host.amountText({ amount_minor: 0, currency: host.CURRENCY });
   }
@@ -109,7 +105,7 @@
       groupRows('Less: payments not yet on the statement', ledgerRows(ledger, 'cr_minor')) + leftOut +
       '<tr class="bd-k"><td colspan="2">Balance as per books</td><td class="bd-r">' + money(recon.closing_books_before) + '</td></tr>' + differenceRow(recon, outside.length, done) + '</tbody></table>' +
       '<p class="bd-foot">' + (done ? 'Reconciled to the statement of ' + esc(host.dateWords(recon.statement_date || host.lastDate(model))) + '.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
-      '<div class="bd-sign"><span>Prepared by: sample</span></div></article>' + EDGES + '</div>';
+      '<div class="bd-sign"><span>Prepared by: sample</span></div></article></div>';
   }
   /** create(host) → the painters; host is the page's own functions */
   function create(pageHost) {

@@ -72,7 +72,7 @@
       line: statementLine,
       entry: projected.entry || null,
       event: (proposal && proposal.event) || null, /* what POST /events takes: the proposal's own event, the one posting.post composed the entry from */
-      needs: blockers.indexOf('gst_basis') >= 0 ? 'gst_basis' : null,
+      needs: blockers.indexOf('gst_basis') >= 0 ? 'gst_basis' : blockers.indexOf('tax_invoice') >= 0 ? 'tax_invoice' : null, /* tax_invoice: the engine asks whether the tax invoice is held (B5-03) */
       blockers: blockers,
       closed: closed,
       party: projected.party ? Object.assign({}, projected.party) : null,
