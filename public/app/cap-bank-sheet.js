@@ -43,21 +43,35 @@ function bkshModeOf(body) {
   if (!mode) return body;
   return Object.assign({}, body, { paid_from: swap('paid_from'), into: swap('into'), from: swap('from'), to: swap('to') });
 }
+/** the registration answer the preview takes: an unread answer asks each charge its tax kind (true), a said answer stands, unknown stays unknown */
+function bkshTaxRegisteredFor(answer) {
+  return answer === true || answer === 'unread' ? true : answer;
+}
+/** who is signed in, as the post adapter reads it: the shop's own login is the owner */
+function bkshSignedIn() {
+  const role = typeof SESSION !== 'undefined' && SESSION ? SESSION.role : null;
+  return { role: role === 'entity' ? 'owner' : role || 'unknown' };
+}
+/** the books account the statement is for */
+function bkshStatementAccount() {
+  const code = String(BKB.stmtAcct || BKB.acct);
+  return (BKB.accts || []).filter((item) => String(item.code) === code)[0] || {};
+}
 /** the controller for this statement: the books it reads, the adapter that posts, the pack's country and the rules this device learned */
 function bkshController() {
   const country = bkbCountry(),
-    who = { role: typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'entity' ? 'owner' : (SESSION && SESSION.role) || 'unknown' },
-    acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {};
+    signedIn = bkshSignedIn(),
+    acct = bkshStatementAccount();
   return CBBankPreview.create({
     engine: bkshEngine(),
     currency: String(bkCur() || '').toUpperCase(),
     account: acct.name || String(BKB.acct),
     ledger: bkshLedger,
-    post: CBBankPost.adapter({ api, who, modeOf: bkshModeOf }),
+    post: CBBankPost.adapter({ api, who: signedIn, modeOf: bkshModeOf }),
     lockedMonth: () => null /* a closed month is the server's answer, shown on the line */,
     statementCurrency: () => BKB.stmtCur || null,
     postable: CBBankPost.POSTABLE,
-    taxRegistered: BKSH.taxRegistered === true || BKSH.taxRegistered === 'unread' ? true : BKSH.taxRegistered,
+    taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     suggestOpts: { country, learned: bkbRules(), parties: bkshParties() },
     parseOpts: { country, currency: BKB.stmtCur || undefined, preset: BKB.preset || undefined }
   });
@@ -76,14 +90,14 @@ function bkshStrip(model) {
 /** paint the sheet again from the controller: the strip, the lines, and the Add button with its count */
 function bkshPaint() {
   const model = BKSH.ctl.view(),
-    add = bkshEl('bks_add'),
+    addButton = bkshEl('bks_add'),
     ready = BKSH.ctl.readyCount();
   bkshEl('bks_strip').textContent = bkshStrip(model);
   if (model.parsed) BKSH.ui.paint(model);
   if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
-  if (add) {
-    add.disabled = !ready || BKSH.posting;
-    add.textContent = ready ? txf('Add {n} to your books', { n: ready }) : tx('Nothing ready to add');
+  if (addButton) {
+    addButton.disabled = !ready || BKSH.posting;
+    addButton.textContent = ready ? txf('Add {n} to your books', { n: ready }) : tx('Nothing ready to add');
   }
 }
 /** the question the Add press asks first: how many entries, how much, which dates, how many new parties, how many still need you (the engine's own carried totals) */
@@ -116,10 +130,20 @@ function bkshClose() {
   closeModal();
   if (typeof bankRun === 'function' && BKB.parsed) bankRun().catch((failure) => bkQuiet('bank-sheet-close', failure));
 }
+/** the statement, the engine and the three scripts the sheet needs are all there */
+function bkshReady() {
+  const scripts = [typeof CBBankPreview, typeof CBBankPreviewUI, typeof CBBankPost];
+  return !!BKB.text && !!bkshEngine() && scripts.every((kind) => kind !== 'undefined');
+}
+/** the sheet's first words under the title: the engine's refusal, or that registration could not be read */
+function bkshFirstWords(said, unread) {
+  if (!said.ok) return said.why;
+  return unread ? tx('Could not check whether the shop is registered for GST, so each charge asks what GST it carries.') : '';
+}
 /** open the sheet for the statement on screen */
 async function bankSheetOpen() {
   if (!bkbBound()) return;
-  if (!BKB.text || !bkshEngine() || typeof CBBankPreview === 'undefined' || typeof CBBankPreviewUI === 'undefined' || typeof CBBankPost === 'undefined') return toast(tx('Load the statement file again to add its lines.'));
+  if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
   const unread = BKSH.taxRegistered === 'unread';
   BKSH.ctl = bkshController();
@@ -135,9 +159,7 @@ async function bankSheetOpen() {
     host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
-  const said = BKSH.ctl.load(BKB.text, BKB.file && BKB.file.name);
-  if (!said.ok) bkshEl('bks_say').textContent = said.why;
-  else if (unread) bkshEl('bks_say').textContent = tx('Could not check whether the shop is registered for GST, so each charge asks what GST it carries.');
+  bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(BKB.text, BKB.file && BKB.file.name), unread);
   bkshPaint();
 }
 /** the Add button over the lines (owner only: POST /events is the owner's); the sheet then shows every line with what it needs */

@@ -191,10 +191,14 @@
   function holdProposal_(proposal, opts) {
     var type = proposal && proposal.event && proposal.event.type;
     if (!type || proposal.needs) return proposal;
-    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0; /* the engine splits a taxed receipt into net + output tax; POST /events carries input tax only, so the bank leg would be short */
-    if ((opts.postable && opts.postable.indexOf(type) < 0) || outputTax) return Object.assign({}, proposal, { needs: 'not_here' });
+    if (cannotPostHere_(proposal, type, opts)) return Object.assign({}, proposal, { needs: 'not_here' });
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
+  }
+  /** the host cannot post this proposal: its kind is not on the host's list, or the engine split a taxed receipt into net + output tax (POST /events carries input tax only, so the bank leg would be short) */
+  function cannotPostHere_(proposal, type, opts) {
+    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0;
+    return !!outputTax || (!!opts.postable && opts.postable.indexOf(type) < 0);
   }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
   function projectAgain(opts, preview) {

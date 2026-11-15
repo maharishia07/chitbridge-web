@@ -62,11 +62,17 @@
    * account's mode, the line's own client_ref (a replay answers the first payment). allocate 'none': the receipt waits on account and Dues settles it against bills; the owner decides, nothing is allocated here.
    * acknowledge same_again: a line the owner ticked, or a second identical line on the SAME statement (item.twin), is a real second payment the bank itself shows, so the server's "Already paid?" is answered.
    */
+  /** the statement line's own figure in minor units, whichever side it is on (nothing is worked out) */
+  function lineFigure(line) {
+    return Math.abs((+line.credit_minor || 0) - (+line.debit_minor || 0));
+  }
+  /** the payment mode of the statement's own account (cap-bank.js bkbModeOf via the host's modeOf), else what the proposal said */
+  function statementMode(modeOf, event) {
+    return (modeOf && modeOf({ paid_from: 'bank' }).paid_from) || event.mode || 'bank';
+  }
   function paymentBodyOf(item, partyId, modeOf) {
-    var line = item.line || {}, event = item.event || {},
-      minor = Math.abs((+line.credit_minor || 0) - (+line.debit_minor || 0));
-    var mode = (modeOf && modeOf({ paid_from: 'bank' }).paid_from) || event.mode || 'bank';
-    var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: minor, mode: mode, received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
+    var line = item.line || {}, event = item.event || {};
+    var body = { party_id: partyId, direction: PAYMENT_DIRECTION[event.type], amount_minor: lineFigure(line), mode: statementMode(modeOf, event), received_at: event.date || line.date, reference: item.ref, allocate: 'none', client_ref: item.ref };
     if (item.ticked || item.twin) body.acknowledge = ['same_again'];
     return body;
   }
@@ -90,23 +96,36 @@
   function adapter(deps) {
     var made = {}; /* new party (name|kind) → id made in this run, so two lines naming one payee make it once */
     return async function post(item) {
-      var refused = ownerRefusal(deps.who);
+      var refused = ownerRefusal(deps.who) || refusalOf(item.event && item.event.type);
       if (refused) return { ok: false, why: refused };
-      var type = item.event && item.event.type;
-      if (NOT_YET[type]) return { ok: false, why: NOT_YET[type] + ' cannot be added from a bank line yet. Record it from Books, then load the statement again.' };
-      if (POSTABLE.indexOf(type) < 0) return { ok: false, why: 'This kind of line cannot be added from here yet.' };
-      var party = await partyOf(deps, made, item.party);
-      if (!party.ok) return party;
-      var paying = !!PAYMENT_DIRECTION[type];
-      if (paying && !party.id) return { ok: false, why: 'Pick who this payment is with, then try again.' };
       try {
-        var reply = paying ? await deps.api('booksPayRecord', { body: paymentBodyOf(item, party.id, deps.modeOf) }) : await deps.api('booksEventPost', { body: bodyOf(item, party.id, deps.modeOf) });
-        if (paying) return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null };
-        return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null };
+        return await postLine(deps, made, item);
       } catch (failure) {
         return { ok: false, why: (failure && failure.message) || 'Could not add this entry.' };
       }
     };
+  }
+  /** one line: its party first (made once), then its one door: POST /payments for money in from / out to a party, else POST /events */
+  async function postLine(deps, made, item) {
+    var party = await partyOf(deps, made, item.party);
+    if (!party.ok) return party;
+    if (!PAYMENT_DIRECTION[item.event.type]) return postEntry(deps, item, party.id);
+    return party.id ? postPayment(deps, item, party.id) : { ok: false, why: 'Pick who this payment is with, then try again.' };
+  }
+  /** why this kind of line is not added from here (in words); null when it is */
+  function refusalOf(type) {
+    if (NOT_YET[type]) return NOT_YET[type] + ' cannot be added from a bank line yet. Record it from Books, then load the statement again.';
+    return POSTABLE.indexOf(type) < 0 ? 'This kind of line cannot be added from here yet.' : null;
+  }
+  /** one entry through POST /events */
+  async function postEntry(deps, item, partyId) {
+    var reply = await deps.api('booksEventPost', { body: bodyOf(item, partyId, deps.modeOf) });
+    return { ok: true, duplicate: !!(reply && reply.duplicate), entry_no: (reply && (reply.entry_no || reply.no)) || null };
+  }
+  /** one receipt or payment through POST /payments, the door Dues records through */
+  async function postPayment(deps, item, partyId) {
+    var reply = await deps.api('booksPayRecord', { body: paymentBodyOf(item, partyId, deps.modeOf) });
+    return { ok: true, duplicate: !!(reply && reply.payment && reply.payment.duplicate), entry_no: (reply && reply.posted && reply.posted.entry_no) || null };
   }
 
   root.CBBankPost = { POSTABLE: POSTABLE, adapter: adapter, ownerRefusal: ownerRefusal, idOfParty: idOfParty, makeParty: makeParty, bodyOf: bodyOf, paymentBodyOf: paymentBodyOf };
