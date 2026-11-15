@@ -103,7 +103,7 @@ function stand(pending) {
     const p = await ctx.newPage();
     p.on('pageerror', (e) => { threw.push(e.message); if (process.env.DEBUG_PE) console.log('  !! pageerror: ' + e.message); });
     await p.goto(base + '/accounts.html#bank');
-    await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="bank-file"]', { timeout: 15000, state: 'attached' });
     return { ctx, p };
   }
   const pick = (p, name, text) => p.setInputFiles('[data-testid="bank-stmts-file"]', { name, mimeType: 'text/csv', buffer: Buffer.from(text) });

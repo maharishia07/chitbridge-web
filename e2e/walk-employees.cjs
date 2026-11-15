@@ -167,10 +167,10 @@ W.run('employees', async (w) => {
   });
   await w.step('E13', 'Add a person -> a good sign-in name -> Add -> "Added" with the sign-in name and where the first code went, and the list has 4 people', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kavya04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForSelector('[data-testid="emp-added"]', { timeout: 6000 });
-    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]');
+    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]'); const copyN = await page.locator('[data-testid="emp-copy"]').count();
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04@walk-shop.br' && (await page.locator('[data-testid="emp-copy"]').count()) === 1 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04@walk-shop.br' && copyN === 1 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
   });
   await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
     await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
@@ -190,7 +190,7 @@ W.run('employees', async (w) => {
     await page.click('#emp_pin'); await confirmYes();
     const digits = (await txt('[data-testid="emp-code-digits"]')).replace(/\s/g, ''), say = await txt('[data-testid="emp-code-say"]');
     const grouped = /^\d{3} \d{3}$/.test(await txt('[data-testid="emp-code-digits"]'));
-    const copy = await page.locator('#emp_sheet button', { hasText: /copy/i }).count();
+    const copy = await page.locator('#emp_sheet button:not([data-testid="emp-copy"])', { hasText: /copy/i }).count();
     await page.screenshot({ path: 'e2e/shots/walk-employees-r112.png' }).catch(() => {});
     const bad = [];   /* AA contrast + no clipping + no sideways scroll, light and dark, 1366 and 390 */
     for (const [wd, ht] of [[1366, 800], [390, 844]]) {

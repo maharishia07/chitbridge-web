@@ -37,7 +37,7 @@ for (const m of src.matchAll(/data-cbsid="(EMP001-[A-Z][0-9]{2})"/g)) all[m[1]] 
 for (const c of CALLS) all[c] = (all[c] || 0) + 1;
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is used by two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 22, 'the page has 22 tagged elements, counted by code: ' + Object.keys(all).length);
+check(Object.keys(all).length === 23, 'the page has 23 tagged elements, counted by code: ' + Object.keys(all).length);
 check(src.indexOf('function actRow(id, icon, label, may, extra, stampCode)') >= 0, 'actRow takes the stamp code as its 6th parameter');
 
 /** actRow itself: drawn with stubs, the code is on the button and the rest of the button is what it was */

@@ -20,7 +20,7 @@ const SET = {
   'app/cap-period.js': 'BKS016-B01 BKS016-I01 BKS016-S01 BKS016-B02 BKS016-B03 BKS016-B04 BKS016-B05 BKS016-B06 BKS016-B07 BKS016-B08 BKS016-B09',
   'app/cap-bank.js': 'BKS014-I01 BKS014-S01 BKS014-B09 BKS014-B26 BKS014-B02 BKS014-B19 BKS014-B01 BKS014-B22 BKS014-B25 BKS014-B24 BKS014-B18 BKS014-B23 BKS014-B21 BKS014-B27 BKS014-B29 BKS014-B28 BKS014-T01 BKS014-B03 BKS014-B04 BKS014-B05 BKS014-B06 BKS014-B07',
   'app/cap-bank-store.js': 'BKS014-B08',
-  'app/cap-bank-statements.js': 'BKS014-B41 BKS014-I12 BKS014-I13 BKS014-B44 BKS014-B42 BKS014-B43 BKS014-B45',
+  'app/cap-bank-statements.js': 'BKS014-B41 BKS014-B45 BKS014-I12 BKS014-I13 BKS014-B44 BKS014-B42 BKS014-B43',
   'app/cap-move-in.js': 'BKS024-S01 BKS024-I01 BKS024-I02 BKS024-S02 BKS024-B01 BKS024-B02',
   'app/cap-compare.js': 'BKS007-S01 BKS007-B01 BKS007-B02 BKS007-B03 BKS007-B04 BKS007-B05 BKS007-B06 BKS007-B07 BKS007-S02 BKS007-I01 BKS007-B08 BKS007-I02 BKS007-I03 BKS007-I04 BKS007-S03',
   'app/cap-fx.js': 'BKS025-B01 BKS025-I01 BKS025-I02 BKS025-I03 BKS025-I04 BKS025-S01 BKS025-I05 BKS025-B02 BKS025-B03 BKS025-B04'
@@ -53,7 +53,7 @@ for (const f of Object.keys(SET)) {
 }
 const dup = Object.keys(all).filter((c) => all[c] > 1);
 check(dup.length === 0, 'no code is written on two element definitions' + (dup.length ? ' (' + dup.join(',') + ')' : ''));
-check(Object.keys(all).length === 78, 'the page has 78 coded element definitions: ' + Object.keys(all).length);
+check(Object.keys(all).length === 79, 'the page has 79 coded element definitions: ' + Object.keys(all).length);
 
 for (const [f, marker, code] of NEAR) {
   const lines = src[f].split('\n'), at = lines.findIndex((l) => l.indexOf('data-cbsid="' + code + '"') >= 0);
