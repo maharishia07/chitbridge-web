@@ -23,7 +23,7 @@
  */
 (function (root) {
   'use strict';
-  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, opened: null };
+  var N = { networks: [], notices: [], stores: [], may: { ok: false, why: null }, draft: undefined, el: null, o: {}, tab: 'mine', lists: {}, held: {}, ended: {}, opened: null };
   var STAND = { active: 'In', invited: 'Invited you', asked: 'You asked', requested: 'Asked', suspended: 'Paused', none: 'Not yet' };
 
   function T(s) {
@@ -75,14 +75,15 @@
       call('GET', '/api/network-design/stores').catch(function () {
         return { stores: [] };
       }),
-      root.CBBooksGrantApi.held(call)
+      root.CBBooksGrantApi.heldSplit(call)
     ]).then(function (reply) {
-      N.held = reply[2] || {};
+      N.held = (reply[2] || {}).live || {};
+      N.ended = (reply[2] || {}).ended || {};
       var s = (reply[0] && reply[0].store) || {};
       N.networks = s.networks || [];
       N.notices = s.price_notices || [];
       N.may = reply[0].may_design || N.may;
-      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], N.held, T);
+      N.stores = root.CBBooksGrantApi.withHeld((reply[1] && reply[1].stores) || [], Object.assign({}, N.ended, N.held), T);
     });
   }
   function offers() {
@@ -218,7 +219,7 @@
   }
   /** the store list's columns */
   function storeColumns() {
-    return [
+    var cols = [
       {
         key: 'name',
         label: T('Store'),
@@ -252,9 +253,7 @@
         prio: 3,
         w: 110,
         sort: 'km',
-        cell: function (s) {
-          return s.km == null ? '—' : Math.round(s.km) + ' km';
-        },
+        cell: function (s) { return s.km == null ? '—' : Math.round(s.km) + ' km'; },
         value: function (s) {
           return s.km == null ? '' : String(s.km);
         }
@@ -282,7 +281,7 @@
           return N.held[String(s.entity_id)] ? 'open' : '';
         }
       }
-    ];
+    ]; return root.CBBooksGrantApi.clientColumns(cols, N, T);
   }
   /** the store list's sort choices */
   function storeSorts() {
@@ -338,7 +337,7 @@
     var id = esc(s.entity_id);
     return N.held[String(s.entity_id)]
       ? '<button data-cbsid="NET001-B04" type="button" class="act quiet" id="nw_books_' + id + '" data-open-books="' + id + '" data-testid="nw-books-' + id + '">' + esc(T('Open books')) + '</button>'
-      : '';
+      : '<span class="sub" data-testid="nw-ended-' + id + '">' + esc(root.CBBooksGrantApi.endedWords(N.ended[String(s.entity_id)])) + '</span>';
   }
   function openBooksClick(ev) {
     var button = ev.target.closest && ev.target.closest('[data-open-books]');

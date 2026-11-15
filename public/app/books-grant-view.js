@@ -202,7 +202,7 @@
     var rows = report.rows(viewState.answer || {}).concat(totalRows(report.k, viewState.answer || {})).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
-    viewState.o.mountList(host, listConfig(report, rows));
+    viewState.o.mountList(host, Object.assign({ foldHead: true } /* a phone's head folds to one chip */, listConfig(report, rows)));
   }
   /** Who owes whom: two panels, customers owe you and you owe suppliers, no net total */
   function paintDues(host, report) {
@@ -212,7 +212,7 @@
       var rows = all.filter(function (row) { return row.side === who; }).map(function (row, n) { return Object.assign({ _n: n }, row); });
       var config = listConfig(report, rows);
       config.key = 'books-grant-dues-' + who;
-      viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), config);
+      viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), Object.assign({ foldHead: true }, config));
     });
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
@@ -272,12 +272,18 @@
   function forget() {
     viewState = { host: viewState.host, o: viewState.o, report: 'tb', day: '', answer: null, why: null };
   }
+  /** after Open books: focus lands on the books heading (the acting band), not on a button that has gone */
+  function focusHeading() {
+    var head = $('ba_band') || viewState.host;
+    head.setAttribute('tabindex', '-1');
+    head.focus();
+  }
   function mount(host, options) {
     viewState = { host: host, o: options, report: 'tb', day: '', answer: null, why: null };
     root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
     if (stopForgetting) stopForgetting();
     stopForgetting = root.CBBooksActing.onClear(forget);
-    reload();
+    Promise.resolve(reload()).then(focusHeading, focusHeading);
     return {
       destroy: function () {
         host.innerHTML = '';

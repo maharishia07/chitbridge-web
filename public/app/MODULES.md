@@ -91,7 +91,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (76)
+## Shared (77)
 
 | file | loading | what it is |
 |---|---|---|
@@ -106,7 +106,8 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `barcode.js` | eager | CBBarcode — Code 128 as inline SVG, no dependency, no network |
 | `books-acting.js` | — |  |
 | `books-actions-view.js` | — |  |
-| `books-grant-api.js` | — |  |
+| `books-clients-door.js` | eager |  |
+| `books-grant-api.js` | eager |  |
 | `books-grant-drill.js` | — |  |
 | `books-grant-member.js` | — |  |
 | `books-grant-view.js` | — |  |
@@ -190,7 +191,7 @@ Each page is a module of its own (its inline script and header). The count is th
 | page | app/ scripts | what it is |
 |---|---|---|
 | `accounts.html` | 40 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
-| `app.html` | 35 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
+| `app.html` | 37 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 12 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 5 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the reconciliation, then "add" into |
 | `bill-print.html` | 1 | the slip's one renderer (the print test, and the live preview of CB Settings › Print setup) · CALLED BY: opened on its own, or in a frame by |
@@ -235,4 +236,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*147 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*148 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

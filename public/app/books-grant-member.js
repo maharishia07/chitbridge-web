@@ -15,7 +15,7 @@
  */
 (function (root) {
   'use strict';
-  var panel = { host: null, o: {}, given: [], looks: [], view: 'given', why: null, notice: [] };
+  var panel = { host: null, o: {}, given: [], parents: [], looks: [], view: 'given', why: null, notice: [] };
   var ROLE = { auditor: 'Auditor: reads only', adviser: 'Adviser: acts for you' };
   var LOOKED = {
     allowed: 'Looked',
@@ -54,8 +54,16 @@
   function api(key, o) {
     return root.CBBooksGrantApi.run(panel.o.call, key, o);
   }
+  /** who this member may give access to: the page's active network memberships plus the businesses the server named (governance, commercial or agency edge), once each */
+  function allParents() {
+    var seen = {};
+    return (panel.o.parents() || []).concat((panel.parents || []).map(function (p) { return { id: p.entity_id, name: p.name }; })).filter(function (p) {
+      var id = String(p.id);
+      return seen[id] ? false : (seen[id] = true);
+    });
+  }
   function nameOf(entity) {
-    var found = (panel.o.parents() || []).filter(function (item) {
+    var found = allParents().filter(function (item) {
       return String(item.id) === String(entity);
     })[0];
     return found ? found.name : words('Your network parent');
@@ -100,7 +108,7 @@
       function (answer) {
         panel.why = null;
         if (panel.view === 'looks') panel.looks = (answer && answer.looks) || [];
-        else panel.given = (answer && answer.given) || [];
+        else { panel.given = (answer && answer.given) || []; panel.parents = (answer && answer.parents) || []; }
         return weekly();
       },
       function (failure) {
@@ -262,7 +270,7 @@
   }
   /** open the Give access sheet for the network parents this store may open its books to */
   function openGive() {
-    var parents = panel.o.parents() || [];
+    var parents = allParents();
     if (!parents.length) {
       panel.o.sheet('<h2>' + esc(words('Give access')) + '</h2><p data-testid="bg-noparent">' + esc(words('You have no network parent to give access to.')) + '</p>');
       return;

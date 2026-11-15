@@ -20,7 +20,7 @@ of file each thing is; this says what already does the job.
 | 89 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
 | 82 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 82 | `next` | `dayopen.js` | the next thing to do — |
-| 79 | `list` | `cap-settings.js` |  |
+| 80 | `list` | `cap-settings.js` |  |
 | 79 | `catalogue` | `books-manual.js` | GET /events → the grid. |
 | 76 | `till` | `home-facts.js` | undefined then, and JSON leaves an undefined key out. |
 | 76 | `schemaValidate` | `validate.js` | options.legacy(errors, req) → the frozen body for the first failure (the request is there for a body that coun |
@@ -61,11 +61,11 @@ of file each thing is; this says what already does the job.
 | 47 | `facts` | `bill-steps.js` | MY state_log — |
 | 46 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 45 | `rules` | `docnumber.js` | the rule set for a country — |
+| 44 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 44 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 44 | `holds` | `bounds.js` | holds(fragment, figure) → true when a figure is a finite number inside the fragment's min / max (the derived f |
 | 44 | `contractOf` | `contract-kit.js` | contractOf({ mount, routes, gateStatus, refusals?, refusalsWhen?, extension? }) → { OPERATIONS, operationFor(r |
 | 44 | `page` | `crm-followups.js` | page(h, owner, { scope, done, me, party_id?, page? }) → the one envelope { followups, total, page, limit } + l |
-| 43 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
 | 42 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 42 | `body` | `books-acting.js` | a write's body: |
@@ -112,9 +112,9 @@ of file each thing is; this says what already does the job.
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
 | 30 | `governance` | `home-facts.js` |  |
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
+| 29 | `call` | `books-clients-door.js` |  |
 | 29 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 29 | `group` | `identity.js` | again in a different costume. |
-| 28 | `call` | `cap-assist.js` |  |
 | 28 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 28 | `names` | `shortcuts.js` |  |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
@@ -141,13 +141,13 @@ of file each thing is; this says what already does the job.
 | 23 | `network` | `mintuserid.js` | Delegated to `handle.child()`, which has owned the rule since 2026-08-07. |
 | 23 | `balance` | `reward-store.js` | about to write anyway persists them, and the caller that is only looking does not have to. |
 | 23 | `allowed` | `trips.js` | let _idsFrom = null, |
+| 22 | `card` | `cap-shop.js` |  |
 | 22 | `cblog` | `core.js` | const __cblog = []; |
 | 22 | `note` | `device-id.js` | note(where, problem) — |
 | 22 | `panel` | `sides.js` |  |
 | 22 | `claim` | `reward-store.js` | Both holders locked, the balance read on the same handle, the due expiries written, then both halves; a half t |
 | 22 | `keep` | `signin.js` | see. |
 | 21 | `side` | `books-grant-view.js` |  |
-| 21 | `card` | `cap-shop.js` |  |
 | 21 | `reason` | `lab-kit.js` | W9: |
 | 21 | `field` | `ui-field.js` | the part: |
 | 21 | `currency` | `ui-money.js` | the currency a money field uses: |
@@ -164,6 +164,7 @@ of file each thing is; this says what already does the job.
 | 19 | `renderApp` | `app.html` |  |
 | 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 19 | `send` | `cap-quotes.js` |  |
+| 19 | `head` | `list-ctl.js` |  |
 | 19 | `label` | `screen-id.js` |  |
 | 19 | `later` | `signin-ui.js` |  |
 | 19 | `current` | `assign.js` | to "no line assignment on this chit" rather than erroring — |
@@ -177,7 +178,6 @@ of file each thing is; this says what already does the job.
 | 18 | `today` | `kural.js` |  |
 | 18 | `confirm` | `lab-kit.js` | opts: |
 | 18 | `more` | `lab-kit.js` | idKey: |
-| 18 | `head` | `list-ctl.js` |  |
 | 18 | `resolve` | `page.js` |  |
 | 18 | `dialog` | `ui.js` | caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialo |
 | 18 | `setting` | `books-store.js` | const missingToNull = (value) => (value == null ? null : |
@@ -186,6 +186,7 @@ of file each thing is; this says what already does the job.
 | 18 | `base` | `qty.js` | handing it over keeps this file free of a dependency that would have to be vendored in a fixed order. |
 | 18 | `report` | `raida.js` | register at the one moment it must not. |
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
+| 17 | `cols` | `cap-catalogue.js` |  |
 | 17 | `message` | `cap-print.js` | the one message: |
 | 17 | `check` | `network-app.js` |  |
 | 17 | `verdict` | `rail-thread.js` |  |
@@ -196,7 +197,6 @@ of file each thing is; this says what already does the job.
 | 17 | `pick` | `scalecode.js` | pull out the digits one letter marks, as a string, in order |
 | 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
-| 16 | `cols` | `cap-catalogue.js` |  |
 | 16 | `frame` | `cap-settings.js` |  |
 | 16 | `said` | `cap-shop.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |

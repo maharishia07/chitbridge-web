@@ -95,8 +95,15 @@ A2.enter({ id: 's2', name: 'Two' }, 'auditor');
 check(A2.hides('bank') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor');
 const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };
 check(A2.clientStores([{ entity_id: 's1', name: 'x' }, { entity_id: 's2', name: 'y' }, { entity_id: 's3', name: 'z' }], heldBy).map((c) => c.role).join() === 'adviser,auditor' && acting.includes("'Switch client'") && !acting.includes('Switch store'), 'the switch lists every client with its role (adviser and auditor), not only advisers');
-check(api.includes("out[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
+check(api.includes("out.live[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
 check(view.includes('num: column[2] === MONEY') && view.includes('groupWords') && view.includes('paintDues') && !view.includes("facts: [['total_minor'") && view.includes('totalRows') && view.includes('findMonth'), 'the grant screens: money right-aligned, group words, two dues panels without a net, totals row, the month of the books');
+/* (9) round 2b: parents from the answer, the firm's client list, ended grants, the front door */
+const net = read('network-app.js'), door = read('books-clients-door.js');
+check(member.includes('answer.parents') && member.includes('allParents()') && member.includes('entity_id'), 'Give access: the parents the server names (governance, commercial, agency) join the network list, once each');
+check(api.includes('clientColumns') && api.includes("'since'") && api.includes("'until'") && api.includes("['city', 'km', 'purpose']") && net.includes('clientColumns(cols, N, T)'), 'the client list of a firm: Role, Since, Until; no City, Distance or purpose columns');
+check(api.includes('heldSplit') && api.includes('endedWords') && net.includes('nw-ended-') && net.includes('N.ended'), 'ended grants are listed with their state in words and no Open books');
+check(door.includes('home-your-clients') && door.includes('/network.html') && read('../app.html').includes('books-clients-door.js'), 'Home: a login with live received grants gets a "Your clients" card to My network');
+check(view.includes('foldHead: true') && view.includes("setAttribute('tabindex', '-1')") && view.includes('focusHeading'), 'books view: the list head folds; focus moves to the heading on open');
 /* (8) the header names live in one file */
 check(![acting, actions, member, view].some((src) => /X-Books-(For|Role)/.test(src.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/^ \*.*$/gm, ''))), 'no literal header name outside books-grant-api.js');
 

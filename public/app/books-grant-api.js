@@ -85,20 +85,54 @@
     return call(ENDPOINTS[key] ? ENDPOINTS[key].m : 'GET', pathOf(key, o.params) + queryOf(o.query), o.body, o.headers).catch(phrased);
   }
   /** held(call) → { <member entity id>: the live grant this business holds on its books }: a login that may not list grants gets {} and the list shows nothing extra */
-  function held(call) {
+  function heldSplit(call) {
     return callEndpoint(call, 'grantsList').then(
       function (answer) {
-        var out = {};
+        var out = { live: {}, ended: {} };
         ((answer && answer.received) || []).forEach(function (grant) {
           var id = String(grant.grantor_entity);
-          if (grant.state === 'live' && !grant.revoked_at && !grant.ended_at && (!out[id] || out[id].preset !== 'adviser')) out[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
+          var isLive = grant.state === 'live' && !grant.revoked_at && !grant.ended_at;
+          if (isLive && (!out.live[id] || out.live[id].preset !== 'adviser')) out.live[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
+          else if (!isLive && grant.state !== 'edge_off') out.ended[id] = grant; /* ended or ran out: listed, quiet, no actions */
         });
+        Object.keys(out.live).forEach(function (id) { delete out.ended[id]; });
         return out;
       },
       function () {
         return {};
       }
     );
+  }
+  function held(call) {
+    return heldSplit(call).then(function (split) { return split.live || {}; });
+  }
+  var ROLE_NAME = { adviser: 'Adviser', auditor: 'Auditor' };
+  function dayOf(value) {
+    var d = new Date(value);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  /** a client's grant row (live or ended) for a firm's list: Role · Since · Until */
+  function grantOf(lists, store) {
+    var id = String(store.entity_id);
+    return lists.held[id] || (lists.ended || {})[id] || null;
+  }
+  /** the columns of a firm's client list: the shop-network columns (city, distance, purpose) give way to the grant's Role · Since · Until; a login that holds no grant keeps its columns */
+  function clientColumns(cols, lists, tell) {
+    if (!Object.keys(lists.held).length && !Object.keys(lists.ended || {}).length) return cols;
+    var make = function (key, label, text) { return { key: key, label: tell(label), prio: 2, w: 130, cell: function (s) { var g = grantOf(lists, s); return g ? text(g) : '—'; }, value: function (s) { var g = grantOf(lists, s); return g ? text(g) : ''; } }; };
+    var keep = cols.filter(function (c) { return ['city', 'km', 'purpose'].indexOf(c.key) < 0; });
+    keep[0] = Object.assign({}, keep[0], { label: tell('Client') });
+    var books = keep.pop();
+    return keep.concat([
+      make('role', 'Role', function (g) { return tell(ROLE_NAME[g.preset] || ROLE_NAME.auditor); }),
+      make('since', 'Since', function (g) { return dayOf(g.granted_at || g.created_at); }),
+      make('until', 'Until', function (g) { return dayOf(g.expires_at); }),
+      books
+    ]);
+  }
+  /** what a client whose access ended shows in the Books column: the state in words, no action */
+  function endedWords(grant) {
+    return grant ? stateWords(grant.state === 'expired' ? 'expired' : 'revoked') : '';
   }
 /**
    * the client list of a firm comes from the GRANTS it holds (received, live), never from a store's catalogue visibility: a shop that keeps its catalogue private is still its client.
@@ -115,5 +149,5 @@
   function stateWords(state) {
     return words(STATE[state] || state || '');
   }
-  root.CBBooksGrantApi = { run: callEndpoint, held: held, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
+  root.CBBooksGrantApi = { run: callEndpoint, held: held, heldSplit: heldSplit, clientColumns: clientColumns, endedWords: endedWords, withHeld: withHeld, stateWords: stateWords, refusalWords: refusalWords, HEADER: HEADER, ROLE_HEADER: ROLE_HEADER };
 })(typeof window !== 'undefined' ? window : globalThis);
