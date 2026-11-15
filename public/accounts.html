@@ -327,7 +327,7 @@ function go() {
 </script>
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/edition.js"></script>   <!-- CBEdition (AX1): the showing this person chose — the switcher, the bell and the avatar's Edition choice follow it -->
-<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script src="/app/books-grant-api.js"></script><script src="/app/books-acting.js"></script><script src="/app/avatar.js"></script>   <!-- ACC-176b: books-grant-api (the header names of a grant) + books-acting (?acting=<store>: banner, headers, Save prepares) · CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
@@ -639,7 +639,7 @@ BK.views = {
   accruals: (b) => peAccrualsView(b),
   gstclose: (b) => peGstView(b),
   yearclose: (b) => peYearView(b),
-  bank: (b) => bankView(b),
+  bank: (b) => (CBBooksActing.hides('bank') ? CBBooksActing.hiddenView(b) : bankView(b)),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
   rates: (b) => fxView(b)
@@ -858,7 +858,7 @@ async function accTodo(body) {
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    const bank = typeof bankTodoItem === 'function' ? bankTodoItem() : null;
+    const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
     if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
     ACC.todo = list;
     body.innerHTML = list.length
@@ -995,7 +995,7 @@ function countryCard(d) {
 
 /* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 async function start() {
-  SESS = session();
+  SESS = session(); CBBooksActing.fromAddress(location.search); /* ACC-176b: before the first read, so every request names the store */
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
   SESSION = Object.assign(
@@ -1011,13 +1011,13 @@ async function start() {
       shop: SESS.shop
     }
   );
-  whoPaint();
+  whoPaint(); await CBBooksActing.openPage(CFG.API_BASE, SESS.token, NAV, NAV_GROUPS); /* ACC-176b: acting enters only on a live adviser grant (else leaves); the menu keeps the /api/books tabs */
   const g = ++ACC.gen;
   /* ⭐ UI9: the WHOLE frame at once — the menu, the title and the rows' room — before anything is read; the views then fill only the rows.
      (The Ledger's answer below can still turn this into the "not switched on" card; nothing here reads or writes.) */
   {
     const f0 = (location.hash || '').replace(/^#\/?/, ''),
-      v0 = NAV.some((item) => item[0] === f0) ? f0 : 'todo';
+      v0 = NAV.some((item) => item[0] === f0) ? f0 : CBBooksActing.firstTab();
     chrome(v0);
     if (v0 !== 'ledgers')
       $('content').innerHTML = '<div class="bk-skel" aria-busy="true" data-testid="acc-skeleton"><i></i><i></i><i></i><i></i><i></i><i></i></div>';
@@ -1049,7 +1049,7 @@ async function start() {
   }
   if (!ON) return offCard();
   const first = (location.hash || '').replace(/^#\/?/, '');
-  show(NAV.some((item) => item[0] === first) ? first : 'todo');
+  show(NAV.some((item) => item[0] === first) ? first : CBBooksActing.firstTab()); CBBooksActing.startPage($, enOpen, SESSION.currency); /* ACC-176b: a page opened to act for a store: banner, then the journal sheet that PREPARES */
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */
