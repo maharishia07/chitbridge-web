@@ -235,6 +235,7 @@ function finCols() {
       sort: 'name',
       w: 220,
       html: true,
+      stretch: true /* l16: the party name takes the free width (it wrapped to 6 lines at 62 px while Age took it) */,
       cell: function (p) {
         return esc(bkPartyLabel(p.party_id, p.name));
       }

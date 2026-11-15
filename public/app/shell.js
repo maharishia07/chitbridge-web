@@ -1315,6 +1315,7 @@
     function leadByData() {
       var holder = $('.cbsh-more');
       if (!holder) return;
+      if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
       var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
       var score = function (sec) {
         return LEAD_LAST[sec.getAttribute('data-area')] ? -1 : sec.querySelector('[data-state="needs_you"],[data-state="in_use"]') ? 1 : 0;
@@ -1324,13 +1325,46 @@
         .sort(function (a, b) { return b.s - a.s || a.n - b.n; });
       if (ordered.some(function (x, n) { return x.sec !== secs[n]; })) ordered.forEach(function (x) { holder.appendChild(x.sec); });
     }
+    /* l16 home-fix: the api sheds over its in-flight cap (503 SERVER_BUSY; pool 10 x 1.6 = 16) and Home asked for ~20 cards at once, so the cards read "—" on every load.
+       The cards are read FACTS_PARALLEL at a time, and a SERVER_BUSY is asked again after the server's own Retry-After (at most FACTS_RETRIES times). One place: every card's read goes through it. */
+    var FACTS_PARALLEL = 4,
+      FACTS_RETRIES = 3,
+      factsQueue = [],
+      factsRunning = 0;
+    function factsGet(url, left) {
+      return get(url).catch(function (err) {
+        if (!err || err.status !== 503 || !(left > 0)) throw err;
+        return new Promise(function (go) {
+          root.setTimeout(go, (err.retryAfter || 2) * 1000);
+        }).then(function () {
+          return factsGet(url, left - 1);
+        });
+      });
+    }
+    function factsNext() {
+      while (factsRunning < FACTS_PARALLEL && factsQueue.length) {
+        var job = factsQueue.shift();
+        factsRunning += 1;
+        factsGet(job.url, FACTS_RETRIES).then(job.ok, job.no).then(function () {
+          factsRunning -= 1;
+          factsNext();
+          if (!factsRunning && !factsQueue.length) leadByData();
+        });
+      }
+    }
+    function factsRead(url) {
+      return new Promise(function (ok, no) {
+        factsQueue.push({ url: url, ok: ok, no: no });
+        factsNext();
+      });
+    }
     function readFacts(onlyId) {
       if (!person || !S.manifest) return;
       (S.manifest.entries || []).forEach(function (e) {
         if (!e || e.state !== 'built' || !e.facts || (onlyId && e.id !== onlyId)) return;
         var spot = $('[data-testid="shell-facts-' + e.id + '"]');
         if (!spot) return;
-        get(e.facts)
+        factsRead(e.facts)
           .then(function (reply) {
             var lines = (reply && reply.lines) || [],
               state = noteNeeds(e, cardState(reply, lines), routeOf);
@@ -1471,6 +1505,7 @@
         if (!reply.ok) {
           var e = new Error('HTTP ' + reply.status);
           e.status = reply.status;
+          e.retryAfter = Math.min(10, Number(reply.headers && reply.headers.get && reply.headers.get('Retry-After')) || 0);
           throw e;
         }
         return reply.json();

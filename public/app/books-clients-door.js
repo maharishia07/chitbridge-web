@@ -31,8 +31,13 @@
       return null;
     }
   }
-  function call(method, path) {
+  /** a read the api turned away as busy (503 SERVER_BUSY, over its in-flight cap while Home loads) is asked again after its own Retry-After, up to 3 times: the card never vanishes for one shed answer (l16 home-fix) */
+  function call(method, path, body, headers, left) {
+    left = left === undefined ? 3 : left;
     return root.fetch(base() + path, { method: method, headers: { Authorization: 'Bearer ' + token() } }).then(function (r) {
+      if (r.status === 503 && left > 0) {
+        return new Promise(function (go) { root.setTimeout(go, (Math.min(10, Number(r.headers.get('Retry-After')) || 2)) * 1000); }).then(function () { return call(method, path, body, headers, left - 1); });
+      }
       return r.json().then(function (j) {
         if (!r.ok) throw new Error(j.message || 'API ' + r.status);
         return j;
