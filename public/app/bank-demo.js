@@ -84,7 +84,6 @@
   function amountText(value) {
     return preview.moneyText(value, CURRENCY).replace(/^[A-Z]{3}\s/, '');
   }
-  /** an amount inside a sentence, with its currency */
   function amountWithCurrency(value) {
     return preview.moneyText(value, CURRENCY);
   }
