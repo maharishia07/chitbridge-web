@@ -119,7 +119,7 @@
       open = items.length - agree;
     return '<button type="button" class="bb-rtoggle' + (bad ? ' bb-bad' : '') + '" data-bb-toggle aria-expanded="' + bad + '" data-testid="' + esc(tid) + '-toggle">' + esc(T('Right account?')) + ' ' + MARK.ok + ' ' + agree + (open ? ' · ' + (bad ? MARK.bad : MARK.none) + ' ' + open : '') + ' <span aria-hidden="true">▾</span></button>';
   }
-  function rightHtml(items, tid) {
+  function rightHtml(items, tid, act) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.filter(function (one) { return one.state === 'none'; }).length;
     return (
@@ -128,7 +128,7 @@
       (open ? '<span class="bb-sum bb-none" data-testid="' + esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + esc(T('not in the file')) + '</span>' : '') +
       items.map(function (one) {
         return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '</span>';
-      }).join('') + '</div>'
+      }).join('') + (act || '') + '</div>'
     );
   }
   /**
@@ -164,7 +164,7 @@
       (f.change || '') + toggleHtml(f.right, tid) +
       '<span class="bb-cur" data-testid="' + esc(tid) + '-currency">' + esc(currencyLine(f.currency || '')) + '</span>' +
       (f.actions ? '<span class="bb-acts">' + f.actions + '</span>' : '') + '</div>' +
-      ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right') : '') +
+      ((f.right && f.right.length) ? rightHtml(f.right, tid + '-right', f.rightAct) : '') +
       (tiles ? '<div class="bb-row2">' : '') + tiles +
       (tiles ? '<div class="bb-gorow"><span class="bb-go" data-cbsid="CMP065-D03" data-testid="' + esc(tid) + '-togo" aria-live="polite">' + esc(go) + (f.unexplained ? ' · ' + esc(T('Unexplained')) + ' ' + esc(f.unexplained) : '') + '</span>' + progress + '</div></div>' : '') +
       '</section>'

@@ -55,3 +55,7 @@
 .cbl[data-cbl^="bank"] .cbl-cell{padding-block:3px}
 .cbl[data-cbl^="bank"] .cbl-tw{margin-block:-4px}
 @media (max-width:700px){.bb-row2 .bb-tiles{flex-basis:100%}.bb-head .bb-acts{margin-left:0}}
+.bb-right[hidden]{display:none}
+.cbl[data-cbl^="bank"] .cbl-row .cbl-cell{padding-block:2px;font-size:14px}
+.cbl[data-cbl^="bank"] .cbl-tw{min-height:24px;margin-block:0}
+.cbl[data-cbl^="bank"] .lk-st{height:20px}

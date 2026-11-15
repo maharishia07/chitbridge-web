@@ -519,10 +519,7 @@ function bankLayout(loaded, fill) {
 }
 /** the one QUIET line the load form folds to: the file, and the way back to the form. The account, the period and the count are the band's (bank-band.js), said large once (W15-18) */
 function bankLineHtml() {
-  return (
-    '<span class="bk-file">' + bkbE((BKB.file && BKB.file.name) || '') + '</span>' +
-    '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>'
-  );
+  return ''; /* the way back to the form is the band's "Load another statement" (bankFinish): nothing is drawn here any more */
 }
 /** the load form opens again over the lines (a different file or account); the list is re-fitted to the room left */
 function bankChange(btn) {
@@ -693,7 +690,8 @@ function bankFinish() {
     tid: 'bank-finish',
     account: bkbAcctName() || BKB.stmtAcct,
     from: P.from, to: P.to, count: P.lines.length, currency: code,
-    change: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change'),
+    change: '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
+    rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change'),
     actions: acts,
     right: CBBankBand.rightAccount({
       parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
