@@ -90,7 +90,8 @@
       function (answer) {
         var out = {};
         ((answer && answer.received) || []).forEach(function (grant) {
-          if (grant.state === 'live') out[String(grant.grantor_entity)] = grant;
+          var id = String(grant.grantor_entity);
+          if (grant.state === 'live' && !grant.revoked_at && !grant.ended_at && (!out[id] || out[id].preset !== 'adviser')) out[id] = grant; /* both an auditor and an adviser grant live: the adviser one acts */
         });
         return out;
       },

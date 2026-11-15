@@ -863,7 +863,7 @@ function enSeen(r) {
     lines: (r.lines || []).map(function (item) {
       return Object.assign({}, item, { name: item.ledger || item.name });
     }),
-    refusals: enWords(r.refusals, r.code),
+    refusals: enWords(typeof CBBooksActing !== 'undefined' ? CBBooksActing.refusals(r.refusals) : r.refusals, r.code),
     warnings: enWords(r.flags || r.warnings, null).map(function (item, index) {
       return Object.assign(item, { code: 'FLAG' + index });
     })

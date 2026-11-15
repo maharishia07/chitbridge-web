@@ -8,7 +8,7 @@
  *
  * Why one object: data must never mix between clients. A request is never built from two places (a header from one, a body from another); both come from the same context, and the server refuses a mismatch with STORE_MISMATCH.
  * The owner works in his own books: role 'owner', no header, his own entity as the store. The server decides who may; nothing here grants anything.
- *   CBBooksActing.confirmGrant · .openPage · .firstTab · .posts · .keepTabs · .mayCall · .guard · .enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .adviserStores
+ *   CBBooksActing.confirmGrant · .openPage · .firstTab · .posts · .keepTabs · .mayCall · .guard · .enter · .leave · .current · .headers · .body · .onClear · .setCurrency · .banner · .wireBanner · .figure · .ownStore · .isAdviser · .prepare · .paintPrepared · .startPage · .roleOf · .clientStores · .refusals · .hides · .refusedFor
  */
 (function (root) {
   'use strict';
@@ -114,6 +114,7 @@
     return !!context && context.role === 'adviser' && context.posting === 'adviser_posts';
   }
   /** the acting page shows only what is read and written through /api/books*: the tabs that call anything else are taken out of the menu, so no request outside it carries the store's header */
+  var OWNER_SENTENCE = 'Only the owner may record this.';
   var TABS = ['daybook', 'ledgers', 'tb', 'pl', 'bs', 'dues', 'lock'];
   function mayCall(path) {
     return !context || context.role === 'owner' || path.indexOf('/api/books') === 0;
@@ -151,12 +152,15 @@
   }
 
   /* ── the banner: frozen at the top of every screen that acts for a store ── */
+  function roleWord(role) {
+    return words(role === 'adviser' ? 'adviser' : 'auditor');
+  }
   function switchBox(stores) {
     if (!stores || stores.length < 2) return '';
     return (
-      '<label class="sub" for="ba_switch">' + esc(words('Switch store')) + '</label><select data-cbsid="NET006-S01" id="ba_switch" class="inp" data-testid="ba-switch">' +
+      '<label class="sub" for="ba_switch">' + esc(words('Switch client')) + '</label><select data-cbsid="NET006-S01" id="ba_switch" class="inp" data-testid="ba-switch">' +
       stores.map(function (item) {
-        return '<option value="' + esc(item.id) + '"' + (String(item.id) === context.store.id ? ' selected' : '') + '>' + esc(item.name) + '</option>';
+        return '<option value="' + esc(item.id) + '"' + (String(item.id) === context.store.id ? ' selected' : '') + '>' + esc(item.name) + (item.role ? ' (' + esc(roleWord(item.role)) + ')' : '') + '</option>';
       }).join('') + '</select>'
     );
   }
@@ -175,7 +179,7 @@
     if (back) back.onclick = o.onBack;
     if (box)
       box.onchange = function () {
-        o.onSwitch(box.value, box.options[box.selectedIndex].text);
+        o.onSwitch(box.value, box.options[box.selectedIndex].text.replace(/ \([^)]*\)$/, ''));
       };
   }
 
@@ -224,10 +228,27 @@
   function roleOf(held, id) {
     return (held[String(id)] || {}).preset === 'adviser' ? 'adviser' : 'auditor';
   }
-  /** the stores a firm holds an ADVISER grant on, for the banner's switch (one store: no switch is drawn) */
-  function adviserStores(stores, held) {
-    return stores.filter(function (s) { return roleOf(held, s.entity_id) === 'adviser'; }).map(function (s) { return { id: s.entity_id, name: s.name }; });
+  /** EVERY client a firm holds a live grant on, with its role, for the banner's switch (one client: no switch is drawn) */
+  function clientStores(stores, held) {
+    return stores.filter(function (s) { return held[String(s.entity_id)]; }).map(function (s) { return { id: s.entity_id, name: (held[String(s.entity_id)].grantor_name) || s.name, role: roleOf(held, s.entity_id) }; });
+  }
+  /** the preview's "Only the owner may record this." does not stop an acting ADVISER: Save prepares (or posts under adviser_posts) through the actions door, not through POST /events */
+  function refusals(list) {
+    if (!isAdviser()) return list;
+    return (list || []).filter(function (item) { return String(item && item.message ? item.message : item) !== OWNER_SENTENCE; });
+  }
+  /** a tab this page does not offer while acting for a client (the bank: nothing of it is read or written through /api/books for a client) */
+  function hides(tab) {
+    return !!context && context.role !== 'owner' && TABS.indexOf(tab) < 0;
+  }
+  /** what a hidden tab shows if it is reached by an address anyway: one sentence, nothing is read or sent */
+  function hiddenView(host) {
+    host.innerHTML = '<div class="en-why" data-testid="acting-hidden">' + esc(words('This page is not part of the client books you work in. Nothing was sent.')) + '</div>';
+  }
+  /** the refusal sentence names the real role */
+  function refusedFor() {
+    return words(context && context.role === 'adviser' ? 'This part of the books is not open to an adviser.' : 'This part of the books is not open to an auditor.');
   }
 
-  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, adviserStores: adviserStores, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
+  root.CBBooksActing = { isAdviser: isAdviser, posts: posts, confirmGrant: confirmGrant, openPage: openPage, guard: guard, firstTab: firstTab, keepTabs: keepTabs, mayCall: mayCall, prepare: prepare, paintPrepared: paintPrepared, startPage: startPage, roleOf: roleOf, clientStores: clientStores, refusals: refusals, hides: hides, hiddenView: hiddenView, refusedFor: refusedFor, enter: enter, leave: leave, current: current, headers: headers, body: body, onClear: onClear, setCurrency: setCurrency, addressOf: addressOf, fromAddress: fromAddress, banner: banner, wireBanner: wireBanner, figure: figure, ownStore: ownStore };
 })(typeof window !== 'undefined' ? window : globalThis);

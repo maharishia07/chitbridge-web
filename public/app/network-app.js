@@ -352,10 +352,10 @@
     root.CBBooksGrantView.mount(host, {
       call: call,
       member: N.opened,
-      stores: root.CBBooksActing.adviserStores(N.stores, N.held),
+      stores: root.CBBooksActing.clientStores(N.stores, N.held),
       mountList: mountList, sheet: sheet, closeSheet: closeSheet,
       onEnded: N.o.onEnded,
-      onSwitch: function (id, name) { N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || name, role: 'adviser', posting: (N.held[id] || {}).posting }; paint(); },
+      onSwitch: function (id, name) { N.opened = { id: id, name: (N.held[id] && N.held[id].grantor_name) || name, role: root.CBBooksActing.roleOf(N.held, id), posting: (N.held[id] || {}).posting }; paint(); },
       onBack: function () {
         var id = N.opened.id;
         N.opened = null;

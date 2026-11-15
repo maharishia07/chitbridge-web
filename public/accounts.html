@@ -639,7 +639,7 @@ BK.views = {
   accruals: (b) => peAccrualsView(b),
   gstclose: (b) => peGstView(b),
   yearclose: (b) => peYearView(b),
-  bank: (b) => bankView(b),
+  bank: (b) => (CBBooksActing.hides('bank') ? CBBooksActing.hiddenView(b) : bankView(b)),
   movein: (b) => miView(b),
   compare: (b) => cmpView(b),
   rates: (b) => fxView(b)
@@ -858,7 +858,7 @@ async function accTodo(body) {
     if (g !== ACC.gen) return;
     const list = (Array.isArray(reply) ? reply : (reply && (reply.items || reply.todo)) || []).slice();
     /* BR1: the bank lines that need a person — counted on THIS device (the statement never reaches the server), drawn by the same row */
-    const bank = typeof bankTodoItem === 'function' ? bankTodoItem() : null;
+    const bank = typeof bankTodoItem === 'function' && !CBBooksActing.hides('bank') ? bankTodoItem() : null;
     if (bank && !list.some((x) => x.kind === 'bank')) list.push(bank);
     ACC.todo = list;
     body.innerHTML = list.length

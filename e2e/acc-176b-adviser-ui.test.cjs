@@ -87,6 +87,16 @@ check(/Posted JV-0007/.test(host.innerHTML.replace(/<[^>]+>/g, '')) && !/Nothing
 check(actions.includes('attemptKey(row)') && !actions.includes("'accept-' + row.action_id }") && actions.includes('delete row.accept_key'), 'accept: one key per attempt, dropped once an answer under 500 settles it');
 check(entry.includes("p: '/api/books-actions', idem: 'attempt' }") && entry.includes('EN.saved.posted) enSavedTell'), 'prepare is one key per attempt; a delegated post runs the after-save tell');
 check(core.includes('CBBooksActing.guard(ep)') && accounts.includes('CBBooksActing.openPage(') && acting.includes('confirmGrant(base, token)') && acting.includes('keepTabs(menu, groups)') && !acting.includes('actingName'), 'the page enters only on a live adviser grant, the name comes from the grant row, the core refuses a call outside /api/books*');
+/* (11) round 2: an acting adviser prepares, hides the bank, is named right; the switch lists every client */
+A2.enter({ id: 's1', name: 'One' }, 'adviser', 'owner_approves');
+check(A2.refusals([{ message: 'Only the owner may record this.' }, { message: 'Date is locked' }]).length === 1 && entry.includes('CBBooksActing.refusals(r.refusals)'), 'an acting adviser is not stopped by the owner-only preview sentence; the sheet asks CBBooksActing');
+check(A2.hides('bank') && !A2.hides('tb') && /not open to an adviser/.test(A2.refusedFor()), 'acting: the bank is hidden; the refusal names an adviser');
+A2.enter({ id: 's2', name: 'Two' }, 'auditor');
+check(A2.hides('bank') && /not open to an auditor/.test(A2.refusedFor()) && A2.refusals(['x']).length === 1, 'an auditor is named as an auditor');
+const heldBy = { s1: { preset: 'adviser', grantor_name: 'One' }, s2: { preset: 'auditor', grantor_name: 'Two' } };
+check(A2.clientStores([{ entity_id: 's1', name: 'x' }, { entity_id: 's2', name: 'y' }, { entity_id: 's3', name: 'z' }], heldBy).map((c) => c.role).join() === 'adviser,auditor' && acting.includes("'Switch client'") && !acting.includes('Switch store'), 'the switch lists every client with its role (adviser and auditor), not only advisers');
+check(api.includes("out[id].preset !== 'adviser'") && api.includes('grant.revoked_at'), 'held(): the adviser grant wins when both are live; an ended grant is not held');
+check(view.includes('num: column[2] === MONEY') && view.includes('groupWords') && view.includes('paintDues') && !view.includes("facts: [['total_minor'") && view.includes('totalRows') && view.includes('findMonth'), 'the grant screens: money right-aligned, group words, two dues panels without a net, totals row, the month of the books');
 /* (8) the header names live in one file */
 check(![acting, actions, member, view].some((src) => /X-Books-(For|Role)/.test(src.replace(/\/\*[^]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/^ \*.*$/gm, ''))), 'no literal header name outside books-grant-api.js');
 

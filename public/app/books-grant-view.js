@@ -25,7 +25,7 @@
     { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
     { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
     { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['event_type', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY]], facts: [], drill: 'entry' },
-    { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['side', 'Side'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [['total_minor', 'Total']] },
+    { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [], panels: true },
     { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: function (a) { return a.periods || []; }, cols: [['fiscal_year', 'Year'], ['period', 'Month'], ['status', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
 
@@ -49,9 +49,21 @@
   function minorWords(minor) {
     return root.CBBooksActing.figure(minor, viewState.answer && viewState.answer.currency);
   }
+  /** a group key (trade_debtors, gst_and_statutory) as words */
+  function groupWords(key) {
+    var text = String(key).split('_').join(' ');
+    return words(text.charAt(0).toUpperCase() + text.slice(1)).split('Gst').join('GST');
+  }
   function figure(row, column) {
     var v = row[column[0]];
-    return column[2] === MONEY ? minorWords(v) : v == null || v === '' ? '—' : String(v);
+    if (column[2] === MONEY) return moneyCell(row, column[0], v);
+    if (v == null || v === '') return row._total ? '' : '—';
+    return column[0] === 'group' ? groupWords(v) : String(v);
+  }
+  /** a money cell: a nil debit or credit is blank; a supplier's balance is what is owed (no minus) */
+  function moneyCell(row, key, v) {
+    if ((key === 'dr_minor' || key === 'cr_minor') && (v == null || v === '' || String(v) === '0')) return '';
+    return minorWords(row.side === 'supplier' && key === 'balance_minor' ? String(Math.abs(Number(v))) : v);
   }
   /** the firm's "Actions" tab is open: the queues, not a read */
   function onActions() {
@@ -62,6 +74,7 @@
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
+    if (!viewState.day && report.k === 'daybook' && viewState.month) return { from: viewState.month + '-01', to: viewState.month + '-' + String(new Date(Number(viewState.month.slice(0, 4)), Number(viewState.month.slice(5, 7)), 0).getDate()) };
     if (!viewState.day || !report.day) return {};
     if (report.day === 'both') return { from: viewState.day, to: viewState.day };
     var q = {};
@@ -70,9 +83,20 @@
   }
 
   /* ── the read ── */
+  /** the month of the books: the latest month the server lists, so the Day book does not open on an empty today */
+  function findMonth() {
+    if (viewState.month !== undefined) return Promise.resolve();
+    return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { headers: root.CBBooksActing.headers() }).then(function (a) {
+      var list = ((a && a.periods) || []).map(function (p) { return String(p.period || ''); }).filter(function (p) { return /^[0-9]{4}-[0-9]{2}$/.test(p); }).sort();
+      viewState.month = list.length ? list[list.length - 1] : '';
+    }, function () { viewState.month = ''; });
+  }
   function load() {
     if (onActions()) return Promise.resolve();
     var report = current();
+    return (report.k === 'daybook' ? findMonth() : Promise.resolve()).then(function () { return readReport(report); });
+  }
+  function readReport(report) {
     return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
@@ -101,7 +125,7 @@
   }
   /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
   function prepareButton() {
-    return isAdviser() ? '<button data-cbsid="NET005-B03" type="button" class="act" id="bv_prepare" data-testid="bv-prepare">' + esc(words('Prepare a journal')) + '</button>' : '';
+    return isAdviser() && !viewState.why ? '<button data-cbsid="NET005-B03" type="button" class="act" id="bv_prepare" data-testid="bv-prepare">' + esc(words('Prepare a journal')) + '</button>' : '';
   }
   function openPrepare() {
     root.location.assign(root.CBBooksActing.addressOf(root.CBBooksActing.current().store, 'journal'));
@@ -125,6 +149,7 @@
       band() +
       '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
+      (viewState.why ? '' : asAt(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
     wireBand();
@@ -159,11 +184,36 @@
       });
     return items.length ? '<div class="nw-acts" data-testid="bv-facts">' + items.join('') + '</div>' : '';
   }
+  /** the server's own totals as a last row (nothing is added up here) */
+  function totalRows(key, a) {
+    var total = words('Total');
+    if (key === 'tb' && a.total_dr_minor != null) return [{ _total: true, name: total, dr_minor: a.total_dr_minor, cr_minor: a.total_cr_minor }];
+    if (key === 'pl' && a.profit_minor != null) return [{ _total: true, name: words('Profit'), amount_minor: a.profit_minor }];
+    if (key === 'bs' && a.total_assets_minor != null) return [{ _total: true, side: words('Assets'), name: total, amount_minor: a.total_assets_minor }, { _total: true, side: words('Liabilities and equity'), name: total, amount_minor: a.total_liab_equity_minor }];
+    return [];
+  }
+  /** a heading naming the date the figures stand at */
+  function asAt(report) {
+    var date = viewState.day || (viewState.answer && (viewState.answer.asOf || viewState.answer.as_of || viewState.answer.to)) || '';
+    return date && (report.k === 'tb' || report.k === 'pl' || report.k === 'bs') ? '<h3 class="sub" data-testid="bv-asat">' + esc(words('As at')) + ' ' + esc(date) + '</h3>' : '';
+  }
   function paintRows(host, report) {
-    var rows = report.rows(viewState.answer || {}).map(function (row, n) {
+    if (report.panels) return paintDues(host, report);
+    var rows = report.rows(viewState.answer || {}).concat(totalRows(report.k, viewState.answer || {})).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
     viewState.o.mountList(host, listConfig(report, rows));
+  }
+  /** Who owes whom: two panels, customers owe you and you owe suppliers, no net total */
+  function paintDues(host, report) {
+    var all = report.rows(viewState.answer || {});
+    host.innerHTML = '<h3 class="sub">' + esc(words('Customers owe you')) + '</h3><div id="bv_dues_c" data-testid="bv-dues-customers"></div><h3 class="sub">' + esc(words('You owe suppliers')) + '</h3><div id="bv_dues_s" data-testid="bv-dues-suppliers"></div>';
+    ['customer', 'supplier'].forEach(function (who) {
+      var rows = all.filter(function (row) { return row.side === who; }).map(function (row, n) { return Object.assign({ _n: n }, row); });
+      var config = listConfig(report, rows);
+      config.key = 'books-grant-dues-' + who;
+      viewState.o.mountList($(who === 'customer' ? 'bv_dues_c' : 'bv_dues_s'), config);
+    });
   }
   /** the list's configuration for one report: its columns, search, drill and empty state */
   function listConfig(report, rows) {
@@ -185,6 +235,7 @@
           key: column[0],
           label: words(column[1]),
           prio: i === 0 || column[0] === 'name' || column[2] === MONEY ? 1 : 2,
+          num: column[2] === MONEY,
           w: column[2] === MONEY ? 140 : 180,
           cell: function (row) {
             return figure(row, column);
