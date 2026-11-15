@@ -91,6 +91,9 @@
     audNoChannel: '{party} has no phone or e-mail on record and is not on the network; add one to send this',
     audDispute: '⚑ Dispute — only its members see this',
     send: 'Send',
+    write: 'Write a reply',
+    count1: '1 message',
+    countN: '{n} messages',
     sending: 'Sending…',
     sentInt: '🔒 Note added — team only',
     sentExt: '↔ Sent — {party} notified',
@@ -166,10 +169,13 @@
     '.rt-out{font-size:var(--fs-1,12px);min-height:1em}.rt-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.rt-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.rt-no{border:1px dashed var(--line,#DDD6C6);border-radius:9px;padding:9px 11px;color:var(--grey,#5E594D);font-size:var(--fs-2,14px)}' +
     '.rt-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
-    '.rt-list{display:flex;flex-direction:column;gap:7px}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);font-weight:700}' +
-    '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:0 10px 10px 0;padding:8px 11px;background:var(--card,#fff);border-inline-start:3px solid var(--slate-line,#8aa0ad)}' +
-    '.rt-m.ext{background:var(--blue-tint-bg,#eef4fb);border-inline-start-color:var(--blue,#1f5fa8)}.rt-m.disp{background:var(--danger-tint,#fbeeec);border-inline-start-color:var(--disp,#8E3517)}' +
-    '.rt-m.mine{margin-inline-start:18px}' +
+    '.rt-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;overflow-x:hidden;max-height:var(--rt-max,min(46vh,380px));min-height:64px;padding:4px 2px;overscroll-behavior:contain}' +
+    '.rt.fill{height:100%;min-height:0}.rt.fill .rt-list{flex:1 1 auto;max-height:none}.rt-n{font-size:var(--fs-1,12px);color:var(--grey,#5E594D);align-self:center}' +
+    '.rt-above{display:flex;flex-direction:column;gap:6px}.rt-above:empty{display:none}' +
+    '.rt-box{display:flex;gap:8px;align-items:flex-end}.rt-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}.rt-box .rt-send{flex:0 0 auto;min-height:44px}' +
+    '.rt-m{border:1px solid var(--line,#DDD6C6);border-radius:14px 14px 14px 4px;padding:8px 12px;background:var(--card,#fff);max-width:86%;align-self:flex-start;box-sizing:border-box;overflow-wrap:anywhere}' +
+    '.rt-m.ext{border-inline-start:3px solid var(--blue,#1f5fa8)}.rt-m.disp{background:var(--danger-tint,#fbeeec);border-inline-start:3px solid var(--disp,#8E3517)}' +
+    '.rt-m.mine{align-self:flex-end;border-radius:14px 14px 4px 14px;background:var(--blue-tint-bg,#eef4fb);border-color:var(--blue-line,#B9D2EF)}' +
     '.rt-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:var(--fs-1,12px);margin-bottom:3px}.rt-h b{color:var(--ink,#1D1B16)}.rt-h .rt-t{margin-inline-start:auto;color:var(--grey,#5E594D)}' +
     '.rt-tag{border-radius:6px;padding:1px 7px;font-weight:700;font-size:var(--fs-1,12px)}.rt-tag.int{background:var(--blue-tint-bg,#eef4fb);color:var(--grey,#5f7682)}.rt-tag.ext{background:var(--blue-tint-bg,#eef4fb);color:var(--blue,#1f5fa8)}.rt-tag.disp{background:var(--danger-tint,#fbeeec);color:var(--disp,#8E3517)}.rt-tag.ln{background:var(--paper,#f4f1ea);color:var(--grey,#5E594D)}' +
     '.rt-b{white-space:pre-wrap;line-height:1.45}.rt-att{margin-top:6px}.rt-empty{color:var(--grey,#5E594D);padding:8px 2px}';
@@ -258,8 +264,8 @@
         return true;
       });
       list.sort(function (first, second) {
-        return String(second.created_at || '').localeCompare(String(first.created_at || ''));
-      }); /* newest first (Athi, 2026-08-15) */
+        return String(first.created_at || '').localeCompare(String(second.created_at || ''));
+      }); /* a chat: oldest first, the newest at the BOTTOM next to the reply box (Athi, 15 Nov walk W15-26/W15-28; it was newest first since 2026-08-15) */
       m.rows = list;
     } catch (e) {
       m.err = (e && e.message) || 'fail';
@@ -284,6 +290,14 @@
   }
 
   /* ── paint ── */
+  /** a bubble that is not a posted message: the question a thread opens with (o.lead = { who, at, text, mine, tid }) */
+  function leadHTML(L) {
+    return (
+      '<div class="rt-m lead' + (L.mine ? ' mine' : '') + '" data-testid="rt-lead" data-side="' + (L.mine ? 'mine' : 'theirs') + '">' +
+      '<div class="rt-h"><b>' + esc(L.mine ? T(W.you) : L.who || '—') + '</b><span class="rt-t">' + esc(when(L.at)) + '</span></div>' +
+      '<div class="rt-b"' + (L.tid ? ' data-testid="' + esc(L.tid) + '"' : '') + '>' + esc(L.text || '') + '</div></div>'
+    );
+  }
   function rowHTML(m, x) {
     var o = m.o,
       dec = null;
@@ -318,7 +332,7 @@
       '<div class="rt-m ' +
       cls +
       (mine ? ' mine' : '') +
-      '" data-testid="rt-row" data-id="' +
+      '" data-testid="rt-row" data-side="' + (mine ? 'mine' : 'theirs') + '" data-id="' +
       esc(x.message_id) +
       '" data-thread="' +
       esc(x.thread_type) +
@@ -433,37 +447,41 @@
       (toggle || kinds ? '<div class="rt-row">' + toggle + kinds + '</div>' : '') +
       offWhy +
       lines +
-      '<textarea data-cbsid="SCR051-T01" data-rt-act="text" data-testid="' +
-      esc(ids.text || 'msg-body') +
-      '" placeholder="' +
-      esc(aud) +
-      '">' +
-      esc(m.text) +
-      '</textarea>' +
       '<div class="rt-aud ' +
       tone +
       '" data-testid="rt-aud">' +
       esc(aud) +
       '</div>' +
-      '<div class="rt-foot"><button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
+      '<div class="rt-box"><textarea data-cbsid="SCR051-T01" data-rt-act="text" rows="1" data-testid="' +
+      esc(ids.text || 'msg-body') +
+      '" aria-label="' +
+      esc(T(W.write)) +
+      '" placeholder="' +
+      esc(T(W.write)) +
+      '">' +
+      esc(m.text) +
+      '</textarea>' +
+      '<button data-cbsid="SCR051-B03" type="button" class="rt-send ' +
       tone +
       '" data-rt-act="send" data-testid="' +
       esc(ids.send || 'msg-send') +
       '">' +
       esc(T(W.send)) +
-      '</button>' +
-      '<span class="rt-out" data-testid="rt-out" data-tone=""></span></div></div>'
+      '</button></div>' +
+      '<div class="rt-foot"><span class="rt-out" role="status" data-testid="rt-out" data-tone=""></span></div></div>'
     );
   }
   function listHTML(m) {
     var o = m.o;
     if (m.err) return '<div class="rt-empty" data-testid="rt-err">' + esc(T(W.readFail)) + '</div>';
     if (!m.rows) return '<div class="rt-empty">' + esc(T(W.reading)) + '</div>';
-    if (!m.rows.length) return '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>';
+    var lead = o.lead ? leadHTML(o.lead) : '';
+    if (!m.rows.length) return lead + (o.lead ? '' : '<div class="rt-empty" data-testid="rt-empty">' + esc(T(o.line_id ? W.noneLine : W.none)) + '</div>');
     return (
       '<div class="rt-n" data-testid="rt-count">' +
-      m.rows.length +
+      esc(fill(T(m.rows.length === 1 ? W.count1 : W.countN), { n: m.rows.length })) +
       '</div>' +
+      lead +
       m.rows
         .map(function (x) {
           return rowHTML(m, x);
@@ -475,14 +493,33 @@
     if (!m.el || !m.el.isConnected) return;
     var keep = m.el.querySelector('[data-rt-act="text"]');
     if (keep) m.text = keep.value;
+    var hadFocus = !!keep && doc.activeElement === keep;
+    var above = m.o.above && m.o.above.nodeType ? m.o.above : null;
+    if (above && above.parentNode) above.parentNode.removeChild(above); /* a host's node outlives the repaint: detach before the innerHTML wipe, put back after */
+    var composer = m.o.readOnly ? '' : composerHTML(m);
     m.el.innerHTML =
-      '<div class="rt" data-testid="rt" data-chit="' +
+      '<div class="rt' + (m.o.fill ? ' fill' : '') + '" data-testid="rt" data-chit="' +
       esc(m.o.chit_id) +
       '">' +
-      (m.o.readOnly ? '' : composerHTML(m)) +
-      '<div class="rt-list" data-testid="rt-list">' +
+      '<div class="rt-list" data-testid="rt-list" tabindex="-1" role="log" aria-live="polite">' +
       listHTML(m) +
-      '</div></div>';
+      '</div>' +
+      '<div class="rt-above" data-testid="rt-above"></div>' +
+      composer +
+      '</div>';
+    var slot = m.el.querySelector('[data-testid="rt-above"]');
+    if (above && slot) slot.appendChild(above);
+    var list = m.el.querySelector('.rt-list');
+    if (list) list.scrollTop = list.scrollHeight; /* opens on the newest */
+    if (hadFocus || (m.o.focus && !m.focused && m.rows)) {
+      var box = m.el.querySelector('[data-rt-act="text"]');
+      if (box) {
+        m.focused = true;
+        try {
+          box.focus({ preventScroll: true });
+        } catch (_) { /* best effort: failing here changes nothing the user sees */ }
+      }
+    }
   }
 
   /* ── the one send ── */
@@ -593,6 +630,8 @@
       if (node.getAttribute('data-rt-act') === 'text') {
         m.text = node.value;
         draftSet(o, node.value);
+        node.style.height = 'auto';
+        node.style.height = Math.min(node.scrollHeight + 2, 140) + 'px'; /* grows with Shift+Enter lines, then scrolls inside */
       }
       if (node.getAttribute('data-rt-act') === 'line') m.line = node.value;
     }
@@ -662,6 +701,16 @@
         }
       });
     }
+    function onKey(ev) {
+      var node = ev.target;
+      if (!node || !node.getAttribute || node.getAttribute('data-rt-act') !== 'text') return;
+      if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing && !ev.ctrlKey && !ev.altKey) {
+        ev.preventDefault(); /* Enter sends, Shift+Enter is a new line */
+        var send = el.querySelector('[data-rt-act="send"]');
+        if (send) sendPress(send);
+      }
+    }
+    el.addEventListener('keydown', onKey);
     el.addEventListener('click', onClick);
     el.addEventListener('input', onInput);
     el.addEventListener('change', onInput);
@@ -671,6 +720,7 @@
         return load(m);
       },
       destroy: function () {
+        el.removeEventListener('keydown', onKey);
         el.removeEventListener('click', onClick);
         el.removeEventListener('input', onInput);
         el.removeEventListener('change', onInput);
@@ -743,6 +793,6 @@
     return out;
   }
 
-  var CBThread = { mount: mount, mountAll: mountAll, send: send, last: null, EP: CB_THREAD_EP, WORDS: W };
+  var CBThread = { mount: mount, mountAll: mountAll, send: send, lead: function (L) { addCss(); return '<div class="rt"><div class="rt-list">' + leadHTML(L) + '</div></div>'; }, last: null, EP: CB_THREAD_EP, WORDS: W };
   root.CBThread = CBThread;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

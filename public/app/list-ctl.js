@@ -116,6 +116,7 @@
     '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
     '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
     '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
+    '.cbl .cbl-chip.ask{background:var(--cl-blue-t);border-color:var(--cl-blue-b);color:var(--cl-blue-i);font-weight:600}.cbl .cbl-chip.ask[aria-pressed=true]{background:var(--cl-blue);border-color:var(--cl-blue);color:var(--on-accent,#fff)}',
     '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
     '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
     /* row 2 · tools */
@@ -983,8 +984,8 @@
   function noteHTML(n, i) {
     return (
       '<button type="button" data-cbsid="CMP033-B01"' + mountAttribute('CMP033') + ' class="cbl-chip ' +
-      esc(n.cls === 'bad' ? 'bad' : 'warn') +
-      '" data-notice="' +
+      esc(n.cls === 'bad' ? 'bad' : n.cls === 'ask' ? 'ask' : 'warn') +
+      '"' + (n.cls === 'ask' ? ' aria-pressed="' + (n.pressed ? 'true' : 'false') + '"' : '') + ' data-notice="' +
       i +
       '"' +
       (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') +

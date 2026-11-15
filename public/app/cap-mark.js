@@ -67,6 +67,9 @@
     allQueries: 'All queries',
     allEntries: 'All entries',
     queryWord: 'Query',
+    questionFrom: 'Question from {who}',
+    youAnswered: 'You answered',
+    theOther: 'the reviewer',
     entryFallback: 'This entry',
     noQueries: 'No open queries.',
     openQueries: 'Open queries',
@@ -109,9 +112,12 @@
     '.mk-qi{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;border:1px solid var(--line,#DDD6C6);border-radius:10px;background:var(--card,#fff);padding:8px 10px;font:inherit;text-align:start;cursor:pointer;color:inherit;width:100%}' +
     '.mk-qi:focus-visible{outline:2px solid var(--blue,#1f5fa8)}' +
     '.mk-qi b{display:block;font-size:var(--fs-2,14px)}.mk-qi span.t{display:block;font-size:var(--fs-1,12px);color:var(--grey,#5E594D);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-    'dialog.mk-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16);overflow:auto}' +
+    'dialog.mk-sheet{border:1px solid var(--line,#DDD6C6);border-radius:14px;padding:0;width:min(520px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--card,#fff);color:var(--ink,#1D1B16);overflow:hidden}' +
+    'dialog.mk-sheet[open]{display:flex;flex-direction:column;height:min(680px,calc(100dvh - 24px))}' +
+    '.mk-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}.mk-body>#mk_thread{flex:1 1 auto;min-height:0}.mk-spacer{flex:1 1 auto;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;overflow-y:auto}' +
+    '.mk-actbar{display:flex;flex-direction:column;gap:6px}.mk-box{display:flex;gap:8px;align-items:flex-end}.mk-box textarea{flex:1 1 auto;min-width:0;min-height:44px;max-height:140px;resize:none}' +
     'dialog.mk-sheet::backdrop{background:rgba(0,0,0,.4)}' +
-    '.mk-in{padding:14px 16px;display:flex;flex-direction:column;gap:9px}' +
+    '.mk-in{padding:14px 16px;display:flex;flex-direction:column;gap:9px;flex:1 1 auto;min-height:0}' +
     '.mk-hd{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.mk-hd h2{margin:0;font-size:var(--fs-3,17px)}' +
     '.mk-x{border:0;background:transparent;font:inherit;font-size:20px;line-height:1;min-width:44px;min-height:44px;cursor:pointer;color:var(--grey,#5E594D)}' +
     '.mk-sub{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
@@ -125,7 +131,8 @@
     '.mk-out{font-size:var(--fs-1,12px);min-height:1em}.mk-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.mk-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.mk-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
     '.mk-n{display:none}' +
-    '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:auto 0 0;width:100vw;max-width:100vw;border-radius:14px 14px 0 0}}';
+    '.cbl .cbl-row.mk-wait,.cbl .cbl-lrec.mk-wait{box-shadow:inset 5px 0 0 var(--blue,#1f5fa8)}.cbl .cbl-row.mk-answered,.cbl .cbl-lrec.mk-answered{box-shadow:inset 5px 0 0 var(--line,#DDD6C6)}' +
+    '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:0;width:100vw;max-width:100vw;max-height:100dvh;border-radius:0}dialog.mk-sheet[open]{height:100dvh}}';
   var cssDone = false;
   function addCss() {
     if (cssDone || !doc) return;
@@ -206,6 +213,19 @@
       row: function (id) { return c.rows[String(id)] || null; },
       /** the record in words ("JV-0002 · 12 Oct 2026 · A$880.00"), as the page last showed it; '' when the page never showed it */
       nameOf: function (id) { return c.names[String(id)] || ''; },
+      /** whose turn a Query is, for THIS seat: 'waiting' (it waits for you) · 'answered' (you have answered, it waits for the other side) · '' (no open Query).
+       *  The server's `waiting_on` ('owner'|'auditor') when it sends one; until then: a Query with no reply waits for the owner, one with a reply waits for the reviewer. */
+      turn: function (id) {
+        var r = c.rows[String(id)];
+        if (!r || classOf(r) !== 'open' || r.altered) return '';
+        var on = r.waiting_on || (Number(r.message_count) > 0 ? 'auditor' : 'owner');
+        return (on === 'owner') === !ctl.mayCheck(id) ? 'waiting' : 'answered';
+      },
+      /** the row's left bar: waiting for you = the full bar, answered = the quiet one */
+      rowClass: function (id) {
+        var t = ctl.turn(id);
+        return t === 'waiting' ? 'mk-wait' : t === 'answered' ? 'mk-answered' : '';
+      },
       mayCheck: function (id) {
         var r = c.rows[String(id)], a = (r && r.actions) || c.may || {};
         return !!(a.set && a.set.ok !== false && a.set.ok != null) || (a.set === true);
@@ -285,6 +305,8 @@
         ' <button type="button" class="mk mk-ghost" data-cbsid="CMP058-B05" data-mk="ask" data-id="' + esc(id) + '" aria-label="' + esc(T(W.askQuestion)) + '" title="' + esc(T(W.askQuestion)) + '"><span class="mk-s" aria-hidden="true">?</span><span class="mk-n">' + esc(T(W.queryWord)) + '</span></button>';
     }
     var k = CLASS[cls], word = (r.label && !alt) ? r.label : T(k.word), tone = 'mk-' + k.tone, sym = k.sym;
+    var turn = c.ctl.turn(id);
+    if (turn && !c.ctl.mayCheck(id)) word = turn === 'waiting' ? fill(W.questionFrom, { who: r.by_firm || r.by_name || T(W.theOther) }) : T(W.youAnswered); /* the owner's words: who asked, and whose turn it is (Athi, W15-25) */
     if (alt) { word = r.recheck_needed && !r.altered ? T(W.recheck) : T(W.altered); tone = 'mk-alt'; sym = '⚠'; }
     var age = (cls === 'open' || cls === 'hold') && r.age_days != null ? ' <span class="mk-age">· ' + esc(ageWords(r.age_days)) + '</span>' : '';
     return '<button type="button" class="mk ' + tone + '" data-cbsid="CMP058-B02" data-mk="open" data-id="' + esc(id) + '" data-class="' + esc(cls) + '"' + (alt ? ' data-altered="1"' : '') +
@@ -367,22 +389,29 @@
     var word = cls ? (altered ? T(W.altered) : (r.label || T(CLASS[cls].word))) : T(W.notChecked);
     var thread = r && r.thread_id;
     var title = c.names[id] || o.title || (c.cfg.title && c.cfg.title(id)) || T(W.entryFallback);
+    /* the open query with its thread: the reply box IS the composer (no second box); else the one note box asks the question */
+    var replyOk = !!thread && !(act.reply && act.reply.ok === false) && (cls === 'open' || cls === 'hold' || !cls);
+    var noteMode = maySet && !replyOk;
+    var lead = r && r.note ? { who: r.by_name || '', at: r.at, text: r.note, mine: maySet, tid: 'mk-question' } : null;
     dlg.innerHTML =
       '<div class="mk-in"><div class="mk-hd"><div><h2 data-testid="mk-title">' + esc(title) + '</h2>' +
       '<div class="mk-sub" data-testid="mk-state">' + (cls ? '<span class="mk mk-' + (altered ? 'alt' : CLASS[cls].tone) + '" style="cursor:default"><span class="mk-s" aria-hidden="true">' + (altered ? '⚠' : CLASS[cls].sym) + '</span> ' + esc(word) + '</span> ' + (r.by_name ? esc(fill(W.by, { who: r.by_name })) : '') + ' ' + esc(when(r.at)) : esc(word)) + '</div></div>' +
       '<button type="button" class="mk-x" data-cbsid="CMP059-B01" data-mk-act="close" aria-label="' + esc(T(W.close)) + '">✕</button></div>' +
       (altered ? '<div class="mk-warn" data-testid="mk-altered">' + esc(T(W.changedNote)) + '</div>' : '') +
-      (r && r.note ? '<div class="mk-quote" data-testid="mk-question">' + esc(r.note) + '</div>' : '') +
+      '<div class="mk-body">' + (thread ? '<div id="mk_thread" data-testid="mk-thread"></div>' : '<div class="mk-spacer" data-testid="mk-thread">' + (lead && root.CBThread && root.CBThread.lead ? root.CBThread.lead(lead) : '') + '</div>') + '</div>' +
+      '<div class="mk-actbar" data-testid="mk-actbar">' +
       (maySet
-        ? '<label class="mk-sub" for="mk_note">' + esc(T(W.reasonLabel)) + ' · ' + esc(T(W.seenBy)) + '</label>' +
-          '<textarea id="mk_note" data-cbsid="CMP059-T01" data-testid="mk-note" maxlength="1000"></textarea>' +
-          '<div class="mk-acts"><button type="button" class="mk-act ok" data-cbsid="CMP059-B02" data-mk-act="clear" data-testid="mk-set-clear">✓ ' + esc(T(W.markChecked)) + '</button>' +
-          '<button type="button" class="mk-act ask" data-cbsid="CMP059-B03" data-mk-act="open" data-testid="mk-set-open" aria-disabled="true">? ' + esc(T(W.askQuestion)) + '</button>' +
+        ? '<div class="mk-acts"><button type="button" class="mk-act ok" data-cbsid="CMP059-B02" data-mk-act="clear" data-testid="mk-set-clear">✓ ' + esc(T(W.markChecked)) + '</button>' +
           '<button type="button" class="mk-act" data-cbsid="CMP059-B04" data-mk-act="hold" data-testid="mk-set-hold">‖ ' + esc(T(W.putOnHold)) + '</button>' +
           (cls ? '<button type="button" class="mk-act" data-cbsid="CMP059-B05" data-mk-act="removed" data-testid="mk-set-removed">' + esc(T(W.takeOff)) + '</button>' : '') + '</div>'
         : (act.set && act.set.why ? '<div class="mk-why" data-testid="mk-why">' + esc(act.set.why) + '</div>' : '')) +
-      '<div class="mk-out" role="status" data-testid="mk-out" data-tone=""></div>' +
-      (thread ? '<div class="mk-sub"><b>' + esc(T(W.threadHead)) + '</b></div><div id="mk_thread" data-testid="mk-thread"></div>' : '') + '</div>';
+      '<div class="mk-out" role="status" data-testid="mk-out" data-tone=""></div></div>' +
+      (noteMode
+        ? '<label class="mk-sub" for="mk_note">' + esc(T(W.reasonLabel)) + ' · ' + esc(T(W.seenBy)) + '</label>' +
+          '<div class="mk-box"><textarea id="mk_note" rows="1" data-cbsid="CMP059-T01" data-testid="mk-note" maxlength="1000"></textarea>' +
+          '<button type="button" class="mk-act ask" data-cbsid="CMP059-B03" data-mk-act="open" data-testid="mk-set-open" aria-disabled="true">? ' + esc(T(W.askQuestion)) + '</button></div>'
+        : '') +
+      '</div>';
     doc.body.appendChild(dlg);
     var outEl = dlg.querySelector('[data-testid="mk-out"]'), note = dlg.querySelector('#mk_note');
     c.outEl = outEl;
@@ -396,7 +425,16 @@
     function syncAsk() {
       if (askBtn) askBtn.setAttribute('aria-disabled', note && note.value.trim() ? 'false' : 'true');
     }
-    if (note) note.addEventListener('input', syncAsk);
+    if (note) {
+      note.addEventListener('input', function () {
+        syncAsk();
+        note.style.height = 'auto';
+        note.style.height = Math.min(note.scrollHeight + 2, 140) + 'px';
+      });
+      note.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && askBtn) { event.preventDefault(); askBtn.click(); } /* Enter asks, Shift+Enter is a new line */
+      });
+    }
     dlg.addEventListener('click', function (event) {
       var b = event.target.closest ? event.target.closest('[data-mk-act]') : null;
       if (event.target === dlg) return close();
@@ -415,10 +453,13 @@
     dlg.addEventListener('cancel', function (event) { event.preventDefault(); close(); });
     if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
     if (thread && root.CBThread) {
-      var replyOk = !(act.reply && act.reply.ok === false) && (cls === 'open' || cls === 'hold' || !cls);
       root.CBThread.mount(dlg.querySelector('#mk_thread'), {
         subject: { type: 'mark', id: thread },
         transport: c.cfg.transport || null,
+        lead: lead,
+        fill: true,
+        focus: true,
+        above: dlg.querySelector('[data-testid="mk-actbar"]'),
         actions: { message_external: replyOk ? { ok: true } : { ok: false, why: (act.reply && act.reply.why) || T(W.replyOff) } },
         party: T(W.everyone),
         readOnly: !replyOk && !(act.reply && act.reply.why),

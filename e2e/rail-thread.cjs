@@ -138,7 +138,8 @@ async function route(S, r) {
     ok(await p.evaluate(() => typeof messagesTab === 'function' && /data-rt=/.test(messagesTab.toString()) && !/api\(["']sendMsg/.test(messagesTab.toString())), 'A · the Messages tab is a CBThread host, not a composer of its own');
     let r0 = await rows();
     ok(r0.length === 3 && r0.every((x) => !x.disp) && r0.some((x) => x.th === 'internal') && r0.some((x) => x.th === 'external'), 'A · the thread lists the three rows this copy holds — external, internal, the line\'s — and NO dispute row (' + r0.length + ')');
-    ok(r0[0].id === 'm4' && r0[2].id === 'm1', 'A · newest first');
+    ok(r0[0].id === 'm1' && r0[2].id === 'm4', 'A · a chat: oldest first, the newest at the bottom (W15-26)');
+    ok(await p.evaluate(() => { const l = document.querySelector('[data-testid="rt-host"] .rt-list'), c = document.querySelector('[data-testid="rt-host"] [data-testid="rt-composer"]'); return !!l && !!c && l.getBoundingClientRect().bottom <= c.getBoundingClientRect().top + 1 && l.scrollTop + l.clientHeight >= l.scrollHeight - 2; }), 'A · the reply box sits under the list and the list opens scrolled to the newest');
     ok(await p.locator('[data-testid="rt-host"] [data-testid="msg-channel-internal"].on').count() === 1 && await p.locator('[data-testid="rt-host"] [data-testid="msg-channel-external"]:not(.off)').count() === 1, 'A · both channels offered; internal selected first for the shop');
     await p.click('[data-testid="rt-host"] [data-testid="msg-channel-external"]');
     ok(/Ravi Stores sees this/.test(await p.textContent('[data-testid="rt-host"] [data-testid="rt-aud"]')), 'A · the audience line names the other party on External');
@@ -153,7 +154,7 @@ async function route(S, r) {
     ok(ext.length === 1 && ext[0].body.thread_type === 'external' && ext[0].body.message_text === 'Friday is fine — before noon' && !ext[0].body.line_id && !ext[0].body.is_dispute, 'A · double press → ONE POST {thread_type:external} (' + ext.length + ')');
     ok(/Sent — Ravi Stores notified/.test(await out()), 'A · the outcome is said under the button: "' + (await out()).trim() + '"');
     r0 = await rows();
-    ok(r0.length === 4 && r0[0].text === 'Friday is fine — before noon' && /You/.test(await p.textContent('[data-testid="rt-host"] [data-testid="rt-row"] b')), 'A · the list repaints in place with the new row on top, as "You"');
+    ok(r0.length === 4 && r0[3].text === 'Friday is fine — before noon' && /You/.test(await p.textContent('[data-testid="rt-host"] [data-testid="rt-row"]:last-of-type b')), 'A · the list repaints in place with the new row at the bottom, as "You", on the right');
     ok(await p.evaluate(() => window.__rail.length === 1 && window.__rail[0].module === 'thread' && window.__rail[0].chit_id === 'lab-chit' && !!window.__rail[0].result.message_id && CBThread.last && CBThread.last.message_id === window.__rail[0].result.message_id), 'A · cb:rail {module:thread, chit_id, result} fired once; CBThread.last holds the send result');
     ok(await p.evaluate(() => (document.querySelector('[data-testid="msg-body"]') || {}).value === ''), 'A · the box is empty after a send');
     /* internal, with the line chooser: the message is about line 1 */

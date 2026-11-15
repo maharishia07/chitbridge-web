@@ -2558,7 +2558,8 @@ function bkDvHead() {
         bkTab('waiting');
       }
     });
-  if (!n.accept && !n.supplier && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
+  var askWaiting = bkMarkChips(notices, (reply && reply.entries) || []);
+  if (!n.accept && !n.supplier && !n.overdue && !n.cheques && !n.waiting && !askWaiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
   return {
     period: {
       label: bkDbPeriodLabel(dayRange, period.preset),
@@ -2594,6 +2595,32 @@ function bkDvHead() {
           }
         : undefined
   };
+}
+/** W15-25 (cap-mark.js turn()): the Day book's two filter chips for Queries — "Waiting for you · n" (the owner has not answered) and "Answered · n" (the reviewer has the ball); pressing one shows only those rows, pressing it again shows all */
+function bkMarkChips(notices, entries) {
+  if (!BK.mk || !BK.mk.state().may) return 0;
+  var count = { waiting: 0, answered: 0 };
+  entries.forEach(function (e) {
+    var turn = BK.mk.turn(e.entry_id);
+    if (turn) count[turn]++;
+  });
+  [
+    ['waiting', 'Waiting for you'],
+    ['answered', 'Answered']
+  ].forEach(function (item) {
+    if (!count[item[0]] && BK.dvMk !== item[0]) return;
+    notices.push({
+      cls: 'ask',
+      pressed: BK.dvMk === item[0],
+      tid: 'mk-chip-' + item[0],
+      text: tx(item[1]) + ' · ' + count[item[0]],
+      onOpen: function () {
+        BK.dvMk = BK.dvMk === item[0] ? '' : item[0];
+        if (BK.dv && BK.dv.api) BK.dv.api.refresh();
+      }
+    });
+  });
+  return count.waiting;
 }
 /** declare the Day book's list once per read: its columns, grouping, four filters (Kind · Tender · Counter · Person), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
@@ -2644,7 +2671,14 @@ function bkDvMount(el) {
     t: tx,
     view: 'lines' /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */,
     rows: function () {
-      return d.r.entries || [];
+      var all = d.r.entries || [];
+      if (!BK.dvMk || !BK.mk) return all;
+      return all.filter(function (e) {
+        return BK.mk.turn(e.entry_id) === BK.dvMk;
+      });
+    },
+    rowClass: function (e) {
+      return BK.mk && BK.mk.state().may ? BK.mk.rowClass(e.entry_id) : '';
     },
     id: function (e) {
       return e.entry_no;
