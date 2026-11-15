@@ -66,6 +66,17 @@ html.cbsk body{background:var(--page,#fcfaf5);color:var(--ink,#1d1b16);font-fami
 .lk-fig .lk-bar{margin-top:6px}
 .lk-fig-good{background:var(--green-t,#e8f4ed);border-color:var(--green-b,#a9d3bc)}
 .lk-fig-good .lk-fig-v{color:var(--green-d,#0d4a2b)}
+/* CMP060 as a slim tile: label and figure on ONE line, nothing under them (the Bank band) */
+.lk-fig-line{flex-direction:row;align-items:baseline;gap:10px;padding:6px 14px;flex-wrap:nowrap;white-space:nowrap}
+.lk-fig-line .lk-fig-v{font-size:20px;overflow:hidden;text-overflow:ellipsis}
+.lk-fig-loud{background:var(--amber-t,var(--ask-t,#fdf3dc));border:2px solid var(--amber,#c98a1a)}
+.lk-fig-loud .lk-fig-l,.lk-fig-loud .lk-fig-v{color:var(--amber-i,var(--ask-i,#7a5205))}
+.lk-fig-loud.lk-fig-good{background:var(--green-t,#e8f4ed);border-color:var(--green,#16693f)}
+.lk-fig-loud.lk-fig-good .lk-fig-l,.lk-fig-loud.lk-fig-good .lk-fig-v{color:var(--green-d,#0d4a2b)}
+/* CMP064 status icon: a shape per state (never colour alone); the word is read by a screen reader and is the tooltip */
+.lk-st{display:inline-grid;place-items:center;width:24px;height:24px;flex:none;color:var(--muted,#5e594d)}
+.lk-st svg{width:20px;height:20px}
+.lk-st-in{color:var(--green,#16693f)}.lk-st-ready{color:var(--accent,#1f5f5b)}.lk-st-need{color:var(--amber-i,var(--ask-i,#7a5205))}.lk-st-done{color:var(--accent,#1f5f5b)}
 /* the placement variant of the popup (CMP002): a panel at the side on a wide screen, a sheet at the bottom on a phone */
 .lk-pop-back.lk-side-back,.lk-pop-back:has(.lk-side){justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.28)}
 .lk-pop.lk-side{width:min(400px,100%);height:100%;border-radius:0;margin-left:auto}

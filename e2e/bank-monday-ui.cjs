@@ -94,8 +94,23 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     /* M3 · ONE truth in the band */
     const band = (await p.textContent('[data-testid="bank-finish"]')).replace(/\s+/g, ' ');
     ok(/18,280\.75/.test(band) && !/18,280\.75 Dr/.test(band) && /19,963\.00/.test(band), tag + ': the band gives the statement and the books figures, no "Dr" on the statement (' + band.slice(0, 120) + ')');
-    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /10 lines not yet in your books/.test(band) && /Unexplained\s*A?\$?0\.00/.test(band), tag + ': Difference 1,682.25 = 10 lines not yet in your books · Unexplained 0.00');
+    /* CHANGED ON PURPOSE (W15-18, W15-27): the band is the shared one (bank-band.js): the Difference tile holds the figure only, the count is its own line under the tiles ("10 lines to go"), "Unexplained" shows only when it is not 0.00 */
+    ok(/Difference\s*A?\$?1,682\.25/.test(band) && /10 lines to go/.test(band) && !/Unexplained/.test(band), tag + ': Difference 1,682.25, "10 lines to go" on its own line, no Unexplained while it is 0.00');
+    ok(/2 of 12 in your books/.test(band) && await p.locator('[data-testid="bank-finish-tiles"] .lk-fig').count() === 3, tag + ': three tiles and the progress "2 of 12 in your books"');
+    ok(/All amounts in Australian dollars \(AUD\)/.test(band) && /Right account\?/.test(band) && /Business bank account/.test(band) && /2 Oct to 31 Oct 2026 · 12 lines/.test(band), tag + ': the band names the account, the period and the lines, says the currency once and asks "Right account?" (W15-20, W15-21)');
+    ok(/Opening 18,500\.00 agrees with your books/.test(band) || tag === 'phone', tag + ': the opening agrees with the books (read from the engine check, not worked again)');
     ok(!/Difference\s*A?\$?0\.00/.test(band), tag + ': the band does not say a difference of 0.00 while 10 lines are missing');
+    /* W15-24 · the account's bank details: bank, BSB, last four; a bad BSB is refused in words; the band then says the number is held */
+    if (vp.width > 700) {
+      await p.click('[data-testid="bank-finish-toggle"]');
+      await p.click('[data-testid="bank-details-open"]');
+      await p.fill('#bk_dbank', 'Westpac'); await p.fill('#bk_dbranch', '12'); await p.fill('#bk_dlast4', '1234');
+      await p.click('[data-testid="bank-details-save"]');
+      ok((await p.locator('[data-testid="bank-details-bad"]').count()) === 1, tag + ': a BSB that is not six digits is refused in words');
+      await p.fill('#bk_dbranch', '062-000'); await p.click('[data-testid="bank-details-save"]');
+      await p.waitForTimeout(800);
+      ok((await p.textContent('[data-testid="bank-finish"]')).includes('Account no. ****1234 held'), tag + ': the band says the account holds ****1234 and the file carries no number (shown masked, last four only)');
+    }
     /* M1 · one primary, sign-off only at nil */
     ok(await p.locator('[data-testid="bank-sheet-open"]').count() === 1 && await p.locator('[data-testid="bank-signoff"]').count() === 0, tag + ': ONE primary button (Add to your books) and no Sign off while the difference is not nil');
     ok(await p.locator('[data-testid="bank-actions"] button:visible').count() === 2, tag + ': the band carries two buttons only: the primary and More');
@@ -109,7 +124,12 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     });
     ok(m.pageScroll <= 1 && m.mainScroll <= 1, tag + ': the page does not scroll (page +' + m.pageScroll + ', main +' + m.mainScroll + ')');
     ok(m.bottom >= m.vh - 20 && m.listH >= (vp.width > 700 ? 330 : 240), tag + ': the lines list fills the screen (' + m.listH + ' px, ends at ' + m.bottom + ' of ' + m.vh + ')');
-    ok(m.above <= 3, tag + ': ' + m.above + ' controls above the list besides its own toolbar (was 17 in all)');
+    /* CHANGED ON PURPOSE (W15-18): the band now carries Wrong account? Change as well as the file line's Load another statement, the primary and More: four, not three (still 17 before FIN-27) */
+    ok(m.above <= 4, tag + ': ' + m.above + ' controls above the list besides its own toolbar and its chips (was 17 in all)');
+    /* Fiori density (Athi 15 Nov): rows about 32 px, the head one line; at least 12 statement lines show at 1366x768 with no page scroll */
+    const rowsShown = await p.evaluate(() => { const l = document.querySelector('[data-testid="bank-list"] .cbl-list'), lr = l.getBoundingClientRect(); return [...l.querySelectorAll('[data-row]')].filter((n) => { const r = n.getBoundingClientRect(); return r.top >= lr.top - 1 && r.bottom <= lr.bottom + 1; }).length; });
+    console.log('  ROWS-VISIBLE ' + tag + ' ' + rowsShown);
+    ok(vp.width > 700 ? rowsShown >= 12 : rowsShown >= 2, tag + ': ' + rowsShown + ' statement lines show without scrolling' + (vp.width > 700 ? ' (target 12, Fiori compact density)' : ''));
     ok(m.sticky === 'sticky', tag + ': the column header stays put');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-lines.png') });
     /* the One menu: Grid / Lines / Columns / CSV / Expand under View */

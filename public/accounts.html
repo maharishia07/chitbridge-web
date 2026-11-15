@@ -20,6 +20,8 @@
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/fonts/cb-fonts.css">
+<link rel="stylesheet" href="/app/lab-kit.css">   <!-- CMP060 figure card, CMP064 status icon: the Bank band and its lines -->
+<link rel="stylesheet" href="/app/bank-band.css">   <!-- the band over a bank statement, shared with the public demo -->
 <style>
 /* the designer's tokens, as handed over (docs/design/ledgers-page/styles.css) … */
 :root{
@@ -255,6 +257,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .pe-bank.bk-loaded .bk-store{color:var(--muted);font-size:13px}
 .pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 120px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pe-bank.bk-loaded .bk-line .act{flex:none}
+.pe-bank.bk-loaded:not(.bk-open) .pe-card[data-testid="bank-form"]{display:none}.pe-bank.bk-loaded:not(.bk-open) .bk-file{display:none}.pe-bank.bk-loaded:not(.bk-open) .bk-line{justify-content:flex-end}.pe-bank.bk-loaded .bk-line button.act{min-height:32px;padding-block:0}   /* the quiet file line: the account, the period and the count are the band's */
 .pe-bank.bk-loaded .pe-card{padding:8px 14px;margin:0;max-width:none;gap:8px}
 .bk-band{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;padding:10px 16px;border:1px solid var(--amber-b,var(--line));border-radius:12px;background:var(--amber-t,var(--surface))}
 .bk-band.bk-ok{border-color:var(--green-b,var(--line));background:var(--green-t,var(--surface))}
@@ -432,6 +435,9 @@ function go() {
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
 <script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script src="/app/lab-kit.js"></script>   <!-- CBLabKit.figure · statusIcon: the band's tiles and the lines' status icons -->
+<script src="/app/bank-band.js"></script>   <!-- CBBankBand: the band over the lines, the same the public demo paints -->
+<script src="/app/bank-lines.js"></script>   <!-- CBBankLines: the one row control of a statement's lines (status icon, chips, Filters, one open row) -->
 <script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
 <script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
 <script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->

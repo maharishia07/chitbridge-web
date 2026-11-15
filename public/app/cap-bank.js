@@ -58,25 +58,6 @@ function bkbEventWord(ev) {
   const k = ev.type === 'contra' ? 'contra:' + ev.from + '>' + ev.to : ev.type === 'expense' || ev.type === 'other_income' ? ev.type + ':' + ev.class : ev.type;
   return tx(bkbWords[k] || 'Another entry');
 }
-const bkbStatus = {
-  settled: ['green', 'Settled by chit'],
-  told: ['blue', 'Party told us'],
-  accepted: ['green', 'In your books'],
-  matched: ['green', 'In your books'],
-  suggested: ['amber', 'Ready to add'],
-  'bank-only': ['red', 'Needs you'],
-  asked: ['blue', 'Asked'],
-  check: ['amber', 'Check'],
-  missing: ['blue', 'Not on the statement'],
-  'told-only': ['blue', 'Told, not in the bank yet']
-};
-/** the chip of a row: a line the books lack says what the sheet's controller says of it (Ready to add / Needs you), the one split for the file; any other row keeps its state's words */
-function bkbChipOf(row) {
-  const stand = ['bank-only', 'check', 'suggested'].includes(row.status) && typeof bkshStandingOf === 'function' ? bkshStandingOf(row) : null;
-  if (stand === 'ready') return bkbStatus.suggested;
-  if (stand === 'need' || stand === 'wait') return bkbStatus['bank-only'];
-  return bkbStatus[row.status];
-}
 /* FIN-27 · THREE GROUPS, one count each: every engine state answers one question — is the pair in both, only in the bank, or only in your books?
    (the states stay on each row's chip; the head and the filter speak the three) */
 const BKB_GROUPS = [
@@ -86,7 +67,6 @@ const BKB_GROUPS = [
 ];
 /** the group a row's state belongs to; a state nobody listed lands in "Missing in your books", where a person looks at it */
 const bkbGroupOf = (status) => (BKB_GROUPS.filter((item) => item.states.indexOf(status) >= 0)[0] || BKB_GROUPS[0]).key;
-const BKB_ORDER = ['bank-only', 'check', 'suggested', 'told', 'asked', 'settled', 'matched', 'accepted', 'missing', 'told-only'];
 /* ── ON THIS DEVICE: the marks (accept · note · file) of a bank account, and the rules learned — keyed by the shop, never uploaded ── */
 const bkbShop = () => {
   try {
@@ -537,14 +517,9 @@ function bankLayout(loaded, fill) {
   if (pane && !loaded) pane.classList.remove('bk-open');
   document.body.classList.toggle('bk-on', !!(loaded && fill));
 }
-/** the one line the load form folds to: which account, which file, how many lines, and the way back to the form */
+/** the one QUIET line the load form folds to: the file, and the way back to the form. The account, the period and the count are the band's (bank-band.js), said large once (W15-18) */
 function bankLineHtml() {
-  const acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct))[0] || {};
-  return (
-    '<span class="bk-name"><b>' + bkbE(tx('Bank')) + '</b> · ' + bkbE(acct.name || BKB.stmtAcct) + '</span><span class="bk-file">' +
-    bkbE([bkbAcctCur(), (BKB.file && BKB.file.name) || ''].filter(Boolean).join(' · ')) + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
-    '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>'
-  );
+  return ''; /* the way back to the form is the band's "Load another statement" (bankFinish): nothing is drawn here any more */
 }
 /** the load form opens again over the lines (a different file or account); the list is re-fitted to the room left */
 function bankChange(btn) {
@@ -554,6 +529,8 @@ function bankChange(btn) {
   btn.setAttribute('aria-expanded', String(open));
   btn.textContent = tx(open ? 'Hide the form' : 'Load another statement');
   window.dispatchEvent(new Event('resize'));
+  const file = bkbEl('bk_file');
+  if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
 const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
@@ -621,7 +598,7 @@ function bankPaint() {
   res.innerHTML =
     warn +
     bankOpeningHtml() +
-    bankFinish() +
+    '<div id="bk_bandslot">' + bankFinish() + '</div>' +
     (lines
       ? '<div id="bkl_bank" data-testid="bank-list"></div>'
       : '<div class="supacts"><button data-cbsid="BKS014-B22" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
@@ -675,9 +652,8 @@ function bankOpeningHtml() {
   return (
     '<div class="pe-bad bk-wrong" role="alert" data-testid="bank-opening-check"><span>' +
     bkbE(txf('This statement opens at {s}; your books show {b} the day before. Is it the right bank account?', { s: facts.statement, b: facts.books })) +
-    '</span><span class="bk-wrong-acts"><button data-cbsid="BKS014-B23" type="button" class="act" data-testid="bank-opening-other" onclick="bankChangeOpen()">' +
-    bkbE(tx('Choose another account')) +
-    '</button><button data-cbsid="BKS014-B24" type="button" class="act" data-testid="bank-opening-go" onclick="BKB.openingOk=true;bankPaint()">' +
+    '</span><span class="bk-wrong-acts">' + bkbWrongAccountButton('bank-opening-other', 'Choose another account') +
+    '<button data-cbsid="BKS014-B24" type="button" class="act" data-testid="bank-opening-go" onclick="BKB.openingOk=true;bankPaint()">' +
     bkbE(tx('It is right, go on')) +
     '</button></span></div>'
   );
@@ -691,22 +667,86 @@ function bankPrimaryHtml(fig) {
   return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open"' + held + ' onclick="bankAdd()">' + bkbE(bkbCount('books') ? txn('Add {count} line to your books', 'Add {count} lines to your books', bkbCount('books')) : tx('Add to your books')) + '</button>';
 }
 
-/** FIN-27 · the band over the lines: Statement · Books · Difference (and what it is made of) · Unexplained, then the one primary button and More. Green when nothing is left to do */
+/** the statement signed off just before this one (the log's newest period that ended before this one starts): { to, by }, or null when there is none (continuity: the engine's check words a gap or an overlap) */
+function bkbPreviousStatement() {
+  const from = BKB.parsed && BKB.parsed.from,
+    rows = (typeof bankStoreState !== 'undefined' && bankStoreState.statements) || [];
+  const before = rows.filter((row) => row.period_to && from && row.period_to < from).sort((first, second) => (first.period_to < second.period_to ? 1 : -1))[0];
+  return before ? { to: before.period_to, by: (typeof bankStoreSignerFull === 'function' && bankStoreSignerFull(before)) || '' } : null;
+}
+/** the controller's statement check for this statement (the same one the Add sheet runs), or null before it has read the file */
+const bkbCheck = () => (typeof BKSH !== 'undefined' && BKSH.ctl && BKSH.key === bkshKey() && BKSH.ctl.view().check) || null;
+/** the "Wrong account? Change" button, ONE definition: the opening question and the band both use it. The load form opens again; nothing is saved, so nothing is harmed */
+const bkbWrongAccountButton = (testid, label) =>
+  '<button data-cbsid="BKS014-B23" type="button" class="act" data-testid="' + testid + '" onclick="bankChangeOpen()">' + bkbE(tx(label)) + '</button>';
+/** W15-18, W15-20 to W15-23, W15-27 · the band over the lines (bank-band.js, the same one the public demo paints): the account large, the period, the currency said once, "Right account?", three slim tiles, the lines to go and the progress bar.
+ *  Every figure is carried (bankFigures: the engine's BRS; the counts are the list's own rows). */
 function bankFinish() {
   const fig = bankFigures();
-  const part = (label, text, testId, sub, dir) =>
-    '<div class="bk-fig" data-testid="' + testId + '"><span class="bk-l">' + bkbE(tx(label)) + '</span><b>' + bkbE(text) + '</b>' + (sub ? '<span class="bk-sub">= ' + bkbE(sub) + '</span>' : '') + (dir ? '<span class="bk-sub" data-testid="bank-finish-dir">' + bkbE(dir) + '</span>' : '') + '</div>';
   const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs, BKB.tab !== 'brs') + '</div>';
   if (!fig)
     return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
-  return (
-    '<div class="bk-band' + (fig.nil ? ' bk-ok' : '') + '" data-testid="bank-finish" data-tied="' + fig.nil + '">' +
-    part('Statement', fig.statement, 'bank-finish-statement') +
-    part('Books', fig.books, 'bank-finish-books') +
-    part('Difference', fig.gap, 'bank-finish-diff', fig.parts, fig.dir) +
-    part('Unexplained', fig.unexplained, 'bank-finish-unexplained') +
-    acts + '</div>'
-  );
+  const P = BKB.parsed,
+    code = bkCur();
+  return CBBankBand.html({
+    tid: 'bank-finish',
+    account: bkbAcctName() || BKB.stmtAcct,
+    from: P.from, to: P.to, count: P.lines.length, currency: code,
+    change: '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
+    rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
+    actions: acts,
+    right: CBBankBand.rightAccount({
+      parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
+      booksOpening_minor: BKB.ledgerRaw ? BKB.ledgerRaw.opening_minor : null, accountNumber: bkbHeldNumber(), previous: bkbPreviousStatement()
+    }),
+    statement: fig.statement, books: fig.books, difference: fig.gap,
+    toGo: bkbCount('books'), inBooks: bkbCount('matched'), total: P.lines.length,
+    unexplained: fig.unexplained && /[1-9]/.test(fig.unexplained) ? fig.unexplained : '', nil: fig.nil
+  });
+}
+/**
+ * W15-24 · the BANK DETAILS of a bank account: bank, branch code and the LAST FOUR of the account number. Asked once, optional ("not given" stays unknown, never defaulted), and matched against a file that carries a number.
+ * Only the last four are kept, never the full number: that is all the match needs, and it is the form Australian banks themselves show (the Consumer Data Right banking standard's maskedNumber).
+ * The branch code is the country's own: AU a 6-digit BSB (allocated by AusPayNet), IN an IFSC, else a free branch code. Kept on THIS device for this shop and account (the books have no field for it yet: a server home needs
+ * an api field and a migration, which is the owner's decision), so another device or the adviser's seat does not see it until then.
+ * Figures cited from the walker's knowledge, not looked up in this round: cb-country to cite-check before a requirement is written.
+ */
+const BKB_BRANCH_WORDS = { AU: ['BSB', 'a 6-digit BSB, for example 062-000'], IN: ['IFSC code', 'an 11-character IFSC code'] };
+const bkbBranchWords = () => BKB_BRANCH_WORDS[bkbCountry()] || ['Branch code', 'the branch code, if your bank has one'];
+const bkbDetails = () => bkbLoad('acctdetails:' + (BKB.stmtAcct || BKB.acct), {}) || {};
+/** the account number the books hold for this bank account, masked ('****1234'), or '' when none is held */
+function bkbHeldNumber() {
+  const held = bkbDetails();
+  return held.last4 ? '****' + held.last4 : '';
+}
+function bankDetailsOpen() {
+  const held = bkbDetails(),
+    words = bkbBranchWords();
+  ui.dialog({
+    mount: 'BKS014-U04', pop: 'POP092',
+    titleText: tx('Bank details of this account'),
+    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    body: peField('bk_dbank', 'Bank', peInput('bk_dbank', held.bank, '', 'text', ' maxlength="60" autocomplete="off"')) +
+      peField('bk_dbranch', words[0], peInput('bk_dbranch', held.branch, tx('For example') + ' ' + (bkbCountry() === 'AU' ? '062-000' : ''), 'text', ' maxlength="20" autocomplete="off"')) +
+      peField('bk_dlast4', 'Last 4 digits of the account number', peInput('bk_dlast4', held.last4, '', 'text', ' maxlength="4" inputmode="numeric" autocomplete="off"')) +
+      '<div class="pe-note">' + bkbE(tx('Only the last four digits are kept, so a statement that carries the account number can be checked against this account. Nothing here is sent anywhere.')) + '</div><div id="bk_dout" class="pe-slot"></div>',
+    footerHtml: '<button data-cbsid="BKS014-B29" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B28" type="button" class="pri" data-testid="bank-details-save" onclick="bankDetailsSave()">' + bkbE(tx('Save')) + '</button>'
+  });
+}
+function bankDetailsSave() {
+  const bank = String(peVal('bk_dbank') || '').trim(),
+    branch = String(peVal('bk_dbranch') || '').trim(),
+    last4 = String(peVal('bk_dlast4') || '').trim(),
+    out = bkbEl('bk_dout');
+  const refuse = (words) => out && (out.innerHTML = '<div class="pe-bad" role="alert" data-testid="bank-details-bad">' + bkbE(tx(words)) + '</div>');
+  if (last4 && !/^[0-9]{4}$/.test(last4)) return refuse('The last four digits of the account number are four digits.');
+  if (branch && bkbCountry() === 'AU' && !/^[0-9]{3}-?[0-9]{3}$/.test(branch)) return refuse('A BSB is six digits, for example 062-000.');
+  bkbSave('acctdetails:' + (BKB.stmtAcct || BKB.acct), { bank, branch, last4 });
+  if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* the statement is checked again with the number */
+  closeModal();
+  if (typeof bkshPrime === 'function') bkshPrime().then(() => bankPaint()).catch((failure) => bkQuiet('bank-details', failure));
+  bankPaint();
+  toast(tx('Bank details kept.'));
 }
 const BKB_BRS_ITEMS = [
   ['Cheques issued, not yet presented', 'issued_not_presented'],
@@ -738,124 +778,87 @@ function bankBrsDownload() {
   if (BKB.brs && BKB.brs.ok) bkSaveCsv('bank-reconciliation-' + BKB.acct + '-' + BKB.brs.asOf + '.csv', bankBrsCsv(BKB.brs));
 }
 
+/** the page's rows for the shared list (bank-lines.js). A statement line takes the ONE standing the Add sheet's controller gives it (bkshItemOf: Ready to add or Needs you, the same split on every page); the rail's own state stays on `raw`.
+ *  A line already in the books is "In your books", one only in the books is "Not on the statement". */
+function bkbLineRows() {
+  const rows = BKB.rows.map((raw) => {
+    const item = typeof bkshItemOf === 'function' ? bkshItemOf(raw) : null,
+      group = bkbGroupOf(raw.status);
+    let row;
+    if (item) {
+      const result = BKSH.ctl.view().results[item.key];
+      row = CBBankLines.rowOfItem(item, result, CBBankPreview.standing(item, result));
+    } else row = { item: null, result: null, standing: '', narration: raw.narration || '', date: raw.date, out: !raw.in, amount_minor: raw.amount_minor, kind: '', gst: '', sure: '', look: false, status: raw.status === 'suggested' ? 'ready' : 'need' };
+    if (group === 'matched') row.status = 'in';
+    else if (group === 'bank') row.status = 'books';
+    return Object.assign(row, { id: raw.id, raw });
+  });
+  CBBankLines.markLookAlikes(rows);
+  return rows;
+}
+/** what opens under a line: the answers it asks (the sheet's controller, bank-preview-ui.js: what it looks like, Dr and Cr, the questions) and, under them, what the rail and the books say about it */
+function bkbLinePanel(row) {
+  const answers = row.item && BKB.ui && (row.status === 'need' || row.status === 'ready') ? BKB.ui.panel(row.item, row.result) : '';
+  return answers + bankNext(row.raw);
+}
+/** an answer was given under a line on this page: the band and the chips follow (the same controller), the open row and the filters stay, and after an answer the next line that needs one opens */
+function bkbAnswered(key, what) {
+  bkshPageFollows(); /* a "Same payment" answer moves the pairing: the page reads its engine again (a full paint) */
+  const slot = bkbEl('bk_bandslot');
+  if (slot) slot.innerHTML = bankFinish();
+  if (typeof bkshTodo === 'function') bkshTodo();
+  if (BKB.lines) {
+    BKB.lines.refresh();
+    if (what === 'answered') BKB.lines.openNext(key);
+  }
+}
+/** a rail action of a row, on the page's own row: the row carries the rail's state on `raw` */
+const bkbOnRaw = (item) => Object.assign({}, item, { when: item.when && ((row) => item.when(row.raw)), run: (row) => item.run(row.raw), why: item.why && ((row) => item.why(row.raw)) });
 function bankList() {
   const host = bkbEl('bkl_bank');
   if (!host) return;
-  const own = bkbMayAct(),
-    count = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
+  const own = bkbMayAct();
   const may = (BKB.rail && BKB.rail.may && BKB.rail.may.ask) || { ok: false, say: tx('Asking starts after an update') };
   const notices = [];
   if (BKB.rail && BKB.rail.failed)
     notices.push({ cls: 'warn', tid: 'bank-rail-failed', text: tx('Could not read what parties told you. Lines are matched to your books only.') });
-  CBList.reset && CBList.reset('bank');
-  CBList.mount(host, {
+  BKB.ui = typeof bkshPageUi === 'function' ? bkshPageUi(host, bkbAnswered) : null; /* the answers painter, on this list's host (null until the controller has read the file) */
+  BKB.lines = CBBankLines.mount(host, {
     key: 'bank',
-    defaultCols: ['status', 'line', 'out', 'in'] /* the list shows the first four by default; Told by and In your books are one tick away in Columns */,
-    foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu (the Ledgers head's fold) */,
-    t: tx,
-    rows: () =>
-      BKB.rows
-        .slice()
-        .sort((first, second) => BKB_ORDER.indexOf(first.status) - BKB_ORDER.indexOf(second.status) || String(first.date).localeCompare(String(second.date))),
-    id: (r) => r.id,
-    rowTid: (r) => 'bank-row-' + r.id,
-    head: () => ({
-      chips: BKB_GROUPS.map((item) => ({ tid: 'bank-group-' + item.key, text: tx(item.label) + ' ' + count(item.key) })),
-      notices
-    }),
-    columns: [
-      {
-        key: 'status',
-        label: tx('Status'),
-        prio: 1,
-        sort: 'status',
-        w: 150,
-        html: true,
-        cell: (r) => {
-          const chip = bkbChipOf(r);
-          return '<span class="step ' + chip[0] + '" data-testid="bank-chip-' + bkbE(r.id) + '" data-status="' + r.status + '">' + bkbE(tx(chip[1])) + '</span>';
+    rows: bkbLineRows,
+    panel: bkbLinePanel,
+    fmt: (minor) => bkbFig(minor),
+    tid: (r) => 'bank-row-' + r.id,
+    extra: {
+      head: () => ({ notices }),
+      wrapStatus: (row, icon) => '<span data-testid="bank-chip-' + bkbE(row.id) + '" data-status="' + bkbE(row.raw.status) + '">' + icon + '</span>' /* the rail's own state (Settled by chit · Party told us · …) stays readable on the row; the icon is the line's standing */,
+      columns: [
+        {
+          key: 'party',
+          label: tx('Told by'),
+          prio: 5,
+          w: 170,
+          html: true,
+          cell: (row) => {
+            const r = row.raw;
+            return r.chits && r.chits.length
+              ? bkbE(r.chits.map((item) => (item.party && item.party.name) || tx('A party')).filter((item, index, a) => a.indexOf(item) === index).join(', '))
+              : r.asked
+                ? bkbE(txf('Asked {party}', { party: (r.asked.party && r.asked.party.name) || tx('the party') }))
+                : '—';
+          }
+        },
+        {
+          key: 'entry',
+          label: tx('In your books'),
+          prio: 6,
+          sort: 'entry',
+          w: 170,
+          html: true,
+          cell: (row) => ((row.raw.books || []).length && row.raw.status !== 'check' ? '<span class="mono">' + bkbE(row.raw.books.map((item) => item.entry_no).join(', ')) + '</span>' : '—')
         }
-      },
-      {
-        key: 'line',
-        label: tx('Line'),
-        prio: 2,
-        sort: 'line',
-        w: 340,
-        html: true,
-        cell: (r) =>
-          '<div>' +
-          (typeof bkshPartyOf === 'function' && bkshPartyOf(r) ? '<b>' + bkbE(bkshPartyOf(r)) + '</b> <span style="color:var(--muted)">' + bkbE(r.narration || '') + '</span>' : bkbE(r.narration || '')) +
-          '</div><div style="color:var(--muted);font-size:var(--fs-1)">' +
-          bkbE(bkDate(r.date)) +
-          (r.ref ? ' · <span class="mono">' + bkbE(r.ref) + '</span>' : '') +
-          '</div>'
-      },
-      {
-        key: 'out',
-        label: tx('Out'),
-        prio: 3,
-        sort: 'amount',
-        num: true,
-        w: 120,
-        html: true,
-        cell: (r) => bkbAmountCell(r, true)
-      },
-      {
-        key: 'in',
-        label: tx('In'),
-        prio: 3,
-        num: true,
-        w: 120,
-        html: true,
-        cell: (r) => bkbAmountCell(r, false)
-      },
-      {
-        key: 'party',
-        label: tx('Told by'),
-        prio: 4,
-        w: 170,
-        html: true,
-        cell: (r) =>
-          r.chits && r.chits.length
-            ? bkbE(
-                r.chits
-                  .map((item) => (item.party && item.party.name) || tx('A party'))
-                  .filter((item, index, a) => a.indexOf(item) === index)
-                  .join(', ')
-              )
-            : r.asked
-              ? bkbE(txf('Asked {party}', { party: (r.asked.party && r.asked.party.name) || tx('the party') }))
-              : '—'
-      },
-      {
-        key: 'entry',
-        label: tx('In your books'),
-        prio: 5,
-        sort: 'entry',
-        w: 170,
-        html: true,
-        cell: (r) =>
-          (r.books || []).length && r.status !== 'check' ? '<span class="mono">' + bkbE(r.books.map((item) => item.entry_no).join(', ')) + '</span>' : '—'
-      }
-    ],
-    filters: [
-      {
-        key: 'group',
-        label: tx('Show'),
-        all: tx('All three'),
-        options: BKB_GROUPS.map((item) => ({ v: item.key, label: tx(item.label) })),
-        match: (r, v) => bkbGroupOf(r.status) === v
-      }
-    ],
-    search: (r) => [r.narration, r.ref, r.date, bkbStatus[r.status][1], bkbFig(r.amount_minor), (r.party && r.party.name) || ''].join(' '),
-    sorts: [
-      { key: 'date', label: tx('Date'), cmp: (a, b) => String(a.date).localeCompare(String(b.date)) },
-      { key: 'status', label: tx('Status'), cmp: (a, b) => BKB_ORDER.indexOf(a.status) - BKB_ORDER.indexOf(b.status) },
-      { key: 'amount', label: tx('Amount'), cmp: (a, b) => a.amount_minor - b.amount_minor }
-    ],
-    next: (r) => bankNext(r),
-    actions: [
+      ],
+      actions: [
       {
         id: 'accept',
         icon: '✓',
@@ -909,12 +912,10 @@ function bankList() {
         when: (r) => !!(r.sugg && r.sugg.rule === 'learned'),
         run: (r) => bankForget(r)
       }
-    ],
-    empty: { title: tx('Nothing in that file') }
+    ].map(bkbOnRaw)
+    }
   });
 }
-/** one money cell of the Out | In pair: the amount in the UI face, only in the column its side belongs to */
-const bkbAmountCell = (r, outSide) => (!r.in === outSide ? '<span style="font-family:var(--cl-ui);font-variant-numeric:tabular-nums">' + bkbE(bkbFig(r.amount_minor)) + '</span>' : '');
 const bankIsParty = (r) => !!(r.sugg && r.sugg.event && /^(payment_received|payment_made|cheque_dishonoured)$/.test(r.sugg.event.type));
 
 /* ── the actions: device marks (accept · undo · note), the ONE books writer (record), the rail (ask) ── */

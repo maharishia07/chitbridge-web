@@ -47,7 +47,11 @@ const CONTRAST_IN_PAGE = () => {
     const v = rgb.map((c) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4); });
     return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
   };
-  const parse = (css) => { const m = css.match(/[\d.]+/g).map(Number); return { rgb: m.slice(0, 3), a: m.length > 3 ? m[3] : 1 }; };
+  /* a computed colour is rgb(...) or, for a colour-mix() the list control uses for its zebra, color(srgb 0.9 0.9 0.9 / 1): channels 0 to 1 */
+  const parse = (css) => {
+    const wide = /^color\(/.test(css), m = css.replace(/^color\([a-z-]+/, '').match(/[0-9.]+/g).map(Number);
+    return { rgb: wide ? m.slice(0, 3).map((c) => c * 255) : m.slice(0, 3), a: m.length > 3 ? m[3] : 1 };
+  };
   const backdrop = (node) => {
     for (let n = node; n; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c.a > 0.9) return c.rgb; }
     return [255, 255, 255];
@@ -126,12 +130,19 @@ async function walkOne(browser, base, scheme, width, height, signedIn) {
   await context.close();
 }
 
-/** the counts that must agree: the chips, the sticky bar and the button all read one standing per line */
+/** the counts that must agree: the "Ready to add" chip, the ready icons on the rows and the button all read one standing per line (CHANGED ON PURPOSE, W15-15: the chips are the list's status chips; the sticky count text is gone) */
 async function countsAgree(page, tag, when) {
-  const chips = await page.locator('#bd_lines .bd-go-tag').count();
+  const chip = Number(((await page.textContent('[data-testid="bank-status-ready"]')).match(/([0-9]+)[ \t\r\n]*$/) || [])[1] || 0);
+  const icons = await page.locator('#bd_list [data-row] [data-state="ready"]').count();
   const button = (await page.getAttribute('#bd_add', 'data-ready')) || '0';
-  const bar = ((await page.textContent('#bd_count')).match(/(\d+) ready to add/) || [])[1] || '0';
-  check(String(chips) === button && button === bar, tag + ' ' + when + ': ' + chips + ' "Ready to add" chips = the button (' + button + ') = the bar (' + bar + ')');
+  check(String(icons) === button && button === String(chip), tag + ' ' + when + ': ' + icons + ' ready icons = the "Ready to add" chip (' + chip + ') = the button (' + button + ')');
+}
+/** open the row whose payee says this (CHANGED ON PURPOSE, W15-14: a line's answers open as a panel under it, one at a time); its panel is returned */
+async function openLine(page, words) {
+  const row = page.locator('#bd_list [data-row]', { hasText: words }).first();
+  if (!(await row.evaluate((node) => node.classList.contains('cbl-open')))) await row.click();
+  await page.waitForSelector('#bd_list .bd-openrow');
+  return page.locator('#bd_list .bd-openrow').first();
 }
 /** answer the page's one GST question: a radio segment on a wide screen, a menu on a phone */
 async function answerGst(page, value) {
@@ -159,21 +170,26 @@ async function signedOutStates(page, tag, width, shot, fits) {
   const phone = width < 700;
   const figs = await text('#bd_figs');
   check(figs.includes('18,280.75') && figs.includes('19,963.00') && figs.includes('1,682.25') && !/AUD \d/.test(figs), tag + ': frame 0: statement 18,280.75, books 19,963.00, difference 1,682.25 (the figures of the product for the October file), AUD not on a figure');
-  check((await page.locator('#bd_lines .bd-row').count()) === 12, tag + ': the twelve lines of the October file are listed');
-  check((await text('#bd_lines')).includes('2 Oct 2026') && (await text('#bd_lines')).includes('Invoice INV-1'), tag + ': dates read "2 Oct 2026" and an in-books line names the entry it matched');
+  check((await page.locator('#bd_list [data-row]').count()) === 12, tag + ': the twelve lines of the October file are listed in the one list');
+  check((await text('#bd_lines')).includes('8 Oct 2026') && /KENSINGTON/.test(await text('#bd_lines')) && (await openLine(page, 'KENSINGTON')) && (await text('#bd_lines .bd-openrow')).includes('Invoice INV-1'), tag + ': dates read "8 Oct 2026", the payee is as the bank wrote it, and an in-books line names the entry it matched when it opens (W15-13)');
+  check(/Business bank account/.test(figs) && /2 Oct to 31 Oct 2026 · 12 lines/.test(figs) && figs.includes('All amounts in Australian dollars (AUD)') && figs.includes('Right account?') && /10 lines to go/.test(figs) && /2 of 12 in your books/.test(figs), tag + ': the band names the account, the period and the lines, says the currency once, asks "Right account?" and counts "10 lines to go" with "2 of 12 in your books" (W15-18, W15-20 to W15-23, W15-27)');
+  check((await page.locator('#bd_list .cbl-vtab').count()) === 4 && (await page.locator('#bd_list [data-row] [data-state]').count()) === 12 && (await page.locator('#bd_list [data-row] [data-state]').first().getAttribute('aria-label')) !== null, tag + ': four status chips and a status ICON on every row, each with its name for a screen reader (W15-13, W15-15)');
   check(!(await page.locator('#bd_tabs, .bd-tabs').first().isVisible()) && !(await page.locator('#bd_gst').isVisible()), tag + ': no tabs and no setup question on the opening frame');
   await countsAgree(page, tag, 'at the start');
   await shot('30s-0-open');
-  const hasInvoiceQuestion = (await page.locator('[data-act=taxinvoice]').count()) > 0;
+  const hasInvoiceQuestion = (await page.locator('#bd_list [data-row]', { hasText: 'BUNNINGS' }).count()) > 0 && (await (await openLine(page, 'BUNNINGS')).textContent()).includes('needs a tax invoice');
   if (hasInvoiceQuestion) {
-    check((await text('#bd_lines')).includes('needs a tax invoice. Do you hold it?'), tag + ': Bunnings asks the tax-invoice question first, in the row');
+    check((await (await openLine(page, 'BUNNINGS')).textContent()).includes('needs a tax invoice. Do you hold it?'), tag + ': Bunnings asks the tax-invoice question first, in the panel under its line');
     await shot('30s-8-question');
-    await page.click('[data-act=taxinvoice][data-v=held]');
+    await page.click('#bd_list .bd-openrow [data-act=inv][data-v=held]');
     await countsAgree(page, tag, 'after "Yes, I hold it"');
   }
-  const newParty = page.locator('[data-act=newparty]');
-  if (await newParty.count()) {
-    await newParty.first().click();
+  const newParty = page.locator('#bd_list [data-act=resolve]');
+  if (await page.locator('#bd_list [data-row]', { hasText: 'PACIFIC' }).count()) {
+    const panel = await openLine(page, 'PACIFIC');
+    check((await panel.textContent()).includes('What is this?'), tag + ': a payee nobody knows asks "What is this?" in its panel, with the way to a new customer under "Someone or something else"');
+    await page.locator('#bd_list .bd-openrow [data-act=more]').first().click();
+    await page.locator('#bd_list .bd-openrow [data-act=resolve]').first().click();
     await countsAgree(page, tag, 'after "New customer"');
   }
   await fits('before the press');
@@ -193,7 +209,7 @@ async function signedOutStates(page, tag, width, shot, fits) {
   await fits('after the press');
   await shot('30s-20-added');
   const finished = (await page.locator('#bd_brs').isVisible()) && (await page.locator('.bd-tick').count()) > 0;
-  if (hasInvoiceQuestion && !(await page.locator('.bd-s-needs_you').count())) check(finished && (await text('#bd_brs')).includes('Reconciled') && (await text('#bd_figs')).includes('0.00'), tag + ': the last frame is the reconciliation statement with the green nil and the tick');
+  if (hasInvoiceQuestion && !(await page.locator('#bd_list [data-state="need"]').count())) check(finished && (await text('#bd_brs')).includes('Reconciled') && (await text('#bd_figs')).includes('0.00'), tag + ': the last frame is the reconciliation statement with the green nil and the tick');
   else check(!(await page.locator('.bd-tick').count()) || finished, tag + ': the report shows a tick only when nothing is left outside the books');
   if (!(await page.locator('#bd_brs').isVisible())) await page.evaluate(() => document.getElementById('bd_tab_brs').click());
   const report = await text('#bd_brs');
@@ -231,11 +247,11 @@ async function filesStates(page, tag, shot) {
   await loadWithCurrency(page, input, file('notes.csv', 'hello there'), tag, shot);
   await page.waitForSelector('#bd_lines .bd-problem');
   const lines = await page.textContent('#bd_lines');
-  check(/not a bank statement|which column/.test(lines) && !(await page.locator('#bd_lines .bd-row').count()), tag + ': a file that cannot be read says so in words, and the old statement is gone');
+  check(/not a bank statement|which column/.test(lines) && !(await page.locator('#bd_list [data-row]').count()), tag + ': a file that cannot be read says so in words, and the old statement is gone');
   check(!/preset|mapping/.test(lines), tag + ': no engine words ("preset", "mapping") on screen');
   await shot('11-bad-file');
   await loadWithCurrency(page, input, file('narrative.csv', NARRATIVE_CSV));
-  await page.waitForSelector('#bd_lines .bd-row, #bd_lines .bd-problem');
+  await page.waitForSelector('#bd_list [data-row], #bd_lines .bd-problem');
   if (await page.locator('[data-act=showmap]').count()) {
     await page.click('[data-act=showmap]');
     await page.waitForSelector('select[data-map]');
@@ -243,13 +259,19 @@ async function filesStates(page, tag, shot) {
     const pick = { date: 'Date', narration: 'Narrative', debit: 'Debit Amount', credit: 'Credit Amount', balance: 'Balance' };
     for (const field of Object.keys(pick)) await page.selectOption('select[data-map=' + field + ']', pick[field]);
     await page.click('[data-act=readmap]');
-    await page.waitForSelector('#bd_lines .bd-row');
+    await page.waitForSelector('#bd_list [data-row]');
   }
-  check((await page.locator('#bd_lines .bd-row').count()) >= 2, tag + ': a file whose heading says "Narrative" is read (by the engine or through the column map), its lines are listed');
+  check((await page.locator('#bd_list [data-row]').count()) >= 2, tag + ': a file whose heading says "Narrative" is read (by the engine or through the column map), its lines are listed');
   await shot('13-own-file');
   await loadWithCurrency(page, input, file('harbour.csv', fs.readFileSync(path.join(__dirname, 'fixtures', 'harbour-oct-2026.csv'), 'utf8')));
-  await page.waitForSelector('#bd_lines .bd-row');
+  await page.waitForSelector('#bd_list [data-row]');
   await shot('14-harbour-file');
-  const sampleText = await page.textContent('#bd_lines');
+  /* CHANGED ON PURPOSE (W15-12, W15-13): a closed line is the icon, the date, the payee and the amount; what it looks like is the first thing in its opened panel (R69 still holds: the same words as the owner sheet) */
+  let sampleText = '';
+  for (const words of ['TRANSFER TO SAVINGS', 'ATO PAYMENT']) {
+    const panel = await openLine(page, words);
+    sampleText += ' ' + (await panel.textContent());
+    await page.locator('#bd_list [data-row]', { hasText: words }).first().click();
+  }
   check(/Looks like a transfer to your own account\. Which one\?/.test(sampleText) && /Looks like tax paid to the tax office\./.test(sampleText) && !/New (supplier|customer): (Savings|Ato|Card)/i.test(sampleText), tag + ': l16-bank-rules (R69, the same words as the owner sheet): the savings transfer and the ATO payment say what they look like, no new supplier made of a bank word');
 }

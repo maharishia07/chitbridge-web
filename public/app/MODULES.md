@@ -103,7 +103,6 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `bank-demo-ask.js` | — | bank-demo-ask.js — the "What is this?" panel, the confirm popup's lines and the column map of public/bank-demo.html (split from bank-demo.js) |
 | `bank-demo-files.js` | — | bank-demo-files.js — a file the visitor loads into public/bank-demo.html, and the one question it needs first: which currency is it in? (B5-05) |
 | `bank-demo-report.js` | — | bank-demo-report.js — the books-after table, the bank reconciliation statement and the three cards (nothing loaded yet, lines added, a file that could |
-| `bank-demo-rows.js` | — | bank-demo-rows.js — one statement line of public/bank-demo.html: its row, what it says about itself and the question it asks (split from bank-demo.js) |
 | `bank-demo-sample.js` | — | bank-demo-sample.js — the sample of public/bank-demo.html: Harbour Plumbing Pty Ltd, October 2026, twelve statement lines and the books they are check |
 | `bank-demo.js` | — | bank-demo.js — the page script of public/bank-demo.html (the no-login Bank-to-books showcase). External, because the page's CSP allows no inline scrip |
 | `bank-preview-check.js` | — | bank-preview-check.js — THE STATEMENT CHECK for public/app/bank-preview.js: "is this the right statement?" asked BEFORE any line is worked |

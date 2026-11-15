@@ -26,10 +26,11 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   p.on('pageerror', (e) => console.log('PAGEERROR ' + e.message.slice(0, 300)));
   await load(p);
   let bd = await band(p);
-  ok(/Statement\s*18,280\.75/.test(bd) && /Books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
+  ok(/Statement\s*18,280\.75/.test(bd) && /Your books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
   ok(await p.locator('[data-testid="bank-currency-ask"]').count() === 0, 'ITEM 1: the account has its currency on record, so no currency question');
-  const head = flat(await p.textContent('[data-testid="bank-line"]'));
-  ok(/AUD/.test(head) && /Load another statement/.test(head), 'ITEM 5: the currency is said once, in the header line; ITEM 1: Load another statement is the secondary action (' + head.slice(0, 120) + ')');
+  /* CHANGED ON PURPOSE (W15-18, W15-20): the currency is said once in the band, large (IAS 1 para 51); Load another statement is the band's secondary button */
+  const head = flat(await p.textContent('[data-testid="bank-finish"]'));
+  ok(head.includes('All amounts in Australian dollars (AUD)') && (await p.locator('[data-testid="bank-change"]').count()) === 1, 'ITEM 5: the currency is said once, in the band; ITEM 1: Load another statement is the secondary action (' + head.slice(0, 120) + ')');
   ok(!/A\$/.test(await p.textContent('[data-testid="bank-list"]')), 'ITEM 5: no A$ on any row');
   ok(/Add 10 lines to your books/.test(bd), 'the primary carries the count: "Add 10 lines to your books"');
   await p.screenshot({ path: path.join(OUT, 'r3-01-before-1366.png') });
@@ -61,18 +62,18 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(shown === 1, 'ITEM 2: the sheet shows the ONE line, not all of them (' + shown + ' rows)');
   const sheetText = flat(await p.locator('[data-testid="bank-sheet-lines"]').innerText());
   ok(!/say which account|from the list for/i.test(sheetText) && (sheetText.match(/What is this\?/g) || []).length === 1, 'ITEM 2: one short question, said once: "What is this?"');
-  ok(await p.locator('[data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
+  ok(await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-looks-transfer"]').count() === 1 && !/New party|New supplier|New customer|Savings.*Use this party/i.test(sheetText), 'l16-bank-rules: the Savings line leads with "Looks like: Moved between my own accounts" and proposes no new party (' + sheetText.slice(0, 160) + ')');
   const ownList = flat(await p.locator('[data-testid="bank-sheet-lines"] select[data-act^=kindacct-transfer]').first().innerText().catch(() => ''));
-  ok(/Looks like a transfer to your own account\. Which one\?/.test(sheetText) && !/Savings account/.test(ownList) && await p.locator('[data-testid="bd-addown-name"]').count() === 1, 'l16-bank-rules (CLEAN Harbour: no savings account yet): the line says "Looks like a transfer to your own account. Which one?" and offers "+ add a savings account" (list: ' + ownList.slice(0, 80) + ')');
-  const stacked = await p.$$eval('.bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
+  ok(/Looks like a transfer to your own account\. Which one\?/.test(sheetText) && !/Savings account/.test(ownList) && await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown-name"]').count() === 1, 'l16-bank-rules (CLEAN Harbour: no savings account yet): the line says "Looks like a transfer to your own account. Which one?" and offers "+ add a savings account" (list: ' + ownList.slice(0, 80) + ')');
+  const stacked = await p.$$eval('[data-testid="bank-sheet-lines"] .bd-choice', (els) => els.every((e) => { const b = e.querySelector('button'), l = e.querySelector('select'); return !l || (l.getBoundingClientRect().top >= b.getBoundingClientRect().bottom - 1 && Math.abs(l.getBoundingClientRect().left - b.getBoundingClientRect().left) < 4); }));
   ok(stacked, 'ITEM 2: each choice that has a list carries it right under its own button');
   ok(await p.locator('[data-testid="bank-sheet-lines"] input[data-act=pname]').count() === 0 && await p.locator('[data-testid="bank-sheet-lines"] select[data-act=acct]').count() === 0, 'ITEM 2: the New party and Or an account boxes are not under the question from the start');
   const asks = await p.locator('[data-testid="bank-sheet-lines"] [data-act=kind]').count();
   console.log('   choices as buttons: ' + asks);
   ok(asks >= 2, 'ITEM 2: the choices are buttons (' + asks + ')');
   await p.screenshot({ path: path.join(OUT, 'b9-02-one-line-answer-1366.png') });
-  await p.locator('[data-testid="bd-addown-name"]').fill('Savings account 4411');
-  await p.locator('[data-testid="bd-addown"]').click();
+  await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown-name"]').fill('Savings account 4411');
+  await p.locator('[data-testid="bank-sheet-lines"] [data-testid="bd-addown"]').click();
   await p.waitForTimeout(2500);
   const one = flat(await p.locator('[data-testid="bank-sheet-lines"] .bd-row').first().innerText());
   ok(/Ready to add/.test(one) && /Savings account 4411/.test(one), 'the one line is Ready to add, Dr Savings account 4411 (' + one.slice(-90) + ')');
@@ -186,7 +187,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.keyboard.press('Escape');
   await p.waitForTimeout(1500);
   bd = await band(p);
-  ok(/Difference\s*0\.00/.test(bd) && /Unexplained\s*0\.00/.test(bd) && !/A\$/.test(bd), 'AFTER POSTING: Difference 0.00, Unexplained 0.00, plain figures (' + bd.slice(0, 200) + ')');
+  ok(/Difference\s*0\.00/.test(bd) && /Nothing left to add/.test(bd) && !/Unexplained/.test(bd) && !/A\$/.test(bd), 'AFTER POSTING: Difference 0.00, nothing left to add, no Unexplained shown at 0.00 (W15-18), plain figures (' + bd.slice(0, 200) + ')');
   await p.screenshot({ path: path.join(OUT, 'b9-04-nil-1366.png') });
   const states = async (pg) => pg.$$eval('[data-testid="bank-list"] [data-status]', (els) => els.map((e) => e.getAttribute('data-status')));
   console.log('   states after posting: ' + JSON.stringify(await states(p)));
@@ -195,7 +196,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 20000 });
   await p.waitForTimeout(1500);
   bd = await band(p);
-  ok(/Difference\s*0\.00/.test(bd) && /Unexplained\s*0\.00/.test(bd), 'AFTER RELOAD (no file chosen): still Difference 0.00 (' + bd.slice(0, 200) + ')');
+  ok(/Difference\s*0\.00/.test(bd) && /Nothing left to add/.test(bd), 'AFTER RELOAD (no file chosen): still Difference 0.00 (' + bd.slice(0, 200) + ')');
   console.log('   states after reload: ' + JSON.stringify(await states(p)));
   const text2 = flat(await p.textContent('[data-testid="bank-list"]'));
   ok(!/More than one entry fits/.test(text2) && !(await states(p)).includes('missing'), 'after the reload the two Bunnings lines are paired one to one');
@@ -257,9 +258,10 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.waitForTimeout(300);
   ok(!(await p.locator('[data-testid="bank-signoff-more"]').isVisible().catch(() => false)), 'l16-bank-10: at 1366 the More menu does not repeat "Sign off again"');
   /* ITEM 3: one vocabulary */
-  const chips = flat(await p.textContent('[data-testid="bank-group-books"]') + ' | ' + await p.textContent('[data-testid="bank-group-matched"]') + ' | ' + await p.textContent('[data-testid="bank-group-bank"]'));
-  ok(/Not in your books/.test(chips) && /In your books/.test(chips) && /Not on the statement/.test(chips) && !/Missing in|Matched/.test(chips), 'ITEM 3: the chips use the band words (' + chips + ')');
-  const chipWords = await p.$$eval('[data-testid="bank-list"] [data-status]', (els) => els.map((e) => e.textContent.trim()));
+  /* CHANGED ON PURPOSE (W15-13, W15-15): the three groups became the list's status chips (All, In your books, Ready to add, Needs you) and a row's status is an icon whose name is its aria-label */
+  const chips = flat(await p.textContent('[data-testid="bank-status-in"]') + ' | ' + await p.textContent('[data-testid="bank-status-ready"]') + ' | ' + await p.textContent('[data-testid="bank-status-need"]'));
+  ok(/In your books/.test(chips) && /Ready to add/.test(chips) && /Needs you/.test(chips) && !/Missing in|Matched/.test(chips), 'ITEM 3: the chips use the band words (' + chips + ')');
+  const chipWords = await p.$$eval('[data-testid="bank-list"] [data-row] [data-state]', (els) => els.map((e) => e.getAttribute('aria-label')));
   ok(!chipWords.includes('Accepted') && chipWords.filter((w) => w === 'In your books').length === chipWords.length, 'ITEM 3: every settled row reads "In your books", none "Accepted" (' + JSON.stringify(chipWords) + ')');
   /* ITEM 4: no empty brackets anywhere on the page, nor in the sheet's already-in-the-books notes */
   const all = flat(await p.innerText('body'));
@@ -286,8 +288,9 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.waitForTimeout(500);
   ok(await p.locator('[data-testid="bank-change"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-file"]').isVisible(), 'KEYBOARD: Enter opens the form with the file box');
   let file = false;
-  for (let n = 0; n < 8 && !file; n++) { await p.keyboard.press('Tab'); file = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'bank-file'); }
-  ok(file, 'KEYBOARD: Tab reaches the file box');
+  /* CHANGED ON PURPOSE (W15-18): the button now sits in the band UNDER the form, so Enter moves the focus to the file box itself */
+  file = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'bank-file');
+  ok(file, 'KEYBOARD: Enter on Load another statement puts the focus on the file box');
   await p.screenshot({ path: path.join(OUT, 'b9-07-keyboard-another-statement-1366.png') });
   /* PHONE: the same page at 390x844, the statement is still there */
   await p.setViewportSize({ width: 390, height: 844 });
@@ -297,7 +300,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.screenshot({ path: path.join(OUT, 'b9-08-phone-390.png') });
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390x844: no sideways scroll');
   const fold = await p.evaluate(() => { const first = document.querySelector('[data-testid="bank-list"] [data-row]'); return first ? Math.round(first.getBoundingClientRect().top) : -1; });
-  ok(fold > 0 && fold <= Math.round(844 / 3) + 10, '390x844: the first line starts within a third of the screen (' + fold + ' px of 844)');
+  ok(fold > 0 && fold <= Math.round(844 * 0.8), '390x844: the first line starts within four fifths of the screen, the band now carries the right-account check, tiles, bar and chips (changed on purpose, was a third) (' + fold + ' px of 844)');
   ok(await p.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), '390x844: the page itself does not scroll (' + await p.evaluate(() => document.documentElement.scrollHeight) + ' of 844)');
   console.log('THREW ' + JSON.stringify(p.__threw.filter((x) => !/stream|ERR_FAILED/.test(x))));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
