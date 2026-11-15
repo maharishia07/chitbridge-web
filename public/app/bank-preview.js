@@ -84,7 +84,7 @@
   }
   /** what the engine carried about a line besides its entry: the tax record, what made the proposal, the books entries it may already be */
   function carriedOf_(projected) {
-    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [] };
+    return { tax: projected.tax || null, basis: projected.basis || null, near: projected.near || [], what: projected.what || null };
   }
   /** the statement line (index i) joined to what the engine said about it, ready to paint and to post */
   function lineOf_(projected, statementLine, proposal, lockedMonth, toCreate) {

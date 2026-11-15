@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-recon · sha256 8417eb327137c9866c3fafb0ab4e80862255e559c329837d568e4641b4bd31e4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · bank-recon · sha256 a58c48f3d1f71a23c0b69ddc3b0f2ab734f0aa37f6a0d29e3dc483225b6145c1 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
@@ -1210,6 +1210,11 @@
   }
   /** the answer for an unexplained line, with the party it would be — only when the caller handed in its parties (opt-in: no caller's answer changes): a payee who is no party yet is PROPOSED new (never created here), near names listed first */
   function withNewParty_(answer, situation) {
+    var not = Array.isArray(situation.options.parties) && bankEntry_().notAParty(situation.text, { rules: situation.rules, out: situation.out, has: hasWord_ });
+    if (not) {
+      answer.what = not; /* l16-bank-rules: the pack's own words say it is no payee (own account, tax office, card payout): proposed as that answer, never as a new party */
+      return answer;
+    }
     var party = Array.isArray(situation.options.parties) && bankEntry_().newParty(situation.line, { out: situation.out, parties: situation.options.parties, ownWords: bankWords_(situation.pack) });
     if (party) answer.party = party;
     return answer;
@@ -1219,7 +1224,17 @@
    * B5-01: a PARTY is tried before the words ("SMITH LEGAL PROFESSIONAL FEE" is a payment to Smith, not a bank charge); a proposal that only the words made is never ready on its own (see basisOf_).
    */
   function ruleSuggestion_(situation) {
-    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation));
+    return learnedSuggestion_(situation) || openItemSuggestion_(situation) || partySuggestion_(situation) || (situation.out ? debitWordSuggestion_(situation) : creditWordSuggestion_(situation)) || notAPartySuggestion_(situation);
+  }
+  /**
+   * l16-bank-rules: a narration the pack's own words call a tax-office payment or a card settlement is no supplier or customer: it is PROPOSED as that answer of bank-entry.whatIsThis (tax paid against the tax head, card takings into the card account),
+   * composed by the one answer path (eventOfAnswer), never a new party. Words only, so it waits for the person's tick like any word-made proposal. Opt-in like the party proposal: only when the caller handed in its parties.
+   */
+  function notAPartySuggestion_(situation) {
+    var not = Array.isArray(situation.options.parties) && bankEntry_().notAParty(situation.text, { rules: situation.rules, out: situation.out, has: hasWord_ });
+    if (!not || not.kind === 'transfer') return null;
+    var made = bankEntry_().eventOfAnswer({ kind: not.kind }, situation.out, situation.pack, situation.options);
+    return made.event ? situation.base(made.event, 'not_a_party', 'medium', 'narration says "' + not.word + '"' + (not.kind === 'tax_payment' ? ' — tax paid to the tax office' : ' — card takings paid to the bank'), { what: not }) : null;
   }
   /** BR1: a rule a person taught (learn()) is tried first — still only a PROPOSAL, shown with where it came from */
   function learnedSuggestion_(situation) {
@@ -1379,6 +1394,7 @@
       if (extra.tax.tax_minor > 0 && !extra.tax.basis) res.needs = 'gst_basis'; /* cash or accrual is in no pack: the owner says once, never defaulted */
       else if (taxInvoiceUnanswered_(extra.tax)) res.needs = 'tax_invoice'; /* B5-03: the credit waits for the person's word on the tax invoice */
     }
+    if (extra && extra.what) res.what = extra.what; /* l16-bank-rules: the pack's words said what the line is (tax_payment · card_settlement) */
     if (extra && extra.source !== undefined) {
       res.source = extra.source;
       res.learned_id = extra.learned_id;
@@ -2041,6 +2057,7 @@
     };
     Object.keys(keywords).forEach(function (bank) {
       Object.keys(keywords[bank] || {}).forEach(function (item) {
+        if (bankEntry_().NOT_A_PARTY_CATEGORIES.indexOf(item) >= 0) return; /* ATO, EFTPOS, SAVINGS can name who a taught rule is for: only these words say the line is no payee, they are not the bank's own filler */
         (keywords[bank][item] || []).forEach(addWords);
       });
     });
