@@ -10,8 +10,8 @@
 'use strict';
 /** the Bank view's own state (cap-bank.js declares BKB; this file reads it through one door) */
 const bkshBook = () => BKB;
-/** the signed-in role, or null before a login is known */
-const bkshRole = () => (typeof SESSION !== 'undefined' && SESSION ? SESSION.role : null);
+/** the shop's own login (the page's isOwner: a co-assist is not the owner); false where the page has none */
+const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
 const BKSH = { ctl: null, ui: null, taxRegistered: null, posting: false };
 /** the engine parts the sheet needs, or null when the page did not load them */
 function bkshEngine() {
@@ -52,8 +52,7 @@ function bkshTaxRegisteredFor(answer) {
 }
 /** who is signed in, as the post adapter reads it: the shop's own login is the owner */
 function bkshSignedIn() {
-  const role = bkshRole();
-  return { role: role === 'entity' ? 'owner' : role || 'unknown' };
+  return { role: bkshIsOwner() ? 'owner' : 'other' };
 }
 /** the books account the statement is for */
 function bkshStatementAccount() {
@@ -167,6 +166,6 @@ async function bankSheetOpen() {
 }
 /** the Add button over the lines (owner only: POST /events is the owner's); the sheet then shows every line with what it needs */
 function bankSheetButton() {
-  if (!bkshBook().text || (bkshRole() && bkshRole() !== 'entity')) return '';
+  if (!bkshBook().text || !bkshIsOwner()) return '';
   return '<div class="pe-note"><button data-cbsid="BKS014-B18" type="button" class="pri" data-testid="bank-sheet-open" onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button> ' + bkbE(tx('Lines your books lack, with what each needs.')) + '</div>';
 }
