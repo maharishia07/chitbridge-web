@@ -5118,19 +5118,19 @@ function bkLockRowsPaint() {
         esc(tx(BK_PERIOD_WORD[st] || st)) +
         '</td><td data-testid="lk-figs-' +
         p +
-        '" class="num">' +
-        (x && x.entries ? esc(String(x.entries)) : '—') +
-        '</td><td class="num">' +
-        (x && x.sales_minor ? bkMoney(x.sales_minor) : '—') +
-        '</td><td>' +
+        '" class="num lk-ent">' +
+        esc(String((x && x.entries) || 0)) +
+        '</td><td class="num lk-sales">' +
+        (x && x.sales_minor ? bkMoney(x.sales_minor) : esc(tx('No sales'))) +
+        '</td><td class="lk-act">' +
         b +
-        (b ? ' ' + bkLockNote(x, p, may, why) : '') +
+        (b ? (may ? '' : '<span class="lk-why" data-testid="lk-why-' + p + '" style="color:var(--grey);font-size:var(--fs-1)" title="' + esc(tx(why) + (x && x.return && !x.return.closed ? ' ' + txf('{form} {label} not closed yet', { form: x.return.form, label: x.return.label }) : '')) + '">' + esc(tx(why)) + '</span>') : '') +
         '</td></tr>'
       );
     })
     .join('');
   el.innerHTML =
-    '<style>.lk-box{max-height:calc(100vh - 340px);min-height:160px;overflow:auto}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
+    '<style>@media(max-width:620px){.lk-t thead{display:none}.lk-t,.lk-t tbody{display:block}.lk-t tr{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}.lk-t td,.lk-t th{padding:0!important}.lk-t .lk-ent{display:none}.lk-t .lk-act{grid-column:1 / -1}.lk-t .lk-sales{text-align:right}}.lk-why{display:inline-block;vertical-align:middle;margin-left:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}@media(max-width:620px){.lk-why{display:block;margin:2px 0 0;max-width:100%}}.lk-box{max-height:calc(100vh - 340px);min-height:160px;overflow:auto}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
     '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
     tx('Month') +
     '</th><th>' +
