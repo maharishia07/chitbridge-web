@@ -2091,7 +2091,8 @@ function c2SpendHTML(reply, header, delivery) {
           delivery_summary: delivery,
           line_delivery: reply.line_delivery,
           line_assignment: reply.line_assignment,
-          order_billed: reply.order_billed /* W36: "Not billed yet" on an order */
+          order_billed: reply.order_billed /* W36: "Not billed yet" on an order */,
+          _status: header.current_status /* a cancelled or rejected bill shows Mark paid disabled (chitNoPayWhy reads it) */
         }) +
         '</div>'
       : '';

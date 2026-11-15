@@ -41,4 +41,21 @@ for (const st of ['pending', 'delivered', 'read', 'accepted', 'in_progress', 'pa
 assert.deepStrictEqual(['cancelled', 'rejected', 'completed', 'pending'].map((s) => globalThis.CBSheet.isDead(s)), [true, true, false, false]);
 /* the two seams stay stamped: the testid on the button, one list in the sheet */
 assert(!/\['cancelled', ?'rejected'\]/.test(fnSource('chitNoPayWhy') + fnSource('chitMarkPaidButton')), 'no second status list in app.html');
+/* design 2 (cap-chit2.js c2SpendHTML) hands chitSpendStrip a chit-shaped object: it must carry the status, so the dead bill is disabled there too */
+const c2src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app', 'cap-chit2.js'), 'utf8');
+const c2at = c2src.indexOf('\nfunction c2SpendHTML(');
+assert(c2at > 0, 'c2SpendHTML is in cap-chit2.js');
+const c2rest = c2src.slice(c2at + 1);
+let handed = null;
+globalThis.C2 = { id: 'c1' };
+globalThis.billTotalOf = () => 100;
+globalThis.billNoticeHTML = () => '';
+globalThis.c2CostHidden = () => false;
+globalThis.chitSpendStrip = (c) => { handed = c; return chitMarkPaidButton(c, c.amt); };
+eval(c2rest.slice(0, c2rest.search(/\n(?:\/\*\*|async function |function )/)) + '\nglobalThis.c2SpendHTML = c2SpendHTML;');
+for (const st of ['cancelled', 'rejected']) {
+  const html = c2SpendHTML({}, { current_status: st, summary_json: {} }, null);
+  assert(handed._status === st && /aria-disabled="true"/.test(html) && !/onclick=/.test(html), 'design 2 ' + st + ': Mark paid disabled');
+}
+assert(/onclick="chitMarkPaid\('c1', 100\)"/.test(c2SpendHTML({}, { current_status: 'pending', summary_json: {} }, null)), 'design 2 open bill: live');
 console.log('chit-mark-paid-dead: ok');
