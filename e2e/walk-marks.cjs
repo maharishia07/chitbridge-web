@@ -60,7 +60,7 @@ W.run('marks', async (w) => {
     }
     if (/^\/api\/marks\/[^/]+\/messages$/.test(p)) {
       const id = Object.keys(S.marks).filter((k) => S.marks[k].thread_id === p.split('/')[3])[0], mk = id && mark(id, h);
-      if (m === 'GET') return J(r, 200, { thread_id: THREAD, adopter: 'acc.audit', subject_id: id, subject_label: 'JV-0002', mark: mk, history: [], messages: S.msgs.filter((x) => x.qseq === S.qseq), actions: acts(h) });
+      if (m === 'GET') return J(r, 200, { thread_id: THREAD, adopter: 'acc.audit', subject_id: id, subject_label: 'JV-0002', mark: mk, history: [], messages: S.msgs.filter((x) => x.qseq === S.qseq).map((x) => Object.assign({}, x, { mine: !auditor(h) })), actions: acts(h) });
       const b = JSON.parse(q.postData() || '{}'); S.replies.push({ b, h });
       if (auditor(h)) return J(r, 403, { code: 'MARK_REPLY_NOT_ALLOWED', message: 'Only the owner and the adviser answer a question.' });
       const msg = { message_id: 'm' + S.msgs.length, sender_display_name: 'Fixture Owner', message_text: b.message_text, msg_type: 'info', created_at: DAY(0), mine: true, qseq: S.qseq };
@@ -162,7 +162,7 @@ W.run('marks', async (w) => {
     return { ok: /Checked/.test(checked) && /Question from Harbour Audit/.test(query) && !/^Query/.test(query) && ghosts === 0, saw: checked + ' · ' + query + ' · check chips ' + ghosts };
   });
   await w.step('O1b', 'the owner · W15-25: the queried row has a coloured bar on its LEFT edge; "Waiting for you · 1" shows only the Query still waiting for his answer; pressed again it shows all', async () => {
-    const bar = await page.evaluate((id) => { const h = document.querySelector('[data-mark*="' + id + '"]'), r = h && h.closest('.cbl-row'); return r ? { cls: r.className, shadow: getComputedStyle(r).boxShadow } : null; }, E[1]);
+    const bar = await page.evaluate((id) => { const h = document.querySelector('[data-mark*="' + id + '"]'), r = h && h.closest('.cbl-row,.cbl-lrec'); return r ? { cls: r.className, shadow: getComputedStyle(r).boxShadow } : null; }, E[1]);
     const chipTxt = await txt(T('mk-chip-waiting'));
     await page.click(T('mk-chip-waiting')); await page.waitForTimeout(400);
     const rowsOn = await page.locator('[data-mark] button[data-mk]').count(), pressed = await page.getAttribute(T('mk-chip-waiting'), 'aria-pressed'); await shot('06c-owner-waiting-filter');

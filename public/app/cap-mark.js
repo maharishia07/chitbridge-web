@@ -131,7 +131,7 @@
     '.mk-out{font-size:var(--fs-1,12px);min-height:1em}.mk-out[data-tone=error]{color:var(--disp,#8E3517);font-weight:700}.mk-out[data-tone=ok]{color:var(--ok-2,#16693F);font-weight:700}' +
     '.mk-why{font-size:var(--fs-1,12px);color:var(--grey,#5E594D)}' +
     '.mk-n{display:none}' +
-    '.cbl .cbl-row.mk-wait{box-shadow:inset 5px 0 0 var(--blue,#1f5fa8)}.cbl .cbl-row.mk-answered{box-shadow:inset 5px 0 0 var(--line,#DDD6C6)}' +
+    '.cbl .cbl-row.mk-wait,.cbl .cbl-lrec.mk-wait{box-shadow:inset 5px 0 0 var(--blue,#1f5fa8)}.cbl .cbl-row.mk-answered,.cbl .cbl-lrec.mk-answered{box-shadow:inset 5px 0 0 var(--line,#DDD6C6)}' +
     '@media (max-width:700px){.mk-ghost .mk-w{display:none}.mk-ghost .mk-n{display:inline}.mk{min-width:44px;min-height:44px;justify-content:center;padding:3px 8px}.mk-act{flex:1 1 40%}dialog.mk-sheet{margin:0;width:100vw;max-width:100vw;max-height:100dvh;border-radius:0}dialog.mk-sheet[open]{height:100dvh}}';
   var cssDone = false;
   function addCss() {
