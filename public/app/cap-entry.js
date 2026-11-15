@@ -26,8 +26,7 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' },
-    booksActionPrepare: { m: 'POST', p: '/api/books-actions' } /* ACC-176b: an adviser PREPARES a journal for the owner to accept; nothing is posted */
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions' } /* ACC-176b: an adviser PREPARES, nothing is posted */
   });
 }
 
@@ -1052,14 +1051,11 @@ async function enSave(btn) {
 /** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
 async function enSaveWrite() {
   EN.saving = true;
-  var body = enBody();
-  body.client_ref = EN.ref;
+  var body = enBody(); body.client_ref = EN.ref;
   if (EN.photo) body.attachment = EN.photo;
   try {
-    var reply = enActingAdviser() ? await enPrepare(body) : await api('booksEventPost', { body: body });
-    EN.saved = reply || {};
-    EN.saving = false;
-    EN.ref = null;
+    var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
+    EN.saved = reply || {}; EN.saving = false; EN.ref = null;
     if (!EN.saved.prepared) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
@@ -1070,21 +1066,8 @@ async function enSaveWrite() {
     enPaint2();
   }
 }
-/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, it never posts */
-function enActingAdviser() {
-  var acting = typeof CBBooksActing !== 'undefined' && CBBooksActing.current();
-  return !!acting && acting.role === 'adviser';
-}
-/** an adviser's Save: POST /api/books-actions { store_id, kind: 'journal', body, client_ref, working_month }; the journal's date is required, the owner accepts and only then it posts */
-async function enPrepare(body) {
-  if (body.event !== 'journal') throw new Error(tx('An adviser prepares journals. Pick Journal.'));
-  if (!body.date) throw new Error(tx('Give the journal its date.'));
-  var journal = Object.assign({}, body);
-  delete journal.event;
-  delete journal.client_ref;
-  var made = await api('booksActionPrepare', { body: CBBooksActing.body({ kind: 'journal', body: journal, client_ref: body.client_ref, working_month: bkToday().slice(0, 7) }) });
-  return Object.assign({ prepared: true }, made);
-}
+/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, it never posts (CBBooksActing is loaded only by the pages that act) */
+function enActingAdviser() { return typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser(); }
 /** after a save: the Day book, the Books to-do and the opener (R106: Payables) are told — a painter that fails is logged, the save stands */
 function enSavedTell(saved) {
   try {
@@ -1098,7 +1081,7 @@ function enSavedTell(saved) {
 }
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
-  if (EN.saved.prepared) return enPaintPrepared(body, acts);
+  if (EN.saved.prepared) return CBBooksActing.paintPrepared(body, acts, EN.saved, tx, esc);
   var s = EN.saved,
     no = s.entry_no || s.no || '';
   body.innerHTML =
@@ -1121,15 +1104,6 @@ function enPaintSaved(body, acts) {
     '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' +
     esc(tx('Done')) +
     '</button>';
-}
-
-/** the screen after an adviser's Save: prepared, not posted */
-function enPaintPrepared(body, acts) {
-  var s = EN.saved;
-  body.innerHTML =
-    '<h3 data-testid="en-prepared"><span class="en-ok">✓</span> ' + esc(tx('Prepared, waiting for review')) + '</h3><div data-testid="en-prepared-ref" class="en-chip">' + esc(s.client_ref || '') + '</div>' +
-    '<div class="en-why" style="border:0;margin-top:10px">' + esc(tx('A colleague reviews it, then the owner accepts. Nothing is posted yet.')) + '</div>';
-  acts.innerHTML = '<button data-cbsid="CMP004" class="en-btn pri" data-testid="en-done" onclick="enClose()">' + esc(tx('Done')) + '</button>';
 }
 
 /* ── Reverse this entry: a plain confirm, then the mirror entry (insert-only) ── */
