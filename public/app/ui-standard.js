@@ -362,7 +362,7 @@ var CBUiStandard = (function () {
     ['bookfield', 'CMP040-I01 text, I02 date, I03 tick, T01 free text'], ['bookselect', 'CMP041-S01 select'], ['bookaction', 'CMP042-B01..B23 the books commands, P01 row tools'],
     ['booktab', 'CMP043-K01 tab, K02 ledger tree item'], ['booklink', 'CMP044-C01 day bills, C02 chit, C03 reversal'],
     ['field', 'CMP055-I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text (ui.field; CMP040 and CMP045 are aliases)'],
-    ['select', 'CMP056-S01 select (ui.select; CMP035 and CMP041 are aliases)'], ['figure', 'CMP060-D01 figure card: a label, one figure with its currency, an optional progress line', 'CBLabKit.figure (lab-kit.js)'], ['badge', 'CMP061-D01 initials badge: a named payee\'s initials on one of six tints, or a category icon', 'CBLabKit.badge (lab-kit.js)']
+    ['select', 'CMP056-S01 select (ui.select; CMP035 and CMP041 are aliases)'], ['figure', 'CMP060-D01 figure card: a label, one figure with its currency, an optional progress line', 'CBLabKit.figure (lab-kit.js)'], ['badge', 'CMP061-D01 initials badge: a named payee\'s initials on one of six tints, or a category icon', 'CBLabKit.badge (lab-kit.js)'], ['statusicon', 'CMP064-D01 status icon: the state of a list row as one shape (tick, dot, ring), its word always there for a screen reader', 'CBLabKit.statusIcon (lab-kit.js)']
   ];
   function listRows() {
     return LIST_ROWS.map(function (entry) {

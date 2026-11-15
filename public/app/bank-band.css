@@ -1,0 +1,33 @@
+/* bank-band.css — the band over a bank statement (app/bank-band.js): the demo, the owner's Bank page and the adviser's seat share it. Tokens only, light and dark. */
+.bb{display:flex;flex-direction:column;gap:8px;margin:0 0 10px}
+.bb-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.bb .bb-name{margin:0;font-size:20px;line-height:1.2;font-weight:700;color:var(--ink,#1d1b16)}
+.bb-period{font-size:14px;color:var(--ink,#1d1b16)}
+.bb-cur{margin-left:auto;font-size:14px;font-weight:700;color:var(--ink,#1d1b16)}
+.bb-acts{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bb-right{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding:7px 12px;font-size:13.5px;background:var(--green-t,#e8f4ed);border:1px solid var(--green-b,#a9d3bc);border-radius:10px;color:var(--ink,#1d1b16)}
+.bb-chk{white-space:nowrap}
+.bb-sum{display:none}
+.bb-ok{color:var(--green-d,#0d4a2b)}
+.bb-none{color:var(--amber-i,var(--ask-i,#7a5205))}
+.bb-bad{color:var(--bad-i,#8e3517);font-weight:600}
+.bb-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.bb-tiles .lk-fig{min-width:0}
+.bb-go{font-size:15px;font-weight:700;color:var(--amber-i,var(--ask-i,#7a5205));text-align:right}
+.bb-nil .bb-go{color:var(--green-d,#0d4a2b)}
+.bb-progress{display:flex;align-items:center;gap:12px}
+.bb-progress .lk-bar{flex:1}
+.bb-pnote{font-size:13px;color:var(--muted,#5e594d);white-space:nowrap}
+@media (max-width:700px){
+  .bb-tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .bb-tiles .lk-fig-line{flex-direction:column;align-items:flex-start;gap:0;padding:4px 8px}
+  .bb-tiles .lk-fig-l{font-size:10px}
+  .bb-tiles .lk-fig-v{font-size:15px}
+  .bb-sum{display:inline}
+  .bb-chk.bb-ok{display:none}
+  .bb-cur{margin-left:0;flex-basis:100%}
+  .bb-right{gap:2px 12px;font-size:13px}
+  .bb-go{text-align:left}
+}
+/* the status chips of the bank lines (the list's own views): they wrap, never scroll sideways */
+.cbl[data-cbl^="bank"] .cbl-views{flex-wrap:wrap;overflow:visible}

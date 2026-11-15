@@ -32,7 +32,10 @@
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
     askPanel = null,
-    rowPainter = null,
+    lines = null /* the one list of statement lines: CBBankLines on CBList (W15-12) */,
+    addBtn = null /* the Add button: it sits in the band while a statement shows, in the bar when none does */,
+    ui = null /* the answers under a line: CBBankPreviewUI, the same painter the owner's Bank page uses */,
+    matchedNames = {} /* which entry of the books each line matched, in the entry's words */,
     files = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
@@ -139,30 +142,10 @@
     return counts;
   }
   /* ── the payee and the badge of a line ── */
-  var GENERIC_PAYEE = /^(customer|supplier|unknown payer|card settlement.*|atm.*)$/i;
-  var CATEGORY_ICONS = [
-    [/origin|energy|electric|power/i, 'bolt'],
-    [/telstra|phone|mobile|optus|internet/i, 'phone'],
-    [/\bato\b|tax office|taxation/i, 'gov'],
-    [/fee|interest|bank/i, 'bank'],
-    [/atm|cash|withdraw/i, 'cash'],
-    [/card|settlement|eftpos/i, 'card'],
-    [/rent/i, 'home']
-  ];
   /** who a line is: the party the books matched when there is one, else the statement's own words exactly as written (never re-cased) */
   function payeeOf(item) {
     var named = item.party && item.party.name && item.party.status === 'existing' ? item.party.name : '';
     return named || String(item.line.narration || '').trim() || 'This line';
-  }
-  function badgeOf(item) {
-    var words = item.line.narration + ' ' + payeeOf(item),
-      icon = null;
-    CATEGORY_ICONS.forEach(function (rule) {
-      if (!icon && rule[0].test(words)) icon = rule[1];
-    });
-    var payee = payeeOf(item);
-    if (!icon && GENERIC_PAYEE.test(payee)) icon = 'who';
-    return '<span class="bd-lk-badge">' + labKit.badge(icon ? { icon: icon } : { name: payee }) + '</span>';
   }
   /** the account a ready line is proposed to, from the entry the engine composed: its non-bank lines, "Electricity · tax included" or "Bank fees · no tax" */
   function accountOf(item) {
@@ -174,14 +157,26 @@
   function figures(model) {
     var recon = model.projection && model.projection.brs,
       counts = countsOf(model),
-      open = model.items.length - counts.in - counts.posted;
-    if (!recon) return void (el('bd_figs').hidden = true);
-    var closed = preview.minorOf(recon.difference_before) === 0 && !open;
+      total = model.items.length,
+      inBooks = counts.in + counts.posted,
+      parsed = model.parsed;
+    if (!recon) return void (placeAdd(false), (el('bd_figs').hidden = true));
+    var fmt = function (minor) { return amountText({ amount_minor: minor, currency: CURRENCY }); };
     el('bd_figs').hidden = false;
-    el('bd_figs').innerHTML =
-      labKit.figure({ label: 'Statement', value: amountText(recon.closing_statement) }) +
-      labKit.figure({ label: 'Your books', value: amountText(recon.closing_books_before) }) +
-      labKit.figure({ label: 'Difference', value: amountText(recon.difference_before).replace(/^-/, ''), good: closed, note: closed ? 'Reconciled to the statement of ' + dateWords(recon.statement_date || lastDate(model)) : plural(open, 'line', 'lines') + ' to go' });
+    el('bd_figs').innerHTML = root.CBBankBand.html({
+      account: ACCOUNT, from: parsed.from, to: parsed.to, count: total, currency: CURRENCY,
+      right: root.CBBankBand.rightAccount({ parsed: parsed, check: model.check, fmt: fmt, currency: CURRENCY, statementCurrency: CURRENCY, accountNumber: '', previous: null }),
+      statement: amountText(recon.closing_statement), books: amountText(recon.closing_books_before), difference: amountText(recon.difference_before).replace(/^-/, ''),
+      actions: '<span id="bd_addslot"></span>',
+      toGo: total - inBooks, inBooks: inBooks, total: total, nil: preview.minorOf(recon.difference_before) === 0 && total === inBooks, tid: 'bd-band'
+    });
+    placeAdd(true);
+  }
+  /** the Add button belongs to the band (beside the account's name) while a statement shows, else to the bar under the header */
+  function placeAdd(inBand) {
+    var slot = inBand && el('bd_addslot');
+    (slot || el('bd_bar')).appendChild(addBtn);
+    el('bd_bar').hidden = !!slot;
   }
   function lastDate(model) {
     var dates = model.items.map(function (item) { return item.line.date; }).sort();
@@ -228,23 +223,30 @@
     });
     return names;
   }
-  /** the payee, with the date (shown on a phone only) and the bank's own words under it */
-  function whoCell(item) {
-    var line = item.line;
-    return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + (payeeOf(item) === String(line.narration || '').trim() ? '' : esc(line.narration)) + '</span></span></span>';
+  /** the open row of a line: what the engine says it is, the entry it would make and the answers it asks (bank-preview-ui.js), or, for a line already in the books, the entry it matched */
+  function panelOf(row) {
+    if (row.standing === 'in') return '<div class="bd-openrow" data-testid="bd-panel"><p class="bd-looks-line"><b>Already in your books</b></p><div class="bd-sub"><span class="bd-why">' + esc(matchedNames[row.item.i] || '') + '</span></div></div>';
+    return ui.panel(row.item, row.result);
   }
   function paintLines(model, names) {
-    var rows = model.items
-      .map(function (item) {
-        return rowPainter.lineRow(item, model.results, names[item.i]);
-      })
-      .join('');
-    el('bd_lines').innerHTML =
-      report.successCard(added) +
-      '<div class="bd-colh" role="presentation"><span>Date</span><span>Payee and what the bank says</span><span class="bd-m">Spent (AUD)</span><span class="bd-m">Received (AUD)</span><span>In your books?</span></div>' +
-      '<ul class="bd-list">' + rows + '</ul>';
+    matchedNames = names;
+    if (!el('bd_list')) {
+      el('bd_lines').innerHTML = '<div id="bd_added"></div><div id="bd_list" class="bd-listhost"></div>';
+      lines = null;
+    }
+    el('bd_added').innerHTML = report.successCard(added);
+    if (!lines)
+      lines = root.CBBankLines.mount(el('bd_list'), {
+        key: 'bank-demo',
+        rows: function () { return root.CBBankLines.rowsOfModel(controller.view()); },
+        panel: panelOf,
+        fmt: function (minor) { return amountText({ amount_minor: minor, currency: CURRENCY }); }
+      });
+    else lines.refresh();
   }
   function paintEmpty() {
+    lines = null;
+    placeAdd(false);
     ['bd_figs', 'bd_gst'].forEach(function (id) { el(id).hidden = true; });
     el('bd_sub').textContent = '';
     el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? askPanel.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
@@ -254,20 +256,14 @@
     paintView();
   }
   function paintBar(model) {
-    var addButton = el('bd_add'),
-      count = el('bd_count');
+    var addButton = addBtn;
     if (!model) {
       addButton.disabled = true;
       addButton.textContent = 'Nothing ready to add';
-      count.textContent = '';
       return;
     }
     var counts = countsOf(model),
       readyCount = controller.readyCount();
-    var parts = ['<b>' + (counts.in + counts.posted) + '</b> already in your books', '<b>' + counts.ready + '</b> ready to add'];
-    if (counts.wait) parts.push('<b>' + counts.wait + '</b> ' + (counts.wait === 1 ? 'waits' : 'wait') + ' for your GST answer');
-    parts.push('<b>' + counts.need + '</b> ' + (counts.need === 1 ? 'needs' : 'need') + ' you');
-    count.innerHTML = parts.join(' \u00b7 ');
     addButton.hidden = !readyCount && !counts.need && !counts.wait; /* everything is in the books: no dead button */
     addButton.disabled = !readyCount;
     addButton.setAttribute('data-ready', String(readyCount));
@@ -285,7 +281,7 @@
     el('bd_msg').textContent = model.parsed && model.refusal ? plainRefusal(model.refusal) : msg;
     if (!model.parsed) return paintEmpty();
     loadRefusal = null;
-    el('bd_sub').textContent = 'Statement to ' + dateWords(lastDate(model)) + ' \u00b7 all amounts in ' + CURRENCY + (gstFact ? ' \u00b7 tax counted on an accrual basis (sample books)' : '');
+    el('bd_sub').textContent = gstFact ? 'Tax counted on an accrual basis (sample books)' : ''; /* the period and the currency are the band's */
     figures(model);
     paintCheck();
     gstStrip(model);
@@ -318,6 +314,7 @@
   /** the slot #bd_check is left for the statement check (web #718's bank-preview-check.js and bank-preview-ui.js, engines #146): refuse, confirm, already done; it clears here when a file is loaded */
   function loadStatement(text, name) {
     el('bd_check').hidden = true;
+    lines = null; /* a new file: the list starts again (no filter or open row of the old one) */
     warnings = [];
     var said = controller.load(text, name);
     if (said.ok) {
@@ -365,7 +362,7 @@
         view = counts.need + counts.wait ? 'lines' : 'brs';
         paint();
       });
-    }, { okLabel: 'Add ' + plural(controller.readyCount(), 'entry', 'entries'), cancelLabel: 'Not now', className: 'bd-wide', onClose: function () { return el('bd_add'); } });
+    }, { okLabel: 'Add ' + plural(controller.readyCount(), 'entry', 'entries'), cancelLabel: 'Not now', className: 'bd-wide', onClose: function () { return addBtn; } });
   }
   /** what the files module asks of the page: refuse a file, wait for its currency, or read it (a visitor's own file has no sample basis) */
   function refuseFile(why) {
@@ -408,22 +405,11 @@
       view = 'lines';
       added = null;
       paint();
-      var next = askPanel.firstNeedKey(),
-        node = next && doc.querySelector('[data-key="' + next + '"]');
-      if (node) node.focus();
+      if (lines) lines.openNext(''); /* the first line that needs an answer opens */
       return true;
     },
     print: function () { root.print(); return true; },
     reset: function () { startAgain(); return true; },
-    taxinvoice: function (target, key) { controller.invoice(key, target.getAttribute('data-v')); },
-    tick: function (target, key) { controller.tick(key); },
-    notmatch: function (target, key) { controller.notMatch(key); },
-    newparty: function (target, key) {
-      var one = itemOf(key);
-      if (one && one.party && preview.asWritten(one) !== one.party.name) controller.editParty(key, { name: preview.asWritten(one), kind: one.party.kind }); /* the party made carries the statement's own letters, as the button said */
-      var said = controller.resolveLine(key);
-      setMessage(said.ok ? '' : said.why);
-    },
     retry: function () {
       loadRefusal = null;
       paintEmpty();
@@ -439,13 +425,16 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')] || files.actions[target.getAttribute('data-act')];
+    if (target.closest(".bd-openrow")) return; /* an answer under a line is the answers painter's (bank-preview-ui.js), which repaints through onAnswered */
+    var handler = ACTIONS[target.getAttribute('data-act')] || files.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
-  function onChange(event) {
-    var action = event.target.getAttribute && event.target.getAttribute('data-act');
-    if (action === 'pname' || action === 'pkind') askPanel.editPayee(event.target);
+  /** an answer under a line was given (or asked about): everything that reads the lines is painted again, and after an answer the next line that needs one opens */
+  function onAnswered(key, what) {
+    added = null;
+    paint();
+    if (what === 'answered' && lines) lines.openNext(key);
   }
   /** what the other modules of the page may use: the page's own readers and painters, never its state */
   function hostFor() {
@@ -453,7 +442,7 @@
       doc: doc, el: el, labKit: labKit, preview: preview, CURRENCY: CURRENCY, ACCOUNT: ACCOUNT, controller: function () { return controller; },
       itemOf: itemOf, paint: paint, standing: standing, countsOf: countsOf, payeeOf: payeeOf, accountOf: accountOf, nameOf: nameOf, chartOf: chartOf, whatIsThis: whatIsThis,
       refuseFile: refuseFile, waitForFile: waitForFile, loadOwn: loadOwn, say: function (words) { setMessage(words); paint(); },
-      CHIPS: CHIPS, whoCell: whoCell, nameOf: nameOf, tag: tag,
+      CHIPS: CHIPS, nameOf: nameOf, tag: tag,
       amountText: amountText, plural: plural, tag: tag, dateWords: dateWords, lastDate: lastDate,
       onResolved: function () {
         added = null;
@@ -469,17 +458,20 @@
   }
   function start() {
     mountHeader();
+    addBtn = el('bd_add');
     askPanel = root.CBBankDemoAsk.create(hostFor());
-    rowPainter = root.CBBankDemoRows.create(hostFor());
     files = root.CBBankDemoFiles.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
+    ui = root.CBBankPreviewUI.mount({
+      host: el('bd_lines'), controller: function () { return controller; }, currency: CURRENCY, country: COUNTRY, amountText: amountText, accountName: nameOf,
+      only: function () { return ''; }, say: function (words) { setMessage(words || ''); }, changed: onAnswered
+    });
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_file', 'bd_file2'].forEach(function (id) { el(id).addEventListener('change', function (event) { toggleMore(false); files.onFile(event); }); });
     el('bd_more').addEventListener('click', function () { toggleMore(el('bd_menu').hidden); });
-    el('bd_add').addEventListener('click', askToPost);
+    addBtn.addEventListener('click', askToPost);
     doc.addEventListener('click', onClick);
-    doc.addEventListener('change', onChange);
     doc.addEventListener('keydown', function (event) { if (event.key === 'Escape') toggleMore(false); });
     startAgain();
   }

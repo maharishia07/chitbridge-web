@@ -1132,7 +1132,7 @@
     return t;
   }
   function fopts(f) {
-    return (f.options || []).map(function (x) {
+    return (typeof f.options === 'function' ? f.options() || [] : f.options || []).map(function (x) {
       return typeof x === 'object' ? x : { v: x, label: x };
     });
   }
@@ -1487,6 +1487,16 @@
     });
     return ok;
   }
+  /** every filter key some view of the list sets */
+  function viewKeys(inst) {
+    var keys = [];
+    ((inst.o.views && inst.o.views.items) || []).forEach(function (view) {
+      Object.keys(view.filt || {}).forEach(function (item) {
+        if (keys.indexOf(item) < 0) keys.push(item);
+      });
+    });
+    return keys;
+  }
   function viewOn(inst, view) {
     var a = inst.r.filt,
       b = view.filt || {},
@@ -1497,6 +1507,13 @@
     var sameOwn = list.every(function (item) {
       return a[item] === b[item];
     });
+    if (inst.o.views && inst.o.views.merge)
+      /* views.merge: the tabs are one more filter, not a replacement of them all: a tab is lit when ITS keys hold (the tab with none is lit when no tab's key is set) */
+      return list.length
+        ? sameOwn
+        : !viewKeys(inst).some(function (item) {
+            return a[item];
+          });
     return view.rows
       ? list.length > 0 && sameOwn
       : ka.length === list.length && sameOwn; /* a view with its own rows stays lit while its filters are in force (its country filter may change) */
@@ -1554,6 +1571,7 @@
           '"' +
           (item.tip ? ' title="' + esc(T(I, item.tip)) + '"' : '') +
           '>' +
+          (item.iconHtml || '') +
           esc(T(I, item.label)) +
           ' <span class="n">' +
           n +
@@ -1639,6 +1657,9 @@
       esc(T(I, 'Filters')) +
       '</h4>' +
       (I.o.filters || [])
+        .filter(function (item) {
+          return !(typeof item.hide === 'function' && item.hide()); /* a filter with nothing to choose among (no line has the fact) is not offered */
+        })
         .map(function (item) {
           return (
             '<div class="f"><span id="cbl-fl-' +
@@ -2491,7 +2512,11 @@
     var R = I.r;
     R.hl = id;
     if (R.allOpen) R.open[id + '#closed'] = !R.open[id + '#closed'];
-    else R.open[id] = !R.open[id];
+    else {
+      var wasOpen = !!R.open[id];
+      if (I.o.oneOpen) R.open = {}; /* oneOpen: a list whose next level is a working panel (an answer to give) keeps ONE row open; opening another closes the first */
+      R.open[id] = !wasOpen;
+    }
     var keep = I.el.querySelector('.cbl-list'),
       top = keep ? keep.scrollTop : 0;
     paintList(I);
@@ -2712,10 +2737,22 @@
         return x.key === b.getAttribute('data-view-tab');
       })[0];
       if (vw) {
-        R.filt = {};
-        Object.keys(vw.filt || {}).forEach(function (item) {
-          R.filt[item] = vw.filt[item];
-        });
+        if (o.views.merge) {
+          /* views.merge: only the tab's own keys change; the lit tab pressed again is "all" (its keys go), every other filter stays in force */
+          var wasLit = viewOn(list, vw);
+          viewKeys(list).forEach(function (item) {
+            delete R.filt[item];
+          });
+          if (!wasLit)
+            Object.keys(vw.filt || {}).forEach(function (item) {
+              R.filt[item] = vw.filt[item];
+            });
+        } else {
+          R.filt = {};
+          Object.keys(vw.filt || {}).forEach(function (item) {
+            R.filt[item] = vw.filt[item];
+          });
+        }
         list.pop = null;
         resetLimit(list);
         paintAll(list);

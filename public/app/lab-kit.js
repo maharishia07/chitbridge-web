@@ -343,7 +343,7 @@
     return '<span class="lk-bd lk-bd-' + tintOf(opts.name) + '" data-cbsid="CMP061-D01" aria-hidden="true">' + escapeText(letters) + '</span>';
   }
   /* ── CMP060 FIGURE CARD: a label, one big figure and (optional) a progress line. The figure arrives as text the caller made with the ONE money formatter (its currency in it, CUR-1);
-        the bar is the existing .lk-bar (CMP021 family), never a second one. opts: { label, value (text), note, done, total, good } ── */
+        the bar is the existing .lk-bar (CMP021 family), never a second one. opts: { label, value (text), note, done, total, good, line (label and figure on ONE line: the slim tile of the Bank band), loud (the one figure that asks for attention: amber) } ── */
   function figure(opts) {
     var bar = '';
     if (opts.total) {
@@ -351,10 +351,29 @@
       bar = '<div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + opts.total + '" aria-valuenow="' + opts.done + '" aria-label="' + escapeText(opts.note || '') + '"><i style="width:' + percent + '%"></i></div>';
     }
     return (
-      '<div class="lk-fig' + (opts.good ? ' lk-fig-good' : '') + '" data-cbsid="CMP060-D01"><span class="lk-fig-l">' + escapeText(opts.label) + '</span><b class="lk-fig-v">' + escapeText(opts.value) + '</b>' +
+      '<div class="lk-fig' + (opts.good ? ' lk-fig-good' : '') + (opts.line ? ' lk-fig-line' : '') + (opts.loud ? ' lk-fig-loud' : '') + '" data-cbsid="CMP060-D01"><span class="lk-fig-l">' + escapeText(opts.label) + '</span><b class="lk-fig-v">' + escapeText(opts.value) + '</b>' +
       bar + (opts.note ? '<span class="lk-progress-line">' + escapeText(opts.note) + '</span>' : '') + '</div>'
     );
   }
 
-  root.CBLabKit = { badge: badge, figure: figure, tintOf: tintOf, LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, groupBy: groupBy, more: more, popup: popup, confirm: confirm, promise: promise };
+  /* ── CMP064 STATUS ICON: the state of a list row as ONE small icon, never a word on every row (Athi 15 Nov, W15-13). The shape says it without colour: a tick = settled, a filled dot = ready,
+        a ring = needs you, a tick in a ring = just answered. The word is always there for a screen reader (.lk-sr) and as the tooltip, so the icon is never the only carrier of the meaning.
+        statusIcon({ status: 'in'|'ready'|'need'|'done'|'books', name }) → html ── */
+  var STATUS_ICONS = {
+    in: '<path d="M5 12.5 10 17.5 19 7"/>',
+    ready: '<circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>',
+    need: '<circle cx="12" cy="12" r="6"/>',
+    done: '<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5 11 15l4.5-5.5"/>',
+    books: '<path d="M6 7h12M6 12h12M6 17h8"/>'
+  };
+  function statusIcon(opts) {
+    var shape = STATUS_ICONS[opts.status] || STATUS_ICONS.need,
+      name = escapeText(opts.name || '');
+    return (
+      '<span class="lk-st lk-st-' + escapeText(STATUS_ICONS[opts.status] ? opts.status : 'need') + '" data-cbsid="CMP064-D01" data-status="' + escapeText(opts.status || '') + '" title="' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      shape + '</svg><span class="lk-sr">' + name + '</span></span>'
+    );
+  }
+
+  root.CBLabKit = { badge: badge, figure: figure, statusIcon: statusIcon, tintOf: tintOf, LABS: LABS, MORE_AT: MORE_AT, plain: plain, addWords: addWords, notSetUp: notSetUp, reason: reason, tag: tag, progress: progress, groups: groups, readiness: readiness, groupBy: groupBy, more: more, popup: popup, confirm: confirm, promise: promise };
 })(typeof window !== 'undefined' ? window : globalThis);

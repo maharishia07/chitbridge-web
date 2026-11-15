@@ -16,6 +16,7 @@
 <meta name="referrer" content="no-referrer">
 <title>Bank to books demo · ChitBridge</title>
 <link rel="stylesheet" href="/app/lab-kit.css">
+<link rel="stylesheet" href="/app/bank-band.css">
 <link rel="stylesheet" href="/app/bank-demo.css">
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/ibm-plex-sans-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
@@ -40,9 +41,8 @@
     </div>
   </div>
 </header>
-<section id="bd_figs" class="bd-figs" aria-label="Totals" data-testid="bd-sum" aria-live="polite"></section>
+<section id="bd_figs" class="bd-figs" aria-label="The statement and the books" data-testid="bd-sum"></section>
 <div id="bd_bar" class="bd-bar" data-cbsid="BKS017-F01">
-  <span id="bd_count" class="bd-count" data-testid="bd-count"></span>
   <button data-cbsid="BKS017-B02" id="bd_add" type="button" class="bd-btn bd-go" data-testid="bd-add" disabled>Nothing ready to add</button>
 </div>
 <div id="bd_check" class="bd-check" role="status" hidden data-testid="bd-check" data-cbsid="BKS017-N03"></div>
@@ -76,12 +76,15 @@
 <script src="/engine/bank-entry.js"></script>
 <script src="/engine/bank-recon.js"></script>
 <script src="/engine/bank-project.js"></script>
+<script src="/app/list-ctl.js"></script>
 <script src="/app/lab-kit.js"></script>
 <script src="/app/bank-preview.js"></script>
+<script src="/app/bank-preview-ui.js"></script>
+<script src="/app/bank-band.js"></script>
+<script src="/app/bank-lines.js"></script>
 <script src="/app/bank-demo-sample.js"></script>
 <script src="/app/bank-demo-ask.js"></script>
 <script src="/app/bank-demo-report.js"></script>
-<script src="/app/bank-demo-rows.js"></script>
 <script src="/app/bank-demo-files.js"></script>
 <script src="/app/bank-demo.js"></script>
 </body>

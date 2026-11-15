@@ -99,7 +99,8 @@
     }
     /** B5-01: only the words on the bank line proposed this, no rule you taught and no party you know: it is added only when you say it is right */
     function tickBox(item) {
-      return '<span class="bd-ask">' + escapeHtml(preview.looksLike(item) || 'Suggested from the words on the statement.') + '</span> <button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
+      var said = preview.looksLike(item);
+      return (ctx.inPanel && said ? '' : '<span class="bd-ask">' + escapeHtml(said || 'Suggested from the words on the statement.') + '</span> ') + '<button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
     }
     function basisQuestion() {
       return (
@@ -149,7 +150,12 @@
       var reason = item.state === 'needs_you' && !asked && !item.what ? '<span class="bd-why">' + escapeHtml(/^no rule matched$/i.test(item.why || '') ? 'Nothing here says who or what this is.' : item.why || 'Nothing here says who or what this is.') + '</span>' : '';
       return entryNote(item) + asked + (others ? ' ' + others : '') + reason + sayBox(item);
     }
-    Object.assign(ctx, { taxKindBox, askedBox, sayBox, lineNote });
+    /** the engine's own reason for a proposal as one sentence ("narration says \"X\" — card takings paid to the bank" is the engine's; a line it could not read says what to do) */
+    function sentenceOf(item) {
+      if (!item.what && /^no rule matched$/i.test(item.why || '')) return 'Nothing here says who or what this is.';
+      return String(item.why || '').replace(/^narration says "[^"]*" — /i, 'Looks like ');
+    }
+    Object.assign(ctx, { taxKindBox, askedBox, sayBox, lineNote, sentenceOf });
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
@@ -214,7 +220,7 @@
           return choice.id !== 'expense' && choice.id !== 'other_income' && (choice.side === 'both' || choice.side === (out ? 'out' : 'in'));
         })
         .sort(function (left, right) { return (right.id === said) - (left.id === said); })
-        .map(function (choice) { return (choice.id === said ? '<span class="bd-ask bd-looks" data-testid="bd-looks-' + escapeHtml(choice.id) + '">' + escapeHtml(preview.looksLike(item) || 'Looks like:') + '</span>' : '') + choiceHtml(choice, key); });
+        .map(function (choice) { return (choice.id === said && !ctx.inPanel ? '<span class="bd-ask bd-looks" data-testid="bd-looks-' + escapeHtml(choice.id) + '">' + escapeHtml(preview.looksLike(item) || 'Looks like:') + '</span>' : '') + choiceHtml(choice, key); });
       if (choices.length && !ctx.opened[item.key]) choices.push('<span class="bd-choice"><button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="more" data-key="' + key + '">Someone or something else</button></span>');
       return choices.length ? '<span class="bd-party"><span class="bd-ask">What is this?</span><span class="bd-choices">' + choices.join('') + '</span></span>' : '';
     }
@@ -322,6 +328,17 @@
       opened: ctx.opened,
       state: ctx,
       skipBox: ctx.skipBox,
+      /** the OPEN ROW of one line (W15-14), for any list that draws the line: what it looks like, the entry it would make (Dr and Cr), and the answer controls it asks (the same boxes the sheet's table rows use) */
+      panelHtml: function (item, result) {
+        ctx.inPanel = true; /* the sentence is the panel's headline: the boxes under it do not say it again */
+        var key = ctx.escapeHtml(item.key),
+          said = preview.looksLike(item) || (item.state === 'proposed' || item.state === 'needs_you' ? ctx.sentenceOf(item) : ''),
+          kind = result ? '' : ctx.kindBox(item),
+          boxes = result ? '' : kind + (kind && !ctx.opened[item.key] ? '' : ctx.partyBox(item) + ctx.accountBox(item)) + (item.resolveWhy ? ctx.tag('bad', item.resolveWhy) : '');
+        var note = ctx.lineNote(item, result);
+        ctx.inPanel = false;
+        return '<div class="bd-openrow" data-line="' + key + '" data-testid="bd-panel">' + (said ? '<p class="bd-looks-line"><b>' + ctx.escapeHtml(said) + '</b></p>' : '') + '<div class="bd-sub">' + boxes + note + '</div></div>';
+      },
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
       /** the statement-lines table (or ONE line of it when the host answers a single line) with the boxes above it */
@@ -426,7 +443,7 @@
    *   cfg.currency · cfg.country · cfg.addedWords (what an added line says)
    *   cfg.amountText(money)  optional: the host's own money text; the default is moneyText ("AUD 2,200.00")
  *   cfg.entry(key)  the one step of a line the sheet cannot finish: opens its entry (the host's business); cfg.entryWords its button's words
- *   cfg.say(words)  where a refusal is shown                      cfg.changed()  called after every answer, so the host paints its other panes
+ *   cfg.say(words)  where a refusal is shown                      cfg.changed(key, 'answered'|'asked')  called after every answer, so the host paints its other panes
    */
   function mount(cfg) {
     var paintLines = painter(cfg);
@@ -440,13 +457,14 @@
       if (!act) return;
       var key = target.getAttribute('data-key'),
         said = act(key, target);
-      if (!/^(open|group|more)$/.test(target.getAttribute('data-act'))) paintLines.state.shown = ''; /* an answer was given: the next line that needs one opens */
+      var answered = !/^(open|group|more)$/.test(target.getAttribute('data-act'));
+      if (answered) paintLines.state.shown = ''; /* an answer was given: the next line that needs one opens */
       if (said && said.ok === false && said.line) {
         paintLines.says[key] = said.why; /* the message stays ON THE LINE with its one step, never at the top of the sheet */
         cfg.say('');
       } else if (said && said.ok === false) cfg.say(said.why);
       else cfg.say('');
-      cfg.changed();
+      cfg.changed(key, answered && !(said && said.ok === false) ? 'answered' : 'asked');
     }
     /** the press a person would make, made for them */
     function pressing(act, key) {
@@ -473,6 +491,8 @@
         host.innerHTML = paintLines.linesHtml(model);
       },
       skipBox: paintLines.skipBox,
+      /** the open row's html for one controller item (the host's list draws the row; this is what opens under it) */
+      panel: paintLines.panelHtml,
       chosenFor: chosenFor
     };
   }

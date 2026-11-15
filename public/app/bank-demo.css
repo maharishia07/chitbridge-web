@@ -22,11 +22,7 @@ body{display:flex;flex-direction:column;background:var(--page,#fcfaf5);color:var
 .bd-file input{width:1px;height:1px;opacity:0;position:absolute}
 .bd-file:focus-within{outline:3px solid var(--accent,#1f5f5b);outline-offset:2px}
 /* the three figure cards (CMP056) */
-.bd-figs{flex:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:4px 24px}
-.bd-figs .lk-fig{padding:6px 14px;flex-direction:row;flex-wrap:wrap;align-items:baseline;column-gap:10px}
-.bd-figs .lk-fig-l{flex:1 0 100%}
-.bd-figs .lk-fig .lk-bar{flex:1 0 100%}
-.bd-figs .lk-fig-v{font-size:22px}
+.bd-figs{flex:none;padding:4px 24px}
 .bd-figs[hidden]{display:none}
 /* the one GST question of the page (CMP025 choice) */
 .bd-gst{flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:2px 24px 0;padding:3px 14px;background:var(--ask-t,#fdf3dc);color:var(--ask-i,#7a5205);border:1px solid var(--line,#ddd6c6);border-radius:12px}
@@ -48,7 +44,6 @@ body{display:flex;flex-direction:column;background:var(--page,#fcfaf5);color:var
 .bd-pane{flex:1 1 auto;min-width:0;overflow:auto;background:var(--card,#fff);border:0}
 .bd-pane[hidden]{display:none}
 .bd-bar{flex:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 24px;background:var(--card,#fff);border-top:1px solid var(--line,#ddd6c6)}
-.bd-count{color:var(--muted,#5e594d)}.bd-count b{color:var(--ink,#1d1b16)}
 /* the statement lines: columns on a wide screen, two lines on a phone */
 .bd-list{list-style:none;margin:0;padding:0}
 .bd-colh,.bd-row{display:grid;grid-template-columns:76px minmax(180px,1fr) 190px 110px 110px 140px 20px;gap:12px;align-items:center;padding:6px 24px}
@@ -148,11 +143,7 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-subtitle{display:none}
   .bd-acts{display:none}
   .bd-more{display:block}
-  .bd-figs{gap:6px;padding-top:4px}
-  .bd-figs .lk-fig{padding:6px 8px}
-  .bd-figs .lk-fig-l{font-size:10px}
-  .bd-figs .lk-fig-v{font-size:15px}
-  .bd-figs .lk-progress-line{display:none}
+  .bd-figs{padding-top:4px}
   .bd-gst{padding:4px 10px}
   .bd-tabs button{padding:6px 8px;font-size:13px}
   .bd-colh{display:none}
@@ -167,7 +158,6 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-row .bd-status{grid-column:3;grid-row:2;justify-self:end}
   .bd-bar{flex-direction:column;align-items:stretch;gap:6px}
   .bd-bar .bd-btn{justify-content:center}
-  .bd-count{text-align:center;font-size:12px}
   .bd-sheet{padding:12px}
   .bd-sheet .bd-sheet-h,.bd-sign{flex-direction:column}
   .bd-sheet td{font-size:12px}
@@ -188,9 +178,6 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 .bd-tabs,.bd-offscript{display:none}
 .bd-demo{margin:0 auto 0 12px;font-size:12px;color:var(--muted,#5e594d)}
 .bd-bar{order:0;border-top:0;border-bottom:1px solid var(--line,#ddd6c6);padding:6px 24px;background:var(--page,#fcfaf5)}
-.bd-figs .lk-fig{padding:8px 16px}
-.bd-figs .lk-fig-l{text-transform:uppercase;letter-spacing:.08em;font-size:11px}
-.bd-figs .lk-fig-v{font-size:30px}
 .bd-colh,.bd-row{grid-template-columns:76px minmax(200px,1fr) 100px 100px minmax(300px,440px);padding:4px 24px}
 .bd-row{min-height:46px}
 .bd-status{display:flex;flex-direction:column;gap:2px;align-items:flex-start;min-width:0}
@@ -205,16 +192,12 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
   .bd-demo{display:none}
   .bd-bar{padding:6px 12px;flex-direction:row;align-items:center}
   .bd-bar .bd-btn{width:auto}
-  .bd-count{text-align:left}
   .bd-row{grid-template-columns:40px minmax(0,1fr) auto;padding:6px 12px}
   .bd-row .bd-status{grid-column:2 / -1}
-  .bd-figs .lk-fig-v{font-size:17px}
 }
 
 /* ten rows without a scroll at 1366x768: one line of chip and detail, a smaller badge, tighter cards */
 .bd-figs{padding:2px 24px}
-.bd-figs .lk-fig{padding:4px 16px}
-.bd-figs .lk-fig-v{font-size:26px}
 .bd-bar{padding:3px 24px}
 .bd-bar .bd-btn{min-height:34px}
 .bd-colh,.bd-row{grid-template-columns:76px minmax(180px,1fr) 100px 100px minmax(440px,600px);padding:2px 24px}
@@ -231,10 +214,6 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 }
 /* the phone, last so it wins: a line is a badge, the payee and the amount, with its status under it */
 @media (max-width:700px){
-  .bd-figs .lk-fig{padding:4px 8px}
-  .bd-figs .lk-fig-v{font-size:16px}
-  .bd-figs .lk-fig-l{font-size:10px}
-  .bd-figs .lk-progress-line{display:none}
   .bd-colh{display:none}
   .bd-row{grid-template-columns:36px minmax(0,1fr) auto;column-gap:8px;row-gap:2px;padding:6px 12px;min-height:0}
   .bd-row .bd-date{display:none}
@@ -258,3 +237,10 @@ button.bd-row:hover{background:var(--panel,#f3efe6)}
 @media (max-width:900px){.bd-cur{margin-left:12px;margin-right:12px}}
 
 .bd-choices{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px}.bd-choice{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+/* W15-12: the lines are ONE list (CBBankLines on CBList) filling the pane; only its rows scroll */
+#bd_lines{display:flex;flex-direction:column;overflow:hidden}
+#bd_lines .bd-listhost{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+#bd_lines .bd-listhost .cbl{flex:1 1 auto;min-height:0}
+#bd_lines .bl-amt{font-variant-numeric:tabular-nums}
+.bl-out{color:var(--out,#8e3517)}.bl-in{color:var(--in,#0d4a2b)}
+.bd-openrow .bd-looks-line{margin:0 0 4px}
