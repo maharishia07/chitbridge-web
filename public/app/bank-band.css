@@ -36,6 +36,9 @@
 /* the status chips of the bank lines (the list's own views): they wrap, never scroll sideways */
 .cbl[data-cbl^="bank"] .cbl-views{flex-wrap:wrap;overflow:visible}
 
-@media (max-width:700px){.cbl[data-cbl^="bank"] .bl-chip-l{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}.cbl[data-cbl^="bank"] .cbl-vtab{padding:4px 12px}}
+.cbl[data-cbl^="bank"] .bl-sh{display:none}
+@media (max-width:700px){.cbl[data-cbl^="bank"] .bl-lg{display:none}.cbl[data-cbl^="bank"] .bl-sh{display:inline}.cbl[data-cbl^="bank"] .cbl-vtab{padding:4px 10px}}
 .bb-head .act{min-height:32px}
 @media (min-width:701px){.bb-head .act{padding-block:0}}
+.bb-right.bb-has-bad{background:var(--red-t,#fbeae3);border-color:var(--red-b,#e7b9a8)}
+.bb-has-bad .bb-ok,.bb-has-bad .bb-none{color:var(--ink,#1d1b16)}
