@@ -1317,13 +1317,13 @@
       if (!holder) return;
       if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
       var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
-      /* tier: an area with a card that needs you (2) outranks one that is only in use (1), which outranks one not started (0); at the SAME tier Money goes first
+      /* rank: an area with a card that needs you (2) outranks one that is only in use (1), which outranks one not started (0); at the SAME rank Money goes first
          (R48: a books-first shop, with the bank, dues and GST in use, opens on its money, not on Selling). Same data, same order on every load (R51). */
       var score = function (sec) {
         var area = sec.getAttribute('data-area');
         if (LEAD_LAST[area]) return -1;
-        var tier = sec.querySelector('[data-state="needs_you"]') ? 2 : sec.querySelector('[data-state="in_use"]') ? 1 : 0;
-        return tier * 10 + (tier && area === 'money' ? 1 : 0);
+        var rank = sec.querySelector('[data-state="needs_you"]') ? 2 : sec.querySelector('[data-state="in_use"]') ? 1 : 0;
+        return rank * 10 + (rank && area === 'money' ? 1 : 0);
       };
       var ordered = secs
         .map(function (sec, n) { return { sec: sec, n: n, s: score(sec) }; })
