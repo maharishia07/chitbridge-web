@@ -286,11 +286,11 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(reached === 'bank-change', 'KEYBOARD: Tab reaches "Load another statement" (' + reached + ')');
   await p.keyboard.press('Enter');
   await p.waitForTimeout(500);
-  ok(await p.locator('[data-testid="bank-change"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-file"]').isVisible(), 'KEYBOARD: Enter opens the form with the file box');
+  ok(await p.locator('[data-testid="bank-change"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-stmts-file"], [data-testid="bank-file"]').first().waitFor({ state: 'attached', timeout: 5000 }).then(() => true, () => false), 'KEYBOARD: Enter opens the form with the file box (the Statements box Add statement input, or the plain picker when the box is not ready)');
   let file = false;
   /* CHANGED ON PURPOSE (W15-18): the button now sits in the band UNDER the form, so Enter moves the focus to the file box itself */
-  file = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'bank-file');
-  ok(file, 'KEYBOARD: Enter on Load another statement puts the focus on the file box');
+  file = await p.evaluate(() => ['bank-stmts-file', 'bank-file'].includes(document.activeElement && document.activeElement.getAttribute('data-testid')));
+  ok(file, 'KEYBOARD: Enter on Load another statement puts the focus on the file box (one door: Add statement file input of the box)');
   await p.screenshot({ path: path.join(OUT, 'b9-07-keyboard-another-statement-1366.png') });
   /* PHONE: the same page at 390x844, the statement is still there */
   await p.setViewportSize({ width: 390, height: 844 });

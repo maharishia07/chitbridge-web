@@ -72,7 +72,7 @@ function bkstSummary() {
 function bkstBarInner(open, ready) {
   return (
     '<b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '')
+    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" title="' + bkstE(bkstSummary()) + '" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '')
   );
 }
 /** the slot the band keeps for the folded line (cap-bank.js bankFinish): a statement on screen gives the lines the whole screen, so the box costs no row of its own */

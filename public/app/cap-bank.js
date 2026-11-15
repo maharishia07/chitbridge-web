@@ -532,7 +532,13 @@ function bankChange(btn) {
   btn.setAttribute('aria-expanded', String(open));
   btn.textContent = tx(open ? 'Hide the form' : 'Load another statement');
   window.dispatchEvent(new Event('resize'));
-  const file = bkbEl('bk_file');
+  /* ONE DOOR (W15-62): while the Statements box is ready it IS the file door, so it opens with the form and the keyboard goes to ITS file box; else to the plain picker's */
+  const boxReady = typeof BKST !== 'undefined' && BKST.mode === 'server' && typeof bankStmtPaint === 'function';
+  if (boxReady) {
+    BKST.open = open;
+    bankStmtPaint();
+  }
+  const file = bkbEl(boxReady ? 'bks_file' : 'bk_file') || bkbEl('bk_file');
   if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
