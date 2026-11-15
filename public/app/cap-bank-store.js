@@ -198,32 +198,38 @@ function bankStoreExceptions() {
     bksMore(bankStoreState.exceptions.length)
   );
 }
-/** the Sign off button: shown always, greyed with the reason while the record is not set up */
+/** the Sign off button, drawn only when the difference is nil (the band asks for it then); greyed with the reason while the record is not set up. Its slot is repainted after a sign-off */
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
   if (!worked || !worked.ok) return '';
   const notReady = bankStoreState.mode !== 'server';
   return (
-    '<div class="supacts"><button data-cbsid="BKS014-B08" type="button" class="act" data-testid="bank-signoff"' +
-    (notReady ? ' disabled aria-describedby="bk_store_line" title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
+    '<button data-cbsid="BKS014-B08" type="button" class="pri bk-primary" data-testid="bank-signoff"' +
+    (notReady ? ' disabled title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
     ' onclick="bankStoreSignOff(this)">' +
     bksE(tx('Sign off this reconciliation')) +
-    '</button></div>'
+    '</button>'
   );
 }
-/** the whole panel: the line, the sign-off, the signed list, the exceptions */
+/** the whole panel: the line, the signed list, the exceptions */
 const bankStorePanel = () =>
   '<div id="bk_store" data-testid="bank-store"><div class="pe-note" id="bk_store_line" data-testid="bank-store-line" data-mode="' +
   bankStoreState.mode +
   '">' +
   bksE(bankStoreLine()) +
   '</div>' +
-  bankStoreSignButton() +
   bankStoreSigned() +
   bankStoreExceptions() +
   '</div>';
 /** a step or an answer changed the line or the lists: redraw the panel where it is, nothing else */
 function bankStorePaintLine() {
-  const host = document.getElementById('bk_store');
+  const host = document.getElementById('bk_store'),
+    slot = document.getElementById('bk_primary');
+  const quiet = document.querySelector('.bk-store');
   if (host) host.outerHTML = bankStorePanel();
+  else if (quiet) {
+    quiet.textContent = bankStoreLine();
+    quiet.setAttribute('data-mode', bankStoreState.mode);
+  }
+  if (slot && typeof bankPrimaryHtml === 'function') slot.innerHTML = bankPrimaryHtml(bankFigures());
 }

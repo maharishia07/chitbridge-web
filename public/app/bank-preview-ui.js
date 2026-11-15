@@ -6,7 +6,7 @@
  * FLOW      mount({ host, controller, currency, country, say, changed }) → paint(model, results) → a click or change on host → the controller's answer method → say(words) if refused → changed()
  * CARD      16-finance/bank-reconciliation-and-bank-rail
  * CONTROLS  BKS017-B03 use an existing party · BKS017-B04 GST on cash · BKS017-B05 GST on accrual · BKS017-B07 use this party · BKS017-B08 use this account · BKS017-B09 yes, this is right
- *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-I02 new party name · BKS017-S04 new party kind
+ *           BKS017-B10/B11 tax invoice held / not held · BKS017-B12 same payment · BKS017-B13 it is new · BKS017-B15 use this tax · BKS017-B18 add a line the sheet cannot finish as its own entry · BKS017-I02 new party name · BKS017-S04 new party kind
  *           BKS017-S05 account · BKS017-S06 tax kind · BKS017-S08 the tax a line carries
  * ⭐ Written for pages with no inline script (the demo's CSP): everything is data-act on a button, one delegated listener on the host.
  */
@@ -125,6 +125,12 @@
       return '';
     }
     /** what a line says under its state: the entry it would make, the ONE question it asks next, and every other thing holding it back (none is dropped) */
+    /** the message of a line the sheet cannot finish (a tax payment, a loan, a transfer between own accounts, a card settlement with tax), ON THE LINE with its one step; the words are the controller's (item.say) or the refusal this line was given */
+    function sayBox(item) {
+      var words = item.say || ctx.says[item.key];
+      if (!words) return '';
+      return '<span class="bd-say" role="status" data-testid="bd-line-say" data-line-say="' + escapeHtml(item.key) + '">' + escapeHtml(words) + ' <button data-cbsid="BKS017-B18" type="button" class="bd-btn bd-go" data-act="entry"' + dataKey(item) + '>' + escapeHtml(cfg.entryWords || 'Add it as an entry') + '</button></span>';
+    }
     function lineNote(item, result) {
       if (result) return result.ok ? tag('ok', cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
       if (item.state === 'closed') return tag('bad', item.why);
@@ -133,9 +139,9 @@
       var asked = askedBox(item),
         others = otherNeeds(item, tag);
       var reason = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + escapeHtml(item.why || 'Nothing here says who or what this is.') + '</span>' : '';
-      return entryNote(item) + asked + (others ? ' ' + others : '') + reason;
+      return entryNote(item) + asked + (others ? ' ' + others : '') + reason + sayBox(item);
     }
-    Object.assign(ctx, { taxKindBox, askedBox, lineNote });
+    Object.assign(ctx, { taxKindBox, askedBox, sayBox, lineNote });
   }
   /** a new party, and the account a line nothing explained is given; each function lands on the one shared `ctx` */
   function addParties(ctx) {
@@ -231,12 +237,13 @@
   }
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
-    var ctx = { cfg: cfg, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
-    ctx.amountText = function (value) { return preview.moneyText(value, cfg.currency); };
+    var ctx = { cfg: cfg, says: {}, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
+    ctx.amountText = cfg.amountText || function (value) { return preview.moneyText(value, cfg.currency); }; /* a host may draw money its own way (the in-app Bank sheet: the page's symbol form, as the band) */
     ctx.tag = function (kind, words) { return '<span class="bd-tag bd-' + kind + '">' + ctx.escapeHtml(words) + '</span>'; };
     ctx.dataKey = function (item) { return ' data-key="' + ctx.escapeHtml(item.key) + '"'; };
     addWords(ctx); addQuestions(ctx); addAsks(ctx); addParties(ctx); addRows(ctx); addCheck(ctx);
     return {
+      says: ctx.says,
       skipBox: ctx.skipBox,
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
@@ -260,7 +267,7 @@
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
     function useAccount(key) {
       var account = chosenFor('acct', key);
-      if (account === NOT_INCOME_OR_EXPENSE) return { ok: false, why: 'A tax payment, loan, drawings or a transfer between your own accounts is not booked here yet. Add it with + Entry in the app.' };
+      if (account === NOT_INCOME_OR_EXPENSE) return { ok: false, line: true, why: 'A tax payment, a loan, drawings or a transfer between your own accounts is not an expense or income, so it is added as its own entry.' };
       return cfg.controller().resolveLine(key, { account: account, tax_kind: chosenFor('taxkind', key) });
     }
     /** FIN-116: the tax kind for a line the bank's words proposed: its own class (the proposal's, never a literal) with the chosen kind, through resolve() */
@@ -282,6 +289,7 @@
       inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
       notmatch: function (key) { return cfg.controller().notMatch(key); },
+      entry: function (key) { return cfg.entry ? cfg.entry(key) : { ok: false, why: 'This starts after an update.' }; },
       chk: function (code) { return cfg.controller().confirmCheck(code) ? { ok: true } : { ok: false, why: 'Could not read this statement again.' }; }
     };
     return ACTIONS;
@@ -296,7 +304,9 @@
    *   cfg.host        the element the lines are painted into (clicks and changes are listened for on it)
    *   cfg.controller  () → the CBBankPreview controller now in use
    *   cfg.currency · cfg.country · cfg.addedWords (what an added line says)
-   *   cfg.say(words)  where a refusal is shown                      cfg.changed()  called after every answer, so the host paints its other panes
+   *   cfg.amountText(money)  optional: the host's own money text; the default is moneyText ("AUD 2,200.00")
+ *   cfg.entry(key)  the one step of a line the sheet cannot finish: opens its entry (the host's business); cfg.entryWords its button's words
+ *   cfg.say(words)  where a refusal is shown                      cfg.changed()  called after every answer, so the host paints its other panes
    */
   function mount(cfg) {
     var paintLines = painter(cfg);
@@ -308,8 +318,12 @@
       if (!target) return;
       var act = ACTIONS[target.getAttribute('data-act')];
       if (!act) return;
-      var said = act(target.getAttribute('data-key'), target);
-      if (said && said.ok === false) cfg.say(said.why);
+      var key = target.getAttribute('data-key'),
+        said = act(key, target);
+      if (said && said.ok === false && said.line) {
+        paintLines.says[key] = said.why; /* the message stays ON THE LINE with its one step, never at the top of the sheet */
+        cfg.say('');
+      } else if (said && said.ok === false) cfg.say(said.why);
       else cfg.say('');
       cfg.changed();
     }

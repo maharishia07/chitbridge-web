@@ -125,7 +125,8 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   await accept(p, 0);
   ok('F1', (await status(p, 0)) === 'accepted' && lineStatus !== 'accepted', 'an accept still works on the device (' + lineStatus + ' to accepted)');
   ok('F1', S.posts.length === 0, 'nothing is sent to the marks door while the record is not set up (' + S.posts.length + ' posts)');
-  ok('F1', await p.locator('[data-testid="bank-signoff"]').isDisabled(), 'Sign off is shown and greyed (the line says why)');
+  const tiedNow = (await p.getAttribute('[data-testid="bank-finish"]', 'data-tied')) === 'true';
+  ok('F1', tiedNow ? await p.locator('[data-testid="bank-signoff"]').isDisabled() : (await p.locator('[data-testid="bank-signoff"]').count()) === 0, 'Sign off shows only at a nil difference, and is greyed while the record is not set up (nil: ' + tiedNow + ')');
   await p.screenshot({ path: path.join(SHOTS, 'walk-bank-store-device.png') });
   await ctx.close();
 
@@ -164,11 +165,12 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
   ok('F3', !!note && note.note === 'Cheque seen at the branch', 'the note travels as the owner\'s own text');
 
   /* ── F5 · the exceptions ── */
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]'); /* the exceptions and the signed list live on the Statement view */
   const ex = await p.textContent('[data-testid="bank-exceptions"]').catch(() => '');
   ok('F5', /MJ\/26-27\/0009/.test(ex) && /1,234\.00/.test(ex), 'the posted-not-accepted line is a named row: ' + ex.replace(/\s+/g, ' ').trim().slice(0, 90));
 
   /* ── F4 · sign off, keyboard only ── */
-  await p.click('[data-testid="bank-tab-brs"]');
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]');
   const btn = p.locator('[data-testid="bank-signoff"]');
   ok('F4', (await btn.count()) === 1 && (await btn.isEnabled()) && (await btn.getAttribute('data-cbsid')) === 'BKS014-B08', 'the Sign off button is there, enabled, and wears BKS014-B08');
   await btn.focus();
@@ -206,7 +208,7 @@ const NOT_YET = { type: 'about:blank', title: 'Service Unavailable', status: 503
     const tag = theme + '-' + vp.width;
     ({ ctx, p } = await open(S, { theme, vp }));
     await load(p);
-    await p.click('[data-testid="bank-tab-brs"]');
+    await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]');
     await p.waitForTimeout(300);
     const m = (await p.evaluate(measure)).filter((x) => !x.grad && x.ratio < x.need);
     ok('F7', m.length === 0, tag + ': AA contrast for every text' + (m.length ? ' — ' + m.slice(0, 3).map((x) => '"' + x.text + '" ' + x.ratio + ' < ' + x.need).join(' · ') : ''));

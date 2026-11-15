@@ -1,18 +1,20 @@
 /* cap-bank-sheet.js — the Bank view's "Add to your books" SHEET (FIN-117): the statement's lines against the books, the questions each line asks, one confirm that says what it reaches, then the lines posted.
  * OWNS      bankSheetOpen (the sheet) · the controller's in-app options (ledger, post, parties, learned rules, who may post) · the confirm and the posting of the ready lines · the read of the books after.
  *           The flow is public/app/bank-preview.js (the same module the no-login demo runs), the lines are painted by public/app/bank-preview-ui.js, each line is posted by public/app/cap-bank-post.js.
- * CALLED BY cap-bank.js (the Add button over the lines, and Add missing on a line: bankAdd → bankSheetOpen). Loaded by public/accounts.html after cap-bank.js.
+ * CALLED BY cap-bank.js (the primary Add button in the band, and Add missing on a line: bankAdd → bankSheetOpen). Loaded by public/accounts.html after cap-bank.js.
  * FLOW      bankSheetOpen → countrySetup (tax registered? unknown stays unknown) → CBBankPreview.create({ ledger: bkshBook().ledger, post: CBBankPost.adapter }) → load(bkshBook().text) → CBBankPreviewUI.mount → answers → Add N → CBAction.ask (reach) → postReady → bankLedger → paint
  * ⭐ THE STATEMENT NEVER LEAVES THE DEVICE: bkshBook().text is read by the engine here; what is sent is each confirmed entry (kind, date, amount, narration, one client_ref), as before.
  * ⭐ THE PAGE COMPUTES NO MONEY and defaults no unasked fact: the entry, its tax and its totals are the engine's; a registered shop is asked what tax a charge is (bank-preview.js heldHere_), an unknown registration asks nothing and claims nothing.
- * IDS       BKS014-U03 (the sheet) · BKS014-B16 (Add) · BKS014-B17 (Close) · BKS014-B18 (the Add button over the lines). CARD 16-finance/bank-reconciliation-and-bank-rail
+ * IDS       BKS014-U03 (the sheet) · BKS014-B16 (Add) · BKS014-B17 (Close) · BKS014-B18 (the Add button in the band, drawn by cap-bank.js bankPrimaryHtml). CARD 16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
 /** the Bank view's own state (cap-bank.js declares BKB; this file reads it through one door) */
 const bkshBook = () => BKB;
 /** the shop's own login (the page's isOwner: a co-assist is not the owner); false where the page has none */
 const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
-const BKSH = { ctl: null, ui: null, taxRegistered: null, posting: false };
+const BKSH = { ctl: null, ui: null, key: '', taxRegistered: null, posting: false };
+/** the statement the answers belong to: the account and the file's hash; the controller (and every answer on it) is kept for this key, so closing the sheet never loses them */
+const bkshKey = () => String(bkshBook().stmtAcct || bkshBook().acct) + ':' + ((bkshBook().file && bkshBook().file.hash) || '');
 /** the engine parts the sheet needs, or null when the page did not load them */
 function bkshEngine() {
   const parts = { recon: window.CBBankRecon, project: window.CBBankProject, entry: window.CBBankEntry, statementCheck: window.CBBankStatementCheck };
@@ -123,14 +125,16 @@ function bkshController() {
   });
 }
 const bkshEl = (id) => document.getElementById(id);
-/** the sheet's own words under the title: the refusal first, else the statement against the books now */
-function bkshStrip(model) {
-  const brs = model.projection && model.projection.brs;
-  if (!brs) return '';
-  return txf('Statement {s} · Books now {b} · Difference now {d}', {
-    s: CBBankPreview.moneyText(brs.closing_statement, bkshBook().stmtCur),
-    b: CBBankPreview.moneyText(brs.closing_books_before, bkshBook().stmtCur),
-    d: CBBankPreview.moneyText(brs.difference_before, bkshBook().stmtCur)
+/** the sheet's own words under the title: the band's ONE truth (bankFigures, cap-bank.js), so the page and the sheet never say two things; nothing here is worked out */
+function bkshStrip() {
+  const fig = typeof bankFigures === 'function' ? bankFigures() : null;
+  if (!fig) return '';
+  return txf('Statement {s} · Books {b} · Difference {d}{parts} · Unexplained {u}', {
+    s: fig.statement,
+    b: fig.books,
+    d: fig.gap,
+    parts: fig.parts ? ' = ' + fig.parts : '',
+    u: fig.unexplained
   });
 }
 /** paint the sheet again from the controller: the strip, the lines, and the Add button with its count */
@@ -138,7 +142,7 @@ function bkshPaint() {
   const model = BKSH.ctl.view(),
     addButton = bkshEl('bks_add'),
     ready = BKSH.ctl.readyCount();
-  bkshEl('bks_strip').textContent = bkshStrip(model);
+  bkshEl('bks_strip').textContent = bkshStrip();
   if (model.parsed) BKSH.ui.paint(model);
   if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
   if (addButton) {
@@ -162,7 +166,7 @@ async function bkshAdd(btn) {
   try {
     const done = await BKSH.ctl.postReady(() => {});
     bkshNoteAdded();
-    await bankLedger();
+    await bankRun(); /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
     bkshEl('bks_say').textContent = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
   } catch (failure) {
@@ -194,7 +198,22 @@ function bkshAcceptAdded() {
   });
   BKSH.added = {};
 }
-/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched, and the owner's own adds are accepted */
+/** the one step on a line the sheet cannot finish (a tax payment, a loan, a transfer): the ＋ Entry opens for that line, the sheet stays kept behind it. The entry is pre-filled by bankEntryPreset when the bank-match build provides it; else the date, amount and words of the line */
+function bkshEntry(key) {
+  const item = ((BKSH.ctl && BKSH.ctl.view().items) || []).filter((one) => one.key === key)[0];
+  if (!item) return { ok: false, why: tx('That line is gone') };
+  if (typeof enOpen !== 'function') return { ok: false, why: tx('This starts after an update') };
+  const line = item.line || {},
+    minor = line.debit_minor || line.credit_minor || 0,
+    preset =
+      typeof bankEntryPreset === 'function'
+        ? bankEntryPreset(item, bkshBook())
+        : { v: { date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, ref: 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+  closeModal();
+  enOpen(preset);
+  return { ok: true };
+}
+/** the sheet closed: the Bank view reads the books again so the lines that were added show as matched */
 function bkshClose() {
   closeModal();
   if (typeof bankRun === 'function' && bkshBook().parsed) bankRun().then(bkshAcceptAdded).catch((failure) => bkQuiet('bank-sheet-close', failure));
@@ -214,25 +233,25 @@ async function bankSheetOpen() {
   if (!bkbBound()) return;
   if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
-  const unread = BKSH.taxRegistered === 'unread';
-  BKSH.ctl = bkshController();
+  const unread = BKSH.taxRegistered === 'unread',
+    kept = !!BKSH.ctl && BKSH.key === bkshKey();
+  if (!kept) {
+    BKSH.ctl = bkshController();
+    BKSH.key = bkshKey();
+  }
   ui.dialog({
     mount: 'BKS014-U03', pop: 'POP092', titleTestid: 'bank-sheet-title',
-    titleText: tx('Add to your books'),
+    titleText: tx('Add to your books'), wide: true,
     bodyStyle: 'display:flex;flex-direction:column;gap:8px',
     body: '<div class="pe-note" id="bks_strip" data-testid="bank-sheet-strip" aria-live="polite"></div><div class="pe-bad" id="bks_say" data-testid="bank-sheet-say" role="status"></div><div id="bks_lines" class="bks-lines" data-testid="bank-sheet-lines"></div>',
-    footerHtml: '<button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
+    footerHtml: '<span class="bks-keep" data-testid="bank-sheet-kept">' + bkbE(tx('Your answers are kept if you close this. They clear when you load another statement.')) + '</span><button data-cbsid="BKS014-B17" type="button" data-testid="bank-sheet-close" onclick="bkshClose()">' + bkbE(tx('Close')) + '</button>' +
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
-  bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
+  if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
+  else bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
   bkshPaint();
-}
-/** the Add button over the lines (owner only: POST /events is the owner's); the sheet then shows every line with what it needs */
-function bankSheetButton() {
-  if (!bkshBook().text || !bkshIsOwner()) return '';
-  return '<div class="pe-note"><button data-cbsid="BKS014-B18" type="button" class="pri" data-testid="bank-sheet-open" onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button> ' + bkbE(tx('Lines your books lack, with what each needs.')) + '</div>';
 }

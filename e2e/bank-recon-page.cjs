@@ -143,7 +143,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   ok(leaks2.length === 0, 'still no request carries the file (the confirmed entry carries a date, an amount and the note the shop saw)');
 
   /* ── 4 · THE STATEMENT (BRS) ── */
-  await p.click('[data-testid="bank-tab-brs"]'); await p.waitForSelector('[data-testid="bank-brs-card"]');
+  await p.click('[data-testid="bank-more"]'); await p.click('[data-testid="bank-tab-brs"]'); await p.waitForSelector('[data-testid="bank-brs-card"]');
   ok(await p.locator('[data-testid="brs-tied"]').count() === 1 && await p.locator('[data-testid="brs-untied"]').count() === 0, 'the BRS ties: "the books reconcile to the bank"');
   const brs = await p.textContent('[data-testid="bank-brs-card"]'); if (process.env.DEBUG_PE) console.log(brs.slice(0, 700));
   ok(/Balance as per books/.test(brs) && /1,04,476\.40 Dr/.test(brs) && /Balance as per bank statement/.test(brs) && /1,09,016\.40 Dr/.test(brs), 'books vs bank: books 1,04,476.40 Dr (the API\'s ledger figure after the new entry) and bank 1,09,016.40 Dr (the statement\'s)');
@@ -169,7 +169,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
     await c4.p.waitForSelector('[data-testid="bank-list"].cbl [data-status]', { timeout: 10000 });
     let m = await noSide(c4.p); ok(m.d === 390 && m.m, '390 px: the lines do not scroll sideways (' + m.d + ')');
     await c4.p.screenshot({ path: path.join(SHOTS, 'bank-lines-phone.png') });
-    await c4.p.click('[data-testid="bank-tab-brs"]'); await c4.p.waitForSelector('[data-testid="bank-brs-card"]');
+    await c4.p.click('[data-testid="bank-more"]'); await c4.p.click('[data-testid="bank-tab-brs"]'); await c4.p.waitForSelector('[data-testid="bank-brs-card"]');
     m = await noSide(c4.p); ok(m.d === 390 && m.m, '390 px: the statement does not scroll sideways (' + m.d + ')');
     await c4.p.screenshot({ path: path.join(SHOTS, 'bank-brs-phone.png') });
     await c4.ctx.close();
