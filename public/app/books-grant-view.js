@@ -113,9 +113,41 @@
     if (viewState.range !== undefined) return Promise.resolve();
     return root.CBBooksGrantApi.run(viewState.o.call, 'readPeriods', { headers: root.CBBooksActing.headers() }).then(function (a) {
       var busy = ((a && a.periods) || []).filter(function (p) { return Number(p.entries) > 0 && Number(p.period) >= 1 && p.start_date && p.end_date; }).sort(function (x, y) { return String(x.end_date) < String(y.end_date) ? -1 : 1; });
-      var last = busy[busy.length - 1];
-      viewState.range = last ? { from: String(last.start_date).slice(0, 10), to: String(last.end_date).slice(0, 10) } : null;
+      viewState.months = busy.map(function (p) { return { from: String(p.start_date).slice(0, 10), to: String(p.end_date).slice(0, 10), entries: Number(p.entries) }; });
+      var pick = defaultMonth(viewState.months);
+      viewState.range = pick.open ? { from: pick.open.from, to: pick.open.to } : null;
+      viewState.monthRule = pick.rule; /* the quiet line: which month was opened instead of the latest, and why */
     }, function () { viewState.range = null; });
+  }
+  /** THE DEFAULT MONTH (one read, the periods rows): the latest month with entries; but when that month has 2 or fewer entries and the month before it has more, the month before opens and the latest keeps its chip. → { open, rule } */
+  var THIN_MONTH = 2;
+  function defaultMonth(months) {
+    var latest = months[months.length - 1], before = months[months.length - 2];
+    if (latest && before && latest.entries <= THIN_MONTH && before.entries > latest.entries) return { open: before, rule: { latest: latest, opened: before } };
+    return { open: latest || null, rule: null };
+  }
+  function monthWord(m) {
+    var names = typeof root.monthNames === 'function' ? root.monthNames('short') : [];
+    return (names[Number(m.from.slice(5, 7)) - 1] || m.from.slice(0, 7)) + ' ' + m.from.slice(0, 4);
+  }
+  /** the Day book's month chips ("Oct 2026 · 9"), every month with entries, one press opens it; and the quiet line that says why an earlier month opened */
+  function monthBar(report) {
+    if (report.k !== 'daybook' || !viewState.months || !viewState.months.length || viewState.why) return '';
+    var on = !viewState.day && viewState.range ? viewState.range.from : '';
+    var chips = viewState.months.map(function (m) {
+      return '<button type="button" class="act ' + (m.from === on ? '' : 'quiet') + '" data-cbsid="NET005-B06" data-month="' + esc(m.from) + '" aria-pressed="' + (m.from === on) + '" data-testid="bv-month-' + esc(m.from.slice(0, 7)) + '">' + esc(monthWord(m) + ' · ' + m.entries) + '</button>';
+    }).join('');
+    var rule = viewState.monthRule && on === viewState.monthRule.opened.from ? '<p class="sub" data-testid="bv-month-rule">' + esc(words('Opened on') + ' ' + monthWord(viewState.monthRule.opened) + ' ' + words('because') + ' ' + monthWord(viewState.monthRule.latest) + ' ' + words('has only') + ' ' + viewState.monthRule.latest.entries + ' ' + words(viewState.monthRule.latest.entries === 1 ? 'entry' : 'entries') + '. ' + words('Press its chip to see it.')) + '</p>' : '';
+    return '<div class="nw-acts" data-testid="bv-months" role="group" aria-label="' + esc(words('Months')) + '">' + chips + '</div>' + rule;
+  }
+  /** a month chosen (a chip, or a Months row): its Day book, the whole month */
+  function openMonth(from, to) {
+    var m = (viewState.months || []).filter(function (x) { return x.from === from; })[0] || (to ? { from: from, to: to } : null); /* a month with no entries opens too, from its own row */
+    if (!m) return;
+    viewState.range = { from: m.from, to: m.to };
+    viewState.day = '';
+    viewState.report = 'daybook';
+    reload();
   }
   /** GET /periods names no currency: a month's sales would print as a dash. The store's currency is learned once from the Day book's own answer (the period it opens on) */
   function knowCurrency() {
@@ -183,7 +215,7 @@
       band() +
       '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
-      (viewState.why ? '' : asAt(report) + periodLine(report)) +
+      (viewState.why ? '' : asAt(report) + monthBar(report) + periodLine(report)) +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       (markable(report) ? '<div id="bv_marks" data-testid="bv-marks"></div>' : '') +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
@@ -198,6 +230,9 @@
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
+    Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-month]'), function (button) {
+      button.onclick = function () { openMonth(button.getAttribute('data-month')); };
+    });
     if (onActions()) mountQueues();
     else if (!viewState.why) { paintList(report); paintMarkBar(report); }
   }
@@ -343,7 +378,7 @@
           })
           .join(' ');
       },
-      onOpen: report.drill ? function (row) { drill(report, row); } : undefined,
+      onOpen: report.drill ? function (row) { drill(report, row); } : report.k === 'periods' ? function (row) { if (row.start_date && row.end_date) openMonth(String(row.start_date).slice(0, 10), String(row.end_date).slice(0, 10)); } : undefined, /* a Months row opens that month's Day book */
       empty: { title: words('Nothing to show here'), body: words(viewState.day || !viewState.range ? 'These books have no entries for this day.' : 'These books have no entries in this period.') }
     };
   }

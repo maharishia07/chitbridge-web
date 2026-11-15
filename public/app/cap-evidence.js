@@ -112,15 +112,29 @@
     return ctl;
   }
 
-  /** open one file in a new tab through the seat's own door; a download for anything a tab should not render */
+  /** the page a tab shows for a file: its name as the TITLE (a blob url alone would title the tab with a bare id) and the file in the browser's own viewer (a PDF in the PDF plugin, an image as an image) */
+  function viewerPage(name, kind, fileUrl) {
+    var label = esc(name || 'file');
+    var body = kind === 'pdf' ? '<embed type="application/pdf" src="' + fileUrl + '">' : '<img alt="' + label + '" src="' + fileUrl + '">';
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + label + '</title><style>html,body{margin:0;height:100%;background:#525659}embed{width:100%;height:100%;display:block}img{max-width:100%;max-height:100%;display:block;margin:0 auto}</style></head><body>' + body + '</body></html>';
+  }
+  /** a link pressed on the page: the browser opens the tab itself, with no opener (a script that opens about:blank and sets its address later loses the blob: Chrome keys a blob url to the page that made it) */
+  function pressLink(href, name, download) {
+    var a = doc.createElement('a');
+    a.href = href;
+    a.rel = 'noopener noreferrer';
+    if (download) a.download = name || 'file';
+    else a.target = '_blank';
+    (doc.body || doc.documentElement).appendChild(a);
+    a.click();
+    a.remove();
+  }
+  var alive = []; /* the blob urls of opened files: kept until this page goes, so a tab that is reloaded still finds its file (nothing is stored beyond the page) */
+  if (root.addEventListener) root.addEventListener('pagehide', function () { alive.forEach(function (u) { try { root.URL.revokeObjectURL(u); } catch (_) { /* gone */ } }); alive = []; });
+
+  /** open one file through the seat's own door: images and PDFs in a new tab titled with the file's name; anything else downloads */
   function openFile(ctl, file, out) {
-    var tab = null;
-    try {
-      tab = root.open('about:blank', '_blank'); /* opened inside the press, so a pop-up blocker lets it through */
-      if (tab) tab.opener = null; /* noopener: the file's tab can never reach back to the books page */
-    } catch (_) { /* best effort */ }
     function fail(text) {
-      if (tab) try { tab.close(); } catch (_) { /* gone already */ }
       out.setAttribute('data-tone', 'error');
       out.textContent = text;
     }
@@ -131,20 +145,13 @@
         if (!res.ok) return fail(res.status === 403 ? T(W.ended) : T(W.failed));
         return res.blob().then(function (blob) {
           var mime = String(blob.type || '').toLowerCase();
-          var url = root.URL.createObjectURL(blob);
-          var view = /^image\/(png|jpe?g|gif|webp|bmp)$/.test(mime) || mime === 'application/pdf';
-          if (view && tab) tab.location.href = url;
-          else {
-            if (tab) try { tab.close(); } catch (_) { /* gone already */ }
-            var a = doc.createElement('a');
-            a.href = url;
-            a.download = file.name || 'file';
-            a.rel = 'noopener';
-            (doc.body || doc.documentElement).appendChild(a);
-            a.click();
-            a.remove();
-          }
-          root.setTimeout(function () { root.URL.revokeObjectURL(url); }, 60000); /* nothing of the books stays cached in the browser */
+          var fileUrl = root.URL.createObjectURL(blob);
+          alive.push(fileUrl);
+          var kind = mime === 'application/pdf' ? 'pdf' : /^image\/(png|jpe?g|gif|webp|bmp)$/.test(mime) ? 'image' : null;
+          if (!kind) return pressLink(fileUrl, file.name, true);
+          var page = root.URL.createObjectURL(new root.Blob([viewerPage(file.name, kind, fileUrl)], { type: 'text/html' }));
+          alive.push(page);
+          pressLink(page, file.name, false);
         });
       },
       function () { fail(T(W.failed)); }
