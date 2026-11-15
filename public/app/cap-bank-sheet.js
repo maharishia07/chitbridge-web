@@ -15,7 +15,7 @@ const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
 const BKSH = { ctl: null, ui: null, taxRegistered: null, posting: false };
 /** the engine parts the sheet needs, or null when the page did not load them */
 function bkshEngine() {
-  const parts = { recon: window.CBBankRecon, project: window.CBBankProject, entry: window.CBBankEntry };
+  const parts = { recon: window.CBBankRecon, project: window.CBBankProject, entry: window.CBBankEntry, statementCheck: window.CBBankStatementCheck };
   return parts.recon && parts.project && parts.entry ? parts : null;
 }
 /** the shop's bank ledger as the preview reads it: every line carries its currency; read again after a post through bankLedger */
@@ -59,6 +59,26 @@ function bkshStatementAccount() {
   const code = String(bkshBook().stmtAcct || bkshBook().acct);
   return (bkshBook().accts || []).filter((item) => String(item.code) === code)[0] || {};
 }
+/** the entries already posted from bank lines, by ref: { ref → { at, by, entry_no } } (the check names who and when per line) */
+function bkshPostedFeed() {
+  const feed = {};
+  (bankStoreState.posted || []).forEach((row) => {
+    feed[row.ref] = { at: row.made_at, by: row.made_by, entry_no: row.entry_no };
+  });
+  return feed;
+}
+/** the carried figures the statement check compares: this account, the books' balance before the statement (the ledger read, never summed here), the reconciled statements and the posted feed */
+function bkshCheckInput() {
+  const acct = bkshStatementAccount(),
+    statements = (bankStoreState.statements || []).map((row) => Object.assign({ made_by: row.by, made_at: row.at }, row));
+  return {
+    today: bkToday(),
+    accounts: [{ id: String(acct.code || bkshBook().acct), name: acct.name || null, number: null }],
+    books: { opening_minor: Number((bkshBook().ledgerRaw || {}).opening_minor) || 0 },
+    log: { statements },
+    posted: bkshPostedFeed()
+  };
+}
 /** the controller for this statement: the books it reads, the adapter that posts, the pack's country and the rules this device learned */
 function bkshController() {
   const country = bkbCountry(),
@@ -72,6 +92,7 @@ function bkshController() {
     post: CBBankPost.adapter({ api, who: signedIn, modeOf: bkshModeOf }),
     lockedMonth: () => null /* a closed month is the server's answer, shown on the line */,
     statementCurrency: () => bkshBook().stmtCur || null,
+    checkInput: bkshCheckInput,
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     suggestOpts: { country, learned: bkbRules(), parties: bkshParties() },

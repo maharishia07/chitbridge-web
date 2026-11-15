@@ -43,6 +43,7 @@
     "regulation": "1.85.0",
     "country": "1.88.0",
     "bank-entry": "1.96.0",
+    "bank-statement-check": "1.97.0",
     "bank-project": "1.96.0",
     "chart": "1.65.0",
     "accounts-packs": "1.79.0",
@@ -139,6 +140,9 @@
     "bank-entry": [
       "public/engine/bank-entry.js"
     ],
+    "bank-statement-check": [
+      "public/engine/bank-statement-check.js"
+    ],
     "chart": [
       "public/engine/chart.js"
     ],
@@ -197,6 +201,7 @@
     "workflow": "f8c7a43048bc1b8453a1c2ec43b6eed7f619feee4c67eaba046c6cea370f0a5b",
     "bank-project": "8ffe8a46789b167c5f44df91aded79e4fadf06d9037cfd227199828e6cb19892",
     "bank-entry": "64f8c5ad5fb8ac9b78009e8ce35855cccb9b01f0ca99e90c2cd3917615a2a771",
+    "bank-statement-check": "04006dac3c80e836e50f14189d8e5bfe886d2c314ee0488144a39ce36fec3f8f",
     "chart": "7201c432d50a3f35038f415cfef71c7ac1652c79ed3aadacca8cea3ec42fed37",
     "accounts-packs": "08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a",
     "posting": "d0cf6de25e4b15a495863ed9a0b2c9524ae8f435c87cfc3b777c4c234758a2e0",

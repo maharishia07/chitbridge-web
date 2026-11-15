@@ -154,7 +154,7 @@
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
-    var resolved = entry.resolve(line, answers, suggestOpts);
+    var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
       return proposal;
@@ -162,19 +162,41 @@
     delete preview.resolveRefusal[ref];
     return holdProposal_(resolved, opts);
   }
+  /** the statement as the engine's project() reads it: its currency is what the FILE or the person said (B5-05), its balances and the rows the reader skipped */
+  function statementOf_(opts, parsed) {
+    var stated = (opts.statementCurrency && opts.statementCurrency()) || parsed.currency || null;
+    return { currency: stated, opening_minor: parsed.opening_minor, closing_minor: parsed.closing_minor, skipped: parsed.skipped || [] };
+  }
   /** match against the books, a proposal for each line the books lack (null for a line already there), then the engine's preview of it all */
   function projectNow(opts, preview) {
     var books = opts.ledger(),
       lines = preview.parsed.lines,
-      refs = opts.engine.project.refsOf(lines, opts.account, lines),
+      account = opts.account,
+      refs = opts.engine.project.refsOf(lines, account, lines),
       pass = booksPass(opts, preview, lines, refs, books.lines);
+    /* the statement check runs BEFORE any line is worked: a refusal stops here, in the engine's words */
+    var gate = checkGate_(opts, preview, pass);
+    if (gate.stop) return { ok: false, why: gate.stop };
+    if (gate.account && gate.account !== account) {
+      account = gate.account; /* the statement carries no number: the account the check fingerprinted names the lines */
+      refs = opts.engine.project.refsOf(lines, account, lines);
+      pass = booksPass(opts, preview, lines, refs, books.lines);
+    }
     preview.proposals = lines.map(function (line, index) {
       return pass.held[index] ? null : proposalFor(opts, preview, line, refs[index]);
     });
     /* B5-05: the statement's currency is what the FILE or the person said, never the account's: with none the engine refuses (statement_currency_missing), with another it refuses (currency_mismatch) */
-    var stated = (opts.statementCurrency && opts.statementCurrency()) || preview.parsed.currency || null;
-    var statement = { currency: stated, opening_minor: preview.parsed.opening_minor, closing_minor: preview.parsed.closing_minor, skipped: preview.parsed.skipped || [] };
-    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: opts.account, posted_refs: books.posted_refs || [], period_lines: lines, near: pass.near });
+    var statement = statementOf_(opts, preview.parsed);
+    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: account, posted_refs: books.posted_refs || [], period_lines: lines, near: pass.near });
+  }
+  /** the statement check of this load (null when the host does not ask): { stop, account } — stop is the words that end line work */
+  function checkGate_(opts, preview, pass) {
+    var Check = root.CBBankPreviewCheck;
+    preview.check = null;
+    if (!Check) return {};
+    var made = Check.check(opts, preview, pass);
+    preview.check = made.check;
+    return { stop: made.refusal, account: made.check && made.check.fingerprint_account };
   }
   /** the owner's edit of a line's party (a new name or kind, or an existing party picked from did-you-mean) laid over what the engine said */
   function withPartyEdit(item, edit, asked) {
@@ -200,6 +222,26 @@
     var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0;
     return !!outputTax || (!!opts.postable && opts.postable.indexOf(type) < 0);
   }
+  /** what the statement check says of this line already being done (who, when), or null */
+  function alreadyOf_(preview, index) {
+    return (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null;
+  }
+  /** the owner's answers to the statement check, as controller methods: tick a finding (confirmCheck) · pick the account (chooseAccount); each reads the statement again */
+  function checkAnswers(opts, preview) {
+    var again = function () {
+      return preview.parsed ? projectAgain(opts, preview) : false;
+    };
+    return {
+      confirmCheck: function (code) {
+        preview.confirmed = (preview.confirmed || []).concat(code);
+        return again();
+      },
+      chooseAccount: function (id) {
+        preview.chosenAccount = id;
+        return again();
+      }
+    };
+  }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
   function projectAgain(opts, preview) {
     var out = projectNow(opts, preview);
@@ -212,6 +254,7 @@
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
+      item.alreadyWhy = alreadyOf_(preview, index);
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
@@ -287,6 +330,8 @@
   }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
+    var owed = root.CBBankPreviewCheck ? root.CBBankPreviewCheck.pendingCodes(preview.check) : [];
+    if (owed.length) return { tried: 0, added: 0, failed: 0, blocked: 'Answer the questions about this statement first.' };
     var todo = markTwins_(readyItems(preview));
     for (var position = 0; position < todo.length; position++) {
       await postOne(opts, preview, todo[position]);
@@ -313,7 +358,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -411,7 +456,7 @@
    */
   function create(opts) {
     var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
-    return Object.assign(answerMethods(opts, preview), {
+    return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
       },
@@ -439,7 +484,7 @@
         return readyItems(preview).length;
       },
       view: function () {
-        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal };
+        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal, check: preview.check || null };
       }
     });
   }

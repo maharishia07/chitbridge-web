@@ -20,7 +20,7 @@ if (typeof EP !== 'undefined') {
 }
 
 /** where the marks are kept: mode 'server' (shared record) · 'device' (the record is not set up yet) · 'error' (could not reach it); the rest is what the log said */
-var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], chain: Promise.resolve(), say: '', signing: false };
+var bankStoreState = { view: null, mode: 'device', acct: '', statements: [], exceptions: [], posted: [], chain: Promise.resolve(), say: '', signing: false };
 const bankStoreState_SHOWN = 4;
 /** a string made safe to put into the panel */
 const bksE = (text) => (typeof bkbE === 'function' ? bkbE(text) : String(text));
@@ -54,6 +54,7 @@ async function bankStoreLoad(view) {
     const log = (await api('booksBankLog', { query: { account: bankStoreState.view.acct, from: bankStoreState.view.from, to: bankStoreState.view.to }, fresh: true })) || {};
     bankStoreState.mode = 'server';
     bankStoreState.statements = log.statements || [];
+    bankStoreState.posted = log.posted || []; /* api #1350: the bank-line entries posted, who and when (the statement check reads them) */
     bankStoreState.exceptions = log.exceptions || [];
     const state = bankStoreReplay(log.marks);
     bkbSave('marks:' + bankStoreState.view.acct, state);

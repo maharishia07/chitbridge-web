@@ -34,11 +34,11 @@ of file each thing is; this says what already does the job.
 | 67 | `here` | `screen-id.js` | if (root.addEventListener) root.addEventListener('load', paintHelp); |
 | 64 | `root` | `platformroot.js` | the uuid of this deployment's root entity, or null if none is configured |
 | 64 | `adopt` | `remote-party.js` | local → the input names a business in THIS installation's namespace (or is an e-mail): |
+| 62 | `again` | `signin-ui.js` |  |
 | 62 | `items` | `books-store.js` | PERF1: |
 | 61 | `record` | `access-events.js` |  |
 | 61 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
-| 60 | `again` | `signin-ui.js` |  |
 | 57 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 56 | `toast` | `accounts-shell.js` |  |
 | 56 | `rows` | `cap-settings.js` |  |
@@ -67,6 +67,7 @@ of file each thing is; this says what already does the job.
 | 43 | `CBAction` | `accounts-shell.js` | Every writing control and whether it uses this: |
 | 43 | `live` | `receivables.js` | the allocations that still count: |
 | 42 | `gate` | `country-setup.js` | gate(h, entity): |
+| 41 | `button` | `bank-preview-ui.js` | var escapeHtml = ctx.escapeHtml; |
 | 41 | `status` | `books-engines.js` | what the health screen says about the engines — |
 | 41 | `missing` | `variant.browser.js` | refusing with no reason. |
 | 40 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
@@ -110,8 +111,8 @@ of file each thing is; this says what already does the job.
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
 | 30 | `governance` | `home-facts.js` |  |
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
+| 29 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 29 | `group` | `identity.js` | again in a different costume. |
-| 28 | `opts` | `cap-stock.js` | the options the stock list is mounted with |
 | 28 | `names` | `shortcuts.js` |  |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
 | 27 | `call` | `cap-assist.js` |  |
@@ -157,6 +158,7 @@ of file each thing is; this says what already does the job.
 | 20 | `parties` | `books-store.js` | it started from identities with a WHERE over both outer joins, which read the whole platform's identities for  |
 | 20 | `clock` | `sla.js` | delivered on time, and the party at fault would be the one who fixed it. |
 | 19 | `renderApp` | `app.html` |  |
+| 19 | `done` | `attach-ui.js` |  |
 | 19 | `country` | `cap-catalogue.js` | the shop's country, off its own record (the pack the chip's words come from) |
 | 19 | `send` | `cap-quotes.js` |  |
 | 19 | `step` | `cart.js` |  |
@@ -168,7 +170,6 @@ of file each thing is; this says what already does the job.
 | 19 | `label` | `bill-privacy.js` | label(step, mine) — |
 | 19 | `verify` | `bookpack.js` | manifest's own hash. |
 | 19 | `same` | `variant.browser.js` | do two sets of choices mean the same thing — |
-| 18 | `done` | `attach-ui.js` |  |
 | 18 | `close` | `avatar.js` |  |
 | 18 | `group` | `cart.js` | A heading's control adds ONE of each — |
 | 18 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
@@ -185,6 +186,7 @@ of file each thing is; this says what already does the job.
 | 18 | `actions` | `rail-actions.js` | the whole answer for GET /chits/:id |
 | 17 | `message` | `cap-print.js` | the one message: |
 | 17 | `confirm` | `lab-kit.js` | opts: |
+| 17 | `check` | `network-app.js` |  |
 | 17 | `verdict` | `rail-thread.js` |  |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `orders` | `home-facts.js` | the till said 2 — |
@@ -194,6 +196,7 @@ of file each thing is; this says what already does the job.
 | 16 | `bkMoney` | `cap-books.js` |  |
 | 16 | `bkDate` | `cap-books.js` |  |
 | 16 | `frame` | `cap-settings.js` |  |
+| 16 | `said` | `cap-shop.js` |  |
 | 16 | `fmtMoney` | `helpers.js` |  |
 | 16 | `clean` | `amend.js` | Rejecting the shape in one place beats tolerating it in four. |
 | 16 | `validate` | `bill-use.js` | Only lines the copy has; only the three words; at least one thing said. |
@@ -205,7 +208,4 @@ of file each thing is; this says what already does the job.
 | 16 | `heads` | `tax-lines.js` | The heads, summed. |
 | 15 | `confirmAsk` | `app.html` | In-app confirm (replaces browser confirm()). |
 | 15 | `cols` | `cap-catalogue.js` |  |
-| 15 | `said` | `cap-shop.js` |  |
 | 15 | `chips` | `country-profiles.js` | words as chips; null when there are none |
-| 15 | `offers` | `network-app.js` |  |
-| 15 | `check` | `network-app.js` |  |

@@ -122,6 +122,27 @@ const make = (over) => {
   assert.strictEqual(onlyContra.seen.args.proposals[0].needs, 'not_here');
   ok('FIN-116/117: a registered shop is ASKED the tax kind (needs tax_kind, never defaulted); unknown registration asks nothing; a kind the host cannot post says where it is recorded; the demo is unchanged');
 
+  /* the statement check runs before any line is worked (engines bank-statement-check via bank-preview-check.js): refuse stops in its words, confirm waits for the owner's tick, already-done lines carry their why */
+  globalThis.CBBankPreviewCheck = require(pub('app/bank-preview-check.js'));
+  const verdictOf = (verdict, items) => ({ ok: true, verdict, items, pending: items.filter((x) => x.level === 'confirm' && !x.confirmed).map((x) => x.code), already: { all: false, per_line: [{ i: 0, kind: 'posted', why: 'Posted by Ann on 12 Oct (entry MJ-4).' }] }, fingerprint_account: null });
+  const refuseSeen = { suggest: [], project: 0, posted: [] };
+  const refuseEngine = Object.assign(engines(refuseSeen), { statementCheck: { check: () => verdictOf('refuse', [{ code: 'currency_mismatch', level: 'refuse', why: 'This statement is in USD, the account is in AUD.' }]) } });
+  const wrongStatement = P.create({ engine: refuseEngine, currency: 'AUD', statementCurrency: () => 'AUD', account: 'Demo', ledger: () => ({ lines: [], opening_minor: 0 }), post: async () => ({ ok: true }), lockedMonth: () => null, checkInput: () => ({}) });
+  const refusedLoad = wrongStatement.load('ok', 'f.csv');
+  assert.strictEqual(refusedLoad.ok, false);
+  assert.ok(/USD/.test(refusedLoad.why) && refuseSeen.project === 0, 'a refusal stops BEFORE project()');
+  let confirmedSent = [];
+  const confirmSeen = { suggest: [], project: 0, posted: [] };
+  const confirmEngine = Object.assign(engines(confirmSeen), { statementCheck: { check: (input) => { confirmedSent = input.confirmed; const ticked = input.confirmed.indexOf('gap') >= 0; return verdictOf(ticked ? 'go' : 'confirm', [{ code: 'gap', level: 'confirm', why: 'There is a gap before this statement.', confirmed: ticked }]); } } });
+  const waiting = P.create({ engine: confirmEngine, currency: 'AUD', statementCurrency: () => 'AUD', account: 'Demo', ledger: () => ({ lines: [], opening_minor: 0 }), post: async () => ({ ok: true }), lockedMonth: () => null, checkInput: () => ({}) });
+  assert.strictEqual(waiting.load('ok', 'f.csv').ok, true);
+  assert.ok((await waiting.postReady()).blocked, 'an unticked confirm blocks every post');
+  waiting.confirmCheck('gap');
+  assert.deepStrictEqual(confirmedSent, ["gap"]);
+  assert.ok(!(await waiting.postReady()).blocked, 'ticked: line work goes on');
+  assert.ok(waiting.view().items.some((x) => x.alreadyWhy), 'the already-done why rides on the line');
+  ok('statement check: refuse stops before project(); confirm waits for the owner tick; already-done why on the line');
+
   /* B5-06: every skipped row reaches the engine's statement, so "tied" can refuse */
   const skip = make();
   skip.seen.skipped = [{ row: 3, why: 'unreadable date "06/11/2026 09:14"' }];

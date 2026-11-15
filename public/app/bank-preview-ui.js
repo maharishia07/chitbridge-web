@@ -15,6 +15,21 @@
   var preview = root.CBBankPreview;
   /** the choice that says a line is neither an income nor an expense (a tax payment, a loan, drawings, a transfer between own accounts): it has no account here, the owner adds it with + Entry */
   var NOT_INCOME_OR_EXPENSE = '__other__';
+  /** a line already in the books: who put it there and when, in the check's words; '' for any other line */
+  function alreadyNote(item, escapeHtml) {
+    return item.state === 'in_books' && item.alreadyWhy ? '<span class="bd-why">' + escapeHtml(item.alreadyWhy) + '</span>' : '';
+  }
+  /** every other thing holding a line back besides its entry and its one question, as tags */
+  function otherNeeds(item, tag) {
+    return (item.blockers || [])
+      .filter(function (code) {
+        return code !== 'no_entry' && code !== item.needs;
+      })
+      .map(function (code) {
+        return tag('ask', preview.NEEDS_WORDS[code] || code);
+      })
+      .join(' ');
+  }
   /** the words of a line: the pack's tax name, the tax it carries, the entry it would make, the chart the owner picks from; each function lands on the one shared `ctx` */
   function addWords(ctx) {
     var cfg = ctx.cfg, escapeHtml = ctx.escapeHtml, amountText = ctx.amountText;
@@ -113,15 +128,10 @@
     function lineNote(item, result) {
       if (result) return result.ok ? tag('ok', cfg.addedWords || 'Added') : tag('bad', 'Not added: ' + result.why);
       if (item.state === 'closed') return tag('bad', item.why);
+      var done = alreadyNote(item, escapeHtml);
+      if (done) return done;
       var asked = askedBox(item),
-        others = (item.blockers || [])
-          .filter(function (code) {
-            return code !== 'no_entry' && code !== item.needs;
-          })
-          .map(function (code) {
-            return tag('ask', preview.NEEDS_WORDS[code] || code);
-          })
-          .join(' ');
+        others = otherNeeds(item, tag);
       var reason = item.state === 'needs_you' && !asked ? '<span class="bd-why">' + escapeHtml(item.why || 'Nothing here says who or what this is.') + '</span>' : '';
       return entryNote(item) + asked + (others ? ' ' + others : '') + reason;
     }
@@ -196,20 +206,43 @@
     }
     Object.assign(ctx, { stateKeyOf, lineRow, skipBox });
   }
+  /** the statement check, in words: each finding's sentence, a tick on what the owner must confirm, "Use it anyway" on what the owner may override, the account to choose, and the all-done summary */
+  function addCheck(ctx) {
+    var escapeHtml = ctx.escapeHtml;
+    function button(item, label) {
+      return ' <button data-cbsid="BKS017-B16" type="button" class="bd-btn" data-act="chk" data-key="' + escapeHtml(item.code) + '">' + escapeHtml(label) + '</button>';
+    }
+    function pickOf(item) {
+      var choices = (item.choose_from || []).map(function (one) { return '<option value="' + escapeHtml(one.id) + '">' + escapeHtml(one.name + (one.masked ? ' ' + one.masked : '')) + '</option>'; });
+      return choices.length ? ' <select data-cbsid="BKS017-S09" class="bd-inp" aria-label="Which account" data-act="acctpick"><option value="">Choose</option>' + choices.join('') + '</select>' : '';
+    }
+    function findingBox(item) {
+      var open = !item.confirmed && item.level === 'confirm' ? button(item, 'Yes, go on') : '';
+      var anyway = !item.confirmed && item.level === 'refuse' && item.override ? button(item, 'Use it anyway') : '';
+      return '<p class="bd-find bd-' + escapeHtml(item.level) + '" data-testid="bd-check-' + escapeHtml(item.code) + '">' + escapeHtml(item.why) + open + anyway + pickOf(item) + '</p>';
+    }
+    function checkBox(model) {
+      var check = model.check;
+      if (!check) return '';
+      var all = check.already && check.already.all ? '<p class="bd-find bd-info" data-testid="bd-check-all">' + escapeHtml(check.already.summary) + '</p>' : '';
+      return '<div class="bd-check" role="status">' + (check.items || []).filter(function (item) { return item.level !== 'info' || !item.confirmed; }).map(findingBox).join('') + all + '</div>';
+    }
+    ctx.checkBox = checkBox;
+  }
   /** the painter for one mount: it reads its currency and country once, so no tax name or money unit is written here */
   function painter(cfg) {
     var ctx = { cfg: cfg, escapeHtml: root.esc /* helpers.js's ONE esc: every page that mounts this painter loads helpers.js first */ };
     ctx.amountText = function (value) { return preview.moneyText(value, cfg.currency); };
     ctx.tag = function (kind, words) { return '<span class="bd-tag bd-' + kind + '">' + ctx.escapeHtml(words) + '</span>'; };
     ctx.dataKey = function (item) { return ' data-key="' + ctx.escapeHtml(item.key) + '"'; };
-    addWords(ctx); addQuestions(ctx); addAsks(ctx); addParties(ctx); addRows(ctx);
+    addWords(ctx); addQuestions(ctx); addAsks(ctx); addParties(ctx); addRows(ctx); addCheck(ctx);
     return {
       skipBox: ctx.skipBox,
       chartOf: ctx.chartOf,
       taxWordOf: ctx.taxWordOf,
       linesHtml: function (model) {
         return (
-          ctx.skipBox(model) +
+          ctx.checkBox(model) + ctx.skipBox(model) +
           '<table class="bd-table"><thead><tr><th>Date</th><th>What the bank says</th><th>Out</th><th>In</th><th>In your books?</th></tr></thead><tbody>' +
           model.items.map(function (item) { return ctx.lineRow(item, model.results); }).join('') + '</tbody></table>'
         );
@@ -248,9 +281,15 @@
       tick: function (key) { return cfg.controller().tick(key); },
       inv: function (key, target) { return cfg.controller().invoice(key, target.getAttribute('data-v')); },
       pair: function (key, target) { return cfg.controller().pair(key, target.getAttribute('data-id')); },
-      notmatch: function (key) { return cfg.controller().notMatch(key); }
+      notmatch: function (key) { return cfg.controller().notMatch(key); },
+      chk: function (code) { return cfg.controller().confirmCheck(code) ? { ok: true } : { ok: false, why: 'Could not read this statement again.' }; }
     };
     return ACTIONS;
+  }
+  /** the owner chose which of their accounts this statement is for */
+  function pickAccount(cfg, field) {
+    if (field.value) cfg.controller().chooseAccount(field.value);
+    cfg.changed();
   }
   /**
    * mount(cfg) → { paint(), chosenFor }
@@ -276,11 +315,12 @@
     }
     function onChange(event) {
       var field = event.target,
-        act = field.getAttribute && field.getAttribute('data-act'),
+        action = field.getAttribute && field.getAttribute('data-act'),
         key = field.getAttribute && field.getAttribute('data-key');
-      if (act !== 'pname' && act !== 'pkind') return;
+      if (action === 'acctpick') return pickAccount(cfg, field);
+      if (action !== 'pname' && action !== 'pkind') return;
       var party = cfg.controller().view().items.filter(function (one) { return one.key === key; })[0].party;
-      var said = cfg.controller().editParty(key, { name: act === 'pname' ? field.value : party.name, kind: act === 'pkind' ? field.value : party.kind });
+      var said = cfg.controller().editParty(key, { name: action === 'pname' ? field.value : party.name, kind: action === 'pkind' ? field.value : party.kind });
       if (!said.ok) cfg.say(said.why);
       cfg.changed();
     }
