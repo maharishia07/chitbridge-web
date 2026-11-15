@@ -229,6 +229,9 @@ ok(noiseMod.sameCode('x.js', 'a(1); // x', 'a(1);') && !noiseMod.sameCode('x.js'
 ok(!noiseMod.sameCode('x.js', 'function f(x) {\n  return\n  x;\n}', 'function f(x) {\n  return x;\n}') && !noiseMod.sameCode('x.js', 'a\n(b)', 'a(b)') && !noiseMod.sameCode('x.js', 'var a = 1\n+b', 'var a = 1 + b'), 'noise: a line break moved around return / ASI cases is a real change');
 ok(noiseMod.sameCode('x.js', '// head\nvar a = 1;\n// why\nb();', 'var a = 1;\nb();') && noiseMod.sameCode('x.js', 'a();\n  // note\nb();', 'a();\nb();'), 'noise: comment lines added between statements that already sit on separate lines stay noise');
 ok(!noiseMod.sameCode('x.html','<p>a</p><script>b()</script>', '<p>a</p><script>c()</script>') && !noiseMod.sameCode('x.html', '<p>a</p>', '<p>b</p>'), 'noise: a changed script or changed markup is not noise');
+const popCall = "modal('<b>x</b>', false, { pop: 'POP012' });", popBase = "modal('<b>x</b>', false);";
+ok(noiseMod.sameCode('x.js', popCall, popBase) && noiseMod.sameCode('x.js', "modal('<b>x</b>', false, { pop: 'POP012' });", "modal('<b>x</b>');") && noiseMod.sameCode('x.html', '<div data-pop="POP206" id="a"></div>', '<div id="a"></div>'), 'noise: a dialog code ({ pop: POPnnn } argument, data-pop attribute) is identity only, like data-cbsid');
+ok(!noiseMod.sameCode('x.js', "modal('<b>x</b>', true, { pop: 'POP012' });", popBase) && !noiseMod.sameCode('x.js', "go('<b>x</b>', { pop: 'POP012' });", "go('<b>x</b>');") && !noiseMod.sameCode('x.js', "modal('<b>x</b>', false, { pop: 'later' });", popBase), 'noise: a changed wide flag, another callee or a pop value that is not a POP code is a real change');
 fs.rmSync(noiseTmp, { recursive: true, force: true });
 
 console.log('\n6 · the modules behind the tool, one unit each');

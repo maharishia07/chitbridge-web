@@ -1383,7 +1383,7 @@ function cbDefNoteFieldHTML(form) {
   var hint =
     form.kind === 'tax'
       ? tx('On your tax slabs list. Buyers never see it.')
-      : f.kind === 'pricing'
+      : form.kind === 'pricing'
         ? tx('On your pricing list. Buyers never see it.')
         : tx('On your offers list. Buyers never see it.');
   return ui.field({

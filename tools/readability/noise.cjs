@@ -21,22 +21,53 @@ function loadAcorn() {
 const acorn = loadAcorn();
 
 /** ` data-cbsid="X"` in any form it takes in markup or inside a JS string (plain, single-quoted, backslash-escaped quotes, bare) */
-const CBSID_ATTRIBUTE = /\s*data-cbsid=(?:\\?"[^"\\]*\\?"|\\?'[^'\\]*\\?'|[^\s>"'\\]+)/g;
+const CBSID_ATTRIBUTE = /\s*data-(?:cbsid|pop)=(?:\\?"[^"\\]*\\?"|\\?'[^'\\]*\\?'|[^\s>"'\\]+)/g;
 const withoutIds = (text) => text.replace(CBSID_ATTRIBUTE, '');
 const collapse = (text) => text.replace(/\s+/g, ' ').trim();
+
+/** a dialog's own name: the call modal(html, wide, { pop: 'POPnnn' }) only stamps a code on the dialog header (modalStamp), it changes no behaviour */
+const isPopArgument = (items, at) =>
+  items[at].label === ',' &&
+  items.slice(at + 1, at + 6).map((item) => item.label).join(' ') === '{ name : string }' &&
+  items[at + 2].text === 'pop' &&
+  /^(['"])POP\d+\1$/.test(items[at + 5 - 1].text);
+
+/** the stream without its { pop } arguments, and without a trailing ", false" of a modal( call (wide is only tested for truthiness) */
+function withoutPopArguments(items) {
+  const kept = [];
+  const modalOpen = [];
+  for (let at = 0; at < items.length; at++) {
+    if (modalOpen[modalOpen.length - 1] && isPopArgument(items, at)) {
+      at += 5;
+      continue;
+    }
+    const item = items[at];
+    if (item.label === '(') modalOpen.push(at > 0 && items[at - 1].text === 'modal');
+    if (item.label === ')' && modalOpen.pop()) dropTrailingFalse(kept);
+    kept.push(item);
+  }
+  return kept;
+}
+
+/** ", false" at the end of the kept tokens goes (the false of a modal( call whose { pop } argument was cut) */
+function dropTrailingFalse(kept) {
+  const last = kept.length - 1;
+  if (last >= 1 && kept[last].label === 'false' && kept[last - 1].label === ',') kept.length -= 2;
+}
 
 /** the tokens of JS code (comments are not tokens), each as its own text with ids removed from strings and templates, plus an N flag when a
  *  line break sits before it: a return-newline-x and a newline-before-parenthesis change behaviour (automatic semicolon insertion). The first
  *  token carries no flag, so a header comment added at the top is noise; a line break inside a comment counts, as it does for the language. */
 function codeStream(code) {
-  const tokens = [];
+  const items = [];
   let previousEnd = null;
   for (const token of acorn.tokenizer(code, { ecmaVersion: 'latest', allowHashBang: true })) {
     const lineBreak = previousEnd !== null && code.slice(previousEnd, token.start).includes('\n') ? 'N' : '';
-    tokens.push(lineBreak + token.type.label + '\u0001' + withoutIds(code.slice(token.start, token.end)));
+    const tokenText = code.slice(token.start, token.end);
+    items.push({ label: token.type.label, text: tokenText, joined: lineBreak + token.type.label + '\u0001' + withoutIds(tokenText) });
     previousEnd = token.end;
   }
-  return tokens.join('\u0002');
+  return withoutPopArguments(items).map((item) => item.joined).join('\u0002');
 }
 
 const SCRIPT = /(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi;

@@ -69,5 +69,29 @@ let spoken = '';
 try { bare.verifyReadiness('gst', 'registration', 'gstin'); } catch (error) { spoken = String(error.message); }
 check(/field/.test(spoken), 'the sheet fails loud (it could not draw), never opens half-blank: ' + spoken.slice(0, 50) + ' (ui-script-loaded.cjs stops a page that lacks the script)');
 
+console.log('The offer, pricing and tax Note field (cap-definitions.js cbDefNoteFieldHTML)');
+const defSource = read('app/cap-definitions.js');
+const noteStart = defSource.indexOf('function cbDefNoteFieldHTML(form) {');
+const noteSource = defSource.slice(noteStart, defSource.indexOf('\n}\n', noteStart) + 3);
+const listeners = {}, stored = [];
+const noteBox = Object.assign({}, sandbox, {
+  document: Object.assign({}, sandbox.document, { addEventListener: (name, fn) => { listeners[name] = fn; } }),
+  cbDefSetField: (key, value) => stored.push([key, value])
+});
+vm.createContext(noteBox);
+noteBox.window = noteBox;
+vm.runInContext(read('app/ui.js'), noteBox);
+vm.runInContext(read('app/ui-field.js'), noteBox);
+vm.runInContext(noteSource, noteBox);
+const typing = { id: 'cbdef-note', value: 'ring me', getAttribute: (name) => ({ 'data-cbname': 'field', 'data-cbkind': 'text' }[name] || null), closest: () => null, parentNode: null };
+[['offer', 'On your offers list'], ['pricing', 'On your pricing list'], ['tax', 'On your tax slabs list']].forEach(([kind, hint]) => {
+  let html = '', drew = '';
+  try { html = noteBox.cbDefNoteFieldHTML({ kind, note: '' }); } catch (error) { drew = String(error.message); }
+  check(!drew && html.indexOf(hint) > 0 && /id="cbdef-note"/.test(html), kind + ': the Note field draws with its own hint' + (drew ? ' (threw: ' + drew + ')' : ''));
+  stored.length = 0;
+  try { listeners.input({ target: typing }); } catch (error) { drew = String(error.message); }
+  check(stored.length === 1 && stored[0][0] === 'note' && stored[0][1] === 'ring me', kind + ': typing reaches cbDefSetField(note)' + (drew ? ' (' + drew + ')' : ''));
+});
+
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);
