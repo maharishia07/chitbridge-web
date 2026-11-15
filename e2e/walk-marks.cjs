@@ -136,7 +136,7 @@ W.run('marks', async (w) => {
   });
   await w.step('T1', 'the Query sheet is titled by the entry (number · day · amount), never the record id', async () => {
     const title = await txt(T('mk-title'));
-    return { ok: /^JV-0002 · 4 Nov 2026 · ₹[d,]+.dd$/.test(title) && !title.includes(E[1]), saw: title };
+    return { ok: /^JV-0002 · 4 Nov 2026 · ₹[0-9,]+.[0-9]{2}$/.test(title) && !title.includes(E[1]), saw: title };
   });
   await w.step('A4', 'the auditor · type the question, Ask: ONE write (query + note), the sheet closes, the row says Query', async () => {
     await page.fill(T('mk-note'), 'Why was rent posted to 4100?'); await shot('03-auditor-query-sheet');
