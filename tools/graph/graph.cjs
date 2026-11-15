@@ -590,7 +590,7 @@ function build() {
     }
     if (!/^\.\.?\//.test(spec)) return null;
     const base = path.posix.normalize(path.posix.join(path.posix.dirname(f.rel), spec));
-    for (const cand of [base, base + '.js', base + '.cjs', base + '/index.js']) {
+    for (const cand of [base, base + '.js', base + '.cjs', base + '.mjs', base + '/index.js', base + '/index.cjs']) { /* the way Node resolves: exact, extensions, directory index */
       const hit = byId.get('file:' + f.repo + ':' + cand) || byId.get('test:' + f.repo + ':' + cand);
       if (hit) return hit;
     }

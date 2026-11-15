@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { entryKindsOf, namedByOf, importedByOf } = require('./entries.cjs');
 
 const HERE = __dirname;
 const WEB_ROOT = path.resolve(HERE, '..', '..');
@@ -217,17 +218,20 @@ const routeLabel = (graph, id) => {
 const tableName = (id) => String(id).replace(/^table:/, '');
 
 /** one module's TRACE row */
-function rowOf(graph, repo, entry, roots) {
+function rowOf(graph, repo, entry, roots, links) {
   const tests = testsOf(graph, entry, roots);
   const layer = layerOf(repo, entry.file);
   const filesOf = (ids) => [...new Set(ids.filter((id) => /^(fn|file|screen|route):/.test(id)).map((id) => repoOf(id) + ':' + fileOf(id)))].sort();
+  /* used by = a call edge, a require of the file (inline `require('./x').f()` makes no call edge), or a web file that writes its path */
+  const users = neighbours(graph, entry, 'calls', 'in').concat(neighbours(graph, entry, 'requires', 'in'), (links.named[entry.file] || []).map((file) => 'file:' + repo + ':' + file));
   return {
+    entry: links.entry[entry.file] || undefined /* cli | ci: run by a person or CI, so nothing requires it (JSON drops undefined) */,
     card: cardOf(path.join(roots[repo], entry.file)),
     layer,
     tests: tests.filter((test) => !/(^|\/)walk-/.test(test.file)),
     walks: tests.filter((test) => /(^|\/)walk-/.test(test.file)),
     calls: filesOf(neighbours(graph, entry, 'calls', 'out')),
-    calledBy: filesOf(neighbours(graph, entry, 'calls', 'in')),
+    calledBy: filesOf(users).filter((file) => file !== repo + ':' + entry.file),
     routesServed: entry.routes.map((node) => node.method + ' ' + node.path).sort(),
     routesCalled: neighbours(graph, entry, 'calls', 'out')
       .filter((id) => id.startsWith('route:'))
@@ -243,14 +247,22 @@ function rowOf(graph, repo, entry, roots) {
   };
 }
 
+/** what no call edge shows: the entry points (run by a person or CI) and the files that name a module by path or import it */
+function linksOf(repo, root, files) {
+  const named = repo === 'web' ? namedByOf(root, files) : {};
+  for (const [file, importers] of Object.entries(importedByOf(root, files))) named[file] = (named[file] || []).concat(importers);
+  return { entry: entryKindsOf(root, files), named };
+}
+
 /** the trace of one repo: a row per own-code module (file nodes and page screens; tests and adopted copies excluded) */
 function traceOf(graph, repo, roots) {
   const modules = {};
-  for (const entry of index(graph).values()) {
+  const ownEntries = [...index(graph).values()].filter((entry) => {
     const node = entry.node || entry.screen;
-    if (!node || node.repo !== repo || (entry.node && entry.node.adopted)) continue;
-    modules[entry.file] = rowOf(graph, repo, entry, roots);
-  }
+    return node && node.repo === repo && !(entry.node && entry.node.adopted);
+  });
+  const links = linksOf(repo, roots[repo], ownEntries.map((entry) => entry.file));
+  for (const entry of ownEntries) modules[entry.file] = rowOf(graph, repo, entry, roots, links);
   const sorted = {};
   for (const file of Object.keys(modules).sort()) sorted[file] = modules[file];
   return {
