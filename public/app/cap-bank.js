@@ -682,6 +682,7 @@ function bankList() {
   CBList.reset && CBList.reset('bank');
   CBList.mount(host, {
     key: 'bank',
+    defaultCols: ['status', 'line', 'out', 'in'] /* the list shows the first four by default; Told by and In your books are one tick away in Columns */,
     foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu (the Ledgers head's fold) */,
     t: tx,
     rows: () =>
