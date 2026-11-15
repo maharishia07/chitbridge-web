@@ -590,31 +590,41 @@
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 28, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
-  /** the column that stretches: the one the page names (stretch: true), else the first that is not a number or the pinned amount */
-  function stretchKey(cols) {
-    var named = cols.filter(function (item) { return item.stretch; })[0];
-    if (named) return named.key;
-    var text = cols.filter(function (item) { return !item.num && item.pin !== 'end'; })[0];
-    return text ? text.key : null;
+  /** a column that may take the free width: text that reads on, never a number, money, code, status, date or id */
+  function stretchable(c) {
+    return !c.num && !c.money && !c.mono && c.pin !== 'end' && c.type !== 'num' && c.type !== 'money' && !/^(code|status|state|date|id|no|ref|type)$/i.test(String(c.label || c.key).trim());
   }
-  /** measure the rows once per paint: I.auto = { width per column key, stretch: key } */
+  /** measure the rows once per paint: I.auto = { width per column key, stretch: key }.
+   *  The column that stretches is the one the page names (stretch: true), else the text column that holds the most (the name or description: the data decides). */
   function autoFit(I, cols, rows) {
-    var auto = { stretch: stretchKey(cols) };
-    var sample = rows.slice(0, AUTO_SAMPLE);
+    var auto = {},
+      sample = rows.slice(0, AUTO_SAMPLE),
+      chars = {},
+      named = cols.filter(function (item) { return item.stretch; })[0],
+      best = null;
+    cols.forEach(function (c) {
+      var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
+      sample.forEach(function (row) {
+        var cell = cellOf(I, c, row),
+          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[s>]/g) || []).length * 4 : 0); /* a button in the cell is wider than its words: its padding counts */
+        if (len > n) n = len;
+      });
+      chars[c.key] = n;
+      if (!named && stretchable(c) && (!best || n > chars[best.key])) best = c;
+    });
+    if (!named && !best)
+      cols.forEach(function (c) {
+        if (!c.num && !c.money && c.pin !== 'end' && (!best || chars[c.key] > chars[best.key])) best = c; /* no text column at all: the widest that is not a number */
+      });
+    auto.stretch = named ? named.key : best ? best.key : null;
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
-      var chars = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
-      sample.forEach(function (row) {
-        var text = plainText(cellOf(I, c, row));
-        var longest = text.trim().length;
-        if (longest > chars) chars = longest;
-      });
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
-      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars * AUTO_CHAR + AUTO_PAD)));
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
     });
     I.auto = sample.length ? auto : null;
   }
@@ -1657,6 +1667,23 @@
             esc(T(I, 'Move {x} right', { x: c.label })) +
             '">→</button>'
           : '<span class="cbl-mvsp"></span>') +
+        /* L16 F29: the drag handles are out of the Tab order, so the keyboard resizes here: narrower / wider, one step each */
+        (on
+          ? ['-1', '1']
+              .map(function (dir) {
+                var word = dir === '1' ? 'Wider {x}' : 'Narrower {x}';
+                return (
+                  '<button type="button" data-cbsid="CMP039-B03"' + mountAttribute('CMP039') + ' class="cbl-mv" data-wd="' +
+                  esc(c.key) +
+                  '" data-d="' + dir + '" data-testid="cols-wd-' + esc(c.key) + (dir === '1' ? '-more' : '-less') + '" aria-label="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '" title="' +
+                  esc(T(I, word, { x: c.label })) +
+                  '">' + (dir === '1' ? '+' : '−') + '</button>'
+                );
+              })
+              .join('')
+          : '') +
         '</div>'
       );
     }
@@ -1965,7 +1992,7 @@
     return (
       '<button type="button" data-cbsid="CMP039-B02"' + mountAttribute('CMP039') + ' class="cbl-rz colrz" data-rz="' +
       esc(item.key) +
-      '" aria-label="' +
+      '" tabindex="-1" data-testid="cbl-rz-' + esc(item.key) + '" aria-label="' +
       esc(T(list, 'Resize {x} column (arrow keys)', { x: item.label || item.key })) +
       '" title="' +
       esc(T(list, 'Drag to resize · double-click resets')) +
@@ -1984,7 +2011,7 @@
         .map(function (item) {
           var id = sortId(item),
             sorted = !!(st && id && st.key === id),
-            r = !!(item.num || item.pin === 'end'),
+            r = !!(item.num || item.money || item.type === 'num' || item.type === 'money' || item.pin === 'end'),
             label = esc(item.label || item.key);
           return (
             '<div class="cbl-hc lhcell' +
@@ -2059,7 +2086,7 @@
           '<div class="cbl-cell lcell' +
           (index === 0 ? ' first' : '') +
           (amt ? ' r mono strong amt' : '') +
-          (item.num && !amt ? ' r mono' : '') +
+          ((item.num || item.money || item.type === 'num' || item.type === 'money') && !amt ? ' r mono' : '') +
           (item.mono ? ' mono' : '') +
           '" data-l="' +
           esc(index === 0 ? '' : item.label || '') +
@@ -2401,7 +2428,14 @@
       });
       return;
     }
-    if (hasNext(I)) toggleRow(I, id, ev && ev.type === 'keydown');
+    if (hasNext(I)) {
+      toggleRow(I, id, ev && ev.type === 'keydown');
+      return;
+    }
+    /* L16 F29: Enter on a row with no open handler runs the row's main action: its first link or button (a mouse click on the row never reaches here) */
+    var rowNode = ev && ev.type === 'keydown' ? I.el.querySelector('[data-row="' + cssId(id) + '"]') : null;
+    var main = rowNode && rowNode.querySelector('a[href],button:not([disabled]):not([data-caret]),[data-act]');
+    if (main) main.click();
   }
   function closePop(list, refocus) {
     if (!list.pop) return;
@@ -2734,6 +2768,13 @@
       saveChoices(list);
       paintTools(list);
       paintList(list);
+      return;
+    }
+    if (d.wd) {
+      resize(list, d.wd, +d.d * 16, false);
+      paintTools(list);
+      var again = list.el.querySelector('[data-wd="' + d.wd + '"][data-d="' + d.d + '"]');
+      if (again) again.focus();
       return;
     }
     if (d.col) return; /* the checkbox acts on 'change' */
