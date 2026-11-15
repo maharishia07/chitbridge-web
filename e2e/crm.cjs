@@ -1030,7 +1030,8 @@ async function route(S, r) {
       ok(await p.locator('[data-testid="pay_bills"] table').count() === 1, 'L16-3 @' + w + ': the bills table is visible at once');
       await p.screenshot({ path: path.join(SH, 'receive-' + w + '.png') }).catch(() => {});
       await p.getByRole('button', { name: 'Cancel' }).first().click(); await p.waitForSelector('[data-testid="pay_title"]', { state: 'detached', timeout: 5000 }).catch(() => {});
-      await p.focus('[data-testid="crm-next-remind"]'); await p.keyboard.press('Enter'); await p.waitForSelector('[data-testid="remind_title"]', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(900);
+      /* the Dues / Collections Remind (bkRemind - a message on the oldest bill); the party page's own Remind files a follow-up */
+      await p.evaluate(() => { bkRemind('pid-0002', null); }); await p.waitForSelector('[data-testid="remind_title"]', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(900);
       const ph = await p.getAttribute('[data-testid="msg-body"]', 'placeholder').catch(() => '') || '';
       ok(/no phone or e-mail/i.test(ph) && !/sees this/.test(ph), 'L16-4 @' + w + ': Remind to a party with no channel says "' + ph + '"');
       await p.screenshot({ path: path.join(SH, 'remind-' + w + '.png') }).catch(() => {});
