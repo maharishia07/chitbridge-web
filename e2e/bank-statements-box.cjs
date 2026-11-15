@@ -122,6 +122,10 @@ function stand(pending) {
   { const [fc] = await Promise.all([p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null), p.click('[data-testid="bank-stmts-justread-go"]')]); ok(!!fc, 'W15-62: it opens the file picker (the one reader of the page)'); }
   ok(await sideways(p), '1366 px: nothing scrolls sideways');
   await p.screenshot({ path: path.join(SHOTS, 'stmts-box-laptop.png') });
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok(await sideways(p) && await p.locator('[data-testid="bank-stmts-justread-go"]').isVisible(), 'W15-62 · 390x844: nothing scrolls sideways and the quiet "Just read a file" choice shows');
+  await p.screenshot({ path: path.join(SHOTS, 'stmts-box-phone.png') });
+  await p.setViewportSize({ width: 1366, height: 768 });
 
   /* ── 2 · ADD ── */
   await p.click('[data-testid="bank-stmts-add-go"]');

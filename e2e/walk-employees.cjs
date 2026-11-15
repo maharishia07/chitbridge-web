@@ -167,10 +167,10 @@ W.run('employees', async (w) => {
   });
   await w.step('E13', 'Add a person -> a good sign-in name -> Add -> "Added" with the sign-in name and where the first code went, and the list has 4 people', async () => {
     await page.fill('[data-testid="emp-add-key"]', 'kavya04'); await page.click('[data-testid="emp-add-go"]'); await page.waitForSelector('[data-testid="emp-added"]', { timeout: 6000 });
-    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]'); const copyN = await page.locator('[data-testid="emp-copy"]').count();
+    const id = await txt('[data-testid="emp-added-id"]'), code = await txt('[data-testid="emp-added-code"]'); const copyN = await page.locator('[data-testid="emp-copy"]').count(); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-laptop.png' }).catch(() => {}); await page.setViewportSize({ width: 390, height: 844 }); await page.waitForTimeout(300); const fit390 = await page.evaluate(() => { const b = document.querySelector('[data-testid="emp-copy"]').getBoundingClientRect(); return b.right <= window.innerWidth && document.documentElement.scrollWidth <= document.documentElement.clientWidth; }); await page.screenshot({ path: 'e2e/shots/smallfix-employee-added-phone.png' }).catch(() => {}); await page.setViewportSize({ width: 1366, height: 800 });
     await page.click('[data-testid="emp-done"]'); await page.waitForTimeout(400);
     const n = await rows();
-    return { ok: id === 'kavya04@walk-shop.br' && copyN === 1 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
+    return { ok: id === 'kavya04@walk-shop.br' && copyN === 1 && fit390 && /went to k\*\*\*@/.test(code) && n === 4 && wrote(/POST \/api\/actors \{/) === 1, saw: 'sign-in "' + id + '"; "' + code + '"; ' + n + ' rows; one add call' };
   });
   await w.step('E18', 'SEC2 · Asha -> E-mail -> type her address -> Save -> "Saved." and the sheet shows it (codes go there, never on screen)', async () => {
     await page.click('[data-testid="emp-row-p1"]'); await page.waitForSelector('#emp_email', { timeout: 6000 });
