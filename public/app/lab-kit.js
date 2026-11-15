@@ -152,7 +152,10 @@
       if (target && target.isConnected && target.focus) target.focus();
     }
     function onKey(event) {
-      if (event.key === 'Escape') return void close();
+      if (event.key === 'Escape') {
+        event.stopPropagation(); /* one Esc closes only this popup: a sheet or confirm under it stays until the next one */
+        return void close();
+      }
       if (event.key !== 'Tab') return;
       var items = tabbables(back.querySelector('.lk-pop'));
       if (!items.length) return void event.preventDefault();

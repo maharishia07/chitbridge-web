@@ -398,7 +398,7 @@
   var FONTS_HREF =
     'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap';
   function addFonts(options) {
-    if (!doc || !doc.head || (options && options.fonts === false)) return; /* fonts:false: a page whose CSP allows no third-party call (the no-login bank demo) */
+    if (!doc || !doc.head || (options && options.fonts === false)) return; /* fonts:false: a page whose CSP allows no third-party call (the no-login bank page) */
     var hasPlexLink = [].some.call(doc.querySelectorAll('link[rel="stylesheet"]'), function (nestedLink) {
       return /IBM\+Plex\+Sans/.test(nestedLink.getAttribute('href') || '');
     });
