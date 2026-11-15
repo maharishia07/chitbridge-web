@@ -12,7 +12,7 @@
 const bkshBook = () => BKB;
 /** the shop's own login (the page's isOwner: a co-assist is not the owner); false where the page has none */
 const bkshIsOwner = () => typeof isOwner === 'function' && isOwner();
-const BKSH = { ctl: null, ui: null, key: '', taxRegistered: null, posting: false };
+const BKSH = { ctl: null, ui: null, key: '', taxRegistered: null, posting: false, said: null, refs: null };
 /** the statement the answers belong to: the account and the file's hash; the controller (and every answer on it) is kept for this key, so closing the sheet never loses them */
 const bkshKey = () => String(bkshBook().stmtAcct || bkshBook().acct) + ':' + ((bkshBook().file && bkshBook().file.hash) || '');
 /** the engine parts the sheet needs, or null when the page did not load them */
@@ -178,6 +178,13 @@ function bkshFigures(fig) { /* one line answered: that line alone, the statement
     u: fig.unexplained
   });
 }
+/** the sheet's one say-line: red for what went wrong, green for what was added */
+function bkshSay(words, good) {
+  const node = bkshEl('bks_say');
+  if (!node) return;
+  node.textContent = words || '';
+  node.className = good ? 'pe-ok' : 'pe-bad';
+}
 /** paint the sheet again from the controller: the strip, the lines, and the Add button with its count */
 /** a "Same payment" answer is the page's truth too: when the pairs changed, the page counts its lines again (no read: the engine's match with the pairs added) */
 function bkshPageFollows() {
@@ -195,7 +202,7 @@ function bkshPaint() {
     ready = BKSH.ctl.readyCount();
   bkshEl('bks_strip').textContent = bkshStrip();
   if (model.parsed) BKSH.ui.paint(model);
-  if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
+  if (model.refusal) bkshSay(model.refusal, false);
   if (addButton) {
     addButton.disabled = !ready || BKSH.posting;
     addButton.textContent = ready ? (BKSH.ctl.only() ? tx('Add this line to your books') : txf('Add these {n} ready lines', { n: ready })) : tx('Nothing ready to add');
@@ -210,7 +217,7 @@ function bkshAsk() {
 /** the one write: confirm, post the ready lines one at a time, read the books again, paint what happened on each line */
 async function bkshAdd(btn) {
   const question = bkshAsk();
-  if (!question) return void (bkshEl('bks_say').textContent = tx('The engine sent no figures for this press, so nothing was added.'));
+  if (!question) return void bkshSay(tx('The engine sent no figures for this press, so nothing was added.'), false);
   if (BKSH.posting || (await CBAction.ask(question)) !== true) return;
   BKSH.posting = true;
   bkshPaint();
@@ -221,10 +228,19 @@ async function bkshAdd(btn) {
     bkshAcceptAdded(); /* the owner's own adds read as accepted at once, whichever way the sheet is closed later */
     /* the Bank view reads the books and the rail again and repaints: its band and its counts follow what was posted (B4) */
     BKSH.ctl.answer('ledger_read', Date.now()); /* projects again over the books just read */
-    bkshEl('bks_say').textContent = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
+    const said = done.failed ? txf('{a} added, {f} not added: each says why on its line.', { a: done.added, f: done.failed }) : txf('{a} added to your books.', { a: done.added });
+    const fig = typeof bankFigures === 'function' ? bankFigures() : null;
+    if (!done.failed && fig && fig.nil) {
+      /* nothing is left: the books agree with the statement, so the sheet closes itself and the Bank view offers the sign-off */
+      BKSH.posting = false;
+      closeModal();
+      toast(said);
+      return;
+    }
+    bkshSay(said, !done.failed);
   } catch (failure) {
     bkQuiet('bank-sheet-add', failure);
-    bkshEl('bks_say').textContent = tx('Could not finish adding. Nothing more was sent. Open the Bank view again to see what was added.');
+    bkshSay(tx('Could not finish adding. Nothing more was sent. Open the Bank view again to see what was added.'), false);
   }
   BKSH.posting = false;
   bkshPaint();
@@ -296,16 +312,57 @@ function bkshKeyOfRow(row) {
   const parsed = bkshBook().parsed;
   return row && parsed ? String((bkshPairing(parsed.lines).line_refs || [])[row.i] || '') : '';
 }
+/**
+ * ONE split per bank line (l16-bank-10): the page's rows read the same controller the sheet runs, so "Ready to add" and "Needs you" are one answer for one file.
+ * The controller is made quietly as soon as the statement is read (no sheet), and kept for the sheet; the page repaints when it is there.
+ */
+async function bkshPrime() {
+  if (!bkbBound() || !bkshReady()) return;
+  if (BKSH.taxRegistered === null || BKSH.taxRegistered === 'unread') BKSH.taxRegistered = await bkshRegistered();
+  if (!BKSH.ctl || BKSH.key !== bkshKey()) {
+    BKSH.ctl = bkshController();
+    BKSH.key = bkshKey();
+    BKSH.said = BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name);
+  } else BKSH.ctl.answer('ledger_read', Date.now());
+  BKSH.refs = null;
+  bkshTodo();
+}
+/** the Accounts Home count: the lines still to add that are not ready, from the same controller */
+function bkshTodo() {
+  if (!BKSH.ctl) return;
+  const count = bkshCounts();
+  bkbSave('todo', { n: count.needs, acct: bkshBook().acct, to: bkshBook().to });
+}
+/** the controller's own item for a page row, or null when the sheet's controller is not there for this statement */
+function bkshItemOf(row) {
+  const parsed = bkshBook().parsed;
+  if (!BKSH.ctl || BKSH.key !== bkshKey() || !parsed || row.i === undefined) return null;
+  if (!BKSH.refs) BKSH.refs = bkshPairing(parsed.lines).line_refs || [];
+  const ref = BKSH.refs[row.i];
+  return (BKSH.ctl.view().items || []).filter((one) => one.key === ref)[0] || null;
+}
+/** the standing ('in' · 'ready' · 'wait' · 'need' · 'posted' …) the controller gives a page row, or null */
+function bkshStandingOf(row) {
+  const item = bkshItemOf(row);
+  return item ? CBBankPreview.standing(item, BKSH.ctl.view().results[item.key]) : null;
+}
+/** the party the books matched to a line, by name, or '' (the statement's own words stay under it) */
+function bkshPartyOf(row) {
+  const item = bkshItemOf(row);
+  return item && item.party && item.party.status === 'existing' && item.party.name ? item.party.name : '';
+}
 /** open the sheet for the statement on screen, or for ONE line of it (Add missing on a line: that line alone) */
 async function bankSheetOpen(row) {
   if (!bkbBound()) return;
   if (!bkshReady()) return toast(tx('Load the statement file again to add its lines.'));
   BKSH.taxRegistered = await bkshRegistered();
+  BKSH.refs = null;
   const unread = BKSH.taxRegistered === 'unread',
     kept = !!BKSH.ctl && BKSH.key === bkshKey();
   if (!kept) {
     BKSH.ctl = bkshController();
     BKSH.key = bkshKey();
+    BKSH.said = null;
   }
   BKSH.ctl.only(bkshKeyOfRow(row));
   ui.dialog({
@@ -318,9 +375,10 @@ async function bankSheetOpen(row) {
   });
   BKSH.ui = CBBankPreviewUI.mount({
     host: bkshEl('bks_lines'), controller: () => BKSH.ctl, accountName: bkshAccountName, only: () => (BKSH.ctl ? BKSH.ctl.only() : ''), currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: bkshAmountText, addedWords: tx('Added to your books'),
-    say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: () => { bkshPaint(); bkshPageFollows(); }
+    say: (words) => { bkshSay(words, false); }, changed: () => { bkshPaint(); bkshPageFollows(); }
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
-  else bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
+  else BKSH.said = BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name);
+  bkshSay(bkshFirstWords(BKSH.said || { ok: true }, unread), false);
   bkshPaint();
 }

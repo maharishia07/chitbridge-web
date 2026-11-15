@@ -23,7 +23,6 @@
     ACCOUNT = 'Business bank account';
   var SAMPLE_CSV = root.CBBankDemoSample.SAMPLE_CSV,
     SAMPLE_BOOKS = root.CBBankDemoSample.SAMPLE_BOOKS,
-    LEARNED = root.CBBankDemoSample.LEARNED,
     PARTIES = root.CBBankDemoSample.PARTIES,
     OPENING_MINOR = root.CBBankDemoSample.OPENING_MINOR;
   var books = { opening_minor: 1000000, lines: [] },
@@ -71,7 +70,7 @@
       lockedMonth: function () {
         return null;
       },
-      suggestOpts: { learned: LEARNED, country: COUNTRY, parties: parties },
+      suggestOpts: { learned: [], country: COUNTRY, parties: parties } /* no rule is taught here: the sample reads as the product reads the same file (one split per line, l16-bank-10) */,
       parseOpts: { country: COUNTRY, currency: CURRENCY }
     };
   }
@@ -131,13 +130,7 @@
     failed: ['bad', 'Not added'],
     closed: ['bad', 'Month closed']
   };
-  function standing(item, result) {
-    if (result) return result.ok ? 'posted' : 'failed';
-    if (item.state === 'closed') return 'closed';
-    if (item.state === 'in_books') return 'in';
-    if (item.state === 'proposed') return item.ready ? 'ready' : item.needs === 'gst_basis' ? 'wait' : 'need';
-    return 'need';
-  }
+  var standing = preview.standing; /* the ONE standing per line lives in bank-preview.js: the owner's page and sheet read the same */
   function countsOf(model) {
     var counts = { in: 0, ready: 0, wait: 0, need: 0, posted: 0, failed: 0, closed: 0 };
     model.items.forEach(function (item) {
@@ -156,17 +149,10 @@
     [/card|settlement|eftpos/i, 'card'],
     [/rent/i, 'home']
   ];
-  /** the words a bank prints in capitals, as a person writes them: "Jones Plumbing Supplies" (its prefix and trailing reference left off) */
-  function tidyPayee(narration) {
-    var said = String(narration || '').replace(/^(EFT|CHEQUE|EFTPOS|DIRECT DEBIT|DIRECT CREDIT)\s+/i, '');
-    for (var again = 0; again < 3; again++) said = said.replace(/\s+(INV\s?\d+|J\d+|\d{3,}|SYDNEY)$/i, '');
-    said = said.trim();
-    return said && said === said.toUpperCase() ? said.toLowerCase().replace(/(^|\s)([a-z])/g, function (all, space, letter) { return space + letter.toUpperCase(); }) : said;
-  }
+  /** who a line is: the party the books matched when there is one, else the statement's own words exactly as written (never re-cased) */
   function payeeOf(item) {
     var named = item.party && item.party.name && item.party.status === 'existing' ? item.party.name : '';
-    var said = named || tidyPayee(item.line.narration) || 'This line';
-    return said.charAt(0).toUpperCase() + said.slice(1);
+    return named || String(item.line.narration || '').trim() || 'This line';
   }
   function badgeOf(item) {
     var words = item.line.narration + ' ' + payeeOf(item),
@@ -245,7 +231,7 @@
   /** the payee, with the date (shown on a phone only) and the bank's own words under it */
   function whoCell(item) {
     var line = item.line;
-    return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span></span>';
+    return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + (payeeOf(item) === String(line.narration || '').trim() ? '' : esc(line.narration)) + '</span></span></span>';
   }
   function paintLines(model, names) {
     var rows = model.items
@@ -433,6 +419,8 @@
     tick: function (target, key) { controller.tick(key); },
     notmatch: function (target, key) { controller.notMatch(key); },
     newparty: function (target, key) {
+      var one = itemOf(key);
+      if (one && one.party && preview.asWritten(one) !== one.party.name) controller.editParty(key, { name: preview.asWritten(one), kind: one.party.kind }); /* the party made carries the statement's own letters, as the button said */
       var said = controller.resolveLine(key);
       setMessage(said.ok ? '' : said.why);
     },
@@ -496,5 +484,5 @@
     startAgain();
   }
   if (doc && doc.getElementById('bd_lines')) start();
-  root.CBBankDemo = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS, LEARNED: LEARNED };
+  root.CBBankDemo = { SAMPLE_CSV: SAMPLE_CSV, SAMPLE_BOOKS: SAMPLE_BOOKS };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -47,7 +47,7 @@
     var meant = (item.didYouMean || []).map(function (one) {
       return '<button data-cbsid="BKS017-B03" type="button" class="bd-btn" data-act="meant" data-key="' + esc(item.key) + '" data-id="' + esc(one.id) + '" data-name="' + esc(one.name) + '">' + esc(one.name) + '</button>';
     }).join('');
-    return '<label>Payee<input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="Payee name" data-act="pname" data-key="' + esc(item.key) + '" value="' + esc(party.name) + '"></label>' +
+    return '<label>Payee<input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="Payee name" data-act="pname" data-key="' + esc(item.key) + '" value="' + esc(host.preview.asWritten(item) || party.name) + '"></label>' +
       '<label>Payee kind<select data-cbsid="BKS017-S04" class="bd-inp" aria-label="Payee kind" data-act="pkind" data-key="' + esc(item.key) + '">' +
       ['supplier', 'customer'].map(function (kind) { return '<option value="' + kind + '"' + (party.kind === kind ? ' selected' : '') + '>' + kind + '</option>'; }).join('') + '</select></label>' +
       (meant ? '<div class="bd-dym"><span>Did you mean</span> ' + meant + '</div>' : '') +

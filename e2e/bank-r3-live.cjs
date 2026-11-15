@@ -178,6 +178,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.waitForTimeout(9000);
   await p.screenshot({ path: path.join(OUT, 'r3-04-posted-1366.png') });
   console.log('   after: ' + flat(await p.locator('#acc_sheet').innerText().catch(() => '')).slice(0, 400));
+  ok(!(await p.locator('#acc_sheet').isVisible().catch(() => false)), 'l16-bank-10 SIGNED STATE: at nil the sheet closed by itself (no Escape pressed yet)');
   await p.keyboard.press('Escape');
   await p.waitForTimeout(1500);
   bd = await band(p);
@@ -195,6 +196,40 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const text2 = flat(await p.textContent('[data-testid="bank-list"]'));
   ok(!/More than one entry fits/.test(text2) && !(await states(p)).includes('missing'), 'after the reload the two Bunnings lines are paired one to one');
   await p.screenshot({ path: path.join(OUT, 'b9-05-reload-1366.png') });
+  /* l16-bank-10: sign-off, the signed state of the lines view, and the statement as a document */
+  const signBtn = p.locator('[data-testid="bank-signoff"]');
+  ok(/pri/.test((await signBtn.getAttribute('class')) || '') && !(await p.locator('[data-testid="bank-signed-line"]').count()), 'l16-bank-10: before signing, Sign off is the filled primary and no "Signed off" line shows');
+  await signBtn.click();
+  await p.waitForTimeout(500);
+  const signAsk = flat(await p.locator('[role=dialog], dialog[open]').last().innerText().catch(() => ''));
+  console.log('   sign-off confirm: ' + signAsk.slice(0, 260));
+  ok(!/A\$/.test(signAsk), 'l16-bank-10: the sign-off confirm has no "A$" in its Difference');
+  await p.locator('[role=dialog] button, dialog[open] button', { hasText: /^Sign off$/ }).last().click();
+  await p.waitForTimeout(3000);
+  const signedLine = flat(await p.locator('[data-testid="bank-signed-line"]').first().innerText().catch(() => ''));
+  console.log('   signed line: ' + signedLine);
+  ok(/Signed off by .+ on \d+ \w+ 2026/.test(signedLine) && !/[0-9a-f]{8}-[0-9a-f]{4}/.test(signedLine), 'l16-bank-10: the lines view says "Signed off by <name> on <date>", no record id (' + signedLine + ')');
+  ok(!/pri/.test((await p.locator('[data-testid="bank-signoff"]').first().getAttribute('class')) || ''), 'l16-bank-10: after signing, Sign off is no longer the filled primary');
+  await p.screenshot({ path: path.join(OUT, 'b10-01-signed-lines-1366.png') });
+  await p.locator('[data-testid="bank-more"]').click();
+  await p.locator('[data-testid="bank-tab-brs"]').click();
+  await p.waitForTimeout(800);
+  const title = flat(await p.locator('[data-testid="bank-brs-title"]').innerText().catch(() => ''));
+  const panel = flat(await p.locator('[data-testid="bank-store"]').innerText().catch(() => ''));
+  console.log('   statement title: ' + title + ' | panel: ' + panel.slice(0, 200));
+  ok(/^Bank reconciliation · Business bank account · 31 Oct 2026$/.test(title), 'l16-bank-10: the statement has its title (' + title + ')');
+  ok(!/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(await p.textContent('#bk_body')), 'l16-bank-10: no record id anywhere on the statement view');
+  ok(/Signed off by/.test(flat(await p.locator('[data-testid="bank-brs-signed"]').innerText().catch(() => ''))), 'l16-bank-10: the statement carries the signer by name');
+  ok((await p.locator('[data-testid="bank-brs-print"]').count()) === 1, 'l16-bank-10: the statement has a Print button');
+  await p.emulateMedia({ media: 'print' });
+  const printed = await p.evaluate(() => { document.body.classList.add('brs-printing'); const card = document.getElementById('bk_brs_print'), side = document.querySelector('.pe-bank, #bk_line, nav, aside'); return { card: getComputedStyle(card).visibility, other: side ? getComputedStyle(side).visibility : 'none' }; });
+  console.log('   print media: ' + JSON.stringify(printed));
+  ok(printed.card === 'visible' && printed.other !== 'visible', 'l16-bank-10: the print stylesheet shows the statement card and hides the rest');
+  await p.evaluate(() => document.body.classList.remove('brs-printing'));
+  await p.emulateMedia({ media: 'screen' });
+  await p.screenshot({ path: path.join(OUT, 'b10-02-statement-1366.png') });
+  await p.locator('[data-testid="bank-tab-lines"]').click();
+  await p.waitForTimeout(500);
   /* ITEM 3: one vocabulary */
   const chips = flat(await p.textContent('[data-testid="bank-group-books"]') + ' | ' + await p.textContent('[data-testid="bank-group-matched"]') + ' | ' + await p.textContent('[data-testid="bank-group-bank"]'));
   ok(/Not in your books/.test(chips) && /In your books/.test(chips) && /Not on the statement/.test(chips) && !/Missing in|Matched/.test(chips), 'ITEM 3: the chips use the band words (' + chips + ')');

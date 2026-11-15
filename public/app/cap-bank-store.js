@@ -132,7 +132,7 @@ function bankStoreAsk(body) {
       '<div data-testid="bank-signoff-reach">' +
       bksE(txf('{account}, {from} to {to}.', { account: (acct && acct.name) || bankStoreState.view.acct, from: bkDate(bankStoreState.view.from), to: bkDate(bankStoreState.view.to) })) +
       '<br>' +
-      bksE(txf('Difference {amount}.', { amount: bkMoney(Math.abs(body.difference_minor), body.currency) })) +
+      bksE(txf('Difference {amount}.', { amount: bkbFig(Math.abs(body.difference_minor), body.currency) })) +
       '<br>' +
       bksE(tx('It is kept for your accountant and cannot be edited. Signing again adds a new record.')) +
       '</div>',
@@ -162,6 +162,22 @@ function bankStoreSignOff(btn) {
 const bksRow = (testId, left, right) => '<div class="pe-row" data-testid="' + testId + '"><span>' + bksE(left) + '</span><span class="mono">' + bksE(right) + '</span></div>';
 /** "and n more" when a list shows only its first few rows */
 const bksMore = (count) => (count > bankStoreState_SHOWN ? '<div class="pe-note">' + bksE(txf('and {n} more', { n: count - bankStoreState_SHOWN })) + '</div>' : '');
+/** who signed, in words: the record carries the login's id, so the name is the one on this login (or the record's own by_name); an id nobody can name is left out, never printed */
+function bankStoreSigner(item) {
+  const by = String((item && (item.by_name || item.by)) || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-/i.test(by)) return by;
+  return (item && item.by_name) || (typeof bkbBy === 'function' && bkbBy()) || '';
+}
+/** the sign-off of THIS statement's period, newest first, or null */
+const bankStoreSignedNow = () => bankStoreState.statements.filter((item) => item.period_to && bankStoreState.view && item.period_to === bankStoreState.view.to)[0] || null;
+/** "Signed off by <name> on <date>", the one sentence the lines view and the statement both print; '' while the period is not signed */
+function bankStoreSignedWords() {
+  const item = bankStoreSignedNow();
+  if (!item) return '';
+  const who = bankStoreSigner(item),
+    date = bkDate(String(item.at || '').slice(0, 10));
+  return who ? txf('Signed off by {who} on {date}', { who, date }) : txf('Signed off on {date}', { date });
+}
 /** the signed statements, newest first, the first few */
 function bankStoreSigned() {
   if (!bankStoreState.statements.length) return '';
@@ -174,7 +190,7 @@ function bankStoreSigned() {
       .map((item) =>
         bksRow(
           'bank-signed-row',
-          bkDate(String(item.at || '').slice(0, 10)) + ' · ' + (item.by || '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
+          bkDate(String(item.at || '').slice(0, 10)) + (bankStoreSigner(item) ? ' · ' + bankStoreSigner(item) : '') + ' · ' + tx('as at') + ' ' + bkDate(item.period_to),
           (item.tied ? tx('Tied') : tx('Difference') + ' ' + bkMoney(Math.abs(item.difference_minor), item.currency))
         )
       )
@@ -202,12 +218,14 @@ function bankStoreExceptions() {
 function bankStoreSignButton() {
   const worked = bankStoreState.view.brs;
   if (!worked || !worked.ok) return '';
-  const notReady = bankStoreState.mode !== 'server';
+  const notReady = bankStoreState.mode !== 'server',
+    signed = bankStoreSignedWords();
   return (
-    '<button data-cbsid="BKS014-B08" type="button" class="pri bk-primary" data-testid="bank-signoff"' +
+    (signed && bankStoreState.view.tab !== 'brs' ? '<span class="bk-signed" data-testid="bank-signed-line">✓ ' + bksE(signed) + '</span>' : '') +
+    '<button data-cbsid="BKS014-B08" type="button" class="' + (signed ? 'act' : 'pri bk-primary') + '" data-testid="bank-signoff"' +
     (notReady ? ' disabled title="' + bksE(tx('Signing off starts after the next update')) + '"' : '') +
     ' onclick="bankStoreSignOff(this)">' +
-    bksE(tx('Sign off this reconciliation')) +
+    bksE(tx(signed ? 'Sign off again' : 'Sign off this reconciliation')) +
     '</button>'
   );
 }

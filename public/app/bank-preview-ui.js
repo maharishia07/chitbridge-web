@@ -99,7 +99,7 @@
     }
     /** B5-01: only the words on the bank line proposed this, no rule you taught and no party you know: it is added only when you say it is right */
     function tickBox(item) {
-      return '<span class="bd-ask">' + escapeHtml('Only the words on the line proposed this: ' + (item.why || '')) + '</span> <button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
+      return '<span class="bd-ask">' + escapeHtml(preview.looksLike(item) || 'Suggested from the words on the statement.') + '</span> <button data-cbsid="BKS017-B09" type="button" class="bd-btn" data-act="tick"' + dataKey(item) + '>Yes, this is right</button>';
     }
     function basisQuestion() {
       return (
@@ -163,7 +163,7 @@
         })
         .join(' ');
       return (
-        '<span class="bd-party"><b>New party:</b> <input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="New party name" data-act="pname" data-key="' + escapeHtml(item.key) + '" value="' + escapeHtml(party.name) + '"> ' +
+        '<span class="bd-party"><b>New party:</b> <input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="New party name" data-act="pname" data-key="' + escapeHtml(item.key) + '" value="' + escapeHtml(preview.asWritten(item) || party.name) + '"> ' +
         '<select data-cbsid="BKS017-S04" class="bd-inp" aria-label="New party kind" data-act="pkind" data-key="' + escapeHtml(item.key) + '">' +
         ['supplier', 'customer'].map(function (kind) { return '<option value="' + kind + '"' + (party.kind === kind ? ' selected' : '') + '>' + kind + '</option>'; }).join('') +
         '</select> <button data-cbsid="BKS017-B07" type="button" class="bd-btn" data-act="resolve" data-key="' + escapeHtml(item.key) + '">Use this party</button> ' + (meant ? '<span class="bd-why">Did you mean</span> ' + meant : '') + '</span>'
@@ -251,7 +251,7 @@
         hint = !open && !result && item.what && preview.looksLike(item) ? '<div class="bd-sub bd-hint" data-testid="bd-hint"><span class="bd-ask">' + escapeHtml(preview.looksLike(item)) + '</span> ' + ctx.entryNote(item) + '</div>' : '',
         sub = hint || (open || result ? '<div class="bd-sub">' + (open ? kindBox(item) + (kindBox(item) && !ctx.opened[item.key] ? '' : partyBox(item) + accountBox(item)) + (item.resolveWhy ? tag('bad', item.resolveWhy) : '') : '') + lineNote(item, result) + '</div>' : '');
       return (
-        '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + (open ? ' bd-is-open' : '') + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + escapeHtml(line.narration) + '</td>' +
+        '<tr class="bd-row bd-s-' + escapeHtml(stateKey) + (open ? ' bd-is-open' : '') + '" data-line="' + escapeHtml(item.key) + '"><td class="bd-d">' + escapeHtml(preview.dateText(line.date)) + '</td><td class="bd-n">' + (item.party && item.party.status === 'existing' && item.party.name ? '<b class="bd-payee">' + escapeHtml(item.party.name) + '</b> <span class="bd-bank">' + escapeHtml(line.narration) + '</span>' : escapeHtml(line.narration)) + '</td>' +
         '<td class="bd-m">' + (line.debit_minor ? escapeHtml(amountText(line.debit_minor)) : '') + '</td><td class="bd-m">' + (line.credit_minor ? escapeHtml(amountText(line.credit_minor)) : '') + '</td>' +
         '<td class="bd-st">' + tag(stateKey === 'posted' ? 'ok' : stateKey === 'proposed' ? 'go' : stateKey === 'in_books' ? 'plain' : 'ask', preview.STATE_WORDS[stateKey] || 'Needs you') + toggle + sub + '</td></tr>'
       );

@@ -70,6 +70,13 @@ const bkbStatus = {
   missing: ['blue', 'Not on the statement'],
   'told-only': ['blue', 'Told, not in the bank yet']
 };
+/** the chip of a row: a line the books lack says what the sheet's controller says of it (Ready to add / Needs you), the one split for the file; any other row keeps its state's words */
+function bkbChipOf(row) {
+  const stand = ['bank-only', 'check', 'suggested'].includes(row.status) && typeof bkshStandingOf === 'function' ? bkshStandingOf(row) : null;
+  if (stand === 'ready') return bkbStatus.suggested;
+  if (stand === 'need' || stand === 'wait') return bkbStatus['bank-only'];
+  return bkbStatus[row.status];
+}
 /* FIN-27 · THREE GROUPS, one count each: every engine state answers one question — is the pair in both, only in the bank, or only in your books?
    (the states stay on each row's chip; the head and the filter speak the three) */
 const BKB_GROUPS = [
@@ -390,6 +397,8 @@ async function bankRun() {
   bankExplain();
   bankBrs();
   bankPaint();
+  /* ONE split per line: the rows read the controller the Add sheet runs (cap-bank-sheet.js), so the page, the sheet and the demo say the same of one file */
+  if (typeof bkshPrime === 'function') bkshPrime().then(() => bankPaint()).catch((failure) => bkQuiet('bank-prime', failure));
 }
 /** every customer and supplier of the books (not only those on the rail) and every open invoice or bill, as the books sent them (GET /bank/rail books): the engine matches a line to them, the page matches nothing */
 const bkbBookParties = () => ((BKB.rail && BKB.rail.books && BKB.rail.books.parties) || []).slice();
@@ -484,6 +493,8 @@ function bankExplain() {
   bkbSave('todo', { n: M.counts.needs_you, acct: BKB.acct, to: BKB.to });
 }
 
+/** the name of the ledger the statement is for, as the chart names it */
+const bkbAcctName = () => ((BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct || BKB.acct))[0] || {}).name || '';
 /** the Bank Reconciliation Statement: the books' balance is the API's ledger closing figure; the bank's is the statement's (or typed); the engine states the difference */
 function bankBrs() {
   const P = BKB.parsed,
@@ -597,7 +608,7 @@ function bankPaint() {
     (lines
       ? '<div id="bkl_bank" data-testid="bank-list"></div>'
       : '<div class="supacts"><button data-cbsid="BKS014-B22" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
-        bkbE(tx('Back to the lines')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
+        bkbE(tx('Back to the lines')) + '</button><button data-cbsid="BKS014-B25" type="button" class="act" data-testid="bank-brs-print" onclick="bankBrsPrint()">' + bkbE(tx('Print or save as PDF')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
   const line = bkbEl('bk_line');
   if (line) line.innerHTML = bankLineHtml();
   bankLayout(true, lines);
@@ -695,6 +706,17 @@ function bankBrsCsv(worked) {
   );
   return rows.map((row) => row.map(bkCsvCell).join(',')).join('\r\n') + '\r\n';
 }
+/** Print: the browser's own print sheet, the statement card alone (a print stylesheet hides the rest); PDF is its "Save as PDF" */
+function bankBrsPrint() {
+  const body = document.body;
+  body.classList.add('brs-printing');
+  const done = () => {
+    body.classList.remove('brs-printing');
+    window.removeEventListener('afterprint', done);
+  };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
 function bankBrsDownload() {
   if (BKB.brs && BKB.brs.ok) bkSaveCsv('bank-reconciliation-' + BKB.acct + '-' + BKB.brs.asOf + '.csv', bankBrsCsv(BKB.brs));
 }
@@ -732,16 +754,10 @@ function bankList() {
         sort: 'status',
         w: 150,
         html: true,
-        cell: (r) =>
-          '<span class="step ' +
-          bkbStatus[r.status][0] +
-          '" data-testid="bank-chip-' +
-          bkbE(r.id) +
-          '" data-status="' +
-          r.status +
-          '">' +
-          bkbE(tx(bkbStatus[r.status][1])) +
-          '</span>'
+        cell: (r) => {
+          const chip = bkbChipOf(r);
+          return '<span class="step ' + chip[0] + '" data-testid="bank-chip-' + bkbE(r.id) + '" data-status="' + r.status + '">' + bkbE(tx(chip[1])) + '</span>';
+        }
       },
       {
         key: 'line',
@@ -752,7 +768,7 @@ function bankList() {
         html: true,
         cell: (r) =>
           '<div>' +
-          bkbE(r.narration || '') +
+          (typeof bkshPartyOf === 'function' && bkshPartyOf(r) ? '<b>' + bkbE(bkshPartyOf(r)) + '</b> <span style="color:var(--muted)">' + bkbE(r.narration || '') + '</span>' : bkbE(r.narration || '')) +
           '</div><div style="color:var(--muted);font-size:var(--fs-1)">' +
           bkbE(bkDate(r.date)) +
           (r.ref ? ' · <span class="mono">' + bkbE(r.ref) + '</span>' : '') +
@@ -1233,7 +1249,11 @@ function bankBrsPaint() {
         '</div>'
       : '';
   host.innerHTML =
-    '<div class="pe-card" data-testid="bank-brs-card"><div class="pe-sub">' +
+    '<div class="pe-card" id="bk_brs_print" data-testid="bank-brs-card"><h2 class="brs-title" data-testid="bank-brs-title">' +
+    bkbE(txf('Bank reconciliation · {account} · {d}', { account: bkbAcctName(), d: bkDate(b.asOf) })) +
+    '</h2>' +
+    (typeof bankStoreSignedWords === 'function' && bankStoreSignedWords() ? '<div class="pe-ok brs-signed" data-testid="bank-brs-signed">✓ ' + bkbE(bankStoreSignedWords()) + '</div>' : '') +
+    '<div class="pe-sub">' +
     bkbE(txf('Bank statement as at {d}', { d: bkDate(b.asOf) })) +
     '</div><div class="pe-rows">' +
     b.rows

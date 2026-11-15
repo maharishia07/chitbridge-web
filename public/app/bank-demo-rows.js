@@ -31,13 +31,13 @@
         '<button type="button" class="bd-btn" data-act="taxinvoice" data-key="' + key + '" data-v="none" data-cbsid="BKS017-B11">No: book it without the GST credit</button></span>';
     }
     if (item.needs === 'needs_tick') {
-      return '<span class="bd-question"><span class="bd-q">Only the words on the statement say what this is.</span><button type="button" class="bd-btn" data-act="tick" data-key="' + key + '" data-cbsid="BKS017-B09">Yes, this is right</button>' + more + '</span>';
+      return '<span class="bd-question">' + (host.preview.looksLike(item) ? '' : '<span class="bd-q">Suggested from the words on the statement.</span>') + '<button type="button" class="bd-btn" data-act="tick" data-key="' + key + '" data-cbsid="BKS017-B09">Yes, this is right</button>' + more + '</span>';
     }
     if (item.needs === 'may_be_in_books') {
       return '<span class="bd-question"><span class="bd-q">This may already be in your books.</span><button type="button" class="bd-btn" data-act="notmatch" data-key="' + key + '" data-cbsid="BKS017-B13">It is new</button>' + more + '</span>';
     }
     if (item.party && item.party.status === 'new') {
-      return '<span class="bd-question"><span class="bd-q">Who is this?</span><button type="button" class="bd-btn" data-act="newparty" data-key="' + key + '" data-cbsid="BKS017-B07">New ' + esc(item.party.kind) + ': ' + esc(item.party.name) + '</button>' + more + '</span>';
+      return '<span class="bd-question"><span class="bd-q">Who is this?</span><button type="button" class="bd-btn" data-act="newparty" data-key="' + key + '" data-cbsid="BKS017-B07">New ' + esc(item.party.kind) + ': ' + esc(host.preview.asWritten(item)) + '</button>' + more + '</span>';
     }
     return '<span class="bd-question">' + more + '</span>';
   }
