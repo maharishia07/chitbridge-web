@@ -6,6 +6,7 @@
  *           assignment is collected; a name assigned by two different files fails, naming the page and both files. (Comments in the
  *           HTML are ignored; a file that assigns the same name twice is one file, fine.)
  * CALLED BY npm run check. No browser, no network.
+ * CARD      08-rewards-and-loyalty/customer-s-rewards-view  (closes CRM-50: the pane is CBRewardsPane, the vendored engine owns CBRewards)
  * Run: node tests/page-global-collision.test.cjs */
 const fs = require('fs');
 const path = require('path');
