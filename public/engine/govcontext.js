@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.42.0 · govcontext · sha256 d6eaa7aab22daeb73b006f25996a23d74ca571bb1260d61dfd56669f21e59a82 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · govcontext · sha256 24ece8f52893ca282114595f205e87f1b9d1f5b78cae7060cde9ae9796208b09 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · govcontext. Edited ONLY in chitbridge-engines/src/govcontext.js; every platform adopts a released version of it. */
 /**
  * govcontext.js — WHAT THE APPLICATION CAN KNOW WITHOUT ASKING ([TILL-72] / registration)
@@ -39,15 +39,29 @@
    * Anything not listed comes back as unknown, which the screen then asks about. [[feedback-country-first]]
    */
   var ZONES = {
-    'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN',
+    'Asia/Kolkata': 'IN',
+    'Asia/Calcutta': 'IN',
     'Asia/Dubai': 'AE',
     /* v1.42.0 (CS2): the Australian zones (reg-au.timeZones) — an Australian browser's clock names AU at register, as an Indian one names IN */
-    'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU', 'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU', 'Australia/Darwin': 'AU',
-    'Australia/Hobart': 'AU', 'Australia/Broken_Hill': 'AU', 'Australia/Lindeman': 'AU', 'Australia/Eucla': 'AU', 'Australia/Lord_Howe': 'AU',
+    'Australia/Sydney': 'AU',
+    'Australia/Melbourne': 'AU',
+    'Australia/Brisbane': 'AU',
+    'Australia/Perth': 'AU',
+    'Australia/Adelaide': 'AU',
+    'Australia/Darwin': 'AU',
+    'Australia/Hobart': 'AU',
+    'Australia/Broken_Hill': 'AU',
+    'Australia/Lindeman': 'AU',
+    'Australia/Eucla': 'AU',
+    'Australia/Lord_Howe': 'AU',
     'Asia/Riyadh': 'SA',
     'Europe/London': 'GB',
-    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US',
-    'America/Los_Angeles': 'US', 'America/Phoenix': 'US', 'America/Anchorage': 'US',
+    'America/New_York': 'US',
+    'America/Chicago': 'US',
+    'America/Denver': 'US',
+    'America/Los_Angeles': 'US',
+    'America/Phoenix': 'US',
+    'America/Anchorage': 'US',
     'Europe/Berlin': 'DE',
     'Europe/Paris': 'FR',
     'Asia/Singapore': 'SG',
@@ -56,7 +70,11 @@
   };
 
   function regions() {
-    try { return (root.CBLocale && root.CBLocale.REGIONS) || {}; } catch (_) { return {}; }
+    try {
+      return (root.CBLocale && root.CBLocale.REGIONS) || {};
+    } catch (_) {
+      return {};
+    }
   }
 
   /** 'en-IN' → 'IN'. A language tag with no region subtag ('en', 'ta') says nothing about where. */
@@ -84,8 +102,8 @@
     var fromTag = regionFromTag(env && env.language);
     if (fromTag && R[fromTag]) return { value: fromTag, from: 'the language your browser reports' };
     var list = (env && env.languages) || [];
-    for (var i = 0; i < list.length; i++) {
-      var r = regionFromTag(list[i]);
+    for (var index = 0; index < list.length; index++) {
+      var r = regionFromTag(list[index]);
       if (r && R[r]) return { value: r, from: 'the languages your browser reports' };
     }
     /* ⚠️ a real region we do not serve is worth SAYING, rather than reporting nothing and looking broken */
@@ -100,8 +118,9 @@
    * not something a screen size proves — a tablet is a waiter's handheld in one shop and the till in another.
    */
   function deviceOf(env) {
-    var w = (env && env.screenW) || 0, h = (env && env.screenH) || 0;
-    var shortest = (w && h) ? Math.min(w, h) : 0;
+    var w = (env && env.screenW) || 0,
+      h = (env && env.screenH) || 0;
+    var shortest = w && h ? Math.min(w, h) : 0;
     var coarse = !!(env && env.coarsePointer);
     var mobile = env && env.uaMobile;
     if (mobile === true || (coarse && shortest && shortest < 480)) return 'phone';
@@ -115,13 +134,21 @@
     var nav = root.navigator || {};
     var scr = root.screen || {};
     var tz = '';
-    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) {}
+    try {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    } catch (_) {}
     var coarse = false;
-    try { coarse = !!(root.matchMedia && root.matchMedia('(pointer:coarse)').matches); } catch (_) {}
+    try {
+      coarse = !!(root.matchMedia && root.matchMedia('(pointer:coarse)').matches);
+    } catch (_) {}
     var uaMobile = null;
-    try { if (nav.userAgentData && typeof nav.userAgentData.mobile === 'boolean') uaMobile = nav.userAgentData.mobile; } catch (_) {}
+    try {
+      if (nav.userAgentData && typeof nav.userAgentData.mobile === 'boolean') uaMobile = nav.userAgentData.mobile;
+    } catch (_) {}
     var platform = '';
-    try { platform = (nav.userAgentData && nav.userAgentData.platform) || ''; } catch (_) {}
+    try {
+      platform = (nav.userAgentData && nav.userAgentData.platform) || '';
+    } catch (_) {}
     return {
       language: nav.language || '',
       languages: (nav.languages || []).slice(0, 5),
@@ -151,15 +178,15 @@
       at: new Date().toISOString(),
       country: { value: c.value, from: c.from, unserved: c.unserved || '', name: reg ? reg.name : '' },
       /* ⭐ the region names its money and its formats — this file does not keep a second opinion about either */
-      currency: { value: reg ? reg.cur[0] : '', from: reg ? ('the usual currency in ' + reg.name) : '' },
-      locale: { value: reg ? reg.format : (e.language || ''), from: reg ? ('how numbers and dates are written in ' + reg.name) : 'your browser' },
+      currency: { value: reg ? reg.cur[0] : '', from: reg ? 'the usual currency in ' + reg.name : '' },
+      locale: { value: reg ? reg.format : e.language || '', from: reg ? 'how numbers and dates are written in ' + reg.name : 'your browser' },
       language: { value: String(e.language || '').split('-')[0], from: 'your browser' },
       languages: { value: (e.languages || []).slice(), from: 'your browser' },
       timezone: { value: e.timeZone || '', from: 'your device clock' },
       device: {
         value: deviceOf(e),
         from: 'the screen and pointer on this device',
-        screen: (e.screenW && e.screenH) ? (e.screenW + '×' + e.screenH) : '',
+        screen: e.screenW && e.screenH ? e.screenW + '×' + e.screenH : '',
         dpr: e.dpr || 1,
         platform: e.platform || '',
         touch: (e.touchPoints || 0) > 0
@@ -182,9 +209,9 @@
       { key: 'timezone', what: 'Time zone', value: c.timezone.value, from: c.timezone.from },
       { key: 'device', what: 'This device', value: c.device.value + (c.device.screen ? ' · ' + c.device.screen : ''), from: c.device.from }
     ];
-    return out.map(function (r) {
-      r.known = !!String(r.value || '').trim();
-      return r;
+    return out.map(function (item) {
+      item.known = !!String(item.value || '').trim();
+      return item;
     });
   }
 

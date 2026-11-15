@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.4.0 · search · sha256 3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · search · sha256 c74118e4c85943a8380ab0e6c9abc330cee99ba2e27d3c6bc37f411a3c023989 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · search. Edited ONLY in chitbridge-engines/src/search.js; every platform adopts a released version of it. */
 /* app/search.js — HOW A SHOPKEEPER FINDS A PRODUCT.  (classic script, shared global scope)
  *
@@ -46,8 +46,9 @@
    */
   var KEEP = /[\p{L}\p{N}\p{M}]/u;
   function normalise(t) {
-    var out = ' ', s = String(t == null ? '' : t).toLowerCase();
-    for (var n = 0; n < s.length; n++) out += KEEP.test(s[n]) ? s[n] : ' ';
+    var out = ' ',
+      text = String(t == null ? '' : t).toLowerCase();
+    for (var index = 0; index < text.length; index++) out += KEEP.test(text[index]) ? text[index] : ' ';
     return out + ' ';
   }
 
@@ -55,7 +56,7 @@
   function tokens(q) {
     var t = normalise(q).split(' ');
     var out = [];
-    for (var i = 0; i < t.length; i++) if (t[i]) out.push(t[i]);
+    for (var index = 0; index < t.length; index++) if (t[index]) out.push(t[index]);
     return out;
   }
 
@@ -76,27 +77,44 @@
    * the same word resolved in a message and failed at the till. One authority, read by both now.
    * ("alias_text" is the other direction: what a SUPPLIER calls it. Both belong in the words you can search by.)
    */
-  var DEFAULT_FIELDS = ['name', 'code', 'sku', 'category', 'brand', 'variant', 'grade', 'unit', 'hsn', 'desc',
-                        'alias_text', 'synonym_text'];
+  var DEFAULT_FIELDS = ['name', 'code', 'sku', 'category', 'brand', 'variant', 'grade', 'unit', 'hsn', 'desc', 'alias_text', 'synonym_text'];
   function textOf(item, opts) {
     if (!item || typeof item !== 'object') return ' ';
-    var o = Array.isArray(opts) ? { fields: opts } : (opts || {});
+    var o = Array.isArray(opts) ? { fields: opts } : opts || {};
     var held = item[CACHE];
     if (held && held.stamp === (o.stamp || '')) return held.text;
     var t;
-    if (typeof o.text === 'function') { t = normalise(o.text(item)); }
-    else {
-      var f = o.fields || DEFAULT_FIELDS, parts = [];
-      for (var i = 0; i < f.length; i++) { var v = item[f[i]]; if (v != null && typeof v !== 'object' && String(v)) parts.push(String(v)); }
+    if (typeof o.text === 'function') {
+      t = normalise(o.text(item));
+    } else {
+      var f = o.fields || DEFAULT_FIELDS,
+        parts = [];
+      for (var index = 0; index < f.length; index++) {
+        var v = item[f[index]];
+        if (v != null && typeof v !== 'object' && String(v)) parts.push(String(v));
+      }
       t = normalise(parts.join(' '));
     }
     var box = { stamp: o.stamp || '', text: t };
-    try { Object.defineProperty(item, CACHE, { value: box, enumerable: false, writable: true, configurable: true }); }
-    catch (_) { item[CACHE] = box; }      /* a frozen row still searches, it just recomputes */
+    try {
+      Object.defineProperty(item, CACHE, { value: box, enumerable: false, writable: true, configurable: true });
+    } catch (_) {
+      item[CACHE] = box;
+    } /* a frozen row still searches, it just recomputes */
     return t;
   }
   /** the shop changed: every cached text is stale */
-  function forget(items) { (items || []).forEach(function (i) { if (i && i[CACHE]) { try { delete i[CACHE]; } catch (_) { i[CACHE] = null; } } }); }
+  function forget(items) {
+    (items || []).forEach(function (item) {
+      if (item && item[CACHE]) {
+        try {
+          delete item[CACHE];
+        } catch (_) {
+          item[CACHE] = null;
+        }
+      }
+    });
+  }
 
   /**
    * ⭐ THE SQUEEZE: a doubled letter is the commonest slip in transliterated Indian English — aachi/achi,
@@ -106,19 +124,22 @@
    * digits are left alone.
    */
   function squeeze(t) {
-    var out = '', last = '';
-    for (var i = 0; i < t.length; i++) {
-      var c = t[i];
+    var out = '',
+      last = '';
+    for (var index = 0; index < t.length; index++) {
+      var c = t[index];
       if (c === last && !(c >= '0' && c <= '9')) continue;
-      out += c; last = c;
+      out += c;
+      last = c;
     }
     return out;
   }
   function squeezedAll(hay, toks) {
     var words = squeeze(hay).split(' ');
-    for (var i = 0; i < toks.length; i++) {
-      var want = squeeze(toks[i]), found = false;
-      for (var w = 0; w < words.length && !found; w++) if (words[w] === want || words[w].indexOf(want) === 0) found = true;
+    for (var index = 0; index < toks.length; index++) {
+      var want = squeeze(toks[index]),
+        found = false;
+      for (var count = 0; count < words.length && !found; count++) if (words[count] === want || words[count].indexOf(want) === 0) found = true;
       if (!found) return false;
     }
     return true;
@@ -132,24 +153,34 @@
   function near(a, b) {
     if (a === b) return true;
     if (Math.abs(a.length - b.length) > 1) return false;
-    var i = 0, j = 0, slips = 0;
-    while (i < a.length && j < b.length) {
-      if (a[i] === b[j]) { i++; j++; continue; }
+    var index = 0,
+      j = 0,
+      slips = 0;
+    while (index < a.length && j < b.length) {
+      if (a[index] === b[j]) {
+        index++;
+        j++;
+        continue;
+      }
       if (++slips > 1) return false;
-      if (a.length === b.length) { i++; j++; }
-      else if (a.length > b.length) i++;
+      if (a.length === b.length) {
+        index++;
+        j++;
+      } else if (a.length > b.length) index++;
       else j++;
     }
-    return (slips + (a.length - i) + (b.length - j)) <= 1;
+    return slips + (a.length - index) + (b.length - j) <= 1;
   }
-  function nearAll(hay, toks) {
-    var words = hay.split(' ');
-    for (var i = 0; i < toks.length; i++) {
-      var tok = toks[i], found = false;
-      if (tok.length < 5 || /^[0-9]+$/.test(tok)) {                 /* short words and numbers are compared exactly */
+  function nearAll(text, toks) {
+    var words = text.split(' ');
+    for (var index = 0; index < toks.length; index++) {
+      var tok = toks[index],
+        found = false;
+      if (tok.length < 5 || /^[0-9]+$/.test(tok)) {
+        /* short words and numbers are compared exactly */
         for (var e = 0; e < words.length && !found; e++) if (words[e] === tok) found = true;
       } else {
-        for (var w = 0; w < words.length && !found; w++) if (near(tok, words[w])) found = true;
+        for (var count = 0; count < words.length && !found; count++) if (near(tok, words[count])) found = true;
       }
       if (!found) return false;
     }
@@ -157,19 +188,21 @@
   }
 
   function startsAll(hay, toks) {
-    for (var i = 0; i < toks.length; i++) if (hay.indexOf(' ' + toks[i]) < 0) return false;
+    for (var index = 0; index < toks.length; index++) if (hay.indexOf(' ' + toks[index]) < 0) return false;
     return true;
   }
   /** each typed word as a subsequence of SOME single word: "ac" ⊂ "aachi" */
-  function lettersAll(hay, toks) {
-    var words = hay.split(' ');
-    for (var t = 0; t < toks.length; t++) {
-      var tok = toks[t], found = false;
+  function lettersAll(text, toks) {
+    var words = text.split(' ');
+    for (var count = 0; count < toks.length; count++) {
+      var tok = toks[count],
+        found = false;
       for (var w = 0; w < words.length && !found; w++) {
-        var word = words[w]; if (word.length < tok.length) continue;
-        var n = 0;
-        for (var c = 0; c < word.length && n < tok.length; c++) if (word[c] === tok[n]) n++;
-        if (n === tok.length) found = true;
+        var word = words[w];
+        if (word.length < tok.length) continue;
+        var index = 0;
+        for (var c = 0; c < word.length && index < tok.length; c++) if (word[c] === tok[index]) index++;
+        if (index === tok.length) found = true;
       }
       if (!found) return false;
     }
@@ -184,32 +217,52 @@
    *   opts.name    the key to rank on (default 'name')
    */
   function search(items, query, opts) {
-    var o = opts || {}, limit = o.limit || 60, nameKey = o.name || 'name';
-    var bcKey = (o.barcode === undefined) ? 'barcode' : o.barcode;
+    var o = opts || {},
+      limit = o.limit || 60,
+      nameKey = o.name || 'name';
+    var bcKey = o.barcode === undefined ? 'barcode' : o.barcode;
     var list = items || [];
-    var raw = String(query == null ? '' : query).trim();
-    if (!raw) return list.slice(0, limit);
+    var text = String(query == null ? '' : query).trim();
+    if (!text) return list.slice(0, limit);
 
-    var flat = raw.toLowerCase();
-    if (bcKey) for (var b = 0; b < list.length; b++) if (String(list[b][bcKey] || '').toLowerCase() === flat) return [list[b]];
+    var flat = text.toLowerCase();
+    if (bcKey) for (var count = 0; count < list.length; count++) if (String(list[count][bcKey] || '').toLowerCase() === flat) return [list[count]];
 
-    var toks = tokens(raw);
+    var toks = tokens(text);
     /* ⚠️ SOMETHING WAS TYPED AND NOTHING SURVIVED IT — punctuation alone, or a script this fold cannot keep. That is NOT "no query",
        and answering with the whole shelf is how a wrong product gets added by somebody pressing Enter. */
-    if (!toks.length) return raw ? [] : list.slice(0, limit);
+    if (!toks.length) return text ? [] : list.slice(0, limit);
 
-    var starts = [], loose = [], letters = [], typo = [];
-    for (var k = 0; k < list.length && starts.length < limit; k++) {
-      var it = list[k], hay = textOf(it, o);
-      if (startsAll(hay, toks)) { starts.push(it); continue; }
-      if (loose.length < limit && toks.length === 1 && hay.indexOf(toks[0]) >= 0) { loose.push(it); continue; }
-      if (letters.length < limit && lettersAll(hay, toks)) { letters.push(it); continue; }
+    var starts = [],
+      loose = [],
+      letters = [],
+      typo = [];
+    for (var index = 0; index < list.length && starts.length < limit; index++) {
+      var it = list[index],
+        hay = textOf(it, o);
+      if (startsAll(hay, toks)) {
+        starts.push(it);
+        continue;
+      }
+      if (loose.length < limit && toks.length === 1 && hay.indexOf(toks[0]) >= 0) {
+        loose.push(it);
+        continue;
+      }
+      if (letters.length < limit && lettersAll(hay, toks)) {
+        letters.push(it);
+        continue;
+      }
       /* ⚠️ THE FORGIVING PASSES RANK LAST, and are collected separately so an exact match is never pushed below a
          guess. A shopkeeper who typed the name right must not have to look past somebody's spelling mistake. */
       if (typo.length < limit && (squeezedAll(hay, toks) || nearAll(hay, toks))) typo.push(it);
     }
     var first = toks[0];
-    var nameOf = (typeof nameKey === 'function') ? nameKey : function (x) { return x[nameKey]; };
+    var nameOf =
+      typeof nameKey === 'function'
+        ? nameKey
+        : function (x) {
+            return x[nameKey];
+          };
     /**
      * ⚠️⚠️ THE THING YOU TYPED IN FULL MUST COME FIRST. Athi, 2026-09-09: *"I selected one product and when I enter, the topmost
      * product gets added."*
@@ -228,21 +281,24 @@
      *   3  neither — only the individual tokens matched
      * then the old rules break the remaining ties. A phrase is what a person believes they typed; matching it should win.
      */
-    var phrase = ' ' + normalise(raw).trim() + ' ';
+    var phrase = ' ' + normalise(text).trim() + ' ';
     var phraseRank = function (x) {
       var n = normalise(nameOf(x) || '');
       if (n === phrase) return 0;
-      if (n.indexOf(phrase.slice(0, -1)) === 0) return 1;   /* starts with it (drop the trailing pad) */
-      if (n.indexOf(phrase.slice(1, -1)) >= 0) return 2;    /* contains it as a phrase */
+      if (n.indexOf(phrase.slice(0, -1)) === 0) return 1; /* starts with it (drop the trailing pad) */
+      if (n.indexOf(phrase.slice(1, -1)) >= 0) return 2; /* contains it as a phrase */
       return 3;
     };
-    starts.sort(function (a, c) {
-      var ar = phraseRank(a), cr = phraseRank(c);
+    starts.sort(function (a, second) {
+      var ar = phraseRank(a),
+        cr = phraseRank(second);
       if (ar !== cr) return ar - cr;
-      var an = String(nameOf(a) || '').toLowerCase(), cn = String(nameOf(c) || '').toLowerCase();
-      var ap = an.indexOf(first) === 0 ? 0 : 1, cp = cn.indexOf(first) === 0 ? 0 : 1;
+      var label = String(nameOf(a) || '').toLowerCase(),
+        content = String(nameOf(second) || '').toLowerCase();
+      var ap = label.indexOf(first) === 0 ? 0 : 1,
+        cp = content.indexOf(first) === 0 ? 0 : 1;
       if (ap !== cp) return ap - cp;
-      return an.length - cn.length;
+      return label.length - content.length;
     });
     return starts.concat(loose, letters, typo).slice(0, limit);
   }

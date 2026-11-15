@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.71.0 · locale · sha256 0af5e9442f95eec96b046bce4c3c92e81301b9349c116af860ac63b728bb37d2 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · locale · sha256 0af5e9442f95eec96b046bce4c3c92e81301b9349c116af860ac63b728bb37d2 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · locale. Edited ONLY in chitbridge-engines/src/locale.js; every platform adopts a released version of it.
  * CALLED BY src/offers.js   [from the knowledge graph, 2026-10-18 - regenerate: node tools/graph/trace.cjs]
  */

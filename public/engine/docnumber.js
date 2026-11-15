@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.77.0 · docnumber · sha256 fe9a817976cd6fbe81e67cb8cb8a2a3149c44a7cbdad3d6a81f02a176b64108d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · docnumber · sha256 fe9a817976cd6fbe81e67cb8cb8a2a3149c44a7cbdad3d6a81f02a176b64108d — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · docnumber. Edited ONLY in chitbridge-engines/src/docnumber.js; every platform adopts a released version of it. */
 (function (root) {
   'use strict';

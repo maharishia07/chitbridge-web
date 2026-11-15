@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.79.0 · accounts-packs · sha256 08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · accounts-packs · sha256 08ee7a753735b46bd480582cf2035e88f4f676f0442ddf585c279616a9c3775a — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · accounts-packs. Edited ONLY in chitbridge-engines/src/accounts-packs.js; every platform adopts a released version of it. */
 (function (root) {
   'use strict';

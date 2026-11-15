@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.92.0 · pricing · sha256 cdc1a4d42d1e30e97b514fb22ba9cf6204530b1588a46ddd885e5e83d953a2a9 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · pricing · sha256 cdc1a4d42d1e30e97b514fb22ba9cf6204530b1588a46ddd885e5e83d953a2a9 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · pricing. Edited ONLY in chitbridge-engines/src/pricing.js; every platform adopts a released version of it. */
 /* app/pricing.js — THE PRICING STRUCTURE A PRODUCT CITES, AND THE UNIT PRICE IT YIELDS AT A QUANTITY.
  *   (classic script, shared global scope · ONE file for every host, adopted from chitbridge-engines since v1.3.0)

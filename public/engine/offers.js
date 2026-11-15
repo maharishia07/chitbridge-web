@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.96.0 · offers · sha256 8cd28e26556383c2d1d172bdf1e27f59769a00c145517bf3168bbd2b2c23dcac — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.97.9-proof · offers · sha256 8cd28e26556383c2d1d172bdf1e27f59769a00c145517bf3168bbd2b2c23dcac — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · offers. Edited ONLY in chitbridge-engines/src/offers.js; every platform adopts a released version of it. */
 /* app/offers.js — OFFERS AS A SUBJECT OF THEIR OWN.  (classic script, shared global scope)
  *
