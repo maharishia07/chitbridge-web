@@ -111,7 +111,6 @@
     return out;
   }
   var MARK = { ok: '✓', bad: '✕', none: '○' };
-  var STATE_WORD = { ok: 'agrees', bad: 'differs', none: 'not in the file' };
   function rightHtml(items, tid) {
     var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
       open = items.filter(function (one) { return one.state === 'none'; }).length;
@@ -120,7 +119,7 @@
       (agree ? '<span class="bb-sum bb-ok" data-testid="' + esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + esc(T('agree')) + '</span>' : '') +
       (open ? '<span class="bb-sum bb-none" data-testid="' + esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + esc(T('not in the file')) + '</span>' : '') +
       items.map(function (one) {
-        return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '<span class="lk-sr"> (' + esc(T(STATE_WORD[one.state])) + ')</span></span>';
+        return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '</span>';
       }).join('') + '</div>'
     );
   }
@@ -151,7 +150,7 @@
           ? '<div class="bb-progress"><div class="lk-bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + f.total + '" aria-valuenow="' + (f.inBooks || 0) + '" aria-label="' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '"><i style="width:' + Math.round(((f.inBooks || 0) / f.total) * 100) + '%"></i></div><span class="bb-pnote" data-testid="' + esc(tid) + '-progress">' + esc((f.inBooks || 0) + ' ' + T('of') + ' ' + f.total + ' ' + T('in your books')) + '</span></div>'
           : '';
     return (
-      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" aria-label="' + esc(T('Bank statement')) + '">' +
+      '<section class="bb' + (nil ? ' bb-nil' : '') + '" data-cbsid="CMP065-D01" data-testid="' + esc(tid) + '" data-tied="' + nil + '" aria-label="' + esc(T('Bank statement')) + '">' +
       '<div class="bb-head"><h2 class="bb-name" data-testid="' + esc(tid) + '-account">' + esc(f.account || '') + '</h2>' +
       '<span class="bb-period" data-testid="' + esc(tid) + '-period">' + esc(periodText(f.from, f.to)) + (f.count != null ? ' · ' + esc(many(f.count, 'line', 'lines')) : '') + '</span>' +
       (f.change || '') +

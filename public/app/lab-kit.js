@@ -357,7 +357,7 @@
   }
 
   /* ── CMP064 STATUS ICON: the state of a list row as ONE small icon, never a word on every row (Athi 15 Nov, W15-13). The shape says it without colour: a tick = settled, a filled dot = ready,
-        a ring = needs you, a tick in a ring = just answered. The word is always there for a screen reader (.lk-sr) and as the tooltip, so the icon is never the only carrier of the meaning.
+        a ring = needs you, a tick in a ring = just answered. The word is always there as the icon's accessible name (role img, aria-label) and as the tooltip, so the icon is never the only carrier of the meaning.
         statusIcon({ status: 'in'|'ready'|'need'|'done'|'books', name }) → html ── */
   var STATUS_ICONS = {
     in: '<path d="M5 12.5 10 17.5 19 7"/>',
@@ -370,8 +370,8 @@
     var shape = STATUS_ICONS[opts.status] || STATUS_ICONS.need,
       name = escapeText(opts.name || '');
     return (
-      '<span class="lk-st lk-st-' + escapeText(STATUS_ICONS[opts.status] ? opts.status : 'need') + '" data-cbsid="CMP064-D01" data-state="' + escapeText(opts.status || '') + '" title="' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
-      shape + '</svg><span class="lk-sr">' + name + '</span></span>'
+      '<span class="lk-st lk-st-' + escapeText(STATUS_ICONS[opts.status] ? opts.status : 'need') + '" data-cbsid="CMP064-D01" data-state="' + escapeText(opts.status || '') + '" role="img" aria-label="' + name + '" title="' + name + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+      shape + '</svg></span>'
     );
   }
 
