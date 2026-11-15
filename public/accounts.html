@@ -252,12 +252,12 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .pe-card.bks{max-width:none;gap:6px;padding:6px 14px}
 .bks-bar{display:flex;align-items:center;gap:10px;min-height:32px;font-size:14px}
 .bks-sum{color:var(--muted-2);font-size:13px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bks-tog,.bks-btn,.bks-miss{height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
-.bks-miss{border-color:var(--amber-b,var(--line));background:var(--amber-t,var(--surface));color:var(--amber-d,var(--ink,inherit));width:100%;height:28px;padding:0 6px}
+#bk_body .bks-tog,#bk_body .bks-btn,#bk_body .bks-miss,#bk_body .bks-add button{min-height:32px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink,inherit);font-size:13px;font-weight:600;cursor:pointer}
+#bk_body .bks-add .supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+#bk_body .bks-miss{border-color:var(--amber-b,var(--line));background:var(--amber-t,var(--surface));color:var(--amber-d,var(--ink,inherit));width:100%;height:26px;min-height:26px;padding:0 6px}
 .bks-add{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
 .bks-add .pe-f .inp{min-height:32px;height:32px;padding:0 8px}
 .bks-add .pe-f{flex:1 1 180px}
-.bks-add .supact-pri{height:32px;min-height:32px;align-self:flex-end}
 .bks-wrap{overflow-x:auto}
 .bks-grid,.bks-files{border-collapse:collapse;width:100%;font-size:13px}
 .bks-grid th,.bks-grid td,.bks-files th,.bks-files td{height:32px;padding:0 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -266,7 +266,7 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 .bks-grid .bks-have{color:var(--green-d)}
 .bks-flag{font-size:12px;color:var(--amber-d,var(--muted-2));border:1px solid var(--amber-b,var(--line));border-radius:6px;padding:0 4px}
 .bks-name{max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.bks-acts{display:flex;gap:6px;justify-content:flex-end}
+.bks-files .bks-acts{text-align:right}.bks-files .bks-btn{margin-left:6px}
 .pe-bank.bk-loaded .pe-card.bks{padding:2px 14px}
 /* ⭐ THE BANK VIEW, a statement on screen (app/cap-bank.js): the load form is ONE line, a band of four figures and ONE primary button, and the lines fill the rest of the screen; nothing scrolls but the rows.
    body.bk-on is set while the Lines view shows (bankLayout); the Statement view scrolls as a page. */
