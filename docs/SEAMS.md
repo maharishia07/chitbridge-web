@@ -38,21 +38,21 @@ of file each thing is; this says what already does the job.
 | 61 | `record` | `access-events.js` |  |
 | 61 | `said` | `chits-contract.js` | A body that carried its own `code` keeps it (it is the Problem code too); else `code` names it. |
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
-| 56 | `again` | `signin-ui.js` |  |
+| 60 | `again` | `signin-ui.js` |  |
 | 56 | `pack` | `books-store.js` |  |
 | 56 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 56 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 55 | `toast` | `accounts-shell.js` |  |
-| 55 | `rows` | `cap-settings.js` |  |
+| 56 | `rows` | `cap-settings.js` |  |
 | 55 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
 | 54 | `view` | `books-payables.js` | group: |
 | 54 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
-| 51 | `read` | `cap-print.js` |  |
+| 52 | `read` | `cap-print.js` |  |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
-| 48 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 49 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
@@ -101,7 +101,7 @@ of file each thing is; this says what already does the job.
 | 32 | `flags` | `cmdb.js` | the flags a record raises about itself — |
 | 32 | `lookup` | `regulation.js` | lookup(country) → its pack, or the UNKNOWN answer (unknown_) — |
 | 32 | `owner` | `books.js` |  |
-| 31 | `modal` | `app.html` |  |
+| 32 | `modal` | `app.html` |  |
 | 31 | `money` | `cart.js` |  |
 | 31 | `back` | `signin-ui.js` | into the next person's sign-in, so the next person's six-digit code was checked as the first person's PIN. |
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
@@ -185,7 +185,7 @@ of file each thing is; this says what already does the job.
 | 17 | `parts` | `country-compare.js` | the parts of one row of one country; [] for an unknown row |
 | 17 | `confirm` | `lab-kit.js` | opts: |
 | 17 | `verdict` | `rail-thread.js` |  |
-| 17 | `dialog` | `ui.js` | caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialo |
+| 18 | `dialog` | `ui.js` | caller must keep drawing itself (a step wizard repaints its own); its buttons carry their own codes, the dialo |
 | 17 | `series` | `gst-returns.js` | `paid_on`: |
 | 17 | `orders` | `home-facts.js` | the till said 2 — |
 | 17 | `people` | `home-facts.js` | the same three words (lib/people.stateOf) — |
