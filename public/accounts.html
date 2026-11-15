@@ -182,6 +182,8 @@ h1{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-s
 .pe-bad,.pe-calm,.pe-warn{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;border-radius:10px;padding:10px 12px;font-size:14px}
 .bk-signed{font-weight:600;color:var(--green-d,var(--text));font-size:13px;line-height:1.25}
 @media (max-width:760px){#bk_primary:has(.bk-signed){display:contents}.bk-acts:has(.bk-signed){flex-wrap:nowrap}.bk-acts .bk-signed{flex:1 1 0;min-width:0}.bk-acts button[data-testid="bank-signoff"].act{display:none}}
+.bk-more-sign{display:none}
+@media (max-width:760px){.bk-more-sign{display:block}}
 .brs-title{margin:0 0 6px;font-size:16px;font-weight:700}
 .brs-signed{margin:0 0 8px;padding:6px 10px;font-size:13px}
 @media print{body.brs-printing *{visibility:hidden}body.brs-printing #bk_brs_print,body.brs-printing #bk_brs_print *{visibility:visible}body.brs-printing #bk_brs_print{position:absolute;inset:0 auto auto 0;width:100%;border:0;box-shadow:none;background:Canvas;color:CanvasText}}

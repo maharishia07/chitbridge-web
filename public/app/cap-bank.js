@@ -546,6 +546,12 @@ function bankChange(btn) {
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
 const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
+/** a signed period at nil: "Sign off again" lives in More on a phone, where the band has no room for the button (the band shows it from 760 px up) */
+function bankMoreSignAgain() {
+  const fig = bankFigures();
+  if (!fig || !fig.nil || typeof bankStoreSignedNow !== 'function' || !bankStoreSignedNow() || bankStoreState.mode !== 'server') return '';
+  return '<button data-cbsid="BKS014-B08" type="button" role="menuitem" class="bk-mi bk-more-sign" data-testid="bank-signoff-more" onclick="bankMoreToggle(false);bankStoreSignOff(this)">' + bkbE(tx('Sign off again')) + '</button>';
+}
 /** the More menu: the Statement view and the file of the reconciliation; one button opens it, Esc and a press outside close it */
 function bankMoreHtml(worked, withStore) {
   const download =
@@ -559,7 +565,7 @@ function bankMoreHtml(worked, withStore) {
       ? '<div class="bk-note" id="bk_store_line" data-testid="bank-store-line" data-mode="' + bankStoreState.mode + '">' + bkbE(bankStoreLine()) + '</div>'
       : '') +
     '<button data-cbsid="BKS014-B01" type="button" role="menuitem" class="bk-mi" data-testid="bank-tab-brs" onclick="bankMoreToggle(false);BKB.tab=\'brs\';bankPaint()">' + bkbE(tx('The statement and sign-off')) + '</button>' +
-    download + '</div></span>'
+    download + bankMoreSignAgain() + '</div></span>'
   );
 }
 function bankMoreToggle(want) {

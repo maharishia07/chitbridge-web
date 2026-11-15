@@ -86,6 +86,10 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.screenshot({ path: path.join(OUT, 'b9-03-confirm-1366.png') });
   await p.locator('[role=dialog] button, dialog[open] button', { hasText: /^(Yes|Add|Confirm)/ }).last().click();
   await p.waitForTimeout(6000);
+  const sayNode = p.locator('[data-testid="bank-sheet-say"]');
+  console.log('   say after one line: ' + flat(await sayNode.innerText().catch(() => '')) + ' | class ' + (await sayNode.getAttribute('class').catch(() => '')));
+  ok(/added to your books/.test(flat(await sayNode.innerText().catch(() => ''))) && /pe-ok/.test((await sayNode.getAttribute('class').catch(() => '')) || ''), 'l16-bank-10: "1 added to your books." is in the success tone (pe-ok), not the red band');
+  await p.screenshot({ path: path.join(OUT, 'b10-00-added-success-tone-1366.png') });
   await p.keyboard.press('Escape');
   await p.waitForTimeout(1500);
   bd = await band(p);
@@ -221,6 +225,15 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   ok(!/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/.test(await p.textContent('#bk_body')), 'l16-bank-10: no record id anywhere on the statement view');
   ok(/Signed off by/.test(flat(await p.locator('[data-testid="bank-brs-signed"]').innerText().catch(() => ''))), 'l16-bank-10: the statement carries the signer by name');
   ok((await p.locator('[data-testid="bank-brs-print"]').count()) === 1, 'l16-bank-10: the statement has a Print button');
+  /* keyboard only: Tab to Print, Enter presses it (window.print is stubbed: the browser's sheet is not driven), the print mode is set and cleared again */
+  await p.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; window.dispatchEvent(new Event('afterprint')); }; });
+  await p.locator('[data-testid="bank-tab-lines"]').focus();
+  await p.keyboard.press('Tab');
+  const onPrint = await p.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid'));
+  ok(onPrint === 'bank-brs-print', 'l16-bank-10 KEYBOARD: one Tab from "Back to the lines" lands on Print (' + onPrint + ')');
+  await p.keyboard.press('Enter');
+  const printState = await p.evaluate(() => ({ n: window.__printed, cls: document.body.classList.contains('brs-printing') }));
+  ok(printState.n === 1 && !printState.cls, 'l16-bank-10 KEYBOARD: Enter on Print asks the browser to print once and the print mode is cleared after (' + JSON.stringify(printState) + ')');
   await p.emulateMedia({ media: 'print' });
   const printed = await p.evaluate(() => { document.body.classList.add('brs-printing'); const card = document.getElementById('bk_brs_print'), side = document.querySelector('.pe-bank, #bk_line, nav, aside'); return { card: getComputedStyle(card).visibility, other: side ? getComputedStyle(side).visibility : 'none' }; });
   console.log('   print media: ' + JSON.stringify(printed));
@@ -228,8 +241,21 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.evaluate(() => document.body.classList.remove('brs-printing'));
   await p.emulateMedia({ media: 'screen' });
   await p.screenshot({ path: path.join(OUT, 'b10-02-statement-1366.png') });
+  /* the phone: the band has no room for "Sign off again", so it is in More, reachable by keyboard */
   await p.locator('[data-testid="bank-tab-lines"]').click();
+  await p.setViewportSize({ width: 390, height: 844 });
   await p.waitForTimeout(500);
+  ok(!(await p.locator('[data-testid="bank-signoff"]').first().isVisible().catch(() => false)), 'l16-bank-10: at 390 the band does not carry "Sign off again"');
+  await p.locator('[data-testid="bank-more"]').focus();
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(300);
+  const moreSign = p.locator('[data-testid="bank-signoff-more"]');
+  ok(await moreSign.isVisible().catch(() => false), 'l16-bank-10: at 390 "Sign off again" is in More (R74: the action is never dropped)');
+  await p.screenshot({ path: path.join(OUT, 'b10-03-more-signoff-390.png') });
+  await p.keyboard.press('Escape');
+  await p.setViewportSize({ width: 1366, height: 768 });
+  await p.waitForTimeout(300);
+  ok(!(await p.locator('[data-testid="bank-signoff-more"]').isVisible().catch(() => false)), 'l16-bank-10: at 1366 the More menu does not repeat "Sign off again"');
   /* ITEM 3: one vocabulary */
   const chips = flat(await p.textContent('[data-testid="bank-group-books"]') + ' | ' + await p.textContent('[data-testid="bank-group-matched"]') + ' | ' + await p.textContent('[data-testid="bank-group-bank"]'));
   ok(/Not in your books/.test(chips) && /In your books/.test(chips) && /Not on the statement/.test(chips) && !/Missing in|Matched/.test(chips), 'ITEM 3: the chips use the band words (' + chips + ')');
