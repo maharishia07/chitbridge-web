@@ -67,7 +67,7 @@ async function open(browser, base, token, vp, entity, target, waitSel) {
   page.on('requestfailed', (r) => threw.push('FAILED ' + r.url().slice(0, 120)));
   page.on('response', (r) => { if (r.status() >= 400) threw.push(r.status() + ' ' + r.url().slice(-80)); });
   await page.goto(base + (target || '/accounts.html#bank')); /* target: an adviser opens '/accounts.html?acting=<client id>#bank' */
-  try { await page.waitForSelector(waitSel || '[data-testid="bank-file"]', { timeout: 20000 }); } catch (e) { console.log('OPEN-FAILED url', page.url(), 'threw', JSON.stringify(threw), 'body', ((await page.textContent('body').catch(() => '')) || '').replace(/s+/g, ' ').slice(0, 500)); throw e; }
+  try { await page.waitForSelector(waitSel || '[data-testid="bank-file"]', waitSel ? { timeout: 20000 } : { timeout: 20000, state: 'attached' }); /* one door: the plain picker's input may be hidden behind the Statements box (attached, not visible) */ } catch (e) { console.log('OPEN-FAILED url', page.url(), 'threw', JSON.stringify(threw), 'body', ((await page.textContent('body').catch(() => '')) || '').replace(/s+/g, ' ').slice(0, 500)); throw e; }
   return { ctx, page };
 }
 module.exports = { serve, open, signIn, call, API };
