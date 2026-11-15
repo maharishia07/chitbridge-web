@@ -406,7 +406,7 @@
       var ctl = bell.mk || (bell.mk = root.CBMark.use({
           adopter: 'acc.audit',
           call: function (key, o) {
-            return api(key, o); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
+            return api(key, o).catch(function (e) { root.__mkerr += ' APIERR ' + (e && (e.message || e.status)); throw e; }); /* the page's own api(): the seat's token and acting headers ride on it, as on the Day book */
           }
         })),
         title = row.getAttribute('data-mark-title') || '',
