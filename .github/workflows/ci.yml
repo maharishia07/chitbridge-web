@@ -285,6 +285,7 @@ jobs:
           node e2e/ui-codes-till.test.cjs
           node e2e/ui-codes-promo.test.cjs
           node e2e/ui-codes-g1.test.cjs
+          node e2e/ui-codes-sweep.test.cjs
           node e2e/ui-component-keys.cjs
           node e2e/embed-operations-strings.test.cjs
           node e2e/tx-key.test.cjs

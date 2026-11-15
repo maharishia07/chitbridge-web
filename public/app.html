@@ -13807,7 +13807,7 @@ function customersScreen() {
   const list = `<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button data-cbsid="CMP016" onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from you (storefront, Suppliers, a bill), or added here. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
-    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID, email or name')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><input class="inp" id="cu_add_phone" data-testid="cust-add-phone" placeholder="${tx('Phone (for a name)')}" style="width:130px" autocomplete="off" inputmode="tel" onkeydown="if(event.key==='Enter')addCustomer()"><button data-cbsid="CMP007" class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
+    <div style="display:flex;gap:7px;margin-top:8px"><input data-cbsid="BUS001-I01" class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID, email or name')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><input data-cbsid="BUS001-I02" class="inp" id="cu_add_phone" data-testid="cust-add-phone" placeholder="${tx('Phone (for a name)')}" style="width:130px" autocomplete="off" inputmode="tel" onkeydown="if(event.key==='Enter')addCustomer()"><button data-cbsid="CMP007" class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
     </div>
     <div class="rows" id="cu_rows" style="overflow:hidden;padding-bottom:0;min-height:0"></div></div>`;
   setTimeout(paintCustList, 0); /* the rows are a CBList mount: painted once the panel is in the page */
@@ -16498,7 +16498,7 @@ function prodOfferPaint() {
           esc(win) +
           '</span>' +
           (already ? '<span class="bh">' + esc(already + ' of ' + ids.length + ' already on') + '</span>' : '') +
-          '<button type="button" class="badd" data-testid="po-add-' +
+          '<button data-cbsid="CAT001-B23" type="button" class="badd" data-testid="po-add-' +
           esc(item.id) +
           '"' +
           ' onclick="prodOfferApply(\'' +
@@ -22469,7 +22469,7 @@ function chitPaymentCell(c, cell, quoted) {
   const bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
   const pay = bj.payment || null;
   const nestedVal = pay
-    ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
+    ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method || '').toUpperCase())}${pay.ref ? ' · ' + esc(pay.ref) : ''}</span> <button data-cbsid="RAL002-B29" type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
     : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx(chitUnpaidWord(c)))}</span> <button data-cbsid="DTL001-B01" type="button" data-testid="chit-mark-paid" onclick="chitMarkPaid('${c.id}', ${Number(quoted) || 0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Mark paid'))}</button> ${payHasUpi() ? `<button data-cbsid="DTL001-B02" type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted) || 0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>` : ''}`;
   return cell(tx('Payment'), nestedVal);
 }
@@ -23440,13 +23440,13 @@ function quickDelete() {
           them2: sent.length > 1 ? tx('them') : tx('it'),
           them3: sent.length > 1 ? tx('them') : tx('it')
         }
-      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`, false, { pop: 'POP205' }
+      )}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length ? `<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length > 1 ? 's' : ''} in your selection can still be deleted separately.</span>` : ''}</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="RAL002-B30" class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`, false, { pop: 'POP205' }
     );
     return;
   }
   MODALS.del = { ids: drafts };
   modal(
-    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`, false, { pop: 'POP062' }
+    `<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length > 1 ? 's' : ''}?</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${drafts.length > 1 ? 'They move' : 'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button data-cbsid="CMP003" onclick="closeModal()">${tx('Cancel')}</button><button data-cbsid="RAL002-B31" class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`, false, { pop: 'POP062' }
   );
 }
 async function archiveSelected() {
@@ -30062,7 +30062,7 @@ function amendPaint() {
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
       ${AMD_REASONS.map((item) => `<button data-cbsid="DTL001-B55" class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:var(--fs-3)" onclick="amendSave(null,'${item[0]}')">${esc(item[1])}</button>`).join('')}
-      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`, false, { pop: 'POP015' });
+      <button data-cbsid="DTL001-B60" class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`, false, { pop: 'POP015' });
   }
 
   /* ── the card ───────────────────────────────────────────────────────────────────────────────────────────── */
@@ -30119,7 +30119,7 @@ function amendPaint() {
       <input data-cbsid="DTL001-I10" inputmode="decimal" value="${esc(String(l.quantity ?? ''))}" oninput="amdSetQty(this.value)"
              style="width:74px;text-align:center;font-size:var(--fs-5);font-weight:800;padding:8px;border:1px solid var(--line);border-radius:9px">
       <span data-cbsid="DTL001-C08" onclick="amdView('unit')" style="cursor:pointer;font-size:var(--fs-3);font-weight:700;min-width:52px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit || 'unit')}</span>
-      <button class="btn" onclick="amdStep(1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">+</button>
+      <button data-cbsid="DTL001-B61" class="btn" onclick="amdStep(1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">+</button>
       <span style="color:var(--grey);font-size:var(--fs-3)">×</span>
       <input data-cbsid="DTL001-I11" inputmode="decimal" data-testid="amd-price" value="${esc(l.price === '' || l.price == null || isNaN(Number(l.price)) ? '' : String(Number(l.price)))}" oninput="amdSetPrice(this.value)" placeholder="price"
              style="width:84px;text-align:center;font-size:var(--fs-4);font-weight:700;padding:8px;border:1px solid var(--line);border-radius:9px">

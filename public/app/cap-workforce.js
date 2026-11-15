@@ -715,7 +715,7 @@ function awRender() {
     return (
       '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">' +
       label +
-      '</label><input class="inp" id="' +
+      '</label><input data-cbsid="BUS005-I10" class="inp" id="' +
       id +
       '" data-testid="' +
       id +
@@ -730,7 +730,7 @@ function awRender() {
     return (
       '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">' +
       label +
-      '</label><select class="inp" id="' +
+      '</label><select data-cbsid="BUS005-S06" class="inp" id="' +
       id +
       '" style="width:100%">' +
       opts
@@ -868,7 +868,7 @@ function awRender() {
       if (UI.awErr) body += '<div style="color:var(--disp);font-size:var(--fs-2);margin-top:10px">' + esc(UI.awErr) + '</div>';
       var nextLbl = UI.awStep === steps.length - 1 ? (rdy ? 'Create' : 'See result') : 'Next ›';
       foot =
-        '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
+        '<button data-cbsid="CMP006" class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button data-cbsid="BUS005-B23" class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">' +
         nextLbl +
         '</button>';
     }
