@@ -130,6 +130,7 @@ function bankAcctPick(code) {
     out = bkbEl('bk_out');
   if (file) file.value = '';
   if (res) res.innerHTML = '';
+  bankLayout(false, false);
   if (out) out.innerHTML = '<div class="pe-note" data-testid="bank-acct-changed">' + bkbE(tx('You changed the bank account, so the statement on screen was cleared. Load the statement file for this account.')) + '</div>';
 }
 /** one step action: the engine's step, the device copy, then the shared record */
@@ -205,7 +206,7 @@ async function bankView(body) {
   const known = bkbPresets(),
     presets = Object.keys(known);
   body.innerHTML =
-    '<div class="pe-bank"><div class="pe-card" data-testid="bank-form"><div class="pe-form">' +
+    '<div class="pe-bank"><div class="pe-card" data-testid="bank-form"><div class="bk-line" id="bk_line" data-testid="bank-line"></div><div class="pe-form">' +
     peField(
       'bk_acct',
       'Bank account',
@@ -256,6 +257,7 @@ async function bankPick(input) {
     BKB.parsed = null;
     BKB.rows = [];
     bkbEl('bk_res').innerHTML = '';
+    bankLayout(false, false);
     return peBad('bk_out', (parsed && parsed.why) || tx('That file could not be read as a bank statement.'));
   }
   BKB.text = text; /* kept in memory only, for the Add sheet: never sent */
@@ -468,12 +470,76 @@ function bankBrs() {
   });
 }
 
+/** the page is "loaded" once a statement is on screen: the load form folds to one line and the lines fill the screen (body.bk-on, accounts.html); the Statement view scrolls as a page */
+function bankLayout(loaded, fill) {
+  const pane = document.querySelector('.pe-bank');
+  if (pane) pane.classList.toggle('bk-loaded', !!loaded);
+  if (pane && !loaded) pane.classList.remove('bk-open');
+  document.body.classList.toggle('bk-on', !!(loaded && fill));
+}
+/** the one line the load form folds to: which account, which file, how many lines, and the way back to the form */
+function bankLineHtml() {
+  const acct = (BKB.accts || []).filter((item) => String(item.code) === String(BKB.stmtAcct))[0] || {};
+  return (
+    '<span class="bk-name"><b>' + bkbE(tx('Bank')) + '</b> · ' + bkbE(acct.name || BKB.stmtAcct) + '</span><span class="bk-file">' +
+    bkbE((BKB.file && BKB.file.name) || '') + ' · ' + bkbE(txn('{count} line', '{count} lines', BKB.parsed.lines.length)) + '</span>' +
+    '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Change statement')) + '</button>'
+  );
+}
+/** the load form opens again over the lines (a different file or account); the list is re-fitted to the room left */
+function bankChange(btn) {
+  const pane = document.querySelector('.pe-bank');
+  if (!pane) return;
+  const open = pane.classList.toggle('bk-open');
+  btn.setAttribute('aria-expanded', String(open));
+  btn.textContent = tx(open ? 'Hide the form' : 'Change statement');
+  window.dispatchEvent(new Event('resize'));
+}
+/** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
+const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
+/** the More menu: the Statement view and the file of the reconciliation; one button opens it, Esc and a press outside close it */
+function bankMoreHtml(worked) {
+  const item = (code, tid, label, fn) =>
+    '<button data-cbsid="' + code + '" type="button" role="menuitem" class="bk-mi" data-testid="' + tid + '" onclick="' + fn + '">' + bkbE(tx(label)) + '</button>';
+  return (
+    '<span class="bk-menu"><button data-cbsid="BKS014-B19" type="button" class="act" id="bk_more" data-testid="bank-more" aria-haspopup="menu" aria-expanded="false" onclick="bankMoreToggle()">' +
+    bkbE(tx('More')) + ' ▾</button><div class="bk-pop" id="bk_pop" role="menu" data-testid="bank-more-menu" hidden>' +
+    item('BKS014-B01', 'bank-tab-brs', 'The statement and sign-off', "bankMoreToggle(false);BKB.tab='brs';bankPaint()") +
+    (worked && worked.ok ? item('BKS014-B02', 'bank-brs-download', 'Download the reconciliation', 'bankMoreToggle(false);bankBrsDownload()') : '') +
+    '</div></span>'
+  );
+}
+function bankMoreToggle(want) {
+  const pop = bkbEl('bk_pop'),
+    btn = bkbEl('bk_more');
+  if (!pop || !btn) return;
+  const open = want === undefined ? pop.hidden : !!want;
+  pop.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+  if (open) (pop.querySelector('button') || btn).focus();
+  else btn.focus();
+}
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && bkbEl('bk_pop') && !bkbEl('bk_pop').hidden) {
+    event.stopPropagation();
+    bankMoreToggle(false);
+  }
+});
+document.addEventListener('click', (event) => {
+  const pop = bkbEl('bk_pop');
+  if (pop && !pop.hidden && !event.target.closest('.bk-menu')) {
+    pop.hidden = true;
+    bkbEl('bk_more').setAttribute('aria-expanded', 'false');
+  }
+});
+
 function bankPaint() {
   const res = bkbEl('bk_res');
   if (!res) return;
   const P = BKB.parsed;
   if (!P) {
     res.innerHTML = '';
+    bankLayout(false, false);
     return;
   }
   /* the engine's note that a bank's format is not confirmed is for its builders: the shop is told what to do about it */
@@ -481,54 +547,67 @@ function bankPaint() {
     /verify against a real file/i.test(item) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : item
   );
   const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
+  const lines = BKB.tab !== 'brs';
   res.innerHTML =
     warn +
     bankFinish() +
-    bankStorePanel() +
-    '<div class="tabs" role="group">' +
-    [
-      ['lines', 'Lines'],
-      ['brs', 'Statement']
-    ]
-      .map(
-        (item) =>
-          '<button data-cbsid="BKS014-B01" type="button" class="pe-tab" data-testid="bank-tab-' +
-          item[0] +
-          '" aria-pressed="' +
-          (BKB.tab === item[0]) +
-          '" onclick="BKB.tab=\'' +
-          item[0] +
-          '\';bankPaint()">' +
-          bkbE(tx(item[1])) +
-          '</button>'
-      )
-      .join('') +
-    '</div>' +
-    (typeof bankSheetButton === 'function' ? bankSheetButton() : '') +
-    (BKB.tab === 'brs' ? '<div id="bk_brs" data-testid="bank-brs"></div>' : '<div id="bkl_bank" data-testid="bank-list"></div>');
-  if (BKB.tab === 'brs') bankBrsPaint();
-  else bankList();
+    (lines
+      ? '<div id="bkl_bank" data-testid="bank-list"></div>'
+      : '<div class="supacts"><button data-cbsid="BKS014-B01" type="button" class="act" data-testid="bank-tab-lines" onclick="BKB.tab=\'lines\';bankPaint()">← ' +
+        bkbE(tx('Back to the lines')) + '</button></div>' + bankStorePanel() + '<div id="bk_brs" data-testid="bank-brs"></div>');
+  const line = bkbEl('bk_line');
+  if (line) line.innerHTML = bankLineHtml();
+  bankLayout(true, lines);
+  if (lines) bankList();
+  else bankBrsPaint();
 }
 
-/** FIN-27 · the finish line: Statement · Books · Difference as the engine's BRS states them (nothing is summed here), green at zero, and the BRS as a file */
-function bankFinish() {
+/** the words of the band, ONE truth: the statement's figure and the books' figure (both carried: the engine's BRS reads them), the gap between them and what it is made of, and what nobody explained.
+ *  Nothing is worked out twice: the gap is the two carried figures set side by side (as the Add sheet does), the unexplained is the BRS's own difference. */
+function bankFigures() {
   const worked = BKB.brs;
-  if (!worked || !worked.ok)
-    return '<div class="pe-note" data-testid="bank-finish-ask">' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</div>';
-  const tied = worked.difference_minor === 0,
-    part = (label, text, testId) => '<span data-testid="' + testId + '"><b>' + bkbE(tx(label)) + '</b> ' + bkbE(text) + '</span>';
+  if (!worked || !worked.ok) return null;
+  const plain = (minor) => (minor < 0 ? bkMoney(-minor) + ' ' + tx('overdrawn') : bkMoney(minor)),
+    gap = worked.bank_balance_minor - worked.book_balance_minor,
+    notIn = bkbCount('books'),
+    notBank = bkbCount('bank');
+  return {
+    statement: plain(worked.bank_balance_minor),
+    books: plain(worked.book_balance_minor),
+    gap: bkMoney(Math.abs(gap)),
+    parts: [
+      notIn ? txn('{count} line not yet in your books', '{count} lines not yet in your books', notIn) : '',
+      notBank ? txn('{count} line not yet on the statement', '{count} lines not yet on the statement', notBank) : ''
+    ]
+      .filter(Boolean)
+      .join(' · '),
+    unexplained: bkMoney(Math.abs(worked.difference_minor)),
+    nil: gap === 0 && worked.difference_minor === 0
+  };
+}
+/** the ONE primary button: Sign off when the difference is nil, else Add to your books while lines are missing; nothing for a reader who may do neither */
+function bankPrimaryHtml(fig) {
+  const canAdd = typeof bankSheetOpen === 'function' && BKB.text && peOwner();
+  if (fig && fig.nil && typeof bankStoreSignButton === 'function') return bankStoreSignButton();
+  if (!canAdd || (fig && !bkbCount('books'))) return '';
+  return '<button data-cbsid="BKS014-B18" type="button" class="pri bk-primary" data-testid="bank-sheet-open" onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button>';
+}
+
+/** FIN-27 · the band over the lines: Statement · Books · Difference (and what it is made of) · Unexplained, then the one primary button and More. Green when nothing is left to do */
+function bankFinish() {
+  const fig = bankFigures();
+  const part = (label, text, testId, sub) =>
+    '<div class="bk-fig" data-testid="' + testId + '"><span class="bk-l">' + bkbE(tx(label)) + '</span><b>' + bkbE(text) + '</b>' + (sub ? '<span class="bk-sub">= ' + bkbE(sub) + '</span>' : '') + '</div>';
+  const acts = '<div class="bk-acts" data-testid="bank-actions"><span id="bk_primary">' + bankPrimaryHtml(fig) + '</span>' + bankMoreHtml(BKB.brs) + '</div>';
+  if (!fig)
+    return '<div class="bk-band" data-testid="bank-finish-ask"><span>' + bkbE(tx("Type the bank's closing balance on the Statement tab to see the difference.")) + '</span>' + acts + '</div>';
   return (
-    '<div class="' +
-    (tied ? 'pe-ok' : 'pe-warn') +
-    '" data-testid="bank-finish" data-tied="' +
-    tied +
-    '" style="display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center">' +
-    part('Statement', bkDrCr(worked.bank_balance_minor), 'bank-finish-statement') +
-    part('Books', bkDrCr(worked.book_balance_minor), 'bank-finish-books') +
-    part('Difference', bkMoney(Math.abs(worked.difference_minor)), 'bank-finish-diff') +
-    '<button data-cbsid="BKS014-B02" type="button" class="act" data-testid="bank-brs-download" onclick="bankBrsDownload()">' +
-    bkbE(tx('Download the reconciliation')) +
-    '</button></div>'
+    '<div class="bk-band' + (fig.nil ? ' bk-ok' : '') + '" data-testid="bank-finish" data-tied="' + fig.nil + '">' +
+    part('Statement', fig.statement, 'bank-finish-statement') +
+    part('Books', fig.books, 'bank-finish-books') +
+    part('Difference', fig.gap, 'bank-finish-diff', fig.parts) +
+    part('Unexplained', fig.unexplained, 'bank-finish-unexplained') +
+    acts + '</div>'
   );
 }
 const BKB_BRS_ITEMS = [
@@ -564,6 +643,7 @@ function bankList() {
   CBList.reset && CBList.reset('bank');
   CBList.mount(host, {
     key: 'bank',
+    foldHead: true /* View · Grid / Lines · Columns · CSV · Expand under ONE menu (the Ledgers head's fold) */,
     t: tx,
     rows: () =>
       BKB.rows

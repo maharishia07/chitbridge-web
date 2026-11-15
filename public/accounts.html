@@ -228,6 +228,40 @@ body.lg-on.lg-sel .titlebar{display:none}   /* the list's own title row is the v
 /* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
 @media (min-width:761px){body.lg-on .nav-grp{display:none}body.lg-on .nav-sec:has(>.nav-grp)::before{content:"";display:block;height:1px;margin:8px 10px;background:var(--line-3)}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
 
+/* ⭐ THE BANK VIEW, a statement on screen (app/cap-bank.js): the load form is ONE line, a band of four figures and ONE primary button, and the lines fill the rest of the screen; nothing scrolls but the rows.
+   body.bk-on is set while the Lines view shows (bankLayout); the Statement view scrolls as a page. */
+.pe-bank.bk-loaded:not(.bk-open) .pe-form,.pe-bank.bk-loaded:not(.bk-open) [data-testid="bank-private"]{display:none}
+.bk-line{display:none}
+.pe-bank.bk-loaded .bk-line{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+.pe-bank.bk-loaded .bk-name{font-size:15px}
+.pe-bank.bk-loaded .bk-file{color:var(--muted);font-size:13.5px;flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.pe-bank.bk-loaded .pe-card{padding:8px 14px;margin:0;max-width:none;gap:8px}
+.bk-band{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 28px;padding:10px 16px;border:1px solid var(--amber-b,var(--line));border-radius:12px;background:var(--amber-t,var(--surface))}
+.bk-band.bk-ok{border-color:var(--green-b,var(--line));background:var(--green-t,var(--surface))}
+.bk-fig{display:flex;flex-direction:column;gap:1px;min-width:0}
+.bk-fig .bk-l{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bk-fig b{font-family:var(--f-num,ui-monospace,monospace);font-variant-numeric:tabular-nums;font-size:19px;font-weight:700;line-height:1.2}
+.bk-fig .bk-sub{font-size:12.5px;color:var(--muted)}
+.bk-acts{display:flex;align-items:center;gap:8px;margin-inline-start:auto;flex-wrap:wrap}
+.bk-acts button{min-height:40px}
+.bk-acts .bk-primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink,var(--on-accent,#fff))}
+.bk-acts .bk-primary:hover{background:var(--accent);filter:brightness(1.08)}
+.bk-acts .bk-primary[disabled]{opacity:.6}
+.bk-menu{position:relative;display:inline-block}
+.bk-pop{position:absolute;inset-inline-end:0;top:calc(100% + 4px);z-index:30;min-width:240px;display:flex;flex-direction:column;padding:4px;background:var(--surface);border:1px solid var(--line-3);border-radius:10px;box-shadow:var(--shadow-toast,0 8px 24px rgba(0,0,0,.18))}
+.bk-pop[hidden]{display:none}
+#bk_body .bk-pop .bk-mi{border:0;background:none;text-align:start;justify-content:flex-start;width:100%;border-radius:7px}
+#bk_body .bk-pop .bk-mi:hover{background:var(--hover)}
+body.bk-on .main{display:flex;flex-direction:column;overflow:hidden}
+body.bk-on .titlebar{display:none}
+body.bk-on .content{flex:1 1 auto;min-height:0;padding:10px 24px 8px;gap:8px}
+body.bk-on #bk_body,body.bk-on .pe-bank,body.bk-on #bk_res{display:flex;flex-direction:column;min-height:0;gap:8px}
+body.bk-on #bk_body,body.bk-on .pe-bank{flex:1 1 auto}
+body.bk-on #bk_res{flex:1 1 auto}
+body.bk-on #bkl_bank{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
+@media (max-width:760px){body.bk-on .content{padding:8px 12px 6px}.bk-band{padding:8px 12px;gap:6px 16px}.bk-fig b{font-size:16px}.bk-acts{margin-inline-start:0;width:100%}.bk-acts .bk-primary{flex:1 1 auto}.bk-fig .bk-sub{max-width:34ch}}
+
 /* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
 @media (max-width:760px){
   .side{width:64px}
@@ -606,6 +640,7 @@ function chrome(view) {
   navPaint(nav[0]);
   document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
   if (nav[0] !== 'ledgers') document.body.classList.remove('lg-sel');
+  document.body.classList.remove('bk-on'); /* the Bank view sets it again while a statement's lines show (cap-bank.js bankLayout) */
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
@@ -889,7 +924,7 @@ new MutationObserver(() => cardLabels($('content'))).observe($('content'), { chi
 
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
 function card(html, bad) {
-  document.body.classList.remove('lg-on', 'lg-sel');
+  document.body.classList.remove('lg-on', 'lg-sel', 'bk-on');
   $('title').hidden = true;
   $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`;
   $('summary').textContent = '';

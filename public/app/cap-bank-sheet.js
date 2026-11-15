@@ -1,11 +1,11 @@
 /* cap-bank-sheet.js — the Bank view's "Add to your books" SHEET (FIN-117): the statement's lines against the books, the questions each line asks, one confirm that says what it reaches, then the lines posted.
  * OWNS      bankSheetOpen (the sheet) · the controller's in-app options (ledger, post, parties, learned rules, who may post) · the confirm and the posting of the ready lines · the read of the books after.
  *           The flow is public/app/bank-preview.js (the same module the no-login demo runs), the lines are painted by public/app/bank-preview-ui.js, each line is posted by public/app/cap-bank-post.js.
- * CALLED BY cap-bank.js (the Add button over the lines, and Add missing on a line: bankAdd → bankSheetOpen). Loaded by public/accounts.html after cap-bank.js.
+ * CALLED BY cap-bank.js (the primary Add button in the band, and Add missing on a line: bankAdd → bankSheetOpen). Loaded by public/accounts.html after cap-bank.js.
  * FLOW      bankSheetOpen → countrySetup (tax registered? unknown stays unknown) → CBBankPreview.create({ ledger: bkshBook().ledger, post: CBBankPost.adapter }) → load(bkshBook().text) → CBBankPreviewUI.mount → answers → Add N → CBAction.ask (reach) → postReady → bankLedger → paint
  * ⭐ THE STATEMENT NEVER LEAVES THE DEVICE: bkshBook().text is read by the engine here; what is sent is each confirmed entry (kind, date, amount, narration, one client_ref), as before.
  * ⭐ THE PAGE COMPUTES NO MONEY and defaults no unasked fact: the entry, its tax and its totals are the engine's; a registered shop is asked what tax a charge is (bank-preview.js heldHere_), an unknown registration asks nothing and claims nothing.
- * IDS       BKS014-U03 (the sheet) · BKS014-B16 (Add) · BKS014-B17 (Close) · BKS014-B18 (the Add button over the lines). CARD 16-finance/bank-reconciliation-and-bank-rail
+ * IDS       BKS014-U03 (the sheet) · BKS014-B16 (Add) · BKS014-B17 (Close) · BKS014-B18 (the Add button in the band, drawn by cap-bank.js bankPrimaryHtml). CARD 16-finance/bank-reconciliation-and-bank-rail
  */
 'use strict';
 /** the Bank view's own state (cap-bank.js declares BKB; this file reads it through one door) */
@@ -101,14 +101,16 @@ function bkshController() {
   });
 }
 const bkshEl = (id) => document.getElementById(id);
-/** the sheet's own words under the title: the refusal first, else the statement against the books now */
-function bkshStrip(model) {
-  const brs = model.projection && model.projection.brs;
-  if (!brs) return '';
-  return txf('Statement {s} · Books now {b} · Difference now {d}', {
-    s: CBBankPreview.moneyText(brs.closing_statement, bkshBook().stmtCur),
-    b: CBBankPreview.moneyText(brs.closing_books_before, bkshBook().stmtCur),
-    d: CBBankPreview.moneyText(brs.difference_before, bkshBook().stmtCur)
+/** the sheet's own words under the title: the band's ONE truth (bankFigures, cap-bank.js), so the page and the sheet never say two things; nothing here is worked out */
+function bkshStrip() {
+  const fig = typeof bankFigures === 'function' ? bankFigures() : null;
+  if (!fig) return '';
+  return txf('Statement {s} · Books {b} · Difference {d}{parts} · Unexplained {u}', {
+    s: fig.statement,
+    b: fig.books,
+    d: fig.gap,
+    parts: fig.parts ? ' = ' + fig.parts : '',
+    u: fig.unexplained
   });
 }
 /** paint the sheet again from the controller: the strip, the lines, and the Add button with its count */
@@ -116,7 +118,7 @@ function bkshPaint() {
   const model = BKSH.ctl.view(),
     addButton = bkshEl('bks_add'),
     ready = BKSH.ctl.readyCount();
-  bkshEl('bks_strip').textContent = bkshStrip(model);
+  bkshEl('bks_strip').textContent = bkshStrip();
   if (model.parsed) BKSH.ui.paint(model);
   if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
   if (addButton) {
@@ -185,9 +187,4 @@ async function bankSheetOpen() {
   });
   bkshEl('bks_say').textContent = bkshFirstWords(BKSH.ctl.load(bkshBook().text, bkshBook().file && bkshBook().file.name), unread);
   bkshPaint();
-}
-/** the Add button over the lines (owner only: POST /events is the owner's); the sheet then shows every line with what it needs */
-function bankSheetButton() {
-  if (!bkshBook().text || !bkshIsOwner()) return '';
-  return '<div class="pe-note"><button data-cbsid="BKS014-B18" type="button" class="pri" data-testid="bank-sheet-open" onclick="bankAdd()">' + bkbE(tx('Add to your books')) + '</button> ' + bkbE(tx('Lines your books lack, with what each needs.')) + '</div>';
 }
