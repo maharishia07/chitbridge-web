@@ -262,7 +262,7 @@
     var done = { ok: 0, failed: [] };
     return rows.reduce(function (chain, row) {
       return chain.then(function () {
-        return api('actionsAccept', { params: { id: row.action_id }, body: root.CBBooksActing.body({ body_hash: row.body_hash, total_minor: row.total_minor, currency: row.currency }) }).then(
+        return api('actionsAccept', { params: { id: row.action_id }, headers: Object.assign({ 'Idempotency-Key': 'accept-' + row.action_id }, root.CBBooksActing.headers()), body: root.CBBooksActing.body({ body_hash: row.body_hash, total_minor: row.total_minor, currency: row.currency }) }).then(
           function () {
             done.ok++;
           },

@@ -23,7 +23,7 @@
     actionsGet: { m: 'GET', p: '/api/books-actions/:id' } /* one action with its steps[] */,
     actionsReview: { m: 'POST', p: '/api/books-actions/:id/review' } /* { store_id, body_hash }: a colleague of the preparer */,
     actionsReturn: { m: 'POST', p: '/api/books-actions/:id/return' } /* { store_id, body_hash, reason } */,
-    actionsAccept: { m: 'POST', p: '/api/books-actions/:id/accept' } /* the owner only: { store_id, body_hash, total_minor, currency } */
+    actionsAccept: { m: 'POST', p: '/api/books-actions/:id/accept', idem: 'attempt' } /* the owner only: { store_id, body_hash, total_minor, currency } */
   };
   /* the six books reads an auditor opens. Plain paths on purpose: the endpoint registry already names each one (cap-books.js booksTB · booksPL · booksBS · booksDaybook · booksPeriods, accounts-shell.js booksDues) and
      ep-aliases.cjs fails an endpoint with two names; this page reads them with a header the books page never sends. */
