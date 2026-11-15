@@ -107,7 +107,7 @@
     else if (lastClose) out.push(item('previous', 'bad', lastClose.why));
     else if (gap) out.push(item('previous', 'bad', gap.why));
     else if (f.previous && f.previous.to) out.push(item('previous', 'ok', T('Follows the statement to') + ' ' + dayText(f.previous.to) + (f.previous.by ? ', ' + T('signed off by') + ' ' + f.previous.by : '')));
-    else out.push(item('previous', 'none', T('No earlier statement loaded')));
+    else out.push(item('previous', 'none', T('No earlier statement')));
     return out;
   }
   var MARK = { ok: '✓', bad: '✕', none: '○' };
