@@ -1911,7 +1911,7 @@
   if (root && typeof root.window !== 'undefined') root.window.CBRegIN = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
-/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · reg-au · sha256 6dfa3386292713942c83acde793b5b8916443645d90b534fd9c7c00d0840f2b3 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.98.0-sitau.1 · reg-au · sha256 c99de2ab375941f7065bebaa35316bb555a30bca2aeede1703e36db9d1a62eba — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · reg-au. Edited ONLY in chitbridge-engines/src/reg-au.js; every platform adopts a released version of it. */
 /*
  * OWNS      the Australia regulation pack: its chart, AASB 101 lines, Division 40 depreciation, GST 10% with its supply kinds, the BAS periods and labels, the dated penalty unit and records rules, as data.
@@ -2772,7 +2772,10 @@
         atm: ['ATM', 'ATM WITHDRAWAL', 'CASH OUT'],
         cash_deposit: ['CASH DEPOSIT', 'DEPOSIT CASH', 'CASH DEP'],
         cheque_return: ['DISHONOUR', 'DISHONOURED', 'RETURNED', 'REVERSAL'],
-        transfer: ['EFT', 'BPAY', 'OSKO', 'PAYID', 'DIRECT CREDIT', 'DIRECT DEBIT', 'TRANSFER', 'NPP']
+        transfer: ['EFT', 'BPAY', 'OSKO', 'PAYID', 'DIRECT CREDIT', 'DIRECT DEBIT', 'TRANSFER', 'NPP'],
+        own_transfer: ['TRANSFER TO SAVINGS', 'TRANSFER FROM SAVINGS', 'TO SAVINGS', 'FROM SAVINGS', 'OWN ACCOUNT', 'INTERNAL TRANSFER'],
+        tax_office: ['ATO', 'BAS', 'TAX OFFICE', 'ACTIVITY STATEMENT'],
+        card_settlement: ['CARD SETTLEMENT', 'EFTPOS', 'MERCHANT SETTLEMENT']
       }
     }
   };
