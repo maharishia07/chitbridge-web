@@ -72,7 +72,7 @@ W.run('books-door', async (w) => {
     return { ok: true, saw: await txt(T('bg-noparent')) };
   });
   await w.step('D7', 'the page opens on the section from the Accounts door (#books)', async () => {
-    await page.goto(base + '/network.html#books'); await page.waitForSelector(T('bg-list'), { timeout: 15000 });
+    await page.goto(base + '/network.html#books'); await page.reload(); await page.waitForSelector(T('bg-list'), { timeout: 15000 });
     return { ok: (await page.getAttribute(T('skel-nav-books'), 'aria-current')) === 'page', saw: 'books section is the current one' };
   });
   await page.goto(base + '/accounts.html'); await page.waitForSelector(T('acc-nav-access'), { timeout: 20000 });
