@@ -247,26 +247,33 @@
     var again = doc.querySelector('#bd_gst [data-choice-value="' + value + '"]');
     if (again && again.focus) again.focus();
   }
+  /** the words of the Account column: what the engine proposed, the ask for a line nothing explains, nothing for a line already in the books */
+  function accountWords(item, state) {
+    if (state === 'in' || state === 'posted') return '';
+    return accountOf(item) || (state === 'need' ? 'Choose what this is' : '');
+  }
+  /** one money cell: the carried amount in its currency, or an empty cell; which is 'out' (spent) or 'in' (received) */
+  function moneyCell(minor, which) {
+    return '<span class="bd-m bd-' + which + ' bd-cell' + which + '">' + (minor ? esc(amountText(minor)) : '') + '</span>';
+  }
+  /** the payee, with the date (shown on a phone only) and the bank's own words under it */
+  function whoCell(item) {
+    var line = item.line;
+    return '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span></span>';
+  }
   function lineRow(item, results, opensPanel) {
     var line = item.line,
       result = results[item.key],
       state = standing(item, result),
       chip = CHIPS[state],
-      account = state === 'in' || state === 'posted' ? '' : accountOf(item) || (state === 'need' ? 'Choose what this is' : '');
-    var out = line.debit_minor ? esc(amountText(line.debit_minor)) : '',
-      received = line.credit_minor ? esc(amountText(line.credit_minor)) : '';
-    var reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
+      reason = result && !result.ok ? '<span class="bd-why">' + esc(result.why) + '</span>' : '';
     var inner =
-      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' +
-      '<span class="bd-who">' + badgeOf(item) + '<span class="bd-names"><span class="bd-payee">' + esc(payeeOf(item)) + '</span><span class="bd-bank"><span class="bd-pdate">' + esc(preview.dateText(line.date)) + ' · </span>' + esc(line.narration) + '</span></span>' +
-      '</span><span class="bd-acc">' + esc(account) + '</span>' +
-      '<span class="bd-m bd-out bd-cellout">' + out + '</span><span class="bd-m bd-in bd-cellin">' + received + '</span>' +
+      '<span class="bd-date">' + esc(preview.dateText(line.date)) + '</span>' + whoCell(item) + '<span class="bd-acc">' + esc(accountWords(item, state)) + '</span>' +
+      moneyCell(line.debit_minor, 'out') + moneyCell(line.credit_minor, 'in') +
       '<span class="bd-status">' + tag(chip[0], chip[1]) + reason + '</span><span class="bd-chev" aria-hidden="true">' + (opensPanel ? '›' : '') + '</span>';
     var rowClass = 'bd-row bd-s-' + (state === 'need' ? 'needs_you' : state);
-    if (opensPanel) {
-      return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
-    }
-    return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
+    if (!opensPanel) return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
+    return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
   }
   function paintLines(model) {
     var rows = model.items
