@@ -2638,6 +2638,8 @@ function bkDvMount(el) {
     };
   };
   var cols = bkDvCols(c);
+  if (BK.mk && BK.mk.state().may)
+    cols.splice(1, 0, { key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (e) { return BK.mk.chip(e.entry_id); }, value: function (e) { var m = BK.mk.row(e.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358: the auditor's mark, read-only here; a Query opens its sheet for a reply */
   return CBList.mount(el, {
     key: 'daybook',
     t: tx,
@@ -2758,7 +2760,19 @@ function bkDvMount(el) {
     empty: { title: tx('Nothing in these dates') }
   });
 }
-/* the Day book tab: one date range of entries, the strip and the to-do read together */
+/** ACC-358 (cap-mark.js): the auditor's marks arrive on each Day book entry; the owner sees the chip and may reply to a Query, never set one (the server's `mark_actions` says so) */
+function bkMarksIngest(r, list) {
+  if (typeof CBMark === 'undefined') return;
+  if (!BK.mk) {
+    BK.mk = CBMark.use({ adopter: 'acc.audit', call: api });
+    BK.mk.onChange(function () {
+      if (BK.dv && BK.dv.api) BK.dv.api.refresh();
+      if (BK.lt && BK.lt.api) BK.lt.api.refresh();
+    });
+  }
+  BK.mk.ingest(list || r.entries, r);
+}
+/** the Day book tab: one date range of entries, the strip and the to-do read together */
 async function bkDaybook(body) {
   var q = bkRange('db');
   try {
@@ -2767,6 +2781,7 @@ async function bkDaybook(body) {
     var r = rr[0];
     bkDuesStore(rr[1]); /* the same read names each entry's party (bkPartyLabel) */
     BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
+    bkMarksIngest(r);
     body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
     BK.dv.api = bkDvMount(document.getElementById('bk_dvlist'));
   } catch (e) {
@@ -3285,6 +3300,7 @@ async function bkLtLoad() {
     (r.lines || []).forEach(function (item, index) {
       item._ix = index;
     }); /* a line's place in the statement is its row id */
+    if (!sel.party) bkMarksIngest(r, r.lines); /* ACC-358: the same chip on each ledger line (read + reply; the owner never sets) */
     if (BK.lt.api) BK.lt.api.refresh({ filters: bkLgFilters() });
   } catch (e) {
     if (BK.lt.sel !== sel) return;
@@ -3344,6 +3360,8 @@ function bkLgCols(c, kind) {
       }
     }
   ];
+  if (BK.mk && BK.mk.state().may)
+    cols.push({ key: 'mark', label: tx('Mark'), prio: 2, w: 120, html: true, cell: function (l) { return l.entry_id == null ? '' : BK.mk.chip(l.entry_id); }, value: function (l) { var m = l.entry_id == null ? null : BK.mk.row(l.entry_id); return m ? m.label || '' : ''; } }); /* ACC-358 */
   if (ctrl)
     cols.push({
       key: 'party',
