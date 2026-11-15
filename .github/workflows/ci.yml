@@ -200,6 +200,7 @@ jobs:
           node e2e/ux-122-timeline-status-words.test.cjs
           node e2e/net-19-one-session-keeper.test.cjs
           node e2e/net-24-shop-no-fx-table.test.cjs
+          node e2e/net-42-supplier-list-fresh.test.cjs
           node e2e/ux-109-reach-sweep.test.cjs
           node e2e/ux-109-categories-attach-confirm.test.cjs
           node e2e/ctry-18-starter-price-follows-country.test.cjs
