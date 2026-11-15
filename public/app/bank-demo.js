@@ -331,6 +331,7 @@
     loadRefusal = null;
     el('bd_sub').textContent = (model.name || 'Statement') + ' · ' + plural(model.items.length, 'line', 'lines');
     figures(model);
+    paintCheck();
     gstStrip(model);
     paintLines(model);
     report.paintBooks(model, posted, books.opening_minor);
@@ -338,7 +339,14 @@
     paintBar(model);
     paintView();
   }
-  var msg = '',
+  /** the slot before the figures for what the engine says about the FILE: its warnings now (for example no description column was read); the statement-check panel (refuse, confirm, already done) goes here */
+  function paintCheck() {
+    var slot = el('bd_check');
+    slot.hidden = !warnings.length;
+    slot.innerHTML = warnings.map(function (words) { return '<p>' + esc(typeof words === 'string' ? words : words.why || words.words || 'Check this file.') + '</p>'; }).join('');
+  }
+  var warnings = [],
+    msg = '',
     msgOk = false,
     gstBasis = null;
   function setMessage(words, good) {
@@ -353,9 +361,11 @@
 
   /* ── actions ── */
   function loadStatement(text, name) {
+    warnings = [];
     var said = controller.load(text, name);
     if (said.ok) {
       loadRefusal = null;
+      warnings = said.warnings || [];
       setMessage('');
     } else {
       loadRefusal = { why: plainRefusal(said.why), text: /header|column|mapping|preset/i.test(said.why) ? text : '', name: name };
@@ -384,7 +394,7 @@
     var text = controller.confirmText();
     if (!text) return void (setMessage('The engine sent no figures for this press, so nothing was added.'), paint());
     var title = 'Add ' + plural(controller.readyCount(), 'line', 'lines') + ' to the demo books?';
-    labKit.confirm(title, confirmBody(text), function () {
+    labKit.confirm(title, askPanel.confirmBody(text), function () {
       controller.postReady().then(function (said) {
         var model = controller.view(),
           counts = countsOf(model);
