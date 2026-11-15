@@ -308,7 +308,12 @@ body.bk-on #bkl_bank>.cbl{flex:1 1 auto;min-height:0}
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 /* The Add to your books sheet (app/cap-bank-sheet.js, lines painted by app/bank-preview-ui.js): the lines are rows that stack at phone width — tokens only */
 #bks_say:empty{display:none}
-.bks-lines{min-height:0;max-height:60vh;overflow:auto}
+.bks-lines{min-height:0;max-height:calc(100vh - 260px);overflow:auto}
+.bks-lines .bd-confirm{position:sticky;top:0;z-index:3;margin:0 0 6px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.bks-lines .bd-group td{padding:4px 8px;background:var(--sub)}
+.bks-lines .bd-open{min-height:32px;margin-inline-start:6px;padding:2px 10px}
+.bks-lines .bd-row.bd-is-open{background:var(--sub)}
+.bks-lines .bd-table th{position:static}
 .bks-lines .bd-table{width:100%;border-collapse:collapse;font-size:13px}
 .bks-lines .bd-table th{position:sticky;top:0;background:var(--sub);text-align:left;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 .bks-lines .bd-table td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}

@@ -6,6 +6,7 @@ const { chromium } = require('@playwright/test'), fs = require('fs'), path = req
 const L = require('./lib/live-harbour.cjs');
 const OUT = process.env.OUT || 'e2e/shots';
 let pass = 0, fail = 0;
+const PRESS_TARGET = Number(process.env.PRESS_TARGET || 14);
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const CSV = () => fs.readFileSync(fs.existsSync('/w/Harbour-Plumbing-Oct2026-bank-statement-description.csv') ? '/w/Harbour-Plumbing-Oct2026-bank-statement-description.csv' : path.join(__dirname, 'fixtures', 'harbour-oct-2026.csv'));
 const flat = (s) => String(s || '').replace(/\s+/g, ' ').trim();
@@ -22,6 +23,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const { base } = await L.serve(), token = await L.signIn(process.env.HANDLE || 'harbour-plumbing-au');
   const b = await chromium.launch();
   const { ctx, page: p } = await L.open(b, base, token, { width: 1366, height: 768 });
+  p.on('pageerror', (e) => console.log('PAGEERROR ' + e.message.slice(0, 300)));
   await load(p);
   let bd = await band(p);
   ok(/Statement\s*18,280\.75/.test(bd) && /Books\s*19,963\.00/.test(bd) && /Difference\s*1,682\.25/.test(bd) && !/A\$/.test(bd), 'ITEM 5: the band reads plain figures, statement 18,280.75, books 19,963.00, difference 1,682.25, no A$ (' + bd.slice(0, 160) + ')');
@@ -82,47 +84,68 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   const row = (needle) => p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: needle }).first();
   const pause = () => p.waitForTimeout(450);
   const show = async (needle) => console.log('   ' + needle + ' -> ' + flat(await row(needle).innerText()).slice(0, 200));
-  /* the answers, each on its own line */
-  await row('CREDIT INTEREST').locator('button[data-act=tick]').first().click();
-  await pause();
-  await row('ATO PAYMENT').locator('button[data-act=kind][data-kind=tax_payment]').click();
-  await pause();
-  await show('ATO PAYMENT');
-  await openMore('CARD SETTLEMENT');
-  await row('CARD SETTLEMENT').locator('select[data-act=acct]').selectOption({ label: 'Sundry income' });
-  await row('CARD SETTLEMENT').locator('select[data-act=taxkind]').selectOption({ label: 'Taxable supply' });
-  await row('CARD SETTLEMENT').locator('button[data-act=useacct]').click();
-  await pause();
-  await show('CARD SETTLEMENT');
-  await row('MONTHLY ACCOUNT FEE').locator('select[data-act=taxkind1]').selectOption({ label: 'Input-taxed supply' });
-  await row('MONTHLY ACCOUNT FEE').locator('button[data-act=taxuse]').click();
-  await pause();
-  await show('MONTHLY ACCOUNT FEE');
-  await openMore('PACIFIC RIM');
-  await row('PACIFIC RIM').locator('input[data-act=pname]').fill('Pacific Rim Traders');
-  await row('PACIFIC RIM').locator('select[data-act=pkind]').selectOption('customer');
-  await row('PACIFIC RIM').locator('button[data-act=resolve]').click();
-  await pause();
-  await show('PACIFIC RIM');
-  for (let n = 0; n < 2; n++) {
-    const r = p.locator('[data-testid="bank-sheet-lines"] .bd-row', { hasText: 'BUNNINGS' }).nth(n);
-    if (await r.locator('button[data-act=more]').count()) { await r.locator('button[data-act=more]').click(); await p.waitForTimeout(300); }
-    await r.locator('select[data-act=acct]').selectOption('repairs');
-    await r.locator('select[data-act=taxkind]').selectOption({ index: 1 });
-    await r.locator('button[data-act=useacct]').click();
-    await pause();
+  /* the answers: each line that needs one opens by itself, one at a time; every press and choice is counted */
+  let presses = 0;
+  const lines = '[data-testid="bank-sheet-lines"]';
+  const press = async (loc) => { presses++; await loc.click(); await pause(); };
+  const choose = async (loc, what) => { presses++; await loc.selectOption(what); await pause(); };
+  const heightOf = (sel) => p.evaluate((q) => { const e = document.querySelector(q); return e ? e.scrollHeight : -1; }, sel);
+  const sheetHeight = await heightOf('#acc_sheet');
+  const pageScrolls = await p.evaluate(() => document.documentElement.scrollHeight > innerHeight + 2);
+  console.log('   sheet content height at 1366x768: ' + await heightOf('.bks-lines') + ' px, dialog ' + sheetHeight + ', page scrolls: ' + pageScrolls);
+  ok(!pageScrolls, 'ITEM 1: the 1366 page does not scroll with the sheet open');
+  ok(sheetHeight <= 768, 'ITEM 1: the whole sheet fits the 768 px screen (' + sheetHeight + ' px); its list scrolls inside, ' + await heightOf('.bks-lines') + ' px of content for ' + await p.locator(lines + ' .bd-row').count() + ' rows shown');
+  /* the same sheet on the phone */
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(600);
+  const phoneDialog = await heightOf('#acc_sheet'), phoneScrolls = await p.evaluate(() => document.documentElement.scrollHeight > innerHeight + 2 || document.documentElement.scrollWidth > innerWidth);
+  console.log('   sheet at 390x844: dialog ' + phoneDialog + ' px, lines content ' + await heightOf('.bks-lines') + ' px, page scrolls: ' + phoneScrolls);
+  await p.screenshot({ path: path.join(OUT, 'b9-09-sheet-390.png') });
+  ok(phoneDialog <= 844 && !phoneScrolls, 'ITEM 1: at 390x844 the sheet fits the screen and the page does not scroll (' + phoneDialog + ' px)');
+  await p.setViewportSize({ width: 1366, height: 768 });
+  await p.waitForTimeout(400);
+  await p.screenshot({ path: path.join(OUT, 'b9-09-sheet-1366.png') });
+  const strip = flat(await p.textContent('[data-testid="bank-sheet-strip"]'));
+  console.log('   strip: ' + strip);
+  ok(/9 lines to add/.test(strip) && /ready/.test(strip) && /need an answer/.test(strip), 'ITEM 4: the sheet says what each number is (' + strip.slice(0, 90) + ')');
+  for (let round = 0; round < 24; round++) {
+    const basis = p.locator(lines + ' button[data-act=gst][data-v=cash]');
+    if (await basis.count()) {
+      const inView = await p.evaluate(() => { const e = document.querySelector('.bks-lines .bd-confirm'), h = document.querySelector('.bks-lines'); if (!e) return false; const r = e.getBoundingClientRect(), q = h.getBoundingClientRect(); return r.top >= q.top - 1 && r.bottom <= q.bottom + 1; });
+      ok(inView, 'ITEM 1: the GST basis question is in view at the top of the sheet when it is asked');
+      await press(basis.first());
+      continue;
+    }
+    const open = p.locator(lines + ' .bd-row.bd-is-open').first();
+    if (!(await open.count())) break;
+    const text = flat(await open.innerText());
+    const more = open.locator('button[data-act=more]');
+    if (/ATO PAYMENT/.test(text)) await press(open.locator('button[data-act=kind][data-kind=tax_payment]'));
+    else if (/CARD SETTLEMENT/.test(text)) { if (await more.count()) await press(more); await choose(open.locator('select[data-act=acct]'), { label: 'Sundry income' }); await choose(open.locator('select[data-act=taxkind]'), { label: 'Taxable supply' }); }
+    else if (/MONTHLY ACCOUNT FEE/.test(text)) await choose(open.locator('select[data-act=taxkind1]'), { label: 'Input-taxed supply' });
+    else if (/PACIFIC RIM/.test(text)) { if (await more.count()) await press(more); await open.locator('input[data-act=pname]').fill('Pacific Rim Traders'); await choose(open.locator('select[data-act=pkind]'), 'customer'); await press(open.locator('button[data-act=resolve]')); }
+    else if (/BUNNINGS/.test(text)) { if (await more.count()) await press(more); await choose(open.locator('select[data-act=acct]'), 'repairs'); await choose(open.locator('select[data-act=taxkind]'), { index: 1 }); }
+    else if (await open.locator('button[data-act=tick]').count()) await press(open.locator('button[data-act=tick]').first());
+    else if (await open.locator('button[data-act=inv][data-v=held]').count()) await press(open.locator('button[data-act=inv][data-v=held]'));
+    else { console.log('   UNHANDLED open row: ' + text.slice(0, 160)); break; }
+    for (let held = 0; held < 3; held++) {
+      const again = p.locator(lines + ' .bd-row.bd-is-open button[data-act=inv][data-v=held], ' + lines + ' .bd-row.bd-is-open button[data-act=tick]').first();
+      if (await again.count()) await press(again); else break;
+    }
   }
-  /* whatever still asks a plain yes (tax invoice held, a tick, cash basis): answered with the first yes the line offers */
-  for (let round = 0; round < 12; round++) {
-    const yes = p.locator('[data-testid="bank-sheet-lines"] button[data-act=inv][data-v=held], [data-testid="bank-sheet-lines"] button[data-act=gst][data-v=cash], [data-testid="bank-sheet-lines"] button[data-act=tick]');
-    if (!(await yes.count())) break;
-    await yes.first().click();
-    await pause();
-  }
+  console.log('PRESSES for the rest of the statement: ' + presses);
+  ok(presses <= PRESS_TARGET, 'ITEM 1/2: the nine lines answered in ' + presses + ' presses (target ' + PRESS_TARGET + ')');
+  await p.locator(lines + ' button[data-act=group][data-g=ready]').first().click().catch(() => {});
+  await p.waitForTimeout(300);
+  await row('CARD SETTLEMENT').locator('button[data-act=open]').click();
+  await p.waitForTimeout(300);
+  const entryWords = flat(await row('CARD SETTLEMENT').innerText());
+  console.log('   entry words: ' + entryWords);
+  ok(/Cr GST collected/.test(entryWords) && !/gst collected|Dr bank |Cr card/.test(entryWords), 'ITEM 3: the entry prints the chart account names (' + entryWords.slice(0, 160) + ')');
   const rows = await p.$$eval('[data-testid="bank-sheet-lines"] .bd-row', (els) => els.map((e) => e.innerText.replace(/\s+/g, ' ').slice(0, 170)));
   rows.forEach((r, i) => console.log('   row ' + i + ': ' + r));
   await p.screenshot({ path: path.join(OUT, 'r3-02-sheet-answered-1366.png') });
-  const addBtn = p.locator('#acc_sheet button', { hasText: /Add \d+ to your books/ }).first();
+  const addBtn = p.locator('#acc_sheet button', { hasText: /Add these \d+ ready lines/ }).first();
   console.log('   add button: ' + flat(await addBtn.innerText().catch(() => '')));
   await addBtn.click();
   await p.waitForTimeout(800);

@@ -153,16 +153,28 @@ function bkshController() {
 }
 /** a carried amount as the page writes it: plain, the currency is said once on the page (bkbFig, cap-bank.js) */
 const bkshAmountText = (value) => bkbFig(CBBankPreview.minorOf(value), (value && value.currency) || undefined);
+/** the name the shop's own chart gives an account key ("gst_collected" → "GST collected"); '' when the chart has none */
+const bkshAccountName = (role) => ((bkshBook().accts || []).filter((item) => item.role === role)[0] || {}).name || '';
 const bkshEl = (id) => document.getElementById(id);
 /** the sheet's own words under the title: the band's ONE truth (bankFigures, cap-bank.js), so the page and the sheet never say two things; nothing here is worked out */
+/** the counts every place reads: the lines still to add, how many of them are ready, how many wait for an answer (the controller's own items, counted once) */
+function bkshCounts() {
+  const model = BKSH.ctl.view(),
+    toAdd = (model.items || []).filter((item) => item.state !== 'in_books' && !(model.results[item.key] && model.results[item.key].ok)).length,
+    ready = BKSH.ctl.readyCount();
+  return { toAdd, ready, needs: Math.max(0, toAdd - ready) };
+}
 function bkshStrip() {
   const fig = typeof bankFigures === 'function' ? bankFigures() : null;
-  if (!fig || BKSH.ctl.only()) return ''; /* one line answered: that line alone, the statement's figures stay on the page */
-  return txf('Statement {s} · Books {b} · Difference {d}{parts} · Unexplained {u}', {
+  if (!fig || BKSH.ctl.only()) return '';
+  const count = bkshCounts();
+  return txf('{total} to add · {ready} ready · {needs} need an answer', { total: txn('{count} line', '{count} lines', count.toAdd), ready: count.ready, needs: count.needs }) + ' · ' + bkshFigures(fig);
+}
+function bkshFigures(fig) { /* one line answered: that line alone, the statement's figures stay on the page */
+  return txf('Statement {s} · Books {b} · Difference {d} · Unexplained {u}', {
     s: fig.statement,
     b: fig.books,
     d: fig.gap,
-    parts: fig.parts ? ' = ' + fig.parts : '',
     u: fig.unexplained
   });
 }
@@ -186,7 +198,7 @@ function bkshPaint() {
   if (model.refusal) bkshEl('bks_say').textContent = model.refusal;
   if (addButton) {
     addButton.disabled = !ready || BKSH.posting;
-    addButton.textContent = ready ? (BKSH.ctl.only() ? tx('Add this line to your books') : txf('Add {n} to your books', { n: ready })) : tx('Nothing ready to add');
+    addButton.textContent = ready ? (BKSH.ctl.only() ? tx('Add this line to your books') : txf('Add these {n} ready lines', { n: ready })) : tx('Nothing ready to add');
   }
 }
 /** the question the Add press asks first: how many entries, how much, which dates, how many new parties, how many still need you (the engine's own carried totals) */
@@ -305,7 +317,7 @@ async function bankSheetOpen(row) {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, only: () => (BKSH.ctl ? BKSH.ctl.only() : ''), currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: bkshAmountText, addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, accountName: bkshAccountName, only: () => (BKSH.ctl ? BKSH.ctl.only() : ''), currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: bkshAmountText, addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: () => { bkshPaint(); bkshPageFollows(); }
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */

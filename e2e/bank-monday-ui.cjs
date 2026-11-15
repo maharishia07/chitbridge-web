@@ -138,10 +138,11 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(sh.w >= sh.vw * 0.9 && sh.h >= sh.vh * 0.85, tag + ': the Add sheet takes the screen (' + sh.w + 'x' + sh.h + ' of ' + sh.vw + 'x' + sh.vh + ')');
     ok(!sh.sideways, tag + ': the sheet does not scroll sideways');
     ok(!sh.overlap, tag + ': the code chip does not sit over the close cross');
-    ok(/Difference\s*A?\$?1,682\.25 = 10 lines not yet in your books/.test(sh.strip) && /Unexplained/.test(sh.strip) && !/Difference now/.test(sh.strip), tag + ': the sheet says the same one truth as the band (' + sh.strip.slice(0, 140) + ')');
+    ok(/10 lines to add · \d+ ready · \d+ need an answer/.test(sh.strip) && /Difference 1,682\.25/.test(sh.strip) && /Unexplained/.test(sh.strip) && !/Difference now/.test(sh.strip), tag + ': the sheet says the same one truth as the band (' + sh.strip.slice(0, 140) + ')');
     await p.screenshot({ path: path.join(ASHOTS, 'bank-' + tag + '-sheet.png') });
     /* M5 · a line nothing explained says what it can be, ON THE LINE, one step each (the engine's closed list) */
     const ato = p.locator('#acc_sheet tr[data-line]', { hasText: 'ATO PAYMENT' });
+    if (!(await ato.locator('[data-act="kind"]').count())) await ato.locator('[data-act="open"]').click(); /* one row is open at a time: open this one */
     ok(await ato.locator('[data-act="kind"]').count() >= 1, tag + ': the ATO payment line offers its one-step answers on the line (' + (await ato.locator('[data-act="kind"]').allTextContents()).join(' | ') + ')');
     const r0 = await p.evaluate(() => BKSH.ctl.readyCount());
     const taxBtn = ato.locator('[data-act="kind"][data-kind="tax_payment"]');
