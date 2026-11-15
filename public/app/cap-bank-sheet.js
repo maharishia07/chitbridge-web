@@ -123,7 +123,7 @@ function bkshCheckInput() {
     statements = (bankStoreState.statements || []).map((row) => Object.assign({ made_by: bankStoreSignerFull(row) || null, made_at: row.at }, row));
   return {
     today: bkToday(),
-    accounts: [{ id: String(acct.code || bkshBook().acct), name: acct.name || null, number: null }],
+    accounts: [{ id: String(acct.code || bkshBook().acct), name: acct.name || null, number: typeof bkbHeldNumber === 'function' && bkbHeldNumber() ? bkbHeldNumber() : null }],
     saved_account_id: String(acct.code || bkshBook().acct) /* the owner already picked this account for the statement in the Bank view */,
     books: { opening_minor: Number((bkshBook().ledgerRaw || {}).opening_minor) || 0 },
     log: { statements },

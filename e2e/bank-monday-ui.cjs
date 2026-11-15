@@ -100,6 +100,17 @@ const ASHOTS = process.env.SHOTS_DIR || SHOTS;
     ok(/All amounts in Australian dollars \(AUD\)/.test(band) && /Right account\?/.test(band) && /Business bank account/.test(band) && /2 Oct to 31 Oct 2026 · 12 lines/.test(band), tag + ': the band names the account, the period and the lines, says the currency once and asks "Right account?" (W15-20, W15-21)');
     ok(/Opening 18,500\.00 agrees with your books/.test(band) || tag === 'phone', tag + ': the opening agrees with the books (read from the engine check, not worked again)');
     ok(!/Difference\s*A?\$?0\.00/.test(band), tag + ': the band does not say a difference of 0.00 while 10 lines are missing');
+    /* W15-24 · the account's bank details: bank, BSB, last four; a bad BSB is refused in words; the band then says the number is held */
+    if (vp.width > 700) {
+      await p.click('[data-testid="bank-finish-toggle"]');
+      await p.click('[data-testid="bank-details-open"]');
+      await p.fill('#bk_dbank', 'Westpac'); await p.fill('#bk_dbranch', '12'); await p.fill('#bk_dlast4', '1234');
+      await p.click('[data-testid="bank-details-save"]');
+      ok((await p.locator('[data-testid="bank-details-bad"]').count()) === 1, tag + ': a BSB that is not six digits is refused in words');
+      await p.fill('#bk_dbranch', '062-000'); await p.click('[data-testid="bank-details-save"]');
+      await p.waitForTimeout(800);
+      ok((await p.textContent('[data-testid="bank-finish"]')).includes('Account no. ****1234 held'), tag + ': the band says the account holds ****1234 and the file carries no number (shown masked, last four only)');
+    }
     /* M1 · one primary, sign-off only at nil */
     ok(await p.locator('[data-testid="bank-sheet-open"]').count() === 1 && await p.locator('[data-testid="bank-signoff"]').count() === 0, tag + ': ONE primary button (Add to your books) and no Sign off while the difference is not nil');
     ok(await p.locator('[data-testid="bank-actions"] button:visible').count() === 2, tag + ': the band carries two buttons only: the primary and More');

@@ -98,6 +98,7 @@
     if (mismatch) out.push(item('number', 'bad', mismatch.why));
     else if (masked && f.accountNumber) out.push(item('number', 'ok', T('Account number') + ' ' + masked + ' ' + T('matches the account')));
     else if (masked) out.push(item('number', 'none', T('Account number') + ' ' + masked + ' ' + T('is in the file; the account holds none to compare')));
+    else if (f.accountNumber) out.push(item('number', 'none', T('Account no.') + ' ' + f.accountNumber + ' ' + T('held; the file carries none')));
     else out.push(item('number', 'none', T('Account no.') + ': ' + T('not in this file')));
     /* 5 · the earlier statement: continuity */
     var gap = checkItem(check, 'period_gap'),

@@ -691,7 +691,7 @@ function bankFinish() {
     account: bkbAcctName() || BKB.stmtAcct,
     from: P.from, to: P.to, count: P.lines.length, currency: code,
     change: '<button data-cbsid="BKS014-B21" type="button" class="act" data-testid="bank-change" aria-expanded="false" onclick="bankChange(this)">' + bkbE(tx('Load another statement')) + '</button>',
-    rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change'),
+    rightAct: bkbWrongAccountButton('bank-wrong-account', 'Wrong account? Change') + '<button data-cbsid="BKS014-B27" type="button" class="act" data-testid="bank-details-open" onclick="bankDetailsOpen()">' + bkbE(tx('Bank details')) + '</button>',
     actions: acts,
     right: CBBankBand.rightAccount({
       parsed: P, check: bkbCheck(), fmt: (minor) => bkbFig(minor), currency: code, statementCurrency: BKB.stmtCur,
@@ -702,10 +702,49 @@ function bankFinish() {
     unexplained: fig.unexplained && /[1-9]/.test(fig.unexplained) ? fig.unexplained : '', nil: fig.nil
   });
 }
-/** the account number the books hold for this bank account, masked ('****1234'), or '' when none is held (W15-24: bank details of an account, kept on this device) */
+/**
+ * W15-24 · the BANK DETAILS of a bank account: bank, branch code and the LAST FOUR of the account number. Asked once, optional ("not given" stays unknown, never defaulted), and matched against a file that carries a number.
+ * Only the last four are kept, never the full number: that is all the match needs, and it is the form Australian banks themselves show (the Consumer Data Right banking standard's maskedNumber).
+ * The branch code is the country's own: AU a 6-digit BSB (allocated by AusPayNet), IN an IFSC, else a free branch code. Kept on THIS device for this shop and account (the books have no field for it yet: a server home needs
+ * an api field and a migration, which is the owner's decision), so another device or the adviser's seat does not see it until then.
+ * Figures cited from the walker's knowledge, not looked up in this round: cb-country to cite-check before a requirement is written.
+ */
+const BKB_BRANCH_WORDS = { AU: ['BSB', 'a 6-digit BSB, for example 062-000'], IN: ['IFSC code', 'an 11-character IFSC code'] };
+const bkbBranchWords = () => BKB_BRANCH_WORDS[bkbCountry()] || ['Branch code', 'the branch code, if your bank has one'];
+const bkbDetails = () => bkbLoad('acctdetails:' + (BKB.stmtAcct || BKB.acct), {}) || {};
+/** the account number the books hold for this bank account, masked ('****1234'), or '' when none is held */
 function bkbHeldNumber() {
-  const held = bkbLoad('acctdetails:' + (BKB.stmtAcct || BKB.acct), {});
-  return held && held.last4 ? '****' + held.last4 : '';
+  const held = bkbDetails();
+  return held.last4 ? '****' + held.last4 : '';
+}
+function bankDetailsOpen() {
+  const held = bkbDetails(),
+    words = bkbBranchWords();
+  ui.dialog({
+    mount: 'BKS014-U04', pop: 'POP092',
+    titleText: tx('Bank details of this account'),
+    bodyStyle: 'display:flex;flex-direction:column;gap:8px',
+    body: peField('bk_dbank', 'Bank', peInput('bk_dbank', held.bank, '', 'text', ' maxlength="60" autocomplete="off"')) +
+      peField('bk_dbranch', words[0], peInput('bk_dbranch', held.branch, tx('For example') + ' ' + (bkbCountry() === 'AU' ? '062-000' : ''), 'text', ' maxlength="20" autocomplete="off"')) +
+      peField('bk_dlast4', 'Last 4 digits of the account number', peInput('bk_dlast4', held.last4, '', 'text', ' maxlength="4" inputmode="numeric" autocomplete="off"')) +
+      '<div class="pe-note">' + bkbE(tx('Only the last four digits are kept, so a statement that carries the account number can be checked against this account. Nothing here is sent anywhere.')) + '</div><div id="bk_dout" class="pe-slot"></div>',
+    footerHtml: '<button data-cbsid="BKS014-B29" type="button" onclick="closeModal()">' + bkbE(tx('Cancel')) + '</button><button data-cbsid="BKS014-B28" type="button" class="pri" data-testid="bank-details-save" onclick="bankDetailsSave()">' + bkbE(tx('Save')) + '</button>'
+  });
+}
+function bankDetailsSave() {
+  const bank = String(peVal('bk_dbank') || '').trim(),
+    branch = String(peVal('bk_dbranch') || '').trim(),
+    last4 = String(peVal('bk_dlast4') || '').trim(),
+    out = bkbEl('bk_dout');
+  const refuse = (words) => out && (out.innerHTML = '<div class="pe-bad" role="alert" data-testid="bank-details-bad">' + bkbE(tx(words)) + '</div>');
+  if (last4 && !/^[0-9]{4}$/.test(last4)) return refuse('The last four digits of the account number are four digits.');
+  if (branch && bkbCountry() === 'AU' && !/^[0-9]{3}-?[0-9]{3}$/.test(branch)) return refuse('A BSB is six digits, for example 062-000.');
+  bkbSave('acctdetails:' + (BKB.stmtAcct || BKB.acct), { bank, branch, last4 });
+  if (typeof BKSH !== 'undefined') BKSH.ctl = null; /* the statement is checked again with the number */
+  closeModal();
+  if (typeof bkshPrime === 'function') bkshPrime().then(() => bankPaint()).catch((failure) => bkQuiet('bank-details', failure));
+  bankPaint();
+  toast(tx('Bank details kept.'));
 }
 const BKB_BRS_ITEMS = [
   ['Cheques issued, not yet presented', 'issued_not_presented'],
