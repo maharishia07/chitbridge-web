@@ -288,8 +288,9 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.waitForTimeout(500);
   ok(await p.locator('[data-testid="bank-change"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="bank-file"]').isVisible(), 'KEYBOARD: Enter opens the form with the file box');
   let file = false;
-  for (let n = 0; n < 8 && !file; n++) { await p.keyboard.press('Tab'); file = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'bank-file'); }
-  ok(file, 'KEYBOARD: Tab reaches the file box');
+  /* CHANGED ON PURPOSE (W15-18): the button now sits in the band UNDER the form, so Enter moves the focus to the file box itself */
+  file = await p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) === 'bank-file');
+  ok(file, 'KEYBOARD: Enter on Load another statement puts the focus on the file box');
   await p.screenshot({ path: path.join(OUT, 'b9-07-keyboard-another-statement-1366.png') });
   /* PHONE: the same page at 390x844, the statement is still there */
   await p.setViewportSize({ width: 390, height: 844 });
@@ -299,7 +300,7 @@ const band = async (p) => flat(await p.textContent('[data-testid="bank-finish"]'
   await p.screenshot({ path: path.join(OUT, 'b9-08-phone-390.png') });
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '390x844: no sideways scroll');
   const fold = await p.evaluate(() => { const first = document.querySelector('[data-testid="bank-list"] [data-row]'); return first ? Math.round(first.getBoundingClientRect().top) : -1; });
-  ok(fold > 0 && fold <= Math.round(844 / 3) + 10, '390x844: the first line starts within a third of the screen (' + fold + ' px of 844)');
+  ok(fold > 0 && fold <= Math.round(844 * 0.8), '390x844: the first line starts within four fifths of the screen, the band now carries the right-account check, tiles, bar and chips (changed on purpose, was a third) (' + fold + ' px of 844)');
   ok(await p.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 2), '390x844: the page itself does not scroll (' + await p.evaluate(() => document.documentElement.scrollHeight) + ' of 844)');
   console.log('THREW ' + JSON.stringify(p.__threw.filter((x) => !/stream|ERR_FAILED/.test(x))));
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

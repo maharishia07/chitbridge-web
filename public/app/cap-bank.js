@@ -529,6 +529,8 @@ function bankChange(btn) {
   btn.setAttribute('aria-expanded', String(open));
   btn.textContent = tx(open ? 'Hide the form' : 'Load another statement');
   window.dispatchEvent(new Event('resize'));
+  const file = bkbEl('bk_file');
+  if (open && file) file.focus(); /* the form opens ABOVE the band that holds this button: the keyboard goes to its file box */
 }
 /** the lines of one group, from the rows the engine explained (a count of rows, nothing summed) */
 const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === key).length;
