@@ -80,7 +80,7 @@ W.run('books-grant', async (w) => {
   await w.step('D1', 'the auditor drill · trial balance row Cash → its ledger: opening, the line with its running balance, the period total and the closing', async () => {
     await page.click(T('bv-row-0')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     const title = await txt(T('bd-title')), facts = await txt(T('bd-facts')), line = await txt(T('bd-line-0'));
-    const asked = S.calls.filter((c) => /^/api/books/ledger/1000$/.test(c.p));
+    const asked = S.calls.filter((c) => c.p === "/api/books/ledger/1000");
     return { ok: /1000 Cash/.test(title) && /Opening/.test(facts) && /Total debit/.test(facts) && /Closing/.test(facts) && /JV-0001/.test(line) && /1,234/.test(line) && asked.length > 0 && asked.every((c) => c.h['x-books-for'] === MEMBER && /limit=100/.test(c.q)), saw: title + ' · ' + facts + ' · ' + line };
   });
   await w.step('D2', 'the auditor drill · the ledger line opens its entry: who made it, when, each line account · party · Dr · Cr', async () => {
@@ -88,7 +88,7 @@ W.run('books-grant', async (w) => {
     const title = await txt(T('bd-title')), who = await txt(T('bd-who')), facts = await txt(T('bd-facts')), l0 = await txt(T('bd-jl-0')), l1 = await txt(T('bd-jl-1'));
     return { ok: /JV-0001/.test(title) && /Made by Asha/.test(who) && /recorded/.test(who) && /Amount/.test(facts) && !(await has(T('bd-unbalanced'))) && /Cash/.test(l0) && /Walk-in buyer/.test(l0) && /Sales/.test(l1), saw: title + ' · ' + who + ' · ' + l0 + ' · ' + l1 };
   });
-  await w.step('D3', 'the auditor drill · Back to the ledger; an entry line (Sales) opens that account's ledger', async () => {
+  await w.step('D3', 'the auditor drill · Back to the ledger; an entry line (Sales) opens the Sales ledger', async () => {
     await page.click(T('bd-back')); await page.waitForSelector(T('bd-line-0'), { timeout: 10000 });
     await page.click(T('bd-line-0')); await page.waitForSelector(T('bd-jl-1'), { timeout: 10000 });
     await page.click(T('bd-jl-1')); await page.waitForSelector(T('bd-fact-closing'), { timeout: 10000 });
