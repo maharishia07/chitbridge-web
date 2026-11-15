@@ -64,7 +64,8 @@
     view = 'lines',
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
-    panel = null /* the open "What is this?" panel: { key, step, choice, refused, shown } */,
+    ask = null,
+    report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
   function el(id) {
@@ -265,32 +266,7 @@
     if (opensPanel) {
       return '<li><button type="button" class="' + rowClass + '" data-act="open" data-key="' + esc(item.key) + '" data-cbsid="BKS017-R01" aria-label="' + esc(payeeOf(item) + ', ' + line.narration + '. Needs you. Open') + '">' + inner + '</button></li>';
     }
-    return '<li><div class="' + cls + '">' + inner + '</div></li>';
-  }
-  function successCard() {
-    if (!added) return '';
-    return (
-      '<div class="bd-card" data-testid="bd-added"><div class="bd-mark" aria-hidden="true">✓</div><h2>' + esc(plural(added.count, 'line', 'lines') + ' added to the demo books') + '</h2>' +
-      '<p>The bank account now reads <b>' + esc(added.balance) + '</b>.' + (added.open ? ' ' + esc(plural(added.open, 'line still needs', 'lines still need')) + ' you, and those are the only lines not in the books.' : ' Every statement line is in the books.') + '</p>' +
-      '<div class="bd-card-acts"><button type="button" class="bd-btn bd-go" data-act="view" data-v="brs" data-cbsid="BKS017-B15">See the bank reconciliation</button>' +
-      (added.open ? '<button type="button" class="bd-btn" data-act="firstneed" data-cbsid="BKS017-B16">Deal with the ' + added.open + '</button>' : '') + '</div>' +
-      '<p class="bd-why">Demo: nothing was saved. Start again to run it again.</p></div>'
-    );
-  }
-  function emptyCard() {
-    return (
-      '<div class="bd-card" data-testid="bd-empty"><div class="bd-mark" aria-hidden="true">' + labKit.badge({ icon: 'bank' }) + '</div><h2>Start with a bank statement</h2>' +
-      '<p>Load the sample, or your own CSV from your bank. We compare it with the books, show what is missing, and add it only when you say so.</p>' +
-      '<p class="bd-why">A file you load stays on this device.</p></div>'
-    );
-  }
-  function problemCard() {
-    if (!loadRefusal) return '';
-    var map = loadRefusal.text ? '<button type="button" class="bd-btn" data-act="showmap" data-cbsid="BKS017-B18">Tell us which column is which</button>' : '';
-    return (
-      '<div class="bd-problem" role="alert" data-cbsid="BKS017-N02"><b>' + esc(loadRefusal.why) + '</b>' + (map ? '<span>The first row may name columns we do not know.</span>' + map : '') +
-      '<button type="button" class="bd-btn" data-act="retry" data-cbsid="BKS017-B17">Try again</button></div>'
-    );
+    return '<li><div class="' + rowClass + '">' + inner + '</div></li>';
   }
   function paintLines(model) {
     var rows = model.items
@@ -300,66 +276,18 @@
       })
       .join('');
     el('bd_lines').innerHTML =
-      successCard() +
+      report.successCard(added) +
       '<div class="bd-colh" role="presentation"><span>Date</span><span>Payee and what the bank says</span><span>Account</span><span class="bd-m">Spent (AUD)</span><span class="bd-m">Received (AUD)</span><span>Status</span><span></span></div>' +
       '<ul class="bd-list">' + rows + '</ul>';
   }
   function paintEmpty() {
     ['bd_figs', 'bd_gst'].forEach(function (id) { el(id).hidden = true; });
     el('bd_sub').textContent = '';
-    el('bd_lines').innerHTML = problemCard() + (loadRefusal && loadRefusal.mapping ? mapCard() : emptyCard());
+    el('bd_lines').innerHTML = report.problemCard(loadRefusal) + (loadRefusal && loadRefusal.mapping ? ask.mapCard(loadRefusal.text) || report.emptyCard() : report.emptyCard());
     el('bd_books').innerHTML = '';
     el('bd_brs').innerHTML = '';
     paintBar(null);
     paintView();
-  }
-  function paintBooks(model) {
-    var rows = (model.projection && model.projection.ledger) || [],
-      ready = countsOf(model).ready,
-      said = ready ? 'The bank account as it will read once the ' + plural(ready, 'ready line is', 'ready lines are') + ' in (opening ' + amountText({ amount_minor: books.opening_minor, currency: CURRENCY }) + '). Preview: not yet in the books.' : posted ? 'The bank account as it reads now, with the ' + plural(posted, 'line', 'lines') + ' added in this demo marked.' : 'The bank account as it reads now. Nothing is waiting to be added.';
-    el('bd_books').innerHTML =
-      '<p class="bd-note">' + esc(said) + '</p>' +
-      '<table class="bd-table"><thead><tr><th>Date</th><th>What</th><th class="bd-r">In (AUD)</th><th class="bd-r">Out (AUD)</th><th class="bd-r">Balance (AUD)</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var proposed = r.state === 'proposed',
-          mine = /^DEMO-/.test(r.entry_no || '');
-        return '<tr class="' + (proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(preview.dateText(r.date)) + '</td><td>' + esc(r.narration) + (proposed ? ' ' + tag('go-tag', 'To add') : mine ? ' ' + tag('ok', 'Added') : '') + '</td><td class="bd-m">' + (preview.minorOf(r.dr) ? esc(amountText(r.dr)) : '') + '</td><td class="bd-m">' + (preview.minorOf(r.cr) ? esc(amountText(r.cr)) : '') + '</td><td class="bd-m">' + esc(amountText(r.balance)) + '</td></tr>';
-      }).join('') + '</tbody></table>';
-  }
-  /** the bank reconciliation as a statement an auditor reads: books, the statement lines not yet in them, the statement; a tick ONLY when nothing is left outside the books */
-  function paintBrs(model) {
-    var recon = model.projection && model.projection.brs;
-    if (!recon) return void (el('bd_brs').innerHTML = '');
-    var outside = model.items.filter(function (item) {
-      var state = standing(item, model.results[item.key]);
-      return state !== 'in' && state !== 'posted';
-    });
-    var receipts = outside.filter(function (item) { return item.line.credit_minor; }),
-      payments = outside.filter(function (item) { return item.line.debit_minor; });
-    var line = function (item, minor) {
-      return '<tr class="bd-i"><td>' + esc(preview.dateText(item.line.date)) + '</td><td>' + esc(item.line.narration) + '</td><td class="bd-r">' + esc(amountText({ amount_minor: minor, currency: CURRENCY })) + '</td></tr>';
-    };
-    var none = '<tr class="bd-none bd-i"><td colspan="3">None</td></tr>';
-    var done = !outside.length && preview.minorOf(recon.difference_before) === 0;
-    var subtotal = function (words, money) {
-      return money ? '<tr class="bd-k"><td colspan="2">' + words + '</td><td class="bd-r">' + esc(amountText(money)) + '</td></tr>' : '';
-    };
-    var notInBooks = recon.not_in_books || {};
-    el('bd_brs').innerHTML =
-      '<div class="bd-report"><article class="bd-sheet" data-cbsid="BKS017-R90"><header class="bd-sheet-h"><div><h2>Bank reconciliation statement</h2><p class="bd-sheet-subtotal"><b>Demo, sample data</b> · ' + esc(ACCOUNT) + ' · as at ' + esc(dateWords(recon.statement_date || lastDate(model))) + ' · Currency ' + CURRENCY + '</p></div>' +
-      '<div><button type="button" class="bd-btn" data-act="print" data-cbsid="BKS017-B14">Print or save as PDF</button></div></header>' +
-      '<table><tbody><tr class="bd-k"><td colspan="2">Balance per the books</td><td class="bd-r">' + esc(amountText(recon.closing_books_before)) + '</td></tr>' +
-      '<tr class="bd-g"><td colspan="3">Add: receipts on the statement, not yet in the books (' + receipts.length + ')</td></tr>' +
-      (receipts.length ? receipts.map(function (item) { return line(item, item.line.credit_minor); }).join('') + subtotal('Total receipts', notInBooks.in) : none) +
-      '<tr class="bd-g"><td colspan="3">Less: payments on the statement, not yet in the books (' + payments.length + ')</td></tr>' +
-      (payments.length ? payments.map(function (item) { return line(item, item.line.debit_minor); }).join('') + subtotal('Total payments', notInBooks.out) : none) +
-      '<tr class="bd-k"><td colspan="2">Balance per the bank statement</td><td class="bd-r">' + esc(amountText(recon.closing_statement)) + '</td></tr>' +
-      '<tr class="bd-g"><td colspan="3">In the books, not yet on the statement</td></tr>' + none +
-      '<tr class="bd-res"><td colspan="2">Difference, statement less books' + (done ? '' : ' <span class="bd-pending">' + esc(plural(outside.length, 'statement line', 'statement lines') + ' not in the books yet') + '</span>') + '</td><td class="bd-r">' + esc(amountText(recon.difference_before)) + (done ? ' <span class="bd-tick" aria-label="Reconciled">✓</span>' : '') + '</td></tr></tbody></table>' +
-      '<p class="bd-foot">' + (done ? 'Reconciled: every statement line is in the books and the statement and the books agree.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
-      '<div class="bd-sign"><span>Prepared by ________________</span><span>Reviewed by ________________</span></div></article>' +
-      '<div class="bd-edges"><h3>Not in this demo yet</h3><ul><li>Match to an invoice (find and match several, part payment)</li><li>Split a line</li><li>Undo a posted line</li><li>Bank rules you write yourself</li><li>Bank feeds: CSV only for now, no OFX or QIF</li></ul>' +
-      '<h3>What this does that others do not</h3><ul><li>Shows a preview before anything posts</li><li>Recognises a line seen in an earlier file</li><li>Names a closed month, never skips it silently</li><li>Nothing posts by itself</li></ul></div></div>';
   }
   function paintBar(model) {
     var addButton = el('bd_add'),
@@ -398,8 +326,8 @@
     figures(model);
     gstStrip(model);
     paintLines(model);
-    paintBooks(model);
-    paintBrs(model);
+    report.paintBooks(model, posted, books.opening_minor);
+    report.paintBrs(model);
     paintBar(model);
     paintView();
   }
@@ -411,122 +339,9 @@
     msgOk = !!good;
   }
 
-  /* ── the "What is this?" panel: the lab-labKit popup in its side / sheet placement (CMP002 variant) ── */
+  /* ── the "What is this?" panel: the lab-kit popup in its side / sheet placement (CMP002 variant) ── */
   function itemOf(key) {
     return controller.view().items.filter(function (one) { return one.key === key; })[0] || null;
-  }
-  function choicesFor(item) {
-    var said = whatIsThis(),
-      out = item.line.debit_minor > 0;
-    var list = said ? said.items.filter(function (one) { return one.side === 'both' || one.side === (out ? 'out' : 'in'); }) : [];
-    return { items: list, later: said ? said.later : [], said: !!said };
-  }
-  function selectHtml(label, name, options, value) {
-    return '<label>' + esc(label) + '<select class="bd-inp" data-cbsid="BKS017-S05" data-field="' + name + '"><option value="">Choose</option>' +
-      options.map(function (one) { return '<option value="' + esc(one[0]) + '"' + (value === one[0] ? ' selected' : '') + '>' + esc(one[1]) + '</option>'; }).join('') + '</select></label>';
-  }
-  function panelStep1(item, choices) {
-    var out = item.line.debit_minor > 0,
-      all = [];
-    if (item.party) all.push(['payee', 'Someone I deal with', 'A customer or a supplier: say who']);
-    choices.items.forEach(function (one) { all.push([one.id, one.words, '']); });
-    var rows = all.map(function (one) {
-      return '<button type="button" role="radio" aria-checked="' + (panel.choice === one[0]) + '" data-act="pick" data-kind="' + esc(one[0]) + '" data-cbsid="BKS017-B21">' + esc(one[1]) + (one[2] ? '<small>' + esc(one[2]) + '</small>' : '') + '</button>';
-    }).join('');
-    var later = choices.later.map(function (one) {
-      return '<button type="button" role="radio" aria-checked="false" disabled>' + esc(one.words) + '<small>Later: not in this demo yet</small></button>';
-    }).join('');
-    return '<p class="bd-step">Step 1 of 2</p><p class="bd-q"><b>What is this?</b> Money ' + (out ? 'out' : 'in') + '. Nothing on the line says.</p>' +
-      '<div class="bd-choices" role="radiogroup" aria-label="What is this?">' + rows + later + '</div>' +
-      '<button type="button" class="lk-btn lk-btn-go" data-act="next" data-cbsid="BKS017-B22"' + (panel.choice ? '' : ' disabled') + '>Next</button>';
-  }
-  function partyPanel(item) {
-    var party = item.party;
-    if (!party) return '<p class="bd-q">Say who this is.</p>';
-    var meant = (item.didYouMean || []).map(function (one) {
-      return '<button data-cbsid="BKS017-B03" type="button" class="bd-btn" data-act="meant" data-key="' + esc(item.key) + '" data-id="' + esc(one.id) + '" data-name="' + esc(one.name) + '">' + esc(one.name) + '</button>';
-    }).join('');
-    return '<label>Payee<input data-cbsid="BKS017-I02" class="bd-inp" type="text" maxlength="120" aria-label="Payee name" data-act="pname" data-key="' + esc(item.key) + '" value="' + esc(party.name) + '"></label>' +
-      '<label>Payee kind<select data-cbsid="BKS017-S04" class="bd-inp" aria-label="Payee kind" data-act="pkind" data-key="' + esc(item.key) + '">' +
-      ['supplier', 'customer'].map(function (kind) { return '<option value="' + kind + '"' + (party.kind === kind ? ' selected' : '') + '>' + kind + '</option>'; }).join('') + '</select></label>' +
-      (meant ? '<div class="bd-dym"><span>Did you mean</span> ' + meant + '</div>' : '') +
-      '<button type="button" class="lk-btn lk-btn-go" data-act="resolve" data-key="' + esc(item.key) + '" data-cbsid="BKS017-B07">Mark ready</button>';
-  }
-  function panelStep2(item, choices) {
-    var back = '<p class="bd-step">Step 2 of 2</p><button type="button" class="bd-back" data-act="back" data-cbsid="BKS017-B23">‹ Change the answer</button>';
-    if (panel.choice === 'payee') return back + partyPanel(item);
-    var answer = choices.items.filter(function (entry) { return entry.id === panel.choice; })[0];
-    if (!answer) return back + '<p class="bd-q">Pick an answer first.</p>';
-    var out = item.line.debit_minor > 0,
-      body = '<p class="bd-q"><b>' + esc(answer.words) + '</b></p>';
-    if (answer.ask === 'account') body += selectHtml('Account', 'account', answer.accounts.map(function (acct) { return [acct.role, acct.name]; }), '');
-    else if (answer.fixed) body += '<p class="bd-why">Between the bank and ' + esc(nameOf(answer.fixed)) + '. No payee and no tax are asked.</p>';
-    else body += '<p class="bd-why">Paid to the tax office. No account and no tax kind are asked.</p>';
-    if (answer.event === 'expense' || answer.event === 'other_income') body += selectHtml('Tax on this line', 'taxkind', chartOf().taxKinds.map(function (kind) { return [kind.id, kind.name]; }), '');
-    return back + body + (panel.refused ? '<p class="bd-refused" role="alert">' + esc(panel.refused) + '</p>' : '') +
-      '<button type="button" class="lk-btn lk-btn-go" data-act="resolve2" data-key="' + esc(item.key) + '" data-cbsid="BKS017-B08">Mark ready</button>';
-  }
-  /** no "What is this?" list from the engine yet: the old single step, an account from the pack's chart (and the tax kind on money out), or who it is */
-  function panelPlain(item) {
-    var out = item.line.debit_minor > 0,
-      chart = chartOf(),
-      list = (out ? chart.expense : chart.income).map(function (acct) { return [acct.role, acct.name]; });
-    return '<p class="bd-q"><b>What is this?</b> Pick an account, or say who it is.</p>' + selectHtml('Account', 'account', list, '') +
-      (out ? selectHtml('Tax on this line', 'taxkind', chart.taxKinds.map(function (kind) { return [kind.id, kind.name]; }), '') : '') +
-      (panel.refused ? '<p class="bd-refused" role="alert">' + esc(panel.refused) + '</p>' : '') +
-      '<button type="button" class="lk-btn lk-btn-go" data-act="resolve2" data-key="' + esc(item.key) + '" data-cbsid="BKS017-B08">Mark ready</button>' + (item.party ? '<p class="bd-step">Or a payee</p>' + partyPanel(item) : '');
-  }
-  function paintPanel() {
-    if (!panel || !panel.shown) return;
-    var item = itemOf(panel.key);
-    var body = panel.shown.node.querySelector('.lk-pop-body');
-    if (!item) return void panel.shown.close();
-    var choices = choicesFor(item);
-    body.innerHTML = '<div class="bd-panel">' + (!choices.said ? panelPlain(item) : panel.step === 2 ? panelStep2(item, choices) : panelStep1(item, choices)) + '</div>';
-    var first = (panel.focusSel && body.querySelector(panel.focusSel)) || body.querySelector('[aria-checked="true"],[data-act="pick"],select,input,button');
-    if (first && first.focus) first.focus();
-  }
-  function openPanel(key) {
-    var item = itemOf(key);
-    if (!item) return;
-    panel = { key: key, step: 1, choice: null, refused: '', focusSel: '', shown: null };
-    var title = payeeOf(item) + ' · ' + preview.dateText(item.line.date) + ' · ' + amountText(item.line.debit_minor ? { amount_minor: item.line.debit_minor, currency: CURRENCY } : { amount_minor: item.line.credit_minor, currency: CURRENCY });
-    panel.shown = labKit.popup(title, function () {}, 'lk-side', function () {
-      var after = panel && panel.next;
-      panel = null;
-      return (after && doc.querySelector('[data-key="' + after + '"]')) || el('bd_add');
-    });
-    paintPanel();
-  }
-  function closePanel(nextKey) {
-    if (!panel || !panel.shown) return;
-    panel.next = nextKey || null;
-    panel.shown.close();
-  }
-  function firstNeedKey() {
-    var model = controller.view();
-    var found = model.items.filter(function (item) { return standing(item, model.results[item.key]) === 'need'; })[0];
-    return found ? found.key : null;
-  }
-  /** the select a button reads: the panel's own fields, by data-field */
-  function fieldOf(name) {
-    var node = panel && panel.shown && panel.shown.node.querySelector('select[data-field="' + name + '"]');
-    return node ? node.value : '';
-  }
-  function resolvePanel(key, plain) {
-    var said = null;
-    if (plain === 'party') said = controller.resolveLine(key);
-    else said = controller.resolveLine(key, { kind: panel.choice && panel.choice !== 'payee' ? panel.choice : undefined, account: fieldOf('account') || undefined, tax_kind: fieldOf('taxkind') || undefined });
-    if (!said.ok) {
-      panel.refused = said.why;
-      panel.focusSel = '.bd-refused,[data-act^="resolve"]';
-      paint();
-      return paintPanel();
-    }
-    added = null;
-    setMessage('');
-    paint();
-    closePanel(firstNeedKey());
   }
 
   /* ── actions ── */
@@ -545,7 +360,7 @@
   /** the engine's reason in a shopkeeper's words: a file the page cannot read says what to do next, never "pass a preset or a mapping" */
   function plainRefusal(why) {
     if (/header|column|mapping|preset/i.test(why)) return 'We could not tell which column is which in that file.';
-    if (/too big/i.test(why)) return why;
+    if (/too big|has not loaded/i.test(why)) return why;
     if (/currency/i.test(why)) return 'That file is in a different currency from this bank account. Nothing is converted in this demo.';
     return 'That file is not a bank statement we can read.';
   }
@@ -557,24 +372,6 @@
     view = 'lines';
     setMessage('');
     loadStatement(SAMPLE_CSV, 'Sample statement');
-  }
-  /** the confirm popup: the reach first, then each line with its payee, account and the Dr and Cr lines the engine composed, each entry's own totals */
-  function confirmBody(text) {
-    var model = controller.view(),
-      ready = model.items.filter(function (item) { return standing(item, model.results[item.key]) === 'ready'; });
-    var money = function (minor) { return esc(amountText({ amount_minor: minor, currency: CURRENCY })); };
-    var cards = ready.map(function (item) {
-      var entry = item.entry || { lines: [], totals: null },
-        t = entry.totals;
-      var legs = (entry.lines || []).map(function (leg) {
-        var dr = (leg.dr_minor || 0) > 0;
-        return '<tr><td>' + (dr ? 'Dr' : 'Cr') + '</td><td>' + esc(nameOf(leg.account)) + '</td><td class="bd-r">' + money(dr ? leg.dr_minor : leg.cr_minor) + '</td></tr>';
-      }).join('');
-      return '<li><div class="bd-lp-top"><span>' + esc(payeeOf(item)) + '</span><span>' + esc(preview.dateText(item.line.date)) + '</span></div><div class="bd-lp-sub">' + esc(accountOf(item)) + (item.party && item.party.status === 'new' ? ' · new payee made first' : '') + '</div><table class="bd-jt"><tbody>' + legs + '</tbody></table>' +
-        (t ? '<div class="bd-lp-sub">Dr ' + money(t.dr_minor) + ' = Cr ' + money(t.cr_minor) + (t.dr_minor === t.cr_minor ? ' ✓' : '') + '</div>' : '') + '</li>';
-    }).join('');
-    var facts = text.lines.map(function (words) { return esc(words.replace(/new part(y|ies)/g, function (_, tail) { return tail === 'y' ? 'new payee' : 'new payees'; })); });
-    return '<p class="lk-reach">' + facts.slice(0, 2).join(' · ') + '</p><p>' + facts.slice(2).join('</p><p>') + '</p><ul class="bd-lines-pop">' + cards + '</ul><p class="bd-note">Demo: only the books on this page change. Nothing is sent or saved.</p>';
   }
   function askToPost() {
     var text = controller.confirmText();
@@ -613,72 +410,25 @@
   }
 
   /* ── the column map: a file whose first row names columns we do not know (a "Narrative" header) ── */
-  var MAP_FIELDS = [['date', 'Date'], ['narration', 'What the bank says'], ['debit', 'Money out'], ['credit', 'Money in'], ['amount', 'One amount column (minus = out)'], ['balance', 'Balance']];
-  function headCells(text) {
-    var first = String(text || '').split(/\r?\n/).filter(function (row) { return row.trim(); })[0] || '';
-    return first.split(',').map(function (cell) { return cell.replace(/^"|"$/g, '').trim(); }).filter(Boolean);
-  }
-  function mapCard() {
-    var cells = headCells(loadRefusal.text);
-    if (!cells.length) return emptyCard();
-    return '<div class="bd-map" data-cbsid="BKS017-M01"><h2>Which column is which?</h2><p class="bd-why">Tell us once and we read the rest of the file. Nothing is guessed.</p><div class="bd-map-grid">' +
-      MAP_FIELDS.map(function (field) {
-        return '<label>' + esc(field[1]) + '<select class="bd-inp" data-cbsid="BKS017-S07" data-map="' + field[0] + '"><option value="">Not in this file</option>' + cells.map(function (cell) { return '<option value="' + esc(cell) + '">' + esc(cell) + '</option>'; }).join('') + '</select></label>';
-      }).join('') + '</div><button type="button" class="bd-btn bd-go" data-act="readmap" data-cbsid="BKS017-B26">Read the file</button></div>';
-  }
   function readWithMap() {
-    var mapping = {};
-    Array.prototype.forEach.call(doc.querySelectorAll('select[data-map]'), function (node) {
-      if (node.value) mapping[node.getAttribute('data-map')] = node.value;
-    });
     var text = loadRefusal.text,
       name = loadRefusal.name;
     resetBooks();
-    makeController({ country: COUNTRY, currency: CURRENCY, mapping: mapping });
+    makeController({ country: COUNTRY, currency: CURRENCY, mapping: ask.mapping() });
     loadStatement(text, name);
   }
   function toggleMore(open) {
-    var menu = el('bd_menu');
-    menu.hidden = !open;
+    el('bd_menu').hidden = !open;
     el('bd_more').setAttribute('aria-expanded', String(open));
   }
-  /** the actions of the page, by data-act: each takes the pressed control and its data-key; one that changes nothing on screen returns true (no repaint) */
+  /** the actions of the page, by data-act (the panel's are bank-demo-ask.js's): each takes the pressed control and its data-key; one that changes nothing on screen returns true (no repaint) */
   var ACTIONS = {
-    open: function (target, key) { openPanel(key); return true; },
-    pick: function (target) {
-      panel.choice = target.getAttribute('data-kind');
-      panel.focusSel = '[data-kind="' + panel.choice + '"]';
-      paintPanel();
-      return true;
-    },
-    next: function () {
-      panel.step = 2;
-      panel.focusSel = 'select,input';
-      paintPanel();
-      return true;
-    },
-    back: function () {
-      panel.step = 1;
-      panel.refused = '';
-      panel.focusSel = '[aria-checked="true"]';
-      paintPanel();
-      return true;
-    },
-    resolve: function (target, key) { resolvePanel(key, 'party'); return true; },
-    resolve2: function (target, key) { resolvePanel(key, 'kind'); return true; },
-    meant: function (target, key) {
-      controller.editParty(key, { status: 'existing', id: target.getAttribute('data-id'), name: target.getAttribute('data-name') });
-      panel.focusSel = '[data-act="resolve"]';
-      paint();
-      paintPanel();
-      return true;
-    },
     view: function (target) { view = target.getAttribute('data-v'); },
     firstneed: function () {
       view = 'lines';
       added = null;
       paint();
-      var next = firstNeedKey(),
+      var next = ask.firstNeedKey(),
         node = next && doc.querySelector('[data-key="' + next + '"]');
       if (node) node.focus();
       return true;
@@ -699,21 +449,26 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')];
+    var handler = ACTIONS[target.getAttribute('data-act')] || ask.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
   function onChange(event) {
-    var field = event.target,
-      action = field.getAttribute && field.getAttribute('data-act'),
-      key = field.getAttribute && field.getAttribute('data-key');
-    if (action !== 'pname' && action !== 'pkind') return;
-    var item = itemOf(key);
-    if (!item || !item.party) return;
-    var said = controller.editParty(key, { name: action === 'pname' ? field.value : item.party.name, kind: action === 'pkind' ? field.value : item.party.kind });
-    if (!said.ok && panel) panel.refused = said.why;
-    paint();
-    paintPanel();
+    var action = event.target.getAttribute && event.target.getAttribute('data-act');
+    if (action === 'pname' || action === 'pkind') ask.editPayee(event.target);
+  }
+  /** what the other modules of the page may use: the page's own readers and painters, never its state */
+  function hostFor() {
+    return {
+      doc: doc, el: el, labKit: labKit, preview: preview, CURRENCY: CURRENCY, ACCOUNT: ACCOUNT, controller: function () { return controller; },
+      itemOf: itemOf, paint: paint, standing: standing, countsOf: countsOf, payeeOf: payeeOf, accountOf: accountOf, nameOf: nameOf, chartOf: chartOf, whatIsThis: whatIsThis,
+      amountText: amountText, plural: plural, tag: tag, dateWords: dateWords, lastDate: lastDate,
+      onResolved: function () {
+        added = null;
+        setMessage('');
+        paint();
+      }
+    };
   }
   /** the one product header: CBFrame bar, signed out ("Sign in" goes to Home); nothing stored is read, nothing is fetched, no font is linked (the page's CSP) */
   function mountHeader() {
@@ -722,6 +477,8 @@
   }
   function start() {
     mountHeader();
+    ask = root.CBBankDemoAsk.create(hostFor());
+    report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_file', 'bd_file2'].forEach(function (id) { el(id).addEventListener('change', function (event) { toggleMore(false); onFile(event); }); });

@@ -171,7 +171,11 @@ var CBUi = (function () {
     booktab: { code: 'CMP043', element: 'CMP043-K01', elements: ['K01', 'K02'], label: 'Books tab', verb: 'CHOOSE', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     booklink: { code: 'CMP044', element: 'CMP044-C01', elements: ['C01', 'C02', 'C03'], label: 'Books link', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
     /* CMP055 FIELD (UX-137, docs WEB-FIELD-PART): one part for text-like, date, time, checkbox, file and long text, drawn by ui.field (app/ui-field.js). It WIDENS CMP040 and CMP045, which stay valid aliases until their pages convert. Elements: I01 text-like, I02 date and time, I03 checkbox, I04 file, T01 long text. A field never confirms. */
-    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
+    field: { code: 'CMP055', element: 'CMP055-I01', elements: ['I01', 'I02', 'I03', 'I04', 'T01'], label: 'Field', verb: 'ENTER', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP056 FIGURE CARD (the bank demo's Statement / Books / Difference): a label, one figure with its currency (the one money formatter, CUR-1) and an optional progress line that is the existing .lk-bar (CMP021 family). Drawn by CBLabKit.figure (app/lab-kit.js). Display only: never a control. */
+    figure: { code: 'CMP056', element: 'CMP056-D01', label: 'Figure card', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true },
+    /* CMP057 INITIALS BADGE: a round badge for a named payee (its initials on one of six tints picked from the name) or, for a category, a plain line icon. Not CBAvatar (CMP048, the account menu). Drawn by CBLabKit.badge. Display only. */
+    badge: { code: 'CMP057', element: 'CMP057-D01', label: 'Initials badge', verb: 'OPEN', effect: 'none', effectFixed: true, tone: 'quiet', nonButton: true }
   };
   Object.keys(ACTION_SET).forEach(function (key) {
     ACTION_SET[key].name = key;

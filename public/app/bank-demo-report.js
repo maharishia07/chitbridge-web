@@ -1,0 +1,107 @@
+/* bank-demo-report.js — the books-after table, the bank reconciliation statement and the three cards (nothing loaded yet, lines added, a file that could not be read) of public/bank-demo.html (split from bank-demo.js).
+ * OWNS      the painting of those views from the engine's carried figures: the bank-account ledger as it will read, the reconciliation laid out the way an auditor reads one (books, the statement lines not
+ *           yet in them, the statement, the difference, a tick ONLY when no statement line is left outside the books), and the cards.
+ * CALLED BY public/app/bank-demo.js (CBBankDemoReport.create(host)); loaded before it by public/bank-demo.html.
+ * ⭐ NO MONEY IS COMPUTED HERE: every figure is one the engines carried (brs, ledger, line amounts); a subtotal is shown only when the engine carries it (brs.not_in_books).
+ * CARD      16-finance/bank-reconciliation-and-bank-rail
+ * CONTROLS  BKS017-R90 the report · BKS017-B14 print · BKS017-B15 see the reconciliation · BKS017-B16 deal with the lines left · BKS017-N02 a problem · BKS017-B17 try again · BKS017-B18 the column map
+ */
+(function (root) {
+  'use strict';
+  /** create(host) → the painters; host is the page's own functions (el, amountText, standing, countsOf …) */
+  function create(host) {
+    var
+      el = host.el,
+      labKit = host.labKit,
+      preview = host.preview,
+      amountText = host.amountText,
+      standing = host.standing,
+      countsOf = host.countsOf,
+      tag = host.tag,
+      plural = host.plural,
+      dateWords = host.dateWords,
+      lastDate = host.lastDate,
+      CURRENCY = host.CURRENCY,
+      ACCOUNT = host.ACCOUNT;
+    function successCard(added) {
+      if (!added) return '';
+      return (
+        '<div class="bd-card" data-testid="bd-added"><div class="bd-mark" aria-hidden="true">✓</div><h2>' + esc(plural(added.count, 'line', 'lines') + ' added to the demo books') + '</h2>' +
+        '<p>The bank account now reads <b>' + esc(added.balance) + '</b>.' + (added.open ? ' ' + esc(plural(added.open, 'line still needs', 'lines still need')) + ' you, and those are the only lines not in the books.' : ' Every statement line is in the books.') + '</p>' +
+        '<div class="bd-card-acts"><button type="button" class="bd-btn bd-go" data-act="view" data-v="brs" data-cbsid="BKS017-B15">See the bank reconciliation</button>' +
+        (added.open ? '<button type="button" class="bd-btn" data-act="firstneed" data-cbsid="BKS017-B16">Deal with the ' + added.open + '</button>' : '') + '</div>' +
+        '<p class="bd-why">Demo: nothing was saved. Start again to run it again.</p></div>'
+      );
+    }
+
+    function emptyCard() {
+      return (
+        '<div class="bd-card" data-testid="bd-empty"><div class="bd-mark" aria-hidden="true">' + labKit.badge({ icon: 'bank' }) + '</div><h2>Start with a bank statement</h2>' +
+        '<p>Load the sample, or your own CSV from your bank. We compare it with the books, show what is missing, and add it only when you say so.</p>' +
+        '<p class="bd-why">A file you load stays on this device.</p></div>'
+      );
+    }
+
+    function problemCard(loadRefusal) {
+      if (!loadRefusal) return '';
+      var map = loadRefusal.text ? '<button type="button" class="bd-btn" data-act="showmap" data-cbsid="BKS017-B18">Tell us which column is which</button>' : '';
+      return (
+        '<div class="bd-problem" role="alert" data-cbsid="BKS017-N02"><b>' + esc(loadRefusal.why) + '</b>' + (map ? '<span>The first row may name columns we do not know.</span>' + map : '') +
+        '<button type="button" class="bd-btn" data-act="retry" data-cbsid="BKS017-B17">Try again</button></div>'
+      );
+    }
+
+    function paintBooks(model, posted, openingMinor) {
+      var rows = (model.projection && model.projection.ledger) || [],
+        ready = countsOf(model).ready,
+        said = ready ? 'The bank account as it will read once the ' + plural(ready, 'ready line is', 'ready lines are') + ' in (opening ' + amountText({ amount_minor: openingMinor, currency: CURRENCY }) + '). Preview: not yet in the books.' : posted ? 'The bank account as it reads now, with the ' + plural(posted, 'line', 'lines') + ' added in this demo marked.' : 'The bank account as it reads now. Nothing is waiting to be added.';
+      el('bd_books').innerHTML =
+        '<p class="bd-note">' + esc(said) + '</p>' +
+        '<table class="bd-table"><thead><tr><th>Date</th><th>What</th><th class="bd-r">In (AUD)</th><th class="bd-r">Out (AUD)</th><th class="bd-r">Balance (AUD)</th></tr></thead><tbody>' +
+        rows.map(function (r) {
+          var proposed = r.state === 'proposed',
+            mine = /^DEMO-/.test(r.entry_no || '');
+          return '<tr class="' + (proposed ? 'bd-prop' : '') + '"><td class="bd-d">' + esc(preview.dateText(r.date)) + '</td><td>' + esc(r.narration) + (proposed ? ' ' + tag('go-tag', 'To add') : mine ? ' ' + tag('ok', 'Added') : '') + '</td><td class="bd-m">' + (preview.minorOf(r.dr) ? esc(amountText(r.dr)) : '') + '</td><td class="bd-m">' + (preview.minorOf(r.cr) ? esc(amountText(r.cr)) : '') + '</td><td class="bd-m">' + esc(amountText(r.balance)) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    /** the bank reconciliation as a statement an auditor reads: books, the statement lines not yet in them, the statement; a tick ONLY when nothing is left outside the books */
+    function paintBrs(model) {
+      var recon = model.projection && model.projection.brs;
+      if (!recon) return void (el('bd_brs').innerHTML = '');
+      var outside = model.items.filter(function (item) {
+        var state = standing(item, model.results[item.key]);
+        return state !== 'in' && state !== 'posted';
+      });
+      var receipts = outside.filter(function (item) { return item.line.credit_minor; }),
+        payments = outside.filter(function (item) { return item.line.debit_minor; });
+      var line = function (item, minor) {
+        return '<tr class="bd-i"><td>' + esc(preview.dateText(item.line.date)) + '</td><td>' + esc(item.line.narration) + '</td><td class="bd-r">' + esc(amountText({ amount_minor: minor, currency: CURRENCY })) + '</td></tr>';
+      };
+      var none = '<tr class="bd-none bd-i"><td colspan="3">None</td></tr>';
+      var done = !outside.length && preview.minorOf(recon.difference_before) === 0;
+      var subtotal = function (words, money) {
+        return money ? '<tr class="bd-k"><td colspan="2">' + words + '</td><td class="bd-r">' + esc(amountText(money)) + '</td></tr>' : '';
+      };
+      var notInBooks = recon.not_in_books || {};
+      el('bd_brs').innerHTML =
+        '<div class="bd-report"><article class="bd-sheet" data-cbsid="BKS017-R90"><header class="bd-sheet-h"><div><h2>Bank reconciliation statement</h2><p class="bd-sheet-subtotal"><b>Demo, sample data</b> · ' + esc(ACCOUNT) + ' · as at ' + esc(dateWords(recon.statement_date || lastDate(model))) + ' · Currency ' + CURRENCY + '</p></div>' +
+        '<div><button type="button" class="bd-btn" data-act="print" data-cbsid="BKS017-B14">Print or save as PDF</button></div></header>' +
+        '<table><tbody><tr class="bd-k"><td colspan="2">Balance per the books</td><td class="bd-r">' + esc(amountText(recon.closing_books_before)) + '</td></tr>' +
+        '<tr class="bd-g"><td colspan="3">Add: receipts on the statement, not yet in the books (' + receipts.length + ')</td></tr>' +
+        (receipts.length ? receipts.map(function (item) { return line(item, item.line.credit_minor); }).join('') + subtotal('Total receipts', notInBooks.in) : none) +
+        '<tr class="bd-g"><td colspan="3">Less: payments on the statement, not yet in the books (' + payments.length + ')</td></tr>' +
+        (payments.length ? payments.map(function (item) { return line(item, item.line.debit_minor); }).join('') + subtotal('Total payments', notInBooks.out) : none) +
+        '<tr class="bd-k"><td colspan="2">Balance per the bank statement</td><td class="bd-r">' + esc(amountText(recon.closing_statement)) + '</td></tr>' +
+        '<tr class="bd-g"><td colspan="3">In the books, not yet on the statement</td></tr>' + none +
+        '<tr class="bd-res"><td colspan="2">Difference, statement less books' + (done ? '' : ' <span class="bd-pending">' + esc(plural(outside.length, 'statement line', 'statement lines') + ' not in the books yet') + '</span>') + '</td><td class="bd-r">' + esc(amountText(recon.difference_before)) + (done ? ' <span class="bd-tick" aria-label="Reconciled">✓</span>' : '') + '</td></tr></tbody></table>' +
+        '<p class="bd-foot">' + (done ? 'Reconciled: every statement line is in the books and the statement and the books agree.' : 'Not reconciled yet. The tick appears when no statement line is left outside the books.') + '</p>' +
+        '<div class="bd-sign"><span>Prepared by ________________</span><span>Reviewed by ________________</span></div></article>' +
+        '<div class="bd-edges"><h3>Not in this demo yet</h3><ul><li>Match to an invoice (find and match several, part payment)</li><li>Split a line</li><li>Undo a posted line</li><li>Bank rules you write yourself</li><li>Bank feeds: CSV only for now, no OFX or QIF</li></ul>' +
+        '<h3>What this does that others do not</h3><ul><li>Shows a preview before anything posts</li><li>Recognises a line seen in an earlier file</li><li>Names a closed month, never skips it silently</li><li>Nothing posts by itself</li></ul></div></div>';
+    }
+
+    return { paintBooks: paintBooks, paintBrs: paintBrs, successCard: successCard, emptyCard: emptyCard, problemCard: problemCard };
+  }
+  root.CBBankDemoReport = { create: create };
+})(typeof globalThis !== 'undefined' ? globalThis : this);
