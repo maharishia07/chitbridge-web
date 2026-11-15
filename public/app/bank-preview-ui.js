@@ -48,11 +48,17 @@
       return ' ' + (taxRecord.direction === 'output' ? taxWord + ' collected ' : taxWord + ' ') + amountText(taxRecord.tax_minor) + ' (' + String(taxRecord.kind).replace(/_/g, ' ') + ')' + invoice + '.';
     }
     /** the entry a proposed line would make, in words: each leg's account and amount, and the tax it carries (shown on the row, ready or not) */
+    /** a leg's account in words: the pack's role (bank_charges → bank charges), or the name of the shop's own ledger the leg carries by code (a savings account the owner added) */
+    function legName(leg) {
+      var raw = leg.account != null ? leg.account : leg.code != null ? leg.code : leg.ledger,
+        own = (cfg.ownAccounts ? cfg.ownAccounts() : []).filter(function (one) { return String(one.code) === String(raw); })[0];
+      return own ? own.name : String(raw == null ? 'account' : raw).replace(/_/g, ' ');
+    }
     function entryNote(item) {
       if (!item.entry) return '';
       var legs = item.entry.lines
         .map(function (leg) {
-          return (leg.dr_minor ? 'Dr' : 'Cr') + ' ' + String(leg.account).replace(/_/g, ' ') + ' ' + amountText(leg.dr_minor || leg.cr_minor);
+          return (leg.dr_minor ? 'Dr' : 'Cr') + ' ' + legName(leg) + ' ' + amountText(leg.dr_minor || leg.cr_minor);
         })
         .join(' · ');
       return '<span class="bd-why bd-entry">' + escapeHtml(legs + '.' + taxWordsOf(item.tax)) + '</span> ';
@@ -179,6 +185,10 @@
      * "What is this?" ON THE LINE, for a line nothing explained: one step each from the engine's own closed list (CBBankEntry.whatIsThis, the same list resolve() uses): moved between my own accounts
      * (asks which account when the shop has more than one), card takings paid to the bank, cash, tax paid to the tax office, a loan. The screen lists nothing of its own; an answer goes to resolveLine(key, { kind, account }).
      */
+    /** the savings (or other own) account a transfer goes to does not exist yet: its name and one press make it, then the line is answered with it */
+    function addOwnBox(key) {
+      return '<input data-cbsid="BKS017-I03" class="bd-inp" type="text" maxlength="60" data-testid="bd-addown-name" aria-label="Name of a new savings account" placeholder="+ add a savings account: name" data-act="addownname" data-key="' + key + '"> <button data-cbsid="BKS017-B20" type="button" class="bd-btn" data-testid="bd-addown" data-act="addown" data-key="' + key + '">Add it</button> ';
+    }
     function kindBox(item) {
       var engine = root.CBBankEntry;
       if (item.state !== 'needs_you' || item.entry || !engine || !engine.whatIsThis) return '';
@@ -192,7 +202,7 @@
         .map(function (one) {
           var pick = one.ask === 'account' && one.accounts.length > 1;
           if (!pick) return '<button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '"' + (one.ask === 'account' ? ' data-acct="' + escapeHtml(one.accounts[0].role || one.accounts[0].code) + '"' : '') + '>' + escapeHtml(one.words) + '</button>';
-          return '<span class="bd-party"><select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml(one.words) + '" data-act="kindacct-' + escapeHtml(one.id) + '" data-key="' + key + '">' + optionsOf(one.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }) + '</select> <button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '">' + escapeHtml(one.words) + '</button></span>';
+          return '<span class="bd-party">' + (one.id === 'transfer' && cfg.addOwn ? addOwnBox(key) : '') + '<select data-cbsid="BKS017-S10" class="bd-inp" aria-label="' + escapeHtml(one.words) + '" data-act="kindacct-' + escapeHtml(one.id) + '" data-key="' + key + '">' + optionsOf(one.accounts, function (entry) { return entry.role || entry.code; }, function (entry) { return entry.name; }) + '</select> <button data-cbsid="BKS017-B19" type="button" class="bd-btn" data-act="kind" data-key="' + key + '" data-kind="' + escapeHtml(one.id) + '">' + escapeHtml(one.words) + '</button></span>';
         });
       return buttons.length ? '<span class="bd-party"><b>What is this?</b> ' + buttons.join(' ') + '</span>' : '';
     }
@@ -285,7 +295,7 @@
     return found ? found.value : '';
   }
   /** what each button does, by its data-act (the answers the controller gives, or { ok, why } when it refuses) */
-  function actionsOf(cfg, chosenFor, taxWordOf) {
+  function actionsOf(cfg, chosenFor, taxWordOf, says) {
     /** the owner picked an account and a tax kind for a line nothing explained; "not income or expense" is no account here (B5-04) */
     function useAccount(key) {
       var account = chosenFor('acct', key);
@@ -317,6 +327,17 @@
         var said = cfg.controller().resolveLine(key, { kind: id, account: account || undefined });
         return said && said.ok === false ? Object.assign({ line: true }, said) : said; /* a refusal is said on the line, in its words */
       },
+      addown: function (key, target) {
+        var field = target.parentNode.querySelector('input[data-act="addownname"]'),
+          name = field ? String(field.value || '').trim() : '';
+        if (!name) return { ok: false, line: true, why: 'Type the name of the new account first.' };
+        Promise.resolve(cfg.addOwn(name)).then(function (made) {
+          var said = made && made.ok ? cfg.controller().resolveLine(key, { kind: 'transfer', account: made.code }) : made;
+          if (said && said.ok === false) says[key] = said.why;
+          cfg.changed();
+        });
+        return { ok: true };
+      },
       entry: function (key) { return cfg.entry ? cfg.entry(key) : { ok: false, why: 'This starts after an update.' }; },
       chk: function (code) { return cfg.controller().confirmCheck(code) ? { ok: true } : { ok: false, why: 'Could not read this statement again.' }; }
     };
@@ -340,7 +361,7 @@
     var paintLines = painter(cfg);
     var host = cfg.host;
     var chosenFor = function (action, key) { return chosenIn(host, action, key); };
-    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf);
+    var ACTIONS = actionsOf(cfg, chosenFor, paintLines.taxWordOf, paintLines.says);
     function onClick(event) {
       var target = event.target.closest('[data-act]');
       if (!target) return;

@@ -36,7 +36,8 @@ var EN_ICON = { receipt: '🧾', 'receipt-minus': '🧾', coins: '🪙', 'wallet
 /* R106: an event whose Save is a money promise asks first (CBAction.ask), naming the party and the server's ₹ — by the event's kind, the server's own code */
 var EN_ASK = { debit_note: { title: 'Note {amt} against the bill?', body: 'A debit note posts against the bill. What you owe {who} falls by {amt}.', yes: 'Note it' } };
 var EN_ITEM = { name: 'Item', qty: 'Qty', unit_price: 'Rate difference', gst_rate: 'Tax %' };
-var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card' };
+/* a payment mode in words: the pack's raw keys (eft, bpay, payid, eftpos…) never show as typed */
+var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card', eft: 'EFT', bpay: 'BPAY', payid: 'PayID', eftpos: 'EFTPOS', cheque: 'Cheque', transfer: 'Bank transfer', neft: 'NEFT', imps: 'IMPS', rtgs: 'RTGS', paynow: 'PayNow', nets: 'NETS', duitnow: 'DuitNow', fpx: 'FPX', paypay: 'PayPay', ic: 'IC card' };
 var EN_LABEL = {
   class: 'What for',
   paid_from: 'Paid from',
@@ -506,6 +507,55 @@ function enLedgerSelect(id, cur, onch, onlyGroup, testid) {
   });
   return '<select data-cbsid="SCR022-S01"' + (testid ? ' data-testid="' + testid + '"' : '') + ' id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
+/** the shop's OWN cash and bank ledgers (the ones money moves between): [{ v, l }], v the ledger's payment mode when it has one, else its code (the server's contra takes either) */
+function enOwnOptions() {
+  var all = (EN.accounts || []).filter(function (a) {
+      return !a.is_group && a.active !== false;
+    }),
+    homes = {};
+  all.forEach(function (a) {
+    if (/^(cash|bank|upi|card)$/.test(a.role || '')) homes[a.parent_code] = true;
+  });
+  return all
+    .filter(function (a) {
+      return /^(cash|bank|upi|card)$/.test(a.role || '') || homes[a.parent_code];
+    })
+    .map(function (a) {
+      return { v: /^(cash|bank|upi|card)$/.test(a.role || '') ? a.role : String(a.code), l: a.name };
+    });
+}
+/** Move money: "Taken from" / "Put into" name the business's own accounts, with the one inline door to add a savings account (the same POST /accounts the chart uses) */
+function enOwnField(k, lab, tid, v, on) {
+  var opened = EN.addOwn === k,
+    box = opened
+      ? '<span class="en-addown" data-testid="en-addown"><input data-testid="en-addown-name" id="en_addown_name" maxlength="60" placeholder="' + esc(tx('Name, e.g. Savings account')) + '" value="' + esc(EN.addOwnName || '') + '" oninput="EN.addOwnName=this.value"> <button type="button" class="en-btn pri" data-testid="en-addown-go" onclick="enOwnAdd(this.dataset.k)" data-k="' + esc(k) + '">' + esc(tx('Add account')) + '</button> <button type="button" class="en-btn" onclick="EN.addOwn=null;enPaint()">' + esc(tx('Cancel')) + '</button></span>' + (EN.addOwnErr ? '<span class="en-bad" role="alert">' + esc(EN.addOwnErr) + '</span>' : '')
+      : '<button type="button" class="en-btn" data-testid="en-addown-open" data-k="' + esc(k) + '" onclick="EN.addOwn=this.dataset.k;EN.addOwnErr=&quot;&quot;;enPaint()">+ ' + esc(tx('Add a savings account')) + '</button>';
+  return '<label class="en-f"><span>' + esc(lab) + '</span>' + enSelect(tid, enOwnOptions(), v, on) + '</label>' + box;
+}
+/** add the account under the shop's bank group, read the accounts again, and put it in the field that asked */
+async function enOwnAdd(k) {
+  var name = String(EN.addOwnName || '').trim(),
+    main = (EN.accounts || []).filter(function (a) {
+      return a.role === 'bank';
+    })[0];
+  if (!name) {
+    EN.addOwnErr = tx('Type a name');
+    return enPaint();
+  }
+  try {
+    var made = await api('booksAccountAdd', { body: { name: name, parent_code: main ? main.parent_code : undefined } });
+    var again = await api('booksAccounts');
+    EN.accounts = (again && again.accounts) || EN.accounts;
+    EN.v[k] = String((made && made.account && made.account.code) || '');
+    EN.pv = null;
+    EN.addOwn = null;
+    EN.addOwnName = '';
+    EN.addOwnErr = '';
+  } catch (e) {
+    EN.addOwnErr = bkWhy(e, tx('Could not add it'));
+  }
+  enPaint();
+}
 /** the HTML of one field of the current step, by its kind (date, amount, party, ledger, lines, photo, narration…) */
 function enFieldHTML(f) {
   var k = f.key,
@@ -534,6 +584,7 @@ function enFieldHTML(f) {
     return '<label class="en-f"><span>' + esc(lab) + '</span>' + inner + '</label>';
   };
   var on = "enSet('" + esc(k) + "',this.value)";
+  if (EN.ev && EN.ev.kind === 'contra' && (k === 'from' || k === 'to')) return enOwnField(k, lab, tid, v, on);
   if (f.kind === 'pick' && f.pick === 'ledger')
     return (
       '<label class="en-f"><span>' +

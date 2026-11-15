@@ -38,6 +38,22 @@ function bkshOwnAccounts() {
   const own = String(bkshStatementAccount().code || bkshBook().acct);
   return bkbBanks(bkshBook().accts || []).filter((item) => String(item.code) !== own).map((item) => ({ code: String(item.code), name: item.name }));
 }
+/**
+ * the owner's own savings (or other bank) account, added where the transfer asks for it: the one door the chart uses (POST /accounts under the shop's bank group), then the accounts are read again,
+ * so the "moved between my own accounts" answer can name it. Answers { ok, code } or { ok: false, why }.
+ */
+async function bkshAddOwnAccount(name) {
+  const main = (bkshBook().accts || []).filter((item) => item.role === 'bank')[0];
+  try {
+    const known = await api('booksAccounts', { fresh: true }), same = ((known && known.accounts) || []).filter((item) => !item.is_group && String(item.name).toLowerCase() === name.toLowerCase())[0]; /* the same name twice would be refused: the one that is there is the one meant */
+    const made = same ? { account: same } : await api('booksAccountAdd', { body: { name, parent_code: main ? main.parent_code : undefined } });
+    const again = await api('booksAccounts', { fresh: true });
+    bkshBook().accts = (again && again.accounts) || bkshBook().accts;
+    return { ok: true, code: String((made && made.account && made.account.code) || '') };
+  } catch (failure) {
+    return { ok: false, line: true, why: bkWhy(failure, tx('Could not add the account')) };
+  }
+}
 /** true / false as the shop said, null when it did not say (SET-49: unknown is not false, nothing is claimed on it); 'unread' when the read failed: the sheet then ASKS the tax kind and says so, so a registered shop's charge is never posted untaxed by a failed read */
 async function bkshRegistered() {
   try {
@@ -90,8 +106,11 @@ function bkshPairing(lines) {
   Object.keys(bkshBook().postedLocal || {}).forEach((ref) => {
     posted[ref] = bkshBook().postedLocal[ref]; /* what this very session posted: its reply named the entry, so the pairing never waits for the log */
   });
-  const acct = bkshStatementAccount();
-  return { line_refs: engine.project.refsOf(lines, acct.name || String(bkshBook().acct), lines), posted };
+  return { line_refs: engine.project.refsOf(lines, bkshRefAccount(), lines), posted };
+}
+/** the ONE account key every statement-line ref is fingerprinted with: the ledger CODE, the same the statement check hands back (fingerprint_account) and the controller posts with. A name here made the page pair by other refs than the entries were posted under (B5, reload showed twins as "Not on the statement") */
+function bkshRefAccount() {
+  return String(bkshStatementAccount().code || bkshBook().acct);
 }
 /** the carried figures the statement check compares: this account, the books' balance before the statement (the ledger read, never summed here), the reconciled statements and the posted feed */
 function bkshCheckInput() {
@@ -114,7 +133,7 @@ function bkshController() {
   return CBBankPreview.create({
     engine: bkshEngine(),
     currency: String(bkCur() || '').toUpperCase(),
-    account: acct.name || String(bkshBook().acct),
+    account: bkshRefAccount(),
     ledger: bkshLedger,
     post: CBBankPost.adapter({ api, who: signedIn, modeOf: bkshModeOf }),
     lockedMonth: () => null /* a closed month is the server's answer, shown on the line */,
@@ -123,7 +142,7 @@ function bkshController() {
     postable: CBBankPost.POSTABLE,
     taxRegistered: bkshTaxRegisteredFor(BKSH.taxRegistered),
     pairing: bkshPairing,
-    suggestOpts: { country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems(), own_accounts: bkshOwnAccounts() },
+    suggestOpts: Object.defineProperty({ country, learned: bkbRules(), parties: bkshParties(), open_items: bkbOpenItems() }, 'own_accounts', { enumerable: true, get: bkshOwnAccounts }) /* read per answer: an account added in this sheet is on the list at once */,
     parseOpts: { country, currency: bkshBook().stmtCur || undefined, preset: bkshBook().preset || undefined }
   });
 }
@@ -191,10 +210,16 @@ function bkshEntry(key) {
     preset =
       typeof bankEntryPreset === 'function'
         ? bankEntryPreset(item, bkshBook())
-        : { v: { date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, ref: 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
+        : { v: Object.assign({ date: line.date, amount: bkMinorText(minor, bkCur()), narration: 'Bank statement ' + line.date + ': ' + String(line.narration || '').slice(0, 120) }, bkshBankEnd(line)), ref: item.ref || 'bank:' + ((bkshBook().file && bkshBook().file.hash) || '') + ':' + key };
   closeModal();
   enOpen(preset);
   return { ok: true };
+}
+/** the statement's own account on the side of the entry it is on, so the entry never asks again: money out → paid_from / from, money in → into / to (its mode when the ledger has one, else its code) */
+function bkshBankEnd(line) {
+  const code = String(bkshBook().stmtAcct || bkshBook().acct),
+    end = bkbModeOf(bkshBook().accts, code) || code;
+  return (+line.debit_minor || 0) > 0 ? { paid_from: end, from: end } : { into: end, to: end };
 }
 /**
  * BNK-new-10: the lines the owner just added from the sheet were CONFIRMED by the owner (the press named what it reached), so each is accepted as it comes back matched: the accept mark names the entry
@@ -257,7 +282,7 @@ async function bankSheetOpen() {
       '<button data-cbsid="BKS014-B16" id="bks_add" type="button" class="pri" data-testid="bank-sheet-add" disabled onclick="bkshAdd(this)">' + bkbE(tx('Nothing ready to add')) + '</button>'
   });
   BKSH.ui = CBBankPreviewUI.mount({
-    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
+    host: bkshEl('bks_lines'), controller: () => BKSH.ctl, currency: String(bkCur() || '').toUpperCase(), country: bkbCountry(), entry: bkshEntry, ownAccounts: bkshOwnAccounts, addOwn: bkshAddOwnAccount, amountText: (value) => bkMoney(CBBankPreview.minorOf(value), (value && value.currency) || undefined), addedWords: tx('Added to your books'),
     say: (words) => { bkshEl('bks_say').textContent = words || ''; }, changed: bkshPaint
   });
   if (kept) BKSH.ctl.answer('ledger_read', Date.now()); /* the books may have moved since: project again, keep every answer */
