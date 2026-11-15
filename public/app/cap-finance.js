@@ -59,26 +59,26 @@ async function finLoad(quiet) {
   if (finTab() === 'cheques') return fqLoad(quiet); /* the Cheques tab (cap-finance-cheques.js, T3-P1-MONEY) */
   if (finTab() === 'returns') return frLoad(quiet); /* the Returns tab (cap-finance-returns.js, T3-P1-MONEY) */
   if (finTab() === 'reports') return fmLoad(quiet); /* the Reports tab (cap-mis.js, T3-P4-ACCOUNT) */
-  var g = ++FIN.gen;
+  var generation = ++FIN.gen;
   if (!quiet) {
     FIN.state = 'loading';
     if (FIN.api) FIN.api.refresh();
   }
   try {
-    var r = await finDuesRead();
-    if (g !== FIN.gen) return;
-    bkDuesStore(r);
-    FIN.cur = (r && r.currency) || bkCur();
-    if (r && r.currency && typeof SESSION !== 'undefined' && SESSION)
-      SESSION.currency = r.currency; /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
-    FIN.rows = ((r && r.parties) || []).filter(function (item) {
+    var dues = await finDuesRead();
+    if (generation !== FIN.gen) return;
+    bkDuesStore(dues);
+    FIN.cur = (dues && dues.currency) || bkCur();
+    if (dues && dues.currency && typeof SESSION !== 'undefined' && SESSION)
+      SESSION.currency = dues.currency; /* CX0: the ledger's currency reaches Receive / Pay (finance.html sets none) */
+    FIN.rows = ((dues && dues.parties) || []).filter(function (item) {
       return bkDuesSide(item) === 'rcv' && finOwes(item);
     });
     FIN.state = 'ready';
     FIN.err = null;
     ftNav(); /* the tabs' words again, now the language pack has had the boot to land */
   } catch (e) {
-    if (g !== FIN.gen) return;
+    if (generation !== FIN.gen) return;
     if (e && e.status === 404) {
       finOff();
       return;
@@ -114,14 +114,14 @@ function finOff() {
     '</button>' +
     (owner ? '' : '<p data-testid="fin-off-why">' + esc(tx('Ask the owner to switch it on')) + '</p>') +
     '</div>';
-  var b = document.getElementById('fin_on');
+  var switchOn = document.getElementById('fin_on');
   if (owner)
-    b.onclick = function () {
+    switchOn.onclick = function () {
       CBLedger.run(true, {
         ask: confirmAsk,
         working: function () {
-          b.disabled = true;
-          b.textContent = tx('Working…');
+          switchOn.disabled = true;
+          switchOn.textContent = tx('Working…');
         },
         call: function (on) {
           return CBLedger.call({ api: api }, on);
@@ -130,8 +130,8 @@ function finOff() {
           start();
         },
         failed: function (e) {
-          b.disabled = false;
-          b.textContent = tx('Turn on');
+          switchOn.disabled = false;
+          switchOn.textContent = tx('Turn on');
           toast(tx('Could not switch it on.') + ' ' + (e && e.status === 403 ? tx('Only the owner may do this.') : tx('Try again.')));
         }
       });
@@ -139,15 +139,15 @@ function finOff() {
 }
 
 /** the server said who may see it: the sentence, greyed, and no list — the server refuses anyway. `why`: another tab's sentence (Cash, F3); Collections' by default. `title`: that tab's name (Payables, F4) */
-function finDenied(why, title) {
+function finDenied(reason, title) {
   var node = document.getElementById('screen');
   if (!node) return;
   node.className = 'screen';
   node.innerHTML =
     '<div class="card" data-testid="fin-denied" style="opacity:.75"><h2>' +
-    esc(tx(title || (why ? 'Cash position' : 'Collections'))) +
+    esc(tx(title || (reason ? 'Cash position' : 'Collections'))) +
     '</h2><p data-testid="fin-denied-why">' +
-    esc(tx(why || FIN_OWNER_ONLY)) +
+    esc(tx(reason || FIN_OWNER_ONLY)) +
     '</p></div>';
 }
 
@@ -223,7 +223,7 @@ function finFilterMatch(party, value) {
 }
 /* ── the columns: every figure is the server's ── */
 function finCols() {
-  var c = function () {
+  var currencyOf = function () {
     return FIN.cur;
   };
   var dash = '<span style="color:var(--grey)">—</span>';
@@ -248,7 +248,7 @@ function finCols() {
       w: 140,
       html: true,
       cell: function (p) {
-        return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), c())) + '</b>' + finEarlyHTML(p);
+        return '<b data-b="balance">' + esc(bkMoney(Number(p.balance_minor), currencyOf())) + '</b>' + finEarlyHTML(p);
       }
     },
     {
@@ -279,7 +279,7 @@ function finCols() {
         if (p.credit_limit_minor == null) return p.credit_limit_from === null ? finNotSet('limit') : dash;
         return (
           '<span data-b="limit">' +
-          esc(bkMoney(Number(p.credit_limit_minor), c())) +
+          esc(bkMoney(Number(p.credit_limit_minor), currencyOf())) +
           '</span>' +
           (p.over_limit ? ' <span class="tag red" data-b="over">⚠ ' + esc(tx('Over limit')) + '</span>' : '')
         );
@@ -298,7 +298,7 @@ function finCols() {
         if (p.interest_state === 'not_set') return finNotSet('interest');
         if (p.interest_state === 'off') return '<span data-b="interest-off" style="color:var(--grey)">' + esc(tx('Off')) + '</span>';
         return Number(p.interest_minor) > 0
-          ? '<span data-b="interest" title="' + esc(tx('Shown, never charged')) + '">' + esc(bkMoney(Number(p.interest_minor), c())) + '</span>'
+          ? '<span data-b="interest" title="' + esc(tx('Shown, never charged')) + '">' + esc(bkMoney(Number(p.interest_minor), currencyOf())) + '</span>'
           : dash;
       }
     },

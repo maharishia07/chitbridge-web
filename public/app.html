@@ -25858,6 +25858,16 @@ function chitDetailCarry(reply) {
     billTotal: reply.bill_total || null /* ACC-348b: the detail's own bill_total, the same pick as the list row (api money-check billTotalWire) */
   };
 }
+/** open a chit from a lazy capability (messages, worklist): the line-level design once its module is in, else the plain opener, else nothing */
+function openChitDetail(chit_id) {
+  if (typeof openChit2 === 'function' && typeof ensureCap === 'function') {
+    ensureCap('chit2').then(function () {
+      openChit2(chit_id);
+    });
+  } else if (typeof openChit === 'function') {
+    openChit(chit_id);
+  }
+}
 async function openChit(id, silent) {
   if (UI._byId && id !== UI._byId) UI._byId = null; /* WX-P2P-09: picking another chit un-pins the one opened by id */
   UI.sel = id;

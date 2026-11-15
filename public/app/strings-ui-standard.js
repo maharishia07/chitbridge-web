@@ -2,6 +2,7 @@
  * strings-ui-standard.js — the labels of the UI standard page (ui-standard.html), in Tamil, Hindi, Arabic and French.
  * Same shape as strings-ta.js and its siblings: the English is the key; each pack is merged into CBSTR.
  * These sit in their own file so the page does not touch the four big packs (a translation PR for those trips the readability guard on old debt);
+ * OWNS      the ta / hi / ar / fr label packs of the UI standard page, merged into CBSTR without overwriting an existing key
  * they move into the packs when the stable-keys PR (ux137-i18n-keys) lands. Short labels only: the explanation lines stay English until reviewed.
  * CALLED BY  public/ui-standard.html (loaded after the four packs, before ui-standard.js)
  * FLOW       load -> merge each pack into CBSTR (an existing key is never overwritten)

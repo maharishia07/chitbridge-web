@@ -121,6 +121,7 @@ function go() {
       ? h
       : 'stock';
   }
+  /** show section k: mark it active in the skeleton, keep the address bar on its hash, then load it */
   function paint(k) {
     if (frame && frame.skeleton) frame.skeleton.setActive(k);
     if (location.hash !== '#/' + k) {

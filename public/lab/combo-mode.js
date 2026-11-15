@@ -85,9 +85,9 @@ function modLabTab(t) {
 }
 /** ⭐ the worst a customer could add across every group at once — each group's own priciest option, summed;
  *  a product with only free options (or none) reads as "no price change", never a misleading ₹0. */
-function modLabMaxUp(p) {
+function modLabMaxUp(product) {
   var sum = 0;
-  CBVariant.groupsOf({ modifiers: p.modifiers }).forEach(function (item) {
+  CBVariant.groupsOf({ modifiers: product.modifiers }).forEach(function (item) {
     var count = 0;
     (item.options || []).forEach(function (entry) {
       var v = Number(entry.price) || 0;
@@ -242,10 +242,10 @@ function modLabBuildFresh() {
   MODLAB.building = true;
   MODLAB.savingAs = false;
   if (!MODLAB.draft.length) {
-    var ex = comboExampleFresh();
-    MODLAB.draft = ex.groups;
-    MODLAB.name = ex.name;
-    MODLAB.price = ex.price;
+    var example = comboExampleFresh();
+    MODLAB.draft = example.groups;
+    MODLAB.name = example.name;
+    MODLAB.price = example.price;
   }
   MODLABPREV = [];
   paintModLab();
@@ -291,19 +291,19 @@ async function modLabCreateNew() {
     toastSay('Give this combo a price first.');
     return;
   }
-  var v = CBVariant.validate(modLabGroups());
-  if (!v.ok) {
-    toastSay('Fix this first: ' + v.errors[0].message);
+  var verdict = CBVariant.validate(modLabGroups());
+  if (!verdict.ok) {
+    toastSay('Fix this first: ' + verdict.errors[0].message);
     return;
   }
   if (!(S.biz === 'mine' && savedLive())) {
     toastSay('Sign in and use your own catalogue to create a real product.');
     return;
   }
-  var item_data = { name: name, price: priceNum, modifiers: v.groups };
-  var r = await apiFetch('POST', API + '/api/products', { item_data: item_data });
-  if (!r.ok) {
-    toastSay('Could not create "' + name + '": ' + ((r.body && r.body.message) || 'try again.'));
+  var item_data = { name: name, price: priceNum, modifiers: verdict.groups };
+  var response = await apiFetch('POST', API + '/api/products', { item_data: item_data });
+  if (!response.ok) {
+    toastSay('Could not create "' + name + '": ' + ((response.body && response.body.message) || 'try again.'));
     return;
   }
   toastSay('Created "' + name + '" — ' + M0(priceNum) + ', with its combo groups already on it.');
@@ -352,9 +352,9 @@ async function modLabSaveAsConfirm() {
     toastSay('Type a name for this combo first — that is what you’ll look for to reopen it.');
     return;
   }
-  var v = CBVariant.validate(modLabGroups());
-  if (!v.ok) {
-    toastSay('Fix this first: ' + v.errors[0].message);
+  var verdict = CBVariant.validate(modLabGroups());
+  if (!verdict.ok) {
+    toastSay('Fix this first: ' + verdict.errors[0].message);
     return;
   }
   if (!(S.biz === 'mine' && savedLive())) {
@@ -366,16 +366,16 @@ async function modLabSaveAsConfirm() {
    * with a real price later without retyping it. */
   var price = MODLAB.pid ? (byId(MODLAB.pid) || {}).price : MODLAB.price !== '' ? Number(MODLAB.price) : null;
   toastSay('Saving “' + name + '” to your combos…');
-  var r = await apiFetch('POST', API + '/api/combo-templates', { name: name, definition: v.groups, price: price });
-  if (r.ok) {
+  var response = await apiFetch('POST', API + '/api/combo-templates', { name: name, definition: verdict.groups, price: price });
+  if (response.ok) {
     toastSay('Saved “' + name + '” — in your combo library (back office). Not on your product list yet — “Push to products” below puts it there.');
     MODLAB.savingAs = false;
     /* ⭐ [OFFR-08] "if we save or save as, we have to explicitly show preview and push" — a fresh save/save-as
      * always leaves behind a real template id, which is what makes "👁 Preview" and "✚ Push to products"
      * appear in the footer right below, instead of the person having to go find them separately. */
-    MODLAB.templateId = r.body.template.id;
+    MODLAB.templateId = response.body.template.id;
     await comboLibLoad(true);
-  } else toastSay('NOT saved — “' + name + '” did not reach your combo library: ' + ((r.body && r.body.message) || 'try again.'));
+  } else toastSay('NOT saved — “' + name + '” did not reach your combo library: ' + ((response.body && response.body.message) || 'try again.'));
   paintModLab();
 }
 /**
@@ -386,9 +386,9 @@ async function modLabSaveAsConfirm() {
  */
 async function modLabSaveConfirm() {
   if (!MODLAB.templateId) return; /* the button that calls this is only ever shown when one exists */
-  var v = CBVariant.validate(modLabGroups());
-  if (!v.ok) {
-    toastSay('Fix this first: ' + v.errors[0].message);
+  var verdict = CBVariant.validate(modLabGroups());
+  if (!verdict.ok) {
+    toastSay('Fix this first: ' + verdict.errors[0].message);
     return;
   }
   if (!(S.biz === 'mine' && savedLive())) {
@@ -398,11 +398,11 @@ async function modLabSaveConfirm() {
   var name = String(MODLAB.name || '').trim() || 'Untitled combo';
   var price = MODLAB.pid ? (byId(MODLAB.pid) || {}).price : MODLAB.price !== '' ? Number(MODLAB.price) : null;
   toastSay('Saving changes to “' + name + '”…');
-  var r = await apiFetch('PATCH', API + '/api/combo-templates/' + MODLAB.templateId, { name: name, definition: v.groups, price: price });
+  var response = await apiFetch('PATCH', API + '/api/combo-templates/' + MODLAB.templateId, { name: name, definition: verdict.groups, price: price });
   /* ⭐ Athi: "save, commit, update message is a must without which not able to understand the change" — a bare
    * "Saved." said nothing. This names what changed and where it landed (combo library = back office), and — if
    * this template is already live as a product — that the product itself is now out of date until pushed again. */
-  if (r.ok) {
+  if (response.ok) {
     toastSay(
       'Saved “' +
         name +
@@ -410,7 +410,7 @@ async function modLabSaveConfirm() {
         (modLabTemplateLinked() ? ' The live product still has the OLD version until you push this update.' : '')
     );
     await comboLibLoad(true);
-  } else toastSay('NOT saved — the update to “' + name + '” did not reach your combo library: ' + ((r.body && r.body.message) || 'try again.'));
+  } else toastSay('NOT saved — the update to “' + name + '” did not reach your combo library: ' + ((response.body && response.body.message) || 'try again.'));
   paintModLab();
 }
 /** ⭐ loaded once per Lab session (cached on COMBO_LIB), forced fresh right after a save or a delete */
@@ -421,8 +421,8 @@ async function comboLibLoad(force) {
     COMBO_LIB.loaded = true;
     return [];
   }
-  var r = await apiFetch('GET', API + '/api/combo-templates');
-  if (r.ok && r.body && Array.isArray(r.body.templates)) COMBO_LIB.items = r.body.templates;
+  var response = await apiFetch('GET', API + '/api/combo-templates');
+  if (response.ok && response.body && Array.isArray(response.body.templates)) COMBO_LIB.items = response.body.templates;
   COMBO_LIB.loaded = true;
   return COMBO_LIB.items || [];
 }
@@ -446,24 +446,24 @@ function modLabCloseLibrary() {
  * template" any more, only "Save as" (a new one) makes sense for it.
  */
 function modLabUseTemplate(id) {
-  var t = (COMBO_LIB.items || []).filter(function (x) {
+  var template = (COMBO_LIB.items || []).filter(function (x) {
     return x.id === id;
   })[0];
-  if (!t) return;
-  var groups = CBVariant.normalize(t.definition);
+  if (!template) return;
+  var groups = CBVariant.normalize(template.definition);
   var editing = !MODLAB.pid && !modLabGroups().length;
   if (editing) {
     modLabSetGroups(groups);
-    MODLAB.name = t.name || '';
-    MODLAB.price = t.price == null ? '' : t.price;
-    MODLAB.templateId = t.id;
+    MODLAB.name = template.name || '';
+    MODLAB.price = template.price == null ? '' : template.price;
+    MODLAB.templateId = template.id;
   } else {
     modLabSetGroups(modLabGroups().concat(groups));
     MODLAB.templateId = null;
   }
   MODLAB.libraryOpen = false;
   if (!MODLAB.pid) MODLAB.building = true;
-  toastSay(editing ? 'Opened “' + t.name + '” to edit.' : 'Added “' + t.name + '” — ' + groups.length + ' group' + (groups.length === 1 ? '' : 's') + '.');
+  toastSay(editing ? 'Opened “' + template.name + '” to edit.' : 'Added “' + template.name + '” — ' + groups.length + ' group' + (groups.length === 1 ? '' : 's') + '.');
   paintModLab();
 }
 /** ⚠️ no confirm() dialog — matches this Lab's own style (✕ on a group/option removes immediately too), and
@@ -513,15 +513,15 @@ async function modLabApply() {
      * printed "saved to your catalogue" because nothing ever reached it. Checking r.ok/r.queued directly is
      * the fix — and it is also the honest three-way answer: saved for real, only queued (offline), or refused.
      */
-    var r = await apiFetch('PATCH', API + '/api/products/' + node.id, { item_data: { modifiers: clean }, merge: true }, 'modifiers');
-    if (r.queued)
+    var response = await apiFetch('PATCH', API + '/api/products/' + node.id, { item_data: { modifiers: clean }, merge: true }, 'modifiers');
+    if (response.queued)
       toastSay(
         'Saved here in the Lab. Offline right now — this reaches your catalogue (and then the till, on its next price refresh) once you’re back online.'
       );
-    else if (r.ok) toastSay('Saved — in the Lab and in your catalogue. The till will show it next time it refreshes prices.');
+    else if (response.ok) toastSay('Saved — in the Lab and in your catalogue. The till will show it next time it refreshes prices.');
     else
       toastSay(
-        'Saved here in the Lab only — NOT in your catalogue: ' + ((r.body && r.body.message) || 'the save was refused') + '. The till will not see this.'
+        'Saved here in the Lab only — NOT in your catalogue: ' + ((response.body && response.body.message) || 'the save was refused') + '. The till will not see this.'
       );
   } else {
     toastSay(
@@ -597,7 +597,7 @@ function comboGroupsEditorHTML(groups) {
           : '') +
         '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">' +
         item.options
-          .map(function (entry, oi) {
+          .map(function (entry, optionIndex) {
             return (
               '<div style="display:flex;gap:6px;align-items:center">' +
               '<input class="inp" style="flex:1;height:36px" value="' +
@@ -605,19 +605,19 @@ function comboGroupsEditorHTML(groups) {
               '" placeholder="Option" onchange="modLabSetOption(' +
               index +
               ',' +
-              oi +
+              optionIndex +
               ',{name:this.value})">' +
               '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="' +
               entry.price +
               '" onchange="modLabSetOption(' +
               index +
               ',' +
-              oi +
+              optionIndex +
               ',{price:this.value})"></div>' +
               '<button class="btn sm" onclick="modLabRemoveOption(' +
               index +
               ',' +
-              oi +
+              optionIndex +
               ')">✕</button></div>'
             );
           })
@@ -710,14 +710,14 @@ function paintComboTillPreview() {
     foot = document.getElementById('comboTillPreviewFoot');
   var node = document.getElementById('comboTillPreviewTitle');
   if (!body || !COMBO_TILL_PREVIEW) return;
-  var cv = COMBO_TILL_PREVIEW;
-  if (node) node.textContent = cv.name || 'Preview';
+  var preview = COMBO_TILL_PREVIEW;
+  if (node) node.textContent = preview.name || 'Preview';
   /* ⭐ the same "Separately ₹X" banner spot the till's #combohead sits in — here it just names the combo's
    * own price, since a draft has no "separate items" to compare against yet (see PATCHNOTE below). */
-  var head = '<div class="combohead">' + esc(cv.name || 'This combo') + (cv.price != null ? '<b>' + M0(Number(cv.price)) + '</b>' : '') + '</div>';
+  var head = '<div class="combohead">' + esc(preview.name || 'This combo') + (preview.price != null ? '<b>' + M0(Number(preview.price)) + '</b>' : '') + '</div>';
   body.innerHTML =
     head +
-    CBVariant.chooserHTML(cv.groups, MODLABPREV, {
+    CBVariant.chooserHTML(preview.groups, MODLABPREV, {
       money: M0,
       onClick: function (gi, oi) {
         return 'comboTillPreviewPick(' + gi + ',' + oi + ')';
@@ -730,7 +730,7 @@ function paintComboTillPreview() {
       }
     });
   if (foot) {
-    var missing = CBVariant.missing(cv.groups, MODLABPREV);
+    var missing = CBVariant.missing(preview.groups, MODLABPREV);
     var words = CBVariant.words(MODLABPREV, M0);
     foot.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">' +
@@ -765,34 +765,34 @@ function comboLibraryUnsavedProducts() {
  * argument and stays exactly as unfiltered as it always was.
  */
 function comboLibraryRowsHTML(filterQ) {
-  var q = (filterQ || '').trim().toLowerCase();
+  var query = (filterQ || '').trim().toLowerCase();
   var items = (COMBO_LIB.items || []).filter(function (item) {
-    return !q || (item.name || '').toLowerCase().indexOf(q) >= 0;
+    return !query || (item.name || '').toLowerCase().indexOf(query) >= 0;
   });
   var live = comboLibraryUnsavedProducts().filter(function (item) {
-    return !q || item.name.toLowerCase().indexOf(q) >= 0;
+    return !query || item.name.toLowerCase().indexOf(query) >= 0;
   });
-  var rowHTML = function (t) {
-    var n = (t.definition || []).length,
-      opts = (t.definition || []).reduce(function (total, item) {
+  var rowHTML = function (template) {
+    var groupCount = (template.definition || []).length,
+      opts = (template.definition || []).reduce(function (total, item) {
         return total + ((item && item.options) || []).length;
       }, 0);
-    var linkedProduct = t.product_item_id && S.biz === 'mine' ? byId(t.product_item_id) : null;
+    var linkedProduct = template.product_item_id && S.biz === 'mine' ? byId(template.product_item_id) : null;
     return (
       '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">' +
       '<div><div style="font-weight:700">' +
-      esc(t.name) +
-      (t.price != null ? ' · ' + M0(Number(t.price)) : '') +
+      esc(template.name) +
+      (template.price != null ? ' · ' + M0(Number(template.price)) : '') +
       '</div>' +
       '<div style="font-size:12px;color:var(--muted)">' +
-      n +
+      groupCount +
       ' group' +
-      (n === 1 ? '' : 's') +
+      (groupCount === 1 ? '' : 's') +
       ' · ' +
       opts +
       ' option' +
       (opts === 1 ? '' : 's') +
-      (t.product_item_id
+      (template.product_item_id
         ? linkedProduct
           ? ' · live as "' + esc(linkedProduct.name) + '"'
           : ' · was pushed, product no longer found'
@@ -800,24 +800,24 @@ function comboLibraryRowsHTML(filterQ) {
       '</div></div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
       '<button class="btn sm" onclick="openComboTillPreview(\'' +
-      esc(String(t.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      esc(String(template.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
       "'," +
-      (t.price == null ? 'null' : Number(t.price)) +
+      (template.price == null ? 'null' : Number(template.price)) +
       ",comboLibDef('" +
-      t.id +
+      template.id +
       '\'))">👁 Preview</button>' +
       '<button class="btn sm" onclick="modLabUseTemplate(\'' +
-      t.id +
+      template.id +
       '\')">Use</button>' +
       '<button class="btn sm pri" onclick="modLabPushTemplate(\'' +
-      t.id +
+      template.id +
       '\')">' +
-      (t.product_item_id ? '⟳ Update product' : '✚ Push to products') +
+      (template.product_item_id ? '⟳ Update product' : '✚ Push to products') +
       '</button>' +
       '<button class="btn sm" onclick="modLabDeleteTemplate(\'' +
-      t.id +
+      template.id +
       "','" +
-      esc(String(t.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      esc(String(template.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
       '\')">✕</button></div></div>'
     );
   };
@@ -825,29 +825,29 @@ function comboLibraryRowsHTML(filterQ) {
    * showcase... preview and edit option should be there." No auto-save just to be listed — this row reads
    * straight off the real product, and "✏️ Edit" opens the SAME per-product screen every product already
    * opens through, where Save as / Apply already exist. Nothing is written just by seeing this row. */
-  var liveRowHTML = function (p) {
-    var n = CBVariant.groupsOf({ modifiers: p.modifiers }).length;
+  var liveRowHTML = function (product) {
+    var groupCount = CBVariant.groupsOf({ modifiers: product.modifiers }).length;
     return (
       '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">' +
       '<div><div style="font-weight:700">' +
-      esc(p.name) +
+      esc(product.name) +
       ' · ' +
-      M0(p.price) +
+      M0(product.price) +
       '</div>' +
       '<div style="font-size:12px;color:var(--muted)">' +
-      n +
+      groupCount +
       ' group' +
-      (n === 1 ? '' : 's') +
+      (groupCount === 1 ? '' : 's') +
       ' · already on your product list</div></div>' +
       '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\'' +
-      esc(String(p.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
+      esc(String(product.name).replace(/\\/g, '\\\\').replace(/'/g, "\\'")) +
       "'," +
-      p.price +
+      product.price +
       ',JSON.parse(this.dataset.g))" data-g=\'' +
-      esc(JSON.stringify(p.modifiers || [])) +
+      esc(JSON.stringify(product.modifiers || [])) +
       "'>👁 Preview</button>" +
       '<button class="btn sm pri" onclick="modLabCloseLibrary();modLabPick(\'' +
-      p.id +
+      product.id +
       '\')">✏️ Edit</button></div></div>'
     );
   };
@@ -926,11 +926,11 @@ function modsTabFootHTML() {
  */
 function modsTabHTML(pendingDraft) {
   var totals = modLabModsTotals(),
-    q = (MODLAB.q || '').trim();
+    query = (MODLAB.q || '').trim();
   if (totals.withMods === 0 && totals.bare === 0) {
     return '<div class="empty"><b>Nothing here yet</b><span>Add products to your catalogue first.</span></div>';
   }
-  if (totals.withMods === 0 && !q) {
+  if (totals.withMods === 0 && !query) {
     return (
       '<div class="empty"><b>No modifiers yet</b><span>A choice before something goes on the bill — spice level, size, an extra.</span>' +
       '<button class="btn pri" onclick="modLabAddToProduct()">Add one to a product</button></div>'
@@ -938,9 +938,9 @@ function modsTabHTML(pendingDraft) {
   }
   var withMods = modLabModsSplit().withMods;
   var clickFn = pendingDraft ? 'modLabAttachDraftTo' : 'modLabPick';
-  var h = '<div class="modlist">';
+  var listHtml = '<div class="modlist">';
   if (!withMods.length) {
-    h += '<div class="empty"><b>Nothing matches</b><span>Try another word.</span></div>';
+    listHtml += '<div class="empty"><b>Nothing matches</b><span>Try another word.</span></div>';
   } else {
     var byCat = {},
       order = [];
@@ -953,7 +953,7 @@ function modsTabHTML(pendingDraft) {
       byCat[c].push(item);
     });
     order.forEach(function (item) {
-      h += '<div class="grp">' + esc(item) + '</div>';
+      listHtml += '<div class="grp">' + esc(item) + '</div>';
       byCat[item].forEach(function (entry) {
         var groups = CBVariant.groupsOf({ modifiers: entry.modifiers });
         var chips = groups
@@ -961,8 +961,8 @@ function modsTabHTML(pendingDraft) {
             return '<span class="modchip">' + esc(element.title || element.name || '') + '</span>';
           })
           .join('');
-        var up = modLabMaxUp(entry);
-        h +=
+        var maxUp = modLabMaxUp(entry);
+        listHtml +=
           '<button class="it" onclick="' +
           clickFn +
           "('" +
@@ -973,12 +973,12 @@ function modsTabHTML(pendingDraft) {
           chips +
           '</span></span>' +
           '<span class="rt">' +
-          (up ? 'up to +' + M0(up) : 'no price change') +
+          (maxUp ? 'up to +' + M0(maxUp) : 'no price change') +
           '</span><span class="go">›</span></button>';
       });
     });
   }
-  return h + '</div>';
+  return listHtml + '</div>';
 }
 /** ⭐ a saved template's own groups, for the "Preview" onclick above — kept as a tiny lookup rather than
  *  inlining the whole (possibly large) definition array into an attribute string. */
@@ -1007,20 +1007,20 @@ async function modLabPushTemplate(id) {
     return;
   }
   toastSay('Pushing to your products…');
-  var r = await apiFetch('POST', API + '/api/combo-templates/' + id + '/push');
-  if (r.ok) {
+  var response = await apiFetch('POST', API + '/api/combo-templates/' + id + '/push');
+  if (response.ok) {
     /* ⭐ Athi: "when it is pushed to product status has to change where applied. no information at all" — this
      * names BOTH halves: what happened to the PRODUCT (created vs updated, in your catalogue = back office)
      * and that the TILL only sees it on its own next price refresh, never instantly. modLabStatusLineHTML()
      * (right above the buttons, once comboLibLoad(true) below refreshes) is the part that STAYS on screen. */
     toastSay(
-      (r.body.verb === 'created' ? 'Created "' : 'Updated "') +
-        r.body.item.item_data.name +
+      (response.body.verb === 'created' ? 'Created "' : 'Updated "') +
+        response.body.item.item_data.name +
         '" in your products (back office). The till will show it next time it refreshes prices.'
     );
     await labUseMine(true); /* the pushed/updated product needs to be in P before the library can show it as linked */
     await comboLibLoad(true);
-  } else toastSay('NOT pushed — this combo did not reach your products: ' + ((r.body && r.body.message) || 'try again.'));
+  } else toastSay('NOT pushed — this combo did not reach your products: ' + ((response.body && response.body.message) || 'try again.'));
   paintModLab();
 }
 function paintModLab() {
