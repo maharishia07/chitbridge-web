@@ -323,6 +323,13 @@ function catsetColName(c) {
 function catsetRename(key, value) {
   return catsetFieldPatch(key, { field_name: value });
 }
+/** the name of a plan row for a screen reader: its number and its product (or every product), so each From and To is its own */
+function catsetPlanLabel(item, prods, index) {
+  var made = (prods || []).filter(function (p) {
+    return (p.item_id || p.id) === item.product;
+  })[0];
+  return '#' + (index + 1) + ' ' + (made ? (made.item_data || made).name || '' : tx('every product'));
+}
 /** a plan row's From / To date */
 function catsetPlanDate(index, prop, value) {
   CATSET_PLAN[index][prop] = value;
@@ -681,7 +688,7 @@ function catsetUomRuleHTML(u) {
         '_t">' +
         tx('Round down within') +
         '</label>' +
-        ui.field({ mount: 'CAT004-U03', kind: 'number', density: 'compact', id: id + '_t', label: 'Round down within', of: u, value: String(r.tol), testid: 'uom-tol-' + u,
+        ui.field({ mount: 'CAT004-U03', kind: 'number', density: 'compact', id: id + '_t', min: '0', step: '0.001', label: 'Round down within', of: u, value: String(r.tol), testid: 'uom-tol-' + u,
         onChange: catsetOn(catsetUomRuleSet, u, 'tol') }) +
         '<span class="uru">' +
         esc(u) +
@@ -691,7 +698,7 @@ function catsetUomRuleHTML(u) {
         '_m">' +
         tx('from') +
         '</label>' +
-        ui.field({ mount: 'CAT004-U04', kind: 'number', density: 'compact', id: id + '_m', label: 'from', of: u, value: String(r.min_qty), testid: 'uom-min-' + u,
+        ui.field({ mount: 'CAT004-U04', kind: 'number', density: 'compact', id: id + '_m', min: '0', step: '0.001', label: 'from', of: u, value: String(r.min_qty), testid: 'uom-min-' + u,
         onChange: catsetOn(catsetUomRuleSet, u, 'min_qty') }) +
         '<span class="uru">' +
         esc(u) +
@@ -2348,8 +2355,8 @@ function catsetPlanPaint() {
         })
         .join('') +
       '</select>' +
-      ui.field({ mount: 'CAT004-U09', kind: 'date', density: 'compact', key: index, label: 'From', cls: 'inp', value: item.from, testid: 'plan-from-' + index, onChange: catsetOn(catsetPlanDate, index, 'from') }) +
-      ui.field({ mount: 'CAT004-U10', kind: 'date', density: 'compact', key: index, label: 'To', cls: 'inp', value: item.to, testid: 'plan-to-' + index, onChange: catsetOn(catsetPlanDate, index, 'to') }) +
+      ui.field({ mount: 'CAT004-U09', kind: 'date', density: 'compact', key: index, label: 'From', of: catsetPlanLabel(item, prods, index), cls: 'inp', value: item.from, testid: 'plan-from-' + index, onChange: catsetOn(catsetPlanDate, index, 'from') }) +
+      ui.field({ mount: 'CAT004-U10', kind: 'date', density: 'compact', key: index, label: 'To', of: catsetPlanLabel(item, prods, index), cls: 'inp', value: item.to, testid: 'plan-to-' + index, onChange: catsetOn(catsetPlanDate, index, 'to') }) +
       '<button data-cbsid="CMP008" class="composebtn" title="' +
       esc(tx('Remove')) +
       '" onclick="CATSET_PLAN.splice(' +

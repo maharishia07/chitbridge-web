@@ -31,6 +31,7 @@ var CBUiField = (function () {
   };
   var DIGITS = [['٠', '٩'], ['۰', '۹'], ['०', '९']]; /* Arabic-Indic, Extended Arabic-Indic, Devanagari: each ten code points in a row */
   var HANDLERS = {};
+  var ID_OWNER = {};
   /* the error colour: the theme has no danger TEXT token (the page's own #b4453f is 2.98:1 on Dark), so it is the red pulled 30% toward the theme's --ink: dark red on Cream, light red on Dark, AA on both (the walk measures it) */
   var FIELD_STYLE =
     '@supports (color:color-mix(in srgb,currentcolor,currentcolor)){:root{--field-bad:color-mix(in srgb,var(--bad-source,#b4453f) 65%,var(--ink,#1d1b16))}}' +
@@ -53,7 +54,9 @@ var CBUiField = (function () {
     /* density:'compact': the control stands alone in a one-line row (no wrapper, no label row); the page's own class gives its look, this adds only the state rules and the tap floor */
     '.cbf-in.cbf-dn:focus-visible{outline:2px solid var(--accent,#1f5f5b);outline-offset:1px}.cbf-in.cbf-dn[aria-invalid="true"]{border-color:var(--field-bad,#b4453f)}' +
     'input.cbf-in.cbf-dn{min-height:32px;box-sizing:border-box}input[type="checkbox"].cbf-dn{min-height:0;width:20px;height:20px;margin:2px}.cbf-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
-    '@media(max-width:700px){input.cbf-in.cbf-dn:not([type="checkbox"]){min-height:max(44px,var(--act-h,44px))}input[type="checkbox"].cbf-dn{width:24px;height:24px;margin:10px}}' +
+    '@media(max-width:700px){input.cbf-in.cbf-dn:not([type="checkbox"]){min-height:max(44px,var(--act-h,44px))}input[type="checkbox"].cbf-dn{-webkit-appearance:none;appearance:none;width:max(44px,var(--act-h,44px));height:max(44px,var(--act-h,44px));margin:0;border:0;background:none;display:inline-grid;place-content:center;cursor:pointer}' +
+    '.cbf-in.cbf-dn[type="checkbox"]::before{content:"";box-sizing:border-box;width:22px;height:22px;border:2px solid var(--field-edge,#85807C);border-radius:5px;background:var(--card,#fff)}' +
+    '.cbf-in.cbf-dn[type="checkbox"]:checked::before{background:var(--accent,#1f5f5b);border-color:var(--accent,#1f5f5b);box-shadow:inset 0 0 0 3px var(--card,#fff)}.cbf-in.cbf-dn[type="checkbox"]:disabled{opacity:.5}}' +
     '.cbf-suf{position:relative}.cbf .cbf-suf .cbf-in{padding-inline-end:30px}.cbf-suf b{position:absolute;inset-inline-end:10px;top:50%;margin-top:-4px;font-weight:400;color:var(--grey-3,var(--dim,#5e594d))}';
 
   function refuse(reason) {
@@ -174,7 +177,20 @@ var CBUiField = (function () {
   function idOf(options) {
     if (options.id) return String(options.id);
     var tail = options.key === undefined || options.key === null ? '' : '-' + String(options.key).toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    return options.mount.toLowerCase() + tail;
+    return uniqueId(options.mount.toLowerCase() + tail, options.mount + '|' + String(options.key));
+  }
+  /** the id a key-made field gets: the first writer keeps it, a different key that sanitises to the same id gets a short hash of its own key, so two rows never share an id (and a redraw of the same key keeps its id) */
+  function uniqueId(id, owner) {
+    if (ID_OWNER[id] === undefined || ID_OWNER[id] === owner) { ID_OWNER[id] = owner; return id; }
+    var hashed = id + '-' + hashOf(owner);
+    if (ID_OWNER[hashed] !== undefined && ID_OWNER[hashed] !== owner) refuse('two keys make the same id (' + hashed + '); give one of them an id');
+    ID_OWNER[hashed] = owner;
+    return hashed;
+  }
+  function hashOf(text) {
+    var sum = 7;
+    for (var at = 0; at < text.length; at += 1) sum = (sum * 31 + text.charCodeAt(at)) % 1679616;
+    return sum.toString(36);
   }
   /** the reason a field is read-only: role {ok:false, why} (permission) outranks readonly:'sentence' (state); null when it can be typed in */
   function readonlyReason(options) {

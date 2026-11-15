@@ -72,12 +72,58 @@ vm.runInContext(read('app/ui-field.js'), page);
 vm.runInContext(read('app/cap-catsetup.js'), page);
 page.catsetUnitMeasured = () => true; /* after the script: its own function would replace the stub */
 const calls = [];
+const realRuleSet = page.catsetUomRuleSet; /* the page's own function, for the refusals below */
 page.catsetUomRuleSet = (unit, field, value) => calls.push([unit, field, value]);
-const rule = page.catsetUomRuleHTML('KGM');
+let rule = page.catsetUomRuleHTML('KGM');
 const tolBox = (rule.match(/<input[^>]* id="uomr_KGM_t"[^>]*>/) || [''])[0];
 check(/data-cbmount="CAT004-U03"/.test(tolBox) && /data-testid="uom-tol-KGM"/.test(tolBox) && tolBox.indexOf('aria-label="[Round down within] KGM"') > 0, 'the tolerance box is a compact CMP055 number named by its label and its unit, testid kept');
 check(rule.indexOf('data-cbsid="CAT004-I0') < 0 && rule.indexOf('class="cbf"') < 0, 'the row holds no hand-written input and no field wrapper: the one-line layout is in the page rules');
 heard.change({ target: { getAttribute: (name) => ({ 'data-cbname': 'field', 'data-cbkind': 'number' }[name]), id: 'uomr_KGM_t', value: '0.5' } });
 check(calls.length === 1 && calls[0].join('|') === 'KGM|tol|0.5', 'a change on it reaches catsetUomRuleSet(unit, tol, value): ' + calls.map((c) => c.join('|')).join(';'));
+
+console.log('U03 / U04: the limits the old type=number box had');
+const minBox = (rule.match(/<input[^>]* id="uomr_KGM_m"[^>]*>/) || [''])[0];
+check(/ min="0"/.test(tolBox) && / step="0\.001"/.test(tolBox) && / min="0"/.test(minBox) && / step="0\.001"/.test(minBox), 'both boxes carry min 0 and step 0.001 again');
+const typed = (id, value) => heard.change({ target: { getAttribute: (name) => ({ 'data-cbname': 'field', 'data-cbkind': 'number' }[name]), id, value } });
+calls.length = 0;
+typed('uomr_KGM_m', '');
+check(calls.length === 1 && calls[0][2] === '', 'a blank box reaches the page as an empty value (the page reads it as 0, as the old box did)');
+const toasts = [];
+page.toast = (message) => toasts.push(message);
+page.catsetUomRuleSet = realRuleSet;
+rule = page.catsetUomRuleHTML('KGM'); /* drawn again: the handlers bind the function they find at draw time */
+for (const id of ['uomr_KGM_t', 'uomr_KGM_m']) {
+  toasts.length = 0;
+  typed(id, '-1');
+  check(toasts.length === 1, id + ': a negative number is refused with a sentence, not stored');
+  toasts.length = 0;
+  typed(id, '1,5');
+  check(toasts.length === 1, id + ': "1,5" in a "." locale is refused, never read as 15 or 1.5');
+}
+check(!ui.field.parse('1,5').ok && ui.field.parse('1.5').value === '1.5', 'the one number reader: 1,5 is an error and 1.5 is canonical');
+
+console.log('names and sizes of the other converted inputs');
+const own = read('app/cap-catsetup.js');
+const mounts = [...own.matchAll(/ui\.field\(\{ mount: '(CAT004-U\d\d)'/g)].map((hit) => [own.slice(hit.index, hit.index + 480).split('onChange')[0], hit[1]]);
+check(mounts.length === 10, 'ten compact mounts are written in cap-catsetup (' + mounts.length + ')');
+for (const [call, mount] of mounts) {
+  const rowly = ['CAT004-U01', 'CAT004-U02', 'CAT004-U03', 'CAT004-U04', 'CAT004-U05', 'CAT004-U07', 'CAT004-U08', 'CAT004-U09', 'CAT004-U10'].includes(mount);
+  check(/density: 'compact'/.test(call) && /label: '/.test(call) && (!rowly || /\bof: /.test(call)), mount + ' is compact, has a label, and a repeated row names itself with of');
+}
+const planRows = [{ product: 'p1' }, { product: 'p1' }, { product: '' }];
+const prods = [{ item_id: 'p1', item_data: { name: 'Rice' } }];
+const names = planRows.map((item, index) => page.catsetPlanLabel(item, prods, index));
+check(names.join('|') === '#1 Rice|#2 Rice|#3 [every product]' && new Set(names).size === 3, 'each plan row has its own name for its From and To: ' + names.join(' | '));
+const style = read('app/ui-field.js');
+check(/@media\(max-width:700px\)\{[^]*input\[type="checkbox"\]\.cbf-dn\{-webkit-appearance:none;appearance:none;width:max\(44px,var\(--act-h,44px\)\);height:max\(44px,var\(--act-h,44px\)\)/.test(style), 'a compact checkbox is a 44 px box of its own on a phone (U01, U02, U05): the hit area is the input, not a margin');
+check(/cbf-dn\[type="checkbox"\]::before\{[^}]*width:22px;height:22px/.test(style), 'the drawn box is 22 px inside the 44 px hit area');
+
+console.log('ids made from a key never clash');
+const first = ui.field({ mount: 'CAT004-U30', kind: 'text', density: 'compact', key: 'X.1', label: 'a' });
+const second = ui.field({ mount: 'CAT004-U30', kind: 'text', density: 'compact', key: 'x1', label: 'b' });
+const idIn = (html) => (html.match(/ id="([^"]+)"/) || [])[1];
+check(idIn(first) !== idIn(second), 'two keys that sanitise to one id get two ids (' + idIn(first) + ', ' + idIn(second) + ')');
+check(idIn(ui.field({ mount: 'CAT004-U30', kind: 'text', density: 'compact', key: 'X.1', label: 'a' })) === idIn(first) && idIn(ui.field({ mount: 'CAT004-U30', kind: 'text', density: 'compact', key: 'x1', label: 'b' })) === idIn(second), 'a redraw of the same key keeps its id');
+
 console.log(failures ? failures + ' FAILED' : 'ALL PASS');
 process.exit(failures ? 1 : 0);
