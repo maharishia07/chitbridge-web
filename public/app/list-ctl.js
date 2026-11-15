@@ -610,7 +610,7 @@
       var n = String(c.label || c.key).length + 3; /* the header also carries its sort and filter marks */
       sample.forEach(function (row) {
         var cell = cellOf(I, c, row),
-          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
+          len = plainText(cell).trim().length + (c.html ? (String(cell).match(/<(?:button|a)[\s>]/g) || []).length * 7 : 0); /* a button in the cell is wider than its words: its padding counts */
         if (len > n) n = len;
       });
       chars[c.key] = n;
