@@ -1412,7 +1412,7 @@ function payPaint() {
             );
           })
           .join('') +
-        '</tbody></table>';
+        '</tbody></table></div>';
   payLeftPaint();
   var list = payOpenWarnings();
   if (band) {
@@ -5130,8 +5130,8 @@ function bkLockRowsPaint() {
     })
     .join('');
   el.innerHTML =
-    '<style>.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
-    '<table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
+    '<style>.lk-box{max-height:calc(100vh - 340px);min-height:160px;overflow:auto}.lk-t th{position:sticky;top:0;background:var(--bg,#fff);z-index:1}.lk-t td,.lk-t th{padding:3px 8px;text-align:left;vertical-align:middle}.lk-t .num{text-align:right}.lk-t button{padding:3px 10px;min-height:0}</style>' +
+    '<div class="lk-box" data-testid="lk-box"><table class="tbl lk-t" data-testid="lk-table" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' +
     tx('Month') +
     '</th><th>' +
     tx('State') +
@@ -5141,7 +5141,7 @@ function bkLockRowsPaint() {
     tx('Sales') +
     '</th><th></th></tr></thead><tbody>' +
     rows +
-    '</tbody></table>';
+    '</tbody></table></div>';
 }
 /* lock or unlock one month, asking the server and flipping only that row */
 async function bkLockDo(what, period) {

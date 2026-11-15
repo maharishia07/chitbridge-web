@@ -74,7 +74,7 @@ function peList(r, k) {
 
 /* ── words: the server's sentence, its one fix button, and the calm line for "not migrated yet" ── */
 function peFix(msg, code) {
-  if (code === 'PERIOD_RETURN_OPEN') return { label: tx('Open') + ' ' + peReturnName(), tab: 'gstclose' }; /* ACC-204: the year close waits for every BAS period — branch on the code, never the prose */
+  if (code === 'PERIOD_RETURN_OPEN') return { label: txf('Open {name}', { name: peReturnName() }), tab: 'gstclose' }; /* ACC-204: the year close waits for every BAS period — branch on the code, never the prose */
   if (/locked|closed for good/i.test(msg)) return { label: tx('Open Month lock'), tab: 'lock' };
   return null;
 }
@@ -1580,7 +1580,7 @@ async function peYearView(body) {
 /** the page's fix for a failing check: where to go (the check's own sentence says what is wrong) */
 function peYearFix(x) {
   const s = (x.name || '') + ' ' + (x.why || '');
-  if (x.code === 'PERIOD_RETURN_OPEN' || x.name === 'return_open') return { label: tx('Open') + ' ' + peReturnName(), tab: 'gstclose' }; /* ACC-204: the server's code first */
+  if (x.code === 'PERIOD_RETURN_OPEN' || x.name === 'return_open') return { label: txf('Open {name}', { name: peReturnName() }), tab: 'gstclose' }; /* ACC-204: the server's code first */
   if (/month|lock/i.test(s)) return { label: tx('Open Month lock'), tab: 'lock' };
   if (/suspense/i.test(s)) return { label: tx('Open the Day book'), tab: 'daybook' };
   if (/balance|trial/i.test(s)) return { label: tx('Open Trial balance'), tab: 'tb' };
