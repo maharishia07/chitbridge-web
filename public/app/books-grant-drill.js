@@ -31,8 +31,7 @@
   }
   function whenWords(iso) {
     if (!iso) return '';
-    var d = new Date(iso);
-    return isNaN(d.getTime()) ? String(iso) : d.toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return root.shopStamp(iso);
   }
   function read(ctx, key, params, query) {
     return root.CBBooksGrantApi.run(ctx.call, key, { params: params, query: query, headers: root.CBBooksActing.headers() });
@@ -102,7 +101,7 @@
       columns: cols.map(function (c, i) {
         return {
           key: c[0], label: words(c[1]), prio: i < 2 || c[2] ? 1 : 2, w: c[2] ? 120 : c[0] === 'what' ? 200 : 110,
-          cell: function (row) { return c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
+          cell: function (row) { return c[2] === MONEY ? root.CBBooksActing.figure(row[c[0]], currency) : c[0] === 'date' && row.date ? root.shopDay(row.date) : row[c[0]] == null || row[c[0]] === '' ? '—' : String(row[c[0]]); },
           value: function (row) { return row[c[0]] == null ? '' : String(row[c[0]]); }
         };
       }),
@@ -126,7 +125,7 @@
     var reversal = entry.reversed_by ? '<div class="nw-why" role="status" data-testid="bd-reversed">' + esc(words('Reversed by') + ' ' + entry.reversed_by) + '</div>' : '';
     show(ctx,
       (back ? '<button data-cbsid="NET005-B04" type="button" class="act quiet" id="bd_back" data-testid="bd-back">← ' + esc(words('Back to the ledger')) + '</button>' : '') +
-      '<h2 data-testid="bd-title">' + esc(entry.entry_no) + '</h2><p class="sub">' + esc(entry.posting_date + ' · ' + entry.narration) + '</p>' +
+      '<h2 data-testid="bd-title">' + esc(entry.entry_no) + '</h2><p class="sub">' + esc(root.shopDay(entry.posting_date) + ' · ' + entry.narration) + '</p>' +
       (madeBy ? '<p class="sub" data-testid="bd-who">' + esc(madeBy) + '</p>' : '') + reversal +
       '<div class="nw-acts" data-testid="bd-facts">' + fact('Amount', root.CBBooksActing.figure(debit, shown), 'amount') + fact('Total debit', root.CBBooksActing.figure(debit, shown), 'dr') + fact('Total credit', root.CBBooksActing.figure(credit, shown), 'cr') +
       (debit === credit ? '' : '<span class="tag" data-testid="bd-unbalanced">' + esc(words('Debit and credit differ')) + '</span>') + '</div>' +

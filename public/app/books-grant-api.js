@@ -108,8 +108,7 @@
   }
   var ROLE_NAME = { adviser: 'Adviser', auditor: 'Auditor' };
   function dayOf(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return root.shopDay(value);
   }
   /** a client's grant row (live or ended) for a firm's list: Role · Since · Until */
   function grantOf(lists, store) {

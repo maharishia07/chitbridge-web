@@ -70,12 +70,10 @@
   }
   /** a day as a person reads it, from the server's moment */
   function dayWords(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    return root.shopDay(value);
   }
   function whenWords(value) {
-    var d = new Date(value);
-    return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return root.shopStamp(value);
   }
   /** the value a date box takes: the day in the browser's own calendar */
   function dayValue(d) {

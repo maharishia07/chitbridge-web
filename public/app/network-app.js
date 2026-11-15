@@ -441,7 +441,7 @@
           prio: 4,
           w: 130,
           cell: function (o) {
-            return o.until ? String(o.until).slice(0, 10) : '—';
+            return o.until ? shopDay(o.until) : '—';
           },
           value: function (o) {
             return o.until || '';
