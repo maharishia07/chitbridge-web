@@ -31,7 +31,7 @@
     refused: 'The books refused this entry',
     bank_leg_mismatch: "Entry does not match the bank line's amount",
     tax_kind: 'Tax needed',
-    not_here: 'Record it as a payment in Dues, or ask the party',
+    not_here: 'Not added from a bank line yet: record it in Books, then load the statement again',
     no_entry: 'Needs you'
   };
   /** the blockers a person answers on the line, in the order they are asked (is it new at all? then the tax, then the tick); every other blocker is only shown */
@@ -154,7 +154,7 @@
     var proposal = opts.engine.recon.suggest(line, suggestOpts);
     if (!asked || !entry || !entry.resolve) return holdProposal_(proposal, opts);
     var answers = { party: asked.party && asked.party.id, party_name: asked.party && asked.party.name, account: asked.account, tax_kind: asked.tax_kind };
-    var resolved = entry.resolve(line, answers, suggestOpts);
+    var resolved = entry.resolve(line, answers, suggestOpts); /* engines #147: a payee-less line composes once with learned:false and no taught rule — nothing is stored on the device either way */
     if (resolved.ok === false) {
       preview.resolveRefusal[ref] = resolved.why;
       return proposal;
@@ -162,19 +162,41 @@
     delete preview.resolveRefusal[ref];
     return holdProposal_(resolved, opts);
   }
+  /** the statement as the engine's project() reads it: its currency is what the FILE or the person said (B5-05), its balances and the rows the reader skipped */
+  function statementOf_(opts, parsed) {
+    var stated = (opts.statementCurrency && opts.statementCurrency()) || parsed.currency || null;
+    return { currency: stated, opening_minor: parsed.opening_minor, closing_minor: parsed.closing_minor, skipped: parsed.skipped || [] };
+  }
   /** match against the books, a proposal for each line the books lack (null for a line already there), then the engine's preview of it all */
   function projectNow(opts, preview) {
     var books = opts.ledger(),
       lines = preview.parsed.lines,
-      refs = opts.engine.project.refsOf(lines, opts.account, lines),
+      account = opts.account,
+      refs = opts.engine.project.refsOf(lines, account, lines),
       pass = booksPass(opts, preview, lines, refs, books.lines);
+    /* the statement check runs BEFORE any line is worked: a refusal stops here, in the engine's words */
+    var gate = checkGate_(opts, preview, pass);
+    if (gate.stop) return { ok: false, why: gate.stop };
+    if (gate.account && gate.account !== account) {
+      account = gate.account; /* the statement carries no number: the account the check fingerprinted names the lines */
+      refs = opts.engine.project.refsOf(lines, account, lines);
+      pass = booksPass(opts, preview, lines, refs, books.lines);
+    }
     preview.proposals = lines.map(function (line, index) {
       return pass.held[index] ? null : proposalFor(opts, preview, line, refs[index]);
     });
     /* B5-05: the statement's currency is what the FILE or the person said, never the account's: with none the engine refuses (statement_currency_missing), with another it refuses (currency_mismatch) */
-    var stated = (opts.statementCurrency && opts.statementCurrency()) || preview.parsed.currency || null;
-    var statement = { currency: stated, opening_minor: preview.parsed.opening_minor, closing_minor: preview.parsed.closing_minor, skipped: preview.parsed.skipped || [] };
-    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: opts.account, posted_refs: books.posted_refs || [], period_lines: lines, near: pass.near });
+    var statement = statementOf_(opts, preview.parsed);
+    return opts.engine.project.project(lines, preview.proposals, { currency: opts.currency, opening_minor: books.opening_minor, ledger: books.lines, statement: statement, account: account, posted_refs: books.posted_refs || [], period_lines: lines, near: pass.near });
+  }
+  /** the statement check of this load (null when the host does not ask): { stop, account } — stop is the words that end line work */
+  function checkGate_(opts, preview, pass) {
+    var Check = root.CBBankPreviewCheck;
+    preview.check = null;
+    if (!Check) return {};
+    var made = Check.check(opts, preview, pass);
+    preview.check = made.check;
+    return { stop: made.refusal, account: made.check && made.check.fingerprint_account };
   }
   /** the owner's edit of a line's party (a new name or kind, or an existing party picked from did-you-mean) laid over what the engine said */
   function withPartyEdit(item, edit, asked) {
@@ -184,17 +206,41 @@
   }
   /**
    * what THIS host cannot post from a line, set on the PROPOSAL as the one `needs` code the engine already turns into a blocker, so the engine's own counts and totals (the confirm popup) leave the line out (opt-in: the demo passes neither option).
-   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a payment between parties) says where it is recorded instead (not_here)
+   *   opts.postable      the event types the host's post adapter can post; a line proposing another (a tax payment, a loan, a taxed receipt) says it is not added from here yet (not_here)
    *   opts.taxRegistered true when the shop SAID it is registered for tax (unknown is not true, SET-49): a money-out line the bank's words proposed carries no tax until the owner says what kind
    *                      it is, so it is asked (tax_kind), never defaulted and never posted without. A need the engine already set (the tick, the tax basis) comes first.
    */
   function holdProposal_(proposal, opts) {
     var type = proposal && proposal.event && proposal.event.type;
     if (!type || proposal.needs) return proposal;
-    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0; /* the engine splits a taxed receipt into net + output tax; POST /events carries input tax only, so the bank leg would be short */
-    if ((opts.postable && opts.postable.indexOf(type) < 0) || outputTax) return Object.assign({}, proposal, { needs: 'not_here' });
+    if (cannotPostHere_(proposal, type, opts)) return Object.assign({}, proposal, { needs: 'not_here' });
     if (opts.taxRegistered === true && type === 'expense' && !proposal.tax) return Object.assign({}, proposal, { needs: 'tax_kind' });
     return proposal;
+  }
+  /** the host cannot post this proposal: its kind is not on the host's list, or the engine split a taxed receipt into net + output tax (POST /events carries input tax only, so the bank leg would be short) */
+  function cannotPostHere_(proposal, type, opts) {
+    var outputTax = proposal.tax && proposal.tax.direction === 'output' && proposal.tax.tax_minor > 0;
+    return !!outputTax || (!!opts.postable && opts.postable.indexOf(type) < 0);
+  }
+  /** what the statement check says of this line already being done (who, when), or null */
+  function alreadyOf_(preview, index) {
+    return (root.CBBankPreviewCheck && root.CBBankPreviewCheck.alreadyByLine(preview.check)[index]) || null;
+  }
+  /** the owner's answers to the statement check, as controller methods: tick a finding (confirmCheck) · pick the account (chooseAccount); each reads the statement again */
+  function checkAnswers(opts, preview) {
+    var again = function () {
+      return preview.parsed ? projectAgain(opts, preview) : false;
+    };
+    return {
+      confirmCheck: function (code) {
+        preview.confirmed = (preview.confirmed || []).concat(code);
+        return again();
+      },
+      chooseAccount: function (id) {
+        preview.chosenAccount = id;
+        return again();
+      }
+    };
   }
   /** read the books again and project again; false (with the engine's words in preview.refusal) when the engine refuses */
   function projectAgain(opts, preview) {
@@ -208,6 +254,7 @@
     preview.items = out.lines.map(function (projected, index) {
       var item = lineOf_(projected, preview.parsed.lines[index], preview.proposals[index], opts.lockedMonth, out.parties_to_create || []);
       item.resolveWhy = preview.resolveRefusal[projected.ref] || null;
+      item.alreadyWhy = alreadyOf_(preview, index);
       return withPartyEdit(item, preview.partyEdits[projected.ref], preview.resolved[projected.ref]);
     });
     return true;
@@ -259,15 +306,33 @@
   /** one adapter call, one line; a throw or a refusal is that line's reason, never the end of the others */
   async function postOne(opts, preview, item) {
     try {
-      var reply = await opts.post(item);
+      var reply = await opts.post(Object.assign({}, item, { ticked: !!preview.ticks[item.key] }));
       preview.results[item.key] = reply && reply.ok ? { ok: true, duplicate: !!reply.duplicate, entry_no: reply.entry_no || null } : { ok: false, why: (reply && reply.why) || 'Not added.' };
     } catch (failure) {
       preview.results[item.key] = { ok: false, why: (failure && failure.message) || 'Not added.' };
     }
   }
+  /** a ready line that repeats an earlier ready line of THIS statement (same party, same side, same figure, same day) is marked twin: the bank itself shows two payments, so the host may answer the server's "already paid?" for it */
+  /** who a line is with, as one string: a party the books know by its id, a NEW party (its id is made per line) by kind and name; '' when the line has none */
+  function partySignOf_(item) {
+    var party = item.party || {};
+    return party.status === 'new' ? 'new:' + party.kind + ':' + String(party.name).toLowerCase() : party.id || (item.event && item.event.party) || '';
+  }
+  function markTwins_(todo) {
+    var seen = {};
+    return todo.map(function (item) {
+      var line = item.line || {}, party = partySignOf_(item);
+      var sign = [party, line.date, line.credit_minor, line.debit_minor].join('|');
+      var twin = !!party && !!seen[sign];
+      seen[sign] = true;
+      return twin ? Object.assign({}, item, { twin: true }) : item;
+    });
+  }
   /** post every ready line in order, tell the page after each (onLine(item, result)), then read the books again so the preview is the truth */
   async function postReady(opts, preview, onLine) {
-    var todo = readyItems(preview);
+    var owed = root.CBBankPreviewCheck ? root.CBBankPreviewCheck.pendingCodes(preview.check) : [];
+    if (owed.length) return { tried: 0, added: 0, failed: 0, blocked: 'Answer the questions about this statement first.' };
+    var todo = markTwins_(readyItems(preview));
     for (var position = 0; position < todo.length; position++) {
       await postOne(opts, preview, todo[position]);
       if (onLine) onLine(todo[position], preview.results[todo[position].key]);
@@ -293,7 +358,7 @@
   }
   /** read the statement text; the state is filled and the first projection made, or the words for why not */
   function loadStatement(opts, preview, text, name) {
-    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} });
+    Object.assign(preview, { results: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {}, confirmed: [], chosenAccount: null, check: null });
     var read = readText(opts, text);
     if (!read.refusal) {
       Object.assign(preview, { parsed: read.parsed, name: name || '' });
@@ -391,7 +456,7 @@
    */
   function create(opts) {
     var preview = { proposals: [], parsed: null, projection: null, items: [], results: {}, name: '', refusal: null, answers: {}, partyEdits: {}, resolved: {}, resolveRefusal: {}, ticks: {}, invoice: {}, pairs: {}, notMatch: {} };
-    return Object.assign(answerMethods(opts, preview), {
+    return Object.assign(answerMethods(opts, preview), checkAnswers(opts, preview), {
       load: function (text, name) {
         return loadStatement(opts, preview, text, name);
       },
@@ -419,7 +484,7 @@
         return readyItems(preview).length;
       },
       view: function () {
-        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal };
+        return { name: preview.name, parsed: preview.parsed, projection: preview.projection, items: preview.items, results: preview.results, refusal: preview.refusal, check: preview.check || null };
       }
     });
   }

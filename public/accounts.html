@@ -330,7 +330,7 @@ function go() {
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
-<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
+<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP, CB_SHOP_EP);</script>   <!-- CB_PARTY_EP: supAdd — a Waiting bill's "Add supplier" (F11) -->
 <script src="/engine/money.js"></script>
 <script src="/engine/locale.js"></script>
 <script src="/app/helpers.js"></script>
@@ -355,7 +355,7 @@ function go() {
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script src="/app/cap-bank-store.js"></script>   <!-- Bank marks on the server (FIN-70): replayed through CBBankRecon.step; until the SQL runs they stay on this device and the page says so -->
 <script src="/engine/bank-project.js"></script>   <!-- CBBankProject: the books as they will read once the ready lines are in (FIN-117) -->
-<script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
+<script src="/engine/bank-statement-check.js"></script><script src="/app/bank-preview-check.js"></script><script src="/app/bank-preview.js"></script>   <!-- CBBankPreview: statement → match → proposals → preview → confirm, the one module the no-login demo also runs -->
 <script src="/app/bank-preview-ui.js"></script>   <!-- CBBankPreviewUI: the one painter of the lines and their questions -->
 <script src="/app/cap-bank-post.js"></script>   <!-- CBBankPost: one confirmed line → POST /events (owner) -->
 <script src="/app/cap-bank-sheet.js"></script>   <!-- the Add to your books sheet over the Bank view -->

@@ -23,7 +23,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-adopt.js` | lazy · on demand | TAKING A SUPPLIER'S DELIVERY INTO YOUR OWN CATALOGUE |
 | `cap-assist.js` | — |  |
 | `cap-attach.js` | — |  |
-| `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ), after its NEW |
+| `cap-bank-post.js` | — | cap-bank-post.js — the IN-APP post adapter for public/app/bank-preview.js: one confirmed bank line becomes one POST /events (series MJ) or one POST /p |
 | `cap-bank-sheet.js` | — | cap-bank-sheet.js — the Bank view's "Add to your books" SHEET (FIN-117): the statement's lines against the books, the questions each line asks, one co |
 | `cap-bank-store.js` | — | cap-bank-store.js — the SERVER STORE of the Bank view's marks (FIN-70, web half; api: POST /bank/marks, POST /bank/statements, GET /bank/log) |
 | `cap-bank.js` | — | cap-bank.js — BANK on CB Accounts (Daily): a statement file is read, matched to the shop's bank ledger, and the lines the Ledger lacks are added |
@@ -91,7 +91,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (72)
+## Shared (73)
 
 | file | loading | what it is |
 |---|---|---|
@@ -100,6 +100,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `attach-ui.js` | eager | ATTACH + VIEW, as a helper any screen can reuse. (classic script, shared global scope) |
 | `avatar.js` | eager |  |
 | `bank-demo.js` | — | bank-demo.js — the page script of public/bank-demo.html (the no-login Bank-to-books showcase). External, because the page's CSP allows no inline scrip |
+| `bank-preview-check.js` | — | bank-preview-check.js — THE STATEMENT CHECK for public/app/bank-preview.js: "is this the right statement?" asked BEFORE any line is worked |
 | `bank-preview-ui.js` | — | bank-preview-ui.js — the ONE painter of the Bank-to-books statement lines (shared by the no-login demo and the in-app Bank sheet) |
 | `bank-preview.js` | — | bank-preview.js — BANK STATEMENT → BOOKS, the ONE module: load → match → proposals → preview → confirm with reach → post |
 | `barcode.js` | eager | CBBarcode — Code 128 as inline SVG, no dependency, no network |
@@ -185,7 +186,7 @@ Each page is a module of its own (its inline script and header). The count is th
 
 | page | app/ scripts | what it is |
 |---|---|---|
-| `accounts.html` | 37 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
+| `accounts.html` | 38 | the CB Accounts page: Ledger · Day book · Dues · Month & year end · Returns (cap-books.js · cap-period.js paint the server's figures). |
 | `app.html` | 35 | the workshop: the Task panel and every capability screen (cap-*.js loaded on demand) — not a customer page (index-not-app). |
 | `authority-forms.html` | 12 | the Authority forms page: a statutory form's boxes as the law names them, read from the server (never computed here). |
 | `bank-demo.html` | 5 | the no-login Bank-to-books showcase: a bank statement checked against sample books, the books as they WILL read, the reconciliation, then "add" into |
@@ -231,4 +232,4 @@ Each page is a module of its own (its inline script and header). The count is th
 
 ---
 
-*143 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*144 app modules, 4 other scripts, 43 pages. Regenerate with `node tools/gen-modules-doc.cjs`.*

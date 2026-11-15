@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.97.0 · bank-recon · sha256 893588afdd4887fd219d7d654c7e73a63d8dd8ad413a835dac095ce080c62254 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.96.0 · bank-recon · sha256 7a951d22b4e7efeb6eccbf58a9beb770e018f10af77cb094b528b3c98cae587c — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · bank-recon. Edited ONLY in chitbridge-engines/src/bank-recon.js; every platform adopts a released version of it. */
 /*
  * OWNS      reading a bank statement (CSV or JSON, India presets and the Account Aggregator schema), matching its lines to the Ledger's bank lines and to the payment advices on the rail, suggesting the entry a missing line needs (a proposal, never posted), the Bank Reconciliation Statement, and the device's accept / note / attach marks
