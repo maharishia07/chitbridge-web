@@ -515,7 +515,7 @@ function bankMoreHtml(worked) {
   return (
     '<span class="bk-menu"><button data-cbsid="BKS014-B19" type="button" class="act" id="bk_more" data-testid="bank-more" aria-haspopup="menu" aria-expanded="false" onclick="bankMoreToggle()">' +
     bkbE(tx('More')) + ' ▾</button><div class="bk-pop" id="bk_pop" role="menu" data-testid="bank-more-menu" hidden>' +
-    '<button data-cbsid="BKS014-B01" type="button" role="menuitem" class="bk-mi" data-testid="bank-tab-brs" onclick="bankMoreToggle(false);BKB.tab='brs';bankPaint()">' + bkbE(tx('The statement and sign-off')) + '</button>' +
+    '<button data-cbsid="BKS014-B01" type="button" role="menuitem" class="bk-mi" data-testid="bank-tab-brs" onclick="bankMoreToggle(false);BKB.tab=\'brs\';bankPaint()">' + bkbE(tx('The statement and sign-off')) + '</button>' +
     download + '</div></span>'
   );
 }
