@@ -43,7 +43,7 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
   await k.keyboard.press('Enter');
   ok(await k.evaluate(() => !!document.activeElement && document.activeElement.tagName === 'MAIN'), 'Enter on it moves focus to the main region');
   for (const [w, h] of [[1366, 768], [390, 844]]) {
-    for (const hash of ['/list-lab.html', '/accounts.html#daybook', '/accounts.html#bank', '/crm.html']) {
+    for (const hash of ['/list-lab.html', '/accounts.html#daybook', '/accounts.html#bank', '/accounts.html#tb', '/network.html', '/crm.html']) {
       const ctx = await b.newContext({ viewport: { width: w, height: h }, serviceWorkers: 'block' });
       await ctx.route(/fonts.(googleapis|gstatic).com/, (r) => r.abort());
       await ctx.route('**/api/**', (r) => { const pp = new URL(r.request().url()).pathname; if (pp === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Books Shop', currency_code: 'AUD', ui_prefs: {} } }); return booksRoute(S, r); });
