@@ -26,7 +26,7 @@ if (typeof EP !== 'undefined') {
     booksEvents: { m: 'GET', p: '/api/books/events' },
     booksPreview: { m: 'POST', p: '/api/books/preview' },
     booksEventPost: { m: 'POST', p: '/api/books/events' } /* ONE save door for every event (the server's own composition); `event` names which */,
-    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }
+    booksReverse: { m: 'POST', p: '/api/books/entries/:id/reverse' }, booksActionPrepare: { m: 'POST', p: '/api/books-actions', idem: 'attempt' } /* ACC-176b: an adviser PREPARES, or posts under adviser_posts */
   });
 }
 
@@ -311,7 +311,7 @@ function enActs() {
     esc(tx('Back')) +
     '</button>' +
     (last
-      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx('Save')) + '</button>'
+      ? '<button data-cbsid="CMP001" class="en-btn pri" data-testid="en-save" id="en_save" onclick="enSave(this)"' + (can ? '' : ' disabled') + '>' + esc(tx(enActingAdviser() ? (CBBooksActing.posts() ? 'Post' : 'Prepare') : 'Save')) + '</button>'
       : '<button data-cbsid="SCR022-B01" class="en-btn pri" data-testid="en-next" id="en_next" onclick="enNext()"' +
         (enStepReady(EN.step) ? '' : ' disabled') +
         '>' +
@@ -1051,15 +1051,12 @@ async function enSave(btn) {
 /** the one write: POST /events with the sheet's client_ref; then the Saved screen, the Day book and the opener are told — a refusal shows under the preview */
 async function enSaveWrite() {
   EN.saving = true;
-  var body = enBody();
-  body.client_ref = EN.ref;
+  var body = enBody(); body.client_ref = EN.ref;
   if (EN.photo) body.attachment = EN.photo;
   try {
-    var reply = await api('booksEventPost', { body: body });
-    EN.saved = reply || {};
-    EN.saving = false;
-    EN.ref = null;
-    enSavedTell(EN.saved);
+    var reply = enActingAdviser() ? await CBBooksActing.prepare(api, tx, body, bkToday().slice(0, 7)) : await api('booksEventPost', { body: body });
+    EN.saved = reply || {}; EN.saving = false; EN.ref = null;
+    if (!EN.saved.prepared || EN.saved.posted) enSavedTell(EN.saved);
     enPaint();
   } catch (e) {
     EN.saving = false;
@@ -1069,6 +1066,8 @@ async function enSaveWrite() {
     enPaint2();
   }
 }
+/** this sheet is open on a page acting for a store as the adviser: Save PREPARES, or POSTS under the grant's adviser_posts (CBBooksActing is loaded only by the pages that act) */
+function enActingAdviser() { return typeof CBBooksActing !== 'undefined' && CBBooksActing.isAdviser(); }
 /** after a save: the Day book, the Books to-do and the opener (R106: Payables) are told — a painter that fails is logged, the save stands */
 function enSavedTell(saved) {
   try {
@@ -1082,6 +1081,7 @@ function enSavedTell(saved) {
 }
 /** the "Saved" screen after a successful save, with its entry number and the next actions */
 function enPaintSaved(body, acts) {
+  if (EN.saved.prepared) return CBBooksActing.paintPrepared(body, acts, EN.saved, tx, esc);
   var s = EN.saved,
     no = s.entry_no || s.no || '';
   body.innerHTML =

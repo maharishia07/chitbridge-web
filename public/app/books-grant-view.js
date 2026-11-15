@@ -1,27 +1,30 @@
 /**
  * books-grant-view.js — ACC-176, THE AUDITOR'S SIDE: a member's books, READ ONLY.
  *
- * OWNS      the read-only books view an auditor opens from "My network" for one member store: the "Viewing <store> — read only" band, the back link, six reads (Trial balance · Profit and loss · Balance sheet · Day book · Who owes whom · Closed months) as CBLists
+ * OWNS      the books view a firm opens from "My network" for one member store: for an auditor the "Viewing <store> — read only" band, for an adviser the frozen "Acting for <store>, <currency>" banner (CBBooksActing) with its store switch and an "Actions" tab (the queues); the back link; six reads (Trial balance · Profit and loss · Balance sheet · Day book · Who owes whom · Closed months) as CBLists
  * CALLED BY network-app.js ("Open books" on a member row that holds a live grant)
- * FLOW      mount(host, o) → GET /api/books/<read> with X-Books-For: <member> (the server checks the grant on every look and writes the log row) → rows + totals painted as the server sent them; a refusal is shown in the server's words
+ * FLOW      mount(host, o) → GET /api/books/<read> with the headers of CBBooksActing (the server checks the grant on every look and writes the log row) → rows + totals painted as the server sent them; a refusal is shown in the server's words
  * CARD      04-network/ACC-176-AUDITOR-GRANT
  *
- * This screen has NO write control: nothing here adds, changes or exports a book. It paints what the server answered and computes nothing. A look the server refuses (a grant that ended, a part not open to an auditor)
+ * This screen has NO write control: nothing here adds, changes or exports a book (the adviser's writes live in books-actions-view.js, which this screen only mounts). It paints what the server answered and computes nothing. A look the server refuses (a grant that ended, a part not open to an auditor)
  * is said in its own sentence, never as an empty table.
- *   CBBooksGrantView.mount(host, { call, member: { id, name }, onBack, mountList }) → { destroy }
+ *   CBBooksGrantView.mount(host, { call, member: { id, name, role }, onBack, onSwitch, stores, mountList, sheet, closeSheet }) → { destroy }
  *
- * REUSE (named in the PR): CBList (via mountList) · CBBooksGrantApi (endpoints + header) · fmtMoney / CBMoney.decimals (money as the books screens paint it) · the page's own call (token, base, 401)
+ * ACC-176c: a trial balance, profit and loss or balance sheet row opens that account's ledger; a Day book row opens its entry (books-grant-drill.js).
+ *
+ * REUSE (named in the PR): CBBooksGrantDrill · CBList (via mountList) · CBBooksGrantApi (endpoints) · CBBooksActing (headers, banner, figure) · CBBooksActionsView (the queues) · the page's own call (token, base, 401)
  */
 (function (root) {
   'use strict';
   var viewState = { host: null, o: {}, report: 'tb', day: '', answer: null, why: null };
   var MONEY = 'money'; /* a column kind: the server's minor units, painted in the answer's currency */
+  var ACTIONS = 'actions'; /* the adviser's seventh tab: the three queues */
   /** each read: its endpoint, how the day box maps to its question, the rows it lists and the totals it shows (names are the server's own keys) */
   var REPORTS = [
-    { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']] },
-    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']] },
-    { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']] },
-    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return a.entries || []; }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['event_type', 'Kind'], ['narration', 'What it was']], facts: [] },
+    { k: 'tb', label: 'Trial balance', ep: 'readTB', day: 'asOf', rows: function (a) { return a.rows || []; }, cols: [['code', 'Code'], ['name', 'Account'], ['group', 'Group'], ['dr_minor', 'Debit', MONEY], ['cr_minor', 'Credit', MONEY]], facts: [['total_dr_minor', 'Total debit'], ['total_cr_minor', 'Total credit']], drill: 'ledger' },
+    { k: 'pl', label: 'Profit and loss', ep: 'readPL', day: 'to', rows: function (a) { return side(a.income, 'Income').concat(side(a.expense, 'Expense')); }, cols: [['side', 'Type'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_income_minor', 'Income'], ['total_expense_minor', 'Expense'], ['profit_minor', 'Profit']], drill: 'ledger' },
+    { k: 'bs', label: 'Balance sheet', ep: 'readBS', day: 'asOf', rows: function (a) { return side(a.assets, 'Assets').concat(side(a.liabilities, 'Liabilities'), side(a.equity, 'Equity')); }, cols: [['side', 'Part'], ['code', 'Code'], ['name', 'Account'], ['amount_minor', 'Amount', MONEY]], facts: [['total_assets_minor', 'Assets'], ['total_liab_equity_minor', 'Liabilities and equity']], drill: 'ledger' },
+    { k: 'daybook', label: 'Day book', ep: 'readDaybook', day: 'both', rows: function (a) { return (a.entries || []).map(function (e) { return Object.assign({ amount_minor: root.CBBooksGrantDrill.amountOf(e) }, e); }); }, cols: [['entry_no', 'Entry'], ['posting_date', 'Date'], ['event_type', 'Kind'], ['narration', 'What it was'], ['amount_minor', 'Amount', MONEY]], facts: [], drill: 'entry' },
     { k: 'dues', label: 'Who owes whom', ep: 'readDues', day: 'asOf', rows: function (a) { return a.parties || []; }, cols: [['name', 'Party'], ['side', 'Side'], ['balance_minor', 'Balance', MONEY], ['oldest_due', 'Oldest due']], facts: [['total_minor', 'Total']] },
     { k: 'periods', label: 'Closed months', ep: 'readPeriods', day: null, rows: function (a) { return a.periods || []; }, cols: [['fiscal_year', 'Year'], ['period', 'Month'], ['status', 'State'], ['entries', 'Entries'], ['sales_minor', 'Sales', MONEY]], facts: [] }
   ];
@@ -42,16 +45,20 @@
       return r.k === viewState.report;
     })[0];
   }
-  /** a figure the way the books screens paint it: the server's minor units, the currency's own decimals, never a guessed symbol */
+  /** a figure in the answer's currency, the way the books screens paint it (CBBooksActing.money) */
   function minorWords(minor) {
-    if (minor == null || minor === '') return '—';
-    var code = viewState.answer && viewState.answer.currency;
-    var places = root.CBMoney && root.CBMoney.decimals && code ? root.CBMoney.decimals(code) : NaN;
-    return typeof root.fmtMoney === 'function' && isFinite(places) ? root.fmtMoney(Number(minor) / Math.pow(10, places), code) : String(minor);
+    return root.CBBooksActing.figure(minor, viewState.answer && viewState.answer.currency);
   }
   function figure(row, column) {
     var v = row[column[0]];
     return column[2] === MONEY ? minorWords(v) : v == null || v === '' ? '—' : String(v);
+  }
+  /** the firm's "Actions" tab is open: the queues, not a read */
+  function onActions() {
+    return viewState.report === ACTIONS;
+  }
+  function isAdviser() {
+    return viewState.o.member.role === 'adviser';
   }
   /** the day box → the question each read takes (the server defaults every one to today) */
   function queryOf(report) {
@@ -64,11 +71,13 @@
 
   /* ── the read ── */
   function load() {
+    if (onActions()) return Promise.resolve();
     var report = current();
-    return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: headerOf() }).then(
+    return root.CBBooksGrantApi.run(viewState.o.call, report.ep, { query: queryOf(report), headers: root.CBBooksActing.headers() }).then(
       function (answer) {
         viewState.answer = answer;
         viewState.why = null;
+        root.CBBooksActing.setCurrency(answer && answer.currency);
       },
       function (failure) {
         if (failure.status === 401) throw failure;
@@ -77,30 +86,49 @@
       }
     );
   }
-  function headerOf() {
-    var h = {};
-    h[root.CBBooksGrantApi.HEADER] = viewState.o.member.id;
-    return h;
-  }
 
   /* ── the screen ── */
   function tabs() {
-    return REPORTS.map(function (r) {
+    var all = REPORTS.map(function (r) {
+      return { k: r.k, label: r.label };
+    });
+    if (isAdviser()) all.push({ k: ACTIONS, label: 'Actions' });
+    return all.map(function (r) {
       return (
         '<button data-cbsid="NET005-B02" type="button" id="bv_tab_' + r.k + '" class="act' + (viewState.report === r.k ? '' : ' quiet') + '" data-report="' + r.k + '" data-testid="bv-tab-' + r.k + '" aria-pressed="' + (viewState.report === r.k) + '">' + esc(words(r.label)) + '</button>'
       );
-    }).join('');
+    }).join('') + prepareButton();
+  }
+  /** the adviser's way to prepare a journal: the owner's books page, opened to act for this store (CBBooksActing.addressOf), where Save prepares (or posts, when the owner's grant says adviser_posts) */
+  function prepareButton() {
+    return isAdviser() ? '<button data-cbsid="NET005-B03" type="button" class="act" id="bv_prepare" data-testid="bv-prepare">' + esc(words('Prepare a journal')) + '</button>' : '';
+  }
+  function openPrepare() {
+    root.location.assign(root.CBBooksActing.addressOf(root.CBBooksActing.current().store, 'journal'));
+  }
+  /** the band: an auditor is told it is read only; an adviser gets the frozen banner naming the store and its currency, with the store switch */
+  function band() {
+    if (isAdviser()) return root.CBBooksActing.banner(viewState.o.stores);
+    return (
+      '<div class="bv-band" role="status" data-testid="bv-band"><b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
+      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Back to My network')) + '</button></div>'
+    );
+  }
+  function wireBand() {
+    var back = function () { root.CBBooksActing.leave(); viewState.o.onBack(); };
+    if (isAdviser()) root.CBBooksActing.wireBanner(viewState.host, { onBack: back, onSwitch: viewState.o.onSwitch });
+    else $('bv_back').onclick = back;
   }
   function paint() {
-    var report = current();
+    var report = onActions() ? { day: null, facts: [] } : current();
     viewState.host.innerHTML =
-      '<div class="bv-band" role="status" data-testid="bv-band"><b>' + esc(words('Viewing')) + ' ' + esc(viewState.o.member.name) + ' — ' + esc(words('read only')) + '</b>' +
-      '<button data-cbsid="NET005-B01" type="button" class="act quiet" id="bv_back" data-testid="bv-back">← ' + esc(words('Back to My network')) + '</button></div>' +
+      band() +
       '<div class="nw-acts" data-testid="bv-tabs" role="group" aria-label="' + esc(words('Books')) + '">' + tabs() +
       (report.day ? '<label class="sub" for="bv_day">' + esc(words('Day')) + '</label><input data-cbsid="NET005-I01" id="bv_day" class="inp" type="date" value="' + esc(viewState.day) + '" data-testid="bv-day">' : '') + '</div>' +
       (viewState.why ? '<div class="nw-why" id="bv_why" role="status" data-testid="bv-why">' + esc(viewState.why) + '</div>' : facts(report)) +
       '<div class="nw-list" id="bv_list" data-testid="bv-list"></div>';
-    $('bv_back').onclick = viewState.o.onBack;
+    wireBand();
+    if ($('bv_prepare')) $('bv_prepare').onclick = openPrepare;
     Array.prototype.forEach.call(viewState.host.querySelectorAll('[data-report]'), function (button) {
       button.onclick = function () {
         viewState.report = button.getAttribute('data-report');
@@ -110,7 +138,12 @@
       };
     });
     if ($('bv_day')) $('bv_day').onchange = pickDay;
-    if (!viewState.why) paintRows($('bv_list'), report);
+    if (onActions()) mountQueues();
+    else if (!viewState.why) paintRows($('bv_list'), report);
+  }
+  /** the firm's queues, inside the list area, under the same banner */
+  function mountQueues() {
+    root.CBBooksActionsView.mount($('bv_list'), { call: viewState.o.call, mode: 'firm', mountList: viewState.o.mountList, sheet: viewState.o.sheet, closeSheet: viewState.o.closeSheet });
   }
   function pickDay() {
     viewState.day = $('bv_day').value;
@@ -130,8 +163,14 @@
     var rows = report.rows(viewState.answer || {}).map(function (row, n) {
       return Object.assign({ _n: n }, row);
     });
-    viewState.o.mountList(host, {
+    viewState.o.mountList(host, listConfig(report, rows));
+  }
+  /** the list's configuration for one report: its columns, search, drill and empty state */
+  function listConfig(report, rows) {
+    return {
       key: 'books-grant-' + report.k,
+      csv: false /* read only: no copy of the books leaves this screen */,
+      defaultCols: report.cols.map(function (column) { return column[0]; }) /* an auditor sees every column the server sent (Credit, Amount), not the list's first three */,
       rows: function () {
         return rows;
       },
@@ -162,16 +201,31 @@
           })
           .join(' ');
       },
+      onOpen: report.drill ? function (row) { drill(report, row); } : undefined,
       empty: { title: words('Nothing to show here'), body: words('These books have no entries for this day.') }
-    });
+    };
+  }
+  /** a row opens what is behind it (ACC-176c): an account's ledger (a code on the row), or the journal entry a Day book row is; books-grant-drill.js paints both, read only */
+  function drill(report, row) {
+    var ctx = { call: viewState.o.call, sheet: viewState.o.sheet, mountList: viewState.o.mountList, day: viewState.day, currency: viewState.answer && viewState.answer.currency };
+    if (report.drill === 'entry') root.CBBooksGrantDrill.openEntry(ctx, row, ctx.currency, null);
+    else if (row.code) root.CBBooksGrantDrill.openLedger(ctx, { code: row.code, name: row.name });
   }
   function reload() {
     return load().then(paint, function () {
       if (viewState.o.onEnded) viewState.o.onEnded();
     });
   }
-  function mount(host, o) {
-    viewState = { host: host, o: o, report: 'tb', day: '', answer: null, why: null };
+  var stopForgetting = null;
+  /** the answer and the day of the store that was open are forgotten when the store changes */
+  function forget() {
+    viewState = { host: viewState.host, o: viewState.o, report: 'tb', day: '', answer: null, why: null };
+  }
+  function mount(host, options) {
+    viewState = { host: host, o: options, report: 'tb', day: '', answer: null, why: null };
+    root.CBBooksActing.enter({ id: options.member.id, name: options.member.name }, options.member.role === 'adviser' ? 'adviser' : 'auditor', options.member.posting);
+    if (stopForgetting) stopForgetting();
+    stopForgetting = root.CBBooksActing.onClear(forget);
     reload();
     return {
       destroy: function () {
