@@ -406,16 +406,23 @@ function shopDateTime(ts, opts) {
   return typeof CBLocale !== 'undefined' ? CBLocale.datetime(ts, base) : String(ts || '').replace('T', ' ').slice(0, 16);
 }
 /** ONE rule: which day-book group an entry belongs to — the owner Day book (cap-books.js) and the auditor/firm Day book (books-grant-view.js) both read it (Sales, Receipts, Purchases, Payments, Expenses, Returns, Other) */
-function dayBookKind(e) {
-  var t = String((e && e.event_type) || ''),
-    k = String((e && e.source && e.source.kind) || '');
-  if (/return|credit_note|debit_note/.test(t) || k === 'credit_note') return 'Returns';
-  if (/purchase/.test(t)) return 'Purchases';
-  if (/expense/.test(t) || k === 'expense') return 'Expenses';
-  if (k === 'day' || /sale|walkin/.test(t)) return 'Sales';
-  if (/received|receipt/.test(t) || k === 'receipt') return 'Receipts';
-  if (/payment/.test(t) || k === 'payment') return 'Payments';
-  return k === 'bill' ? 'Sales' : 'Other';
+/* [group, the event_type pattern, the source.kind it also takes] — the first row that fits wins, so the order is the rule */
+var DAY_BOOK_KINDS = [
+  ['Returns', /return|credit_note|debit_note/, 'credit_note'],
+  ['Purchases', /purchase/, null],
+  ['Expenses', /expense/, 'expense'],
+  ['Sales', /sale|walkin/, 'day'],
+  ['Receipts', /received|receipt/, 'receipt'],
+  ['Payments', /payment/, 'payment']
+];
+function dayBookKind(entry) {
+  var type = String((entry && entry.event_type) || ''),
+    sourceKind = String((entry && entry.source && entry.source.kind) || '');
+  var hit = DAY_BOOK_KINDS.filter(function (row) {
+    return row[1].test(type) || (row[2] !== null && row[2] === sourceKind);
+  })[0];
+  if (hit) return hit[0];
+  return sourceKind === 'bill' ? 'Sales' : 'Other';
 }
 /**
  * l16 polish (R09): THE ONE way a screen writes a day or a moment for a person: the shop's locale (AU: 15 Nov 2026, 1:36 pm), never an ISO string and never the browser's own order.
