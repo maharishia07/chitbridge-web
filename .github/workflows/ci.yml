@@ -201,6 +201,7 @@ jobs:
           node e2e/net-24-shop-no-fx-table.test.cjs
           node e2e/ux-109-reach-sweep.test.cjs
           node e2e/ux-109-categories-attach-confirm.test.cjs
+          node e2e/l15-confirm-money-actions.test.cjs
           node e2e/ctry-18-starter-price-follows-country.test.cjs
           node e2e/ctry-23-governance-no-localstorage.test.cjs
           node e2e/ctry-70-india-compared-with.test.cjs

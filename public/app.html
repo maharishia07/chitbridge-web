@@ -9800,6 +9800,25 @@ function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel) {
       onOk();
     };
 }
+/** confirmAsk as a Promise, for a money or price promise (DISCIPLINES: confirm before commit). true on OK; false on Cancel, Escape or the backdrop. Cancel holds the focus, so a stray Enter commits nothing. */
+function askCancelFirst(title, bodyHtml, okLabel) {
+  return new Promise(function (resolve) {
+    confirmAsk(
+      title,
+      bodyHtml,
+      okLabel,
+      function () {
+        resolve(true);
+      },
+      true,
+      function () {
+        resolve(false);
+      }
+    );
+    const cancel = document.querySelector('[data-testid="confirm-cancel"]');
+    if (cancel) cancel.focus();
+  });
+}
 /**
  * ⭐ In-app PROMPT — the text-entry sibling of confirmAsk, and the replacement for every `prompt()` left in the
  * app. Athi, on the supplier panel: *"the message appears from the browser it has to be system message"*.
@@ -16550,6 +16569,32 @@ function prodOfferTerms(rules) {
   }
 }
 
+/** what the add-to-offer confirm shows: the offer (terms and window) and which products it will price */
+function prodOfferAskWords(offerDef, rules, ids) {
+  const names = ids.map((id) => ((UI.prods || []).find((x) => x.id === id) || {}).name || id);
+  const shown = names.slice(0, 3).map(esc).join(', ') + (names.length > 3 ? ' ' + esc(txn('and {count} more', 'and {count} more', names.length - 3)) : '');
+  return (
+    '<div data-testid="po-ask-reach"><b>' + esc(txn('{count} product', '{count} products', ids.length)) + '</b> ' + esc(tx('will be priced by this offer')) + ': ' + shown + '</div>' +
+    '<div style="margin-top:8px"><b>' + esc((offerDef && offerDef.name) || tx('This offer')) + '</b> · ' + esc(prodOfferTerms(rules)) + ' · ' + esc(prodOfferWindow(rules)) + '</div>'
+  );
+}
+/** the item ids after the change: the picked ones unioned in (add) or differenced out */
+function prodOfferNextIds(current, ids, add) {
+  const list = Array.isArray(current) ? current.slice() : [];
+  if (!add) return list.filter((item) => ids.indexOf(item) < 0);
+  ids.forEach((item) => {
+    if (list.indexOf(item) < 0) list.push(item);
+  });
+  return list;
+}
+/** ask before ADDING products to an offer (the busy cover is lifted while the question is up); false = Cancel, nothing is written; taking products off, or an unreadable offer, asks nothing */
+async function prodOfferConfirm(add, offerDef, rules, ids) {
+  if (!add || !rules.kind) return true;
+  hideBusy();
+  if (!(await askCancelFirst(tx('Add to this offer?'), prodOfferAskWords(offerDef, rules, ids), tx('Add')))) return false;
+  showBusy(txn('Adding {count} product…', 'Adding {count} products…', ids.length));
+  return true;
+}
 /**
  * ⚠️ ONE WRITE, AND IT MERGES. The offer's reach is read, unioned (or differenced) with the selection, and saved
  * back as a new definition_version — so the change is versioned like any other change to a term of trade, and a
@@ -16585,6 +16630,8 @@ async function prodOfferApply(offerId, add) {
       {};
     /* The kind is on the DEFINITION; joining it here is what lets the guard below pass for a form-authored offer. */
     const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
+    /* ⭐ ADDING products widens what the offer prices: ask first, showing the reach. Reads above change nothing; the first write is the defSave below. */
+    if (!(await prodOfferConfirm(add, d, rules, ids))) return;
 
     /**
      * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
@@ -16598,17 +16645,7 @@ async function prodOfferApply(offerId, add) {
       return;
     }
     const at = Object.assign({}, rules.applies_to || {});
-    const list = Array.isArray(at.item_ids) ? at.item_ids.slice() : [];
-    let next;
-    if (add) {
-      next = list.slice();
-      ids.forEach(function (item) {
-        if (next.indexOf(item) < 0) next.push(item);
-      });
-    } else
-      next = list.filter(function (item) {
-        return ids.indexOf(item) < 0;
-      });
+    const next = prodOfferNextIds(at.item_ids, ids, add);
 
     /**
      * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
@@ -22531,11 +22568,24 @@ function chitPayAsk(id, form, e) {
   );
   return true;
 }
+/** what the Clear-payment confirm shows: the amount with its currency, the method and the reference (nothing is invented when the row does not carry them) */
+function chitUnpayWords(row) {
+  const bj = (row && (row.business_json || (row.header && row.header.business_json))) || {};
+  const pay = bj.payment || {};
+  const code = (row && (row.currency || (row.summary_json && row.summary_json.currency_code) || (row.header && row.header.currency_code))) || '';
+  return (
+    '<div>' + esc(tx('This clears the recorded payment. The log keeps both entries.')) + '</div>' +
+    '<div style="margin-top:8px"><b data-testid="unpay-amount">' + esc(fmtMoney(pay.amount, code, '—')) + '</b> · <span data-testid="unpay-method">' +
+    esc(String(pay.method || '—').toUpperCase()) + '</span>' + (pay.ref ? ' · <span data-testid="unpay-ref">' + esc(pay.ref) + '</span>' : '') + '</div>'
+  );
+}
 async function chitUnpay(id) {
+  const row = UI.rows && UI.rows.find((x) => x.id === id);
+  if (!(await askCancelFirst(tx('Clear this payment?'), chitUnpayWords(row), tx('Clear payment')))) return;
   try {
     await api('chitUnpay', { params: { id } });
     toast(tx('Payment cleared'));
-    const c = UI.rows && UI.rows.find((x) => x.id === id);
+    const c = row;
     if (c) {
       if (c.business_json) delete c.business_json.payment;
       if (c.header && c.header.business_json) delete c.header.business_json.payment;
