@@ -186,7 +186,7 @@ W.run('marks', async (w) => {
   await w.step('M1', 'Closed months: month names, the sales as the server sent them, and no month that has not begun', async () => {
     await page.setViewportSize(WIDE); await openDaybook(); await page.click(T('bv-tab-periods')); await page.waitForFunction(() => /November 2026/.test((document.querySelector('[data-testid="bv-list"]') || {}).innerText || ''), null, { timeout: 8000 }).catch(() => {});
     const list = await txt(T('bv-list')); await shot('13-closed-months');
-    return { ok: list.includes('November 2026') && !list.includes('2099') && !list.includes('January'), saw: list.slice(0, 160) };
+    return { ok: list.includes('November 2026') && !list.includes('2099') && !list.includes('January') && list.includes('3,702'), saw: list.slice(0, 160) };
   });
   await w.step('S1', 'two grants on one client: the firm is asked which seat, nothing is picked silently; "Open as auditor" opens read only with no Prepare a journal', async () => {
     S.both = true; await page.goto(base + '/network.html'); await page.waitForSelector(T('nw-books-' + MEMBER), { timeout: 20000 });
