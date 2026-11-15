@@ -590,7 +590,7 @@
   }
   /* L16-M7 (Athi, walk 15 Nov): a column is sized from what it holds, between its minimum and a maximum, and ONE column (the name / description) takes the rest of the row.
      A width the person dragged always wins; a column that has not been measured yet (no rows) keeps its declared width. */
-  var AUTO_CHAR = 8.4, AUTO_PAD = 28, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
+  var AUTO_CHAR = 8.4, AUTO_PAD = 32, AUTO_FIRST = 24 /* the first cell also holds the expand caret */, AUTO_MAX = 260, STRETCH_MAX = 420, AUTO_SAMPLE = 200;
   function plainText(html) {
     return String(html).replace(/<[^>]*>/g, '').replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, 'x');
   }
@@ -615,7 +615,7 @@
     cols.forEach(function (c) {
       if (typeof I.s.widths[c.key] === 'number') return;
       var cap = c.key === auto.stretch ? STRETCH_MAX : Math.max(AUTO_MAX, px(c.w, 0));
-      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD)));
+      auto[c.key] = Math.round(Math.min(cap, Math.max(minW(I, c), chars[c.key] * AUTO_CHAR + AUTO_PAD + (c === cols[0] ? AUTO_FIRST : 0))));
     });
     I.auto = sample.length ? auto : null;
   }
