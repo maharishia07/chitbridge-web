@@ -48,7 +48,7 @@ of file each thing is; this says what already does the job.
 | 56 | `table` | `convert.js` | over a stale one should get the fresher answer without having to remove anything. |
 | 56 | `party` | `mint.js` | passed through untouched, because they legitimately differ per path. |
 | 55 | `read` | `books-grant-drill.js` |  |
-| 54 | `host` | `chit-sheet.js` |  |
+| 55 | `host` | `chit-sheet.js` |  |
 | 54 | `waiting` | `books-store.js` | FROM books_outbox WHERE entity_id = ${entityRef} AND source_chit_id = ${chitRef} AND done_at IS NULL ORDER BY  |
 | 54 | `shape` | `cmdb.js` | The record comes back as given (validated, never rewritten), plus nothing — |
 | 54 | `count` | `money-check.js` | the count /health reads |
@@ -112,9 +112,9 @@ of file each thing is; this says what already does the job.
 | 31 | `build` | `bookpack.js` | mismatches are named; the caller shows them and never marks such a pack clean. |
 | 31 | `amount` | `bounds.js` | below the ceiling of the named chit column (a cost is bounded by the chit total's column: |
 | 31 | `mine` | `crm.js` | `opt.removedOk`: |
+| 30 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 30 | `governance` | `home-facts.js` |  |
 | 30 | `guess` | `move-in.js` | `table` (optional, PR1): |
-| 29 | `changed` | `cap-catalogue.js` | an import landed (the _cfImportRun painter calls this) — |
 | 29 | `names` | `shortcuts.js` |  |
 | 29 | `group` | `identity.js` | again in a different costume. |
 | 28 | `guard` | `amend.js` | would disturb what has gone out. |
