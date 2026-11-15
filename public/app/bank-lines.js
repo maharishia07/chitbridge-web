@@ -166,7 +166,7 @@
     var kit = root.CBLabKit,
       onlyBooks = cfg.rows().some(function (row) { return row.status === 'books'; }); /* "Not on the statement": a chip only where the page has such lines (the owner's page) */
     var chip = function (key, label, status) {
-      return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', filt: status ? { status: status } : {}, tip: '' };
+      return { key: key, label: T(label), iconHtml: status ? kit.statusIcon({ status: status, name: '' }).replace(/<span class="lk-sr">[^<]*<\/span>/, '') : '', labelHtml: '<span class="bl-chip-l">' + esc(T(label)) + '</span>', filt: status ? { status: status } : {}, tip: '' };
     };
     return { merge: true, tid: 'bank-status', items: [chip('all', 'All', ''), chip('in', STATUS.in, 'in'), chip('ready', STATUS.ready, 'ready'), chip('need', STATUS.need, 'need')].concat(onlyBooks ? [chip('books', STATUS.books, 'books')] : []) };
   }

@@ -1572,7 +1572,7 @@
           (item.tip ? ' title="' + esc(T(I, item.tip)) + '"' : '') +
           '>' +
           (item.iconHtml || '') +
-          esc(T(I, item.label)) +
+          (item.labelHtml || esc(T(I, item.label))) +
           ' <span class="n">' +
           n +
           '</span></button>'

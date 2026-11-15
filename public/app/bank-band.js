@@ -113,10 +113,12 @@
   var MARK = { ok: '✓', bad: '✕', none: '○' };
   var STATE_WORD = { ok: 'agrees', bad: 'differs', none: 'not in the file' };
   function rightHtml(items, tid) {
-    var agree = items.filter(function (one) { return one.state === 'ok'; }).length;
+    var agree = items.filter(function (one) { return one.state === 'ok'; }).length,
+      open = items.filter(function (one) { return one.state === 'none'; }).length;
     return (
       '<div class="bb-right" data-cbsid="CMP065-D02" data-testid="' + esc(tid) + '" role="group" aria-label="' + esc(T('Right account?')) + '"><b>' + esc(T('Right account?')) + '</b>' +
       (agree ? '<span class="bb-sum bb-ok" data-testid="' + esc(tid) + '-agree">' + MARK.ok + ' ' + agree + ' ' + esc(T('agree')) + '</span>' : '') +
+      (open ? '<span class="bb-sum bb-none" data-testid="' + esc(tid) + '-open">' + MARK.none + ' ' + open + ' ' + esc(T('not in the file')) + '</span>' : '') +
       items.map(function (one) {
         return '<span class="bb-chk bb-' + one.state + '" data-check="' + esc(one.id) + '" data-state="' + one.state + '"><span aria-hidden="true">' + MARK[one.state] + '</span> ' + esc(one.text) + '<span class="lk-sr"> (' + esc(T(STATE_WORD[one.state])) + ')</span></span>';
       }).join('') + '</div>'
