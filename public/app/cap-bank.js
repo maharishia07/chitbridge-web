@@ -550,7 +550,7 @@ const bkbCount = (key) => BKB.rows.filter((item) => bkbGroupOf(item.status) === 
 function bankMoreSignAgain() {
   const fig = bankFigures();
   if (!fig || !fig.nil || typeof bankStoreSignedNow !== 'function' || !bankStoreSignedNow() || bankStoreState.mode !== 'server') return '';
-  return '<button data-cbsid="BKS014-B08" type="button" role="menuitem" class="bk-mi bk-more-sign" data-testid="bank-signoff-more" onclick="bankMoreToggle(false);bankStoreSignOff(this)">' + bkbE(tx('Sign off again')) + '</button>';
+  return '<button data-cbsid="BKS014-B26" type="button" role="menuitem" class="bk-mi bk-more-sign" data-testid="bank-signoff-more" onclick="bankMoreToggle(false);bankStoreSignOff(this)">' + bkbE(tx('Sign off again')) + '</button>';
 }
 /** the More menu: the Statement view and the file of the reconciliation; one button opens it, Esc and a press outside close it */
 function bankMoreHtml(worked, withStore) {
