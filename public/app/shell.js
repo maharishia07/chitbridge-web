@@ -908,15 +908,19 @@
         })
       : drawn.indexOf(navId) < 0;
   }
+  /** the styles and fonts a mount needs, and the stored session it reads: fonts:false = a page whose CSP allows no third-party call; anonymous = a page that reads no stored session (the no-login bank demo) */
+  function prepare(o) {
+    addCss();
+    if (o.fonts !== false) addFonts();
+    return o.anonymous ? null : session();
+  }
   function mount(el, o) {
     if (!el) return null;
     o = o || {};
-    addCss();
-    if (o.fonts !== false) addFonts(); /* fonts:false = a page whose CSP allows no third-party call (the no-login bank demo): the system faces */
+    var sess = prepare(o);
     var host = o.host || null,
       mode = host && host.bar ? 'bar' : host ? 'app' : 'home';
     var appId = host && host.app ? String(host.app) : ''; /* bar mode too (SHELL-ONE): the storefront and the labs name their app for the chip */
-    var sess = o.anonymous ? null : session(); /* anonymous: this page reads no stored session and makes no call (bank-demo.html) */
     var person = o.person !== undefined ? o.person : root.CBAvatar && root.CBAvatar.sessionPerson ? root.CBAvatar.sessionPerson() : null;
     var token = o.token || (sess && sess.token) || '';
     var base = o.apiBase != null ? o.apiBase : apiBase();
