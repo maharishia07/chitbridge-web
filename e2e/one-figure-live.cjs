@@ -46,7 +46,7 @@ const SCREENS = [
   ok(has('pl', /Sales\s*A\$4,800\.00/), '1 P&L Oct sales A$4,800.00');
   ok(has('bas', /A\$228\.00/) && has('bas', /480\.00/) && has('bas', /252\.00/), '2/3 BAS Oct-Dec 1A 480.00 · 1B 252.00 · to pay A$228.00');
   ok(has('cash', /BAS\s*A\$228\.00\s*·\s*28 Feb 2027/), '6 Cash: BAS A$228.00 · 28 Feb 2027');
-  ok(has('cash', /BAS\s*A\$1,462\.00\s*·\s*owing from before/) && has('cash', /no due date held/), '7 Cash: BAS A$1,462.00 owing from before, no due date held');
+  ok(has('cash', /GST owing from before 1 Oct 2026 · A\$1,462\.00 · due date not recorded/), '7 Cash: GST owing from before 1 Oct 2026 · A$1,462.00 · due date not recorded');
   ok(!has('cash', /A\$1,690\.00\s*·\s*28 Feb/), '8 Cash no longer lumps A$1,690.00 against 28 Feb');
   ok(has('lock', /Oct[^]{0,80}A\$4,800\.00 sales/) && !has('lock', /5,280\.00 sales/), '9 Month lock Oct: A$4,800.00 sales (not 5,280.00)');
   ok(has('terms', /a bill is due on its own date/) && !has('terms', /has no due date/), '10 Terms: a bill is due on its own date');
