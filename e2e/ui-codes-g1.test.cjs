@@ -423,6 +423,9 @@ for (const [code, mount, tag, marker] of LIBRARY) {
   const at = src.indexOf('data-cbmount="' + mount + '"'), open = src.lastIndexOf('<', at), end = src.indexOf('>', at), body = src.slice(open, end + 1);
   check(at > 0 && body.indexOf('<' + tag) === 0 && body.indexOf('data-cbsid="' + code + '"') > 0 && body.indexOf(marker) >= 0, code + ' + ' + mount + ' sit in the same <' + tag + '> (' + marker + ')');
 }
+/* codes in one builder share a marker (id="l_go"): the code ORDER in the file is the proof they are not swapped */
+const pos = CODES.map((r) => src.indexOf('data-cbsid="' + r[0] + '"'));
+check(pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])), 'the ' + CODES.length + ' codes appear in file order (no two codes of one marker swapped)');
 const seen = {};
 let n = 0;
 for (const m of src.matchAll(/data-cbsid="([A-Z]{3}\d{3}-[A-Z]\d{2})"/g)) { seen[m[1]] = (seen[m[1]] || 0) + 1; n++; }
