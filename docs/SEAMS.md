@@ -41,7 +41,7 @@ of file each thing is; this says what already does the job.
 | 61 | `entity` | `mintuserid.js` | Registration chooses this; we only say whether it is allowed. |
 | 59 | `rows` | `cap-settings.js` |  |
 | 59 | `line` | `country-compare.js` | and `text`, the one short line the table shows. |
-| 57 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
+| 58 | `answer` | `app.html` | answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. |
 | 56 | `toast` | `accounts-shell.js` |  |
 | 56 | `view` | `books-payables.js` | group: |
 | 56 | `pack` | `books-store.js` |  |
@@ -54,11 +54,11 @@ of file each thing is; this says what already does the job.
 | 54 | `count` | `money-check.js` | the count /health reads |
 | 53 | `write` | `junitresults.js` | control characters are not legal XML at all — |
 | 51 | `change` | `books-grant.js` | change(grantor, by, grantId, { expires_at }) → the grant: |
+| 48 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 48 | `checked` | `capture-contract.js` | the schema check of one route as a list to spread after auth (a route that takes no input has none) |
 | 48 | `open` | `ctpenvelope.js` | a 500 on a protocol endpoint tells the sender to retry something that will never work. |
 | 48 | `header` | `mint.js` | spreading it into each copy is what makes that structural rather than a thing to remember. |
 | 48 | `door` | `signin.js` | offering a shift handover to a counter that cannot bill would be the same dead end in a new coat. |
-| 47 | `words` | `accounts-shell.js` | var CBLedger = (function () { |
 | 47 | `facts` | `bill-steps.js` | MY state_log — |
 | 46 | `verdict` | `db-role.js` | fatal everywhere except a local stack (production has carried NODE_ENV=" development", so only a local DB prov |
 | 45 | `body` | `books-acting.js` | a write's body: |
