@@ -65,6 +65,7 @@
     posted = 0,
     added = null /* { count, balance, open } of the last press, shown as one calm card until the next action */,
     askPanel = null,
+    checkPanel = null,
     report = null,
     loadRefusal = null /* { why, text, name } of a file that could not be read: the plain words, and the text for the column map */;
 
@@ -341,7 +342,7 @@
   }
   /** the slot before the figures for what the engine says about the FILE: its warnings now (for example no description column was read); the statement-check panel (refuse, confirm, already done) goes here */
   function paintCheck() {
-    var slot = el('bd_check');
+    var slot = el('bd_warn');
     slot.hidden = !warnings.length;
     slot.innerHTML = warnings.map(function (words) { return '<p>' + esc(typeof words === 'string' ? words : words.why || words.words || 'Check this file.') + '</p>'; }).join('');
   }
@@ -360,7 +361,14 @@
   }
 
   /* ── actions ── */
+  /** a file goes through the statement check first (when the engine has one); the books page reads it only when the verdict allows */
   function loadStatement(text, name) {
+    var slot = el('bd_check');
+    slot.hidden = true;
+    slot.innerHTML = '';
+    checkPanel.run(text, name, function () { return readStatement(text, name); });
+  }
+  function readStatement(text, name) {
     warnings = [];
     var said = controller.load(text, name);
     if (said.ok) {
@@ -466,7 +474,7 @@
       if (!event.target.closest('.bd-more')) toggleMore(false);
       return;
     }
-    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')];
+    var handler = ACTIONS[target.getAttribute('data-act')] || askPanel.actions[target.getAttribute('data-act')] || checkPanel.actions[target.getAttribute('data-act')];
     if (handler && handler(target, target.getAttribute('data-key'))) return;
     paint();
   }
@@ -477,6 +485,7 @@
   /** what the other modules of the page may use: the page's own readers and painters, never its state */
   function hostFor() {
     return {
+      openingMinor: function () { return books.opening_minor; }, parseOpts: function () { return { country: COUNTRY, currency: CURRENCY }; },
       doc: doc, el: el, labKit: labKit, preview: preview, CURRENCY: CURRENCY, ACCOUNT: ACCOUNT, controller: function () { return controller; },
       itemOf: itemOf, paint: paint, standing: standing, countsOf: countsOf, payeeOf: payeeOf, accountOf: accountOf, nameOf: nameOf, chartOf: chartOf, whatIsThis: whatIsThis,
       amountText: amountText, plural: plural, tag: tag, dateWords: dateWords, lastDate: lastDate,
@@ -495,6 +504,7 @@
   function start() {
     mountHeader();
     askPanel = root.CBBankDemoAsk.create(hostFor());
+    checkPanel = root.CBBankDemoCheck.create(hostFor());
     report = root.CBBankDemoReport.create(hostFor());
     ['bd_load', 'bd_load2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
     ['bd_reset', 'bd_reset2'].forEach(function (id) { el(id).addEventListener('click', function () { toggleMore(false); startAgain(); }); });
