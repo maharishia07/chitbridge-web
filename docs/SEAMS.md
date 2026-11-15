@@ -18,7 +18,7 @@ of file each thing is; this says what already does the job.
 | 109 | `answer` | `availability.js` | from March; then nearest. |
 | 100 | `money` | `bill-privacy.js` |  |
 | 89 | `code` | `signin.js` | a 5-digit string is simply unfinished, whichever one it turns out to be. |
-| 84 | `list` | `cap-settings.js` |  |
+| 83 | `list` | `cap-settings.js` |  |
 | 82 | `check` | `books-nightly.js` | check(entity) → the result stored as last_check |
 | 82 | `next` | `dayopen.js` | the next thing to do — |
 | 79 | `catalogue` | `books-manual.js` | GET /events → the grid. |
@@ -78,9 +78,9 @@ of file each thing is; this says what already does the job.
 | 40 | `send` | `crm-groups.js` | a real send goes through the ONE sender per allowed member. |
 | 40 | `statement` | `receivables.js` | is LISTED (with why) but does not reduce the balance — |
 | 39 | `closeModal` | `app.html` |  |
+| 39 | `view` | `country-ready.js` |  |
 | 39 | `faultOf` | `capture-contract.js` | keeps that status: |
 | 38 | `lines` | `cart.js` |  |
-| 38 | `view` | `country-ready.js` |  |
 | 38 | `mint` | `api-keys.js` | Throws { status, message } on a validation or limit failure. |
 | 38 | `rate` | `convert.js` | A rate, with its evidence. |
 | 37 | `changes` | `books-store.js` |  |
