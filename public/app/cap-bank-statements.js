@@ -68,16 +68,33 @@ function bkstSummary() {
     kept = last ? bkstMonth(last) + ' ✓ · ' : '';
   return kept + (gaps ? txf('{n} months missing', { n: gaps }) : tx('Every month is kept'));
 }
+/** the box's one line: its name, what it holds (the gap to fix) and the press that opens it (BKS014-B41); the SAME line is drawn in the box or, folded over a statement, in the band (bkstMiniHtml) */
+function bkstBarInner(open, ready) {
+  return (
+    '<b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
+    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '')
+  );
+}
+/** the slot the band keeps for the folded line (cap-bank.js bankFinish): a statement on screen gives the lines the whole screen, so the box costs no row of its own */
+const bkstMiniHtml = () => '<span class="bks-mini" id="bks_mini" data-testid="bank-stmts-mini"></span>';
 function bankStmtPaint() {
   const host = bkstEl('bk_stmts');
   if (!host) return;
-  const open = BKST.open === null ? !(typeof BKB !== 'undefined' && BKB.rows && BKB.rows.length) : BKST.open; /* open on a bare page; folded while a statement is on screen */
-  const ready = BKST.mode === 'server';
+  const onScreen = typeof BKB !== 'undefined' && BKB.rows && BKB.rows.length,
+    open = BKST.open === null ? !onScreen : BKST.open; /* open on a bare page; folded while a statement is on screen */
+  const ready = BKST.mode === 'server',
+    mini = bkstEl('bks_mini');
   bkstOneDoor(ready);
+  if (mini) mini.innerHTML = '';
+  if (onScreen && !open && mini) {
+    host.style.display = 'none';
+    host.innerHTML = '';
+    mini.innerHTML = bkstBarInner(false, ready);
+    return;
+  }
+  host.style.display = '';
   host.innerHTML =
-    '<div class="bks-bar"><b>' + bkstE(tx('Statements')) + '</b><span class="bks-sum" data-testid="bank-stmts-sum">' + bkstE(bkstSummary()) + '</span>' +
-    (ready ? '<button data-cbsid="BKS014-B41" type="button" class="bks-tog" data-testid="bank-stmts-toggle" onclick="bankStmtToggle()" aria-expanded="' + open + '">' + bkstE(open ? tx('Hide') : tx('Add statement') + ' ▾') + '</button>' : '') +
-    '</div>' +
+    '<div class="bks-bar">' + bkstBarInner(open, ready) + '</div>' +
     (ready && open ? bkstAddHtml() + bkstGridHtml() + bkstFilesHtml() + bkstJustReadHtml() + '<div class="pe-note" data-testid="bank-stmts-kept">' + bkstE(tx('Kept on our server for the record period; visible to the adviser or auditor you give access.')) + '</div>' : '');
 }
 /** W15-62: while the box is the door, the plain picker's file field and its sentence step aside (one "Add statement" door); the file input stays for "Just read a file", the quiet choice inside the box. Box not ready (503, error): the picker is the only door and stays. */
