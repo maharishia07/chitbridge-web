@@ -543,7 +543,7 @@ function taxCloseWord() {
     word = pack && ((pack.words && pack.words.taxName) || (pack.tax && pack.tax.scheme));
   /* the return's own name wins once the server has answered one (BAS, VAT return — cap-period.js peReturnWord): the specific over the general,
      or this repaint would put "GST close & pay" back over an Australian shop's BAS */
-  const returnWord = typeof PE_RET !== 'undefined' ? PE_RET.word || '' : '';
+  const returnWord = (typeof PE_RET !== 'undefined' && PE_RET.word) || (typeof packWord === 'function' && packWord('returnName')) || ''; /* the pack's word (BAS) from the first paint, not only once the page has opened */
   const item = NAV.find((entry) => entry[0] === 'gstclose');
   if (item && (returnWord || word)) item[1] = returnWord || word + ' close & pay';
 }
