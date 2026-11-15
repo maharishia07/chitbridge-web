@@ -1315,6 +1315,7 @@
     function leadByData() {
       var holder = $('.cbsh-more');
       if (!holder) return;
+      if (factsRunning || factsQueue.length) return; /* l16: the order is set ONCE, when every card has answered or failed: a card that is still waiting (or was shed) must not reshuffle the sections per load */
       var secs = [].slice.call(holder.querySelectorAll(':scope > .cbsh-sec'));
       var score = function (sec) {
         return LEAD_LAST[sec.getAttribute('data-area')] ? -1 : sec.querySelector('[data-state="needs_you"],[data-state="in_use"]') ? 1 : 0;
@@ -1347,6 +1348,7 @@
         factsGet(job.url, FACTS_RETRIES).then(job.ok, job.no).then(function () {
           factsRunning -= 1;
           factsNext();
+          if (!factsRunning && !factsQueue.length) leadByData();
         });
       }
     }
